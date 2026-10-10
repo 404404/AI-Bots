@@ -319,6 +319,21 @@ _The exact [BH-LARK-SETUP] source ends in f708a3f1; its Inbox admission was hand
 
 _Close/reopen and same-Profile restart retained configuration/history; select the persisted account after reload. Disable, grant revocation, unbind and account removal returned relevant steps to pending. Native Remove integration then stopped reception and deleted local configuration/credentials. The external application remains; external credential reset is an administrator action._
 
+## Open one group to visitors
+
+In the Bot DM sidebar, open the bound App's conversation list and the group's **Rules**.
+Enable **Allow unpaired visitors to address the Bot in this group** to accept new mentions under
+the existing reception and Wake Policy. Visitors have no paired Role or management powers.
+Disable it to return their next restricted mention to reviewed pairing; an approved person's
+separate pairing remains valid. The exception does not cover DMs, other groups, Bots or Apps,
+and rebinding does not inherit it. Blocking or disabling reception still wins.
+
+Separately choose ordinary-message collection when you want background context. Under pairing
+restriction, an unpaired author's ordinary text can be retained without starting a Turn or filling
+count/time thresholds. A later eligible request can read that context with individual sender
+provenance. It can influence the reply and consume tokens; background authors do not supply a
+combined Role. Replies are visible to the group. This is not a current/full membership list.
+
 ## Handle tool approvals in a management DM
 
 The #1375 candidate also lets you edit a Role in **IM roles and pairing** and explicitly select

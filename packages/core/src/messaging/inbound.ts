@@ -25,6 +25,7 @@ import {
   trustedSenderReference,
   readSenderPolicy,
   senderAdmissionAllowed,
+  senderContextAllowed,
   sourceSenderAllowed,
   type TrustedSenderReference,
 } from './sender-access.js';
@@ -194,7 +195,7 @@ export interface InboundMessaging {
   ): Promise<ThreadReceptionPolicy>;
   ordinaryDelivery(grantId: string): 'verified' | 'unverified';
   status(grantId: string): 'off' | 'connecting' | 'receiving' | 'unavailable';
-  available(botSlug: string, sourceEventId: string): boolean;
+  available(botSlug: string, sourceEventId: string, context?: boolean): boolean;
   pendingPaths(
     botSlug: string,
     now: Date,
@@ -659,7 +660,7 @@ export function createInboundMessaging(options: {
             event.conversation.id !== value.receiveScope!.conversationId
           )
             return { accepted: true };
-          if (!database.read((db) => senderAdmissionAllowed(db, value.botSlug, event)))
+          if (!database.read((db) => senderContextAllowed(db, value.botSlug, event)))
             return { accepted: true };
           if (event.conversation.kind === 'dm' && !latest.bridgeRoutes) {
             if (latest.receiveTargetChannelId || latest.channelBridge || latest.bridgeRoutes)
@@ -797,8 +798,10 @@ export function createInboundMessaging(options: {
                   const policy = options.sourcePolicy.resolveIn(db, value.botSlug, reason);
                   const ordinary =
                     thread?.mode === 'follow' && thread.wake ? thread.wake : reception;
-                  const wake =
-                    event.conversation.kind === 'dm' || event.mentionedAccount
+                  const passive = !senderAdmissionAllowed(db, value.botSlug, event);
+                  const wake = passive
+                    ? 'context'
+                    : event.conversation.kind === 'dm' || event.mentionedAccount
                       ? policy.wake
                       : thread?.wake || reception.inheritance === 'custom' || !policy.overrideActive
                         ? ordinary.wake
@@ -824,9 +827,9 @@ export function createInboundMessaging(options: {
                     policy.revision,
                     wake,
                     reception.revision,
-                    wake === 'immediate' ? 'all' : wake,
-                    wake === 'immediate' ? 1 : count,
-                    wake === 'immediate' ? 0 : seconds * 1000,
+                    passive ? 'silent' : wake === 'immediate' ? 'all' : wake,
+                    passive ? null : wake === 'immediate' ? 1 : count,
+                    passive ? null : wake === 'immediate' ? 0 : seconds * 1000,
                     thread?.revision ?? null,
                     reception.defaultRevision ?? null,
                   );
@@ -947,11 +950,14 @@ export function createInboundMessaging(options: {
               if (!event.mentionedAccount && source.localChannelId) return id;
               const reason = event.mentionedAccount ? 'group-mention' : 'group-ordinary';
               const policy = options.sourcePolicy.resolveIn(db, value.botSlug, reason);
-              const wake = event.mentionedAccount
-                ? policy.wake
-                : thread?.wake || reception.inheritance === 'custom' || !policy.overrideActive
-                  ? ordinary.wake
-                  : policy.wake;
+              const passive = !senderAdmissionAllowed(db, value.botSlug, event);
+              const wake = passive
+                ? 'context'
+                : event.mentionedAccount
+                  ? policy.wake
+                  : thread?.wake || reception.inheritance === 'custom' || !policy.overrideActive
+                    ? ordinary.wake
+                    : policy.wake;
               const count =
                 reception.inheritance !== 'custom' && !thread?.wake && policy.overrideActive
                   ? (policy.digestCount ?? ordinary.count)
@@ -970,7 +976,7 @@ export function createInboundMessaging(options: {
                 policy.revision,
                 wake,
                 reception.revision,
-                wake === 'immediate' ? 'all' : wake,
+                passive ? 'silent' : wake === 'immediate' ? 'all' : wake,
                 !event.mentionedAccount && (wake === 'immediate' || wake === 'digest')
                   ? wake === 'immediate'
                     ? 1
@@ -1350,12 +1356,12 @@ export function createInboundMessaging(options: {
       throw new MessagingError('untrusted-source');
     if (identity.receiveAfter && Date.parse(event.at) < Date.parse(identity.receiveAfter))
       return { accepted: true };
-    if (!database.read((db) => senderAdmissionAllowed(db, identity.botSlug, event)))
-      return { accepted: true };
     if (event.conversation.kind === 'group' && !event.mentionedAccount) {
       placeIngests(identity, event);
       return { accepted: true };
     }
+    if (!database.read((db) => senderAdmissionAllowed(db, identity.botSlug, event)))
+      return { accepted: true };
     const result = await admitDefault(id, lease, identity, entry, event, signal);
     placeIngests(identity, event);
     return result;
@@ -2261,7 +2267,7 @@ export function createInboundMessaging(options: {
       )
         throw new MessagingError('grant-unavailable');
       const entry = providers.get(value.providerId)!;
-      const inspected = await entry.provider.inspect(value.accountRef, value.targetRef);
+      const inspected = await inspectGrant(entry.provider, value);
       if (
         providers.get(value.providerId) !== entry ||
         inspected.account.fingerprint !== value.fingerprint ||
@@ -2526,9 +2532,9 @@ export function createInboundMessaging(options: {
       );
       options.onReceptionChanged?.();
     },
-    available(botSlug, id) {
+    available(botSlug, id, context = false) {
       try {
-        if (!database.read((db) => sourceSenderAllowed(db, botSlug, id))) return false;
+        if (!database.read((db) => sourceSenderAllowed(db, botSlug, id, context))) return false;
         const source = read(botSlug, id);
         const value = grant(source.grantId);
         if (source.receptionPaths)

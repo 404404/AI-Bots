@@ -4,6 +4,14 @@ import { z } from 'zod';
 import { readMessagingIdentity } from './identity.js';
 import { MessagingError, type MessagingInboundEvent } from './provider.js';
 import type { PairingCapability, PairingRequest } from './pairing.js';
+import type { MessagingGrant } from './outbound.js';
+import { readBlock } from './conversations.js';
+import { groupReceptionPolicy } from './group-policy.js';
+import { channelBridgeRoutes } from './channel-bridge.js';
+import { messagingDefaults } from './defaults.js';
+import { threadReceptionPolicy } from './thread-policy.js';
+import { matchingIngests } from './conversation-ingest.js';
+import { bridgeChannel } from './channel-target.js';
 
 export interface ExternalUserRole {
   id: string;
@@ -145,6 +153,8 @@ export function readSenderPermissions(
       : { ...base, status: 'unavailable', reason: 'role-unavailable' };
   }
   const latest = pairings[0];
+  if (openGroupAllows(db, botSlug, event))
+    return { ...base, status: 'visitor', reason: 'explicit-open-group' };
   if (latest)
     return {
       ...base,
@@ -271,7 +281,7 @@ export function changeSenderAccess(
         ).run(new Date().toISOString(), new Date().toISOString(), botSlug, row.source_event_id);
   }
 }
-function bumpSenderPolicy(db: DatabaseSync, botSlug: string): void {
+export function bumpSenderPolicy(db: DatabaseSync, botSlug: string): void {
   const policy = readSenderPolicy(db, botSlug);
   db.prepare(
     'INSERT INTO messaging_sender_policies (bot_slug, restricted, revision) VALUES (?, ?, ?) ON CONFLICT(bot_slug) DO UPDATE SET revision = excluded.revision',
@@ -332,13 +342,121 @@ export function senderAdmissionAllowed(
   return (
     event.channel !== 'feishu' ||
     !readSenderPolicy(db, botSlug).restricted ||
-    currentSenderRole(db, botSlug, event) !== undefined
+    currentSenderRole(db, botSlug, event) !== undefined ||
+    ((event.conversation.kind === 'dm' || event.mentionedAccount) &&
+      openGroupAllows(db, botSlug, event))
   );
+}
+function senderGroupGrants(
+  db: DatabaseSync,
+  botSlug: string,
+  event: Omit<MessagingInboundEvent, 'text'>,
+): MessagingGrant[] {
+  if (event.conversation.kind !== 'group') return [];
+  const sender = trustedSenderReference(db, botSlug, event);
+  if (!sender) return [];
+  const identity = readMessagingIdentity(db, sender.bindingId);
+  if (
+    !identity.enabled ||
+    readBlock(db, botSlug, identity.fingerprint, event.conversation) ||
+    !Number.isFinite(Date.parse(event.at)) ||
+    Date.parse(event.at) < Date.parse(identity.createdAt)
+  )
+    return [];
+  return (
+    db
+      .prepare(
+        'SELECT body FROM messaging_grants WHERE bot_slug = ? AND binding_id = ? AND revoked_at IS NULL',
+      )
+      .all(botSlug, sender.bindingId) as { body: string }[]
+  )
+    .map((row) => JSON.parse(row.body) as MessagingGrant)
+    .filter(
+      (value) =>
+        !value.suspendedReason &&
+        value.receiveScope?.kind === 'group' &&
+        value.receiveScope.conversationId === event.conversation.id &&
+        (!value.receiveAfter || Date.parse(event.at) >= Date.parse(value.receiveAfter)),
+    );
+}
+function openGroupAllows(
+  db: DatabaseSync,
+  botSlug: string,
+  event: Omit<MessagingInboundEvent, 'text'>,
+): boolean {
+  return senderGroupGrants(db, botSlug, event).some(
+    (value) =>
+      value.openGroup === true &&
+      !!value.openGroupAfter &&
+      Date.parse(event.at) >= Date.parse(value.openGroupAfter),
+  );
+}
+export function senderContextAllowed(
+  db: DatabaseSync,
+  botSlug: string,
+  event: Omit<MessagingInboundEvent, 'text'>,
+): boolean {
+  if (senderAdmissionAllowed(db, botSlug, event)) return true;
+  if (event.channel !== 'feishu' || event.conversation.kind !== 'group' || event.mentionedAccount)
+    return false;
+  const sender = trustedSenderReference(db, botSlug, event);
+  if (!sender) return false;
+  const identity = readMessagingIdentity(db, sender.bindingId);
+  if (
+    !identity.enabled ||
+    !Number.isFinite(Date.parse(event.at)) ||
+    Date.parse(event.at) < Date.parse(identity.createdAt) ||
+    readBlock(db, botSlug, identity.fingerprint, event.conversation)
+  )
+    return false;
+  if (
+    matchingIngests(db, identity.providerId, identity.fingerprint, event.conversation).some(
+      (ingest) => {
+        if (
+          !ingest.enabled ||
+          ingest.accountRef !== identity.accountRef ||
+          Date.parse(event.at) < Date.parse(ingest.intakeAfter)
+        )
+          return false;
+        try {
+          return bridgeChannel(db, ingest.channelId, botSlug, true).type === 'group';
+        } catch {
+          return false;
+        }
+      },
+    )
+  )
+    return true;
+  return senderGroupGrants(db, botSlug, event).some((value) => {
+    const thread = event.reply.threadId
+      ? threadReceptionPolicy(db, value.id, event.reply.threadId)
+      : undefined;
+    if (thread?.mode === 'exclude') return false;
+    if (
+      thread?.mode === 'follow' &&
+      thread.rootId === event.reply.rootId &&
+      thread.fingerprint === event.fingerprint &&
+      thread.conversationId === event.conversation.id
+    )
+      return true;
+    const policy = groupReceptionPolicy(db, value.id);
+    return channelBridgeRoutes(value).some(
+      (route) =>
+        route.enabled &&
+        (!route.intakeAfter || Date.parse(event.at) >= Date.parse(route.intakeAfter)) &&
+        (route.collectionInheritance === 'inherit'
+          ? messagingDefaults(db, value.platform).collection
+          : value.bridgeRoutes || value.channelBridge
+            ? route.collection
+            : policy.collection) === 'all',
+    );
+  });
 }
 export function sourceSenderAllowed(
   db: DatabaseSync,
   botSlug: string,
   sourceEventId: string,
+  context = false,
 ): boolean {
   if (!readSenderPolicy(db, botSlug).restricted) return true;
   const row = db
@@ -350,5 +468,10 @@ export function sourceSenderAllowed(
   const event = (
     JSON.parse(row.payload_json) as { external?: { event?: Omit<MessagingInboundEvent, 'text'> } }
   ).external?.event;
-  return !!event && senderAdmissionAllowed(db, botSlug, event);
+  return (
+    !!event &&
+    (context
+      ? senderContextAllowed(db, botSlug, event)
+      : senderAdmissionAllowed(db, botSlug, event))
+  );
 }

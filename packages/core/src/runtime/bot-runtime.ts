@@ -6,7 +6,11 @@ import {
 } from './assignment-approval-capacity.js';
 import { waitForAssignment, type AssignmentWaitOutcome } from './assignment-wait.js';
 import { externalMemberWake } from '../messaging/defaults.js';
-import { trustedSenderReference, type SenderPermissions } from '../messaging/sender-access.js';
+import {
+  sourceSenderAllowed,
+  trustedSenderReference,
+  type SenderPermissions,
+} from '../messaging/sender-access.js';
 import type { MessagingDirectoryQuery, MessagingDirectoryPage } from '../messaging/directory.js';
 import type {
   ThreadReceptionInput,
@@ -1200,7 +1204,7 @@ class BotRuntimeImplementation implements BotRuntime {
       for (const candidate of this.#pendingExternalRows(botSlug, true)) {
         if (
           candidate.source_event_id === sourceEventId ||
-          !this.#externalMessaging.inbound.available(botSlug, candidate.source_event_id)
+          !this.#externalMessaging.inbound.available(botSlug, candidate.source_event_id, true)
         )
           continue;
         const context = this.#externalMessaging.inbound.read(botSlug, candidate.source_event_id);
@@ -2358,7 +2362,7 @@ class BotRuntimeImplementation implements BotRuntime {
       FROM inbox_admissions a JOIN source_events e ON e.source_event_id = a.source_event_id
      WHERE a.bot_slug = ? AND a.reason = 'group-ordinary' AND e.channel_id IS NOT NULL
            AND NOT EXISTS (SELECT 1 FROM messaging_source_paths rp WHERE rp.source_event_id = e.source_event_id)
-       AND a.wake_mode IN ('all', 'digest', 'mentions')
+       AND (a.wake_mode IN ('all', 'digest', 'mentions') OR (a.wake_mode = 'silent' AND a.source_policy_wake_mode = 'context'))
        AND a.attempt_state IN ('pending', 'retryable') AND e.channel_id = ?`;
     const total = database.prepare(`SELECT COUNT(*) AS count ${base}`).get(botSlug, channelId) as {
       count: number;
@@ -2377,6 +2381,7 @@ class BotRuntimeImplementation implements BotRuntime {
       .all(botSlug, channelId, GROUP_PROMPT_CHANNEL_LIMIT) as unknown as DigestRow[];
     const rows: DigestRow[] = [];
     for (const row of candidates) {
+      if (!sourceSenderAllowed(database, botSlug, row.source_event_id, true)) continue;
       if (alreadyIncluded + rows.length >= GROUP_PROMPT_CHANNEL_LIMIT) break;
       const candidateContext = {
         channelId,
@@ -5785,7 +5790,7 @@ class BotRuntimeImplementation implements BotRuntime {
     const legacy = this.#database.read((db) =>
       db
         .prepare(`WITH pending AS (
-      SELECT e.source_event_id, e.body, e.created_at, a.attempt_state, a.reason, a.wake_mode,
+      SELECT e.source_event_id, e.body, e.created_at, a.attempt_state, a.reason, a.wake_mode, a.source_policy_wake_mode,
         a.wake_count, a.wake_interval_ms, g.id AS grant_id,
         SUM(CASE WHEN a.reason = 'group-ordinary' THEN 1 ELSE 0 END) OVER policy AS pending_count,
         MIN(CASE WHEN a.reason = 'group-ordinary' THEN e.created_at END) OVER policy AS first_at,
@@ -5802,12 +5807,12 @@ class BotRuntimeImplementation implements BotRuntime {
         AND NOT EXISTS (SELECT 1 FROM messaging_source_paths rp WHERE rp.source_event_id = e.source_event_id)
         AND (a.reason != 'group-ordinary' OR e.channel_id IS NULL)
         AND a.attempt_state IN ('pending', 'retryable') AND a.observed_at IS NULL
-      WINDOW policy AS (PARTITION BY g.id, a.wake_policy_revision, a.source_policy_revision, a.external_default_revision, a.reason, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.thread_id ELSE '' END, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.revision ELSE 0 END)
+      WINDOW policy AS (PARTITION BY g.id, a.wake_policy_revision, a.source_policy_revision, a.external_default_revision, a.reason, a.wake_mode, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.thread_id ELSE '' END, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.revision ELSE 0 END)
     ) SELECT source_event_id, body, created_at, attempt_state FROM pending
       WHERE (reason = 'group-mention' AND wake_mode IS NOT 'silent') OR (reason = 'human-dm' AND wake_mode = 'all') OR (reason = 'group-ordinary' AND (
         wake_mode = 'all' OR (wake_mode = 'digest' AND (pending_count >= wake_count OR
           (julianday(?) - julianday(first_at)) * 86400000 >= wake_interval_ms)) OR
-        (? = 1 AND has_mention = 1 AND wake_mode IN ('digest', 'mentions'))))
+        (? = 1 AND has_mention = 1 AND (wake_mode IN ('digest', 'mentions') OR (wake_mode = 'silent' AND source_policy_wake_mode = 'context')))))
       ORDER BY CASE WHEN reason = 'group-mention' THEN 0 ELSE 1 END, created_at, source_event_id LIMIT 20
     `)
         .all(botSlug, this.#now().toISOString(), includeContext ? 1 : 0),
@@ -5857,7 +5862,7 @@ class BotRuntimeImplementation implements BotRuntime {
     rows.reverse();
     let externalCharacters = 0;
     for (const row of this.#pendingExternalRows(botSlug, true)) {
-      if (!this.#externalMessaging?.inbound.available(botSlug, row.source_event_id)) continue;
+      if (!this.#externalMessaging?.inbound.available(botSlug, row.source_event_id, true)) continue;
       const cost = row.body.length + 1600;
       if (externalCharacters + cost > 24000) break;
       externalCharacters += cost;

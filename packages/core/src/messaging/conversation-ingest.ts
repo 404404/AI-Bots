@@ -162,11 +162,12 @@ export function admitIngestMembers(
 ): string[] {
   const admitted: string[] = [];
   for (const botSlug of channel.members) {
-    if (!isBotActive(botSlug) || !sourceSenderAllowed(db, botSlug, sourceEventId)) continue;
+    if (!isBotActive(botSlug) || !sourceSenderAllowed(db, botSlug, sourceEventId, true)) continue;
+    const passive = !sourceSenderAllowed(db, botSlug, sourceEventId);
     const rule = sourcePolicy.resolveIn(db, botSlug, 'group-ordinary');
     const custom = channel.wakePolicies?.[botSlug];
     const policy = custom ?? { ...ingest.wake, revision: ingest.revision };
-    const mode = policy.mode;
+    const mode = passive ? 'context' : policy.mode;
     const result = db
       .prepare(`INSERT OR IGNORE INTO inbox_admissions
       (source_event_id, bot_slug, reason, source_policy_revision, source_policy_wake_mode,
@@ -176,9 +177,9 @@ export function admitIngestMembers(
         sourceEventId,
         botSlug,
         rule.revision,
-        rule.wake,
+        passive ? 'context' : rule.wake,
         policy.revision,
-        mode,
+        passive ? 'silent' : mode,
         mode === 'all' ? 1 : mode === 'digest' ? policy.count : null,
         mode === 'all' ? 0 : mode === 'digest' ? policy.intervalSeconds * 1000 : null,
       );

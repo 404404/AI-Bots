@@ -23,16 +23,19 @@ export function admitBridgeMembers(
 ): string[] {
   const admitted: string[] = [];
   for (const botSlug of channel.members) {
-    if (!isBotActive(botSlug) || !sourceSenderAllowed(db, botSlug, sourceEventId)) continue;
+    if (!isBotActive(botSlug) || !sourceSenderAllowed(db, botSlug, sourceEventId, true)) continue;
+    const passive = !sourceSenderAllowed(db, botSlug, sourceEventId);
     const rule = sourcePolicy.resolveIn(db, botSlug, 'group-ordinary');
     const defaults = messagingDefaults(db, path?.grant.platform);
     const { policy } = externalMemberWake(channel, botSlug, rule, defaults);
     const thread = followed?.botSlug === botSlug ? followed : undefined;
-    const mode = thread
-      ? thread.wake.wake === 'immediate'
-        ? 'all'
-        : thread.wake.wake
-      : policy.mode;
+    const mode = passive
+      ? 'context'
+      : thread
+        ? thread.wake.wake === 'immediate'
+          ? 'all'
+          : thread.wake.wake
+        : policy.mode;
     const result = db
       .prepare(`INSERT OR IGNORE INTO inbox_admissions
       (source_event_id, bot_slug, reason, source_policy_revision, source_policy_wake_mode,
@@ -42,9 +45,9 @@ export function admitBridgeMembers(
         sourceEventId,
         botSlug,
         rule.revision,
-        rule.wake,
+        passive ? 'context' : rule.wake,
         policy.revision,
-        mode,
+        passive ? 'silent' : mode,
         mode === 'all' ? 1 : mode === 'digest' ? (thread?.wake.count ?? policy.count) : null,
         mode === 'all'
           ? 0

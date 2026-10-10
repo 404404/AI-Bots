@@ -1320,6 +1320,117 @@ async function grantFor(fx: Awaited<ReturnType<typeof fixture>>, conversation: s
   )!;
 }
 
+it('explicit open groups admit visitors without powers, close to reviewed pairing, and preserve scope across restart', async () => {
+  const fx = await fixture();
+  await fx.receive(fresh(mention('open-bootstrap')));
+  await ordinaryRole(fx);
+  const grant = await grantFor(fx, 'oc_team');
+  const open = { kind: 'open-group' as const, grantId: grant.id, expectedRevision: 0, open: true };
+  await fx.core.externalMessaging.conversation('ada', open);
+  await expect(fx.core.externalMessaging.conversation('ada', open)).rejects.toThrow(
+    'conversation-stale',
+  );
+  await expect(fx.core.externalMessaging.conversation('other-bot', open)).rejects.toThrow();
+  await fx.receive(fresh(asActor(mention('visitor-open'), 'ou_visitor')));
+  const source = fx.sourceId('om-visitor-open');
+  expect(fx.core.externalMessaging.senderPermissions('ada', source)).toMatchObject({
+    status: 'visitor',
+  });
+  expect(fx.core.externalMessaging.senderPermissions('ada', source).role).toBeUndefined();
+  expect(fx.core.externalMessaging.pairing.list('ada')).toHaveLength(0);
+  expect(() =>
+    fx.core.externalMessaging.pairing.assert('ada', fx.identity.id, 'ou_visitor', 'approve'),
+  ).toThrow();
+  await fx.core.externalMessaging.reply('ada', source, 'Visitor answer');
+  await fx.settle();
+  expect(fx.replies.at(-1)?.route.conversationId).toBe('oc_team');
+  await fx.core.externalMessaging.conversation('ada', {
+    ...open,
+    expectedRevision: 1,
+    open: false,
+  });
+  const runs = fx.runs.length;
+  await fx.receive(fresh(asActor(mention('visitor-closed'), 'ou_visitor')));
+  expect(fx.runs).toHaveLength(runs);
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]?.status).toBe('pending');
+  await fx.core.externalMessaging.conversation('ada', { ...open, expectedRevision: 2 });
+  await fx.restart();
+  await fx.receive(fresh(asActor(mention('visitor-reopened'), 'ou_visitor')));
+  expect(fx.runs.length).toBe(runs + 1);
+  await fx.receive(fresh(asActor(dm('visitor-dm'), 'ou_visitor')));
+  expect(fx.runs.length).toBe(runs + 1);
+  await fx.core.externalMessaging.conversation('ada', {
+    kind: 'block',
+    grantId: grant.id,
+    expectedRevision: grant.revision,
+  });
+  await expect(
+    fx.core.externalMessaging.conversation('ada', { ...open, expectedRevision: 3 }),
+  ).rejects.toThrow();
+  await fx.receive(fresh(asActor(mention('visitor-blocked'), 'ou_visitor')));
+  expect(fx.runs.length).toBe(runs + 1);
+});
+
+it('unpaired collected authors remain context-only and cannot fill a paired digest threshold', async () => {
+  const fx = await fixture();
+  await fx.receive(fresh(mention('passive-bootstrap')));
+  const role = await ordinaryRole(fx);
+  await fx.receive(fresh(dm('paired-person')));
+  const pairing = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  fx.core.externalMessaging.pairing.review('ada', {
+    kind: 'approve',
+    id: pairing.id,
+    expectedRevision: pairing.revision,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  });
+  const grant = await grantFor(fx, 'oc_team');
+  await fx.receive(fresh(mention('verify-ordinary-delivery', false)));
+  await fx.core.externalMessaging.inbound.setPolicy(
+    'ada',
+    grant.id,
+    {
+      inheritance: 'custom',
+      expectedRevision: 0,
+      expectedDefaultRevision: 0,
+      collection: 'all',
+      wake: 'digest',
+      count: 2,
+      intervalSeconds: 86400,
+    },
+    { kind: 'human' },
+  );
+  const runs = fx.runs.length;
+  for (let n = 0; n < 6; n++)
+    await fx.receive(fresh(asActor(mention(`passive-${n}`, false), 'ou_visitor')));
+  expect(fx.runs).toHaveLength(runs);
+  expect(fx.core.externalMessaging.pairing.list('ada')).toHaveLength(1);
+  expect(
+    fx.query(
+      "SELECT wake_mode, wake_count, wake_interval_ms FROM inbox_admissions WHERE source_policy_wake_mode = 'context'",
+    ),
+  ).toHaveLength(6);
+  for (const row of fx.query(
+    "SELECT wake_count, wake_interval_ms FROM inbox_admissions WHERE source_policy_wake_mode = 'context'",
+  ))
+    expect(row).toMatchObject({ wake_count: null, wake_interval_ms: null });
+  await fx.receive(fresh(mention('one-eligible', false)));
+  expect(fx.runs).toHaveLength(runs);
+  await fx.restart();
+  expect(fx.runs).toHaveLength(runs);
+  await fx.receive(fresh(mention('eligible-question')));
+  expect(fx.runs.length).toBe(runs + 1);
+  expect(fx.runs.at(-1)?.inbox).toContain('chatter passive-0');
+  expect(fx.runs.at(-1)?.inbox).toContain('ou_visitor');
+  expect(fx.runs.at(-1)?.inbox).not.toContain(role.behavior);
+  expect(
+    fx.core.externalMessaging.senderPermissions('ada', fx.sourceId('om-passive-0')),
+  ).toMatchObject({ status: 'unpaired' });
+  expect(
+    fx.core.externalMessaging.senderPermissions('ada', fx.sourceId('om-eligible-question')),
+  ).toMatchObject({ status: 'paired', role: { id: role.id } });
+});
+
 it('blocking an entry stops admission and survives restart and rebind; allowing again admits only new messages', async () => {
   const fx = await fixture();
   await fx.receive(mention('ask'));

@@ -104,3 +104,26 @@ No mutation rewrites model history or claims to interrupt an already running arb
 operation. Role text remains prompt behavior, while supported control decisions are Host checked.
 The one-time reviewed pairing-code proposal remains a future extension until its issuance and
 reviewer command contract is specified; public request references remain non-authorizing locators.
+
+## Explicit group visitors and passive observations
+
+The #1376 application-defined exception is an authenticated revision-checked preference on one
+existing allowed group grant, with an activation timestamp. It is never inherited from platform
+defaults, directory discovery, another Bot/App, or an old Binding. Closing/reopening advances the
+current sender policy revision and cannot replay an earlier blocked instruction. Reach, reception,
+durable blocks, mention rules and Wake Policy remain independent requirements. A visitor's
+permission query reports no paired Role or management powers; an effective pairing still wins
+independently and supported native decisions still check the actual actor.
+
+Separate group collection, explicit Bridge collection or a followed thread can retain an unpaired
+author's ordinary text as passive context. The Messaging owner records `source_policy_wake_mode`
+as `context`, the existing bounded admission's `wake_mode` as `silent`, and no count/interval.
+Routed reception uses its existing `context` mode. These observations cannot schedule a Turn or
+fill an eligible digest's threshold, including mixed-author batches or restart recovery. A later
+eligible request may include currently authorized context with each author's trusted identity;
+no background Role, permission union or quoted administrator becomes request authority.
+
+Collection can influence later replies and consume tokens when read. Pairing restricts request
+initiation, not arbitrary resource access or all model influence. Group replies remain public to
+that group, without full membership sync or dynamic disclosure confirmation. The same Operational
+Database and Gateway/Client seams remain the authorities; this slice adds no schema migration.
