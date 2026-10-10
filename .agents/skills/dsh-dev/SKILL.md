@@ -129,6 +129,8 @@ When a DSH-side bug or trap is diagnosed, **record it here (or in the playbook) 
 
 ## Reference
 
+In pinned RC1, `defineTool` nested object properties mark requiredness with per-property `required: true`; an explicit JSON Schema `required` array is rejected by the authoring DSL. Native `bash` output is a structured foreground/background/promoted union, so an interception must preserve the registered result schema instead of returning a string as `value`. #1380 verified both failures through a real PersonaBot; tool-registration/schema and real runtime checks cover the correction.
+
 Pinned DSH 0.2.0 RC1 selects one directory picker interaction at boot. A loopback Windows Host commonly serves native; uiWorkspace.listDirectory() then throws DirectoryBrowseError with rpcError.code = directory-picker/unavailable. A consumer may fall back to uiWorkspace.pickDirectory() only for this capability refusal; unreadable directories and other failures remain errors, and cancellation returns no selection. Authorization still follows an explicit Human choice.
 
 For isolated browser E2E on Windows, pin the browse pair in that task-owned Profile overlay: disable the directory-picker auto entry, then use a Patch insert list to compose @deepseek-ai/dsh-host-directory-picker-browse and @deepseek-ai/dsh-client-ui-directory-picker-browse. A bare new id/name patch does not insert a Plugin, and changing the name on an existing patch does not swap its implementation. Stop and restart that exact Host, retaining loopback bind and one backend. Verify the running folder-selection path. See the [upstream picker contract](https://github.com/deepseek-ai/deepseek-harness/tree/dsh-v0.2.0-rc.1/packages/host/directory-picker).

@@ -52,6 +52,8 @@ import type { MemoryFileTarget } from '../memory/file-actions.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { UsageFilter, UsageQueryResult } from '../usage/query.js';
 import { RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
+import type { PrivateInputs } from '../credentials/private-inputs.js';
+import type { PrivateInputStatus } from '../credentials/contracts.js';
 
 import type { PersonaBotPatch } from '../bots/persona-bot.js';
 import type { ModelCatalogEntry } from '../models/catalog.js';
@@ -173,9 +175,44 @@ async function unwrapAsync<T>(result: Promise<BridgeResult<T>>): Promise<T> {
 export class BotharnessBridgeService extends TypertRemoteService {
   private readonly methods: BridgeMethods;
 
-  constructor(ctx: Context, methods: BridgeMethods) {
+  constructor(
+    ctx: Context,
+    methods: BridgeMethods,
+    private readonly privateInputs?: PrivateInputs,
+  ) {
     super(ctx, BRIDGE_SERVICE_KEY, { namespace: BRIDGE_NAMESPACE });
     this.methods = methods;
+  }
+
+  privateInputStatus(channelId: string, messageId: string): { status: PrivateInputStatus } {
+    this.requirePrivateOwner();
+    return { status: this.privateInputs?.status(channelId, messageId) ?? 'expired' };
+  }
+
+  async privateInputSubmit(
+    channelId: string,
+    messageId: string,
+    values: Record<string, string>,
+  ): Promise<{ accepted: boolean }> {
+    this.requirePrivateOwner();
+    return {
+      accepted: (await this.privateInputs?.submit(true, { channelId, messageId, values })) ?? false,
+    };
+  }
+
+  privateInputCancel(channelId: string, messageId: string): { accepted: boolean } {
+    this.requirePrivateOwner();
+    return { accepted: this.privateInputs?.cancel(true, channelId, messageId) ?? false };
+  }
+
+  private requirePrivateOwner(): void {
+    const operator = (this.ctx.get('connection') as { operator?: unknown } | undefined)?.operator;
+    if (operator === undefined || this.ctx.invocation?.peer !== operator)
+      throw new RemoteError(
+        'forbidden' as RemoteError['code'],
+        'Private input requires the authenticated Owner',
+        {},
+      );
   }
 
   messagingChannelTarget(
@@ -1143,6 +1180,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
 }
 
 markRemoteMethods(BotharnessBridgeService.prototype, [
+  'privateInputStatus',
+  'privateInputSubmit',
+  'privateInputCancel',
   'messagingDefaults',
   'messagingDefaultsSet',
   'channelBridges',
@@ -1312,6 +1352,10 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'schedulePreview',
 ]);
 
-export function registerBridge(ctx: Context, methods: BridgeMethods): BotharnessBridgeService {
-  return new BotharnessBridgeService(ctx, methods);
+export function registerBridge(
+  ctx: Context,
+  methods: BridgeMethods,
+  privateInputs?: PrivateInputs,
+): BotharnessBridgeService {
+  return new BotharnessBridgeService(ctx, methods, privateInputs);
 }

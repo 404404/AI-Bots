@@ -539,6 +539,16 @@ export interface BridgeActions {
   listToolApprovalRules(slug: string): Promise<ToolApprovalRuleView[]>;
   revokeToolApprovalRule(slug: string, id: string): Promise<void>;
   toolApprovalStatus(channelId: string, messageId: string): Promise<'pending' | 'expired'>;
+  privateInputStatus?(
+    channelId: string,
+    messageId: string,
+  ): Promise<import('../../../core/src/credentials/contracts.js').PrivateInputStatus>;
+  privateInputSubmit?(
+    channelId: string,
+    messageId: string,
+    values: Record<string, string>,
+  ): Promise<void>;
+  privateInputCancel?(channelId: string, messageId: string): Promise<void>;
   toolApprovalExecutionState?(
     channelId: string,
     messageId: string,
@@ -1235,6 +1245,24 @@ export function createActions(
     revokeToolApprovalRule: (slug, id) => revokeToolApprovalRule(call, slug, id),
     toolApprovalStatus: (channelId, messageId) =>
       loadToolApprovalStatus(call, channelId, messageId),
+    privateInputStatus: async (channelId, messageId) => {
+      const result = await call('privateInputStatus', { channelId, messageId });
+      if (!result.ok) throw new Error('Private input status is unavailable');
+      const status = (result.value as { status?: unknown }).status;
+      if (!['pending', 'configured', 'cancelled', 'expired'].includes(String(status)))
+        throw new Error('Private input status is invalid');
+      return status as import('../../../core/src/credentials/contracts.js').PrivateInputStatus;
+    },
+    privateInputSubmit: async (channelId, messageId, values) => {
+      const result = await call('privateInputSubmit', { channelId, messageId, values });
+      if (!result.ok || (result.value as { accepted?: unknown }).accepted !== true)
+        throw new Error('Private input was not accepted');
+    },
+    privateInputCancel: async (channelId, messageId) => {
+      const result = await call('privateInputCancel', { channelId, messageId });
+      if (!result.ok || (result.value as { accepted?: unknown }).accepted !== true)
+        throw new Error('Private input cancellation was not accepted');
+    },
     toolApprovalExecutionState: (channelId, messageId) =>
       loadToolApprovalExecutionState(call, channelId, messageId),
     decideToolApproval: (channelId, messageId, outcome) =>
