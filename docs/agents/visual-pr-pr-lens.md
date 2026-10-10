@@ -2,6 +2,8 @@
 
 Use this supplement when the pull request changes ownership across modules, a service boundary, or a data flow that is hard to explain in the visual-pr outline. A local edit, styling change, or short linear call path is sufficiently explained by the visual-pr description.
 
+Assess the need for a [PR HTML explainer](pr-html-explainer.md) separately. HTML owns the detailed behavior, code, trade-offs, and verification explanation; PR Lens owns a focused architecture or data-flow diagram. Keep `visual-pr` as the PR description authority. When both supplements help, reuse the same verified facts and head SHA rather than maintaining conflicting explanations. Neither supplement substitutes for runtime evidence or Human QA.
+
 1. Read the complete diff against the merge base. Identify the changed units and the unchanged units needed to explain the path. Ground every node and edge in a file or verified runtime contract.
 2. If a diagram would make the change easier to review, create a PR Lens graph document in the ignored `.humanlayer/tasks/<task>/` directory. Use the [PR Lens graph contract](https://github.com/coldteadotai/pr-lens/blob/main/skills/pr-lens/references/graph-document.md) and choose only the architecture or data-flow views that answer a reviewer question.
 3. Validate and render locally with the PR Lens CLI. Inspect both themes and compare the result with the diff. Correct missing boundaries, misleading arrows, or unsupported claims before sharing. Keep the generated graph and SVGs as local artifacts until they are accurate.

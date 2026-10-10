@@ -104,7 +104,9 @@ When creating or updating a PR, use the `visual-pr` skill to write the descripti
 For every PR, follow [merge-risk classification](docs/agents/pr-merge-risk.md) and summarize reversibility, blast radius, and review focus in one `Special things to note` bullet.
 For every PR that changes visible UI or user interactions, embed GitHub-rendered before/after screenshots in the PR `Change outline` and verify they render; follow [UI/UX PR visual evidence](docs/agents/pr-ui-visual-evidence.md) for capture and exceptions.
 
-For PRs that change architecture or data flow across modules, read [the optional PR Lens supplement](docs/agents/visual-pr-pr-lens.md) and use a diagram when it clarifies the review. Keep routine PRs on the visual-pr description alone.
+For every PR, assess whether a detailed explanation would help review; follow [PR HTML explainers](docs/agents/pr-html-explainer.md). Use the repository's `answer-me-with-html` skill for nontrivial behavior, lifecycle, permission, persistence, or cross-module changes; simple edits may omit it. Keep `visual-pr` as the PR description authority, bind explainers to the exact head SHA, and do not treat local HTML as reviewer-accessible or as runtime evidence.
+
+For PRs that change architecture or data flow across modules, read [the optional PR Lens supplement](docs/agents/visual-pr-pr-lens.md) and use a diagram when it clarifies the review. HTML explains the details; PR Lens provides focused architecture/data-flow views. Neither replaces required GitHub-rendered UI evidence or the Human-QA gate.
 
 ### Domain docs
 
