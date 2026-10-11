@@ -1,7 +1,7 @@
 import { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import { createScope } from '@deepseek-ai/dsh-scope';
-import { ToolRuntime } from '@deepseek-ai/dsh-tools';
+import { ToolRuntime, type ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { ToolCallId } from '@deepseek-ai/dsh-llm';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,8 +41,27 @@ describe('ordinary native MCP in Linux', () => {
         (root, index) =>
           ({ session: { id: 'mcp-agent-' + index, header: { cwd: root } } }) as Agent,
       );
-      const scopes = agents.map((agent) => createScope(ctx, agent));
+      const ancestorKey = {};
+      const ancestor = createScope(ctx, ancestorKey);
+      const scopes = agents.map((agent) => createScope(ctx, agent, { parent: ancestorKey }));
       agents.forEach((agent, index) => Object.assign(agent, { ctx: scopes[index]!.ctx }));
+      let hostCalls = 0;
+      const sentinel = (name: string): ToolDefinition => ({
+        name,
+        description: 'Host-only sentinel',
+        parameters: { type: 'object', properties: {} },
+        output: { schema: { type: 'boolean' }, render: () => [] },
+        async execute() {
+          hostCalls++;
+          return true;
+        },
+      });
+      const globalName = 'mcp__linux_demo__global_host_reader';
+      const ancestorName = 'mcp__linux_demo__ancestor_host_reader';
+      const ownName = 'mcp__linux_demo__existing_host_reader';
+      ctx.tools.register(sentinel(globalName));
+      ancestor.ctx.get('tools')!.register(sentinel(ancestorName));
+      scopes[0]!.ctx.get('tools')!.register(sentinel(ownName));
       const active = new Set(agents);
       const mcp = new LinuxMcp(execution, home, (agent, workdir) => {
         if (!active.has(agent)) throw new Error('Revoked');
@@ -61,22 +80,41 @@ describe('ordinary native MCP in Linux', () => {
       ];
       const disposers: Array<() => Promise<void>> = [];
       const name = 'mcp__linux_demo__workspace_probe';
+      const lateGlobalName = 'mcp__linux_demo__late_global_host_reader';
+      const lateAncestorName = 'mcp__linux_demo__late_ancestor_host_reader';
+      let injected = false;
+      ctx.on('tools/change', () => {
+        if (injected || ctx.tools.get(name, agents[0]) === undefined) return;
+        injected = true;
+        ctx.tools.register(sentinel(lateGlobalName));
+        ancestor.ctx.get('tools')!.register(sentinel(lateAncestorName));
+      });
       try {
         for (const [index, scope] of scopes.entries())
           disposers.push(await mcp.install(scope.ctx, agents[index]!, servers));
         ctx.tools.guard(({ name: tool, agent }) =>
-          tool === name && agent !== undefined ? mcp.denial(ctx, agent, name) : undefined,
+          tool.startsWith('mcp__linux_demo__') && agent !== undefined
+            ? mcp.denial(ctx, agent, tool)
+            : undefined,
         );
         expect(ctx.tools.get(name)).toBeUndefined();
         expect(ctx.tools.get(name, agents[0])).not.toBe(ctx.tools.get(name, agents[1]));
-        const invoke = (agent: Agent, id: string) =>
+        const invoke = (agent: Agent, id: string, tool = name) =>
           ctx.tools.execute({
             agent,
             callId: ToolCallId(id),
-            name,
+            name: tool,
             arguments: {},
             signal: new AbortController().signal,
           });
+        for (const agent of agents) {
+          for (const tool of [globalName, ancestorName, lateGlobalName, lateAncestorName]) {
+            expect(ctx.tools.get(tool, agent)).toBeDefined();
+            expect((await invoke(agent, 'deny-' + tool, tool)).isError).toBe(true);
+          }
+        }
+        expect((await invoke(agents[0]!, 'deny-existing', ownName)).isError).toBe(true);
+        expect(hostCalls).toBe(0);
         const [a, b] = await Promise.all(
           agents.map((agent, index) => invoke(agent, 'ordinary-mcp-' + index)),
         );
@@ -91,6 +129,7 @@ describe('ordinary native MCP in Linux', () => {
       } finally {
         await Promise.allSettled(disposers.map((dispose) => dispose()));
         await Promise.allSettled(scopes.map((scope) => scope.dispose()));
+        await ancestor.dispose();
         await ctx.fiber.dispose();
         await execution.close();
       }

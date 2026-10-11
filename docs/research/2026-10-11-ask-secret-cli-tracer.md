@@ -35,6 +35,10 @@ The PR attaches [allowlisted native Session events](evidence/1380/native-session
 
 ## Human review
 
+The Human accepted the inline interaction and submitted the retained Secret Acceptance card. Native events 397–412 record the three-field declaration, configured references, existing allowed-once approval, protected CLI HTTP 200 and same-DM delivery. The fixture counted five requests, all authenticated. The subsequent artifact scan covered 1,213 files, 651 Session events, twelve request headers, 63 tool results and the two real Spill files, with no canary violations outside the exact exclusions. The [allowlisted Human acceptance excerpt](evidence/1380/human-acceptance-events.json) preserves these linked facts without the full Session.
+
+Pre-merge security review reproduced an unsafe MCP qualification: merged native Registry visibility admitted inherited Host definitions with the controlled server's name prefix. Qualification now accepts only new Agent-owned identities and excludes global and all ancestor identities, including registrations during startup. The real native Registry/Docker regression denies global, ancestor and pre-existing own Host sentinels without invoking them, while two concurrent Guest tools retain their distinct workspace results and revocation behavior.
+
 Screenshots come from the real base checkout and candidate Host at 1280 × 800, Chinese locale, in both themes. The baseline is the prior DM entry point without a private-input card. The candidate adds a pending inline card and a configured state followed by the actual same-DM result. Existing native question-card composition and native Input/Button primitives were reused; there is no separate settings page or added design-system dependency.
 
 | State                 | Dark                                    | Light                                    |

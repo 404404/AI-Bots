@@ -78,7 +78,7 @@ pnpm exec vitest run packages/core/test/protected-execution.test.ts --maxWorkers
 pnpm exec vitest run packages/core/test/linux-execution.test.ts packages/core/test/linux-mcp.test.ts --maxWorkers=1
 ```
 
-This checks both the stricter unmounted command world and the mounted Linux world: Host-file/base64, environment, Docker socket, Git metadata protection and authorized file persistence. It also exercises the actual native MCP SDK and fixed-CLI output against an echoing service. The ordinary suite skips Docker qualification when the opt-in environment variable is absent.
+This checks both the stricter unmounted command world and the mounted Linux world: Host-file/base64, environment, Docker socket, Git metadata protection and authorized file persistence. It also exercises the actual native MCP SDK and fixed-CLI output against an echoing service. MCP qualification excludes pre-existing Agent-owned tools and inherited global/ancestor Host tools, including registrations arriving during server startup with the same namespace prefix. Concurrent Guest tools continue to work. The ordinary suite skips Docker qualification when the opt-in environment variable is absent.
 
 Qualification also inspects actual model request bodies, persisted request headers/messages/results/errors, ordinary Channel history, developer logs and Spill using synthetic raw, URL-encoded and base64 patterns. Native credential records and task-owned synthetic instrumentation are allowed destinations; publishing their contents is unnecessary. A model refusing an extraction prompt is not boundary evidence. Node's one-shot zstd decompressor reads one concatenated frame at a time: advance by `engine.bytesWritten` to scan the entire native Session artifact, not only its header.
 

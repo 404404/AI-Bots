@@ -2,7 +2,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import * as mcpClient from '@deepseek-ai/dsh-mcp-client';
-import { scopeOf } from '@deepseek-ai/dsh-scope';
+import { scopeChainOf, scopeOf, scopeParentOf } from '@deepseek-ai/dsh-scope';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { linuxWorkspaceArgs } from './linux-execution.js';
@@ -65,11 +65,12 @@ export class LinuxMcp {
     try {
       const tools = ctx.get('tools');
       if (tools === undefined) throw new Error('Native Tool Registry is unavailable');
-      if (servers.length > 0 && scopeOf(ctx) === undefined)
+      if (servers.length > 0 && scopeOf(ctx) !== agent)
         throw new Error('Native Agent Scope is required for Linux MCP');
       if (servers.length > 0 && !(await this.execution.qualified()))
         throw new Error('Linux MCP execution is unavailable');
       for (const server of servers) {
+        const before = new Set(tools.schemas(agent).map((schema) => tools.get(schema.name, agent)));
         const workdir = server.workdir ?? agent.session.header.cwd;
         if (workdir === undefined) throw new Error('MCP workspace is unavailable');
         const root = this.rootFor(agent, workdir);
@@ -96,7 +97,15 @@ export class LinuxMcp {
         for (const schema of tools.schemas(agent)) {
           if (!schema.name.startsWith(`mcp__${server.serverName}__`)) continue;
           const definition = tools.get(schema.name, agent);
-          if (definition !== undefined) qualified.set(schema.name, { definition, workdir, root });
+          if (definition === undefined || before.has(definition)) continue;
+          if (tools.get(schema.name) === definition) continue;
+          if (
+            scopeChainOf(scopeParentOf(agent)).some(
+              (ancestor) => tools.get(schema.name, ancestor) === definition,
+            )
+          )
+            continue;
+          qualified.set(schema.name, { definition, workdir, root });
         }
         this.execution.log('mcp-started', {
           program: server.serverName,
