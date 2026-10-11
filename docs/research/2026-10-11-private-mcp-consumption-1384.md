@@ -96,6 +96,15 @@ timeouts; it did not pass. A separate `model-usage-query` run reproduced 13 temp
 specific baseline limitation, not that every failure in the interrupted suite is pre-existing.
 The PR tracks exact-head Linux CI independently; local focused checks are not a full-suite claim.
 
+The first Linux CI run (`38141209431`) passed 4,063 tests with 13 skips and failed two tests.
+The existing dynamic-schema fixture passed a bare Context instead of a native Agent Scope,
+which the new Consumer correctly refused. It now creates a native Scope with the inherited Tool
+Registry. The CLI receipt-timeout test raced its authenticated handshake against a 100 ms wall
+deadline under full-suite load; a standalone local run passed. It now advances the test clock
+only after the real status-poll response, preserving real HTTP/authentication and checking that
+the mutating send and status poll each happen once. No production guard or CLI behavior changed.
+The corrected four-file focused run passed all 44 tests; the PR tracks the subsequent full CI.
+
 Use the [runnable MCP guide](../dev/guides/private-input-mcp.md) for a new Bot/private card and the
 controlled service. The [ADR](../adr/0170-private-mcp-consumption-uses-fixed-server-and-bounded-projection.md)
 states the trusted server/process boundary, output admission and rollback limits. Human review of

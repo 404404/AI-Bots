@@ -1,9 +1,10 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { runBotCreateCli } from '../src/bots/bot-create-cli.js';
 
 const servers: ReturnType<typeof createServer>[] = [];
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(
     servers.splice(0).map(
       (server) =>
@@ -135,15 +136,20 @@ describe('live CLI over the authenticated DSH carrier', () => {
   });
 
   it('retains the receipt on timeout and never retries the mutating RPC', async () => {
-    const live = await host((method) => ({
-      ok: true,
-      value:
-        method === 'get'
-          ? { bot: { displayName: 'Ada' } }
-          : method === 'channelSend'
-            ? {}
-            : { state: 'running', replies: [] },
-    }));
+    const started = Date.now();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(started);
+    const live = await host((method) => {
+      if (method === 'channelSendStatus') clock.mockReturnValue(started + 60_001);
+      return {
+        ok: true,
+        value:
+          method === 'get'
+            ? { bot: { displayName: 'Ada' } }
+            : method === 'channelSend'
+              ? {}
+              : { state: 'running', replies: [] },
+      };
+    });
     const result = await invoke(
       [
         'send',
@@ -153,7 +159,7 @@ describe('live CLI over the authenticated DSH carrier', () => {
         '--message-id',
         'human-22222222-2222-4222-8222-222222222222',
         '--timeout',
-        '0.1',
+        '60',
       ],
       live.url,
     );
@@ -161,6 +167,7 @@ describe('live CLI over the authenticated DSH carrier', () => {
     expect(result.json.error.code).toBe('reply-timeout');
     expect(result.json.receipt.messageId).toBe('human-22222222-2222-4222-8222-222222222222');
     expect(live.calls.filter((call) => call.method === 'channelSend')).toHaveLength(1);
+    expect(live.calls.filter((call) => call.method === 'channelSendStatus')).toHaveLength(1);
   });
 
   it('passes Host decision and question contracts through and preserves coded refusals', async () => {
