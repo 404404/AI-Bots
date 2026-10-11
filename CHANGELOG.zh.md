@@ -25,6 +25,8 @@
 
 - IM 配对设置采用宽版人员／角色／申请工作区，提供可搜索、排序的表格、紧凑的创建／修改时间及所选条目详情。角色创建打开独立弹窗，表格与详情圆角对齐原生输入框，补充说明通过信息图标查看；未记录时间的旧数据显示为空（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。
 
+- PersonaBot 可通过有界只读目录查询当前配对人员与角色、已配置的外部会话，以及在某个授权会话中观察过的配对人员；观察结果明确不完整，不代表当前群成员名单（[#1374](https://github.com/BotHarness/DeepSeekBot/issues/1374)）。
+
 - Bot DM 设置支持 Lark 普通角色与可选的聊天配对审核：未配对的私聊和群 @ 等待审核而不唤醒模型，批准后通知重新提问，撤销关闭后续资格。模型接收可信发送者引用并按需查询当前权限，既有管理配对保持独立；独立测试 App 可配置一次并跨 worktree 复用（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)、[共享测试 App 指南](docs/agents/im-test-apps.md)、[ADR-0165](docs/adr/0165-lark-chat-pairing-is-reviewed-current-binding-authority.md)）。
 
 - 隔离 Profile 的 opt-in 允许 PersonaBot 在 Web Chat 请求私密字段或接收 Owner 的 CLI 回复，经原生 Credentials Service 保存，并沿用现有审批由固定 CLI 消费引用。普通原生 bash 与已配置的 MCP stdio 调用在 Linux 内访问获授权工作区；[验证指南](docs/dev/guides/private-input-cli.md)说明已支持的边界与审阅限制（[#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)）。
