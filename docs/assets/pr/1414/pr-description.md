@@ -51,6 +51,13 @@ Permission settings use native dialogs, contextual info controls and the existin
 
 **Group preparation flow:** Bot DM → Channel sidebar → External identities → IM roles and pairing → Groups → Create group. These captures show the new editor only; Save is disabled until a real App is bound. They do not claim group-save or Lark E2E evidence.
 
+**Actual native setup flow:** sidebar entry → create ordinary `QA Member` → saved table with both roles and persisted reviewer use/delegation details → search `Pairing` and select descending Time sort. `QA Member` is created without management or delegation grants; the separately edited reviewer retains its independently saved choices.
+
+| Entry and Role creation | Persisted details and table controls |
+| --- | --- |
+| ![01: Channel sidebar entry opens the pairing workspace](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/flow01-sidebar-entry.png?raw=true) | ![03: saved roles and current reviewer use and delegation details](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/flow03-saved-role-details.png?raw=true) |
+| ![02: create an ordinary QA Member with no management capabilities](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/flow02-create-role.png?raw=true) | ![04: search filter and descending Time sort state](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/flow04-search-sort.png?raw=true) |
+
 | Existing group editor | Four independent permission choices |
 | --- | --- |
 | ![Before group editor](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/before-group-dark.png?raw=true) | ![After group editor](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/after-group-dark-fixed.png?raw=true) |
