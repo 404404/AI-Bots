@@ -336,4 +336,6 @@ systemctl start botharness-seo-tutorial.service
 
 本次实机验证了严格 SSH、tailnet-only HTTPS、原生 Owner 登录、独立 Unit、真实模型回复及两次真实 QQ 原群回复。[素材来源清单](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/README.md) 记录版本、UTC 时间、digest 与每张公开图能证明的范围。
 
+仓库原用户指南路由已重定向到 DeepSeekBot 产品站。发布本教程时仍需核对该站的中英文目标页面；此 PR 准备的是源文档与重定向，并未部署线上教程页面。
+
 真实的 [安装及源码更新 terminal 输出/timing](https://github.com/BotHarness/DeepSeekBot/tree/codex/1438-vps-qq-tutorial/docs/assets/vps-source/terminal) 已审阅，原样公开并记录 digest；浏览器录屏仍保留在私有目录。公开成片、字幕及逐帧隐私核对仍待完成。登录链接、Owner token、模型 Key、QQ Secret、二维码、账号列表出现前暂停录制。只发布已审阅并去除无关会话和机器标识的素材；视频发布时附可读命令 transcript、章节时间和等价字幕。完整教程媒体交付继续由 [issue #1438](https://github.com/BotHarness/DeepSeekBot/issues/1438) 跟踪。
