@@ -4,7 +4,7 @@ subtitle: Lark 配对审核首片 · PR 1418
 lang: zh
 template: doc
 PR: 1418
-base: 28aa5792ce1973349861026621732615026d61fe
+base: 28aa579244419953ffa4c484f33d404b0a867362
 head: 4cfd90f0df05d67020bb506ec0db2cc9bafe272c
 date: 2026-10-11
 ---
