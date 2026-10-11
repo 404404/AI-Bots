@@ -128,7 +128,7 @@ describe('protected native MCP consumer', () => {
       const args = { account: 'mcp-demo', ...configured.references };
       const original = JSON.stringify(args);
       let calls = 0;
-      const invoke = (current = agent, argumentsValue = args) =>
+      const invoke = (current = agent, argumentsValue: Record<string, unknown> = args) =>
         ctx.tools.execute({
           agent: current,
           callId: ToolCallId('private-mcp-' + ++calls),
@@ -144,6 +144,10 @@ describe('protected native MCP consumer', () => {
       expect(JSON.stringify(args)).toBe(original);
       expect((await invoke(bea)).isError).toBe(true);
       expect((await invoke(agent, { ...args, account: 'other' })).isError).toBe(true);
+      expect((await invoke(agent, { ...args, command: 'print-private-values' })).isError).toBe(
+        true,
+      );
+      expect((await invoke(agent, { ...args, server: 'unqualified' })).isError).toBe(true);
       expect(requests).toBe(1);
       const started = new Promise<void>((resolve) => {
         entered = resolve;

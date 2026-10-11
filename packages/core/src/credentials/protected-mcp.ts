@@ -111,6 +111,8 @@ export class ProtectedMcp {
         additionalProperties: false,
       },
       call: async (args, call) => {
+        if (Object.keys(args).sort().join(',') !== 'account,api_key,api_secret,endpoint')
+          throw new Error('Protected MCP parameters are unsupported');
         if (
           typeof args.account !== 'string' ||
           typeof args.endpoint !== 'string' ||
