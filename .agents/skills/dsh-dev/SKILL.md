@@ -150,6 +150,15 @@ Pre-execution refusal can leave an application-owned Session ID without a DSH Se
 - `references/probe-web.mjs` — headless browser probe (console errors, failed requests, WS, internal fetch); run from the repo.
 - `dsh-ui` skill — in-harness UI rules; `docs/client-bridge.md` §7 — dev loop; ADR-0023 / #50 — bridge transport contract.
 
+## Additional verified pitfall — #1425
+
+An exact DSH peer in any composed Plugin can reject installation before its code is imported.
+The build pin is not the supported Host floor. Product declarations use `>=0.1.7-0` with native
+prerelease semantics and no future-version ceiling; preflight acceptance is not runtime qualification.
+Check Core and the product-managed Provider together. Preserve each release train's immutable
+Provider source and runtime digest, and qualify its own packages rather than borrowing a maintenance
+release's E2E result. Do not use compatibility exemptions as release evidence (#1425).
+
 ## Additional verified pitfall — #1138
 
 For a fresh pinned RC1 local Profile, let native initialization create the Profile directory before applying a task Patch. Precreating the directory makes the native default-profile initializer refuse its destination; initialization also creates an empty `cordis.patch.yml`, so merge intended entries instead of moving another file over it. Preserve native entries, then restart the helper's exact verified Host PID. This was reproduced in #1381.
@@ -172,3 +181,5 @@ A native credential write may commit before its response fails. Application-defi
 Qualify a passive model-request probe against the actual selected adapter. In #1383, a DeepSeek-only URL filter would miss the native Go route; the probe now recognizes the observed `/messages`, `/chat/completions` and `/responses` paths and records whether the body was available. Clone a Request only when no body override exists; non-string overrides are incomplete evidence, not a clean scan of the original body. Windows `NODE_OPTIONS=--import` requires a `file:///` URL, and a synthetic canary file belongs outside DSH_HOME so storage scans do not mistake test instrumentation for leakage. The probe preserves fetch payloads and authentication headers and never records either; unsupported routes or encodings remain unqualified. Verified against pinned RC1 Go requests and isolated body-override regressions.
 
 In pinned RC1, an exported native `createMcpToolDefinition` input schema with `additionalProperties: false` did not itself reject extra arguments at the adapter entry. Enforce the admitted parameter set in a trusted Consumer before resolving confidential values or invoking a private transport. Verify a real native Tool call with an extra parameter, not only schema inspection. The SDK stdio Client also merges selected default environment names when `env` is supplied; explicitly override inherited names when a fixed child must exclude ambient credentials. Both behaviors were verified in #1384 with the installed native adapter and SDK.
+
+Cross-platform Profile migration needs a separate path-metadata audit. In #1386, the qualified dsh-im Provider returned `feishu-startup-config-invalid` and no accounts because its copied `integrations/dsh-feishu/workspaces.json` contained an absolute Windows workspace that is invalid on Linux. The native management `connection.status` surfaced the startup error; translating only the audited source-home workspace field and restarting the exact task-owned Host restored the same account and sole receiver. Native Session header cwd/project keys and application ownership metadata also need bounded translation; preserve immutable Session Event frames and the native credential store. A Linux bind-mounted workspace additionally needs the guest UID's POSIX access: Docker Desktop success does not qualify Host umask, directory traversal or file-write behavior. See the [Linux qualification guide](../../../docs/dev/guides/private-input-linux.md).
