@@ -29,7 +29,7 @@
 
 ### Added
 
-- 普通聊天配对扩展到 Slack 私聊，复用人员／角色／申请设置、当前发送者权限查询及原会话 checked 回复；批准要求重新提问，撤销阻止后续接收。真实 Slack 验收仍待完成；Slack 群聊和原生管理控件由独立功能推进（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)，[指南](docs/slack-connection.md)）。
+- 普通聊天配对扩展到 Slack 私聊，复用人员／角色／申请设置、当前发送者权限查询及原会话 checked 回复；批准要求重新提问，撤销阻止后续接收。三步本机向导和私密加载器提供独立 Slack QA1／QA2／QA3，跨 worktree 复用且保留 Lark 配置，配置过程不启动接收器。真实 Slack 验收仍待完成；Slack 群聊和原生管理控件由独立功能推进（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)，[指南](docs/slack-connection.md)）。
 
 - Lark 授权组可勾选可复用的具名行为权限；宽版组编辑弹窗用标签区分管理能力、行为权限和成员，用紧凑的 sidebar 折叠交互预览受影响人员；Allow／Deny 单元格只显示 checkbox，保留无障碍名称，弹窗内容可滚动且标题与操作按钮保持可见。人员显示去重后的当前权限项、每个组来源及拒绝优先的 Allow／Deny 冲突，同时保留主 Role 和独立管理能力（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。Profile schema Generation 81 升级前须备份；回退需要该备份或兼容写入版本。
 

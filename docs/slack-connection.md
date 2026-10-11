@@ -22,6 +22,8 @@ The switch is Bot-wide and remains off by default. If it was already enabled for
 
 Real Slack acceptance for this candidate remains pending. Existing Provider messaging/reaction screenshots below qualify their own earlier scope, not this new pairing flow. Use an independent App and an explicitly coordinated exclusive receiver window. Before reverting to older code, disable the Slack Binding if it relies on the new restriction. See [ADR-0174](adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md).
 
+For reusable independent test Apps, run `node scripts/dev-im-test-apps.mjs setup slack` in an interactive terminal. The three-stage wizard saves separate Slack QA1/QA2/QA3 slots in the same private machine-local registry used by Lark; it preserves existing Lark configuration and never starts a receiver. `list slack` shows only metadata. See the [shared QA setup guide](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/agents/im-test-apps.md#reusable-slack-qa-apps).
+
 You need a Slack workspace that allows application installation, permission to create an app (or an administrator's help), and a public test channel. Create a PersonaBot in BotHarness and confirm that it can answer a local DM before testing Slack.
 
 Use a BotHarness product with its qualified IM Provider included. Do not separately install an arbitrary dsh-im version or start a second receiver for the same app.
