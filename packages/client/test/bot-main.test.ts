@@ -247,6 +247,8 @@ describe('Bot main Sessions pane', () => {
       root.render(
         createElement(BotMain, {
           actions: {
+            profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+            listWorkspaceGrants: async () => [],
             modelPlanState: async () => undefined,
             botSourcePolicies: async () => [],
           } as unknown as BridgeActions,
@@ -758,6 +760,9 @@ describe('Bot main question developer details', () => {
       },
     };
     const actions = {
+      profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+      modelPlanState: async () => ({}),
+      listWorkspaceGrants: async () => [],
       userQuestionStatus: vi.fn().mockResolvedValue('pending'),
       markRead: vi.fn().mockResolvedValue(undefined),
     } as unknown as BridgeActions;

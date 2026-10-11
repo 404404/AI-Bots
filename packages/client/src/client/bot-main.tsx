@@ -2,6 +2,7 @@ import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
 import { GroupChannelHeader } from './group-channel-header.js';
 import { CompanionPin } from './window-companions-view.js';
+import { useDmComposerContext } from './dm-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
@@ -687,6 +688,7 @@ function ConversationView({
     state.selection?.kind === 'bot' && state.selection.profile === true,
   );
   const [profileActivity, setProfileActivity] = useState<ProfileActivity | undefined>(undefined);
+  const [profileUsageLoading, setProfileUsageLoading] = useState(true);
   const [groupProfileActivity, setGroupProfileActivity] = useState<GroupProfileActivity>();
   const [pinnedProfileCards, setPinnedProfileCards] = useState<readonly string[]>(() =>
     loadPinnedProfileCards(),
@@ -885,8 +887,30 @@ function ConversationView({
   }, [channelId]);
 
   const profileMount = useMountedResource<HTMLDivElement>(() => {
-    if (!profilePopoverOpen && !profileViewOpen) return;
+    if (channel?.type !== 'dm' && !profilePopoverOpen && !profileViewOpen) return;
     let cancelled = false;
+    let fetching = false;
+    setProfileActivity(undefined);
+    const refreshUsage = (): void => {
+      if (fetching || channelId === undefined || channel?.type !== 'dm') return;
+      fetching = true;
+      setProfileUsageLoading(true);
+      void actions
+        .profileActivity(channelId)
+        .then(
+          (activity) => {
+            if (!cancelled)
+              setProfileActivity(activity?.slug === channel.botSlug ? activity : undefined);
+          },
+          () => {
+            if (!cancelled) setProfileActivity(undefined);
+          },
+        )
+        .finally(() => {
+          fetching = false;
+          if (!cancelled) setProfileUsageLoading(false);
+        });
+    };
     if (channelId !== undefined) {
       if (channel?.type === 'group')
         void actions.groupProfileActivity(channelId).then(
@@ -897,17 +921,12 @@ function ConversationView({
             console.warn('botharness: Group Profile activity failed', error);
           },
         );
-      else
-        void actions.profileActivity(channelId).then(
-          (activity) => {
-            if (!cancelled) setProfileActivity(activity);
-          },
-          (error: unknown) => {
-            console.warn('botharness: Profile activity failed', error);
-          },
-        );
+      else refreshUsage();
     }
+    const usageTimer =
+      channel?.type === 'dm' ? window.setInterval(refreshUsage, 30_000) : undefined;
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (!profilePopoverOpen && !profileViewOpen) return;
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]') !== null) return;
       event.preventDefault();
@@ -923,10 +942,32 @@ function ConversationView({
     if (profilePopoverOpen) document.addEventListener('pointerdown', onPointerDown);
     return () => {
       cancelled = true;
+      window.clearInterval(usageTimer);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [actions, channel?.type, channelId, profilePopoverOpen, profileViewOpen]);
+  }, [
+    actions,
+    channel?.type,
+    channelId,
+    profilePopoverOpen,
+    profileViewOpen,
+    messages.findLast((message) => !message.pending && !message.failed && !message.streaming)?.id,
+  ]);
+
+  const composerContext = useDmComposerContext({
+    bot: channel?.type === 'dm' && !readOnlyDm ? profileBot : undefined,
+    channelId,
+    actions,
+    companion,
+    activity: profileActivity,
+    loading: profileUsageLoading,
+    t,
+    onUsage: () => {
+      setProfilePopoverOpen(false);
+      setProfileViewOpen(true);
+    },
+  });
 
   const togglePinnedCard = (id: string): void => {
     setPinnedProfileCards((current) => {
@@ -1703,6 +1744,7 @@ function ConversationView({
                 >
                   <ChannelComposer
                     key={channelId}
+                    context={composerContext}
                     value={draft}
                     mentions={mentionTokens}
                     channelRefs={channelRefTokens}

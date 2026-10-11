@@ -882,6 +882,7 @@ describe('Memory Git graph sidebar', () => {
     };
     const actions = new Proxy(
       {
+        listWorkspaceGrants: vi.fn(async () => []),
         memorySnapshot: vi
           .fn()
           .mockResolvedValue({ head: SHA, files: ['note.md'], provisional: false }),
