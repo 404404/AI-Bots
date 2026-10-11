@@ -1,0 +1,26 @@
+title: ''
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Start with the problem, not just an implementation. Upvotes do not promise a roadmap commitment. Do not post sensitive information.
+        先讲问题，不只讲实现；高赞不代表已接受或排期。请勿公开敏感信息。
+  - type: textarea
+    id: problem
+    attributes:
+      label: Scenario and pain point / 场景与痛点
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Current workaround / 目前的替代方案
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would a useful improvement look like? / 怎样算解决了问题？
+  - type: textarea
+    id: participation
+    attributes:
+      label: Interested in helping? / 愿意参与哪部分？
+      description: Optional; ideas do not require a commitment to implement / 可选，不要求提议者负责实现。
