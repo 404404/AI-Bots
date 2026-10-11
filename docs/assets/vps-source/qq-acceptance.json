@@ -10,6 +10,8 @@
   "outboxState": "provider-accepted",
   "providerReceiptPresent": true,
   "humanConfirmedOriginalGroupReplyBeforeAndAfterRestart": true,
-  "publicOriginalGroupVisualEvidenceAvailable": false,
-  "observedAt": "2026-10-11T18:19:56.105618+00:00"
+  "publicOriginalGroupVisualEvidenceAvailable": true,
+  "observedAt": "2026-10-11T18:19:56.105618+00:00",
+  "publicOriginalGroupVisualEvidence": "04-qq-group-before-after.png",
+  "visualEvidenceReceivedAt": "2026-10-12 JST"
 }

@@ -2,7 +2,7 @@
 
 This walkthrough follows a real Ubuntu 26.04 deployment: verify SSH, join an existing tailnet, install a complete source-built product, keep its Host running under systemd, create a PersonaBot, and connect an independent official QQ Bot App. It includes a fresh group reply after Host restart. You can follow the text without watching a video.
 
-**Candidate walkthrough, reviewed in [PR #1443](https://github.com/BotHarness/DeepSeekBot/pull/1443).** The deployed product is `1.2.1-vps.20261012.sha031a14db`, built from merged source `031a14db43af5b3bf52e76b01c30e27828e6e9c9`. At qualification time, npm `deepseekbot@1.2.0` supplied `botharness-profile` but not the business `deepseekbot` CLI used below. Do not substitute the stable npm package for this candidate. Public QQ group images and edited recordings remain pending; the two real group replies were confirmed by the Human and correlated with canonical records.
+**Candidate walkthrough, reviewed in [PR #1443](https://github.com/BotHarness/DeepSeekBot/pull/1443).** The deployed product is `1.2.1-vps.20261012.sha031a14db`, built from merged source `031a14db43af5b3bf52e76b01c30e27828e6e9c9`. At qualification time, npm `deepseekbot@1.2.0` supplied `botharness-profile` but not the business `deepseekbot` CLI used below. Do not substitute the stable npm package for this candidate. The original-group A/B image and native binding clip are public; the complete tutorial film remains pending. The two group replies were confirmed by the Human and correlated with canonical records.
 
 ## Before starting
 
@@ -273,11 +273,13 @@ printf 'Please reply only TUTORIAL_DM_A_OK' | live send <new-bot-id> --body-stdi
 
 Use the actual returned IDs. Verify a correlated committed reply to this fresh request, then open the **same Bot's DM** in Web and inspect the matching message. A provider configuration or accepted send alone does not prove model usability.
 
-![Real model reply after updating the source candidate](https://raw.githubusercontent.com/BotHarness/DeepSeekBot/ac30b3a4fc41a2882b3ea417bddd486fc4c22465/docs/assets/vps-source/01-real-dm-031a14db.png)
+![Real model reply after updating the source candidate](/guides/vps-source/01-real-dm-031a14db.png)
 
 _Actual 1280 × 800 capture, 2026-10-11 17:55 UTC. The bottom reply matches the source-version marker; the larger welcome card is preset product text._
 
 ## 8. Connect an independent QQ App and bind this Bot
+
+For Tencent registration, official App creation, group setup and mobile permissions, follow the illustrated [QQ connection guide](https://deepseekbot.app/en/docs/qq-connection/). This deployment reuses an existing independent QA App.
 
 Reserve a dedicated official App and test group. Confirm that **no other Host on any machine** is receiving this App. Do not use personal-account automation or add a second receiver for a production App.
 
@@ -287,7 +289,7 @@ When the selected App already has native authorization in a stopped Profile, use
 
 After either authorization path, open the tutorial Bot's **External identities**, choose that authenticated QQ App and bind it. Native Provider authorization and application-defined Bot Binding are separate operations.
 
-![Native confirmation that the existing QQ App is bound to the tutorial Bot](https://raw.githubusercontent.com/BotHarness/DeepSeekBot/ac30b3a4fc41a2882b3ea417bddd486fc4c22465/docs/assets/vps-source/02-qq-app-bound.png)
+![Native confirmation that the existing QQ App is bound to the tutorial Bot](/guides/vps-source/02-qq-app-bound.png)
 
 _Actual 1280 × 800 native Web capture, 2026-10-11 18:10:31 UTC. No Secret or QR code is shown. This verifies binding readiness; it is not an original-group reply image._
 
@@ -305,7 +307,11 @@ live im-apps
 
 Verify the Bot, model settings, authorization and Binding persist. Send a **new** group @mention, such as “请只回复 SEO_QQ_QA1_20261012_B_OK”. The Human confirmed that exact reply too. Its source and outbox records were distinct, created after restart and associated with the same native QQ conversation. Old process evidence cannot stand in for this new send.
 
-The public [bounded acceptance summary](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/qq-acceptance.json) omits group IDs, Source locators, credentials and machine addresses. Original-group screenshots/video have not yet been supplied for public review. Do not use binding screenshots, synthetic chat images or Provider receipts as a substitute.
+The public [bounded acceptance summary](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/qq-acceptance.json) omits group IDs, Source locators, credentials and machine addresses. The Human supplied an original-group image containing both requests and replies. The public derivative only crops the view and covers personal identity; no message text is changed. No original-group video is claimed.
+
+![Matching original QQ group replies before and after Host restart](/guides/vps-source/04-qq-group-before-after.png)
+
+_Original-group evidence received on 2026-10-12 JST; exact processing and digests are in the asset inventory._
 
 ## Troubleshooting and maintenance
 
@@ -333,6 +339,10 @@ systemctl start botharness-seo-tutorial.service
 ```
 
 After restoration, refresh native Owner login if needed and repeat a new real DM and group mention. To remove the task's HTTPS route, inspect the installed Serve help and current routing before turning off **only** its HTTPS 443 handler; do not reset other routes. Preserve the task home and native credentials. Back up the stopped Profile privately before an update; database rollback requires a compatible writer or its pre-upgrade backup.
+
+## Supplemental actual recordings
+
+The [blank native QQ Manual setup recording and bilingual transcript](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/video/manual-setup-transcript.md) supplement the binding clip. The [fresh final-source isolated Profile transcript](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.typescript) and [original timing](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.timing), captured at 19:58 UTC on 2026-10-11, show actual OS, resources, tool versions, unit status and six-component verification. This later installation on the provisioned VPS did not start a second Host or QQ receiver.
 
 ## Evidence and publication checklist
 

@@ -164,7 +164,7 @@
 
 ### Documentation
 
-- 补充经 2 核 4GB 实机验证的源码部署教程，覆盖严格 SSH、CLI 安装、tailnet HTTPS、Host 重启前后的真实 QQ 群回复，以及附双语字幕的原生绑定实录；完整教程成片仍待完成（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[教程](docs/vps-qq-tutorial.md)，[Profile 安装](docs/agents/source-profile-install.md)）。
+- 补充经 2 核 4GB 实机验证的源码部署教程，覆盖严格 SSH、CLI 安装、tailnet HTTPS、Host 重启前后的真实 QQ 群回复，遮盖个人身份的原群 A/B 截图，以及附双语字幕的原生绑定实录；完整教程成片仍待完成（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[教程](docs/vps-qq-tutorial.md)，[Profile 安装](docs/agents/source-profile-install.md)）。
 
 - DeepSeekBot 的 GitHub Release 公告顶部提供按版本区分的官网与中英文安装入口；短链保留 GitHub 来源、Release 版本与入口归因，不改变统计授权行为（[#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)）。
 

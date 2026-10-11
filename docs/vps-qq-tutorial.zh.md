@@ -2,7 +2,7 @@
 
 本教程对应真实 Ubuntu 26.04 部署：核对 SSH、加入既有 tailnet、安装完整源码产品产物、用 systemd 持久运行 Host、创建 PersonaBot，并接入独立官方 QQ App，最后验证重启后的新群回复。不看视频也能按文字操作。
 
-**候选构建教程，审阅于 [PR #1443](https://github.com/BotHarness/DeepSeekBot/pull/1443)。** 部署产品为 `1.2.1-vps.20261012.sha031a14db`，源码固定在已合并的 `031a14db43af5b3bf52e76b01c30e27828e6e9c9`。验收时 npm `deepseekbot@1.2.0` 仅提供 `botharness-profile`，没有本教程所用的新业务 CLI，不能直接替换该候选构建。QQ 原群图片及剪辑视频仍待完成；两次真实群回复已由 Human 确认并关联原生事实。
+**候选构建教程，审阅于 [PR #1443](https://github.com/BotHarness/DeepSeekBot/pull/1443)。** 部署产品为 `1.2.1-vps.20261012.sha031a14db`，源码固定在已合并的 `031a14db43af5b3bf52e76b01c30e27828e6e9c9`。验收时 npm `deepseekbot@1.2.0` 仅提供 `botharness-profile`，没有本教程所用的新业务 CLI，不能直接替换该候选构建。QQ 原群 A/B 图和原生绑定实录已公开；完整教程成片仍待完成。两次真实群回复已由 Human 确认并关联原生事实。
 
 ## 开始之前
 
@@ -271,11 +271,13 @@ printf 'Please reply only TUTORIAL_DM_A_OK' | live send <new-bot-id> --body-stdi
 
 使用命令返回的实际 ID。核对该新请求的已提交关联回复，再打开 Web 中**同一个 Bot 的 DM**查看匹配消息。Provider 配置或 send accepted 不证明模型可用。
 
-![源码更新后教程 Bot 的真实模型回复](https://raw.githubusercontent.com/BotHarness/DeepSeekBot/ac30b3a4fc41a2882b3ea417bddd486fc4c22465/docs/assets/vps-source/01-real-dm-031a14db.png)
+![源码更新后教程 Bot 的真实模型回复](/guides/vps-source/01-real-dm-031a14db.png)
 
 _2026-10-11 17:55 UTC 的实际 1280 × 800 截图。底部回复匹配源码 marker；上方较大的欢迎卡为预设产品文字。_
 
 ## 8. 连接独立 QQ App 并绑定该 Bot
+
+申请腾讯账号、创建官方 App、配置 QQ 群场景与手机权限的完整图文步骤见 [QQ 接入教程](https://deepseekbot.app/docs/qq-connection/)。本节使用已经存在的独立 QA App。
 
 分配独立官方应用与专用测试群，并确认**所有机器上没有其他 Host 接收该 App**。不使用个人账号自动化，也不为生产 App 增加第二个接收器。
 
@@ -285,7 +287,7 @@ _2026-10-11 17:55 UTC 的实际 1280 × 800 截图。底部回复匹配源码 ma
 
 无论使用哪条授权路径，都要在教程 Bot 的 **External identities** 选择已认证 QQ App 并绑定。原生 Provider 授权与 application-defined Bot Binding 是两个步骤。
 
-![已认证 QQ App 成功绑定到教程 Bot 的原生确认](https://raw.githubusercontent.com/BotHarness/DeepSeekBot/ac30b3a4fc41a2882b3ea417bddd486fc4c22465/docs/assets/vps-source/02-qq-app-bound.png)
+![已认证 QQ App 成功绑定到教程 Bot 的原生确认](/guides/vps-source/02-qq-app-bound.png)
 
 _2026-10-11 18:10:31 UTC 的实际 1280 × 800 截图，无 Secret 或二维码。它只验证绑定就绪，不是 QQ 原群回复截图。_
 
@@ -303,7 +305,11 @@ live im-apps
 
 验证 Bot、模型设置、授权和 Binding 保留。再发一条**新** @mention，例如“请只回复 SEO_QQ_QA1_20261012_B_OK”。Human 同样确认原群匹配回复；这次 Source 和 Outbox 与首次不同、创建于重启之后，且属于同一原生 QQ 会话。旧进程证据不能替代这次新发送。
 
-公开的 [有限验收摘要](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/qq-acceptance.json) 不含群号、Source 定位值、凭据或机器地址。QQ 原群截图/视频尚未提供公开审阅；不要用绑定图、合成聊天图或 Provider receipt 代替。
+公开的 [有限验收摘要](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/qq-acceptance.json) 不含群号、Source 定位值、凭据或机器地址。Human 已提供两次请求与回复的 QQ 原群截图，公开图仅裁剪与遮盖个人身份，消息未改写。QQ 原群视频不在这份验收内。
+
+![首次及 Host 重启后 QQ 原群内可见的匹配回复](/guides/vps-source/04-qq-group-before-after.png)
+
+_原群 A/B 验收图，2026-10-12 JST 收到；精确裁剪与 digest 见素材清单。_
 
 ## 排错与维护
 
@@ -331,6 +337,10 @@ systemctl start botharness-seo-tutorial.service
 ```
 
 恢复后必要时刷新原生 Owner 登录，并发送新 DM 与群 @mention。移除 HTTPS 路由前查看实际 Serve 帮助和当前配置，只关闭本任务的 HTTPS 443 handler，不 reset 其他路由。保留本任务 HOME 与原生凭据；升级前对停止的 Profile 做私有备份，数据库回退需要兼容 writer 或升级前备份。
+
+## 实际补录
+
+[空 QQ 手动接入表单实录与双语文字稿](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/video/manual-setup-transcript.md)补充原有绑定实录。[最终源码全新隔离 Profile 安装记录](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.typescript)与[原始 timing](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.timing)于 2026-10-11 19:58 UTC 实际采集，包含 Ubuntu、资源、工具版本、Unit 状态和六组件验证；这是已配置机器上的后续安装补录，没有启动第二个 Host 或 QQ 接收器。
 
 ## 证据与发布检查
 

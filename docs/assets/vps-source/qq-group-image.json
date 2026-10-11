@@ -1,0 +1,27 @@
+{
+  "source": "Human-supplied original QQ group screenshot, received 2026-10-12 JST",
+  "originalSha256": "8bbf06d833f02017e563feaf3c3c128cff2de33db01c727c667ff19e5f1d1843",
+  "publicSha256": "b4901a4c579efc409ff187b704cab0c3726987c0148e53362abd6dc4a5792525",
+  "publicFile": "04-qq-group-before-after.png",
+  "processing": "Lossless PNG crop only (x=20,y=290,width=930,height=424) plus three opaque black privacy rectangles. Header, unrelated member list and Human avatars are outside the crop; sender alias and reply @mentions are obscured. Original request/reply text and both A/B markers are unchanged; no synthetic UI or generated content.",
+  "privacyRectanglesAfterCrop": [
+    {
+      "x": 95,
+      "y": 138,
+      "width": 108,
+      "height": 31
+    },
+    {
+      "x": 805,
+      "y": 215,
+      "width": 125,
+      "height": 27
+    },
+    {
+      "x": 95,
+      "y": 370,
+      "width": 108,
+      "height": 32
+    }
+  ]
+}

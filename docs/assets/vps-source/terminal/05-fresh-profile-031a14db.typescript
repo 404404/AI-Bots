@@ -1,0 +1,79 @@
+Script started on 2026-10-12 03:58:23+08:00 [COMMAND="runuser -u bh-seo -- bash /opt/botharness/seo-tutorial/supplemental-recording-20261012-retry2/commands.sh" <not executed on terminal>]
+printf 'SUPPLEMENTAL_RECORDING_OK\n'
+Supplemental actual verification and fresh isolated Profile install; not initial provisioning.
+2026-10-11T19:58:23Z
++ cat /etc/os-release
+PRETTY_NAME="Ubuntu 26.04 LTS"
+NAME="Ubuntu"
+VERSION_ID="26.04"
+VERSION="26.04 (Resolute Raccoon)"
+VERSION_CODENAME=resolute
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=resolute
+LOGO=ubuntu-logo
++ nproc
+2
++ free -m
+               total        used        free      shared  buff/cache   available
+Mem:            3654         952         307           4        2684        2702
+Swap:           2047           0        2047
++ df -h /opt/botharness/seo-tutorial
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda3        59G  8.8G   48G  16% /
++ node --version
+v24.21.0
++ pnpm --version
+12.4.2
++ dsh --version
+0.2.0-rc.1
++ script --version
+script from util-linux 2.41.3
++ tailscale version
+1.104.1
+  tailscale commit: 7f4efe814ff14b064eb080344389ceb9ea2d37ac
+  long version: 1.104.1-t7f4efe814-g8da26756c
+  other commit: 8da26756c9a2af700dfd05fa38d21b1eef2bcaa2
+  go version: go1.27.1 (tailscale/go 24ee2fd061)
++ systemctl is-active botharness-seo-tutorial.service
+active
++ systemctl show botharness-seo-tutorial.service -p MemoryCurrent -p MemoryPeak
+MemoryCurrent=334036992
+MemoryPeak=454955008
++ git -C /opt/botharness/seo-tutorial/source rev-parse HEAD
+031a14db43af5b3bf52e76b01c30e27828e6e9c9
++ node /opt/botharness/seo-tutorial/artifacts/source-031a14db/kit/install-source-profile.mjs --home /opt/botharness/seo-tutorial/supplemental-recording-20261012-retry2/home/dsh --profile seo-tutorial-recording --artifacts /opt/botharness/seo-tutorial/artifacts/source-031a14db/product --dsh /opt/botharness/seo-tutorial/toolchain/bin/dsh
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /opt/botharness/seo-tutorial/home/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Downloading file:../../../../../artifacts/source-031a14db/product/botharness-im-provider-4.32.0-botharness.19.tgz: 0.00 B/9.57 MB
+Packages: +198
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 198, reused 195, downloaded 6, added 198, done
+
+dependencies:
++ deepseekbot 1.2.1-vps.20261012.sha031a14db
+
+Done in 629ms using pnpm v12.4.2
+{
+  "installed": {
+    "version": "1.2.1-vps.20261012.sha031a14db",
+    "providerVersion": "4.32.0-botharness.19",
+    "source": "602baa37fa327f7069545aaadbbd34db8a8f4636",
+    "runtime": {
+      "runtimeFiles": 413,
+      "runtimeSha256": "09c8066e2565eb1ab018eaf59edef8d47e368c13314a14f9504b1664c836c01c"
+    }
+  },
+  "profile": "seo-tutorial-recording",
+  "componentsVerified": true
+}
++ set +x
+Supplemental Profile installed and verified; no Host or QQ receiver was started.
+
+Script done on 2026-10-12 03:58:25+08:00 [COMMAND_EXIT_CODE="0"]
