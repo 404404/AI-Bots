@@ -130,6 +130,8 @@
 
 ### Fixed
 
+- 明确 Orchestrator 的回答（包括简短确认和图片描述）应通过 Channel 回复工具送达，而非仅输出到私有 Session；保留主动沉默与外部消息回复路由（[#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)）。
+
 - 私密输入的公开 Session 证据保留 RC1 原生拒绝及不可用审批结果，同时排除决定理由和未知值（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)）。
 
 - Core 和随产品更新的 IM Provider 声明改用最低 DSH 版本 `>=0.1.7-0`（含预览版），不再锁定 RC1 或设置未来版本上限。声明允许未来版本安装，不代表已验证运行兼容性；1.2.1 维护版的实包安装矩阵与当前开发树分别验证 ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425))。

@@ -130,6 +130,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Clarified that Orchestrator answers, including short acknowledgments and image descriptions, must be delivered through the Channel reply Tool rather than private Session text, while preserving intentional silence and external reply routing ([#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)).
+
 - Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).
 
 - Core and product-managed IM Provider declarations use the minimum DSH version `>=0.1.7-0`, including previews, without an exact RC1 lock or future-version ceiling. Future versions are admitted by metadata, not automatically runtime-qualified; the 1.2.1 maintenance installation matrix is separate from this development tree ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425)).
