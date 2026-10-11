@@ -4,6 +4,7 @@ import {
   type ApprovalMessagingSnapshot,
 } from './approval-messaging.js';
 import { externalPermissionGroups, type ExternalPermissionGroup } from './permission-groups.js';
+import { createPairingCards } from './pairing-cards.js';
 import {
   createMessagingDirectory,
   type MessagingDirectoryQuery,
@@ -603,8 +604,25 @@ export function createOutboundMessaging(options: {
     isBotActive: options.isBotActive,
     ...(options.warn ? { warn: options.warn } : {}),
   });
+  const pairingCards = createPairingCards({
+    ...(options.recover === undefined ? {} : { recover: options.recover }),
+    database,
+    pairing,
+    provider(id) {
+      const entry = provider(id);
+      return { provider: entry.provider, assertCurrent: () => current(id, entry.token) };
+    },
+    isBotActive: options.isBotActive,
+    notifyApplicant: (request) => inbound.notifyPairing(request),
+    routeAvailable: (request) => inbound.pairingRouteAvailable(request),
+    ...(options.warn ? { warn: options.warn } : {}),
+  });
   const inbound = createInboundMessaging({
-    onApprovalAction: (providerId, event, signal) => approvals.action(providerId, event, signal),
+    onApprovalAction: (providerId, event, signal) =>
+      event.kind === 'pairing'
+        ? pairingCards.action(providerId, event, signal)
+        : approvals.action(providerId, event, signal),
+    onPairingRequest: (request) => pairingCards.notify(request),
     pairing,
     database,
     bindingAvailable(id) {
@@ -785,6 +803,7 @@ export function createOutboundMessaging(options: {
     senderAccess(botSlug, input) {
       active(botSlug);
       transaction((db) => changeSenderAccess(db, botSlug, input), ['pairing', 'bot-inbox']);
+      pairingCards.refresh(botSlug);
     },
     senderPermissions(botSlug, sourceEventId) {
       active(botSlug);
@@ -814,6 +833,7 @@ export function createOutboundMessaging(options: {
     },
     async reviewPairing(botSlug, input) {
       const request = pairing.review(botSlug, input);
+      pairingCards.refresh(botSlug);
       await inbound.notifyPairing(request);
       return pairing.list(botSlug).find((item) => item.id === request.id)!;
     },
@@ -2438,6 +2458,7 @@ export function createOutboundMessaging(options: {
       } finally {
         closed = true;
         approvals.close();
+        pairingCards.close();
         feedback.close();
         typing.close();
         inbound.close();

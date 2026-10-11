@@ -2981,8 +2981,8 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 760px) { .bh-pairing-workspace { grid-template-columns: minmax(0, 1fr); } .bh-pairing-table { min-width: 560px; } .bh-pairing-detail { max-height: none; } }
 .bh-permission-table { min-width: 0; table-layout: fixed; }
-.bh-permission-table th:first-child, .bh-permission-table td:first-child { width: 52%; }
-.bh-permission-table th:nth-child(2), .bh-permission-table th:last-child { width: 24%; min-width: 0; white-space: normal; }
+.bh-permission-table th:first-child, .bh-permission-table td:first-child { width: 32%; }
+.bh-permission-table th:not(:first-child), .bh-permission-table td:not(:first-child) { width: 17%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .bh-permission-table td label { font-size: 0; gap: 0; }
 .bh-group-members .bh-pairing-table th:nth-child(2) { width: auto; }
 .bh-sidebar-modal-form, .bh-im-grant-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; font-size: 13px; }

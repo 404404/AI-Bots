@@ -2013,6 +2013,19 @@ const PERMISSION_GROUP_MIGRATION: SchemaMigration = {
   },
 };
 
+const PAIRING_CARD_MIGRATION: SchemaMigration = {
+  generation: 80,
+  module: 'messaging',
+  description: 'Persist scoped pairing-review card receipts and operator choices',
+  migrate(database) {
+    database.exec(`CREATE TABLE messaging_pairing_cards (
+      id TEXT PRIMARY KEY, request_id TEXT NOT NULL, bot_slug TEXT NOT NULL,
+      destination TEXT NOT NULL, body TEXT NOT NULL CHECK (json_valid(body)),
+      UNIQUE(request_id, destination));
+      CREATE INDEX messaging_pairing_cards_bot ON messaging_pairing_cards(bot_slug);`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2092,4 +2105,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   INBOX_HISTORY_MIGRATION,
   EXTERNAL_USER_ROLE_MIGRATION,
   PERMISSION_GROUP_MIGRATION,
+  PAIRING_CARD_MIGRATION,
 ]);

@@ -25,6 +25,7 @@ export interface ExternalUserRole {
   name: string;
   behavior: string;
   capabilities: PairingCapability[];
+  delegableCapabilities?: PairingCapability[];
   revision: number;
   createdAt?: string;
   updatedAt?: string;
@@ -49,7 +50,11 @@ export const senderAccessInput = z.discriminatedUnion('kind', [
       expectedRevision: z.number().int().positive(),
       name: z.string().trim().min(1).max(80),
       behavior: z.string().trim().min(1).max(2000),
-      capabilities: z.array(z.enum(['approve', 'reject'])).max(2),
+      capabilities: z.array(z.enum(['approve', 'reject', 'review-pairing'])).max(3),
+      delegableCapabilities: z
+        .array(z.enum(['approve', 'reject', 'review-pairing']))
+        .max(3)
+        .optional(),
     })
     .strict(),
   z
@@ -244,6 +249,9 @@ export function changeSenderAccess(
       name: input.name,
       behavior: input.behavior,
       capabilities: [...new Set(input.capabilities)],
+      delegableCapabilities: [
+        ...new Set(input.delegableCapabilities ?? role.delegableCapabilities ?? []),
+      ],
       revision: role.revision + 1,
       updatedAt: new Date().toISOString(),
     };

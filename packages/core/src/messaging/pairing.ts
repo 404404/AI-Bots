@@ -11,7 +11,13 @@ import {
   type EffectivePermissions,
 } from './permission-groups.js';
 
-export const pairingCapabilities = ['approve', 'reject', 'answer', 'save-rules'] as const;
+export const pairingCapabilities = [
+  'approve',
+  'reject',
+  'answer',
+  'save-rules',
+  'review-pairing',
+] as const;
 export type PairingCapability = (typeof pairingCapabilities)[number];
 export const pairingReviewInput = z.discriminatedUnion('kind', [
   z
@@ -19,7 +25,7 @@ export const pairingReviewInput = z.discriminatedUnion('kind', [
       kind: z.literal('approve'),
       id: z.string().uuid(),
       expectedRevision: z.number().int().positive(),
-      capabilities: z.array(z.enum(pairingCapabilities)).min(1).max(4).optional(),
+      capabilities: z.array(z.enum(pairingCapabilities)).min(1).max(5).optional(),
       roleId: z.string().uuid().optional(),
       expectedRoleRevision: z.number().int().positive().optional(),
     })
@@ -57,7 +63,9 @@ export interface PairingRequest {
   revision: number;
   attempts: number;
   messageIds?: string[];
-  reviewedBy?: 'authenticated-web';
+  reviewedBy?: 'authenticated-web' | 'paired-reviewer';
+  reviewerActorId?: string;
+  privateReply?: MessagingInboundEvent['reply'];
   purpose?: 'management' | 'conversation';
   roleId?: string;
   roleRevision?: number;
@@ -77,7 +85,12 @@ export interface BotPairing {
     purpose?: 'management' | 'conversation',
   ): PairingRequest;
   list(botSlug: string): PairingRequest[];
-  review(botSlug: string, input: PairingReviewInput): PairingRequest;
+  review(
+    botSlug: string,
+    input: PairingReviewInput,
+    reviewer?: { bindingId: string; actorId: string },
+  ): PairingRequest;
+  observePrivate(bindingId: string, event: MessagingInboundEvent): void;
   notice(id: string, key: string, outcome?: 'accepted' | 'unconfirmed'): boolean;
   assert(
     botSlug: string,
@@ -267,7 +280,40 @@ export function createBotPairing(
         )
         .map(current);
     },
-    review(botSlug, raw) {
+    observePrivate(bindingId, event) {
+      if (
+        event.conversation.kind !== 'dm' ||
+        event.channel !== 'feishu' ||
+        !/^ou_[A-Za-z0-9]+$/.test(event.actor.id) ||
+        event.reply.actorId !== event.actor.id ||
+        event.reply.conversationId !== event.conversation.id ||
+        event.reply.messageId !== event.messageId
+      )
+        return;
+      transaction<void>((db) => {
+        const binding = assertMessagingIdentity(db, bindingId);
+        if (
+          !isBotActive(binding.botSlug) ||
+          binding.platform !== event.channel ||
+          binding.accountRef !== event.botId ||
+          binding.fingerprint !== event.fingerprint
+        )
+          return;
+        const rows = db
+          .prepare(
+            "SELECT body FROM messaging_pairings WHERE binding_id = ? AND actor_id = ? AND status = 'approved'",
+          )
+          .all(bindingId, event.actor.id) as { body: string }[];
+        for (const row of rows) {
+          const value = read(row);
+          db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?').run(
+            JSON.stringify({ ...value, privateReply: event.reply }),
+            value.id,
+          );
+        }
+      });
+    },
+    review(botSlug, raw, reviewer) {
       const input = pairingReviewInput.parse(raw);
       return transaction<PairingRequest>((db) => {
         const row = db
@@ -281,6 +327,31 @@ export function createBotPairing(
           (input.kind === 'revoke' ? stored.status !== 'approved' : value.status !== 'pending')
         )
           throw new MessagingError('pairing-stale');
+        if (reviewer) {
+          const permissions = effectivePairingPermissions(
+            db,
+            botSlug,
+            reviewer.bindingId,
+            reviewer.actorId,
+          );
+          if (
+            value.purpose !== 'conversation' ||
+            value.bindingId !== reviewer.bindingId ||
+            input.kind === 'revoke' ||
+            !permissions.capabilities.includes('review-pairing')
+          )
+            throw new MessagingError('pairing-unauthorized');
+          if (input.kind === 'approve') {
+            const role = externalUserRoles(db, botSlug).find((item) => item.id === input.roleId);
+            if (
+              !role ||
+              [...role.capabilities, ...(role.delegableCapabilities ?? [])].some(
+                (cap) => !(permissions.delegableCapabilities ?? []).includes(cap),
+              )
+            )
+              throw new MessagingError('pairing-delegation-denied');
+          }
+        }
         if (input.kind === 'approve') {
           if (value.purpose === 'conversation') {
             const role = externalUserRoles(db, botSlug).find((role) => role.id === input.roleId);
@@ -316,7 +387,8 @@ export function createBotPairing(
           revision: value.revision + 1,
           reviewedAt,
           updatedAt: reviewedAt,
-          reviewedBy: 'authenticated-web',
+          reviewedBy: reviewer ? 'paired-reviewer' : 'authenticated-web',
+          ...(reviewer ? { reviewerActorId: reviewer.actorId } : {}),
         };
         db.prepare('UPDATE messaging_pairings SET status = ?, body = ? WHERE id = ?').run(
           next.status,

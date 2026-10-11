@@ -6,7 +6,8 @@ import type { ExternalUserRole } from './sender-access.js';
 import { readMessagingIdentity } from './identity.js';
 import { MessagingError } from './provider.js';
 
-const choices = z.array(z.enum(['approve', 'reject'])).max(2);
+const choices = z.array(z.enum(['approve', 'reject', 'review-pairing'])).max(3);
+const delegation = { delegateAllow: choices.optional(), delegateDeny: choices.optional() };
 const memberIds = z.array(z.string().uuid()).max(100);
 export const permissionGroupInputs = [
   z
@@ -16,6 +17,7 @@ export const permissionGroupInputs = [
       name: z.string().trim().min(1).max(80),
       allow: choices,
       deny: choices,
+      ...delegation,
       memberIds,
     })
     .strict(),
@@ -27,6 +29,7 @@ export const permissionGroupInputs = [
       name: z.string().trim().min(1).max(80),
       allow: choices,
       deny: choices,
+      ...delegation,
       memberIds,
     })
     .strict(),
@@ -44,6 +47,7 @@ export const permissionGroupInputs = [
       expectedRevision: z.number().int().positive(),
       allow: choices,
       deny: choices,
+      ...delegation,
     })
     .strict(),
 ] as const;
@@ -52,6 +56,8 @@ type GroupInput = z.infer<typeof inputSchema>;
 export interface PermissionChoices {
   allow: PairingCapability[];
   deny: PairingCapability[];
+  delegateAllow?: PairingCapability[];
+  delegateDeny?: PairingCapability[];
 }
 export interface ExternalPermissionGroup extends PermissionChoices {
   id: string;
@@ -73,6 +79,8 @@ export interface PermissionSource extends PermissionChoices {
 export interface EffectivePermissions {
   capabilities: PairingCapability[];
   deniedCapabilities: PairingCapability[];
+  delegableCapabilities?: PairingCapability[];
+  deniedDelegableCapabilities?: PairingCapability[];
   permissionSources: PermissionSource[];
 }
 function groups(db: DatabaseSync, botSlug: string): ExternalPermissionGroup[] {
@@ -136,7 +144,16 @@ export function changePermissionGroups(db: DatabaseSync, botSlug: string, raw: G
     db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ? AND bot_slug = ?').run(
       JSON.stringify({
         ...pairing,
-        permissionExceptions: { allow: [...new Set(input.allow)], deny: [...new Set(input.deny)] },
+        permissionExceptions: {
+          allow: [...new Set(input.allow)],
+          deny: [...new Set(input.deny)],
+          delegateAllow: [
+            ...new Set(input.delegateAllow ?? pairing.permissionExceptions?.delegateAllow ?? []),
+          ],
+          delegateDeny: [
+            ...new Set(input.delegateDeny ?? pairing.permissionExceptions?.delegateDeny ?? []),
+          ],
+        },
         revision: pairing.revision + 1,
         updatedAt: at,
       }),
@@ -177,6 +194,8 @@ export function changePermissionGroups(db: DatabaseSync, botSlug: string, raw: G
     name: input.name,
     allow: [...new Set(input.allow)],
     deny: [...new Set(input.deny)],
+    delegateAllow: [...new Set(input.delegateAllow ?? existing?.delegateAllow ?? [])],
+    delegateDeny: [...new Set(input.delegateDeny ?? existing?.delegateDeny ?? [])],
     memberIds: [...new Set(input.memberIds)],
     revision: (existing?.revision ?? 0) + 1,
     createdAt: existing?.createdAt ?? at,
@@ -236,6 +255,7 @@ export function effectivePairingPermissions(
         revision: role.revision,
         allow: role.capabilities,
         deny: [],
+        delegateAllow: role.delegableCapabilities ?? [],
       });
       for (const group of groups(db, botSlug).filter(
         (g) => g.bindingId === bindingId && g.memberIds.includes(person.id),
@@ -247,6 +267,8 @@ export function effectivePairingPermissions(
           revision: group.revision,
           allow: group.allow,
           deny: group.deny,
+          delegateAllow: group.delegateAllow ?? [],
+          delegateDeny: group.delegateDeny ?? [],
         });
       if (person.permissionExceptions)
         permissionSources.push({
@@ -259,11 +281,18 @@ export function effectivePairingPermissions(
     }
   }
   const deniedCapabilities = [...new Set(permissionSources.flatMap((source) => source.deny))];
+  const deniedDelegableCapabilities = [
+    ...new Set(permissionSources.flatMap((source) => source.delegateDeny ?? [])),
+  ];
   return {
     capabilities: [...new Set(permissionSources.flatMap((source) => source.allow))].filter(
       (cap) => !deniedCapabilities.includes(cap),
     ),
     deniedCapabilities,
+    delegableCapabilities: [
+      ...new Set(permissionSources.flatMap((source) => source.delegateAllow ?? [])),
+    ].filter((cap) => !deniedDelegableCapabilities.includes(cap)),
+    deniedDelegableCapabilities,
     permissionSources,
   };
 }

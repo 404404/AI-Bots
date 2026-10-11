@@ -9,6 +9,8 @@
 
 ### Breaking Changes
 
+- 配对审核卡片新增 Profile Schema Generation 80。升级前请备份；回退需要兼容写入者或升级前备份（[#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)）。
+
 - 外部授权组新增 Profile schema Generation 79。升级前请备份；回退需要兼容 writer 或恢复升级前备份（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
 
 - Lark 普通角色新增 Profile schema Generation 78。升级前请备份；回滚需要兼容写入程序或恢复升级前备份（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。
@@ -24,6 +26,8 @@
 - QQ 接收区间追加 Profile schema Generation 74，并复用既有接收边界字段；升级前备份，升级后应向前修复（[#1153](https://github.com/BotHarness/BotHarness/issues/1153)）。
 
 ### Added
+
+- Lark 配对审核人可在来源群共享卡片或私聊卡片中选择已有 Role 并批准／拒绝申请，支持只有群的场景；当前审核权限与独立的委派 Allow/Deny 限定管理 Role 授予范围，批准后申请人须重新提问（[#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)）。
 
 - 受保护 Profile 中的 PersonaBot 可通过固定 MCP 认证状态操作消费私密引用，复用既有 Web 输入与执行审批；普通隔离 MCP 仍可使用（[#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)，[指南](docs/dev/guides/private-input-mcp.md)）。
 

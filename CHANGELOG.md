@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Pairing-review cards add Profile schema Generation 80. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
+
 - External authorization groups add Profile schema Generation 79. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 
 - Ordinary Lark roles add Profile schema Generation 78. Back up before upgrading; rollback requires a compatible writer or restoration of the pre-upgrade backup ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
@@ -24,6 +26,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- Lark pairing reviewers can choose an existing Role and approve or reject from a shared source-group or private-DM card, including group-only use. Current review permission and separate delegation Allow/Deny limit management Role grants; applicants must ask again after approval ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
 
 - PersonaBots in the opt-in protected Profile can consume opaque private references through one fixed MCP authenticated-status operation, using existing Web input and execution approval; ordinary isolated MCP remains available ([#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384), [guide](docs/dev/guides/private-input-mcp.md)).
 

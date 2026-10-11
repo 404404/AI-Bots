@@ -332,7 +332,7 @@ export const zh = {
   'pairing.reassignRole': '分配所选角色',
   'pairing.roleCapabilities': '显式管理能力',
   'pairing.privateRoleApproval':
-    '批准一次和拒绝适用于现有私聊审批路径。请选择从私聊配对的人员；群管理目的地由独立功能提供。行为文字不会授予这些能力。',
+    '批准一次和拒绝适用于现有私聊执行审批；审核聊天配对适用于配对卡片，并受独立委派范围限制。原生问题与执行审批的群目的地由独立功能提供。行为文字不授予管理能力。',
   'pairing.restricted': 'Lark 聊天请求必须经过配对',
   'pairing.policyLimit':
     '行为权限是模型的 prompt 策略，不隔离邮件、代码或 Shell 资源。群回复对全群可见；聊天资格与管理权限独立。',
@@ -358,6 +358,12 @@ export const zh = {
   'pairing.none': '未选择能力',
   'pairing.approveCapability': '批准本次操作',
   'pairing.rejectCapability': '拒绝操作',
+  'pairing.reviewCapability': '审核聊天配对',
+  'pairing.delegable': '可委派管理能力',
+  'pairing.delegateAllow': '允许委派',
+  'pairing.delegateDeny': '禁止委派',
+  'pairing.delegationHelp':
+    '使用管理能力与授予他人能力分别授权。审核人只能授予管理能力及后续委派范围均在其当前可委派范围内的角色；显式禁止优先。',
   'pairing.answerCapability': '回答正式提问',
   'pairing.rulesCapability': '明确保存审批规则',
   'pairing.pending': '等待审核',
@@ -3099,7 +3105,7 @@ export const en = {
   'pairing.reassignRole': 'Assign selected role',
   'pairing.roleCapabilities': 'Explicit management capabilities',
   'pairing.privateRoleApproval':
-    'Allow once and Reject apply to the existing private approval route. Select a person paired from a DM; group management destinations are separate. Behavior text does not grant these capabilities.',
+    'Allow once and Reject apply to existing private execution approvals. Review chat pairing applies to pairing cards with a separate delegation ceiling. Group destinations for native questions and execution approvals are separate. Behavior text does not grant management capabilities.',
   'pairing.restricted': 'Require pairing for Lark conversation requests',
   'pairing.policyLimit':
     'Behavior permissions are prompt policies; they do not isolate email, code or Shell resources. Group replies are visible to the group. Chat eligibility and management powers are independent.',
@@ -3125,6 +3131,12 @@ export const en = {
   'pairing.none': 'No capabilities selected',
   'pairing.approveCapability': 'Approve once',
   'pairing.rejectCapability': 'Reject operations',
+  'pairing.reviewCapability': 'Review chat pairing',
+  'pairing.delegable': 'Delegable management capabilities',
+  'pairing.delegateAllow': 'Allow delegation',
+  'pairing.delegateDeny': 'Deny delegation',
+  'pairing.delegationHelp':
+    'Using management capabilities and granting them to others are separate permissions. A reviewer can grant only Roles whose management and onward-delegation grants fit their current delegation ceiling. Explicit Deny wins.',
   'pairing.answerCapability': 'Answer formal questions',
   'pairing.rulesCapability': 'Explicitly save approval rules',
   'pairing.pending': 'Awaiting review',

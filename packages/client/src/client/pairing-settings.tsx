@@ -24,12 +24,13 @@ import type {
 } from '../../../core/src/messaging/pairing.js';
 import type { BotHarnessTranslate } from './locale.js';
 
-const capabilities = ['approve', 'reject', 'answer', 'save-rules'] as const;
+const capabilities = ['approve', 'reject', 'answer', 'save-rules', 'review-pairing'] as const;
 const labels = {
   approve: 'pairing.approveCapability',
   reject: 'pairing.rejectCapability',
   answer: 'pairing.answerCapability',
   'save-rules': 'pairing.rulesCapability',
+  'review-pairing': 'pairing.reviewCapability',
 } as const;
 
 function auditColumn<Row extends { createdAt?: string; updatedAt?: string }>(
@@ -603,6 +604,14 @@ function RoleDetails({
           <Tag>{t('pairing.ordinary')}</Tag>
         )}
       </div>
+      {role.delegableCapabilities?.length ? (
+        <div className="bh-im-pairing-capabilities">
+          <span>{t('pairing.delegable')}</span>
+          {role.delegableCapabilities.map((capability) => (
+            <Tag key={capability}>{t(labels[capability])}</Tag>
+          ))}
+        </div>
+      ) : null}
       {change ? (
         <Button size="sm" variant="toolbar" disabled={busy} onClick={() => setEditing(true)}>
           {t('pairing.editRole')}
@@ -637,10 +646,16 @@ function RoleDialog({
 }): ReactElement {
   const [name, setName] = useState(role?.name ?? '');
   const [behavior, setBehavior] = useState(role?.behavior ?? '');
-  const [selected, setSelected] = useState<('approve' | 'reject')[]>(
+  const [selected, setSelected] = useState<('approve' | 'reject' | 'review-pairing')[]>(
     (role?.capabilities ?? []).filter(
-      (capability): capability is 'approve' | 'reject' =>
-        capability === 'approve' || capability === 'reject',
+      (capability): capability is 'approve' | 'reject' | 'review-pairing' =>
+        capability === 'approve' || capability === 'reject' || capability === 'review-pairing',
+    ),
+  );
+  const [delegable, setDelegable] = useState<('approve' | 'reject' | 'review-pairing')[]>(
+    (role?.delegableCapabilities ?? []).filter(
+      (cap): cap is 'approve' | 'reject' | 'review-pairing' =>
+        cap === 'approve' || cap === 'reject' || cap === 'review-pairing',
     ),
   );
   const [failed, setFailed] = useState(false);
@@ -656,6 +671,7 @@ function RoleDialog({
               name,
               behavior,
               capabilities: selected,
+              delegableCapabilities: delegable,
             }
           : { kind: 'create-role', name, behavior },
       );
@@ -723,7 +739,7 @@ function RoleDialog({
                 />
               </span>
             </legend>
-            {(['approve', 'reject'] as const).map((capability) => (
+            {(['approve', 'reject', 'review-pairing'] as const).map((capability) => (
               <Checkbox
                 key={capability}
                 label={t(labels[capability])}
@@ -747,6 +763,31 @@ function RoleDialog({
             />
           </div>
         )}
+        {role ? (
+          <fieldset className="bh-im-pairing-capabilities" disabled={busy}>
+            <legend className="bh-im-actions">
+              {t('pairing.delegable')}
+              <MessagingHelp
+                title={t('pairing.delegable')}
+                text={t('pairing.delegationHelp')}
+                t={t}
+              />
+            </legend>
+            {(['approve', 'reject', 'review-pairing'] as const).map((capability) => (
+              <Checkbox
+                key={capability}
+                label={`${t('pairing.delegateAllow')} · ${t(labels[capability])}`}
+                checked={delegable.includes(capability)}
+                disabled={busy}
+                onChange={(checked) =>
+                  setDelegable((value) =>
+                    checked ? [...value, capability] : value.filter((item) => item !== capability),
+                  )
+                }
+              />
+            ))}
+          </fieldset>
+        ) : null}
         {failed ? (
           <p className="bh-error" role="alert">
             {t('pairing.error')}
