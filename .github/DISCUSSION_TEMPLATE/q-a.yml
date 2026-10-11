@@ -1,0 +1,23 @@
+title: ''
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Chinese and English welcome. Search existing answers; include only sanitized information. Reproducible bugs can go directly to Issues.
+        欢迎中文和英文；先搜索已有答案，内容请脱敏。有明确复现的 bug 可以直接提 Issue。
+  - type: textarea
+    id: question
+    attributes:
+      label: What are you trying to do? / 想做什么，卡在哪？
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions, environment and what you tried / 版本、环境与已尝试的方法
+      description: Include what you know; unknown versions should not stop you asking / 写出已知信息即可。
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized example or screenshot / 脱敏示例或截图
+      description: Optional. No credentials, login links, private chats or sensitive vulnerability details / 可选，不附敏感信息。

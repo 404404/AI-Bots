@@ -1,0 +1,33 @@
+name: Bug report / 问题反馈
+description: Report a reproducible problem / 报告有复现步骤的问题。
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Do not include credentials, login links, private chats or sensitive vulnerability details.
+        请先搜索已有问题；不要公开密钥、登录链接、私人聊天或敏感漏洞细节。敏感问题先请求私下渠道，不要提交细节。
+  - type: textarea
+    id: environment
+    attributes:
+      label: Versions and environment / 版本与环境
+      description: DeepSeekBot and DSH versions, OS, desktop or web, and provider if relevant. Mark anything unknown / 不知道的标注未知即可。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce / 复现步骤
+      description: Provide the smallest steps you can; explain any blocker / 给出尽量小的步骤，无法复现时说明限制。
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior / 预期与实际
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence / 脱敏证据
+      description: Optional screenshots or short logs; remove secrets and unrelated conversations / 可选，先脱敏。

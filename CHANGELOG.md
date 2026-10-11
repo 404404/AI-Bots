@@ -114,6 +114,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
+- Added bilingual human contributor guides and community entry points for questions, ideas, examples and focused issues or PRs; runtime behavior is unchanged ([contributor guide](CONTRIBUTING.md), [#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)).
+
 - Documented how a PersonaBot's Memory commits and its own BotHarness-tool actions will be kept as Channel Notices in the conversation that caused them and as searchable Bot Inbox history that never wakes it; runtime behavior is unchanged ([ADR-0154](docs/adr/0154-bot-self-records-keep-memory-commits-and-bot-actions-in-the-timeline-and-inbox.md), [#1272](https://github.com/BotHarness/DeepSeekBot/issues/1272)).
 
 - Documented five-companion foreground frame, concurrent-output and stream-recovery/Client-reload measurements, ten-cycle heap observations, same-version/Profile walking studies with separate main-renderer stage observations and an explicitly interrupted current-version comparison, separate Windows GPU-process counters and actual browser-process restart checks, with repeatable protocols, confirmed scoped budgets and explicit remaining qualification; no SVG-specific GPU attribution or overall performance acceptance is claimed ([report](docs/research/2026-10-09-window-companion-performance.md), [#1167](https://github.com/BotHarness/DeepSeekBot/issues/1167)).

@@ -228,7 +228,7 @@ helper 可注入机器本地的 DeepSeek key，也可使用隔离 Profile 的凭
 
 - [DeepSeekBot 官网](https://deepseekbot.botharness.ai) · [文档站](https://botharness.ai) · [介绍 Slides](https://botharness.ai/slides/s/botharness-intro)
 - [产品术语](CONTEXT.zh.md) · [持续维护的架构与数据流](docs/architecture/botharness-architecture.md) · [架构决策](docs/adr/)
-- [贡献指南](AGENTS.md) · [Release Ledger](CHANGELOG.md) · [DSH 官方文档](https://deepseek-harness.github.io/deepseek-harness/)
+- [贡献指南](CONTRIBUTING.zh.md) · [Agent 开发规范](AGENTS.md) · [Release Ledger](CHANGELOG.md) · [DSH 官方文档](https://deepseek-harness.github.io/deepseek-harness/)
 
 ```bash
 pnpm lint && pnpm format:check && pnpm typecheck && pnpm test
@@ -257,7 +257,9 @@ apps/presentations    介绍与其他 Slides
 
 - **Discord**：[加入 DeepSeekBot 服务器](https://discord.gg/aEB2Ayhu7B)
 - **QQ 群**：在 QQ 中搜索群号 **1125565676**
-- **问题反馈与功能建议**：[GitHub Issues](https://github.com/BotHarness/BotHarness/issues)
+- **使用求助、想法与作品分享**：[GitHub Discussions](https://github.com/BotHarness/DeepSeekBot/discussions) · [欢迎帖](https://github.com/BotHarness/DeepSeekBot/discussions/1397)
+- **明确的 Bug 与实施任务**：[GitHub Issues](https://github.com/BotHarness/DeepSeekBot/issues/new/choose)
+- **参与维护**：[贡献指南](CONTRIBUTING.zh.md) · [第一次贡献](https://github.com/BotHarness/DeepSeekBot/discussions/1398)，文档、测试和答疑也欢迎。
 
 ## 灵感与致谢
 

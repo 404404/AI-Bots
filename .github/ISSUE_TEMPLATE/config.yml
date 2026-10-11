@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Usage help / 使用求助
+    url: https://github.com/BotHarness/DeepSeekBot/discussions/categories/q-a
+    about: Ask installation, configuration and usage questions in Q&A / 在 Q&A 提问。
+  - name: Ideas / 想法建议
+    url: https://github.com/BotHarness/DeepSeekBot/discussions/categories/ideas
+    about: Discuss the user problem before planning a large feature / 大功能先交流场景与痛点。
+  - name: Your first contribution / 第一次贡献
+    url: https://github.com/BotHarness/DeepSeekBot/discussions/1398
+    about: Find a small task or tell us how you would like to help / 一起找一个小切口。
