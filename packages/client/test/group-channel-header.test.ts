@@ -15,7 +15,8 @@ import { GroupChannelHeader } from '../src/client/group-channel-header.js';
 import { GroupProfilePopover } from '../src/client/group-profile.js';
 import { EMPTY_PROFILE_CARDS } from '../src/client/profile-cards.js';
 import { PersonaBotFacepile, type PersonaBotFacepileItem } from '../src/client/avatar.js';
-import type { ChannelSummary } from '../src/client/store.js';
+import type { BotSummary, ChannelSummary } from '../src/client/store.js';
+import { GroupChannelIcon } from '../src/client/group-avatar-stack.js';
 import { zhTranslate } from '../src/client/locale.js';
 
 const members: PersonaBotFacepileItem[] = [
@@ -38,12 +39,25 @@ const channel: ChannelSummary = {
   updatedAt: '2026-10-04T00:00:00Z',
 };
 const noop = () => undefined;
-function header(group: ChannelSummary, items = members) {
+const bots = new Map<string, BotSummary>(
+  members.map((member) => [
+    member.personaBotId,
+    {
+      slug: member.personaBotId,
+      displayName: member.name,
+      roles: [],
+      aggregateState: member.state ?? 'idle',
+      workspaces: [],
+      createdAt: channel.createdAt,
+    },
+  ]),
+);
+function header(group: ChannelSummary) {
   return renderToStaticMarkup(
     createElement(GroupChannelHeader, {
       channel: group,
       title: group.name,
-      members: items,
+      bots,
       expanded: false,
       t: zhTranslate,
       onOpenActivity: noop,
@@ -51,23 +65,37 @@ function header(group: ChannelSummary, items = members) {
     }),
   );
 }
-it('gives each visible Bot an independent safe keyboard button outside the Profile name button', () => {
+it('uses the sidebar Group avatar in member order instead of live member chips', () => {
   const html = header(channel);
-  expect(html.match(/class="bh-avatar-facepile-button"/gu)).toHaveLength(3);
-  expect(html).toContain('>+1</span>');
-  expect(html).toContain('aria-label="Ada &lt;safe&gt; · 正在搜索"');
-  expect(html).toContain('aria-label="Cy · 空闲"');
+  const sidebar = renderToStaticMarkup(
+    createElement(GroupChannelIcon, {
+      channel,
+      bots,
+      className: 'bh-channel-slot',
+      groupClassName: 'bh-group-channel-slot',
+      size: 34,
+      hashSize: 18,
+      t: zhTranslate,
+    }),
+  );
+  expect(html).toContain(sidebar);
+  expect(html).toContain('data-count="4"');
+  expect(html.match(/data-state="idle"/gu)).toHaveLength(4);
+  expect(html).not.toContain('bh-avatar-facepile');
+  expect(html).not.toContain('>+1</span>');
+  expect(html).toContain('class="bh-group-channel-avatar"');
   expect(html).toContain('class="bh-group-channel-name"');
   expect(html).toContain('<span class="bh-channel-island bh-group-channel-header">');
+  expect(html).not.toContain('bh-companion-pin');
+  expect(html).not.toContain('data-companion-pin');
 });
-it('keeps the custom Group identity alongside live member avatars and an empty Group hash fallback', () => {
+it('prefers custom Group identity without member faces and keeps the empty Group fallback', () => {
   expect(header({ ...channel, avatar: 'avatar.webp' })).toContain('src="avatar.webp"');
-  expect(
-    header({ ...channel, avatar: 'avatar.webp' }).match(/class="bh-avatar-facepile-button"/gu),
-  ).toHaveLength(3);
-  const empty = header({ ...channel, members: [] }, []);
-  expect(empty).toContain('bh-channel-mark bh-channel-mark-sm');
-  expect(empty).not.toContain('bh-avatar-facepile-button');
+  expect(header({ ...channel, avatar: 'avatar.webp' })).not.toContain('bh-group-avatar-stack');
+  const empty = header({ ...channel, members: [] });
+  expect(empty).toContain('class="bh-channel-slot" aria-hidden="true"><svg');
+  expect(empty).not.toContain('bh-group-avatar-stack');
+  expect(empty).toContain('class="bh-group-channel-avatar"');
 });
 it('shows at most three active-first member chips and overflow in the existing Group Profile popover', () => {
   const html = renderToStaticMarkup(

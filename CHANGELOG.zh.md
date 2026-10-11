@@ -19,6 +19,7 @@
 
 - 音频和文件附件采用紧凑的统一卡片布局，提供内联音频控件和直接下载文件的操作 ([#1290](https://github.com/BotHarness/DeepSeekBot/issues/1290))。
 - 自己发送的消息头将名称放在右侧，时间放在名称左侧 ([#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298))。
+- 群 Channel 消息区的 Header 与侧栏使用相同头像，不再显示单个 Bot 的窗口伙伴 Pin 按钮；Bot 私聊的小人 Pin 和 Channel 置顶保持可用 ([#1439](https://github.com/BotHarness/DeepSeekBot/issues/1439))。
 
 ### Fixed
 

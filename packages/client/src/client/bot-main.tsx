@@ -1105,8 +1105,7 @@ function ConversationView({
                 <GroupChannelHeader
                   channel={channel}
                   title={title}
-                  members={channelFacepile}
-                  companion={companion}
+                  bots={new Map(state.bots.map((member) => [member.slug, member]))}
                   expanded={profilePopoverOpen}
                   t={t}
                   onOpenActivity={() => setProfilePopoverOpen(true)}

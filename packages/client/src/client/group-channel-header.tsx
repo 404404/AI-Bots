@@ -1,79 +1,48 @@
 import type { ReactElement } from 'react';
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
-import {
-  PersonaBotFacepile,
-  personaBotPresentationSummary,
-  type PersonaBotFacepileItem,
-} from './avatar.js';
+import { GroupChannelIcon } from './group-avatar-stack.js';
 import type { BotHarnessTranslate } from './locale.js';
-import type { ChannelSummary } from './store.js';
-import { CompanionPin } from './window-companions-view.js';
-import type { WindowCompanions } from './window-companions.js';
+import type { BotSummary, ChannelSummary } from './store.js';
 
 export function GroupChannelHeader({
   channel,
   title,
-  members,
+  bots,
   expanded,
   t,
   onOpenActivity,
   onToggleProfile,
-  companion,
 }: {
   channel: ChannelSummary;
   title: string;
-  members: readonly PersonaBotFacepileItem[];
+  bots: ReadonlyMap<string, BotSummary>;
   expanded: boolean;
   t: BotHarnessTranslate;
   onOpenActivity(): void;
   onToggleProfile(): void;
-  companion?: WindowCompanions | undefined;
 }): ReactElement {
   return (
     <span className="bh-channel-island bh-group-channel-header">
-      {channel.avatar ? (
-        <img className="bh-group-avatar-image bh-group-avatar-topbar" src={channel.avatar} alt="" />
-      ) : members.length === 0 ? (
-        <span className="bh-channel-mark bh-channel-mark-sm" aria-hidden="true">
-          #
-        </span>
-      ) : null}
-      <PersonaBotFacepile
-        items={members}
-        indicator={false}
-        size={22}
-        t={t}
-        renderAvatar={(item, avatar) => {
-          const label =
-            item.name +
-            ' · ' +
-            personaBotPresentationSummary(item.state ?? 'idle', item.activity, item.attention, t);
-          return (
-            <span key={item.personaBotId} className="bh-companion-chip">
-              <Tooltip label={label} side="bottom" portal delayMs={350}>
-                <button
-                  type="button"
-                  className="bh-avatar-facepile-button"
-                  aria-label={label}
-                  aria-haspopup="dialog"
-                  aria-expanded={expanded}
-                  onClick={onOpenActivity}
-                >
-                  {avatar}
-                </button>
-              </Tooltip>
-              {companion ? (
-                <CompanionPin
-                  companion={companion}
-                  botId={item.personaBotId}
-                  name={item.name}
-                  t={t}
-                />
-              ) : null}
-            </span>
-          );
-        }}
-      />
+      <Tooltip label={t('groupProfile.liveActivity')} side="bottom" portal delayMs={350}>
+        <button
+          type="button"
+          className="bh-group-channel-avatar"
+          aria-label={t('groupProfile.liveActivity')}
+          aria-haspopup="dialog"
+          aria-expanded={expanded}
+          onClick={onOpenActivity}
+        >
+          <GroupChannelIcon
+            channel={channel}
+            bots={bots}
+            className="bh-channel-slot"
+            groupClassName="bh-group-channel-slot"
+            size={34}
+            hashSize={18}
+            t={t}
+          />
+        </button>
+      </Tooltip>
       <button
         type="button"
         className="bh-group-channel-name"
