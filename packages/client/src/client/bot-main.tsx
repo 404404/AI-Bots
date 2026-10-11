@@ -890,7 +890,6 @@ function ConversationView({
     if (channel?.type !== 'dm' && !profilePopoverOpen && !profileViewOpen) return;
     let cancelled = false;
     let fetching = false;
-    setProfileActivity(undefined);
     const refreshUsage = (): void => {
       if (fetching || channelId === undefined || channel?.type !== 'dm') return;
       fetching = true;

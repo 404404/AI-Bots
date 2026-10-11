@@ -18,6 +18,8 @@ Composition borrows a compact context row and input-adjacent menu, adapted to DS
 
 ## Automated verification
 
+- Merge-preparation review follow-up removes only the unconditional activity reset: an in-flight refresh retains the same-Bot snapshot, while failed queries still mark data unavailable and channel-key/cancellation/slug fences remain unchanged. Bot main/composer/token regressions: **three files, 21 tests passed**; typecheck, lint, scoped formatting and build passed. The maintained English architecture source is synchronized through `scripts/sync-docs.mjs`; generated docs remain uncommitted. Earlier real Host E2E and screenshots below belong to the preceding slice/visual follow-up, not a new runtime rerun of this refresh refinement.
+
 - Original slice Client suite at `2c6790fc`: **167 files passed, one skipped; 1216 tests passed, one skipped**. Existing jsdom navigation warnings are not browser runtime failures.
 - Focused regression after the collapsible follow-up: **eight files, 54 tests passed**, covering slash filtering, ordinary prose/path slashes, Enter/Tab/arrows/Escape, pointer selection, target changes, draft/attachment preservation, model-store synchronization, scoped Grant confirmation/cancellation/reuse, preview failure readback, Companion readiness/preference restoration, usage states and sidebar-style native disclosure.
 - Typecheck, lint/source policy, formatting, build and bilingual Release Ledger checks passed.
