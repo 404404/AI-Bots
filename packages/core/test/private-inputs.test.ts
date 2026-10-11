@@ -117,6 +117,7 @@ describe('IM private input origin leases', () => {
   it('opens only an Owner Web card, notifies the captured source, and revokes result delivery with the account', async () => {
     const source = origin();
     const notify = vi.fn(async () => {});
+    const disposeReply = vi.fn();
     let delivery: import('../src/credentials/im-origin.js').PrivateReplyAuthority | undefined;
     const f = await fixture(true, undefined, {
       origin: () => source.lease,
@@ -124,7 +125,7 @@ describe('IM private input origin leases', () => {
       replyAuthority: (_bot, id, authority) => {
         expect(id).toBe('im-source');
         delivery = authority;
-        return () => {};
+        return disposeReply;
       },
     });
     try {
@@ -150,6 +151,9 @@ describe('IM private input origin leases', () => {
       await f.owner.revoke(true, 'dm-ada', id);
       expect(delivery?.signal.aborted).toBe(true);
       expect(delivery?.current()).toBe(false);
+      expect(disposeReply).not.toHaveBeenCalled();
+      source.nextTurn();
+      await vi.waitFor(() => expect(disposeReply).toHaveBeenCalled(), { timeout: 2000 });
     } finally {
       await f.close();
     }

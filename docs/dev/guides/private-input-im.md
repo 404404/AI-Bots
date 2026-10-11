@@ -14,7 +14,7 @@ In that isolated Profile's existing `botharness-core` patch, set:
     telemetry: false
 ```
 
-Use a Web origin the Owner can actually reach. Do not include a login token, userinfo, query or path. Build and restart only the task-owned Host with the pinned development launcher and qualified IM Provider. Start the controlled service:
+Use a Web origin the Owner can actually reach. Do not include a login token, userinfo, query or path. Build and restart only the task-owned Host with the pinned development launcher and qualified IM Provider.
 
 ### A server accessed through Tailscale
 

@@ -13,6 +13,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { BOT_MODE_NAMESPACE, type BotModeSettings } from '../bot-mode-settings.js';
 import { privateInputLocator } from '../../../core/src/credentials/web-locator.js';
+import { watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
 import { createActions, type BridgeActions } from './actions.js';
 import { ProviderAppSetup } from './provider-app-setup.js';
@@ -713,25 +714,16 @@ export function apply(ctx: ClientContext): void {
   const privateLocator =
     typeof window === 'undefined' ? undefined : privateInputLocator(window.location.hash);
   if (privateLocator !== undefined) {
-    ctx.effect(() => {
-      let opened = false;
-      const open = (): void => {
-        const snapshot = store.getSnapshot();
-        if (opened || snapshot.status !== 'ready') return;
-        opened = true;
-        unsubscribe();
-        if (!snapshot.channels.some((channel) => channel.id === privateLocator.channelId)) return;
-        ctx.layout.selectPanel(PANEL_ID);
-        void actions
-          .openChannelAtMessage(privateLocator.channelId, privateLocator.messageId)
-          .catch(() => {
+    ctx.effect(
+      () =>
+        watchPrivateInputNavigation(store, privateLocator, (channelId, messageId) => {
+          ctx.layout.selectPanel(PANEL_ID);
+          void actions.openChannelAtMessage(channelId, messageId).catch(() => {
             ctx.logger.warn('botharness: private input card locator unavailable');
           });
-      };
-      const unsubscribe = store.subscribe(open);
-      open();
-      return unsubscribe;
-    }, 'botharness: private input Chat locator');
+        }),
+      'botharness: private input Chat locator',
+    );
   }
   if (privateLocator === undefined && viewToRestore !== undefined) {
     ctx.effect(() => {
