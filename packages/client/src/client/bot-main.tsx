@@ -1,6 +1,7 @@
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
 import { GroupChannelHeader } from './group-channel-header.js';
+import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { CompanionPin } from './window-companions-view.js';
 import type { WindowCompanions } from './window-companions.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
@@ -43,7 +44,7 @@ import {
   type ChannelComposerUpload,
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
-import type { SelectedChannelRef } from './channel-refs.js';
+import { conversationDraftKey, useConversationDraft } from './conversation-draft.js';
 import { channelHumanName, humanLabel } from './actor-names.js';
 import { HumanChannelNameMenu } from './human-channel-name.js';
 import type { ChannelHumanMember } from './store.js';
@@ -617,6 +618,7 @@ function EmptyConversation({
 }
 
 function ConversationView({
+  onMobileBack,
   state,
   actions,
   companion,
@@ -625,6 +627,7 @@ function ConversationView({
   nativeChatT,
   t,
 }: {
+  onMobileBack?: (() => void) | undefined;
   state: ClientState;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
@@ -636,11 +639,16 @@ function ConversationView({
 }): ReactElement {
   const sidebar = useChannelSidebar(state);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const [draft, setDraft] = useState('');
+  const draftScope = conversationDraftKey(state);
+  const [draft, setDraft] = useConversationDraft(draftScope, 'text', '');
   const [allBotPreview, setAllBotPreview] = useState<AllBotPreview>();
   const [allBotNotice, setAllBotNotice] = useState<string>();
-  const [mentionTokens, setMentionTokens] = useState<SelectedMention[]>([]);
-  const [channelRefTokens, setChannelRefTokens] = useState<SelectedChannelRef[]>([]);
+  const [mentionTokens, setMentionTokens] = useConversationDraft(draftScope, 'mentions', []);
+  const [channelRefTokens, setChannelRefTokens] = useConversationDraft(
+    draftScope,
+    'channelRefs',
+    [],
+  );
   const [selectedMemoryView, setSelectedMemoryView] = useState<
     { channelId: string } & (
       | { kind: 'commit'; sha: string }
@@ -649,11 +657,11 @@ function ConversationView({
     )
   >();
   const chatScrollBeforeDiff = useRef(0);
-  const [uploadItems, setUploadItems] = useState<ChannelComposerUpload[]>([]);
+  const [uploadItems, setUploadItems] = useConversationDraft(draftScope, 'uploads', []);
   const [restoreBlocked, setRestoreBlocked] = useState(false);
   const [restoreFocusSignal, setRestoreFocusSignal] = useState(0);
   const uploadControllers = useRef(new Map<string, AbortController>());
-  const [replyTarget, setReplyTarget] = useState<ChannelMessage | undefined>();
+  const [replyTarget, setReplyTarget] = useConversationDraft(draftScope, 'reply', undefined);
   const submitting = useRef(false);
   const followingLatest = useRef(true);
   const activityOverlayPane = useRef<HTMLElement | null>(null);
@@ -881,6 +889,11 @@ function ConversationView({
       window.clearTimeout(readMarkTimer.current);
       for (const controller of uploadControllers.current.values()) controller.abort();
       uploadControllers.current.clear();
+      setUploadItems((items) =>
+        items.map((item) =>
+          item.status === 'uploading' ? { ...item, status: 'error', error: undefined } : item,
+        ),
+      );
     };
   }, [channelId]);
 
@@ -1253,10 +1266,18 @@ function ConversationView({
                 : undefined
             }
           >
-            {channel === undefined ? null : (
+            {onMobileBack !== undefined || channel === undefined ? null : (
               <HumanChannelNameMenu key={channel.id} channel={channel} actions={actions} t={t} />
             )}
-            {channel?.type === 'group' ? (
+            {onMobileBack !== undefined ? (
+              <MobileConversationHeader
+                title={title}
+                onBack={onMobileBack}
+                onSettings={sidebar.toggle}
+                settingsOpen={sidebar.mode !== 'hidden'}
+                t={t}
+              />
+            ) : channel?.type === 'group' ? (
               <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
                 <GroupChannelHeader
                   channel={channel}
@@ -1817,6 +1838,7 @@ function ConversationView({
 }
 
 function BotMainContent({
+  onMobileBack,
   actions,
   companion,
   nativeSessions,
@@ -1825,6 +1847,7 @@ function BotMainContent({
   nativeChatT,
   t = zhTranslate,
 }: {
+  onMobileBack?: (() => void) | undefined;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
@@ -1843,6 +1866,7 @@ function BotMainContent({
       : `channel:${state.selection.channelId}`;
   return (
     <ConversationView
+      onMobileBack={onMobileBack}
       key={`${scopeKey}:${state.conversation.channel?.id ?? ''}`}
       state={state}
       actions={actions}
@@ -1876,6 +1900,7 @@ export function BotMain({
 }
 
 export function BotPanel({
+  onMobileBack,
   prefs,
   actions,
   companion,
@@ -1887,6 +1912,7 @@ export function BotPanel({
   telemetryNotice,
   t,
 }: {
+  onMobileBack?: (() => void) | undefined;
   prefs?: Pick<BotModePrefs, 'source'> | undefined;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
@@ -1915,6 +1941,7 @@ export function BotPanel({
         <TelemetryNotice controller={telemetryNotice} releaseNotes={releaseNotes} t={t} />
       )}
       <BotMain
+        onMobileBack={onMobileBack}
         prefs={prefs}
         actions={actions}
         companion={companion}
