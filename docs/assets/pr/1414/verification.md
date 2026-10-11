@@ -1,13 +1,13 @@
 # #1414 verification — 2026-10-11
 
-Product head: `faf91a729eeddf1aa48832b784f236900593d541`.
+Product head: `d3cbd0bb4380bc95e57d62cc33be92f9c1010733`.
 Product base: `71aa4d06b4ba9619e17cd971c6e303eec9374bf6`.
 Provider head: `602baa37fa327f7069545aaadbbd34db8a8f4636`.
 Provider base: `81b91291600edba36b1947940c2be8e50abc9fdf`.
 
 ## Performed checks
 
-- Product focused coverage: six files / 97 tests passed; pairing-card plus existing native-approval regression: two files / 21 tests passed. These runs overlap and are not additive.
+- Product focused coverage: six files / 97 tests passed; pairing-card plus existing native-approval regression: two files / 22 tests passed, including group delegation Deny across restart. These runs overlap and are not additive.
 - After the permission-column correction: Client pairing/settings and style-token coverage, two files / 26 tests passed.
 - Product lint, typecheck, format, bilingual ledger and ADR-number checks passed. Complete product build passed before the CSS-only correction; the Client rebuild and targeted format check passed after it.
 - Provider related Lark transport/controller/delivery coverage: 108 tests passed; build and package verification passed.
@@ -16,7 +16,7 @@ Provider base: `81b91291600edba36b1947940c2be8e50abc9fdf`.
 
 ## Native Web captures
 
-Before is accepted #1406 code at `cefa12fac05856c182bfab4b80f565f7ec074f06`; after is the product head above. Both use fresh isolated Profiles and public UI, with synthetic Role names and no external App binding or receiver.
+Before is accepted #1406 code at `cefa12fac05856c182bfab4b80f565f7ec074f06`; after is the product head above. Candidate screenshots were captured from the same production code at faf91a729eeddf1aa48832b784f236900593d541; the new head adds only a regression test. Both use fresh isolated Profiles and public UI, with synthetic Role names and no external App binding or receiver.
 
 - Role editor: desktop light/dark and 390 × 844 dark before/after. The candidate saves `review-pairing` for use and `approve` for delegation while own `approve` remains unchecked.
 - Group editor: desktop before/after and candidate narrow view. These are preparation-state captures: no App is bound, so Save is disabled. They do not prove group persistence or real Lark activity.

@@ -5,7 +5,7 @@ lang: zh
 template: doc
 PR: 1418
 base: 71aa4d06b4ba9619e17cd971c6e303eec9374bf6
-head: faf91a729eeddf1aa48832b784f236900593d541
+head: d3cbd0bb4380bc95e57d62cc33be92f9c1010733
 date: 2026-10-11
 ---
 
@@ -57,7 +57,7 @@ Messaging -> 模型: 执行新问题
 ```ts src=packages/core/src/messaging/pairing-cards.ts lines=85-101
 ```
 
-[准确版本的校验代码](https://github.com/BotHarness/DeepSeekBot/blob/faf91a729eeddf1aa48832b784f236900593d541/packages/core/src/messaging/pairing-cards.ts#L85)
+[准确版本的校验代码](https://github.com/BotHarness/DeepSeekBot/blob/d3cbd0bb4380bc95e57d62cc33be92f9c1010733/packages/core/src/messaging/pairing-cards.ts#L85)
 
 ## D 持久化与失效路径
 
@@ -78,7 +78,7 @@ Web 与卡片竞争时，首个有效决策胜出。
 角色已通过界面创建、编辑、保存并重新读取。
 组截图展示准备态，尚无 App，不能保存。
 
-产品定向测试为 97 项；原生审批回归另有重叠。
+产品定向测试为 97 项；当前卡片与原生审批回归共 22 项，包含重叠。
 修正表格后，26 项 Client 测试通过。
 Windows 全套未通过；基线也出现 EPERM 清理失败。
 Linux CI、真实卡片展示和真人反馈独立验收。
