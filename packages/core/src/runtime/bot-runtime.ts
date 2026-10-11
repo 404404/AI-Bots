@@ -945,7 +945,10 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #activeTurns = new Map<string, Promise<void>>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
-  readonly #turnSources = new Map<string, { sessionId: string; eventIds: Set<string> }>();
+  readonly #turnSources = new Map<
+    string,
+    { sessionId: string; eventIds: Set<string>; acceptedEventIds: Set<string> }
+  >();
   readonly #activeMemoryEvents = new Map<
     string,
     { eventIds: string[]; preserveObservation: boolean }
@@ -1251,6 +1254,7 @@ class BotRuntimeImplementation implements BotRuntime {
         return;
       }
       if (delivered) {
+        this.#acceptTurnSources(botSlug, [...included, ...contextIds]);
         this.#typingTurns.get(botSlug)?.add(included);
         for (const row of context?.rows ?? [])
           this.#observeAdmission(row.source_event_id, botSlug, context!.channelId, row.message_id);
@@ -1452,6 +1456,10 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#acceptTurnSources(
+      botSlug,
+      admissions.map((admission) => admission.sourceEventId),
+    );
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
     const settlement = active.then(
@@ -1663,6 +1671,10 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#acceptTurnSources(
+      botSlug,
+      admissions.map((admission) => admission.sourceEventId),
+    );
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
 
@@ -2466,6 +2478,11 @@ class BotRuntimeImplementation implements BotRuntime {
     ].join('\n');
   }
 
+  #acceptTurnSources(botSlug: string, sourceEventIds: readonly string[]): void {
+    const turn = this.#turnSources.get(botSlug);
+    for (const id of sourceEventIds) turn?.acceptedEventIds.add(id);
+  }
+
   #markAdmissionsSideEffect(botSlug: string, sourceEventIds: string[]): void {
     if (sourceEventIds.length === 0) return;
     for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.eventIds.add(id);
@@ -2634,7 +2651,7 @@ class BotRuntimeImplementation implements BotRuntime {
          WHERE e.source_event_id = ? AND a.bot_slug = ? AND e.source_kind = 'human-message'
            AND a.reason IN ('human-dm', 'group-mention', 'group-ordinary')`,
       );
-      return [...turn.eventIds].some((id) => {
+      return [...turn.acceptedEventIds].some((id) => {
         const source = human.get(id, owner.botSlug);
         if (
           typeof source?.channel_id !== 'string' ||
@@ -2657,7 +2674,7 @@ class BotRuntimeImplementation implements BotRuntime {
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
     const owner = this.#ownership.resolve(sessionId);
     const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
-    const sources = turn?.sessionId === sessionId ? turn.eventIds : undefined;
+    const sources = turn?.sessionId === sessionId ? turn.acceptedEventIds : undefined;
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
     const sourceIds = [...(sources ?? [])];
@@ -3061,7 +3078,11 @@ class BotRuntimeImplementation implements BotRuntime {
       ...reportEventIds,
       ...nativeSourceIds,
     ]);
-    this.#turnSources.set(bot.slug, { sessionId: orchestrator.sessionId, eventIds: turnSources });
+    this.#turnSources.set(bot.slug, {
+      sessionId: orchestrator.sessionId,
+      eventIds: turnSources,
+      acceptedEventIds: new Set(turnSources),
+    });
     const typingSources = [sourceEventId, ...inboxUnits.map((unit) => unit.sourceEventId)];
     for (const unit of inboxUnits) {
       if (!unit.assignmentSessionId) continue;

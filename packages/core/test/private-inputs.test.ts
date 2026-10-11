@@ -112,6 +112,16 @@ describe('private input native authority and reference contract', () => {
     expect(await restarted.ask(f.agent, declaration, new AbortController().signal)).toEqual(
       configured,
     );
+    await expect(
+      restarted.ask(
+        f.agent,
+        {
+          ...declaration,
+          fields: [...declaration.fields, { id: 'password', label: 'Password', required: true }],
+        },
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow('Owner action');
     const consume = vi.fn(async (resolved) => ({
       statusCode: resolved.api_key === values.api_key ? 200 : 401,
     }));
