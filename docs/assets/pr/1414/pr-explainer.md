@@ -82,6 +82,7 @@ Web 与卡片竞争时，首个有效决策胜出。
 修正表格后，26 项 Client 测试通过。
 Windows 全套未通过；基线也出现 EPERM 清理失败。
 Linux 全套通过：4,045 项测试，跳过 13 项。
+
 真实卡片展示和真人反馈仍须独立验收。
 
 [完整 Linux 校验](https://github.com/BotHarness/DeepSeekBot/actions/runs/38135347584)
