@@ -15,6 +15,31 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () => ({
   ...(await import('./primitive-mocks.js')).comboboxPrimitives(),
   Button: (props: ButtonHTMLAttributes<HTMLButtonElement>) => createElement('button', props),
   Tag: ({ children }: PropsWithChildren) => createElement('span', null, children),
+  SegmentedTabs: ({
+    items,
+    value,
+    onChange,
+  }: {
+    items: { value: string; label: ReactNode }[];
+    value: string;
+    onChange(value: string): void;
+  }) =>
+    createElement(
+      'div',
+      { role: 'tablist' },
+      items.map((item) =>
+        createElement(
+          'button',
+          {
+            key: item.value,
+            role: 'tab',
+            'aria-selected': item.value === value,
+            onClick: () => onChange(item.value),
+          },
+          item.label,
+        ),
+      ),
+    ),
   IconChevronRightOutlineRegular: () => null,
   IconInfoOutlineRegular: () => null,
   Tooltip: ({ children, label }: PropsWithChildren<{ label: string }>) =>
@@ -861,7 +886,9 @@ it('shows a rejected pairing review beside its controls and clears it after a su
       [...pairing.querySelectorAll('button')].find(
         (item) => item.textContent === zhTranslate(key),
       )!;
-    await act(async () => pairing.querySelector<HTMLInputElement>('input')!.click());
+    await act(async () =>
+      pairing.querySelector<HTMLInputElement>('.bh-pairing-detail input[type=checkbox]')!.click(),
+    );
     await act(async () => button('pairing.approve').click());
     expect(actions.pairingReview).toHaveBeenCalledExactlyOnceWith('ada', {
       kind: 'approve',

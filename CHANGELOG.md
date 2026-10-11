@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Ordinary Lark roles add Profile schema Generation 78. Back up before upgrading; rollback requires a compatible writer or restoration of the pre-upgrade backup ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
+
 - Inbox history adds Profile schema Generation 77 with a rebuildable FTS5 trigram index. Back up before upgrading; reopening an upgraded Profile requires a compatible binary or restoration of the pre-upgrade backup ([#1278](https://github.com/BotHarness/DeepSeekBot/issues/1278)).
 
 - Memory commit records add Profile schema Generation 76 (a per-Bot commit cursor and a one-record-per-commit index). Back up before upgrading; reopening an upgraded Profile requires a compatible binary or restoration of the pre-upgrade backup ([#1277](https://github.com/BotHarness/DeepSeekBot/issues/1277)).
@@ -20,6 +22,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- IM pairing settings use a wide People / Roles / Requests workspace with searchable, sortable tables, compact creation/change times and selected-entry details. Role creation opens separately, table and detail corners align with native inputs, and information icons reveal supporting explanations. Older records without timestamps show an unknown value ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
+
+- Bot DM settings offer ordinary Lark roles and optional reviewed chat pairing: unpaired DMs and mentions wait without waking the model, approval asks for a new question, and revocation closes future access. The model receives trusted sender references and can query current permissions on demand; existing management pairing stays separate. Independent test Apps can be configured once and reused across worktrees ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373), [shared test App guide](docs/agents/im-test-apps.md), [ADR-0165](docs/adr/0165-lark-chat-pairing-is-reviewed-current-binding-authority.md)).
 
 - An opt-in isolated Profile lets a PersonaBot request confidential fields in Web Chat or receive Owner CLI replies, save them through native Credentials Service and consume references through a fixed CLI under existing approval. Ordinary native bash and configured MCP stdio calls run in Linux with an authorized workspace; the [qualification guide](docs/dev/guides/private-input-cli.md) describes supported boundaries and review limits ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).
 

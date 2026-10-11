@@ -16,6 +16,9 @@ allowBuilds:
   agent-browser: false
 
 packageExtensions:
+  '@tanstack/react-table@8.21.3':
+    peerDependencies:
+      '@types/react': '~18.3.1'
   '@deepseek-ai/dsh-client-ui-primitives@0.2.0-rc.1':
     peerDependencies:
       '@types/react': '~18.3.1'
