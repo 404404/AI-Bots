@@ -114,6 +114,8 @@
 
 ### Fixed
 
+- 可复用 Lark QA App 配置向导改为显示链接供手动打开，避免等待浏览器启动程序（[#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)）。
+
 - Lark 工具审批卡片通过合格 Provider 的共享更新显示最终执行或拒绝状态，避免继续显示旧审批按钮（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
 
 - 聊天气泡使用一致的内边距；私密输入、提问、审批、工作区授权与失败修复卡的操作区上方间距与底部内边距对齐（[#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)）。
