@@ -85,11 +85,15 @@ export function PairingTable<Row extends { id: string }>({
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       {flexRender(header.column.columnDef.header, header.getContext())}
-                      {header.column.getIsSorted() === 'asc'
-                        ? ' ↑'
-                        : header.column.getIsSorted() === 'desc'
-                          ? ' ↓'
-                          : ''}
+                      {header.column.getCanSort() ? (
+                        <span aria-hidden="true" className="bh-pairing-sort-indicator">
+                          {header.column.getIsSorted() === 'asc'
+                            ? ' ↑'
+                            : header.column.getIsSorted() === 'desc'
+                              ? ' ↓'
+                              : ' ↕'}
+                        </span>
+                      ) : null}
                     </button>
                   </th>
                 ))}

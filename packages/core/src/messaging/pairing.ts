@@ -46,6 +46,7 @@ export interface PairingRequest {
   status: 'pending' | 'approved' | 'rejected' | 'revoked' | 'expired' | 'unavailable';
   capabilities: PairingCapability[];
   createdAt: string;
+  updatedAt?: string;
   expiresAt: string;
   reviewedAt?: string;
   revision: number;
@@ -163,6 +164,7 @@ export function createBotPairing(
             const next = {
               ...value,
               attempts: value.attempts + 1,
+              updatedAt: at,
               messageIds: [...(value.messageIds ?? []), event.messageId],
             };
             db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?').run(
@@ -172,12 +174,12 @@ export function createBotPairing(
             return next;
           }
           db.prepare(
-            "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired') WHERE id = ?",
-          ).run(value.id);
+            "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired', '$.updatedAt', ?) WHERE id = ?",
+          ).run(at, value.id);
         }
         db.prepare(
-          "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired') WHERE status = 'pending' AND json_extract(body, '$.expiresAt') <= ?",
-        ).run(at);
+          "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired', '$.updatedAt', ?) WHERE status = 'pending' AND json_extract(body, '$.expiresAt') <= ?",
+        ).run(at, at);
         const total = db
           .prepare("SELECT count(*) AS n FROM messaging_pairings WHERE status = 'pending'")
           .get() as { n: number };
@@ -200,6 +202,7 @@ export function createBotPairing(
           status: 'pending',
           capabilities: [],
           createdAt: at,
+          updatedAt: at,
           expiresAt: new Date(now().getTime() + pairingDefaults.expiryMs).toISOString(),
           revision: 1,
           attempts: 1,
@@ -283,6 +286,7 @@ export function createBotPairing(
             : {}),
           revision: value.revision + 1,
           reviewedAt,
+          updatedAt: reviewedAt,
           reviewedBy: 'authenticated-web',
         };
         db.prepare('UPDATE messaging_pairings SET status = ?, body = ? WHERE id = ?').run(

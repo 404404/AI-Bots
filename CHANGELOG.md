@@ -23,7 +23,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- IM pairing settings use a wide People / Roles / Requests workspace with searchable tables and selected-entry details. Role creation opens separately, and information icons reveal supporting explanations ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
+- IM pairing settings use a wide People / Roles / Requests workspace with searchable, sortable tables, compact creation/change times and selected-entry details. Role creation opens separately, table and detail corners align with native inputs, and information icons reveal supporting explanations. Older records without timestamps show an unknown value ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
 
 - Bot DM settings offer ordinary Lark roles and optional reviewed chat pairing: unpaired DMs and mentions wait without waking the model, approval asks for a new question, and revocation closes future access. The model receives trusted sender references and can query current permissions on demand; existing management pairing stays separate. Independent test Apps can be configured once and reused across worktrees ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373), [shared test App guide](docs/agents/im-test-apps.md), [ADR-0164](docs/adr/0164-lark-chat-pairing-is-reviewed-current-binding-authority.md)).
 

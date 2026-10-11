@@ -131,6 +131,97 @@ const request: PairingRequest = {
   revision: 1,
   attempts: 1,
 };
+it('search and person/time sorting filter actual rows without changing authority; unknown timestamps stay unknown', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const review = vi.fn(async () => {});
+  const change = vi.fn(async () => {});
+  const older = '2026-10-06T01:00:00.000Z';
+  const newer = '2026-10-07T02:00:00.000Z';
+  const names = () =>
+    Array.from(host.querySelectorAll('.bh-pairing-name')).map((entry) => entry.textContent);
+  const filter = async (value: string) =>
+    act(async () => {
+      const input = host.querySelector<HTMLInputElement>('.bh-pairing-table-panel input')!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  try {
+    await act(async () =>
+      root.render(
+        createElement(PairingSettings, {
+          requests: [
+            { ...request, status: 'approved', updatedAt: older },
+            {
+              ...request,
+              id: 'bob',
+              actorName: 'Bob QA',
+              accountName: 'Other App',
+              status: 'approved',
+              updatedAt: newer,
+            },
+          ],
+          roles: [
+            {
+              id: 'legacy',
+              botSlug: 'ada',
+              name: 'Legacy role',
+              behavior: 'Read docs',
+              capabilities: [],
+              revision: 1,
+            },
+          ],
+          senderAccess: change,
+          busy: false,
+          refresh: async () => {},
+          review,
+          t: zhTranslate,
+        }),
+      ),
+    );
+    expect(names()).toEqual(['Alice QA', 'Bob QA']);
+    await filter('Other App');
+    expect(names()).toEqual(['Bob QA']);
+    await filter('Alice');
+    expect(names()).toEqual(['Alice QA']);
+    await filter('no-such-person');
+    expect(names()).toEqual([]);
+    expect(host.textContent).toContain(zhTranslate('pairing.noMatches'));
+    await filter('');
+    const nameHeader = host.querySelectorAll<HTMLTableCellElement>('th')[1]!;
+    await act(async () => nameHeader.querySelector('button')!.click());
+    expect(nameHeader.getAttribute('aria-sort')).toBe('ascending');
+    await act(async () => nameHeader.querySelector('button')!.click());
+    expect(nameHeader.getAttribute('aria-sort')).toBe('descending');
+    expect(names()).toEqual(['Bob QA', 'Alice QA']);
+    const timeHeader = host.querySelectorAll<HTMLTableCellElement>('th')[5]!;
+    await act(async () => timeHeader.querySelector('button')!.click());
+    expect(timeHeader.getAttribute('aria-sort')).toBe('descending');
+    expect(names()).toEqual(['Bob QA', 'Alice QA']);
+    await act(async () => timeHeader.querySelector('button')!.click());
+    expect(names()).toEqual(['Alice QA', 'Bob QA']);
+    expect(host.querySelector('.bh-pairing-times time')?.getAttribute('datetime')).toBe(
+      request.createdAt,
+    );
+    expect(host.querySelectorAll('.bh-pairing-times time')).toHaveLength(4);
+    await act(async () =>
+      Array.from(host.querySelectorAll<HTMLButtonElement>('[role=tab]'))
+        .find((button) => button.textContent?.startsWith(zhTranslate('pairing.roles')))!
+        .click(),
+    );
+    expect(host.querySelectorAll('.bh-pairing-times time')).toHaveLength(0);
+    expect(host.querySelector('.bh-pairing-times')?.textContent).toContain('—');
+    expect(host.querySelector('.bh-pairing-times span')?.getAttribute('title')).toContain(
+      zhTranslate('pairing.timeUnknown'),
+    );
+    expect(review).not.toHaveBeenCalled();
+    expect(change).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 it('selecting a different request cannot carry over approval capabilities or review the old person', async () => {
   const host = document.createElement('div');
   document.body.append(host);

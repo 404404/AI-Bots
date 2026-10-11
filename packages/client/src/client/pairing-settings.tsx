@@ -24,6 +24,47 @@ const labels = {
   answer: 'pairing.answerCapability',
   'save-rules': 'pairing.rulesCapability',
 } as const;
+
+function auditColumn<Row extends { createdAt?: string; updatedAt?: string }>(
+  t: BotHarnessTranslate,
+): ColumnDef<Row> {
+  return {
+    id: 'time',
+    accessorFn: (row) => Date.parse(row.updatedAt ?? '') || 0,
+    header: t('pairing.time'),
+    enableGlobalFilter: false,
+    cell: ({ row }) => (
+      <div className="bh-pairing-times">
+        {(['createdAt', 'updatedAt'] as const).map((key) => {
+          const value = row.original[key];
+          const date = value ? new Date(value) : undefined;
+          const valid = date && Number.isFinite(date.getTime());
+          const label = t(key === 'createdAt' ? 'pairing.created' : 'pairing.modified');
+          return (
+            <span
+              key={key}
+              title={`${label}: ${valid ? date.toLocaleString() : t('pairing.timeUnknown')}`}
+            >
+              <span className="bh-muted">{label}</span>{' '}
+              {valid ? (
+                <time dateTime={value}>
+                  {date.toLocaleDateString(undefined, { month: '2-digit', day: '2-digit' })}{' '}
+                  {date.toLocaleTimeString(undefined, {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  })}
+                </time>
+              ) : (
+                '—'
+              )}
+            </span>
+          );
+        })}
+      </div>
+    ),
+  };
+}
 export function PairingSettings({
   requests,
   receivers = [],
@@ -84,6 +125,7 @@ export function PairingSettings({
       header: t('pairing.status'),
       cell: (cell) => <Tag>{String(cell.getValue())}</Tag>,
     },
+    auditColumn<PairingRequest>(t),
   ];
   const roleColumns: ColumnDef<ExternalUserRole>[] = [
     { id: 'name', accessorKey: 'name', header: t('pairing.roleName') },
@@ -98,6 +140,7 @@ export function PairingSettings({
       accessorFn: (role) => people.filter((person) => person.roleId === role.id).length,
       header: t('pairing.people'),
     },
+    auditColumn<ExternalUserRole>(t),
   ];
   return (
     <section className="bh-im-pairing" aria-label={t('pairing.title')}>

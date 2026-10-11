@@ -369,6 +369,8 @@ it('permission lookup refreshes visitor, unpaired and pending state without admi
 it('ordinary pairing survives restart and reuses only the same app identity across allowed conversations', async () => {
   const fx = await fixture();
   const role = await ordinaryRole(fx);
+  expect(Number.isFinite(Date.parse(role.createdAt!))).toBe(true);
+  expect(role.updatedAt).toBe(role.createdAt);
   await fx.receive(fresh(mention('group')));
   const request = fx.core.externalMessaging.pairing.list('ada')[0]!;
   await fx.core.externalMessaging.reviewPairing('ada', {
@@ -379,6 +381,7 @@ it('ordinary pairing survives restart and reuses only the same app identity acro
     expectedRoleRevision: 1,
   });
   await fx.restart();
+  expect((await fx.core.externalMessaging.snapshot('ada')).roles![0]).toEqual(role);
   await fx.receive(fresh(dm('after-restart')));
   expect(fx.runs).toHaveLength(1);
   expect(fx.admissions()).toEqual([{ reason: 'human-dm', messageId: 'om-after-restart' }]);

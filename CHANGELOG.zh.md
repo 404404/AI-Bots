@@ -23,7 +23,7 @@
 
 ### Added
 
-- IM 配对设置采用宽版人员／角色／申请工作区，提供可搜索表格与所选条目详情。角色创建打开独立弹窗，补充说明通过信息图标查看（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。
+- IM 配对设置采用宽版人员／角色／申请工作区，提供可搜索、排序的表格、紧凑的创建／修改时间及所选条目详情。角色创建打开独立弹窗，表格与详情圆角对齐原生输入框，补充说明通过信息图标查看；未记录时间的旧数据显示为空（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。
 
 - Bot DM 设置支持 Lark 普通角色与可选的聊天配对审核：未配对的私聊和群 @ 等待审核而不唤醒模型，批准后通知重新提问，撤销关闭后续资格。模型接收可信发送者引用并按需查询当前权限，既有管理配对保持独立；独立测试 App 可配置一次并跨 worktree 复用（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)、[共享测试 App 指南](docs/agents/im-test-apps.md)、[ADR-0164](docs/adr/0164-lark-chat-pairing-is-reviewed-current-binding-authority.md)）。
 

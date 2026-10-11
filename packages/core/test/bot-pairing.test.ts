@@ -89,16 +89,20 @@ function fixture() {
 it('Web review selects exact current-Bot capabilities; restart retains authority and revoke requires fresh review', () => {
   const f = fixture();
   const request = f.pairing.request('binding', event());
+  expect(request.updatedAt).toBe(request.createdAt);
   expect(request).toMatchObject({ status: 'pending', capabilities: [], actorId: 'ou_alice' });
   expect(() => f.pairing.assert('ada', 'binding', 'ou_alice', 'approve')).toThrow(
     'pairing-unauthorized',
   );
+  f.advance(1000);
   const approved = f.pairing.review('ada', {
     kind: 'approve',
     id: request.id,
     expectedRevision: 1,
     capabilities: ['approve', 'reject'],
   });
+  expect(approved.createdAt).toBe(request.createdAt);
+  expect(Date.parse(approved.updatedAt!)).toBe(Date.parse(request.createdAt) + 1000);
   expect(f.pairing.assert('ada', 'binding', 'ou_alice', 'approve').id).toBe(request.id);
   for (const [bot, actor, capability] of [
     ['another-bot', 'ou_alice', 'approve'],
@@ -119,7 +123,14 @@ it('Web review selects exact current-Bot capabilities; restart retains authority
   f.owner.close();
   const resumed = f.mount();
   expect(resumed.pairing.assert('ada', 'binding', 'ou_alice', 'approve')).toEqual(approved);
-  resumed.pairing.review('ada', { kind: 'revoke', id: request.id, expectedRevision: 2 });
+  f.advance(1000);
+  const revoked = resumed.pairing.review('ada', {
+    kind: 'revoke',
+    id: request.id,
+    expectedRevision: 2,
+  });
+  expect(revoked.createdAt).toBe(request.createdAt);
+  expect(Date.parse(revoked.updatedAt!)).toBe(Date.parse(request.createdAt) + 2000);
   expect(() => resumed.pairing.assert('ada', 'binding', 'ou_alice', 'approve')).toThrow(
     'pairing-unauthorized',
   );

@@ -291,6 +291,8 @@ PersonaBot Profile 的 IM 连接经现有 Typert/API Gateway 选择账号和已�
 
 ### Lark 普通角色与自动申请（ADR-0164）
 
+人员、角色与申请表格的创建／修改时间来自 Messaging owner 持久化的 JSON 元数据，不由 Client 加载时间推断；读取和通知投递记账不推进修改时间。旧记录未记录的时间保持未知。时间字段是兼容的可选元数据，沿用 Operational Database authority，不增加 SQL schema generation。
+
 [#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373) 沿用 Messaging owner 与 Operational Database，新增普通 External User Role、默认关闭的发送者限制和 `conversation` purpose 配对；既有 `management` purpose 的 `/pair` 显式能力保持独立。普通角色先支持自然语言行为权限与空管理能力，不新增 DSH 原生 RBAC，也不宣称隔离邮件、代码或任意 Shell 资源。配对按当前 PersonaBot、App Binding/fingerprint 与 Provider 认证的 Lark open ID 限定，可跨允许的 DM/群复用，但不跨 Bot/App/平台或重新绑定继承。Host 在默认接收、显式 Bridge、会话接入、共享来源及模型消费处逐 Bot 校验资格；不同作者的角色不合并。
 
 未配对的受限 DM/群 @ 先持久提交有界审核元数据，不保存旧指令正文、不建立请求 Source Event/Inbox Admission、wake 或 Task。认证 Web Human 在 Bot DM Channel sidebar 经既有 API Gateway/Client seam 选择角色并按 revision 审核。批准先提交，再通过当前独占 Consumer 的受检查回复能力发送固定重问通知；只允许新的有效消息进入原有模型回复/Outbox 路径。通知尝试在外部调用前记录，未知结果不盲重试；接收回调先返回，避免与 Provider 账号队列死锁。撤销立即关闭后续资格及尚未执行的相关 Admission，既有历史保留。Generation 78、迁移和边界详见 [ADR-0164](../adr/0164-lark-chat-pairing-is-reviewed-current-binding-authority.md)。三个只读目录与完整首轮真人反馈仍由 #1374 交付，角色编辑/重新分配与显式开放群/被动上下文分别保留 #1375/#1376 的真人依赖。

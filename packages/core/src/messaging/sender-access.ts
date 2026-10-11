@@ -12,6 +12,8 @@ export interface ExternalUserRole {
   behavior: string;
   capabilities: PairingCapability[];
   revision: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface SenderPolicy {
   restricted: boolean;
@@ -159,6 +161,7 @@ export function changeSenderAccess(
   const input = senderAccessInput.parse(raw);
   if (input.kind === 'create-role') {
     if (externalUserRoles(db, botSlug).length >= 50) throw new MessagingError('role-capacity');
+    const at = new Date().toISOString();
     const role: ExternalUserRole = {
       id: randomUUID(),
       botSlug,
@@ -166,6 +169,8 @@ export function changeSenderAccess(
       behavior: input.behavior,
       capabilities: [],
       revision: 1,
+      createdAt: at,
+      updatedAt: at,
     };
     db.prepare('INSERT INTO messaging_external_roles (id, bot_slug, body) VALUES (?, ?, ?)').run(
       role.id,
