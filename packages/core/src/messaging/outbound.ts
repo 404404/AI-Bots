@@ -1861,7 +1861,7 @@ export function createOutboundMessaging(options: {
         pairings: pairing.list(botSlug),
         approvals: approvals.snapshot(botSlug),
         pairingReceivers: identities
-          .filter((i) => i.platform === 'feishu' && !i.revokedAt)
+          .filter((i) => ['feishu', 'slack'].includes(i.platform) && !i.revokedAt)
           .map((i) => ({ name: i.name, status: i.reception ?? 'unavailable' })),
         grants,
         heldConversations: database.read((db) =>
