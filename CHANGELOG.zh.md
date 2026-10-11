@@ -29,7 +29,7 @@
 
 ### Added
 
-- 普通聊天配对扩展到 Slack 私聊，复用人员／角色／申请设置、当前发送者权限查询及原会话 checked 回复；批准要求重新提问，撤销阻止后续接收。三步本机向导和私密加载器提供独立 Slack QA1／QA2／QA3，跨 worktree 复用且保留 Lark 配置，配置过程不启动接收器。中英文指南补充真实私聊权限截图、权限用途及重新安装步骤。真实 Slack 验收仍待完成；Slack 群聊和原生管理控件由独立功能推进（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)，[指南](docs/slack-connection.md)）。
+- 普通聊天配对扩展到 Slack 私聊，复用人员／角色／申请设置、当前发送者权限查询及原会话 checked 回复；批准要求重新提问，撤销阻止后续接收。三步本机向导和私密加载器提供独立 Slack QA1／QA2／QA3，跨 worktree 复用且保留 Lark 配置，配置过程不启动接收器。中英文指南补充真实私聊权限与完整流程截图、权限用途及重新安装步骤。隔离普通私聊的原生执行／撤销／重启检查与 Human 反馈已通过；Slack 群聊和原生管理控件由独立功能推进（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)，[指南](docs/slack-connection.md)）。
 
 - Bot 私聊输入区新增既有模型、工作区授权和 Bot 小人显示／移除快捷操作；图标加文字的模型及工作区数量 chips 居左，紧凑 token 用量居右，点击展开只读 Orchestrator／最近 Assignment 用量浮层，显示 Session 相对占比进度条，底部独立详情按钮才跳转。Profile 和记忆文件详情替换整个 Channel body，不再叠加聊天 header；标题与 pin chips 居中对齐，hover 背景保持不透明。保留草稿与附件，工作区授权仍需明确确认，工作区折叠区复用 Channel sidebar 的标题与 chevron 设计（[#1432](https://github.com/BotHarness/DeepSeekBot/issues/1432)）。
 

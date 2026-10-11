@@ -1,6 +1,6 @@
 # ADR-0174: Slack DM chat pairing reuses current Binding authority
 
-Status: Accepted for the bounded #1415 implementation; real Slack qualification pending.
+Status: Accepted; bounded #1415 source-candidate Slack DM qualification and Human interaction feedback completed. Published product and Slack group/native-management qualification remain separate.
 
 ## Context
 
@@ -23,6 +23,8 @@ This tracer does not qualify Slack group pairing, open groups, passive unpaired 
 No DSH-native RBAC is added. Native execution and Web Human authority remain unchanged. Natural-language Role/group behavior is prompt policy, not arbitrary filesystem, mail or Shell isolation. Current sender lookup and management checks remain separate.
 
 The first real Slack test must prove pending → Web review → fixed re-ask → fresh own-app DM reply → revoke refusal → restart, with native rendering matched to Source Event/Admission/Outbox facts and Human feedback. Tests or an existing Provider DM success do not satisfy that gate. Shared production and other task receivers remain exclusive.
+
+The isolated QA2 source candidate completed that sequence, including actual Web Role selection/approval, current permission and all three read-only directory queries. Only fresh approved questions produced bridged Source Events, handled Admissions and provider-accepted Outboxes; their receipt IDs matched the rendered Slack replies. Pending and post-revocation messages remained metadata-only. The Human accepted the interaction, and the task receiver stopped. See [PR #1436](https://github.com/BotHarness/DeepSeekBot/pull/1436) for current-head automated/visual evidence and the earlier receiver-conflict recovery; this does not qualify a published product, native approval or Slack group intake.
 
 Profiles that already enabled the Bot-wide restriction will now restrict Slack DMs too; update the settings wording and guide rather than silently describe this as Lark-only. Before reverting to an older binary that lacks Slack restriction, disable the affected Slack Binding while deciding the replacement policy; older code must not be relied on to enforce this new gate. No schema downgrade or data restoration is required.
 
