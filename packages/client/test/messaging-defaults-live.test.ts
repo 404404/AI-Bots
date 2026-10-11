@@ -45,13 +45,11 @@ it('switches cached ready Channels with healthy Activity without leaking a neste
   const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const stopChannel = mountChannelLive(store, { refreshChannelMessages: vi.fn(async () => {}) });
   try {
-    streams
-      .at(-1)!
-      .dispatchEvent(
-        new MessageEvent('activity/snapshot', {
-          data: JSON.stringify({ generation: 'host', revision: 1, bots: [] }),
-        }),
-      );
+    streams.at(-1)!.dispatchEvent(
+      new MessageEvent('activity/snapshot', {
+        data: JSON.stringify({ generation: 'host', revision: 1, bots: [] }),
+      }),
+    );
     expect(store.getSnapshot().activitySync).toBe('live');
     store.select({ kind: 'channel', channelId: second.id });
     expect(streams.filter((source) => !source.closed)).toHaveLength(1);

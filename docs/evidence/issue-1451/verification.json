@@ -31,5 +31,16 @@
     }
   ],
   "ownEchoQualified": false,
-  "qqPostRestartMarkerPending": true
+  "qqPostRestart": {
+    "marker": "QQ_FRONTIER_QA2_20261012_WEB_D_OK",
+    "humanVisibleConfirmed": true,
+    "inboxCount": 1,
+    "inboxHandled": true,
+    "sourceAvailable": true,
+    "sourceLinked": true,
+    "ownAppReplyCount": 1,
+    "providerAccepted": true,
+    "nativeReceipts": 1,
+    "latestReplyAt": "2026-10-11T22:45:19.420Z"
+  }
 }

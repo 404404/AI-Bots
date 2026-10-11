@@ -11,7 +11,7 @@ Issue: [#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451).
 - The first candidate `04efa8db` shared only roster/Activity; it still failed warm two-document request checks because native client-hmr owns another SSE. It is not accepted as the fix.
 - Final combined candidate: both actual documents render the retained real DM, models and qualified QQ binding. Warm authenticated readback confirms native RPC `ok=true`, one identity, no Loading, at1224ms and690ms. [Safe aggregate verification](verification.json) contains no credentials, raw API payloads, native IDs or logs.
 - Current fresh document console has no new error. Earlier native unknown-Session/Connection errors and Host-restart failures remain preserved separately; this fix does not claim their causes resolved. Background diagnostic freshness is separate from actual DOM/API inspection.
-- QQ authorization and binding survived restart and the receiver reconnected. A fresh original-group marker after this final restart is pending Human confirmation; these browser images are not QQ group-reply or Echo proof.
+- QQ authorization and binding survived restart and the receiver reconnected. Human confirmed the fresh original-group reply `QQ_FRONTIER_QA2_20261012_WEB_D_OK` after this final restart. Native readback associates one handled Inbox, available Source, linked own-App reply and native receipt (settled2026-10-11T22:45:19.420Z). These browser images are not QQ group-reply or Echo proof; own Echo remains unqualified.
 
 ## Actual before and after
 
