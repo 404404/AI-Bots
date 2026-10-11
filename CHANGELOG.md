@@ -132,6 +132,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Restored QQ group Channel mappings retain bounded retries while apps become ready after Host restart, so the first new mention reaches its mapped Channel as well as its Inbox ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
 - Fixed checked QQ self mentions in full-reception events while keeping ordinary messages and Bot authors excluded; the candidate Provider retains current Lark pairing capabilities and does not claim own Echo qualification ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).
@@ -285,7 +287,6 @@ Bots can be pinned as pixel Window Companions that play their replies, binding o
 
 ### Changed
 
-- QQ independent Bot bindings retain explicit self mentions in the platform full-reception carrier while Bot-authored messages remain excluded from Human admission. ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156), [#1172](https://github.com/BotHarness/DeepSeekBot/pull/1172))
 
 - Bot Marketplace cards now read like a profile card: the Profile banner sits on top, the Bot's avatar overlaps its lower edge with the name, repository and Install beside it, then a two-line bio and one line of tags, stars and update date. The detail view opens with the same banner and avatar, and the modal shows two cards per row ([#1232](https://github.com/BotHarness/BotHarness/pull/1232)).
 - **Bind app** links directly to the website connection tutorials for Lark / Feishu, Slack and WeChat, with a more-platforms overview; the standalone Lark setup card is removed so platform instructions stay in one place ([#822](https://github.com/BotHarness/DeepSeekBot/issues/822)).
@@ -303,7 +304,6 @@ Bots can be pinned as pixel Window Companions that play their replies, binding o
 
 ### Fixed
 
-- Restored QQ group Channel mappings retain bounded retries while apps become ready after Host restart, so the first new mention reaches its mapped Channel as well as its Inbox ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - On an explicitly configured native RC2 timed-question Profile, a DM question card stays answerable after its foreground deadline while the same Bot handles other messages; a late answer shows submitted until the original native Session admits it. Production pins and blocking RC1 questions remain unchanged ([#1220](https://github.com/BotHarness/DeepSeekBot/issues/1220)).
 
