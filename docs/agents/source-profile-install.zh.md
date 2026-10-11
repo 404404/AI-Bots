@@ -65,3 +65,7 @@ helper 校验 artifact integrity、DSH 和 pnpm 版本，让原生 DSH 从 `web`
 Issue [#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438) 在真实 Ubuntu 26.04 VPS 上使用此安装器创建了新的 Profile：2 vCPU、云规格 4 GB 内存、DSH 0.2.0-rc.1，源码为 `73c75f86aa50767be34a5c8d2cadc17b6a3e8862`。已验证原生 loopback 认证、tailnet HTTPS、真实关联的本地 DM，以及任务服务重启后的新 DM。随后更新至源码 `031a14db43af5b3bf52e76b01c30e27828e6e9c9`，原 Bot 保留并产生了新的关联回复。
 
 这些证据不包含 QQ 群投递资格。完整 VPS/QQ 教程及公开录屏核对仍由该 Issue 跟踪。接收器分配见[可复用 QQ QA 客户端](qq-test-clients.md)；原生授权和真实聊天验收见 [QQ 连接指南](../qq-connection.md)。
+
+![真实教程 Bot 的模型设置，以及对源码版本标记的回复](../assets/vps-source/01-real-dm-031a14db.png)
+
+_2026-10-11 17:55 UTC 从实际运行的源码候选 `1.2.1-vps.20261012.sha031a14db` 采集。底部请求及其对应回复是真实模型输出；上方较大的欢迎卡明确标为预设产品文字。画面不含授权表单或浏览器地址栏。_
