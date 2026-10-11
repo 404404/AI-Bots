@@ -32,7 +32,11 @@ function IdentitiesForBot({
   const [panel, setPanel] = useState<'pairing' | 'approval'>();
   const [busy, setBusy] = useState(false);
   const [scopeFailed, setScopeFailed] = useState<'pairing' | 'approval'>();
-  const operate = async (operation: () => Promise<void>, scope: 'pairing' | 'approval') => {
+  const operate = async (
+    operation: () => Promise<void>,
+    scope: 'pairing' | 'approval',
+    propagate = false,
+  ) => {
     if (busy) return;
     setBusy(true);
     setScopeFailed(undefined);
@@ -41,6 +45,7 @@ function IdentitiesForBot({
       await refresh();
     } catch {
       setScopeFailed(scope);
+      if (propagate) throw new Error('pairing-operation-failed');
     } finally {
       setBusy(false);
     }
@@ -141,7 +146,9 @@ function IdentitiesForBot({
           requests={pairings}
           roles={snapshot?.roles ?? []}
           {...(snapshot?.senderPolicy ? { policy: snapshot.senderPolicy } : {})}
-          senderAccess={(input) => operate(() => actions.senderAccess(slug, input), 'pairing')}
+          senderAccess={(input) =>
+            operate(() => actions.senderAccess(slug, input), 'pairing', true)
+          }
           receivers={snapshot?.pairingReceivers ?? []}
           busy={busy}
           failed={scopeFailed === 'pairing'}
