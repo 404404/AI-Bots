@@ -270,4 +270,124 @@ describe('live CLI over the authenticated DSH carrier', () => {
     expect(wrongType.text).not.toContain(canary);
     expect(live.calls).toHaveLength(1);
   });
+
+  it.each(['configured', 'revoked', 'superseded', 'unavailable'])(
+    'reports current account %s independently of configured request settlement',
+    async (status) => {
+      const live = await host((method) => ({
+        ok: true,
+        value: {
+          status: method === 'privateInputStatus' ? 'configured' : status,
+          secret: 'CANARY',
+        },
+      }));
+      const account = await invoke(
+        ['ask-secret-account-status', 'dm-ada', '--message-id', 'private-card'],
+        live.url,
+      );
+      expect(account.code).toBe(0);
+      expect(account.json).toEqual({ status });
+      expect(live.calls).toEqual([
+        {
+          method: 'privateAccountStatus',
+          args: {
+            channelId: 'dm-ada',
+            messageId: 'private-card',
+          },
+        },
+      ]);
+      expect(
+        (await invoke(['ask-secret-status', 'dm-ada', '--message-id', 'private-card'], live.url))
+          .json,
+      ).toEqual({ status: 'configured' });
+    },
+  );
+
+  it('opens a blank replacement once and returns only its new card id', async () => {
+    const messageId = '11111111-1111-4111-8111-111111111111';
+    const live = await host(() => ({ ok: true, value: { messageId, secret: 'CANARY' } }));
+    const result = await invoke(
+      ['ask-secret-replace', 'dm-ada', '--message-id', 'private-card'],
+      live.url,
+    );
+    expect(result.code).toBe(0);
+    expect(result.json).toEqual({ messageId });
+    expect(live.calls).toEqual([
+      {
+        method: 'privateInputReplace',
+        args: {
+          channelId: 'dm-ada',
+          messageId: 'private-card',
+        },
+      },
+    ]);
+  });
+
+  it('revokes once and publishes only bounded stop counts', async () => {
+    const summary = { accepted: true, stopped: 2, completed: 1, uncertain: 0 };
+    const live = await host(() => ({ ok: true, value: { ...summary, secret: 'CANARY' } }));
+    const result = await invoke(
+      ['ask-secret-revoke', 'dm-ada', '--message-id', 'private-card'],
+      live.url,
+    );
+    expect(result.code).toBe(0);
+    expect(result.json).toEqual(summary);
+    expect(live.calls).toEqual([
+      {
+        method: 'privateAccountRevoke',
+        args: {
+          channelId: 'dm-ada',
+          messageId: 'private-card',
+        },
+      },
+    ]);
+  });
+
+  it.each([
+    { command: 'ask-secret-account-status', value: { status: ['configured'] } },
+    { command: 'ask-secret-status', value: { status: ['configured'] } },
+    { command: 'ask-secret-replace', value: { messageId: 'CANARY' } },
+    { command: 'ask-secret-replace', value: {} },
+    {
+      command: 'ask-secret-revoke',
+      value: { accepted: false, stopped: 0, completed: 0, uncertain: 0 },
+    },
+    {
+      command: 'ask-secret-revoke',
+      value: { accepted: true, stopped: -1, completed: 0, uncertain: 0 },
+    },
+    {
+      command: 'ask-secret-revoke',
+      value: { accepted: true, stopped: 0, completed: 0.5, uncertain: 0 },
+    },
+    {
+      command: 'ask-secret-revoke',
+      value: { accepted: true, stopped: 0, completed: 0, uncertain: 'CANARY' },
+    },
+  ])(
+    'rejects invalid $command results without exposing payloads or retrying',
+    async ({ command, value }) => {
+      const live = await host(() => ({ ok: true, value: { ...value, secret: 'CANARY' } }));
+      const result = await invoke([command, 'dm-ada', '--message-id', 'private-card'], live.url);
+      expect(result.code).toBe(1);
+      expect(result.json.error.code).toBe('private-input-not-accepted');
+      expect(result.text).not.toContain('CANARY');
+      expect(live.calls).toHaveLength(1);
+    },
+  );
+
+  it.each(['ask-secret-account-status', 'ask-secret-replace', 'ask-secret-revoke'])(
+    'requires a card and suppresses raw Owner refusal payloads for %s',
+    async (command) => {
+      const live = await host(() => ({ ok: false, error: { code: 'CANARY', message: 'CANARY' } }));
+      expect((await invoke([command, 'dm-ada'], live.url)).json.error.code).toBe('usage');
+      expect(live.calls).toHaveLength(0);
+      const refused = await invoke([command, 'dm-ada', '--message-id', 'private-card'], live.url);
+      expect(refused.json.error.code).toBe('private-input-not-accepted');
+      expect(refused.text).not.toContain('CANARY');
+      expect(live.calls).toHaveLength(1);
+      const search = await invoke(['search', command]);
+      expect(search.text).toContain(command);
+    },
+  );
 });

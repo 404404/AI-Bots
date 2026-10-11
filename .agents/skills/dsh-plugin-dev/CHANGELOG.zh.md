@@ -9,6 +9,8 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 
 ### Documentation
 
+- 记录 Owner CLI 私密输入生命周期的等价操作，复用现有已认证 Host carrier；DSH／Cordis Context 与 Skill 行为保持不变（[#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416)，[指南](../../../docs/dev/guides/private-input-cli.md)）。
+
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录真实模型路由匹配、Request 请求体覆盖与 Windows 探针导入，已用 pinned RC1 Go 请求及被动探针回归验证；DSH/Cordis Context 不变（[#1383](https://github.com/BotHarness/DeepSeekBot/issues/1383)）。
 
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录凭据提交后响应失败及启动恢复的写入顺序，通过 pinned RC1 原生 Provider 和私密账号回归测试核验；DSH／Cordis Context 不变（[#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)）。
