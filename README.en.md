@@ -242,7 +242,7 @@ Configure reusable independent Lark test Apps once with `node scripts/dev-im-tes
 
 - [DeepSeekBot website](https://deepseekbot.app/en/) · [Documentation site](https://botharness.ai) · [Intro slides](https://botharness.ai/slides/s/botharness-intro)
 - [Product language](CONTEXT.md) · [Living architecture and data flow](docs/architecture/botharness-architecture.md) · [Architecture decisions](docs/adr/)
-- [Contributor instructions](AGENTS.md) · [Release Ledger](CHANGELOG.md) · [DSH official documentation](https://deepseek-harness.github.io/deepseek-harness/)
+- [Contributor guide](CONTRIBUTING.md) · [Agent development instructions](AGENTS.md) · [Release Ledger](CHANGELOG.md) · [DSH official documentation](https://deepseek-harness.github.io/deepseek-harness/)
 
 ```bash
 pnpm lint && pnpm format:check && pnpm typecheck && pnpm test
@@ -271,7 +271,9 @@ Questions, ideas and the Bots you build are all welcome.
 
 - **Discord:** [join the DeepSeekBot server](https://discord.gg/aEB2Ayhu7B)
 - **QQ group:** search **1125565676** in QQ
-- **Bugs and feature requests:** [GitHub Issues](https://github.com/BotHarness/DeepSeekBot/issues)
+- **Help, ideas and examples:** [GitHub Discussions](https://github.com/BotHarness/DeepSeekBot/discussions) · [Welcome](https://github.com/BotHarness/DeepSeekBot/discussions/1397)
+- **Reproducible bugs and scoped work:** [GitHub Issues](https://github.com/BotHarness/DeepSeekBot/issues/new/choose)
+- **Help maintain the project:** [Contributor guide](CONTRIBUTING.md) · [Your first contribution](https://github.com/BotHarness/DeepSeekBot/discussions/1398); documentation, testing and answers count too.
 
 ## Inspiration and acknowledgements
 

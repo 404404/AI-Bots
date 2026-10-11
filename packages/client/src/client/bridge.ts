@@ -1447,11 +1447,22 @@ function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['priv
   if (
     record === undefined ||
     Object.keys(record).some(
-      (key) => !['sessionId', 'account', 'purpose', 'fields'].includes(key),
+      (key) =>
+        !['sessionId', 'account', 'purpose', 'fields', 'expiresAt', 'replacesMessageId'].includes(
+          key,
+        ),
     ) ||
-    typeof record['sessionId'] !== 'string' ||
+    (record['sessionId'] === undefined
+      ? typeof record['replacesMessageId'] !== 'string'
+      : typeof record['sessionId'] !== 'string') ||
+    (record['replacesMessageId'] !== undefined &&
+      (typeof record['replacesMessageId'] !== 'string' ||
+        !/^[0-9a-f-]{36}$/.test(record['replacesMessageId']))) ||
     typeof record['account'] !== 'string' ||
     typeof record['purpose'] !== 'string' ||
+    (record['expiresAt'] !== undefined &&
+      (typeof record['expiresAt'] !== 'string' ||
+        !Number.isFinite(Date.parse(record['expiresAt'])))) ||
     !Array.isArray(record['fields']) ||
     record['fields'].length < 1 ||
     record['fields'].length > 8
@@ -1473,10 +1484,14 @@ function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['priv
   if (new Set(fields.map((field) => field.id)).size !== fields.length)
     throw new Error('Invalid private input fields');
   return {
-    sessionId: record['sessionId'],
+    ...(typeof record['sessionId'] === 'string' ? { sessionId: record['sessionId'] } : {}),
+    ...(typeof record['replacesMessageId'] === 'string'
+      ? { replacesMessageId: record['replacesMessageId'] }
+      : {}),
     account: record['account'],
     purpose: record['purpose'],
     fields,
+    ...(typeof record['expiresAt'] === 'string' ? { expiresAt: record['expiresAt'] } : {}),
   };
 }
 
@@ -2817,6 +2832,7 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
     if (
       item['kind'] !== 'group-join-request' &&
       item['kind'] !== 'user-question' &&
+      item['kind'] !== 'private-input' &&
       item['kind'] !== 'tool-approval' &&
       item['kind'] !== 'workspace-grant-request' &&
       item['kind'] !== 'bot-dm-message' &&
@@ -2854,6 +2870,13 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
       return undefined;
     if (item['requestId'] !== undefined && typeof item['requestId'] !== 'string') return undefined;
     if (item['messageId'] !== undefined && typeof item['messageId'] !== 'string') return undefined;
+    if (
+      item['kind'] === 'private-input' &&
+      (item['category'] !== 'action' ||
+        typeof item['messageId'] !== 'string' ||
+        typeof item['sourceEventId'] !== 'string')
+    )
+      return undefined;
     if (
       item['kind'] === 'channel-unread' &&
       (!Number.isSafeInteger(item['unreadCount']) ||

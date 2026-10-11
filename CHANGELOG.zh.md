@@ -27,6 +27,10 @@
 
 - Lark 配对设置支持持续授权组与个人 Allow／Deny 例外；当前权限查询展示各项来源，显式 Deny 优先于 Allow，移出组只撤销该组贡献，每人仍保留一个行为 Role（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
 
+- Web Chat 支持按 PersonaBot／账号私密替换凭据、撤销本地访问，并在宽记忆授权下继续核对消费版本、限时报告运行中使用的停止结果（[#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)，[指南](docs/dev/guides/private-input-cli.md)）。旧程序不理解新增账号 tombstone；升级前备份，升级后向前修复或恢复完整升级前 Profile 备份。
+
+- 私密输入卡片拥有独立待办和十五分钟有效期；取消、并发提交与重启会安全结算，不因旧卡片唤醒已停止的 Bot。已配置引用继续保留，新 grant 使用前必须核对卡片的已提交结果（[#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381)、[指南](docs/dev/guides/private-input-cli.md)）。
+
 - IM 配对设置采用宽版人员／角色／申请工作区，提供可搜索、排序的表格、紧凑的创建／修改时间及所选条目详情。角色创建打开独立弹窗，表格与详情圆角对齐原生输入框，补充说明通过信息图标查看；未记录时间的旧数据显示为空（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。
 
 - 已允许的具体 Lark 群可显式接纳无管理能力的未配对访客；独立采集的未配对普通消息可作为被动上下文，但不唤醒模型或填充有效请求的唤醒阈值（[#1376](https://github.com/BotHarness/DeepSeekBot/issues/1376)）。
@@ -102,6 +106,8 @@
 
 - Lark 工具审批卡片通过合格 Provider 的共享更新显示最终执行或拒绝状态，避免继续显示旧审批按钮（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
 
+- 聊天气泡使用一致的内边距；私密输入、提问、审批、工作区授权与失败修复卡的操作区上方间距与底部内边距对齐（[#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)）。
+
 - 窗口伙伴按每个 Bot 独立错开眨眼时点与空闲间隔，外形相同的伙伴也不再同步眨眼（[#1367](https://github.com/BotHarness/DeepSeekBot/issues/1367)）。
 
 - 窗口伙伴说话时全张嘴改为更平的开口，保留半张嘴、原有表情、头像和说话节奏（[#1241](https://github.com/BotHarness/DeepSeekBot/issues/1241)）。
@@ -133,6 +139,8 @@
 - 窄屏下消息气泡不再被常驻的回复和复制按钮挤占横向空间，这两个操作收进气泡的长按菜单；桌面端的悬停显示和右键菜单保持不变（[#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)）。
 
 ### Documentation
+
+- 新增面向人的双语贡献指南与社区入口，区分求助、想法、案例和明确的 Issue / PR；运行行为不变（[contributor guide](CONTRIBUTING.md)、[#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)）。
 
 - 双语 README 明确 DeepSeekBot 的项目身份、官网与安装入口及其与 DS Bot 的区别，并区分正式 npm 与当前源码的 Browser / Computer 能力范围（[#1399](https://github.com/BotHarness/DeepSeekBot/issues/1399)）。
 

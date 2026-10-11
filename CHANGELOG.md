@@ -27,6 +27,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - Lark pairing settings manage continuing authorization groups and personal Allow/Deny exceptions; current permission queries show every source, explicit Deny overrides Allow, and removing membership withdraws only that group contribution while each person retains one behavior Role ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 
+- Added Web Chat private credential replacement and local revocation per PersonaBot/account, with current-version execution checks and bounded running-use stop reports even under remembered broad approval ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382), [guide](docs/dev/guides/private-input-cli.md)). Older binaries do not honor the new account tombstones; back up before upgrading and repair forward or restore the full pre-upgrade Profile backup.
+
+- Private input cards have independent pending attention and a fifteen-minute deadline; cancellation, competing submissions and restart settle safely without waking a stopped Bot. Configured references persist, while new grants require a committed card result before use ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381), [guide](docs/dev/guides/private-input-cli.md)).
+
 - IM pairing settings use a wide People / Roles / Requests workspace with searchable, sortable tables, compact creation/change times and selected-entry details. Role creation opens separately, table and detail corners align with native inputs, and information icons reveal supporting explanations. Older records without timestamps show an unknown value ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
 
 - Each allowed Lark group can explicitly accept unpaired visitors without management powers; separately collected unpaired ordinary messages supply passive context without waking the model or filling eligible request thresholds ([#1376](https://github.com/BotHarness/DeepSeekBot/issues/1376)).
@@ -102,6 +106,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - Lark tool-approval cards now show settled execution or rejection without stale action buttons by using shared updates in the qualified Provider ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 
+- Chat bubbles use equal insets, and private-input, question, approval, workspace-grant and failure-repair cards align the space above their actions with the bottom inset ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
+
 - Window Companions blink at independently staggered phases and idle intervals per Bot, so matching avatars no longer blink in unison ([#1367](https://github.com/BotHarness/DeepSeekBot/issues/1367)).
 
 - Window Companions use a flatter full speech opening, preserving the half-open mouth, saved expression, portraits and speaking rhythm ([#1241](https://github.com/BotHarness/DeepSeekBot/issues/1241)).
@@ -133,6 +139,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - On narrow screens, message bubbles are no longer squeezed by the always-visible reply and copy buttons; those actions move into the long-press message menu, while desktop hover and right-click behavior is unchanged ([#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)).
 
 ### Documentation
+
+- Added bilingual human contributor guides and community entry points for questions, ideas, examples and focused issues or PRs; runtime behavior is unchanged ([contributor guide](CONTRIBUTING.md), [#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)).
 
 - Clarified DeepSeekBot’s project identity, canonical installation links and distinction from DS Bot in both READMEs, with published npm versus current-source Browser/Computer scope ([#1399](https://github.com/BotHarness/DeepSeekBot/issues/1399)).
 

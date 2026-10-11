@@ -201,9 +201,37 @@ export class BotharnessBridgeService extends TypertRemoteService {
     };
   }
 
-  privateInputCancel(channelId: string, messageId: string): { accepted: boolean } {
+  async privateInputCancel(channelId: string, messageId: string): Promise<{ accepted: boolean }> {
     this.requirePrivateOwner();
-    return { accepted: this.privateInputs?.cancel(true, channelId, messageId) ?? false };
+    return { accepted: (await this.privateInputs?.cancel(true, channelId, messageId)) ?? false };
+  }
+
+  async privateAccountStatus(channelId: string, messageId: string) {
+    this.requirePrivateOwner();
+    return (
+      this.privateInputs?.accountStatus(true, channelId, messageId) ?? {
+        status: 'unavailable',
+        references: {},
+      }
+    );
+  }
+
+  async privateInputReplace(channelId: string, messageId: string): Promise<{ messageId?: string }> {
+    this.requirePrivateOwner();
+    const replacement = await this.privateInputs?.replace(true, channelId, messageId);
+    return replacement === undefined ? {} : { messageId: replacement };
+  }
+
+  async privateAccountRevoke(channelId: string, messageId: string) {
+    this.requirePrivateOwner();
+    return (
+      this.privateInputs?.revoke(true, channelId, messageId) ?? {
+        accepted: false,
+        stopped: 0,
+        completed: 0,
+        uncertain: 0,
+      }
+    );
   }
 
   private requirePrivateOwner(): void {
@@ -1187,6 +1215,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'privateInputStatus',
   'privateInputSubmit',
   'privateInputCancel',
+  'privateAccountStatus',
+  'privateInputReplace',
+  'privateAccountRevoke',
   'messagingDefaults',
   'messagingDefaultsSet',
   'channelBridges',

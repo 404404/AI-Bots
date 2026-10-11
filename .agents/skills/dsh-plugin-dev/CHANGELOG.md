@@ -10,6 +10,10 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Documented post-commit credential response failures and startup-recovery ordering in the [local development guide](../dsh-dev/SKILL.md), verified against the pinned RC1 native Provider and private-account regression tests; DSH/Cordis Context is unchanged ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
+
+- Recorded fresh RC1 Profile initialization, native credential-record object ownership and recovery quiescence in the [local development guide](../dsh-dev/SKILL.md), verified with the pinned native Provider and real private-input Host; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381)).
+
 - Recorded deferred Node environment reads in browser dependencies, compile-time browser constants and real native-dialog verification in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1 ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
 
 - Recorded RC1 native MCP stdio lifecycle, shared Scope module identity, Windows Subprocess argv, and inherited Registry visibility traps in the [local development guide](../dsh-dev/SKILL.md), verified with concurrent native Agent Scopes and real Docker; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).

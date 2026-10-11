@@ -29,7 +29,7 @@ const values = {
   private_url: 'http://127.0.0.1/private?canary=synthetic',
 };
 
-async function fixture(qualified = true) {
+async function fixture(qualified = true, requestTimeoutMs?: number) {
   const root = createTempRoot('bh-private-input-');
   const ctx = new Context();
   const fiber = ctx.plugin(LocalCredentialProvider, {
@@ -52,24 +52,28 @@ async function fixture(qualified = true) {
   const agent = { session: { id: 'ada-session' } } as Agent;
   const bea = { session: { id: 'bea-session' } } as Agent;
   let live = true;
-  const owner = new PrivateInputs({
+  const deps = {
     channels,
     ownership,
     registry,
     credentials: () => credentials,
-    isLive: (candidate) => live && (candidate === agent || candidate === bea),
+    isLive: (candidate: Agent) => live && (candidate === agent || candidate === bea),
     qualified: async () => qualified,
     log: vi.fn(),
-  });
+    ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+  };
+  const owner = new PrivateInputs(deps);
   return {
     owner,
     agent,
     bea,
     channels,
     credentials,
+    ownership,
     ctx,
-    close: () => {
-      owner.close();
+    replacement: () => new PrivateInputs(deps),
+    close: async () => {
+      await owner.close();
       registryDatabase(root).close();
     },
     stop: () => {
@@ -79,6 +83,292 @@ async function fixture(qualified = true) {
 }
 
 describe('private input native authority and reference contract', () => {
+  it('replaces an account through private Chat input and durably revokes both old and current references', async () => {
+    const f = await fixture();
+    const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId, values });
+    const original = await wait;
+    expect(await f.owner.replace(false, 'dm-ada', messageId)).toBeUndefined();
+    const replacementId = await f.owner.replace(true, 'dm-ada', messageId);
+    expect(replacementId).toBeDefined();
+    const replacementValues = { ...values, api_key: 'SYNTHETIC replacement key' };
+    expect(
+      await f.owner.submit(true, {
+        channelId: 'dm-ada',
+        messageId: replacementId,
+        values: replacementValues,
+      }),
+    ).toBe(true);
+    const current = await f.owner.accountStatus(true, 'dm-ada', replacementId!);
+    expect(current.status).toBe('configured');
+    const reuse = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await expect(
+      Promise.race([
+        reuse,
+        new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 100)),
+      ]),
+    ).resolves.toEqual({
+      status: 'configured',
+      account: declaration.account,
+      references: current.references,
+    });
+    const run = vi.fn(async () => 'HTTP 200');
+    await expect(
+      f.owner.consume(f.agent, declaration.account, original.references, run),
+    ).rejects.toThrow(/unavailable/);
+    expect(run).not.toHaveBeenCalled();
+    expect(
+      await f.owner.consume(
+        f.agent,
+        declaration.account,
+        current.references,
+        async (resolved) => resolved.api_key,
+      ),
+    ).toBe(replacementValues.api_key);
+    expect((await f.owner.revoke(true, 'dm-ada', replacementId!)).accepted).toBe(true);
+    await expect(
+      f.owner.consume(f.agent, declaration.account, current.references, run),
+    ).rejects.toThrow(/unavailable/);
+    const restarted = f.replacement();
+    await expect(
+      restarted.consume(f.agent, declaration.account, current.references, run),
+    ).rejects.toThrow(/unavailable/);
+    expect(JSON.stringify(f.channels.readMessages('dm-ada'))).not.toContain(
+      replacementValues.api_key,
+    );
+    await restarted.close();
+    await f.close();
+  });
+
+  it('revocation stops an active consumer and invalidates a pending replacement without affecting another Bot', async () => {
+    const f = await fixture();
+    const a = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    const b = f.owner.ask(f.bea, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-bea')).toHaveLength(1));
+    const aId = f.channels.readMessages('dm-ada')[0]!.id;
+    const bId = f.channels.readMessages('dm-bea')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId: aId, values });
+    await f.owner.submit(true, { channelId: 'dm-bea', messageId: bId, values });
+    const original = await a;
+    const other = await b;
+    const replacementId = await f.owner.replace(true, 'dm-ada', aId);
+    let started!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const use = f.owner.consume(
+      f.agent,
+      declaration.account,
+      original.references,
+      async (_values, signal) => {
+        started();
+        return new Promise<void>((_resolve, reject) =>
+          signal.addEventListener('abort', () => reject(new Error('stopped')), { once: true }),
+        );
+      },
+    );
+    const refused = expect(use).rejects.toThrow(/cancelled/);
+    await entered;
+    expect(await f.owner.revoke(true, 'dm-ada', aId)).toEqual({
+      accepted: true,
+      stopped: 1,
+      completed: 0,
+      uncertain: 0,
+    });
+    await refused;
+    expect(
+      await f.owner.submit(true, { channelId: 'dm-ada', messageId: replacementId, values }),
+    ).toBe(false);
+    expect(
+      await f.owner.consume(
+        f.bea,
+        declaration.account,
+        other.references,
+        async () => 'other Bot still works',
+      ),
+    ).toBe('other Bot still works');
+    await f.close();
+  });
+
+  it('reports a consumer that completes despite a stop signal as completed, not stopped', async () => {
+    const f = await fixture();
+    const waiting = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const id = f.channels.readMessages('dm-ada')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values });
+    const configured = await waiting;
+    let entered!: () => void;
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const use = f.owner.consume(
+      f.agent,
+      declaration.account,
+      configured.references,
+      async (_values, signal) => {
+        entered();
+        await new Promise<void>((resolve) =>
+          signal.addEventListener('abort', () => resolve(), { once: true }),
+        );
+        return 'already applied';
+      },
+    );
+    await started;
+    expect(await f.owner.revoke(true, 'dm-ada', id)).toEqual({
+      accepted: true,
+      stopped: 0,
+      completed: 1,
+      uncertain: 0,
+    });
+    expect(await use).toBe('already applied');
+    await f.close();
+  });
+
+  it('reports uncertainty after a bounded stop attempt while still denying every new use', async () => {
+    const f = await fixture();
+    const waiting = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const id = f.channels.readMessages('dm-ada')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values });
+    const configured = await waiting;
+    let finish!: () => void;
+    let enter!: () => void;
+    const entered = new Promise<void>((resolve) => {
+      enter = resolve;
+    });
+    const running = f.owner.consume(
+      f.agent,
+      declaration.account,
+      configured.references,
+      async () => {
+        enter();
+        await new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+        return 'completed later';
+      },
+    );
+    await entered;
+    expect(await f.owner.revoke(true, 'dm-ada', id)).toEqual({
+      accepted: true,
+      stopped: 0,
+      completed: 0,
+      uncertain: 1,
+    });
+    const run = vi.fn(async () => 'never');
+    await expect(
+      f.owner.consume(f.agent, declaration.account, configured.references, run),
+    ).rejects.toThrow(/unavailable/);
+    expect(run).not.toHaveBeenCalled();
+    finish();
+    expect(await running).toBe('completed later');
+    await f.close();
+  });
+
+  it('acknowledges committed revocation and attempts a stop even if the credential provider response fails afterwards', async () => {
+    const f = await fixture();
+    const waiting = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const id = f.channels.readMessages('dm-ada')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values });
+    const configured = await waiting;
+    const modify = f.credentials.modifyRecord.bind(f.credentials);
+    vi.spyOn(f.credentials, 'modifyRecord').mockImplementation(async (key, change) => {
+      const result = await modify(key, change);
+      if (key.startsWith('botharness-private/account-')) throw new Error(values.api_secret);
+      return result;
+    });
+    expect(await f.owner.revoke(true, 'dm-ada', id)).toEqual({
+      accepted: true,
+      stopped: 0,
+      completed: 0,
+      uncertain: 0,
+    });
+    expect(await f.owner.accountStatus(true, 'dm-ada', id)).toEqual({
+      status: 'revoked',
+      references: {},
+    });
+    const run = vi.fn(async () => 'never');
+    await expect(
+      f.owner.consume(f.agent, declaration.account, configured.references, run),
+    ).rejects.toThrow(/unavailable/);
+    expect(run).not.toHaveBeenCalled();
+    await f.close();
+  });
+
+  it('never publishes configured references after an account activation failure', async () => {
+    const f = await fixture();
+    const waiting = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const id = f.channels.readMessages('dm-ada')[0]!.id;
+    const modify = f.credentials.modifyRecord.bind(f.credentials);
+    const failure = vi
+      .spyOn(f.credentials, 'modifyRecord')
+      .mockImplementation(async (key, change) => {
+        if (key.startsWith('botharness-private/account-')) throw new Error(values.api_secret);
+        return modify(key, change);
+      });
+    const deletion = vi
+      .spyOn(f.credentials, 'deleteRecord')
+      .mockRejectedValue(new Error(values.api_key));
+    expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values })).toBe(false);
+    expect(await waiting).toMatchObject({ status: 'expired', references: {} });
+    const resolution = f.channels.message(
+      'dm-ada',
+      'private-resolution-' + id,
+    )!.privateInputResolution!;
+    expect(resolution).toMatchObject({ state: 'expired', references: {} });
+    const run = vi.fn(async () => 'never');
+    await expect(
+      f.owner.consume(f.agent, declaration.account, resolution.references, run),
+    ).rejects.toThrow(/invalid/);
+    expect(run).not.toHaveBeenCalled();
+    expect(JSON.stringify(await f.owner.accountStatus(true, 'dm-ada', id))).not.toContain(
+      values.api_secret,
+    );
+    failure.mockRestore();
+    deletion.mockRestore();
+    const restarted = f.replacement();
+    await restarted.recover();
+    await expect(
+      restarted.consume(f.agent, declaration.account, resolution.references, run),
+    ).rejects.toThrow(/invalid/);
+    await restarted.close();
+    await f.close();
+  });
+
+  it('waits for startup recovery before Owner replacement can begin', async () => {
+    const f = await fixture();
+    const waiting = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const id = f.channels.readMessages('dm-ada')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values });
+    await waiting;
+    await f.owner.close();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const list = f.credentials.listRecords.bind(f.credentials);
+    const blocked = vi.spyOn(f.credentials, 'listRecords').mockImplementation(async () => {
+      await gate;
+      return list();
+    });
+    const restarted = f.replacement();
+    const recovery = restarted.recover();
+    const replacing = restarted.replace(true, 'dm-ada', id);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(f.channels.readMessages('dm-ada').filter((m) => m.privateInputRequest)).toHaveLength(1);
+    release();
+    await recovery;
+    blocked.mockRestore();
+    expect(await replacing).toBeDefined();
+    await restarted.close();
+    await f.close();
+  });
+
   it('saves all confidential fields atomically, returns references only, and refuses cross-Bot/account or fabricated actor use', async () => {
     const f = await fixture();
     const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
@@ -102,7 +392,9 @@ describe('private input native authority and reference contract', () => {
     const visible = JSON.stringify({ result, messages: f.channels.readMessages('dm-ada') });
     for (const value of Object.values(values)) expect(visible).not.toContain(value);
     expect(
-      await f.owner.consume(f.agent, 'synthetic', result.references, async (resolved) => resolved),
+      await f.owner.consume(f.agent, 'synthetic', result.references, async (resolved) => ({
+        ...resolved,
+      })),
     ).toEqual(values);
     const consume = vi.fn(async () => 'never');
     await expect(f.owner.consume(f.bea, 'synthetic', result.references, consume)).rejects.toThrow(
@@ -121,8 +413,12 @@ describe('private input native authority and reference contract', () => {
     ).rejects.toThrow(/unavailable/);
     expect(consume).not.toHaveBeenCalled();
     expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId, values })).toBe(false);
-    expect(await f.credentials.listRecords()).toHaveLength(1);
-    f.close();
+    expect(
+      (await f.credentials.listRecords()).filter((entry) =>
+        entry.key.startsWith('botharness-private/grant-'),
+      ),
+    ).toHaveLength(1);
+    await f.close();
   });
 
   it('refuses unsupported consumption before collecting values and rejects a stopped request', async () => {
@@ -131,16 +427,16 @@ describe('private input native authority and reference contract', () => {
       unsupported.owner.ask(unsupported.agent, declaration, new AbortController().signal),
     ).rejects.toThrow(/unavailable/);
     expect(unsupported.channels.readMessages('dm-ada')).toHaveLength(0);
-    unsupported.close();
+    await unsupported.close();
     const f = await fixture();
     const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
     await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
     const messageId = f.channels.readMessages('dm-ada')[0]!.id;
     f.stop();
     expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId, values })).toBe(false);
-    expect((await wait).status).toBe('cancelled');
+    expect((await wait).status).toBe('expired');
     expect(await f.credentials.listRecords()).toHaveLength(0);
-    f.close();
+    await f.close();
   });
 
   it('checks the actual Remote invocation peer rather than a Client-supplied Owner', async () => {
@@ -152,6 +448,319 @@ describe('private input native authority and reference contract', () => {
     const forged = Object.create(remote) as typeof remote;
     Object.defineProperty(forged, 'ctx', { value: f.ctx.extend({ invocation: { peer: {} } }) });
     expect(() => forged.privateInputStatus('dm-ada', 'missing')).toThrow(/authenticated Owner/);
-    f.close();
+    for (const method of [
+      'privateAccountStatus',
+      'privateInputReplace',
+      'privateAccountRevoke',
+    ] as const) {
+      await expect(remote[method]('dm-ada', 'missing')).rejects.toThrow(/authenticated Owner/);
+      await expect(forged[method]('dm-ada', 'missing')).rejects.toThrow(/authenticated Owner/);
+    }
+    await f.close();
+  });
+
+  it('settles concurrent cards independently and accepts only one of duplicate Owner submissions', async () => {
+    const f = await fixture();
+    try {
+      const a = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      const b = f.owner.ask(
+        f.bea,
+        { ...declaration, account: 'other' },
+        new AbortController().signal,
+      );
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-bea')).toHaveLength(1));
+      const aId = f.channels.readMessages('dm-ada')[0]!.id;
+      const bId = f.channels.readMessages('dm-bea')[0]!.id;
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: bId, values })).toBe(
+        false,
+      );
+      const accepted = await Promise.all([
+        f.owner.submit(true, { channelId: 'dm-ada', messageId: aId, values }),
+        f.owner.submit(true, { channelId: 'dm-ada', messageId: aId, values }),
+      ]);
+      expect(accepted.sort()).toEqual([false, true]);
+      expect((await a).status).toBe('configured');
+      expect(f.owner.activeMessageIds()).toEqual([bId]);
+      expect(await f.owner.cancel(true, 'dm-bea', bId)).toBe(true);
+      expect((await b).status).toBe('cancelled');
+      expect(f.owner.activeMessageIds()).toEqual([]);
+      expect(
+        (await f.credentials.listRecords()).filter((entry) =>
+          entry.key.startsWith('botharness-private/grant-'),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it.each(['cancel', 'abort', 'stop'] as const)(
+    'prevents a late grant when %s wins during credential write',
+    async (action) => {
+      const f = await fixture();
+      const controller = new AbortController();
+      const wait = f.owner.ask(f.agent, declaration, controller.signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+      let release!: () => void;
+      let entered!: () => void;
+      const entry = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const modify = f.credentials.modifyRecord.bind(f.credentials);
+      vi.spyOn(f.credentials, 'modifyRecord').mockImplementationOnce(async (...args) => {
+        entered();
+        await gate;
+        return modify(...args);
+      });
+      const submit = f.owner.submit(true, { channelId: 'dm-ada', messageId, values });
+      await entry;
+      const cancel = action === 'cancel' ? f.owner.cancel(true, 'dm-ada', messageId) : undefined;
+      if (action === 'abort') controller.abort();
+      if (action === 'stop') f.stop();
+      release();
+      expect(await submit).toBe(false);
+      if (cancel !== undefined) expect(await cancel).toBe(true);
+      const state = action === 'cancel' ? 'cancelled' : 'expired';
+      expect((await wait).status).toBe(state);
+      expect(f.owner.status('dm-ada', messageId)).toBe(state);
+      expect(
+        f.channels.readMessages('dm-ada').filter((m) => m.privateInputResolution),
+      ).toHaveLength(1);
+      expect(await f.credentials.listRecords()).toHaveLength(0);
+      await f.close();
+    },
+  );
+
+  it.each(['missing', 'assignment', 'other-bot'] as const)(
+    'refuses late submission after ownership becomes %s while the Agent remains live',
+    async (change) => {
+      const f = await fixture();
+      const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const id = f.channels.readMessages('dm-ada')[0]!.id;
+      const original = f.ownership.resolve('ada-session')!;
+      vi.spyOn(f.ownership, 'resolve').mockReturnValue(
+        change === 'missing'
+          ? undefined
+          : {
+              ...original,
+              botSlug: change === 'other-bot' ? 'bea' : original.botSlug,
+              rootRole: change === 'assignment' ? 'assignment' : original.rootRole,
+            },
+      );
+      expect(f.owner.status('dm-ada', id)).toBe('expired');
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values })).toBe(
+        false,
+      );
+      expect(await wait).toMatchObject({ status: 'expired', references: {} });
+      expect(await f.credentials.listRecords()).toHaveLength(0);
+      await f.close();
+    },
+  );
+
+  it('expires a committed card at its Host deadline without an Owner poll', async () => {
+    const f = await fixture(true, 200);
+    try {
+      const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const card = f.channels.readMessages('dm-ada')[0]!;
+      expect(card.privateInputRequest?.expiresAt).toBeDefined();
+      expect((await wait).status).toBe('expired');
+      expect(f.owner.status('dm-ada', card.id)).toBe('expired');
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: card.id, values })).toBe(
+        false,
+      );
+      expect(await f.credentials.listRecords()).toHaveLength(0);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it('refuses a grant when cancellation wins at the queued Channel commit boundary', async () => {
+    const f = await fixture();
+    const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+    let release!: () => void;
+    let entered!: () => void;
+    const entry = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const append = f.channels.appendMessageOnce.bind(f.channels);
+    vi.spyOn(f.channels, 'appendMessageOnce').mockImplementationOnce(async (...args) => {
+      entered();
+      await gate;
+      return append(...args);
+    });
+    const submission = f.owner.submit(true, { channelId: 'dm-ada', messageId, values });
+    await entry;
+    const cancel = f.owner.cancel(true, 'dm-ada', messageId);
+    release();
+    expect(await submission).toBe(false);
+    expect(await cancel).toBe(true);
+    expect((await wait).status).toBe('cancelled');
+    expect(
+      (await f.credentials.listRecords()).filter((entry) =>
+        entry.key.startsWith('botharness-private/grant-'),
+      ),
+    ).toHaveLength(0);
+    expect(f.channels.readMessages('dm-ada').filter((m) => m.privateInputResolution)).toHaveLength(
+      1,
+    );
+    await f.close();
+  });
+
+  it('drains request persistence on Host disposal before expiring the waiter', async () => {
+    const f = await fixture();
+    await f.owner.recover();
+    let release!: () => void;
+    let entered!: () => void;
+    const entry = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const append = f.channels.appendMessageOnce.bind(f.channels);
+    vi.spyOn(f.channels, 'appendMessageOnce').mockImplementationOnce(async (...args) => {
+      entered();
+      await gate;
+      return append(...args);
+    });
+    const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await entry;
+    let closed = false;
+    const close = f.owner.close().then(() => {
+      closed = true;
+    });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    release();
+    await close;
+    expect((await wait).status).toBe('expired');
+    const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+    expect(f.owner.status('dm-ada', messageId)).toBe('expired');
+    expect(await f.credentials.listRecords()).toHaveLength(0);
+    await f.close();
+  });
+
+  it('drains startup reconciliation before disposal returns', async () => {
+    const f = await fixture();
+    const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    let release!: () => void;
+    let entered!: () => void;
+    const entry = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const append = f.channels.appendMessageOnce.bind(f.channels);
+    vi.spyOn(f.channels, 'appendMessageOnce').mockImplementationOnce(async (...args) => {
+      entered();
+      await gate;
+      return append(...args);
+    });
+    const replacement = f.replacement();
+    const recovery = replacement.recover();
+    await entry;
+    let closed = false;
+    const close = replacement.close().then(() => {
+      closed = true;
+    });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    release();
+    await Promise.all([close, recovery]);
+    expect(closed).toBe(true);
+    expect(f.channels.readMessages('dm-ada')).toHaveLength(2);
+    await f.close();
+    expect((await wait).status).toBe('expired');
+  });
+
+  it('never uses an orphan grant after a partial write failure and removes it during recovery', async () => {
+    const f = await fixture();
+    const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+    const modify = f.credentials.modifyRecord.bind(f.credentials);
+    vi.spyOn(f.credentials, 'modifyRecord').mockImplementationOnce(async (...args) => {
+      await modify(...args);
+      throw new Error(values.api_secret);
+    });
+    const deletion = vi
+      .spyOn(f.credentials, 'deleteRecord')
+      .mockRejectedValue(new Error(values.api_key));
+    expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId, values })).toBe(false);
+    expect(await wait).toMatchObject({ status: 'expired', references: {} });
+    const records = await f.credentials.listRecords();
+    expect(records).toHaveLength(1);
+    const grantId = records[0]!.key.split('grant-')[1]!;
+    const references = Object.fromEntries(
+      Object.keys(values).map((field) => [field, `private:${grantId}:${field}`]),
+    );
+    const run = vi.fn(async () => true);
+    await expect(f.owner.consume(f.agent, 'synthetic', references, run)).rejects.toThrow(
+      /grant is unavailable/,
+    );
+    expect(run).not.toHaveBeenCalled();
+    const visible = JSON.stringify(f.channels.readMessages('dm-ada'));
+    for (const value of Object.values(values)) expect(visible).not.toContain(value);
+    deletion.mockRestore();
+    const replacement = f.replacement();
+    await replacement.recover();
+    expect(await f.credentials.listRecords()).toHaveLength(0);
+    await replacement.close();
+    await f.close();
+  });
+
+  it('reconciles lost live cards durably and retains configured references on replacement', async () => {
+    const f = await fixture();
+    const first = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const configuredId = f.channels.readMessages('dm-ada')[0]!.id;
+    expect(
+      await f.owner.submit(true, { channelId: 'dm-ada', messageId: configuredId, values }),
+    ).toBe(true);
+    const configured = await first;
+    const lost = f.owner.ask(f.bea, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-bea')).toHaveLength(1));
+    const lostId = f.channels.readMessages('dm-bea')[0]!.id;
+    const replacement = f.replacement();
+    try {
+      await replacement.recover();
+      expect(replacement.status('dm-bea', lostId)).toBe('expired');
+      expect(
+        f.channels.message('dm-bea', 'private-resolution-' + lostId)?.privateInputResolution?.state,
+      ).toBe('expired');
+      expect(
+        await replacement.submit(true, { channelId: 'dm-bea', messageId: lostId, values }),
+      ).toBe(false);
+      expect(
+        await replacement.consume(
+          f.agent,
+          'synthetic',
+          configured.references,
+          async (resolved) => ({ ...resolved }),
+        ),
+      ).toEqual(values);
+      expect(
+        (await f.credentials.listRecords()).filter((entry) =>
+          entry.key.startsWith('botharness-private/grant-'),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await replacement.close();
+      await f.close();
+      await lost;
+    }
   });
 });

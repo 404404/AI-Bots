@@ -12,12 +12,12 @@ The ordinary paired person kept one primary behavior Role with no management cap
 
 The first four scenarios ran on product `550898dd4cc3f11198e1eab904755826906381f1` with the previously qualified Provider `bddd7d93e1c1b969ce137721c2494f6d72bfa8bc`. Commands only printed uniquely marked strings and did not read/write files or access the network.
 
-| Scenario | Native evidence | Actual Lark behavior |
-| --- | --- | --- |
-| Group Allow once | decision seq 93, successful result seq 94 | One `BH1406_GROUP_ALLOW_ONCE_1811` stdout; actual reply visible |
-| Independent Reject | decision seq 117, rejected error result seq 118 | No execution or stdout; actual refusal reply visible |
-| Delayed group Deny | Call seq 135 remained pending after the old Allow once click; later Reject decision seq 137 and rejected result seq 138 | No execution; Reject on the same card remained usable |
-| New request after Profile restart | decision seq 157, successful result seq 158 | One `BH1406_RESTART_ALLOW_ONCE_1819` stdout; actual reply visible |
+| Scenario                          | Native evidence                                                                                                         | Actual Lark behavior                                              |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Group Allow once                  | decision seq 93, successful result seq 94                                                                               | One `BH1406_GROUP_ALLOW_ONCE_1811` stdout; actual reply visible   |
+| Independent Reject                | decision seq 117, rejected error result seq 118                                                                         | No execution or stdout; actual refusal reply visible              |
+| Delayed group Deny                | Call seq 135 remained pending after the old Allow once click; later Reject decision seq 137 and rejected result seq 138 | No execution; Reject on the same card remained usable             |
+| New request after Profile restart | decision seq 157, successful result seq 158                                                                             | One `BH1406_RESTART_ALLOW_ONCE_1819` stdout; actual reply visible |
 
 For delayed Deny, the actual Client edited QA Reviewers to Approve Deny/Reject Allow while Flow Reviewers still allowed Approve. The person's direct exception was empty during this test. Separate saved readbacks before Reject confirmed that the old Allow click produced neither a decision nor a native result. No refusal toast was observed; the evidence establishes blocked execution, not a specific toast.
 
@@ -31,10 +31,10 @@ The first run exposed a separate presentation defect: settled cards still displa
 
 The isolated Host installed and digest-verified this exact Provider: 412 runtime files, SHA-256 `1d2dcc7d4548cf74edfac7934eb065aa9b1fae99fb0b9309931ae285d932d6c5`. Two fresh real requests then verified the repaired path:
 
-| Scenario | Native evidence | Original card and reply |
-| --- | --- | --- |
-| Shared-card Allow once | decision seq 181, successful result seq 182 | `BH1406_SHARED_CARD_ALLOW_1835`; final execution state, zero buttons, actual stdout reply |
-| Shared-card Reject | decision seq 201, rejected error result seq 202 | No execution; final rejected state, zero buttons, actual refusal reply |
+| Scenario               | Native evidence                                 | Original card and reply                                                                   |
+| ---------------------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Shared-card Allow once | decision seq 181, successful result seq 182     | `BH1406_SHARED_CARD_ALLOW_1835`; final execution state, zero buttons, actual stdout reply |
+| Shared-card Reject     | decision seq 201, rejected error result seq 202 | No execution; final rejected state, zero buttons, actual refusal reply                    |
 
 Source Events for these final two scenarios are `im-ed3109e3e4467c845f7a431bd780ee54b88f14ccccc60886374061597669c4da` and `im-425f27f45c2c442a67c6a5dd3dc5e6041ed5754908323bdbf39e64a011bc5f1f`. Both Admissions were handled and replies provider-accepted. Screenshots of the real before/after cards are embedded in both PR bodies with unrelated conversations, person names and local paths masked. Older non-shared cards are historical evidence; the repair does not replay their operations or claim to retrofit their private copies.
 

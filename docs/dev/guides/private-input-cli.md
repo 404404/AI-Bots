@@ -1,6 +1,18 @@
 # Private input CLI candidate
 
-This is the opt-in #1380 qualification path, not a completed v1.3 capability. It demonstrates a real PersonaBot, inline Web input, native storage, existing approval and a fixed reference-consuming CLI. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records the proposed execution boundary and open acceptance gates.
+## Account replacement and local revocation (#1382)
+
+The card keeps account, purpose and current status visible. Its info icon reveals request expiry, replacement guidance and Host storage/approval details on hover, keyboard focus or click; click pins the tooltip and Escape closes it. It never contains original private values.
+
+On a configured Web Chat card, **Replace** opens another inline card with blank fields. Submit new values there; `ask_secret` for the same PersonaBot/account returns current references without reading either version back. The previous card shows superseded. **Revoke** durably denies new uses, including calls covered by an existing broad remembered approval, and attempts to stop active consumers. The card and Chat distinguish stopped, already completed and uncertain outcomes. This revokes local access only; third-party tokens and completed effects are unchanged. Other Bots/accounts retain independent authorization.
+
+Use `node scripts/ask-secret-lifecycle-fixture.mjs` for a loopback-only synthetic two-version service on port 31386. Begin with version A: endpoint `http://127.0.0.1:31386/status?marker=SYNTHETIC-1380-url-A`, key `SYNTHETIC-1380-key-A`, secret `SYNTHETIC-1380-secret-A`. Switch the fixture with `POST /control` JSON `{"version":1,"delayMs":0}`. Privately replace with endpoint `http://127.0.0.1:31386/status?marker=SYNTHETIC-1382-url-B`, key `SYNTHETIC-1382-key-B`, secret `SYNTHETIC-1382-secret-B`. Request one real Bot `protected_cli http-status-v1` call for each version; both must report 200 in the original DM, while using the old references must be refused without another fixture request.
+
+Set fixture delay to 9000 ms, start one real Bot call, observe `/evidence` increment before completion, and revoke from the configured card while it is running. Verify the bounded stop summary and connection-disconnected counter; neither establishes rollback of remote effects. Reset delay to zero. Revoked references must remain refused after an exact task-owned Host restart. A different account using A against a B-only fixture must return only 401 and a static private-replacement/remote-authorization repair action, never response content or secrets. It must remain independent of the revoked account. Use synthetic inputs only and retain all raw traces locally.
+
+Version-three grants require both the current native account record and canonical configured Channel proof. Startup recovery finishes before Owner mutations. Partial persistence failures publish no configured reference set; a committed account head without its final Channel proof remains unusable and can be repaired with a fresh private request. Older binaries ignore the new account tombstones: back up before upgrading, repair forward or restore the complete pre-upgrade Profile backup. See [ADR-0167](../../adr/0167-private-account-versions-fence-consumption-and-revocation.md).
+
+This is the opt-in #1380/#1381 qualification path, not a completed v1.3 capability. Human accepted the real PersonaBot inline Web input and authenticated fixed-CLI result in #1380. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records its execution boundary; [ADR-0166](../../adr/0166-private-input-settlement-commits-before-continuation.md) records request settlement and recovery.
 
 Use a dedicated, isolated DSH home with pinned `0.2.0-rc.1`, Docker running Linux containers, and the exact image below. Do not enable this candidate on a production or shared home. It changes all Agent tool access in this Profile, including native Sessions and other Bots.
 
@@ -69,6 +81,14 @@ deepseekbot ask-secret-cancel <dm-channel-id> --message-id <card-id> --host <ori
 ```
 
 Supply a JSON object of declared field IDs and confidential strings over stdin from a trusted input source; do not put values in arguments, shell history or repo files. Submission returns only `{accepted:true}`, status returns only the status, and errors do not echo values or Host error payloads. Submission is never retried automatically. Ordinary `user-question-answer --answer-stdin` retains its existing nonsecret answer JSON contract; ordinary question answers are durable model-visible content.
+
+To verify #1381, create two real Bots and request the same three generic fields for separate accounts. Both pending requests must appear independently in Activity center / Human Inbox; **Go to private input card** opens the existing DM card. A request expires after fifteen minutes of Host time, even without an open Web page. It is metadata only after expiry, cancellation, Agent stop or restart, and cannot be submitted late.
+
+Open one pending card in two independent authenticated browser contexts, fill only its password inputs, and submit concurrently. Both pages must converge to configured with empty inputs, while only one grant and one configured resolution exist. Approve the single CLI invocation and verify exactly one authenticated fixture request and one same-DM result. Cancel the other Bot's card after filling its inputs: inputs and that request's attention clear independently, and the configured Bot's references remain usable. Reload must never restore the entered plaintext.
+
+Ask the second Bot for a fresh card, use native Session stop while it waits, then attempt a late Owner submission. It must return `accepted:false`, commit expired with no references, and never start credential use. Bot pause only controls new admissions; it does not stop its existing native turn and is not this check. Create another pending request with an explicit DM, then restart the exact isolated Host. The lost card must become durably expired without recreating its waiter or waking the stopped Bot; existing configured references remain usable when the first Bot receives a new explicit DM instruction. Do not interpret automatic re-execution as successful recovery. Version-two grants require the configured Channel commit, so a native write with failed Channel persistence cannot publish a usable partial result.
+
+Initialize a fresh native Profile before adding its Patch; do not precreate its Profile directory or overwrite native patch entries. Stop the helper's verified exact Host PID before rebuilding/restarting. Keep local tokens and full native Sessions private. Publish allowlisted event projections and aggregate canary counts only.
 
 Run deterministic active extraction independently of any model's willingness to attempt it:
 

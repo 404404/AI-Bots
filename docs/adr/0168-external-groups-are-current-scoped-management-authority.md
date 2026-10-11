@@ -1,4 +1,4 @@
-# ADR-0166: External groups are current scoped management authority
+# ADR-0168: External groups are current scoped management authority
 
 Date: 2026-10-11
 Status: Accepted
