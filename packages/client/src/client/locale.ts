@@ -2690,6 +2690,8 @@ export const zh = {
   'composerContext.grantScope':
     '已解析目录：{path}。仅建立此 Bot 的 Workspace Grant；不启用 Orchestrator 项目写入，不更改 Assignment 权限或审批规则。',
   'composer.addAttachment': '添加附件',
+  'composer.referenceAttachment': '在正文中引用 {name}',
+  'composer.locateAttachment': '定位附件 {name}',
   'composer.uploading': '上传中',
   'composer.retryAttachment': '重试上传',
   'composer.removeAttachment': '移除 {name}',
@@ -5635,6 +5637,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'composerContext.grantScope':
     'Resolved directory: {path}. Creates only this Bot’s Workspace Grant; does not enable Orchestrator project writes or change Assignment access or approval rules.',
   'composer.addAttachment': 'Add attachment',
+  'composer.referenceAttachment': 'Reference {name} in message',
+  'composer.locateAttachment': 'Locate attachment {name}',
   'composer.uploading': 'Uploading',
   'composer.retryAttachment': 'Retry upload',
   'composer.removeAttachment': 'Remove {name}',

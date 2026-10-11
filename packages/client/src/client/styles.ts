@@ -4009,6 +4009,33 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
 .bh-composer-inline-mention {
   user-select: all;
 }
+.bh-composer-inline-attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  max-width: min(100%, 320px);
+  padding: 0 5px;
+  font: inherit;
+  line-height: 20px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 7px;
+  vertical-align: middle;
+  user-select: all;
+  cursor: pointer;
+}
+.bh-composer-inline-attachment [data-attachment-icon] { display: inline-flex; flex: none; }
+.bh-composer-inline-attachment-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.bh-composer-inline-attachment-size { flex: none; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
+.bh-attachment-ordinal { flex: none; font-size: 11px; font-weight: 600; }
+.bh-composer-inline-attachment[data-status='uploading'] { opacity: .65; }
+.bh-composer-inline-attachment[data-status='error'] { border-color: var(--dsw-alias-state-error-primary); }
+.bh-composer-attachment-reference { display: grid; place-items: center; flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.bh-composer-attachment-reference:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.bh-composer-attachment-reference:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: 2px; }
+.bh-composer-attachment-reference:disabled { opacity: .5; cursor: default; }
+.bh-composer-image-reference,
+.bh-composer-file-reference { position: absolute; bottom: 2px; right: 2px; width: 20px; height: 20px; }
 .bh-delivery-trigger {
   position: absolute;
   z-index: 2;
@@ -4368,25 +4395,40 @@ html[data-botharness-motion='reduce'] .bh-composer-activity-status { transition:
 .bh-composer-add-file:disabled { opacity: .5; cursor: default; }
 .bh-composer-attachments {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 2px 6px 8px 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  gap: 6px;
+  padding: 2px 4px 6px 0;
 }
-.bh-composer-image-attachment {
+.bh-composer-attachment-card {
   position: relative;
-  flex: 0 0 88px;
-  width: 88px;
-  aspect-ratio: 1;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  flex: 0 0 180px;
+  box-sizing: border-box;
+  width: 180px;
+  height: 48px;
+  min-width: 0;
+  gap: 6px;
+  padding: 5px 26px 5px 5px;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--dsw-specific-input-major);
+  color: var(--dsw-alias-label-secondary);
 }
 .bh-composer-image-preview {
   display: block;
-  width: 100%;
-  height: 100%;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 6px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -4396,50 +4438,17 @@ html[data-botharness-motion='reduce'] .bh-composer-activity-status { transition:
 .bh-composer-image-preview:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: -3px; }
 .bh-composer-image-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .bh-composer-image-attachment[data-status='error'] .bh-composer-image-preview img { opacity: .55; }
-.bh-composer-image-status {
-  position: absolute;
-  right: 5px;
-  bottom: 5px;
-  left: 5px;
-  display: flex;
-  pointer-events: none;
-}
-.bh-composer-image-status:empty { display: none; }
-.bh-composer-image-status .bh-composer-upload-status,
-.bh-composer-image-status .bh-composer-upload-retry {
-  max-width: 100%;
-  overflow: hidden;
-  padding: 3px 6px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 999px;
-  background: var(--dsw-specific-input-major);
-  color: var(--dsw-alias-label-secondary);
-  font-size: 10px;
-  line-height: 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  pointer-events: auto;
-}
-.bh-composer-image-status .bh-composer-upload-retry { color: var(--dsw-alias-state-error-primary); cursor: pointer; }
-.bh-composer-file-attachment {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: min(100%, 280px);
-  min-height: 42px;
-  padding: 5px 7px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
-  background: var(--dsw-specific-input-major);
-  color: var(--dsw-alias-label-secondary);
-}
-.bh-composer-file-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; }
+.bh-composer-file-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; }
+.bh-composer-attachment-card .bh-composer-attachment-remove { top: 2px; right: 2px; width: 20px; height: 20px; }
 .bh-composer-file-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.bh-composer-attachment-size { color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 14px; }
 .bh-composer-attachment-name { display: block; overflow: hidden; min-width: 0; color: var(--dsw-alias-label-primary); font-size: 12px; line-height: 16px; white-space: nowrap; text-overflow: ellipsis; }
 .bh-composer-upload-status { color: var(--dsw-alias-label-tertiary); font-size: 10px; line-height: 13px; }
 .bh-composer-upload-retry { width: fit-content; padding: 0; border: 0; background: transparent; color: var(--dsw-alias-state-error-primary); font-size: 10px; line-height: 13px; cursor: pointer; }
 .bh-composer-attachment-remove {
+  position: absolute;
+  top: 5px;
+  right: 5px;
   display: grid;
   place-items: center;
   flex: none;
@@ -4455,13 +4464,6 @@ html[data-botharness-motion='reduce'] .bh-composer-activity-status { transition:
 .bh-composer-attachment-remove:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
 .bh-composer-attachment-remove:focus-visible,
 .bh-composer-upload-retry:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color, var(--dsw-alias-state-business-primary)); outline-offset: 2px; }
-.bh-composer-image-remove {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  background: var(--dsw-specific-input-major);
-}
 .bh-composer-body {
   position: relative;
   display: flex;
