@@ -12,6 +12,8 @@ import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { BOT_MODE_NAMESPACE, type BotModeSettings } from '../bot-mode-settings.js';
+import { privateInputLocator } from '../../../core/src/credentials/web-locator.js';
+import { watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
 import { createActions, type BridgeActions } from './actions.js';
 import { ProviderAppSetup } from './provider-app-setup.js';
@@ -709,7 +711,21 @@ export function apply(ctx: ClientContext): void {
 
   const viewToRestore =
     hmrView ?? (lastView?.mode === 'bot' ? { selection: lastView.selection } : undefined);
-  if (viewToRestore !== undefined) {
+  const privateLocator =
+    typeof window === 'undefined' ? undefined : privateInputLocator(window.location.hash);
+  if (privateLocator !== undefined) {
+    ctx.effect(
+      () =>
+        watchPrivateInputNavigation(store, privateLocator, (channelId, messageId) => {
+          ctx.layout.selectPanel(PANEL_ID);
+          void actions.openChannelAtMessage(channelId, messageId).catch(() => {
+            ctx.logger.warn('botharness: private input card locator unavailable');
+          });
+        }),
+      'botharness: private input Chat locator',
+    );
+  }
+  if (privateLocator === undefined && viewToRestore !== undefined) {
     ctx.effect(() => {
       let restored = false;
       const restore = (): void => {

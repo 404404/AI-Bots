@@ -1,8 +1,14 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { imTestAppsPath, listImTestApps, loadImTestApp } from '../dev-im-test-apps.mjs';
+import {
+  imTestAppsPath,
+  listImTestApps,
+  loadImTestApp,
+  saveImTestAppValues,
+} from '../dev-im-test-apps.mjs';
 
 const directories = [];
 function fixture(text) {
@@ -33,6 +39,52 @@ const configuration = [
 ].join('\n');
 
 describe('machine-local reusable IM test Apps', () => {
+  it('atomically saves one stage while preserving other Apps, comments and literal values', () => {
+    const options = fixture('# private machine-local configuration\n' + configuration);
+    const before = loadImTestApp('QA1', options);
+    saveImTestAppValues(
+      'BH_LARK_QA2_NAME=QA2 $(exit 99) = literal\nBH_LARK_QA2_CONSOLE_READY=yes\n',
+      options,
+    );
+    expect(loadImTestApp('QA1', options)).toEqual(before);
+    expect(loadImTestApp('QA2', options)).toMatchObject({
+      name: 'QA2 $(exit 99) = literal',
+      consoleReady: true,
+    });
+    expect(readFileSync(options.path, 'utf8')).toContain('# private machine-local configuration');
+    expect(readdirSync(directories.at(-1))).toEqual(['im-test-apps.env']);
+    if (process.platform !== 'win32') expect(statSync(options.path).mode & 0o077).toBe(0);
+  });
+
+  it('refuses malformed or duplicate updates before changing the existing configuration', () => {
+    const options = fixture(configuration);
+    for (const text of ['', 'UNKNOWN_KEY=value', 'BH_IM_QA_SLOT=QA1\nBH_IM_QA_SLOT=QA2']) {
+      expect(() => saveImTestAppValues(text, options)).toThrow();
+      expect(readFileSync(options.path, 'utf8')).toBe(configuration);
+    }
+  });
+
+  it('runs actual setup with synthetic stdin and preserves QA1 without echoing the new secret', () => {
+    const options = fixture(configuration);
+    const result = spawnSync(process.execPath, ['scripts/dev-im-test-apps.mjs', 'setup'], {
+      input: '\nQA2\nSynthetic QA2\ny\ncli_synthetic_two\nSYNTHETIC-WIZARD-SECRET\nn\n',
+      encoding: 'utf8',
+      timeout: 15_000,
+      env: { ...process.env, BOTHARNESS_IM_TEST_APPS_ENV: options.path },
+    });
+    expect(result.error).toBeUndefined();
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('https://open.larksuite.com/app');
+    expect(result.stdout).not.toContain('SYNTHETIC-WIZARD-SECRET');
+    expect(result.stderr).not.toContain('SYNTHETIC-WIZARD-SECRET');
+    expect(loadImTestApp('QA1', options)).toEqual(loadImTestApp('QA1', fixture(configuration)));
+    expect(loadImTestApp('QA2', options)).toMatchObject({
+      appId: 'cli_synthetic_two',
+      appSecret: 'SYNTHETIC-WIZARD-SECRET',
+      consoleReady: false,
+    });
+  });
+
   it('uses a fixed user path independent of the repository and allows an explicit cross-OS file', () => {
     expect(imTestAppsPath({})).toMatch(/[\\/]\.config[\\/]botharness[\\/]im-test-apps\.env$/u);
     const file = fixture(configuration).path;

@@ -41,6 +41,11 @@ is an old operator statement, never an idle indication, automatic lock or contin
 Stop only this task's exact receiver. Keep production exclusive. The Onboarding QA App reserved
 by #1022 remains owned by that task; adding it to this registry would not authorize taking it over.
 
+When two Human accounts are signed in to one Lark organization, confirm the selected browser
+account as well as the App slot. The other account may not show the designated private chat.
+Follow the [AX account-selection procedure](ax-browser.md#im-qa-with-two-human-accounts-in-one-organization)
+before changing credentials, permissions or receiver configuration.
+
 For #1373, use one available independent slot and an isolated Host. Complete the actual
 unpaired DM/@ → sidebar approval → fixed re-ask notification → new-message model reply → revoke
 path before recording real Lark acceptance.

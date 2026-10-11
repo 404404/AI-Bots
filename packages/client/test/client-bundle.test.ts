@@ -83,6 +83,7 @@ beforeAll(async () => {
   bundleCode = readFileSync(join(tempDir, 'client.js'), 'utf8');
   const sandbox = {
     window: {
+      location: { hash: '' },
       __ModuleLoader__: {
         load: (loaded: LoadedEntry) => {
           entry = loaded;
