@@ -183,13 +183,13 @@ export function mountPrivateInputs(
           defineTool({
             name: 'ask_secret',
             description:
-              'Reuse configured private references, or ask the authenticated Owner for private strings in an interactive conversation. Declare account, purpose and dynamic fields. For an accepted IM Source Event the Host sends the Owner an existing Web Chat card link; never collect private values in IM text, attachments, quoted messages or ordinary questions. Returns opaque references only. Do not send references or private configuration details to IM; report only the authorized nonsecret operation result with bridge_reply to the same source. Private input does not approve execution. Unattended runs cannot open input cards. A failed handoff may already have sent its notice; report missing private configuration and do not retry.',
+              'Reuse configured private references, or ask the authenticated Owner for private strings in an interactive conversation. Declare account, purpose and dynamic fields. Web and scheduled runs must omit source_event_id; configured accounts can be reused without an IM source or new input. For an accepted IM Source Event the Host sends the Owner an existing Web Chat card link; never collect private values in IM text, attachments, quoted messages or ordinary questions. Returns opaque references only. Do not send references or private configuration details to IM; report only the authorized nonsecret operation result with bridge_reply to the same source. Private input does not approve execution. Unattended runs cannot open input cards. A failed handoff may already have sent its notice; report missing private configuration and do not retry.',
             parameters: {
               account: { type: 'string', required: true, description: 'Nonsecret account label.' },
               source_event_id: {
                 type: 'string',
                 description:
-                  'Exact accepted IM Source Event. Required when several IM requests are active; never select a historical read.',
+                  'Optional IM-only selector: exact currently accepted IM Source Event, required when several IM requests are active. Omit for Web and scheduled reuse; never pass a Schedule Source Event or historical IM source.',
               },
               purpose: {
                 type: 'string',
