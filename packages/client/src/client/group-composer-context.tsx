@@ -82,7 +82,7 @@ export function GroupComposerContextView({
   onOpen(): void;
   onClose(): void;
 }): ReactElement {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>();
   const [facts, setFacts] = useState<Record<string, WorkspaceGrantView[] | undefined>>({});
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
   const [preview, setPreview] = useState<{
@@ -95,7 +95,9 @@ export function GroupComposerContextView({
   const [error, setError] = useState<string>();
   const current = useRef(0);
   const factRequest = useRef(0);
-  const eligible = selected.filter((slug) => members.some((bot) => bot.slug === slug));
+  const eligible = (selected ?? members.map((bot) => bot.slug)).filter((slug) =>
+    members.some((bot) => bot.slug === slug),
+  );
   const signature = eligible.join('|');
   const mount = useMountedResource<HTMLDivElement>(() => {
     current.current += 1;

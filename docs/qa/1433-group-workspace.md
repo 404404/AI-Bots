@@ -8,7 +8,17 @@
 - Task: `codex/local/01a12c92-1feb-7823-8fb8-f603fad9ca1d`; [claim](https://github.com/BotHarness/DeepSeekBot/issues/1433#issuecomment-6113191966); branch: `codex/1433-group-workspace`.
 - Run date: October 12, 2026, Asia/Tokyo (October 11, 2026 UTC). The PR body and outcome comment record the current head. The screenshots and real-model delegation below belong to `c5f962824d8aab1ab5103f4784e6ab8f20f88a4a`, before the compact-modal feedback revision; they are not claimed as screenshots of the revised layout.
 
-## Setup and proof boundaries
+## Latest Human clarification: defaults to all eligible Bots
+
+Human superseded the earlier default-unselected requirement: the Group entry now initially selects all currently eligible Bots and allows unchecking any Bot to narrow the target set. Grants still belong to each Bot, never to the Group or its Human members. Nothing is written until directory/access confirmation. Paused/deleted Bots are excluded; custom choices, including an empty choice, are preserved; the preview snapshots the targets, so later joiners receive no Grant through that confirmation. All earlier default-unselected screenshots and steps below are historical, not evidence of this updated behavior.
+
+Focused regressions cover initially unloaded members, eligible-only defaults, subset selection, empty selection, late joiners, confirmation-only writes, partial failures and readback. Updated runtime evidence and the final revision are recorded separately in the PR; neither the previous 253-test run nor the old images are relabeled as validation of this semantic change.
+
+Updated validation: 16 focused files / 254 tests pass; typecheck, lint including ledger checks, format check and build pass.
+
+The task-owned Host has restarted from this build, and a new three-Bot fixture plus two disposable directories are prepared without creating Grants. Current T3 navigation and screenshot attempts time out while the preview reports not visible. Native default-all/subset runs and refreshed screenshots are therefore pending; earlier screenshots must not be used to satisfy the screenshot-conditioned merge instruction.
+
+## Historical setup and proof boundaries
 
 Two disposable, isolated native DSH `0.2.0-rc.1` Profiles run through the repository's verified dev launcher: baseline and implementation. The implementation uses a real DeepSeek model, not a canned reply. The Group and three synthetic PersonaBots are prepared through authenticated native RPC as **fixture setup**, not counted as UI evidence. The disposable project directory contains a README and no personal files. Opaque Bot, Grant, Workspace and Session IDs, credentials and Profile paths stay private.
 

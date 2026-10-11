@@ -29,7 +29,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- Group composer workspace shortcuts reuse DM directory cards, permission badges and native modal geometry to explicitly select members, confirm their directory and existing access, and report independent per-Bot Grant creation, reuse, failure and unknown-outcome readback without granting unselected members access ([#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)).
+- Group composer workspace shortcuts reuse DM directory cards, permission badges and native modal geometry to default to all currently eligible Bots with optional subset selection, confirm their directory and existing access, and report independent per-Bot Grant creation, reuse, failure and unknown-outcome readback without granting unselected members access ([#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)).
 
 - The reviewed ordinary-chat pairing path extends to Slack DMs through the existing People/Roles/Requests settings, current sender queries and checked original reply route; approval asks for a fresh question and revocation closes later intake. A three-stage local wizard and private loader reuse separate Slack QA1/QA2/QA3 slots across worktrees while preserving Lark configuration; setup never starts a receiver. The bilingual guide includes actual DM-scope and full-flow screenshots, permission purposes and reinstallation. The isolated ordinary-DM flow passed native execution/revocation/restart checks and Human feedback; Slack group and native management controls remain separate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415), [guide](docs/slack-connection.md)).
 

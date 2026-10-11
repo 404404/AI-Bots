@@ -48,7 +48,7 @@ const grant: WorkspaceGrantView = {
   orchestratorWrite: false,
 };
 
-it('requires explicit members, shares folder confirmation, isolates partial results and preserves them when membership changes', async () => {
+it('defaults to all Bots, allows narrowing, and preserves independent partial results when membership changes', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const container = document.createElement('div');
   document.body.append(container);
@@ -109,18 +109,18 @@ it('requires explicit members, shares folder confirmation, isolates partial resu
     await act(async () => render([ada, bea, bob]));
     expect(
       Array.from(container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')).every(
-        (input) => !input.checked,
+        (input) => input.checked,
       ),
     ).toBe(true);
     expect(
       Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
         (item) => item.textContent === zhTranslate('grant.addFolder'),
       )!.disabled,
-    ).toBe(true);
-    await act(async () => {
-      container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!.click();
-      container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[1]!.click();
-    });
+    ).toBe(false);
+    expect(actions.authorizeGroupWorkspacePath).not.toHaveBeenCalled();
+    await act(async () =>
+      container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[2]!.click(),
+    );
     await act(async () =>
       container.querySelector<HTMLButtonElement>('.bh-workspace-folder-toggle')!.click(),
     );
@@ -138,6 +138,8 @@ it('requires explicit members, shares folder confirmation, isolates partial resu
         .getAttribute('aria-expanded'),
     ).toBe('true');
     expect(container.querySelector('.bh-workspace-grant-confirm')).toBeNull();
+    await act(async () => render([ada, bea, bob, { ...ada, slug: 'late', displayName: 'Late' }]));
+    expect(container.querySelectorAll('.bh-group-grant-results > .bh-card-row')).toHaveLength(3);
     await act(async () =>
       container
         .querySelector<HTMLButtonElement>('.bh-group-grant-results .bh-workspace-folder-toggle')!
@@ -167,7 +169,9 @@ it('requires explicit members, shares folder confirmation, isolates partial resu
       vi.mocked(actions.authorizeGroupWorkspacePath).mock.calls.map((call) => call[1]),
     ).toEqual(['ada', 'bea', 'bea']);
     expect(
-      vi.mocked(actions.listWorkspaceGrants).mock.calls.every((call) => call[0] !== 'bob'),
+      vi
+        .mocked(actions.readGroupWorkspaceGrant)
+        .mock.calls.every((call) => call[1] !== 'bob' && call[1] !== 'late'),
     ).toBe(true);
     expect(actions.send).not.toHaveBeenCalled();
     expect(actions.setAssignmentAccess).not.toHaveBeenCalled();
@@ -178,17 +182,77 @@ it('requires explicit members, shares folder confirmation, isolates partial resu
   }
 });
 
+it('defaults loaded eligible Bots without writing, and preserves a custom empty selection and later joiner exclusion', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  let members: BotSummary[] = [];
+  let context: ComposerContext | undefined;
+  const actions = {
+    listWorkspaceGrants: vi.fn(async () => []),
+    listWorkspaceOptions: vi.fn(async () => []),
+    authorizeGroupWorkspacePath: vi.fn(),
+  } as unknown as BridgeActions;
+  function Harness() {
+    context = useGroupComposerContext({
+      channel: {
+        id: 'group',
+        name: 'Group',
+        type: 'group',
+        members: ['ada', 'bea', 'bob'],
+        createdAt: '',
+        updatedAt: '',
+      },
+      members,
+      actions,
+      t: zhTranslate,
+    });
+    return context?.content;
+  }
+  const checks = () =>
+    Array.from(container.querySelectorAll<HTMLInputElement>('input[type=checkbox]'));
+  try {
+    await act(async () => root.render(createElement(Harness)));
+    await act(async () => context!.shortcuts[0]!.run());
+    expect(checks()).toHaveLength(0);
+    members = [ada, bea, { ...bob, paused: true }, { ...ada, slug: 'deleted', deleted: true }];
+    await act(async () => root.render(createElement(Harness)));
+    expect(checks().map((input) => input.checked)).toEqual([true, true]);
+    expect(actions.authorizeGroupWorkspacePath).not.toHaveBeenCalled();
+    await act(async () => checks()[1]!.click());
+    members = [ada, bea, bob];
+    await act(async () => root.render(createElement(Harness)));
+    expect(checks().map((input) => input.checked)).toEqual([true, false, false]);
+    await act(async () => checks()[0]!.click());
+    expect(checks().map((input) => input.checked)).toEqual([false, false, false]);
+    expect(
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        (button) => button.textContent === zhTranslate('grant.addFolder'),
+      )!.disabled,
+    ).toBe(true);
+    await act(async () => root.render(createElement(Harness)));
+    expect(checks().map((input) => input.checked)).toEqual([false, false, false]);
+    expect(actions.authorizeGroupWorkspacePath).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
 it('offers only the shared workspace shortcut in Group and resets scope on Channel switches', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const container = document.createElement('div');
   const root = createRoot(container);
   let id = 'one';
   let context: ComposerContext | undefined;
+  const actions = {
+    listWorkspaceGrants: vi.fn(async () => []),
+    listWorkspaceOptions: vi.fn(async () => []),
+  } as unknown as BridgeActions;
   function Harness() {
     context = useGroupComposerContext({
       channel: { id, name: id, type: 'group', members: ['ada'], createdAt: '', updatedAt: '' },
       members: [ada],
-      actions: {} as BridgeActions,
+      actions,
       t: zhTranslate,
     });
     return context?.content;
