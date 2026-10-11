@@ -6,6 +6,7 @@ import type {
   PermissionChoices,
 } from '../../../core/src/messaging/permission-groups.js';
 import type { PairingRequest } from '../../../core/src/messaging/pairing.js';
+import type { PairingCapability } from '../../../core/src/messaging/pairing.js';
 import type { SenderAccessInput } from '../../../core/src/messaging/sender-access.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { Combobox } from './combobox.js';
@@ -13,11 +14,30 @@ import { MessagingHelp } from './messaging-help.js';
 import { Modal } from './modal.js';
 import { PairingTable } from './pairing-table.js';
 
-const capabilities = ['approve', 'reject'] as const;
+const capabilities = ['approve', 'reject', 'review-pairing'] as const;
 const capabilityLabel = {
   approve: 'pairing.approveCapability',
   reject: 'pairing.rejectCapability',
+  'review-pairing': 'pairing.reviewCapability',
 } as const;
+const permissionKinds = ['allow', 'deny', 'delegateAllow', 'delegateDeny'] as const;
+const kindLabels = {
+  allow: 'pairing.allow',
+  deny: 'pairing.deny',
+  delegateAllow: 'pairing.delegateAllow',
+  delegateDeny: 'pairing.delegateDeny',
+} as const;
+function editable(cap: PairingCapability): cap is (typeof capabilities)[number] {
+  return cap === 'approve' || cap === 'reject' || cap === 'review-pairing';
+}
+function choices(value: PermissionChoices) {
+  return {
+    allow: value.allow.filter(editable),
+    deny: value.deny.filter(editable),
+    delegateAllow: (value.delegateAllow ?? []).filter(editable),
+    delegateDeny: (value.delegateDeny ?? []).filter(editable),
+  };
+}
 export type GroupBinding = { id: string; name: string };
 
 function PermissionEditor({
@@ -35,41 +55,54 @@ function PermissionEditor({
     <fieldset disabled={busy} className="bh-im-role-form">
       <legend className="bh-im-actions">
         {t('pairing.roleCapabilities')}
-        <MessagingHelp title={t('pairing.roleCapabilities')} text={t('pairing.groupHelp')} t={t} />
+        <MessagingHelp
+          title={t('pairing.roleCapabilities')}
+          text={t('pairing.delegationHelp')}
+          t={t}
+        />
       </legend>
       <table className="bh-pairing-table bh-permission-table">
         <thead>
           <tr>
             <th>{t('pairing.roleCapabilities')}</th>
-            <th>{t('pairing.allow')}</th>
-            <th>{t('pairing.deny')}</th>
+            {permissionKinds.map((kind) => (
+              <th key={kind}>{t(kindLabels[kind])}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {capabilities.map((capability) => (
             <tr key={capability}>
               <td>{t(capabilityLabel[capability])}</td>
-              {(['allow', 'deny'] as const).map((kind) => (
+              {permissionKinds.map((kind) => (
                 <td key={kind}>
                   <Checkbox
-                    label={`${t(kind === 'allow' ? 'pairing.allow' : 'pairing.deny')} · ${t(capabilityLabel[capability])}`}
-                    checked={value[kind].includes(capability)}
+                    label={`${t(kindLabels[kind])} · ${t(capabilityLabel[capability])}`}
+                    checked={(value[kind] ?? []).includes(capability)}
                     disabled={busy}
-                    onChange={(checked) =>
+                    onChange={(checked) => {
+                      const opposite =
+                        kind === 'allow'
+                          ? 'deny'
+                          : kind === 'deny'
+                            ? 'allow'
+                            : kind === 'delegateAllow'
+                              ? 'delegateDeny'
+                              : 'delegateAllow';
                       change({
                         ...value,
                         [kind]: checked
-                          ? [...value[kind], capability]
-                          : value[kind].filter((item) => item !== capability),
+                          ? [...(value[kind] ?? []), capability]
+                          : (value[kind] ?? []).filter((item) => item !== capability),
                         ...(checked
                           ? {
-                              [kind === 'allow' ? 'deny' : 'allow']: value[
-                                kind === 'allow' ? 'deny' : 'allow'
-                              ].filter((item) => item !== capability),
+                              [opposite]: (value[opposite] ?? []).filter(
+                                (item) => item !== capability,
+                              ),
                             }
                           : {}),
-                      })
-                    }
+                      });
+                    }}
                   />
                 </td>
               ))}
@@ -117,6 +150,15 @@ export function PersonPermissions({
               <Tag>{t('pairing.ordinary')}</Tag>
             )}
           </div>
+          <div className="bh-im-actions">
+            <strong>{t('pairing.delegable')}</strong>
+            <span>{effective.delegableCapabilities?.join(', ') || '—'}</span>
+            <MessagingHelp
+              title={t('pairing.delegable')}
+              text={t('pairing.delegationHelp')}
+              t={t}
+            />
+          </div>
           <table
             className="bh-pairing-table bh-permission-table"
             aria-label={t('pairing.permissionSources')}
@@ -126,6 +168,8 @@ export function PersonPermissions({
                 <th>{t('pairing.permissionSources')}</th>
                 <th>{t('pairing.allow')}</th>
                 <th>{t('pairing.deny')}</th>
+                <th>{t('pairing.delegateAllow')}</th>
+                <th>{t('pairing.delegateDeny')}</th>
               </tr>
             </thead>
             <tbody>
@@ -139,6 +183,8 @@ export function PersonPermissions({
                   </td>
                   <td>{source.allow.join(', ') || '—'}</td>
                   <td>{source.deny.join(', ') || '—'}</td>
+                  <td>{source.delegateAllow?.join(', ') || '—'}</td>
+                  <td>{source.delegateDeny?.join(', ') || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -173,12 +219,7 @@ export function PersonPermissions({
                     kind: 'person-permissions',
                     id: request.id,
                     expectedRevision: request.revision,
-                    allow: value.allow.filter(
-                      (cap): cap is 'approve' | 'reject' => cap === 'approve' || cap === 'reject',
-                    ),
-                    deny: value.deny.filter(
-                      (cap): cap is 'approve' | 'reject' => cap === 'approve' || cap === 'reject',
-                    ),
+                    ...choices(value),
                   })
                     .then(() => setEditing(false))
                     .catch(() => setFailed(true));
@@ -235,6 +276,14 @@ export function GroupDetails({
         <div>
           <dt>{t('pairing.deny')}</dt>
           <dd>{group.deny.join(', ') || '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('pairing.delegateAllow')}</dt>
+          <dd>{group.delegateAllow?.join(', ') || '—'}</dd>
+        </div>
+        <div>
+          <dt>{t('pairing.delegateDeny')}</dt>
+          <dd>{group.delegateDeny?.join(', ') || '—'}</dd>
         </div>
       </dl>
       <strong>{t('pairing.groupMembers')}</strong>
@@ -356,6 +405,8 @@ export function GroupDialog({
   const [value, setValue] = useState<PermissionChoices>({
     allow: group?.allow ?? [],
     deny: group?.deny ?? [],
+    delegateAllow: group?.delegateAllow ?? [],
+    delegateDeny: group?.delegateDeny ?? [],
   });
   const [failed, setFailed] = useState(false);
   const columns: ColumnDef<PairingRequest>[] = [
@@ -367,21 +418,21 @@ export function GroupDialog({
   ];
   const submit = async () => {
     setFailed(false);
-    const choices = {
+    const selectedChoices = {
       name,
-      allow: value.allow.filter(
-        (cap): cap is 'approve' | 'reject' => cap === 'approve' || cap === 'reject',
-      ),
-      deny: value.deny.filter(
-        (cap): cap is 'approve' | 'reject' => cap === 'approve' || cap === 'reject',
-      ),
+      ...choices(value),
       memberIds: members,
     };
     try {
       await change(
         group
-          ? { kind: 'edit-group', id: group.id, expectedRevision: group.revision, ...choices }
-          : { kind: 'create-group', bindingId, ...choices },
+          ? {
+              kind: 'edit-group',
+              id: group.id,
+              expectedRevision: group.revision,
+              ...selectedChoices,
+            }
+          : { kind: 'create-group', bindingId, ...selectedChoices },
       );
       close();
     } catch {

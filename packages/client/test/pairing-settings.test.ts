@@ -239,6 +239,8 @@ it('group member selection is scoped to approved people and personal exceptions 
     name: 'Reviewers',
     allow: ['approve'],
     deny: [],
+    delegateAllow: [],
+    delegateDeny: [],
     memberIds: [person.id],
   });
   await act(async () => button('人员 (2)').click());
@@ -257,6 +259,8 @@ it('group member selection is scoped to approved people and personal exceptions 
     expectedRevision: 7,
     allow: [],
     deny: ['approve'],
+    delegateAllow: [],
+    delegateDeny: [],
   });
   await act(async () => root.unmount());
   host.remove();
@@ -311,8 +315,13 @@ it('separate role editing and selected-person reassignment retain exact authorit
     expect(host.querySelector('[role=dialog]')).toBeNull();
     await act(async () => button('pairing.editRole').click());
     const editor = host.querySelector('[role=dialog]')!;
-    expect(editor.querySelectorAll('input[type=checkbox]')).toHaveLength(2);
-    await act(async () => editor.querySelector<HTMLInputElement>('input[type=checkbox]')!.click());
+    const permission = (label: string) =>
+      Array.from(editor.querySelectorAll('label'))
+        .find((item) => item.textContent === label)!
+        .querySelector('input')!;
+    await act(async () => permission('批准本次操作').click());
+    await act(async () => permission('审核聊天配对').click());
+    await act(async () => permission('允许委派 · 拒绝操作').click());
     await act(async () => button('pairing.saveRole').click());
     expect(change).toHaveBeenLastCalledWith({
       kind: 'edit-role',
@@ -320,7 +329,8 @@ it('separate role editing and selected-person reassignment retain exact authorit
       expectedRevision: 4,
       name: role.name,
       behavior: role.behavior,
-      capabilities: ['approve'],
+      capabilities: ['approve', 'review-pairing'],
+      delegableCapabilities: ['reject'],
     });
     expect(host.querySelector('[role=dialog]')).toBeNull();
     await act(async () => tab('pairing.people').click());

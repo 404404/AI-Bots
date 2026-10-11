@@ -486,6 +486,14 @@ _Avoid_: native DSH role, resource ACL, administrator (for every role)
 A Human-reviewed association of one external person with a Role for one PersonaBot and its current authenticated App Binding. It is reusable across allowed conversations in that scope, with a fresh question required after approval; it does not transfer to another Bot, App, platform or replacement Binding.
 _Avoid_: conversation membership, account-wide administrator, saved pending instruction
 
+**Pairing Reviewer**:
+A currently paired external person with explicit authority to review ordinary Chat pairing requests in the same PersonaBot and App Binding. A visible group request is not public approval authority; reviewing a pairing does not grant permission to answer Questions or approve native execution.
+_Avoid_: every group member, native execution approver, automatic first administrator
+
+**Management Delegation Ceiling**:
+The current explicit set of management capabilities a Pairing Reviewer may grant through a Role, including that Role's onward delegation. It is resolved separately from capabilities the reviewer may use, from current Role, authorization groups and person exceptions; explicit delegation Deny takes precedence.
+_Avoid_: own permissions imply delegation, resource ACL, cross-App administrator
+
 **External Authorization Group**:
 A continuing source of explicit management Allow and Deny for currently paired external people in one PersonaBot and App Binding; a person can belong to several groups while retaining one primary behavior Role. Membership does not grant chat eligibility and does not survive revocation and a new pairing.
 _Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBAC
