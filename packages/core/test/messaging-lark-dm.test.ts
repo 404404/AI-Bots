@@ -5,6 +5,7 @@ import { createDshImProvider, type DshImOutboundService } from '../src/messaging
 import type { MessagingInboundEvent, MessagingReplyRoute } from '../src/messaging/provider.js';
 import { attachOperationalModule } from '../src/database/owner.js';
 import { createTempRoot } from './helpers.js';
+import { privateInputWebUrl } from '../src/credentials/web-locator.js';
 
 const cores: BotHarnessCore[] = [];
 afterEach(async () => {
@@ -30,6 +31,29 @@ it('Lark exact private chat uses canonical Inbox without mentions and replies th
           .list({ botSlug: 'ada' })
           .items.find((item) => item.sourceKind === 'bridge-message');
         expect(source).toBeDefined();
+        const origin = core.runtime.bindPrivateInputOrigin?.(run.sessionId, source!.id);
+        expect(origin?.current()).toBe(true);
+        expect(core.runtime.canRequestPrivateInput?.(run.sessionId, source!.id)).toBe(true);
+        expect(() =>
+          core.runtime.bindPrivateInputOrigin?.(run.sessionId, 'historical-source'),
+        ).toThrow();
+        const cardId = '11111111-1111-4111-8111-111111111111';
+        const link = privateInputWebUrl('http://127.0.0.1:31393', 'dm-ada', cardId);
+        const notice = await core.externalMessaging.privateInputNotice(
+          'ada',
+          source!.id,
+          cardId,
+          link,
+        );
+        expect(
+          await core.externalMessaging.privateInputNotice('ada', source!.id, cardId, link),
+        ).toEqual(notice);
+        await expect(
+          run.externalMessaging!.reply(
+            source!.id,
+            'private:11111111-1111-4111-8111-111111111111:api_key',
+          ),
+        ).rejects.toThrow('private-reference-not-deliverable');
         await run.externalMessaging!.reply(source!.id, 'LARK-DM-QA-OK');
       },
       async runAssignment() {},
@@ -236,7 +260,11 @@ it('Lark exact private chat uses canonical Inbox without mentions and replies th
   await core.runtime.whenIdle();
   await tick();
   expect(runs).toBe(1);
-  expect(replies).toEqual([{ account: 'feishu-qa', route: source.reply, text: 'LARK-DM-QA-OK' }]);
+  expect(replies).toHaveLength(2);
+  expect(replies[0]).toMatchObject({ account: 'feishu-qa', route: source.reply });
+  expect(replies[0]!.text).toContain('#botharness-private-input=');
+  expect(replies[0]!.text).not.toContain('api_key');
+  expect(replies[1]).toEqual({ account: 'feishu-qa', route: source.reply, text: 'LARK-DM-QA-OK' });
   expect(core.attention.list({ botSlug: 'ada' }).items[0]).toMatchObject({
     externalOrigin: {
       platform: 'feishu',
@@ -266,7 +294,7 @@ it('Lark exact private chat uses canonical Inbox without mentions and replies th
   expect(
     db.read((database) => database.prepare('SELECT * FROM inbox_admissions').all()),
   ).toHaveLength(1);
-  expect(replies).toHaveLength(1);
+  expect(replies).toHaveLength(2);
   expect(core.externalMessaging.history('ada')[0]?.receipt).toMatchObject({
     messageId: 'dsh-feishu-qa-client',
   });

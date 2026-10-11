@@ -205,6 +205,7 @@ export function handleCompactionEvent(
 export interface BotHarnessConfig {
   enabled: boolean;
   privateInputExecution?: boolean;
+  privateInputWebUrl?: string;
   privateInputMcpServers?: LinuxMcpServer[];
 
   agentPreset?: string;
@@ -223,6 +224,9 @@ export const DEFAULT_CONFIG: BotHarnessConfig = {
 };
 
 export const Config: Schema<BotHarnessConfig> = Schema.object({
+  privateInputWebUrl: Schema.string().description(
+    'Explicit credential-free Web origin for IM private input links; never use a login token URL.',
+  ),
   privateInputMcpServers: Schema.array(
     Schema.object({
       serverName: Schema.string()
@@ -1071,6 +1075,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     config.privateInputExecution === true,
     privateExecution,
     linuxMcp,
+    config.privateInputWebUrl,
   );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
   ctx.inject(['dshIm'], (child) => {

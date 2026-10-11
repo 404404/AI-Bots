@@ -7,6 +7,8 @@ import type { PrivateInputLog } from './diagnostics.js';
 import { LinuxMcp } from './linux-mcp.js';
 import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
 import { nativeExecutionRoot } from '../workspaces/grant-native-tools.js';
+import { isQualifiedMessagingName, messagingToolDenial } from './messaging-tools.js';
+import { privateInputWebUrl } from './web-locator.js';
 
 const SAFE_TOOLS = new Set([
   'ask_secret',
@@ -30,7 +32,10 @@ export function mountPrivateInputs(
     ctx.logger.info('private-input %j', { phase, ...details }),
   ),
   linuxMcp?: LinuxMcp,
+  webUrl?: string,
 ): PrivateInputs {
+  if (webUrl !== undefined)
+    privateInputWebUrl(webUrl, 'dm-check', '00000000-0000-0000-0000-000000000000');
   const log: PrivateInputLog = (phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details });
   const privateMcp = new ProtectedMcp(log);
@@ -59,7 +64,30 @@ export function mountPrivateInputs(
     registry: core.registry,
     credentials: () => ctx.get('credentials'),
     isLive: (agent) => ctx.agents.get(agent.id) === agent,
-    canRequest: (agent) => core.runtime.canRequestPrivateInput?.(agent.session.id) === true,
+    canRequest: (agent, sourceEventId) =>
+      core.runtime.canRequestPrivateInput?.(agent.session.id, sourceEventId) === true,
+    origin: (agent, sourceEventId) =>
+      core.runtime.bindPrivateInputOrigin?.(agent.session.id, sourceEventId),
+    replyAuthority: (botSlug, sourceEventId, authority) =>
+      core.externalMessaging.privateInputReplyAuthority(botSlug, sourceEventId, authority),
+    ...(webUrl === undefined
+      ? {}
+      : {
+          notify: async (
+            botSlug: string,
+            origin: import('./im-origin.js').PrivateInputOrigin,
+            channelId: string,
+            messageId: string,
+          ) => {
+            if (!origin.current()) throw new Error('Private input IM authority changed');
+            await core.externalMessaging.privateInputNotice(
+              botSlug,
+              origin.sourceEventId,
+              messageId,
+              privateInputWebUrl(webUrl, channelId, messageId),
+            );
+          },
+        }),
     qualified: () =>
       enabled && mode === 'protected' ? execution.qualified() : Promise.resolve(false),
     log,
@@ -78,6 +106,7 @@ export function mountPrivateInputs(
       core.ownership.resolve(agent.session.id)?.rootRole === 'orchestrator'
     ) {
       if (name === 'bash') return undefined;
+      if (isQualifiedMessagingName(name)) return messagingToolDenial(ctx, agent, name);
       if (name === PRIVATE_MCP_TOOL) return privateMcp.denial(ctx, agent);
       if (name.startsWith('mcp__') && linuxMcp !== undefined)
         return linuxMcp.denial(ctx, agent, name);
@@ -150,9 +179,14 @@ export function mountPrivateInputs(
           defineTool({
             name: 'ask_secret',
             description:
-              'Reuse configured private references, or ask the authenticated Owner for private strings in an interactive conversation. Declare account, purpose and dynamic fields. All fields are confidential; never ask for their values in ordinary Chat or questions. Returns opaque references only. Private input does not approve execution. Unattended runs cannot open input cards: report missing private configuration and do not retry.',
+              'Reuse configured private references, or ask the authenticated Owner for private strings in an interactive conversation. Declare account, purpose and dynamic fields. For an accepted IM Source Event the Host sends the Owner an existing Web Chat card link; never collect private values in IM text, attachments, quoted messages or ordinary questions. Returns opaque references only. Do not send references or private configuration details to IM; report only the authorized nonsecret operation result with bridge_reply to the same source. Private input does not approve execution. Unattended runs cannot open input cards. A failed handoff may already have sent its notice; report missing private configuration and do not retry.',
             parameters: {
               account: { type: 'string', required: true, description: 'Nonsecret account label.' },
+              source_event_id: {
+                type: 'string',
+                description:
+                  'Exact accepted IM Source Event. Required when several IM requests are active; never select a historical read.',
+              },
               purpose: {
                 type: 'string',
                 required: true,
@@ -178,8 +212,12 @@ export function mountPrivateInputs(
               schema: { type: 'string' },
               render: (_args, value) => [{ type: 'text', text: value }],
             },
-            execute: async (args, call) =>
-              JSON.stringify(await owner.ask(agent, args, call.signal)),
+            execute: async (args, call) => {
+              const { source_event_id: sourceEventId, ...declaration } = args;
+              return JSON.stringify(
+                await owner.ask(agent, declaration, call.signal, sourceEventId),
+              );
+            },
           }),
         );
         agentCtx.tools.register(

@@ -29,7 +29,11 @@ const values = {
   private_url: 'http://127.0.0.1/private?canary=synthetic',
 };
 
-async function fixture(qualified = true, requestTimeoutMs?: number) {
+async function fixture(
+  qualified = true,
+  requestTimeoutMs?: number,
+  extra: Partial<ConstructorParameters<typeof PrivateInputs>[0]> = {},
+) {
   const root = createTempRoot('bh-private-input-');
   const ctx = new Context();
   const fiber = ctx.plugin(LocalCredentialProvider, {
@@ -63,6 +67,7 @@ async function fixture(qualified = true, requestTimeoutMs?: number) {
     qualified: async () => qualified,
     log: vi.fn(),
     ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
+    ...extra,
   };
   const owner = new PrivateInputs(deps);
   return {
@@ -86,6 +91,165 @@ async function fixture(qualified = true, requestTimeoutMs?: number) {
     },
   };
 }
+
+describe('IM private input origin leases', () => {
+  function origin() {
+    const controller = new AbortController();
+    let current = true;
+    let applies = true;
+    return {
+      lease: {
+        sourceEventId: 'im-source',
+        signal: controller.signal,
+        current: () => current && !controller.signal.aborted,
+        applies: () => applies,
+      },
+      revoke: () => {
+        current = false;
+        controller.abort();
+      },
+      nextTurn: () => {
+        applies = false;
+      },
+    };
+  }
+
+  it('opens only an Owner Web card, notifies the captured source, and revokes result delivery with the account', async () => {
+    const source = origin();
+    const notify = vi.fn(async () => {});
+    let delivery: import('../src/credentials/im-origin.js').PrivateReplyAuthority | undefined;
+    const f = await fixture(true, undefined, {
+      origin: () => source.lease,
+      notify,
+      replyAuthority: (_bot, id, authority) => {
+        expect(id).toBe('im-source');
+        delivery = authority;
+        return () => {};
+      },
+    });
+    try {
+      const result = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(notify).toHaveBeenCalledOnce());
+      const id = f.channels.readMessages('dm-ada')[0]!.id;
+      expect(notify).toHaveBeenCalledWith('ada', source.lease, 'dm-ada', id);
+      expect(delivery?.current()).toBe(false);
+      expect(await f.owner.submit(false, { channelId: 'dm-ada', messageId: id, values })).toBe(
+        false,
+      );
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values })).toBe(true);
+      const configured = await result;
+      expect(configured.status).toBe('configured');
+      expect(delivery?.current()).toBe(true);
+      expect(
+        await f.owner.consume(f.agent, declaration.account, configured.references, async () => ({
+          httpStatus: 200,
+        })),
+      ).toEqual({ httpStatus: 200 });
+      expect(JSON.stringify(notify.mock.calls)).not.toContain(values.api_key);
+      expect(JSON.stringify(f.channels.readMessages('dm-ada'))).not.toContain(values.api_secret);
+      await f.owner.revoke(true, 'dm-ada', id);
+      expect(delivery?.signal.aborted).toBe(true);
+      expect(delivery?.current()).toBe(false);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it('expires an IM card on Binding loss and refuses even authenticated late submission', async () => {
+    const source = origin();
+    const f = await fixture(true, undefined, {
+      origin: () => source.lease,
+      notify: async () => {},
+    });
+    try {
+      const result = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const id = f.channels.readMessages('dm-ada')[0]!.id;
+      source.revoke();
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values })).toBe(
+        false,
+      );
+      expect(await result).toMatchObject({ status: 'expired', references: {} });
+      expect(
+        (await f.credentials.listRecords()).some((record) => record.key.includes('/grant-')),
+      ).toBe(false);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it('guards IM result delivery when consuming saved references without asking again', async () => {
+    const source = origin();
+    let imTurn = false;
+    let delivery: import('../src/credentials/im-origin.js').PrivateReplyAuthority | undefined;
+    const f = await fixture(true, undefined, {
+      origin: () => (imTurn ? source.lease : undefined),
+      notify: async () => {},
+      replyAuthority: (_bot, _id, authority) => {
+        delivery = authority;
+        return () => {};
+      },
+    });
+    try {
+      const requested = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+      await f.owner.submit(true, { channelId: 'dm-ada', messageId, values });
+      const configured = await requested;
+      imTurn = true;
+      expect(
+        await f.owner.consume(f.agent, declaration.account, configured.references, async () => 200),
+      ).toBe(200);
+      expect(delivery?.current()).toBe(true);
+      await f.owner.revoke(true, 'dm-ada', messageId);
+      expect(delivery?.signal.aborted).toBe(true);
+      expect(delivery?.current()).toBe(false);
+    } finally {
+      await f.close();
+    }
+  });
+
+  it('stops in-flight IM consumption and permits later unattended reuse independently of its old source', async () => {
+    const source = origin();
+    const f = await fixture(true, undefined, {
+      origin: () => (source.lease.applies() ? source.lease : undefined),
+      notify: async () => {},
+    });
+    try {
+      const result = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const id = f.channels.readMessages('dm-ada')[0]!.id;
+      await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values });
+      const configured = await result;
+      let active: AbortSignal | undefined;
+      const consume = f.owner.consume(
+        f.agent,
+        declaration.account,
+        configured.references,
+        async (_values, signal) => {
+          active = signal;
+          return new Promise((resolve) =>
+            signal.addEventListener('abort', () => resolve('late result'), { once: true }),
+          );
+        },
+      );
+      const rejected = expect(consume).rejects.toThrow(/failed or was cancelled/);
+      await vi.waitFor(() => expect(active).toBeDefined());
+      source.revoke();
+      await rejected;
+      expect(active?.aborted).toBe(true);
+      source.nextTurn();
+      f.unattended();
+      const reused = await f.owner.ask(f.agent, declaration, new AbortController().signal);
+      expect(reused.references).toEqual(configured.references);
+      expect(
+        await f.owner.consume(f.agent, declaration.account, reused.references, async () => 200),
+      ).toBe(200);
+    } finally {
+      await f.close();
+    }
+  });
+});
 
 describe('private input native authority and reference contract', () => {
   it('refuses missing private configuration without creating an unattended input card', async () => {
