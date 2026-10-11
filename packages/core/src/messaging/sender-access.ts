@@ -160,17 +160,27 @@ export function readSenderPermissions(
   const approved = pairings.find((pairing) => pairing.status === 'approved');
   if (approved) {
     const role = externalUserRoles(db, botSlug).find((role) => role.id === approved.roleId);
+    const effectivePermissions = effectivePairingPermissions(
+      db,
+      botSlug,
+      sender.bindingId,
+      sender.actorId,
+    );
     return role
       ? {
           ...base,
           status: 'paired',
           role,
-          effectivePermissions: effectivePairingPermissions(
-            db,
-            botSlug,
-            sender.bindingId,
-            sender.actorId,
-          ),
+          effectivePermissions: {
+            ...effectivePermissions,
+            ...(effectivePermissions.behaviorPermissions
+              ? {
+                  behaviorPermissions: effectivePermissions.behaviorPermissions.map(
+                    ({ excludes: _excludes, ...behavior }) => behavior,
+                  ),
+                }
+              : {}),
+          },
         }
       : { ...base, status: 'unavailable', reason: 'role-unavailable' };
   }

@@ -382,6 +382,11 @@ export const zh = {
   'pairing.noBehaviorPermissions': '尚无行为权限。先创建，再到组内勾选。',
   'pairing.behaviorConflict': '允许与拒绝冲突 · 拒绝优先',
   'pairing.behaviorConflictShort': '冲突',
+  'pairing.behaviorExclusions': '互斥权限项',
+  'pairing.behaviorExclusionHelp':
+    '勾选不能同时允许的权限项。关系双向生效，并更新双方版本；修改前检查受影响的分组和人员。明确拒绝仍优先。这里只识别人工声明的互斥，不判断任意文字矛盾。',
+  'pairing.behaviorIncompatible':
+    '存在同时允许的互斥权限，无法保存。请先移除一个允许来源或明确拒绝其中一项。',
   'pairing.behaviorNoConflict': '无同项冲突',
   'pairing.behaviorPreview': '生效预览',
   'pairing.behaviorNoAffectedPeople': '没有受影响的有效配对人员。',
@@ -3223,6 +3228,11 @@ export const en = {
     'No behavior permissions yet. Create an item, then select it in a group.',
   'pairing.behaviorConflict': 'Allow/Deny conflict · Deny wins',
   'pairing.behaviorConflictShort': 'Conflict',
+  'pairing.behaviorExclusions': 'Mutually exclusive items',
+  'pairing.behaviorExclusionHelp':
+    'Select items that cannot both be allowed. The relation works both ways and updates both revisions; review affected groups and people. Explicit Deny still wins. Only authored exclusions are checked, not arbitrary text contradictions.',
+  'pairing.behaviorIncompatible':
+    'Mutually exclusive items are both allowed. Cannot save: remove an Allow source or explicitly deny one item first.',
   'pairing.behaviorNoConflict': 'No same-item conflict',
   'pairing.behaviorPreview': 'Effective preview',
   'pairing.behaviorNoAffectedPeople': 'No affected currently paired people.',
