@@ -78,3 +78,13 @@ Both PRs remain Draft, Project In Progress. Actual reviewer card selection/appro
 ![Actual fresh-message reply with current permissions and 323](lark-fresh-reply.png)
 
 **Gate:** first-flow Human feedback has been requested; not yet accepted. Independent authorized Reject, delayed/current Deny and competing review/cold-restart decision cases remain before full issue completion. Pending-card/baseline Lark captures and person exception screenshots remain required visual review work; these final-state crops do not substitute for all matching before/after states. Keep both PRs Draft, Project In Progress. No one-time codes or other-platform expansion started.
+
+
+## Accepted first slice and remaining real decisions
+
+The Human explicitly accepted the first real group-only slice and authorized remaining qualification. Independent Reject was clicked by the Human as the authorized reviewer; canonical request A3384E5264 and final card are rejected, and the task independently inspected native rendering with controls absent. The task then sent a fresh true @ as the applicant, selected QA Allow once as the other reviewer, applied group delegation Deny through the public Web RPC, and clicked the original Approve button: actual authorization refusal, request still pending, no new Admission. Person review-pairing Deny also refused Reject. A cold restart preserved the exact request/receipt/selection and both Denies; after restoring only person Deny, group delegation Deny continued refusing Approve. Restoring the test group allowed the original selected card to approve; final native rendering had no buttons and fixed re-ask notice. Admissions stayed at the first-flow count of one throughout all pending/rejected/denied decisions. Setup mutations used public authenticated Web RPC; reviewer decisions used real Lark controls. Neither actor gained a private-DM route.
+
+![Actual selected pending card](lark-pending-selected-card.png)
+![Actual independently rejected final card](lark-rejected-card.png)
+
+The older historical pending-feedback paragraphs above describe earlier attempts; the latest Human acceptance supersedes that gate. Both source heads are unchanged. Two-reviewer races are covered by public tests, not a claimed live third-user scenario. Matching baseline-version Lark capture and paired-person permission-source/exception screenshots remain visual review work.
