@@ -85,7 +85,9 @@ Host 管理能力与可委派范围继续独立校验。
 | 构建、类型、lint、格式与发布账本 | ok 通过 |
 | 真实 Lark Allow → Deny → 恢复 | ok 真人接受 |
 | Windows 默认并行全套 | warn 超时失败后中断 |
-| 当前 head 的 Linux CI | warn 运行中，PR 上查看实时结果 |
+| 当前 head 的 Linux CI | ok 全部通过 |
+
+[当前 head 的 CI 记录](https://github.com/BotHarness/DeepSeekBot/actions/runs/38155263825)。
 
 三条新问题均读取当前权限，回复算术结果 1147、1517、1763。
 Deny 时拒绝产品问答，移除来源后恢复问答。
