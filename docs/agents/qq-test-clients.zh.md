@@ -79,7 +79,7 @@ node scripts/dev-qq-test-clients.mjs status QA1 \
 
 ![已有 QQ QA 应用绑定到教程 Bot 的原生确认画面](../assets/vps-source/02-qq-app-bound.png)
 
-_CLI 连接后的真实原生 Web 截图，2026-10-11 18:11 UTC。绑定通过 External identities 完成；此画面不证明 QQ 群内回复。_
+_CLI 连接后的真实原生 Web 截图，2026-10-11 18:10:31 UTC。绑定通过 External identities 完成；此画面不证明 QQ 群内回复。_
 
 ## 停止与交接
 

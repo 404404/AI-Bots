@@ -79,7 +79,7 @@ For later branches using the same Profile, claim and launch it after the old rec
 
 ![Native binding confirmation for the existing QQ QA App and the tutorial Bot](../assets/vps-source/02-qq-app-bound.png)
 
-_Actual native Web capture after CLI connection, 2026-10-11 18:11 UTC. Binding was completed in External identities; this screen is not a QQ group-reply receipt._
+_Actual native Web capture after CLI connection, 2026-10-11 18:10:31 UTC. Binding was completed in External identities; this screen is not a QQ group-reply receipt._
 
 ## Stop and hand off
 
