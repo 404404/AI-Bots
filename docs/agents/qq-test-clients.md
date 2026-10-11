@@ -77,6 +77,10 @@ Verify the SSH Host key independently before creating `knownHostsFile`. The help
 
 For later branches using the same Profile, claim and launch it after the old receiver stops, then run `status`; do not repeat `connect`. This retains authorization without retyping. `connected: true` verifies transport readiness, not group rendering. On the new Ubuntu 26.04 VPS, this path actually connected the existing QA App without entering its Secret again; original-group chat acceptance remains a separate check.
 
+![Native binding confirmation for the existing QQ QA App and the tutorial Bot](../assets/vps-source/02-qq-app-bound.png)
+
+_Actual native Web capture after CLI connection, 2026-10-11 18:11 UTC. Binding was completed in External identities; this screen is not a QQ group-reply receipt._
+
 ## Stop and hand off
 
 Stop only the exact Host/receiver identified by this claim. Verify its process has exited and its listener/receiver has stopped, including on a remote VPS. Then:

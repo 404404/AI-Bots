@@ -77,6 +77,10 @@ node scripts/dev-qq-test-clients.mjs status QA1 \
 
 后续分支使用同一 Profile 时，旧接收器停止后认领、启动，再执行 `status`，无需重复 `connect`，也无需重新输入授权。`connected: true` 证明传输就绪，不证明群内渲染。新 Ubuntu 26.04 VPS 已用此路径实际连接已有 QA 应用，未再次输入 Secret；原 QQ 群聊天验收仍是独立检查。
 
+![已有 QQ QA 应用绑定到教程 Bot 的原生确认画面](../assets/vps-source/02-qq-app-bound.png)
+
+_CLI 连接后的真实原生 Web 截图，2026-10-11 18:11 UTC。绑定通过 External identities 完成；此画面不证明 QQ 群内回复。_
+
 ## 停止与交接
 
 只停止该认领标明的准确 Host/接收器。确认进程退出、监听及接收停止，远程 VPS 也需检查，然后执行：
