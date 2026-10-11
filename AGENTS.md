@@ -64,6 +64,10 @@ The dev VPS lives on the Human's Tailscale tailnet. Per-machine values (SSH host
 - Hands off other sessions' stacks (e.g. `/opt/botharness/bot-seo`): observe, never restart, rebuild, or reconfigure without that session's owner.
 - Phone QA without tailnet: keep DSH loopback-bound and publish it with a Cloudflare quick tunnel; see [the phone QA runbook](docs/agents/phone-qa-tunnel.md) for trusted-host, token rotation, and stale-shell handling.
 
+### SEO research and tracking (AX)
+
+Before SEO research, blog planning, channel adaptation, or ranking tracking, read [the SEO AX adapter](docs/agents/seo-ax.md). It routes agents to the canonical bot-seo shared-VPS workflow; do not substitute a machine-local OpenSEO instance or treat multi-agent capacity as publishing permission.
+
 ## Delivery workflow — tracer bullets
 
 For a feature that crosses layers, deliver a sequence of **tracer bullets**: the smallest production-shaped end-to-end slice that reaches the owning Host module, durable authority, adapter/RPC, Client surface, and a Human-testable runtime path. Validate that slice before expanding the next one. This follows the [tracer-bullet practice](https://www.aihero.dev/tracer-bullets): build one narrow vertical path, test it immediately, get feedback, then extend it.
