@@ -88,3 +88,10 @@ The Human explicitly accepted the first real group-only slice and authorized rem
 ![Actual independently rejected final card](lark-rejected-card.png)
 
 The older historical pending-feedback paragraphs above describe earlier attempts; the latest Human acceptance supersedes that gate. Both source heads are unchanged. Two-reviewer races are covered by public tests, not a claimed live third-user scenario. Matching baseline-version Lark capture and paired-person permission-source/exception screenshots remain visual review work.
+
+
+## Final remaining qualification and receiver handback
+
+After cold restart and restored authority, only the fresh native @ produced the actual reply **667**, current QA Allow once / use approve / empty delegation. The two external Admissions are handled without errors, and both corresponding Outboxes are provider-accepted with receipts. The approved applicant was revoked through the public Web boundary; its final card is unavailable with no controls. The exact isolated receiver stopped at 2026-10-11 14:10:11 UTC; no owned listener remains, test group removed and person Deny restored. No original receiver was restarted.
+
+Person exceptions were also saved/reopened/restored through the actual native Web UI. The clear and saved-Deny crops are mutation states, not matching baseline-version screenshots; the base comparison requires a separately bound base Profile/App because the earlier baseline has no bound person and no shared group-card feature. Never use the new database with the old writer. Both source heads stay unchanged. Full live Reject/Deny/restart/new-message/revoke qualification is complete; no third live reviewer or code/platform extension is claimed.
