@@ -33,7 +33,7 @@ node scripts/dev-qq-test-clients.mjs launch QA1 \
 
 启动沿用 `dev-instance.mjs`，使用槽位的 HOME/Profile、当前 worktree 和 qualified IM Provider。先构建当前分支，并使用[固定版本的本机开发工具链](../client-bridge.md)。启动器会输出私密登录 URL，不要公开录制该输出。它不会停止已有 Host。发现 Profile 写入者记录或重复启动请求时，会在启动第二个 Host 前拒绝。启动结果不确定时，检查该 HOME、端口和准确 PID；槽位继续保持认领。
 
-空白 Profile 中打开 **Settings → IM Bots → QQ → Scan to connect**，完成官方应用授权并核对真实身份。通过目标 PersonaBot 的 **External identities** 绑定。旧 Host 停止后，后续分支复用同一个 Profile。原生授权和 BotHarness Binding 是两步，注册表认领不提供其中任何一种权限。分支的数据 schema 不兼容时，应使用兼容程序，或另建 Profile 并重新授权，不要用不兼容程序打开旧数据。
+空白 Profile 中打开 **Settings → IM bots → QQ**。复用已有应用时选择 **Manual setup**，由 Human 在原生表单直接输入 AppID 和 AppSecret，录制保持停止。合格 Provider 的 **Scan QR code** 流程写明会创建并连接 Bot，只在确实需要新建应用时使用。核对已认证的应用身份，再通过目标 PersonaBot 的 **External identities** 绑定。旧 Host 停止后，后续分支复用同一个 Profile。原生授权和 BotHarness Binding 是两步，注册表认领不提供其中任何一种权限。分支的数据 schema 不兼容时，应使用兼容程序，或另建 Profile 并重新授权，不要用不兼容程序打开旧数据。
 
 登记时省略 AppID 的，在核对已授权 Provider 的身份后补记：
 
