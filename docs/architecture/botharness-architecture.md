@@ -277,6 +277,8 @@ Messaging 在 Source Event 与 Inbox Admission 提交后异步尝试原消息的
 
 反馈 attempt 元数据保存在既有 Source Event payload，完成记录引用原 Outbox；管理 snapshot 暴露最近状态，不复制消息内容。写入前持久化 attempt，超时／未知／重连／重启均不自动重试；有界异步调用不阻塞接收、模型或回复。静音仍可产生 silent Admission，屏蔽阻止新 Admission；静默结束、委派完成、待确认问题及无关输出不表示已回答。平台接受不表示 Human 已读或样式已经验证。详见 [ADR-0149](../adr/0149-lark-feedback-follows-admission-and-accepted-reply.md)。
 
+Slack 的 #1161 候选复用这条 application-defined Messaging 反馈链：checked Provider 把 `received`／`answered` 映射为原始 Human 消息上的 `eyes`／`white_check_mark`，回答后移除自身的 `eyes`。Slack 静音会话不产生反馈；Lark 既有 silent Admission 语义不变。Provider 仅串行同一来源的反应写入，不占用 Bot transition queue 执行网络写入；每次写入重查来源、账号、Consumer 和授权 fence，部分写入／清理不确定保留 unknown，不自动重试。本候选不提升现有 Provider pin；真实 Slack 频道与 DM 证据仍是独立交付门槛。
+
 ### 绑定的应用接收默认流量（ADR-0142）
 
 接收以外部身份 Binding 为键，而不是保存的目标。启用的 Binding 把应用的默认流量（私聊和合格的群 @）接收进绑定 Bot 的 Inbox。会话的第一条被接收的消息，会与其 Source Event、Inbox Admission 在同一事务中提交一个隐式会话条目（`messaging_grants` 中 `origin: 'implicit'` 的行），使 Outbox fence、群策略、Channel Bridge 路由和撤销仍挂在同一个锚点上。Binding 的新会话模式（`auto` 或 `ask`）及其上限（每小时 20 个新条目、500 个活跃、200 个等待）决定新会话被接收还是等待处理。屏蔽按 Bot、应用指纹、会话类型和 ID 持久保存；静音只推进 `preferenceRevision`，不改动条目的 Outbox revision。一个 Bot 可以绑定同一平台的多个应用，每个应用仍只属于一个 Bot。Client 中，应用的会话列表管理这些条目并显示已有的 Channel Bridge 路由（新建同步正在围绕外部连接器重新设计），「外部连接器」列出这些路由并保留保存目标的 Service Grant，作为 Provider 无法列出或直接发往会话时的高级后备。

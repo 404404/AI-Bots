@@ -368,7 +368,7 @@ export function createDshImProvider(
       name: info.account.name ?? ref,
       fingerprint: info.account.fingerprint,
       connected: info.connected,
-      ...(platform === 'feishu'
+      ...(['feishu', 'slack'].includes(platform)
         ? {
             reactionSupported:
               host.reactionVersion === 1 &&
@@ -469,7 +469,7 @@ export function createDshImProvider(
       return result.flatMap((item) => (item.status === 'fulfilled' ? [item.value] : []));
     },
     targets,
-    ...(platform === 'feishu' &&
+    ...(['feishu', 'slack'].includes(platform) &&
     host.reactionVersion === 1 &&
     typeof host.reactionChecked === 'function'
       ? {
