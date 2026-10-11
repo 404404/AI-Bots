@@ -21,6 +21,7 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
     outDir,
     format: ['cjs'],
     platform: 'browser',
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     dts: false,
     clean: true,
     sourcemap: true,

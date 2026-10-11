@@ -105,6 +105,9 @@ afterAll(() => {
 });
 
 describe('@botharness/ui browser bundle', () => {
+  it('does not defer Node environment reads to browser interactions', () => {
+    expect(bundleCode).not.toMatch(/\bprocess\.env\b/);
+  });
   it('self-registers with the lazy-CJS module-loader contract', () => {
     const loaded = loadedEntry();
     expect(loaded.id).toBe('@botharness/ui');
