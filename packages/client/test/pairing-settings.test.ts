@@ -320,6 +320,7 @@ it('group member selection is scoped to approved people and personal exceptions 
   await act(async () => button('授权组 (0)').click());
   await act(async () => button('创建组').click());
   const dialog = host.querySelector('[role="dialog"]')!;
+  await act(async () => button('组成员 (0)').click());
   expect(dialog.textContent).toContain('Alice QA');
   expect(dialog.textContent).not.toContain('Other App');
   const name = dialog.querySelector('input:not([type="checkbox"])')!;
@@ -332,8 +333,12 @@ it('group member selection is scoped to approved people and personal exceptions 
     Array.from(dialog.querySelectorAll('label'))
       .find((item) => item.textContent?.includes(label))!
       .querySelector('input')!;
+  await act(async () => button('管理能力').click());
   await act(async () => checkbox('允许 · 批准').click());
+  await act(async () => button('组成员 (0)').click());
   await act(async () => checkbox('Alice QA').click());
+  await act(async () => button('管理能力').click());
+  expect(checkbox('允许 · 批准').checked).toBe(true);
   await act(async () => button('保存组').click());
   expect(change).toHaveBeenLastCalledWith({
     kind: 'create-group',

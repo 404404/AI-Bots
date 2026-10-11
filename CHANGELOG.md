@@ -27,7 +27,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- Lark authorization groups can select reusable named behavior permissions. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
+- Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a live affected-person preview. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
 
 - Lark pairing reviewers can choose an existing Role and approve or reject from a shared source-group or private-DM card, including group-only use. Current review permission and separate delegation Allow/Deny limit management Role grants; applicants must ask again after approval ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
 

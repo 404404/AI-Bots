@@ -1,5 +1,5 @@
-import { useState, type ReactElement } from 'react';
-import { Button, Checkbox, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
+import { useId, useState, type ReactElement } from 'react';
+import { Button, Checkbox, Input, SegmentedTabs, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { ColumnDef } from '@tanstack/react-table';
 import type {
   ExternalPermissionGroup,
@@ -446,6 +446,10 @@ export function GroupDialog({
   close(): void;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const id = useId();
+  const [tab, setTab] = useState<'management' | 'behavior' | 'members'>(
+    behaviorPermissions.length ? 'behavior' : 'management',
+  );
   const [name, setName] = useState(group?.name ?? '');
   const [bindingId, setBindingId] = useState(group?.bindingId ?? bindings[0]?.id ?? '');
   const eligible = people.filter(
@@ -516,7 +520,7 @@ export function GroupDialog({
       }}
       title={t(group ? 'pairing.editGroup' : 'pairing.createGroup')}
       closeLabel={t('common.close')}
-      className="bh-sidebar-modal bh-pairing-role-modal"
+      className="bh-sidebar-modal bh-pairing-modal bh-group-editor-modal"
       contentClassName="bh-pairing-content"
       footer={
         <div className="bh-modal-footer">
@@ -534,7 +538,7 @@ export function GroupDialog({
         </div>
       }
     >
-      <fieldset disabled={busy} className="bh-im-role-form">
+      <fieldset disabled={busy} className="bh-group-editor-header">
         <label className="bh-im-field">
           <span>{t('pairing.groupName')}</span>
           <Input
@@ -556,62 +560,101 @@ export function GroupDialog({
             setMembers([]);
           }}
         />
-        <PermissionEditor value={value} change={setValue} busy={busy} t={t} />
-        <BehaviorSelection
-          items={behaviorPermissions}
-          value={behaviorValue}
-          change={setBehaviorValue}
-          busy={busy}
-          t={t}
-        />
       </fieldset>
-      <strong>
-        {t('pairing.groupMembers')} ({members.length})
-      </strong>
-      <div className="bh-group-members">
-        <PairingTable
-          key={bindingId}
-          data={eligible}
-          columns={columns}
-          selectedIds={members}
-          disabled={busy}
-          select={(person) => {
-            if (!busy)
-              setMembers((ids) =>
-                ids.includes(person.id)
-                  ? ids.filter((id) => id !== person.id)
-                  : ids.length < 100
-                    ? [...ids, person.id]
-                    : ids,
-              );
-          }}
-          label={t('pairing.groupMembers')}
-          empty={t('pairing.noPeople')}
-          t={t}
-        />
+      <div className="bh-pairing-workspace">
+        <section className="bh-group-editor-selection">
+          <SegmentedTabs
+            label={t('pairing.groupConfiguration')}
+            value={tab}
+            onChange={setTab}
+            items={[
+              {
+                value: 'management',
+                label: t('pairing.groupManagement'),
+                id: `${id}-management`,
+                panelId: `${id}-panel-management`,
+              },
+              {
+                value: 'behavior',
+                label: `${t('pairing.behaviorPermissions')} (${[...new Set([...(behaviorValue.behaviorAllow ?? []), ...(behaviorValue.behaviorDeny ?? [])])].length})`,
+                id: `${id}-behavior`,
+                panelId: `${id}-panel-behavior`,
+              },
+              {
+                value: 'members',
+                label: `${t('pairing.groupMembers')} (${members.length})`,
+                id: `${id}-members`,
+                panelId: `${id}-panel-members`,
+              },
+            ]}
+          />
+          <div
+            role="tabpanel"
+            id={`${id}-panel-${tab}`}
+            aria-labelledby={`${id}-${tab}`}
+            className="bh-pairing-panel"
+          >
+            {tab === 'management' ? (
+              <PermissionEditor value={value} change={setValue} busy={busy} t={t} />
+            ) : tab === 'behavior' ? (
+              <BehaviorSelection
+                items={behaviorPermissions}
+                value={behaviorValue}
+                change={setBehaviorValue}
+                busy={busy}
+                t={t}
+              />
+            ) : (
+              <div className="bh-group-members">
+                <PairingTable
+                  key={bindingId}
+                  data={eligible}
+                  columns={columns}
+                  selectedIds={members}
+                  disabled={busy}
+                  select={(person) => {
+                    if (!busy)
+                      setMembers((ids) =>
+                        ids.includes(person.id)
+                          ? ids.filter((id) => id !== person.id)
+                          : ids.length < 100
+                            ? [...ids, person.id]
+                            : ids,
+                      );
+                  }}
+                  label={t('pairing.groupMembers')}
+                  empty={t('pairing.noPeople')}
+                  t={t}
+                />
+              </div>
+            )}
+          </div>
+        </section>
+        <aside className="bh-pairing-detail" aria-label={t('pairing.behaviorPreview')}>
+          <BehaviorPreview
+            items={behaviorPermissions}
+            groups={[
+              ...groups.filter((existing) => existing.id !== group?.id),
+              {
+                id: group?.id ?? 'draft',
+                botSlug: group?.botSlug ?? '',
+                bindingId,
+                name,
+                revision: group?.revision ?? 1,
+                memberIds: members,
+                ...value,
+                ...behaviorValue,
+                createdAt: group?.createdAt ?? '',
+                updatedAt: group?.updatedAt ?? '',
+              },
+            ]}
+            people={people.filter((person) =>
+              [...members, ...(group?.memberIds ?? [])].includes(person.id),
+            )}
+            t={t}
+          />
+        </aside>
       </div>
-      <BehaviorPreview
-        items={behaviorPermissions}
-        groups={[
-          ...groups.filter((existing) => existing.id !== group?.id),
-          {
-            id: group?.id ?? 'draft',
-            botSlug: group?.botSlug ?? '',
-            bindingId,
-            name,
-            revision: group?.revision ?? 1,
-            memberIds: members,
-            ...value,
-            ...behaviorValue,
-            createdAt: group?.createdAt ?? '',
-            updatedAt: group?.updatedAt ?? '',
-          },
-        ]}
-        people={people.filter((person) =>
-          [...members, ...(group?.memberIds ?? [])].includes(person.id),
-        )}
-        t={t}
-      />
       {failed ? (
         <p role="alert" className="bh-error">
           {t('pairing.error')}
