@@ -27,7 +27,11 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
 
 import { ChannelComposer } from '../src/client/channel-composer.js';
 import { attachmentReferenceText } from '../src/client/attachment-refs.js';
-import { setRichSelection } from '../src/client/rich-mention-editor.js';
+import {
+  readRichMentionDraft,
+  renderRichMentionDraft,
+  setRichSelection,
+} from '../src/client/rich-mention-editor.js';
 import type { BotSummary } from '../src/client/store.js';
 
 const ada: BotSummary = {
@@ -175,14 +179,11 @@ describe('mounted Channel composer', () => {
       });
     }
     await act(async () => root.render(createElement(Harness)));
-    const input = host.querySelector('textarea')!;
+    const input = host.querySelector<HTMLElement>('[contenteditable]')!;
     const type = async (value: string) =>
       act(async () => {
-        Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
-          input,
-          value,
-        );
-        input.setSelectionRange(value.length, value.length);
+        renderRichMentionDraft(input, value, [], []);
+        setRichSelection(input, value.length);
         input.dispatchEvent(new Event('input', { bubbles: true }));
       });
     await type('keep this draft\n/');
@@ -194,7 +195,7 @@ describe('mounted Channel composer', () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })),
     );
     expect(workspace).toHaveBeenCalledOnce();
-    expect(input.value).toBe('keep this draft\n');
+    expect(readRichMentionDraft(input).value).toBe('keep this draft\n');
     expect(host.textContent).toContain('proof.txt');
     expect(onSubmit).not.toHaveBeenCalled();
     await type('keep this draft\n/mo');
@@ -202,7 +203,7 @@ describe('mounted Channel composer', () => {
     await act(async () =>
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })),
     );
-    expect(input.value).toBe('keep this draft\n');
+    expect(readRichMentionDraft(input).value).toBe('keep this draft\n');
     expect(model).not.toHaveBeenCalled();
     await type('ordinary /model text');
     expect(host.querySelector('[role="menu"]')).toBeNull();
