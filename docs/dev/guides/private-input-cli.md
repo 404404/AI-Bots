@@ -1,6 +1,6 @@
 # Private input CLI candidate
 
-This is the opt-in #1380 qualification path, not a completed v1.3 capability. It demonstrates a real PersonaBot, inline Web input, native storage, existing approval and a fixed reference-consuming CLI. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records the proposed execution boundary and open acceptance gates.
+This is the opt-in #1380/#1381 qualification path, not a completed v1.3 capability. Human accepted the real PersonaBot inline Web input and authenticated fixed-CLI result in #1380. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records its execution boundary; [ADR-0166](../../adr/0166-private-input-settlement-commits-before-continuation.md) records request settlement and recovery.
 
 Use a dedicated, isolated DSH home with pinned `0.2.0-rc.1`, Docker running Linux containers, and the exact image below. Do not enable this candidate on a production or shared home. It changes all Agent tool access in this Profile, including native Sessions and other Bots.
 
@@ -69,6 +69,14 @@ deepseekbot ask-secret-cancel <dm-channel-id> --message-id <card-id> --host <ori
 ```
 
 Supply a JSON object of declared field IDs and confidential strings over stdin from a trusted input source; do not put values in arguments, shell history or repo files. Submission returns only `{accepted:true}`, status returns only the status, and errors do not echo values or Host error payloads. Submission is never retried automatically. Ordinary `user-question-answer --answer-stdin` retains its existing nonsecret answer JSON contract; ordinary question answers are durable model-visible content.
+
+To verify #1381, create two real Bots and request the same three generic fields for separate accounts. Both pending requests must appear independently in Activity center / Human Inbox; **Go to private input card** opens the existing DM card. A request expires after fifteen minutes of Host time, even without an open Web page. It is metadata only after expiry, cancellation, Agent stop or restart, and cannot be submitted late.
+
+Open one pending card in two independent authenticated browser contexts, fill only its password inputs, and submit concurrently. Both pages must converge to configured with empty inputs, while only one grant and one configured resolution exist. Approve the single CLI invocation and verify exactly one authenticated fixture request and one same-DM result. Cancel the other Bot's card after filling its inputs: inputs and that request's attention clear independently, and the configured Bot's references remain usable. Reload must never restore the entered plaintext.
+
+Ask the second Bot for a fresh card, use native Session stop while it waits, then attempt a late Owner submission. It must return `accepted:false`, commit expired with no references, and never start credential use. Bot pause only controls new admissions; it does not stop its existing native turn and is not this check. Create another pending request with an explicit DM, then restart the exact isolated Host. The lost card must become durably expired without recreating its waiter or waking the stopped Bot; existing configured references remain usable when the first Bot receives a new explicit DM instruction. Do not interpret automatic re-execution as successful recovery. Version-two grants require the configured Channel commit, so a native write with failed Channel persistence cannot publish a usable partial result.
+
+Initialize a fresh native Profile before adding its Patch; do not precreate its Profile directory or overwrite native patch entries. Stop the helper's verified exact Host PID before rebuilding/restarting. Keep local tokens and full native Sessions private. Publish allowlisted event projections and aggregate canary counts only.
 
 Run deterministic active extraction independently of any model's willingness to attempt it:
 

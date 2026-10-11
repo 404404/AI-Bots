@@ -36,6 +36,7 @@ export function mountPrivateInputs(
           mode = records.some((record) => record.key.startsWith('botharness-private/'))
             ? 'locked'
             : 'ordinary';
+        void owner.recover().catch(() => log('recovery-unavailable'));
       },
       () => {
         mode = 'locked';
@@ -55,6 +56,7 @@ export function mountPrivateInputs(
     qualified: () =>
       enabled && mode === 'protected' ? execution.qualified() : Promise.resolve(false),
     log,
+    changed: (botSlug, count) => core.states.setPrivateInputCount(botSlug, count),
   });
   ctx.effect(() => () => owner.close(), 'botharness: private input owner');
   ctx.effect(() => () => execution.close(), 'botharness: protected Execution World');

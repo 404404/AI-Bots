@@ -152,6 +152,10 @@ Pre-execution refusal can leave an application-owned Session ID without a DSH Se
 
 ## Additional verified pitfall — #1138
 
+For a fresh pinned RC1 local Profile, let native initialization create the Profile directory before applying a task Patch. Precreating the directory makes the native default-profile initializer refuse its destination; initialization also creates an empty `cordis.patch.yml`, so merge intended entries instead of moving another file over it. Preserve native entries, then restart the helper's exact verified Host PID. This was reproduced in #1381.
+
+The pinned native local Credentials Provider retains record objects in its cache. A trusted private-input owner that clears its incoming submission object must copy the values into the atomic grant payload before handing it to the Provider; otherwise clearing the request also clears the cached grant. Validate the published Host through an actual credential consumer, not only disk serialization. A Fiber's disposal must also drain already-started recovery writes before its storage Providers can close. These native ownership and lifecycle interactions were verified in #1381; the request settlement policy remains application-defined.
+
 A new root overlay must budget its long-lived Connection Fetch streams with existing pages. In official DSH 0.2.0 RC1 Windows Web, adding a separate companion SSE alongside the Bot-mode Activity, Channel and roster consumers left real DM sending pending until Bot mode exited. Reusing the companion's full Activity snapshot for the shared Client Activity store and closing the redundant Activity SSE restored three genuine DM submissions within Bot mode. The symptom is consistent with the per-origin HTTP/1 connection limit; an exact wire connection count was not measured. Validate an actual DM reply while both the overlay and owning page remain visible. On removal, restore ordinary Activity demand; keep listener/frame/heartbeat disposal bounded and never weaken authentication to work around the symptom.
 
 ## Additional verified pitfalls — #1339

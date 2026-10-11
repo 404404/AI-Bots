@@ -201,9 +201,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
     };
   }
 
-  privateInputCancel(channelId: string, messageId: string): { accepted: boolean } {
+  async privateInputCancel(channelId: string, messageId: string): Promise<{ accepted: boolean }> {
     this.requirePrivateOwner();
-    return { accepted: this.privateInputs?.cancel(true, channelId, messageId) ?? false };
+    return { accepted: (await this.privateInputs?.cancel(true, channelId, messageId)) ?? false };
   }
 
   private requirePrivateOwner(): void {
