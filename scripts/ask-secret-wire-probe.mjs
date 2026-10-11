@@ -35,9 +35,11 @@ globalThis.fetch = async (input, init) => {
     const body =
       typeof init?.body === 'string'
         ? init.body
-        : input instanceof Request
-          ? await input.clone().text()
-          : undefined;
+        : init?.body !== undefined
+          ? undefined
+          : input instanceof Request
+            ? await input.clone().text()
+            : undefined;
     appendFileSync(
       evidence,
       JSON.stringify({
