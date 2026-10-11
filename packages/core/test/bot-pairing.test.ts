@@ -146,6 +146,14 @@ it('declared exclusion refuses new memberships and Deny-removal mutations withou
     'behavior-permission-conflict',
   );
   create('Public', [a!.id], []);
+  const publicPolicy = f.db.read((db) => readSenderPermissions(db, 'ada', event(), new Date()));
+  expect(publicPolicy.effectivePermissions?.behaviorPermissions).toMatchObject([
+    { id: a!.id, effect: 'allow', conflict: false },
+  ]);
+  expect(publicPolicy.effectivePermissions?.behaviorPermissions?.[0]).not.toHaveProperty(
+    'excludes',
+  );
+  expect(items()[0]).toMatchObject({ excludes: [b!.id] });
   create('Private', [b!.id], [], []);
   const edit = (name: string, memberIds: string[], behaviorDeny: string[]) => {
     const group = groups().find((g) => g.name === name)!;
