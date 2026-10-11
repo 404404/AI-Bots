@@ -132,7 +132,7 @@
 
 ### Fixed
 
-- Bot mode Web 在每个页面内共用 Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
+- Bot mode Web 在每个页面内共用选中 Channel、Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
 
 - QQ 应用在 Host 重启时延迟就绪后，已有群 Channel 同步会沿用有界重试恢复，首条新提及不再只进入 Inbox（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
 

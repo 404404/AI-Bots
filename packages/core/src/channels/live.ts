@@ -75,6 +75,59 @@ interface ActivitySource {
   onChange(listener: () => void): () => void;
 }
 
+function combineLiveResponses(channel: Response, roster: Response): Response {
+  const readers = [channel.body!, roster.body!].map((body) => body.getReader());
+  let ended = false;
+  let completed = 0;
+  const waiters = new Set<() => void>();
+  const resume = (): void => {
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  };
+  const stop = async (): Promise<void> => {
+    ended = true;
+    resume();
+    await Promise.allSettled(readers.map((reader) => reader.cancel()));
+  };
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const pump = async (reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> => {
+        try {
+          while (!ended) {
+            if ((controller.desiredSize ?? 0) <= 0)
+              await new Promise<void>((resolve) => waiters.add(resolve));
+            if (ended) return;
+            const chunk = await reader.read();
+            if (ended) return;
+            if (chunk.done) {
+              completed++;
+              if (completed === readers.length) {
+                ended = true;
+                resume();
+                controller.close();
+              }
+              return;
+            }
+            controller.enqueue(chunk.value);
+          }
+        } catch (error) {
+          if (ended) return;
+          controller.error(error);
+          await stop();
+        }
+      };
+      for (const reader of readers) void pump(reader);
+    },
+    pull() {
+      resume();
+    },
+    cancel() {
+      return stop();
+    },
+  });
+  return new Response(body, { headers: channel.headers });
+}
+
 export function createChannelLiveHub(
   channels: ChannelStore,
   activity?: ActivitySource,
@@ -264,6 +317,14 @@ export function createChannelLiveHub(
   return {
     open(request) {
       const url = new URL(request.url);
+      if (url.searchParams.get('roster') === '1' && url.searchParams.has('channelId')) {
+        const channelUrl = new URL(url);
+        channelUrl.searchParams.delete('roster');
+        channelUrl.searchParams.delete('activity');
+        const response = this.open(new Request(channelUrl, { headers: request.headers }));
+        if (response.status !== 200 || response.body === null) return response;
+        return combineLiveResponses(response, openRoster(url.searchParams.get('activity') === '1'));
+      }
       if (url.searchParams.get('scope') === 'activity') return openActivity();
       if (url.searchParams.get('scope') === 'roster')
         return openRoster(url.searchParams.get('activity') === '1');

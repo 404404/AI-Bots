@@ -37,6 +37,64 @@ afterEach(() => {
 });
 
 describe('Channel post-commit stream', () => {
+  it('combines authoritative Channel replay with roster, purge and activity and cancels every owner', async () => {
+    const store = createChannelStore({ rootDir: root() });
+    const channel = store.createGroup({ name: 'Shared', members: ['ada'] });
+    await store.appendMessage(channel.id, message('actual-placement'));
+    const listeners = new Set<() => void>();
+    const hub = createChannelLiveHub(
+      store,
+      {
+        snapshot: () => ({ generation: 'host', revision: 0, bots: [] }),
+        onChange: (listener) => {
+          listeners.add(listener);
+          return () => {
+            listeners.delete(listener);
+          };
+        },
+      },
+      () => [{ sourceEventId: 'source', channelId: channel.id, messageId: 'purged' }],
+    );
+    hubs.push(hub);
+    const request = new Request(
+      `http://localhost${CHANNEL_STREAM_PATH}?channelId=${channel.id}&after=0&roster=1&activity=1`,
+    );
+    const response = hub.open(request);
+    expect(response.status).toBe(200);
+    const reader = response.body!.getReader();
+    const frames: string[] = [];
+    hub.publishRosterCommitted();
+    try {
+      for (let count = 0; count < 10; count++) {
+        const chunk = await Promise.race([
+          reader.read(),
+          new Promise<undefined>((resolve) => setTimeout(resolve, 200)),
+        ]);
+        if (chunk === undefined || chunk.done) break;
+        frames.push(new TextDecoder().decode(chunk.value));
+        if (
+          ['channel/message', 'roster/changed', 'content/purged', 'activity/snapshot'].every(
+            (type) => frames.join('').includes('event: ' + type),
+          )
+        )
+          break;
+      }
+      const text = frames.join('');
+      expect(text).toContain('actual-placement');
+      expect(text).toContain('id: 1');
+      for (const type of ['roster/changed', 'content/purged', 'activity/snapshot'])
+        expect(text).toContain('event: ' + type);
+      expect(listeners.size).toBe(1);
+    } finally {
+      await reader.cancel();
+    }
+    expect(listeners.size).toBe(0);
+    const invalid = hub.open(
+      new Request(`http://localhost${CHANNEL_STREAM_PATH}?channelId=missing&roster=1&activity=1`),
+    );
+    expect(invalid.status).toBe(404);
+    expect(listeners.size).toBe(0);
+  });
   it('does not accumulate multiplexed heartbeats behind an unread baseline', async () => {
     vi.useFakeTimers();
     const hub = createChannelLiveHub(createChannelStore({ rootDir: root() }), {
