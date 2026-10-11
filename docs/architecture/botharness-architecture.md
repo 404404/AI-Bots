@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+#1384 新增 application-defined ProtectedMcp Consumer，复用 native MCP Tool 适配器及官方 SDK stdio Client。模型与既有审批仅携带账号及字段引用；同一个 PrivateInputs owner 核对真实 Bot、当前版本和 Channel configured proof 后，才在私有 MCP tools/call 管道内提供原值。固定 Host 进程只执行一次认证 GET，丢弃正文、头部和错误，Host 在 native 结果持久化前只接受有界状态投影。普通 MCP 保留 native Client Plugin 与隔离 Linux 工作区；任意第三方 MCP 不自动获得凭据。详见 [ADR-0170](../adr/0170-private-mcp-consumption-uses-fixed-server-and-bounded-projection.md)。
+
 #1383 复用既有 application-defined Bot Schedule → Source Event → Bot Inbox → Orchestrator 路径。Schedule 只保存引用；重启后仍由 native Credentials 及当前账号绑定核验真实消费，既有执行与 Channel 发送授权分别生效。受保护 Profile 允许 owning Orchestrator 使用四个 `bot_schedule_*` 管理工具。新建私密输入卡还需 Host 当前轮次的真实 Human Source Event；旧 Session 历史、目的 Channel 或模型自述不能提供此证明。无人值守缺少有效配置时立即返回安全 Owner-action 错误，不创建 waiter；详见 [ADR-0169](../adr/0169-private-input-interaction-follows-current-turn-source-events.md)。
 
 #1382 在同一个 PrivateInputs owner 内加入 PersonaBot 创建身份与账号范围的 native Credentials 版本记录。Owner 从既有 Web Chat 卡片打开空白替换卡或撤销本地访问；新 grant 激活及 canonical Channel configured resolution 都成功后才返回引用。每次真实消费在账号串行队列内核对当前 UUID，登记 AbortSignal 后释放队列；替换／撤销写入新版本或持久 tombstone，并尝试停止既有使用。宽执行授权不能越过版本检查，停止结果区分已停止、已完成与不确定，401／403 只返回状态及安全修复建议。启动恢复先于 Owner 写入，撤销跨重启保留。详见 [ADR-0167](../adr/0167-private-account-versions-fence-consumption-and-revocation.md)；旧程序不理解 tombstone，回滚需恢复完整升级前备份或向前修复。

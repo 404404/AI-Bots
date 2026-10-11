@@ -88,9 +88,16 @@ The CLI can also settle the same inline private card using the authenticated Own
 deepseekbot ask-secret-status <dm-channel-id> --message-id <card-id> --host <origin> --token-file <private-token-file>
 deepseekbot ask-secret-submit <dm-channel-id> --message-id <card-id> --values-stdin --host <origin> --token-file <private-token-file>
 deepseekbot ask-secret-cancel <dm-channel-id> --message-id <card-id> --host <origin> --token-file <private-token-file>
+deepseekbot ask-secret-account-status <dm-channel-id> --message-id <configured-card-id> --host <origin> --token-file <private-token-file>
+deepseekbot ask-secret-replace <dm-channel-id> --message-id <configured-card-id> --host <origin> --token-file <private-token-file>
+deepseekbot ask-secret-revoke <dm-channel-id> --message-id <configured-card-id> --host <origin> --token-file <private-token-file>
 ```
 
 Supply a JSON object of declared field IDs and confidential strings over stdin from a trusted input source; do not put values in arguments, shell history or repo files. Submission returns only `{accepted:true}`, status returns only the status, and errors do not echo values or Host error payloads. Submission is never retried automatically. Ordinary `user-question-answer --answer-stdin` retains its existing nonsecret answer JSON contract; ordinary question answers are durable model-visible content.
+
+Find the card ID and its declared field IDs using `channel-messages <dm-channel-id>`. `ask-secret-status` describes that request's settlement (`pending`, `configured`, `cancelled`, `expired`); `ask-secret-account-status` describes current account access (`configured`, `revoked`, `superseded`, `unavailable`). An old request stays configured after its grant is superseded or revoked. Both status commands return only `{status}`.
+
+`ask-secret-replace` uses the configured card and returns only the new blank card's `{messageId}`. Submit replacement fields with `ask-secret-submit --values-stdin` using that new ID, or cancel it with `ask-secret-cancel`. This shares the Web card's current-version checks and clears its pending attention. `ask-secret-revoke` uses the configured card and returns only `{accepted:true,stopped,completed,uncertain}`. These are bounded running-use stop counts, not remote token invalidation or effect rollback. None of these mutations retry automatically. After a transport failure, inspect Channel history and request/account status before deciding whether another mutation is needed. No CLI command reads original values back.
 
 To verify #1381, create two real Bots and request the same three generic fields for separate accounts. Both pending requests must appear independently in Activity center / Human Inbox; **Go to private input card** opens the existing DM card. A request expires after fifteen minutes of Host time, even without an open Web page. It is metadata only after expiry, cancellation, Agent stop or restart, and cannot be submitted late.
 

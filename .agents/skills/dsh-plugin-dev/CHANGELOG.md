@@ -10,6 +10,10 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Documented the qualified private-reference MCP consumer, native adapter/SDK boundary and trusted-server limits; DSH/Cordis Context and Skill behavior remain unchanged ([#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384), [guide](../../../docs/dev/guides/private-input-mcp.md)).
+
+- Documented Owner CLI private-input lifecycle parity using the existing authenticated Host carrier; DSH/Cordis Context and Skill behavior remain unchanged ([#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416), [guide](../../../docs/dev/guides/private-input-cli.md)).
+
 - Recorded actual model-route matching, Request body overrides and Windows probe imports in the [local development guide](../dsh-dev/SKILL.md), verified against pinned RC1 Go requests and passive-probe regressions; DSH/Cordis Context is unchanged ([#1383](https://github.com/BotHarness/DeepSeekBot/issues/1383)).
 
 - Documented post-commit credential response failures and startup-recovery ordering in the [local development guide](../dsh-dev/SKILL.md), verified against the pinned RC1 native Provider and private-account regression tests; DSH/Cordis Context is unchanged ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
