@@ -22,6 +22,22 @@ function aliasBounds(): { start: number; end: number } {
 }
 
 describe('client styles', () => {
+  it('keeps mixed composer attachments in fixed-height cards on one horizontal scroll row', () => {
+    expect(source).toMatch(/\.bh-composer-attachments \{[^}]*flex-wrap: nowrap/);
+    expect(source).toMatch(/\.bh-composer-attachments \{[^}]*overflow-x: auto/);
+    expect(source).toMatch(/\.bh-composer-attachments \{[^}]*overflow-y: hidden/);
+    expect(source).toMatch(/\.bh-composer-attachment-card \{[^}]*flex: 0 0 180px/);
+    expect(source).toMatch(/\.bh-composer-attachment-card \{[^}]*height: 48px/);
+    expect(source).toMatch(/\.bh-composer-attachment-card \{[^}]*box-sizing: border-box/);
+  });
+  it('aligns the attachment reference and remove controls in matching inset boxes', () => {
+    expect(source).toMatch(
+      /\.bh-composer-file-reference \{[^}]*bottom: 2px; right: 2px; width: 20px; height: 20px/,
+    );
+    expect(source).toMatch(
+      /\.bh-composer-attachment-card \.bh-composer-attachment-remove \{[^}]*top: 2px; right: 2px; width: 20px; height: 20px/,
+    );
+  });
   it('contains no literal colours outside the brand alias block', () => {
     const { start, end } = aliasBounds();
     const outside = `${source.slice(0, start)}${source.slice(end)}`;

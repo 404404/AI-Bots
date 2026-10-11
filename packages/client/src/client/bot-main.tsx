@@ -47,6 +47,9 @@ import {
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
 import { conversationDraftKey, useConversationDraft } from './conversation-draft.js';
+import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
+import { rebaseMentions } from './mentions.js';
+import { rebaseChannelRefs } from './channel-refs.js';
 import { channelHumanName, humanLabel } from './actor-names.js';
 import { HumanChannelNameMenu } from './human-channel-name.js';
 import type { ChannelHumanMember } from './store.js';
@@ -1177,13 +1180,19 @@ function ConversationView({
       });
   };
 
-  const addFiles = (files: File[]): void => {
+  const addFiles = (files: File[], selection?: { start: number; end: number }): number | void => {
     const available = Math.max(0, 10 - uploadItems.length);
     const added = files
       .slice(0, available)
       .map((file) => ({ id: crypto.randomUUID(), file, status: 'uploading' as const }));
+    if (added.length === 0) return;
+    const selected = insertAttachmentReferences(draft, added, selection);
+    setDraft(selected.value);
+    setMentionTokens(rebaseMentions(draft, selected.value, mentionTokens));
+    setChannelRefTokens(rebaseChannelRefs(draft, selected.value, channelRefTokens));
     setUploadItems((current) => [...current, ...added]);
     for (const item of added) startUpload(item);
+    return selected.caret;
   };
 
   const submit = async (): Promise<void> => {
@@ -1811,6 +1820,18 @@ function ConversationView({
                       if (item !== undefined) startUpload(item);
                     }}
                     onRemoveAttachment={(id) => {
+                      const item = uploadItems.find((candidate) => candidate.id === id);
+                      if (item !== undefined) {
+                        const next = removeAttachmentReferences(
+                          draft,
+                          item,
+                          mentionTokens,
+                          channelRefTokens,
+                        );
+                        setDraft(next.value);
+                        setMentionTokens(next.mentions);
+                        setChannelRefTokens(next.channelRefs);
+                      }
                       uploadControllers.current.get(id)?.abort();
                       uploadControllers.current.delete(id);
                       setUploadItems((current) => current.filter((item) => item.id !== id));

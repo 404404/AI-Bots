@@ -4,7 +4,7 @@
 
 - Issue: [#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433); parent: #1431.
 - Dependency #1432 was explicitly Human-accepted in [the acceptance comment](https://github.com/BotHarness/DeepSeekBot/issues/1432#issuecomment-6113040095), not inferred from its closed state. PR #1441 merged; [completion](https://github.com/BotHarness/DeepSeekBot/issues/1432#issuecomment-6113130888) records the accepted baseline.
-- Base: `184edf23b422a69b9f04bdfde29e35e40c88f3a0`. A separate checkout runs this exact base for the before capture.
+- Original accepted base and before capture: `184edf23b422a69b9f04bdfde29e35e40c88f3a0`. The DM-card alignment revision incorporates refreshed main `e513ac414ab6c38ee95173377ebeb0950324d7dc`; historical captures are not rebound to that newer baseline.
 - Task: `codex/local/01a12c92-1feb-7823-8fb8-f603fad9ca1d`; [claim](https://github.com/BotHarness/DeepSeekBot/issues/1433#issuecomment-6113191966); branch: `codex/1433-group-workspace`.
 - Run date: October 12, 2026, Asia/Tokyo (October 11, 2026 UTC). The PR body and outcome comment record the current head. The screenshots and real-model delegation below belong to `c5f962824d8aab1ab5103f4784e6ab8f20f88a4a`, before the compact-modal feedback revision; they are not claimed as screenshots of the revised layout.
 
@@ -80,6 +80,8 @@ Screenshots are native UI captures, not reconstructed or annotated mockups. The 
 ![Unselected member refuses in Group; cancellation retains draft and attachment](assets/1433-group-workspace/unselected-and-cancel.png)
 
 ## Automated validation and remaining gates
+
+After incorporating main `e513ac414ab6c38ee95173377ebeb0950324d7dc`, all 16 focused files / 253 tests pass, including the incoming attachment-reference composer regressions. Typecheck, lint (including bilingual release-ledger checks), format check and build also pass. These checks do not refresh the earlier native-model run or prove Human visual acceptance. The final head is recorded in the PR and outcome comment.
 
 Focused coverage includes Group selection isolation, partial failures, lost-response readback, no-write-on-unavailable-readback, preservation after membership changes, shared DM picker canonicalization, composer lifecycle and existing sidebar notifications, bridge scope fences, and post-await Grant commit validation. Typecheck, lint, release-ledger checks, formatting, build and documentation validation are reported separately in the PR against its final head.
 
