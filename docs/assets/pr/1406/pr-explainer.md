@@ -72,7 +72,7 @@ Messaging -> [(Operational Database)]: 组与个人例外
 | Web Human 实际回复 | ok WEB1406_OK |
 | 首条 Lark 当前权限查询 | ok 平台确认与模型 Tool 调用 |
 | 前一 head 的完整 Linux CI | ok 3994 个测试通过，13 个跳过，构建与 docs 通过 |
-| 当前 head 的 CI | ok 完整 Linux 检查通过 |
+| 当前 head 的 CI | ok 4027 个测试通过、13 个跳过，完整检查通过 |
 | 真实 Lark Allow once / Reject | ok 原生结果与实际私聊回复对应 |
 | 延迟卡片遇到组 Deny | ok 无执行结果，同卡 Reject 仍有效 |
 | 重启后新的 Allow once | ok 原生结果 seq 158 成功，回复已读 |
