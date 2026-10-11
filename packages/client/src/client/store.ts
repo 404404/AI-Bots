@@ -218,6 +218,8 @@ export interface ChannelMessage {
   toolApprovalDecision?: ToolApprovalDecision;
   userQuestionRequest?: UserQuestionRequestCard;
   userQuestionResolution?: UserQuestionResolution;
+  privateInputRequest?: import('../../../core/src/credentials/contracts.js').PrivateInputCard;
+  privateInputResolution?: import('../../../core/src/credentials/contracts.js').PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   format?: 'markdown' | 'text';
   replyTo?: string;

@@ -803,7 +803,7 @@ The per-PersonaBot list of users and chats allowed to reach it.
 _Avoid_: whitelist, permissions, ACL
 
 **Credential reference**:
-A pointer to a Feishu App Secret held by the DSH credentials service; the secret itself never reaches config, repo, or logs.
+An opaque pointer to confidential information held by the Host's DSH Credentials Service. The owning application defines its authorization scope: an IM application for existing app credentials, or a PersonaBot and account for private input. Agents receive references and configuration state; qualified consumers resolve original values inside the Host without returning them to Chat or the model (Spec #1378).
 _Avoid_: secret, API key, token
 
 ### Telemetry and campaigns

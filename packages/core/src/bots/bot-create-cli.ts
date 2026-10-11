@@ -164,6 +164,9 @@ Usage:
   deepseekbot tool-approval-decide <channel> --message-id <card-id> --outcome allowed-once|rejected
   deepseekbot user-question-status <channel> --message-id <card-id>
   deepseekbot user-question-answer <channel> --message-id <card-id> --answer-stdin
+  deepseekbot ask-secret-status <channel> --message-id <card-id>
+  deepseekbot ask-secret-submit <channel> --message-id <card-id> --values-stdin
+  deepseekbot ask-secret-cancel <channel> --message-id <card-id>
   deepseekbot release-info [--since <version>]
   deepseekbot workspace-options
   deepseekbot grant-create <id> --workspace <workspace-id>
@@ -217,6 +220,8 @@ Live Host:
   Bot diagnostics are bounded summaries, not full execution logs or live streams.
   Deletion requires preview then stdin {"token":"<preview.token>"}; Memory is retained.
   Question stdin: {"answers":[{"id":"question-id","selected":["option"],"custom":"optional"}]}
+  Private input stdin: {"field_id":"confidential value",...}; only declared fields.
+  Private input commands return status/acceptance only and never retry a submission.
 
 Models:
   model-presets lists the profile presets; model-preset-create mints one from

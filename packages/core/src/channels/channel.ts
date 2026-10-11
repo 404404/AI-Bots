@@ -4,6 +4,11 @@ import { createHash } from 'node:crypto';
 import { isChannelAttachmentRef, type ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ToolApprovalDecision, ToolApprovalRequestCard } from '../workspaces/tool-approval.js';
 import type { ChannelQuestionRequest, ChannelQuestionResolution } from './user-questions.js';
+import {
+  privateRequestSchema,
+  type PrivateInputCard,
+  type PrivateInputResolution,
+} from '../credentials/contracts.js';
 
 export type ChannelType = 'dm' | 'group';
 
@@ -255,6 +260,8 @@ export interface ChannelMessage {
   userQuestionRequest?: ChannelQuestionRequest;
 
   userQuestionResolution?: ChannelQuestionResolution;
+  privateInputRequest?: PrivateInputCard;
+  privateInputResolution?: PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   bridgeMedia?: {
     items: { id: string; kind: 'image'; name: string }[];
@@ -800,6 +807,48 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     if (
       origin['threadId'] !== undefined &&
       (typeof origin['threadId'] !== 'string' || origin['threadId'].length === 0)
+    )
+      return false;
+  }
+  const privateRequest = message['privateInputRequest'];
+  if (privateRequest !== undefined) {
+    if (
+      typeof privateRequest !== 'object' ||
+      privateRequest === null ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+    const { sessionId, ...declaration } = privateRequest as Record<string, unknown>;
+    if (
+      typeof sessionId !== 'string' ||
+      sessionId.length === 0 ||
+      !privateRequestSchema.safeParse(declaration).success
+    )
+      return false;
+  }
+  const privateResolution = message['privateInputResolution'];
+  if (privateResolution !== undefined) {
+    if (
+      typeof privateResolution !== 'object' ||
+      privateResolution === null ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'human'
+    )
+      return false;
+    const resolution = privateResolution as Record<string, unknown>;
+    if (
+      Object.keys(resolution).some(
+        (key) => !['requestMessageId', 'state', 'references'].includes(key),
+      ) ||
+      typeof resolution.requestMessageId !== 'string' ||
+      message['replyTo'] !== resolution.requestMessageId ||
+      !['configured', 'cancelled'].includes(String(resolution.state)) ||
+      typeof resolution.references !== 'object' ||
+      resolution.references === null ||
+      Array.isArray(resolution.references) ||
+      !Object.values(resolution.references).every(
+        (ref) =>
+          typeof ref === 'string' && /^private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}$/.test(ref),
+      )
     )
       return false;
   }

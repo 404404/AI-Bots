@@ -1419,6 +1419,9 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
     ...(sessionFailure === undefined ? {} : { sessionFailure }),
     ...(toolApprovalDecision === undefined ? {} : { toolApprovalDecision }),
+    ...(record['privateInputRequest'] === undefined
+      ? {}
+      : { privateInputRequest: parsePrivateInputCard(record['privateInputRequest']) }),
     ...(userQuestionRequest === undefined ? {} : { userQuestionRequest }),
     ...(userQuestionResolution === undefined ? {} : { userQuestionResolution }),
     ...(attachments === undefined ? {} : { attachments: attachments as ChannelAttachmentRef[] }),
@@ -1437,6 +1440,44 @@ export function parseChannelMessages(value: unknown): ChannelMessage[] {
     const message = parseChannelMessage(entry);
     return message === undefined ? [] : [message];
   });
+}
+
+function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['privateInputRequest']> {
+  const record = asRecord(value);
+  if (
+    record === undefined ||
+    Object.keys(record).some(
+      (key) => !['sessionId', 'account', 'purpose', 'fields'].includes(key),
+    ) ||
+    typeof record['sessionId'] !== 'string' ||
+    typeof record['account'] !== 'string' ||
+    typeof record['purpose'] !== 'string' ||
+    !Array.isArray(record['fields']) ||
+    record['fields'].length < 1 ||
+    record['fields'].length > 8
+  )
+    throw new Error('Invalid private input card');
+  const fields = record['fields'].map((value: unknown) => {
+    const field = asRecord(value);
+    if (
+      field === undefined ||
+      Object.keys(field).some((key) => !['id', 'label', 'required'].includes(key)) ||
+      typeof field['id'] !== 'string' ||
+      !/^[a-z][a-z0-9_]{0,47}$/.test(field['id']) ||
+      typeof field['label'] !== 'string' ||
+      typeof field['required'] !== 'boolean'
+    )
+      throw new Error('Invalid private input field');
+    return { id: field['id'], label: field['label'], required: field['required'] };
+  });
+  if (new Set(fields.map((field) => field.id)).size !== fields.length)
+    throw new Error('Invalid private input fields');
+  return {
+    sessionId: record['sessionId'],
+    account: record['account'],
+    purpose: record['purpose'],
+    fields,
+  };
 }
 
 export interface SessionBotOwner {
