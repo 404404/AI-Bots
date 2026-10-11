@@ -78,6 +78,9 @@ describe('bridge typert service', () => {
     const { service } = setup();
 
     expect(remoteMethods(service).map((marker) => marker.exportName ?? marker.method)).toEqual([
+      'privateInputStatus',
+      'privateInputSubmit',
+      'privateInputCancel',
       'messagingDefaults',
       'messagingDefaultsSet',
       'channelBridges',

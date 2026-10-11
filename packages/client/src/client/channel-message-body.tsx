@@ -1,4 +1,5 @@
 import { UserQuestionCard } from './user-question-card.js';
+import { PrivateInputCard } from './private-input-card.js';
 import { ToolApprovalCard } from './tool-approval-card.js';
 import { OnboardingWelcome } from './onboarding-view.js';
 import { BridgeImage } from './bridge-image.js';
@@ -345,6 +346,9 @@ export function ChannelMessageBody({
     return (
       <ToolApprovalCard message={message} actions={actions} decision={toolApprovalDecision} t={t} />
     );
+  }
+  if (message.privateInputRequest !== undefined && actions !== undefined) {
+    return <PrivateInputCard message={message} actions={actions} t={t} />;
   }
   if (message.userQuestionRequest !== undefined && actions !== undefined) {
     return (

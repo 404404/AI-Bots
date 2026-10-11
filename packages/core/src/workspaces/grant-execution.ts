@@ -135,6 +135,7 @@ const BOT_TOOL_NAMES = new Set([
   'channel_send',
 
   'ask_user_question',
+  'ask_secret',
   'memory_switch_branch',
   'memory_continue_from_commit',
   'report_to_orchestrator',

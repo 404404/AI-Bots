@@ -21,6 +21,8 @@
 
 ### Added
 
+- 隔离 Profile 的 opt-in 允许 PersonaBot 在 Web Chat 请求私密字段或接收 Owner 的 CLI 回复，经原生 Credentials Service 保存，并沿用现有审批由固定 CLI 消费引用。普通原生 bash 与已配置的 MCP stdio 调用在 Linux 内访问获授权工作区；[验证指南](docs/dev/guides/private-input-cli.md)说明已支持的边界与审阅限制（[#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)）。
+
 - 窗口伙伴新增随文字播放的轻柔叽咕声与抓起、快速拖动、抛出及首次落地音效，按 Profile 保存开关且默认关闭；拖拽倾斜改用阻尼角度弹簧，让反向拖动与回摆连续，不增加模型工具或 TTS。空闲时隐藏占位状态气泡，操作按钮仅在悬浮或键盘聚焦时淡入；拖拽留下的鼠标焦点不再锁住阅读状态。长消息气泡隐藏滚动条并自动跟随最新播放文字；向上翻阅时保持阅读位置，回到底部后恢复跟随。关闭最后一张卡片后立即显示等待中的回复，小人仍保留键盘焦点时，后续新消息也能继续出现（[#1173](https://github.com/BotHarness/DeepSeekBot/issues/1173)）。
 
 - CLI 可在运行中的 Host 创建空白、Zip／目录和 GitHub／Git PersonaBot，配置模型并查询 Channel、待办与 Session 摘要；失败保留已知完成结果，显式清理身份时保留 Memory。见 [CLI 指南](docs/bot-cli.md)（[#1363](https://github.com/BotHarness/DeepSeekBot/issues/1363)）。
