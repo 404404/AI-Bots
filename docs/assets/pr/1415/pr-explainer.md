@@ -7,7 +7,7 @@ subtitle: 当前 App 的审核、重问与撤销
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1436
 base: 73c75f86aa50767be34a5c8d2cadc17b6a3e8862
 head: 1b773fcfc7508fa1643f6e922dff223b2e2d9348
-generated: 2026-10-11T19:24:55.508Z
+generated: 2026-10-11T19:25:20.710Z
 ---
 
 ## A 实现可审查，真实 Slack 验收仍待完成
@@ -89,8 +89,10 @@ Slack 群配对和原生管理审批由独立任务推进。Web Human 保持默�
 | 撤销、重问、重启 | 新请求被拦；当前授权与时间边界保留 |
 | Human 反馈 | 接受首轮交互后才扩大范围 |
 
-QA2 已配置；Human 分别授权独占窗口，以及仅补充 im:read 并重新安装。配置与安装权限已实测核对。原生首次申请与 Web 批准重问已持久化；新问题的可见回复未与测试 Host 的 Source Event/Admission 对应，当前权限查询不可用，撤销后仍出现回复。因此本轮未通过，任务接收器已停止。Human 再次确认其他接收器停止；继续核对执行来源与生命周期，不推定另一个接收器存在，也不接管其他任务。
+QA2 已配置；Human 分别授权独占窗口，以及仅补充 im:read 并重新安装。配置与安装权限已实测核对。原生首次申请与 Web 批准重问已持久化；新问题的可见回复未与测试 Host 的 Source Event/Admission 对应，当前权限查询不可用，撤销后仍出现回复。
 
-[中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待闭环通过。
+本轮未通过，任务接收器已停止。Human 再次确认其他接收器停止；继续核对执行来源与生命周期，不推定另一个接收器存在，也不接管其他任务。
+
+[中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。
 
 [Issue 与 Agent claim](https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564) · [ADR-0174](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md)
