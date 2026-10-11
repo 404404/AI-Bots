@@ -5,6 +5,7 @@ import { PrivateInputs } from './private-inputs.js';
 import { ProtectedExecution } from './protected-execution.js';
 import type { PrivateInputLog } from './diagnostics.js';
 import { LinuxMcp } from './linux-mcp.js';
+import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
 import { nativeExecutionRoot } from '../workspaces/grant-native-tools.js';
 
 const SAFE_TOOLS = new Set([
@@ -32,6 +33,7 @@ export function mountPrivateInputs(
 ): PrivateInputs {
   const log: PrivateInputLog = (phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details });
+  const privateMcp = new ProtectedMcp(log);
   let mode: 'checking' | 'ordinary' | 'protected' | 'locked' = enabled ? 'protected' : 'checking';
   ctx.inject(['credentials'], (child) => {
     void child.credentials.listRecords().then(
@@ -65,6 +67,7 @@ export function mountPrivateInputs(
   });
   ctx.effect(() => () => owner.close(), 'botharness: private input owner');
   ctx.effect(() => () => execution.close(), 'botharness: protected Execution World');
+  ctx.effect(() => () => privateMcp.close(), 'botharness: protected MCP lifetime');
   ctx.tools.guard(({ name, agent }) => {
     if (mode === 'ordinary') return undefined;
     if (mode !== 'protected' && name === 'bash')
@@ -75,6 +78,7 @@ export function mountPrivateInputs(
       core.ownership.resolve(agent.session.id)?.rootRole === 'orchestrator'
     ) {
       if (name === 'bash') return undefined;
+      if (name === PRIVATE_MCP_TOOL) return privateMcp.denial(ctx, agent);
       if (name.startsWith('mcp__') && linuxMcp !== undefined)
         return linuxMcp.denial(ctx, agent, name);
     }
@@ -141,6 +145,7 @@ export function mountPrivateInputs(
     () =>
       core.contributeBotAgentSetup((agentCtx, agent, info) => {
         if (info.rootRole !== 'orchestrator') return;
+        privateMcp.register(agentCtx, agent, owner);
         agentCtx.tools.register(
           defineTool({
             name: 'ask_secret',
