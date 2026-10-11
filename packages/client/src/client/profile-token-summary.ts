@@ -1,6 +1,13 @@
 import type { ProfileActivity } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
 
+export function compactTokenCount(count: number): string {
+  if (count < 1000) return String(count);
+  const divisor = count < 999_950 ? 1000 : count < 999_950_000 ? 1_000_000 : 1_000_000_000;
+  const suffix = divisor === 1000 ? 'K' : divisor === 1_000_000 ? 'M' : 'B';
+  return `${Number((count / divisor).toFixed(1))}${suffix}`;
+}
+
 export function profileTokenSummary(activity: ProfileActivity | undefined): {
   status: 'ready' | 'unknown' | 'partial' | 'unavailable';
   total: number | null;
@@ -21,10 +28,11 @@ export function profileTokenSummary(activity: ProfileActivity | undefined): {
 export function profileTokenSummaryText(
   activity: ProfileActivity | undefined,
   t: BotHarnessTranslate,
+  compact = false,
 ): string {
   const summary = profileTokenSummary(activity);
   if (summary.status === 'unavailable') return t('composerContext.unavailable');
   if (summary.status === 'unknown') return t('profile.usage.unknown');
-  const count = String(summary.total);
+  const count = compact ? compactTokenCount(summary.total!) : String(summary.total);
   return summary.status === 'partial' ? t('composerContext.partial', { count }) : count;
 }

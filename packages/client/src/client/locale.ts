@@ -2670,6 +2670,15 @@ export const zh = {
   'composerContext.noModel': '未配置模型',
   'composerContext.partial': '部分已知 {count}',
   'composerContext.usage': '{name} · 近 {weeks} 周 · {count} tokens',
+  'composerContext.tokens': '{count} tokens',
+  'composerContext.workspaces': '{count} 个工作区',
+  'composerContext.usageTitle': 'Token 用量',
+  'composerContext.usageWindow': '近 {weeks} 周 · 已记录用量，不是上下文窗口占用',
+  'composerContext.currentSession': '当前 Orchestrator 会话',
+  'composerContext.recentAssignments': '最近活跃的 Assignment 会话',
+  'composerContext.sessionScope': '下列会话含子会话；仅列最近任务，不等于 Bot 全部历史用量。',
+  'composerContext.noSessions': '暂无会话',
+  'composerContext.details': '查看详细用量',
   'composerContext.companionUnavailable': 'Bot 小人尚未就绪或不可用',
   'composerContext.confirmGrant': '确认授权给 {name}',
   'composerContext.grantScope':
@@ -5598,6 +5607,17 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'composerContext.noModel': 'Model not configured',
   'composerContext.partial': 'Partially known {count}',
   'composerContext.usage': '{name} · last {weeks} weeks · {count} tokens',
+  'composerContext.tokens': '{count} tokens',
+  'composerContext.workspaces': '{count} workspaces',
+  'composerContext.usageTitle': 'Token usage',
+  'composerContext.usageWindow':
+    'Last {weeks} weeks · recorded usage, not context-window occupancy',
+  'composerContext.currentSession': 'Current Orchestrator session',
+  'composerContext.recentAssignments': 'Recently active Assignment sessions',
+  'composerContext.sessionScope':
+    'Sessions include child sessions; recent tasks are not the Bot’s full historical usage.',
+  'composerContext.noSessions': 'No sessions yet',
+  'composerContext.details': 'See detailed usage',
   'composerContext.companionUnavailable': 'Window Companion is not ready or unavailable',
   'composerContext.confirmGrant': 'Confirm authorization for {name}',
   'composerContext.grantScope':

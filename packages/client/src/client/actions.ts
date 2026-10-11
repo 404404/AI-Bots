@@ -159,6 +159,8 @@ import {
   loadMemoryGitGraph,
   loadMemoryGitCommitDiff,
   loadProfileActivity,
+  loadProfileSessionUsage,
+  type ProfileSessionUsage,
   loadProfileUsage,
   loadOverviewMemory,
   loadOverviewUsage,
@@ -477,6 +479,7 @@ export interface BridgeActions {
   memoryGitGraph(channelId: string, offset: number): Promise<MemoryGitGraph>;
   memoryGitCommitDiff(channelId: string, sha: string): Promise<MemoryGitCommitDiff>;
   profileActivity(channelId: string, window?: ProfileActivityWindow): Promise<ProfileActivity>;
+  profileSessionUsage(channelId: string): Promise<ProfileSessionUsage>;
   overviewMemory(
     after?: string,
   ): Promise<import('../../../core/src/memory/overview.js').OverviewMemory>;
@@ -2031,6 +2034,7 @@ export function createActions(
     memoryGitGraph: (channelId, offset) => loadMemoryGitGraph(call, channelId, offset),
     memoryGitCommitDiff: (channelId, sha) => loadMemoryGitCommitDiff(call, channelId, sha),
     profileActivity: (channelId, window) => loadProfileActivity(call, channelId, window),
+    profileSessionUsage: (channelId) => loadProfileSessionUsage(call, channelId),
     overviewMemory: (after) => loadOverviewMemory(call, after),
     overviewUsage: (period, after) => loadOverviewUsage(call, period, after),
     marketplaceList: (query) => loadMarketplacePage(call, query),

@@ -305,6 +305,7 @@ function stubActions(): BridgeActions {
     importLibraryParts: vi.fn(async () => ({ added: [], refused: 0 })),
     importLibraryImage: vi.fn(async () => ({ error: 'unavailable' })),
     profileUsage: vi.fn(),
+    profileSessionUsage: vi.fn(),
     profileActivity: vi.fn(async () => ({
       slug: '',
       weeks: 26,

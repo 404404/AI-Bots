@@ -919,7 +919,8 @@ export function ChannelComposer({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => chooseShortcut(shortcut)}
             >
-              <span>
+              <span className="bh-composer-shortcut-label">
+                {shortcut.icon}
                 {shortcut.label}
                 {shortcut.reason === undefined ? null : <small> · {shortcut.reason}</small>}
               </span>

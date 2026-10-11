@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 export interface ComposerShortcut {
   id: 'model' | 'workspace' | 'companion';
   label: string;
+  icon?: ReactNode;
   disabled?: boolean;
   reason?: string | undefined;
   selected?: boolean;

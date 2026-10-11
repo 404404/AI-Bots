@@ -16,6 +16,8 @@ import {
 } from './workspace-grant-events.js';
 import { profileTokenSummaryText } from './profile-token-summary.js';
 import { PROFILE_ACTIVITY_WEEKS } from './profile-cards-builtins.js';
+import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
+import { DmComposerUsagePopover } from './dm-composer-usage.js';
 
 const subscribeUnavailable = (): (() => void) => () => {};
 const unavailableSnapshot = () => undefined;
@@ -52,10 +54,21 @@ export function useDmComposerContext({
   return {
     target: bot.slug,
     shortcuts: [
-      { id: 'model', label: t('entry.model'), run: () => open('model') },
-      { id: 'workspace', label: t('grant.addFolder'), run: () => open('workspace') },
+      {
+        id: 'model',
+        label: t('entry.model'),
+        icon: <ChannelSidebarIcon name="cpu" />,
+        run: () => open('model'),
+      },
+      {
+        id: 'workspace',
+        label: t('grant.addFolder'),
+        icon: <ChannelSidebarIcon name="folder-key" />,
+        run: () => open('workspace'),
+      },
       {
         id: 'companion',
+        icon: <ChannelSidebarIcon name="bot" />,
         label: `${t(selected ? 'companion.remove' : 'companion.show')} · ${bot.displayName}`,
         selected,
         disabled: !ready,
@@ -119,6 +132,8 @@ function DmComposerContextView({
   const [grants, setGrants] = useState<WorkspaceGrantView[]>();
   const [inheritedRoute, setInheritedRoute] = useState<ModelRouteView>();
   const [grantError, setGrantError] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
+  const usageTrigger = useRef<HTMLButtonElement>(null);
   const subscribeGrants = useCallback(
     (listener: () => void) => subscribeWorkspaceGrantChanges(bot.slug, listener),
     [bot.slug],
@@ -200,9 +215,7 @@ function DmComposerContextView({
     ? t('composerContext.unavailable')
     : grants === undefined
       ? t('composerContext.loading')
-      : grants.length === 0
-        ? t('grant.addFolder')
-        : `${grants[0]!.workspaceTitle}${grants.length > 1 ? ` +${grants.length - 1}` : ''}`;
+      : t('composerContext.workspaces', { count: grants.length });
   const usageLabel = t('composerContext.usage', {
     name: bot.displayName,
     weeks: activity?.weeks ?? PROFILE_ACTIVITY_WEEKS,
@@ -211,34 +224,61 @@ function DmComposerContextView({
         ? t('composerContext.loading')
         : profileTokenSummaryText(activity, t),
   });
+  const compactUsage =
+    loading && activity === undefined
+      ? t('composerContext.loading')
+      : t('composerContext.tokens', { count: profileTokenSummaryText(activity, t, true) });
   return (
     <>
       <div className="bh-composer-context" aria-label={t('composerContext.label')}>
+        <div className="bh-composer-context-left">
+          <button
+            ref={modelMount}
+            type="button"
+            onClick={() => onOpen('model')}
+            aria-label={`${t('entry.model')} · ${bot.displayName} · ${modelLabel}`}
+          >
+            <ChannelSidebarIcon name="cpu" size={14} />
+            <span>{modelLabel}</span>
+          </button>
+          <button
+            ref={grantMount}
+            type="button"
+            onClick={() => onOpen('workspace')}
+            aria-label={`${t('entry.workspaceGrants')} · ${bot.displayName} · ${workspaceLabel}`}
+          >
+            <ChannelSidebarIcon name="folder-key" size={14} />
+            <span>{workspaceLabel}</span>
+          </button>
+        </div>
         <button
-          ref={modelMount}
-          type="button"
-          onClick={() => onOpen('model')}
-          aria-label={`${t('entry.model')} · ${bot.displayName} · ${modelLabel}`}
-        >
-          {modelLabel}
-        </button>
-        <button
-          ref={grantMount}
-          type="button"
-          onClick={() => onOpen('workspace')}
-          aria-label={`${t('entry.workspaceGrants')} · ${bot.displayName} · ${workspaceLabel}`}
-        >
-          {workspaceLabel}
-        </button>
-        <button
+          ref={usageTrigger}
           type="button"
           className="bh-composer-usage"
-          onClick={onUsage}
+          onClick={() => setUsageOpen((open) => !open)}
           aria-label={usageLabel}
+          aria-haspopup="dialog"
+          aria-expanded={usageOpen}
         >
-          {usageLabel}
+          <ChannelSidebarIcon name="ruler" size={14} />
+          <span>{compactUsage}</span>
         </button>
       </div>
+      {usageOpen ? (
+        <DmComposerUsagePopover
+          bot={bot}
+          channelId={channelId}
+          actions={actions}
+          activity={activity}
+          t={t}
+          trigger={usageTrigger}
+          onClose={() => setUsageOpen(false)}
+          onDetails={() => {
+            setUsageOpen(false);
+            onUsage();
+          }}
+        />
+      ) : null}
       {panel === undefined ? null : (
         <Modal
           open

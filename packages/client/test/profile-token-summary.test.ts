@@ -3,6 +3,7 @@ import type { ProfileActivity, ProfileModelUsageRow } from '../src/client/bridge
 import {
   profileTokenSummary,
   profileTokenSummaryText,
+  compactTokenCount,
 } from '../src/client/profile-token-summary.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { composerSlashQuery } from '../src/client/composer-shortcuts.js';
@@ -34,6 +35,18 @@ function activity(rows: ProfileModelUsageRow[]): ProfileActivity {
 }
 
 describe('shared Bot usage summary', () => {
+  it('formats compact token counts without adding Bot identity or a time window', () => {
+    expect([0, 999, 1000, 60_072, 1_250_000, 2_500_000_000].map(compactTokenCount)).toEqual([
+      '0',
+      '999',
+      '1K',
+      '60.1K',
+      '1.3M',
+      '2.5B',
+    ]);
+    expect(compactTokenCount(999_950)).toBe('1M');
+    expect(compactTokenCount(999_950_000)).toBe('1B');
+  });
   it('distinguishes known zero, unknown, partial and unavailable instead of inventing zero', () => {
     expect(profileTokenSummary(activity([]))).toEqual({ status: 'ready', total: 0 });
     expect(profileTokenSummary(activity([row]))).toEqual({ status: 'ready', total: 30 });
