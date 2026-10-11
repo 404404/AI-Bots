@@ -69,6 +69,7 @@ async function fixture(qualified = true, requestTimeoutMs?: number) {
     bea,
     channels,
     credentials,
+    ownership,
     ctx,
     replacement: () => new PrivateInputs(deps),
     close: async () => {
@@ -225,6 +226,33 @@ describe('private input native authority and reference contract', () => {
       expect(
         f.channels.readMessages('dm-ada').filter((m) => m.privateInputResolution),
       ).toHaveLength(1);
+      expect(await f.credentials.listRecords()).toHaveLength(0);
+      await f.close();
+    },
+  );
+
+  it.each(['missing', 'assignment', 'other-bot'] as const)(
+    'refuses late submission after ownership becomes %s while the Agent remains live',
+    async (change) => {
+      const f = await fixture();
+      const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const id = f.channels.readMessages('dm-ada')[0]!.id;
+      const original = f.ownership.resolve('ada-session')!;
+      vi.spyOn(f.ownership, 'resolve').mockReturnValue(
+        change === 'missing'
+          ? undefined
+          : {
+              ...original,
+              botSlug: change === 'other-bot' ? 'bea' : original.botSlug,
+              rootRole: change === 'assignment' ? 'assignment' : original.rootRole,
+            },
+      );
+      expect(f.owner.status('dm-ada', id)).toBe('expired');
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values })).toBe(
+        false,
+      );
+      expect(await wait).toMatchObject({ status: 'expired', references: {} });
       expect(await f.credentials.listRecords()).toHaveLength(0);
       await f.close();
     },
