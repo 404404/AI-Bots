@@ -259,7 +259,13 @@ export function PairingSettings({
           <aside className="bh-pairing-detail" aria-label={t('pairing.details')}>
             {tab === 'roles' ? (
               selectedRole ? (
-                <RoleDetails role={selectedRole} busy={busy} change={senderAccess} t={t} />
+                <RoleDetails
+                  key={`${selectedRole.id}:${selectedRole.revision}`}
+                  role={selectedRole}
+                  busy={busy}
+                  change={senderAccess}
+                  t={t}
+                />
               ) : (
                 <p className="bh-muted">{t('pairing.noRoles')}</p>
               )
@@ -270,6 +276,7 @@ export function PairingSettings({
                 roles={roles}
                 busy={busy}
                 review={review}
+                {...(senderAccess ? { senderAccess } : {})}
                 t={t}
               />
             ) : (
@@ -295,16 +302,18 @@ function PairingRow({
   roles,
   busy,
   review,
+  senderAccess,
   t,
 }: {
   request: PairingRequest;
   roles: ExternalUserRole[];
   busy: boolean;
   review(input: PairingReviewInput): Promise<void>;
+  senderAccess?(input: SenderAccessInput): Promise<void>;
   t: BotHarnessTranslate;
 }): ReactElement {
   const [selected, setSelected] = useState<PairingCapability[]>([]);
-  const [roleId, setRoleId] = useState('');
+  const [roleId, setRoleId] = useState(request.roleId ?? '');
   const selectedRole = roles.find((role) => role.id === roleId);
   const assignedRole = roles.find((role) => role.id === request.roleId);
   const input = { id: request.id, expectedRevision: request.revision };
@@ -381,7 +390,9 @@ function PairingRow({
                 ...roles.map((role) => ({
                   value: role.id,
                   label: role.name,
-                  hint: t('pairing.ordinary'),
+                  hint: role.capabilities.length
+                    ? role.capabilities.map((capability) => t(labels[capability])).join(' · ')
+                    : t('pairing.ordinary'),
                 })),
               ]}
             />
@@ -454,6 +465,38 @@ function PairingRow({
           >
             {t('pairing.revoke')}
           </Button>
+          {request.status === 'approved' && request.purpose === 'conversation' && senderAccess ? (
+            <>
+              <Combobox
+                label={t('pairing.role')}
+                toggleLabel={t('pairing.role')}
+                value={roleId}
+                fallbackValue=""
+                disabled={busy}
+                searchable={false}
+                onSelect={setRoleId}
+                options={[
+                  { value: '', label: t('pairing.selectRole') },
+                  ...roles.map((role) => ({ value: role.id, label: role.name })),
+                ]}
+              />
+              <Button
+                size="sm"
+                disabled={busy || !selectedRole || selectedRole.id === request.roleId}
+                onClick={() =>
+                  selectedRole &&
+                  void senderAccess({
+                    ...input,
+                    kind: 'reassign-role',
+                    roleId: selectedRole.id,
+                    expectedRoleRevision: selectedRole.revision,
+                  }).catch(() => undefined)
+                }
+              >
+                {t('pairing.reassignRole')}
+              </Button>
+            </>
+          ) : null}
         </>
       ) : null}
     </article>
@@ -462,6 +505,8 @@ function PairingRow({
 
 function RoleDetails({
   role,
+  busy,
+  change,
   t,
 }: {
   role: ExternalUserRole;
@@ -469,6 +514,7 @@ function RoleDetails({
   change?: ((input: SenderAccessInput) => Promise<void>) | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const [editing, setEditing] = useState(false);
   return (
     <article className="bh-im-pairing-request">
       <strong>{role.name}</strong>
@@ -477,29 +523,69 @@ function RoleDetails({
         <MessagingHelp title={t('pairing.behavior')} text={t('pairing.policyLimit')} t={t} />
       </div>
       <p className="bh-pairing-behavior">{role.behavior}</p>
-      <Tag>{t('pairing.ordinary')}</Tag>
+      <div className="bh-im-pairing-capabilities">
+        {role.capabilities.length ? (
+          role.capabilities.map((capability) => <Tag key={capability}>{t(labels[capability])}</Tag>)
+        ) : (
+          <Tag>{t('pairing.ordinary')}</Tag>
+        )}
+      </div>
+      {change ? (
+        <Button size="sm" variant="toolbar" disabled={busy} onClick={() => setEditing(true)}>
+          {t('pairing.editRole')}
+        </Button>
+      ) : null}
+      {editing && change ? (
+        <RoleDialog
+          key={`${role.id}:${role.revision}`}
+          role={role}
+          busy={busy}
+          change={change}
+          close={() => setEditing(false)}
+          t={t}
+        />
+      ) : null}
     </article>
   );
 }
 
 function RoleDialog({
+  role,
   busy,
   change,
   close,
   t,
 }: {
+  role?: ExternalUserRole;
   busy: boolean;
   change(input: SenderAccessInput): Promise<void>;
   close(): void;
   t: BotHarnessTranslate;
 }): ReactElement {
-  const [name, setName] = useState('');
-  const [behavior, setBehavior] = useState('');
+  const [name, setName] = useState(role?.name ?? '');
+  const [behavior, setBehavior] = useState(role?.behavior ?? '');
+  const [selected, setSelected] = useState<('approve' | 'reject')[]>(
+    (role?.capabilities ?? []).filter(
+      (capability): capability is 'approve' | 'reject' =>
+        capability === 'approve' || capability === 'reject',
+    ),
+  );
   const [failed, setFailed] = useState(false);
   const submit = async () => {
     setFailed(false);
     try {
-      await change({ kind: 'create-role', name, behavior });
+      await change(
+        role
+          ? {
+              kind: 'edit-role',
+              id: role.id,
+              expectedRevision: role.revision,
+              name,
+              behavior,
+              capabilities: selected,
+            }
+          : { kind: 'create-role', name, behavior },
+      );
       close();
     } catch {
       setFailed(true);
@@ -511,7 +597,7 @@ function RoleDialog({
       onClose={() => {
         if (!busy) close();
       }}
-      title={t('pairing.createRole')}
+      title={t(role ? 'pairing.editRole' : 'pairing.createRole')}
       closeLabel={t('common.close')}
       className="bh-sidebar-modal bh-pairing-role-modal"
       contentClassName="bh-pairing-content"
@@ -526,7 +612,7 @@ function RoleDialog({
             disabled={busy || !name.trim() || !behavior.trim()}
             onClick={() => void submit()}
           >
-            {t('pairing.createRole')}
+            {t(role ? 'pairing.saveRole' : 'pairing.createRole')}
           </Button>
         </div>
       }
@@ -552,14 +638,42 @@ function RoleDialog({
             onChange={(event) => setBehavior(event.target.value)}
           />
         </label>
-        <div className="bh-im-actions">
-          <Tag>{t('pairing.ordinary')}</Tag>
-          <MessagingHelp
-            title={t('pairing.createRole')}
-            text={t('pairing.managementAccess')}
-            t={t}
-          />
-        </div>
+        {role ? (
+          <fieldset className="bh-im-pairing-capabilities" disabled={busy}>
+            <legend>
+              <span className="bh-im-actions">
+                {t('pairing.roleCapabilities')}
+                <MessagingHelp
+                  title={t('pairing.roleCapabilities')}
+                  text={t('pairing.privateRoleApproval')}
+                  t={t}
+                />
+              </span>
+            </legend>
+            {(['approve', 'reject'] as const).map((capability) => (
+              <Checkbox
+                key={capability}
+                label={t(labels[capability])}
+                checked={selected.includes(capability)}
+                disabled={busy}
+                onChange={(checked) =>
+                  setSelected((value) =>
+                    checked ? [...value, capability] : value.filter((item) => item !== capability),
+                  )
+                }
+              />
+            ))}
+          </fieldset>
+        ) : (
+          <div className="bh-im-actions">
+            <Tag>{t('pairing.ordinary')}</Tag>
+            <MessagingHelp
+              title={t('pairing.createRole')}
+              text={t('pairing.managementAccess')}
+              t={t}
+            />
+          </div>
+        )}
         {failed ? (
           <p className="bh-error" role="alert">
             {t('pairing.error')}

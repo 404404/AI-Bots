@@ -131,6 +131,87 @@ const request: PairingRequest = {
   revision: 1,
   attempts: 1,
 };
+it('separate role editing and selected-person reassignment retain exact authority revisions', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host),
+    change = vi.fn(async () => {});
+  const role = {
+    id: 'role-first',
+    botSlug: 'ada',
+    name: 'Reader',
+    behavior: 'Read documentation.',
+    capabilities: [],
+    revision: 4,
+  };
+  const other = { ...role, id: 'role-second', name: 'Colleague', revision: 2 };
+  const button = (key: Parameters<typeof zhTranslate>[0]) =>
+    Array.from(host.querySelectorAll('button')).find(
+      (item) => item.textContent === zhTranslate(key),
+    )!;
+  const tab = (key: 'pairing.people' | 'pairing.roles') =>
+    Array.from(host.querySelectorAll<HTMLButtonElement>('[role=tab]')).find((item) =>
+      item.textContent?.startsWith(zhTranslate(key)),
+    )!;
+  try {
+    await act(async () =>
+      root.render(
+        createElement(PairingSettings, {
+          requests: [
+            {
+              ...request,
+              status: 'approved',
+              purpose: 'conversation',
+              roleId: role.id,
+              revision: 7,
+            },
+          ],
+          roles: [role, other],
+          policy: { restricted: true, revision: 3 },
+          senderAccess: change,
+          busy: false,
+          refresh: async () => {},
+          review: async () => {},
+          t: zhTranslate,
+        }),
+      ),
+    );
+    await act(async () => tab('pairing.roles').click());
+    expect(host.querySelector('[role=dialog]')).toBeNull();
+    await act(async () => button('pairing.editRole').click());
+    const editor = host.querySelector('[role=dialog]')!;
+    expect(editor.querySelectorAll('input[type=checkbox]')).toHaveLength(2);
+    await act(async () => editor.querySelector<HTMLInputElement>('input[type=checkbox]')!.click());
+    await act(async () => button('pairing.saveRole').click());
+    expect(change).toHaveBeenLastCalledWith({
+      kind: 'edit-role',
+      id: role.id,
+      expectedRevision: 4,
+      name: role.name,
+      behavior: role.behavior,
+      capabilities: ['approve'],
+    });
+    expect(host.querySelector('[role=dialog]')).toBeNull();
+    await act(async () => tab('pairing.people').click());
+    expect(button('pairing.reassignRole').disabled).toBe(true);
+    await act(async () => {
+      const select = host.querySelector('select')!;
+      select.value = other.id;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => button('pairing.reassignRole').click());
+    expect(change).toHaveBeenLastCalledWith({
+      kind: 'reassign-role',
+      id: request.id,
+      expectedRevision: 7,
+      roleId: other.id,
+      expectedRoleRevision: 2,
+    });
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 it('search and person/time sorting filter actual rows without changing authority; unknown timestamps stay unknown', async () => {
   const host = document.createElement('div');
   document.body.append(host);
