@@ -47,7 +47,25 @@ Human requested alignment with the DM workspace modal and rejected the initial c
 
 Both DM and Group now measure 380 CSS px wide through the native modal default; Group no longer overrides width to 480 or 620 px. Native DOM readback in the synthetic `Group Workspace Card QA` verifies the directory card, one canonical path, collapsed rules, two confirmed targets, `Authorized · reused` alongside `Failed`, a concrete departed-member refusal, and successful-result preservation after `Read back and retry`. Canonical Grant counts remain Selected QA: 1, Unselected QA: 0, Partial QA: 0; Selected QA retains its original Grant identity. Focused rendering coverage also verifies initial path disclosure, collapse/reopen behavior and persistent target rows. This repeat uses the real rendered UI and authenticated Host; it does not repeat the earlier real-model Assignment execution.
 
-**Current-head visual evidence is pending.** The resumed T3 capture initially returns a stale DM frame despite Group DOM readback; a later native interaction produces an intermediate Group card frame. Neither is used as final-source visual proof. After the final shared-disclosure change, the preview reports not visible and screenshot capture fails. The card UI is not visually accepted based on DOM measurements, an intermediate frame or older images. Existing images remain explicitly bound to the pre-compaction head. Human QA and fresh GitHub-rendered card-modal screenshots are still required before merge.
+### Current implementation captures
+
+Capture recovered intermittently on implementation head `53da03fb3e55a1574232aae72352e34829f93b9a`. The three images below are inspected native T3 captures from that build, not the earlier intermediate frame. Each is identically cropped to 420 × 600 from a 1280 × 800 dark/English screenshot to exclude the unrelated conversation list. Native DOM geometry is 380 CSS px; the screenshot is scaled relative to the 1402 × 877 DOM viewport, so its pixel width is not a second CSS measurement.
+
+**Explicit choices:** all three members initially unchecked; then Selected QA and Partial QA checked, Unselected QA still unchecked. The native registered-folder disclosure and directory card are reused.
+
+![Current Group modal initially selects nobody](assets/1433-group-workspace/card-empty-dark.png)
+
+![Current Group choices leave Unselected QA unchecked](assets/1433-group-workspace/card-selection-dark.png)
+
+**Confirmed reuse:** Selected QA retains its original Grant and read-only Orchestrator badge; canonical readback verifies selected count 1 and unselected count 0. This is a reuse result, not a fresh partial-failure screenshot.
+
+![Current Group directory card and existing Grant reuse](assets/1433-group-workspace/card-reuse-dark.png)
+
+**Human-supplied DM visual reference:** cropped to the modal and resized, with no private conversation backdrop. Its capture revision is unknown; it is a design reference, not a fresh current-head DM verification. The Memory Repository row belongs to DM only and is deliberately absent from Group.
+
+![Human-supplied DM workspace modal reference](assets/1433-group-workspace/dm-human-reference.png)
+
+**Remaining capture gate:** the next confirmation/partial-failure captures again fail while the preview reports not visible; an additional T3 tab does not restore reliable capture. A timed-out fixture-member removal is read back through the canonical Host: the new visual fixture still has three members, so no removal retry or authorization submission is claimed. Fresh partial-failure, matched before/after and current-head DM/light-theme captures remain pending; previous partial-failure and native-model evidence retain their earlier revision anchors. The new screenshots do not imply Human visual acceptance.
 
 ### Pre-compaction captures
 
