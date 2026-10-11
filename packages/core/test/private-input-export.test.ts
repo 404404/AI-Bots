@@ -2,6 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { projectPrivateInputEvents } from '../../../scripts/export-private-input-evidence.mjs';
 
 describe('public native Session evidence', () => {
+  it('retains native RC1 approval outcomes without exporting unknown values or decision reasons', () => {
+    const secret = 'PRIVATE-decision-reason';
+    const outcomes = ['allowed-once', 'rejected', 'cancelled', 'unavailable', secret];
+    const result = projectPrivateInputEvents(
+      outcomes.map((outcome, seq) => ({
+        seq,
+        time: 1_791_691_200_000 + seq,
+        type: 'approval/decided',
+        data: { id: '76a6fe17-1111-2222-3333-444444444444', outcome, reason: secret },
+      })),
+    );
+    expect(result.map((event) => event.outcome)).toEqual([
+      ...outcomes.slice(0, 4),
+      'decision-recorded',
+    ]);
+    expect(JSON.stringify(result)).not.toContain(secret);
+  });
+
   it('exports the qualified MCP references and bounded outcome without additional protocol data', () => {
     const reference = 'private:76a6fe17-1111-2222-3333-444444444444:api_key';
     const result = projectPrivateInputEvents([

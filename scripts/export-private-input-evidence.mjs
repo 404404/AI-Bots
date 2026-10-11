@@ -171,7 +171,15 @@ export function projectPrivateInputEvents(events) {
         {
           ...base,
           id: data.id,
-          outcome: ['allowed-once', 'denied', 'cancelled', 'allow', 'deny'].includes(data.outcome)
+          outcome: [
+            'allowed-once',
+            'rejected',
+            'cancelled',
+            'unavailable',
+            'denied',
+            'allow',
+            'deny',
+          ].includes(data.outcome)
             ? data.outcome
             : 'decision-recorded',
         },
