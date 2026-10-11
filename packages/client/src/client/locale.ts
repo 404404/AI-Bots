@@ -2513,8 +2513,8 @@ export const zh = {
   'approval.expired': '此请求已失效',
   'question.title': '需要你的回答',
   'privateInput.title': '提供私密信息',
-  'privateInput.replace': '替换私密信息',
-  'privateInput.revoke': '撤销本地访问',
+  'privateInput.replace': '替换',
+  'privateInput.revoke': '撤销',
   'privateInput.replacementNote': '填写新的私密信息；旧值不会被取回。提交后旧引用失效。',
   'privateInput.revoked': '本地访问已撤销；服务端令牌和已完成的操作不会因此撤回。',
   'privateInput.superseded': '此配置已被新的私密信息替换，旧引用不能再使用。',
@@ -5370,8 +5370,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.expired': 'This request is no longer active',
   'question.title': 'Your answer is needed',
   'privateInput.title': 'Provide private information',
-  'privateInput.replace': 'Replace private information',
-  'privateInput.revoke': 'Revoke local access',
+  'privateInput.replace': 'Replace',
+  'privateInput.revoke': 'Revoke',
   'privateInput.replacementNote':
     'Provide new private information; old values are never retrieved. Submission invalidates old references.',
   'privateInput.revoked':

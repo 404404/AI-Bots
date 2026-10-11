@@ -1,5 +1,9 @@
 import { useRef, useState, type ReactElement } from 'react';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import {
+  Button,
+  IconRefreshOutlineRegular,
+  IconCloseOutlineRegular,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { store } from './store.js';
@@ -53,7 +57,7 @@ export function PrivateAccountControls({
       clearTimeout(timer);
     };
   }, [actions, channelId, messageId]);
-  const change = async (revoke: boolean) => {
+  const change = async (action: 'replace' | 'revoke') => {
     const current = lease.current;
     if (
       current?.active !== true ||
@@ -66,7 +70,7 @@ export function PrivateAccountControls({
     setBusy(true);
     setError(false);
     try {
-      if (revoke) {
+      if (action === 'revoke') {
         const outcome = await actions.privateAccountRevoke?.(channelId, messageId);
         if (current.active) setResult(outcome);
       } else await actions.privateInputReplace?.(channelId, messageId);
@@ -96,16 +100,27 @@ export function PrivateAccountControls({
   return (
     <div ref={mount}>
       {status === 'configured' ? (
-        <div className="bh-question-actions">
+        <div className="bh-private-account-actions">
           <Button
             type="button"
-            variant="outline"
+            variant="primary"
             disabled={busy}
-            onClick={() => void change(false)}
+            onClick={() => void change('replace')}
           >
+            <span aria-hidden="true">
+              <IconRefreshOutlineRegular size={16} />
+            </span>
             {t('privateInput.replace')}
           </Button>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => void change(true)}>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={busy}
+            onClick={() => void change('revoke')}
+          >
+            <span aria-hidden="true">
+              <IconCloseOutlineRegular size={16} />
+            </span>
             {t('privateInput.revoke')}
           </Button>
         </div>

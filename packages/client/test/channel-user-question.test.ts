@@ -23,6 +23,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   Switch: () => null,
   IconChevronDownOutlineRegular: () => null,
   IconCloseOutlineRegular: () => null,
+  IconRefreshOutlineRegular: () => null,
   IconFolderOpenOutlineRegular: () => null,
 }));
 
@@ -141,13 +142,13 @@ describe('private input card', () => {
       } as unknown as BridgeActions;
       await act(async () => render(actions, undefined, card));
       expect(container.querySelector('input')).toBeNull();
-      expect(button('替换私密信息')).toBeDefined();
+      expect(button('替换')?.textContent).toBe('替换');
       await act(async () => {
         await vi.advanceTimersByTimeAsync(2500);
       });
-      await act(async () => button('撤销本地访问')?.click());
+      await act(async () => button('撤销')?.click());
       await act(async () => stale({ status: 'configured', references: {} }));
-      expect(button('替换私密信息')).toBeUndefined();
+      expect(button('替换')).toBeUndefined();
       expect(container.textContent).toContain('本地访问已撤销');
       expect(container.textContent).toContain('已停止 1');
     } finally {
@@ -165,10 +166,26 @@ describe('private input card', () => {
       privateAccountRevoke: vi.fn().mockRejectedValue(new Error('already changed')),
     } as unknown as BridgeActions;
     await act(async () => render(actions, undefined, card));
-    await act(async () => button('撤销本地访问')?.click());
+    await act(async () => button('撤销')?.click());
     expect(container.textContent).toContain('本地访问已撤销');
     expect(container.querySelector('[role=alert]')).toBeNull();
-    expect(button('撤销本地访问')).toBeUndefined();
+    expect(button('撤销')).toBeUndefined();
+  });
+
+  it('opens a blank replacement with the concise action without revoking the configured account', async () => {
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValue('configured'),
+      privateAccountStatus: vi.fn().mockResolvedValue({ status: 'configured', references: {} }),
+      privateInputReplace: vi.fn().mockResolvedValue(undefined),
+      privateAccountRevoke: vi.fn(),
+    } as unknown as BridgeActions;
+    await act(async () => render(actions, undefined, card));
+    expect(button('替换')?.textContent).toBe('替换');
+    expect(button('撤销')?.textContent).toBe('撤销');
+    await act(async () => button('替换')?.click());
+    expect(actions.privateInputReplace).toHaveBeenCalledWith(channel.id, card.id);
+    expect(actions.privateAccountRevoke).not.toHaveBeenCalled();
+    expect(container.querySelector('input')).toBeNull();
   });
 
   it('clears multiple private fields before awaiting the direct submission', async () => {
