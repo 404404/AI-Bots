@@ -25,6 +25,8 @@
 
 ### Added
 
+- 受保护 Profile 中的 PersonaBot 可通过固定 MCP 认证状态操作消费私密引用，复用既有 Web 输入与执行审批；普通隔离 MCP 仍可使用（[#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)，[指南](docs/dev/guides/private-input-mcp.md)）。
+
 - Owner CLI 支持私密账号状态、空白替换卡和本地撤销，并保留仅从标准输入提交多字段及取消请求的能力，沿用 Web Chat 的 Host 授权边界（[#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416)，[指南](docs/dev/guides/private-input-cli.md)）。
 
 - opt-in 受保护 Profile 中的 Bot Schedule 可在重启后沿用既有执行审批复用已配置的私密引用；缺少配置时提示 Owner 操作，不再打开无人值守私密输入卡（[#1383](https://github.com/BotHarness/DeepSeekBot/issues/1383)）。
