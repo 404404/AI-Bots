@@ -1,11 +1,11 @@
 # #1406 verification — 2026-10-11
 
-Implementation head: `29ba1541e4537131a8f7923581bbacc2032a613e`.
+Implementation head: `550898dd4cc3f11198e1eab904755826906381f1`.
 Base: `fe84f5fd952ca7bf2d7232b8beda590eb38971ec`.
 
 ## Verified locally
 
-- 154 focused and regression tests across seven files passed: pairing, native approval decisions, Operational Database migration, Client pairing settings, default messaging traffic, the DSH Bot agent adapter, and grant execution.
+- 164 focused and regression tests across eight files passed: pairing, native approval decisions, Operational Database migration, Client pairing settings, default messaging traffic, the DSH Bot agent adapter, and grant execution.
 - Lint, format check, typecheck, build, product/Skill changelog checks, source policy, and unique ADR checks passed. Existing lint warnings remain unchanged.
 - Isolated Host and real Client: create a group, scoped member selection, persist two independent groups, write a personal Approve Deny, inspect current permission sources, and restart the same isolated Profile. Both groups Allow Approve/Reject; the personal Deny leaves only Reject effective after restart.
 - A real direct authenticated Web Human DM used `channel_send` and delivered `WEB1406_OK` without IM pairing or external permission configuration.
@@ -13,9 +13,9 @@ Base: `fe84f5fd952ca7bf2d7232b8beda590eb38971ec`.
 
 ## Pending gates
 
-- Full Linux CI pending PR creation.
+- Full Linux CI rerunning after fixing the Inbox upgrade regression's old generation-78 assertion to generation 79. The first Linux run had 3993 passing tests and that single stale assertion failure; the repaired Inbox file's 10 tests pass locally. The new commit changes only that regression assertion, so the captured UI and runtime source are unchanged.
 - Real Lark Allow once, independent Reject, delayed-card refusal after authority change, and post-restart approval verification remain pending.
-- Lark Web subsequently timed out on `/accounts/web/user` and other requests. Later query and pairing attempts had only optimistic client IDs and no Host admission; they do not count as delivered messages or successful QA.
+- Lark Web subsequently timed out on `/accounts/web/user` and other requests. Later query and pairing attempts had only optimistic client IDs and no Host admission; they do not count as delivered messages or successful QA. The Human can see chats in another Lark tab; the preview tool then explicitly reported no automation host and instructed not to retry. The task's isolated QA1 Host/receiver has been stopped while control is unavailable; its Profile remains available for resumption in a coordinated window.
 - Human feedback on the first full tracer remains pending. No merge or deployment occurred.
 
 ## Screenshot provenance

@@ -5,7 +5,7 @@ lang: zh
 template: doc
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1407
 base: fe84f5fd952ca7bf2d7232b8beda590eb38971ec
-head: 29ba1541e4537131a8f7923581bbacc2032a613e
+head: 550898dd4cc3f11198e1eab904755826906381f1
 generated: 2026-10-11
 ---
 ## A 哪些行为改变了
@@ -40,7 +40,7 @@ Messaging -> [(Operational Database)]: 组与个人例外
 ```ts src=packages/core/src/messaging/permission-groups.ts lines=257-269 hl=261-265
 ```
 
-[精确 head 的当前权限解析器](https://github.com/BotHarness/DeepSeekBot/blob/29ba1541e4537131a8f7923581bbacc2032a613e/packages/core/src/messaging/permission-groups.ts#L193)。
+[精确 head 的当前权限解析器](https://github.com/BotHarness/DeepSeekBot/blob/550898dd4cc3f11198e1eab904755826906381f1/packages/core/src/messaging/permission-groups.ts#L193)。
 
 运行验证中，两个组均允许批准和拒绝。
 个人例外拒绝批准，有效能力只剩拒绝。
@@ -66,7 +66,7 @@ Messaging -> [(Operational Database)]: 组与个人例外
 ## E 哪些证据已完成
 | 检查 | 状态 |
 | --- | --- |
-| 针对性与回归测试 | ok 154 个通过 |
+| 针对性与回归测试 | ok 164 个通过 |
 | lint、format、typecheck、build、ledger | ok 本地通过 |
 | 实际 Client 写入与重启 | ok 当前组、例外与来源保留 |
 | Web Human 实际回复 | ok WEB1406_OK |
