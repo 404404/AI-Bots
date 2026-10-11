@@ -7,13 +7,13 @@
       "name": "@botharness/core",
       "version": "1.2.1",
       "filename": "botharness-core-1.2.1.tgz",
-      "integrity": "sha512-f48d5iLfSGIw/Lv9hzrlAH8OFVUOixejDIRmV/Mv+zU7zRSN68fZBZgWRL2fDynoVMGVNXM2CtWF+yqJKz/+RQ=="
+      "integrity": "sha512-+VVV3yeuU0aZ9Lb+2Q6NdiXCXLijQQsNS3rZI/LdfiIkV+asFzcyV0LbM0YpqS9DNZvq+yFgoKSYEJvWRgJAnA=="
     },
     {
       "name": "@botharness/ui",
       "version": "1.2.1",
       "filename": "botharness-ui-1.2.1.tgz",
-      "integrity": "sha512-pN/Ll/HXSj2jODHXUma0G9r8znCEDzgi5vOF5F+meLbWqAnyJYTSb8HeAbptPdDtMAyA/tCUL6MAlH0ePACGog=="
+      "integrity": "sha512-4wY+k4ISx4WeoT1W29jQW1mqNJOMFJjdIZJCCQwYlhXUIRIfLFgvTAi7oI8stifNVk7zandAKg8mKWKdk3OaQQ=="
     },
     {
       "name": "@botharness/im-provider",
