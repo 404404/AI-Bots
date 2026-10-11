@@ -9,6 +9,8 @@
 
 ### Breaking Changes
 
+- 配对审核卡片新增 Profile Schema Generation 80。升级前请备份；回退需要兼容写入者或升级前备份（[#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)）。
+
 - 外部授权组新增 Profile schema Generation 79。升级前请备份；回退需要兼容 writer 或恢复升级前备份（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
 
 - Lark 普通角色新增 Profile schema Generation 78。升级前请备份；回滚需要兼容写入程序或恢复升级前备份（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。
@@ -26,6 +28,10 @@
 ### Added
 
 - 兼容 checked Provider 可依据 Inbox 与原来源回复事实添加 Slack 收到／已回答反应，不阻塞消息处理；静音来源不打标。隔离候选已有真实频道／DM 证据，Human QA 与已发布 Provider 的资格验证仍待完成（[#1161](https://github.com/BotHarness/DeepSeekBot/issues/1161)，[指南](docs/slack-connection.md)）。
+
+- Lark 配对审核人可在来源群共享卡片或私聊卡片中选择已有 Role 并批准／拒绝申请，支持只有群的场景；当前审核权限与独立的委派 Allow/Deny 限定管理 Role 授予范围，批准后申请人须重新提问（[#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)）。
+
+- 受保护 Profile 中的 PersonaBot 可通过固定 MCP 认证状态操作消费私密引用，复用既有 Web 输入与执行审批；普通隔离 MCP 仍可使用（[#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)，[指南](docs/dev/guides/private-input-mcp.md)）。
 
 - Owner CLI 支持私密账号状态、空白替换卡和本地撤销，并保留仅从标准输入提交多字段及取消请求的能力，沿用 Web Chat 的 Host 授权边界（[#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416)，[指南](docs/dev/guides/private-input-cli.md)）。
 

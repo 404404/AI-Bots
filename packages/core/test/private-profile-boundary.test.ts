@@ -1,5 +1,6 @@
 import { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
+import { createScope } from '@deepseek-ai/dsh-scope';
 import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { describe, expect, it, vi } from 'vitest';
 import { mountPrivateInputs } from '../src/credentials/mount.js';
@@ -82,27 +83,31 @@ describe('private Profile capability boundary', () => {
 
   it('compiles the dynamic field declaration with the pinned native schema DSL', async () => {
     const f = await fixture(true);
-    const agentCtx = new Context();
+    const agentRoot = new Context();
+    const agent = { session: { id: 'owned' } } as Agent;
     const tools: ToolDefinition[] = [];
-    agentCtx.provide('tools', {
+    agentRoot.provide('tools', {
       register: (tool: ToolDefinition) => {
         tools.push(tool);
         return () => undefined;
       },
     } as never);
+    const scope = createScope(agentRoot, agent);
+    const agentCtx = scope.ctx;
     const setup = f.contribute.mock.calls[0]![0] as unknown as (
       ctx: Context,
       agent: Agent,
       info: { rootRole: string },
     ) => void;
-    setup(agentCtx, {} as Agent, { rootRole: 'orchestrator' });
+    setup(agentCtx, agent, { rootRole: 'orchestrator' });
     const request = tools.find((tool) => tool.name === 'ask_secret')!;
     expect(request.parameters).toMatchObject({
       properties: {
         fields: { items: { required: ['id', 'label', 'required'], additionalProperties: false } },
       },
     });
-    await agentCtx.fiber.dispose();
+    await scope.dispose();
+    await agentRoot.fiber.dispose();
     await f.ctx.fiber.dispose();
   });
 });

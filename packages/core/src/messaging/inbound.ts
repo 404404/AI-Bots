@@ -173,6 +173,7 @@ export interface InboxSourceShare {
 
 export interface InboundMessaging {
   notifyPairing(request: PairingRequest): Promise<void>;
+  pairingRouteAvailable(request: PairingRequest): boolean;
   register(provider: MessagingProvider): () => void;
   setEnabled(botSlug: string, grantId: string, enabled: boolean): Promise<void>;
   channelBridge(channelId: string, input: ChannelBridgeInput): Promise<void>;
@@ -224,11 +225,12 @@ export interface InboundMessaging {
 export function createInboundMessaging(options: {
   onApprovalAction?(
     providerId: string,
-    event: import('./provider.js').MessagingApprovalAction,
+    event: import('./provider.js').MessagingCardAction,
     signal: AbortSignal,
   ): Promise<import('./provider.js').MessagingApprovalAck>;
   database: OperationalDatabaseModulePort;
   pairing?: BotPairing;
+  onPairingRequest?(request: PairingRequest): void;
   bindingAvailable?(id: string): boolean;
   sourcePolicy: BotSourcePolicyStore;
   isBotActive(slug: string): boolean;
@@ -1685,6 +1687,7 @@ export function createInboundMessaging(options: {
     const lease = controls.get(row.id);
     if (!lease || lease.controller.signal.aborted) return explicit;
     const identity = database.read((db) => readMessagingIdentity(db, row.id));
+    options.pairing.observePrivate(row.id, event);
     const restricted = database.read((db) => readSenderPolicy(db, identity.botSlug).restricted);
     const intentional = event.conversation.kind === 'dm' || event.mentionedAccount;
     if (restricted && intentional && !explicit) {
@@ -1717,6 +1720,7 @@ export function createInboundMessaging(options: {
       if (!database.read((db) => senderAdmissionAllowed(db, identity.botSlug, event))) {
         try {
           const request = options.pairing.request(row.id, event, 'conversation');
+          if (request.status === 'pending') options.onPairingRequest?.(request);
           if (request.status === 'pending')
             setImmediate(() => {
               if (closed || signal.aborted || lease.controller.signal.aborted) return;
@@ -1812,6 +1816,40 @@ export function createInboundMessaging(options: {
     return true;
   };
   const service: InboundMessaging = {
+    pairingRouteAvailable(request) {
+      try {
+        const binding = database.read((db) => assertMessagingIdentity(db, request.bindingId));
+        if (
+          closed ||
+          !controls.has(binding.id) ||
+          controls.get(binding.id)!.controller.signal.aborted ||
+          !options.isBotActive(request.botSlug) ||
+          options.bindingAvailable?.(binding.id) === false
+        )
+          return false;
+        return database.read((db) => {
+          const conversation = {
+            kind: request.conversationKind ?? 'dm',
+            id: request.conversationId,
+          };
+          if (readBlock(db, request.botSlug, binding.fingerprint, conversation)) return false;
+          const entries = conversationEntries(db, binding.id, conversation);
+          return entries.length
+            ? entries.some(
+                (value) =>
+                  !value.revokedAt &&
+                  !value.suspendedReason &&
+                  targetAvailable(value) &&
+                  value.channelBridge?.enabled !== false &&
+                  (!value.bridgeRoutes || value.bridgeRoutes.some((route) => route.enabled)),
+              )
+            : binding.newConversations === 'auto' &&
+                admissionBound(db, binding.id, new Date()) === undefined;
+        });
+      } catch {
+        return false;
+      }
+    },
     async notifyPairing(request) {
       if (request.purpose === 'conversation' && request.status === 'approved' && request.reply)
         await sendPairingNotice(request, `approved:${request.revision}`, request.reply);
