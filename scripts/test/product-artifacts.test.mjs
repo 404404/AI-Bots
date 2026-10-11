@@ -193,7 +193,7 @@ describe('release composition', () => {
     expect(release.dependencies).toEqual({
       '@botharness/core': '0.0.0-test.823',
       '@botharness/ui': '0.0.0-test.823',
-      '@botharness/im-provider': '4.32.0-botharness.15',
+      '@botharness/im-provider': '4.32.0-botharness.16',
     });
     expect(release.dsh.bundle.patch).toBe('./cordis.im.patch.yml');
     expect(release.bin).toEqual({ 'botharness-profile': './dist/profile-cli.mjs' });

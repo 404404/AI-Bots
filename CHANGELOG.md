@@ -5,7 +5,25 @@ Notable changes to DeepSeekBot are recorded here. See the
 
 ## [Unreleased]
 
-No changes since 1.2.0 yet.
+No changes since 1.2.1 yet.
+
+## [1.2.1] - 2026-10-12
+
+Install DeepSeekBot on compatible DSH 0.1.7 and 0.2 Hosts, with clearer Group identities and attachment cards; the unfinished 1.3 data migrations are not included.
+
+### Added
+
+- Groups without a custom avatar show up to four static member faces in the sidebar, rail and pinned grid ([#1270](https://github.com/BotHarness/DeepSeekBot/issues/1270)).
+
+### Changed
+
+- Audio and file attachments share a compact card layout, with inline audio controls and a direct file download action ([#1290](https://github.com/BotHarness/DeepSeekBot/issues/1290)).
+- Your own message header places the name on the right and the timestamp on its left ([#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298)).
+- Group Channel headers use the same avatar as the sidebar, without individual Bot Window Companion Pin buttons; Bot DM companion controls and Channel pinning remain available ([#1439](https://github.com/BotHarness/DeepSeekBot/issues/1439)).
+
+### Fixed
+
+- Core and product-managed IM Provider compatibility declarations now use a DSH minimum of `>=0.1.7-0`, including previews, without an exact-version lock or future-version ceiling. A repeatable packaged installation matrix checks published DSH versions from 0.1.7-alpha.1 through 0.2.1-alpha.2 without compatibility exemptions; future versions are allowed by the declaration, not yet runtime-qualified ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425)).
 
 ## [1.2.0] - 2026-10-08
 

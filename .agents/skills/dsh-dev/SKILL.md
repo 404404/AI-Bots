@@ -139,6 +139,15 @@ Pre-execution refusal can leave an application-owned Session ID without a DSH Se
 - `references/probe-web.mjs` — headless browser probe (console errors, failed requests, WS, internal fetch); run from the repo.
 - `dsh-ui` skill — in-harness UI rules; `docs/client-bridge.md` §7 — dev loop; ADR-0023 / #50 — bridge transport contract.
 
+## Additional verified pitfall — #1425
+
+The exact CLI/build pin is not the supported Host floor. Native DSH compatibility checks
+include prereleases, and an exact DSH peer in either Core or a composed Provider can reject
+an otherwise supported Host before installation. Check every packaged component with native
+preflight and `scripts/e2e-dsh-install-matrix.mjs`; declaration tests alone do not prove installation.
+Keep Provider source/build provenance immutable when changing compatibility metadata, and never
+use compatibility exemptions as release evidence. See `docs/agents/dsh-install-matrix.md`.
+
 ## Additional verified pitfall — #1138
 
 A new root overlay must budget its long-lived Connection Fetch streams with existing pages. In official DSH 0.2.0 RC1 Windows Web, adding a separate companion SSE alongside the Bot-mode Activity, Channel and roster consumers left real DM sending pending until Bot mode exited. Reusing the companion's full Activity snapshot for the shared Client Activity store and closing the redundant Activity SSE restored three genuine DM submissions within Bot mode. The symptom is consistent with the per-origin HTTP/1 connection limit; an exact wire connection count was not measured. Validate an actual DM reply while both the overlay and owning page remain visible. On removal, restore ordinary Activity demand; keep listener/frame/heartbeat disposal bounded and never weaken authentication to work around the symptom.

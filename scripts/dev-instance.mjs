@@ -25,6 +25,8 @@ import {
   resolveDevSecret,
 } from './dev-secret.mjs';
 import { pnpmCommand } from './dev-package-manager.mjs';
+import semver from 'semver';
+import { productDshRange } from './product-artifacts.mjs';
 import {
   resolveAxModel,
   axModelEnvironment,
@@ -64,6 +66,7 @@ function parseArgs(argv) {
     build: false,
     imProvider: false,
     productArtifacts: null,
+    dshVersion: null,
     json: false,
     clientDiagnostics: process.env['BOTHARNESS_CLIENT_DIAGNOSTICS'] !== '0',
   };
@@ -97,6 +100,12 @@ function parseArgs(argv) {
         options.productArtifacts = resolve(next ?? '');
         index += 1;
         break;
+      case '--dsh-version':
+        if (next === undefined || next.startsWith('--'))
+          throw new Error('--dsh-version requires an exact DSH version');
+        options.dshVersion = next;
+        index += 1;
+        break;
       case '--no-client-diagnostics':
         options.clientDiagnostics = false;
         break;
@@ -114,6 +123,13 @@ function parseArgs(argv) {
     throw new Error(
       '--product-artifacts already includes its qualified IM Provider; omit --im-provider',
     );
+  if (
+    options.dshVersion &&
+    (!options.productArtifacts ||
+      semver.valid(options.dshVersion) !== options.dshVersion ||
+      !semver.satisfies(options.dshVersion, productDshRange, { includePrerelease: true }))
+  )
+    throw new Error('--dsh-version requires packaged artifacts and a supported exact DSH version');
   return options;
 }
 
@@ -159,8 +175,11 @@ function ensureProfile(options) {
     );
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (options.productArtifacts && installedDshVersion(runtime) !== '0.2.0-rc.1')
-    throw new Error('Qualified product artifacts require DSH 0.2.0-rc.1');
+  if (
+    options.productArtifacts &&
+    !semver.satisfies(installedDshVersion(runtime), productDshRange, { includePrerelease: true })
+  )
+    throw new Error('Product artifacts require a supported DSH version');
   const base = options.productArtifacts
     ? packagedProfileManifest(manifest, options.productArtifacts)
     : developmentProfileManifest(manifest, options.worktree);
@@ -274,11 +293,11 @@ async function verifyPluginLayer(url, options) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const secret = resolveDevSecret();
-  options.axModel = resolveAxModel();
+  options.axModel = options.dshVersion ? undefined : resolveAxModel();
   mkdirSync(options.home, { recursive: true });
   if (options.productArtifacts || options.axModel) {
     const version = options.productArtifacts
-      ? verifiedProductArtifacts(options.productArtifacts).dsh
+      ? (options.dshVersion ?? verifiedProductArtifacts(options.productArtifacts).dsh)
       : JSON.parse(readFileSync(join(options.worktree, 'package.json'), 'utf8')).devDependencies[
           '@deepseek-ai/dsh'
         ];

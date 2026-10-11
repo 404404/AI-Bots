@@ -260,11 +260,23 @@ describe('Bot main Sessions pane', () => {
       id: 'group-design',
       type: 'group' as const,
       name: '设计组',
-      members: [],
+      members: ['ada'],
       createdAt: '2026-09-21T00:00:00.000Z',
       updatedAt: '2026-09-21T00:01:00.000Z',
     };
-    store.setRoster([], [channel]);
+    store.setRoster(
+      [
+        {
+          slug: 'ada',
+          displayName: 'Ada',
+          roles: [],
+          aggregateState: 'idle',
+          workspaces: [],
+          createdAt: channel.createdAt,
+        },
+      ],
+      [channel],
+    );
     store.select({ kind: 'channel', channelId: channel.id });
     store.setConversation({
       status: 'ready',
@@ -275,8 +287,17 @@ describe('Bot main Sessions pane', () => {
     });
     store.setSessions({ status: 'ready', items: [], error: undefined });
 
+    const companion = new WindowCompanions({
+      context: async () => ({ profileId: 'group-header-qa' }),
+      source: () => ({ addEventListener() {}, close() {} }),
+      update: async () => {},
+    });
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: {} as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+        companion,
+      }),
     );
 
     expect(markup).toContain('class="bh-channel-island bh-group-channel-header"');
@@ -284,11 +305,15 @@ describe('Bot main Sessions pane', () => {
     expect(markup).toContain('aria-label="打开 设计组 的群聊 Profile"');
     expect(markup).toContain('aria-haspopup="dialog"');
     expect(markup).toContain('<span class="bh-title">设计组</span>');
+    expect(markup).toContain('bh-group-avatar-stack');
+    expect(markup).not.toContain('bh-companion-pin');
+    expect(markup).not.toContain('data-companion-pin');
 
     store.setRoster(previous.bots, previous.channels);
     store.select(previous.selection);
     store.setConversation(previous.conversation);
     store.setSessions(previous.sessions);
+    companion.dispose();
   });
 
   it('renders native Session title, role and workspace in the expanded entry', () => {
@@ -479,6 +504,60 @@ describe('Bot main Sessions pane', () => {
     store.setRoster(previous.bots, previous.channels);
     store.select(previous.selection);
     store.setConversation(previous.conversation);
+  });
+  it('keeps the own identity row inside the mirrored group while name still precedes time in DOM order', () => {
+    const previous = store.getSnapshot();
+    const channel = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: '2026-09-21T00:00:00.000Z',
+      updatedAt: '2026-09-21T00:01:00.000Z',
+    };
+    const bot = {
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle' as const,
+      workspaces: [],
+      createdAt: channel.createdAt,
+    };
+    try {
+      store.setRoster([bot], [channel]);
+      store.select({ kind: 'bot', slug: 'ada' });
+      store.setConversation({
+        status: 'ready',
+        channel,
+        sending: false,
+        messages: [
+          {
+            id: 'human-1',
+            at: '2026-09-21T00:01:00.000Z',
+            author: { kind: 'human' },
+            body: 'hello',
+          },
+        ],
+      });
+      const markup = renderToStaticMarkup(
+        createElement(BotMain, {
+          actions: {} as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
+      );
+      expect(markup).toContain('bh-message-group-me');
+      const identity = markup.indexOf('bh-message-identity');
+      expect(identity).toBeGreaterThan(-1);
+      const author = markup.indexOf('bh-bubble-author', identity);
+      const time = markup.indexOf('bh-bubble-time', identity);
+      expect(author).toBeGreaterThan(-1);
+      expect(time).toBeGreaterThan(author);
+    } finally {
+      store.setRoster(previous.bots, previous.channels);
+      store.select(previous.selection);
+      store.setConversation(previous.conversation);
+    }
   });
   it('keeps external provenance in an author dialog control outside the unchanged bubble', () => {
     const previous = store.getSnapshot();
