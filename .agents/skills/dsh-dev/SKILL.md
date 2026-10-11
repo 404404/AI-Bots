@@ -129,6 +129,13 @@ When a DSH-side bug or trap is diagnosed, **record it here (or in the playbook) 
 
 ## Reference
 
+For opted-in AX Go launches on Windows, stage the reviewed adapter patch inside the isolated
+CLI and reference it relative to that CLI's workspace. A drive-qualified absolute pnpm patch
+path can be appended to the runtime path, causing `ERR_PNPM_PATCH_NOT_FOUND` before Host boot.
+Verify staged bytes, preserved workspace settings, and a fresh real DM reply; configuration and
+API health alone do not establish model access. Diagnosed with source on D: and home on C: in
+[#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409).
+
 In pinned RC1, `defineTool` nested object properties mark requiredness with per-property `required: true`; an explicit JSON Schema `required` array is rejected by the authoring DSL. Native `bash` output is a structured foreground/background/promoted union, so an interception must preserve the registered result schema instead of returning a string as `value`. #1380 verified both failures through a real PersonaBot; tool-registration/schema and real runtime checks cover the correction.
 
 Native MCP stdio uses SDK-owned spawn, not the Shell/Subprocess Provider. Its automatic protocol negotiation starts a disposable probe sibling before the live server: a fixed Docker container name conflicts, while a per-owner label lets teardown remove every sibling. Native `dsh-scope` owns a module-local Symbol and WeakMaps; bundling another copy makes native Agent Contexts appear unscoped to the copy. Keep Scope external and resolve the same pinned peer as the Host; verify two real Agents concurrently, not only a raw-source single-Agent test. On Windows the preset's Shell Provider may be PowerShell even behind the `bash` Consumer name; launch a trusted executable with Subprocess argv instead of assuming POSIX Host syntax. The pinned Node image must actually include the Guest shell. These were diagnosed in #1380.

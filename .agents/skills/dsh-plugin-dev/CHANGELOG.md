@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded Windows pnpm absolute patch-path failure, isolated CLI staging and real DM verification in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)).
+
 - Recorded deferred Node environment reads in browser dependencies, compile-time browser constants and real native-dialog verification in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1 ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
 
 - Recorded RC1 native MCP stdio lifecycle, shared Scope module identity, Windows Subprocess argv, and inherited Registry visibility traps in the [local development guide](../dsh-dev/SKILL.md), verified with concurrent native Agent Scopes and real Docker; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).

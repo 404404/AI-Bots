@@ -96,6 +96,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- AX Go launches stage the reviewed adapter patch inside each isolated CLI and reference it relatively, fixing Windows `ERR_PNPM_PATCH_NOT_FOUND` when source and home are on different drives; model credentials and native request handling retain their existing ownership ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409), [AX guide](docs/agents/ax-model.md)).
+
 - Window Companions blink at independently staggered phases and idle intervals per Bot, so matching avatars no longer blink in unison ([#1367](https://github.com/BotHarness/DeepSeekBot/issues/1367)).
 
 - Window Companions use a flatter full speech opening, preserving the half-open mouth, saved expression, portraits and speaking rhythm ([#1241](https://github.com/BotHarness/DeepSeekBot/issues/1241)).

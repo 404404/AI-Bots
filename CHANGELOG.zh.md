@@ -96,6 +96,8 @@
 
 ### Fixed
 
+- AX Go 启动会将经审阅的适配器补丁复制到各自的隔离 CLI，并使用相对路径引用，修复源码与 home 位于不同盘符时 Windows 的 `ERR_PNPM_PATCH_NOT_FOUND`；模型凭据和原生请求处理沿用既有归属（[#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)、[AX 指南](docs/agents/ax-model.md)）。
+
 - 窗口伙伴按每个 Bot 独立错开眨眼时点与空闲间隔，外形相同的伙伴也不再同步眨眼（[#1367](https://github.com/BotHarness/DeepSeekBot/issues/1367)）。
 
 - 窗口伙伴说话时全张嘴改为更平的开口，保留半张嘴、原有表情、头像和说话节奏（[#1241](https://github.com/BotHarness/DeepSeekBot/issues/1241)）。

@@ -54,6 +54,12 @@ header, and retains native `User-Agent` attribution and other headers. Missing S
 stays missing; no fixed, random or substitute identity is supplied. Other Providers keep their
 existing headers. The Go qualification refuses a different DSH version until reverified.
 
+The helper copies the reviewed patch into that CLI's `patches/` directory and uses a relative
+path in its `pnpm-workspace.yaml`. Windows pnpm otherwise resolves a drive-qualified patch path
+under the runtime directory and fails with `ERR_PNPM_PATCH_NOT_FOUND`, especially when the source
+worktree and isolated home are on different drives. Each launch refreshes the staged bytes from
+the worktree; other workspace settings and patch entries are preserved.
+
 This changes no global CLI or application permissions. Each opted-in AX home gets its own
 runtime, while model selection and the credential reference remain launch Patches. See the
 [Go request requirements](https://opencode.ai/docs/go/#where-can-i-use-it) and
