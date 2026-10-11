@@ -4,8 +4,8 @@ subtitle: Lark 配对审核首片 · PR 1418
 lang: zh
 template: doc
 PR: 1418
-base: 71aa4d06b4ba9619e17cd971c6e303eec9374bf6
-head: d3cbd0bb4380bc95e57d62cc33be92f9c1010733
+base: 28aa5792ce1973349861026621732615026d61fe
+head: 4cfd90f0df05d67020bb506ec0db2cc9bafe272c
 date: 2026-10-11
 ---
 
@@ -13,14 +13,14 @@ date: 2026-10-11
 
 群聊可以完成配对，不要求私聊。
 所有人能看到卡片，只有当前审核人能决策。
-该路径已实现，真实 Lark 验收仍待完成。
+该路径已实现，真实 Lark 双人群验收和首片反馈已完成。
 
 | 项目 | 状态 |
 | --- | --- |
 | Host、数据库、Provider、设置界面 | ok 已实现 |
 | 定向自动化与原生审批回归 | ok 通过 |
-| 真实群聊卡片和双人操作 | warn 待验收 |
-| 首片真人反馈、合并、部署 | warn 未完成 |
+| 真实群聊卡片和双人操作 | ok 已验收 |
+| 首片真人反馈 | ok 已接受 |
 
 ## B 群聊里的动作如何生效
 
@@ -57,7 +57,7 @@ Messaging -> 模型: 执行新问题
 ```ts src=packages/core/src/messaging/pairing-cards.ts lines=85-101
 ```
 
-[准确版本的校验代码](https://github.com/BotHarness/DeepSeekBot/blob/d3cbd0bb4380bc95e57d62cc33be92f9c1010733/packages/core/src/messaging/pairing-cards.ts#L85)
+[准确版本的校验代码](https://github.com/BotHarness/DeepSeekBot/blob/4cfd90f0df05d67020bb506ec0db2cc9bafe272c/packages/core/src/messaging/pairing-cards.ts#L85)
 
 ## D 持久化与失效路径
 
@@ -83,7 +83,7 @@ Web 与卡片竞争时，首个有效决策胜出。
 Windows 全套未通过；基线也出现 EPERM 清理失败。
 Linux 全套通过：4,045 项测试，跳过 13 项。
 
-真实卡片展示和真人反馈仍须独立验收。
+真实双人群审核、独立 Reject、延迟 Deny、重启、新消息回复和撤销已验收；真人反馈已接受。
 
 [完整 Linux 校验](https://github.com/BotHarness/DeepSeekBot/actions/runs/38135347584)
 
@@ -91,5 +91,5 @@ Linux 全套通过：4,045 项测试，跳过 13 项。
 [已执行检查及完整验收步骤](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/verification.md)
 [Provider PR 21](https://github.com/DoodleBears/dsh-im/pull/21)
 
-QA1 需要新的独占窗口和两个真实用户。
-完成群聊首片反馈后，再推进一次性配对码。
+本轮 QA1 接收器已停止，未重启原接收器。新的测试需另行核对接收窗口。
+主分支合并仅保留双方发布记录并消除 ADR 编号冲突；代码交付语义保持不变。新提交 CI 正在重新验证。
