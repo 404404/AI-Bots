@@ -18,6 +18,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     size?: string;
   }) => createElement('button', props),
   FileTypeIcon: () => null,
+  fileSizeText: (size: number) => `${size} B`,
   IconCloseOutlineRegular: () => null,
   IconPaperclipOutlineRegular: () => null,
   IconSendOutlineRegular: () => null,
@@ -25,6 +26,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
 }));
 
 import { ChannelComposer } from '../src/client/channel-composer.js';
+import { attachmentReferenceText } from '../src/client/attachment-refs.js';
+import { setRichSelection } from '../src/client/rich-mention-editor.js';
 import type { BotSummary } from '../src/client/store.js';
 
 const ada: BotSummary = {
@@ -65,6 +68,84 @@ afterEach(async () => {
 });
 
 describe('mounted Channel composer', () => {
+  it('reinserts a file at the caret and deletes only the inline chip', async () => {
+    const attachment = {
+      id: 'report',
+      file: new File(['hello'], 'report.txt'),
+      status: 'ready' as const,
+    };
+    const onChange = vi.fn();
+    const onRemoveAttachment = vi.fn();
+    const render = async (value: string) =>
+      act(async () =>
+        root.render(
+          createElement(ChannelComposer, {
+            value,
+            placeholder: 'Message',
+            sending: false,
+            attachments: [attachment],
+            onChange,
+            onSubmit: vi.fn(),
+            onRemoveAttachment,
+          }),
+        ),
+      );
+    await render('before after');
+    const editor = host.querySelector<HTMLElement>('[contenteditable]')!;
+    setRichSelection(editor, 7);
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('[aria-label="在正文中引用 report.txt"]')!.click(),
+    );
+    const next = `before ${attachmentReferenceText(attachment)} after`;
+    expect(onChange).toHaveBeenLastCalledWith(next, [], []);
+    await render(next);
+    expect(host.querySelector('[data-attachment-id="report"]')?.textContent).toBe('1report.txt5 B');
+    setRichSelection(editor, 7 + attachmentReferenceText(attachment).length);
+    await act(async () =>
+      editor.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }),
+      ),
+    );
+    expect(onChange).toHaveBeenLastCalledWith('before after', [], []);
+    expect(onRemoveAttachment).not.toHaveBeenCalled();
+  });
+
+  it('refreshes upload status without losing the inline identity or caret', async () => {
+    const attachment = {
+      id: 'report',
+      file: new File(['hello'], 'report.txt'),
+      status: 'uploading' as const,
+    };
+    const value = attachmentReferenceText(attachment) + ' ';
+    const render = async (status: 'uploading' | 'error' | 'ready') =>
+      act(async () =>
+        root.render(
+          createElement(ChannelComposer, {
+            value,
+            placeholder: 'Message',
+            sending: false,
+            attachments: [{ ...attachment, status }],
+            onChange: vi.fn(),
+            onSubmit: vi.fn(),
+          }),
+        ),
+      );
+    await render('uploading');
+    const editor = host.querySelector<HTMLElement>('[contenteditable]')!;
+    editor.focus();
+    setRichSelection(editor, value.length);
+    await render('error');
+    expect(host.querySelector('[data-attachment-id="report"]')?.getAttribute('data-status')).toBe(
+      'error',
+    );
+    expect(
+      host.querySelector('[data-attachment-id="report"]')?.getAttribute('data-attachment-text'),
+    ).toBe(attachmentReferenceText(attachment));
+    await render('ready');
+    expect(host.querySelector('[data-attachment-id="report"]')?.getAttribute('aria-busy')).toBe(
+      'false',
+    );
+  });
   it('filters slash actions, preserves drafts and attachments, cancels and never submits shortcuts', async () => {
     const model = vi.fn();
     const workspace = vi.fn();

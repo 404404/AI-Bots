@@ -1,4 +1,5 @@
 import { ChannelHistory } from './channel-history.js';
+import { attachmentReferenceLabels } from './attachment-refs.js';
 import {
   useRef,
   useState,
@@ -370,7 +371,9 @@ function channelPreview(
       { name: message.memberDeparture.displayName },
     );
   const body =
-    message.body.replace(/\s+/gu, ' ').trim() ||
+    attachmentReferenceLabels(message.body, message.attachments ?? [])
+      .replace(/\s+/gu, ' ')
+      .trim() ||
     message.attachments?.[0]?.name ||
     t('roster.latestActivity');
   const author =
