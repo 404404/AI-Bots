@@ -1,0 +1,46 @@
+{
+  "recorder": "util-linux script 2.41.3",
+  "scope": "actual initial installation, source update and later fresh isolated final-source Profile installation; no Host login or credential input",
+  "captureTimezone": "+08:00",
+  "privacyReview": "commands and full output inspected; no authentication material or machine addresses",
+  "files": [
+    {
+      "file": "03-source-install-retry2.typescript",
+      "sha256": "b9c02891cb3351432a537236554f2554e11979f1cbad31899567b47727617d39",
+      "bytes": 3851,
+      "unchangedOriginal": true
+    },
+    {
+      "file": "03-source-install-retry2.timing",
+      "sha256": "5bb4ccf7996eddb1dcb86f8ffb25b8b1b0d0020c40b82bc3f3bbb9c169f38cc2",
+      "bytes": 379,
+      "unchangedOriginal": true
+    },
+    {
+      "file": "03-source-update-031a14db.typescript",
+      "sha256": "75ca6f636a5c8952e8922d15165296694ccf40fae3dbd01219eb7ab94c0ee4f4",
+      "bytes": 2306,
+      "unchangedOriginal": true
+    },
+    {
+      "file": "03-source-update-031a14db.timing",
+      "sha256": "ebd049b01a3cbdd4e66242f0a7f99b880a538f3fb4e7dd77b53526490e060a0b",
+      "bytes": 114,
+      "unchangedOriginal": true
+    },
+    {
+      "file": "05-fresh-profile-031a14db.typescript",
+      "sha256": "37339962af11b7ffe83fd17ee3936f08061748af133833385220bf03f7c4478d",
+      "bytes": 3404,
+      "unchangedOriginal": true,
+      "capturedAt": "2026-10-11T19:58:23Z"
+    },
+    {
+      "file": "05-fresh-profile-031a14db.timing",
+      "sha256": "60c954c428d590d89715abf22701481d03864d9436e1b2528291b9adc2d56d8e",
+      "bytes": 14,
+      "unchangedOriginal": true,
+      "capturedAt": "2026-10-11T19:58:23Z"
+    }
+  ]
+}
