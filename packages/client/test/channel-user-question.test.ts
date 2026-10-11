@@ -123,7 +123,7 @@ describe('private input card', () => {
     let finish!: () => void;
     let submitted: Record<string, string> | undefined;
     const actions = {
-      privateInputStatus: vi.fn().mockResolvedValue('pending'),
+      privateInputStatus: vi.fn().mockResolvedValueOnce('pending').mockResolvedValue('configured'),
       privateInputSubmit: vi.fn((_channel, _message, values: Record<string, string>) => {
         submitted = { ...values };
         expect([...container.querySelectorAll('input')].every((input) => input.value === '')).toBe(
@@ -166,6 +166,76 @@ describe('private input card', () => {
       true,
     );
     expect(container.textContent).toContain('未能完成请求');
+    expect(container.textContent).not.toContain('synthetic secret');
+  });
+
+  it('converges a duplicate-tab refusal to configured without retaining an error', async () => {
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValueOnce('pending').mockResolvedValue('configured'),
+      privateInputSubmit: vi.fn().mockRejectedValue(new Error('Already settled')),
+    } as unknown as BridgeActions;
+    await act(async () => render(actions, undefined, card));
+    for (const input of container.querySelectorAll('input')) input.value = 'synthetic secret';
+    await act(async () => button('私密提交')?.click());
+    expect(container.querySelector('input')).toBeNull();
+    expect(container.textContent).toContain('已配置私密信息');
+    expect(container.textContent).not.toContain('未能完成请求');
+    expect(container.textContent).not.toContain('synthetic secret');
+  });
+
+  it('keeps a committed terminal status when an older pending poll arrives later', async () => {
+    vi.useFakeTimers();
+    try {
+      let stale!: (status: 'pending') => void;
+      const actions = {
+        privateInputStatus: vi
+          .fn()
+          .mockResolvedValueOnce('pending')
+          .mockImplementationOnce(
+            () =>
+              new Promise<'pending'>((resolve) => {
+                stale = resolve;
+              }),
+          )
+          .mockResolvedValue('configured'),
+        privateInputSubmit: vi.fn().mockResolvedValue(undefined),
+      } as unknown as BridgeActions;
+      await act(async () => render(actions, undefined, card));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      for (const input of container.querySelectorAll('input')) input.value = 'synthetic secret';
+      await act(async () => button('私密提交')?.click());
+      expect(container.textContent).toContain('已配置私密信息');
+      await act(async () => stale('pending'));
+      expect(container.querySelector('input')).toBeNull();
+      expect(container.textContent).toContain('已配置私密信息');
+      expect(container.textContent).not.toContain('synthetic secret');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('clears cancelled fields and reloads an expired card as metadata only', async () => {
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValueOnce('pending').mockResolvedValue('cancelled'),
+      privateInputCancel: vi.fn().mockResolvedValue(undefined),
+      privateInputSubmit: vi.fn(),
+    } as unknown as BridgeActions;
+    await act(async () => render(actions, undefined, card));
+    const inputs = [...container.querySelectorAll('input')];
+    for (const input of inputs) input.value = 'synthetic secret';
+    await act(async () => button('取消')?.click());
+    expect(actions.privateInputCancel).toHaveBeenCalledTimes(1);
+    expect(inputs.every((input) => input.value === '')).toBe(true);
+    expect(container.querySelector('input')).toBeNull();
+    expect(container.textContent).toContain('已取消');
+    const expired = {
+      privateInputStatus: vi.fn().mockResolvedValue('expired'),
+    } as unknown as BridgeActions;
+    await act(async () => render(expired, undefined, { ...card, id: 'lost-card' }));
+    expect(container.querySelector('input')).toBeNull();
+    expect(container.textContent).toContain('已过期');
     expect(container.textContent).not.toContain('synthetic secret');
   });
 });

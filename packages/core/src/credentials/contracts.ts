@@ -23,15 +23,16 @@ export type PrivateInputDeclaration = z.infer<typeof privateRequestSchema>;
 export type PrivateInputStatus = 'pending' | 'configured' | 'cancelled' | 'expired';
 export interface PrivateInputCard extends PrivateInputDeclaration {
   sessionId: string;
+  expiresAt?: string;
 }
 export interface PrivateInputResult {
-  status: 'configured' | 'cancelled';
+  status: 'configured' | 'cancelled' | 'expired';
   account: string;
   references: Record<string, string>;
 }
 export interface PrivateInputResolution {
   requestMessageId: string;
-  state: 'configured' | 'cancelled';
+  state: 'configured' | 'cancelled' | 'expired';
   references: Record<string, string>;
 }
 

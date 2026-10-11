@@ -21,6 +21,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- Private input cards have independent pending attention and a fifteen-minute deadline; cancellation, competing submissions and restart settle safely without waking a stopped Bot. Configured references persist, while new grants require a committed card result before use ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381), [guide](docs/dev/guides/private-input-cli.md)).
+
 - An opt-in isolated Profile lets a PersonaBot request confidential fields in Web Chat or receive Owner CLI replies, save them through native Credentials Service and consume references through a fixed CLI under existing approval. Ordinary native bash and configured MCP stdio calls run in Linux with an authorized workspace; the [qualification guide](docs/dev/guides/private-input-cli.md) describes supported boundaries and review limits ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).
 
 - Window Companions offer optional, quiet text-paced babble and grab, fast-drag, throw and first-impact landing sounds, off by default for each Profile, and a damped angular spring makes drag reversals and settling continuous without adding model tools or TTS. Idle companions hide the empty status bubble and fade action controls in on hover or keyboard focus; pointer focus after dragging no longer keeps reading open. Long message bubbles follow the latest revealed text without scrollbars; scrolling upward preserves the reading position until returning to the bottom. Dismissing the final card shows waiting replies and lets later arrivals display even while the character retains keyboard focus ([#1173](https://github.com/BotHarness/DeepSeekBot/issues/1173)).

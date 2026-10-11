@@ -6,6 +6,12 @@ import type { BotHarnessTranslate } from './locale.js';
 import { store, type ChannelMessage } from './store.js';
 import type { PrivateInputStatus } from '../../../core/src/credentials/contracts.js';
 
+type PrivateCardMount = {
+  node: HTMLFormElement;
+  active: boolean;
+  terminal: PrivateInputStatus | undefined;
+};
+
 export function PrivateInputCard({
   message,
   actions,
@@ -18,37 +24,39 @@ export function PrivateInputCard({
   const request = message.privateInputRequest!;
   const channelId = 'dm-' + (message.author.kind === 'bot' ? message.author.slug : '');
   const id = useId();
-  const form = useRef<HTMLFormElement | null>(null);
-  const alive = useRef(true);
+  const mounted = useRef<PrivateCardMount>();
+  const submitting = useRef(false);
   const [status, setStatus] = useState<PrivateInputStatus | 'loading'>('loading');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const mount = useMountedResource<HTMLFormElement>(
     (node) => {
-      form.current = node;
-      alive.current = true;
-      let active = true;
+      const lease: PrivateCardMount = { node, active: true, terminal: undefined };
+      mounted.current = lease;
+      setStatus('loading');
       let timer: ReturnType<typeof setTimeout> | undefined;
       const poll = () => {
         void actions.privateInputStatus?.(channelId, message.id).then(
           (current) => {
-            if (!active) return;
+            if (!lease.active || lease.terminal !== undefined) return;
             setStatus(current);
-            if (current !== 'pending') form.current?.reset();
-            else timer = setTimeout(poll, 2500);
+            if (current !== 'pending') {
+              lease.terminal = current;
+              setError(false);
+              node.reset();
+            } else timer = setTimeout(poll, 2500);
           },
           () => {
-            if (active) setError(true);
+            if (lease.active) setError(true);
           },
         );
       };
       poll();
       return () => {
-        active = false;
-        alive.current = false;
+        lease.active = false;
         clearTimeout(timer);
-        form.current?.reset();
+        node.reset();
       };
     },
     [actions, channelId, message.id, retry],
@@ -57,31 +65,39 @@ export function PrivateInputCard({
   const settle = async (cancel: boolean): Promise<void> => {
     if (
       disabled ||
-      form.current === null ||
+      submitting.current ||
+      mounted.current?.active !== true ||
       store.getSnapshot().conversation.channel?.id !== channelId
     )
       return;
+    const lease = mounted.current;
+    submitting.current = true;
     setBusy(true);
     setError(false);
     const values: Record<string, string> = {};
     try {
       if (cancel) await actions.privateInputCancel?.(channelId, message.id);
       else {
-        const data = new FormData(form.current);
+        const data = new FormData(lease.node);
         for (const field of request.fields) values[field.id] = String(data.get(field.id) ?? '');
-        form.current.reset();
+        lease.node.reset();
         await actions.privateInputSubmit!(channelId, message.id, values);
       }
-      if (alive.current) setStatus(cancel ? 'cancelled' : 'configured');
+      const current = (await actions.privateInputStatus?.(channelId, message.id)) ?? 'expired';
+      if (lease.active) {
+        if (current !== 'pending') lease.terminal = current;
+        setStatus(current);
+      }
     } catch {
-      if (alive.current) {
+      if (lease.active) {
         setError(true);
         setRetry((value) => value + 1);
       }
     } finally {
       for (const key of Object.keys(values)) delete values[key];
-      form.current?.reset();
-      if (alive.current) setBusy(false);
+      lease.node.reset();
+      submitting.current = false;
+      if (lease.active) setBusy(false);
     }
   };
   return (
@@ -99,6 +115,11 @@ export function PrivateInputCard({
         {t('privateInput.account')}: {request.account}
       </div>
       <div className="bh-question-prompt">{request.purpose}</div>
+      {request.expiresAt === undefined ? null : (
+        <div className="bh-note">
+          {t('privateInput.expiresAt', { time: new Date(request.expiresAt).toLocaleString() })}
+        </div>
+      )}
       <div className="bh-note">{t('privateInput.note')}</div>
       {status === 'pending' ? (
         request.fields.map((field) => (
@@ -126,7 +147,7 @@ export function PrivateInputCard({
               ? t('privateInput.configured')
               : status === 'cancelled'
                 ? t('question.cancelled')
-                : t('question.expired')}
+                : t('privateInput.expired')}
         </div>
       )}
       {status === 'pending' ? (

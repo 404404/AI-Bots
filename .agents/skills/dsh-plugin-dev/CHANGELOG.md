@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded fresh RC1 Profile initialization, native credential-record object ownership and recovery quiescence in the [local development guide](../dsh-dev/SKILL.md), verified with the pinned native Provider and real private-input Host; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381)).
+
 - Recorded RC1 native MCP stdio lifecycle, shared Scope module identity, Windows Subprocess argv, and inherited Registry visibility traps in the [local development guide](../dsh-dev/SKILL.md), verified with concurrent native Agent Scopes and real Docker; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).
 
 - Recorded native Windows cold-install progress starvation from the duplicate localhost development-refresh SSE, explicit refresh opt-in, first-window CDP readiness, and verified mark-of-web/quarantined-binary outcomes in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1 and Chrome 154.0.8037.57 ([#1339](https://github.com/BotHarness/DeepSeekBot/issues/1339)).

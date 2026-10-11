@@ -1446,11 +1446,14 @@ function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['priv
   if (
     record === undefined ||
     Object.keys(record).some(
-      (key) => !['sessionId', 'account', 'purpose', 'fields'].includes(key),
+      (key) => !['sessionId', 'account', 'purpose', 'fields', 'expiresAt'].includes(key),
     ) ||
     typeof record['sessionId'] !== 'string' ||
     typeof record['account'] !== 'string' ||
     typeof record['purpose'] !== 'string' ||
+    (record['expiresAt'] !== undefined &&
+      (typeof record['expiresAt'] !== 'string' ||
+        !Number.isFinite(Date.parse(record['expiresAt'])))) ||
     !Array.isArray(record['fields']) ||
     record['fields'].length < 1 ||
     record['fields'].length > 8
@@ -1476,6 +1479,7 @@ function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['priv
     account: record['account'],
     purpose: record['purpose'],
     fields,
+    ...(typeof record['expiresAt'] === 'string' ? { expiresAt: record['expiresAt'] } : {}),
   };
 }
 
@@ -2816,6 +2820,7 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
     if (
       item['kind'] !== 'group-join-request' &&
       item['kind'] !== 'user-question' &&
+      item['kind'] !== 'private-input' &&
       item['kind'] !== 'tool-approval' &&
       item['kind'] !== 'workspace-grant-request' &&
       item['kind'] !== 'bot-dm-message' &&
@@ -2853,6 +2858,13 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
       return undefined;
     if (item['requestId'] !== undefined && typeof item['requestId'] !== 'string') return undefined;
     if (item['messageId'] !== undefined && typeof item['messageId'] !== 'string') return undefined;
+    if (
+      item['kind'] === 'private-input' &&
+      (item['category'] !== 'action' ||
+        typeof item['messageId'] !== 'string' ||
+        typeof item['sourceEventId'] !== 'string')
+    )
+      return undefined;
     if (
       item['kind'] === 'channel-unread' &&
       (!Number.isSafeInteger(item['unreadCount']) ||
