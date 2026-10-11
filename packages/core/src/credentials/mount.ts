@@ -16,6 +16,10 @@ const SAFE_TOOLS = new Set([
   'channel_list',
   'ask_user_question',
   'inbox_ignore',
+  'bot_schedule_list',
+  'bot_schedule_create',
+  'bot_schedule_update',
+  'bot_schedule_delete',
 ]);
 export function mountPrivateInputs(
   ctx: Context,
@@ -53,6 +57,7 @@ export function mountPrivateInputs(
     registry: core.registry,
     credentials: () => ctx.get('credentials'),
     isLive: (agent) => ctx.agents.get(agent.id) === agent,
+    canRequest: (agent) => core.runtime.canRequestPrivateInput?.(agent.session.id) === true,
     qualified: () =>
       enabled && mode === 'protected' ? execution.qualified() : Promise.resolve(false),
     log,
@@ -75,6 +80,9 @@ export function mountPrivateInputs(
     }
     if (
       !SAFE_TOOLS.has(name) ||
+      (name.startsWith('bot_schedule_') &&
+        (agent === undefined ||
+          core.ownership.resolve(agent.session.id)?.rootRole !== 'orchestrator')) ||
       (name !== 'bash' &&
         (agent === undefined || core.ownership.resolve(agent.session.id) === undefined))
     )
@@ -137,7 +145,7 @@ export function mountPrivateInputs(
           defineTool({
             name: 'ask_secret',
             description:
-              'Ask the authenticated Owner for private strings in this Web conversation. Declare account, purpose and dynamic fields. All fields are confidential; never ask for their values in ordinary Chat or questions. Returns opaque references only. Private input does not approve execution.',
+              'Reuse configured private references, or ask the authenticated Owner for private strings in an interactive conversation. Declare account, purpose and dynamic fields. All fields are confidential; never ask for their values in ordinary Chat or questions. Returns opaque references only. Private input does not approve execution. Unattended runs cannot open input cards: report missing private configuration and do not retry.',
             parameters: {
               account: { type: 'string', required: true, description: 'Nonsecret account label.' },
               purpose: {

@@ -1,5 +1,15 @@
 # Private input CLI candidate
 
+## Scheduled reuse after Host restart (#1383)
+
+Configure a generic private account in an interactive PersonaBot DM using the three-field card and controlled service below. Approve its first `protected_cli` call through the existing approval card; a remembered exact call or broad allowance remains scoped by the existing execution policy.
+
+Ask that real Bot to create a one-shot **Bot Schedule** with `bot_schedule_create`, a time at least three minutes ahead, and an explicit destination DM Channel ID. Its prompt should call `protected_cli` with `consumer: http-status-v1`, the nonsecret account and the three opaque references, then send only its status to that Channel. Stop the exact isolated Host PID and restart the same home before the due time. The naturally fired Schedule must authenticate, return 200 in the original DM and create no new private-input card. Inspect the existing Schedule history for its planned firing and actual Orchestrator Session.
+
+For a missing account, run a disabled test Bot Schedule once using the existing **Run now** action. Have it call `ask_secret` once and report the failure in its explicit destination DM. It must finish with an Owner-action error and no new private card. Historical Human messages in the same Session do not grant input interaction. Configure or replace the account in Web Chat before explicitly retrying.
+
+Keep a copy of the old-reference Schedule, privately replace the account with fixture version B, and run that Schedule again. It must be refused before another fixture request. A new Schedule can obtain the current reference set through `ask_secret` without another input card and authenticate B. Revoke the account, restart the isolated Host and run it again: both direct old-reference execution and unattended `ask_secret` must fail safely. A configured reference does not grant execution or delivery to another Channel. See [ADR-0169](../../adr/0169-private-input-interaction-follows-current-turn-source-events.md).
+
 ## Account replacement and local revocation (#1382)
 
 The card keeps account, purpose and current status visible. Its info icon reveals request expiry, replacement guidance and Host storage/approval details on hover, keyboard focus or click; click pins the tooltip and Escape closes it. It never contains original private values.
@@ -102,7 +112,7 @@ This checks both the stricter unmounted command world and the mounted Linux worl
 
 Qualification also inspects actual model request bodies, persisted request headers/messages/results/errors, ordinary Channel history, developer logs and Spill using synthetic raw, URL-encoded and base64 patterns. Native credential records and task-owned synthetic instrumentation are allowed destinations; publishing their contents is unnecessary. A model refusing an extraction prompt is not boundary evidence. Node's one-shot zstd decompressor reads one concatenated frame at a time: advance by `engine.bytesWritten` to scan the entire native Session artifact, not only its header.
 
-For the pinned DeepSeek `/messages` adapter, launch the isolated helper with a process-local `NODE_OPTIONS=--import=<file URL of scripts/ask-secret-wire-probe.mjs>` and `BOTHARNESS_PRIVATE_WIRE_EVIDENCE=<task-owned evidence file>`, then restore those environment variables in the launching terminal. The passive probe leaves requests unchanged and writes only request sizes and synthetic-match counts, never bodies or authentication headers. Confirm it observes requests after private submission. The trusted credential CLI scrubs these environment variables. This instrumentation qualifies this adapter and these fixed canaries, not every provider or arbitrary encoding.
+For model adapters using `/messages`, `/chat/completions` or `/responses`, launch the isolated helper with a process-local `NODE_OPTIONS=--import=<file URL of scripts/ask-secret-wire-probe.mjs>` and `BOTHARNESS_PRIVATE_WIRE_EVIDENCE=<task-owned evidence file>`, then restore those environment variables in the launching terminal. On Windows the import must be a `file:///` URL. Keep the synthetic canary list outside DSH_HOME and point `BOTHARNESS_PRIVATE_CANARY_FILE` to it. The passive probe leaves requests unchanged and writes only body-availability, request sizes and synthetic-match counts, never bodies or authentication headers. Confirm it observes actual requests after private submission and reports every body available; an unsupported body is incomplete evidence. The trusted credential CLI scrubs these environment variables. This instrumentation qualifies the observed adapter and fixed canaries, not every provider or arbitrary encoding.
 
 ```powershell
 node scripts/scan-private-input-evidence.mjs <isolated-DSH_HOME>
@@ -112,4 +122,4 @@ The scan must report `nativeStoreContainsSyntheticValues: true` and no violation
 
 The request supports 1–8 dynamic confidential strings, preserving significant whitespace, with no defaults or original-value readback. References are bound to the actual live Orchestrator, Bot creation identity and account. The three-field schema belongs only to `http-status-v1`; it is not an email/provider configuration model. Host failure diagnostics contain stable phases, request/Bot/Session identifiers and durations, never raw values or subprocess errors.
 
-Do not disable/remove the Plugin or revert to an older binary while private grants remain. Restore the isolated pre-trial home or purge only application-owned native grants before rollback. Rotation/revocation, Schedule reuse, IM initiation, credential-consuming MCP and Linux-server verification require their separate slices and Human feedback on this first candidate.
+Do not disable/remove the Plugin or revert to an older binary while private grants remain. Restore the isolated pre-trial home or purge only application-owned native grants before rollback. IM initiation, credential-consuming MCP and Linux-server verification require their separate slices. Account lifecycle and Schedule qualification remain limited to this opt-in execution boundary.
