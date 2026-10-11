@@ -11,7 +11,7 @@ Provider base: `81b91291600edba36b1947940c2be8e50abc9fdf`.
 - After the permission-column correction: Client pairing/settings and style-token coverage, two files / 26 tests passed.
 - Product lint, typecheck, format, bilingual ledger and ADR-number checks passed. Complete product build passed before the CSS-only correction; the Client rebuild and targeted format check passed after it.
 - Provider related Lark transport/controller/delivery coverage: 108 tests passed; build and package verification passed.
-- The full local Windows product suite did not finish successfully. The roster-fixture EPERM cleanup failure reproduced in the accepted baseline and current code. Linux PR CI remains the full-suite gate.
+- The full local Windows product suite did not finish successfully. The roster-fixture EPERM cleanup failure reproduced in the accepted baseline and current code. [Full Linux CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38135347584) passed at the exact product head: 483 test files passed / 7 skipped; 4,045 tests passed / 13 skipped, plus lint, format, typecheck and build. Package preparation is still running.
 - Full Windows Provider results: candidate 3,729 passed / 36 failed / 7 skipped; baseline 3,723 passed / 39 failed / 7 skipped. No new failing test locations. This is not a full-suite pass.
 
 ## Native Web captures

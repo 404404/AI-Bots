@@ -81,7 +81,10 @@ Web 与卡片竞争时，首个有效决策胜出。
 产品定向测试为 97 项；当前卡片与原生审批回归共 22 项，包含重叠。
 修正表格后，26 项 Client 测试通过。
 Windows 全套未通过；基线也出现 EPERM 清理失败。
-Linux CI、真实卡片展示和真人反馈独立验收。
+Linux 全套通过：4,045 项测试，跳过 13 项。
+真实卡片展示和真人反馈仍须独立验收。
+
+[完整 Linux 校验](https://github.com/BotHarness/DeepSeekBot/actions/runs/38135347584)
 
 [PR 内嵌截图](https://github.com/BotHarness/DeepSeekBot/pull/1418)
 [已执行检查及完整验收步骤](https://github.com/BotHarness/DeepSeekBot/blob/codex/1414-review-evidence/docs/assets/pr/1414/verification.md)
