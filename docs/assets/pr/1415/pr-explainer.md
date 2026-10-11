@@ -7,7 +7,7 @@ subtitle: 当前 App 的审核、重问与撤销
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1436
 base: 73c75f86aa50767be34a5c8d2cadc17b6a3e8862
 head: 6655fa8ee1d7ae143c843b7cb95943e486109b55
-generated: 2026-10-11T17:01:55.904Z
+generated: 2026-10-11T17:07:34.403Z
 ---
 
 ## A 实现可审查，真实 Slack 验收仍待完成
@@ -18,10 +18,12 @@ generated: 2026-10-11T17:01:55.904Z
 | --- | --- |
 | 72 项相关自动化回归 | ok 已通过 |
 | lint、格式、类型与构建 | ok 已通过 |
-| 完整 CI | warn 正在运行，须另核结果 |
+| 完整 CI | ok 当前 head 已通过 |
 | 原生 Slack 流程、截图与 Human 反馈 | warn 未完成 |
 
 这页绑定上方 head，只解释实现。它不证明原生 Slack 已通过验收，也不授予合并或部署许可。
+
+[当前 head 的 CI 结果](https://github.com/BotHarness/DeepSeekBot/actions/runs/38157740601)。CodeRabbit 对 Draft 跳过自动 review，因此其成功状态不代表完成代码审查。
 
 ## B 旧问题不会在批准后执行
 
