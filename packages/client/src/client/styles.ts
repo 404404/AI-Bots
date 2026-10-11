@@ -2970,7 +2970,7 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-receiver { font-size: 12px; }
 .bh-pairing-role-modal textarea { padding: 10px 12px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-memory-radius-row); font: inherit; }
 .bh-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-@media (max-width: 760px) { .bh-pairing-workspace { grid-template-columns: minmax(0, 1fr); } .bh-pairing-detail { max-height: none; } }
+@media (max-width: 760px) { .bh-pairing-workspace { grid-template-columns: minmax(0, 1fr); } .bh-pairing-table { min-width: 560px; } .bh-pairing-detail { max-height: none; } }
 .bh-sidebar-modal-form, .bh-im-grant-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; font-size: 13px; }
 .bh-sidebar-modal-form p, .bh-im-grant-body p { margin: 0; }
 .bh-sidebar-modal-form ul:not(.bh-card-list) { margin: 0; padding-left: 18px; }
