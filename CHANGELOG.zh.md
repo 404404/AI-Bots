@@ -150,6 +150,8 @@
 
 ### Documentation
 
+- 中英文 README 新增 Product Hunt 发布徽章（[#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)）。
+
 - 新增面向人的双语贡献指南与社区入口，区分求助、想法、案例和明确的 Issue / PR；运行行为不变（[contributor guide](CONTRIBUTING.md)、[#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)）。
 
 - 双语 README 明确 DeepSeekBot 的项目身份、官网与安装入口及其与 DS Bot 的区别，并区分正式 npm 与当前源码的 Browser / Computer 能力范围（[#1399](https://github.com/BotHarness/DeepSeekBot/issues/1399)）。

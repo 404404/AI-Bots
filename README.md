@@ -12,6 +12,8 @@
 [![QQ 群：1125565676](https://img.shields.io/badge/QQ-1125565676-12B7F5)](#community)
 [![GitHub stars](https://img.shields.io/github/stars/BotHarness/DeepSeekBot?style=flat)](https://github.com/BotHarness/DeepSeekBot)
 
+<a href="https://www.producthunt.com/products/deepseekbot?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-deepseekbot" target="_blank" rel="noopener noreferrer"><img alt="DeepSeekBot - Open-source Grok Bot alternative built on DeepSeek Harness | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1276820&amp;theme=light&amp;t=1791733459461"></a>
+
 **开源的 GrokBot 平替。一组有各自身份、人格和记忆的 bots，一起做事。**
 
 [官网](https://deepseekbot.app) · [宣传片](#video) · [安装](#install) · [能力](#features) · [截图](#screenshots) · [版本亮点](#releases) · [Bot 市场](#marketplace) · [社区](#community) · [文档](https://botharness.ai)
