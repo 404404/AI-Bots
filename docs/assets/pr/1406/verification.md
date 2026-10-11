@@ -11,7 +11,7 @@ Base: `d87b39104305cd9bf2f2420ab018d9e31767741f`.
 - A real direct authenticated Web Human DM used `channel_send` and delivered `WEB1406_OK` without IM pairing or external permission configuration.
 - QA1's first current-permissions request was acknowledged by the Lark platform and admitted by the isolated Host; the real model called the current permission Tool. Earlier optimistic-only sends remain excluded from the evidence below.
 
-Post-merge local checks: typecheck, lint, format and build passed; nine Client pairing tests and 34 Provider-pin/product-artifact tests passed. The broader native-Windows retry stalled before reporting results and was stopped; it is not a passing run. Linux CI covers the combined tree.
+Post-merge local checks: typecheck, lint, format and build passed; 69 core pairing/native-approval/default-traffic tests, nine Client pairing tests and 34 Provider-pin/product-artifact tests passed. An earlier broader native-Windows retry was stopped before reporting results and is not a passing run. Linux CI covers the combined tree.
 
 ## Verified Linux CI
 
