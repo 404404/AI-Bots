@@ -1,0 +1,40 @@
+{
+  "capture": {
+    "tool": "T3 collaborative browser recording",
+    "startedAtUtc": "2026-10-11T18:09:51.247Z",
+    "stoppedAtUtc": "2026-10-11T18:10:08.618Z",
+    "originalSha256": "3ef7ed2a6953d81f0cb8f7f9fb94e4597cb0147892581c7a374b12b5ca9a8e50"
+  },
+  "productSource": "031a14db43af5b3bf52e76b01c30e27828e6e9c9",
+  "candidateVersion": "1.2.1-vps.20261012.sha031a14db",
+  "providerVersion": "4.32.0-botharness.19",
+  "durationSeconds": 17.219433,
+  "decodedFrames": 516,
+  "width": 1824,
+  "height": 1140,
+  "processing": "Removed container metadata; retained the complete original H.264 video payload and timeline without cuts, resizing or synthetic frames. Video payload hashes match.",
+  "privacyReview": "All 516 frames inspected in 21 contact sheets, with full-resolution key-state checks. No credentials, login URL, QR code, machine address, unrelated conversations or member lists visible. Only task-created Bots and the authorized QA App name appear.",
+  "meaning": "Actual native binding of an existing QQ App to the tutorial Bot. Prior CLI connection and original-group delivery are not shown.",
+  "files": {
+    "qq-native-binding.en.srt": {
+      "bytes": 451,
+      "sha256": "f47472c7e2edc4fe0e4c824292b8d4c4e6fc014578573f711ec31fadb330c810"
+    },
+    "qq-native-binding.en.vtt": {
+      "bytes": 449,
+      "sha256": "e7da6f41624981ef319ffc219cae8939d5a14e5d65d141569c334e0a10bf9ee2"
+    },
+    "qq-native-binding.mp4": {
+      "bytes": 2068685,
+      "sha256": "fd4246feb5df8790b1a915c07473e2c6d402a589f06453e38e0af1640bdda949"
+    },
+    "qq-native-binding.zh.srt": {
+      "bytes": 405,
+      "sha256": "95d0b3bf459cf6b7bb4c61b8a55084180d6dd9614e11e4ae421976d39997d2e4"
+    },
+    "qq-native-binding.zh.vtt": {
+      "bytes": 403,
+      "sha256": "368ae04bc66bb12518eefa7a4ce4b2cc30938a0a9462b6de690c7ee56089425e"
+    }
+  }
+}

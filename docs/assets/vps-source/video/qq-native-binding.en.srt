@@ -1,0 +1,15 @@
+1
+00:00:00,000 --> 00:00:06,800
+Select the existing QQ App. It was connected through CLI before this recording.
+
+2
+00:00:06,800 --> 00:00:12,500
+DeepSeekBot QQ QA is selected for VPS SEO Tutorial Bot.
+
+3
+00:00:12,500 --> 00:00:14,400
+Click Bind app. The native interface saves this Bot binding.
+
+4
+00:00:14,400 --> 00:00:17,219
+The native interface confirms binding readiness. Verify actual replies in the original QQ group separately.

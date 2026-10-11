@@ -164,7 +164,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
-- Documented a qualified 2-core, 4 GB source deployment with strict SSH, CLI installation, tailnet HTTPS and real QQ replies before and after Host restart, with public recording review still pending ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [walkthrough](docs/vps-qq-tutorial.md), [Profile installer](docs/agents/source-profile-install.md)).
+- Documented a qualified 2-core, 4 GB source deployment with strict SSH, CLI installation, tailnet HTTPS, real QQ replies before and after Host restart, and an actual native binding clip with bilingual subtitles; the complete tutorial film remains pending ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [walkthrough](docs/vps-qq-tutorial.md), [Profile installer](docs/agents/source-profile-install.md)).
 
 - DeepSeekBot GitHub Release announcements start with version-specific official website and Chinese/English installation links; short links preserve GitHub, release-version and entry-point attribution without changing analytics consent ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
 

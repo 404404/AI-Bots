@@ -11,7 +11,7 @@
 - Verification: the exact committed reply to `SEO_SOURCE_031a14db_OK` is visible in the original local DM after source update and service restart.
 - Privacy review: the entire image was visually inspected; it contains only task-created Bots, product text, model labels and the test marker. The address bar, machine identity, credentials and authorization form are absent.
 
-The welcome letter above the actual reply is preset product content. This is local DM evidence, not QQ group-delivery evidence. Browser recordings and terminal originals remain private pending the complete tutorial's media review.
+The welcome letter above the actual reply is preset product content. This is local DM evidence, not QQ group-delivery evidence. Other browser recordings remain private pending their media review; reviewed terminal originals and the native binding clip are published below.
 
 `02-qq-app-bound.png` is an unchanged 1280 × 800 T3 screenshot captured on 2026-10-11 at 18:10:31 UTC. It shows the native successful binding of the existing QQ QA App to the task's tutorial Bot after CLI credential reuse. Its SHA-256 is `baa38bc120008315ebab93f829ed17ec7faad900efc851101cea7e1e669445e0`.
 
@@ -26,4 +26,10 @@ The four files under `terminal/` are unchanged originals from Linux `util-linux 
 - `03-source-install-retry2.typescript` and its `.timing` file record a successful fresh Profile installation of source `73c75f86`, tool versions, actual DSH help and six-component verification. This was the successful retry, not the earlier failed attempts.
 - `03-source-update-031a14db.typescript` and its `.timing` file record the subsequent actual update to the final `031a14db` product, including its qualified packaged runtime digest. They do not record a fresh install of that newer SHA.
 
-The entire command/output transcripts were inspected before copying. They contain public package references and task-specific installation paths, but no authentication input, Owner login link, IP address, host fingerprint or credential store. Raw DM API responses with private locators remain private. These are actual terminal data and timing, not a reconstructed terminal animation; a replay of them must be labeled as a replay. Public browser video editing and subtitles remain pending.
+The entire command/output transcripts were inspected before copying. They contain public package references and task-specific installation paths, but no authentication input, Owner login link, IP address, host fingerprint or credential store. Raw DM API responses with private locators remain private. These are actual terminal data and timing, not a reconstructed terminal animation; a replay of them must be labeled as a replay.
+
+## Actual native QQ binding video
+
+The [17.219-second MP4, bilingual subtitles and equivalent transcript](video/transcript.md) show the original native binding flow. The clip was recorded through T3 at 18:09:51.247–18:10:08.618 UTC with the same product and Provider revisions above. All 516 frames were visually inspected, including full-resolution key states. Only container metadata was removed; a matching H.264 payload hash verifies that all original video data and timing were retained. [The media manifest](video/manifest.json) records digests, dimensions and the privacy review.
+
+No Secret, QR, login URL, machine address, member list or unrelated conversation is visible. The clip shows binding readiness, not original-group delivery or the earlier CLI credential transfer. Other clips, the complete tutorial film and original-group visuals remain pending.
