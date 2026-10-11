@@ -16,6 +16,7 @@ import {
 } from './pairing.js';
 import {
   changeSenderAccess,
+  bumpSenderPolicy,
   externalUserRoles,
   readSenderPolicy,
   readSenderPermissions,
@@ -157,6 +158,8 @@ export interface MessagingGrant {
   origin?: 'explicit' | 'implicit';
   muted?: boolean;
   preferenceRevision?: number;
+  openGroup?: boolean;
+  openGroupAfter?: string;
   revokedAt?: string;
   suspendedReason?: 'rebind-required';
 }
@@ -1887,6 +1890,41 @@ export function createOutboundMessaging(options: {
     },
     async conversation(botSlug, input) {
       active(botSlug);
+      if (input.kind === 'open-group') {
+        transaction(
+          (db) => {
+            const value = grant(botSlug, input.grantId);
+            const identity = assertMessagingIdentity(db, value.bindingId);
+            if (
+              value.revokedAt ||
+              value.suspendedReason ||
+              value.platform !== 'feishu' ||
+              value.receiveScope?.kind !== 'group' ||
+              identity.botSlug !== botSlug ||
+              !identity.enabled ||
+              readBlock(db, botSlug, value.fingerprint, {
+                kind: 'group',
+                id: value.receiveScope.conversationId,
+              })
+            )
+              throw new MessagingError('grant-unavailable');
+            if ((value.preferenceRevision ?? 0) !== input.expectedRevision)
+              throw new MessagingError('conversation-stale');
+            db.prepare('UPDATE messaging_grants SET body = ? WHERE id = ?').run(
+              JSON.stringify({
+                ...value,
+                openGroup: input.open,
+                openGroupAfter: now(),
+                preferenceRevision: input.expectedRevision + 1,
+              }),
+              value.id,
+            );
+            bumpSenderPolicy(db, botSlug);
+          },
+          ['grants'],
+        );
+        return;
+      }
       if (input.kind === 'mute') {
         transaction(
           (db) => {

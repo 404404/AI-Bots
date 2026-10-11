@@ -1229,6 +1229,9 @@ export const zh = {
   'conversation.muteHint': '消息照常进入收件箱，但不唤醒 Bot。Bot 仍可回复。',
   'conversation.unmuteHint': '恢复：新消息会再次唤醒 Bot。',
   'conversation.rulesHint': '设置这个群里哪些消息会唤醒 Bot。',
+  'conversation.openGroup': '允许未配对访客在此群向 Bot 提问',
+  'conversation.openGroupHint':
+    '仅当前 Bot/App 的此群；访客没有管理能力。关闭后，新 @ 请求重新申请配对。独立开启普通消息采集可提供被动上下文，并在后续读取时影响回答和消耗 token；未配对普通消息不累计唤醒阈值。群回复对全群可见。',
   'conversation.blockHint': '丢弃这个会话的所有消息，并取消尚未发出的回复。需要确认。',
   'conversation.allowHint': '放行这个会话，之后的消息会进入收件箱并唤醒 Bot。',
   'conversation.allowAgainHint': '从下一条消息开始重新接收，屏蔽期间的消息不会补收。',
@@ -4008,6 +4011,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'Messages still reach the Inbox but don’t wake the Bot. The Bot can still reply.',
   'conversation.unmuteHint': 'New messages wake the Bot again.',
   'conversation.rulesHint': 'Choose which messages in this group wake the Bot.',
+  'conversation.openGroup': 'Allow unpaired visitors to address the Bot in this group',
+  'conversation.openGroupHint':
+    'Only this group for the current Bot/App; visitors have no management powers. Closing makes new mentions request pairing. Separate ordinary-message collection can supply passive context that influences later replies and consumes tokens when read; unpaired ordinary messages do not count toward wake thresholds. Replies are visible to the group.',
   'conversation.blockHint':
     'Drop every message from this conversation and cancel unsent replies. Asks to confirm.',
   'conversation.allowHint':

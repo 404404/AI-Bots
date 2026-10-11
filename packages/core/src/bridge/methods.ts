@@ -1376,6 +1376,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           input: z.discriminatedUnion('kind', [
             z
               .object({
+                kind: z.literal('open-group'),
+                grantId: z.string().uuid(),
+                expectedRevision: revision,
+                open: z.boolean(),
+              })
+              .strict(),
+            z
+              .object({
                 kind: z.literal('mute'),
                 grantId: z.string().uuid(),
                 expectedRevision: revision,

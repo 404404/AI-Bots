@@ -25,6 +25,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - IM pairing settings use a wide People / Roles / Requests workspace with searchable, sortable tables, compact creation/change times and selected-entry details. Role creation opens separately, table and detail corners align with native inputs, and information icons reveal supporting explanations. Older records without timestamps show an unknown value ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
 
+- Each allowed Lark group can explicitly accept unpaired visitors without management powers; separately collected unpaired ordinary messages supply passive context without waking the model or filling eligible request thresholds ([#1376](https://github.com/BotHarness/DeepSeekBot/issues/1376)).
+
 - Bot DM settings edit ordinary Lark role behavior and explicit Allow once/Reject capabilities in a separate dialog or reassign a selected paired person; permission queries read current revisions and delayed private approval decisions re-check current authority ([#1375](https://github.com/BotHarness/DeepSeekBot/issues/1375)).
 
 - PersonaBots can query current paired people and roles, configured external conversations, and paired people observed in one authorized conversation through bounded read-only directories; observations explicitly remain incomplete and do not represent current group membership ([#1374](https://github.com/BotHarness/DeepSeekBot/issues/1374)).

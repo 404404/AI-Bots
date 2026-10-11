@@ -295,6 +295,10 @@ PersonaBot Profile 的 IM 连接经现有 Typert/API Gateway 选择账号和已�
 
 人员、角色与申请表格的创建／修改时间来自 Messaging owner 持久化的 JSON 元数据，不由 Client 加载时间推断；读取和通知投递记账不推进修改时间。旧记录未记录的时间保持未知。时间字段是兼容的可选元数据，沿用 Operational Database authority，不增加 SQL schema generation。
 
+#1376 adds an explicit visitor exception on one existing allowed Bot/App group grant, independent of pairing and collection. Unpaired ordinary authors collected through authorized group/Bridge/thread/ingest paths remain passive (`silent` admissions, `context` scheduling evidence, no count/interval), never fill eligible wake thresholds, and may supply trusted author context to a later eligible request. The current requester alone supplies role-governed behavior; no background author union grants management powers. Closing, blocking and rebinding retain the independent authority fences.
+
+#1376 在已允许的具体 Bot/App 群授权上增加显式访客例外，与配对及采集独立。经授权的群、Bridge、线程或 ingest 采集到的未配对普通作者保持被动上下文（`silent` Admission、`context` 调度证据、无 count/interval），不填充有效请求的唤醒阈值，但可为后续有效请求提供带可信作者身份的上下文。角色行为以当前请求者为准，不合并背景作者的管理能力；关闭、封禁及重新绑定仍保留独立权限检查。
+
 The #1375 application-defined Role mutation commands reuse this owner and authenticated sidebar seam. Revision-checked edits and single-role reassignment advance current policy revisions without rewriting historical Tool Results. The existing qualified private approval route reads current `approve`/`reject` Role capabilities for ordinary DM-origin pairings while preserving legacy explicit management grants. Group-origin pairing does not mint a management destination. Exact actor/Binding/pairing/receipt/native-lifetime checks remain Host owned; capability removal refuses delayed decisions and reassignment invalidates old routes. Natural-language behavior is not a resource ACL.
 
 #1375 的应用定义 Role 修改命令沿用同一 owner 和认证侧栏接口。按 revision 编辑角色或为人员重新分配单一角色会推进当前策略 revision，但不改写历史 Tool Result。现有合格私聊审批路线为从 DM 配对的普通人员读取当前角色的 `approve`／`reject` 能力，并保留既有显式管理授权；群内配对不创建管理目的地。真实 actor、Binding、配对、回执和原生请求生命周期仍由 Host 校验；移除能力拒绝延迟决定，重新分配使旧路线失效。自然语言行为不构成资源 ACL。
