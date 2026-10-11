@@ -114,7 +114,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
-- The reusable Lark QA App setup wizard prints links for manual navigation instead of waiting for a browser launcher ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)).
+- The reusable Lark QA App setup wizard prints links for manual navigation and reduces Windows prompt delays by caching defaults, avoiding terminal subprocesses, and saving each stage atomically while preserving other Apps ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)).
 
 - Lark tool-approval cards now show settled execution or rejection without stale action buttons by using shared updates in the qualified Provider ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 

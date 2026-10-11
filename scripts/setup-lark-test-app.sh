@@ -186,13 +186,39 @@ finish() {
 
 TOTAL_STAGES=3
 umask 077
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="${BASH_SOURCE[0]%/*}"
+[[ "$SCRIPT_DIR" != "${BASH_SOURCE[0]}" ]] || SCRIPT_DIR=.
 ENV_FILE="${BOTHARNESS_IM_TEST_APPS_ENV:-$(node -p "require('node:path').join(require('node:os').homedir(), '.config', 'botharness', 'im-test-apps.env').replaceAll(String.fromCharCode(92), '/')")}"
 node "$SCRIPT_DIR/dev-im-test-apps.mjs" protect "$ENV_FILE"
-touch "$ENV_FILE"
-chmod 600 "$ENV_FILE"
 # Keep write_env's replacement files inside the protected shared directory.
-export TMPDIR="$(dirname "$ENV_FILE")"
+export TMPDIR="${ENV_FILE%/*}"
+
+# The shared template stays unchanged. Avoid launching grep/tail for every prompt
+# and tput for every stage on Windows; use one literal, private file snapshot.
+declare -A IM_TEST_APP_VALUES=()
+while IFS= read -r line || [[ -n "$line" ]]; do
+  if [[ "$line" =~ ^(BH_IM_QA_SLOT|BH_LARK_QA[123]_[A-Z_]+)=(.*)$ ]]; then
+    IM_TEST_APP_VALUES["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
+  fi
+done < "$ENV_FILE"
+_existing() {
+  [[ -v "IM_TEST_APP_VALUES[$1]" ]] || return 1
+  printf '%s' "${IM_TEST_APP_VALUES[$1]}"
+}
+_clear() {
+  [[ -t 1 ]] || return 0
+  printf '\033[2J\033[H'
+}
+write_values() {
+  local entry key
+  printf '%s\n' "$@" | node "$SCRIPT_DIR/dev-im-test-apps.mjs" save
+  for entry in "$@"; do
+    key="${entry%%=*}"
+    IM_TEST_APP_VALUES["$key"]="${entry#*=}"
+    WRITTEN_ENV+=("$key")
+  done
+  printf '  ✓ 已保存本阶段配置。\n'
+}
 
 banner "BotHarness 独立 Lark 测试 App 配置"
 
@@ -211,11 +237,9 @@ ask "${prefix}_NAME" "App 的控制台显示名称:"
 name_key="${prefix}_NAME"
 [[ -n "${!name_key}" && ! "${!name_key}" =~ [[:cntrl:]] ]] || { warn "App 名称不能包含控制字符；请重新输入。"; exit 1; }
 confirm "确认这是独立测试 App，并且当前没有任何其他接收器运行？" || exit 1
-write_env BH_IM_QA_SLOT "$BH_IM_QA_SLOT"
-write_env "$name_key" "${!name_key}"
-write_env "${prefix}_DOMAIN" "lark"
 # An operator statement, not an automatic lock or continuing receiver lease.
-write_env "${prefix}_RECEIVER_CHECKED_AT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+write_values "BH_IM_QA_SLOT=$BH_IM_QA_SLOT" "$name_key=${!name_key}" \
+  "${prefix}_DOMAIN=lark" "${prefix}_RECEIVER_CHECKED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 stage "私密保存 App 凭据"
 say "手动打开：https://open.larksuite.com/app"
@@ -226,9 +250,7 @@ id_key="${prefix}_APP_ID"
 ask_secret "${prefix}_APP_SECRET" "复制 App Secret（隐藏输入）:"
 secret_key="${prefix}_APP_SECRET"
 [[ "${!secret_key}" =~ ^[A-Za-z0-9_-]+$ ]] || { warn "App Secret 为空或格式无效。"; exit 1; }
-write_env "$id_key" "${!id_key}"
-write_env "$secret_key" "${!secret_key}"
-chmod 600 "$ENV_FILE"
+write_values "$id_key=${!id_key}" "$secret_key=${!secret_key}"
 note "凭据仅保存在机器本地；请勿 source 此文件（名称可能含空格）。由配置加载器按键值读取。"
 
 stage "核对 Bot、最小权限和消息事件"
@@ -242,9 +264,9 @@ note "若平台要求已建立长连接后才能保存事件：先保存此配�
 step "Version Management & Release → 创建并发布测试版本，完成组织审批与测试用户可用范围。"
 step "把应用 Bot 加入专用测试群；使用你的正常 Lark 客户端发送后续真实 DM/群 @。"
 if confirm "上述配置已完成并发布？"; then
-  write_env "${prefix}_CONSOLE_READY" "yes"
+  write_values "${prefix}_CONSOLE_READY=yes"
 else
-  write_env "${prefix}_CONSOLE_READY" "pending"
+  write_values "${prefix}_CONSOLE_READY=pending"
   SKIPPED+=("完成长连接事件配置、测试版本发布与测试群添加")
 fi
 say "完成后告诉代理所选 QA 槽；无需发送 App Secret。启动前仍须重新核验接收器独占。"

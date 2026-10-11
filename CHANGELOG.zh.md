@@ -114,7 +114,7 @@
 
 ### Fixed
 
-- 可复用 Lark QA App 配置向导改为显示链接供手动打开，避免等待浏览器启动程序（[#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)）。
+- 可复用 Lark QA App 配置向导改为显示链接供手动打开，并缓存默认值、避免终端子进程、逐阶段原子保存且保留其他 App 配置，减少 Windows 输入停顿（[#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)）。
 
 - Lark 工具审批卡片通过合格 Provider 的共享更新显示最终执行或拒绝状态，避免继续显示旧审批按钮（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
 
