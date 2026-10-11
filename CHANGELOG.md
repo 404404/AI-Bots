@@ -287,7 +287,6 @@ Bots can be pinned as pixel Window Companions that play their replies, binding o
 
 ### Changed
 
-
 - Bot Marketplace cards now read like a profile card: the Profile banner sits on top, the Bot's avatar overlaps its lower edge with the name, repository and Install beside it, then a two-line bio and one line of tags, stars and update date. The detail view opens with the same banner and avatar, and the modal shows two cards per row ([#1232](https://github.com/BotHarness/BotHarness/pull/1232)).
 - **Bind app** links directly to the website connection tutorials for Lark / Feishu, Slack and WeChat, with a more-platforms overview; the standalone Lark setup card is removed so platform instructions stay in one place ([#822](https://github.com/BotHarness/DeepSeekBot/issues/822)).
 
@@ -303,7 +302,6 @@ Bots can be pinned as pixel Window Companions that play their replies, binding o
 - Interface text now calls you "you" and Bots "Bot" everywhere: "Human", "PersonaBot", "Source Event" and "Attention" no longer appear in Chinese or English labels, the purge tombstone reads `Content purged · you · {time}`, and the connector section is always "External connectors". A test fails if those internal terms return ([#1090](https://github.com/BotHarness/BotHarness/issues/1090)).
 
 ### Fixed
-
 
 - On an explicitly configured native RC2 timed-question Profile, a DM question card stays answerable after its foreground deadline while the same Bot handles other messages; a late answer shows submitted until the original native Session admits it. Production pins and blocking RC1 questions remain unchanged ([#1220](https://github.com/BotHarness/DeepSeekBot/issues/1220)).
 
