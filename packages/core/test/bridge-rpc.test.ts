@@ -204,6 +204,7 @@ describe('bridge typert service', () => {
       'memorySave',
       'memoryRepair',
       'profileActivity',
+      'profileSessionUsage',
       'overviewMemory',
       'overviewUsage',
       'profileUsage',

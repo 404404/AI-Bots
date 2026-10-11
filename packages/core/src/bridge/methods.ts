@@ -159,7 +159,11 @@ import {
 } from '../memory/accepted.js';
 import type { MemoryRecoveryCheckpoint } from '../memory/recovery.js';
 import type { MemoryService } from '../memory/service.js';
-import type { UsageProjection } from '../usage/usage.js';
+import type {
+  UsageProjection,
+  DshUsageSessionLogReader,
+  SessionUsageSummary,
+} from '../usage/usage.js';
 import { usageFilterSchema, type UsageQueryResult } from '../usage/query.js';
 import {
   isAssignmentModelOption,
@@ -330,6 +334,20 @@ export interface ProfileActivity {
   tokenTotals: ProfileTokenBuckets;
   modelUsageRows: ProfileModelUsageRow[];
   modelUsageStatus: 'ready' | 'unavailable';
+}
+
+export interface ProfileSessionUsage {
+  slug: string;
+  weeks: number;
+  since: string;
+  rows: Array<
+    SessionUsageSummary & {
+      sessionId: string;
+      role: SessionRootRole;
+      label: string;
+      updatedAt: string;
+    }
+  >;
 }
 
 export interface ChannelListItem extends ChannelRecord {
@@ -524,6 +542,7 @@ export interface BridgeMethods {
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
+  profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
   overviewMemory(payload: unknown): Promise<BridgeResult<OverviewMemory>>;
   overviewUsage(payload: unknown): BridgeResult<OverviewUsage>;
   profileUsage(payload: unknown): BridgeResult<UsageQueryResult>;
@@ -600,6 +619,7 @@ export interface BridgeMethodsDeps {
   ownership: SessionOwnership;
   memory?: MemoryService;
   usage?: UsageProjection;
+  readUsageSessionLog?: DshUsageSessionLogReader;
   roster: RosterStore;
   runtime?: BotRuntime;
   attention?: BotAttentionQuery;
@@ -4320,6 +4340,52 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (deps.usage === undefined) return unavailable();
       try {
         return { ok: true, value: deps.usage.query(scope.botSlug, parsed.data) };
+      } catch (error) {
+        if (error instanceof OperationalDatabaseError) return unavailable();
+        throw error;
+      }
+    },
+    async profileSessionUsage(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      if (deps.usage === undefined || deps.readUsageSessionLog === undefined) return unavailable();
+      try {
+        const slug = scope.botSlug;
+        const weeks = 26;
+        const since = new Date(Date.now() - weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
+        const assignments = new Map(
+          (deps.runtime?.listAssignments(slug) ?? []).map((entry) => [entry.sessionId, entry]),
+        );
+        const roots = deps.ownership.rootsFor(slug);
+        const orchestrator = roots
+          .filter((root) => root.rootRole === 'orchestrator')
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+          .slice(0, 1);
+        const updatedAt = (root: (typeof roots)[number]) =>
+          assignments.get(root.sessionId)?.updatedAt ?? root.createdAt;
+        const recent = roots
+          .filter((root) => root.rootRole === 'assignment')
+          .sort((left, right) => updatedAt(right).localeCompare(updatedAt(left)))
+          .slice(0, 5);
+        const rows: ProfileSessionUsage['rows'] = [];
+        for (const root of [...orchestrator, ...recent]) {
+          const summary = await deps.usage.sessionSummary(
+            slug,
+            root.sessionId,
+            since,
+            deps.readUsageSessionLog,
+          );
+          rows.push({
+            ...summary,
+            sessionId: root.sessionId,
+            role: root.rootRole,
+            label: assignments.get(root.sessionId)?.purpose.slice(0, 160) ?? root.rootRole,
+            updatedAt: updatedAt(root),
+          });
+        }
+        const current = dmMemory(payload);
+        if (!('botSlug' in current) || current.botSlug !== slug) return unavailable();
+        return { ok: true, value: { slug, weeks, since, rows } };
       } catch (error) {
         if (error instanceof OperationalDatabaseError) return unavailable();
         throw error;

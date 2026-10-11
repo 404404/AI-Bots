@@ -76,6 +76,7 @@ import type {
   OwnedSessionSummary,
   OwnedSessionBot,
   ProfileActivity,
+  ProfileSessionUsage,
 } from './methods.js';
 import type { ChannelActivityToday } from '../channels/activity-today.js';
 import type { GroupProfileActivity } from '../channels/profile-activity.js';
@@ -1064,6 +1065,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.profileActivity({ channelId, before, weeks }));
   }
 
+  async profileSessionUsage(channelId: string): Promise<ProfileSessionUsage> {
+    return unwrap(await this.methods.profileSessionUsage({ channelId }));
+  }
+
   groupProfileActivity(channelId: string): GroupProfileActivity {
     return unwrap(this.methods.groupProfileActivity({ channelId }));
   }
@@ -1338,6 +1343,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'memorySave',
   'memoryRepair',
   'profileActivity',
+  'profileSessionUsage',
   'overviewMemory',
   'overviewUsage',
   'profileUsage',

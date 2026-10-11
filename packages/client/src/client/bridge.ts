@@ -48,6 +48,8 @@ import {
 } from '../../../core/src/marketplace/client.js';
 import { parseChallenge, type AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
+import type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
+export type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
 import type { UsageOverviewPeriod } from '../../../core/src/usage/overview.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
@@ -3483,6 +3485,39 @@ export async function loadProfileUsage(
   )
     throw new Error('invalid Profile usage');
   return value as unknown as UsageQueryResult;
+}
+
+export async function loadProfileSessionUsage(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ProfileSessionUsage> {
+  const value = asRecord(await unwrap(call, 'profileSessionUsage', { channelId }));
+  if (
+    value === undefined ||
+    typeof value['slug'] !== 'string' ||
+    value['weeks'] !== 26 ||
+    typeof value['since'] !== 'string' ||
+    !Number.isFinite(Date.parse(value['since'])) ||
+    !Array.isArray(value['rows']) ||
+    value['rows'].length > 6 ||
+    !value['rows'].every((item) => {
+      const row = asRecord(item);
+      return (
+        row !== undefined &&
+        typeof row['sessionId'] === 'string' &&
+        ['orchestrator', 'assignment'].includes(String(row['role'])) &&
+        typeof row['label'] === 'string' &&
+        row['label'].length <= 160 &&
+        typeof row['updatedAt'] === 'string' &&
+        Number.isFinite(Date.parse(row['updatedAt'])) &&
+        ['ready', 'unknown', 'partial', 'unavailable'].includes(String(row['status'])) &&
+        (row['totalTokens'] === null ||
+          (Number.isSafeInteger(row['totalTokens']) && Number(row['totalTokens']) >= 0))
+      );
+    })
+  )
+    throw new Error('invalid Profile Session usage');
+  return value as unknown as ProfileSessionUsage;
 }
 
 export interface ProfileActivityWindow {
