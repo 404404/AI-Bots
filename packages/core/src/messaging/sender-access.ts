@@ -12,6 +12,12 @@ import { messagingDefaults } from './defaults.js';
 import { threadReceptionPolicy } from './thread-policy.js';
 import { matchingIngests } from './conversation-ingest.js';
 import { bridgeChannel } from './channel-target.js';
+import {
+  permissionGroupInputs,
+  changePermissionGroups,
+  effectivePairingPermissions,
+  type EffectivePermissions,
+} from './permission-groups.js';
 
 export interface ExternalUserRole {
   id: string;
@@ -28,6 +34,7 @@ export interface SenderPolicy {
   revision: number;
 }
 export const senderAccessInput = z.discriminatedUnion('kind', [
+  ...permissionGroupInputs,
   z
     .object({
       kind: z.literal('create-role'),
@@ -98,6 +105,7 @@ export interface SenderPermissions {
   policyRevision?: number;
   role?: ExternalUserRole;
   reason?: string;
+  effectivePermissions?: EffectivePermissions;
 }
 export function trustedSenderReference(
   db: DatabaseSync,
@@ -149,7 +157,17 @@ export function readSenderPermissions(
   if (approved) {
     const role = externalUserRoles(db, botSlug).find((role) => role.id === approved.roleId);
     return role
-      ? { ...base, status: 'paired', role }
+      ? {
+          ...base,
+          status: 'paired',
+          role,
+          effectivePermissions: effectivePairingPermissions(
+            db,
+            botSlug,
+            sender.bindingId,
+            sender.actorId,
+          ),
+        }
       : { ...base, status: 'unavailable', reason: 'role-unavailable' };
   }
   const latest = pairings[0];
@@ -188,6 +206,16 @@ export function changeSenderAccess(
   raw: SenderAccessInput,
 ): void {
   const input = senderAccessInput.parse(raw);
+  if (
+    input.kind === 'create-group' ||
+    input.kind === 'edit-group' ||
+    input.kind === 'delete-group' ||
+    input.kind === 'person-permissions'
+  ) {
+    changePermissionGroups(db, botSlug, input);
+    bumpSenderPolicy(db, botSlug);
+    return;
+  }
   if (input.kind === 'create-role') {
     if (externalUserRoles(db, botSlug).length >= 50) throw new MessagingError('role-capacity');
     const at = new Date().toISOString();
