@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createBotStateTracker } from '../src/state/bot-state.js';
 import type { ChannelMessage } from '../src/channels/channel.js';
@@ -37,6 +37,69 @@ afterEach(() => {
 });
 
 describe('Channel post-commit stream', () => {
+  it('does not accumulate multiplexed heartbeats behind an unread baseline', async () => {
+    vi.useFakeTimers();
+    const hub = createChannelLiveHub(createChannelStore({ rootDir: root() }), {
+      snapshot: () => ({ generation: 'host', revision: 0, bots: [] }),
+      onChange: () => () => {},
+    });
+    hubs.push(hub);
+    const reader = hub
+      .open(new Request(`http://localhost${CHANNEL_STREAM_PATH}?scope=roster&activity=1`))
+      .body!.getReader();
+    try {
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain('retry:');
+      expect(new TextDecoder().decode((await reader.read()).value)).toContain('activity/snapshot');
+    } finally {
+      await reader.cancel();
+      vi.useRealTimers();
+    }
+  });
+  it('multiplexes bounded activity with roster and purge baselines and releases its subscription', async () => {
+    let revision = 0;
+    const listeners = new Set<() => void>();
+    const hub = createChannelLiveHub(
+      createChannelStore({ rootDir: root() }),
+      {
+        snapshot: () => ({ generation: 'host', revision, bots: [{ slug: 'ada', state: 'idle' }] }),
+        onChange: (listener) => {
+          listeners.add(listener);
+          return () => {
+            listeners.delete(listener);
+          };
+        },
+      },
+      () => [{ sourceEventId: 'source', channelId: 'shared', messageId: 'purged' }],
+    );
+    hubs.push(hub);
+    const reader = hub
+      .open(new Request(`http://localhost${CHANNEL_STREAM_PATH}?scope=roster&activity=1`))
+      .body!.getReader();
+    const read = async () => new TextDecoder().decode((await reader.read()).value);
+    try {
+      expect(await read()).toContain('retry:');
+      expect(await read()).toContain('event: content/purged');
+      const initial = await Promise.race([
+        read(),
+        new Promise<undefined>((resolve) => setTimeout(resolve, 100)),
+      ]);
+      expect(initial).toContain('event: activity/snapshot');
+      expect(initial).toContain('"revision":0');
+      expect(listeners.size).toBe(1);
+      for (let next = 1; next <= 100; next++) {
+        revision = next;
+        for (const listener of listeners) listener();
+      }
+      expect(await read()).toContain('"revision":1');
+      expect(await read()).toContain('"revision":100');
+      hub.publishRosterCommitted();
+      expect(await read()).toContain('event: roster/changed');
+    } finally {
+      await reader.cancel();
+    }
+    expect(listeners.size).toBe(0);
+  });
   it('replays bodyless purge selectors on connection and reconnect, including shared placements', async () => {
     let placements = Array.from({ length: 101 }, (_, index) => ({
       sourceEventId: 'source',

@@ -132,6 +132,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Bot-mode Web documents share roster and Activity SSE within each page, leaving ordinary API requests responsive when two pages use the same HTTP/1 Host. Late Activity consumers retain stale status and HTTP recovery during reconnect; purge baselines and independent consumer cleanup are preserved ([#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)).
+
 - Restored QQ group Channel mappings retain bounded retries while apps become ready after Host restart, so the first new mention reaches its mapped Channel as well as its Inbox ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - Fixed checked QQ self mentions in full-reception events while keeping ordinary messages and Bot authors excluded; the candidate Provider retains current Lark pairing capabilities and does not claim own Echo qualification ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).

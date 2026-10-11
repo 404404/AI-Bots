@@ -52,6 +52,12 @@ See [reading operational logs](reading-operational-logs.md) for WAL and read-onl
 
 ## Pinned RC1 failure attribution
 
+### Two-document request starvation (#1451)
+
+On the pinned RC1 HTTP/1 Host, two simultaneous Bot-mode documents can consume the browser's shared connection budget with independent Channel, roster and Activity SSE streams. A verified loop found one-page authenticated messagingSnapshot reads succeeding, the same read timing out at six seconds after opening a second native document (models/messages/identities remained at Loading), and recovery after the second document navigated to about:blank without a Host restart. CLI and QQ reception remained healthy. Both documents reported visible; hidden-page pausing alone did not address this case. The earlier native Client-runner exceptions remain separately attributed.
+
+Roster and Activity now share one physical EventSource per document at the existing authenticated `/api/botharness/stream?scope=roster&activity=1`. The owning Channel live hub sends Activity from the same projection, coalesces slow-reader updates, and skips heartbeat writes under backpressure. Independent logical Activity consumers share the current healthy baseline; any transport error discards that replay baseline so a late consumer stays stale and retains HTTP recovery until fresh transport data arrives. The last roster/Activity consumer closes the physical stream. Existing purge selectors replay on connect, and Channel replay remains independent. This changes no Owner authentication, Channel authority or API Gateway registration. See [#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451).
+
 Verified native source: DSH `0.2.0-rc.1`, revision [`4878cdabd87d4041bdaff61d04c966883b9fd07a`](https://github.com/deepseek-ai/deepseek-harness/tree/4878cdabd87d4041bdaff61d04c966883b9fd07a). The shared reference checkout can be on a newer revision; inspect this tag with `git show`, without changing another task's checkout.
 
 ```bash

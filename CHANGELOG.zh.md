@@ -132,6 +132,8 @@
 
 ### Fixed
 
+- Bot mode Web 在每个页面内共用 Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
+
 - QQ 应用在 Host 重启时延迟就绪后，已有群 Channel 同步会沿用有界重试恢复，首条新提及不再只进入 Inbox（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
 
 - 修复全量接收事件中明确 @ 当前 QQ Bot 的 checked 收件路径，仍排除普通消息与机器人发送者；候选 Provider 保留当前 Lark 配对能力，不宣称自身 Echo 已验收（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。

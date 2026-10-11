@@ -529,6 +529,8 @@ Assignment Request 的 `context-update`、`next-step`、`next-turn` 分别映射
 
 ### 5.1 · PersonaBot activity、事件与 renderer
 
+Web 的 Roster 与 Activity 消费在每个文档内共用一个受认证的 EventSource；既有 `/api/botharness/stream?scope=roster&activity=1` 从 owning Channel live hub 组合 roster 通知、撤销基线与同一 Activity Projection 的有界快照。各逻辑消费者独立清理，最后一个离开时关闭物理流；重连错误清除可回放 Activity 基线，迟到消费者保持 stale 与 HTTP 恢复直到新快照到达。慢消费者只保留当前 Activity 更新，背压时跳过心跳；Channel revision／回放和 Owner 认证不改变。这是过程内传输复用，不创建新的 Activity 或内容权威（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
+
 DSH 失败的 `turn/end` 仍是执行事实权威；BotHarness 在所属 Orchestrator 或 Assignment 回合结束并判定失败后，由 Host 向对应 PersonaBot DM 提交一条带 role、Session ID、错误码、可用 HTTP status、简短错误详情和事项上下文的 application-defined failure notice。该消息是面向 Human 的持久通知，不把 SessionEvent 全文或工具日志复制成第二套执行历史；Client 把它渲染成可读的失败卡，刷新后从 Channel authority 恢复。Orchestrator 的 Human Source Event 仍依原有 retry/reconciliation 语义处理，失败通知不等于完成该 Source Event。
 
 DSH SessionEvent 是 durable execution authority；BotHarness 不复制 tool call 或 assistant output 为第二套 Session fact。explicit Session Ownership 把 Session 归属到 PersonaBot 及 `orchestrator` / `assignment` root role，PersonaBot module 再把这些事实与 live liveness 折叠成一个可重建的 Activity Projection。Browser 首先经 Typert/API Gateway 查询 projection，随后消费带单调 revision 的 live update；revision 断档时重新查询，而不是由 Client 自己推导状态。

@@ -161,13 +161,36 @@ export function createChannelLiveHub(
     close(): void;
   }
   const rosterSubscribers = new Set<RosterSubscriber>();
-  const openRoster = (): Response => {
+  const openRoster = (includeActivity = false): Response => {
     const encoder = new TextEncoder();
     let subscriber: RosterSubscriber | undefined;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
+    let flushActivity: (() => void) | undefined;
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         let ended = false;
+        let pendingActivity = false;
+        let offActivity: (() => void) | undefined;
+        const sendActivity = (): void => {
+          if (ended || activity === undefined) return;
+          if ((controller.desiredSize ?? 0) <= 0) {
+            pendingActivity = true;
+            return;
+          }
+          pendingActivity = false;
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `event: activity/snapshot\ndata: ${JSON.stringify(activity.snapshot())}\n\n`,
+              ),
+            );
+          } catch {
+            subscriber?.close();
+          }
+        };
+        flushActivity = () => {
+          if (pendingActivity) sendActivity();
+        };
         subscriber = {
           purge(placements) {
             if (ended) return;
@@ -193,6 +216,7 @@ export function createChannelLiveHub(
           close() {
             if (ended) return;
             ended = true;
+            offActivity?.();
             if (heartbeat !== undefined) clearInterval(heartbeat);
             rosterSubscribers.delete(this);
             try {
@@ -203,14 +227,21 @@ export function createChannelLiveHub(
         rosterSubscribers.add(subscriber);
         controller.enqueue(encoder.encode('retry: 1500\n\n'));
         subscriber.purge(redactions?.() ?? []);
+        if (includeActivity && activity !== undefined) {
+          offActivity = activity.onChange(sendActivity);
+          sendActivity();
+        }
         heartbeat = setInterval(() => {
-          if (ended) return;
+          if (ended || (controller.desiredSize ?? 0) <= 0) return;
           try {
             controller.enqueue(encoder.encode(': heartbeat\n\n'));
           } catch {
             subscriber?.close();
           }
         }, 15_000);
+      },
+      pull() {
+        flushActivity?.();
       },
       cancel() {
         subscriber?.close();
@@ -234,7 +265,8 @@ export function createChannelLiveHub(
     open(request) {
       const url = new URL(request.url);
       if (url.searchParams.get('scope') === 'activity') return openActivity();
-      if (url.searchParams.get('scope') === 'roster') return openRoster();
+      if (url.searchParams.get('scope') === 'roster')
+        return openRoster(url.searchParams.get('activity') === '1');
       const channelId = url.searchParams.get('channelId');
       if (channelId === null || channels.get(channelId) === undefined) {
         return new Response('Unknown Channel', { status: 404 });
