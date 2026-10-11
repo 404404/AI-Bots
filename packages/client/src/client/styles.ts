@@ -2938,8 +2938,47 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-modal-footer > button { white-space: nowrap; }
 .bh-modal-footer-gap { flex: 1; }
 .bh-sidebar-modal { width: min(440px, calc(100vw - 32px)); }
-.bh-external-identity-modal { max-height: calc(100dvh - 32px); }
-.bh-external-identity-content { min-height: 0; overflow-y: auto; }
+.bh-external-identity-modal, .bh-pairing-modal { max-height: calc(100dvh - 32px); }
+/* @bh-pairing-aliases:start — native Modal portals sit outside .bh-root.
+   DSH RC1 exports no radius token; 12px matches its measured Input wrapper. */
+.bh-pairing-modal, .bh-pairing-role-modal { --bh-pairing-radius-panel: 12px; }
+/* @bh-pairing-aliases:end */
+.bh-external-identity-content, .bh-pairing-content { min-height: 0; overflow-y: auto; }
+.bh-sidebar-modal.bh-pairing-modal { width: min(1060px, calc(100vw - 32px)); }
+.bh-sidebar-modal.bh-pairing-role-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
+.bh-pairing-toolbar-gap { flex: 1; }
+.bh-pairing-panel { display: grid; gap: 12px; min-width: 0; }
+.bh-pairing-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; min-height: 260px; }
+.bh-pairing-detail { min-width: 0; max-height: 420px; overflow-y: auto; }
+.bh-pairing-table-panel { display: grid; gap: 12px; min-width: 0; }
+.bh-pairing-table-scroll { overflow-x: auto; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-pairing-radius-panel); }
+.bh-pairing-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.bh-pairing-table th, .bh-pairing-table td { padding: 10px 8px; border-bottom: 1px solid var(--dsw-alias-border-l2); vertical-align: middle; overflow-wrap: anywhere; }
+.bh-pairing-table th { color: var(--dsw-alias-label-secondary); font-weight: 500; }
+.bh-pairing-table td:first-child, .bh-pairing-table th:first-child { width: 28px; }
+.bh-pairing-table th:nth-child(2) { width: 24%; min-width: 130px; }
+.bh-pairing-table th:last-child { min-width: 52px; white-space: nowrap; }
+.bh-pairing-table td:first-child label { font-size: 0; gap: 0; }
+.bh-pairing-table tr[data-selected] { background: var(--dsw-alias-interactive-bg-hover); }
+.bh-pairing-table tbody tr:last-child td { border-bottom: none; }
+.bh-pairing-sort, .bh-pairing-name { padding: 0; border: none; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bh-pairing-sort { white-space: nowrap; }
+.bh-pairing-sort:disabled { cursor: default; }
+.bh-pairing-name { font-weight: 500; }
+.bh-pairing-name:hover { text-decoration: underline; }
+.bh-pairing-name:focus-visible, .bh-pairing-sort:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: 3px; }
+.bh-pairing-policy-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bh-pairing-behavior { white-space: pre-wrap; }
+.bh-pairing-empty { padding: 24px 12px; color: var(--dsw-alias-label-secondary); }
+.bh-pairing-pagination { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bh-pairing-pagination > span { margin-right: auto; }
+.bh-pairing-receiver { font-size: 12px; }
+.bh-pairing-role-modal .bh-im-field > textarea { padding: 10px 12px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-pairing-radius-panel); font: inherit; }
+.bh-pairing-modal .bh-im-pairing-request { border-radius: var(--bh-pairing-radius-panel); }
+.bh-pairing-times { display: grid; gap: 2px; font-size: 11px; line-height: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bh-pairing-sort-indicator { color: var(--dsw-alias-label-secondary); }
+.bh-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 760px) { .bh-pairing-workspace { grid-template-columns: minmax(0, 1fr); } .bh-pairing-table { min-width: 560px; } .bh-pairing-detail { max-height: none; } }
 .bh-sidebar-modal-form, .bh-im-grant-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; font-size: 13px; }
 .bh-sidebar-modal-form p, .bh-im-grant-body p { margin: 0; }
 .bh-sidebar-modal-form ul:not(.bh-card-list) { margin: 0; padding-left: 18px; }
@@ -2973,6 +3012,8 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-im-pairing-request dd { margin: 0; }
 .bh-im-pairing-capabilities { display: flex; flex-wrap: wrap; gap: 12px; border: none; padding: 0; margin: 0; }
 .bh-im-pairing-capabilities legend { margin-bottom: 8px; }
+.bh-im-role-form { display: flex; flex-direction: column; gap: 12px; border: none; padding: 0; margin: 0; }
+.bh-im-role-form legend { margin-bottom: 8px; }
 .bh-im-pairing-capabilities label { display: flex; align-items: center; gap: 6px; }
 .bh-im-threads td { overflow-wrap: anywhere; }
 .bh-identity-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

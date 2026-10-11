@@ -319,7 +319,36 @@ _The exact [BH-LARK-SETUP] source ends in f708a3f1; its Inbox admission was hand
 
 _Close/reopen and same-Profile restart retained configuration/history; select the persisted account after reload. Disable, grant revocation, unbind and account removal returned relevant steps to pending. Native Remove integration then stopped reception and deleted local configuration/credentials. The external application remains; external credential reset is an administrator action._
 
+## Open one group to visitors
+
+In the Bot DM sidebar, open the bound App's conversation list and the group's **Rules**.
+Enable **Allow unpaired visitors to address the Bot in this group** to accept new mentions under
+the existing reception and Wake Policy. Visitors have no paired Role or management powers.
+Disable it to return their next restricted mention to reviewed pairing; an approved person's
+separate pairing remains valid. The exception does not cover DMs, other groups, Bots or Apps,
+and rebinding does not inherit it. Blocking or disabling reception still wins.
+
+Separately choose ordinary-message collection when you want background context. Under pairing
+restriction, an unpaired author's ordinary text can be retained without starting a Turn or filling
+count/time thresholds. A later eligible request can read that context with individual sender
+provenance. It can influence the reply and consume tokens; background authors do not supply a
+combined Role. Replies are visible to the group. This is not a current/full membership list.
+
 ## Handle tool approvals in a management DM
+
+The #1375 candidate also lets you edit a Role in **IM roles and pairing** and explicitly select
+Allow once/Reject capabilities, or assign another Role to an approved ordinary person. Empty
+capabilities mean chat without management power. Save checks current revisions; refresh after a
+stale-change error. Subsequent permission and directory queries show current state without
+rewriting earlier model history. Role text alone cannot approve a tool.
+
+For an ordinary Role-based private approval destination, use a person whose approved pairing
+originated in a DM, then choose that person in **Lark approval notifications**. The existing
+private-origin check is retained; a group pairing does not create a management destination.
+Removing a capability or revoking/reassigning the person refuses delayed decisions. If
+reassignment invalidates the route, explicitly select/save its new current destination again.
+Legacy `/pair` management grants remain independent and do not enable ordinary chat by themselves.
+Questions, saved-rule controls, group destinations and pairing-code issuance are separate work.
 
 This slice supports Lark private **Allow once** and **Reject** cards through a qualified Provider. Group approvals, native question forms, saved automatic rules and non-blocking native waits are separate slices. The released dsh-im package number alone does not imply card capability; an unavailable Provider remains unavailable.
 

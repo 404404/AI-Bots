@@ -8,6 +8,7 @@ import type { PrivateInputStatus } from '../../../core/src/credentials/contracts
 
 type PrivateCardMount = {
   node: HTMLFormElement;
+  requestId: string;
   active: boolean;
   terminal: PrivateInputStatus | undefined;
 };
@@ -32,9 +33,18 @@ export function PrivateInputCard({
   const [retry, setRetry] = useState(0);
   const mount = useMountedResource<HTMLFormElement>(
     (node) => {
-      const lease: PrivateCardMount = { node, active: true, terminal: undefined };
+      const replacing = mounted.current?.requestId !== message.id;
+      const lease: PrivateCardMount = {
+        node,
+        requestId: message.id,
+        active: true,
+        terminal: undefined,
+      };
       mounted.current = lease;
+      submitting.current = false;
       setStatus('loading');
+      setBusy(false);
+      if (replacing) setError(false);
       let timer: ReturnType<typeof setTimeout> | undefined;
       const poll = () => {
         void actions.privateInputStatus?.(channelId, message.id).then(
@@ -48,7 +58,7 @@ export function PrivateInputCard({
             } else timer = setTimeout(poll, 2500);
           },
           () => {
-            if (lease.active) setError(true);
+            if (lease.active && lease.terminal === undefined) setError(true);
           },
         );
       };
@@ -89,15 +99,17 @@ export function PrivateInputCard({
         setStatus(current);
       }
     } catch {
-      if (lease.active) {
+      if (lease.active && lease.terminal === undefined) {
         setError(true);
         setRetry((value) => value + 1);
       }
     } finally {
       for (const key of Object.keys(values)) delete values[key];
-      lease.node.reset();
-      submitting.current = false;
-      if (lease.active) setBusy(false);
+      if (lease.active) {
+        lease.node.reset();
+        submitting.current = false;
+        setBusy(false);
+      }
     }
   };
   return (

@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Ordinary Lark roles add Profile schema Generation 78. Back up before upgrading; rollback requires a compatible writer or restoration of the pre-upgrade backup ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
+
 - Inbox history adds Profile schema Generation 77 with a rebuildable FTS5 trigram index. Back up before upgrading; reopening an upgraded Profile requires a compatible binary or restoration of the pre-upgrade backup ([#1278](https://github.com/BotHarness/DeepSeekBot/issues/1278)).
 
 - Memory commit records add Profile schema Generation 76 (a per-Bot commit cursor and a one-record-per-commit index). Back up before upgrading; reopening an upgraded Profile requires a compatible binary or restoration of the pre-upgrade backup ([#1277](https://github.com/BotHarness/DeepSeekBot/issues/1277)).
@@ -22,6 +24,16 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 ### Added
 
 - Private input cards have independent pending attention and a fifteen-minute deadline; cancellation, competing submissions and restart settle safely without waking a stopped Bot. Configured references persist, while new grants require a committed card result before use ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381), [guide](docs/dev/guides/private-input-cli.md)).
+
+- IM pairing settings use a wide People / Roles / Requests workspace with searchable, sortable tables, compact creation/change times and selected-entry details. Role creation opens separately, table and detail corners align with native inputs, and information icons reveal supporting explanations. Older records without timestamps show an unknown value ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
+
+- Each allowed Lark group can explicitly accept unpaired visitors without management powers; separately collected unpaired ordinary messages supply passive context without waking the model or filling eligible request thresholds ([#1376](https://github.com/BotHarness/DeepSeekBot/issues/1376)).
+
+- Bot DM settings edit ordinary Lark role behavior and explicit Allow once/Reject capabilities in a separate dialog or reassign a selected paired person; permission queries read current revisions and delayed private approval decisions re-check current authority ([#1375](https://github.com/BotHarness/DeepSeekBot/issues/1375)).
+
+- PersonaBots can query current paired people and roles, configured external conversations, and paired people observed in one authorized conversation through bounded read-only directories; observations explicitly remain incomplete and do not represent current group membership ([#1374](https://github.com/BotHarness/DeepSeekBot/issues/1374)).
+
+- Bot DM settings offer ordinary Lark roles and optional reviewed chat pairing: unpaired DMs and mentions wait without waking the model, approval asks for a new question, and revocation closes future access. The model receives trusted sender references and can query current permissions on demand; existing management pairing stays separate. Independent test Apps can be configured once and reused across worktrees ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373), [shared test App guide](docs/agents/im-test-apps.md), [ADR-0165](docs/adr/0165-lark-chat-pairing-is-reviewed-current-binding-authority.md)).
 
 - An opt-in isolated Profile lets a PersonaBot request confidential fields in Web Chat or receive Owner CLI replies, save them through native Credentials Service and consume references through a fixed CLI under existing approval. Ordinary native bash and configured MCP stdio calls run in Linux with an authorized workspace; the [qualification guide](docs/dev/guides/private-input-cli.md) describes supported boundaries and review limits ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).
 
@@ -117,6 +129,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - On narrow screens, message bubbles are no longer squeezed by the always-visible reply and copy buttons; those actions move into the long-press message menu, while desktop hover and right-click behavior is unchanged ([#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)).
 
 ### Documentation
+
+- Clarified DeepSeekBot’s project identity, canonical installation links and distinction from DS Bot in both READMEs, with published npm versus current-source Browser/Computer scope ([#1399](https://github.com/BotHarness/DeepSeekBot/issues/1399)).
 
 - Documented how a PersonaBot's Memory commits and its own BotHarness-tool actions will be kept as Channel Notices in the conversation that caused them and as searchable Bot Inbox history that never wakes it; runtime behavior is unchanged ([ADR-0154](docs/adr/0154-bot-self-records-keep-memory-commits-and-bot-actions-in-the-timeline-and-inbox.md), [#1272](https://github.com/BotHarness/DeepSeekBot/issues/1272)).
 

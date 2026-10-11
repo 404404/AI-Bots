@@ -1,6 +1,6 @@
 # Private input CLI candidate
 
-This is the opt-in #1380/#1381 qualification path, not a completed v1.3 capability. Human accepted the real PersonaBot inline Web input and authenticated fixed-CLI result in #1380. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records its execution boundary; [ADR-0165](../../adr/0165-private-input-settlement-commits-before-continuation.md) records request settlement and recovery.
+This is the opt-in #1380/#1381 qualification path, not a completed v1.3 capability. Human accepted the real PersonaBot inline Web input and authenticated fixed-CLI result in #1380. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records its execution boundary; [ADR-0166](../../adr/0166-private-input-settlement-commits-before-continuation.md) records request settlement and recovery.
 
 Use a dedicated, isolated DSH home with pinned `0.2.0-rc.1`, Docker running Linux containers, and the exact image below. Do not enable this candidate on a production or shared home. It changes all Agent tool access in this Profile, including native Sessions and other Bots.
 

@@ -3,7 +3,28 @@ import {
   type ApprovalMessaging,
   type ApprovalMessagingSnapshot,
 } from './approval-messaging.js';
-import { createBotPairing, type BotPairing, type PairingRequest } from './pairing.js';
+import {
+  createMessagingDirectory,
+  type MessagingDirectoryQuery,
+  type MessagingDirectoryPage,
+} from './directory.js';
+import {
+  createBotPairing,
+  type BotPairing,
+  type PairingRequest,
+  type PairingReviewInput,
+} from './pairing.js';
+import {
+  changeSenderAccess,
+  bumpSenderPolicy,
+  externalUserRoles,
+  readSenderPolicy,
+  readSenderPermissions,
+  type SenderPermissions,
+  type SenderAccessInput,
+  type SenderPolicy,
+  type ExternalUserRole,
+} from './sender-access.js';
 import {
   assertMessagingIdentity,
   readMessagingIdentity,
@@ -137,6 +158,8 @@ export interface MessagingGrant {
   origin?: 'explicit' | 'implicit';
   muted?: boolean;
   preferenceRevision?: number;
+  openGroup?: boolean;
+  openGroupAfter?: string;
   revokedAt?: string;
   suspendedReason?: 'rebind-required';
 }
@@ -189,6 +212,8 @@ export type MessagingApp = MessagingAccount & {
 };
 
 export interface MessagingSnapshot {
+  senderPolicy?: SenderPolicy;
+  roles?: ExternalUserRole[];
   receptionHistory?: ReceptionInterval[];
   feedback?: { sourceEventId: string; bindingId: string; attempts: SourceFeedback }[];
   approvals?: ApprovalMessagingSnapshot;
@@ -231,6 +256,10 @@ export interface OutboundMessaging {
   approvals: ApprovalMessaging;
   beginProcessing(botSlug: string, sourceEventIds: readonly string[]): MessagingProcessing;
   pairing: BotPairing;
+  senderAccess(botSlug: string, input: SenderAccessInput): void;
+  senderPermissions(botSlug: string, sourceEventId: string): SenderPermissions;
+  directory(botSlug: string, query: MessagingDirectoryQuery): MessagingDirectoryPage;
+  reviewPairing(botSlug: string, input: PairingReviewInput): Promise<PairingRequest>;
   inbound: InboundMessaging;
   defaults<Platform extends string = 'feishu'>(platform?: Platform): MessagingDefaults<Platform>;
   setDefaults(input: MessagingDefaultsInput): Promise<MessagingDefaults>;
@@ -751,6 +780,41 @@ export function createOutboundMessaging(options: {
     beginProcessing: (botSlug, sourceEventIds) => typing.begin(botSlug, sourceEventIds),
     inbound,
     pairing,
+    senderAccess(botSlug, input) {
+      active(botSlug);
+      transaction((db) => changeSenderAccess(db, botSlug, input), ['pairing', 'bot-inbox']);
+    },
+    senderPermissions(botSlug, sourceEventId) {
+      active(botSlug);
+      if (typeof sourceEventId !== 'string' || !sourceEventId || sourceEventId.length > 200)
+        throw new MessagingError('source-unavailable');
+      const source = inbound.readShared(botSlug, sourceEventId);
+      return database.read((db) => {
+        const result = readSenderPermissions(db, botSlug, source.event, new Date());
+        const sourceGrant = db
+          .prepare('SELECT body FROM messaging_grants WHERE id = ?')
+          .get(source.grantId) as { body: string } | undefined;
+        const authority = sourceGrant
+          ? (JSON.parse(sourceGrant.body) as MessagingGrant)
+          : undefined;
+        if (
+          authority?.botSlug === botSlug &&
+          authority.bindingId &&
+          authority.bindingId !== result.sender?.bindingId
+        )
+          return { queriedAt: result.queriedAt, status: 'unavailable', reason: 'binding-replaced' };
+        return result;
+      });
+    },
+    directory(botSlug, query) {
+      active(botSlug);
+      return createMessagingDirectory(database, inbound.readShared)(botSlug, query);
+    },
+    async reviewPairing(botSlug, input) {
+      const request = pairing.review(botSlug, input);
+      await inbound.notifyPairing(request);
+      return pairing.list(botSlug).find((item) => item.id === request.id)!;
+    },
     defaults<Platform extends string = 'feishu'>(platform?: Platform) {
       return database.read((db) => messagingDefaults(db, platform));
     },
@@ -1690,6 +1754,8 @@ export function createOutboundMessaging(options: {
           })),
         ),
         identities,
+        roles: database.read((db) => externalUserRoles(db, botSlug)),
+        senderPolicy: database.read((db) => readSenderPolicy(db, botSlug)),
         pairings: pairing.list(botSlug),
         approvals: approvals.snapshot(botSlug),
         pairingReceivers: identities
@@ -1824,6 +1890,41 @@ export function createOutboundMessaging(options: {
     },
     async conversation(botSlug, input) {
       active(botSlug);
+      if (input.kind === 'open-group') {
+        transaction(
+          (db) => {
+            const value = grant(botSlug, input.grantId);
+            const identity = assertMessagingIdentity(db, value.bindingId);
+            if (
+              value.revokedAt ||
+              value.suspendedReason ||
+              value.platform !== 'feishu' ||
+              value.receiveScope?.kind !== 'group' ||
+              identity.botSlug !== botSlug ||
+              !identity.enabled ||
+              readBlock(db, botSlug, value.fingerprint, {
+                kind: 'group',
+                id: value.receiveScope.conversationId,
+              })
+            )
+              throw new MessagingError('grant-unavailable');
+            if ((value.preferenceRevision ?? 0) !== input.expectedRevision)
+              throw new MessagingError('conversation-stale');
+            db.prepare('UPDATE messaging_grants SET body = ? WHERE id = ?').run(
+              JSON.stringify({
+                ...value,
+                openGroup: input.open,
+                openGroupAfter: now(),
+                preferenceRevision: input.expectedRevision + 1,
+              }),
+              value.id,
+            );
+            bumpSenderPolicy(db, botSlug);
+          },
+          ['grants'],
+        );
+        return;
+      }
       if (input.kind === 'mute') {
         transaction(
           (db) => {

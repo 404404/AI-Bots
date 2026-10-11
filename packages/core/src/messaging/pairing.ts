@@ -4,6 +4,7 @@ import type { OperationalDatabaseModulePort } from '../database/owner.js';
 import { OperationalDatabaseError } from '../database/owner.js';
 import { assertMessagingIdentity, readMessagingIdentity } from './identity.js';
 import { MessagingError, type MessagingInboundEvent } from './provider.js';
+import { externalUserRoles } from './sender-access.js';
 
 export const pairingCapabilities = ['approve', 'reject', 'answer', 'save-rules'] as const;
 export type PairingCapability = (typeof pairingCapabilities)[number];
@@ -13,9 +14,16 @@ export const pairingReviewInput = z.discriminatedUnion('kind', [
       kind: z.literal('approve'),
       id: z.string().uuid(),
       expectedRevision: z.number().int().positive(),
-      capabilities: z.array(z.enum(pairingCapabilities)).min(1).max(4),
+      capabilities: z.array(z.enum(pairingCapabilities)).min(1).max(4).optional(),
+      roleId: z.string().uuid().optional(),
+      expectedRoleRevision: z.number().int().positive().optional(),
     })
-    .strict(),
+    .strict()
+    .refine((value) =>
+      value.roleId
+        ? value.capabilities === undefined && value.expectedRoleRevision !== undefined
+        : value.capabilities !== undefined && value.expectedRoleRevision === undefined,
+    ),
   z
     .object({
       kind: z.enum(['reject', 'revoke']),
@@ -34,25 +42,42 @@ export interface PairingRequest {
   actorId: string;
   actorName?: string;
   conversationId: string;
+  conversationKind?: 'dm' | 'group';
   status: 'pending' | 'approved' | 'rejected' | 'revoked' | 'expired' | 'unavailable';
   capabilities: PairingCapability[];
   createdAt: string;
+  updatedAt?: string;
   expiresAt: string;
   reviewedAt?: string;
   revision: number;
   attempts: number;
   messageIds?: string[];
   reviewedBy?: 'authenticated-web';
+  purpose?: 'management' | 'conversation';
+  roleId?: string;
+  roleRevision?: number;
+  reply?: MessagingInboundEvent['reply'];
+  notifications?: {
+    key: string;
+    attempts: number;
+    outcome: 'started' | 'accepted' | 'unconfirmed';
+  }[];
 }
 export interface BotPairing {
-  request(bindingId: string, event: MessagingInboundEvent): PairingRequest;
+  request(
+    bindingId: string,
+    event: MessagingInboundEvent,
+    purpose?: 'management' | 'conversation',
+  ): PairingRequest;
   list(botSlug: string): PairingRequest[];
   review(botSlug: string, input: PairingReviewInput): PairingRequest;
+  notice(id: string, key: string, outcome?: 'accepted' | 'unconfirmed'): boolean;
   assert(
     botSlug: string,
     bindingId: string,
     actorId: string,
     capability: PairingCapability,
+    pairingId?: string,
   ): PairingRequest;
 }
 export const pairingDefaults = Object.freeze({
@@ -95,10 +120,17 @@ export function createBotPairing(
       if (value.status === 'pending' || value.status === 'approved')
         return { ...value, status: 'revoked' };
     }
+    if (value.status === 'approved' && value.purpose === 'conversation') {
+      const role = database.read((db) =>
+        externalUserRoles(db, value.botSlug).find((item) => item.id === value.roleId),
+      );
+      if (!role) return { ...value, status: 'unavailable', capabilities: [] };
+      return { ...value, capabilities: role.capabilities, roleRevision: role.revision };
+    }
     return value;
   };
   return {
-    request(bindingId, event) {
+    request(bindingId, event, purpose = 'management') {
       return transaction<PairingRequest>((db) => {
         const binding = assertMessagingIdentity(db, bindingId);
         if (
@@ -107,37 +139,40 @@ export function createBotPairing(
           event.channel !== 'feishu' ||
           event.botId !== binding.accountRef ||
           event.fingerprint !== binding.fingerprint ||
-          event.conversation.kind !== 'dm' ||
+          (purpose === 'management' && event.conversation.kind !== 'dm') ||
+          (purpose === 'conversation' &&
+            event.conversation.kind === 'group' &&
+            !event.mentionedAccount) ||
           event.reply.actorId !== event.actor.id ||
           event.reply.conversationId !== event.conversation.id ||
           event.reply.messageId !== event.messageId ||
           event.actor.kind !== 'user' ||
           !/^ou_[A-Za-z0-9]+$/.test(event.actor.id) ||
           !/^oc_[A-Za-z0-9]+$/.test(event.conversation.id) ||
-          event.text.trim() !== '/pair' ||
-          event.attachments?.length
+          (purpose === 'management' && (event.text.trim() !== '/pair' || event.attachments?.length))
         )
           throw new MessagingError('untrusted-pairing');
         const at = now().toISOString();
         const existing = db
           .prepare(
-            "SELECT body FROM messaging_pairings WHERE binding_id = ? AND actor_id = ? AND status IN ('pending', 'approved')",
+            "SELECT body FROM messaging_pairings WHERE binding_id = ? AND actor_id = ? AND purpose = ? AND status IN ('pending', 'approved')",
           )
-          .get(bindingId, event.actor.id) as { body: string } | undefined;
+          .get(bindingId, event.actor.id, purpose) as { body: string } | undefined;
         if (existing) {
           const value = read(existing);
-          if (value.conversationId !== event.conversation.id)
+          if (purpose === 'management' && value.conversationId !== event.conversation.id)
             throw new MessagingError('pairing-conversation-changed');
           if (value.status === 'approved' || value.messageIds?.includes(event.messageId))
             return current(value);
           if (Date.parse(value.expiresAt) > now().getTime()) {
-            if (value.conversationId !== event.conversation.id)
+            if (purpose === 'management' && value.conversationId !== event.conversation.id)
               throw new MessagingError('pairing-conversation-changed');
             if (value.attempts >= pairingDefaults.maxAttempts)
               throw new MessagingError('pairing-rate-limited');
             const next = {
               ...value,
               attempts: value.attempts + 1,
+              updatedAt: at,
               messageIds: [...(value.messageIds ?? []), event.messageId],
             };
             db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?').run(
@@ -147,12 +182,12 @@ export function createBotPairing(
             return next;
           }
           db.prepare(
-            "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired') WHERE id = ?",
-          ).run(value.id);
+            "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired', '$.updatedAt', ?) WHERE id = ?",
+          ).run(at, value.id);
         }
         db.prepare(
-          "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired') WHERE status = 'pending' AND json_extract(body, '$.expiresAt') <= ?",
-        ).run(at);
+          "UPDATE messaging_pairings SET status = 'expired', body = json_set(body, '$.status', 'expired', '$.updatedAt', ?) WHERE status = 'pending' AND json_extract(body, '$.expiresAt') <= ?",
+        ).run(at, at);
         const total = db
           .prepare("SELECT count(*) AS n FROM messaging_pairings WHERE status = 'pending'")
           .get() as { n: number };
@@ -175,13 +210,17 @@ export function createBotPairing(
           status: 'pending',
           capabilities: [],
           createdAt: at,
+          updatedAt: at,
           expiresAt: new Date(now().getTime() + pairingDefaults.expiryMs).toISOString(),
           revision: 1,
           attempts: 1,
           messageIds: [event.messageId],
+          ...(purpose === 'conversation'
+            ? { purpose, reply: event.reply, conversationKind: event.conversation.kind }
+            : {}),
         };
         db.prepare(
-          'INSERT INTO messaging_pairings (id, bot_slug, binding_id, actor_id, status, body) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO messaging_pairings (id, bot_slug, binding_id, actor_id, status, body, purpose) VALUES (?, ?, ?, ?, ?, ?, ?)',
         ).run(
           value.id,
           value.botSlug,
@@ -189,6 +228,7 @@ export function createBotPairing(
           value.actorId,
           value.status,
           JSON.stringify(value),
+          purpose,
         );
         return value;
       });
@@ -221,6 +261,15 @@ export function createBotPairing(
         )
           throw new MessagingError('pairing-stale');
         if (input.kind === 'approve') {
+          if (value.purpose === 'conversation') {
+            const role = externalUserRoles(db, botSlug).find((role) => role.id === input.roleId);
+            if (
+              !role ||
+              role.revision !== input.expectedRoleRevision ||
+              input.capabilities !== undefined
+            )
+              throw new MessagingError('role-stale');
+          } else if (!input.capabilities || input.roleId) throw new MessagingError('pairing-stale');
           const approved = db
             .prepare(
               "SELECT count(*) AS n FROM messaging_pairings AS p JOIN messaging_bindings AS b ON b.id = p.binding_id WHERE p.bot_slug = ? AND p.status = 'approved' AND b.revoked_at IS NULL",
@@ -229,6 +278,7 @@ export function createBotPairing(
           if (approved.n >= pairingDefaults.maxApprovedPerBot)
             throw new MessagingError('pairing-capacity');
         }
+        const reviewedAt = now().toISOString();
         const next: PairingRequest = {
           ...value,
           status:
@@ -237,9 +287,14 @@ export function createBotPairing(
               : input.kind === 'revoke'
                 ? 'revoked'
                 : 'rejected',
-          capabilities: input.kind === 'approve' ? [...new Set(input.capabilities)] : [],
+          capabilities:
+            input.kind === 'approve' && input.capabilities ? [...new Set(input.capabilities)] : [],
+          ...(input.kind === 'approve' && input.roleId
+            ? { roleId: input.roleId, roleRevision: input.expectedRoleRevision! }
+            : {}),
           revision: value.revision + 1,
-          reviewedAt: now().toISOString(),
+          reviewedAt,
+          updatedAt: reviewedAt,
           reviewedBy: 'authenticated-web',
         };
         db.prepare('UPDATE messaging_pairings SET status = ?, body = ? WHERE id = ?').run(
@@ -247,16 +302,59 @@ export function createBotPairing(
           JSON.stringify(next),
           next.id,
         );
+        if (input.kind === 'revoke' && value.purpose === 'conversation') {
+          const binding = readMessagingIdentity(db, value.bindingId);
+          db.prepare(`UPDATE inbox_admissions SET attempt_state = 'handled', ignored_at = ?, handled_at = ?, wake_count = NULL, wake_interval_ms = NULL
+            WHERE bot_slug = ? AND attempt_state IN ('pending', 'retryable') AND source_event_id IN
+            (SELECT source_event_id FROM source_events WHERE source_kind = 'bridge-message'
+              AND json_extract(payload_json, '$.external.event.botId') = ?
+              AND json_extract(payload_json, '$.external.event.fingerprint') = ?
+              AND json_extract(payload_json, '$.external.event.actor.id') = ?)`).run(
+            reviewedAt,
+            reviewedAt,
+            botSlug,
+            binding.accountRef,
+            binding.fingerprint,
+            value.actorId,
+          );
+        }
         return next;
       });
     },
-    assert(botSlug, bindingId, actorId, capability) {
+    notice(id, key, outcome) {
+      return transaction<boolean>((db) => {
+        const row = db.prepare('SELECT body FROM messaging_pairings WHERE id = ?').get(id) as
+          | { body: string }
+          | undefined;
+        if (!row) return false;
+        const value = read(row);
+        const notifications = value.notifications ?? [];
+        const previous = notifications.find((item) => item.key === key);
+        if (!outcome && previous) return false;
+        if (notifications.length >= pairingDefaults.maxAttempts + 1 && !previous) return false;
+        if (outcome && !previous) return false;
+        const next = {
+          ...value,
+          notifications: previous
+            ? notifications.map((item) =>
+                item.key === key ? { ...item, outcome: outcome! } : item,
+              )
+            : [...notifications, { key, attempts: 1, outcome: 'started' as const }],
+        };
+        db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ?').run(
+          JSON.stringify(next),
+          id,
+        );
+        return true;
+      });
+    },
+    assert(botSlug, bindingId, actorId, capability, pairingId) {
       const row = database.read((db) =>
         db
           .prepare(
-            "SELECT body FROM messaging_pairings WHERE bot_slug = ? AND binding_id = ? AND actor_id = ? AND status = 'approved'",
+            "SELECT body FROM messaging_pairings WHERE bot_slug = ? AND binding_id = ? AND actor_id = ? AND status = 'approved' AND ((? IS NULL AND purpose = 'management') OR id = ?)",
           )
-          .get(botSlug, bindingId, actorId),
+          .get(botSlug, bindingId, actorId, pairingId ?? null, pairingId ?? null),
       ) as { body: string } | undefined;
       if (!row) throw new MessagingError('pairing-unauthorized');
       const value = current(read(row));
