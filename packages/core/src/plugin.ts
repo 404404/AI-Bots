@@ -1443,6 +1443,18 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     ownership: core.ownership,
     memory: core.memory,
     ...(core.usage === undefined ? {} : { usage: core.usage }),
+    readUsageSessionLog: async (sessionId) => {
+      const query = ctx.get('sessionQuery') as unknown as
+        | {
+            readSession(
+              id: string,
+            ): Promise<{ events: readonly DshSessionEvent[]; inheritedEventCount?: number }>;
+          }
+        | undefined;
+      if (query === undefined) return undefined;
+      const snapshot = await query.readSession(sessionId);
+      return { events: snapshot.events, inheritedEventCount: snapshot.inheritedEventCount ?? 0 };
+    },
     roster: core.roster,
     runtime: core.runtime,
     attention: core.attention,

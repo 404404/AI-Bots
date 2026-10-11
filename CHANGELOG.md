@@ -31,6 +31,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - The reviewed ordinary-chat pairing path extends to Slack DMs through the existing People/Roles/Requests settings, current sender queries and checked original reply route; approval asks for a fresh question and revocation closes later intake. A three-stage local wizard and private loader reuse separate Slack QA1/QA2/QA3 slots across worktrees while preserving Lark configuration; setup never starts a receiver. The bilingual guide includes actual DM-scope screenshots, permission purposes and the reinstallation step. Real Slack acceptance is pending; Slack group and native management controls remain separate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415), [guide](docs/slack-connection.md)).
 
+- Bot DMs offer composer shortcuts for existing model and Workspace Grant settings and Window Companion show/remove; icon-labelled model and workspace-count chips sit left, compact token usage sits right and opens a read-only Orchestrator/recent Assignment usage popover with relative Session bars and a separate details button. Profile and Memory file details replace the complete Channel body without its overlaid chat header; header identity and pin chips align and retain opaque hover backgrounds. Drafts and attachments remain intact, authorization still requires confirmation, and Workspace Grant collapsibles reuse the Channel sidebar header and chevron design ([#1432](https://github.com/BotHarness/DeepSeekBot/issues/1432)).
+
+- Mobile Bot mode opens a full-width conversation list with one search/create/Exit header; chats use Back/name/three-line Channel menu, and icon-only navigation connects Conversations, Activity Center and existing Bot Settings. Long empty-composer hints use an ellipsis, Activity Center shows one title, search borders stay visible, and Exit reuses the chosen Bot-mode icon. Mobile sidebar display settings stay at the right inset. Returning preserves list position and conversation-isolated drafts, while Exit restores Host navigation ([#1434](https://github.com/BotHarness/DeepSeekBot/issues/1434)). Physical-phone and Mobile Safari Human QA remains required.
+
 - Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a compact, sidebar-style affected-person preview; its Allow/Deny cells show only checkboxes with accessible names, and its body scrolls while the title and actions remain visible. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
 
 - Compatible checked Providers can add Slack received/answered reactions from canonical Inbox and source-reply facts, without blocking messaging; muted sources are excluded. The isolated candidate has native channel/DM evidence; Human QA and published Provider qualification remain pending ([#1161](https://github.com/BotHarness/DeepSeekBot/issues/1161), [guide](docs/slack-connection.md)).
@@ -124,6 +128,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).
+
+- Core and product-managed IM Provider declarations use the minimum DSH version `>=0.1.7-0`, including previews, without an exact RC1 lock or future-version ceiling. Future versions are admitted by metadata, not automatically runtime-qualified; the 1.2.1 maintenance installation matrix is separate from this development tree ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425)).
+
 - The reusable Lark QA App setup wizard prints links for manual navigation and reduces Windows prompt delays by caching defaults, avoiding terminal subprocesses, and saving each stage atomically while preserving other Apps ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)).
 
 - Lark tool-approval cards now show settled execution or rejection without stale action buttons by using shared updates in the qualified Provider ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
@@ -161,6 +169,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - On narrow screens, message bubbles are no longer squeezed by the always-visible reply and copy buttons; those actions move into the long-press message menu, while desktop hover and right-click behavior is unchanged ([#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)).
 
 ### Documentation
+
+- DeepSeekBot GitHub Release announcements start with version-specific official website and Chinese/English installation links; short links preserve GitHub, release-version and entry-point attribution without changing analytics consent ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
+
+- Added an isolated Linux private-input qualification guide covering tailnet Web access, exclusive IM receiver handoff, cross-platform path metadata and explicit non-root workspace permissions ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [guide](docs/dev/guides/private-input-linux.md)). The `ask_secret` tool now tells Web and scheduled callers to omit the IM-only source selector when reusing configured accounts.
 
 - Added the Product Hunt launch badge to the Chinese and English READMEs ([#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)).
 

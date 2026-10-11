@@ -1,4 +1,11 @@
 import { GroupActivityRows } from './group-activity-rows.js';
+import {
+  composerSlashQuery,
+  composerShortcutOptions,
+  type ComposerContext,
+  type ComposerSlashQuery,
+  type ComposerShortcut,
+} from './composer-shortcuts.js';
 import type { AllBotPreview } from '../../../core/src/channels/all-bot-mention.js';
 import {
   useCallback,
@@ -83,6 +90,7 @@ export interface ChannelComposerUpload {
 }
 
 export interface ChannelComposerProps {
+  context?: ComposerContext | undefined;
   value: string;
   placeholder: string;
   sending: boolean;
@@ -455,6 +463,7 @@ function PersonaBotActivityStatus({
 }
 
 export function ChannelComposer({
+  context,
   value,
   placeholder,
   sending,
@@ -492,6 +501,29 @@ export function ChannelComposer({
   const [mentionQuery, setMentionQuery] = useState<MentionQuery | undefined>();
   const [channelQuery, setChannelQuery] = useState<ChannelRefQuery | undefined>();
   const [activeMentionIndex, setActiveMentionIndex] = useState(0);
+  const [slashQuery, setSlashQuery] = useState<ComposerSlashQuery>();
+  const slashTarget = useRef<string | undefined>(undefined);
+  const [shortcutIndex, setShortcutIndex] = useState(0);
+  const shortcutOptions = composerShortcutOptions(
+    context?.shortcuts ?? [],
+    slashTarget.current === context?.target ? slashQuery : undefined,
+  );
+  const clearShortcut = (): void => {
+    if (slashQuery === undefined) return;
+    const next = value.slice(0, slashQuery.start) + value.slice(slashQuery.end);
+    requestedCaret.current = slashQuery.start;
+    onChange(
+      next,
+      rebaseMentions(value, next, mentions),
+      rebaseChannelRefs(value, next, channelRefs),
+    );
+    setSlashQuery(undefined);
+  };
+  const chooseShortcut = (shortcut: ComposerShortcut): void => {
+    if (shortcut.disabled) return;
+    clearShortcut();
+    shortcut.run();
+  };
   const botCandidates =
     mentionQuery === undefined
       ? []
@@ -689,12 +721,37 @@ export function ChannelComposer({
     syncTextarea(editor);
     onChange(next.value, next.mentions, next.channelRefs);
     const caret = richSelectionOffsets(editor)?.end ?? next.value.length;
+    slashTarget.current = context?.target;
+    setSlashQuery(context === undefined ? undefined : composerSlashQuery(next.value, caret));
+    setShortcutIndex(0);
     setMentionQuery(activeMentionQuery(next.value, caret, next.mentions));
     setChannelQuery(activeChannelRefQuery(next.value, caret, next.channelRefs));
     setActiveMentionIndex(0);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLElement>): void => {
+    if (shortcutOptions.length > 0 && !event.nativeEvent.isComposing) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        clearShortcut();
+        return;
+      }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        setShortcutIndex(
+          (current) =>
+            (current + (event.key === 'ArrowDown' ? 1 : -1) + shortcutOptions.length) %
+            shortcutOptions.length,
+        );
+        return;
+      }
+      if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        const shortcut = shortcutOptions[shortcutIndex % shortcutOptions.length];
+        if (shortcut !== undefined) chooseShortcut(shortcut);
+        return;
+      }
+    }
     const input = event.currentTarget;
     const selection =
       input instanceof HTMLTextAreaElement
@@ -840,6 +897,38 @@ export function ChannelComposer({
           ))}
         </div>
       ) : null}
+      {shortcutOptions.length === 0 ? null : (
+        <div
+          className="bh-composer-shortcuts"
+          role="menu"
+          aria-label={t('composerContext.actions')}
+        >
+          {shortcutOptions.map((shortcut, index) => (
+            <button
+              key={shortcut.id}
+              type="button"
+              role="menuitem"
+              disabled={shortcut.disabled}
+              aria-label={
+                shortcut.reason === undefined
+                  ? shortcut.label
+                  : `${shortcut.label} · ${shortcut.reason}`
+              }
+              data-active={index === shortcutIndex % shortcutOptions.length ? 'true' : undefined}
+              data-selected={shortcut.selected ? 'true' : undefined}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => chooseShortcut(shortcut)}
+            >
+              <span className="bh-composer-shortcut-label">
+                {shortcut.icon}
+                {shortcut.label}
+                {shortcut.reason === undefined ? null : <small> · {shortcut.reason}</small>}
+              </span>
+              <small>/{shortcut.id}</small>
+            </button>
+          ))}
+        </div>
+      )}
       {mentionQuery !== undefined && candidates.length > 0 ? (
         <div className="bh-mention-picker" role="listbox" aria-label="Mention a PersonaBot">
           {candidates.map((candidate, index) =>
@@ -984,6 +1073,13 @@ export function ChannelComposer({
               onChange={(event) => {
                 syncTextarea(event.currentTarget);
                 const next = event.target.value;
+                slashTarget.current = context?.target;
+                setSlashQuery(
+                  context === undefined
+                    ? undefined
+                    : composerSlashQuery(next, event.currentTarget.selectionStart),
+                );
+                setShortcutIndex(0);
                 const nextMentions = rebaseMentions(value, next, mentions);
                 const nextRefs = rebaseChannelRefs(value, next, channelRefs);
                 onChange(next, nextMentions, nextRefs);
@@ -1052,10 +1148,16 @@ export function ChannelComposer({
               ) ||
               attachments.some((item) => item.status !== 'ready')
             }
-            onClick={() => void onSubmit()}
+            onClick={() => {
+              if (shortcutOptions.length > 0) {
+                const shortcut = shortcutOptions[shortcutIndex % shortcutOptions.length];
+                if (shortcut !== undefined) chooseShortcut(shortcut);
+              } else void onSubmit();
+            }}
           />
         </div>
       </div>
+      {context?.content}
     </div>
   );
 }

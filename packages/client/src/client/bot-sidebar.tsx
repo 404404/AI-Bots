@@ -5,6 +5,7 @@ import {
   useSyncExternalStore,
   type MouseEvent as ReactMouseEvent,
   type ReactElement,
+  type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -296,6 +297,7 @@ export function createBotPanelEntry(
 }
 
 interface SidebarProps {
+  headerEnd?: ReactNode;
   companion?: WindowCompanions | undefined;
   wide: boolean;
   actions: BridgeActions;
@@ -765,6 +767,7 @@ type FlatBlockView =
   | { kind: 'loose'; channels: ChannelSummary[] };
 
 export function BotSidebar({
+  headerEnd,
   companion,
   wide,
   actions,
@@ -1727,6 +1730,7 @@ export function BotSidebar({
             }}
           />
         </div>
+        {headerEnd}
       </div>
       {state.status === 'loading' && state.bots.length === 0 ? (
         <LoadingSkeleton kind="roster" label={t('roster.loading')} />
