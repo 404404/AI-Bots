@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
@@ -37,7 +45,7 @@ afterEach(async () => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 function root() {
-  const value = mkdtempSync(join(tmpdir(), 'bh-profile-backup-'));
+  const value = realpathSync(mkdtempSync(join(tmpdir(), 'bh-profile-backup-')));
   roots.push(value);
   return value;
 }

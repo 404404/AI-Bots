@@ -1,0 +1,90 @@
+{
+  "productVersion": "1.2.1",
+  "node": "v24.21.0",
+  "platform": "darwin",
+  "artifacts": [
+    {
+      "name": "@botharness/core",
+      "version": "1.2.1",
+      "filename": "botharness-core-1.2.1.tgz",
+      "integrity": "sha512-f48d5iLfSGIw/Lv9hzrlAH8OFVUOixejDIRmV/Mv+zU7zRSN68fZBZgWRL2fDynoVMGVNXM2CtWF+yqJKz/+RQ=="
+    },
+    {
+      "name": "@botharness/ui",
+      "version": "1.2.1",
+      "filename": "botharness-ui-1.2.1.tgz",
+      "integrity": "sha512-pN/Ll/HXSj2jODHXUma0G9r8znCEDzgi5vOF5F+meLbWqAnyJYTSb8HeAbptPdDtMAyA/tCUL6MAlH0ePACGog=="
+    },
+    {
+      "name": "@botharness/im-provider",
+      "version": "4.32.0-botharness.16",
+      "filename": "botharness-im-provider-4.32.0-botharness.16.tgz",
+      "integrity": "sha512-Kp91PXKxlebC1j5LtpFWimN7p51NZyEq1WgjcnXgKIchMa+xz+6XFPkCAS3KOC3x2ZjA2cNbZ9hJRB/sYs5VLg=="
+    },
+    {
+      "name": "deepseekbot",
+      "version": "1.2.1",
+      "filename": "deepseekbot-1.2.1.tgz",
+      "integrity": "sha512-y9oNlEHI2yzSmqhjgUBRQ+1T34eBuiAVEKeBt6qgRd8dLDarRU7p0zaPrrz0FV/nhV1ovnJ2GOtO4JLNKGfvdg=="
+    }
+  ],
+  "scope": "Real packaged Profile installation, composition, Host boot, authenticated API and restart persistence; browser/model/IM delivery are separate gates.",
+  "rows": [
+    {
+      "dsh": "0.1.7-alpha.1",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.1.7-alpha.2",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.1.7-rc.1",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.1.7-rc.2",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.2.0-rc.1",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.2.0-rc.2",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.2.1-alpha.1",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    },
+    {
+      "dsh": "0.2.1-alpha.2",
+      "state": "passed",
+      "install": true,
+      "api": true,
+      "restart": true
+    }
+  ]
+}

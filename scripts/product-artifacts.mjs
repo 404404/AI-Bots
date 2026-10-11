@@ -7,9 +7,21 @@ import semver from 'semver';
 import { providerRuntimeDigest } from './dev-im-provider.mjs';
 import { pnpmCommand } from './dev-package-manager.mjs';
 
+export const productDshRange = '>=0.1.7-0';
+export const productDshVersions = Object.freeze([
+  '0.1.7-alpha.1',
+  '0.1.7-alpha.2',
+  '0.1.7-rc.1',
+  '0.1.7-rc.2',
+  '0.2.0-rc.1',
+  '0.2.0-rc.2',
+  '0.2.1-alpha.1',
+  '0.2.1-alpha.2',
+]);
+
 export const productImProvider = Object.freeze({
   name: '@botharness/im-provider',
-  version: '4.32.0-botharness.15',
+  version: '4.32.0-botharness.16',
   sourceManifestSha256: '501e62d558eceb2b42ad9cd03fc0910e09581fd6531ec68e074fe5a16225ed1e',
   sourceLockSha256: 'c7f16baaa5bb1ab3bbb607b59a10327f0af010c61e1ea1ab4a72d7d08af9ffe9',
   upstream: Object.freeze({
@@ -131,10 +143,18 @@ export function providerManifest(original) {
       'README.en.md',
       'PROVENANCE.json',
     ],
-    engines: { node: '>=22', dsh: productImProvider.upstream.dsh },
+    engines: { node: '>=22', dsh: productDshRange },
+    peerDependencies: Object.fromEntries(
+      Object.entries(manifest.peerDependencies ?? {}).map(([name, range]) => [
+        name,
+        name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-')
+          ? productDshRange
+          : range,
+      ]),
+    ),
     dsh: {
       ...manifest.dsh,
-      compatibility: { dsh: productImProvider.upstream.dsh, profiles: ['web'] },
+      compatibility: { dsh: productDshRange, profiles: ['web'] },
     },
     botharness: { managedByProduct: true, upstreamSource: productImProvider.upstream.source },
   };

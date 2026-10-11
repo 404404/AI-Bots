@@ -5,7 +5,24 @@
 
 ## [Unreleased]
 
-1.2.0 之后暂无变化。
+1.2.1 之后暂无变化。
+
+## [1.2.1] - 2026-10-12
+
+修复兼容的 DSH 0.1.7 和 0.2 Host 上的插件安装限制，并加入更清晰的群身份和附件卡片；不包含尚未完成的 1.3 数据迁移。
+
+### Added
+
+- 未设置自定义头像的群，在侧栏、折叠栏和置顶网格中显示最多四个成员的静态头像 ([#1270](https://github.com/BotHarness/DeepSeekBot/issues/1270))。
+
+### Changed
+
+- 音频和文件附件采用紧凑的统一卡片布局，提供内联音频控件和直接下载文件的操作 ([#1290](https://github.com/BotHarness/DeepSeekBot/issues/1290))。
+- 自己发送的消息头将名称放在右侧，时间放在名称左侧 ([#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298))。
+
+### Fixed
+
+- Core 和随产品更新的 IM Provider 改用最低 DSH 版本 `>=0.1.7-0`（含预览版），不再锁定精确版本或设置未来版本上限。可重复运行的实包安装矩阵检查 0.1.7-alpha.1 至 0.2.1-alpha.2 的已发布 DSH 版本，无需兼容豁免；声明允许未来版本安装，但不代表已验证其运行兼容性 ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425))。
 
 ## [1.2.0] - 2026-10-08
 
