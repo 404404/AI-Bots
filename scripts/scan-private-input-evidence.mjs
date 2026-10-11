@@ -1,5 +1,6 @@
-import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { readFileSync, readdirSync, realpathSync } from 'node:fs';
+import { join, resolve, relative, sep, isAbsolute } from 'node:path';
+import { tmpdir } from 'node:os';
 import { zstdDecompressSync } from 'node:zlib';
 
 const home = resolve(process.argv[2] ?? '');
@@ -25,6 +26,23 @@ let sessionEvents = 0;
 let requestHeaders = 0;
 let toolResults = 0;
 const violations = [];
+const spillPaths = new Set();
+function collectSpills(text) {
+  const matches = [
+    ...text.matchAll(/Full formatted result stored at: (.+?)\. Use read/g),
+    ...text.matchAll(/\[output truncated; full output: (.+?)\]/g),
+  ];
+  for (const match of matches) {
+    const path = resolve(match[1]);
+    const tail = relative(realpathSync(tmpdir()), path);
+    if (
+      isAbsolute(match[1]) &&
+      !isAbsolute(tail) &&
+      /^dsh-(?:spill|subprocess)-[A-Za-z0-9_-]+$/.test(tail.split(sep)[0])
+    )
+      spillPaths.add(path);
+  }
+}
 for (const entry of readdirSync(home, { recursive: true, withFileTypes: true })) {
   if (!entry.isFile()) continue;
   const file = join(entry.parentPath, entry.name);
@@ -46,6 +64,9 @@ for (const entry of readdirSync(home, { recursive: true, withFileTypes: true }))
       if (event.type !== 'session') sessionEvents++;
       if (event.type === 'request/header') requestHeaders++;
       if (event.type === 'tool/result') toolResults++;
+      if (event.type === 'tool/result')
+        for (const block of event.data?.message?.content ?? [])
+          if (block.type === 'text' && typeof block.text === 'string') collectSpills(block.text);
     }
   }
   files++;
@@ -53,12 +74,28 @@ for (const entry of readdirSync(home, { recursive: true, withFileTypes: true }))
   if (patterns.some((pattern) => texts.some((text) => text.includes(pattern))))
     violations.push(file.slice(home.length + 1));
 }
+let spillFiles = 0;
+for (const file of spillPaths) {
+  spillFiles++;
+  try {
+    const canonical = realpathSync(file);
+    if (canonical !== file) throw new Error('Spill path changed');
+    const data = readFileSync(file);
+    const texts = [data.toString('utf8'), data.toString('utf16le')];
+    collectSpills(texts[0]);
+    if (patterns.some((pattern) => texts.some((text) => text.includes(pattern))))
+      violations.push('native-spill-' + spillFiles);
+  } catch {
+    violations.push('native-spill-unavailable-' + spillFiles);
+  }
+}
 const store = readFileSync(join(home, '.credentials.yaml'), 'utf8');
 const result = {
   files,
   sessionEvents,
   requestHeaders,
   toolResults,
+  spillFiles,
   nativeStoreContainsSyntheticValues: canaries.every((value) => store.includes(value)),
   violations,
 };

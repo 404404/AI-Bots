@@ -45,6 +45,7 @@ export class LinuxMcp {
     agent: Agent,
     servers: readonly LinuxMcpServer[],
   ): Promise<() => Promise<void>> {
+    const started = Date.now();
     const fibers: Array<ReturnType<Context['plugin']>> = [];
     const cleanups: Array<() => Promise<void>> = [];
     const qualified = new Map<
@@ -55,6 +56,11 @@ export class LinuxMcp {
       this.#qualified.delete(agent);
       await Promise.allSettled(fibers.map((fiber) => fiber.dispose()));
       await Promise.allSettled(cleanups.map((cleanup) => cleanup()));
+      if (cleanups.length)
+        this.execution.log('mcp-stopped', {
+          sessionId: agent.session.id,
+          durationMs: Date.now() - started,
+        });
     };
     try {
       const tools = ctx.get('tools');
@@ -92,7 +98,11 @@ export class LinuxMcp {
           const definition = tools.get(schema.name, agent);
           if (definition !== undefined) qualified.set(schema.name, { definition, workdir, root });
         }
-        this.execution.log('mcp-started', { program: server.serverName });
+        this.execution.log('mcp-started', {
+          program: server.serverName,
+          sessionId: agent.session.id,
+          durationMs: Date.now() - started,
+        });
       }
       this.#qualified.set(agent, qualified);
       return dispose;

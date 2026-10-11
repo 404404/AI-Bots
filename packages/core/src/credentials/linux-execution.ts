@@ -120,6 +120,7 @@ export class LinuxShell extends ShellExecutor {
     readonly inner: ShellExecutor,
     readonly execution: ProtectedExecution,
     readonly home: string,
+    readonly sessionId: string,
   ) {
     super(ctx);
   }
@@ -137,7 +138,9 @@ export class LinuxShell extends ShellExecutor {
     const args = linuxWorkspaceArgs(name, root, spec.workdir, this.home);
     args.push('--entrypoint', '/bin/bash', PRIVATE_COMMAND_IMAGE, '-c', spec.command);
     const cleanup = this.execution.trackContainer(name);
-    this.execution.log('command-started', { program: 'linux-shell' });
+    const started = Date.now();
+    const details = { program: 'linux-shell', sessionId: this.sessionId };
+    this.execution.log('command-started', details);
     try {
       const subprocess = this.ctx.get('subprocess');
       if (subprocess === undefined) throw new Error('Native Subprocess Provider is unavailable');
@@ -204,7 +207,10 @@ export class LinuxShell extends ShellExecutor {
           clearTimeout(timer);
           spec.signal?.removeEventListener('abort', abort);
           await cleanup();
-          this.execution.log('command-completed', { program: 'linux-shell' });
+          this.execution.log('command-completed', {
+            ...details,
+            durationMs: Date.now() - started,
+          });
         });
       const collect = (reader: SubprocessOutputReader) => {
         const value = reader.readFrom(0);
@@ -264,6 +270,10 @@ export class LinuxShell extends ShellExecutor {
       };
     } catch {
       await cleanup();
+      this.execution.log('command-start-failed', {
+        ...details,
+        durationMs: Date.now() - started,
+      });
       throw new Error('Linux execution could not start');
     }
   }

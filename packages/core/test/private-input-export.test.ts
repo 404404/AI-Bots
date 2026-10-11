@@ -2,6 +2,35 @@ import { describe, expect, it } from 'vitest';
 import { projectPrivateInputEvents } from '../../../scripts/export-private-input-evidence.mjs';
 
 describe('public native Session evidence', () => {
+  it('exports native truncation/Spill existence without publishing the file path or output', () => {
+    const result = projectPrivateInputEvents([
+      {
+        seq: 1,
+        time: 1_791_691_200_000,
+        type: 'tool/call',
+        data: { callId: 'call_spill', name: 'bash', arguments: '{}' },
+      },
+      {
+        seq: 2,
+        time: 1_791_691_200_001,
+        type: 'tool/result',
+        data: {
+          message: {
+            toolCallId: 'call_spill',
+            content: [
+              {
+                type: 'text',
+                text: 'PRIVATE OUTPUT [output truncated; full output: /private/output]\nFull formatted result stored at: /private/formatted. Use read',
+              },
+            ],
+          },
+        },
+      },
+    ]);
+    expect(result[1]).toMatchObject({ value: { formattedSpill: true, subprocessSpill: true } });
+    expect(JSON.stringify(result)).not.toContain('/private/');
+    expect(JSON.stringify(result)).not.toContain('PRIVATE OUTPUT');
+  });
   it('only exports linked reference/status facts, excluding arbitrary Session text and subprocess projections', () => {
     const secret = 'SYNTHETIC-should-never-be-exported';
     const ref = 'private:76a6fe17-1111-2222-3333-444444444444:api_key';

@@ -126,6 +126,11 @@ export function projectPrivateInputEvents(events) {
             linuxWorkspaceProof: text.includes('linux-workspace-ok\n/workspace\nuid=65534'),
             stderrProof: text.includes('native-error-stream'),
           };
+        if (value === undefined && text.includes('Full formatted result stored at: '))
+          value = {
+            formattedSpill: true,
+            subprocessSpill: text.includes('[output truncated; full output: '),
+          };
       }
       if (name === 'mcp__linux_demo__workspace_probe') {
         let probe = parsed;

@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { zstdCompressSync } from 'node:zlib';
 import { expect, it } from 'vitest';
 import { createTempRoot } from './helpers.js';
 
@@ -28,4 +29,34 @@ it('allows only the exact native store and probe paths while scanning identicall
     join('spill', '.credentials.yaml'),
     join('spill', 'wire-canary-probe.mjs'),
   ]);
+});
+
+it('follows native result Spill references outside Home and checks their contents', () => {
+  const home = createTempRoot('bh-private-scan-');
+  const spill = join(createTempRoot('dsh-spill-scan-'), 'bash.txt');
+  const canary = ['SYNTHETIC', '1380', 'key', 'A'].join('-');
+  writeFileSync(join(home, '.credentials.yaml'), canary);
+  writeFileSync(spill, canary);
+  const event = {
+    type: 'tool/result',
+    data: {
+      message: {
+        content: [{ type: 'text', text: `Full formatted result stored at: ${spill}. Use read` }],
+      },
+    },
+  };
+  writeFileSync(join(home, 'session.zstd'), zstdCompressSync(JSON.stringify(event) + '\n'));
+  let output = '';
+  try {
+    execFileSync(process.execPath, ['scripts/scan-private-input-evidence.mjs', home], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+  } catch (error) {
+    output = String((error as { stdout: string }).stdout);
+  }
+  expect(JSON.parse(output)).toMatchObject({
+    spillFiles: 1,
+    violations: ['native-spill-1'],
+  });
 });

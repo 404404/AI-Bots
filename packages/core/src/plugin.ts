@@ -953,7 +953,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         ctx.get('agentPresets') as DshAgentPresetHost | undefined,
         (name, args) => nativeExecutionRoot(core, agent.session, name, args),
         config.privateInputExecution === true
-          ? (child, shell) => new LinuxShell(child, shell, privateExecution, dshHome)
+          ? (child, shell) =>
+              new LinuxShell(child, shell, privateExecution, dshHome, agent.session.id)
           : undefined,
       );
       if (config.privateInputExecution !== true) return disposeFiles;

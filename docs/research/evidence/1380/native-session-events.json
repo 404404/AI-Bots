@@ -1,7 +1,7 @@
 {
   "source": "DSH 0.2.0-rc.1 native Session Persistence",
   "sessionId": "botharness-1c11a9e2-9725-4778-8799-eed018b3f686",
-  "nativeEventsRead": 298,
+  "nativeEventsRead": 364,
   "omitted": [
     "Human/assistant text",
     "reasoning",
@@ -903,6 +903,181 @@
       "isError": false,
       "value": {
         "messageId": "8cafce2d-de06-4228-81b4-f3188bd3e419"
+      }
+    },
+    {
+      "seq": 306,
+      "time": "2026-10-11T05:10:15.300Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 309,
+      "time": "2026-10-11T05:10:20.072Z",
+      "type": "tool/call",
+      "callId": "call_00_pTWoJE72nyPSMJ8gkL0n2065",
+      "name": "bash"
+    },
+    {
+      "seq": 310,
+      "time": "2026-10-11T05:10:20.076Z",
+      "type": "approval/asked",
+      "id": "203ea3d0-bde8-4327-b83d-7b517ff535b9",
+      "callId": "call_00_pTWoJE72nyPSMJ8gkL0n2065",
+      "toolName": "bash"
+    },
+    {
+      "seq": 311,
+      "time": "2026-10-11T05:10:20.078Z",
+      "type": "approval/decided",
+      "id": "203ea3d0-bde8-4327-b83d-7b517ff535b9",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 312,
+      "time": "2026-10-11T05:10:22.020Z",
+      "type": "tool/result",
+      "callId": "call_00_pTWoJE72nyPSMJ8gkL0n2065",
+      "name": "bash",
+      "isError": false
+    },
+    {
+      "seq": 317,
+      "time": "2026-10-11T05:10:25.019Z",
+      "type": "tool/call",
+      "callId": "call_00_FmVi1MDh9PqGLP45zQ5r0672",
+      "name": "bash"
+    },
+    {
+      "seq": 318,
+      "time": "2026-10-11T05:10:25.021Z",
+      "type": "approval/asked",
+      "id": "1110a36e-c6d7-40ed-99be-a0d690b317b2",
+      "callId": "call_00_FmVi1MDh9PqGLP45zQ5r0672",
+      "toolName": "bash"
+    },
+    {
+      "seq": 319,
+      "time": "2026-10-11T05:10:25.022Z",
+      "type": "approval/decided",
+      "id": "1110a36e-c6d7-40ed-99be-a0d690b317b2",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 320,
+      "time": "2026-10-11T05:10:27.000Z",
+      "type": "tool/result",
+      "callId": "call_00_FmVi1MDh9PqGLP45zQ5r0672",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "formattedSpill": true,
+        "subprocessSpill": true
+      }
+    },
+    {
+      "seq": 327,
+      "time": "2026-10-11T05:10:32.322Z",
+      "type": "tool/call",
+      "callId": "call_01_3BdemI8311XwB54iLl4s7284",
+      "name": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 328,
+      "time": "2026-10-11T05:10:32.324Z",
+      "type": "approval/asked",
+      "id": "fd1a8a18-3ad1-4d3a-b1f8-18cfe5289050",
+      "callId": "call_01_3BdemI8311XwB54iLl4s7284",
+      "toolName": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 329,
+      "time": "2026-10-11T05:10:32.324Z",
+      "type": "approval/decided",
+      "id": "fd1a8a18-3ad1-4d3a-b1f8-18cfe5289050",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 330,
+      "time": "2026-10-11T05:10:32.347Z",
+      "type": "tool/result",
+      "callId": "call_01_3BdemI8311XwB54iLl4s7284",
+      "name": "mcp__linux_demo__workspace_probe",
+      "isError": false,
+      "value": {
+        "called": true,
+        "linuxWorkspaceProof": true,
+        "linuxWorkspace": true,
+        "unprivileged": true,
+        "hostCredentialEnvironmentFalse": true
+      }
+    },
+    {
+      "seq": 335,
+      "time": "2026-10-11T05:10:38.082Z",
+      "type": "tool/call",
+      "callId": "call_00_BTIUrVZy6ViWQVegsvVN7709",
+      "name": "channel_send"
+    },
+    {
+      "seq": 336,
+      "time": "2026-10-11T05:10:38.104Z",
+      "type": "tool/result",
+      "callId": "call_00_BTIUrVZy6ViWQVegsvVN7709",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "9451e1bf-e9a8-46ab-b668-7524f3f758d3"
+      }
+    },
+    {
+      "seq": 350,
+      "time": "2026-10-11T05:13:20.963Z",
+      "type": "tool/call",
+      "callId": "call_00_k8Y6IaoXDh8OoWeduPd92517",
+      "name": "ask_secret",
+      "fields": [
+        {
+          "id": "endpoint",
+          "required": true
+        },
+        {
+          "id": "api_key",
+          "required": true
+        },
+        {
+          "id": "api_secret",
+          "required": true
+        }
+      ]
+    },
+    {
+      "seq": 351,
+      "time": "2026-10-11T05:14:49.586Z",
+      "type": "tool/result",
+      "callId": "call_00_k8Y6IaoXDh8OoWeduPd92517",
+      "name": "ask_secret",
+      "isError": false,
+      "value": {
+        "status": "cancelled",
+        "references": {}
+      }
+    },
+    {
+      "seq": 356,
+      "time": "2026-10-11T05:14:52.853Z",
+      "type": "tool/call",
+      "callId": "call_00_FjR4yiIaAcOqUlvkJVtG3552",
+      "name": "channel_send"
+    },
+    {
+      "seq": 357,
+      "time": "2026-10-11T05:14:52.884Z",
+      "type": "tool/result",
+      "callId": "call_00_FjR4yiIaAcOqUlvkJVtG3552",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "901a0a87-42f4-4cab-a469-67d0ebeb67a5"
       }
     }
   ]
