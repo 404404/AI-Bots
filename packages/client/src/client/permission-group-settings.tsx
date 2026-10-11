@@ -13,6 +13,15 @@ import { Combobox } from './combobox.js';
 import { MessagingHelp } from './messaging-help.js';
 import { Modal } from './modal.js';
 import { PairingTable } from './pairing-table.js';
+import {
+  BehaviorSelection,
+  BehaviorResult,
+  BehaviorPreview,
+} from './behavior-permission-settings.js';
+import type {
+  BehaviorPermission,
+  BehaviorChoices,
+} from '../../../core/src/messaging/behavior-policy.js';
 
 const capabilities = ['approve', 'reject', 'review-pairing'] as const;
 const capabilityLabel = {
@@ -116,11 +125,13 @@ function PermissionEditor({
 
 export function PersonPermissions({
   request,
+  selectGroup,
   busy,
   change,
   t,
 }: {
   request: PairingRequest;
+  selectGroup?: ((id: string) => void) | undefined;
   busy: boolean;
   change(input: SenderAccessInput): Promise<void>;
   t: BotHarnessTranslate;
@@ -189,6 +200,21 @@ export function PersonPermissions({
               ))}
             </tbody>
           </table>
+          {effective.behaviorPermissions?.length ? (
+            <>
+              <strong>{t('pairing.behaviorPermissions')}</strong>
+              <MessagingHelp
+                title={t('pairing.behaviorPermissions')}
+                text={t('pairing.behaviorHelp')}
+                t={t}
+              />
+              <BehaviorResult
+                items={effective.behaviorPermissions}
+                selectGroup={selectGroup}
+                t={t}
+              />
+            </>
+          ) : null}
         </>
       ) : null}
       <Button size="sm" variant="toolbar" disabled={busy} onClick={() => setEditing(true)}>
@@ -245,6 +271,8 @@ export function PersonPermissions({
 
 export function GroupDetails({
   group,
+  behaviorPermissions = [],
+  groups = [],
   people,
   bindings,
   busy,
@@ -252,6 +280,8 @@ export function GroupDetails({
   t,
 }: {
   group: ExternalPermissionGroup;
+  behaviorPermissions?: BehaviorPermission[];
+  groups?: ExternalPermissionGroup[];
   people: PairingRequest[];
   bindings: GroupBinding[];
   busy: boolean;
@@ -286,6 +316,17 @@ export function GroupDetails({
           <dd>{group.delegateDeny?.join(', ') || '—'}</dd>
         </div>
       </dl>
+      {behaviorPermissions
+        .filter((item) =>
+          [...(group.behaviorAllow ?? []), ...(group.behaviorDeny ?? [])].includes(item.id),
+        )
+        .map((item) => (
+          <div key={item.id}>
+            {item.name} ·{' '}
+            {t(group.behaviorDeny?.includes(item.id) ? 'pairing.deny' : 'pairing.allow')} · r
+            {item.revision}
+          </div>
+        ))}
       <strong>{t('pairing.groupMembers')}</strong>
       <ul>
         {people
@@ -352,6 +393,14 @@ export function GroupDetails({
         >
           <strong>{group.name}</strong>
           <p>{t('pairing.deleteGroupWarning')}</p>
+          {behaviorPermissions.length ? (
+            <BehaviorPreview
+              items={behaviorPermissions}
+              groups={groups.filter((entry) => entry.id !== group.id)}
+              people={people.filter((person) => group.memberIds.includes(person.id))}
+              t={t}
+            />
+          ) : null}
           {deleteFailed ? (
             <p role="alert" className="bh-error">
               {t('pairing.error')}
@@ -361,6 +410,8 @@ export function GroupDetails({
       ) : null}
       {editing && change ? (
         <GroupDialog
+          behaviorPermissions={behaviorPermissions}
+          groups={groups}
           group={group}
           people={people}
           bindings={bindings}
@@ -376,6 +427,8 @@ export function GroupDetails({
 
 export function GroupDialog({
   group,
+  behaviorPermissions = [],
+  groups = [],
   people,
   bindings,
   busy,
@@ -384,6 +437,8 @@ export function GroupDialog({
   t,
 }: {
   group?: ExternalPermissionGroup;
+  behaviorPermissions?: BehaviorPermission[];
+  groups?: ExternalPermissionGroup[];
   people: PairingRequest[];
   bindings: GroupBinding[];
   busy: boolean;
@@ -409,6 +464,10 @@ export function GroupDialog({
     delegateDeny: group?.delegateDeny ?? [],
   });
   const [failed, setFailed] = useState(false);
+  const [behaviorValue, setBehaviorValue] = useState<BehaviorChoices>({
+    behaviorAllow: group?.behaviorAllow ?? [],
+    behaviorDeny: group?.behaviorDeny ?? [],
+  });
   const columns: ColumnDef<PairingRequest>[] = [
     {
       id: 'name',
@@ -422,6 +481,16 @@ export function GroupDialog({
       name,
       ...choices(value),
       memberIds: members,
+      ...(behaviorPermissions.length ||
+      (group?.behaviorAllow?.length ?? 0) ||
+      (group?.behaviorDeny?.length ?? 0)
+        ? {
+            ...behaviorValue,
+            expectedBehaviorRevisions: Object.fromEntries(
+              behaviorPermissions.map((item) => [item.id, item.revision]),
+            ),
+          }
+        : {}),
     };
     try {
       await change(
@@ -488,6 +557,13 @@ export function GroupDialog({
           }}
         />
         <PermissionEditor value={value} change={setValue} busy={busy} t={t} />
+        <BehaviorSelection
+          items={behaviorPermissions}
+          value={behaviorValue}
+          change={setBehaviorValue}
+          busy={busy}
+          t={t}
+        />
       </fieldset>
       <strong>
         {t('pairing.groupMembers')} ({members.length})
@@ -514,6 +590,28 @@ export function GroupDialog({
           t={t}
         />
       </div>
+      <BehaviorPreview
+        items={behaviorPermissions}
+        groups={[
+          ...groups.filter((existing) => existing.id !== group?.id),
+          {
+            id: group?.id ?? 'draft',
+            botSlug: group?.botSlug ?? '',
+            bindingId,
+            name,
+            revision: group?.revision ?? 1,
+            memberIds: members,
+            ...value,
+            ...behaviorValue,
+            createdAt: group?.createdAt ?? '',
+            updatedAt: group?.updatedAt ?? '',
+          },
+        ]}
+        people={people.filter((person) =>
+          [...members, ...(group?.memberIds ?? [])].includes(person.id),
+        )}
+        t={t}
+      />
       {failed ? (
         <p role="alert" className="bh-error">
           {t('pairing.error')}

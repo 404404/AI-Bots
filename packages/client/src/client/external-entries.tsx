@@ -146,6 +146,7 @@ function IdentitiesForBot({
           requests={pairings}
           roles={snapshot?.roles ?? []}
           groups={snapshot?.permissionGroups ?? []}
+          behaviorPermissions={snapshot?.behaviorPermissions ?? []}
           bindings={(snapshot?.identities ?? [])
             .filter(
               (binding) => binding.enabled && !binding.revokedAt && binding.platform === 'feishu',

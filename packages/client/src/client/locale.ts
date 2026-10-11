@@ -365,6 +365,22 @@ export const zh = {
   'pairing.delegationHelp':
     '使用管理能力与授予他人能力分别授权。审核人只能授予管理能力及后续委派范围均在其当前可委派范围内的角色；显式禁止优先。',
   'pairing.answerCapability': '回答正式提问',
+  'pairing.behaviorPermissions': '行为权限',
+  'pairing.behaviorName': '权限名称',
+  'pairing.behaviorRevision': '版本',
+  'pairing.createBehaviorPermission': '创建行为权限',
+  'pairing.editBehaviorPermission': '编辑行为权限',
+  'pairing.deleteBehaviorPermission': '删除行为权限',
+  'pairing.saveBehaviorPermission': '保存行为权限',
+  'pairing.noBehaviorPermissions': '尚无行为权限。先创建，再到组内勾选。',
+  'pairing.behaviorConflict': '允许与拒绝冲突 · 拒绝优先',
+  'pairing.behaviorNoConflict': '无同项冲突',
+  'pairing.behaviorPreview': '受影响人员与生效预览',
+  'pairing.behaviorNoAffectedPeople': '没有受影响的有效配对人员。',
+  'pairing.behaviorHelp':
+    '描述可允许或拒绝的行为，例如“回答报价问题”。多个组允许同一项会合并来源；任一组拒绝时，以拒绝为准。主角色约束仍适用。这是模型行为策略，不是文件、邮件或 Shell 的强制隔离，也不自动发现任意文字矛盾。',
+  'pairing.behaviorDeleteHelp':
+    '先从所有组移除此权限的引用，再删除。编辑文字会更新所有引用该项的组，请先检查受影响人员。',
   'pairing.rulesCapability': '明确保存审批规则',
   'pairing.pending': '等待审核',
   'pairing.approved': '已授权',
@@ -3138,6 +3154,23 @@ export const en = {
   'pairing.delegationHelp':
     'Using management capabilities and granting them to others are separate permissions. A reviewer can grant only Roles whose management and onward-delegation grants fit their current delegation ceiling. Explicit Deny wins.',
   'pairing.answerCapability': 'Answer formal questions',
+  'pairing.behaviorPermissions': 'Behavior permissions',
+  'pairing.behaviorName': 'Permission name',
+  'pairing.behaviorRevision': 'Revision',
+  'pairing.createBehaviorPermission': 'Create behavior permission',
+  'pairing.editBehaviorPermission': 'Edit behavior permission',
+  'pairing.deleteBehaviorPermission': 'Delete behavior permission',
+  'pairing.saveBehaviorPermission': 'Save behavior permission',
+  'pairing.noBehaviorPermissions':
+    'No behavior permissions yet. Create an item, then select it in a group.',
+  'pairing.behaviorConflict': 'Allow/Deny conflict · Deny wins',
+  'pairing.behaviorNoConflict': 'No same-item conflict',
+  'pairing.behaviorPreview': 'Affected people and effective preview',
+  'pairing.behaviorNoAffectedPeople': 'No affected currently paired people.',
+  'pairing.behaviorHelp':
+    'Describe a behavior that can be allowed or denied, such as “answer pricing questions”. Multiple groups allowing the same item combine sources; any explicit Deny wins. Primary Role constraints still apply. This guides model behavior, not forced file, mail or Shell isolation, and does not detect arbitrary text contradictions.',
+  'pairing.behaviorDeleteHelp':
+    'Remove this item from every group before deleting it. Editing its text updates every referencing group; inspect affected people first.',
   'pairing.rulesCapability': 'Explicitly save approval rules',
   'pairing.pending': 'Awaiting review',
   'pairing.approved': 'Authorized',

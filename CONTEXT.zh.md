@@ -493,8 +493,12 @@ Pairing Reviewer 当前可通过 Role 授予的显式管理能力集合，包含
 _避免使用_：自身权限隐式允许委派、资源 ACL、跨 App 管理员
 
 **External Authorization Group**：
-一个 PersonaBot 与 App Binding 下，为当前已配对外部人员持续提供显式管理 Allow／Deny 的授权组；人员可属于多个授权组，同时保留一个主行为 Role。成员关系不授予聊天资格，撤销后重新配对不继承旧成员关系。
+一个 PersonaBot 与 App Binding 下，为当前已配对外部人员持续提供显式管理 Allow／Deny 及可复用行为权限项的授权组；人员可属于多个授权组，同时保留一个主行为 Role。成员关系不授予聊天资格，撤销后重新配对不继承旧成员关系。
 _避免使用_：Channel Group、平台会话群、复制 Role、原生 DSH RBAC
+
+**Behavior permission item**：
+一个可命名、可复用的外部人员行为描述，供同一 PersonaBot 的多个授权组引用并允许或拒绝。同项显式 Deny 优先；生效策略在主 Role 约束内指导模型，不是资源 ACL 或管理能力。
+_避免使用_：原生权限、复制 Role、强制 Shell 策略、语义冲突证明
 
 **Person permission exception**：
 绑定一次当前 Chat pairing 的显式管理 Allow／Deny，与其 Role 及授权组贡献共同生效；任意适用的显式 Deny 优先。它不会授予已认证 Web Human 的来源身份。
