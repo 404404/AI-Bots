@@ -205,7 +205,8 @@ export function mountPrivateInputs(
                   agent,
                   args.account,
                   { endpoint: args.endpoint, api_key: args.api_key, api_secret: args.api_secret },
-                  (values) => execution.authenticatedStatus(values, call.signal),
+                  (values, signal) => execution.authenticatedStatus(values, signal),
+                  call.signal,
                 ),
               );
             },

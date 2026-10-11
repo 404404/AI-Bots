@@ -1,5 +1,7 @@
 # BotHarness 架构与数据流
 
+#1382 在同一个 PrivateInputs owner 内加入 PersonaBot 创建身份与账号范围的 native Credentials 版本记录。Owner 从既有 Web Chat 卡片打开空白替换卡或撤销本地访问；新 grant 激活及 canonical Channel configured resolution 都成功后才返回引用。每次真实消费在账号串行队列内核对当前 UUID，登记 AbortSignal 后释放队列；替换／撤销写入新版本或持久 tombstone，并尝试停止既有使用。宽执行授权不能越过版本检查，停止结果区分已停止、已完成与不确定，401／403 只返回状态及安全修复建议。启动恢复先于 Owner 写入，撤销跨重启保留。详见 [ADR-0167](../adr/0167-private-account-versions-fence-consumption-and-revocation.md)；旧程序不理解 tombstone，回滚需恢复完整升级前备份或向前修复。
+
 #679 将入口收束为 Bot 模式设置左侧的紧凑图标／未读 Chip；折叠侧栏时则在 Bot 模式下方以相同尺寸对齐。展开时仅显示未读数字 badge，最多为 99+；有未读时入口常显，没有未读时仅在 Bot 模式开启时悬停或键盘聚焦才显示，与设置按钮一致；模式关闭时 hover 不显示，也不进入 Tab 顺序；折叠时入口仅在 Bot 模式开启后显示，图标右上角红点表示有未读或待行动；模式关闭时入口隐藏且不进入 Tab 顺序。无障碍名称保留完整未读数量与待行动提示。Client 导航偏好单独记住最后查看的总览／收件箱，不受私聊、模式切换或刷新影响；显式 tab 仍直接打开对应视图。
 
 BotHarness 是 DSH（DeepSeek Harness）之上的插件层，给 Agent 持久产品身份：**PersonaBot**。PersonaBot 用一个 Orchestrator Session 管理 Inbox，并可同时管理多个独立 Assignment Session；Memory 是 optional capability，Persona 是其中的 optional 内容；两者都不是聊天或执行的前置依赖。DeepSeekBot 是首个应用，提供 roster、Bot Inbox、Assignment Directory、委派和 IM 接入。

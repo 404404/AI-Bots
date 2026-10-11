@@ -1447,9 +1447,17 @@ function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['priv
   if (
     record === undefined ||
     Object.keys(record).some(
-      (key) => !['sessionId', 'account', 'purpose', 'fields', 'expiresAt'].includes(key),
+      (key) =>
+        !['sessionId', 'account', 'purpose', 'fields', 'expiresAt', 'replacesMessageId'].includes(
+          key,
+        ),
     ) ||
-    typeof record['sessionId'] !== 'string' ||
+    (record['sessionId'] === undefined
+      ? typeof record['replacesMessageId'] !== 'string'
+      : typeof record['sessionId'] !== 'string') ||
+    (record['replacesMessageId'] !== undefined &&
+      (typeof record['replacesMessageId'] !== 'string' ||
+        !/^[0-9a-f-]{36}$/.test(record['replacesMessageId']))) ||
     typeof record['account'] !== 'string' ||
     typeof record['purpose'] !== 'string' ||
     (record['expiresAt'] !== undefined &&
@@ -1476,7 +1484,10 @@ function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['priv
   if (new Set(fields.map((field) => field.id)).size !== fields.length)
     throw new Error('Invalid private input fields');
   return {
-    sessionId: record['sessionId'],
+    ...(typeof record['sessionId'] === 'string' ? { sessionId: record['sessionId'] } : {}),
+    ...(typeof record['replacesMessageId'] === 'string'
+      ? { replacesMessageId: record['replacesMessageId'] }
+      : {}),
     account: record['account'],
     purpose: record['purpose'],
     fields,

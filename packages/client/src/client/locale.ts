@@ -2512,7 +2512,17 @@ export const zh = {
   'approval.loading': '正在检查请求状态…',
   'approval.expired': '此请求已失效',
   'question.title': '需要你的回答',
-  'privateInput.title': '提供私密信息',
+  'privateInput.title': '私密信息',
+  'privateInput.pending': '需要填写',
+  'privateInput.received': '已提交',
+  'privateInput.replace': '替换',
+  'privateInput.revoke': '撤销',
+  'privateInput.replacementNote': '填写新的私密信息；旧值不会被取回。提交后旧引用失效。',
+  'privateInput.revoked': '本地访问已撤销；服务端令牌和已完成的操作不会因此撤回。',
+  'privateInput.superseded': '此配置已被新的私密信息替换，旧引用不能再使用。',
+  'privateInput.unavailable': '此账号配置不可用，请向 Bot 发起新的私密输入请求。',
+  'privateInput.stopSummary':
+    '正在使用的任务：已停止 {stopped}，已完成 {completed}，结果不确定 {uncertain}。',
   'privateInput.expiresAt': '有效期至 {time}',
   'privateInput.expired': '此私密输入请求已过期，请向 Bot 发起新请求',
   'privateInput.account': '账号',
@@ -5361,7 +5371,21 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.loading': 'Checking request…',
   'approval.expired': 'This request is no longer active',
   'question.title': 'Your answer is needed',
-  'privateInput.title': 'Provide private information',
+  'privateInput.title': 'Private information',
+  'privateInput.pending': 'Input needed',
+  'privateInput.received': 'Submitted',
+  'privateInput.replace': 'Replace',
+  'privateInput.revoke': 'Revoke',
+  'privateInput.replacementNote':
+    'Provide new private information; old values are never retrieved. Submission invalidates old references.',
+  'privateInput.revoked':
+    'Local access revoked. Remote tokens and completed effects are unchanged.',
+  'privateInput.superseded':
+    'New private information replaced this configuration. Old references cannot be used.',
+  'privateInput.unavailable':
+    'This account configuration is unavailable. Ask the Bot for a new private-input request.',
+  'privateInput.stopSummary':
+    'Active uses: {stopped} stopped, {completed} completed, {uncertain} uncertain.',
   'privateInput.expiresAt': 'Expires at {time}',
   'privateInput.expired': 'This private input request has expired. Ask the Bot for a new request.',
   'privateInput.account': 'Account',
