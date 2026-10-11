@@ -278,6 +278,58 @@ it('exclusion targets stay Bot-scoped and deletion cannot leave links to an abse
   expect(items()).toEqual([expect.objectContaining({ id: a!.id, revision: 3, excludes: [] })]);
   expect(f.db.read((db) => behaviorPermissions(db, 'other'))).toEqual([other]);
 });
+
+it('disabled-Binding approved memberships retain configuration checks, while permanently revoked membership does not block item editing', () => {
+  const { f, change, request, items, revisions } = behaviorFixture();
+  const [a, b] = items();
+  for (const item of [a!, b!])
+    change({
+      kind: 'create-group',
+      bindingId: 'binding',
+      name: item.name,
+      allow: [],
+      deny: [],
+      memberIds: [request.id],
+      behaviorAllow: [item.id],
+      expectedBehaviorRevisions: revisions(),
+    });
+  f.db.transaction((db) =>
+    db.prepare('UPDATE messaging_bindings SET enabled = 0 WHERE id = ?').run('binding'),
+  );
+  expect(f.pairing.list('ada')).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: request.id,
+        status: 'unavailable',
+        roleId: expect.any(String),
+      }),
+    ]),
+  );
+  const exclusion = {
+    kind: 'edit-behavior-permission' as const,
+    id: a!.id,
+    expectedRevision: 1,
+    name: a!.name,
+    behavior: a!.behavior,
+    excludes: [b!.id],
+    expectedExcludedRevisions: { [b!.id]: 1 },
+  };
+  expect(() => change(exclusion)).toThrow('behavior-permission-conflict');
+  expect(items()).toEqual([a, b]);
+  f.db.transaction((db) =>
+    db
+      .prepare('UPDATE messaging_bindings SET revoked_at = ? WHERE id = ?')
+      .run(new Date().toISOString(), 'binding'),
+  );
+  change(exclusion);
+  expect(f.pairing.list('ada')[0]).toMatchObject({ status: 'revoked' });
+  expect(items()).toEqual(
+    expect.arrayContaining([expect.objectContaining({ id: a!.id, excludes: [b!.id] })]),
+  );
+  expect(
+    f.db.read((db) => readSenderPermissions(db, 'ada', event(), new Date())).effectivePermissions,
+  ).toBeUndefined();
+});
 it('shared behavior items resolve current group sources, Deny conflicts and revisions without granting management authority', () => {
   const f = fixture();
   const change = (input: Parameters<typeof changeSenderAccess>[2]) =>

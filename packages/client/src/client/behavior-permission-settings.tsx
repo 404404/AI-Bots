@@ -31,7 +31,11 @@ export function configuredBehaviorConflicts(
   return behaviorConfigurationConflicts(
     items,
     groups,
-    people.filter((person) => person.status === 'approved' && person.purpose === 'conversation'),
+    people.filter(
+      (person) =>
+        person.purpose === 'conversation' &&
+        (person.status === 'approved' || (person.status === 'unavailable' && !!person.roleId)),
+    ),
   );
 }
 

@@ -216,7 +216,7 @@ it('refuses an incompatible Group grant in the UI and enables save only after ex
   }
 });
 
-it('item editor previews bilateral exclusion removal and sends both endpoint revisions', async () => {
+it('item editor includes a disabled-Binding person and previews bilateral exclusion removal with both endpoint revisions', async () => {
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host),
@@ -232,7 +232,12 @@ it('item editor previews bilateral exclusion removal and sends both endpoint rev
     updatedAt: request.createdAt,
   };
   const b = { ...a, id: 'b', name: 'Private', excludes: ['a'], revision: 3 };
-  const person = { ...request, purpose: 'conversation' as const, status: 'approved' as const };
+  const person = {
+    ...request,
+    purpose: 'conversation' as const,
+    status: 'unavailable' as const,
+    roleId: 'member',
+  };
   const base = {
     botSlug: 'ada',
     bindingId: person.bindingId,
