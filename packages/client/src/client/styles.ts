@@ -4652,7 +4652,8 @@ html[data-botharness-motion='reduce'] .bh-composer-footer {
   color: var(--dsw-alias-label-tertiary);
   transition: transform 150ms var(--ds-ease-in-out);
 }
-.bh-channel-sidebar-entry-chevron.bh-chevron-collapsed {
+.bh-channel-sidebar-entry-chevron.bh-chevron-collapsed,
+.bh-workspace-folder-secondary:not([open]) > summary > .bh-channel-sidebar-entry-chevron {
   transform: rotate(-90deg);
 }
 .bh-channel-sidebar-entry-label {
@@ -5111,8 +5112,11 @@ html[data-botharness-motion='reduce'] .bh-channel-sidebar-entry-chevron {
   min-width: 0;
 }
 .bh-workspace-folder-secondary > summary {
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
+  width: 100%;
+  list-style: none;
+}
+.bh-workspace-folder-secondary > summary::-webkit-details-marker {
+  display: none;
 }
 .bh-workspace-folder-secondary .bh-workspace-folder-table,
 .bh-workspace-folder-manual {

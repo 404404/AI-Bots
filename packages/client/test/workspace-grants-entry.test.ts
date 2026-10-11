@@ -33,12 +33,65 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   Tag: ({ children }: { children: ReactNode }) => createElement('span', null, children),
   Modal: () => null,
   Input: (props: InputHTMLAttributes<HTMLInputElement>) => createElement('input', props),
-  IconChevronDownOutlineRegular: () => null,
+  IconChevronDownOutlineRegular: ({ size }: { size?: number }) =>
+    createElement('svg', { 'data-icon': 'sidebar-chevron', width: size, height: size }),
   IconCloseOutlineRegular: () => null,
   IconFolderOpenOutlineRegular: () => null,
 }));
 
 describe('Workspace Grant sidebar', () => {
+  it('reuses the Channel sidebar summary row and chevron while keeping native disclosure', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const actions = {
+      listWorkspaceGrants: vi.fn(async () => []),
+      listWorkspaceOptions: vi.fn(async () => [
+        { id: 'registered', title: 'Registered project', path: '/registered' },
+      ]),
+      memoryDirectory: vi.fn(async () => undefined),
+      listToolApprovalRules: vi.fn(async () => []),
+      assignmentAccess: vi.fn(async () => ({ mode: 'workspace-write' })),
+      authorizeWorkspacePath: vi.fn(),
+      createWorkspaceGrant: vi.fn(),
+    } as unknown as BridgeActions;
+    try {
+      await act(async () =>
+        root.render(
+          createElement(WorkspaceGrantsEntry, {
+            scope: 'personabot',
+            botSlug: 'ada',
+            channelId: 'dm-ada',
+            actions,
+            t: zhTranslate,
+            composerOnly: true,
+          }),
+        ),
+      );
+      const summaries = container.querySelectorAll('details > summary');
+      expect(summaries).toHaveLength(2);
+      for (const summary of summaries) {
+        expect(summary.classList.contains('bh-channel-sidebar-entry-head')).toBe(true);
+        expect(summary.querySelector('.bh-channel-sidebar-entry-label')).not.toBeNull();
+        const chevron = summary.querySelector('.bh-channel-sidebar-entry-chevron');
+        expect(chevron?.getAttribute('aria-hidden')).toBe('true');
+        expect(chevron?.querySelector('svg')?.getAttribute('width')).toBe('14');
+      }
+      const manual = summaries[0]!.parentElement as HTMLDetailsElement;
+      expect(manual.open).toBe(false);
+      await act(async () => (summaries[0] as HTMLElement).click());
+      expect(manual.open).toBe(true);
+      await act(async () => (summaries[0] as HTMLElement).click());
+      expect(manual.open).toBe(false);
+      expect(actions.authorizeWorkspacePath).not.toHaveBeenCalled();
+      expect(actions.createWorkspaceGrant).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
   it.each(['manual', 'native'] as const)(
     'keeps the %s directory preview visible without publishing a Grant change',
     async (kind) => {

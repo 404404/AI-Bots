@@ -27,7 +27,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- Bot DMs offer composer shortcuts for existing model and Workspace Grant settings and Window Companion show/remove, plus synchronized model/workspace chips and a read-only Bot usage summary; drafts and attachments remain intact and authorization still requires confirmation ([#1432](https://github.com/BotHarness/DeepSeekBot/issues/1432)).
+- Bot DMs offer composer shortcuts for existing model and Workspace Grant settings and Window Companion show/remove, plus synchronized model/workspace chips and a read-only Bot usage summary; drafts and attachments remain intact, authorization still requires confirmation, and Workspace Grant collapsibles reuse the Channel sidebar header and chevron design ([#1432](https://github.com/BotHarness/DeepSeekBot/issues/1432)).
 
 - Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a compact, sidebar-style affected-person preview; its Allow/Deny cells show only checkboxes with accessible names, and its body scrolls while the title and actions remain visible. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
 

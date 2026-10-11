@@ -18,10 +18,10 @@ Composition borrows a compact context row and input-adjacent menu, adapted to DS
 
 ## Automated verification
 
-- Client suite: **167 files passed, one skipped; 1216 tests passed, one skipped**. Existing jsdom navigation warnings are not browser runtime failures.
-- Focused regression: **eight files, 53 tests passed**, covering slash filtering, ordinary prose/path slashes, Enter/Tab/arrows/Escape, pointer selection, target changes, draft/attachment preservation, model-store synchronization, scoped Grant confirmation/cancellation/reuse, preview failure readback, Companion readiness/preference restoration and usage states.
+- Original slice Client suite at `2c6790fc`: **167 files passed, one skipped; 1216 tests passed, one skipped**. Existing jsdom navigation warnings are not browser runtime failures.
+- Focused regression after the collapsible follow-up: **eight files, 54 tests passed**, covering slash filtering, ordinary prose/path slashes, Enter/Tab/arrows/Escape, pointer selection, target changes, draft/attachment preservation, model-store synchronization, scoped Grant confirmation/cancellation/reuse, preview failure readback, Companion readiness/preference restoration, usage states and sidebar-style native disclosure.
 - Typecheck, lint/source policy, formatting, build and bilingual Release Ledger checks passed.
-- Full repository suite: **488 files passed, one failed, seven skipped; 4114 tests passed, one failed, 13 skipped**. Not green: `scripts/test/dev-im-test-apps.test.mjs` synthetic-stdin setup test exits 2 instead of 0. The same single-test failure reproduces at the exact detached base revision (six tests pass, one fails); its source is unchanged by this PR. No unrelated script fix is included.
+- Original slice full repository suite at `2c6790fc`: **488 files passed, one failed, seven skipped; 4114 tests passed, one failed, 13 skipped**. Not green: `scripts/test/dev-im-test-apps.test.mjs` synthetic-stdin setup test exits 2 instead of 0. The same single-test failure reproduces at the exact detached base revision (six tests pass, one fails); its source is unchanged by this PR. No unrelated script fix is included. The style-only follow-up reran focused tests and token guards, not the entire repository suite.
 - CI and Human QA are separate gates; local results do not claim either.
 
 ## Real isolated Host E2E
@@ -41,7 +41,13 @@ The isolated macOS native directory picker initially refused browsing as unavail
 
 Committed PNGs under `1432-dm-composer/` are real rendered UI crops with synthetic data. They intentionally omit unrelated conversation previews, local paths and identifiers. Before shows the prior entry-point/absence state; after shows the new menu/context row. Before/after use the same composer surface, theme and captured image dimensions; configured model/Grant/usage changes in the ready-state after are labeled, not represented as identical fixture data.
 
-Desktop English light/dark captures are browser evidence, not physical-phone, Safari or Human acceptance. Chinese was selected through the real shell settings; DOM verification showed translated menu actions, chips and the existing Profile details reached from the summary. Final Chinese/confirmation-dialog capture and narrow/touch verification remain blocked: the T3 preview continued serving DOM actions but PNG snapshots failed and viewport resizing timed out. The committed dark pair is the completed before/after evidence; ready-state dark/light images are supplemental, not matched light before/after. No standalone headless capture is represented as T3 evidence. Complete these remaining visual checks through the reproduction steps before accepting Human QA.
+Desktop English light/dark captures are browser evidence, not physical-phone or Safari acceptance. Chinese was selected through the real shell settings; DOM verification showed translated menu actions, chips and the existing Profile details reached from the summary. Initial final Chinese/dialog capture and narrow/touch verification were blocked by T3 snapshot/resize failures. PNG capture recovered during the follow-up: the Chinese Workspace Grant editor is now captured both expanded and collapsed. The original dark pair remains the composer before/after evidence; ready-state dark/light images are supplemental, not matched light before/after. No standalone headless capture is represented as T3 evidence; no physical-device or narrow/touch result is inferred from the Human's general functional acceptance.
+
+### Human-requested collapsible follow-up
+
+The Human reported that functional testing found no issue, then requested the Channel sidebar disclosure design in the Workspace Grant editor. All folder secondary sections now reuse `bh-channel-sidebar-entry-head`, `bh-channel-sidebar-entry-label` and the same 14px `IconChevronDownOutlineRegular`/150ms rotation. Native `details`/`summary` keyboard and toggle behavior remains; the browser triangle marker is hidden. No authorization/state-owner behavior changes.
+
+The Human-provided annotated before image is cropped to the dialog (`workspace-before-human.png`); `workspace-after-open.png` and `workspace-after-closed.png` are fresh T3 captures on the task-owned Host. They use the same Chinese editor/fixture, but the Human's image has a different zoom/capture scale; this is labeled rather than presented as a pixel-matched pair. Crops exclude background conversation paths. Real DOM/CSS inspection confirms marker `none`, 14px glyphs, no expanded rotation and -90-degree collapsed rotation. Focused editor/token guards: **two files / 26 tests pass**; the wider eight-file focused suite, typecheck, lint, format, build and bilingual ledger checks also pass.
 
 T3 browser console snapshots during the main E2E had no displayed console errors; canceled streams/diagnostic requests during navigation are not claimed to be a completely clean network trace. The detailed HTML explainer is generated locally against the exact PR head; no authorized shared HTML hosting path was used. This Markdown evidence is reviewer-accessible, but the local HTML is not claimed to be shared or runtime proof.
 
@@ -54,4 +60,4 @@ T3 browser console snapshots during the main E2E had no displayed console errors
 5. Compare summary and header Bot/26-week counts, click into the existing details, then return to Chat. Toggle Companion from each entry and reload to check the existing preference.
 6. Review light/dark, zh/en, wrapping and touch on your actual target devices. Group/navigation changes are out of scope.
 
-**Human QA pending.** One issue/PR only; pause after PR publication. No merge or #1433 work is authorized by this delivery.
+**Human-reported functional QA passed.** The requested visual follow-up is posted for review; device-specific checks are not inferred. One issue/PR only; pause after the PR update. No merge or #1433 work is authorized by this delivery.

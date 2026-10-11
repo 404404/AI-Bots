@@ -85,6 +85,17 @@ function rememberWorkspace(
 
 const WORKSPACE_ACTION_TIMEOUT_MS = 15_000;
 
+function FolderSectionSummary({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <summary className="bh-channel-sidebar-entry-head">
+      <span className="bh-channel-sidebar-entry-chevron" aria-hidden="true">
+        <IconChevronDownOutlineRegular size={14} />
+      </span>
+      <span className="bh-channel-sidebar-entry-label">{children}</span>
+    </summary>
+  );
+}
+
 function withWorkspaceActionDeadline<T>(promise: Promise<T>, timeoutMessage: string): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = window.setTimeout(
@@ -628,7 +639,7 @@ export function WorkspaceGrantsEntry({
           open={manualOpen}
           onToggle={(event) => setManualOpen(event.currentTarget.open)}
         >
-          <summary>{t('grant.enterPath')}</summary>
+          <FolderSectionSummary>{t('grant.enterPath')}</FolderSectionSummary>
           <div className="bh-workspace-folder-manual">
             <div className="bh-note">{t('grant.pathHelp')}</div>
             <Input
@@ -661,7 +672,7 @@ export function WorkspaceGrantsEntry({
       ) : null}
       {(!developerMode && !composerOnly) || available.length === 0 ? null : (
         <details className="bh-workspace-folder-secondary">
-          <summary>{t('grant.registeredFolders')}</summary>
+          <FolderSectionSummary>{t('grant.registeredFolders')}</FolderSectionSummary>
           <SidebarCardList className="bh-workspace-folder-table">
             {available.map((workspace) => (
               <FolderRow
@@ -691,9 +702,9 @@ export function WorkspaceGrantsEntry({
       )}
       {!developerMode || revoked.length === 0 ? null : (
         <details className="bh-workspace-folder-secondary">
-          <summary>
+          <FolderSectionSummary>
             {t('grant.history')} ({revoked.length})
-          </summary>
+          </FolderSectionSummary>
           <SidebarCardList className="bh-workspace-folder-table">
             {revoked.map((grant) => (
               <FolderRow key={grant.id} name={grant.workspaceTitle} path={grant.workspacePath} />
@@ -762,7 +773,7 @@ export function WorkspaceGrantsEntry({
           ) : null}
           {rules.filter((rule) => rule.revokedAt === undefined).length === 0 ? null : (
             <details className="bh-workspace-folder-secondary">
-              <summary>{t('approval.rulesTitle')}</summary>
+              <FolderSectionSummary>{t('approval.rulesTitle')}</FolderSectionSummary>
               <div className="bh-workspace-folder-table">
                 {rules
                   .filter((rule) => rule.revokedAt === undefined)
@@ -791,7 +802,7 @@ export function WorkspaceGrantsEntry({
                         </button>
                       </div>
                       <details className="bh-workspace-folder-secondary">
-                        <summary>{t('approval.ruleDetails')}</summary>
+                        <FolderSectionSummary>{t('approval.ruleDetails')}</FolderSectionSummary>
                         <div className="bh-note">
                           {t('approval.cwd', { path: approvalRulePath(rule) })}
                         </div>
