@@ -7,7 +7,7 @@ subtitle: 当前 App 的审核、重问与撤销
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1436
 base: 73c75f86aa50767be34a5c8d2cadc17b6a3e8862
 head: 61a8fb4a2b23019fbec828fba097b1a20ff38271
-generated: 2026-10-11T19:28:41.290Z
+generated: 2026-10-11T19:42:48.926Z
 ---
 
 ## A 实现可审查，真实 Slack 验收仍待完成
@@ -18,12 +18,12 @@ generated: 2026-10-11T19:28:41.290Z
 | --- | --- |
 | 72 项配对回归与 10 项共享配置回归 | ok 已通过 |
 | lint、格式、类型与构建 | ok 已通过 |
-| 完整 CI | warn 文档 head 待 CI；配对与共享向导 head 已通过 |
+| 完整 CI | ok 当前配对、共享向导与教程 head 已通过 |
 | 原生 Slack 流程、截图与 Human 反馈 | warn 执行来源与撤销验收未通过 |
 
 这页绑定上方 head，只解释实现。它不证明原生 Slack 已通过验收，也不授予合并或部署许可。
 
-[配对与共享向导 head 的 CI 结果](https://github.com/BotHarness/DeepSeekBot/actions/runs/38159615213)。当前 head 补充教程权限说明和真实配置截图，CI 仍待完成。CodeRabbit 对 Draft 跳过自动 review，因此其成功状态不代表完成代码审查。
+[当前 head 的完整 CI 结果](https://github.com/BotHarness/DeepSeekBot/actions/runs/38168159069)。CodeRabbit 对 Draft 跳过自动 review，因此其成功状态不代表完成代码审查。
 
 ## B 旧问题不会在批准后执行
 
@@ -91,7 +91,9 @@ Slack 群配对和原生管理审批由独立任务推进。Web Human 保持默�
 
 QA2 已配置；Human 分别授权独占窗口，以及仅补充 im:read 并重新安装。配置与安装权限已实测核对。原生首次申请与 Web 批准重问已持久化；新问题的可见回复未与测试 Host 的 Source Event/Admission 对应，当前权限查询不可用，撤销后仍出现回复。
 
-本轮未通过，任务接收器已停止。Human 再次确认其他接收器停止；继续核对执行来源与生命周期，不推定另一个接收器存在，也不接管其他任务。
+本轮未通过，任务接收器已停止。随后在本任务进程不存在、端口未监听的状态下发送新的标记消息，原生网页和同一 Bot 的服务端历史都记录了新回复；因此确有本任务 Host 之外的执行路径。只读检查尚未定位所有者，未停止或修改其他任务。
+
+备用 QA1 BotHarness Cloud QA 的 App、Workspace、必需权限与同一测试人员的已有私聊已核对。新空 Profile 复用原端口准备中；接收器等待 QA1 独占窗口确认，不需要新增权限。
 
 [中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。
 
