@@ -2962,6 +2962,7 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-table tr[data-selected] { background: var(--dsw-alias-interactive-bg-hover); }
 .bh-pairing-table tbody tr:last-child td { border-bottom: none; }
 .bh-pairing-sort, .bh-pairing-name { padding: 0; border: none; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bh-pairing-sort { white-space: nowrap; }
 .bh-pairing-sort:disabled { cursor: default; }
 .bh-pairing-name { font-weight: 500; }
 .bh-pairing-name:hover { text-decoration: underline; }
