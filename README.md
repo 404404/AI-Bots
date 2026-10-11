@@ -251,7 +251,7 @@ pnpm dev:client    # 隔离本地 DSH Profile 的 Client 自动构建
 pnpm docs:dev      # 文档预览：http://localhost:4321
 ```
 
-独立 Lark 测试 App 可配置一次并跨 worktree、branch 和 session 复用：`node scripts/dev-im-test-apps.mjs setup`。凭据只保存在机器本地，每次测试前仍须协调独占接收窗口；见[共享测试 App 指南](docs/agents/im-test-apps.md)。
+独立 Lark 测试 App 可配置一次并跨 worktree、branch 和 session 复用：`node scripts/dev-im-test-apps.mjs setup`；Slack 使用独立 QA1／QA2／QA3 槽，运行 `node scripts/dev-im-test-apps.mjs setup slack`。凭据保存在同一机器本地共享文件中，`list slack` 只列出 Slack 配置元数据；每次测试前仍须协调独占接收窗口。见[共享测试 App 指南](docs/agents/im-test-apps.md)。
 
 稳定的本地文档域名：`pnpm dev` → `https://docs.botharness.localhost`（首次可能请求信任本地 CA）；免 sudo 方式为 `PORTLESS_PORT=8788 PORTLESS_HTTPS=0 pnpm dev`。文档页从仓库源文件生成，请修改源文件。Slides 位于 `apps/presentations`，用 `pnpm slides:dev` 迭代。
 
