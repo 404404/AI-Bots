@@ -9,6 +9,8 @@ import {
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   resolveBehaviorPermissions,
+  behaviorConfigurationConflicts,
+  withBehaviorPermission,
   type BehaviorPermission,
   type BehaviorChoices,
   type EffectiveBehaviorPermission,
@@ -20,6 +22,51 @@ import type { BotHarnessTranslate } from './locale.js';
 import { PairingTable } from './pairing-table.js';
 import { Modal } from './modal.js';
 import { MessagingHelp } from './messaging-help.js';
+
+export function configuredBehaviorConflicts(
+  items: BehaviorPermission[],
+  groups: ExternalPermissionGroup[],
+  people: PairingRequest[],
+) {
+  return behaviorConfigurationConflicts(
+    items,
+    groups,
+    people.filter((person) => person.status === 'approved' && person.purpose === 'conversation'),
+  );
+}
+
+export function BehaviorCompatibility({
+  items,
+  groups,
+  people,
+  t,
+}: {
+  items: BehaviorPermission[];
+  groups: ExternalPermissionGroup[];
+  people: PairingRequest[];
+  t: BotHarnessTranslate;
+}): ReactElement | null {
+  const conflicts = configuredBehaviorConflicts(items, groups, people);
+  if (!conflicts.length) return null;
+  return (
+    <section className="bh-im-role-form bh-error" role="alert">
+      <strong>{t('pairing.behaviorIncompatible')}</strong>
+      {conflicts.map((entry) => (
+        <div key={`${entry.kind}:${entry.id}`}>
+          <strong>{entry.name}</strong>
+          {entry.conflicts.map(({ first, second }) => (
+            <p key={`${first.id}:${second.id}`}>
+              {first.name} ↔ {second.name} ·{' '}
+              {[
+                ...new Set([...first.sources, ...second.sources].map((source) => source.name)),
+              ].join(' · ')}
+            </p>
+          ))}
+        </div>
+      ))}
+    </section>
+  );
+}
 
 export function BehaviorResult({
   items,
@@ -318,6 +365,15 @@ export function BehaviorPermissionsPanel({
             <>
               <strong>{selected.name}</strong>
               <p className="bh-pairing-behavior">{selected.behavior}</p>
+              {selected.excludes?.length ? (
+                <p className="bh-muted">
+                  {t('pairing.behaviorExclusions')}:{' '}
+                  {items
+                    .filter((item) => selected.excludes?.includes(item.id))
+                    .map((item) => item.name)
+                    .join(' · ')}
+                </p>
+              ) : null}
               <div className="bh-muted">
                 r{selected.revision} · {new Date(selected.updatedAt).toLocaleString()}
               </div>
@@ -383,6 +439,7 @@ export function BehaviorPermissionsPanel({
           key={`${editing}:${selected?.id}:${selected?.revision}`}
           {...(editing === 'edit' && selected ? { item: selected } : {})}
           groups={groups}
+          items={items}
           people={people}
           busy={busy}
           change={change}
@@ -396,6 +453,7 @@ export function BehaviorPermissionsPanel({
 
 function BehaviorPermissionDialog({
   item,
+  items,
   groups,
   people,
   busy,
@@ -404,6 +462,7 @@ function BehaviorPermissionDialog({
   t,
 }: {
   item?: BehaviorPermission;
+  items: BehaviorPermission[];
   groups: ExternalPermissionGroup[];
   people: PairingRequest[];
   busy: boolean;
@@ -413,7 +472,12 @@ function BehaviorPermissionDialog({
 }): ReactElement {
   const [name, setName] = useState(item?.name ?? '');
   const [behavior, setBehavior] = useState(item?.behavior ?? '');
+  const [excludes, setExcludes] = useState<string[]>(item?.excludes ?? []);
   const [failed, setFailed] = useState(false);
+  const proposed = item
+    ? withBehaviorPermission(items, { ...item, name, behavior, excludes })
+    : items;
+  const incompatible = configuredBehaviorConflicts(proposed, groups, people).length > 0;
   return (
     <Modal
       open
@@ -422,7 +486,7 @@ function BehaviorPermissionDialog({
       }}
       title={t(item ? 'pairing.editBehaviorPermission' : 'pairing.createBehaviorPermission')}
       closeLabel={t('common.close')}
-      className="bh-sidebar-modal bh-pairing-role-modal"
+      className="bh-sidebar-modal bh-pairing-modal bh-group-editor-modal"
       contentClassName="bh-pairing-content"
       footer={
         <div className="bh-modal-footer">
@@ -432,7 +496,7 @@ function BehaviorPermissionDialog({
           <Button
             size="sm"
             variant="primary"
-            disabled={busy || !name.trim() || !behavior.trim()}
+            disabled={busy || !name.trim() || !behavior.trim() || incompatible}
             onClick={() => {
               setFailed(false);
               void change(
@@ -443,8 +507,26 @@ function BehaviorPermissionDialog({
                       expectedRevision: item.revision,
                       name,
                       behavior,
+                      excludes,
+                      expectedExcludedRevisions: Object.fromEntries(
+                        items
+                          .filter((entry) =>
+                            [...excludes, ...(item.excludes ?? [])].includes(entry.id),
+                          )
+                          .map((entry) => [entry.id, entry.revision]),
+                      ),
                     }
-                  : { kind: 'create-behavior-permission', name, behavior },
+                  : {
+                      kind: 'create-behavior-permission',
+                      name,
+                      behavior,
+                      excludes,
+                      expectedExcludedRevisions: Object.fromEntries(
+                        items
+                          .filter((entry) => excludes.includes(entry.id))
+                          .map((entry) => [entry.id, entry.revision]),
+                      ),
+                    },
               )
                 .then(close)
                 .catch(() => setFailed(true));
@@ -455,36 +537,65 @@ function BehaviorPermissionDialog({
         </div>
       }
     >
-      <label className="bh-im-field">
-        <span>{t('pairing.behaviorName')}</span>
-        <Input
-          data-modal-autofocus
-          value={name}
-          maxLength={80}
-          disabled={busy}
-          onChange={(event) => setName(event.target.value)}
-        />
-      </label>
-      <label className="bh-im-field">
-        <span className="bh-im-actions">
-          {t('pairing.behavior')}
-          <MessagingHelp title={t('pairing.behavior')} text={t('pairing.behaviorHelp')} t={t} />
-        </span>
-        <textarea
-          className="bh-im-textarea"
-          value={behavior}
-          maxLength={1000}
-          rows={4}
-          disabled={busy}
-          onChange={(event) => setBehavior(event.target.value)}
-        />
-      </label>
+      <div className="bh-pairing-workspace">
+        <section className="bh-im-role-form">
+          <label className="bh-im-field">
+            <span>{t('pairing.behaviorName')}</span>
+            <Input
+              data-modal-autofocus
+              value={name}
+              maxLength={80}
+              disabled={busy}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label className="bh-im-field">
+            <span className="bh-im-actions">
+              {t('pairing.behavior')}
+              <MessagingHelp title={t('pairing.behavior')} text={t('pairing.behaviorHelp')} t={t} />
+            </span>
+            <textarea
+              className="bh-im-textarea"
+              value={behavior}
+              maxLength={1000}
+              rows={4}
+              disabled={busy}
+              onChange={(event) => setBehavior(event.target.value)}
+            />
+          </label>
+        </section>
+        <section className="bh-im-role-form bh-behavior-exclusions">
+          <div className="bh-im-actions">
+            <strong>{t('pairing.behaviorExclusions')}</strong>
+            <MessagingHelp
+              title={t('pairing.behaviorExclusions')}
+              text={t('pairing.behaviorExclusionHelp')}
+              t={t}
+            />
+          </div>
+          <PairingTable
+            data={items.filter((entry) => entry.id !== item?.id)}
+            columns={[{ id: 'name', accessorKey: 'name', header: t('pairing.behaviorName') }]}
+            selectedIds={excludes}
+            select={(entry) =>
+              setExcludes((current) =>
+                current.includes(entry.id)
+                  ? current.filter((id) => id !== entry.id)
+                  : [...current, entry.id],
+              )
+            }
+            disabled={busy}
+            label={t('pairing.behaviorExclusions')}
+            empty={t('pairing.noBehaviorPermissions')}
+            t={t}
+          />
+        </section>
+      </div>
+      <BehaviorCompatibility items={proposed} groups={groups} people={people} t={t} />
       {item ? (
         <BehaviorPreview
-          items={[{ ...item, name, behavior }]}
-          groups={groups.filter((group) =>
-            [...(group.behaviorAllow ?? []), ...(group.behaviorDeny ?? [])].includes(item.id),
-          )}
+          items={proposed}
+          groups={groups}
           people={people.filter((person) =>
             groups.some(
               (group) =>

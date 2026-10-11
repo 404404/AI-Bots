@@ -17,6 +17,8 @@ import {
   BehaviorSelection,
   BehaviorResult,
   BehaviorPreview,
+  BehaviorCompatibility,
+  configuredBehaviorConflicts,
 } from './behavior-permission-settings.js';
 import type {
   BehaviorPermission,
@@ -291,6 +293,9 @@ export function GroupDetails({
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteFailed, setDeleteFailed] = useState(false);
+  const afterDeletion = groups.filter((entry) => entry.id !== group.id);
+  const deleteIncompatible =
+    configuredBehaviorConflicts(behaviorPermissions, afterDeletion, people).length > 0;
   return (
     <article className="bh-im-pairing-request">
       <strong>{group.name}</strong>
@@ -374,7 +379,7 @@ export function GroupDetails({
               <Button
                 size="sm"
                 variant="primary"
-                disabled={busy}
+                disabled={busy || deleteIncompatible}
                 onClick={() => {
                   setDeleteFailed(false);
                   void change({
@@ -393,6 +398,12 @@ export function GroupDetails({
         >
           <strong>{group.name}</strong>
           <p>{t('pairing.deleteGroupWarning')}</p>
+          <BehaviorCompatibility
+            items={behaviorPermissions}
+            groups={afterDeletion}
+            people={people}
+            t={t}
+          />
           {behaviorPermissions.length ? (
             <BehaviorPreview
               items={behaviorPermissions}
@@ -472,6 +483,23 @@ export function GroupDialog({
     behaviorAllow: group?.behaviorAllow ?? [],
     behaviorDeny: group?.behaviorDeny ?? [],
   });
+  const proposedGroups: ExternalPermissionGroup[] = [
+    ...groups.filter((existing) => existing.id !== group?.id),
+    {
+      id: group?.id ?? 'draft',
+      botSlug: group?.botSlug ?? '',
+      bindingId,
+      name,
+      revision: group?.revision ?? 1,
+      memberIds: members,
+      ...value,
+      ...behaviorValue,
+      createdAt: group?.createdAt ?? '',
+      updatedAt: group?.updatedAt ?? '',
+    },
+  ];
+  const incompatible =
+    configuredBehaviorConflicts(behaviorPermissions, proposedGroups, people).length > 0;
   const columns: ColumnDef<PairingRequest>[] = [
     {
       id: 'name',
@@ -530,7 +558,7 @@ export function GroupDialog({
           <Button
             size="sm"
             variant="primary"
-            disabled={busy || !name.trim() || !bindingId || members.length > 100}
+            disabled={busy || !name.trim() || !bindingId || members.length > 100 || incompatible}
             onClick={() => void submit()}
           >
             {t('pairing.saveGroup')}
@@ -631,23 +659,15 @@ export function GroupDialog({
           </div>
         </section>
         <aside className="bh-pairing-detail" aria-label={t('pairing.behaviorPreview')}>
+          <BehaviorCompatibility
+            items={behaviorPermissions}
+            groups={proposedGroups}
+            people={people}
+            t={t}
+          />
           <BehaviorPreview
             items={behaviorPermissions}
-            groups={[
-              ...groups.filter((existing) => existing.id !== group?.id),
-              {
-                id: group?.id ?? 'draft',
-                botSlug: group?.botSlug ?? '',
-                bindingId,
-                name,
-                revision: group?.revision ?? 1,
-                memberIds: members,
-                ...value,
-                ...behaviorValue,
-                createdAt: group?.createdAt ?? '',
-                updatedAt: group?.updatedAt ?? '',
-              },
-            ]}
+            groups={proposedGroups}
             people={people.filter((person) =>
               [...members, ...(group?.memberIds ?? [])].includes(person.id),
             )}
