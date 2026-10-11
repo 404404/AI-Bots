@@ -321,6 +321,22 @@ The online management CLI explicitly selects the Host with `--host` or `DEEPSEEK
 
 The application-defined CLI Consumer discovers qualified Provider setup descriptors through the existing Messaging Service `messagingApps` projection, then calls the native Connection Fetch Registry `dsh-im/app-setup` endpoint over the same authenticated DSH HTTP carrier. The Provider owns authorization attempts, expiry and native account/credential persistence; the CLI retains only an invocation's in-memory cookie and adds no store or lifecycle. Feishu credentials and WeChat verification codes enter solely through stdin into purpose-bound `setup.credentials`/`setup.verify` payloads. Stdout projects validated nonsecret state, QR artifacts, account references and fingerprints. A Human confirms WeChat scanning on a phone before the same attempt is polled. IM application authorization does not select a PersonaBot or create a Messaging Grant. See [ADR-0161](../adr/0161-cli-im-authorization-keeps-provider-attempt-authority.md) and [#1318](https://github.com/BotHarness/DeepSeekBot/issues/1318).
 
+### Conditional external tool approval rules
+
+The #1033 exact-rule private Lark candidate requires current `approve` and independent `save-rules`
+management capabilities. A distinct checked Provider callback previews the complete native operation
+and canonical role/directory/Grant scope before an explicit second confirmation. The existing Channel
+Tool Approval owner rechecks the live call, current scope and creator authority before and after its
+awaited canonical decision append, then activates the same rule store. Generation 82 records the
+verified external creator in that rule; Web Human rules retain their prior authority. Every future
+match and final native guard checks the original pairing and current Bot/App Binding capabilities.
+Authority loss permanently revokes the rule, while another still-effective source can preserve it;
+re-enable or re-pair cannot resurrect it. Web and Lark read the same canonical scope and rule status.
+Receipt-only fixed-text cleanup cannot disclose operation details or authorize a new destination.
+Native Session authorization remains Web-only; Workspace/Service authority is not enlarged. See
+[ADR-0175](../adr/0175-external-tool-rules-retain-current-creator-authority.md); real-platform feedback
+and the broader all-opaque IM confirmation remain separate gates.
+
 ## 5 · Orchestrator and Assignment control plane
 
 The Human does not create or select execution Conversations. The Human–PersonaBot DM is the Human's direct entry to that Bot: a message becomes a Source Event, enters the Bot Inbox, and reaches the Orchestrator, which either replies directly or creates, reuses, and manages several Assignment Sessions within authorization and capacity. The right Sessions view projects only DSH root Sessions explicitly owned by that PersonaBot, including Orchestrator and Assignment but not Subagents. Session Ownership supplies membership and role; the native DSH Session catalog supplies title, workspace, and live running state. Cwd never implies ownership (ADR-0072).
