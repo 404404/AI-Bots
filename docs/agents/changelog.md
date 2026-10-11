@@ -150,6 +150,12 @@ instruction authority; Chinese belongs in the human-facing references and releas
 3. Give the ledger release one summary sentence.
 4. Derive the GitHub Release draft from that version, then add up to three optional Highlights and
    contributors when they genuinely help, followed by the full comparison link.
+   Every DeepSeekBot Release, including prereleases, starts with the official website
+   (`https://deepseekbot.app/`) and the Chinese/English installation guides
+   (`https://deepseekbot.app/docs/installation/` and
+   `https://deepseekbot.app/en/docs/installation/`). Keep these user entry points before the
+   technical release notes; `release:draft` inserts them automatically. They are announcement
+   navigation, not additional change entries. The independent DSH Skill release is unchanged.
 5. Obtain explicit Human publishing approval before creating a tag, publishing an artifact, or
    creating the GitHub Release.
 
