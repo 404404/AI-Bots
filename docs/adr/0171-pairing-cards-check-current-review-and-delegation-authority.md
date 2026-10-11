@@ -1,4 +1,4 @@
-# ADR-0170: Pairing cards check current review and delegation authority
+# ADR-0171: Pairing cards check current review and delegation authority
 
 - Status: Accepted
 - Date: 2026-10-11
