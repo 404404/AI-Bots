@@ -160,7 +160,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
-- DeepSeekBot GitHub Release announcements start with the official website and Chinese/English installation guides, so users can install without navigating the source repository ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
+- DeepSeekBot GitHub Release announcements start with version-specific official website and Chinese/English installation links; short links preserve GitHub, release-version and entry-point attribution without changing analytics consent ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
 
 - Added the Product Hunt launch badge to the Chinese and English READMEs ([#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)).
 

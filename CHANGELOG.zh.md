@@ -160,7 +160,7 @@
 
 ### Documentation
 
-- DeepSeekBot 的 GitHub Release 公告顶部提供官网与中英文安装教程入口，方便普通用户安装，无需先阅读源码仓库（[#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)）。
+- DeepSeekBot 的 GitHub Release 公告顶部提供按版本区分的官网与中英文安装入口；短链保留 GitHub 来源、Release 版本与入口归因，不改变统计授权行为（[#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)）。
 
 - 中英文 README 新增 Product Hunt 发布徽章（[#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)）。
 

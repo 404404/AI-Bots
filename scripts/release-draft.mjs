@@ -97,9 +97,10 @@ function releaseBody(release, artifact, metadata) {
   const parts = [];
 
   if (artifact === 'deepseekbot') {
+    const releaseUrl = `https://deepseekbot.app/r/v${release.identity}`;
     parts.push(
-      '- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/)\n' +
-        '- **安装教程 / Installation:** [中文](https://deepseekbot.app/docs/installation/) · [English](https://deepseekbot.app/en/docs/installation/)',
+      `- **官网 / Website:** [DeepSeekBot](${releaseUrl})\n` +
+        `- **安装教程 / Installation:** [中文](${releaseUrl}/install) · [English](${releaseUrl}/install/en)`,
     );
   }
 

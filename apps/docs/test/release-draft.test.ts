@@ -46,8 +46,8 @@ describe("GitHub Release draft preparation", () => {
         tagged: false,
         installable: false,
       },
-      body: `- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/)
-- **安装教程 / Installation:** [中文](https://deepseekbot.app/docs/installation/) · [English](https://deepseekbot.app/en/docs/installation/)
+      body: `- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/r/v0.2.1)
+- **安装教程 / Installation:** [中文](https://deepseekbot.app/r/v0.2.1/install) · [English](https://deepseekbot.app/r/v0.2.1/install/en)
 
 Published a clearer compatibility guide for DeepSeekBot operators.
 
@@ -92,10 +92,10 @@ Published a clearer compatibility guide for DeepSeekBot operators.
     });
 
     expect(
-      draft.body.startsWith("- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/)"),
+      draft.body.startsWith(`- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/r/v${version})`),
     ).toBe(true);
-    expect(draft.body).toContain("[中文](https://deepseekbot.app/docs/installation/)");
-    expect(draft.body).toContain("[English](https://deepseekbot.app/en/docs/installation/)");
+    expect(draft.body).toContain(`[中文](https://deepseekbot.app/r/v${version}/install)`);
+    expect(draft.body).toContain(`[English](https://deepseekbot.app/r/v${version}/install/en)`);
     expect(draft.body.indexOf("安装教程")).toBeLessThan(draft.body.indexOf("Published a clearer"));
   });
 
@@ -293,10 +293,10 @@ Published a clearer compatibility guide for DeepSeekBot operators.
     });
 
     expect(
-      draft.body.startsWith("- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/)"),
+      draft.body.startsWith("- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/r/v0.3.0-rc.1)"),
     ).toBe(true);
-    expect(draft.body).toContain("[中文](https://deepseekbot.app/docs/installation/)");
-    expect(draft.body).toContain("[English](https://deepseekbot.app/en/docs/installation/)");
+    expect(draft.body).toContain("[中文](https://deepseekbot.app/r/v0.3.0-rc.1/install)");
+    expect(draft.body).toContain("[English](https://deepseekbot.app/r/v0.3.0-rc.1/install/en)");
     expect(draft.body).toContain("Documentation-only release: runtime behavior is unchanged.");
     expect(draft.body).not.toContain("Documentation-only patch");
   });
