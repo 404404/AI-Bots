@@ -26,7 +26,15 @@ Before is accepted #1406 code at `cefa12fac05856c182bfab4b80f565f7ec074f06`; aft
 
 ## Pending real group-only acceptance
 
-No #1414 QA1 receiver has started. A fresh exclusive window and second applicant/reviewer actor are awaiting Human coordination. The signed-in Lark automation connection must also be restored, or the unavailable-browser step completed by the Human.
+The Human-authorized QA1 exclusive window is now active on a fresh task-owned isolated Host, with the exact heads above. The reviewer and applicant are two distinct real Lark users in the designated test group. Local receiver owners were checked before start; unrelated task receivers were left stopped. T3 lost its automation host during account switching, so the applicant completed the unavailable-browser interaction manually.
+
+Observed through 2026-10-11 12:57 UTC:
+- The reviewer was bootstrapped through authenticated Web public RPC in this Bot/App with use `review-pairing` and delegation `approve`; own execution approval stays absent. No private-DM route was observed.
+- A different unpaired applicant's true group @ created a pending metadata-only public review card. Its eligible choices are ordinary `QA Member` and management `QA Allow once`; the review/delegation Role itself is excluded by the current ceiling.
+- The Human attempted Role selection and Reject as the applicant and saw “Not authorized or request expired / 未获授权或请求已失效”. Canonical readback before expiry shows pending revision 1, no selection, no granted capabilities and zero external-message Admissions. This records the denied applicant interaction, not an authorized approval.
+- A two-minute task cutoff stopped only its own receiver. After the Human's reply, fresh local availability checks preceded restart of the same isolated Profile; the accepted card receipt and pending request survived. The replacement receiver is bounded by another cutoff.
+
+Authorized reviewer selection/approval, final visible card/re-ask, a fresh actual model reply, independent Reject/delayed Deny and full restart qualification, real Lark screenshots and first-flow Human acceptance remain pending.
 
 1. Confirm QA1's original receiver is stopped, record the exclusive start/stop window, and start only the new isolated Host with the exact qualified Provider.
 2. Through Web, pair the reviewer in the same Bot/App and assign `review-pairing` plus explicit delegation choices. Keep reviewer DM unobserved for the group-only case.
@@ -41,4 +49,4 @@ Human acceptance, real Lark card rendering, native E2E, merge and deployment are
 
 ## Model preparation
 
-In the separate candidate Web DM, the uniquely marked `1414_WEB_MODEL_READY` question produced the actual model reply `323` for 17 × 19. This verifies the isolated Host's model path and shared machine-local credential reuse only. There is still no external App binding or Lark receiver, and this does not accept the real Lark pairing flow.
+In the separate candidate Web DM, the uniquely marked `1414_WEB_MODEL_READY` question produced the actual model reply `323` for 17 × 19. This verifies the isolated Host's model path and shared machine-local credential reuse only. This earlier Web-only model preparation did not accept the real Lark pairing flow; the later bound QA1 run is recorded separately above.
