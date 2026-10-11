@@ -422,6 +422,81 @@ it('can grant a management Role without holding its use capability, but refuses 
   expect((await f.apply(second, 'ou_reviewer', 'reject-pairing')).status).toBe('queued');
 });
 
+it('checks group-only review and delegation grants again after a durable group Deny changes', async () => {
+  const f = await fixture();
+  const change = (input: Parameters<typeof f.core.externalMessaging.senderAccess>[1]) =>
+    f.core.externalMessaging.senderAccess('ada', input);
+  change({
+    kind: 'edit-role',
+    id: f.reviewerRole.id,
+    expectedRevision: f.reviewerRole.revision,
+    name: f.reviewerRole.name,
+    behavior: f.reviewerRole.behavior,
+    capabilities: [],
+    delegableCapabilities: [],
+  });
+  change({
+    kind: 'edit-role',
+    id: f.member.id,
+    expectedRevision: f.member.revision,
+    name: f.member.name,
+    behavior: f.member.behavior,
+    capabilities: ['approve'],
+    delegableCapabilities: ['approve'],
+  });
+  const reviewer = f.core.externalMessaging.pairing
+    .list('ada')
+    .find((p) => p.actorId === 'ou_reviewer')!;
+  change({
+    kind: 'create-group',
+    bindingId: f.binding.id,
+    name: 'Delegated reviewers',
+    memberIds: [reviewer.id],
+    allow: ['review-pairing'],
+    deny: [],
+    delegateAllow: ['approve'],
+    delegateDeny: [],
+  });
+  await f.receiver.onEvent(event('ou_applicant', 'om_group_grant'), {
+    signal: f.receiver.signal,
+  });
+  await vi.waitFor(() => expect(f.deliveries).toHaveLength(1));
+  const card = f.deliveries[0]!;
+  expect((await f.apply(card, 'ou_reviewer', 'select-role', f.member.id)).status).toBe('queued');
+  change({
+    kind: 'create-group',
+    bindingId: f.binding.id,
+    name: 'Delegation hold',
+    memberIds: [reviewer.id],
+    allow: [],
+    deny: [],
+    delegateAllow: ['approve'],
+    delegateDeny: ['approve'],
+  });
+  expect((await f.apply(card, 'ou_reviewer', 'approve-pairing', f.member.id)).status).toBe(
+    'refused',
+  );
+  await f.restart();
+  expect(f.deliveries).toHaveLength(1);
+  expect((await f.apply(card, 'ou_reviewer', 'approve-pairing', f.member.id)).status).toBe(
+    'refused',
+  );
+  const hold = (await f.core.externalMessaging.snapshot('ada')).permissionGroups!.find(
+    (group) => group.name === 'Delegation hold',
+  )!;
+  change({ kind: 'delete-group', id: hold.id, expectedRevision: hold.revision });
+  expect((await f.apply(card, 'ou_reviewer', 'approve-pairing', f.member.id)).status).toBe(
+    'queued',
+  );
+  expect(
+    f.core.externalMessaging.pairing.list('ada').find((p) => p.actorId === 'ou_applicant'),
+  ).toMatchObject({ status: 'approved', roleId: f.member.id, capabilities: ['approve'] });
+  expect(
+    f.core.externalMessaging.pairing.list('ada').find((p) => p.actorId === 'ou_reviewer')!
+      .capabilities,
+  ).not.toContain('approve');
+});
+
 it('requires the confirming reviewer to own the current Role selection on a shared group card', async () => {
   const f = await fixture();
   const p = f.core.externalMessaging.pairing.request(
