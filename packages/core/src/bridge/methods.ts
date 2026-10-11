@@ -503,7 +503,9 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ target: { path: string; relativePath: ''; kind: 'directory' } }>;
   grants(payload: unknown): BridgeResult<{ grants: WorkspaceGrant[] }>;
-  grantCreate(payload: unknown): Promise<BridgeResult<{ grant: WorkspaceGrant }>>;
+  grantCreate(
+    payload: unknown,
+  ): Promise<BridgeResult<{ grant: WorkspaceGrant; created?: boolean }>>;
   grantRevoke(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   grantWriteSet(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   assignmentAccessGet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
@@ -3859,6 +3861,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const slug = asSlug(payload);
       if (slug === undefined) return invalidInput('slug is required');
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      const source = asObject(payload);
+      if (source?.['scope'] !== undefined) {
+        const parsed = z
+          .object({ channelId: z.string().min(1), path: z.string().min(1) })
+          .safeParse(source['scope']);
+        if (!parsed.success) return invalidInput('Invalid Group workspace scope');
+        const channel = deps.channels.get(parsed.data.channelId);
+        if (
+          channel?.type !== 'group' ||
+          !channel.members.includes(slug) ||
+          deps.registry.get(slug)?.paused
+        )
+          return invalidInput('Bot is no longer an eligible Group member');
+        try {
+          const grants = (deps.grants?.list(slug) ?? [])
+            .filter(
+              (grant) => grant.revokedAt === undefined && grant.workspacePath === parsed.data.path,
+            )
+            .map((grant) => deps.grants!.requireActive(slug, grant.id));
+          return { ok: true, value: { grants } };
+        } catch (error) {
+          if (error instanceof WorkspaceGrantError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
       return { ok: true, value: { grants: deps.grants?.list(slug) ?? [] } };
     },
     async grantCreate(payload) {
@@ -3874,8 +3902,53 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           ok: false,
           error: { code: 'unavailable', message: 'Workspace Grants are unavailable' },
         };
+      const scope = source?.['scope'];
+      const parsedScope =
+        scope === undefined
+          ? undefined
+          : z
+              .object({
+                channelId: z.string().min(1),
+                path: z.string().min(1),
+              })
+              .safeParse(scope);
+      if (parsedScope !== undefined && !parsedScope.success)
+        return invalidInput('Invalid Group workspace scope');
+      const validate = (): void => {
+        if (parsedScope?.success !== true) return;
+        const channel = deps.channels.get(parsedScope.data.channelId);
+        const bot = deps.registry.get(slug);
+        if (
+          channel?.type !== 'group' ||
+          !channel.members.includes(slug) ||
+          bot === undefined ||
+          bot.paused
+        ) {
+          throw new WorkspaceGrantError(
+            'invalid-grant',
+            'Bot is no longer an eligible Group member',
+          );
+        }
+        if (
+          deps.grants?.availableWorkspaces().find((workspace) => workspace.id === workspaceId)
+            ?.path !== parsedScope.data.path
+        ) {
+          throw new WorkspaceGrantError(
+            'unavailable-workspace',
+            'Workspace no longer matches the confirmed directory',
+          );
+        }
+      };
       try {
-        return { ok: true, value: { grant: await deps.grants.create(slug, workspaceId) } };
+        validate();
+        let created = false;
+        const grant = await deps.grants.create(slug, workspaceId, {
+          validate,
+          onCreated: () => {
+            created = true;
+          },
+        });
+        return { ok: true, value: { grant, ...(scope === undefined ? {} : { created }) } };
       } catch (error) {
         if (error instanceof WorkspaceGrantError) {
           return { ok: false, error: { code: error.code, message: error.message } };

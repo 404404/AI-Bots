@@ -35,6 +35,8 @@
 
 - 获授权的 Lark 私聊审核人可另行确认精确匹配工具规则，在 Web 查看同一规则，并在当前权限被撤销后停止后续自动批准（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)，[Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)）。
 
+- 群聊 composer 的工作区快捷入口复用 DM 目录卡片、权限标签与原生 modal 尺寸，默认选中当前全部可授权 Bot，也可指定几个，确认目录与既有访问范围，并分别展示逐 Bot Grant 的新增、复用、失败及未知结果读回，不新增未选成员的权限（[#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)）。
+
 - Group 行为权限项支持人工声明互斥，提供可搜索选择、受影响人员／来源预览及当前版本校验。设置与 Host 拒绝不兼容的有效 Allow，包括成员变更和保护性 Deny 的移除；明确拒绝仍优先（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。
 
 - 普通聊天配对扩展到 Slack 私聊，复用人员／角色／申请设置、当前发送者权限查询及原会话 checked 回复；批准要求重新提问，撤销阻止后续接收。三步本机向导和私密加载器提供独立 Slack QA1／QA2／QA3，跨 worktree 复用且保留 Lark 配置，配置过程不启动接收器。中英文指南补充真实私聊权限与完整流程截图、权限用途及重新安装步骤。隔离普通私聊的原生执行／撤销／重启检查与 Human 反馈已通过；Slack 群聊和原生管理控件由独立功能推进（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)，[指南](docs/slack-connection.md)）。

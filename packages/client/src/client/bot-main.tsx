@@ -4,6 +4,7 @@ import { GroupChannelHeader } from './group-channel-header.js';
 import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { CompanionPin } from './window-companions-view.js';
 import { useDmComposerContext } from './dm-composer-context.js';
+import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
@@ -970,7 +971,7 @@ function ConversationView({
     messages.findLast((message) => !message.pending && !message.failed && !message.streaming)?.id,
   ]);
 
-  const composerContext = useDmComposerContext({
+  const dmComposerContext = useDmComposerContext({
     bot: channel?.type === 'dm' && !readOnlyDm ? profileBot : undefined,
     channelId,
     actions,
@@ -983,6 +984,14 @@ function ConversationView({
       setProfileViewOpen(true);
     },
   });
+
+  const groupComposerContext = useGroupComposerContext({
+    channel,
+    members: channelBots,
+    actions,
+    t,
+  });
+  const composerContext = dmComposerContext ?? groupComposerContext;
 
   const togglePinnedCard = (id: string): void => {
     setPinnedProfileCards((current) => {

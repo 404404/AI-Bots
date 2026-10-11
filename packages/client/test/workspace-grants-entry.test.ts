@@ -119,7 +119,12 @@ describe('Workspace Grant sidebar', () => {
                 truncated: false,
               }))
             : vi.fn().mockRejectedValue({ rpcError: { code: 'directory-picker/unavailable' } }),
-        pickWorkspaceFolder: vi.fn(async () => '/resolved/folder'),
+        pickWorkspaceFolder: vi.fn(async () => '/native/alias'),
+        resolveWorkspaceFolder: vi.fn(async () => ({
+          id: 'folder',
+          path: '/resolved/folder',
+          title: 'Folder',
+        })),
         authorizeWorkspacePath,
       } as unknown as BridgeActions;
       try {
@@ -149,7 +154,7 @@ describe('Workspace Grant sidebar', () => {
               .find((button) => button.textContent === zhTranslate('grant.authorize'))!
               .click(),
           );
-          expect(actions.listHostFolders).toHaveBeenCalledWith('/typed/alias');
+          expect(actions.resolveWorkspaceFolder).toHaveBeenCalledWith('/typed/alias');
         } else {
           await act(async () =>
             Array.from(container.querySelectorAll<HTMLButtonElement>('button'))
@@ -157,6 +162,7 @@ describe('Workspace Grant sidebar', () => {
               .click(),
           );
           expect(actions.pickWorkspaceFolder).toHaveBeenCalledOnce();
+          expect(actions.resolveWorkspaceFolder).toHaveBeenCalledWith('/native/alias');
         }
         expect(container.querySelector('.bh-workspace-grant-confirm')!.textContent).toContain(
           '/resolved/folder',
@@ -209,6 +215,17 @@ describe('Workspace Grant sidebar', () => {
       listWorkspaceOptions: vi.fn(async () => [
         { id: 'project', path: '/resolved/project', title: 'Project' },
       ]),
+      listHostFolders: vi.fn(async () => ({
+        path: '/resolved/project',
+        crumbs: [],
+        entries: [],
+        truncated: false,
+      })),
+      resolveWorkspaceFolder: vi.fn(async () => ({
+        id: 'project',
+        path: '/resolved/project',
+        title: 'Project',
+      })),
       memoryDirectory: vi.fn(async () => undefined),
       listToolApprovalRules: vi.fn(async () => []),
       assignmentAccess: vi.fn(async () => ({ mode: 'workspace-write' })),
