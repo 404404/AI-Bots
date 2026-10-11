@@ -132,6 +132,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Fixed checked QQ self mentions in full-reception events while keeping ordinary messages and Bot authors excluded; the candidate Provider retains current Lark pairing capabilities and does not claim own Echo qualification ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
 - Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).
 
 - Core and product-managed IM Provider declarations use the minimum DSH version `>=0.1.7-0`, including previews, without an exact RC1 lock or future-version ceiling. Future versions are admitted by metadata, not automatically runtime-qualified; the 1.2.1 maintenance installation matrix is separate from this development tree ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425)).

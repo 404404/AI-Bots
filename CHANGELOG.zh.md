@@ -132,6 +132,8 @@
 
 ### Fixed
 
+- 修复全量接收事件中明确 @ 当前 QQ Bot 的 checked 收件路径，仍排除普通消息与机器人发送者；候选 Provider 保留当前 Lark 配对能力，不宣称自身 Echo 已验收（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+
 - 私密输入的公开 Session 证据保留 RC1 原生拒绝及不可用审批结果，同时排除决定理由和未知值（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)）。
 
 - Core 和随产品更新的 IM Provider 声明改用最低 DSH 版本 `>=0.1.7-0`（含预览版），不再锁定 RC1 或设置未来版本上限。声明允许未来版本安装，不代表已验证运行兼容性；1.2.1 维护版的实包安装矩阵与当前开发树分别验证 ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425))。
