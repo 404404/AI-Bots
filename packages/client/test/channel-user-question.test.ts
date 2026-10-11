@@ -13,17 +13,28 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   Button: ({
     children,
     variant: _variant,
+    size: _size,
+    icon,
     ...props
-  }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string; children: ReactNode }) =>
-    createElement('button', props, children),
+  }: ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: string;
+    size?: string;
+    icon?: ReactNode;
+    children: ReactNode;
+  }) => createElement('button', props, icon, children),
   Input: (props: InputHTMLAttributes<HTMLInputElement>) => createElement('input', props),
   MarkdownText: () => null,
   StateDot: () => null,
+  Tag: ({ children }: { children: ReactNode }) => createElement('span', {}, children),
   Modal: () => null,
   Switch: () => null,
   IconChevronDownOutlineRegular: () => null,
   IconCloseOutlineRegular: () => null,
   IconRefreshOutlineRegular: () => null,
+  IconInfoOutlineRegular: () => null,
+  IconCheckOutlineRegular: () => null,
+  Tooltip: ({ children, label }: { children: ReactNode; label: string }) =>
+    createElement('span', { 'data-help-text': label }, children),
   IconFolderOpenOutlineRegular: () => null,
 }));
 
@@ -188,6 +199,37 @@ describe('private input card', () => {
     expect(container.querySelector('input')).toBeNull();
   });
 
+  it('keeps the account and state visible while supplementary details belong to an accessible help control', async () => {
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValue('configured'),
+      privateInputSubmit: vi.fn(),
+    } as unknown as BridgeActions;
+    await act(async () =>
+      render(actions, undefined, {
+        ...card,
+        privateInputRequest: {
+          ...card.privateInputRequest!,
+          expiresAt: '2026-10-11T08:30:00.000Z',
+          replacesMessageId: 'previous-private-request',
+        },
+      }),
+    );
+    expect(container.textContent).toContain('controlled');
+    expect(container.textContent).toContain('已提交');
+    expect(container.textContent).not.toContain('仅 Host 保存原值');
+    expect(container.textContent).not.toContain('旧值不会被取回');
+    const help = container.querySelector<HTMLButtonElement>('button[aria-label="私密信息的说明"]');
+    expect(help).not.toBeNull();
+    expect(help?.getAttribute('type')).toBe('button');
+    const details = help?.closest('[data-help-text]')?.getAttribute('data-help-text');
+    expect(details).toContain('仅 Host 保存原值');
+    expect(details).toContain('旧值不会被取回');
+    expect(details).toContain('有效期至');
+    await act(async () => help?.click());
+    expect(actions.privateInputSubmit).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('已提交');
+  });
+
   it('clears multiple private fields before awaiting the direct submission', async () => {
     let finish!: () => void;
     let submitted: Record<string, string> | undefined;
@@ -216,7 +258,7 @@ describe('private input card', () => {
     expect(actions.send).not.toHaveBeenCalled();
     await act(async () => finish());
     expect(container.querySelector('input')).toBeNull();
-    expect(container.textContent).toContain('已配置私密信息');
+    expect(container.textContent).toContain('已提交');
     expect(container.textContent).not.toContain('synthetic secret');
   });
 
@@ -247,7 +289,7 @@ describe('private input card', () => {
     for (const input of container.querySelectorAll('input')) input.value = 'synthetic secret';
     await act(async () => button('私密提交')?.click());
     expect(container.querySelector('input')).toBeNull();
-    expect(container.textContent).toContain('已配置私密信息');
+    expect(container.textContent).toContain('已提交');
     expect(container.textContent).not.toContain('未能完成请求');
     expect(container.textContent).not.toContain('synthetic secret');
   });
@@ -275,10 +317,10 @@ describe('private input card', () => {
       });
       for (const input of container.querySelectorAll('input')) input.value = 'synthetic secret';
       await act(async () => button('私密提交')?.click());
-      expect(container.textContent).toContain('已配置私密信息');
+      expect(container.textContent).toContain('已提交');
       await act(async () => stale('pending'));
       expect(container.querySelector('input')).toBeNull();
-      expect(container.textContent).toContain('已配置私密信息');
+      expect(container.textContent).toContain('已提交');
       expect(container.textContent).not.toContain('synthetic secret');
     } finally {
       vi.useRealTimers();
@@ -309,7 +351,7 @@ describe('private input card', () => {
       for (const input of container.querySelectorAll('input')) input.value = 'synthetic secret';
       await act(async () => button('私密提交')?.click());
       await act(async () => reject(new Error('Stale status failure')));
-      expect(container.textContent).toContain('已配置私密信息');
+      expect(container.textContent).toContain('已提交');
       expect(container.textContent).not.toContain('未能完成请求');
       expect(container.querySelector('input')).toBeNull();
     } finally {
@@ -343,7 +385,7 @@ describe('private input card', () => {
     expect(fields.every((input) => input.value === 'synthetic replacement secret')).toBe(true);
     await act(async () => button('私密提交')?.click());
     expect(replacement.privateInputSubmit).toHaveBeenCalledTimes(1);
-    expect(container.textContent).toContain('已配置私密信息');
+    expect(container.textContent).toContain('已提交');
     expect(fields.every((input) => input.value === '')).toBe(true);
   });
 

@@ -1,11 +1,18 @@
 import { useId, useRef, useState, type ReactElement } from 'react';
 import { useMountedResource } from './mounted-resource.js';
-import { Button, Input } from '@deepseek-ai/dsh-client-ui-primitives';
+import {
+  Button,
+  Input,
+  Tag,
+  IconCheckOutlineRegular,
+  IconCloseOutlineRegular,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { store, type ChannelMessage } from './store.js';
 import type { PrivateInputStatus } from '../../../core/src/credentials/contracts.js';
 import { PrivateAccountControls } from './private-account-controls.js';
+import { MessagingHelp } from './messaging-help.js';
 
 type PrivateCardMount = {
   node: HTMLFormElement;
@@ -73,6 +80,16 @@ export function PrivateInputCard({
     [actions, channelId, message.id, retry],
   );
   const disabled = status !== 'pending' || busy || actions.privateInputSubmit === undefined;
+  const details = [
+    request.replacesMessageId === undefined ? undefined : t('privateInput.replacementNote'),
+    request.expiresAt === undefined
+      ? undefined
+      : t('privateInput.expiresAt', { time: new Date(request.expiresAt).toLocaleString() }),
+    t('privateInput.note'),
+    status === 'configured' ? t('privateInput.configured') : undefined,
+  ]
+    .filter((text) => text !== undefined)
+    .join('\n\n');
   const settle = async (cancel: boolean): Promise<void> => {
     if (
       disabled ||
@@ -116,27 +133,28 @@ export function PrivateInputCard({
   return (
     <form
       ref={mount}
-      className="bh-question-card"
+      className="bh-question-card bh-private-input-card"
       autoComplete="off"
       onSubmit={(event) => {
         event.preventDefault();
         void settle(false);
       }}
     >
-      <div className="bh-grant-request-title">{t('privateInput.title')}</div>
+      <div className="bh-private-input-heading">
+        <div className="bh-grant-request-title">{t('privateInput.title')}</div>
+        {status === 'pending' || status === 'configured' ? (
+          <span role="status" className="bh-private-input-state">
+            <Tag tone={status === 'pending' ? 'warning' : 'neutral'}>
+              {t(status === 'pending' ? 'privateInput.pending' : 'privateInput.received')}
+            </Tag>
+          </span>
+        ) : null}
+        <MessagingHelp title={t('privateInput.title')} text={details} t={t} />
+      </div>
       <div className="bh-note">
         {t('privateInput.account')}: {request.account}
       </div>
       <div className="bh-question-prompt">{request.purpose}</div>
-      {request.replacesMessageId === undefined ? null : (
-        <div className="bh-note">{t('privateInput.replacementNote')}</div>
-      )}
-      {request.expiresAt === undefined ? null : (
-        <div className="bh-note">
-          {t('privateInput.expiresAt', { time: new Date(request.expiresAt).toLocaleString() })}
-        </div>
-      )}
-      <div className="bh-note">{t('privateInput.note')}</div>
       {status === 'pending' ? (
         request.fields.map((field) => (
           <div className="bh-question-item" key={field.id}>
@@ -155,25 +173,31 @@ export function PrivateInputCard({
             />
           </div>
         ))
-      ) : (
+      ) : status === 'configured' ? null : (
         <div role="status" className="bh-note">
           {status === 'loading'
             ? t('approval.loading')
-            : status === 'configured'
-              ? t('privateInput.configured')
-              : status === 'cancelled'
-                ? t('question.cancelled')
-                : t('privateInput.expired')}
+            : status === 'cancelled'
+              ? t('question.cancelled')
+              : t('privateInput.expired')}
         </div>
       )}
       {status === 'pending' ? (
-        <div className="bh-question-actions">
-          <Button type="submit" disabled={disabled}>
+        <div className="bh-private-input-actions">
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={<IconCheckOutlineRegular size={14} />}
+            disabled={disabled}
+          >
             {busy ? t('approval.loading') : t('privateInput.submit')}
           </Button>
           <Button
             type="button"
-            variant="outline"
+            variant="toolbar"
+            size="sm"
+            icon={<IconCloseOutlineRegular size={14} />}
             disabled={disabled}
             onClick={() => void settle(true)}
           >
@@ -184,7 +208,12 @@ export function PrivateInputCard({
       {error ? (
         <div className="bh-error" role="alert">
           {t('privateInput.error')}{' '}
-          <Button type="button" variant="outline" onClick={() => setRetry((value) => value + 1)}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => setRetry((value) => value + 1)}
+          >
             {t('question.retry')}
           </Button>
         </div>

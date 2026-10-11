@@ -100,27 +100,25 @@ export function PrivateAccountControls({
   return (
     <div ref={mount}>
       {status === 'configured' ? (
-        <div className="bh-private-account-actions">
+        <div className="bh-private-input-actions">
           <Button
             type="button"
             variant="primary"
+            size="sm"
+            icon={<IconRefreshOutlineRegular size={14} />}
             disabled={busy}
             onClick={() => void change('replace')}
           >
-            <span aria-hidden="true">
-              <IconRefreshOutlineRegular size={16} />
-            </span>
             {t('privateInput.replace')}
           </Button>
           <Button
             type="button"
             variant="primary"
+            size="sm"
+            icon={<IconCloseOutlineRegular size={14} />}
             disabled={busy}
             onClick={() => void change('revoke')}
           >
-            <span aria-hidden="true">
-              <IconCloseOutlineRegular size={16} />
-            </span>
             {t('privateInput.revoke')}
           </Button>
         </div>

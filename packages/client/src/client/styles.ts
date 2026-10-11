@@ -5997,7 +5997,12 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-tool-approval-card { display: grid; gap: 10px; min-width: min(340px, 100%); }
 .bh-question-card { display: grid; gap: 10px; width: 380px; max-width: 100%; }
 .bh-question-card > button { justify-self: start; }
-.bh-private-account-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.bh-private-input-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.bh-private-input-card { width: 520px; gap: 6px; }
+.bh-private-input-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bh-private-input-state { margin-left: auto; }
+.bh-private-input-card .bh-question-prompt { font-weight: 400; }
+.bh-private-input-card .bh-note { padding: 0; line-height: 16px; color: var(--dsw-alias-label-secondary); }
 .bh-question-source { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, 13px); }
 .bh-question-source code { display: block; margin-top: 5px; overflow-wrap: anywhere; }
 .bh-question-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }

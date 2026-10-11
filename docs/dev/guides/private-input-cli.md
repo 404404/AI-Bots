@@ -2,6 +2,8 @@
 
 ## Account replacement and local revocation (#1382)
 
+The card keeps account, purpose and current status visible. Its info icon reveals request expiry, replacement guidance and Host storage/approval details on hover, keyboard focus or click; click pins the tooltip and Escape closes it. It never contains original private values.
+
 On a configured Web Chat card, **Replace** opens another inline card with blank fields. Submit new values there; `ask_secret` for the same PersonaBot/account returns current references without reading either version back. The previous card shows superseded. **Revoke** durably denies new uses, including calls covered by an existing broad remembered approval, and attempts to stop active consumers. The card and Chat distinguish stopped, already completed and uncertain outcomes. This revokes local access only; third-party tokens and completed effects are unchanged. Other Bots/accounts retain independent authorization.
 
 Use `node scripts/ask-secret-lifecycle-fixture.mjs` for a loopback-only synthetic two-version service on port 31386. Begin with version A: endpoint `http://127.0.0.1:31386/status?marker=SYNTHETIC-1380-url-A`, key `SYNTHETIC-1380-key-A`, secret `SYNTHETIC-1380-secret-A`. Switch the fixture with `POST /control` JSON `{"version":1,"delayMs":0}`. Privately replace with endpoint `http://127.0.0.1:31386/status?marker=SYNTHETIC-1382-url-B`, key `SYNTHETIC-1382-key-B`, secret `SYNTHETIC-1382-secret-B`. Request one real Bot `protected_cli http-status-v1` call for each version; both must report 200 in the original DM, while using the old references must be refused without another fixture request.
