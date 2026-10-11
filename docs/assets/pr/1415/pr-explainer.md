@@ -6,8 +6,8 @@ title: Slack 私聊普通配对 · PR #1436
 subtitle: 当前 App 的审核、重问与撤销
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1436
 base: 73c75f86aa50767be34a5c8d2cadc17b6a3e8862
-head: 1b773fcfc7508fa1643f6e922dff223b2e2d9348
-generated: 2026-10-11T19:25:20.710Z
+head: 61a8fb4a2b23019fbec828fba097b1a20ff38271
+generated: 2026-10-11T19:28:41.290Z
 ---
 
 ## A 实现可审查，真实 Slack 验收仍待完成
@@ -62,7 +62,7 @@ API Gateway / Client | 既有 Web 人员、角色与申请界面
 ~~~ts src=packages/core/src/messaging/chat-sender.ts lines=11-28
 ~~~
 
-[查看此 head 的完整实现](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/packages/core/src/messaging/chat-sender.ts)。ID 格式只是第一步；后续仍核对当前 Bot、Provider、App account、fingerprint 与 Binding。
+[查看此 head 的完整实现](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/packages/core/src/messaging/chat-sender.ts)。ID 格式只是第一步；后续仍核对当前 Bot、Provider、App account、fingerprint 与 Binding。
 
 复制的回复路由、错误 App 或替换 Binding 不会继承配对。目录不是完整平台成员名单；权限查询按当前规范记录解析。
 
@@ -93,6 +93,6 @@ QA2 已配置；Human 分别授权独占窗口，以及仅补充 im:read 并重�
 
 本轮未通过，任务接收器已停止。Human 再次确认其他接收器停止；继续核对执行来源与生命周期，不推定另一个接收器存在，也不接管其他任务。
 
-[中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。
+[中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。
 
-[Issue 与 Agent claim](https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564) · [ADR-0174](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md)
+[Issue 与 Agent claim](https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564) · [ADR-0174](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md)

@@ -761,7 +761,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <button class="am-btn" type="button" data-am="copy" data-done="已复制 ✓">复制源稿</button>
 </div>
 <main class="am-doc">
-<header class="am-head"><h1>Slack 私聊普通配对 · PR</h1><p class="am-sub">当前 App 的审核、重问与撤销</p><div class="am-head-meta"><span><b>PR</b>https://github.com/BotHarness/DeepSeekBot/pull/1436</span><span><b>base</b>73c75f86aa50767be34a5c8d2cadc17b6a3e8862</span><span><b>head</b>1b773fcfc7508fa1643f6e922dff223b2e2d9348</span><span><b>generated</b>2026-10-11T19:25:20.710Z</span></div></header>
+<header class="am-head"><h1>Slack 私聊普通配对 · PR</h1><p class="am-sub">当前 App 的审核、重问与撤销</p><div class="am-head-meta"><span><b>PR</b>https://github.com/BotHarness/DeepSeekBot/pull/1436</span><span><b>base</b>73c75f86aa50767be34a5c8d2cadc17b6a3e8862</span><span><b>head</b>61a8fb4a2b23019fbec828fba097b1a20ff38271</span><span><b>generated</b>2026-10-11T19:28:41.290Z</span></div></header>
 <div class="am-doc-layout">
 <nav class="am-toc" aria-label="目录"><a href="#panel-A">A · 实现可审查，真实 Slack 验收仍待完成</a><a href="#panel-B">B · 旧问题不会在批准后执行</a><a href="#panel-C">C · 复用同一个权威和生命周期</a><a href="#panel-D">D · 可信人员与原会话必须匹配</a><a href="#panel-E">E · 兼容性与回退需审查</a><a href="#panel-F">F · 如何完成这轮真实验收</a></nav><div class="am-doc-body">
 <section class="am-panel" id="panel-A">
@@ -810,7 +810,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <section class="am-panel" id="panel-D">
 <header class="am-panel-head"><span class="am-panel-id">D</span><h2>可信人员与原会话必须匹配</h2></header>
 <div class="am-panel-body"><figure class="am-codeblock" data-am-src="packages/core/src/messaging/chat-sender.ts" data-am-lines="11-28"><figcaption class="am-code-head"><span class="am-code-title">packages/core/src/messaging/chat-sender.ts:11-28</span><span class="am-code-lang">ts</span><button class="am-code-copy" type="button" data-am="copy-code" data-done="已复制 ✓">复制</button></figcaption><pre class="am-code am-code--num"><code data-lang="ts"><span class="am-ln" data-n="11">export function chatSenderIdentity(</span><span class="am-ln" data-n="12">  event: Omit&lt;MessagingInboundEvent, &#39;text&#39;&gt;,</span><span class="am-ln" data-n="13">): { providerId: string; namespace: ChatSenderNamespace } | undefined {</span><span class="am-ln" data-n="14">  if (event.actor.kind !== &#39;user&#39;) return undefined;</span><span class="am-ln" data-n="15">  if (event.channel === &#39;feishu&#39; &amp;&amp; /^ou_[A-Za-z0-9]+$/.test(event.actor.id))</span><span class="am-ln" data-n="16">    return { providerId: &#39;dsh-im/feishu&#39;, namespace: &#39;lark-app-open-id&#39; };</span><span class="am-ln" data-n="17">  if (</span><span class="am-ln" data-n="18">    event.channel === &#39;slack&#39; &amp;&amp;</span><span class="am-ln" data-n="19">    event.conversation.kind === &#39;dm&#39; &amp;&amp;</span><span class="am-ln" data-n="20">    /^[UW][A-Z0-9]+$/.test(event.actor.id) &amp;&amp;</span><span class="am-ln" data-n="21">    /^D[A-Z0-9]+$/.test(event.conversation.id) &amp;&amp;</span><span class="am-ln" data-n="22">    event.reply.actorId === event.actor.id &amp;&amp;</span><span class="am-ln" data-n="23">    event.reply.conversationId === event.conversation.id &amp;&amp;</span><span class="am-ln" data-n="24">    event.reply.messageId === event.messageId</span><span class="am-ln" data-n="25">  )</span><span class="am-ln" data-n="26">    return { providerId: &#39;dsh-im/slack&#39;, namespace: &#39;slack-workspace-user-id&#39; };</span><span class="am-ln" data-n="27">  return undefined;</span><span class="am-ln" data-n="28">}</span></code></pre></figure>
-<div class="am-md"><p><a href="https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/packages/core/src/messaging/chat-sender.ts">查看此 head 的完整实现</a>。ID 格式只是第一步；后续仍核对当前 Bot、Provider、App account、fingerprint 与 Binding。</p>
+<div class="am-md"><p><a href="https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/packages/core/src/messaging/chat-sender.ts">查看此 head 的完整实现</a>。ID 格式只是第一步；后续仍核对当前 Bot、Provider、App account、fingerprint 与 Binding。</p>
 <p>复制的回复路由、错误 App 或替换 Binding 不会继承配对。目录不是完整平台成员名单；权限查询按当前规范记录解析。</p>
 </div></div>
 </section>
@@ -859,8 +859,8 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 </tbody></table></div>
 <p>QA2 已配置；Human 分别授权独占窗口，以及仅补充 im:read 并重新安装。配置与安装权限已实测核对。原生首次申请与 Web 批准重问已持久化；新问题的可见回复未与测试 Host 的 Source Event/Admission 对应，当前权限查询不可用，撤销后仍出现回复。</p>
 <p>本轮未通过，任务接收器已停止。Human 再次确认其他接收器停止；继续核对执行来源与生命周期，不推定另一个接收器存在，也不接管其他任务。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/slack-connection.md">中英文 Slack 教程</a>已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564">Issue 与 Agent claim</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md">ADR-0174</a></p>
+<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/slack-connection.md">中英文 Slack 教程</a>已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。</p>
+<p><a href="https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564">Issue 与 Agent claim</a> · <a href="https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md">ADR-0174</a></p>
 </div></div>
 </section>
 </div>
@@ -881,7 +881,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-12 04:25 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-12 04:28 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 template: doc
 theme: paper
@@ -890,8 +890,8 @@ title: Slack 私聊普通配对 · PR #1436
 subtitle: 当前 App 的审核、重问与撤销
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1436
 base: 73c75f86aa50767be34a5c8d2cadc17b6a3e8862
-head: 1b773fcfc7508fa1643f6e922dff223b2e2d9348
-generated: 2026-10-11T19:25:20.710Z
+head: 61a8fb4a2b23019fbec828fba097b1a20ff38271
+generated: 2026-10-11T19:28:41.290Z
 ---
 
 ## A 实现可审查，真实 Slack 验收仍待完成
@@ -946,7 +946,7 @@ API Gateway / Client | 既有 Web 人员、角色与申请界面
 ~~~ts src=packages/core/src/messaging/chat-sender.ts lines=11-28
 ~~~
 
-[查看此 head 的完整实现](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/packages/core/src/messaging/chat-sender.ts)。ID 格式只是第一步；后续仍核对当前 Bot、Provider、App account、fingerprint 与 Binding。
+[查看此 head 的完整实现](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/packages/core/src/messaging/chat-sender.ts)。ID 格式只是第一步；后续仍核对当前 Bot、Provider、App account、fingerprint 与 Binding。
 
 复制的回复路由、错误 App 或替换 Binding 不会继承配对。目录不是完整平台成员名单；权限查询按当前规范记录解析。
 
@@ -977,9 +977,9 @@ QA2 已配置；Human 分别授权独占窗口，以及仅补充 im:read 并重�
 
 本轮未通过，任务接收器已停止。Human 再次确认其他接收器停止；继续核对执行来源与生命周期，不推定另一个接收器存在，也不接管其他任务。
 
-[中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。
+[中英文 Slack 教程](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/slack-connection.md)已补充真实权限配置截图与用途。配置截图不代表运行验收；完整配对流程截图与首片反馈仍待全部步骤通过。
 
-[Issue 与 Agent claim](https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564) · [ADR-0174](https://github.com/BotHarness/DeepSeekBot/blob/1b773fcfc7508fa1643f6e922dff223b2e2d9348/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md)
+[Issue 与 Agent claim](https://github.com/BotHarness/DeepSeekBot/issues/1415#issuecomment-6111271564) · [ADR-0174](https://github.com/BotHarness/DeepSeekBot/blob/61a8fb4a2b23019fbec828fba097b1a20ff38271/docs/adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md)
 </textarea>
 <script>
 (() => {
