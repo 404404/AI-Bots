@@ -60,6 +60,27 @@ _这是现有 QA 应用的配置状态，页面不展示 App Token。_
 
 ### Bot 权限与事件
 
+测试**普通私聊配对**前，先核对以下 **Bot Token Scopes（机器人令牌权限）**：
+
+| Bot 权限     | 用途                                                     |
+| ------------ | -------------------------------------------------------- |
+| `im:history` | 接收已订阅的 `message.im` 私聊消息事件                   |
+| `im:read`    | 用 `conversations.info` 核对原始私聊；仅能接收事件还不够 |
+| `chat:write` | 发送审核提示、重新提问通知和回复                         |
+| `users:read` | 解析已验证发送者的显示名                                 |
+
+启用 **Socket Mode**，App-level Token 包含 `connections:write`。在 **Event Subscriptions → Subscribe to bot events** 添加 **`message.im`**；在 **App Home** 启用 **Messages Tab**，并允许用户从此标签页发送消息。这几项需要分别配置：Bot 权限不会自动添加事件订阅或开启输入框。Slack 官方说明见 [`message.im` 及其 `im:history` 要求](https://docs.slack.dev/reference/events/message.im/)和[读取私聊信息的 `im:read`](https://docs.slack.dev/reference/scopes/im.read/)。
+
+新增 Bot 权限后，点击 **Reinstall to your workspace**，核对授权内容并完成重新安装；确认已安装的 Bot Token 获得新权限后再重试。#1415 的 QA 配置原有 `im:history`，但缺少 `im:read`；补充后重新安装，原始私聊核对才通过。两种 Token 都只在本机保存。Slack App 权限负责让集成收发消息；Bot 的 **IM 角色与配对** 设置另外决定谁可以与这个 PersonaBot 聊天。
+
+下方频道和文件权限用于其他功能，并非普通私聊配对必须全部申请。
+
+![重新安装后真实 QA App 的 Bot 权限，包含 chat:write、im:history 和 im:read](/guides/slack/13-dm-bot-scopes.png)
+
+![真实私聊权限与 users:read；User Token 权限仍为空](/guides/slack/14-dm-scope-detail.png)
+
+_以上裁剪截图展示 QA App 的实际配置，也包含其原有可选权限；配置截图不代表配对运行验收通过，未展示 OAuth Token。_
+
 进入 **OAuth & Permissions → Bot Token Scopes**，按用途核对：
 
 | Bot 权限                    | 用途                                            |

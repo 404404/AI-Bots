@@ -60,6 +60,27 @@ _The existing QA app has Socket Mode enabled. This page does not display its App
 
 ### Bot permissions and events
 
+For **ordinary DM pairing**, check these **Bot Token Scopes** before connecting:
+
+| Bot scope    | Used for                                                                                |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `im:history` | Receive the subscribed `message.im` events from the app's DMs                           |
+| `im:read`    | Check the original DM with `conversations.info`; receiving events alone is insufficient |
+| `chat:write` | Send the review notice, ask-again notification and replies                              |
+| `users:read` | Resolve the verified sender's display name                                              |
+
+Enable **Socket Mode** with an App-level Token containing `connections:write`. In **Event Subscriptions → Subscribe to bot events**, add **`message.im`**. In **App Home**, enable the **Messages Tab** and allow users to send messages from it. These are separate settings: a Bot scope does not create an event subscription or enable the message composer. Slack documents the [`message.im` event and its `im:history` requirement](https://docs.slack.dev/reference/events/message.im/) and [`im:read` for DM information](https://docs.slack.dev/reference/scopes/im.read/).
+
+After adding a Bot scope, select **Reinstall to your workspace**, review the requested access and complete installation. Confirm that the installed Bot Token has the new scope before retrying. In the #1415 QA setup, `im:history` was already granted but `im:read` was missing; adding it and reinstalling enabled the original-DM check. Keep both tokens local. Slack App permissions allow the integration to receive and send; the Bot's **IM roles and pairing** settings separately decide who may chat with that PersonaBot.
+
+The channel/file scopes below support additional features; they are not all prerequisites for the ordinary DM pairing path.
+
+![Actual QA Bot Token scopes, including chat:write, im:history and im:read after reinstallation](/guides/slack/13-dm-bot-scopes.png)
+
+![Actual DM scopes and users:read; User Token scopes remain empty](/guides/slack/14-dm-scope-detail.png)
+
+_These cropped settings captures show the configured QA App, including its existing optional scopes. They do not qualify the pairing runtime. No OAuth token is shown._
+
 Under **OAuth & Permissions → Bot Token Scopes**, check permissions by purpose:
 
 | Bot scope                   | Used for                                                                                     |
