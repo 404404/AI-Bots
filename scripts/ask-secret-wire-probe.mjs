@@ -25,14 +25,23 @@ const patterns = canaries.flatMap((value) => [
 const original = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-  if (url.includes('deepseek') && url.endsWith('/messages') && init?.method === 'POST') {
-    const body = String(init.body ?? '');
+  const endpoint = new URL(url);
+  const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
+  if (method === 'POST' && /\/(messages|chat\/completions|responses)$/.test(endpoint.pathname)) {
+    const body =
+      typeof init?.body === 'string'
+        ? init.body
+        : input instanceof Request
+          ? await input.clone().text()
+          : undefined;
     appendFileSync(
       evidence,
       JSON.stringify({
         phase: 'model-wire-request',
-        bodyBytes: Buffer.byteLength(body),
-        canaryMatches: patterns.filter((pattern) => body.includes(pattern)).length,
+        bodyAvailable: body !== undefined,
+        bodyBytes: body === undefined ? 0 : Buffer.byteLength(body),
+        canaryMatches:
+          body === undefined ? null : patterns.filter((pattern) => body.includes(pattern)).length,
       }) + '\n',
     );
   }

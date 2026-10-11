@@ -460,6 +460,7 @@ export type DmMessageAdmission =
   | { admitted: false; reason: DmAdmissionFailure };
 
 export interface BotRuntime {
+  canRequestPrivateInput?(sessionId: string): boolean;
   beginAssignmentApprovalWait?(
     sessionId: string,
     callId: string,
@@ -944,7 +945,7 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #activeTurns = new Map<string, Promise<void>>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
-  readonly #turnSources = new Map<string, Set<string>>();
+  readonly #turnSources = new Map<string, { sessionId: string; eventIds: Set<string> }>();
   readonly #activeMemoryEvents = new Map<
     string,
     { eventIds: string[]; preserveObservation: boolean }
@@ -2467,7 +2468,7 @@ class BotRuntimeImplementation implements BotRuntime {
 
   #markAdmissionsSideEffect(botSlug: string, sourceEventIds: string[]): void {
     if (sourceEventIds.length === 0) return;
-    for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.add(id);
+    for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.eventIds.add(id);
     this.#database.transaction(
       (database) => {
         for (const id of sourceEventIds) {
@@ -2616,12 +2617,47 @@ class BotRuntimeImplementation implements BotRuntime {
     if (changed) this.#channels.admissionChanged?.(channelId, messageId);
   }
 
+  canRequestPrivateInput(sessionId: string): boolean {
+    const owner = this.#ownership.resolve(sessionId);
+    if (
+      this.#closed ||
+      owner?.rootRole !== 'orchestrator' ||
+      !this.#ownership.contentAvailable(sessionId)
+    )
+      return false;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (turn?.sessionId !== sessionId) return false;
+    return this.#database.read((db) => {
+      const human = db.prepare(
+        `SELECT e.channel_id FROM source_events e
+         JOIN inbox_admissions a ON a.source_event_id = e.source_event_id
+         WHERE e.source_event_id = ? AND a.bot_slug = ? AND e.source_kind = 'human-message'
+           AND a.reason IN ('human-dm', 'group-mention', 'group-ordinary')`,
+      );
+      return [...turn.eventIds].some((id) => {
+        const source = human.get(id, owner.botSlug);
+        if (
+          typeof source?.channel_id !== 'string' ||
+          this.#channels.get(source.channel_id) === undefined
+        )
+          return false;
+        try {
+          requireSourceEffects(db, id, owner.botSlug);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    });
+  }
+
   bindNativeQuestionInput(
     sessionId: string,
     channelId: string,
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
     const owner = this.#ownership.resolve(sessionId);
-    const sources = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    const sources = turn?.sessionId === sessionId ? turn.eventIds : undefined;
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
     const sourceIds = [...(sources ?? [])];
@@ -3025,7 +3061,7 @@ class BotRuntimeImplementation implements BotRuntime {
       ...reportEventIds,
       ...nativeSourceIds,
     ]);
-    this.#turnSources.set(bot.slug, turnSources);
+    this.#turnSources.set(bot.slug, { sessionId: orchestrator.sessionId, eventIds: turnSources });
     const typingSources = [sourceEventId, ...inboxUnits.map((unit) => unit.sourceEventId)];
     for (const unit of inboxUnits) {
       if (!unit.assignmentSessionId) continue;
@@ -3420,7 +3456,8 @@ class BotRuntimeImplementation implements BotRuntime {
     } finally {
       await processing?.stop();
       if (this.#typingTurns.get(bot.slug) === processing) this.#typingTurns.delete(bot.slug);
-      if (this.#turnSources.get(bot.slug) === turnSources) this.#turnSources.delete(bot.slug);
+      if (this.#turnSources.get(bot.slug)?.eventIds === turnSources)
+        this.#turnSources.delete(bot.slug);
       if (observeMemory) this.#activeMemoryEvents.delete(bot.slug);
       this.#originalAttachments.clear(orchestrator.sessionId);
     }
@@ -4744,7 +4781,7 @@ class BotRuntimeImplementation implements BotRuntime {
   }
 
   #turnSourceIn(botSlug: string, channelId: string): string | undefined {
-    const sources = [...(this.#turnSources.get(botSlug) ?? [])];
+    const sources = [...(this.#turnSources.get(botSlug)?.eventIds ?? [])];
     if (sources.length === 0) return undefined;
     const row = this.#database.read(
       (database) =>

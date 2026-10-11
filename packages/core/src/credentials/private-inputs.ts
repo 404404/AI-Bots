@@ -78,6 +78,7 @@ export class PrivateInputs {
       registry: PersonaBotRegistry;
       credentials(): CredentialProvider | undefined;
       isLive(agent: Agent): boolean;
+      canRequest(agent: Agent): boolean;
       qualified(): Promise<boolean>;
       log: PrivateInputLog;
       requestTimeoutMs?: number;
@@ -317,6 +318,15 @@ export class PrivateInputs {
         account: request.data.account,
         references: existing.references,
       };
+    if (!this.deps.canRequest(agent)) {
+      this.deps.log('owner-action-required', {
+        botSlug: owner.botSlug,
+        sessionId: agent.session.id,
+      });
+      throw new Error(
+        'Private account requires Owner action in an interactive conversation; do not retry this unattended request',
+      );
+    }
     const binding = existing.binding;
     const opened = await this.#open(agent, owner, request.data, signal, binding?.revision);
     return opened.result;

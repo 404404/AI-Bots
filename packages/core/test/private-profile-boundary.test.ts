@@ -22,7 +22,11 @@ async function fixture(enabled: boolean, keys: string[] = []) {
   const core = {
     ownership: {
       resolve: (id: string) =>
-        id === 'owned' ? { botSlug: 'ada', rootRole: 'orchestrator' } : undefined,
+        id === 'owned'
+          ? { botSlug: 'ada', rootRole: 'orchestrator' }
+          : id === 'assignment'
+            ? { botSlug: 'ada', rootRole: 'assignment' }
+            : undefined,
     },
     contributeBotAgentSetup: contribute,
   } as unknown as BotHarnessCore;
@@ -36,6 +40,23 @@ async function fixture(enabled: boolean, keys: string[] = []) {
 }
 
 describe('private Profile capability boundary', () => {
+  it('qualifies Bot Schedule management only for owned Orchestrators', async () => {
+    const f = await fixture(true);
+    const agent = { session: { id: 'owned' } } as Agent;
+    const assignment = { session: { id: 'assignment' } } as Agent;
+    for (const name of [
+      'bot_schedule_list',
+      'bot_schedule_create',
+      'bot_schedule_update',
+      'bot_schedule_delete',
+    ]) {
+      expect(f.guard({ name, agent })).toBeUndefined();
+      expect(f.guard({ name })).toContain('not qualified');
+      expect(f.guard({ name, agent: assignment })).toContain('not qualified');
+    }
+    expect(f.guard({ name: 'schedule_create', agent })).toContain('not qualified');
+    await f.ctx.fiber.dispose();
+  });
   it('preserves ordinary Host tools before opt-in but refuses downgrade with stored grants', async () => {
     const ordinary = await fixture(false);
     expect(ordinary.guard({ name: 'mcp_example' })).toBeUndefined();

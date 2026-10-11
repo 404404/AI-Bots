@@ -52,12 +52,14 @@ async function fixture(qualified = true, requestTimeoutMs?: number) {
   const agent = { session: { id: 'ada-session' } } as Agent;
   const bea = { session: { id: 'bea-session' } } as Agent;
   let live = true;
+  let interactive = true;
   const deps = {
     channels,
     ownership,
     registry,
     credentials: () => credentials,
     isLive: (candidate: Agent) => live && (candidate === agent || candidate === bea),
+    canRequest: () => interactive,
     qualified: async () => qualified,
     log: vi.fn(),
     ...(requestTimeoutMs === undefined ? {} : { requestTimeoutMs }),
@@ -72,6 +74,9 @@ async function fixture(qualified = true, requestTimeoutMs?: number) {
     ownership,
     ctx,
     replacement: () => new PrivateInputs(deps),
+    unattended: () => {
+      interactive = false;
+    },
     close: async () => {
       await owner.close();
       registryDatabase(root).close();
@@ -83,6 +88,51 @@ async function fixture(qualified = true, requestTimeoutMs?: number) {
 }
 
 describe('private input native authority and reference contract', () => {
+  it('refuses missing private configuration without creating an unattended input card', async () => {
+    const f = await fixture();
+    f.unattended();
+    await expect(f.owner.ask(f.agent, declaration, new AbortController().signal)).rejects.toThrow(
+      'Owner action in an interactive conversation',
+    );
+    expect(f.channels.readMessages('dm-ada')).toEqual([]);
+    expect(await f.credentials.listRecords()).toEqual([]);
+    await f.close();
+  });
+
+  it('reuses durable current references unattended after restart and refuses revoked configuration', async () => {
+    const f = await fixture();
+    const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
+    await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+    const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+    await f.owner.submit(true, { channelId: 'dm-ada', messageId, values });
+    const configured = await wait;
+    await f.owner.close();
+    f.unattended();
+    const restarted = f.replacement();
+    expect(await restarted.ask(f.agent, declaration, new AbortController().signal)).toEqual(
+      configured,
+    );
+    const consume = vi.fn(async (resolved) => ({
+      statusCode: resolved.api_key === values.api_key ? 200 : 401,
+    }));
+    expect(
+      await restarted.consume(f.agent, declaration.account, configured.references, consume),
+    ).toEqual({ statusCode: 200 });
+    await restarted.revoke(true, 'dm-ada', messageId);
+    await expect(restarted.ask(f.agent, declaration, new AbortController().signal)).rejects.toThrow(
+      'Owner action',
+    );
+    await expect(
+      restarted.consume(f.agent, declaration.account, configured.references, consume),
+    ).rejects.toThrow();
+    expect(consume).toHaveBeenCalledTimes(1);
+    expect(
+      f.channels.readMessages('dm-ada').filter((message) => message.privateInputRequest),
+    ).toHaveLength(1);
+    await restarted.close();
+    await f.close();
+  });
+
   it('replaces an account through private Chat input and durably revokes both old and current references', async () => {
     const f = await fixture();
     const wait = f.owner.ask(f.agent, declaration, new AbortController().signal);
