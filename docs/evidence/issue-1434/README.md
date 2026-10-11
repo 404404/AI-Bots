@@ -25,6 +25,50 @@ timeouts; do not interpret the screenshots as a new exact-head runtime rerun.
 
 ## Verified categories
 
+### Human-requested IM header refinement — October 12, 2026
+
+The follow-up removes the duplicate list/conversation headers: the existing list header owns
+search, More, create and Exit; conversation headers contain only Back icon, full accessible
+Channel name and Channel settings icon. The three top-level bottom destinations use icons
+with translated accessible names. Conversation bottom-bar hiding remains provisional.
+
+The task-owned Host was rebuilt with this refinement. Browser checks use the real app in a
+same-origin iframe with measured CSS viewports of 390 × 844, 427 × 925, 844 × 390 and
+1402 × 877. The outer frame is scaled to fit the preview; this is browser layout testing,
+not device emulation, Mobile Safari or physical-phone proof. Existing DOM controls were
+clicked, and composer/search input events were dispatched in that frame; no Channel API
+was used as a substitute for the composer. Finite header transitions were finished through
+the browser animation API for settled-state measurements in the inactive preview.
+
+- At 390px, closed-header Search/More/New/Exit bounds were 189–233 / 237–281 / 285–329 /
+  333–377px, with no overlaps. At 427px the same controls were 226–270 / 274–318 /
+  322–366 / 370–414px. Expanded search keeps Exit reachable and filters the actual Group row.
+- Fresh visible-composer DM and Group sends produced visible `HEADER DM OK` and
+  `HEADER GROUP OK` Channel replies from the real Host. The previous canonical readback
+  belongs to the original roundtrip, not this additional navigation-only check.
+- Back restored list scroll at 862.5px; DM and Group unsent drafts stayed distinct.
+  The long Group title truncates visually while its full text remains in the heading/title.
+- Channel settings opens the existing Members / Wake policy / External connectors /
+  Group management sidebar. Its display-settings menu remains visible; backdrop dismisses it.
+- At 844 × 390, both header controls and the composer fit the viewport with zero horizontal
+  overflow. At 1402 × 877, the mobile shell/sidebar mark are removed, native navigation
+  returns, and the real DM history and draft load. Returning to mobile starts on the list.
+- Activity Center and Bot Settings both loaded their existing content. Exit removed the
+  shell/sidebar mark and restored the native Host layout.
+- Refinement checks: 9 focused files / 75 tests passed (mobile panel, panel entry, bundle,
+  token guard, Bot main, mode, composer, composer lifecycle and Group composer activity).
+  Typecheck, lint, format check, bilingual changelog check and build passed. This is a new
+  focused selection, not a claim that the previous local full-suite failures disappeared.
+
+**Capture blocker:** the collaborative browser's screenshot operation repeatedly returned
+`PreviewAutomationExecutionError`, including on a new preview tab. DOM/runtime observations
+above are not visual approval. The seven committed images remain historical pre-refinement
+captures; they must not be described as screenshots of the new header. Recapture the refined
+list, DM, Group/settings and desktop in matched theme/locale/viewports before visual approval.
+The earlier seven-image GitHub page render was verified separately on head `0b0e16c2`.
+
+### Original implementation verification
+
 - **Focused automation:** 7 files / 100 tests passed, including navigation, stable list node and
   scroll, draft isolation (text, mentions, reply, Channel refs and uploads), late send-failure
   restoration into the original scope, viewport listener disposal, desktop shadow restoration,
@@ -56,14 +100,14 @@ the dev-im-test-apps synthetic stdin exit failure remained. This does not turn t
 
 The mobile bottom bar is currently absent inside conversations to reserve composer space;
 **this remains a candidate design, not a phone-validated conclusion**. The persistent Back and
-Exit controls are the intended escape routes. The existing Companion can overlap the bottom
+list-header Exit controls are the intended escape routes. The existing Companion can overlap the bottom
 area in these captures; its business logic is unchanged and needs a phone-level reachability
 check before accepting this layout.
 
 1. On a physical iPhone/Mobile Safari and Android browser, enter Bot mode and open both DM and
    Group from the list; send a message and observe the actual Channel response.
 2. Open/close the software keyboard; verify composer, attachments, send, Back and Exit remain
-   reachable. Test nonzero top/bottom safe areas and browser chrome collapse/expansion.
+   reachable (Exit is on the list header). Test nonzero top/bottom safe areas and browser chrome collapse/expansion.
 3. Rotate portrait ↔ landscape, including with keyboard open, and check for horizontal overflow,
    clipped controls and correct desktop/mobile breakpoint restoration.
 4. Scroll a long list, enter/return from a conversation and check position. Leave different
@@ -75,6 +119,6 @@ check before accepting this layout.
    fully loaded. Compare the current composer and menus; no #1432 dependency is required.
 
 The environment reported device access disabled. Real keyboard, nonzero safe-area behavior,
-landscape interaction, Mobile Safari and physical-phone QA are **pending**, not passed.
+native landscape interaction, Mobile Safari and physical-phone QA are **pending**, not passed.
 The automated VisualViewport contraction test is a simulation, not native keyboard evidence.
 Do not merge automatically; pause this PR for Human QA.

@@ -1,6 +1,7 @@
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
 import { GroupChannelHeader } from './group-channel-header.js';
+import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { CompanionPin } from './window-companions-view.js';
 import type { WindowCompanions } from './window-companions.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
@@ -617,6 +618,7 @@ function EmptyConversation({
 }
 
 function ConversationView({
+  onMobileBack,
   state,
   actions,
   companion,
@@ -625,6 +627,7 @@ function ConversationView({
   nativeChatT,
   t,
 }: {
+  onMobileBack?: (() => void) | undefined;
   state: ClientState;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
@@ -1263,10 +1266,18 @@ function ConversationView({
                 : undefined
             }
           >
-            {channel === undefined ? null : (
+            {onMobileBack !== undefined || channel === undefined ? null : (
               <HumanChannelNameMenu key={channel.id} channel={channel} actions={actions} t={t} />
             )}
-            {channel?.type === 'group' ? (
+            {onMobileBack !== undefined ? (
+              <MobileConversationHeader
+                title={title}
+                onBack={onMobileBack}
+                onSettings={sidebar.toggle}
+                settingsOpen={sidebar.mode !== 'hidden'}
+                t={t}
+              />
+            ) : channel?.type === 'group' ? (
               <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
                 <GroupChannelHeader
                   channel={channel}
@@ -1827,6 +1838,7 @@ function ConversationView({
 }
 
 function BotMainContent({
+  onMobileBack,
   actions,
   companion,
   nativeSessions,
@@ -1835,6 +1847,7 @@ function BotMainContent({
   nativeChatT,
   t = zhTranslate,
 }: {
+  onMobileBack?: (() => void) | undefined;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
@@ -1853,6 +1866,7 @@ function BotMainContent({
       : `channel:${state.selection.channelId}`;
   return (
     <ConversationView
+      onMobileBack={onMobileBack}
       key={`${scopeKey}:${state.conversation.channel?.id ?? ''}`}
       state={state}
       actions={actions}
@@ -1886,6 +1900,7 @@ export function BotMain({
 }
 
 export function BotPanel({
+  onMobileBack,
   prefs,
   actions,
   companion,
@@ -1897,6 +1912,7 @@ export function BotPanel({
   telemetryNotice,
   t,
 }: {
+  onMobileBack?: (() => void) | undefined;
   prefs?: Pick<BotModePrefs, 'source'> | undefined;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
@@ -1925,6 +1941,7 @@ export function BotPanel({
         <TelemetryNotice controller={telemetryNotice} releaseNotes={releaseNotes} t={t} />
       )}
       <BotMain
+        onMobileBack={onMobileBack}
         prefs={prefs}
         actions={actions}
         companion={companion}

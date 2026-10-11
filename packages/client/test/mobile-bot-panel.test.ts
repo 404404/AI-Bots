@@ -1,19 +1,37 @@
 // @vitest-environment jsdom
-import { act, createElement, type ReactElement } from 'react';
+import { act, createElement, type ReactElement, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  IconPanelLeftOutlineRegular: () => null,
+  IconChevronLeftOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
+  IconCloseOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
+  IconFlatListOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
+  IconSettingsOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
 }));
 vi.mock('../src/client/bot-main.js', () => ({
-  BotPanel: () => createElement('div', { 'data-conversation': true }, 'Existing composer'),
+  BotPanel: ({ onMobileBack, t }: { onMobileBack?: () => void; t: BotHarnessTranslate }) =>
+    createElement(
+      'div',
+      { 'data-conversation': true },
+      onMobileBack === undefined || store.getSnapshot().selection === undefined
+        ? null
+        : createElement(MobileConversationHeader, {
+            title: store.getSnapshot().selection?.kind === 'bot' ? 'Alpha' : 'Group',
+            onBack: onMobileBack,
+            onSettings: () => {},
+            settingsOpen: false,
+            t,
+          }),
+      'Existing composer',
+    ),
 }));
 vi.mock('../src/client/bot-sidebar.js', () => ({
-  BotSidebar: () =>
+  BotSidebar: ({ headerEnd }: { headerEnd?: ReactNode }) =>
     createElement(
       'div',
       { className: 'bh-region' },
+      createElement('div', { className: 'bh-header' }, 'Messages', headerEnd),
       createElement(
         'button',
         { className: 'bh-contact', onClick: () => store.select({ kind: 'bot', slug: 'alpha' }) },
@@ -31,7 +49,9 @@ vi.mock('../src/client/bot-sidebar.js', () => ({
 }));
 
 import { MobileBotPanel, mountMobileBotShell } from '../src/client/mobile-bot-panel.js';
+import { MobileConversationHeader } from '../src/client/mobile-conversation-header.js';
 import { MOBILE_BOT_QUERY } from '../src/client/mobile-viewport.js';
+import { MOBILE_BOT_CSS } from '../src/client/mobile-bot-styles.js';
 import {
   clearConversationDrafts,
   useConversationDraft,
@@ -79,7 +99,7 @@ afterEach(() => {
 
 function click(name: string): void {
   const button = [...container.querySelectorAll('button')].find(
-    (item) => item.textContent?.trim() === name,
+    (item) => item.getAttribute('aria-label') === name || item.textContent?.trim() === name,
   );
   expect(button, name).toBeDefined();
   act(() => button?.click());
@@ -139,6 +159,11 @@ describe('Mobile Bot navigation', () => {
   it('connects only existing top-level actions and restores the desktop component on resize', () => {
     const { exitBotMode, openBotSettings } = renderPanel();
     expect(container.querySelectorAll('.bh-mobile-nav button')).toHaveLength(3);
+    click('Activity Center');
+    expect(container.querySelector('.bh-mobile-shell')?.getAttribute('data-page')).toBe('inbox');
+    expect(container.querySelector<HTMLElement>('.bh-mobile-content')?.hidden).toBe(false);
+    click('Conversations');
+    expect(container.querySelector('.bh-mobile-shell')?.getAttribute('data-page')).toBe('list');
     click('Bot settings');
     expect(openBotSettings).toHaveBeenCalledOnce();
     click('Exit Bot mode');
@@ -161,12 +186,89 @@ describe('Mobile Bot navigation', () => {
     );
   });
 
+  it('stays on the list when the Host restores its last conversation after mounting', () => {
+    renderPanel();
+    act(() => store.select({ kind: 'channel', channelId: 'group' }));
+    expect(container.querySelector('.bh-mobile-shell')?.getAttribute('data-page')).toBe('list');
+    click('Group');
+    expect(container.querySelector('.bh-mobile-shell')?.getAttribute('data-page')).toBe(
+      'conversation',
+    );
+  });
+
   it('provides translated touch and keyboard button names', () => {
     renderPanel(zhTranslate);
     expect(container.querySelector('nav')?.getAttribute('aria-label')).toBe('Bot 模式导航');
     click('Alpha');
     click('返回会话列表');
     expect(container.querySelectorAll('.bh-mobile-nav button')).toHaveLength(3);
+  });
+
+  it('uses one list header and icon-only top-level navigation with accessible names', () => {
+    renderPanel();
+    expect(container.querySelector('.bh-mobile-header')).toBeNull();
+    expect(container.querySelectorAll('.bh-header')).toHaveLength(1);
+    const buttons = [...container.querySelectorAll('.bh-mobile-nav button')];
+    expect(buttons.map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Conversations',
+      'Activity Center',
+      'Bot settings',
+    ]);
+    for (const button of buttons) {
+      expect(button.textContent).toBe('');
+      expect(button.querySelector('svg')).not.toBeNull();
+    }
+    click('Alpha');
+    const header = container.querySelector('.bh-mobile-conversation-header')!;
+    expect(header.querySelector('h1')?.textContent).toBe('Alpha');
+    expect(header.querySelector('button')?.textContent).toBe('');
+    expect(container.querySelector('.bh-mobile-header')).toBeNull();
+  });
+
+  it('connects the conversation back and settings icons without truncating accessible names', () => {
+    const onBack = vi.fn();
+    const onSettings = vi.fn();
+    const title = 'A deliberately long Group name';
+    act(() =>
+      root.render(
+        createElement(MobileConversationHeader, {
+          title,
+          onBack,
+          onSettings,
+          settingsOpen: true,
+          t: enTranslate,
+        }),
+      ),
+    );
+    expect(container.querySelector('h1')?.getAttribute('title')).toBe(title);
+    expect(
+      container
+        .querySelector('[aria-controls="bh-channel-sidebar"]')
+        ?.getAttribute('aria-expanded'),
+    ).toBe('true');
+    click('Conversation settings');
+    expect(onSettings).toHaveBeenCalledOnce();
+    click('Back to conversations');
+    expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it('fits larger header actions and preserves settings inside the Channel sidebar', () => {
+    container.innerHTML = `<style>${MOBILE_BOT_CSS}</style>
+      <div class="bh-mobile-list"><div class="bh-header-actions"></div></div>
+      <div class="bh-mobile-content"><div class="bh-chat-layout">
+        <button class="bh-sidebar-toggle"></button>
+        <div class="bh-channel-sidebar"><button class="bh-sidebar-toggle bh-sidebar-settings"></button></div>
+      </div></div>`;
+    const actions = container.querySelector('.bh-header-actions')!;
+    expect(getComputedStyle(actions).maxWidth).toBe('92px');
+    actions.classList.add('bh-header-actions-hidden');
+    expect(getComputedStyle(actions).maxWidth).toBe('0');
+    expect(getComputedStyle(container.querySelector('.bh-chat-layout > button')!).display).toBe(
+      'none',
+    );
+    expect(getComputedStyle(container.querySelector('.bh-sidebar-settings')!).display).not.toBe(
+      'none',
+    );
   });
 
   it('owns only the measured native sidebar attribute and removes it on disposal', () => {

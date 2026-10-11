@@ -7,6 +7,7 @@ export const zh = {
   'mobile.conversations': '会话',
   'mobile.host': '退出 Bot 模式',
   'mobile.navigation': 'Bot 模式导航',
+  'mobile.channelSettings': '会话设置',
   'backup.title': '完整环境备份与恢复',
   'backup.description': '保存整个本地环境的 Bot 身份、记忆、聊天历史和设置。',
   'backup.open': '管理备份',
@@ -2782,6 +2783,7 @@ export const en = {
   'mobile.conversations': 'Conversations',
   'mobile.host': 'Exit Bot mode',
   'mobile.navigation': 'Bot mode navigation',
+  'mobile.channelSettings': 'Conversation settings',
   'backup.title': 'Complete environment backup and restore',
   'backup.description':
     'Preserve this local environment’s Bot identities, Memory, conversation history and settings.',

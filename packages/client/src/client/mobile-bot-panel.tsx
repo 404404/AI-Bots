@@ -1,6 +1,11 @@
-import { useState, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store';
-import { IconPanelLeftOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives';
+import {
+  IconChevronLeftOutlineRegular,
+  IconCloseOutlineRegular,
+  IconFlatListOutlineRegular,
+  IconSettingsOutlineRegular,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { BotPanel } from './bot-main.js';
 import { BotSidebar } from './bot-sidebar.js';
@@ -10,6 +15,7 @@ import { useMountedResource } from './mounted-resource.js';
 import { store } from './store.js';
 import { MOBILE_BOT_CSS } from './mobile-bot-styles.js';
 import { useMobileBotViewport } from './mobile-viewport.js';
+import { InboxIcon } from './inbox-icon.js';
 
 export function mountMobileBotShell(node: HTMLElement): () => void {
   let frame = node.parentElement;
@@ -60,6 +66,7 @@ export function MobileBotPanel(props: MobileBotPanelProps): ReactElement {
 function MobileNavigation(props: MobileBotPanelProps): ReactElement {
   const { prefs, actions, companion, useBotModePrefs, t } = props;
   const [page, setPage] = useState<'list' | 'conversation' | 'inbox'>('list');
+  const navigationIntent = useRef(false);
   const shellMount = useMountedResource<HTMLDivElement>((node) => {
     store.setMode('bot');
     const releaseShell = mountMobileBotShell(node);
@@ -68,7 +75,10 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
       const next = store.getSnapshot().selection;
       if (next === selection) return;
       selection = next;
-      if (next !== undefined) setPage(next.kind === 'inbox' ? 'inbox' : 'conversation');
+      if (next !== undefined && navigationIntent.current) {
+        navigationIntent.current = false;
+        setPage(next.kind === 'inbox' ? 'inbox' : 'conversation');
+      }
     });
     return () => {
       unsubscribe();
@@ -77,28 +87,38 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
     };
   }, []);
   const showList = (): void => {
+    navigationIntent.current = false;
     store.select(undefined);
     setPage('list');
   };
+  const exitButton = (
+    <button
+      type="button"
+      className="bh-mobile-exit"
+      onClick={props.exitBotMode}
+      aria-label={t('mobile.host')}
+      title={t('mobile.host')}
+    >
+      <IconCloseOutlineRegular size={22} />
+    </button>
+  );
   return (
     <div ref={shellMount} className="bh-root bh-mobile-shell" data-page={page}>
       <style>{MOBILE_BOT_CSS}</style>
-      <header className="bh-mobile-header">
-        {page !== 'list' ? (
+      {page === 'inbox' ? (
+        <header className="bh-mobile-header">
           <button type="button" onClick={showList} aria-label={t('mobile.back')}>
-            <IconPanelLeftOutlineRegular /> {t('mobile.back')}
+            <IconChevronLeftOutlineRegular size={22} />
           </button>
-        ) : (
-          <strong>{t('mobile.conversations')}</strong>
-        )}
-        <button type="button" onClick={props.exitBotMode}>
-          {t('mobile.host')}
-        </button>
-      </header>
+          <strong>{t('activityCenter.title')}</strong>
+          {exitButton}
+        </header>
+      ) : null}
       <div
         className="bh-mobile-list"
         hidden={page !== 'list'}
         onClickCapture={(event) => {
+          navigationIntent.current = true;
           if (
             event.target instanceof Element &&
             event.target.closest('button.bh-contact, button.bh-channel-row') !== null
@@ -109,6 +129,7 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
         {prefs === undefined ? null : (
           <BotSidebar
             wide
+            headerEnd={exitButton}
             actions={actions}
             companion={companion}
             useBotModePrefs={useBotModePrefs}
@@ -119,29 +140,38 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
         )}
       </div>
       <div className="bh-mobile-content" hidden={page === 'list'}>
-        <BotPanel {...props} />
+        <BotPanel {...props} onMobileBack={showList} />
       </div>
       {page === 'conversation' ? null : (
         <nav className="bh-mobile-nav" aria-label={t('mobile.navigation')}>
           <button
             type="button"
             aria-current={page === 'list' ? 'page' : undefined}
+            aria-label={t('mobile.conversations')}
+            title={t('mobile.conversations')}
             onClick={showList}
           >
-            {t('mobile.conversations')}
+            <IconFlatListOutlineRegular size={24} />
           </button>
           <button
             type="button"
             aria-current={page === 'inbox' ? 'page' : undefined}
+            aria-label={t('activityCenter.title')}
+            title={t('activityCenter.title')}
             onClick={() => {
               setPage('inbox');
               void actions.openActivityCenter();
             }}
           >
-            {t('activityCenter.title')}
+            <InboxIcon size={24} />
           </button>
-          <button type="button" onClick={props.openBotSettings}>
-            {t('panel.settings')}
+          <button
+            type="button"
+            onClick={props.openBotSettings}
+            aria-label={t('panel.settings')}
+            title={t('panel.settings')}
+          >
+            <IconSettingsOutlineRegular size={24} />
           </button>
         </nav>
       )}
