@@ -101,7 +101,7 @@ The existing dynamic-schema fixture passed a bare Context instead of a native Ag
 which the new Consumer correctly refused. It now creates a native Scope with the inherited Tool
 Registry. The CLI receipt-timeout test raced its authenticated handshake against a 100 ms wall
 deadline under full-suite load; a standalone local run passed. It now advances the test clock
-only after the real status-poll response, preserving real HTTP/authentication and checking that
+only after the authenticated status-poll request reaches its handler, preserving real HTTP/authentication and checking that
 the mutating send and status poll each happen once. No production guard or CLI behavior changed.
 The corrected four-file focused run passed all 44 tests; the PR tracks the subsequent full CI.
 
