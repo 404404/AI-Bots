@@ -468,7 +468,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		function ViewerTitleBar(props) {
-			const { t, title, phase, reconnecting, busy, stopping, interactive, extraControls, onToggleInteractive, onStop, onCollapse } = props;
+			const { t, title, phase, reconnecting, busy, stopping, interactive, extraControls, onToggleInteractive, onStop, onCollapse, hideStop, hideInteractiveToggle } = props;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				style: {
 					display: "flex",
@@ -486,7 +486,11 @@ window.__ModuleLoader__.load({
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", {
 						style: {
 							fontSize: 13,
-							fontWeight: 600
+							fontWeight: 600,
+							minWidth: 0,
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap"
 						},
 						children: title
 					}),
@@ -506,7 +510,7 @@ window.__ModuleLoader__.load({
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { style: { flex: 1 } }),
 					extraControls,
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+					hideInteractiveToggle ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 						variant: interactive ? "ghost" : "primary",
 						size: "sm",
 						"aria-pressed": interactive,
@@ -515,7 +519,7 @@ window.__ModuleLoader__.load({
 						title: t(interactive ? "entry.interactive.disable" : "entry.interactive.enable"),
 						children: t(interactive ? "entry.interactive.disable" : "entry.interactive.enable")
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(StopButton, {
+					hideStop === true ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(StopButton, {
 						t,
 						busy,
 						stopping,
@@ -532,7 +536,7 @@ window.__ModuleLoader__.load({
 				]
 			});
 		}
-		function RemoteViewer({ t, title, src, design, busy, stopping, onStop, footer, notice, extraControls, onEvent, interactive, onToggleInteractive, onDisableInteraction, expanded: controlledExpanded, onExpandedChange }) {
+		function RemoteViewer({ t, title, src, design, busy, stopping, onStop, footer, notice, extraControls, onEvent, interactive, onToggleInteractive, onDisableInteraction, expanded: controlledExpanded, onExpandedChange, hideStop, hideInteractiveToggle, allowFrameInput }) {
 			const entryRef = (0, react.useRef)(null);
 			const mounted = (0, react.useRef)(false);
 			const [hovered, setHovered] = (0, react.useState)(false);
@@ -723,7 +727,9 @@ window.__ModuleLoader__.load({
 						interactive: interactive ?? inputEnabled,
 						onToggleInteractive: onToggleInteractive ?? (() => setInputEnabled((current) => !current)),
 						onStop,
-						onCollapse: collapseViewer
+						onCollapse: collapseViewer,
+						hideStop,
+						hideInteractiveToggle
 					}, "viewer-titlebar") : null,
 					notice,
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -754,7 +760,7 @@ window.__ModuleLoader__.load({
 							src,
 							title,
 							design,
-							interactive: expanded && (interactive ?? inputEnabled),
+							interactive: allowFrameInput === true ? true : expanded && (interactive ?? inputEnabled),
 							fit: expanded ? "contain" : "width",
 							iframeRef: streamRef
 						}, reloadKey), overlay]
@@ -775,7 +781,7 @@ window.__ModuleLoader__.load({
 								display: "flex",
 								gap: 8
 							},
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							children: [hideStop === true ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								disabled: busy || stopping,
 								onClick: onStop,
@@ -1272,6 +1278,7 @@ window.__ModuleLoader__.load({
 			"settings.containerDriver": "容器驱动",
 			"settings.driver.current": "默认",
 			"settings.driver.agent-browser": "agent-browser（试用）",
+			"settings.section": "Browser",
 			"settings.target": "操作目标",
 			"settings.local": "本机 Browser",
 			"settings.container": "Docker Browser",
@@ -1284,8 +1291,14 @@ window.__ModuleLoader__.load({
 			"entry.borrow.cancel": "取消配对",
 			"entry.borrow.instructions": "在扩展中输入此地址和配对码，再选择借出当前页面。配对码 5 分钟内有效，仅可使用一次。",
 			"entry.view.interaction": "允许 Human 操作",
+			"entry.view.inputMode.direct": "直接点按",
+			"entry.view.inputMode.trackpad": "触控板",
 			"entry.view.close": "关闭",
 			"entry.view.container": "容器浏览器",
+			"entry.view.browserTitle": "{name}的浏览器",
+			"entry.takeover.start": "接管",
+			"entry.takeover.stop": "取消接管",
+			"entry.takeover.active": "接管中",
 			"entry.label": "浏览器",
 			"entry.access.title": "Browser Access",
 			"entry.access.enable": "启用 Browser Access",
@@ -1301,6 +1314,7 @@ window.__ModuleLoader__.load({
 			"entry.view.pause": "暂停 Bot",
 			"entry.view.resume": "继续",
 			"entry.view.open": "打开 Bot 浏览器",
+			"entry.view.fullscreen": "全屏",
 			"entry.view.stop": "停止",
 			"entry.view.cleanupFailed": "浏览器清理失败。点击“停止”重试。",
 			"entry.view.opening": "正在打开…",
@@ -1319,6 +1333,39 @@ window.__ModuleLoader__.load({
 			"entry.chip.connected": "已连接",
 			"entry.chip.notShared": "未借用",
 			"entry.chip.readOnly": "只读",
+			"entry.provision.preparing": "正在准备下载浏览器…",
+			"entry.provision.downloading": "正在下载浏览器…{percent}%（{downloaded}/{total}）",
+			"entry.fail.details": "详情",
+			"entry.fail.provision-no-network.title": "浏览器下载失败——本机网络似乎不通。",
+			"entry.fail.provision-no-network.fault": "这是本机网络的问题，不是你的设置问题。",
+			"entry.fail.provision-no-network.action": "让本机连上网后，再点一次“打开”。",
+			"entry.fail.provision-no-disk-space.title": "浏览器下载失败——磁盘空间不足。",
+			"entry.fail.provision-no-disk-space.fault": "这是本机剩余空间的问题。",
+			"entry.fail.provision-no-disk-space.action": "至少腾出 500 MB 空间后，再点一次“打开”。",
+			"entry.fail.provision-no-permission.title": "浏览器下载失败——下载目录不可写。",
+			"entry.fail.provision-no-permission.fault": "这是本机目录权限的问题。",
+			"entry.fail.provision-no-permission.action": "请机器管理员放开浏览器目录的写权限后，再点一次“打开”。",
+			"entry.fail.provision-missing-libs.title": "这台机器缺少浏览器需要的系统库。",
+			"entry.fail.provision-missing-libs.fault": "这是机器环境的问题，不是浏览器设置的问题。",
+			"entry.fail.provision-missing-libs.action": "Ubuntu 24.04 上按“详情”里的命令安装系统库，装好后再点“打开”。",
+			"entry.fail.provision-failed.title": "浏览器下载失败。",
+			"entry.fail.provision-failed.fault": "暂时看不出具体原因。",
+			"entry.fail.provision-failed.action": "再点一次“打开”重试；多次失败请把“详情”发给机器管理员。",
+			"entry.fail.startup-missing-binary.title": "配置的浏览器文件不存在。",
+			"entry.fail.startup-missing-binary.fault": "这是插件配置里的浏览器路径问题。",
+			"entry.fail.startup-missing-binary.action": "修正浏览器插件配置中的 browserPath，或清空它改用自动下载。",
+			"entry.fail.startup-spawn-failed.title": "浏览器程序无法启动。",
+			"entry.fail.startup-spawn-failed.fault": "本机拦截或删除了浏览器文件——常见是杀毒软件，偶尔是权限问题。",
+			"entry.fail.startup-spawn-failed.action": "把浏览器目录加入杀毒软件白名单（或找机器管理员看权限），再点一次“打开”。",
+			"entry.fail.startup-sandbox.title": "浏览器因系统沙箱限制拒绝启动。",
+			"entry.fail.startup-sandbox.fault": "这是本机系统限制的问题。",
+			"entry.fail.startup-sandbox.action": "在浏览器插件配置中打开 headless 后，再点一次“打开”。",
+			"entry.fail.startup-crashed.title": "浏览器在启动过程中退出了。",
+			"entry.fail.startup-crashed.fault": "这是本机浏览器的问题，不是页面问题。",
+			"entry.fail.startup-crashed.action": "再点一次“打开”重试；多次失败请把“详情”发给机器管理员。",
+			"entry.fail.startup-timeout.title": "浏览器启动超时。",
+			"entry.fail.startup-timeout.fault": "这台机器可能比较慢或负载较高。",
+			"entry.fail.startup-timeout.action": "再点一次“打开”重试；多次失败请重启机器或联系管理员。",
 			"entry.error": "浏览器操作失败"
 		};
 		const en = {
@@ -1353,6 +1400,7 @@ window.__ModuleLoader__.load({
 			"settings.containerDriver": "Container driver",
 			"settings.driver.current": "Default",
 			"settings.driver.agent-browser": "agent-browser (trial)",
+			"settings.section": "Browser",
 			"settings.target": "Browser Target",
 			"settings.local": "Local Browser",
 			"settings.container": "Docker Browser",
@@ -1365,8 +1413,14 @@ window.__ModuleLoader__.load({
 			"entry.borrow.cancel": "Cancel pairing",
 			"entry.borrow.instructions": "Enter this address and code in the extension, then share the current page. The code expires in 5 minutes and can be used once.",
 			"entry.view.interaction": "Enable Human interaction",
+			"entry.view.inputMode.direct": "Direct tap",
+			"entry.view.inputMode.trackpad": "Trackpad",
 			"entry.view.close": "Close",
 			"entry.view.container": "Container Browser",
+			"entry.view.browserTitle": "{name}'s Browser",
+			"entry.takeover.start": "Take over",
+			"entry.takeover.stop": "Release",
+			"entry.takeover.active": "Taking over",
 			"entry.label": "Browser",
 			"entry.access.title": "Browser Access",
 			"entry.access.enable": "Enable Browser Access",
@@ -1382,6 +1436,7 @@ window.__ModuleLoader__.load({
 			"entry.view.pause": "Pause Bot",
 			"entry.view.resume": "Resume",
 			"entry.view.open": "Open Bot Browser",
+			"entry.view.fullscreen": "Fullscreen",
 			"entry.view.stop": "Stop",
 			"entry.view.cleanupFailed": "Browser cleanup failed. Click Stop to retry.",
 			"entry.view.opening": "Opening…",
@@ -1400,8 +1455,128 @@ window.__ModuleLoader__.load({
 			"entry.chip.connected": "Connected",
 			"entry.chip.notShared": "Not shared",
 			"entry.chip.readOnly": "Read-only",
+			"entry.provision.preparing": "Preparing the browser download…",
+			"entry.provision.downloading": "Downloading browser… {percent}% ({downloaded} / {total})",
+			"entry.fail.details": "Details",
+			"entry.fail.provision-no-network.title": "The browser download failed — this machine looks offline.",
+			"entry.fail.provision-no-network.fault": "This is about the network on this machine, not your settings.",
+			"entry.fail.provision-no-network.action": "Reconnect this machine to the internet, then click Open again.",
+			"entry.fail.provision-no-disk-space.title": "The browser download failed — the disk is full.",
+			"entry.fail.provision-no-disk-space.fault": "This is about free space on this machine.",
+			"entry.fail.provision-no-disk-space.action": "Free at least 500 MB, then click Open again.",
+			"entry.fail.provision-no-permission.title": "The browser download failed — the download folder is not writable.",
+			"entry.fail.provision-no-permission.fault": "This is about folder permissions on this machine.",
+			"entry.fail.provision-no-permission.action": "Ask the machine owner to make the browser folder writable, then click Open again.",
+			"entry.fail.provision-missing-libs.title": "This machine is missing system libraries the browser needs.",
+			"entry.fail.provision-missing-libs.fault": "This is about the machine setup, not your browser settings.",
+			"entry.fail.provision-missing-libs.action": "On Ubuntu 24.04, install them with the command in Details, then click Open again.",
+			"entry.fail.provision-failed.title": "The browser download failed.",
+			"entry.fail.provision-failed.fault": "The cause is unclear from here.",
+			"entry.fail.provision-failed.action": "Click Open to retry; if it keeps failing, show Details to the machine owner.",
+			"entry.fail.startup-missing-binary.title": "The configured browser file does not exist.",
+			"entry.fail.startup-missing-binary.fault": "This is about the browser path in the plugin configuration.",
+			"entry.fail.startup-missing-binary.action": "Fix browserPath in the browser plugin configuration, or clear it to use the automatic download.",
+			"entry.fail.startup-spawn-failed.title": "The browser program could not be started.",
+			"entry.fail.startup-spawn-failed.fault": "This machine blocked or removed the browser file — often antivirus, sometimes permissions.",
+			"entry.fail.startup-spawn-failed.action": "Allow-list the browser folder in your antivirus (or ask the machine owner about permissions), then click Open again.",
+			"entry.fail.startup-sandbox.title": "The browser refused to start because of its OS sandbox.",
+			"entry.fail.startup-sandbox.fault": "This is about OS restrictions on this machine.",
+			"entry.fail.startup-sandbox.action": "Enable headless in the browser plugin configuration, then click Open again.",
+			"entry.fail.startup-crashed.title": "The browser exited during startup.",
+			"entry.fail.startup-crashed.fault": "This is about the browser on this machine, not the page.",
+			"entry.fail.startup-crashed.action": "Click Open to retry; if it keeps failing, show Details to the machine owner.",
+			"entry.fail.startup-timeout.title": "The browser took too long to start.",
+			"entry.fail.startup-timeout.fault": "This machine may be slow or overloaded.",
+			"entry.fail.startup-timeout.action": "Click Open to retry; if it keeps failing, restart the machine or ask its owner.",
 			"entry.error": "Browser action failed"
 		};
+		//#endregion
+		//#region packages/browser/src/failure-kinds.ts
+		const BROWSER_FAILURE_KINDS = [
+			"provision-no-network",
+			"provision-no-disk-space",
+			"provision-no-permission",
+			"provision-missing-libs",
+			"provision-failed",
+			"startup-missing-binary",
+			"startup-spawn-failed",
+			"startup-sandbox",
+			"startup-crashed",
+			"startup-timeout"
+		];
+		function isBrowserFailureKind(value) {
+			return typeof value === "string" && BROWSER_FAILURE_KINDS.includes(value);
+		}
+		//#endregion
+		//#region packages/browser/src/client/browser-failure.tsx
+		var BrowserApiError = class extends Error {
+			code;
+			detail;
+			constructor(message, code, detail) {
+				super(message);
+				this.name = "BrowserApiError";
+				if (code !== void 0) this.code = code;
+				if (detail !== void 0) this.detail = detail;
+			}
+		};
+		function readFailure(cause) {
+			if (cause instanceof BrowserApiError) return {
+				message: cause.message,
+				...cause.code === void 0 ? {} : { code: cause.code },
+				...cause.detail === void 0 ? {} : { detail: cause.detail }
+			};
+			return { message: cause instanceof Error ? cause.message : String(cause) };
+		}
+		function BrowserFailureNotice({ failure, t }) {
+			if (!isBrowserFailureKind(failure.code)) return null;
+			const kind = failure.code;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				role: "alert",
+				className: "bh-browser-failure",
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "bh-browser-failure-title",
+						children: t(`entry.fail.${kind}.title`)
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "bh-browser-failure-fault",
+						children: t(`entry.fail.${kind}.fault`)
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "bh-browser-failure-action",
+						children: t(`entry.fail.${kind}.action`)
+					}),
+					failure.detail === void 0 || failure.detail === "" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+						className: "bh-browser-failure-details",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("entry.fail.details") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", { children: failure.detail })]
+					})
+				]
+			});
+		}
+		function formatMiB(bytes) {
+			return `${(bytes / 1048576).toFixed(1)} MB`;
+		}
+		function BrowserProvisionProgress({ progress, t }) {
+			if (progress.totalBytes <= 0) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				role: "status",
+				className: "bh-browser-progress",
+				children: t("entry.provision.preparing")
+			});
+			const percent = Math.max(0, Math.min(99, Math.floor(progress.downloadedBytes / progress.totalBytes * 100)));
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				role: "status",
+				className: "bh-browser-progress",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("progress", {
+					className: "bh-browser-progress-bar",
+					max: progress.totalBytes,
+					value: Math.min(progress.downloadedBytes, progress.totalBytes)
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("entry.provision.downloading", {
+					percent: String(percent),
+					downloaded: formatMiB(progress.downloadedBytes),
+					total: formatMiB(progress.totalBytes)
+				}) })]
+			});
+		}
 		//#endregion
 		//#region packages/client/src/client/combobox.tsx
 		const COMBOBOX_CSS = `
@@ -1467,6 +1642,7 @@ window.__ModuleLoader__.load({
 				disabled: action.disabled
 			}];
 			const enabled = shown.filter((option) => option.disabled !== true);
+			const hasPopup = shown.length > 0 || choices.length === 0 && emptyLabel !== void 0;
 			const highlighted = shown.findIndex((option) => option.value === active && option.disabled !== true);
 			const position = (0, _deepseek_ai_dsh_client_ui_primitives.useAnchoredPosition)({
 				open,
@@ -1525,10 +1701,10 @@ window.__ModuleLoader__.load({
 						className: "bh-combobox-input",
 						role: "combobox",
 						"aria-label": label,
-						"aria-expanded": open,
+						"aria-expanded": open && hasPopup,
 						"aria-autocomplete": "list",
-						"aria-controls": open ? listId : void 0,
-						"aria-activedescendant": open && highlighted >= 0 ? `${listId}-${highlighted}` : void 0,
+						"aria-controls": open && hasPopup ? listId : void 0,
+						"aria-activedescendant": open && hasPopup && highlighted >= 0 ? `${listId}-${highlighted}` : void 0,
 						"aria-invalid": invalid,
 						"aria-describedby": invalid ? errorId : void 0,
 						value: query ?? display,
@@ -1566,7 +1742,7 @@ window.__ModuleLoader__.load({
 						},
 						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 16 })
 					}),
-					open && !disabled ? (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MenuSurface, {
+					open && !disabled && hasPopup ? (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.MenuSurface, {
 						compact: true,
 						ref: panel,
 						id: listId,
@@ -1690,53 +1866,44 @@ window.__ModuleLoader__.load({
 			const target = snapshot.value?.target ?? "local";
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "bh-settings-rows bh-browser-settings",
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "bh-settings-section-head",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "bh-settings-section-title",
-							children: "Browser"
-						})
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
-						scope,
-						field: "target",
-						value: target,
-						writable: snapshot.writable,
-						title: t("settings.target"),
-						items: [
-							"local",
-							"container",
-							"extension",
-							"daily-control",
-							"profile-control"
-						].map((id) => ({
-							id,
-							label: t(`settings.${id}`)
-						}))
-					}),
-					target !== "local" && target !== "container" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
-						scope,
-						field: target === "container" ? "containerDriver" : "localDriver",
-						value: (target === "container" ? snapshot.value?.containerDriver : snapshot.value?.localDriver) ?? "current",
-						writable: snapshot.writable,
-						title: t(target === "container" ? "settings.containerDriver" : "settings.localDriver"),
-						items: ["current", "agent-browser"].map((id) => ({
-							id,
-							label: t(`settings.driver.${id}`)
-						}))
-					})
-				]
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
+					scope,
+					field: "target",
+					value: target,
+					writable: snapshot.writable,
+					title: t("settings.target"),
+					items: [
+						"local",
+						"container",
+						"extension",
+						"daily-control",
+						"profile-control"
+					].map((id) => ({
+						id,
+						label: t(`settings.${id}`)
+					}))
+				}), target !== "local" && target !== "container" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
+					scope,
+					field: target === "container" ? "containerDriver" : "localDriver",
+					value: (target === "container" ? snapshot.value?.containerDriver : snapshot.value?.localDriver) ?? "current",
+					writable: snapshot.writable,
+					title: t(target === "container" ? "settings.containerDriver" : "settings.localDriver"),
+					items: ["current", "agent-browser"].map((id) => ({
+						id,
+						label: t(`settings.driver.${id}`)
+					}))
+				})]
 			});
 		}
 		function registerBrowserSettings(ctx, t) {
 			ctx.inject(["configForms", "slots"], (settingsCtx) => {
 				const native = settingsCtx;
 				const scope = native.configForms.get("botharness-browser");
-				return native.slots.inject("botharness.settings.item", () => native.slots.register({
-					name: "botharness.settings.item",
+				return native.slots.inject("botharness.settings.section", () => native.slots.register({
+					name: "botharness.settings.section",
 					id: "browser",
-					order: 11,
+					order: 32,
+					label: () => t("settings.section"),
 					locale: LOCALE_NS,
 					inject: () => ({
 						scope,
@@ -2131,6 +2298,17 @@ window.__ModuleLoader__.load({
 .bh-browser-tab .bh-browser-tab-url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bh-browser-tabs .bh-card-main { padding: 7px 10px; }
 .bh-browser-error { color: var(--bh-browser-error); overflow-wrap: anywhere; }
+.bh-viewer-btn-content { display: inline-flex; align-items: center; gap: 6px; }
+@media (max-width: 560px) {
+  [data-bh-viewer-btn-label] { display: none; }
+}
+.bh-browser-progress { display: grid; gap: 4px; color: var(--bh-browser-secondary); }
+.bh-browser-progress-bar { width: 100%; height: 6px; accent-color: var(--dsw-alias-state-business-primary); }
+.bh-browser-failure { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.bh-browser-failure-title { color: var(--bh-browser-label); font-weight: 600; }
+.bh-browser-failure-fault, .bh-browser-failure-action { color: var(--bh-browser-secondary); }
+.bh-browser-failure-details { color: var(--bh-browser-secondary); }
+.bh-browser-failure-details pre { overflow-x: auto; white-space: pre-wrap; font-size: 11px; }
 `;
 		//#endregion
 		//#region packages/browser/src/client/access-power-icon.tsx
@@ -2146,6 +2324,52 @@ window.__ModuleLoader__.load({
 				strokeLinejoin: "round",
 				"aria-hidden": "true",
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M12 2v10" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M18.4 6.6a9 9 0 1 1-12.77.04" })]
+			});
+		}
+		//#endregion
+		//#region packages/browser/src/client/viewer-icons.tsx
+		function baseProps(size) {
+			return {
+				width: size,
+				height: size,
+				viewBox: "0 0 24 24",
+				fill: "none",
+				stroke: "currentColor",
+				strokeWidth: 2,
+				strokeLinecap: "round",
+				strokeLinejoin: "round",
+				"aria-hidden": true
+			};
+		}
+		function TrackpadIcon({ size = 14 }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
+				...baseProps(size),
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+					x: "4",
+					y: "5",
+					width: "16",
+					height: "14",
+					rx: "3"
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("line", {
+					x1: "12",
+					y1: "12",
+					x2: "12",
+					y2: "15"
+				})]
+			});
+		}
+		function TakeoverIcon({ size = 14 }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
+				...baseProps(size),
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("circle", {
+						cx: "10",
+						cy: "8",
+						r: "3.5"
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M4 20c0-3.3 2.7-6 6-6 1.4 0 2.7.5 3.7 1.3" }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m14.5 18.5 2.5 2.5 5-5.5" })
+				]
 			});
 		}
 		//#endregion
@@ -2168,7 +2392,7 @@ window.__ModuleLoader__.load({
 				...init
 			});
 			const body = await response.json();
-			if (!response.ok || body.ok === false) throw new Error(body.error ?? `HTTP ${String(response.status)}`);
+			if (!response.ok || body.ok === false) throw new BrowserApiError(body.error ?? `HTTP ${String(response.status)}`, body.code, body.detail);
 			return body;
 		}
 		function createBotInfoStore(botSlug) {
@@ -2365,7 +2589,7 @@ window.__ModuleLoader__.load({
 			const errorId = (0, react.useId)();
 			const [profileInvalid, setProfileInvalid] = (0, react.useState)(false);
 			const [profileOverride, setProfileOverride] = (0, react.useState)(void 0);
-			const [error, setError] = (0, react.useState)(void 0);
+			const [failure, setFailure] = (0, react.useState)(void 0);
 			const [viewer, setViewer] = (0, react.useState)();
 			const [interaction, setInteraction] = (0, react.useState)(false);
 			const viewerScope = (0, react.useRef)("");
@@ -2383,14 +2607,32 @@ window.__ModuleLoader__.load({
 				viewerRequest.current += 1;
 				setInteraction(false);
 			}, []);
+			const [inputMode, setInputMode] = (0, react.useState)(() => typeof window !== "undefined" && window.innerWidth < 768 && typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches ? "trackpad" : "direct");
+			const finePointer = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches;
+			const showHeaderTakeover = inputMode === "direct" && finePointer;
 			const tabs = observation?.tabs ?? [];
 			const focused = observation?.focused ?? null;
 			const currentTab = tabs.find((tab) => tab.current);
 			const orderedTabs = currentTab === void 0 ? tabs : [currentTab, ...tabs.filter((tab) => !tab.current)];
 			const cleanupRequired = observation?.cleanupRequired === true;
-			const visibleError = cleanupRequired ? t("entry.view.cleanupFailed") : error;
+			const failureNotice = !cleanupRequired && failure !== void 0 && isBrowserFailureKind(failure.code) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BrowserFailureNotice, {
+				failure,
+				t
+			}) : null;
+			let visibleError = failure?.message;
+			if (cleanupRequired) visibleError = t("entry.view.cleanupFailed");
+			if (failureNotice !== null) visibleError = void 0;
+			const provisioning = observation?.provisioning ?? null;
 			const paused = observation?.takeover === true;
-			const viewerUrl = observation?.target === "container" && observation.running ? observation.viewerUrl ?? void 0 : void 0;
+			const viewerUrl = observation?.running === true && (observation?.target === "container" || observation?.target === "local") ? observation.viewerUrl ?? void 0 : void 0;
+			const narrowViewer = typeof window !== "undefined" && window.innerWidth < 700;
+			const viewerDesign = observation?.target === "local" && (inputMode === "trackpad" || narrowViewer) ? {
+				width: 390,
+				height: 700
+			} : {
+				width: 1024,
+				height: 768
+			};
 			const identity = `${botSlug ?? ""}:${profileOverride ?? info.browserProfile ?? ""}:${observation?.target ?? ""}`;
 			const scope = `${identity}:${viewerUrl ?? ""}`;
 			const previous = previousViewer.current;
@@ -2406,16 +2648,12 @@ window.__ModuleLoader__.load({
 			}
 			if (!paused && interaction) setInteraction(false);
 			const viewerTranslate = (key) => t(key);
-			const toggleInteraction = () => {
-				if (interaction) {
-					disableInteraction();
-					return;
-				}
-				if (busy || botSlug === void 0 || viewerUrl === void 0) return;
+			const postTakeoverEnable = () => {
+				if (botSlug === void 0 || viewerUrl === void 0) return;
 				const request = ++viewerRequest.current;
 				const expectedScope = viewerScope.current;
 				setBusy(true);
-				setError(void 0);
+				setFailure(void 0);
 				requestJson(TAKEOVER_ENDPOINT, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
@@ -2429,7 +2667,7 @@ window.__ModuleLoader__.load({
 						setInteraction(result.takeover);
 					}
 				}).catch((cause) => {
-					if (mounted.current && request === viewerRequest.current) setError(String(cause));
+					if (mounted.current && request === viewerRequest.current) setFailure(readFailure(cause));
 				}).finally(() => {
 					if (mounted.current) {
 						setBusy(false);
@@ -2437,11 +2675,50 @@ window.__ModuleLoader__.load({
 					}
 				});
 			};
+			const toggleTakeover = () => {
+				if (interaction) {
+					disableInteraction();
+					if (observation?.handoffPending !== true) invoke(TAKEOVER_ENDPOINT, { active: false });
+					return;
+				}
+				if (busy || botSlug === void 0 || viewerUrl === void 0) return;
+				postTakeoverEnable();
+			};
+			const botName = info.displayName ?? botSlug ?? "";
+			const takeoverTitle = interaction && paused ? `${t("entry.view.browserTitle", { name: botName })} · ${t("entry.takeover.active")}` : t("entry.view.browserTitle", { name: botName });
+			const toggleRef = (0, react.useRef)(toggleTakeover);
+			toggleRef.current = toggleTakeover;
+			const messageResource = useMountedResource(() => {
+				const onMessage = (event) => {
+					const data = event.data;
+					if (typeof window === "undefined" || event.origin !== window.location.origin) return;
+					if (data === null || typeof data !== "object" || data.type !== "bh-takeover-toggle") return;
+					if (![...document.querySelectorAll("iframe")].some((frame) => frame.contentWindow === event.source && (frame.getAttribute("src") ?? "").includes("/botharness-browser/viewer/"))) return;
+					toggleRef.current();
+				};
+				window.addEventListener("message", onMessage);
+				return () => window.removeEventListener("message", onMessage);
+			}, []);
+			const takeoverNote = (0, react.useRef)(void 0);
+			const wantTakeoverNote = interaction && paused;
+			if (takeoverNote.current !== wantTakeoverNote && typeof document !== "undefined") {
+				takeoverNote.current = wantTakeoverNote;
+				try {
+					for (const frame of Array.from(document.querySelectorAll("iframe"))) if ((frame.getAttribute("src") ?? "").includes("/botharness-browser/viewer/")) frame.contentWindow?.postMessage({
+						type: "bh-takeover-state",
+						active: wantTakeoverNote
+					}, window.location.origin);
+				} catch {}
+			}
+			const bodyResource = (0, react.useCallback)((node) => {
+				interactionResource(node);
+				messageResource(node);
+			}, [interactionResource, messageResource]);
 			const invoke = (endpoint, body = {}) => {
 				if (busy || botSlug === void 0) return;
 				setBusy(true);
 				setProfileInvalid(false);
-				setError(void 0);
+				setFailure(void 0);
 				requestJson(endpoint, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
@@ -2459,7 +2736,7 @@ window.__ModuleLoader__.load({
 						setViewer(void 0);
 						setInteraction(false);
 					}
-				}).catch((cause) => setError(cause instanceof Error ? cause.message : String(cause))).finally(() => {
+				}).catch((cause) => setFailure(readFailure(cause))).finally(() => {
 					setBusy(false);
 					store.refresh();
 				});
@@ -2492,21 +2769,21 @@ window.__ModuleLoader__.load({
 				const next = trimmed === "default" ? "" : trimmed;
 				if (next === currentProfile) {
 					setProfileInvalid(false);
-					setError(void 0);
+					setFailure(void 0);
 					return;
 				}
 				disableInteraction();
 				setViewer(void 0);
 				setBusy(true);
 				setProfileInvalid(false);
-				setError(void 0);
+				setFailure(void 0);
 				rpc.call("/api", "botharness/browserProfileSet", { args: {
 					slug: botSlug,
 					profile: next
 				} }).then((result) => {
 					if (!result.ok) {
 						setProfileInvalid(true);
-						setError(result.error?.message ?? t("entry.profile.failed"));
+						setFailure({ message: result.error?.message ?? t("entry.profile.failed") });
 						return;
 					}
 					const value = result.value;
@@ -2516,7 +2793,7 @@ window.__ModuleLoader__.load({
 					infoStore.refresh();
 				}).catch((cause) => {
 					setProfileInvalid(true);
-					setError(cause instanceof Error ? cause.message : String(cause));
+					setFailure(readFailure(cause));
 				}).finally(() => {
 					setBusy(false);
 					store.refresh();
@@ -2546,7 +2823,7 @@ window.__ModuleLoader__.load({
 				refresh: store.refresh
 			}, botSlug);
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				ref: interactionResource,
+				ref: bodyResource,
 				className: "bh-browser-body bh-browser-local",
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SidebarCardList, {
@@ -2591,12 +2868,27 @@ window.__ModuleLoader__.load({
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: "bh-browser-actions",
 										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+											viewerUrl === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 												size: "sm",
 												variant: "primary",
 												disabled: busy || cleanupRequired,
 												onClick: () => invoke(OPEN_ENDPOINT, follow || preview === void 0 ? {} : { tab: preview }),
 												children: t(busy ? "entry.view.opening" : "entry.view.open")
+											}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+												size: "sm",
+												variant: "primary",
+												disabled: busy || cleanupRequired,
+												title: t("entry.view.fullscreen"),
+												onClick: () => {
+													if (viewerUrl !== void 0) setViewer(viewerUrl);
+												},
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+													className: "bh-viewer-btn-content",
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFullscreenOutlineRegular, { size: 14 }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														"data-bh-viewer-btn-label": true,
+														children: t("entry.view.fullscreen")
+													})]
+												})
 											}),
 											/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 												size: "sm",
@@ -2605,7 +2897,7 @@ window.__ModuleLoader__.load({
 												onClick: onPause,
 												children: t(paused ? "entry.view.resume" : "entry.view.pause")
 											}),
-											(observation?.running === true || cleanupRequired) && viewerUrl === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+											observation?.running === true || cleanupRequired ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 												size: "sm",
 												variant: "outline",
 												disabled: busy,
@@ -2627,35 +2919,57 @@ window.__ModuleLoader__.load({
 						alt: t("entry.label")
 					}) }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RemoteViewer, {
 						t: viewerTranslate,
-						title: t("entry.view.container"),
-						src: viewerUrl,
-						design: {
-							width: 1024,
-							height: 768
-						},
-						notice: error === void 0 ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						title: takeoverTitle,
+						src: `${viewerUrl}${viewerUrl.includes("?") ? "&" : "?"}mode=${inputMode}`,
+						design: viewerDesign,
+						notice: failure === void 0 ? void 0 : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							role: "alert",
 							className: "bh-browser-error",
-							children: error
+							children: failure.message
 						}),
 						busy,
 						stopping: false,
+						hideStop: true,
+						hideInteractiveToggle: true,
+						allowFrameInput: true,
 						onStop: () => invoke(STOP_ENDPOINT),
 						interactive: interaction && paused,
-						onToggleInteractive: toggleInteraction,
+						onToggleInteractive: toggleTakeover,
 						onDisableInteraction: disableInteraction,
 						expanded: viewer === viewerUrl,
 						onExpandedChange: (next) => {
 							setViewer(next ? viewerUrl : void 0);
 							if (!next) disableInteraction();
 						},
-						extraControls: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+						extraControls: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [showHeaderTakeover ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
 							size: "sm",
 							variant: "outline",
 							disabled: busy,
-							onClick: onPause,
-							children: t(paused ? "entry.view.resume" : "entry.view.pause")
-						})
+							"aria-pressed": false,
+							title: t("entry.view.inputMode.trackpad"),
+							onClick: () => setInputMode("trackpad"),
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: "bh-viewer-btn-content",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TrackpadIcon, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									"data-bh-viewer-btn-label": true,
+									children: t("entry.view.inputMode.trackpad")
+								})]
+							})
+						}) : null, showHeaderTakeover ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+							size: "sm",
+							variant: interaction ? "ghost" : "primary",
+							disabled: busy,
+							"aria-pressed": interaction,
+							title: t(interaction ? "entry.takeover.stop" : "entry.takeover.start"),
+							onClick: toggleTakeover,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: "bh-viewer-btn-content",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TakeoverIcon, {}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									"data-bh-viewer-btn-label": true,
+									children: t(interaction ? "entry.takeover.stop" : "entry.takeover.start")
+								})]
+							})
+						}) : null] })
 					}, scope),
 					tabs.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: "bh-browser-note",
@@ -2694,6 +3008,11 @@ window.__ModuleLoader__.load({
 							})
 						}, tab.targetId))
 					}),
+					provisioning !== null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BrowserProvisionProgress, {
+						progress: provisioning,
+						t
+					}) : null,
+					failureNotice,
 					visibleError !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						id: errorId,
 						role: "alert",

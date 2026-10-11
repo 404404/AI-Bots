@@ -264,6 +264,47 @@ it('streams every message of a connected group into the Channel as context witho
   expect(ingest()).toMatchObject({ state: 'receiving', lastMessageAt: expect.any(String) });
 });
 
+it('independent collection keeps a restricted Bot passive without transferring another member authority', async () => {
+  const { fx, group, placed } = await connected();
+  fx.core.externalMessaging.senderAccess('ada', {
+    kind: 'policy',
+    restricted: true,
+    expectedRevision: 0,
+  });
+  const before = fx.runs.length;
+  for (const id of ['passive-a', 'passive-b', 'passive-c']) await fx.receive(chatter(id));
+  expect(placed()).toHaveLength(3);
+  expect(
+    fx.query(
+      "SELECT wake_mode, source_policy_wake_mode, wake_count FROM inbox_admissions WHERE bot_slug = 'ada' AND source_policy_wake_mode = 'context'",
+    ),
+  ).toEqual(
+    Array.from({ length: 3 }, () => ({
+      wake_mode: 'silent',
+      source_policy_wake_mode: 'context',
+      wake_count: null,
+    })),
+  );
+  expect(fx.runs).toHaveLength(before);
+  expect(fx.core.externalMessaging.pairing.list('ada')).toHaveLength(0);
+  await fx.receive(chatter('restricted-mention', true));
+  expect(placed()).toHaveLength(3);
+  expect(fx.runs).toHaveLength(before);
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]?.status).toBe('pending');
+  fx.core.externalMessaging.senderAccess('bea', {
+    kind: 'policy',
+    restricted: true,
+    expectedRevision: 0,
+  });
+  await fx.receive(chatter('other-member'));
+  expect(
+    fx.query(
+      "SELECT a.bot_slug FROM inbox_admissions a JOIN source_events e USING(source_event_id) WHERE json_extract(e.payload_json, '$.external.event.messageId') = 'om-other-member'",
+    ),
+  ).toEqual([{ bot_slug: 'ada' }]);
+  expect(fx.core.externalMessaging.inbound.ingests(group.id).ingests[0]?.enabled).toBe(true);
+});
+
 it('places a mention once and keeps it answerable through the bound app', async () => {
   const { fx, placed } = await connected();
   await fx.receive(chatter('ask', true));

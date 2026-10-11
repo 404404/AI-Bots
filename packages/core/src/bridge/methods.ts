@@ -8,6 +8,7 @@ import {
   type PurgePreview,
 } from '../purge/contracts.js';
 import { pairingReviewInput, type PairingRequest } from '../messaging/pairing.js';
+import { senderAccessInput } from '../messaging/sender-access.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import {
   parseAllBotMention,
@@ -38,6 +39,7 @@ import { groupReceptionInput } from '../messaging/group-policy.js';
 import type { ExternalSource } from '../messaging/inbound.js';
 import type {
   OutboundMessaging,
+  MessagingApp,
   MessagingSnapshot,
   MessagingGrant,
   OutboxIntent,
@@ -117,7 +119,7 @@ import type { AvatarAppearance, RetainedAvatarAppearance } from '../bots/avatar-
 import { ChannelMentionTargetError, ChannelReplyTargetError } from '../channels/store.js';
 import { ChannelAttachmentError } from '../attachments/store.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
-import type { ChannelReadPosition, ChannelStore } from '../channels/store.js';
+import type { ChannelReadPosition, ChannelStore, ChannelSendStatus } from '../channels/store.js';
 import { groupProfileActivity, type GroupProfileActivity } from '../channels/profile-activity.js';
 import { channelActivityToday, type ChannelActivityToday } from '../channels/activity-today.js';
 import type { ChannelTimelinePage } from '../channels/timeline.js';
@@ -157,7 +159,11 @@ import {
 } from '../memory/accepted.js';
 import type { MemoryRecoveryCheckpoint } from '../memory/recovery.js';
 import type { MemoryService } from '../memory/service.js';
-import type { UsageProjection } from '../usage/usage.js';
+import type {
+  UsageProjection,
+  DshUsageSessionLogReader,
+  SessionUsageSummary,
+} from '../usage/usage.js';
 import { usageFilterSchema, type UsageQueryResult } from '../usage/query.js';
 import {
   isAssignmentModelOption,
@@ -330,6 +336,20 @@ export interface ProfileActivity {
   modelUsageStatus: 'ready' | 'unavailable';
 }
 
+export interface ProfileSessionUsage {
+  slug: string;
+  weeks: number;
+  since: string;
+  rows: Array<
+    SessionUsageSummary & {
+      sessionId: string;
+      role: SessionRootRole;
+      label: string;
+      updatedAt: string;
+    }
+  >;
+}
+
 export interface ChannelListItem extends ChannelRecord {
   humanMembers?: Array<{ humanId: string; displayName: string }>;
   humanNickname?: string | null;
@@ -362,6 +382,11 @@ export interface BridgeError {
 
 export type BridgeResult<T> = { ok: true; value: T } | { ok: false; error: BridgeError };
 
+export interface MessagingAppsView {
+  apps: MessagingApp[];
+  setups: NonNullable<MessagingSnapshot['appSetups']>;
+}
+
 export interface BridgeMethods {
   onboarding(payload: unknown): Promise<BridgeResult<OnboardingSnapshot>>;
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
@@ -379,6 +404,7 @@ export interface BridgeMethods {
     BridgeResult<{ delivery: import('../messaging/approval-messaging.js').ApprovalDelivery }>
   >;
   pairingReview(payload: unknown): Promise<BridgeResult<{ pairing: PairingRequest }>>;
+  senderAccess(payload: unknown): Promise<BridgeResult<void>>;
   channelBridges(payload: unknown): Promise<BridgeResult<ChannelBridgeSnapshot>>;
   channelIngests(payload: unknown): Promise<BridgeResult<ConversationIngestSnapshot>>;
   channelIngest(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
@@ -391,6 +417,7 @@ export interface BridgeMethods {
   messagingSource(payload: unknown): Promise<BridgeResult<{ source: ExternalSource }>>;
   messagingDefaults(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingDefaultsSet(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
+  messagingApps(): Promise<BridgeResult<MessagingAppsView>>;
   messagingSnapshot(payload: unknown): Promise<BridgeResult<MessagingSnapshot>>;
   messagingTargets(payload: unknown): Promise<BridgeResult<{ targets: MessagingTarget[] }>>;
   messagingAuthorize(payload: unknown): Promise<BridgeResult<{ grant: MessagingGrant }>>;
@@ -455,6 +482,7 @@ export interface BridgeMethods {
   channelMessages(payload: unknown): BridgeResult<{ messages: ChannelMessage[]; revision: number }>;
   channelAllBotPreview(payload: unknown): BridgeResult<AllBotPreview>;
   channelSend(payload: unknown): Promise<BridgeResult<{ message: ChannelMessage }>>;
+  channelSendStatus(payload: unknown): BridgeResult<ChannelSendStatus>;
   botAttention(payload: unknown): BridgeResult<BotAttentionPage>;
   botSourcePolicies(payload: unknown): BridgeResult<{ policies: BotSourcePolicy[] }>;
   botSourcePolicySet(payload: unknown): BridgeResult<{ policy: BotSourcePolicy }>;
@@ -514,6 +542,7 @@ export interface BridgeMethods {
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
+  profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
   overviewMemory(payload: unknown): Promise<BridgeResult<OverviewMemory>>;
   overviewUsage(payload: unknown): BridgeResult<OverviewUsage>;
   profileUsage(payload: unknown): BridgeResult<UsageQueryResult>;
@@ -590,6 +619,7 @@ export interface BridgeMethodsDeps {
   ownership: SessionOwnership;
   memory?: MemoryService;
   usage?: UsageProjection;
+  readUsageSessionLog?: DshUsageSessionLogReader;
   roster: RosterStore;
   runtime?: BotRuntime;
   attention?: BotAttentionQuery;
@@ -1221,6 +1251,16 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         delivery: await service.approvals.retry(input.data.slug, input.data.id),
       }));
     },
+    senderAccess(payload) {
+      const input = z
+        .object({ slug: z.string().min(1), input: senderAccessInput })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid sender access'));
+      return messagingCall(async (service) =>
+        service.senderAccess(input.data.slug, input.data.input),
+      );
+    },
     pairingReview(payload) {
       const input = z
         .object({ slug: z.string().min(1), input: pairingReviewInput })
@@ -1228,7 +1268,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         .safeParse(payload);
       if (!input.success) return Promise.resolve(invalidInput('Invalid pairing review'));
       return messagingCall(async (service) => ({
-        pairing: service.pairing.review(input.data.slug, input.data.input),
+        pairing: await service.reviewPairing(input.data.slug, input.data.input),
       }));
     },
     messagingIdentity(payload) {
@@ -1297,6 +1337,12 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('Valid qualified platform defaults required'));
       return messagingCall((service) => service.setDefaults(parsed.data));
     },
+    messagingApps() {
+      return messagingCall(async (service) => ({
+        apps: await service.apps(),
+        setups: await service.setups(),
+      }));
+    },
     messagingSnapshot(payload) {
       const slug = asSlug(payload);
       if (slug === undefined || deps.registry.get(slug) === undefined)
@@ -1348,6 +1394,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         .object({
           slug: z.string().min(1),
           input: z.discriminatedUnion('kind', [
+            z
+              .object({
+                kind: z.literal('open-group'),
+                grantId: z.string().uuid(),
+                expectedRevision: revision,
+                open: z.boolean(),
+              })
+              .strict(),
             z
               .object({
                 kind: z.literal('mute'),
@@ -2932,6 +2986,15 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput((error as Error).message);
       }
     },
+    channelSendStatus(payload) {
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
+      const messageId = asNonBlank(source, 'messageId');
+      if (!channelId || !messageId) return invalidInput('channelId and messageId are required');
+      if (deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
+      const value = deps.channels.humanSendStatus?.(channelId, messageId);
+      return value === undefined ? invalidInput('Unknown Human DM request') : { ok: true, value };
+    },
     async channelSend(payload) {
       const source = asObject(payload);
       const channelId = asNonBlank(source, 'channelId');
@@ -4277,6 +4340,52 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (deps.usage === undefined) return unavailable();
       try {
         return { ok: true, value: deps.usage.query(scope.botSlug, parsed.data) };
+      } catch (error) {
+        if (error instanceof OperationalDatabaseError) return unavailable();
+        throw error;
+      }
+    },
+    async profileSessionUsage(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      if (deps.usage === undefined || deps.readUsageSessionLog === undefined) return unavailable();
+      try {
+        const slug = scope.botSlug;
+        const weeks = 26;
+        const since = new Date(Date.now() - weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
+        const assignments = new Map(
+          (deps.runtime?.listAssignments(slug) ?? []).map((entry) => [entry.sessionId, entry]),
+        );
+        const roots = deps.ownership.rootsFor(slug);
+        const orchestrator = roots
+          .filter((root) => root.rootRole === 'orchestrator')
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+          .slice(0, 1);
+        const updatedAt = (root: (typeof roots)[number]) =>
+          assignments.get(root.sessionId)?.updatedAt ?? root.createdAt;
+        const recent = roots
+          .filter((root) => root.rootRole === 'assignment')
+          .sort((left, right) => updatedAt(right).localeCompare(updatedAt(left)))
+          .slice(0, 5);
+        const rows: ProfileSessionUsage['rows'] = [];
+        for (const root of [...orchestrator, ...recent]) {
+          const summary = await deps.usage.sessionSummary(
+            slug,
+            root.sessionId,
+            since,
+            deps.readUsageSessionLog,
+          );
+          rows.push({
+            ...summary,
+            sessionId: root.sessionId,
+            role: root.rootRole,
+            label: assignments.get(root.sessionId)?.purpose.slice(0, 160) ?? root.rootRole,
+            updatedAt: updatedAt(root),
+          });
+        }
+        const current = dmMemory(payload);
+        if (!('botSlug' in current) || current.botSlug !== slug) return unavailable();
+        return { ok: true, value: { slug, weeks, since, rows } };
       } catch (error) {
         if (error instanceof OperationalDatabaseError) return unavailable();
         throw error;

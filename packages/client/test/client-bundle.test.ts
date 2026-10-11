@@ -83,6 +83,8 @@ beforeAll(async () => {
   bundleCode = readFileSync(join(tempDir, 'client.js'), 'utf8');
   const sandbox = {
     window: {
+      matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+      location: { hash: '' },
       __ModuleLoader__: {
         load: (loaded: LoadedEntry) => {
           entry = loaded;
@@ -105,6 +107,9 @@ afterAll(() => {
 });
 
 describe('@botharness/ui browser bundle', () => {
+  it('does not defer Node environment reads to browser interactions', () => {
+    expect(bundleCode).not.toMatch(/\bprocess\.env\b/);
+  });
   it('self-registers with the lazy-CJS module-loader contract', () => {
     const loaded = loadedEntry();
     expect(loaded.id).toBe('@botharness/ui');
@@ -207,6 +212,13 @@ describe('@botharness/ui browser bundle', () => {
         id: 'botharness-window-companion',
         locale: 'botharness',
         inject: expect.any(Function),
+      },
+      {
+        name: 'shell.overlay',
+        id: 'botharness-bot-settings',
+        locale: 'botharness',
+        inject: expect.any(Function),
+        children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
       },
       {
         name: 'sidebar.panellist',

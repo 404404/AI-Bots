@@ -5,6 +5,7 @@ import {
   useSyncExternalStore,
   type MouseEvent as ReactMouseEvent,
   type ReactElement,
+  type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
 
@@ -44,7 +45,7 @@ import {
 } from './avatar.js';
 import { BotIcon, botBackdropUri } from './bot-icon.js';
 import { sectionSortMode, type BotModePrefsSnapshot } from './bot-mode-prefs.js';
-import { HashIcon } from './hash-icon.js';
+import { GroupChannelIcon } from './group-avatar-stack.js';
 import { InboxIcon } from './inbox-icon.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import {
@@ -207,6 +208,7 @@ export function BotPanelIcon({
             <button
               type="button"
               className="bh-root bh-human-inbox-entry bh-panel-activity"
+              data-bh-tour="inbox"
               data-wide={wide ? 'true' : 'false'}
               data-unread={state.humanInbox.unreadCount > 0 ? 'true' : 'false'}
               data-active={active ? 'true' : 'false'}
@@ -246,6 +248,7 @@ export function BotPanelIcon({
               {wide ? (
                 <span
                   className="bh-panel-gear"
+                  data-bh-tour="bot-settings"
                   role="button"
                   tabIndex={0}
                   aria-label={t('panel.settings')}
@@ -294,6 +297,7 @@ export function createBotPanelEntry(
 }
 
 interface SidebarProps {
+  headerEnd?: ReactNode;
   companion?: WindowCompanions | undefined;
   wide: boolean;
   actions: BridgeActions;
@@ -337,6 +341,18 @@ function RoleBadges({ roles }: { roles: readonly string[] }): ReactElement | nul
         </Tag>
       ))}
     </span>
+  );
+}
+
+function ChannelMessageTime({ channel }: { channel: ChannelSummary }): ReactElement | null {
+  const at = channel.latestMessage?.at;
+  if (at === undefined) return null;
+  const date = new Date(at);
+  if (Number.isNaN(date.getTime())) return null;
+  return (
+    <time className="bh-channel-message-time" dateTime={at} title={date.toLocaleString()}>
+      {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </time>
   );
 }
 
@@ -473,6 +489,7 @@ function BotRow({
               <span className="bh-unread" title={t('roster.needsYou')} />
             ) : null}
             <PersonaBotStatusBadges state={activity} attention={bot?.attention} />
+            <ChannelMessageTime channel={channel} />
           </span>
           <span className="bh-msg">{preview}</span>
         </span>
@@ -487,6 +504,7 @@ function BotRow({
 }
 function ChannelRow({
   channel,
+  bots,
   preview,
   selected,
   multiSelected,
@@ -500,6 +518,7 @@ function ChannelRow({
   t,
 }: {
   channel: ChannelSummary;
+  bots: ReadonlyMap<string, BotSummary>;
   preview: string;
   selected: boolean;
   multiSelected: boolean;
@@ -576,19 +595,19 @@ function ChannelRow({
         onMenu({ channelId: channel.id, x: rect.left + 8, y: rect.bottom });
       }}
     >
-      <span
-        className={`bh-channel-slot${channel.avatar ? ' bh-group-channel-slot' : ''}`}
-        aria-hidden="true"
-      >
-        {channel.avatar ? (
-          <img className="bh-group-avatar-image" src={channel.avatar} alt="" />
-        ) : (
-          <HashIcon size={18} />
-        )}
-      </span>
+      <GroupChannelIcon
+        channel={channel}
+        bots={bots}
+        className="bh-channel-slot"
+        groupClassName="bh-group-channel-slot"
+        size={34}
+        hashSize={18}
+        t={t}
+      />
       <span className="bh-body">
         <span className="bh-top">
           <span className="bh-name">{channel.name}</span>
+          <ChannelMessageTime channel={channel} />
         </span>
         <span className="bh-msg">{preview}</span>
       </span>
@@ -603,6 +622,7 @@ function ChannelRow({
 
 function RailChannel({
   channel,
+  bots,
   bot,
   activity,
   selected,
@@ -613,6 +633,7 @@ function RailChannel({
   t,
 }: {
   channel: ChannelSummary;
+  bots: ReadonlyMap<string, BotSummary>;
   bot: BotSummary | undefined;
   activity: PersonaBotActivityState | undefined;
   selected: boolean;
@@ -647,16 +668,15 @@ function RailChannel({
           onClick={open}
         >
           {bot === undefined ? (
-            <span
-              className={`bh-rail-channel-icon${channel.avatar ? ' bh-group-channel-icon' : ''}`}
-              aria-hidden="true"
-            >
-              {channel.avatar ? (
-                <img className="bh-group-avatar-image" src={channel.avatar} alt="" />
-              ) : (
-                <HashIcon size={18} />
-              )}
-            </span>
+            <GroupChannelIcon
+              channel={channel}
+              bots={bots}
+              className="bh-rail-channel-icon"
+              groupClassName="bh-group-channel-icon"
+              size={32}
+              hashSize={18}
+              t={t}
+            />
           ) : (
             <PersonaBotAvatar
               t={t}
@@ -682,16 +702,15 @@ function RailChannel({
         <div className="bh-rail-preview">
           <div className="bh-rail-preview-head">
             {bot === undefined ? (
-              <span
-                className={`bh-rail-preview-icon${channel.avatar ? ' bh-group-channel-icon' : ''}`}
-                aria-hidden="true"
-              >
-                {channel.avatar ? (
-                  <img className="bh-group-avatar-image" src={channel.avatar} alt="" />
-                ) : (
-                  <HashIcon size={16} />
-                )}
-              </span>
+              <GroupChannelIcon
+                channel={channel}
+                bots={bots}
+                className="bh-rail-preview-icon"
+                groupClassName="bh-group-channel-icon"
+                size={24}
+                hashSize={16}
+                t={t}
+              />
             ) : (
               <PersonaBotAvatar
                 t={t}
@@ -748,6 +767,7 @@ type FlatBlockView =
   | { kind: 'loose'; channels: ChannelSummary[] };
 
 export function BotSidebar({
+  headerEnd,
   companion,
   wide,
   actions,
@@ -1460,6 +1480,7 @@ export function BotSidebar({
         t={t}
         key={channel.id}
         channel={channel}
+        bots={botBySlug}
         preview={preview}
         selected={selectedChannel === channel.id}
         multiSelected={selectedChannelSet.has(channel.id)}
@@ -1481,6 +1502,7 @@ export function BotSidebar({
         <RailChannel
           key={channel.id}
           channel={channel}
+          bots={botBySlug}
           bot={bot}
           activity={bot === undefined ? undefined : personaBotActivity(state, bot)}
           selected={
@@ -1495,7 +1517,11 @@ export function BotSidebar({
       );
     };
     return (
-      <div className="bh-root bh-region bh-region-rail" aria-label={t('rail.label')}>
+      <div
+        className="bh-root bh-region bh-region-rail"
+        aria-label={t('rail.label')}
+        data-bh-tour="roster"
+      >
         <div className="bh-rail-group">
           {railPinnedChannels.map((channel) => renderRailChannel(channel))}
         </div>
@@ -1546,6 +1572,7 @@ export function BotSidebar({
     <div
       ref={rosterMount}
       className="bh-root bh-region"
+      data-bh-tour="roster"
       onDragOver={(event) => {
         if (!channelDragActive) return;
         const target = event.target as HTMLElement | null;
@@ -1703,6 +1730,7 @@ export function BotSidebar({
             }}
           />
         </div>
+        {headerEnd}
       </div>
       {state.status === 'loading' && state.bots.length === 0 ? (
         <LoadingSkeleton kind="roster" label={t('roster.loading')} />
@@ -1902,16 +1930,15 @@ export function BotSidebar({
                       }}
                     >
                       {bot === undefined ? (
-                        <span
-                          className={`bh-pinned-channel-icon${channel.avatar ? ' bh-group-pinned-channel-icon' : ''}`}
-                          aria-hidden="true"
-                        >
-                          {channel.avatar ? (
-                            <img className="bh-group-avatar-image" src={channel.avatar} alt="" />
-                          ) : (
-                            <HashIcon size={24} />
-                          )}
-                        </span>
+                        <GroupChannelIcon
+                          channel={channel}
+                          bots={botBySlug}
+                          className="bh-pinned-channel-icon"
+                          groupClassName="bh-group-pinned-channel-icon"
+                          size={54}
+                          hashSize={24}
+                          t={t}
+                        />
                       ) : (
                         <PersonaBotAvatar
                           t={t}

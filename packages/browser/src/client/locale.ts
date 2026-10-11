@@ -35,6 +35,7 @@ export const zh = {
   'settings.containerDriver': '容器驱动',
   'settings.driver.current': '默认',
   'settings.driver.agent-browser': 'agent-browser（试用）',
+  'settings.section': 'Browser',
   'settings.target': '操作目标',
   'settings.local': '本机 Browser',
   'settings.container': 'Docker Browser',
@@ -48,8 +49,14 @@ export const zh = {
   'entry.borrow.instructions':
     '在扩展中输入此地址和配对码，再选择借出当前页面。配对码 5 分钟内有效，仅可使用一次。',
   'entry.view.interaction': '允许 Human 操作',
+  'entry.view.inputMode.direct': '直接点按',
+  'entry.view.inputMode.trackpad': '触控板',
   'entry.view.close': '关闭',
   'entry.view.container': '容器浏览器',
+  'entry.view.browserTitle': '{name}的浏览器',
+  'entry.takeover.start': '接管',
+  'entry.takeover.stop': '取消接管',
+  'entry.takeover.active': '接管中',
   'entry.label': '浏览器',
   'entry.access.title': 'Browser Access',
   'entry.access.enable': '启用 Browser Access',
@@ -65,6 +72,7 @@ export const zh = {
   'entry.view.pause': '暂停 Bot',
   'entry.view.resume': '继续',
   'entry.view.open': '打开 Bot 浏览器',
+  'entry.view.fullscreen': '全屏',
   'entry.view.stop': '停止',
   'entry.view.cleanupFailed': '浏览器清理失败。点击“停止”重试。',
   'entry.view.opening': '正在打开…',
@@ -83,6 +91,44 @@ export const zh = {
   'entry.chip.connected': '已连接',
   'entry.chip.notShared': '未借用',
   'entry.chip.readOnly': '只读',
+  'entry.provision.preparing': '正在准备下载浏览器…',
+  'entry.provision.downloading': '正在下载浏览器…{percent}%（{downloaded}/{total}）',
+  'entry.fail.details': '详情',
+  'entry.fail.provision-no-network.title': '浏览器下载失败——本机网络似乎不通。',
+  'entry.fail.provision-no-network.fault': '这是本机网络的问题，不是你的设置问题。',
+  'entry.fail.provision-no-network.action': '让本机连上网后，再点一次“打开”。',
+  'entry.fail.provision-no-disk-space.title': '浏览器下载失败——磁盘空间不足。',
+  'entry.fail.provision-no-disk-space.fault': '这是本机剩余空间的问题。',
+  'entry.fail.provision-no-disk-space.action': '至少腾出 500 MB 空间后，再点一次“打开”。',
+  'entry.fail.provision-no-permission.title': '浏览器下载失败——下载目录不可写。',
+  'entry.fail.provision-no-permission.fault': '这是本机目录权限的问题。',
+  'entry.fail.provision-no-permission.action':
+    '请机器管理员放开浏览器目录的写权限后，再点一次“打开”。',
+  'entry.fail.provision-missing-libs.title': '这台机器缺少浏览器需要的系统库。',
+  'entry.fail.provision-missing-libs.fault': '这是机器环境的问题，不是浏览器设置的问题。',
+  'entry.fail.provision-missing-libs.action':
+    'Ubuntu 24.04 上按“详情”里的命令安装系统库，装好后再点“打开”。',
+  'entry.fail.provision-failed.title': '浏览器下载失败。',
+  'entry.fail.provision-failed.fault': '暂时看不出具体原因。',
+  'entry.fail.provision-failed.action': '再点一次“打开”重试；多次失败请把“详情”发给机器管理员。',
+  'entry.fail.startup-missing-binary.title': '配置的浏览器文件不存在。',
+  'entry.fail.startup-missing-binary.fault': '这是插件配置里的浏览器路径问题。',
+  'entry.fail.startup-missing-binary.action':
+    '修正浏览器插件配置中的 browserPath，或清空它改用自动下载。',
+  'entry.fail.startup-spawn-failed.title': '浏览器程序无法启动。',
+  'entry.fail.startup-spawn-failed.fault':
+    '本机拦截或删除了浏览器文件——常见是杀毒软件，偶尔是权限问题。',
+  'entry.fail.startup-spawn-failed.action':
+    '把浏览器目录加入杀毒软件白名单（或找机器管理员看权限），再点一次“打开”。',
+  'entry.fail.startup-sandbox.title': '浏览器因系统沙箱限制拒绝启动。',
+  'entry.fail.startup-sandbox.fault': '这是本机系统限制的问题。',
+  'entry.fail.startup-sandbox.action': '在浏览器插件配置中打开 headless 后，再点一次“打开”。',
+  'entry.fail.startup-crashed.title': '浏览器在启动过程中退出了。',
+  'entry.fail.startup-crashed.fault': '这是本机浏览器的问题，不是页面问题。',
+  'entry.fail.startup-crashed.action': '再点一次“打开”重试；多次失败请把“详情”发给机器管理员。',
+  'entry.fail.startup-timeout.title': '浏览器启动超时。',
+  'entry.fail.startup-timeout.fault': '这台机器可能比较慢或负载较高。',
+  'entry.fail.startup-timeout.action': '再点一次“打开”重试；多次失败请重启机器或联系管理员。',
   'entry.error': '浏览器操作失败',
 };
 
@@ -123,6 +169,7 @@ export const en: Record<BrowserKey, string> = {
   'settings.containerDriver': 'Container driver',
   'settings.driver.current': 'Default',
   'settings.driver.agent-browser': 'agent-browser (trial)',
+  'settings.section': 'Browser',
   'settings.target': 'Browser Target',
   'settings.local': 'Local Browser',
   'settings.container': 'Docker Browser',
@@ -136,8 +183,14 @@ export const en: Record<BrowserKey, string> = {
   'entry.borrow.instructions':
     'Enter this address and code in the extension, then share the current page. The code expires in 5 minutes and can be used once.',
   'entry.view.interaction': 'Enable Human interaction',
+  'entry.view.inputMode.direct': 'Direct tap',
+  'entry.view.inputMode.trackpad': 'Trackpad',
   'entry.view.close': 'Close',
   'entry.view.container': 'Container Browser',
+  'entry.view.browserTitle': "{name}'s Browser",
+  'entry.takeover.start': 'Take over',
+  'entry.takeover.stop': 'Release',
+  'entry.takeover.active': 'Taking over',
   'entry.label': 'Browser',
   'entry.access.title': 'Browser Access',
   'entry.access.enable': 'Enable Browser Access',
@@ -153,6 +206,7 @@ export const en: Record<BrowserKey, string> = {
   'entry.view.pause': 'Pause Bot',
   'entry.view.resume': 'Resume',
   'entry.view.open': 'Open Bot Browser',
+  'entry.view.fullscreen': 'Fullscreen',
   'entry.view.stop': 'Stop',
   'entry.view.cleanupFailed': 'Browser cleanup failed. Click Stop to retry.',
   'entry.view.opening': 'Opening…',
@@ -171,6 +225,55 @@ export const en: Record<BrowserKey, string> = {
   'entry.chip.connected': 'Connected',
   'entry.chip.notShared': 'Not shared',
   'entry.chip.readOnly': 'Read-only',
+  'entry.provision.preparing': 'Preparing the browser download…',
+  'entry.provision.downloading': 'Downloading browser… {percent}% ({downloaded} / {total})',
+  'entry.fail.details': 'Details',
+  'entry.fail.provision-no-network.title':
+    'The browser download failed — this machine looks offline.',
+  'entry.fail.provision-no-network.fault':
+    'This is about the network on this machine, not your settings.',
+  'entry.fail.provision-no-network.action':
+    'Reconnect this machine to the internet, then click Open again.',
+  'entry.fail.provision-no-disk-space.title': 'The browser download failed — the disk is full.',
+  'entry.fail.provision-no-disk-space.fault': 'This is about free space on this machine.',
+  'entry.fail.provision-no-disk-space.action': 'Free at least 500 MB, then click Open again.',
+  'entry.fail.provision-no-permission.title':
+    'The browser download failed — the download folder is not writable.',
+  'entry.fail.provision-no-permission.fault': 'This is about folder permissions on this machine.',
+  'entry.fail.provision-no-permission.action':
+    'Ask the machine owner to make the browser folder writable, then click Open again.',
+  'entry.fail.provision-missing-libs.title':
+    'This machine is missing system libraries the browser needs.',
+  'entry.fail.provision-missing-libs.fault':
+    'This is about the machine setup, not your browser settings.',
+  'entry.fail.provision-missing-libs.action':
+    'On Ubuntu 24.04, install them with the command in Details, then click Open again.',
+  'entry.fail.provision-failed.title': 'The browser download failed.',
+  'entry.fail.provision-failed.fault': 'The cause is unclear from here.',
+  'entry.fail.provision-failed.action':
+    'Click Open to retry; if it keeps failing, show Details to the machine owner.',
+  'entry.fail.startup-missing-binary.title': 'The configured browser file does not exist.',
+  'entry.fail.startup-missing-binary.fault':
+    'This is about the browser path in the plugin configuration.',
+  'entry.fail.startup-missing-binary.action':
+    'Fix browserPath in the browser plugin configuration, or clear it to use the automatic download.',
+  'entry.fail.startup-spawn-failed.title': 'The browser program could not be started.',
+  'entry.fail.startup-spawn-failed.fault':
+    'This machine blocked or removed the browser file — often antivirus, sometimes permissions.',
+  'entry.fail.startup-spawn-failed.action':
+    'Allow-list the browser folder in your antivirus (or ask the machine owner about permissions), then click Open again.',
+  'entry.fail.startup-sandbox.title': 'The browser refused to start because of its OS sandbox.',
+  'entry.fail.startup-sandbox.fault': 'This is about OS restrictions on this machine.',
+  'entry.fail.startup-sandbox.action':
+    'Enable headless in the browser plugin configuration, then click Open again.',
+  'entry.fail.startup-crashed.title': 'The browser exited during startup.',
+  'entry.fail.startup-crashed.fault': 'This is about the browser on this machine, not the page.',
+  'entry.fail.startup-crashed.action':
+    'Click Open to retry; if it keeps failing, show Details to the machine owner.',
+  'entry.fail.startup-timeout.title': 'The browser took too long to start.',
+  'entry.fail.startup-timeout.fault': 'This machine may be slow or overloaded.',
+  'entry.fail.startup-timeout.action':
+    'Click Open to retry; if it keeps failing, restart the machine or ask its owner.',
   'entry.error': 'Browser action failed',
 };
 

@@ -161,6 +161,7 @@ function stubActions(): BridgeActions {
     approvalTest: vi.fn(async () => {}),
     approvalRetry: vi.fn(async () => {}),
     pairingReview: vi.fn(),
+    senderAccess: vi.fn(),
     messagingIdentity: vi.fn(),
     messagingConversation: vi.fn(),
     messagingSnapshot: vi.fn(async () => ({ accounts: [], grants: [], intents: [] })),
@@ -304,6 +305,7 @@ function stubActions(): BridgeActions {
     importLibraryParts: vi.fn(async () => ({ added: [], refused: 0 })),
     importLibraryImage: vi.fn(async () => ({ error: 'unavailable' })),
     profileUsage: vi.fn(),
+    profileSessionUsage: vi.fn(),
     profileActivity: vi.fn(async () => ({
       slug: '',
       weeks: 26,
@@ -542,6 +544,45 @@ afterEach(() => {
 });
 
 describe('bot sidebar rows', () => {
+  it('shows only the latest message time at the right of DM and Group titles', () => {
+    const latestAt = '2026-10-10T14:25:00.000Z';
+    const latestMessage = {
+      id: 'latest',
+      at: latestAt,
+      author: { kind: 'human' as const },
+      body: '最新消息',
+    };
+    store.setRoster(
+      [BOT],
+      [{ ...DM_CHANNEL, latestMessage }, { ...SECTION_CHANNEL, latestMessage }, FLAT_CHANNEL],
+    );
+    const container = document.createElement('div');
+    container.innerHTML = renderSidebar();
+    for (const channelId of [DM_CHANNEL.id, SECTION_CHANNEL.id]) {
+      const titleRow = container.querySelector(`[data-channel-id="${channelId}"] .bh-top`)!;
+      const time = titleRow.querySelector('time')!;
+      expect(time.getAttribute('datetime')).toBe(latestAt);
+      expect(time.textContent).toBe(
+        new Date(latestAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      );
+      expect(titleRow.lastElementChild).toBe(time);
+      expect(time.getAttribute('title')).toBe(new Date(latestAt).toLocaleString());
+    }
+    expect(container.querySelector(`[data-channel-id="${FLAT_CHANNEL.id}"] time`)).toBeNull();
+  });
+
+  it('leaves the title time blank for invalid message dates', () => {
+    store.setRoster(
+      [BOT],
+      [
+        {
+          ...DM_CHANNEL,
+          latestMessage: { id: 'invalid', at: 'invalid', author: { kind: 'human' }, body: '消息' },
+        },
+      ],
+    );
+    expect(renderSidebar()).not.toContain('bh-channel-message-time');
+  });
   it('selects and removes a companion through the real DM context menu without changing Channel pins', async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     store.setRoster([BOT], [DM_CHANNEL]);
@@ -805,6 +846,29 @@ describe('bot sidebar rows', () => {
     const pinnedRail = renderSidebar(false);
     expect(pinnedRail).toContain('bh-rail-channel-icon bh-group-channel-icon');
     expect(pinnedRail.match(/<img class="bh-group-avatar-image"/g)).toHaveLength(2);
+  });
+
+  it('stacks member faces for a Group without an avatar in the roster, pinned grid, and rail', () => {
+    const group = { ...FLAT_CHANNEL, members: ['atlas'] };
+    store.setRoster([BOT], [group]);
+
+    const roster = renderSidebar();
+    expect(roster).toContain('bh-channel-slot bh-group-channel-slot');
+    expect(roster.match(/class="bh-group-avatar-stack" data-count="1"/g)).toHaveLength(1);
+
+    const ordinaryRail = renderSidebar(false);
+    expect(ordinaryRail).toContain('bh-rail-channel-icon bh-group-channel-icon');
+    expect(ordinaryRail.match(/class="bh-group-avatar-stack"/g)).toHaveLength(2);
+
+    setRoster({ pins: [group.id] });
+    const pinned = renderSidebar();
+    expect(pinned).toContain('bh-pinned-channel-icon bh-group-pinned-channel-icon');
+    expect(pinned).toContain('class="bh-group-avatar-stack"');
+    const stack = pinned.slice(pinned.indexOf('class="bh-group-avatar-stack"'));
+    expect(stack).toMatch(/^[^]*?class="bh-persona-avatar"[^>]*data-state="idle"/);
+
+    const pinnedRail = renderSidebar(false);
+    expect(pinnedRail.match(/class="bh-group-avatar-stack"/g)).toHaveLength(2);
   });
 
   it('projects every ordered Channel into the collapsed rail with a pin divider and previews', () => {

@@ -9,6 +9,28 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () => ({
   Tooltip: ({ children }: PropsWithChildren) => children,
   Button: (props: ButtonHTMLAttributes<HTMLButtonElement>) => createElement('button', props),
   Input: (props: Record<string, unknown>) => createElement('input', props),
+  Checkbox: ({
+    label,
+    checked,
+    disabled,
+    onChange,
+  }: {
+    label: string;
+    checked: boolean;
+    disabled: boolean;
+    onChange(checked: boolean): void;
+  }) =>
+    createElement(
+      'label',
+      null,
+      label,
+      createElement('input', {
+        type: 'checkbox',
+        checked,
+        disabled,
+        onChange: (event: { target: { checked: boolean } }) => onChange(event.target.checked),
+      }),
+    ),
   Tag: ({ children }: PropsWithChildren) => createElement('span', null, children),
   Modal: () => null,
 }));
@@ -72,6 +94,58 @@ const snapshot: MessagingSnapshot = {
     },
   ],
 };
+
+it('opens only the selected Lark group through an explicit revision-checked control', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const change = vi.fn(async () => {});
+  const grant = {
+    ...snapshot.grants[0]!,
+    preferenceRevision: 4,
+    openGroup: false,
+    groupPolicy: {
+      collection: 'mentions' as const,
+      wake: 'digest' as const,
+      count: 5,
+      intervalSeconds: 30,
+      revision: 0,
+      changedAt: '',
+      editor: { kind: 'built-in' as const },
+    },
+  };
+  try {
+    await act(async () =>
+      root.render(
+        createElement(ExternalConversations, {
+          identity,
+          snapshot: { ...snapshot, grants: [grant] },
+          busy: false,
+          t: zhTranslate,
+          change,
+          rules: vi.fn(),
+        }),
+      ),
+    );
+    await act(async () =>
+      Array.from(host.querySelectorAll('button'))
+        .find((x) => x.textContent === zhTranslate('conversation.rules'))!
+        .click(),
+    );
+    expect(host.textContent).toContain('未配对普通消息不累计唤醒阈值');
+    await act(async () => (host.querySelector('input[type=checkbox]') as HTMLInputElement).click());
+    expect(change).toHaveBeenLastCalledWith({
+      kind: 'open-group',
+      grantId: grant.id,
+      expectedRevision: 4,
+      open: true,
+    });
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 
 it('groups conversations, confirms Block before sending it, and sends revision-checked commands', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

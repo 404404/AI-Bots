@@ -48,7 +48,11 @@ describe('client styles', () => {
   });
   it('floats the channel island over a non-interactive fade without header dividers', () => {
     expect(source).toMatch(/\.bh-topbar \{[^}]*position: absolute/);
-    expect(source).toMatch(/\.bh-channel-island:hover \{[^}]*background:/);
+    expect(source).toMatch(
+      /\.bh-channel-island:hover \{[^}]*background: color-mix\([^;]*var\(--dsw-alias-bg-module-platform\)/,
+    );
+    expect(source).toMatch(/\.bh-channel-island-wrap \{[^}]*align-items: center/);
+    expect(source).toContain(".bh-topbar[data-channel-detail='true'] { display: none; }");
     expect(source).toMatch(/\.bh-chat-top-fade \{[^}]*mask-image: linear-gradient\(/);
     expect(source).toMatch(/\.bh-chat-top-fade \{[^}]*pointer-events: none/);
     expect(source).not.toMatch(/\.bh-topbar \{[^}]*border-bottom:/);
@@ -125,6 +129,10 @@ describe('client styles', () => {
   it('anchors the channel move menu at the cursor proxy', () => {
     expect(source).toMatch(/\.bh-menu-anchor \{\s*position: fixed/);
     expect(source).toMatch(/\.bh-move-checked \{\s*display: flex/);
+  });
+
+  it('moves bubble copy/reply actions into the long-press menu on narrow screens', () => {
+    expect(source).toMatch(/@media \(max-width: 640px\) \{\s*\.bh-bubble-meta \{\s*display: none/);
   });
 
   it('fits ordered Channels into the native 36px collapsed rail and separates pins', () => {

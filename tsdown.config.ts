@@ -21,6 +21,7 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
     outDir,
     format: ['cjs'],
     platform: 'browser',
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     dts: false,
     clean: true,
     sourcemap: true,
@@ -74,6 +75,7 @@ export default defineConfig([
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-session',
       '@deepseek-ai/dsh-tools',
+      '@deepseek-ai/dsh-scope',
     ],
   },
   {
@@ -115,7 +117,7 @@ export default defineConfig([
   },
   clientBundleOptions,
   {
-    entry: ['packages/deepseekbot/src/profile-cli.mjs'],
+    entry: ['packages/deepseekbot/src/profile-cli.mjs', 'packages/deepseekbot/src/deepseekbot.mjs'],
     outDir: 'packages/deepseekbot/dist',
     format: ['esm'],
     platform: 'node',

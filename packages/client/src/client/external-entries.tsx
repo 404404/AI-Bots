@@ -32,7 +32,11 @@ function IdentitiesForBot({
   const [panel, setPanel] = useState<'pairing' | 'approval'>();
   const [busy, setBusy] = useState(false);
   const [scopeFailed, setScopeFailed] = useState<'pairing' | 'approval'>();
-  const operate = async (operation: () => Promise<void>, scope: 'pairing' | 'approval') => {
+  const operate = async (
+    operation: () => Promise<void>,
+    scope: 'pairing' | 'approval',
+    propagate = false,
+  ) => {
     if (busy) return;
     setBusy(true);
     setScopeFailed(undefined);
@@ -41,6 +45,7 @@ function IdentitiesForBot({
       await refresh();
     } catch {
       setScopeFailed(scope);
+      if (propagate) throw new Error('pairing-operation-failed');
     } finally {
       setBusy(false);
     }
@@ -134,10 +139,23 @@ function IdentitiesForBot({
         onClose={() => setPanel(undefined)}
         title={t('pairing.title')}
         closeLabel={t('common.close')}
-        className="bh-sidebar-modal bh-external-panel-modal"
+        className="bh-sidebar-modal bh-external-panel-modal bh-pairing-modal"
+        contentClassName="bh-pairing-content"
       >
         <PairingSettings
           requests={pairings}
+          roles={snapshot?.roles ?? []}
+          groups={snapshot?.permissionGroups ?? []}
+          behaviorPermissions={snapshot?.behaviorPermissions ?? []}
+          bindings={(snapshot?.identities ?? [])
+            .filter(
+              (binding) => binding.enabled && !binding.revokedAt && binding.platform === 'feishu',
+            )
+            .map((binding) => ({ id: binding.id, name: binding.name }))}
+          {...(snapshot?.senderPolicy ? { policy: snapshot.senderPolicy } : {})}
+          senderAccess={(input) =>
+            operate(() => actions.senderAccess(slug, input), 'pairing', true)
+          }
           receivers={snapshot?.pairingReceivers ?? []}
           busy={busy}
           failed={scopeFailed === 'pairing'}

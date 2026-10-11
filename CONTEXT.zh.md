@@ -260,7 +260,15 @@ _避免使用_：Browser Access、consent dialog、per-action approval
 
 **Browser Pause**：
 Human 对某一个 PersonaBot 标签的暂停：停止该 PersonaBot 的浏览器动作，并在其持续期间关闭面向模型的截图；Human 始终可以直接操作本地 Bot Browser 窗口。暂停期间仍可读取页面；「继续」恢复动作与模型截图，Bot 行动前需要重新观察。这与 Browser Access、Browser Authorization 相互独立。
-_避免使用_：Browser Takeover、Computer Takeover、handoff、screen sharing、access gate
+_避免使用_：Computer Takeover、handoff、screen sharing、access gate
+
+**Browser Takeover**：接管
+Human 经 Viewer 明确接管某一个 PersonaBot 的浏览器画面：暂停该 Bot 的动作并开放 Human 输入；释放后恢复 Bot，除非还有未完成的接管链接。它比 Browser Pause 更窄（是控制，不只是叫停），也比 Computer Takeover 更窄（只是一个 Bot 的画面，永远不是整台机器）。
+_避免使用_：Browser Pause、Computer Takeover、handoff、screen sharing
+
+**Browser Watch**：观看
+打开某一个 PersonaBot 的浏览器画面但不暂停：Human 看直播，Bot 继续干活。观看从不打断；只有 Browser Takeover 会暂停。
+_避免使用_：Browser Pause、Browser Takeover、screen sharing
 
 **Browser Audit**：
 按 PersonaBot 与会话归因的、脱敏的 Bot Browser 观察与动作持久记录；绝不包含输入的原文、页面内容或截图。
@@ -468,6 +476,34 @@ _避免使用_：UI 文案里的「IM账号」、connector、integration
 启用的外部身份 Binding 无需逐会话同意即可接收的消息：发给应用的私聊，以及合格 Provider 报告为 @ 该应用的群消息。谁能触达应用由平台决定；群里的普通文字、跟进的话题和 Channel 同步仍需显式开启。
 _避免使用_：全部消息、已授权流量、开放收件
 
+**External User Role**：
+PersonaBot 为已配对外部 IM 人员设置的角色，包含自然语言行为权限及 Host 校验的显式管理能力；管理能力可以为空。行为权限是模型策略，模型通过按需查询当前权限读取行为策略，不逐消息自动注入角色；普通聊天资格与管理权限不互相隐式授予。
+_避免使用_：原生 DSH 角色、资源 ACL、把所有角色称为管理员
+
+**Chat pairing**：
+Human 审核后，将外部人员与一个 PersonaBot 及其当前已认证 App Binding 下的角色关联。可在该范围内允许的会话中复用，批准后须重新提问；不继承到其他 Bot、App、平台或重新建立的 Binding。
+_避免使用_：会话成员资格、账号级管理员、待执行旧指令
+
+**Pairing Reviewer**：
+当前已配对、拥有显式普通 Chat pairing 审核能力的外部人员，范围限定同一 PersonaBot 与 App Binding。群申请可见不代表所有人能审核；配对审核也不授予回答 Questions 或批准原生执行的能力。
+_避免使用_：所有群成员、原生执行审批人、自动首位管理员
+
+**Management Delegation Ceiling**：
+Pairing Reviewer 当前可通过 Role 授予的显式管理能力集合，包含该 Role 的再次委派能力。它与审核人可使用的能力分别解析，来源是当前 Role、授权组和个人例外；显式委派 Deny 优先。
+_避免使用_：自身权限隐式允许委派、资源 ACL、跨 App 管理员
+
+**External Authorization Group**：
+一个 PersonaBot 与 App Binding 下，为当前已配对外部人员持续提供显式管理 Allow／Deny 及可复用行为权限项的授权组；人员可属于多个授权组，同时保留一个主行为 Role。成员关系不授予聊天资格，撤销后重新配对不继承旧成员关系。
+_避免使用_：Channel Group、平台会话群、复制 Role、原生 DSH RBAC
+
+**Behavior permission item**：
+一个可命名、可复用的外部人员行为描述，供同一 PersonaBot 的多个授权组引用并允许或拒绝。同项显式 Deny 优先；生效策略在主 Role 约束内指导模型，不是资源 ACL 或管理能力。
+_避免使用_：原生权限、复制 Role、强制 Shell 策略、语义冲突证明
+
+**Person permission exception**：
+绑定一次当前 Chat pairing 的显式管理 Allow／Deny，与其 Role 及授权组贡献共同生效；任意适用的显式 Deny 优先。它不会授予已认证 Web Human 的来源身份。
+_避免使用_：Super Admin 配对、行为 Role 覆盖、永久平台用户授权
+
 **Conversation entry**：
 一个 Binding 的单个会话流量所挂靠的锚点，存为 Messaging Grant。_隐式_ 条目在第一条被接收的默认流量消息或第一次主动发送时记录；_显式_ 条目来自保存的发送目标。_等待处理_ 的条目等 Human 决定（先问我，或达到上限），只保留元数据。_已屏蔽_ 的会话有一个按 Bot、应用指纹、会话类型和 ID 记录的持久屏蔽，直到 **再次允许** 前都会被拒绝。静音的条目照常接收，但不会唤醒 Bot。
 _避免使用_：授权（指隐式条目时）、投递目标、订阅
@@ -483,6 +519,14 @@ _避免使用_：queue、mailbox、backlog
 **Inbox Admission**：
 一种持久关系，用来说明一条 Source Event 为何有资格进入某个 PersonaBot 的 attention，并记录该 Bot 的 read、defer 或 ignore facts。它引用 Source Event，绝不复制其内容。
 _避免使用_：inbox item body、delivery job、message copy
+
+**Bot Self-Record**：
+Bot 自我记录。关于 PersonaBot 自己的一次 Memory commit 或一次 BotHarness 工具动作的 Source Event：作为 Channel Notice 出现在引起它的 Source Event 所在的 Channel，同时以已处理状态进入该 PersonaBot 的 Bot Inbox。Bot 之后可以查到自己做过什么、为什么做，但它永远不会成为 attention，也不会叫醒 Bot（ADR-0154）。
+_避免使用_：activity log、tool trace
+
+**Channel Notice**：
+频道事件行。Channel 历史里由系统呈现的一行，记录发生了什么（例如一次 Memory commit 或某个 Bot 的动作），而不是某位参与者说的话。它没有已读或未读，也不会叫醒或通知任何人（ADR-0154）。
+_避免使用_：message、notification、system message（单独使用）
 
 **Inbox Trigger**：
 由 PersonaBot 拥有的持久 Host rule，负责匹配 Source Event 并创建 Inbox Admission，包括 admission reason、priority 与 Wake Policy selection。PersonaBot 自己塑造这些规则，Human 可以查看、覆盖或冻结；template 可以提供初值，Bridge 绝不拥有 attention 或 wake behavior，安全闸门永远不属于规则。
@@ -764,16 +808,20 @@ _避免使用_：widget、tile、gadget、Channel sidebar entry
 Web Client 用于读取 PersonaBot 并调用各自独立 mutation command 的 RPC surface，不与 Client 共享 Host service。
 _避免使用_：remote、IPC、gateway
 
-**Settings UI**：
-harness 内部的 DSH settings surface，用于 setup、全局/plugin setting、PersonaBot administration、Memory diagnostics，以及进入 Memory 的链接。日常 Memory 使用属于 Channel sidebar。
-_避免使用_：admin panel、dashboard、web console
+**Bot Settings**：
+BotHarness 自有的 modal（Bot 设置），承载 profile 级的 BotHarness 配置，按自己 sidebar 中的 Bot Settings section 组织。单个 PersonaBot 或单个 Channel 的配置不在这里，而是 Channel sidebar entry。DSH 自带的设置 modal 称为 DSH settings；其中的 Bot 设置 项只负责指向 Bot Settings，App 凭据仍留在 DSH settings。
+_避免使用_：Settings UI、settings page、preferences、admin panel、dashboard、web console
+
+**Bot Settings section**：
+Bot Settings 的一个 sidebar 目的地：稳定的 id、label、order，以及渲染一组内聚的 profile 级设置的 renderer。
+_避免使用_：tab、page、settings item、Channel sidebar entry
 
 **Access policy**：
 每个 PersonaBot 各自维护、允许访问它的 user 与 Chat 列表。
 _避免使用_：whitelist、permissions、ACL
 
 **Credential reference**：
-指向由 DSH credentials service 保存的 Feishu App Secret 的引用；secret 本身永远不会进入 config、repo 或 log。
+指向 Host 的 DSH Credentials Service 所保存私密信息的不透明引用。拥有该能力的应用定义授权范围：既有应用凭据按 IM 应用，私密输入按 PersonaBot 与账号。Agent 只获得引用和配置状态；受保护的消费者在 Host 内解析原值，不将原值返回 Chat 或模型（Spec #1378）。
 _避免使用_：secret、API key、token
 
 ### 遥测与推广活动

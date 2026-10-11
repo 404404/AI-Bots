@@ -25,6 +25,7 @@ import {
   isGroupAvatar,
   isValidChannelId,
   type LocalHumanIdentity,
+  type ChannelMemoryCommit,
   type ChannelMessage,
   type ChannelRecord,
   type GroupInvitation,
@@ -59,6 +60,12 @@ export interface ChannelStoreOptions {
 export interface ChannelMessageOrigin {
   sessionId: string;
   sourceEventId?: string;
+}
+
+export interface ChannelSendStatus {
+  sourceEventId: string;
+  state: string;
+  replies: ChannelMessage[];
 }
 
 export interface ChannelMessageCommit {
@@ -264,6 +271,7 @@ export interface ChannelStore {
 
   hasMessage(id: string, messageId: string): boolean;
   message(id: string, messageId: string): ChannelMessage | undefined;
+  humanSendStatus?(id: string, messageId: string): ChannelSendStatus | undefined;
   observeOutput(id: string, messageId: string): ChannelOutputObservation | undefined;
   outputCheckpoint(): number | undefined;
   assertAttachmentRefs(refs: readonly ChannelAttachmentRef[]): void;
@@ -343,6 +351,11 @@ export interface ChannelStore {
   ): ChannelRecord;
 
   deleteGroup(channelId: string): void;
+  appendMemoryCommits(input: {
+    botSlug: string;
+    causeSourceEventId: string;
+    commits: ReadonlyArray<Omit<ChannelMemoryCommit, 'botSlug'>>;
+  }): ChannelMessage[];
   rename(id: string, name: string): ChannelRecord | undefined;
   previewAllBotMention(id: string): AllBotPreview;
   appendMessageOnce(
@@ -350,6 +363,7 @@ export interface ChannelStore {
     message: ChannelMessage,
     preview?: AllBotPreview,
     origin?: ChannelMessageOrigin,
+    canCommit?: () => boolean,
   ): Promise<ChannelAppendOnceResult>;
   readPosition(id: string): ChannelReadPosition | undefined;
   markRead(id: string, messageId: string): Promise<ChannelReadPosition | undefined>;
@@ -790,6 +804,9 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
     deleteGroup() {
       throw new Error('Group deletion requires the operational Channel store');
     },
+    appendMemoryCommits() {
+      throw new Error('Memory commit notices require the operational Channel store');
+    },
     rename(id, name) {
       const record = read(id);
       const trimmed = name.trim();
@@ -842,7 +859,7 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
         options.botDisplayName ?? (() => undefined),
       );
     },
-    appendMessageOnce(id, message, preview, origin) {
+    appendMessageOnce(id, message, preview, origin, canCommit) {
       return enqueue(id, () => {
         const record = read(id);
         if (record === undefined) return { status: 'missing' };
@@ -855,6 +872,7 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
             message: projectReply(existing, messageIndex(priorMessages)),
           };
         }
+        if (canCommit?.() === false) return { status: 'conflict' };
         if (preview !== undefined) {
           if (message.author.kind !== 'human') throw new Error('All Bots requires a Human sender');
           assertAllBotPreview(

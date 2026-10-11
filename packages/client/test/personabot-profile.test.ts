@@ -73,6 +73,7 @@ import { createGroupProfileCards } from '../src/client/group-profile.js';
 import { loadGroupProfileActivity, type GroupProfileActivity } from '../src/client/bridge.js';
 import { createProfileCardBuiltins } from '../src/client/profile-cards-builtins.js';
 import { createProfileCardRegistry } from '../src/client/profile-cards.js';
+import { ProfilePopover } from '../src/client/personabot-profile.js';
 import { store } from '../src/client/store.js';
 
 function sidebarRegistry() {
@@ -155,6 +156,7 @@ describe('PersonaBot Profile surface', () => {
       tokenTotals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
     }));
     const actions = {
+      listWorkspaceGrants: vi.fn(async () => []),
       modelCatalog: vi.fn(async () => ({ models: [] })),
       modelPresets: vi.fn(async () => []),
       modelPlanState: vi.fn(async () => ({
@@ -244,6 +246,10 @@ describe('PersonaBot Profile surface', () => {
       await act(async () => click(container, '.bh-profile-expand'));
       expect(container.querySelector('.bh-profile-popover')).toBeNull();
       expect(container.querySelector('.bh-profile-view')).not.toBeNull();
+      expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
+        'true',
+      );
+      expect(container.querySelector<HTMLElement>('.bh-chat-top-fade')?.style.display).toBe('none');
       const sections = container.querySelectorAll('.bh-profile-view > .bh-profile-section');
       expect([...sections].map((section) => section.getAttribute('aria-label'))).toEqual([
         '活动概览',
@@ -359,6 +365,9 @@ describe('PersonaBot Profile surface', () => {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       });
       expect(container.querySelector('.bh-profile-view')).toBeNull();
+      expect(
+        container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail'],
+      ).toBeUndefined();
       expect(container.querySelector('.bh-chat-body')).not.toBeNull();
 
       await act(async () => click(container, '.bh-channel-island'));
@@ -540,6 +549,40 @@ describe('Profile activity windows', () => {
       expect(container.querySelector('.bh-model-usage')?.textContent).toContain(
         '所选时间范围：155',
       );
+      const tokenCard = cards.find((card) => card.id === 'token-usage')!;
+      expect(tokenCard.help?.(props)).toBe(zhTranslate('profile.usage.partial'));
+      expect(tokenCard.help?.(partial)).toBe(zhTranslate('profile.usage.partial'));
+      expect(container.querySelector('.bh-profile-card-body > .bh-note')).toBeNull();
+      const registry = createProfileCardRegistry();
+      registry.register(tokenCard);
+      const popoverProps = {
+        bot: props.bot,
+        activity: partial.activity,
+        cards: registry,
+        pinned: ['token-usage'],
+        t: zhTranslate,
+        onExpand: vi.fn(),
+      };
+      await act(async () => root.render(createElement(ProfilePopover, popoverProps)));
+      const label = container.querySelector('.bh-profile-card-label');
+      expect(label?.textContent).toBe(tokenCard.label);
+      expect(label?.querySelector('button')?.getAttribute('aria-label')).toBe(
+        zhTranslate('im.infoFor', { title: tokenCard.label }),
+      );
+      expect(container.textContent).not.toContain(zhTranslate('profile.usage.partial'));
+      const completeActivity = {
+        ...partial.activity,
+        modelUsageRows: partial.activity.modelUsageRows.map((row) => ({
+          ...row,
+          cacheWriteTokens: 5,
+        })),
+      };
+      expect(tokenCard.help?.({ ...props, activity: completeActivity })).toBeUndefined();
+      expect(tokenCard.help?.({ ...props, activity: undefined })).toBeUndefined();
+      await act(async () =>
+        root.render(createElement(ProfilePopover, { ...popoverProps, activity: completeActivity })),
+      );
+      expect(container.querySelector('.bh-profile-card-label button')).toBeNull();
     } finally {
       await act(async () => root.unmount());
       container.remove();

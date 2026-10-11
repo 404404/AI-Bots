@@ -4,6 +4,11 @@ import { createHash } from 'node:crypto';
 import { isChannelAttachmentRef, type ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ToolApprovalDecision, ToolApprovalRequestCard } from '../workspaces/tool-approval.js';
 import type { ChannelQuestionRequest, ChannelQuestionResolution } from './user-questions.js';
+import {
+  privateRequestSchema,
+  type PrivateInputCard,
+  type PrivateInputResolution,
+} from '../credentials/contracts.js';
 
 export type ChannelType = 'dm' | 'group';
 
@@ -178,6 +183,44 @@ export interface BotMessageCausation {
   hop: number;
 }
 
+export interface ChannelMemoryCommit {
+  botSlug: string;
+  sha: string;
+  subject: string;
+  authorName: string;
+  authoredAt: string;
+  files: Array<{ path: string; added: number | null; deleted: number | null }>;
+  moreFiles: number;
+}
+
+function isMemoryCommit(value: unknown): value is ChannelMemoryCommit {
+  if (typeof value !== 'object' || value === null) return false;
+  const commit = value as Record<string, unknown>;
+  const count = (item: unknown): boolean =>
+    item === null || (Number.isSafeInteger(item) && (item as number) >= 0);
+  return (
+    typeof commit['botSlug'] === 'string' &&
+    commit['botSlug'].length > 0 &&
+    typeof commit['sha'] === 'string' &&
+    /^[0-9a-f]{40}$/u.test(commit['sha']) &&
+    typeof commit['subject'] === 'string' &&
+    typeof commit['authorName'] === 'string' &&
+    typeof commit['authoredAt'] === 'string' &&
+    Array.isArray(commit['files']) &&
+    commit['files'].length <= 20 &&
+    commit['files'].every(
+      (file: unknown) =>
+        typeof file === 'object' &&
+        file !== null &&
+        typeof (file as Record<string, unknown>)['path'] === 'string' &&
+        count((file as Record<string, unknown>)['added']) &&
+        count((file as Record<string, unknown>)['deleted']),
+    ) &&
+    Number.isSafeInteger(commit['moreFiles']) &&
+    (commit['moreFiles'] as number) >= 0
+  );
+}
+
 export interface ChannelMessage {
   id: string;
   at: string;
@@ -198,6 +241,7 @@ export interface ChannelMessage {
 
   humanReceipts?: ChannelHumanReceipt[];
   botDmAction?: BotDmAction;
+  memoryCommit?: ChannelMemoryCommit;
   memberDeparture?: ChannelMemberDeparture;
   botCausation?: BotMessageCausation;
 
@@ -216,6 +260,8 @@ export interface ChannelMessage {
   userQuestionRequest?: ChannelQuestionRequest;
 
   userQuestionResolution?: ChannelQuestionResolution;
+  privateInputRequest?: PrivateInputCard;
+  privateInputResolution?: PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   bridgeMedia?: {
     voice?: Pick<import('../messaging/provider.js').MessagingVoice, 'transcript' | 'durationMs'>;
@@ -653,6 +699,12 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
         departure['departureType'] !== 'removed')
     )
       return false;
+  } else if (message['memoryCommit'] !== undefined) {
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      !isMemoryCommit(message['memoryCommit'])
+    )
+      return false;
   } else if (
     (message['author'] as ChannelMessageAuthor)?.kind === 'system' &&
     !(
@@ -762,6 +814,57 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     if (
       origin['threadId'] !== undefined &&
       (typeof origin['threadId'] !== 'string' || origin['threadId'].length === 0)
+    )
+      return false;
+  }
+  const privateRequest = message['privateInputRequest'];
+  if (privateRequest !== undefined) {
+    if (
+      typeof privateRequest !== 'object' ||
+      privateRequest === null ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+    const { sessionId, expiresAt, replacesMessageId, ...declaration } = privateRequest as Record<
+      string,
+      unknown
+    >;
+    if (
+      (sessionId === undefined
+        ? replacesMessageId === undefined
+        : typeof sessionId !== 'string' || sessionId.length === 0) ||
+      (replacesMessageId !== undefined &&
+        (typeof replacesMessageId !== 'string' || !/^[0-9a-f-]{36}$/.test(replacesMessageId))) ||
+      (expiresAt !== undefined &&
+        (typeof expiresAt !== 'string' || !Number.isFinite(Date.parse(expiresAt)))) ||
+      !privateRequestSchema.safeParse(declaration).success
+    )
+      return false;
+  }
+  const privateResolution = message['privateInputResolution'];
+  if (privateResolution !== undefined) {
+    if (
+      typeof privateResolution !== 'object' ||
+      privateResolution === null ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'human'
+    )
+      return false;
+    const resolution = privateResolution as Record<string, unknown>;
+    if (
+      Object.keys(resolution).some(
+        (key) => !['requestMessageId', 'state', 'references'].includes(key),
+      ) ||
+      typeof resolution.requestMessageId !== 'string' ||
+      message['replyTo'] !== resolution.requestMessageId ||
+      !['configured', 'cancelled', 'expired'].includes(String(resolution.state)) ||
+      typeof resolution.references !== 'object' ||
+      resolution.references === null ||
+      Array.isArray(resolution.references) ||
+      (resolution.state !== 'configured' && Object.keys(resolution.references).length > 0) ||
+      !Object.values(resolution.references).every(
+        (ref) =>
+          typeof ref === 'string' && /^private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}$/.test(ref),
+      )
     )
       return false;
   }

@@ -194,6 +194,15 @@ export interface ChannelMessage {
       | 'ignored';
   }[];
   botDmAction?: { channelId: string; messageId: string; recipientBotSlug: string };
+  memoryCommit?: {
+    botSlug: string;
+    sha: string;
+    subject: string;
+    authorName: string;
+    authoredAt: string;
+    files: Array<{ path: string; added: number | null; deleted: number | null }>;
+    moreFiles: number;
+  };
   memberDeparture?: {
     memberKind: 'bot' | 'human';
     memberId: string;
@@ -209,6 +218,8 @@ export interface ChannelMessage {
   toolApprovalDecision?: ToolApprovalDecision;
   userQuestionRequest?: UserQuestionRequestCard;
   userQuestionResolution?: UserQuestionResolution;
+  privateInputRequest?: import('../../../core/src/credentials/contracts.js').PrivateInputCard;
+  privateInputResolution?: import('../../../core/src/credentials/contracts.js').PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   format?: 'markdown' | 'text';
   replyTo?: string;
@@ -251,6 +262,7 @@ export interface HumanAttentionItem {
   kind:
     | 'group-join-request'
     | 'user-question'
+    | 'private-input'
     | 'tool-approval'
     | 'workspace-grant-request'
     | 'bot-dm-message'
@@ -416,6 +428,7 @@ export interface ClientState {
   status: ClientStatus;
   error: string | undefined;
   query: string;
+  memoryCommitIntent: { channelId: string; sha: string } | undefined;
   config: RosterConfig;
   roster: RosterState;
   selection: ConversationSelection | undefined;
@@ -450,6 +463,7 @@ export interface ClientStore {
   subscribe(listener: () => void): () => void;
   setMode(mode: ClientMode): void;
   setQuery(query: string): void;
+  setMemoryCommitIntent(intent: { channelId: string; sha: string } | undefined): void;
   setConfig(config: RosterConfig): void;
   setRosterStatus(status: ClientStatus, error: string | undefined): void;
   setRoster(bots: readonly BotSummary[], channels: readonly ChannelSummary[]): void;
@@ -591,6 +605,7 @@ export function createStore(): ClientStore {
     status: 'idle',
     error: undefined,
     query: '',
+    memoryCommitIntent: undefined,
     config: { collapsed: {} },
     roster: initialRoster(),
     selection: undefined,
@@ -662,6 +677,9 @@ export function createStore(): ClientStore {
     },
     setMode(mode) {
       if (state.mode !== mode) update({ mode });
+    },
+    setMemoryCommitIntent(memoryCommitIntent) {
+      update({ memoryCommitIntent });
     },
     setQuery(query) {
       if (state.query !== query) update({ query });

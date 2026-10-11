@@ -2,6 +2,7 @@ import type { PartLibraryEntry } from '../bots/part-library.js';
 import type { OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
 import type { HttpsFallback } from '../memory/clone.js';
 import type { PairingRequest, PairingReviewInput } from '../messaging/pairing.js';
+import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
@@ -40,13 +41,20 @@ import type { HumanAssignmentContext } from '../runtime/assignment-human-context
 import type { ThreadReceptionInput } from '../messaging/thread-policy.js';
 import type { GroupReceptionInput } from '../messaging/group-policy.js';
 import type { ExternalSource } from '../messaging/inbound.js';
-import type { MessagingSnapshot, MessagingGrant, OutboxIntent } from '../messaging/outbound.js';
+import type {
+  MessagingApp,
+  MessagingSnapshot,
+  MessagingGrant,
+  OutboxIntent,
+} from '../messaging/outbound.js';
 import type { MessagingTarget } from '../messaging/provider.js';
 import type { PersonaBotDeletionPreview, PersonaBotDeletion } from '../bots/deletion.js';
 import type { MemoryFileTarget } from '../memory/file-actions.js';
 import type { Context } from '@deepseek-ai/cordis';
 import type { UsageFilter, UsageQueryResult } from '../usage/query.js';
 import { RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
+import type { PrivateInputs } from '../credentials/private-inputs.js';
+import type { PrivateInputStatus } from '../credentials/contracts.js';
 
 import type { PersonaBotPatch } from '../bots/persona-bot.js';
 import type { ModelCatalogEntry } from '../models/catalog.js';
@@ -62,15 +70,18 @@ import type {
   BridgeMethods,
   BridgeResult,
   ChannelListItem,
+  MessagingAppsView,
   PersonaBotDetail,
   PersonaBotSummary,
   OwnedSessionSummary,
   OwnedSessionBot,
   ProfileActivity,
+  ProfileSessionUsage,
 } from './methods.js';
 import type { ChannelActivityToday } from '../channels/activity-today.js';
 import type { GroupProfileActivity } from '../channels/profile-activity.js';
 import type { ChannelMessage, ChannelRecord } from '../channels/channel.js';
+import type { ChannelSendStatus } from '../channels/store.js';
 import type { ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ChannelReadPosition } from '../channels/store.js';
 import type { RosterSection, RosterSnapshot } from '../roster/store.js';
@@ -166,9 +177,72 @@ async function unwrapAsync<T>(result: Promise<BridgeResult<T>>): Promise<T> {
 export class BotharnessBridgeService extends TypertRemoteService {
   private readonly methods: BridgeMethods;
 
-  constructor(ctx: Context, methods: BridgeMethods) {
+  constructor(
+    ctx: Context,
+    methods: BridgeMethods,
+    private readonly privateInputs?: PrivateInputs,
+  ) {
     super(ctx, BRIDGE_SERVICE_KEY, { namespace: BRIDGE_NAMESPACE });
     this.methods = methods;
+  }
+
+  privateInputStatus(channelId: string, messageId: string): { status: PrivateInputStatus } {
+    this.requirePrivateOwner();
+    return { status: this.privateInputs?.status(channelId, messageId) ?? 'expired' };
+  }
+
+  async privateInputSubmit(
+    channelId: string,
+    messageId: string,
+    values: Record<string, string>,
+  ): Promise<{ accepted: boolean }> {
+    this.requirePrivateOwner();
+    return {
+      accepted: (await this.privateInputs?.submit(true, { channelId, messageId, values })) ?? false,
+    };
+  }
+
+  async privateInputCancel(channelId: string, messageId: string): Promise<{ accepted: boolean }> {
+    this.requirePrivateOwner();
+    return { accepted: (await this.privateInputs?.cancel(true, channelId, messageId)) ?? false };
+  }
+
+  async privateAccountStatus(channelId: string, messageId: string) {
+    this.requirePrivateOwner();
+    return (
+      this.privateInputs?.accountStatus(true, channelId, messageId) ?? {
+        status: 'unavailable',
+        references: {},
+      }
+    );
+  }
+
+  async privateInputReplace(channelId: string, messageId: string): Promise<{ messageId?: string }> {
+    this.requirePrivateOwner();
+    const replacement = await this.privateInputs?.replace(true, channelId, messageId);
+    return replacement === undefined ? {} : { messageId: replacement };
+  }
+
+  async privateAccountRevoke(channelId: string, messageId: string) {
+    this.requirePrivateOwner();
+    return (
+      this.privateInputs?.revoke(true, channelId, messageId) ?? {
+        accepted: false,
+        stopped: 0,
+        completed: 0,
+        uncertain: 0,
+      }
+    );
+  }
+
+  private requirePrivateOwner(): void {
+    const operator = (this.ctx.get('connection') as { operator?: unknown } | undefined)?.operator;
+    if (operator === undefined || this.ctx.invocation?.peer !== operator)
+      throw new RemoteError(
+        'forbidden' as RemoteError['code'],
+        'Private input requires the authenticated Owner',
+        {},
+      );
   }
 
   messagingChannelTarget(
@@ -237,11 +311,17 @@ export class BotharnessBridgeService extends TypertRemoteService {
   pairingReview(slug: string, input: PairingReviewInput): Promise<{ pairing: PairingRequest }> {
     return unwrapAsync(this.methods.pairingReview({ slug, input }));
   }
+  senderAccess(slug: string, input: SenderAccessInput): Promise<void> {
+    return unwrapAsync(this.methods.senderAccess({ slug, input }));
+  }
   messagingIdentity(
     slug: string,
     input: MessagingIdentityInput,
   ): Promise<{ identity: MessagingIdentity }> {
     return unwrapAsync(this.methods.messagingIdentity({ slug, input }));
+  }
+  messagingApps(): Promise<MessagingAppsView> {
+    return unwrapAsync(this.methods.messagingApps());
   }
   messagingSnapshot(slug: string): Promise<MessagingSnapshot> {
     return unwrapAsync(this.methods.messagingSnapshot({ slug }));
@@ -683,6 +763,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
   channelAllBotPreview(channelId: string): AllBotPreview {
     return unwrap(this.methods.channelAllBotPreview({ channelId }));
   }
+  channelSendStatus(channelId: string, messageId: string): ChannelSendStatus {
+    return unwrap(this.methods.channelSendStatus({ channelId, messageId }));
+  }
+
   async channelSend(
     channelId: string,
     body: string,
@@ -981,6 +1065,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.profileActivity({ channelId, before, weeks }));
   }
 
+  async profileSessionUsage(channelId: string): Promise<ProfileSessionUsage> {
+    return unwrap(await this.methods.profileSessionUsage({ channelId }));
+  }
+
   groupProfileActivity(channelId: string): GroupProfileActivity {
     return unwrap(this.methods.groupProfileActivity({ channelId }));
   }
@@ -1129,6 +1217,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
 }
 
 markRemoteMethods(BotharnessBridgeService.prototype, [
+  'privateInputStatus',
+  'privateInputSubmit',
+  'privateInputCancel',
+  'privateAccountStatus',
+  'privateInputReplace',
+  'privateAccountRevoke',
   'messagingDefaults',
   'messagingDefaultsSet',
   'channelBridges',
@@ -1145,6 +1239,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'approvalTest',
   'approvalRetry',
   'pairingReview',
+  'senderAccess',
+  'messagingApps',
   'messagingSnapshot',
   'messagingTargets',
   'messagingAuthorize',
@@ -1202,6 +1298,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelMarkAllRead',
   'channelAllBotPreview',
   'channelSend',
+  'channelSendStatus',
   'botAttention',
   'botSourcePolicies',
   'botSourcePolicySet',
@@ -1246,6 +1343,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'memorySave',
   'memoryRepair',
   'profileActivity',
+  'profileSessionUsage',
   'overviewMemory',
   'overviewUsage',
   'profileUsage',
@@ -1296,6 +1394,10 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'schedulePreview',
 ]);
 
-export function registerBridge(ctx: Context, methods: BridgeMethods): BotharnessBridgeService {
-  return new BotharnessBridgeService(ctx, methods);
+export function registerBridge(
+  ctx: Context,
+  methods: BridgeMethods,
+  privateInputs?: PrivateInputs,
+): BotharnessBridgeService {
+  return new BotharnessBridgeService(ctx, methods, privateInputs);
 }

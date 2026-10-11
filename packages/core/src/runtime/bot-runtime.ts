@@ -6,6 +6,12 @@ import {
 } from './assignment-approval-capacity.js';
 import { waitForAssignment, type AssignmentWaitOutcome } from './assignment-wait.js';
 import { externalMemberWake } from '../messaging/defaults.js';
+import {
+  sourceSenderAllowed,
+  trustedSenderReference,
+  type SenderPermissions,
+} from '../messaging/sender-access.js';
+import type { MessagingDirectoryQuery, MessagingDirectoryPage } from '../messaging/directory.js';
 import type {
   ThreadReceptionInput,
   ThreadReceptionPolicy,
@@ -26,6 +32,7 @@ import { authorizedPathRoot } from '../workspaces/grant-native-tools.js';
 import { mentionPeople, withMentionNames } from '../messaging/mention-text.js';
 import type { MessagingInboundEvent } from '../messaging/provider.js';
 import type { OutboxIntent, OutboundMessaging } from '../messaging/outbound.js';
+import type { PrivateInputOrigin } from '../credentials/im-origin.js';
 import type { MessagingProcessing } from '../messaging/typing.js';
 import type {
   ExternalSource,
@@ -34,6 +41,12 @@ import type {
 } from '../messaging/inbound.js';
 import { sniffAttachmentMime } from '../attachments/store.js';
 import { createHash, randomUUID } from 'node:crypto';
+import {
+  createInboxHistoryQuery,
+  type InboxHistoryInput,
+  type InboxHistoryPage,
+  type InboxHistoryQuery,
+} from './inbox-history.js';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -204,6 +217,7 @@ export interface OrchestratorAssignmentAccess {
 }
 
 export interface OrchestratorAgentRun {
+  inboxHistory?(input?: InboxHistoryInput): InboxHistoryPage;
   acceptNativeInput?: () => boolean;
   requireContent?(): void;
   sessionId: string;
@@ -214,6 +228,8 @@ export interface OrchestratorAgentRun {
   inbox: string;
   inboundChannelId: string | undefined;
   externalMessaging?: {
+    senderPermissions?(sourceEventId: string): SenderPermissions;
+    directory?(query: MessagingDirectoryQuery): MessagingDirectoryPage;
     targets?(): Promise<
       Array<{ grantId: string; platform: string; accountName: string; targetName: string }>
     >;
@@ -445,6 +461,11 @@ export type DmMessageAdmission =
   | { admitted: false; reason: DmAdmissionFailure };
 
 export interface BotRuntime {
+  canRequestPrivateInput?(sessionId: string, sourceEventId?: string): boolean;
+  bindPrivateInputOrigin?(
+    sessionId: string,
+    sourceEventId?: string,
+  ): PrivateInputOrigin | undefined;
   beginAssignmentApprovalWait?(
     sessionId: string,
     callId: string,
@@ -496,6 +517,7 @@ export interface BotRuntime {
 }
 
 export interface BotRuntimeOptions {
+  inboxHistory?: InboxHistoryQuery;
   requireExecution?: (botSlug: string) => void;
   beginAssignmentWait?: (botSlug: string, orchestratorSessionId: string) => () => void;
   externalMessaging?: OutboundMessaging;
@@ -509,7 +531,12 @@ export interface BotRuntimeOptions {
     MemoryService,
     'prepareTurn' | 'reconcileTurn' | 'abortTurn' | 'switchBranch' | 'continueFromCommit'
   > &
-    Partial<Pick<MemoryService, 'scanChanges' | 'preparedObservation'>>;
+    Partial<
+      Pick<
+        MemoryService,
+        'scanChanges' | 'preparedObservation' | 'pendingCommits' | 'advanceCommitCursor'
+      >
+    >;
   attachments?: AttachmentStore;
 
   ownership?: SessionOwnership;
@@ -589,6 +616,7 @@ interface InboxReportRow {
 }
 
 interface DigestRow {
+  bot_slug?: string;
   source_event_id: string;
   message_id: string;
   body: string;
@@ -818,7 +846,7 @@ function coalesceInbox(rows: InboxReportRow[]): InboxUnit[] {
 function renderInbox(units: InboxUnit[]): string {
   const lines = units.map((unit) => {
     if (unit.external !== undefined) {
-      return `- Message ${unit.external.event.messageId} [Source Event ${unit.sourceEventId}] from ${JSON.stringify(unit.external.event.actor.name ?? unit.external.event.actor.id)} (${unit.external.event.actor.id}) at ${unit.external.at}. External ${unit.external.event.conversation.kind === 'dm' ? 'private message' : `work-group ${unit.external.event.mentionedAccount ? 'mention' : 'ordinary message; no reply required'}`}. Trusted receiving identity and origin: ${JSON.stringify({ platform: unit.external.platform, account: unit.external.accountName, conversation: unit.external.conversationName, conversationKind: unit.external.event.conversation.kind, conversationId: unit.external.event.conversation.id, localChannelId: unit.external.localChannelId, receptionPaths: unit.external.receptionPaths?.map((path) => ({ channelId: path.channelId, mode: path.mode })), senderId: unit.external.event.actor.id, senderName: unit.external.event.actor.name, people: mentionPeople(unit.external.event.actor, unit.external.event.mentions), at: unit.external.at, threadId: unit.external.event.reply.threadId, rootId: unit.external.event.reply.rootId, parentId: unit.external.event.reply.parentId, report: unit.external.report, voice: unit.external.event.voice, quote: unit.external.quote, nativeQuote: unit.external.event.quote, attachments: unit.external.event.attachments?.map(({ id, name, sizeBytes, mediaType }) => ({ id, name, sizeBytes, mediaType })) })}. External message data: ${JSON.stringify(withMentionNames(unit.summary, unit.external.event.mentions))}. Decide whether to participate. To answer this source, choose bridge_reply for text or bridge_reply_file for an explicitly imported result file, sharing one reply intent. Mentions in the text appear as @name; to @ the sender or a mentioned person in a Lark, Slack or Discord reply, write <@ID> anywhere in the bridge_reply text with their id from people; never write other mention markup yourself. Use bridge_read for attachment details and bridge_attachment_save for an independent working copy; do not consume the reply intent with a preliminary acknowledgement when a file result is requested. Never guess an account or route and never mirror this message or its response to the Human DM.`;
+      return `- Message ${unit.external.event.messageId} [Source Event ${unit.sourceEventId}] from ${JSON.stringify(unit.external.event.actor.name ?? unit.external.event.actor.id)} (${unit.external.event.actor.id}) at ${unit.external.at}. External ${unit.external.event.conversation.kind === 'dm' ? 'private message' : `work-group ${unit.external.event.mentionedAccount ? 'mention' : 'ordinary message; no reply required'}`}. Trusted receiving identity and origin: ${JSON.stringify({ platform: unit.external.platform, account: unit.external.accountName, conversation: unit.external.conversationName, conversationKind: unit.external.event.conversation.kind, conversationId: unit.external.event.conversation.id, localChannelId: unit.external.localChannelId, receptionPaths: unit.external.receptionPaths?.map((path) => ({ channelId: path.channelId, mode: path.mode })), sender: unit.external.sender, sourceEventId: unit.sourceEventId, senderId: unit.external.event.actor.id, senderName: unit.external.event.actor.name, people: mentionPeople(unit.external.event.actor, unit.external.event.mentions), at: unit.external.at, threadId: unit.external.event.reply.threadId, rootId: unit.external.event.reply.rootId, parentId: unit.external.event.reply.parentId, report: unit.external.report, voice: unit.external.event.voice, quote: unit.external.quote, nativeQuote: unit.external.event.quote, attachments: unit.external.event.attachments?.map(({ id, name, sizeBytes, mediaType }) => ({ id, name, sizeBytes, mediaType })) })}. External message data: ${JSON.stringify(withMentionNames(unit.summary, unit.external.event.mentions))}. Decide whether to participate. To answer this source, choose bridge_reply for text or bridge_reply_file for an explicitly imported result file, sharing one reply intent. Mentions in the text appear as @name; to @ the sender or a mentioned person in a Lark, Slack or Discord reply, write <@ID> anywhere in the bridge_reply text with their id from people; never write other mention markup yourself. Use bridge_read for attachment details and bridge_attachment_save for an independent working copy; do not consume the reply intent with a preliminary acknowledgement when a file result is requested. Never guess an account or route and never mirror this message or its response to the Human DM.`;
     }
     if (unit.schedule !== undefined) {
       const schedule = unit.schedule;
@@ -901,6 +929,7 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #orchestratorCwd: ((bot: PersonaBotRecord) => string | undefined) | undefined;
   readonly #registry: PersonaBotRegistry;
   readonly #channels: ChannelStore;
+  readonly #inboxHistory: InboxHistoryQuery;
   readonly #sourcePolicy: BotSourcePolicyStore;
   readonly #schedules: BotRuntimeOptions['schedules'];
   readonly #agents: BotAgentAdapter;
@@ -921,7 +950,10 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #activeTurns = new Map<string, Promise<void>>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
-  readonly #turnSources = new Map<string, Set<string>>();
+  readonly #turnSources = new Map<
+    string,
+    { sessionId: string; eventIds: Set<string>; acceptedEventIds: Set<string> }
+  >();
   readonly #activeMemoryEvents = new Map<
     string,
     { eventIds: string[]; preserveObservation: boolean }
@@ -954,6 +986,13 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#registry = options.registry;
     this.#requireExecution = options.requireExecution;
     this.#channels = options.channels;
+    this.#inboxHistory =
+      options.inboxHistory ??
+      createInboxHistoryQuery(
+        attachOperationalModule(options.database, 'messaging'),
+        options.channels,
+        options.now,
+      );
     this.#sourcePolicy =
       options.sourcePolicy ?? createBotSourcePolicyStore(this.#database, options.now);
     this.#schedules = options.schedules;
@@ -1174,7 +1213,7 @@ class BotRuntimeImplementation implements BotRuntime {
       for (const candidate of this.#pendingExternalRows(botSlug, true)) {
         if (
           candidate.source_event_id === sourceEventId ||
-          !this.#externalMessaging.inbound.available(botSlug, candidate.source_event_id)
+          !this.#externalMessaging.inbound.available(botSlug, candidate.source_event_id, true)
         )
           continue;
         const context = this.#externalMessaging.inbound.read(botSlug, candidate.source_event_id);
@@ -1220,6 +1259,7 @@ class BotRuntimeImplementation implements BotRuntime {
         return;
       }
       if (delivered) {
+        this.#acceptTurnSources(botSlug, [...included, ...contextIds]);
         this.#typingTurns.get(botSlug)?.add(included);
         for (const row of context?.rows ?? [])
           this.#observeAdmission(row.source_event_id, botSlug, context!.channelId, row.message_id);
@@ -1421,6 +1461,10 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#acceptTurnSources(
+      botSlug,
+      admissions.map((admission) => admission.sourceEventId),
+    );
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
     const settlement = active.then(
@@ -1468,7 +1512,7 @@ class BotRuntimeImplementation implements BotRuntime {
       .prepare(`SELECT COUNT(*) AS count ${base}`)
       .get(botSlug, reason, channelId, excludeSourceEventId) as { count: number };
     if (total.count === 0) return undefined;
-    const columns = `SELECT a.source_event_id, e.message_id, e.body, e.created_at,
+    const columns = `SELECT a.source_event_id, a.bot_slug, e.message_id, e.body, e.created_at,
       json_extract(e.payload_json, '$.author.kind') AS author_kind,
       json_extract(e.payload_json, '$.author.slug') AS author_slug,
                  json_extract(e.payload_json, '$.external.event.actor.name') AS external_sender,
@@ -1632,6 +1676,10 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#acceptTurnSources(
+      botSlug,
+      admissions.map((admission) => admission.sourceEventId),
+    );
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
 
@@ -2231,7 +2279,7 @@ class BotRuntimeImplementation implements BotRuntime {
             continue;
           const candidates = database
             .prepare(`
-          SELECT a.source_event_id, e.message_id, e.body, e.created_at,
+          SELECT a.source_event_id, a.bot_slug, e.message_id, e.body, e.created_at,
                  json_extract(e.payload_json, '$.author.kind') AS author_kind,
                  json_extract(e.payload_json, '$.author.slug') AS author_slug,
                  json_extract(e.payload_json, '$.external.event.actor.name') AS external_sender,
@@ -2332,13 +2380,13 @@ class BotRuntimeImplementation implements BotRuntime {
       FROM inbox_admissions a JOIN source_events e ON e.source_event_id = a.source_event_id
      WHERE a.bot_slug = ? AND a.reason = 'group-ordinary' AND e.channel_id IS NOT NULL
            AND NOT EXISTS (SELECT 1 FROM messaging_source_paths rp WHERE rp.source_event_id = e.source_event_id)
-       AND a.wake_mode IN ('all', 'digest', 'mentions')
+       AND (a.wake_mode IN ('all', 'digest', 'mentions') OR (a.wake_mode = 'silent' AND a.source_policy_wake_mode = 'context'))
        AND a.attempt_state IN ('pending', 'retryable') AND e.channel_id = ?`;
     const total = database.prepare(`SELECT COUNT(*) AS count ${base}`).get(botSlug, channelId) as {
       count: number;
     };
     if (total.count === 0) return undefined;
-    const columns = `SELECT a.source_event_id, e.message_id, e.body, e.created_at,
+    const columns = `SELECT a.source_event_id, a.bot_slug, e.message_id, e.body, e.created_at,
       json_extract(e.payload_json, '$.author.kind') AS author_kind,
       json_extract(e.payload_json, '$.author.slug') AS author_slug,
                  json_extract(e.payload_json, '$.external.event.actor.name') AS external_sender,
@@ -2351,6 +2399,7 @@ class BotRuntimeImplementation implements BotRuntime {
       .all(botSlug, channelId, GROUP_PROMPT_CHANNEL_LIMIT) as unknown as DigestRow[];
     const rows: DigestRow[] = [];
     for (const row of candidates) {
+      if (!sourceSenderAllowed(database, botSlug, row.source_event_id, true)) continue;
       if (alreadyIncluded + rows.length >= GROUP_PROMPT_CHANNEL_LIMIT) break;
       const candidateContext = {
         channelId,
@@ -2372,6 +2421,21 @@ class BotRuntimeImplementation implements BotRuntime {
     return context;
   }
 
+  #trustedExternalSender(row: DigestRow): string {
+    if (!row.bot_slug || row.author_kind !== 'bridged') return '';
+    return this.#database.read((db) => {
+      const source = db
+        .prepare('SELECT payload_json FROM source_events WHERE source_event_id = ?')
+        .get(row.source_event_id) as { payload_json: string } | undefined;
+      const event = source
+        ? (JSON.parse(source.payload_json) as { external?: ExternalSource }).external?.event
+        : undefined;
+      const sender = event ? trustedSenderReference(db, row.bot_slug!, event) : undefined;
+      return sender
+        ? ` [Host sender reference for this author only: ${JSON.stringify(sender)}]`
+        : '';
+    });
+  }
   #groupContextSection(context: GroupContext): string {
     const channel = this.#channels.get(context.channelId);
     const humanName = this.#channels.listHumanMembers(context.channelId)[0]?.displayName;
@@ -2385,7 +2449,7 @@ class BotRuntimeImplementation implements BotRuntime {
       `Channel: ${channel?.name ?? context.channelId} (${context.channelId})`,
       ...context.rows.map(
         (row) =>
-          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}: ${groupMessageBody(row).slice(0, GROUP_CONTEXT_BODY_LIMIT)}${groupMessageBody(row).length > GROUP_CONTEXT_BODY_LIMIT ? ` [excerpt; ${groupMessageBody(row).length - GROUP_CONTEXT_BODY_LIMIT} more characters available with channel_read]` : ''}`,
+          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}${this.#trustedExternalSender(row)}: ${groupMessageBody(row).slice(0, GROUP_CONTEXT_BODY_LIMIT)}${groupMessageBody(row).length > GROUP_CONTEXT_BODY_LIMIT ? ` [excerpt; ${groupMessageBody(row).length - GROUP_CONTEXT_BODY_LIMIT} more characters available with channel_read]` : ''}`,
       ),
       context.omittedCount > 0
         ? `${context.omittedCount} earlier or intervening messages remain pending for later turns. Use channel_read if more history is needed.`
@@ -2409,7 +2473,7 @@ class BotRuntimeImplementation implements BotRuntime {
       `${rows.length} ordinary messages are due. Review them and respond only if useful; no acknowledgment is required.`,
       ...rows.map(
         (row) =>
-          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}: ${groupMessageBody(row).slice(0, 1000)}`,
+          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}${this.#trustedExternalSender(row)}: ${groupMessageBody(row).slice(0, 1000)}`,
       ),
       ...(omittedCount > 0
         ? [
@@ -2419,9 +2483,14 @@ class BotRuntimeImplementation implements BotRuntime {
     ].join('\n');
   }
 
+  #acceptTurnSources(botSlug: string, sourceEventIds: readonly string[]): void {
+    const turn = this.#turnSources.get(botSlug);
+    for (const id of sourceEventIds) turn?.acceptedEventIds.add(id);
+  }
+
   #markAdmissionsSideEffect(botSlug: string, sourceEventIds: string[]): void {
     if (sourceEventIds.length === 0) return;
-    for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.add(id);
+    for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.eventIds.add(id);
     this.#database.transaction(
       (database) => {
         for (const id of sourceEventIds) {
@@ -2570,12 +2639,101 @@ class BotRuntimeImplementation implements BotRuntime {
     if (changed) this.#channels.admissionChanged?.(channelId, messageId);
   }
 
+  canRequestPrivateInput(sessionId: string, selected?: string): boolean {
+    const owner = this.#ownership.resolve(sessionId);
+    if (
+      this.#closed ||
+      owner?.rootRole !== 'orchestrator' ||
+      !this.#ownership.contentAvailable(sessionId)
+    )
+      return false;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (turn?.sessionId !== sessionId) return false;
+    try {
+      if (this.bindPrivateInputOrigin(sessionId, selected) !== undefined) return true;
+    } catch {
+      return false;
+    }
+    return this.#database.read((db) => {
+      const human = db.prepare(
+        `SELECT e.channel_id FROM source_events e
+         JOIN inbox_admissions a ON a.source_event_id = e.source_event_id
+         WHERE e.source_event_id = ? AND a.bot_slug = ? AND e.source_kind = 'human-message'
+           AND a.reason IN ('human-dm', 'group-mention', 'group-ordinary')`,
+      );
+      return [...turn.acceptedEventIds].some((id) => {
+        const source = human.get(id, owner.botSlug);
+        if (
+          typeof source?.channel_id !== 'string' ||
+          this.#channels.get(source.channel_id) === undefined
+        )
+          return false;
+        try {
+          requireSourceEffects(db, id, owner.botSlug);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    });
+  }
+
+  bindPrivateInputOrigin(sessionId: string, selected?: string): PrivateInputOrigin | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    if (owner?.rootRole !== 'orchestrator' || turn?.sessionId !== sessionId) {
+      if (selected !== undefined) throw new Error('Private input IM source is unavailable');
+      return undefined;
+    }
+    const ids = this.#database.read((db) => {
+      const query = db.prepare('SELECT source_kind FROM source_events WHERE source_event_id = ?');
+      return [...turn.acceptedEventIds].filter(
+        (id) => query.get(id)?.source_kind === 'bridge-message',
+      );
+    });
+    if (ids.length === 0 && selected === undefined) return undefined;
+    const id = selected ?? (ids.length === 1 ? ids[0] : undefined);
+    if (id === undefined || !ids.includes(id) || this.#externalMessaging === undefined)
+      throw new Error('Select one live accepted IM source_event_id for private input');
+    const messaging = this.#externalMessaging;
+    const bot = this.#registry.get(owner.botSlug);
+    if (bot === undefined) throw new Error('Private input IM source is unavailable');
+    const signal = messaging.inbound.sourceSignal(owner.botSlug, id);
+    const applies = () => this.#turnSources.get(owner.botSlug) === turn;
+    const current = () => {
+      const currentOwner = this.#ownership.resolve(sessionId);
+      const currentBot = this.#registry.get(owner.botSlug);
+      if (
+        this.#closed ||
+        signal.aborted ||
+        currentBot?.createdAt !== bot.createdAt ||
+        currentBot.paused === true ||
+        currentOwner?.rootRole !== 'orchestrator' ||
+        currentOwner.botSlug !== owner.botSlug ||
+        !this.#ownership.contentAvailable(sessionId) ||
+        !applies() ||
+        !turn.acceptedEventIds.has(id) ||
+        !messaging.inbound.available(owner.botSlug, id)
+      )
+        return false;
+      try {
+        this.#database.read((db) => requireSourceEffects(db, id, owner.botSlug));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (!current()) throw new Error('Private input IM source is unavailable');
+    return { sourceEventId: id, signal, applies, current };
+  }
+
   bindNativeQuestionInput(
     sessionId: string,
     channelId: string,
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
     const owner = this.#ownership.resolve(sessionId);
-    const sources = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    const sources = turn?.sessionId === sessionId ? turn.acceptedEventIds : undefined;
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
     const sourceIds = [...(sources ?? [])];
@@ -2851,6 +3009,7 @@ class BotRuntimeImplementation implements BotRuntime {
   async close(): Promise<void> {
     if (this.#closed) return;
     this.#closed = true;
+    this.#inboxHistory.clear();
     this.#approvalCapacity.close();
     this.#waitLifetime.abort(new Error('Bot Runtime closed'));
     await Promise.allSettled(
@@ -2978,7 +3137,11 @@ class BotRuntimeImplementation implements BotRuntime {
       ...reportEventIds,
       ...nativeSourceIds,
     ]);
-    this.#turnSources.set(bot.slug, turnSources);
+    this.#turnSources.set(bot.slug, {
+      sessionId: orchestrator.sessionId,
+      eventIds: turnSources,
+      acceptedEventIds: new Set(turnSources),
+    });
     const typingSources = [sourceEventId, ...inboxUnits.map((unit) => unit.sourceEventId)];
     for (const unit of inboxUnits) {
       if (!unit.assignmentSessionId) continue;
@@ -3092,6 +3255,8 @@ class BotRuntimeImplementation implements BotRuntime {
           ? {}
           : {
               externalMessaging: {
+                senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
+                directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
                 targets: async () => {
                   const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
                   return snapshot.grants
@@ -3232,6 +3397,7 @@ class BotRuntimeImplementation implements BotRuntime {
                 },
               },
             }),
+        inboxHistory: (input) => this.#inboxHistory.list(bot.slug, input),
         channels: this.#channelAccess(
           bot.slug,
           channelId,
@@ -3344,13 +3510,15 @@ class BotRuntimeImplementation implements BotRuntime {
           orchestrator.sessionId,
         ),
       });
-      if (observeMemory)
+      if (observeMemory) {
         this.#memory?.reconcileTurn({
           botSlug: bot.slug,
           sessionId: orchestrator.sessionId,
           sourceEventId,
           preserveObservation: this.#activeMemoryEvents.get(bot.slug)?.preserveObservation ?? false,
         });
+        this.#recordTurnCommits(bot.slug, sourceEventId);
+      }
       this.#markReportsHandled(memoryEventIds);
       this.#settleHarvestHandled(bot.slug, [...readAdmissions]);
       this.#notifyReadAdmissions(readAdmissions);
@@ -3368,7 +3536,8 @@ class BotRuntimeImplementation implements BotRuntime {
     } finally {
       await processing?.stop();
       if (this.#typingTurns.get(bot.slug) === processing) this.#typingTurns.delete(bot.slug);
-      if (this.#turnSources.get(bot.slug) === turnSources) this.#turnSources.delete(bot.slug);
+      if (this.#turnSources.get(bot.slug)?.eventIds === turnSources)
+        this.#turnSources.delete(bot.slug);
       if (observeMemory) this.#activeMemoryEvents.delete(bot.slug);
       this.#originalAttachments.clear(orchestrator.sessionId);
     }
@@ -4672,6 +4841,41 @@ class BotRuntimeImplementation implements BotRuntime {
     return result.message;
   }
 
+  #recordTurnCommits(botSlug: string, causeSourceEventId: string): void {
+    const memory = this.#memory;
+    if (memory?.pendingCommits === undefined || memory.advanceCommitCursor === undefined) return;
+    try {
+      const pending = memory.pendingCommits(botSlug);
+      if (pending.commits.length > 0)
+        this.#channels.appendMemoryCommits({
+          botSlug,
+          causeSourceEventId,
+          commits: pending.commits,
+        });
+      memory.advanceCommitCursor(botSlug, pending.branch, pending.head);
+    } catch (error) {
+      this.#warn?.(
+        `memory-commit-record-failed bot=${botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
+      );
+    }
+  }
+
+  #turnSourceIn(botSlug: string, channelId: string): string | undefined {
+    const sources = [...(this.#turnSources.get(botSlug)?.eventIds ?? [])];
+    if (sources.length === 0) return undefined;
+    const row = this.#database.read(
+      (database) =>
+        database
+          .prepare(
+            `SELECT source_event_id FROM source_events
+              WHERE channel_id = ? AND source_event_id IN (${sources.map(() => '?').join(', ')})
+              ORDER BY rowid DESC LIMIT 1`,
+          )
+          .get(channelId, ...sources) as { source_event_id: string } | undefined,
+    );
+    return row?.source_event_id;
+  }
+
   #botCausation(sourceEventId: string): BotMessageCausation {
     const parent = this.#database.read((database) =>
       database
@@ -4758,7 +4962,9 @@ class BotRuntimeImplementation implements BotRuntime {
       throw new Error('Bot DM sender is no longer active');
     if (this.#channels.getOrCreateDm(botSlug, sender.displayName) === undefined)
       throw new Error('Sender Human DM is unavailable');
-    const botCausation = this.#botCausation(input.sourceEventId);
+    const botCausation = this.#botCausation(
+      this.#turnSourceIn(botSlug, channel.id) ?? input.sourceEventId,
+    );
     const messageId = this.#deliveryMessageId(input.sessionId, input.deliveryKey);
     const message: ChannelMessage = {
       id: messageId,
@@ -5701,7 +5907,7 @@ class BotRuntimeImplementation implements BotRuntime {
     const legacy = this.#database.read((db) =>
       db
         .prepare(`WITH pending AS (
-      SELECT e.source_event_id, e.body, e.created_at, a.attempt_state, a.reason, a.wake_mode,
+      SELECT e.source_event_id, e.body, e.created_at, a.attempt_state, a.reason, a.wake_mode, a.source_policy_wake_mode,
         a.wake_count, a.wake_interval_ms, g.id AS grant_id,
         SUM(CASE WHEN a.reason = 'group-ordinary' THEN 1 ELSE 0 END) OVER policy AS pending_count,
         MIN(CASE WHEN a.reason = 'group-ordinary' THEN e.created_at END) OVER policy AS first_at,
@@ -5718,12 +5924,12 @@ class BotRuntimeImplementation implements BotRuntime {
         AND NOT EXISTS (SELECT 1 FROM messaging_source_paths rp WHERE rp.source_event_id = e.source_event_id)
         AND (a.reason != 'group-ordinary' OR e.channel_id IS NULL)
         AND a.attempt_state IN ('pending', 'retryable') AND a.observed_at IS NULL
-      WINDOW policy AS (PARTITION BY g.id, a.wake_policy_revision, a.source_policy_revision, a.external_default_revision, a.reason, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.thread_id ELSE '' END, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.revision ELSE 0 END)
+      WINDOW policy AS (PARTITION BY g.id, a.wake_policy_revision, a.source_policy_revision, a.external_default_revision, a.reason, a.wake_mode, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.thread_id ELSE '' END, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.revision ELSE 0 END)
     ) SELECT source_event_id, body, created_at, attempt_state FROM pending
       WHERE (reason = 'group-mention' AND wake_mode IS NOT 'silent') OR (reason = 'human-dm' AND wake_mode = 'all') OR (reason = 'group-ordinary' AND (
         wake_mode = 'all' OR (wake_mode = 'digest' AND (pending_count >= wake_count OR
           (julianday(?) - julianday(first_at)) * 86400000 >= wake_interval_ms)) OR
-        (? = 1 AND has_mention = 1 AND wake_mode IN ('digest', 'mentions'))))
+        (? = 1 AND has_mention = 1 AND (wake_mode IN ('digest', 'mentions') OR (wake_mode = 'silent' AND source_policy_wake_mode = 'context')))))
       ORDER BY CASE WHEN reason = 'group-mention' THEN 0 ELSE 1 END, created_at, source_event_id LIMIT 20
     `)
         .all(botSlug, this.#now().toISOString(), includeContext ? 1 : 0),
@@ -5773,7 +5979,7 @@ class BotRuntimeImplementation implements BotRuntime {
     rows.reverse();
     let externalCharacters = 0;
     for (const row of this.#pendingExternalRows(botSlug, true)) {
-      if (!this.#externalMessaging?.inbound.available(botSlug, row.source_event_id)) continue;
+      if (!this.#externalMessaging?.inbound.available(botSlug, row.source_event_id, true)) continue;
       const cost = row.body.length + 1600;
       if (externalCharacters + cost > 24000) break;
       externalCharacters += cost;

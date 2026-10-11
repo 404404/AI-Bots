@@ -1,6 +1,7 @@
 import { BridgeAudio } from './bridge-audio.js';
 import { BridgeFile } from './bridge-file.js';
 import { UserQuestionCard } from './user-question-card.js';
+import { PrivateInputCard } from './private-input-card.js';
 import { ToolApprovalCard } from './tool-approval-card.js';
 import { OnboardingWelcome } from './onboarding-view.js';
 import { BridgeImage } from './bridge-image.js';
@@ -98,28 +99,6 @@ function SessionFailureNotice({
           {t('failure.assignmentContext', { context: failure.context })}
         </div>
       )}
-      {needsModels ? (
-        <Button variant="outline" onClick={() => openModelsSettings()}>
-          {t('failure.openModels')}
-        </Button>
-      ) : null}
-      {failure.requestMessageId && actions && channelId ? (
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            setError(undefined);
-            void actions
-              .retryMessage(channelId, failure.requestMessageId!)
-              .catch((cause) => setError(errorMessage(cause)))
-              .finally(() => setBusy(false));
-          }}
-        >
-          {t('onboarding.retryMessage')}
-        </Button>
-      ) : null}
-      {error ? <p role="alert">{error}</p> : null}
       <details className="bh-session-failure-details">
         <summary>{t('failure.details')}</summary>
         <div>
@@ -132,6 +111,32 @@ function SessionFailureNotice({
         <div className="bh-session-failure-raw">{failure.detail}</div>
         <code>{failure.sessionId}</code>
       </details>
+      {needsModels || (failure.requestMessageId && actions && channelId) ? (
+        <div className="bh-message-card-actions">
+          {needsModels ? (
+            <Button variant="outline" onClick={() => openModelsSettings()}>
+              {t('failure.openModels')}
+            </Button>
+          ) : null}
+          {failure.requestMessageId && actions && channelId ? (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError(undefined);
+                void actions
+                  .retryMessage(channelId, failure.requestMessageId!)
+                  .catch((cause) => setError(errorMessage(cause)))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {t('onboarding.retryMessage')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {error ? <p role="alert">{error}</p> : null}
     </div>
   );
 }
@@ -216,6 +221,18 @@ export function GrantRequestCard({
       open(true);
     }
   }, [workspacePickerRequest]);
+  const chooseButton = (
+    <Button
+      variant="primary"
+      size={compact ? 'sm' : 'md'}
+      disabled={busy || opening}
+      onClick={() => open()}
+    >
+      {opening
+        ? t('grant.loading')
+        : t(compact ? 'humanInbox.grant.handle' : 'grant.requestChoose')}
+    </Button>
+  );
   return (
     <div
       className={compact ? 'bh-human-inbox-grant-action' : 'bh-grant-request-card'}
@@ -231,17 +248,10 @@ export function GrantRequestCard({
         <div className="bh-note" role="status">
           {t('grant.requestResolved')}
         </div>
+      ) : compact ? (
+        chooseButton
       ) : (
-        <Button
-          variant="primary"
-          size={compact ? 'sm' : 'md'}
-          disabled={busy || opening}
-          onClick={() => open()}
-        >
-          {opening
-            ? t('grant.loading')
-            : t(compact ? 'humanInbox.grant.handle' : 'grant.requestChoose')}
-        </Button>
+        <div className="bh-message-card-actions">{chooseButton}</div>
       )}
       {error === undefined ? null : (
         <div className="bh-error" role="alert">
@@ -348,6 +358,9 @@ export function ChannelMessageBody({
     return (
       <ToolApprovalCard message={message} actions={actions} decision={toolApprovalDecision} t={t} />
     );
+  }
+  if (message.privateInputRequest !== undefined && actions !== undefined) {
+    return <PrivateInputCard message={message} actions={actions} t={t} />;
   }
   if (message.userQuestionRequest !== undefined && actions !== undefined) {
     return (

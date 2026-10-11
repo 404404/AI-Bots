@@ -1,5 +1,5 @@
 import { createTestRosterStore } from './roster-fixture.js';
-import { createTestRegistry } from './registry-fixture.js';
+import { createTestRegistry, registryDatabase } from './registry-fixture.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,7 +24,10 @@ import { createTestOwnership } from './helpers.js';
 const roots: string[] = [];
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  for (const root of roots.splice(0)) {
+    registryDatabase(root).close();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 function setup(sourcePolicy?: BotSourcePolicyStore) {
@@ -40,7 +43,7 @@ function setup(sourcePolicy?: BotSourcePolicyStore) {
     states: createBotStateTracker(),
     channels,
     ownership: createTestOwnership(),
-    roster: createTestRosterStore(),
+    roster: createTestRosterStore({ database: registryDatabase(root) }),
     createBotId: () => 'ada',
     ...(sourcePolicy === undefined ? {} : { sourcePolicy }),
   });
@@ -75,6 +78,12 @@ describe('bridge typert service', () => {
     const { service } = setup();
 
     expect(remoteMethods(service).map((marker) => marker.exportName ?? marker.method)).toEqual([
+      'privateInputStatus',
+      'privateInputSubmit',
+      'privateInputCancel',
+      'privateAccountStatus',
+      'privateInputReplace',
+      'privateAccountRevoke',
       'messagingDefaults',
       'messagingDefaultsSet',
       'channelBridges',
@@ -91,6 +100,8 @@ describe('bridge typert service', () => {
       'approvalTest',
       'approvalRetry',
       'pairingReview',
+      'senderAccess',
+      'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
       'messagingAuthorize',
@@ -148,6 +159,7 @@ describe('bridge typert service', () => {
       'channelMarkAllRead',
       'channelAllBotPreview',
       'channelSend',
+      'channelSendStatus',
       'botAttention',
       'botSourcePolicies',
       'botSourcePolicySet',
@@ -192,6 +204,7 @@ describe('bridge typert service', () => {
       'memorySave',
       'memoryRepair',
       'profileActivity',
+      'profileSessionUsage',
       'overviewMemory',
       'overviewUsage',
       'profileUsage',

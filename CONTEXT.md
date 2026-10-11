@@ -262,7 +262,15 @@ _Avoid_: Browser Access, consent dialog, per-action approval
 
 **Browser Pause**:
 A Human pause on one PersonaBot's tabs that stops that PersonaBot's browser actions and disables model-facing screenshots for its duration; the Human can always operate the local Bot Browser window directly. Page observation stays available while paused; Resume restores actions and model screenshots, and the Bot re-observes before acting. This is independent of Browser Access and Browser Authorization.
-_Avoid_: Browser Takeover, Computer Takeover, handoff, screen sharing, access gate
+_Avoid_: Computer Takeover, handoff, screen sharing, access gate
+
+**Browser Takeover**:
+A Human explicitly taking control of one PersonaBot's browser viewport through the viewer: it pauses that PersonaBot's actions and enables Human input for its duration. Releasing resumes the Bot unless a handoff link is still pending. It is narrower than Browser Pause (control, not just a stop) and narrower than Computer Takeover (one Bot's viewport, never the whole machine).
+_Avoid_: Browser Pause, Computer Takeover, handoff, screen sharing
+
+**Browser Watch**:
+Opening a PersonaBot's browser viewer without pausing it: the Human observes the live viewport while the Bot keeps acting. Watching never interrupts; only Browser Takeover pauses.
+_Avoid_: Browser Pause, Browser Takeover, screen sharing
 
 **Browser Audit**:
 The durable, redacted record of Bot Browser observations and actions attributed to the PersonaBot and session that performed them; it never contains typed text, page contents, or screenshots.
@@ -463,12 +471,40 @@ A Channel-owned, one-way connection that places every message of one external co
 _Avoid_: sync, mirror, Bridge (for this record)
 
 **App**:
-The UI name (应用) for one authenticated Provider account, such as a Lark app, a Slack app, a Discord bot or a paired WeChat Bot. An App is bound to at most one PersonaBot; a PersonaBot may bind several Apps, including several of one platform. Settings → IM apps lists every App and the Bot that uses it.
+The UI name (应用) for one authenticated Provider account, such as a Lark app, a Slack app, a Discord bot or a paired WeChat Bot. An App is bound to at most one PersonaBot; a PersonaBot may bind several Apps, including several of one platform. Bot Settings → IM apps lists every App and the PersonaBot that uses it.
 _Avoid_: IM account (in UI copy), connector, integration
 
 **Default traffic**:
 The messages an enabled external identity Binding admits without any per-conversation consent: direct messages to the App and group messages the qualified Provider reports as mentioning it. Where the App can be reached is decided on the platform; ordinary group text, followed threads and Channel syncs stay explicit.
 _Avoid_: all messages, authorized traffic, open intake
+
+**External User Role**:
+A PersonaBot's policy for a paired external IM person, containing natural-language behavior permissions and explicit Host-checked management capabilities, which may be empty. The behavior policy guides the model through an on-demand current-permission lookup, not automatic per-message role injection; ordinary chatting and management authority do not implicitly grant one another.
+_Avoid_: native DSH role, resource ACL, administrator (for every role)
+
+**Chat pairing**:
+A Human-reviewed association of one external person with a Role for one PersonaBot and its current authenticated App Binding. It is reusable across allowed conversations in that scope, with a fresh question required after approval; it does not transfer to another Bot, App, platform or replacement Binding.
+_Avoid_: conversation membership, account-wide administrator, saved pending instruction
+
+**Pairing Reviewer**:
+A currently paired external person with explicit authority to review ordinary Chat pairing requests in the same PersonaBot and App Binding. A visible group request is not public approval authority; reviewing a pairing does not grant permission to answer Questions or approve native execution.
+_Avoid_: every group member, native execution approver, automatic first administrator
+
+**Management Delegation Ceiling**:
+The current explicit set of management capabilities a Pairing Reviewer may grant through a Role, including that Role's onward delegation. It is resolved separately from capabilities the reviewer may use, from current Role, authorization groups and person exceptions; explicit delegation Deny takes precedence.
+_Avoid_: own permissions imply delegation, resource ACL, cross-App administrator
+
+**External Authorization Group**:
+A continuing source of explicit management Allow/Deny and reusable behavior permission items for currently paired external people in one PersonaBot and App Binding; a person can belong to several groups while retaining one primary behavior Role. Membership does not grant chat eligibility and does not survive revocation and a new pairing.
+_Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBAC
+
+**Behavior permission item**:
+A named, reusable description of an external person's permitted or prohibited behavior, shared across a PersonaBot's authorization groups. Explicit Deny of the same item wins over Allow; the resulting policy guides the model within the primary Role's constraints and is not a resource ACL or management capability.
+_Avoid_: native permission, copied Role, enforced Shell policy, semantic conflict proof
+
+**Person permission exception**:
+An explicit management Allow or Deny attached to one current Chat pairing, alongside its Role and group contributions; any applicable explicit Deny takes precedence. It never grants authenticated Web Human provenance.
+_Avoid_: Super Admin pairing, behavior Role override, permanent platform-user grant
 
 **Conversation entry**:
 The per-conversation anchor of one Binding's traffic, stored as a Messaging Grant. An _implicit_ entry is recorded on the first admitted default-traffic message or first proactive post; an _explicit_ entry comes from a saved send target. A _held_ entry waits for the Human (Ask me first, or a bound was reached) and keeps only metadata. A _blocked_ conversation has a durable block keyed by Bot, App fingerprint, kind and ID that refuses it until **Allow again**. Muting an entry keeps admission but never wakes the Bot.
@@ -485,6 +521,14 @@ _Avoid_: queue, mailbox, backlog
 **Inbox Admission**:
 The durable relationship saying why a Source Event is eligible for one PersonaBot's attention, together with that Bot's read, defer, or ignore facts. It references the Source Event and never copies its content.
 _Avoid_: inbox item body, delivery job, message copy
+
+**Bot Self-Record**:
+A Source Event about a PersonaBot's own Memory commit or BotHarness-tool action. It appears as a Channel Notice in the Channel of the Source Event that caused it, and is admitted to that PersonaBot's Bot Inbox already handled, so the Bot can find what it did and why without it ever becoming attention or a wake (ADR-0154).
+_Avoid_: activity log, tool trace
+
+**Channel Notice**:
+A system-presented line in a Channel's history that records an effect, such as a Memory commit or a Bot's action, rather than something a participant said. It has no read or unread state and never wakes or notifies anyone (ADR-0154).
+_Avoid_: message, notification, system message (bare)
 
 **Inbox Trigger**:
 A PersonaBot-owned durable Host rule that matches Source Events and creates Inbox Admissions, including the admission reason, priority, and Wake Policy selection. The PersonaBot shapes its own rules and the Human may inspect, override, or freeze them; templates may supply initial values, a Bridge never owns attention or wake behavior, and safety gates are never part of a rule.
@@ -766,16 +810,20 @@ _Avoid_: widget, tile, gadget, Channel sidebar entry
 The RPC surface through which the Web Client reads PersonaBots and invokes separate mutation commands without sharing Host services.
 _Avoid_: remote, IPC, gateway
 
-**Settings UI**:
-The in-harness DSH settings surface for setup, global/plugin settings, PersonaBot administration, Memory diagnostics, and links into Memory. Ordinary Memory use belongs to the Channel sidebar.
-_Avoid_: admin panel, dashboard, web console
+**Bot Settings**:
+The BotHarness-owned modal (Bot 设置) for profile-wide BotHarness configuration, organised into Bot Settings sections in its own sidebar. Configuration of one PersonaBot or one Channel never lives here; that is a Channel sidebar entry. DSH's own settings modal is called DSH settings; its Bot 设置 item only points into Bot Settings, while App credentials remain in DSH settings.
+_Avoid_: Settings UI, settings page, preferences, admin panel, dashboard, web console
+
+**Bot Settings section**:
+One sidebar destination of Bot Settings: a stable id, label, order, and a renderer for one coherent group of profile-wide settings.
+_Avoid_: tab, page, settings item, Channel sidebar entry
 
 **Access policy**:
 The per-PersonaBot list of users and chats allowed to reach it.
 _Avoid_: whitelist, permissions, ACL
 
 **Credential reference**:
-A pointer to a Feishu App Secret held by the DSH credentials service; the secret itself never reaches config, repo, or logs.
+An opaque pointer to confidential information held by the Host's DSH Credentials Service. The owning application defines its authorization scope: an IM application for existing app credentials, or a PersonaBot and account for private input. Agents receive references and configuration state; qualified consumers resolve original values inside the Host without returning them to Chat or the model (Spec #1378).
 _Avoid_: secret, API key, token
 
 ### Telemetry and campaigns

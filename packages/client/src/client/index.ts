@@ -1,4 +1,3 @@
-import { DefaultModelSettings } from './onboarding-view.js';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client';
@@ -13,6 +12,8 @@ import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { BOT_MODE_NAMESPACE, type BotModeSettings } from '../bot-mode-settings.js';
+import { privateInputLocator } from '../../../core/src/credentials/web-locator.js';
+import { watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
 import { createActions, type BridgeActions } from './actions.js';
 import { ProviderAppSetup } from './provider-app-setup.js';
@@ -20,18 +21,30 @@ import { BotModePrefs, botModePrefsFace } from './bot-mode-prefs.js';
 import { subscribeBotColorScheme, readBotColorScheme } from './bot-color-scheme.js';
 import { botIconMarkup } from './bot-icon.js';
 import { installBotNavIcon } from './bot-icon-nav.js';
-import { openBotSettings } from './bot-settings-open.js';
-import { MessagingDefaultsSettings } from './messaging-defaults-settings.js';
-import { HumanNameSettings } from './human-name-settings.js';
-import { TelemetrySettings } from './telemetry-settings.js';
-import { GitSettings } from './git-settings.js';
-import { ProfileBackupSettings } from './profile-backup.js';
-import { BotSettingsSection } from './bot-settings-section.js';
+import {
+  BOT_SETTINGS_SECTIONS,
+  BotSettings,
+  BotSettingsView,
+  botSettingsSectionSource,
+} from './bot-settings.js';
+import { DshBotSettingsItem } from './dsh-bot-settings-item.js';
+import { createImApps, ImAppsSection } from './im-apps-section.js';
+import {
+  AboutSection,
+  AdvancedSection,
+  CompanionsSection,
+  DataPrivacySection,
+  GeneralSection,
+  MessagingSection,
+  ModelsSection,
+} from './bot-settings-sections.js';
 import { ReleaseNotesController } from './release-notes.js';
-import { ReleaseSettings } from './release-notes-view.js';
 import { TelemetryNoticeController } from './telemetry-notice.js';
 import './bot-settings-slot.js';
-import { BotMain, BotPanel } from './bot-main.js';
+import { BotMain } from './bot-main.js';
+import { MobileBotPanel } from './mobile-bot-panel.js';
+import { mobileBotViewport, subscribeMobileBotViewport } from './mobile-viewport.js';
+import { clearConversationDrafts } from './conversation-draft.js';
 import { BotSidebar, createBotPanelEntry } from './bot-sidebar.js';
 import { createChannelSidebarBuiltins } from './channel-sidebar-builtins.js';
 import { webBotModeShortcut, webShortcutBlocked } from './channel-shortcuts.js';
@@ -65,7 +78,7 @@ import { migrateLegacyRoster } from './roster-migration.js';
 import { CSS } from './styles.js';
 import { store } from './store.js';
 import { WindowCompanions } from './window-companions.js';
-import { WindowCompanionsView, CompanionSettings } from './window-companions-view.js';
+import { WindowCompanionsView } from './window-companions-view.js';
 
 export const name = 'botharness-client';
 
@@ -105,6 +118,7 @@ function installStyles(): () => void {
 }
 
 export function apply(ctx: ClientContext): void {
+  ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
   const hmrView =
     typeof window === 'undefined'
@@ -186,6 +200,7 @@ export function apply(ctx: ClientContext): void {
     };
   }, 'botharness: independent Window Companion owner');
   const prefs = new BotModePrefs(storage);
+  const botSettings = new BotSettings();
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       {
@@ -208,15 +223,30 @@ export function apply(ctx: ClientContext): void {
             ctx.layout.selectPanel(PANEL_ID);
             void actions.openActivityCenter();
           },
-          openSettings: () => openBotSettings(() => [t('settings.nav')]),
+          openSettings: () => {
+            botSettings.open(BOT_SETTINGS_SECTIONS.companions);
+          },
         }),
       },
       WindowCompanionsView,
     ),
   );
+  const botSettingsSections = botSettingsSectionSource(ctx);
+  ctx.slots.inject('shell.overlay', () =>
+    ctx.slots.register(
+      {
+        name: 'shell.overlay',
+        id: 'botharness-bot-settings',
+        locale: LOCALE_NS,
+        inject: () => ({ botSettings, sections: botSettingsSections }),
+        children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
+      },
+      BotSettingsView,
+    ),
+  );
   const releaseNotes = new ReleaseNotesController(call, storage);
   const telemetryNotice = new TelemetryNoticeController(call, storage, () => {
-    openBotSettings(() => [t('settings.nav')]);
+    botSettings.open(BOT_SETTINGS_SECTIONS.dataPrivacy);
   });
   const lastView =
     typeof window === 'undefined'
@@ -367,94 +397,118 @@ export function apply(ctx: ClientContext): void {
         };
       },
     });
-    settingsCtx.slots.inject('botharness.settings.item', () =>
+    settingsCtx.slots.inject('botharness.settings.section', () =>
       settingsCtx.slots.register(
         {
-          name: 'botharness.settings.item',
-          id: 'default-model',
-          order: -5,
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.general,
+          order: 0,
+          label: () => t('botSettings.section.general'),
           locale: LOCALE_NS,
-          inject: () => ({ actions }),
+          inject: () => ({
+            ...botModePrefsFace(prefs),
+            call,
+            store,
+            onSaved: () => actions.refreshRoster(),
+            actions,
+            closeBotSettings: () => {
+              botSettings.close();
+            },
+          }),
         },
-        DefaultModelSettings,
+        GeneralSection,
       ),
     );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
+    settingsCtx.slots.inject('botharness.settings.section', () =>
       settingsCtx.slots.register(
         {
-          name: 'botharness.settings.item',
-          id: 'companions',
-          order: 15,
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.models,
+          order: 10,
+          label: () => t('botSettings.section.models'),
+          locale: LOCALE_NS,
+          inject: () => ({ ...botModePrefsFace(prefs), actions }),
+        },
+        ModelsSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.messaging,
+          order: 20,
+          label: () => t('botSettings.section.messaging'),
+          locale: LOCALE_NS,
+          inject: () => ({ ...botModePrefsFace(prefs), call }),
+        },
+        MessagingSection,
+      ),
+    );
+    const imApps = createImApps({ call, botSettings, actions });
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.imApps,
+          order: 25,
+          label: () => t('botSettings.section.imApps'),
+          locale: LOCALE_NS,
+          inject: () => ({ imApps, store }),
+        },
+        ImAppsSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.companions,
+          order: 40,
+          label: () => t('botSettings.section.companions'),
           locale: LOCALE_NS,
           inject: () => ({ companion }),
         },
-        CompanionSettings,
+        CompanionsSection,
       ),
     );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
+    settingsCtx.slots.inject('botharness.settings.section', () =>
       settingsCtx.slots.register(
         {
-          name: 'botharness.settings.item',
-          id: 'release',
-          order: -20,
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.dataPrivacy,
+          order: 50,
+          label: () => t('botSettings.section.dataPrivacy'),
+          locale: LOCALE_NS,
+          inject: () => ({ call }),
+        },
+        DataPrivacySection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.advanced,
+          order: 60,
+          label: () => t('botSettings.section.advanced'),
+          locale: LOCALE_NS,
+          inject: () => ({ ...botModePrefsFace(prefs), call }),
+        },
+        AdvancedSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.about,
+          order: 70,
+          label: () => t('botSettings.section.about'),
           locale: LOCALE_NS,
           inject: () => ({ releaseNotes }),
         },
-        ReleaseSettings,
-      ),
-    );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
-      settingsCtx.slots.register(
-        {
-          name: 'botharness.settings.item',
-          id: 'human-name',
-          order: -10,
-          locale: LOCALE_NS,
-          inject: () => ({ call, store, onSaved: () => actions.refreshRoster() }),
-        },
-        HumanNameSettings,
-      ),
-    );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
-      settingsCtx.slots.register(
-        {
-          name: 'botharness.settings.item',
-          id: 'messaging-defaults',
-          order: 10,
-          locale: LOCALE_NS,
-          inject: () => ({ call, store, onSaved: () => actions.refreshRoster() }),
-        },
-        MessagingDefaultsSettings,
-      ),
-    );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
-      settingsCtx.slots.register(
-        {
-          name: 'botharness.settings.item',
-          id: 'telemetry',
-          order: 20,
-          locale: LOCALE_NS,
-          inject: () => ({ call }),
-        },
-        TelemetrySettings,
-      ),
-    );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
-      settingsCtx.slots.register(
-        {
-          name: 'botharness.settings.item',
-          id: 'git',
-          order: 30,
-          locale: LOCALE_NS,
-          inject: () => ({ call }),
-        },
-        GitSettings,
-      ),
-    );
-    settingsCtx.slots.inject('botharness.settings.item', () =>
-      settingsCtx.slots.register(
-        { name: 'botharness.settings.item', id: 'profile-backup', order: 35, locale: LOCALE_NS },
-        ProfileBackupSettings,
+        AboutSection,
       ),
     );
     settingsCtx.slots.inject('settings.section', () =>
@@ -465,10 +519,9 @@ export function apply(ctx: ClientContext): void {
           order: 25,
           label: () => t('settings.nav'),
           locale: LOCALE_NS,
-          inject: () => botModePrefsFace(prefs),
-          children: { 'botharness.settings.item': { kind: 'list', scope: 'root' } },
+          inject: () => ({ openBotSettings: () => botSettings.open() }),
         },
-        BotSettingsSection,
+        DshBotSettingsItem,
       ),
     );
     return () => {
@@ -488,7 +541,7 @@ export function apply(ctx: ClientContext): void {
         inject: () => ({
           ...botModePrefsFace(prefs),
           openSettings: () => {
-            openBotSettings(() => [t('settings.nav')]);
+            botSettings.open();
           },
         }),
       },
@@ -521,9 +574,12 @@ export function apply(ctx: ClientContext): void {
           prefs,
           releaseNotes,
           telemetryNotice,
+          ...botModePrefsFace(prefs),
+          exitBotMode: () => ctx.layout.selectPanel(null),
+          openBotSettings: () => botSettings.open(),
         }),
       },
-      BotPanel,
+      MobileBotPanel,
     );
     if (restoreBotMode) {
       restoreBotMode = false;
@@ -602,6 +658,10 @@ export function apply(ctx: ClientContext): void {
         BotSidebar,
       ),
     store,
+    {
+      enabled: () => !mobileBotViewport(),
+      subscribe: subscribeMobileBotViewport,
+    },
   );
   registerModeShadow(
     ctx,
@@ -662,7 +722,21 @@ export function apply(ctx: ClientContext): void {
 
   const viewToRestore =
     hmrView ?? (lastView?.mode === 'bot' ? { selection: lastView.selection } : undefined);
-  if (viewToRestore !== undefined) {
+  const privateLocator =
+    typeof window === 'undefined' ? undefined : privateInputLocator(window.location.hash);
+  if (privateLocator !== undefined) {
+    ctx.effect(
+      () =>
+        watchPrivateInputNavigation(store, privateLocator, (channelId, messageId) => {
+          ctx.layout.selectPanel(PANEL_ID);
+          void actions.openChannelAtMessage(channelId, messageId).catch(() => {
+            ctx.logger.warn('botharness: private input card locator unavailable');
+          });
+        }),
+      'botharness: private input Chat locator',
+    );
+  }
+  if (privateLocator === undefined && viewToRestore !== undefined) {
     ctx.effect(() => {
       let restored = false;
       const restore = (): void => {

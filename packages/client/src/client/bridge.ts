@@ -2,6 +2,7 @@ import { isPixelBannerRecipe, type PixelBannerRecipe } from '@botharness/pixel-b
 import { parseToolApprovalActor } from '../../../core/src/workspaces/tool-approval-actor.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { PairingRequest, PairingReviewInput } from '../../../core/src/messaging/pairing.js';
+import type { SenderAccessInput } from '../../../core/src/messaging/sender-access.js';
 import { parsePublicAttention } from './activity-attention.js';
 import {
   isAvatarAppearance,
@@ -47,6 +48,8 @@ import {
 } from '../../../core/src/marketplace/client.js';
 import { parseChallenge, type AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
+import type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
+export type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
 import type { UsageOverviewPeriod } from '../../../core/src/usage/overview.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
@@ -62,6 +65,7 @@ import type {
 import type { HumanAssignmentContext } from '../../../core/src/runtime/assignment-human-context.js';
 export type { HumanAssignmentContext } from '../../../core/src/runtime/assignment-human-context.js';
 import type {
+  MessagingApp,
   MessagingSnapshot,
   MessagingGrant,
   OutboxIntent,
@@ -1055,8 +1059,54 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       displayName: departure['displayName'],
       departureType: departure['departureType'] === 'removed' ? 'removed' : 'left',
     };
+  } else if (record['memoryCommit'] !== undefined) {
+    if (author.kind !== 'system') return undefined;
   } else if (author.kind === 'system' && asRecord(record['onboardingWelcome'])?.['version'] !== 1) {
     return undefined;
+  }
+  let memoryCommit: ChannelMessage['memoryCommit'];
+  if (record['memoryCommit'] !== undefined) {
+    const commit = asRecord(record['memoryCommit']);
+    const count = (value: unknown): number | null | undefined =>
+      value === null
+        ? null
+        : typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
+          ? value
+          : undefined;
+    const files = Array.isArray(commit?.['files'])
+      ? commit['files'].flatMap((item: unknown) => {
+          const file = asRecord(item);
+          const added = count(file?.['added']);
+          const deleted = count(file?.['deleted']);
+          return file !== undefined &&
+            typeof file['path'] === 'string' &&
+            added !== undefined &&
+            deleted !== undefined
+            ? [{ path: file['path'], added, deleted }]
+            : [];
+        })
+      : undefined;
+    if (
+      commit === undefined ||
+      typeof commit['botSlug'] !== 'string' ||
+      typeof commit['sha'] !== 'string' ||
+      !/^[0-9a-f]{40}$/u.test(commit['sha']) ||
+      typeof commit['subject'] !== 'string' ||
+      typeof commit['authorName'] !== 'string' ||
+      typeof commit['authoredAt'] !== 'string' ||
+      files === undefined ||
+      count(commit['moreFiles']) == null
+    )
+      return undefined;
+    memoryCommit = {
+      botSlug: commit['botSlug'],
+      sha: commit['sha'],
+      subject: commit['subject'],
+      authorName: commit['authorName'],
+      authoredAt: commit['authoredAt'],
+      files,
+      moreFiles: commit['moreFiles'] as number,
+    };
   }
   let botDmAction: ChannelMessage['botDmAction'];
   if (record['botDmAction'] !== undefined) {
@@ -1389,10 +1439,14 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
     ...(assignmentReply === undefined ? {} : { assignmentReply }),
     ...(botDmAction === undefined ? {} : { botDmAction }),
+    ...(memoryCommit === undefined ? {} : { memoryCommit }),
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
     ...(sessionFailure === undefined ? {} : { sessionFailure }),
     ...(toolApprovalDecision === undefined ? {} : { toolApprovalDecision }),
+    ...(record['privateInputRequest'] === undefined
+      ? {}
+      : { privateInputRequest: parsePrivateInputCard(record['privateInputRequest']) }),
     ...(userQuestionRequest === undefined ? {} : { userQuestionRequest }),
     ...(userQuestionResolution === undefined ? {} : { userQuestionResolution }),
     ...(attachments === undefined ? {} : { attachments: attachments as ChannelAttachmentRef[] }),
@@ -1411,6 +1465,59 @@ export function parseChannelMessages(value: unknown): ChannelMessage[] {
     const message = parseChannelMessage(entry);
     return message === undefined ? [] : [message];
   });
+}
+
+function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['privateInputRequest']> {
+  const record = asRecord(value);
+  if (
+    record === undefined ||
+    Object.keys(record).some(
+      (key) =>
+        !['sessionId', 'account', 'purpose', 'fields', 'expiresAt', 'replacesMessageId'].includes(
+          key,
+        ),
+    ) ||
+    (record['sessionId'] === undefined
+      ? typeof record['replacesMessageId'] !== 'string'
+      : typeof record['sessionId'] !== 'string') ||
+    (record['replacesMessageId'] !== undefined &&
+      (typeof record['replacesMessageId'] !== 'string' ||
+        !/^[0-9a-f-]{36}$/.test(record['replacesMessageId']))) ||
+    typeof record['account'] !== 'string' ||
+    typeof record['purpose'] !== 'string' ||
+    (record['expiresAt'] !== undefined &&
+      (typeof record['expiresAt'] !== 'string' ||
+        !Number.isFinite(Date.parse(record['expiresAt'])))) ||
+    !Array.isArray(record['fields']) ||
+    record['fields'].length < 1 ||
+    record['fields'].length > 8
+  )
+    throw new Error('Invalid private input card');
+  const fields = record['fields'].map((value: unknown) => {
+    const field = asRecord(value);
+    if (
+      field === undefined ||
+      Object.keys(field).some((key) => !['id', 'label', 'required'].includes(key)) ||
+      typeof field['id'] !== 'string' ||
+      !/^[a-z][a-z0-9_]{0,47}$/.test(field['id']) ||
+      typeof field['label'] !== 'string' ||
+      typeof field['required'] !== 'boolean'
+    )
+      throw new Error('Invalid private input field');
+    return { id: field['id'], label: field['label'], required: field['required'] };
+  });
+  if (new Set(fields.map((field) => field.id)).size !== fields.length)
+    throw new Error('Invalid private input fields');
+  return {
+    ...(typeof record['sessionId'] === 'string' ? { sessionId: record['sessionId'] } : {}),
+    ...(typeof record['replacesMessageId'] === 'string'
+      ? { replacesMessageId: record['replacesMessageId'] }
+      : {}),
+    account: record['account'],
+    purpose: record['purpose'],
+    fields,
+    ...(typeof record['expiresAt'] === 'string' ? { expiresAt: record['expiresAt'] } : {}),
+  };
 }
 
 export interface SessionBotOwner {
@@ -2750,6 +2857,7 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
     if (
       item['kind'] !== 'group-join-request' &&
       item['kind'] !== 'user-question' &&
+      item['kind'] !== 'private-input' &&
       item['kind'] !== 'tool-approval' &&
       item['kind'] !== 'workspace-grant-request' &&
       item['kind'] !== 'bot-dm-message' &&
@@ -2787,6 +2895,13 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
       return undefined;
     if (item['requestId'] !== undefined && typeof item['requestId'] !== 'string') return undefined;
     if (item['messageId'] !== undefined && typeof item['messageId'] !== 'string') return undefined;
+    if (
+      item['kind'] === 'private-input' &&
+      (item['category'] !== 'action' ||
+        typeof item['messageId'] !== 'string' ||
+        typeof item['sourceEventId'] !== 'string')
+    )
+      return undefined;
     if (
       item['kind'] === 'channel-unread' &&
       (!Number.isSafeInteger(item['unreadCount']) ||
@@ -3024,6 +3139,7 @@ export interface MemoryGitGraph {
 
 export interface MemoryGitCommitDiff {
   sha: string;
+  subject?: string;
   files: { path: string; status: string }[];
   diff: string;
 }
@@ -3392,6 +3508,39 @@ export async function loadProfileUsage(
   )
     throw new Error('invalid Profile usage');
   return value as unknown as UsageQueryResult;
+}
+
+export async function loadProfileSessionUsage(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ProfileSessionUsage> {
+  const value = asRecord(await unwrap(call, 'profileSessionUsage', { channelId }));
+  if (
+    value === undefined ||
+    typeof value['slug'] !== 'string' ||
+    value['weeks'] !== 26 ||
+    typeof value['since'] !== 'string' ||
+    !Number.isFinite(Date.parse(value['since'])) ||
+    !Array.isArray(value['rows']) ||
+    value['rows'].length > 6 ||
+    !value['rows'].every((item) => {
+      const row = asRecord(item);
+      return (
+        row !== undefined &&
+        typeof row['sessionId'] === 'string' &&
+        ['orchestrator', 'assignment'].includes(String(row['role'])) &&
+        typeof row['label'] === 'string' &&
+        row['label'].length <= 160 &&
+        typeof row['updatedAt'] === 'string' &&
+        Number.isFinite(Date.parse(row['updatedAt'])) &&
+        ['ready', 'unknown', 'partial', 'unavailable'].includes(String(row['status'])) &&
+        (row['totalTokens'] === null ||
+          (Number.isSafeInteger(row['totalTokens']) && Number(row['totalTokens']) >= 0))
+      );
+    })
+  )
+    throw new Error('invalid Profile Session usage');
+  return value as unknown as ProfileSessionUsage;
 }
 
 export interface ProfileActivityWindow {
@@ -3793,6 +3942,45 @@ export async function reviewPairing(
     throw new BridgeCallError('invalid-response', 'Invalid pairing review');
   return pairing as unknown as PairingRequest;
 }
+export async function changeExternalSenderAccess(
+  call: BridgeCall,
+  slug: string,
+  input: SenderAccessInput,
+): Promise<void> {
+  await unwrap(call, 'senderAccess', { slug, input });
+}
+export type { MessagingApp } from '../../../core/src/messaging/outbound.js';
+
+export async function loadMessagingApps(
+  call: BridgeCall,
+): Promise<{ apps: MessagingApp[]; setups: NonNullable<MessagingSnapshot['appSetups']> }> {
+  const record = asRecord(await unwrap(call, 'messagingApps', {}));
+  const apps = record?.['apps'];
+  const setups = record?.['setups'];
+  if (
+    !Array.isArray(apps) ||
+    !Array.isArray(setups) ||
+    !setups.every((value) => typeof asRecord(value)?.['providerId'] === 'string') ||
+    !apps.every((value) => {
+      const app = asRecord(value);
+      return (
+        typeof app?.['providerId'] === 'string' &&
+        typeof app['ref'] === 'string' &&
+        typeof app['platform'] === 'string' &&
+        typeof app['name'] === 'string' &&
+        typeof app['fingerprint'] === 'string' &&
+        typeof app['connected'] === 'boolean' &&
+        (app['boundBotSlug'] === undefined || typeof app['boundBotSlug'] === 'string')
+      );
+    })
+  )
+    throw new BridgeCallError('invalid-response', 'Invalid messaging apps');
+  return {
+    apps: apps as MessagingApp[],
+    setups: setups as NonNullable<MessagingSnapshot['appSetups']>,
+  };
+}
+
 export async function loadMessagingSnapshot(
   call: BridgeCall,
   slug: string,

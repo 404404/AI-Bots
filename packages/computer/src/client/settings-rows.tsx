@@ -14,7 +14,7 @@ import {
   Menu,
   Switch,
 } from '@deepseek-ai/dsh-client-ui-primitives';
-import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
+import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
 
 import {
   COMPUTER_TARGET_FIELD,
@@ -334,9 +334,7 @@ export function ComputerSettingsRows({
   sendUploadBytes,
   listArchives,
   hostExportDir,
-}: PropsRuntime<'botharness.settings.item'> &
-  PropsLocale<'botharness-computer'> &
-  InjectFace<ComputerSettingsFace>): ReactElement {
+}: PropsLocale<'botharness-computer'> & InjectFace<ComputerSettingsFace>): ReactElement {
   const snapshot = useSyncExternalStore(prefs.subscribe, prefs.getSnapshot);
   const [targetOpen, setTargetOpen] = useState(false);
   const [targetError, setTargetError] = useState<string>();
@@ -540,14 +538,22 @@ export function ComputerSettingsRows({
   }, [uploadName, requestUpload, sendUploadBytes, importArchive, t]);
 
   const openImport = useCallback(() => {
+    if (importOpen) {
+      setImportOpen(false);
+      return;
+    }
     void listArchives()
       .then((files) => {
         setArchives(files);
-        setImportOpen(true);
-        if (files.length === 0) setTransferNote(t('rows.noArchives'));
+        if (files.length === 0) {
+          setImportOpen(false);
+          setTransferNote(t('rows.noArchives'));
+        } else {
+          setImportOpen(true);
+        }
       })
       .catch((error: unknown) => setTransferNote(String(error)));
-  }, [listArchives, t]);
+  }, [importOpen, listArchives, t]);
 
   const openDir = useCallback(() => {
     void openDirectory(exportDir).catch((error: unknown) => setDirNote(String(error)));
@@ -560,7 +566,6 @@ export function ComputerSettingsRows({
       <span hidden ref={hostDirResource} />
       {busy === undefined ? null : <span hidden ref={busyResource} />}
       <div className="bh-settings-section-head">
-        <div className="bh-settings-section-title">{t('section.title')}</div>
         <div className="bh-settings-section-desc">{t('section.description')}</div>
       </div>
       <Row title={t('rows.target.title')} description={t('rows.target.description')}>

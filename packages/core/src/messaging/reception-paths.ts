@@ -180,7 +180,7 @@ export function pendingReceptionPaths(
           now.getTime() - Date.parse(first.created_at) >= path.intervalMs)) ||
       (context &&
         mentions.has(JSON.stringify([path.routeId, path.threadId ?? ''])) &&
-        (path.mode === 'mentions' || path.mode === 'digest'));
+        (path.mode === 'mentions' || path.mode === 'digest' || path.mode === 'context'));
     if (ready) for (const row of candidates) selected.add(row.source_event_id);
   }
   return { ready: rows.filter((row) => selected.has(row.source_event_id)), digests };

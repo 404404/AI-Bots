@@ -1,0 +1,29 @@
+name: Scoped improvement / 明确范围的改进
+description: Track work with a clear outcome; explore unscoped ideas in Discussions / 跟踪已明确的工作。
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Explore open-ended proposals in Ideas. This form does not imply acceptance or scheduling. Do not post sensitive information.
+        尚未明确的想法先去 Ideas；此表单不代表已接受或排期。不要公开敏感信息。
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and context / 问题与背景
+      description: Include the discussion link if one exists / 有相关讨论时请附链接。
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Smallest useful scope / 最小有用范围
+      description: Describe what is included and excluded / 说明做什么、不做什么。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How to verify / 如何验收
+      description: Describe the observable result and a practical check / 描述可观察结果与验证方式。
+    validations:
+      required: true

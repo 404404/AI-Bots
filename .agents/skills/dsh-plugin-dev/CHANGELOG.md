@@ -10,6 +10,24 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded audited Windows-to-Linux Profile path migration and non-root workspace permission prerequisites in the [local development guide](../dsh-dev/SKILL.md), verified against pinned DSH `0.2.0-rc.1` and the real isolated Linux Host; DSH/Cordis Context and Skill behavior remain unchanged ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [qualification](../../../docs/research/2026-10-12-private-input-linux-qualification.md)).
+
+- Documented the qualified private-reference MCP consumer, native adapter/SDK boundary and trusted-server limits; DSH/Cordis Context and Skill behavior remain unchanged ([#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384), [guide](../../../docs/dev/guides/private-input-mcp.md)).
+
+- Documented Owner CLI private-input lifecycle parity using the existing authenticated Host carrier; DSH/Cordis Context and Skill behavior remain unchanged ([#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416), [guide](../../../docs/dev/guides/private-input-cli.md)).
+
+- Recorded actual model-route matching, Request body overrides and Windows probe imports in the [local development guide](../dsh-dev/SKILL.md), verified against pinned RC1 Go requests and passive-probe regressions; DSH/Cordis Context is unchanged ([#1383](https://github.com/BotHarness/DeepSeekBot/issues/1383)).
+
+- Documented post-commit credential response failures and startup-recovery ordering in the [local development guide](../dsh-dev/SKILL.md), verified against the pinned RC1 native Provider and private-account regression tests; DSH/Cordis Context is unchanged ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
+
+- Recorded fresh RC1 Profile initialization, native credential-record object ownership and recovery quiescence in the [local development guide](../dsh-dev/SKILL.md), verified with the pinned native Provider and real private-input Host; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381)).
+
+- Recorded deferred Node environment reads in browser dependencies, compile-time browser constants and real native-dialog verification in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1 ([#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)).
+
+- Recorded RC1 native MCP stdio lifecycle, shared Scope module identity, Windows Subprocess argv, and inherited Registry visibility traps in the [local development guide](../dsh-dev/SKILL.md), verified with concurrent native Agent Scopes and real Docker; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1380](https://github.com/BotHarness/DeepSeekBot/issues/1380)).
+
+- Recorded native Windows cold-install progress starvation from the duplicate localhost development-refresh SSE, explicit refresh opt-in, first-window CDP readiness, and verified mark-of-web/quarantined-binary outcomes in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1 and Chrome 154.0.8037.57 ([#1339](https://github.com/BotHarness/DeepSeekBot/issues/1339)).
+
 - Recorded verified Cordis diagnostic exporter/Patch insertion requirements, delayed-ready QQ restoration checks, and an unconfirmed native Client locale capture failure in the [debugging playbook](../dsh-dev/references/debugging-playbook.md), checked on DSH 0.2.0 RC1; platform vocabulary and Skill behavior remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - Recorded the isolated RC2 timed-question foreground/continued distinction, native late-answer wire verification, the original application-card incompatibility, and the verified application run-lifecycle trap in the [debugging playbook](../dsh-dev/references/debugging-playbook.md); production RC1, DSH/Cordis Context and Decision Tree remain unchanged ([#1220](https://github.com/BotHarness/DeepSeekBot/issues/1220), [report](../../../docs/research/1220-native-timed-question-experiment.md)).

@@ -91,6 +91,7 @@ describe('Workspace Grant execution boundary', () => {
     expect(requiresHumanToolApproval('list_bot_contacts')).toBe(false);
     expect(requiresHumanToolApproval('channel_list')).toBe(false);
     expect(requiresHumanToolApproval('inbox_ignore')).toBe(false);
+    expect(requiresHumanToolApproval('inbox_history')).toBe(false);
     for (const tool of [
       'group_create',
       'group_invite_bot',
@@ -113,7 +114,12 @@ describe('Workspace Grant execution boundary', () => {
   it('keeps checked external file operations internal while retaining Shell approval', () => {
     const state = fixture();
     const session = { id: 'botharness-orchestrator', header: { cwd: '/tmp/memory' } } as never;
-    for (const tool of ['bridge_attachment_save', 'bridge_reply_file']) {
+    for (const tool of [
+      'bridge_sender_permissions',
+      'bridge_directory',
+      'bridge_attachment_save',
+      'bridge_reply_file',
+    ]) {
       expect(requiresHumanToolApproval(tool)).toBe(false);
       expect(
         grantToolExecutionDenial(state.core, session, state.policy, state.approval, tool, {}),

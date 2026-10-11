@@ -13,10 +13,12 @@ import type {
   PersonaBotDeletion,
 } from '../../../core/src/bots/deletion.js';
 import type { PairingRequest, PairingReviewInput } from '../../../core/src/messaging/pairing.js';
+import type { SenderAccessInput } from '../../../core/src/messaging/sender-access.js';
 import {
   gitInstalling,
   loadGitAvailability,
   reviewPairing,
+  changeExternalSenderAccess,
   startGitInstall,
   setApprovalRoute,
   testApprovalRoute,
@@ -157,6 +159,8 @@ import {
   loadMemoryGitGraph,
   loadMemoryGitCommitDiff,
   loadProfileActivity,
+  loadProfileSessionUsage,
+  type ProfileSessionUsage,
   loadProfileUsage,
   loadOverviewMemory,
   loadOverviewUsage,
@@ -312,6 +316,7 @@ export interface BridgeActions {
   approvalTest(slug: string): Promise<void>;
   approvalRetry(slug: string, id: string): Promise<void>;
   pairingReview(slug: string, input: PairingReviewInput): Promise<PairingRequest>;
+  senderAccess(slug: string, input: SenderAccessInput): Promise<void>;
   messagingIdentity(slug: string, input: MessagingIdentityInput): Promise<MessagingIdentity>;
   messagingConversation(slug: string, input: MessagingConversationInput): Promise<void>;
   appSetup?: ProviderAppSetup;
@@ -474,6 +479,7 @@ export interface BridgeActions {
   memoryGitGraph(channelId: string, offset: number): Promise<MemoryGitGraph>;
   memoryGitCommitDiff(channelId: string, sha: string): Promise<MemoryGitCommitDiff>;
   profileActivity(channelId: string, window?: ProfileActivityWindow): Promise<ProfileActivity>;
+  profileSessionUsage(channelId: string): Promise<ProfileSessionUsage>;
   overviewMemory(
     after?: string,
   ): Promise<import('../../../core/src/memory/overview.js').OverviewMemory>;
@@ -539,6 +545,25 @@ export interface BridgeActions {
   listToolApprovalRules(slug: string): Promise<ToolApprovalRuleView[]>;
   revokeToolApprovalRule(slug: string, id: string): Promise<void>;
   toolApprovalStatus(channelId: string, messageId: string): Promise<'pending' | 'expired'>;
+  privateInputStatus?(
+    channelId: string,
+    messageId: string,
+  ): Promise<import('../../../core/src/credentials/contracts.js').PrivateInputStatus>;
+  privateInputSubmit?(
+    channelId: string,
+    messageId: string,
+    values: Record<string, string>,
+  ): Promise<void>;
+  privateInputCancel?(channelId: string, messageId: string): Promise<void>;
+  privateAccountStatus?(
+    channelId: string,
+    messageId: string,
+  ): Promise<import('../../../core/src/credentials/contracts.js').PrivateAccountStatus>;
+  privateInputReplace?(channelId: string, messageId: string): Promise<void>;
+  privateAccountRevoke?(
+    channelId: string,
+    messageId: string,
+  ): Promise<import('../../../core/src/credentials/contracts.js').PrivateRevocationResult>;
   toolApprovalExecutionState?(
     channelId: string,
     messageId: string,
@@ -1235,6 +1260,61 @@ export function createActions(
     revokeToolApprovalRule: (slug, id) => revokeToolApprovalRule(call, slug, id),
     toolApprovalStatus: (channelId, messageId) =>
       loadToolApprovalStatus(call, channelId, messageId),
+    privateInputStatus: async (channelId, messageId) => {
+      const result = await call('privateInputStatus', { channelId, messageId });
+      if (!result.ok) throw new Error('Private input status is unavailable');
+      const status = (result.value as { status?: unknown }).status;
+      if (!['pending', 'configured', 'cancelled', 'expired'].includes(String(status)))
+        throw new Error('Private input status is invalid');
+      return status as import('../../../core/src/credentials/contracts.js').PrivateInputStatus;
+    },
+    privateInputSubmit: async (channelId, messageId, values) => {
+      const result = await call('privateInputSubmit', { channelId, messageId, values });
+      if (!result.ok || (result.value as { accepted?: unknown }).accepted !== true)
+        throw new Error('Private input was not accepted');
+    },
+    privateInputCancel: async (channelId, messageId) => {
+      const result = await call('privateInputCancel', { channelId, messageId });
+      if (!result.ok || (result.value as { accepted?: unknown }).accepted !== true)
+        throw new Error('Private input cancellation was not accepted');
+    },
+    privateAccountStatus: async (channelId, messageId) => {
+      const result = await call('privateAccountStatus', { channelId, messageId });
+      if (!result.ok) throw new Error('Private account status is unavailable');
+      const value =
+        result.value as import('../../../core/src/credentials/contracts.js').PrivateAccountStatus;
+      if (
+        !['configured', 'revoked', 'superseded', 'unavailable'].includes(value.status) ||
+        typeof value.references !== 'object' ||
+        value.references === null ||
+        !Object.values(value.references).every(
+          (reference) =>
+            typeof reference === 'string' &&
+            /^private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}$/.test(reference),
+        )
+      )
+        throw new Error('Private account status is invalid');
+      return value;
+    },
+    privateInputReplace: async (channelId, messageId) => {
+      const result = await call('privateInputReplace', { channelId, messageId });
+      if (!result.ok || typeof (result.value as { messageId?: unknown }).messageId !== 'string')
+        throw new Error('Private input replacement is unavailable');
+    },
+    privateAccountRevoke: async (channelId, messageId) => {
+      const result = await call('privateAccountRevoke', { channelId, messageId });
+      if (!result.ok) throw new Error('Private account revocation is unavailable');
+      const value =
+        result.value as import('../../../core/src/credentials/contracts.js').PrivateRevocationResult;
+      if (
+        value.accepted !== true ||
+        ![value.stopped, value.completed, value.uncertain].every(
+          (count) => Number.isSafeInteger(count) && count >= 0,
+        )
+      )
+        throw new Error('Private account revocation was not accepted');
+      return value;
+    },
     toolApprovalExecutionState: (channelId, messageId) =>
       loadToolApprovalExecutionState(call, channelId, messageId),
     decideToolApproval: (channelId, messageId, outcome) =>
@@ -1954,6 +2034,7 @@ export function createActions(
     memoryGitGraph: (channelId, offset) => loadMemoryGitGraph(call, channelId, offset),
     memoryGitCommitDiff: (channelId, sha) => loadMemoryGitCommitDiff(call, channelId, sha),
     profileActivity: (channelId, window) => loadProfileActivity(call, channelId, window),
+    profileSessionUsage: (channelId) => loadProfileSessionUsage(call, channelId),
     overviewMemory: (after) => loadOverviewMemory(call, after),
     overviewUsage: (period, after) => loadOverviewUsage(call, period, after),
     marketplaceList: (query) => loadMarketplacePage(call, query),
@@ -1982,6 +2063,7 @@ export function createActions(
     approvalTest: (slug) => testApprovalRoute(call, slug),
     approvalRetry: (slug, id) => retryApprovalNotification(call, slug, id),
     pairingReview: (slug, input) => reviewPairing(call, slug, input),
+    senderAccess: (slug, input) => changeExternalSenderAccess(call, slug, input),
     messagingIdentity: (slug, input) => manageMessagingIdentity(call, slug, input),
     messagingConversation: (slug, input) => manageMessagingConversation(call, slug, input),
     messagingSnapshot: (slug) => loadMessagingSnapshot(call, slug),

@@ -1,10 +1,12 @@
 import { INTERNAL_TOUR_CSS } from './internal-tour-styles.js';
+import { COMPOSER_CONTEXT_CSS } from './composer-context-styles.js';
 import { WINDOW_COMPANION_CSS } from './window-companion-styles.js';
 import { COMBOBOX_CSS } from './combobox.js';
 import { keyframesFor } from '@botharness/botui-core';
 import { DEEPSEEKBOT_TRANSPARENT_DATA_URI } from './bot-icon-assets.js';
 
 export const CSS =
+  COMPOSER_CONTEXT_CSS +
   INTERNAL_TOUR_CSS +
   COMBOBOX_CSS +
   WINDOW_COMPANION_CSS +
@@ -25,13 +27,14 @@ export const CSS =
 .bh-im-app-picker { display: flex; align-items: center; gap: 4px; }
 .bh-im-app-refresh:disabled { opacity: 0.5; cursor: default; }
 .bh-root {
+  --bh-chat-card-inset: 12px;
   /* @bh-brand-aliases:start — thin BotHarness brand map onto DSH semantic
      tokens (ADR-0028): at most three entries, no second design system. */
   --bh-accent: var(--dsw-alias-state-business-primary);
   --bh-hover: var(--dsw-alias-interactive-bg-hover);
   --bh-selected: var(--dsw-specific-sidebar-nav-item-active);
   /* @bh-brand-aliases:end */
-  /* @bh-onboarding-aliases:start — native separator for the tutorial strip. */
+  /* @bh-onboarding-aliases:start — native surfaces for the floating onboarding notice and card. */
   --bh-onboarding-border: var(--dsw-alias-border-l2);
   --bh-onboarding-surface: var(--dsw-alias-bg-base);
   --bh-onboarding-label: var(--dsw-alias-label-primary);
@@ -103,13 +106,26 @@ export const CSS =
   font: inherit;
 }
 
-.bh-onboarding { padding: 8px 16px; border-bottom: 1px solid var(--bh-onboarding-border); }
+.bh-onboarding-notice { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 8px; max-width: min(560px, calc(100vw - 32px)); padding: 8px 12px; border: 1px solid var(--bh-onboarding-border); border-radius: 12px; background: var(--bh-onboarding-surface); box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
+.bh-onboarding-notice-text { min-width: 0; overflow-wrap: anywhere; }
 .bh-onboarding-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.bh-onboarding-actions > span { flex: 1; }
-.bh-onboarding-welcome { display: grid; gap: 12px; width: 380px; max-width: 100%; white-space: normal; line-height: 20px; }
-.bh-onboarding-welcome-heading { display: grid; gap: 4px; }
+.bh-bubble:has(> .bh-onboarding-welcome) { padding: 0; background: transparent; }
+.bh-onboarding-welcome { display: grid; gap: 12px; width: 380px; max-width: 100%; white-space: normal; line-height: 20px; border: 1px solid var(--bh-onboarding-border); border-radius: 16px; background: var(--dsw-alias-bg-module-platform); overflow: hidden; }
+.bh-onboarding-welcome > :not(.bh-welcome-banner) { margin-inline: 14px; }
+.bh-onboarding-welcome > :last-child { margin-bottom: 14px; }
+.bh-welcome-banner { aspect-ratio: 4 / 1; background: var(--dsw-alias-bg-base); }
+.bh-welcome-banner .bh-banner-art { display: block; width: 100%; height: 100%; }
+.bh-welcome-identity { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 10px; margin-top: -42px; }
+.bh-welcome-avatar { padding: 3px; border-radius: 17px; background: var(--dsw-alias-bg-module-platform); line-height: 0; }
+.bh-welcome-identity-text { display: grid; gap: 4px; min-width: 0; padding-bottom: 2px; }
+.bh-welcome-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bh-welcome-roles { display: flex; flex-wrap: wrap; gap: 4px; }
+.bh-welcome-letter { display: grid; gap: 6px; }
+.bh-welcome-letter strong { font-size: 15px; }
+.bh-welcome-letter p { margin: 0; }
+.bh-welcome-signature { color: var(--dsw-alias-label-secondary); }
+.bh-welcome-provenance { margin: 0; color: var(--dsw-alias-label-tertiary); font-size: 11px; }
 .bh-onboarding-welcome p, .bh-onboarding-model-form p { margin: 0; }
-.bh-onboarding-welcome > button { justify-self: start; }
 .bh-onboarding-welcome .bh-card-title { white-space: normal; }
 .bh-onboarding-welcome .bh-onboarding-create { color: color-mix(in srgb, var(--bh-accent) 80%, var(--bh-onboarding-label)); background: color-mix(in srgb, var(--bh-accent) 10%, var(--bh-onboarding-surface)); border-color: color-mix(in srgb, var(--bh-accent) 35%, transparent); }
 .bh-onboarding-welcome .bh-onboarding-create:hover:not(:disabled) { background: color-mix(in srgb, var(--bh-accent) 18%, var(--bh-onboarding-surface)); }
@@ -1147,6 +1163,15 @@ html[data-botharness-motion='reduce'] .bh-avatar-botui i {
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bh-channel-message-time {
+  margin-left: auto;
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .bh-role-badges {
@@ -2300,7 +2325,7 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
   pointer-events: auto;
 }
 .bh-channel-island:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, var(--dsw-alias-bg-module-platform));
 }
 .bh-channel-island:focus-visible {
   outline: 2px solid var(--dsw-alias-label-primary);
@@ -2322,6 +2347,7 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
 .bh-channel-island-wrap {
   position: relative;
   display: inline-flex;
+  align-items: center;
   max-width: min(100%, 440px);
   pointer-events: auto;
 }
@@ -2477,7 +2503,7 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 74px 18px 24px;
+  padding: 18px 18px 24px;
 }
 .bh-profile-back {
   display: inline-flex;
@@ -2812,6 +2838,9 @@ canvas.bh-banner-art { image-rendering: pixelated; }
   gap: 8px;
 }
 .bh-profile-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
 }
@@ -2913,8 +2942,75 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-modal-footer > button { white-space: nowrap; }
 .bh-modal-footer-gap { flex: 1; }
 .bh-sidebar-modal { width: min(440px, calc(100vw - 32px)); }
-.bh-external-identity-modal { max-height: calc(100dvh - 32px); }
-.bh-external-identity-content { min-height: 0; overflow-y: auto; }
+.bh-external-identity-modal, .bh-pairing-modal { max-height: calc(100dvh - 32px); }
+/* @bh-pairing-aliases:start — native Modal portals sit outside .bh-root.
+   DSH RC1 exports no radius token; 12px matches its measured Input wrapper. */
+.bh-pairing-modal, .bh-pairing-role-modal { --bh-pairing-radius-panel: 12px; }
+/* @bh-pairing-aliases:end */
+.bh-external-identity-content, .bh-pairing-content { min-height: 0; overflow-y: auto; }
+.bh-sidebar-modal.bh-pairing-modal { width: min(1060px, calc(100vw - 32px)); }
+.bh-sidebar-modal.bh-pairing-role-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
+.bh-pairing-toolbar-gap { flex: 1; }
+.bh-pairing-panel { display: grid; gap: 12px; min-width: 0; }
+.bh-pairing-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; min-height: 260px; }
+.bh-pairing-detail { min-width: 0; max-height: 420px; overflow-y: auto; }
+.bh-group-editor-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; border: 0; padding: 0; margin: 0 0 16px; }
+.bh-group-editor-selection { min-width: 0; }
+.bh-group-editor-modal { gap: 12px; padding-bottom: 16px; max-height: min(680px, calc(100dvh - 48px)); }
+.bh-group-editor-modal > :last-child { flex: none; }
+.bh-group-editor-content { flex: 1; overflow: hidden; font-size: 13px; line-height: 20px; }
+.bh-group-editor-content > :first-child { flex: none; padding-top: 16px; padding-bottom: 8px; }
+.bh-group-editor-content > :last-child { flex: 1; min-height: 0; margin-top: 8px; overflow-y: auto; overscroll-behavior: contain; }
+.bh-group-editor-modal .bh-group-editor-header { gap: 12px; margin-bottom: 12px; }
+.bh-group-editor-modal .bh-pairing-workspace { gap: 12px; min-height: 0; }
+.bh-behavior-results { display: grid; gap: 8px; }
+.bh-im-pairing-request.bh-behavior-item { padding: 8px 10px; gap: 6px; font-size: 13px; line-height: 20px; }
+.bh-behavior-item .bh-pairing-behavior { margin: 0; }
+.bh-behavior-sources { display: grid; gap: 2px; font-size: 12px; line-height: 18px; }
+.bh-behavior-preview-toggle { width: 100%; }
+.bh-behavior-preview-toggle:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: -2px; }
+.bh-behavior-preview-body { padding: 4px 0 0 20px; }
+.bh-pairing-table-panel { display: grid; gap: 12px; min-width: 0; }
+.bh-pairing-table-scroll { overflow-x: auto; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-pairing-radius-panel); }
+.bh-pairing-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+.bh-pairing-table th, .bh-pairing-table td { padding: 10px 8px; border-bottom: 1px solid var(--dsw-alias-border-l2); vertical-align: middle; overflow-wrap: anywhere; }
+.bh-pairing-table th { color: var(--dsw-alias-label-secondary); font-weight: 500; }
+.bh-pairing-table td:first-child, .bh-pairing-table th:first-child { width: 28px; }
+.bh-pairing-table th:nth-child(2) { width: 24%; min-width: 130px; }
+.bh-pairing-table th:last-child { min-width: 52px; white-space: nowrap; }
+.bh-pairing-table td:first-child label { font-size: 0; gap: 0; }
+.bh-behavior-selection .bh-pairing-table { min-width: 0; table-layout: fixed; }
+.bh-behavior-selection .bh-pairing-table th:first-child, .bh-behavior-selection .bh-pairing-table td:first-child { width: 60%; }
+.bh-behavior-selection .bh-pairing-table th:nth-child(2), .bh-behavior-selection .bh-pairing-table th:last-child { width: 20%; min-width: 0; }
+.bh-behavior-checkbox { gap: 0; }
+.bh-behavior-checkbox > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.bh-pairing-table tr[data-selected] { background: var(--dsw-alias-interactive-bg-hover); }
+.bh-pairing-table tbody tr:last-child td { border-bottom: none; }
+.bh-pairing-sort, .bh-pairing-name { padding: 0; border: none; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bh-pairing-sort { white-space: nowrap; }
+.bh-pairing-sort:disabled { cursor: default; }
+.bh-pairing-name { font-weight: 500; }
+.bh-pairing-name:hover { text-decoration: underline; }
+.bh-pairing-name:focus-visible, .bh-pairing-sort:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: 3px; }
+.bh-pairing-policy-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bh-pairing-behavior { white-space: pre-wrap; }
+.bh-pairing-empty { padding: 24px 12px; color: var(--dsw-alias-label-secondary); }
+.bh-pairing-pagination { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bh-pairing-pagination > span { margin-right: auto; }
+.bh-pairing-receiver { font-size: 12px; }
+.bh-pairing-role-modal .bh-im-field > textarea { padding: 10px 12px; color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-pairing-radius-panel); font: inherit; }
+.bh-pairing-modal .bh-im-pairing-request { border-radius: var(--bh-pairing-radius-panel); }
+.bh-pairing-times { display: grid; gap: 2px; font-size: 11px; line-height: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bh-pairing-sort-indicator { color: var(--dsw-alias-label-secondary); }
+.bh-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 760px) { .bh-pairing-workspace { grid-template-columns: minmax(0, 1fr); } .bh-pairing-table { min-width: 560px; } .bh-pairing-detail { max-height: none; } }
+@media (max-width: 760px) { .bh-group-editor-header { grid-template-columns: minmax(0, 1fr); } .bh-group-editor-selection [role="tablist"] { height: auto; } .bh-group-editor-selection [role="tab"] { height: auto; min-height: 34px; padding: 8px 4px; overflow-wrap: anywhere; } }
+@media (max-width: 760px) { .bh-group-editor-modal .bh-pairing-detail { max-height: none; overflow: visible; } }
+.bh-permission-table { min-width: 0; table-layout: fixed; }
+.bh-permission-table th:first-child, .bh-permission-table td:first-child { width: 32%; }
+.bh-permission-table th:not(:first-child), .bh-permission-table td:not(:first-child) { width: 17%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.bh-permission-table td label { font-size: 0; gap: 0; }
+.bh-group-members .bh-pairing-table th:nth-child(2) { width: auto; }
 .bh-sidebar-modal-form, .bh-im-grant-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; font-size: 13px; }
 .bh-sidebar-modal-form p, .bh-im-grant-body p { margin: 0; }
 .bh-sidebar-modal-form ul:not(.bh-card-list) { margin: 0; padding-left: 18px; }
@@ -2948,6 +3044,8 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-im-pairing-request dd { margin: 0; }
 .bh-im-pairing-capabilities { display: flex; flex-wrap: wrap; gap: 12px; border: none; padding: 0; margin: 0; }
 .bh-im-pairing-capabilities legend { margin-bottom: 8px; }
+.bh-im-role-form { display: flex; flex-direction: column; gap: 12px; border: none; padding: 0; margin: 0; }
+.bh-im-role-form legend { margin-bottom: 8px; }
 .bh-im-pairing-capabilities label { display: flex; align-items: center; gap: 6px; }
 .bh-im-threads td { overflow-wrap: anywhere; }
 .bh-identity-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -3363,7 +3461,15 @@ button.bh-profile-heat-cell:focus-visible {
   flex-direction: column;
   padding: 74px 18px calc(10px + var(--bh-activity-overlay-inset, 0px));
   overscroll-behavior: contain;
+  transition: padding-bottom 160ms ease;
 }
+/* The faded composer status gives its reserved space back only after the
+   fade, so the working rows slide down instead of jumping onto its text. */
+.bh-chat-pane[data-activity-concealed='true'] .bh-chat-body {
+  padding-bottom: 10px;
+  transition-delay: 160ms;
+}
+html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
 .bh-chat-empty {
   height: 100%;
 }
@@ -3421,6 +3527,45 @@ button.bh-profile-heat-cell:focus-visible {
   background: transparent;
 }
 .bh-message-group-avatar-link { cursor: pointer; }
+/* Client-only working rows under the latest message: the composer status
+   stays the live region, so these rows are hidden from assistive tech. */
+.bh-timeline-working {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.bh-timeline-working-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.bh-timeline-working-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bh-timeline-working-name { color: var(--dsw-alias-label-secondary); }
+.bh-timeline-working-ellipsis i {
+  font-style: normal;
+  animation: bh-timeline-working-dot 1.2s ease-in-out infinite;
+}
+.bh-timeline-working-ellipsis i:nth-child(2) { animation-delay: 0.2s; }
+.bh-timeline-working-ellipsis i:nth-child(3) { animation-delay: 0.4s; }
+html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animation: none; }
+@keyframes bh-timeline-working-dot {
+  0%, 60%, 100% { opacity: 0.25; }
+  30% { opacity: 1; }
+}
+.bh-timeline-working-more {
+  padding-left: 36px;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 12px;
+}
 .bh-message-group-avatar-link:focus-visible {
   outline: 2px solid var(--dsw-alias-label-primary);
   outline-offset: 2px;
@@ -3497,6 +3642,9 @@ button.bh-profile-heat-cell:focus-visible {
 .bh-message-group-me .bh-bubble-author {
   margin: 0 2px 0 0;
 }
+.bh-message-group-me .bh-message-identity {
+  flex-direction: row-reverse;
+}
 .bh-bubble-wrap {
   position: relative;
   display: flex;
@@ -3542,7 +3690,7 @@ button.bh-profile-heat-cell:focus-visible {
   border-radius: 18px;
   background: var(--dsw-alias-interactive-bg-active);
   color: var(--dsw-alias-label-primary);
-  padding: 8px 12px;
+  padding: var(--bh-chat-card-inset);
 }
 .bh-bubble[data-group-position='first'] {
   border-bottom-left-radius: 5px;
@@ -3633,25 +3781,39 @@ button.bh-profile-heat-cell:focus-visible {
 
 /* Files stay part of the same message grouping as their text. */
 .bh-bubble-content { min-width: 0; }
-.bh-message-attachment { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.bh-message-attachment { position: relative; min-width: 0; }
 .bh-message-file-more { flex: none; color: inherit; }
-button.bh-message-file { font: inherit; text-align: left; cursor: pointer; }
-.bh-message-file:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
-.bh-message-attachments { display: grid; gap: 6px; margin-top: 6px; }
+.bh-message-attachments { display: grid; gap: 8px; margin-top: 8px; }
 .bh-bridge-media-content { white-space: pre-wrap; }
-.bh-bridge-image { max-width: min(100%, 360px); }
+.bh-bridge-image { max-width: min(100%, 320px); }
 .bh-bridge-image-button { display: block; padding: 0; border: 0; background: transparent; cursor: zoom-in; border-radius: 12px; }
 .bh-bridge-image-button:focus-visible { outline: 2px solid var(--bh-bridge-media-focus); outline-offset: 2px; }
 .bh-bridge-image-state { display: flex; align-items: center; gap: 8px; min-height: 96px; color: var(--bh-bridge-media-muted); }
 .bh-bridge-image-expanded { display: block; max-width: 100%; max-height: 75vh; margin: auto; object-fit: contain; }
-.bh-message-image-link { display: block; max-width: min(100%, 360px); }
+.bh-message-image-link { display: block; width: fit-content; max-width: 320px; min-width: 0; }
+.bh-message-image-row { display: flex; align-items: flex-start; gap: 4px; width: fit-content; max-width: 100%; min-width: 0; }
 .bh-message-image { display: block; max-width: 100%; max-height: 320px; border-radius: 12px; object-fit: contain; }
-.bh-message-file { display: inline-flex; align-items: center; gap: 8px; min-width: 0; width: fit-content; max-width: min(100%, 320px); min-height: 42px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: color-mix(in srgb, currentColor 6%, transparent); color: inherit; text-decoration: none; }
-.bh-bubble-me .bh-message-file { border-color: color-mix(in srgb, currentColor 35%, transparent); }
+/* File and audio pills share one card rhythm: icon, stacked name/size, divider, action. */
+.bh-message-file, .bh-message-audio { display: flex; align-items: center; gap: 10px; min-width: 0; width: fit-content; max-width: min(100%, 320px); min-height: 52px; padding: 8px 8px 8px 12px; border: 0; border-radius: 12px; background: color-mix(in srgb, currentColor 6%, transparent); color: inherit; }
+.bh-message-file-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: none; }
+button.bh-message-file-main { cursor: pointer; }
+.bh-message-file-main:focus-visible, .bh-message-file-download:focus-visible, .bh-message-audio-play:focus-visible, .bh-message-audio-spectrum:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
 .bh-message-file-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; }
-.bh-message-file-copy { display: flex; align-items: baseline; flex: 1; gap: 4px; min-width: 0; }
-.bh-message-file-name { display: block; overflow: hidden; min-width: 0; white-space: nowrap; text-overflow: ellipsis; }
-.bh-message-file-size { flex: none; color: color-mix(in srgb, currentColor 72%, transparent); font-size: 11px; white-space: nowrap; }
+.bh-message-file-copy { display: flex; flex-direction: column; flex: 1; gap: 2px; min-width: 0; }
+.bh-message-file-name { display: block; overflow: hidden; min-width: 0; white-space: nowrap; text-overflow: ellipsis; font-size: 13px; font-weight: 500; line-height: 18px; }
+.bh-message-file-size { color: color-mix(in srgb, currentColor 72%, transparent); font-size: 11px; line-height: 14px; white-space: nowrap; }
+.bh-message-file-divider { flex: none; align-self: stretch; width: 1px; margin-block: 2px; background: var(--dsw-alias-border-l2); }
+.bh-message-file-download { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 8px; color: inherit; text-decoration: none; }
+a.bh-message-file-download:hover, button.bh-message-file-download:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.bh-message-audio-play { display: grid; place-items: center; flex: none; width: 32px; height: 32px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.bh-message-audio-play:hover:not(:disabled) { background: color-mix(in srgb, currentColor 8%, transparent); }
+.bh-message-audio-play:disabled { opacity: 0.5; cursor: default; }
+.bh-message-audio-meta { display: flex; align-items: center; gap: 4px; color: color-mix(in srgb, currentColor 72%, transparent); font-size: 11px; line-height: 14px; white-space: nowrap; }
+.bh-message-audio-spectrum { display: flex; align-items: center; gap: 2px; width: 100%; min-width: 0; height: 28px; margin-top: 4px; padding: 0; border-radius: 4px; cursor: pointer; touch-action: none; }
+.bh-message-audio-spectrum[aria-disabled='true'] { cursor: default; }
+.bh-message-audio-bar { flex: 1 1 0; min-width: 2px; max-width: 4px; border-radius: 2px; background: color-mix(in srgb, currentColor 28%, transparent); }
+.bh-message-audio-bar[data-played] { background: var(--dsw-alias-state-business-primary); }
+.bh-message-audio-element { display: none; }
 .bh-bubble-body {
   white-space: pre-wrap;
   word-break: break-word;
@@ -3766,10 +3928,17 @@ button.bh-message-file { font: inherit; text-align: left; cursor: pointer; }
     pointer-events: auto;
   }
 }
+/* Narrow screens: inline copy/reply actions crowd the bubble, so they move
+   into the long-press message menu and the bubble keeps the full width. */
+@media (max-width: 640px) {
+  .bh-bubble-meta {
+    display: none;
+  }
+}
 .bh-timeline-new {
   position: absolute;
   z-index: 2;
-  bottom: 82px;
+  bottom: calc(82px + var(--bh-activity-overlay-inset, 0px));
   left: 50%;
   transform: translateX(-50%);
   border: 1px solid var(--dsw-alias-border-l2);
@@ -4122,6 +4291,7 @@ button.bh-message-file { font: inherit; text-align: left; cursor: pointer; }
 }
 
 .bh-composer-activity-status {
+  transition: opacity 160ms ease, translate 160ms ease;
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
@@ -4135,6 +4305,22 @@ button.bh-message-file { font: inherit; text-align: left; cursor: pointer; }
   color: var(--bh-overview-muted);
   font-size: var(--bh-overview-font);
 }
+/* Scrolled into history, the status sits over messages, so it carries a
+   backdrop that fades in from the chat background above it. */
+.bh-composer-activity-status { isolation: isolate; }
+.bh-composer-activity-status::before {
+  content: '';
+  position: absolute;
+  inset: -12px 0 -6px;
+  z-index: -1;
+  background: linear-gradient(to bottom, transparent, var(--dsw-alias-bg-base) 12px);
+  pointer-events: none;
+}
+/* At the latest message the working rows already show every active Bot, so
+   the status only fades out: it stays the screen-reader live region. */
+.bh-composer-activity-status[data-concealed='true'] { opacity: 0; translate: 0 4px; }
+.bh-composer-activity-status[data-concealed='true'] * { pointer-events: none; }
+html[data-botharness-motion='reduce'] .bh-composer-activity-status { transition: none; }
 .bh-composer-activity-facepile .bh-persona-avatar,
 .bh-composer-activity-facepile .bh-avatar-facepile-overflow {
   border: 0;
@@ -4467,7 +4653,8 @@ html[data-botharness-motion='reduce'] .bh-composer-footer {
   color: var(--dsw-alias-label-tertiary);
   transition: transform 150ms var(--ds-ease-in-out);
 }
-.bh-channel-sidebar-entry-chevron.bh-chevron-collapsed {
+.bh-channel-sidebar-entry-chevron.bh-chevron-collapsed,
+.bh-workspace-folder-secondary:not([open]) > summary > .bh-channel-sidebar-entry-chevron {
   transform: rotate(-90deg);
 }
 .bh-channel-sidebar-entry-label {
@@ -4926,8 +5113,11 @@ html[data-botharness-motion='reduce'] .bh-channel-sidebar-entry-chevron {
   min-width: 0;
 }
 .bh-workspace-folder-secondary > summary {
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
+  width: 100%;
+  list-style: none;
+}
+.bh-workspace-folder-secondary > summary::-webkit-details-marker {
+  display: none;
 }
 .bh-workspace-folder-secondary .bh-workspace-folder-table,
 .bh-workspace-folder-manual {
@@ -5287,6 +5477,35 @@ html[data-botharness-motion='reduce'] .bh-session-workspace-heading svg {
   object-fit: cover;
 }
 .bh-group-avatar-topbar { width: 22px; height: 22px; border-radius: 7px; }
+/* Static member stack for a Group without an uploaded avatar: idle
+   portraits on the Group tile. Two faces overlap on a diagonal with a ring in
+   the tile fill; three or four sit in a 2x2 grid without overlap. Faces
+   ignore the pointer so their per-Bot titles never surface as state. */
+.bh-group-avatar-stack {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--dsw-alias-button-elevated-fill);
+}
+.bh-group-avatar-stack > .bh-persona-avatar {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 28%;
+  pointer-events: none;
+}
+.bh-group-avatar-stack[data-count='1'] > .bh-persona-avatar { top: 50%; left: 50%; translate: -50% -50%; }
+.bh-group-avatar-stack[data-count='2'] > .bh-persona-avatar { border: 1.5px solid var(--dsw-alias-button-elevated-fill); }
+.bh-group-avatar-stack[data-count='2'] > :nth-child(1) { top: 8%; left: 8%; }
+.bh-group-avatar-stack[data-count='2'] > :nth-child(2) { right: 8%; bottom: 8%; }
+.bh-group-avatar-stack[data-count='3'] > :nth-child(1),
+.bh-group-avatar-stack[data-count='4'] > :nth-child(1) { top: 5%; left: 5%; }
+.bh-group-avatar-stack[data-count='3'] > :nth-child(2),
+.bh-group-avatar-stack[data-count='4'] > :nth-child(2) { top: 5%; right: 5%; }
+.bh-group-avatar-stack[data-count='3'] > :nth-child(3) { bottom: 5%; left: 50%; translate: -50% 0; }
+.bh-group-avatar-stack[data-count='4'] > :nth-child(3) { bottom: 5%; left: 5%; }
+.bh-group-avatar-stack[data-count='4'] > :nth-child(4) { right: 5%; bottom: 5%; }
 .bh-group-profile-avatar {
   display: inline-flex;
   align-items: center;
@@ -5508,6 +5727,126 @@ button.bh-bot-nav > svg {
   display: flex;
   flex-direction: column;
 }
+.bh-bot-settings.bh-bot-settings {
+  /* @bh-bot-settings-aliases:start — the modal portals outside .bh-root, so it
+     maps the native settings panel's tokens itself. */
+  --bh-bot-settings-label: var(--dsw-alias-label-primary);
+  --bh-bot-settings-hover: var(--dsw-alias-interactive-bg-hover);
+  --bh-bot-settings-nav-hover: var(--dsw-specific-sidebar-nav-item-hover);
+  --bh-bot-settings-nav-active: var(--dsw-specific-sidebar-nav-item-active);
+  --bh-bot-settings-radius-md: var(--dsw-radius-md);
+  --bh-bot-settings-radius-sm: var(--dsw-radius-sm);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+  /* @bh-bot-settings-aliases:end */
+  flex-direction: row;
+  gap: 0;
+  width: min(800px, 100%);
+  height: min(800px, 100%);
+  padding: 0;
+}
+.bh-bot-settings-nav {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 188px;
+  padding: 22px 12px 0;
+  box-sizing: border-box;
+}
+.bh-bot-settings-nav-title {
+  padding: 0 12px;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--bh-bot-settings-label);
+}
+.bh-bot-settings-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+.bh-bot-settings-nav-cell {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 9px 16px 9px 12px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: var(--bh-bot-settings-radius-md);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 22px;
+  color: var(--bh-bot-settings-label);
+  text-align: left;
+}
+.bh-bot-settings-nav-cell:hover {
+  background: var(--bh-bot-settings-nav-hover);
+}
+.bh-bot-settings-nav-cell[aria-current='page'] {
+  background: var(--bh-bot-settings-nav-active);
+}
+.bh-bot-settings-nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.bh-bot-settings-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bh-bot-settings-header {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 22px 14px 8px 24px;
+}
+.bh-bot-settings-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--bh-bot-settings-label);
+}
+.bh-bot-settings-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--bh-bot-settings-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  color: var(--bh-bot-settings-label);
+}
+.bh-bot-settings-close:hover {
+  background: var(--bh-bot-settings-hover);
+}
+.bh-bot-settings-options {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px 24px;
+  overflow-y: auto;
+}
+.bh-bot-settings-content[data-narrow] .bh-bot-settings-header {
+  align-items: center;
+  padding: 16px 14px 8px 16px;
+}
+.bh-bot-settings-content[data-narrow] .bh-bot-settings-options {
+  padding: 0 16px 16px;
+}
 .bh-settings-row {
   display: flex;
   align-items: center;
@@ -5646,13 +5985,14 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   }
 }
 /* Human approval in a Channel message uses the same Host folder browser as sidebar access. */
-.bh-grant-request-card { display: grid; gap: 12px; min-width: min(340px, 100%); }
+.bh-grant-request-card { --bh-message-card-gap: 12px; display: grid; gap: var(--bh-message-card-gap); min-width: min(340px, 100%); }
 .bh-grant-request-title { font-weight: 600; }
 .bh-grant-request-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
 .bh-grant-request-card > button { justify-self: start; }
 .bh-session-failure-row {
+  --bh-message-card-gap: 8px;
   display: grid;
-  gap: 8px;
+  gap: var(--bh-message-card-gap);
   min-width: min(340px, 100%);
   max-width: 560px;
   color: var(--dsw-alias-label-secondary);
@@ -5691,9 +6031,16 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   overflow-wrap: anywhere;
 }
 .bh-session-failure-raw { white-space: pre-wrap; }
-.bh-tool-approval-card { display: grid; gap: 10px; min-width: min(340px, 100%); }
-.bh-question-card { display: grid; gap: 10px; width: 380px; max-width: 100%; }
+.bh-tool-approval-card { --bh-message-card-gap: 10px; display: grid; gap: var(--bh-message-card-gap); min-width: min(340px, 100%); }
+.bh-question-card { --bh-message-card-gap: 10px; display: grid; gap: var(--bh-message-card-gap); width: 380px; max-width: 100%; }
+.bh-question-card .bh-note, .bh-tool-approval-card .bh-note, .bh-grant-request-card .bh-note { padding: 0; }
 .bh-question-card > button { justify-self: start; }
+.bh-message-card-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: calc(var(--bh-chat-card-inset) - var(--bh-message-card-gap, var(--bh-chat-card-inset))); }
+.bh-private-input-card { --bh-message-card-gap: 6px; width: 520px; }
+.bh-private-input-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bh-private-input-state { margin-left: auto; }
+.bh-private-input-card .bh-question-prompt { font-weight: 400; }
+.bh-private-input-card .bh-note { line-height: 16px; color: var(--dsw-alias-label-secondary); }
 .bh-question-source { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, 13px); }
 .bh-question-source code { display: block; margin-top: 5px; overflow-wrap: anywhere; }
 .bh-question-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
@@ -5711,8 +6058,8 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   background: var(--dsw-alias-button-elevated-fill);
   color: var(--dsw-alias-label-primary);
 }
-.bh-tool-approval-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .bh-tool-approval-confirm, .bh-access-warning { display: grid; gap: 8px; padding: 10px; border: 0.5px solid var(--dsw-alias-border-l3); border-radius: 8px; }
+.bh-tool-approval-confirm { --bh-message-card-gap: var(--bh-chat-card-inset); width: 100%; gap: var(--bh-message-card-gap); padding: var(--bh-chat-card-inset); }
 .bh-assignment-access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 .bh-memory-history {
@@ -6046,13 +6393,34 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-memory-view-icon-button:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
 .bh-memory-view-icon-button:focus-visible, .bh-memory-diff-file-header:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: -2px; }
 .bh-memory-commit-header > .bh-memory-view-icon-button:last-child { margin-left: auto; }
-.bh-memory-continue-open { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
 .bh-memory-continue-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .bh-memory-continue-form label { color: var(--dsw-alias-label-secondary); }
 .bh-memory-continue-form input { min-width: 180px; max-width: 320px; }
 .bh-memory-commit-header div { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .bh-memory-commit-header strong { min-width: 0; overflow-wrap: anywhere; }
 .bh-memory-commit-header span { font-family: var(--bh-memory-font-code); color: var(--dsw-alias-label-secondary); font-size: 12px; }
+.bh-memory-commit-header .bh-memory-commit-title {
+  flex: 0 1 auto;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  max-width: calc(100% - 96px);
+  white-space: nowrap;
+}
+.bh-memory-graph-list > .bh-memory-continue-form { margin: 6px 0 10px 24px; }
+.bh-topbar[data-memory-diff='true'] .bh-channel-island-wrap { display: none; }
+.bh-topbar[data-channel-detail='true'] { display: none; }
+.bh-memory-commit-title code { flex: none; font-family: var(--bh-memory-font-code); font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.bh-memory-commit-header .bh-memory-commit-title span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
 .bh-memory-commit-files-count { margin: 0 0 8px; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 600; }
 .bh-memory-diff-file { overflow: hidden; margin: 0 0 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-memory-radius-card); background: var(--dsw-alias-bg-base); box-shadow: 0 1px 2px color-mix(in srgb, var(--dsw-alias-label-primary) 5%, transparent); }
 .bh-memory-diff-file-header { display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; background: var(--dsw-specific-sidebar-fill); color: var(--dsw-alias-label-primary); cursor: pointer; list-style: none; }
@@ -6111,10 +6479,10 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
   display: block;
   max-width: min(100%, 520px);
   margin: 6px auto;
-  padding: 7px 14px;
+  padding: 4px 10px;
   border: 0;
-  border-radius: 999px;
-  background: var(--dsw-alias-button-elevated-fill);
+  border-radius: 8px;
+  background: transparent;
   color: var(--dsw-alias-label-secondary);
   font: inherit;
   font-size: 12px;
@@ -6123,6 +6491,61 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
 .bh-bot-dm-action:hover {
   color: var(--dsw-alias-label-primary);
 }
+.bh-bot-dm-action-label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.bh-bot-dm-action-bot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.bh-bot-dm-action-avatar { display: inline-flex; pointer-events: none; }
+.bh-memory-commit-row { container-type: inline-size; width: 100%; }
+@container (max-width: 720px) {
+  .bh-memory-commit-line > .bh-memory-commit-files { display: none; }
+}
+.bh-memory-commit-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  margin: 6px auto;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bh-memory-commit-line > * { flex: none; }
+.bh-memory-commit-line:hover { color: var(--dsw-alias-label-primary); }
+.bh-memory-commit-line:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: 2px; }
+.bh-memory-commit-line > .bh-memory-commit-subject {
+  flex: 0 1 auto;
+  min-width: 140px;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  text-overflow: ellipsis;
+}
+.bh-memory-commit-line:hover > .bh-memory-commit-subject { text-decoration: underline; }
+.bh-memory-commit-line > .bh-memory-commit-files {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bh-memory-commit-sha { font-family: var(--dsw-font-family-mono, monospace); font-size: 11px; }
+.bh-memory-commit-files { color: var(--dsw-alias-label-tertiary); }
+.bh-bot-dm-action-bot .bh-persona-avatar { border-radius: 28%; overflow: hidden; }
+.bh-bot-dm-action-name { color: var(--dsw-alias-label-primary); font-weight: 500; }
 .bh-bot-dm-readonly {
   padding: 14px 18px;
   text-align: center;
@@ -6510,6 +6933,8 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) ~ .bh-panel-activity[data-
   background: var(--dsw-alias-interactive-bg-hover);
 }
 .bh-channel-options{position:absolute;right:12px;top:11px;pointer-events:auto}
+.bh-chat-layout[data-sidebar='hidden'] .bh-channel-options{right:44px}
+.bh-chat-layout[data-sidebar='hidden'] .bh-topbar{padding-right:84px}
 .bh-human-nickname-dialog p{margin:0}
 .bh-messaging-defaults{display:flex;flex-direction:column;gap:12px;margin-top:24px}
 .bh-messaging-defaults p{margin:0}
