@@ -1,4 +1,4 @@
-# ADR-0172: Group behavior items resolve by ID with explicit Deny
+# ADR-0173: Group behavior items resolve by ID with explicit Deny
 
 Date: 2026-10-11
 Status: Accepted

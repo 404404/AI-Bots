@@ -5,12 +5,14 @@ import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { describe, expect, it, vi } from 'vitest';
 import { mountPrivateInputs } from '../src/credentials/mount.js';
 import type { BotHarnessCore } from '../src/plugin.js';
+import { qualifyMessagingTool } from '../src/credentials/messaging-tools.js';
 
 async function fixture(enabled: boolean, keys: string[] = []) {
   const ctx = new Context();
   let guard!: (call: { name: string; agent?: Agent }) => string | undefined;
   ctx.provide('tools', {
     register: vi.fn(),
+    get: vi.fn(),
     guard: (callback: typeof guard) => {
       guard = callback;
       return () => undefined;
@@ -41,6 +43,22 @@ async function fixture(enabled: boolean, keys: string[] = []) {
 }
 
 describe('private Profile capability boundary', () => {
+  it('allows only the exact messaging Tool Registration for an owned Orchestrator', async () => {
+    const f = await fixture(true);
+    const agent = { session: { id: 'owned' } } as Agent;
+    const tool = { name: 'bridge_reply' } as ToolDefinition;
+    expect(f.guard({ name: tool.name, agent })).toContain('not qualified');
+    const dispose = qualifyMessagingTool(agent, tool);
+    vi.mocked(f.ctx.tools.get).mockReturnValue(tool);
+    expect(f.guard({ name: tool.name, agent })).toBeUndefined();
+    vi.mocked(f.ctx.tools.get).mockReturnValue({ name: 'bridge_reply' } as ToolDefinition);
+    expect(f.guard({ name: tool.name, agent })).toContain('not qualified');
+    expect(f.guard({ name: 'bridge_post', agent })).toContain('not qualified');
+    dispose();
+    vi.mocked(f.ctx.tools.get).mockReturnValue(tool);
+    expect(f.guard({ name: tool.name, agent })).toContain('not qualified');
+    await f.ctx.fiber.dispose();
+  });
   it('qualifies Bot Schedule management only for owned Orchestrators', async () => {
     const f = await fixture(true);
     const agent = { session: { id: 'owned' } } as Agent;

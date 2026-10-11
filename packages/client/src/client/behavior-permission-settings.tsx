@@ -80,6 +80,7 @@ export function BehaviorSelection({
         const opposite = effect === 'allow' ? 'behaviorDeny' : 'behaviorAllow';
         return (
           <Checkbox
+            className="bh-behavior-checkbox"
             label={`${t(effect === 'allow' ? 'pairing.allow' : 'pairing.deny')} · ${row.original.name}`}
             checked={(value[key] ?? []).includes(row.original.id)}
             disabled={busy}
@@ -100,7 +101,7 @@ export function BehaviorSelection({
     })),
   ];
   return (
-    <section className="bh-im-role-form">
+    <section className="bh-im-role-form bh-behavior-selection">
       <div className="bh-im-actions">
         <strong>{t('pairing.behaviorPermissions')}</strong>
         <MessagingHelp
@@ -112,7 +113,6 @@ export function BehaviorSelection({
       <PairingTable
         data={items}
         columns={columns}
-        select={() => {}}
         disabled={busy}
         label={t('pairing.behaviorPermissions')}
         empty={t('pairing.noBehaviorPermissions')}

@@ -2962,6 +2962,11 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-table th:nth-child(2) { width: 24%; min-width: 130px; }
 .bh-pairing-table th:last-child { min-width: 52px; white-space: nowrap; }
 .bh-pairing-table td:first-child label { font-size: 0; gap: 0; }
+.bh-behavior-selection .bh-pairing-table { min-width: 0; table-layout: fixed; }
+.bh-behavior-selection .bh-pairing-table th:first-child, .bh-behavior-selection .bh-pairing-table td:first-child { width: 60%; }
+.bh-behavior-selection .bh-pairing-table th:nth-child(2), .bh-behavior-selection .bh-pairing-table th:last-child { width: 20%; min-width: 0; }
+.bh-behavior-checkbox { gap: 0; }
+.bh-behavior-checkbox > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .bh-pairing-table tr[data-selected] { background: var(--dsw-alias-interactive-bg-hover); }
 .bh-pairing-table tbody tr:last-child td { border-bottom: none; }
 .bh-pairing-sort, .bh-pairing-name { padding: 0; border: none; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }

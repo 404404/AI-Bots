@@ -8,6 +8,7 @@ import type { ChannelStore, ChannelAppendOnceResult } from '../channels/store.js
 import type { PersonaBotRegistry } from '../bots/registry.js';
 import type { SessionOwnership } from '../sessions/ownership.js';
 import type { PrivateInputLog } from './diagnostics.js';
+import type { PrivateInputOrigin, PrivateReplyAuthority } from './im-origin.js';
 import { PrivateAccountBindings, type PrivateAccountScope } from './account-bindings.js';
 import {
   privateRequestSchema,
@@ -49,6 +50,7 @@ type Pending = {
   request: PrivateInputDeclaration;
   expectedRevision: string | undefined;
   signal: AbortSignal;
+  origin?: PrivateInputOrigin;
   deadline: number;
   committed: boolean;
   commit?: Promise<ChannelAppendOnceResult>;
@@ -61,6 +63,7 @@ type PrivateUse = {
   scope: PrivateAccountScope;
   controller: AbortController;
   done: Promise<'stopped' | 'completed'>;
+  origin?: PrivateInputOrigin;
 };
 export class PrivateInputs {
   readonly #pending = new Map<string, Pending>();
@@ -70,6 +73,14 @@ export class PrivateInputs {
   readonly #accounts: PrivateAccountBindings;
   readonly #uses = new Set<PrivateUse>();
   readonly #completed = new Set<string>();
+  readonly #origins = new WeakMap<Agent, Map<string, Map<string, PrivateInputOrigin>>>();
+  readonly #replyScopes = new Set<{
+    scope: PrivateAccountScope;
+    origin: PrivateInputOrigin;
+    controller: AbortController;
+    ready(): boolean;
+    dispose(): void;
+  }>();
 
   constructor(
     readonly deps: {
@@ -78,7 +89,19 @@ export class PrivateInputs {
       registry: PersonaBotRegistry;
       credentials(): CredentialProvider | undefined;
       isLive(agent: Agent): boolean;
-      canRequest(agent: Agent): boolean;
+      canRequest(agent: Agent, sourceEventId?: string): boolean;
+      origin?(agent: Agent, sourceEventId?: string): PrivateInputOrigin | undefined;
+      notify?(
+        botSlug: string,
+        origin: PrivateInputOrigin,
+        channelId: string,
+        messageId: string,
+      ): Promise<void>;
+      replyAuthority?(
+        botSlug: string,
+        sourceEventId: string,
+        authority: PrivateReplyAuthority,
+      ): () => void;
       qualified(): Promise<boolean>;
       log: PrivateInputLog;
       requestTimeoutMs?: number;
@@ -94,6 +117,14 @@ export class PrivateInputs {
         for (const [id, pending] of this.#pending) {
           if (!this.#valid(pending)) void this.#stop(id, pending, 'expired');
         }
+        for (const use of this.#uses)
+          if (use.origin !== undefined && !use.origin.current()) use.controller.abort();
+        for (const reply of this.#replyScopes)
+          if (!reply.origin.applies()) {
+            reply.controller.abort();
+            reply.dispose();
+            this.#replyScopes.delete(reply);
+          }
       },
       Math.min(timeout, 1000),
     );
@@ -124,6 +155,7 @@ export class PrivateInputs {
     return (
       pending.terminal === undefined &&
       !pending.signal.aborted &&
+      (pending.origin === undefined || pending.origin.current()) &&
       Date.now() < pending.deadline &&
       owner?.botSlug === pending.botSlug &&
       owner.createdAt === pending.botCreatedAt &&
@@ -137,6 +169,25 @@ export class PrivateInputs {
       botCreatedAt: pending.botCreatedAt,
       account: pending.request.account,
     };
+  }
+
+  #guardReply(
+    agent: Agent,
+    scope: PrivateAccountScope,
+    origin: PrivateInputOrigin,
+    ready: () => boolean,
+  ): void {
+    if (this.deps.replyAuthority === undefined) return;
+    const controller = new AbortController();
+    const dispose = this.deps.replyAuthority(scope.botSlug, origin.sourceEventId, {
+      signal: controller.signal,
+      current: () =>
+        !controller.signal.aborted &&
+        origin.current() &&
+        this.#owner(agent)?.createdAt === scope.botCreatedAt &&
+        ready(),
+    });
+    this.#replyScopes.add({ scope, origin, controller, ready, dispose });
   }
 
   #resolution(channelId: string, messageId: string) {
@@ -257,17 +308,41 @@ export class PrivateInputs {
     }
   }
 
-  async ask(agent: Agent, input: unknown, signal: AbortSignal): Promise<PrivateInputResult> {
+  async ask(
+    agent: Agent,
+    input: unknown,
+    signal: AbortSignal,
+    sourceEventId?: string,
+  ): Promise<PrivateInputResult> {
     const request = privateRequestSchema.safeParse(input);
     const owner = this.#owner(agent);
     if (!request.success || owner === undefined || signal.aborted)
       throw new Error('Private input request is invalid or unavailable');
+    const origin = this.deps.origin?.(agent, sourceEventId);
+    if (origin !== undefined) {
+      if (!origin.current() || this.deps.notify === undefined)
+        throw new Error('Private input IM handoff is unavailable');
+      let origins = this.#origins.get(agent);
+      if (origins === undefined) {
+        origins = new Map();
+        this.#origins.set(agent, origins);
+      }
+      let accountOrigins = origins.get(request.data.account);
+      if (accountOrigins === undefined) {
+        accountOrigins = new Map();
+        origins.set(request.data.account, accountOrigins);
+      }
+      for (const [id, previous] of accountOrigins)
+        if (!previous.applies()) accountOrigins.delete(id);
+      accountOrigins.set(origin.sourceEventId, origin);
+    }
     await this.recover();
     if (!(await this.deps.qualified()) || this.deps.credentials() === undefined)
       throw new Error('Protected credential consumption is unavailable in this Profile');
     const currentOwner = this.#owner(agent);
     if (
       signal.aborted ||
+      (origin !== undefined && !origin.current()) ||
       currentOwner?.botSlug !== owner.botSlug ||
       currentOwner.createdAt !== owner.createdAt
     )
@@ -303,22 +378,25 @@ export class PrivateInputs {
           .filter((field) => (grant.data.values[field.id]?.length ?? 0) > 0)
           .map((field) => [field.id, `private:${binding.grantId}:${field.id}`]),
       );
+      if (origin !== undefined) this.#guardReply(agent, scope, origin, () => true);
       return { binding, references };
     });
     const reuseOwner = this.#owner(agent);
     if (
       signal.aborted ||
+      (origin !== undefined && !origin.current()) ||
       reuseOwner?.createdAt !== owner.createdAt ||
       reuseOwner.botSlug !== owner.botSlug
     )
       throw new Error('Private input request expired');
-    if (existing.references !== undefined)
+    if (existing.references !== undefined) {
       return {
         status: 'configured',
         account: request.data.account,
         references: existing.references,
       };
-    if (!this.deps.canRequest(agent)) {
+    }
+    if (!this.deps.canRequest(agent, sourceEventId)) {
       this.deps.log('owner-action-required', {
         botSlug: owner.botSlug,
         sessionId: agent.session.id,
@@ -328,8 +406,32 @@ export class PrivateInputs {
       );
     }
     const binding = existing.binding;
-    const opened = await this.#open(agent, owner, request.data, signal, binding?.revision);
-    return opened.result;
+    const opened = await this.#open(
+      agent,
+      owner,
+      request.data,
+      signal,
+      binding?.revision,
+      undefined,
+      origin,
+    );
+    if (origin !== undefined && this.status(channelId, opened.messageId) === 'pending') {
+      try {
+        await this.deps.notify!(owner.botSlug, origin, channelId, opened.messageId);
+        this.deps.log('im-notice-settled', { botSlug: owner.botSlug, requestId: opened.messageId });
+      } catch {
+        const pending = this.#pending.get(opened.messageId);
+        if (pending !== undefined) await this.#stop(opened.messageId, pending, 'expired');
+        this.deps.log('im-notice-unavailable', {
+          botSlug: owner.botSlug,
+          requestId: opened.messageId,
+        });
+      }
+    }
+    const result = await opened.result;
+    return origin !== undefined && !origin.current()
+      ? { status: 'expired', account: request.data.account, references: {} }
+      : result;
   }
 
   async #open(
@@ -339,6 +441,7 @@ export class PrivateInputs {
     signal: AbortSignal,
     expectedRevision: string | undefined,
     replacesMessageId?: string,
+    origin?: PrivateInputOrigin,
   ): Promise<{ messageId: string; result: Promise<PrivateInputResult> }> {
     const channelId = dmChannelId(owner.botSlug);
     const id = randomUUID();
@@ -353,6 +456,7 @@ export class PrivateInputs {
       request,
       expectedRevision,
       signal,
+      ...(origin === undefined ? {} : { origin }),
       committed: false,
       deadline: Date.now() + (this.deps.requestTimeoutMs ?? 15 * 60_000),
       resolve,
@@ -361,7 +465,15 @@ export class PrivateInputs {
       },
     };
     this.#pending.set(id, pending);
+    if (agent !== undefined && origin !== undefined)
+      this.#guardReply(
+        agent,
+        this.#scope(pending),
+        origin,
+        () => this.#resolution(channelId, id)?.state === 'configured',
+      );
     signal.addEventListener('abort', pending.abort, { once: true });
+    origin?.signal.addEventListener('abort', pending.abort, { once: true });
     try {
       pending.commit = this.deps.channels.appendMessageOnce(channelId, {
         id,
@@ -389,6 +501,7 @@ export class PrivateInputs {
       return { messageId: id, result };
     } catch {
       signal.removeEventListener('abort', pending.abort);
+      origin?.signal.removeEventListener('abort', pending.abort);
       if (this.#pending.get(id) === pending) {
         this.#pending.delete(id);
         this.#publish(pending.botSlug);
@@ -410,6 +523,7 @@ export class PrivateInputs {
 
   #finish(id: string, pending: Pending, result: PrivateInputResult): void {
     pending.signal.removeEventListener('abort', pending.abort);
+    pending.origin?.signal.removeEventListener('abort', pending.abort);
     this.#pending.delete(id);
     pending.resolve(result);
     this.#publish(pending.botSlug);
@@ -664,6 +778,13 @@ export class PrivateInputs {
     )
       throw new Error('Credential references are invalid');
     const scope = { botSlug: owner.botSlug, botCreatedAt: owner.createdAt, account };
+    const remembered = [...(this.#origins.get(agent)?.get(account)?.values() ?? [])].filter(
+      (origin) => origin.applies(),
+    );
+    if (remembered.length > 1) throw new Error('Private input IM source is ambiguous');
+    const origin = remembered[0] ?? this.deps.origin?.(agent);
+    if (origin !== undefined && !origin.current())
+      throw new Error('Private input IM authority changed');
     const startedUse = await this.#accounts
       .serial(scope, async () => {
         const record = await this.deps
@@ -689,9 +810,13 @@ export class PrivateInputs {
         if (currentOwner?.botSlug !== owner.botSlug || currentOwner.createdAt !== owner.createdAt)
           throw new Error('Credential authority changed');
         if (signal?.aborted) throw new Error('Protected credential consumer was cancelled');
+        if (origin !== undefined && !origin.current())
+          throw new Error('Private input IM authority changed');
+        if (origin !== undefined) this.#guardReply(agent, scope, origin, () => true);
         const controller = new AbortController();
         const abort = () => controller.abort();
         signal?.addEventListener('abort', abort, { once: true });
+        origin?.signal.addEventListener('abort', abort, { once: true });
         const resolved = Object.fromEntries(
           matches.map(({ field }) => [field, grant.data.values[field]!]),
         );
@@ -699,17 +824,26 @@ export class PrivateInputs {
         const done = new Promise<'stopped' | 'completed'>((resolve) => {
           settle = resolve;
         });
-        const use: PrivateUse = { scope, controller, done };
+        const use: PrivateUse = {
+          scope,
+          controller,
+          done,
+          ...(origin === undefined ? {} : { origin }),
+        };
         this.#uses.add(use);
         this.#completed.delete(this.#accounts.key(scope));
         const promise = Promise.resolve()
           .then(() => {
-            if (controller.signal.aborted)
+            if (controller.signal.aborted || (origin !== undefined && !origin.current()))
               throw new Error('Protected credential consumer was cancelled');
             return run(resolved, controller.signal);
           })
           .then(
             (result) => {
+              if (origin !== undefined && (controller.signal.aborted || !origin.current())) {
+                settle('completed');
+                throw new Error('Private input IM authority changed');
+              }
               settle('completed');
               return result;
             },
@@ -721,6 +855,7 @@ export class PrivateInputs {
           .finally(() => {
             for (const field of Object.keys(resolved)) delete resolved[field];
             signal?.removeEventListener('abort', abort);
+            origin?.signal.removeEventListener('abort', abort);
             this.#uses.delete(use);
             this.#completed.add(this.#accounts.key(scope));
             if (this.#completed.size > 100)
@@ -854,6 +989,9 @@ export class PrivateInputs {
     initiator: 'replacement' | 'revocation',
   ): Promise<Omit<PrivateRevocationResult, 'accepted'>> {
     const started = Date.now();
+    for (const reply of this.#replyScopes)
+      if (this.#accounts.key(reply.scope) === this.#accounts.key(scope) && reply.ready())
+        reply.controller.abort();
     const uses = [...this.#uses].filter(
       (use) => this.#accounts.key(use.scope) === this.#accounts.key(scope),
     );
@@ -947,6 +1085,11 @@ export class PrivateInputs {
   async close(): Promise<void> {
     this.#closed = true;
     clearInterval(this.#timer);
+    for (const reply of this.#replyScopes) {
+      reply.controller.abort();
+      reply.dispose();
+    }
+    this.#replyScopes.clear();
     for (const use of this.#uses) use.controller.abort();
     await Promise.all(
       [...this.#pending.entries()].map(([id, pending]) => this.#stop(id, pending, 'expired')),

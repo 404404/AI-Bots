@@ -1,5 +1,17 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,12 +45,9 @@ export function protectImTestApps(path = imTestAppsPath()) {
   }
 }
 
-function readValues(path) {
-  if (!existsSync(path)) return {};
-  if (process.platform !== 'win32' && (statSync(path).mode & 0o077) !== 0)
-    throw new Error('IM test App file must be private (chmod 600)');
+function parseValues(text) {
   const values = {};
-  for (const line of readFileSync(path, 'utf8').split(/\r?\n/u)) {
+  for (const line of text.split(/\r?\n/u)) {
     if (!line.trim() || line.trimStart().startsWith('#')) continue;
     const match = /^(BH_IM_QA_SLOT|BH_LARK_QA[123]_[A-Z_]+)=(.*)$/u.exec(line);
     if (!match) throw new Error('Invalid IM test App configuration; use the setup wizard');
@@ -46,6 +55,43 @@ function readValues(path) {
     values[match[1]] = match[2];
   }
   return values;
+}
+
+function readValues(path) {
+  if (!existsSync(path)) return {};
+  if (process.platform !== 'win32' && (statSync(path).mode & 0o077) !== 0)
+    throw new Error('IM test App file must be private (chmod 600)');
+  return parseValues(readFileSync(path, 'utf8'));
+}
+
+export function saveImTestAppValues(text, { path = imTestAppsPath() } = {}) {
+  const updates = parseValues(text);
+  if (Object.keys(updates).length === 0) throw new Error('No IM test App updates provided');
+  protectImTestApps(path);
+  readValues(path);
+  const lines = existsSync(path) ? readFileSync(path, 'utf8').split(/\r?\n/u) : [];
+  while (lines.at(-1) === '') lines.pop();
+  const pending = new Map(Object.entries(updates));
+  const next = lines.map((line) => {
+    const key = line.slice(0, line.indexOf('='));
+    if (!pending.has(key)) return line;
+    const value = pending.get(key);
+    pending.delete(key);
+    return `${key}=${value}`;
+  });
+  next.push(...[...pending].map(([key, value]) => `${key}=${value}`));
+  const temporary = join(dirname(path), `.im-test-apps-${randomUUID()}.tmp`);
+  const descriptor = openSync(temporary, 'wx', 0o600);
+  let open = true;
+  try {
+    writeFileSync(descriptor, next.join('\n') + '\n');
+    closeSync(descriptor);
+    open = false;
+    renameSync(temporary, path);
+  } finally {
+    if (open) closeSync(descriptor);
+    rmSync(temporary, { force: true });
+  }
 }
 
 function displayName(value) {
@@ -111,11 +157,14 @@ function setup() {
         'Git Bash is required on Windows; install Git for Windows. WSL bash uses a different home directory.',
       );
   }
+  console.log('正在准备本机私密配置文件；此步骤不会连接 Lark。');
   const result = spawnSync(bash, [script.replaceAll('\\', '/')], {
     stdio: 'inherit',
     env: {
       ...process.env,
       PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
+      BOTHARNESS_IM_TEST_APPS_ENV: imTestAppsPath().replaceAll('\\', '/'),
+      ...(process.platform === 'win32' ? { TERM: 'dumb' } : {}),
     },
   });
   if (result.error) throw result.error;
@@ -130,7 +179,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     } else if (command === 'setup' && args.length === 0) {
       setup();
     } else if (command === 'protect' && args.length === 1) {
-      protectImTestApps(resolve(args[0]));
+      const path = resolve(args[0]);
+      protectImTestApps(path);
+      if (!existsSync(path)) writeFileSync(path, '', { mode: 0o600, flag: 'wx' });
+    } else if (command === 'save' && args.length === 0) {
+      saveImTestAppValues(readFileSync(0, 'utf8'));
     } else {
       throw new Error('usage: node scripts/dev-im-test-apps.mjs [list|setup]');
     }

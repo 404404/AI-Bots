@@ -110,6 +110,7 @@ export class FakeAgentHost implements DshAgentHost {
     };
     const messages: Message[] = [];
     const events: FakeEvent[] = [];
+    const effects = new Set<() => void>();
     const session: FakeSession = {
       id: sessionId,
       header: {
@@ -161,6 +162,13 @@ export class FakeAgentHost implements DshAgentHost {
     };
     const fakeContext = {
       get: (_name: string) => undefined,
+      effect: (setup: () => () => void) => {
+        const dispose = setup();
+        effects.add(dispose);
+        return () => {
+          if (effects.delete(dispose)) dispose();
+        };
+      },
       on: (event: string, listener: (...args: unknown[]) => unknown) => {
         scope.listeners.set(event, listener);
         return () => void scope.listeners.delete(event);
@@ -211,6 +219,8 @@ export class FakeAgentHost implements DshAgentHost {
       dispose: async () => {
         this.disposed.push(sessionId);
         this.#live.delete(sessionId);
+        for (const dispose of effects) dispose();
+        effects.clear();
       },
     };
   }

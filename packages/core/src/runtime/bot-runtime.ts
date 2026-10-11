@@ -32,6 +32,7 @@ import { authorizedPathRoot } from '../workspaces/grant-native-tools.js';
 import { mentionPeople, withMentionNames } from '../messaging/mention-text.js';
 import type { MessagingInboundEvent } from '../messaging/provider.js';
 import type { OutboxIntent, OutboundMessaging } from '../messaging/outbound.js';
+import type { PrivateInputOrigin } from '../credentials/im-origin.js';
 import type { MessagingProcessing } from '../messaging/typing.js';
 import type {
   ExternalSource,
@@ -460,7 +461,11 @@ export type DmMessageAdmission =
   | { admitted: false; reason: DmAdmissionFailure };
 
 export interface BotRuntime {
-  canRequestPrivateInput?(sessionId: string): boolean;
+  canRequestPrivateInput?(sessionId: string, sourceEventId?: string): boolean;
+  bindPrivateInputOrigin?(
+    sessionId: string,
+    sourceEventId?: string,
+  ): PrivateInputOrigin | undefined;
   beginAssignmentApprovalWait?(
     sessionId: string,
     callId: string,
@@ -2634,7 +2639,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (changed) this.#channels.admissionChanged?.(channelId, messageId);
   }
 
-  canRequestPrivateInput(sessionId: string): boolean {
+  canRequestPrivateInput(sessionId: string, selected?: string): boolean {
     const owner = this.#ownership.resolve(sessionId);
     if (
       this.#closed ||
@@ -2644,6 +2649,11 @@ class BotRuntimeImplementation implements BotRuntime {
       return false;
     const turn = this.#turnSources.get(owner.botSlug);
     if (turn?.sessionId !== sessionId) return false;
+    try {
+      if (this.bindPrivateInputOrigin(sessionId, selected) !== undefined) return true;
+    } catch {
+      return false;
+    }
     return this.#database.read((db) => {
       const human = db.prepare(
         `SELECT e.channel_id FROM source_events e
@@ -2666,6 +2676,55 @@ class BotRuntimeImplementation implements BotRuntime {
         }
       });
     });
+  }
+
+  bindPrivateInputOrigin(sessionId: string, selected?: string): PrivateInputOrigin | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    if (owner?.rootRole !== 'orchestrator' || turn?.sessionId !== sessionId) {
+      if (selected !== undefined) throw new Error('Private input IM source is unavailable');
+      return undefined;
+    }
+    const ids = this.#database.read((db) => {
+      const query = db.prepare('SELECT source_kind FROM source_events WHERE source_event_id = ?');
+      return [...turn.acceptedEventIds].filter(
+        (id) => query.get(id)?.source_kind === 'bridge-message',
+      );
+    });
+    if (ids.length === 0 && selected === undefined) return undefined;
+    const id = selected ?? (ids.length === 1 ? ids[0] : undefined);
+    if (id === undefined || !ids.includes(id) || this.#externalMessaging === undefined)
+      throw new Error('Select one live accepted IM source_event_id for private input');
+    const messaging = this.#externalMessaging;
+    const bot = this.#registry.get(owner.botSlug);
+    if (bot === undefined) throw new Error('Private input IM source is unavailable');
+    const signal = messaging.inbound.sourceSignal(owner.botSlug, id);
+    const applies = () => this.#turnSources.get(owner.botSlug) === turn;
+    const current = () => {
+      const currentOwner = this.#ownership.resolve(sessionId);
+      const currentBot = this.#registry.get(owner.botSlug);
+      if (
+        this.#closed ||
+        signal.aborted ||
+        currentBot?.createdAt !== bot.createdAt ||
+        currentBot.paused === true ||
+        currentOwner?.rootRole !== 'orchestrator' ||
+        currentOwner.botSlug !== owner.botSlug ||
+        !this.#ownership.contentAvailable(sessionId) ||
+        !applies() ||
+        !turn.acceptedEventIds.has(id) ||
+        !messaging.inbound.available(owner.botSlug, id)
+      )
+        return false;
+      try {
+        this.#database.read((db) => requireSourceEffects(db, id, owner.botSlug));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (!current()) throw new Error('Private input IM source is unavailable');
+    return { sourceEventId: id, signal, applies, current };
   }
 
   bindNativeQuestionInput(

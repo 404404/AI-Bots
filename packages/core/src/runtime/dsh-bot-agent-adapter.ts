@@ -17,6 +17,7 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import { SessionId, type SessionLogOffset } from '@deepseek-ai/dsh-session';
 import { defineTool } from '@deepseek-ai/dsh-tools';
+import { qualifyMessagingTool } from '../credentials/messaging-tools.js';
 import { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy';
 import { setApprovalPolicy } from '@deepseek-ai/dsh-user-approval';
 
@@ -547,6 +548,9 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       if (borrowed) borrowedDisposers.push(disposeSelection);
       const registerTool = (tool: Parameters<typeof agentCtx.tools.register>[0]) => {
         const dispose = agentCtx.tools.register(tool);
+        const unqualify = qualifyMessagingTool(agent, tool);
+        agentCtx.effect(() => unqualify, 'botharness: messaging Tool qualification');
+        if (borrowed) borrowedDisposers.push(unqualify);
         if (borrowed) borrowedDisposers.push(dispose);
         return dispose;
       };

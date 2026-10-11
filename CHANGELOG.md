@@ -27,9 +27,13 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a live affected-person preview. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
+- Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a live affected-person preview; its Allow/Deny cells show only checkboxes with accessible names. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
+
+- Compatible checked Providers can add Slack received/answered reactions from canonical Inbox and source-reply facts, without blocking messaging; muted sources are excluded. The isolated candidate has native channel/DM evidence; Human QA and published Provider qualification remain pending ([#1161](https://github.com/BotHarness/DeepSeekBot/issues/1161), [guide](docs/slack-connection.md)).
 
 - Lark pairing reviewers can choose an existing Role and approve or reject from a shared source-group or private-DM card, including group-only use. Current review permission and separate delegation Allow/Deny limit management Role grants; applicants must ask again after approval ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
+
+- Authorized IM requests can lead the Owner to an existing Web Chat private-input card, consume references under existing approval and return a nonsecret result to the original conversation; current source and account authority fence delayed continuation and delivery ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385), [guide](docs/dev/guides/private-input-im.md)).
 
 - PersonaBots in the opt-in protected Profile can consume opaque private references through one fixed MCP authenticated-status operation, using existing Web input and execution approval; ordinary isolated MCP remains available ([#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384), [guide](docs/dev/guides/private-input-mcp.md)).
 
@@ -116,6 +120,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- The reusable Lark QA App setup wizard prints links for manual navigation and reduces Windows prompt delays by caching defaults, avoiding terminal subprocesses, and saving each stage atomically while preserving other Apps ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)).
+
 - Lark tool-approval cards now show settled execution or rejection without stale action buttons by using shared updates in the qualified Provider ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 
 - Chat bubbles use equal insets, and private-input, question, approval, workspace-grant and failure-repair cards align the space above their actions with the bottom inset ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
@@ -151,6 +157,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - On narrow screens, message bubbles are no longer squeezed by the always-visible reply and copy buttons; those actions move into the long-press message menu, while desktop hover and right-click behavior is unchanged ([#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)).
 
 ### Documentation
+
+- Added the Product Hunt launch badge to the Chinese and English READMEs ([#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)).
 
 - Added bilingual human contributor guides and community entry points for questions, ideas, examples and focused issues or PRs; runtime behavior is unchanged ([contributor guide](CONTRIBUTING.md), [#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)).
 

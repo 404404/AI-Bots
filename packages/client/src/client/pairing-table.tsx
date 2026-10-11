@@ -28,7 +28,7 @@ export function PairingTable<Row extends { id: string }>({
   selectedId?: string | undefined;
   selectedIds?: string[] | undefined;
   disabled?: boolean | undefined;
-  select(row: Row): void;
+  select?: ((row: Row) => void) | undefined;
   label: string;
   empty: string;
   t: BotHarnessTranslate;
@@ -69,9 +69,11 @@ export function PairingTable<Row extends { id: string }>({
           <thead>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
-                <th scope="col">
-                  <span className="bh-sr-only">{t('pairing.selection')}</span>
-                </th>
+                {select ? (
+                  <th scope="col">
+                    <span className="bh-sr-only">{t('pairing.selection')}</span>
+                  </th>
+                ) : null}
                 {group.headers.map((header) => (
                   <th
                     key={header.id}
@@ -109,19 +111,21 @@ export function PairingTable<Row extends { id: string }>({
           <tbody>
             {visible.map((row) => (
               <tr key={row.id} data-selected={row.getIsSelected() || undefined}>
-                <td>
-                  <Checkbox
-                    label={t('pairing.selectEntry', {
-                      name: String(row.getValue(columns[0]?.id ?? 'name') ?? row.id),
-                    })}
-                    checked={row.getIsSelected()}
-                    disabled={disabled}
-                    onChange={() => select(row.original)}
-                  />
-                </td>
+                {select ? (
+                  <td>
+                    <Checkbox
+                      label={t('pairing.selectEntry', {
+                        name: String(row.getValue(columns[0]?.id ?? 'name') ?? row.id),
+                      })}
+                      checked={row.getIsSelected()}
+                      disabled={disabled}
+                      onChange={() => select(row.original)}
+                    />
+                  </td>
+                ) : null}
                 {row.getVisibleCells().map((cell, index) => (
                   <td key={cell.id}>
-                    {index === 0 ? (
+                    {index === 0 && select ? (
                       <button
                         type="button"
                         className="bh-pairing-name"

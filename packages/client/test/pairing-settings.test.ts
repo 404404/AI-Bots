@@ -207,10 +207,17 @@ it('previews a cross-group behavior Deny conflict and saves stable item IDs with
       ),
     );
     expect(host.textContent).toContain(zhTranslate('pairing.behaviorNoConflict'));
+    const table = host.querySelector('.bh-behavior-selection table')!;
+    expect(table.querySelectorAll('th')).toHaveLength(3);
+    expect(table.querySelectorAll('input[type=checkbox]')).toHaveLength(2);
+    expect(table.querySelector('.bh-pairing-name')).toBeNull();
+    expect(table.querySelectorAll('label')[0]!.textContent).toBe('允许 · Pricing');
     const deny = Array.from(host.querySelectorAll('label'))
       .find((label) => label.textContent === '拒绝 · Pricing')!
       .querySelector('input')!;
     await act(async () => deny.click());
+    expect(table.querySelectorAll<HTMLInputElement>('input')[0]!.checked).toBe(false);
+    expect(table.querySelectorAll<HTMLInputElement>('input')[1]!.checked).toBe(true);
     expect(host.textContent).toContain(zhTranslate('pairing.behaviorConflict'));
     expect(host.textContent).toContain('Sales');
     expect(host.textContent).toContain('Support');
