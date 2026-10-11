@@ -126,6 +126,11 @@ it('requires explicit members, shares folder confirmation, isolates partial resu
     await act(async () => button(zhTranslate('grant.authorize')).click());
     expect(container.textContent).toContain(zhTranslate('groupGrant.confirm'));
     expect(container.textContent).toContain('/project');
+    expect(container.querySelector('.bh-group-grant-members')).toBeNull();
+    expect(container.querySelector('.bh-group-grant-directory')!.textContent).toBe('/project');
+    expect(container.querySelectorAll('.bh-group-grant-result')).toHaveLength(2);
+    expect(container.querySelector('.bh-group-grant-policy')!.hasAttribute('open')).toBe(false);
+    expect(container.textContent).toContain(zhTranslate('groupGrant.unselected'));
     expect(actions.authorizeGroupWorkspacePath).not.toHaveBeenCalled();
     await act(async () => button(zhTranslate('grant.authorize')).click());
     expect(container.textContent).toContain(zhTranslate('groupGrant.created'));

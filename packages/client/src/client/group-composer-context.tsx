@@ -209,30 +209,31 @@ export function GroupComposerContextView({
           }}
         >
           <div className="bh-workspace-grants">
-            <p className="bh-note">{t('groupGrant.scope')}</p>
-            <fieldset className="bh-group-grant-members" disabled={busy}>
-              <legend>{t('groupGrant.select')}</legend>
-              {members.map((bot) => (
-                <label key={bot.slug}>
-                  <input
-                    type="checkbox"
-                    checked={eligible.includes(bot.slug)}
-                    onChange={(event) => {
-                      setSelected(
-                        event.target.checked
-                          ? [...eligible, bot.slug]
-                          : eligible.filter((slug) => slug !== bot.slug),
-                      );
-                      setPreview(undefined);
-                      setResults([]);
-                      setError(undefined);
-                    }}
-                  />
-                  {bot.displayName}
-                </label>
-              ))}
-              {members.length === 0 ? <p>{t('groupGrant.noMembers')}</p> : null}
-            </fieldset>
+            {preview === undefined ? (
+              <fieldset className="bh-group-grant-members" disabled={busy}>
+                <legend>{t('groupGrant.select')}</legend>
+                {members.map((bot) => (
+                  <label key={bot.slug}>
+                    <input
+                      type="checkbox"
+                      checked={eligible.includes(bot.slug)}
+                      onChange={(event) => {
+                        setSelected(
+                          event.target.checked
+                            ? [...eligible, bot.slug]
+                            : eligible.filter((slug) => slug !== bot.slug),
+                        );
+                        setPreview(undefined);
+                        setResults([]);
+                        setError(undefined);
+                      }}
+                    />
+                    {bot.displayName}
+                  </label>
+                ))}
+                {members.length === 0 ? <p>{t('groupGrant.noMembers')}</p> : null}
+              </fieldset>
+            ) : null}
             {error === undefined ? null : (
               <div className="bh-error" role="alert">
                 {error}
@@ -253,11 +254,19 @@ export function GroupComposerContextView({
               />
             ) : (
               <WorkspaceGrantConfirmation title={t('groupGrant.confirm')}>
+                <p className="bh-group-grant-directory">{preview.path}</p>
+                <p>{t('groupGrant.permissions')}</p>
                 {preview.members.map((bot) => (
                   <div key={bot.slug} className="bh-group-grant-result">
-                    <strong>{bot.name}</strong>
-                    <p>{t('composerContext.grantScope', { path: preview.path })}</p>
-                    <div className="bh-note">
+                    <div className="bh-group-grant-result-head">
+                      <strong>{bot.name}</strong>
+                      <span role="status">
+                        {t(
+                          `groupGrant.${results.find((row) => row.slug === bot.slug)?.status ?? (bot.grant === undefined ? 'pending' : 'existing')}`,
+                        )}
+                      </span>
+                    </div>
+                    <div className="bh-group-grant-access">
                       {t('groupGrant.access', {
                         mode: bot.access.mode,
                         write: t(
@@ -265,41 +274,39 @@ export function GroupComposerContextView({
                         ),
                       })}
                     </div>
-                    {results.find((row) => row.slug === bot.slug) === undefined ? (
-                      <p>
-                        {t(bot.grant === undefined ? 'groupGrant.pending' : 'groupGrant.existing')}
-                      </p>
-                    ) : (
-                      results
-                        .filter((row) => row.slug === bot.slug)
-                        .map((row) => (
-                          <div key={row.slug} role="status">
-                            <strong>{t(`groupGrant.${row.status}`)}</strong>
-                            {row.error === undefined ? null : (
-                              <div className="bh-error">{row.error}</div>
-                            )}
-                          </div>
-                        ))
-                    )}
+                    {results
+                      .filter((row) => row.slug === bot.slug && row.error !== undefined)
+                      .map((row) => (
+                        <div key={row.slug} className="bh-error">
+                          {row.error}
+                        </div>
+                      ))}
                   </div>
                 ))}
-                <p className="bh-note">{t('groupGrant.partial')}</p>
-                {results.length === 0 || retry ? (
-                  <Button disabled={busy} onClick={submit}>
-                    {t(results.length === 0 ? 'grant.authorize' : 'groupGrant.retry')}
+                <div className="bh-group-grant-actions">
+                  {results.length === 0 || retry ? (
+                    <Button disabled={busy} onClick={submit}>
+                      {t(results.length === 0 ? 'grant.authorize' : 'groupGrant.retry')}
+                    </Button>
+                  ) : null}
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      setPreview(undefined);
+                      setResults([]);
+                    }}
+                  >
+                    {t('approval.cancel')}
                   </Button>
-                ) : null}
-                <Button
-                  disabled={busy}
-                  onClick={() => {
-                    setPreview(undefined);
-                    setResults([]);
-                  }}
-                >
-                  {t('approval.cancel')}
-                </Button>
+                </div>
               </WorkspaceGrantConfirmation>
             )}
+            <p>{t('groupGrant.unselected')}</p>
+            <details className="bh-group-grant-policy">
+              <summary>{t('groupGrant.details')}</summary>
+              <p>{t('groupGrant.scope')}</p>
+              <p>{t('groupGrant.partial')}</p>
+            </details>
           </div>
         </Modal>
       ) : null}

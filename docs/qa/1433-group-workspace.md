@@ -6,7 +6,7 @@
 - Dependency #1432 was explicitly Human-accepted in [the acceptance comment](https://github.com/BotHarness/DeepSeekBot/issues/1432#issuecomment-6113040095), not inferred from its closed state. PR #1441 merged; [completion](https://github.com/BotHarness/DeepSeekBot/issues/1432#issuecomment-6113130888) records the accepted baseline.
 - Base: `184edf23b422a69b9f04bdfde29e35e40c88f3a0`. A separate checkout runs this exact base for the before capture.
 - Task: `codex/local/01a12c92-1feb-7823-8fb8-f603fad9ca1d`; [claim](https://github.com/BotHarness/DeepSeekBot/issues/1433#issuecomment-6113191966); branch: `codex/1433-group-workspace`.
-- Run date: October 12, 2026, Asia/Tokyo (October 11, 2026 UTC). The PR body and outcome comment record the exact final head. Final captures use the implementation source tree committed by that PR, with no subsequent runtime-source edits.
+- Run date: October 12, 2026, Asia/Tokyo (October 11, 2026 UTC). The PR body and outcome comment record the current head. The screenshots and real-model delegation below belong to `c5f962824d8aab1ab5103f4784e6ab8f20f88a4a`, before the compact-modal feedback revision; they are not claimed as screenshots of the revised layout.
 
 ## Setup and proof boundaries
 
@@ -40,6 +40,16 @@ Directory preview may register and resolve a native DSH Workspace. It does **not
 The selected marker is 33 bytes: `QA1433 selected member completed` followed by LF. SHA-256: `ba8f796dafe565a694d3a3e7dc4faab429fb80a01a07e1b5e8881b0718f3cb6c`. The coding agent independently reads the completed file after the Assignment. The original 125-byte README remains unchanged. Model statements about these files are cross-checked, not accepted as execution proof by themselves.
 
 ## Rendered evidence
+
+### Compact-modal feedback revision
+
+Human requested alignment with the DM workspace modal and less small, repetitive copy. The Group modal still uses the same folder picker and confirmation seam. It adds compact explicit-member choices, displays the canonical directory and unchanged permission policy once, and keeps concise per-member access/status rows. Member choices are replaced by the confirmed target rows during confirmation; Cancel returns to selection. Detailed authorization and partial-result rules are available through a collapsed disclosure. No authorization behavior changes.
+
+The running DM composer modal measures 380 CSS px wide. The revised Group modal measures 480 CSS px wide, leaving room for member/status rows without the former 620 px width. Native DOM readback in the synthetic `Group Workspace Compact QA` verifies a single displayed canonical directory, collapsed rules, two confirmed targets, `Authorized · reused` alongside `Failed`, a concrete departed-member refusal, and successful-result preservation after `Read back and retry`. Canonical Grant counts remain Selected QA: 1, Unselected QA: 0, Partial QA: 0. This repeat uses the real rendered UI and authenticated Host; it does not repeat the earlier real-model Assignment execution.
+
+**New visual evidence is pending.** T3 preview screenshot capture repeatedly fails, including in a fresh preview tab. The compact UI is not visually accepted based on DOM measurements or older images. Existing images remain explicitly bound to the pre-compaction head. Human QA and fresh GitHub-rendered compact-modal screenshots are still required before merge.
+
+### Pre-compaction captures
 
 Screenshots are native UI captures, not reconstructed or annotated mockups. The entry pair uses matching dark theme, English locale, synthetic Group name and two remaining members. It is cropped identically from 1280 × 800 captures to the central 732 × 800 panel; fixture roster details outside this panel differ between isolated Profiles. Other images retain the 1280 × 800 capture. A transient screenshot-tool failure was retried through the same T3 tool; no alternate browser capture was substituted.
 
