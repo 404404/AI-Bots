@@ -1,5 +1,7 @@
 # Shared Lark test Apps
 
+For official QQ Bot Apps, use the [reusable QQ QA clients](qq-test-clients.md). QQ reuses a dedicated native Profile instead of storing App Secrets in this Lark environment file.
+
 Configure up to three reusable, independent Lark Apps once per machine. From any worktree:
 
 ```bash
