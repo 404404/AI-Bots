@@ -13,6 +13,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { IM_TEST_SLOTS, protectImTestApps } from './dev-im-test-apps.mjs';
+import { qqConnectionRequest, readQqCredential, runQqNative } from './dev-qq-native.mjs';
 
 export function qqTestClientsPath(environment = process.env) {
   return resolve(
@@ -215,6 +216,17 @@ export function markQqTestLaunch(slot, owner, { path = qqTestClientsPath() } = {
   });
 }
 
+export function markQqTestConnect(slot, owner, { path = qqTestClientsPath() } = {}) {
+  return update(path, (data) => {
+    selectedQqTestClient(slot, owner, { path });
+    if (data.clients[slot].claim.connectRequestedAt)
+      throw new Error(
+        'Connect already requested; inspect native status before handing off or retrying',
+      );
+    data.clients[slot].claim.connectRequestedAt = new Date().toISOString();
+  });
+}
+
 function git(...arguments_) {
   return execFileSync('git', ['rev-parse', ...arguments_], {
     encoding: 'utf8',
@@ -222,11 +234,16 @@ function git(...arguments_) {
   }).trim();
 }
 
-function main(argv) {
+async function main(argv) {
   const [command = 'list', slot, ...rest] = argv;
   if (command === 'list' && !slot) return listQqTestClients();
   const flags = {};
-  const booleans = new Set(['--confirmed-idle', '--confirmed-stopped', '--remote']);
+  const booleans = new Set([
+    '--confirmed-idle',
+    '--confirmed-stopped',
+    '--remote',
+    '--confirmed-source-idle',
+  ]);
   const valueFlags = new Set([
     '--name',
     '--app-id',
@@ -236,6 +253,10 @@ function main(argv) {
     '--task',
     '--receiver',
     '--port',
+    '--source-home',
+    '--token-file',
+    '--ssh-config',
+    '--remote-node',
   ]);
   for (let index = 0; index < rest.length; index++) {
     const flag = rest[index];
@@ -277,6 +298,33 @@ function main(argv) {
       worktree,
       confirmedStopped: flags['--confirmed-stopped'],
     });
+  if (command === 'connect' || command === 'status') {
+    const owner = { task, worktree, branch };
+    const client = selectedQqTestClient(slot, owner);
+    if ((client.location === 'remote') !== Boolean(flags['--ssh-config']))
+      throw new Error('Remote slots require explicit --ssh-config; local slots refuse SSH');
+    const request = qqConnectionRequest(client, {
+      port: Number(flags['--port']),
+      tokenFile: flags['--token-file'],
+      connect: command === 'connect',
+    });
+    if (command === 'connect') {
+      if (!flags['--source-home']) throw new Error('Provide an authorized native --source-home');
+      request.appSecret = readQqCredential(
+        flags['--source-home'],
+        client.appId,
+        flags['--confirmed-source-idle'],
+      );
+      markQqTestConnect(slot, owner);
+    }
+    return {
+      slot,
+      ...(await runQqNative(request, {
+        sshConfig: flags['--ssh-config'],
+        remoteNode: flags['--remote-node'],
+      })),
+    };
+  }
   if (command === 'launch') {
     const client = selectedQqTestClient(slot, { task, worktree, branch });
     if (client.location !== 'local')
@@ -308,13 +356,13 @@ function main(argv) {
     return undefined;
   }
   throw new Error(
-    'usage: dev-qq-test-clients.mjs list | register|identify|claim|launch|release QA1|QA2|QA3 [options]',
+    'usage: dev-qq-test-clients.mjs list | register|identify|claim|launch|connect|status|release QA1|QA2|QA3 [options]',
   );
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const result = main(process.argv.slice(2));
+    const result = await main(process.argv.slice(2));
     if (result !== undefined) console.log(JSON.stringify(result, null, 2));
   } catch (error) {
     console.error(error.message);

@@ -8,6 +8,7 @@ import {
   identifyQqTestClient,
   listQqTestClients,
   markQqTestLaunch,
+  markQqTestConnect,
   registerQqTestClient,
   releaseQqTestClient,
   selectedQqTestClient,
@@ -44,6 +45,16 @@ afterEach(() => {
 });
 
 describe('reusable QQ QA clients', () => {
+  it('keeps an uncertain credential connect occupied and refuses another attempt or owner', () => {
+    const options = fixture();
+    claimQqTestClient('QA1', owner, options);
+    markQqTestConnect('QA1', owner, options);
+    expect(() => markQqTestConnect('QA1', owner, options)).toThrow('already requested');
+    expect(() => markQqTestConnect('QA1', { ...owner, branch: 'other' }, options)).toThrow(
+      'current task',
+    );
+    expect(listQqTestClients(options)[0].availability).toBe('claimed');
+  });
   it('records the authenticated identity only for its owner and fences identity replacement', () => {
     const options = fixture();
     claimQqTestClient('QA1', owner, options);

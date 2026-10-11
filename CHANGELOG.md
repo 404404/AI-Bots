@@ -27,7 +27,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- Developers can reuse independent QQ QA1/QA2/QA3 Apps across branches through task claims and dedicated native Profiles, with explicit receiver handoff and no credential copying ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [guide](docs/agents/qq-test-clients.md)).
+- Developers can reuse independent QQ QA1/QA2/QA3 Apps across branches through task claims and dedicated native Profiles, and connect a selected existing native authorization through CLI over strict SSH without retyping its Secret or copying the full credential store ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [guide](docs/agents/qq-test-clients.md)).
 
 - Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a compact, sidebar-style affected-person preview; its Allow/Deny cells show only checkboxes with accessible names, and its body scrolls while the title and actions remain visible. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
 

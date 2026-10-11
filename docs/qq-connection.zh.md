@@ -8,7 +8,7 @@
 
 1. 在 [QQ 机器人官方平台](https://bot.q.qq.com/open) 创建应用，遵循平台当前的应用资格和入群要求，把应用加入测试群。
 2. 确认 PersonaBot 能使用选定模型回复本机私聊。
-3. 打开 **设置 → IM 机器人 → QQ → 扫码接入**，完成腾讯对该应用的官方授权。凭据由 Provider 的凭据服务保存。
+3. 复用已有应用时，打开 **设置 → IM 机器人 → QQ → 手动设置（Manual setup）**，暂停录制后将 AppID 和 AppSecret 直接填入原生表单。**扫码（Scan QR code）** 会创建并连接新的 Bot，仅在需要新应用时使用。凭据保留在原生 Credentials Service。开发者已有原生授权时，可用 [QQ QA 复用脚本](agents/qq-test-clients.md)，无需再次输入 Secret。
 4. 打开 Bot 私聊，在 **Channel sidebar → 外部身份 → 绑定应用** 选择 QQ 应用并绑定。就绪状态表示群提及可以进入这个 Bot 的收件箱；无需保存发送目标或逐群授权。
 5. 在 QQ 群里 @ 应用发送简短文字问题。检查 **Bot 收件箱**、打开来源，并在原 QQ 群核对答复。
 

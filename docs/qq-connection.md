@@ -8,7 +8,7 @@ This is the development slice tracked by [#1152](https://github.com/BotHarness/B
 
 1. Create an application in the [official QQ Bot platform](https://bot.q.qq.com/open). Follow its current application eligibility and group membership requirements. Add the application to your test group.
 2. Confirm that your PersonaBot can answer a local DM using the chosen model.
-3. Open **Settings → IM Bots → QQ → Scan to connect**. Complete Tencent's authorization flow for that application. Keep credentials in the Provider's credential service.
+3. Open **Settings → IM Bots → QQ → Manual setup** to connect an existing App, and enter its AppID and AppSecret directly in the native form with recording stopped. **Scan QR code** creates and connects a new Bot; use it when a new App is intended. Keep credentials in the native Credentials Service. Developers with an existing native authorization can use the [QQ QA reuse helper](agents/qq-test-clients.md) instead of retyping the Secret.
 4. Open the Bot's DM, then **Channel sidebar → External identities → Bind app**. Select your QQ application and bind it. The ready state means its group mentions can reach this Bot's Inbox. You do not need to save a delivery target or authorize each group separately.
 5. In QQ, @mention the application with a short text question. Inspect the **Bot Inbox**, open its source, and check the reply in the original QQ group.
 
