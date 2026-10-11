@@ -25,6 +25,48 @@ timeouts; do not interpret the screenshots as a new exact-head runtime rerun.
 
 ## Verified categories
 
+### Mobile presentation polish — October 12, 2026
+
+Six bounded Human-requested fixes: ellipsize only the empty mobile composer hint; hide the
+duplicate Activity Center content title; keep expanded search inside its slot; reuse the
+selected Bot-mode identity for Exit; use a three-line conversation menu; and keep mobile
+sidebar display settings at the right inset instead of the desktop offset. Existing actions,
+message wrapping, full accessible names and desktop presentation are preserved.
+
+Matched dark/English captures below use the same synthetic Group and isolated Host. Before
+is `8581f2da`; after is the presentation polish build. The actual iframe viewport is 427 × 925
+CSS px, externally scaled to .82; screenshots are cropped to the app's top-left 320 × 693 image
+pixels without retouching. Companion overlap is left visible and still requires Human QA.
+
+| View                           | Before                                  | After                                 |
+| ------------------------------ | --------------------------------------- | ------------------------------------- |
+| Search border / Exit identity  | [Before](before-polish-search.png)      | [After](after-polish-search.png)      |
+| Empty long-name composer hint  | [Before](before-polish-placeholder.png) | [After](after-polish-placeholder.png) |
+| Activity title / existing tabs | [Before](before-polish-activity.png)    | [After](after-polish-activity.png)    |
+
+- At 390px, search and slot both span 12–330px, with zero horizontal overflow; at 427px,
+  they span 12–367px. Settled finite header animations were finished through the browser API.
+- The real empty editor computes `nowrap` / `ellipsis` / `overflow:hidden` for its placeholder
+  only, while the complete Channel name remains in `data-placeholder` and `aria-label`.
+  Unsent multiline input keeps `pre-wrap`; it was cleared without sending.
+- The mobile Activity content h1 computes `display:none` and existing tabs remain visible.
+  At 1402px desktop width its h1 computes `display:block`, without mobile navigation.
+- The three-line conversation menu retains its existing accessible name and sidebar action.
+  The mobile sidebar display-settings button spans 391–419px in the 107–427px sidebar,
+  preserving an 8px right inset; its existing Edit sidebar menu opens. Desktop retains 44px.
+  [After sidebar inset](after-polish-sidebar.png) is an additional after-only view; no synthetic
+  reconstruction or Human-uploaded screenshot is presented as a matched before capture.
+  The placeholder after-image predates the final three-line menu icon change; its hint layout
+  is unchanged. Final conversation recapture returned `PreviewAutomationExecutionError`.
+  The menu SVG/action was checked in the live DOM, not claimed as new visual approval.
+- **Focused tests:** 10 files / 94 tests pass; typecheck, lint, format and build pass.
+- Focused coverage and current build checks are recorded in the PR. No new DM/Group sends
+  were made for this presentation-only follow-up; earlier real roundtrips remain separate.
+
+These new screenshots supersede the earlier screenshot-capture blocker for these three
+views, not the physical-phone/Mobile Safari, keyboard, nonzero-safe-area or native-rotation
+Human-QA gates. Historical images and verification records below remain explicitly separate.
+
 ### Human-requested IM header refinement — October 12, 2026
 
 The follow-up removes the duplicate list/conversation headers: the existing list header owns

@@ -9,6 +9,10 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconFlatListOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
   IconSettingsOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
 }));
+vi.mock('../src/client/bot-icon.js', () => ({
+  BotIcon: ({ icon }: { icon: string }) =>
+    createElement('span', { 'data-bot-mode-icon': icon, 'aria-hidden': true }),
+}));
 vi.mock('../src/client/bot-main.js', () => ({
   BotPanel: ({ onMobileBack, t }: { onMobileBack?: () => void; t: BotHarnessTranslate }) =>
     createElement(
@@ -59,7 +63,8 @@ import {
 } from '../src/client/conversation-draft.js';
 import { en, zhTranslate, type BotHarnessTranslate } from '../src/client/locale.js';
 import { store } from '../src/client/store.js';
-import { BotModePrefs } from '../src/client/bot-mode-prefs.js';
+import { BotModePrefs, type BotModePrefsSnapshot } from '../src/client/bot-mode-prefs.js';
+import type { BotModeIcon } from '../src/bot-mode-settings.js';
 import type { BridgeActions } from '../src/client/actions.js';
 
 let container: HTMLDivElement;
@@ -106,10 +111,11 @@ function click(name: string): void {
 }
 
 describe('Mobile Bot navigation', () => {
-  function renderPanel(t = enTranslate) {
+  function renderPanel(t = enTranslate, icon: BotModeIcon = 'mascot') {
     const exitBotMode = vi.fn();
     const openBotSettings = vi.fn();
     const prefs = new BotModePrefs();
+    prefs.setBotIcon(icon);
     const actions = {
       openActivityCenter: async () => {
         store.select({ kind: 'inbox' });
@@ -121,7 +127,8 @@ describe('Mobile Bot navigation', () => {
           actions: actions as BridgeActions,
           prefs,
           channelSidebar: { entries: [] } as never,
-          useBotModePrefs: (() => prefs.source.getSnapshot()) as never,
+          useBotModePrefs: ((select: (value: BotModePrefsSnapshot) => unknown) =>
+            select(prefs.source.getSnapshot())) as never,
           t,
           exitBotMode,
           openBotSettings,
@@ -242,6 +249,9 @@ describe('Mobile Bot navigation', () => {
     );
     expect(container.querySelector('h1')?.getAttribute('title')).toBe(title);
     expect(
+      container.querySelector('[aria-controls="bh-channel-sidebar"] svg path')?.getAttribute('d'),
+    ).toBe('M4 6h16M4 12h16M4 18h16');
+    expect(
       container
         .querySelector('[aria-controls="bh-channel-sidebar"]')
         ?.getAttribute('aria-expanded'),
@@ -269,6 +279,76 @@ describe('Mobile Bot navigation', () => {
     expect(getComputedStyle(container.querySelector('.bh-sidebar-settings')!).display).not.toBe(
       'none',
     );
+  });
+
+  it('keeps the sidebar settings button at the mobile right inset without moving desktop', () => {
+    container.innerHTML = `<style>
+      .bh-channel-sidebar-head .bh-sidebar-settings-menu { right: 44px; }
+      ${MOBILE_BOT_CSS}
+      </style>
+      <div class="bh-mobile-content"><div class="bh-channel-sidebar-head"><div class="bh-sidebar-settings-menu"></div></div></div>
+      <div class="bh-channel-sidebar-head"><div class="bh-sidebar-settings-menu"></div></div>`;
+    expect(
+      getComputedStyle(container.querySelector('.bh-mobile-content .bh-sidebar-settings-menu')!)
+        .right,
+    ).toBe('8px');
+    expect(
+      getComputedStyle(container.querySelector(':scope > .bh-channel-sidebar-head > div')!).right,
+    ).toBe('44px');
+  });
+
+  it.each(['mascot', 'simple', 'blob', 'bot'] as const)(
+    'reuses the selected %s Bot-mode identity for Exit',
+    (icon) => {
+      renderPanel(enTranslate, icon);
+      expect(
+        container
+          .querySelector('.bh-mobile-exit [data-bot-mode-icon]')
+          ?.getAttribute('data-bot-mode-icon'),
+      ).toBe(icon);
+    },
+  );
+
+  it('keeps mobile search borders within their slot and hides only the duplicate Activity title', () => {
+    container.innerHTML = `<style>${MOBILE_BOT_CSS}</style>
+      <div class="bh-mobile-list"><div class="bh-search bh-search-open"></div></div>
+      <div class="bh-mobile-content"><header class="bh-activity-center-header"><h1>Activity Center</h1><div role="tablist"></div></header></div>
+      <header class="bh-activity-center-header"><h1>Desktop Activity Center</h1></header>`;
+    const search = getComputedStyle(container.querySelector('.bh-search-open')!);
+    expect(search.width).toBe('100%');
+    expect(search.marginInline).toBe('0');
+    expect(getComputedStyle(container.querySelector('.bh-mobile-content h1')!).display).toBe(
+      'none',
+    );
+    expect(
+      getComputedStyle(container.querySelector('.bh-mobile-content [role="tablist"]')!).display,
+    ).not.toBe('none');
+    expect(getComputedStyle(container.querySelector(':scope > header h1')!).display).not.toBe(
+      'none',
+    );
+  });
+
+  it('ellipsizes only the empty mobile placeholder without changing message whitespace', () => {
+    container.innerHTML = `<style>${MOBILE_BOT_CSS}</style>`;
+    const sheet = container.querySelector('style')!.sheet!;
+    const rule = [...sheet.cssRules].find(
+      (entry) =>
+        entry instanceof CSSStyleRule &&
+        entry.selectorText === '.bh-mobile-content .bh-composer-rich-input:empty::before',
+    );
+    expect(rule).toBeDefined();
+    if (!(rule instanceof CSSStyleRule)) throw new Error('Missing mobile placeholder rule');
+    expect(rule.style.getPropertyValue('text-overflow')).toBe('ellipsis');
+    expect(rule.style.getPropertyValue('white-space')).toBe('nowrap');
+    expect(rule.style.getPropertyValue('overflow')).toBe('hidden');
+    expect(rule.style.getPropertyValue('max-width')).toBe('100%');
+    expect(
+      [...sheet.cssRules].some(
+        (entry) =>
+          entry instanceof CSSStyleRule &&
+          entry.selectorText === '.bh-mobile-content .bh-composer-rich-input',
+      ),
+    ).toBe(false);
   });
 
   it('owns only the measured native sidebar attribute and removes it on disposal', () => {

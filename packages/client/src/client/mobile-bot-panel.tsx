@@ -2,7 +2,6 @@ import { useRef, useState, type ReactElement } from 'react';
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store';
 import {
   IconChevronLeftOutlineRegular,
-  IconCloseOutlineRegular,
   IconFlatListOutlineRegular,
   IconSettingsOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -16,6 +15,7 @@ import { store } from './store.js';
 import { MOBILE_BOT_CSS } from './mobile-bot-styles.js';
 import { useMobileBotViewport } from './mobile-viewport.js';
 import { InboxIcon } from './inbox-icon.js';
+import { BotIcon } from './bot-icon.js';
 
 export function mountMobileBotShell(node: HTMLElement): () => void {
   let frame = node.parentElement;
@@ -65,6 +65,7 @@ export function MobileBotPanel(props: MobileBotPanelProps): ReactElement {
 
 function MobileNavigation(props: MobileBotPanelProps): ReactElement {
   const { prefs, actions, companion, useBotModePrefs, t } = props;
+  const botIcon = useBotModePrefs((value) => value.botIcon);
   const [page, setPage] = useState<'list' | 'conversation' | 'inbox'>('list');
   const navigationIntent = useRef(false);
   const shellMount = useMountedResource<HTMLDivElement>((node) => {
@@ -99,7 +100,7 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
       aria-label={t('mobile.host')}
       title={t('mobile.host')}
     >
-      <IconCloseOutlineRegular size={22} />
+      <BotIcon icon={botIcon} size={24} />
     </button>
   );
   return (
