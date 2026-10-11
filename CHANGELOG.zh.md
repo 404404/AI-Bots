@@ -118,6 +118,8 @@
 
 ### Fixed
 
+- 私密输入的公开 Session 证据保留 RC1 原生拒绝及不可用审批结果，同时排除决定理由和未知值（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)）。
+
 - 可复用 Lark QA App 配置向导改为显示链接供手动打开，并缓存默认值、避免终端子进程、逐阶段原子保存且保留其他 App 配置，减少 Windows 输入停顿（[#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)）。
 
 - Lark 工具审批卡片通过合格 Provider 的共享更新显示最终执行或拒绝状态，避免继续显示旧审批按钮（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
@@ -155,6 +157,8 @@
 - 窄屏下消息气泡不再被常驻的回复和复制按钮挤占横向空间，这两个操作收进气泡的长按菜单；桌面端的悬停显示和右键菜单保持不变（[#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)）。
 
 ### Documentation
+
+- 新增隔离 Linux 私密输入复验指南，说明 tailnet Web 访问、IM 接收器独占交接、跨平台路径元数据和非 root 工作区的明确文件权限（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)，[指南](docs/dev/guides/private-input-linux.md)）。`ask_secret` 工具现明确提示 Web 和 Schedule 复用已配置账号时省略仅用于 IM 的来源选择字段。
 
 - 中英文 README 新增 Product Hunt 发布徽章（[#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)）。
 

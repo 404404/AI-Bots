@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded audited Windows-to-Linux Profile path migration and non-root workspace permission prerequisites in the [local development guide](../dsh-dev/SKILL.md), verified against pinned DSH `0.2.0-rc.1` and the real isolated Linux Host; DSH/Cordis Context and Skill behavior remain unchanged ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [qualification](../../../docs/research/2026-10-12-private-input-linux-qualification.md)).
+
 - Documented the qualified private-reference MCP consumer, native adapter/SDK boundary and trusted-server limits; DSH/Cordis Context and Skill behavior remain unchanged ([#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384), [guide](../../../docs/dev/guides/private-input-mcp.md)).
 
 - Documented Owner CLI private-input lifecycle parity using the existing authenticated Host carrier; DSH/Cordis Context and Skill behavior remain unchanged ([#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416), [guide](../../../docs/dev/guides/private-input-cli.md)).

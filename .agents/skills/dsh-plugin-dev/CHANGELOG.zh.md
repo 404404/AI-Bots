@@ -9,6 +9,8 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 
 ### Documentation
 
+- 在[本地开发指南](../dsh-dev/SKILL.md)记录有界 Windows→Linux Profile 路径迁移及非 root 工作区权限前提，以 pinned DSH `0.2.0-rc.1` 和真实隔离 Linux Host 核验；DSH／Cordis Context 与 Skill 行为不变（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)，[复验](../../../docs/research/2026-10-12-private-input-linux-qualification.md)）。
+
 - 记录受保护私密引用 MCP 消费路径、native 适配器／SDK 边界及可信服务器限制；DSH/Cordis Context 与 Skill 行为不变（[#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)，[指南](../../../docs/dev/guides/private-input-mcp.md)）。
 
 - 记录 Owner CLI 私密输入生命周期的等价操作，复用现有已认证 Host carrier；DSH／Cordis Context 与 Skill 行为保持不变（[#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416)，[指南](../../../docs/dev/guides/private-input-cli.md)）。
