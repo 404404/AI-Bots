@@ -102,29 +102,29 @@ export function PairingSettings({
   return (
     <section className="bh-im-pairing" aria-label={t('pairing.title')}>
       <div className="bh-im-actions">
-        <MessagingHelp title={t('pairing.title')} text={t('pairing.hint')} t={t} />
+        {senderAccess && policy ? (
+          <>
+            <Checkbox
+              label={t('pairing.restricted')}
+              checked={policy.restricted}
+              disabled={busy}
+              onChange={(restricted) =>
+                void senderAccess({
+                  kind: 'policy',
+                  restricted,
+                  expectedRevision: policy.revision,
+                }).catch(() => undefined)
+              }
+            />
+            <MessagingHelp title={t('pairing.restricted')} text={t('pairing.policyLimit')} t={t} />
+          </>
+        ) : null}
         <span className="bh-pairing-toolbar-gap" />
         <Button size="sm" variant="toolbar" disabled={busy} onClick={() => void refresh()}>
           {t('pairing.refresh')}
         </Button>
+        <MessagingHelp title={t('pairing.title')} text={t('pairing.hint')} t={t} />
       </div>
-      {senderAccess && policy ? (
-        <div className="bh-im-actions">
-          <Checkbox
-            label={t('pairing.restricted')}
-            checked={policy.restricted}
-            disabled={busy}
-            onChange={(restricted) =>
-              void senderAccess({
-                kind: 'policy',
-                restricted,
-                expectedRevision: policy.revision,
-              }).catch(() => undefined)
-            }
-          />
-          <MessagingHelp title={t('pairing.restricted')} text={t('pairing.policyLimit')} t={t} />
-        </div>
-      ) : null}
       {failed ? (
         <p className="bh-error" role="alert">
           {t('pairing.error')}
@@ -270,6 +270,7 @@ function PairingRow({
       <div className="bh-im-actions">
         <strong>{request.actorName ?? t('pairing.unknownName')}</strong>
         <Tag>{t(`pairing.${request.status}`)}</Tag>
+        <MessagingHelp title={t('pairing.actor')} text={t('pairing.scope')} t={t} />
       </div>
       <dl>
         <div>
@@ -304,7 +305,6 @@ function PairingRow({
           </div>
         ) : null}
       </dl>
-      <MessagingHelp title={t('pairing.actor')} text={t('pairing.scope')} t={t} />
       {request.purpose === 'conversation' ? (
         <p>{assignedRole?.name ?? t('pairing.conversationAccess')}</p>
       ) : (
