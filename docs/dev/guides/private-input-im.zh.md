@@ -6,6 +6,14 @@ opt-in 受保护 Profile 支持真实 PersonaBot 从已授权 IM 请求发起私
 
 在隔离 Profile 的 `botharness-core` patch 中设置 `privateInputExecution: true`、`telemetry: false` 和 `privateInputWebUrl: http://127.0.0.1:31393`。Web origin 必须是 Owner 实际可达的地址，不带登录 token、userinfo、query 或路径。构建后只重启任务自己的 Host。运行 `node scripts/ask-secret-lifecycle-fixture.mjs 31394`。
 
+## 通过 Tailscale 访问服务器
+
+每次请求动态生成卡片 fragment；基础 origin 由 Profile 显式配置，不从 IM 发件人、浏览器请求或本地监听端口推断。服务器部署时，将 `privateInputWebUrl` 设为 Owner 现有可达的 HTTPS 地址，例如 `https://<machine>.<tailnet>.ts.net`；实际机器名与 tailnet 域名只写本机配置。DSH 可继续监听 loopback，由现有反向代理转发。[Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) 将本地服务开放给 tailnet，并沿用访问控制规则；Owner 设备须具有相应 tailnet 访问权。
+
+按 DSH 既有配置信任这个确切代理 hostname，核对认证 `/api` 与实际 Owner 通过该 origin 打开并提交卡片。网络可达和卡片链接不替代 Host Owner 登录。机器名、tailnet 域名或代理端口变化后，先更新 Profile 基础地址；已发出的旧链接仍指向旧地址。本地验收不会修改 Tailscale、代理或生产服务器配置；最终 Linux／代理复验由 #1386 跟踪。
+
+## 本地受控测试
+
 在指定测试私聊发送：
 
 ```text
@@ -28,7 +36,7 @@ Host 应在原会话发送 Web 卡片定位链接，只含既有 Chat 与卡片 
 
 提交后输入清空，普通 Chat 只记录已配置状态。现有审批应仅显示账号、`http-status-v1` 与字段引用。选择允许一次，确认原 IM 回帖 HTTP 200／成功，并通过受控服务 `GET /evidence` 独立核对真实认证完成。Owner CLI 也可通过 `ask-secret-submit --values-stdin` 提交同一多字段 JSON；持有链接或位于 IM 群聊不会获得配置权。
 
-再次使用同一账号可复用当前引用。一个轮次接收多个 IM Source Event 时，`ask_secret.source_event_id` 必须明确选择本轮实际来源；旧历史或未知来源不能提供授权。普通文本、附件、引用消息与群卡都不是秘密提交入口。
+再次使用同一账号可复用当前引用。一个轮次接收多个 IM Source Event 时，`ask_secret.source_event_id` 必须明确选择本轮实际来源；旧历史或未知来源不能提供授权。同一轮次的不同来源选择同一账号时，消费明确拒绝歧义。普通文本、附件、引用消息与群卡都不是秘密提交入口。
 
 回归检查：等待输入时变更／撤销接收 Binding、停止 Bot 或改变 Session 归属，旧卡必须过期，已认证的迟到提交也失败。消费者运行中撤销账号或来源授权，Host 尝试停止并拒绝迟到结果回帖；Provider 已开始的副作用仍可能不确定。通知投递失败会过期当前请求，不自动重试。后续独立轮次与 Schedule 的已配置引用复用仍按各自当前授权验证。
 

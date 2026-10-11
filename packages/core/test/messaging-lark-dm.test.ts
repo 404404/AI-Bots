@@ -20,6 +20,8 @@ it('Lark exact private chat uses canonical Inbox without mentions and replies th
   const fingerprint = 'd'.repeat(64);
   let consumer: Parameters<NonNullable<DshImOutboundService['consumeInbound']>>[1] | undefined;
   let runs = 0;
+  let noticePending = true;
+  let expireNoticeAtSend = false;
   let core: BotHarnessCore;
   const replies: { account: string; route: MessagingReplyRoute; text: string }[] = [];
   core = createCore({
@@ -44,10 +46,23 @@ it('Lark exact private chat uses canonical Inbox without mentions and replies th
           source!.id,
           cardId,
           link,
+          origin!,
         );
         expect(
-          await core.externalMessaging.privateInputNotice('ada', source!.id, cardId, link),
+          await core.externalMessaging.privateInputNotice('ada', source!.id, cardId, link, origin!),
         ).toEqual(notice);
+        expireNoticeAtSend = true;
+        const staleNotice = await core.externalMessaging
+          .privateInputNotice('ada', source!.id, '22222222-2222-4222-8222-222222222222', link, {
+            signal: origin!.signal,
+            current: () => noticePending,
+          })
+          .then(
+            () => 'sent',
+            () => 'refused',
+          );
+        expect(staleNotice).toBe('refused');
+        expireNoticeAtSend = false;
         await expect(
           run.externalMessaging!.reply(
             source!.id,
@@ -110,6 +125,11 @@ it('Lark exact private chat uses canonical Inbox without mentions and replies th
     },
     qualifyReplyChecked: async (_account, route) => route,
     replyChecked: async (account, route, text, options) => {
+      if (expireNoticeAtSend) {
+        noticePending = false;
+        expect(options.beforeSend?.()).toBe(false);
+        throw new Error('cancelled');
+      }
       expect(options.beforeSend?.()).toBe(true);
       replies.push({ account, route, text });
       return {

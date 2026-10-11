@@ -209,6 +209,37 @@ describe('IM private input origin leases', () => {
     }
   });
 
+  it('refuses consumption when distinct IM sources selected the same account in one turn', async () => {
+    const sourceA = origin();
+    const sourceB = origin();
+    sourceA.lease.sourceEventId = 'source-a';
+    sourceB.lease.sourceEventId = 'source-b';
+    let imTurn = false;
+    const f = await fixture(true, undefined, {
+      origin: (_agent, id) =>
+        imTurn ? (id === 'source-a' ? sourceA.lease : sourceB.lease) : undefined,
+      notify: async () => {},
+    });
+    try {
+      const requested = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() => expect(f.channels.readMessages('dm-ada')).toHaveLength(1));
+      const messageId = f.channels.readMessages('dm-ada')[0]!.id;
+      await f.owner.submit(true, { channelId: 'dm-ada', messageId, values });
+      const configured = await requested;
+      imTurn = true;
+      await f.owner.ask(f.agent, declaration, new AbortController().signal, 'source-a');
+      await f.owner.ask(f.agent, declaration, new AbortController().signal, 'source-b');
+      sourceA.revoke();
+      const run = vi.fn(async () => 200);
+      await expect(
+        f.owner.consume(f.agent, declaration.account, configured.references, run),
+      ).rejects.toThrow('source is ambiguous');
+      expect(run).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  });
+
   it('stops in-flight IM consumption and permits later unattended reuse independently of its old source', async () => {
     const source = origin();
     const f = await fixture(true, undefined, {

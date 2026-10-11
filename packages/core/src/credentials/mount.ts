@@ -85,6 +85,10 @@ export function mountPrivateInputs(
               origin.sourceEventId,
               messageId,
               privateInputWebUrl(webUrl, channelId, messageId),
+              {
+                signal: origin.signal,
+                current: () => origin.current() && owner.status(channelId, messageId) === 'pending',
+              },
             );
           },
         }),

@@ -16,6 +16,14 @@ In that isolated Profile's existing `botharness-core` patch, set:
 
 Use a Web origin the Owner can actually reach. Do not include a login token, userinfo, query or path. Build and restart only the task-owned Host with the pinned development launcher and qualified IM Provider. Start the controlled service:
 
+### A server accessed through Tailscale
+
+The card fragment is generated for each request; the base origin is explicit Profile configuration, not inferred from an IM sender, browser request or local listener port. For a Tailscale deployment, set `privateInputWebUrl` to the existing Owner-reachable HTTPS origin, for example `https://<machine>.<tailnet>.ts.net` with actual values kept in the machine-local Profile. Keep the DSH Host loopback-bound behind the existing reverse proxy. [Tailscale Serve](https://tailscale.com/docs/features/tailscale-serve) exposes a local service within the tailnet and applies its access control rules; the Owner's device must have the required tailnet access.
+
+Verify that DSH trusts that exact proxy hostname using its existing configuration, that the native authenticated `/api` works and that an actual Owner can open and submit a card through that origin. A reachable tailnet address and a card locator are not Host Owner authentication. If the machine name, tailnet domain or proxy port changes, update the Profile's base origin before creating new notices; previously sent links retain their old origin. No Tailscale, proxy or production-server configuration is changed by setting up this local acceptance run. Final Linux/proxy qualification is tracked by #1386.
+
+### Run the controlled service
+
 ```powershell
 node scripts/ask-secret-lifecycle-fixture.mjs 31394
 ```
@@ -43,7 +51,7 @@ Fill only that private component:
 
 Submit privately. Inputs clear and ordinary Chat records only configured state. The existing execution approval must show `http-status-v1`, the account and opaque field references. Allow once, confirm the original IM reply reports HTTP 200 and success, and check `GET /evidence` on the controlled service independently records authenticated completion. The Owner CLI may instead submit JSON through `ask-secret-submit --values-stdin`; the locator does not grant authority to the IM sender.
 
-Repeat with the configured account: references may be reused without another private card. A turn with several accepted IM sources must explicitly select the actual source in `ask_secret.source_event_id`. Unknown or historical sources fail. No ordinary message or attachment is a private submission fallback.
+Repeat with the configured account: references may be reused without another private card. A turn with several accepted IM sources must explicitly select the actual source in `ask_secret.source_event_id`. Unknown or historical sources fail. If distinct sources select the same account in that turn, consumption refuses the ambiguity. No ordinary message or attachment is a private submission fallback.
 
 For regression, change or revoke the receiving Binding while a card is pending; the old card must expire and authenticated late submission must fail. Stop the Bot or change Session authority with the same result. During a delayed consumer call, revoke account access or Source authority; the Host attempts to stop the consumer and refuses stale result delivery. If the Provider already began sending, effects may be uncertain. A notice delivery failure expires the live request without automatic retry. Existing Owner rotation/revocation and Schedule reuse remain governed by their current authorities.
 

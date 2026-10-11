@@ -73,7 +73,7 @@ export class PrivateInputs {
   readonly #accounts: PrivateAccountBindings;
   readonly #uses = new Set<PrivateUse>();
   readonly #completed = new Set<string>();
-  readonly #origins = new WeakMap<Agent, Map<string, PrivateInputOrigin>>();
+  readonly #origins = new WeakMap<Agent, Map<string, Map<string, PrivateInputOrigin>>>();
   readonly #replyScopes = new Set<{
     scope: PrivateAccountScope;
     origin: PrivateInputOrigin;
@@ -327,7 +327,14 @@ export class PrivateInputs {
         origins = new Map();
         this.#origins.set(agent, origins);
       }
-      origins.set(request.data.account, origin);
+      let accountOrigins = origins.get(request.data.account);
+      if (accountOrigins === undefined) {
+        accountOrigins = new Map();
+        origins.set(request.data.account, accountOrigins);
+      }
+      for (const [id, previous] of accountOrigins)
+        if (!previous.applies()) accountOrigins.delete(id);
+      accountOrigins.set(origin.sourceEventId, origin);
     }
     await this.recover();
     if (!(await this.deps.qualified()) || this.deps.credentials() === undefined)
@@ -771,8 +778,11 @@ export class PrivateInputs {
     )
       throw new Error('Credential references are invalid');
     const scope = { botSlug: owner.botSlug, botCreatedAt: owner.createdAt, account };
-    const remembered = this.#origins.get(agent)?.get(account);
-    const origin = remembered?.applies() === true ? remembered : this.deps.origin?.(agent);
+    const remembered = [...(this.#origins.get(agent)?.get(account)?.values() ?? [])].filter(
+      (origin) => origin.applies(),
+    );
+    if (remembered.length > 1) throw new Error('Private input IM source is ambiguous');
+    const origin = remembered[0] ?? this.deps.origin?.(agent);
     if (origin !== undefined && !origin.current())
       throw new Error('Private input IM authority changed');
     const startedUse = await this.#accounts

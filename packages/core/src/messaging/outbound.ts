@@ -278,6 +278,7 @@ export interface OutboundMessaging {
     sourceEventId: string,
     requestId: string,
     webUrl: string,
+    authority: import('../credentials/im-origin.js').PrivateReplyAuthority,
   ): Promise<OutboxIntent>;
   acquireFile(
     botSlug: string,
@@ -395,6 +396,10 @@ export function createOutboundMessaging(options: {
   const privateReplies = new Map<
     string,
     Set<import('../credentials/im-origin.js').PrivateReplyAuthority>
+  >();
+  const privateNotices = new Map<
+    string,
+    import('../credentials/im-origin.js').PrivateReplyAuthority
   >();
   const privateReplyKey = (botSlug: string, sourceEventId: string) =>
     JSON.stringify([botSlug, sourceEventId]);
@@ -1429,8 +1434,10 @@ export function createOutboundMessaging(options: {
       return result;
     },
     reply: (botSlug, sourceEventId, text) => routedReply(botSlug, sourceEventId, text),
-    async privateInputNotice(botSlug, sourceEventId, requestId, webUrl) {
+    async privateInputNotice(botSlug, sourceEventId, requestId, webUrl, authority) {
       if (!/^[0-9a-f-]{36}$/.test(requestId)) throw new MessagingError('source-unavailable');
+      if (authority.signal.aborted || !authority.current())
+        throw new MessagingError('source-unavailable');
       const url = new URL(webUrl);
       if (
         !['http:', 'https:'].includes(url.protocol) ||
@@ -1440,15 +1447,21 @@ export function createOutboundMessaging(options: {
         !url.hash.startsWith('#botharness-private-input=')
       )
         throw new MessagingError('source-unavailable');
-      const result = await routedReply(
-        botSlug,
-        sourceEventId,
-        'Owner action needed. Open the private input card in Web Chat. Do not send private values here.\n' +
-          url.href,
-        'private-input-' + requestId,
-      );
-      if (result.state !== 'provider-accepted') throw new MessagingError('source-unavailable');
-      return result;
+      const noticeId = 'private-input-' + requestId;
+      privateNotices.set(noticeId, authority);
+      try {
+        const result = await routedReply(
+          botSlug,
+          sourceEventId,
+          'Owner action needed. Open the private input card in Web Chat. Do not send private values here.\n' +
+            url.href,
+          noticeId,
+        );
+        if (result.state !== 'provider-accepted') throw new MessagingError('source-unavailable');
+        return result;
+      } finally {
+        if (privateNotices.get(noticeId) === authority) privateNotices.delete(noticeId);
+      }
     },
     register(value) {
       if (closed) throw new MessagingError('provider-unavailable');
@@ -2273,10 +2286,13 @@ export function createOutboundMessaging(options: {
       let started = false;
       let timer: ReturnType<typeof setTimeout> | undefined;
       const controller = new AbortController();
+      const noticeAuthority = privateNotices.get(requestId);
       const privateAuthorities =
-        sourceEventId === undefined || requestId.startsWith('private-input-')
-          ? []
-          : [...(privateReplies.get(privateReplyKey(botSlug, sourceEventId)) ?? [])];
+        noticeAuthority !== undefined
+          ? [noticeAuthority]
+          : sourceEventId === undefined
+            ? []
+            : [...(privateReplies.get(privateReplyKey(botSlug, sourceEventId)) ?? [])];
       const privateReplyCurrent = () =>
         privateAuthorities.every((authority) => !authority.signal.aborted && authority.current());
       const abortPrivateReply = () => controller.abort();

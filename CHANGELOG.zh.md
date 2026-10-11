@@ -29,7 +29,7 @@
 
 - Lark 配对审核人可在来源群共享卡片或私聊卡片中选择已有 Role 并批准／拒绝申请，支持只有群的场景；当前审核权限与独立的委派 Allow/Deny 限定管理 Role 授予范围，批准后申请人须重新提问（[#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)）。
 
-- 已授权 IM 请求可引导 Owner 到既有 Web Chat 私密卡，沿用现有审批消费引用并向原会话返回非私密结果；当前来源与账号授权阻止失效后的迟到继续和回帖（[#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)，[指南](docs/dev/guides/private-input-im.zh.md)）。
+- 已授权 IM 请求可引导 Owner 到既有 Web Chat 私密卡，沿用现有审批消费引用并向原会话返回非私密结果；当前来源与账号授权阻止失效后的迟到继续和回帖（[#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)，[指南](docs/dev/guides/private-input-im.md)）。
 
 - 受保护 Profile 中的 PersonaBot 可通过固定 MCP 认证状态操作消费私密引用，复用既有 Web 输入与执行审批；普通隔离 MCP 仍可使用（[#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)，[指南](docs/dev/guides/private-input-mcp.md)）。
 
