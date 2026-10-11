@@ -85,7 +85,7 @@ function rememberWorkspace(
 
 const WORKSPACE_ACTION_TIMEOUT_MS = 15_000;
 
-function FolderSectionSummary({ children }: { children: ReactNode }): ReactElement {
+export function FolderSectionSummary({ children }: { children: ReactNode }): ReactElement {
   return (
     <summary className="bh-channel-sidebar-entry-head">
       <span className="bh-channel-sidebar-entry-chevron" aria-hidden="true">
@@ -126,7 +126,7 @@ function approvalRulePath(rule: ToolApprovalRuleView): string {
   return rule.scopeKey;
 }
 
-function FolderRow({
+export function FolderRow({
   name,
   path,
   icon = 'folder-key',
@@ -136,6 +136,7 @@ function FolderRow({
   disabled,
   detail,
   pathAction,
+  initiallyExpanded = false,
 }: {
   name: string;
   path: string;
@@ -146,8 +147,9 @@ function FolderRow({
   disabled?: boolean;
   detail?: ReactNode;
   pathAction?: ReactNode;
+  initiallyExpanded?: boolean;
 }): ReactElement {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(initiallyExpanded);
   const detailId = useId();
   return (
     <SidebarCardRow

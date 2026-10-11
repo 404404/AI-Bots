@@ -20,6 +20,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   Button: ({ children, ...props }: { children: ReactNode }) =>
     createElement('button', props, children),
   Input: (props: InputHTMLAttributes<HTMLInputElement>) => createElement('input', props),
+  Tag: ({ children }: { children: ReactNode }) => createElement('span', null, children),
   IconChevronDownOutlineRegular: () => null,
   IconCloseOutlineRegular: () => null,
   IconFolderOpenOutlineRegular: () => null,
@@ -124,11 +125,33 @@ it('requires explicit members, shares folder confirmation, isolates partial resu
       container.querySelector<HTMLButtonElement>('.bh-workspace-folder-toggle')!.click(),
     );
     await act(async () => button(zhTranslate('grant.authorize')).click());
-    expect(container.textContent).toContain(zhTranslate('groupGrant.confirm'));
+    expect(
+      container.querySelector(`[aria-label="${zhTranslate('groupGrant.confirm')}"]`),
+    ).not.toBeNull();
     expect(container.textContent).toContain('/project');
     expect(container.querySelector('.bh-group-grant-members')).toBeNull();
     expect(container.querySelector('.bh-group-grant-directory')!.textContent).toBe('/project');
-    expect(container.querySelectorAll('.bh-group-grant-result')).toHaveLength(2);
+    expect(container.querySelectorAll('.bh-group-grant-results > .bh-card-row')).toHaveLength(3);
+    expect(
+      container
+        .querySelector('.bh-group-grant-results .bh-workspace-folder-toggle')!
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(container.querySelector('.bh-workspace-grant-confirm')).toBeNull();
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('.bh-group-grant-results .bh-workspace-folder-toggle')!
+        .click(),
+    );
+    expect(container.querySelector('.bh-group-grant-directory')).toBeNull();
+    expect(container.textContent).toContain('Ada');
+    expect(container.textContent).toContain('Bea');
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>('.bh-group-grant-results .bh-workspace-folder-toggle')!
+        .click(),
+    );
+    expect(container.querySelector('.bh-group-grant-directory')!.textContent).toBe('/project');
     expect(container.querySelector('.bh-group-grant-policy')!.hasAttribute('open')).toBe(false);
     expect(container.textContent).toContain(zhTranslate('groupGrant.unselected'));
     expect(actions.authorizeGroupWorkspacePath).not.toHaveBeenCalled();

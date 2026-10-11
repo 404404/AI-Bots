@@ -2692,6 +2692,8 @@ export const zh = {
   'groupGrant.scope': '仅为明确选择的成员授权；未选成员权限不变，不创建群聊权限或统一工作目录。',
   'groupGrant.confirm': '确认目录和成员访问范围',
   'groupGrant.permissions': '逐 Bot 授权此目录；任务权限与审批规则保持不变。',
+  'groupGrant.targets': '{count} 位成员',
+  'groupGrant.taskAccess': '任务权限：{mode}（不变）',
   'groupGrant.unselected': '未选成员权限不变。',
   'groupGrant.details': '授权规则',
   'groupGrant.access': '任务：{mode} · 主会话：{write}',
@@ -5656,6 +5658,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'groupGrant.confirm': 'Confirm directory and member access',
   'groupGrant.permissions':
     'Per-Bot access to this directory. Task access and approval rules stay unchanged.',
+  'groupGrant.targets': '{count} members',
+  'groupGrant.taskAccess': 'Task access: {mode} (unchanged)',
   'groupGrant.unselected': 'Unselected members keep their permissions.',
   'groupGrant.details': 'Authorization rules',
   'groupGrant.access': 'Task: {mode} · Main session: {write}',

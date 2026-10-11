@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactElement } from 'react';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { AssignmentAccessPresetView, WorkspaceGrantView, WorkspaceOption } from './bridge.js';
 import { errorMessage } from './bridge.js';
@@ -8,10 +8,12 @@ import type { BotHarnessTranslate } from './locale.js';
 import type { ComposerContext } from './composer-shortcuts.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { Modal } from './modal.js';
+import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { useMountedResource } from './mounted-resource.js';
 import {
   WorkspaceFolderPicker,
-  WorkspaceGrantConfirmation,
+  FolderRow,
+  FolderSectionSummary,
   withWorkspaceActionDeadline,
 } from './workspace-grants-entry.js';
 import { subscribeWorkspaceGrantChanges } from './workspace-grant-events.js';
@@ -83,7 +85,11 @@ export function GroupComposerContextView({
   const [selected, setSelected] = useState<string[]>([]);
   const [facts, setFacts] = useState<Record<string, WorkspaceGrantView[] | undefined>>({});
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
-  const [preview, setPreview] = useState<{ path: string; members: PreviewMember[] }>();
+  const [preview, setPreview] = useState<{
+    path: string;
+    title: string;
+    members: PreviewMember[];
+  }>();
   const [results, setResults] = useState<GroupGrantResult[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -148,7 +154,8 @@ export function GroupComposerContextView({
             access: await actions.assignmentAccess(slug),
           })),
         );
-        if (current.current === generation) setPreview({ path: resolved.path, members: targets });
+        if (current.current === generation)
+          setPreview({ path: resolved.path, title: resolved.title, members: targets });
       })(),
       t('grant.loadTimeout'),
     )
@@ -253,43 +260,71 @@ export function GroupComposerContextView({
                 onChoose={choose}
               />
             ) : (
-              <WorkspaceGrantConfirmation title={t('groupGrant.confirm')}>
-                <p className="bh-group-grant-directory">{preview.path}</p>
-                <p>{t('groupGrant.permissions')}</p>
-                {preview.members.map((bot) => (
-                  <div key={bot.slug} className="bh-group-grant-result">
-                    <div className="bh-group-grant-result-head">
-                      <strong>{bot.name}</strong>
-                      <span role="status">
-                        {t(
-                          `groupGrant.${results.find((row) => row.slug === bot.slug)?.status ?? (bot.grant === undefined ? 'pending' : 'existing')}`,
-                        )}
-                      </span>
-                    </div>
-                    <div className="bh-group-grant-access">
-                      {t('groupGrant.access', {
-                        mode: bot.access.mode,
-                        write: t(
-                          bot.grant?.orchestratorWrite ? 'grant.chip.write' : 'grant.chip.read',
-                        ),
-                      })}
-                    </div>
-                    {results
-                      .filter((row) => row.slug === bot.slug && row.error !== undefined)
-                      .map((row) => (
-                        <div key={row.slug} className="bh-error">
-                          {row.error}
-                        </div>
-                      ))}
-                  </div>
-                ))}
+              <div role="group" aria-label={t('groupGrant.confirm')}>
+                <SidebarCardList className="bh-workspace-folder-table bh-group-grant-results">
+                  <FolderRow
+                    name={preview.title}
+                    path={preview.path}
+                    initiallyExpanded
+                    chips={
+                      <Tag tone="outline">
+                        {t('groupGrant.targets', { count: preview.members.length })}
+                      </Tag>
+                    }
+                    pathAction={
+                      <div className="bh-workspace-folder-path bh-group-grant-directory">
+                        {preview.path}
+                      </div>
+                    }
+                    detail={<p>{t('groupGrant.permissions')}</p>}
+                  />
+                  {preview.members.map((bot) => {
+                    const result = results.find((row) => row.slug === bot.slug);
+                    const status =
+                      result?.status ?? (bot.grant === undefined ? 'pending' : 'existing');
+                    return (
+                      <SidebarCardRow
+                        key={bot.slug}
+                        title={bot.name}
+                        state={status}
+                        chips={
+                          <>
+                            <Tag
+                              tone={
+                                ['created', 'existing', 'confirmed'].includes(status)
+                                  ? 'success'
+                                  : 'outline'
+                              }
+                            >
+                              <span role="status">{t(`groupGrant.${status}`)}</span>
+                            </Tag>
+                            <Tag tone="outline">
+                              {t(
+                                bot.grant?.orchestratorWrite
+                                  ? 'grant.chip.write'
+                                  : 'grant.chip.read',
+                              )}
+                            </Tag>
+                          </>
+                        }
+                        meta={t('groupGrant.taskAccess', { mode: bot.access.mode })}
+                        detail={
+                          result?.error === undefined ? undefined : (
+                            <div className="bh-error">{result.error}</div>
+                          )
+                        }
+                      />
+                    );
+                  })}
+                </SidebarCardList>
                 <div className="bh-group-grant-actions">
                   {results.length === 0 || retry ? (
-                    <Button disabled={busy} onClick={submit}>
+                    <Button variant="outline" disabled={busy} onClick={submit}>
                       {t(results.length === 0 ? 'grant.authorize' : 'groupGrant.retry')}
                     </Button>
                   ) : null}
                   <Button
+                    variant="outline"
                     disabled={busy}
                     onClick={() => {
                       setPreview(undefined);
@@ -299,11 +334,11 @@ export function GroupComposerContextView({
                     {t('approval.cancel')}
                   </Button>
                 </div>
-              </WorkspaceGrantConfirmation>
+              </div>
             )}
-            <p>{t('groupGrant.unselected')}</p>
             <details className="bh-group-grant-policy">
-              <summary>{t('groupGrant.details')}</summary>
+              <FolderSectionSummary>{t('groupGrant.details')}</FolderSectionSummary>
+              <p>{t('groupGrant.unselected')}</p>
               <p>{t('groupGrant.scope')}</p>
               <p>{t('groupGrant.partial')}</p>
             </details>
