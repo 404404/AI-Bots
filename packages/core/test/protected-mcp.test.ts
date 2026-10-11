@@ -164,7 +164,9 @@ describe('protected native MCP consumer', () => {
         completed: 0,
         uncertain: 0,
       });
-      expect((await running).isError).toBe(true);
+      const cancelled = await running;
+      expect(cancelled.isError).toBe(true);
+      expect(JSON.stringify(cancelled.content)).toContain('remote effects are unknown');
       await stopped;
       expect((await invoke()).isError).toBe(true);
       expect(requests).toBe(2);

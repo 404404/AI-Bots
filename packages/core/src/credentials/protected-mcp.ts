@@ -98,7 +98,7 @@ export class ProtectedMcp {
       name: PRIVATE_MCP_TOOL,
       rawName: RAW_TOOL,
       description:
-        'Qualified MCP consumer: one authenticated GET using opaque endpoint, api_key and api_secret references from ask_secret for this exact account. Returns HTTP status only; success does not itself certify remote authentication. No raw values, arbitrary server, command, headers, redirects or response-body access. Existing execution approval applies.',
+        'Qualified MCP consumer: one authenticated GET using opaque endpoint, api_key and api_secret references from ask_secret for this exact account. Returns HTTP status only; success does not itself certify remote authentication. A failed or cancelled operation may already have sent a remote request; do not infer no remote effects from failure. No raw values, arbitrary server, command, headers, redirects or response-body access. Existing execution approval applies.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -120,13 +120,24 @@ export class ProtectedMcp {
           typeof args.api_secret !== 'string'
         )
           throw new Error('Protected MCP requires an account and opaque references');
-        const result = await owner.consume(
-          agent,
-          args.account,
-          { endpoint: args.endpoint, api_key: args.api_key, api_secret: args.api_secret },
-          (values, signal) => this.authenticatedStatus(values, signal),
-          call.signal,
-        );
+        const result = await owner
+          .consume(
+            agent,
+            args.account,
+            { endpoint: args.endpoint, api_key: args.api_key, api_secret: args.api_secret },
+            (values, signal) => this.authenticatedStatus(values, signal),
+            call.signal,
+          )
+          .catch((error: unknown) => {
+            if (
+              error instanceof Error &&
+              error.message === 'Protected credential consumer failed or was cancelled'
+            )
+              throw new Error(
+                'Protected MCP failed or was cancelled; a remote request may already have started and remote effects are unknown',
+              );
+            throw error;
+          });
         return { content: [{ type: 'text', text: JSON.stringify(result) }] };
       },
     });
