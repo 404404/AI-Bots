@@ -138,6 +138,19 @@ A Bot may explicitly follow or leave one native Slack topic. Human can inspect o
 
 Slack can address channels directly, so a saved send target is never required. The **External connectors → Save a send target (advanced)** fallback stays for apps that can't.
 
+## 7. Optional: received and answered feedback
+
+The [#1161](https://github.com/BotHarness/DeepSeekBot/issues/1161) candidate uses an optional checked Provider capability; installing the existing Provider pin alone does not enable it. The isolated candidate has passed live channel and DM checks with native screenshots, a same-source DM transition recording and matching canonical facts. Human QA and published Provider qualification remain pending. Do not infer other platforms or every failure path from these successful examples.
+
+With a compatible Provider and an approved, installed **Bot** `reactions:write` scope:
+
+- **👀** follows a committed Inbox Admission, not Socket Mode delivery alone.
+- **✅** follows the accepted reply to that exact source message. The app then removes its own 👀 from that source, never another person's reaction or the thread root. If cleanup is uncertain, both reactions can remain; the attempt is not retried automatically.
+- Muted and context-only sources get no feedback. Silence, delegation, waits, unrelated output and failed or uncertain replies do not get ✅. These are app reactions, not Human read receipts.
+- Reaction failure or missing support does not block intake, model execution or replies. Reconnect, restart and later scope changes do not replay old feedback attempts.
+
+Approve scope changes and reinstall the app before testing; signing into Slack as a Human does not grant the bot this permission. For DM QA, also verify the app's installed IM scopes, `message.im` subscription and a fresh bound-app DM. Keep one receiver per test app and use a dedicated test channel. Verify both the visible reaction on the original Human message and its corresponding Inbox/Outbox facts.
+
 ## Troubleshooting
 
 | Symptom                           | Check and next step                                                                                                                                       |

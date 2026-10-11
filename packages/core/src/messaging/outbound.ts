@@ -763,9 +763,10 @@ export function createOutboundMessaging(options: {
     candidate(botSlug, sourceEventId) {
       if (!inbound.available(botSlug, sourceEventId)) return undefined;
       const source = inbound.read(botSlug, sourceEventId);
-      if (source.platform !== 'feishu') return undefined;
+      if (!['feishu', 'slack'].includes(source.platform)) return undefined;
       const value = grant(botSlug, source.grantId);
       if (value.botSlug !== botSlug) return undefined;
+      if (source.platform === 'slack' && value.muted) return undefined;
       const identity = enabledBinding(value.bindingId);
       const entry = provider(value.providerId);
       return {
@@ -784,6 +785,7 @@ export function createOutboundMessaging(options: {
               return (
                 !latest.revokedAt &&
                 !latest.suspendedReason &&
+                !(source.platform === 'slack' && latest.muted) &&
                 latest.revision === value.revision &&
                 inbound.available(botSlug, sourceEventId)
               );
