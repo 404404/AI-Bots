@@ -120,6 +120,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).
+
 - Core and product-managed IM Provider declarations use the minimum DSH version `>=0.1.7-0`, including previews, without an exact RC1 lock or future-version ceiling. Future versions are admitted by metadata, not automatically runtime-qualified; the 1.2.1 maintenance installation matrix is separate from this development tree ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425)).
 
 - The reusable Lark QA App setup wizard prints links for manual navigation and reduces Windows prompt delays by caching defaults, avoiding terminal subprocesses, and saving each stage atomically while preserving other Apps ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)).
@@ -161,6 +163,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 ### Documentation
 
 - DeepSeekBot GitHub Release announcements start with version-specific official website and Chinese/English installation links; short links preserve GitHub, release-version and entry-point attribution without changing analytics consent ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
+
+- Added an isolated Linux private-input qualification guide covering tailnet Web access, exclusive IM receiver handoff, cross-platform path metadata and explicit non-root workspace permissions ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [guide](docs/dev/guides/private-input-linux.md)). The `ask_secret` tool now tells Web and scheduled callers to omit the IM-only source selector when reusing configured accounts.
 
 - Added the Product Hunt launch badge to the Chinese and English READMEs ([#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)).
 
