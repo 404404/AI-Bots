@@ -1,0 +1,102 @@
+[
+  {
+    "file": "before-people-dark.png",
+    "sha256": "0933fbe8aa171c69601a7ca9317044f8f33cc0b6eb181cf20d706c9b89781c9a",
+    "bytes": 229535
+  },
+  {
+    "file": "before-groups-dark.png",
+    "sha256": "ee78a2103390904840315b260ebcb1ac4235099e46a4b0c9f0868af489e43bd1",
+    "bytes": 229911
+  },
+  {
+    "file": "before-group-editor-dark.png",
+    "sha256": "c8586efd3b33227719575f0de502151d5cd41a0a98dc0c549b0d9581aab8dc35",
+    "bytes": 216002
+  },
+  {
+    "file": "before-group-editor-light.png",
+    "sha256": "281a054d4624000464b9aaf1a0063a78b90f48fee24850850daf960345f3e965",
+    "bytes": 245189
+  },
+  {
+    "file": "before-group-editor-narrow.png",
+    "sha256": "eaaec0966476dd26f654f9f60099f2a8321deec4b4ff7e6522689fcf6ca6035f",
+    "bytes": 68262
+  },
+  {
+    "file": "after-group-editor-dark.png",
+    "sha256": "37dbe7b54086bc5d96672cf9d1bb90f231935c430285cfe673499c366d91c7fd",
+    "bytes": 207333
+  },
+  {
+    "file": "after-group-editor-light.png",
+    "sha256": "b3014b583d98706a5d6938cfd000b75d19477106e197b42c4605e4fb9e040490",
+    "bytes": 227064
+  },
+  {
+    "file": "after-group-editor-narrow.png",
+    "sha256": "4abe1a9bb148398f39704e93de46f6d9445f1c5f0ece3cda9a990c8069dc4188",
+    "bytes": 79911
+  },
+  {
+    "file": "after-group-editor-short-scroll.png",
+    "sha256": "23227a225a0c7366773f947ac809591c8c14e4de6e5e6b992b28dd0305db10bf",
+    "bytes": 90610
+  },
+  {
+    "file": "after-group-editor-collapsed.png",
+    "sha256": "cba6f4dcaafc7ea36ed32955dd88217d6578ce405fe2ddedecbd4df2c56e5398",
+    "bytes": 183149
+  },
+  {
+    "file": "after-group-management.png",
+    "sha256": "cc6f1838a881230435dd4a30740d6240167d25bb623978d1e78d47e6632bceda",
+    "bytes": 208077
+  },
+  {
+    "file": "after-group-members.png",
+    "sha256": "e1206221f980d0b530e5664187287edd86a5f2b2f22d42abb551227a0dc71643",
+    "bytes": 201417
+  },
+  {
+    "file": "after-groups-dark.png",
+    "sha256": "0e90b155fa93f690f6f41118c11d8e765fec6c72fb346cf2b14e373f4bb8b375",
+    "bytes": 244711
+  },
+  {
+    "file": "after-people-conflict.png",
+    "sha256": "75130826d57a49157cbb0a993995a74ed07c639eef19c7b0868da3c864d367b4",
+    "bytes": 231432
+  },
+  {
+    "file": "after-behavior-catalog-dark.png",
+    "sha256": "7f1a2dcf3f926d10c08d9f7322bcd56c25e22670a4cbd3cbcb27fc8829c6f974",
+    "bytes": 260178
+  },
+  {
+    "file": "after-behavior-catalog-light.png",
+    "sha256": "62f2027b8473859657072ce2509762f13eaf17e76f9d53f2453ea52cab016fae",
+    "bytes": 257477
+  },
+  {
+    "file": "after-behavior-editor.png",
+    "sha256": "a7762b20defa19550e9ea87d568f169be4566cad0c3d9af226197f4ec55cd35c",
+    "bytes": 267305
+  },
+  {
+    "file": "before-compact-preview-dark.png",
+    "sha256": "8928957df40c48528d3ed9705c1cb0d024e5f5c7dccabdec777fd7eafdc36bf9",
+    "bytes": 215460
+  },
+  {
+    "file": "before-compact-preview-narrow.png",
+    "sha256": "72b48c454ea8c5c3b4a06c0a54fd5cbcfee338b4dcaee944bdd06538535d993c",
+    "bytes": 90307
+  },
+  {
+    "file": "interim-verbose-checkboxes.png",
+    "sha256": "9744e704e4ea1cadb8ad4c4bd87e7ebb511886180355c923fbf51d29108675f4",
+    "bytes": 246842
+  }
+]
