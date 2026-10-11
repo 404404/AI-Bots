@@ -41,7 +41,10 @@ import {
 import { ReleaseNotesController } from './release-notes.js';
 import { TelemetryNoticeController } from './telemetry-notice.js';
 import './bot-settings-slot.js';
-import { BotMain, BotPanel } from './bot-main.js';
+import { BotMain } from './bot-main.js';
+import { MobileBotPanel } from './mobile-bot-panel.js';
+import { mobileBotViewport, subscribeMobileBotViewport } from './mobile-viewport.js';
+import { clearConversationDrafts } from './conversation-draft.js';
 import { BotSidebar, createBotPanelEntry } from './bot-sidebar.js';
 import { createChannelSidebarBuiltins } from './channel-sidebar-builtins.js';
 import { webBotModeShortcut, webShortcutBlocked } from './channel-shortcuts.js';
@@ -115,6 +118,7 @@ function installStyles(): () => void {
 }
 
 export function apply(ctx: ClientContext): void {
+  ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
   const hmrView =
     typeof window === 'undefined'
@@ -570,9 +574,12 @@ export function apply(ctx: ClientContext): void {
           prefs,
           releaseNotes,
           telemetryNotice,
+          ...botModePrefsFace(prefs),
+          exitBotMode: () => ctx.layout.selectPanel(null),
+          openBotSettings: () => botSettings.open(),
         }),
       },
-      BotPanel,
+      MobileBotPanel,
     );
     if (restoreBotMode) {
       restoreBotMode = false;
@@ -651,6 +658,10 @@ export function apply(ctx: ClientContext): void {
         BotSidebar,
       ),
     store,
+    {
+      enabled: () => !mobileBotViewport(),
+      subscribe: subscribeMobileBotViewport,
+    },
   );
   registerModeShadow(
     ctx,

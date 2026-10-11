@@ -3,6 +3,10 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots';
 export const LOCALE_NS = 'botharness';
 
 export const zh = {
+  'mobile.back': '返回会话列表',
+  'mobile.conversations': '会话',
+  'mobile.host': '退出 Bot 模式',
+  'mobile.navigation': 'Bot 模式导航',
   'backup.title': '完整环境备份与恢复',
   'backup.description': '保存整个本地环境的 Bot 身份、记忆、聊天历史和设置。',
   'backup.open': '管理备份',
@@ -2774,6 +2778,10 @@ export function zhTranslate(key: BotHarnessKey | string, params?: Record<string,
 }
 
 export const en = {
+  'mobile.back': 'Back to conversations',
+  'mobile.conversations': 'Conversations',
+  'mobile.host': 'Exit Bot mode',
+  'mobile.navigation': 'Bot mode navigation',
   'backup.title': 'Complete environment backup and restore',
   'backup.description':
     'Preserve this local environment’s Bot identities, Memory, conversation history and settings.',
