@@ -143,8 +143,11 @@ test ! -e "$base"
 if getent passwd bh-seo >/dev/null; then exit 1; fi
 apt-get update
 apt-get install --no-install-recommends -y ca-certificates curl git xz-utils build-essential python3
+if test ! -e /opt/botharness; then install -d -m 755 /opt/botharness; fi
 mkdir -p "$base/toolchain" "$base/artifacts" "$base/evidence"
+chmod 755 "$base" "$base/toolchain" "$base/artifacts"
 useradd --system --create-home --home-dir "$base/home" --shell /usr/sbin/nologin bh-seo
+runuser -u bh-seo -- test -x /opt/botharness
 mkdir -p "$base/home/dsh"
 chown -R bh-seo:bh-seo "$base/home"
 chmod 700 "$base/home" "$base/home/dsh"
@@ -157,10 +160,13 @@ sha256sum -c node-checksum.txt
 tar -xJf node-v24.21.0-linux-x64.tar.xz --strip-components=1
 export PATH="$base/toolchain/bin:$PATH"
 npm install --global --prefix "$base/toolchain" pnpm@12.4.2 @deepseek-ai/dsh@0.2.0-rc.1
+chmod -R a+rX "$base/toolchain"
 node --version
 pnpm --version
 dsh --version
 ```
+
+The parent directories and public toolchain must be readable and traversable by `bh-seo`; the runtime home, credential store and administrator evidence directory retain mode `0700`.
 
 These Node commands are for the verified x86-64 machine. Use the matching official archive for another CPU architecture. Keep the transferred files outside the runtime home, verify the archive digest, and extract into the new `artifacts/source-candidate` directory. Install the five helpers' `yaml@2.9.1` and `semver@7.8.5` dependencies, then grant the runtime user read/traversal access to the kit and nonsecret artifacts:
 

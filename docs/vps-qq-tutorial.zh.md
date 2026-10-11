@@ -143,8 +143,11 @@ test ! -e "$base"
 if getent passwd bh-seo >/dev/null; then exit 1; fi
 apt-get update
 apt-get install --no-install-recommends -y ca-certificates curl git xz-utils build-essential python3
+if test ! -e /opt/botharness; then install -d -m 755 /opt/botharness; fi
 mkdir -p "$base/toolchain" "$base/artifacts" "$base/evidence"
+chmod 755 "$base" "$base/toolchain" "$base/artifacts"
 useradd --system --create-home --home-dir "$base/home" --shell /usr/sbin/nologin bh-seo
+runuser -u bh-seo -- test -x /opt/botharness
 mkdir -p "$base/home/dsh"
 chown -R bh-seo:bh-seo "$base/home"
 chmod 700 "$base/home" "$base/home/dsh"
@@ -157,10 +160,13 @@ sha256sum -c node-checksum.txt
 tar -xJf node-v24.21.0-linux-x64.tar.xz --strip-components=1
 export PATH="$base/toolchain/bin:$PATH"
 npm install --global --prefix "$base/toolchain" pnpm@12.4.2 @deepseek-ai/dsh@0.2.0-rc.1
+chmod -R a+rX "$base/toolchain"
 node --version
 pnpm --version
 dsh --version
 ```
+
+父目录和公开工具链须允许 `bh-seo` 读取及目录穿越；运行用户 HOME、凭据目录及管理员证据目录仍保持 `0700`。
 
 上述 Node archive 针对本次 x86-64 实机；其他架构须选对应官方包。传输文件放在运行用户 HOME 之外，先核对 digest，再解压到新目录。安装 helper 的 `yaml@2.9.1`、`semver@7.8.5`，并给予运行用户对非敏感 kit/产物的读取与目录穿越权限：
 
