@@ -183,7 +183,7 @@ export function PrivateInputCard({
         </div>
       )}
       {status === 'pending' ? (
-        <div className="bh-private-input-actions">
+        <div className="bh-private-input-actions bh-message-card-actions">
           <Button
             type="submit"
             variant="primary"

@@ -25,6 +25,7 @@ export const CSS =
 .bh-im-app-picker { display: flex; align-items: center; gap: 4px; }
 .bh-im-app-refresh:disabled { opacity: 0.5; cursor: default; }
 .bh-root {
+  --bh-chat-card-inset: 12px;
   /* @bh-brand-aliases:start — thin BotHarness brand map onto DSH semantic
      tokens (ADR-0028): at most three entries, no second design system. */
   --bh-accent: var(--dsw-alias-state-business-primary);
@@ -3658,7 +3659,7 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
   border-radius: 18px;
   background: var(--dsw-alias-interactive-bg-active);
   color: var(--dsw-alias-label-primary);
-  padding: 8px 12px;
+  padding: var(--bh-chat-card-inset);
 }
 .bh-bubble[data-group-position='first'] {
   border-bottom-left-radius: 5px;
@@ -5949,13 +5950,14 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   }
 }
 /* Human approval in a Channel message uses the same Host folder browser as sidebar access. */
-.bh-grant-request-card { display: grid; gap: 12px; min-width: min(340px, 100%); }
+.bh-grant-request-card { --bh-message-card-gap: 12px; display: grid; gap: var(--bh-message-card-gap); min-width: min(340px, 100%); }
 .bh-grant-request-title { font-weight: 600; }
 .bh-grant-request-reason { white-space: pre-wrap; overflow-wrap: anywhere; }
 .bh-grant-request-card > button { justify-self: start; }
 .bh-session-failure-row {
+  --bh-message-card-gap: 8px;
   display: grid;
-  gap: 8px;
+  gap: var(--bh-message-card-gap);
   min-width: min(340px, 100%);
   max-width: 560px;
   color: var(--dsw-alias-label-secondary);
@@ -5994,16 +5996,16 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   overflow-wrap: anywhere;
 }
 .bh-session-failure-raw { white-space: pre-wrap; }
-.bh-tool-approval-card { display: grid; gap: 10px; min-width: min(340px, 100%); }
-.bh-question-card { display: grid; gap: 10px; width: 380px; max-width: 100%; }
+.bh-tool-approval-card { --bh-message-card-gap: 10px; display: grid; gap: var(--bh-message-card-gap); min-width: min(340px, 100%); }
+.bh-question-card { --bh-message-card-gap: 10px; display: grid; gap: var(--bh-message-card-gap); width: 380px; max-width: 100%; }
+.bh-question-card .bh-note, .bh-tool-approval-card .bh-note, .bh-grant-request-card .bh-note { padding: 0; }
 .bh-question-card > button { justify-self: start; }
-.bh-private-input-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.bh-private-input-card { width: 520px; gap: 6px; }
-.bh-bubble:has(> .bh-private-input-card) { padding: 12px; }
+.bh-message-card-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: calc(var(--bh-chat-card-inset) - var(--bh-message-card-gap, var(--bh-chat-card-inset))); }
+.bh-private-input-card { --bh-message-card-gap: 6px; width: 520px; }
 .bh-private-input-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .bh-private-input-state { margin-left: auto; }
 .bh-private-input-card .bh-question-prompt { font-weight: 400; }
-.bh-private-input-card .bh-note { padding: 0; line-height: 16px; color: var(--dsw-alias-label-secondary); }
+.bh-private-input-card .bh-note { line-height: 16px; color: var(--dsw-alias-label-secondary); }
 .bh-question-source { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, 13px); }
 .bh-question-source code { display: block; margin-top: 5px; overflow-wrap: anywhere; }
 .bh-question-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
@@ -6021,8 +6023,8 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   background: var(--dsw-alias-button-elevated-fill);
   color: var(--dsw-alias-label-primary);
 }
-.bh-tool-approval-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .bh-tool-approval-confirm, .bh-access-warning { display: grid; gap: 8px; padding: 10px; border: 0.5px solid var(--dsw-alias-border-l3); border-radius: 8px; }
+.bh-tool-approval-confirm { --bh-message-card-gap: var(--bh-chat-card-inset); width: 100%; gap: var(--bh-message-card-gap); padding: var(--bh-chat-card-inset); }
 .bh-assignment-access-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
 .bh-memory-history {

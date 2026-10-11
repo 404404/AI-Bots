@@ -100,6 +100,8 @@
 
 ### Fixed
 
+- 聊天气泡使用一致的内边距；私密输入、提问、审批、工作区授权与失败修复卡的操作区上方间距与底部内边距对齐（[#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)）。
+
 - 窗口伙伴按每个 Bot 独立错开眨眼时点与空闲间隔，外形相同的伙伴也不再同步眨眼（[#1367](https://github.com/BotHarness/DeepSeekBot/issues/1367)）。
 
 - 窗口伙伴说话时全张嘴改为更平的开口，保留半张嘴、原有表情、头像和说话节奏（[#1241](https://github.com/BotHarness/DeepSeekBot/issues/1241)）。

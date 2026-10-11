@@ -100,6 +100,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Chat bubbles use equal insets, and private-input, question, approval, workspace-grant and failure-repair cards align the space above their actions with the bottom inset ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
+
 - Window Companions blink at independently staggered phases and idle intervals per Bot, so matching avatars no longer blink in unison ([#1367](https://github.com/BotHarness/DeepSeekBot/issues/1367)).
 
 - Window Companions use a flatter full speech opening, preserving the half-open mouth, saved expression, portraits and speaking rhythm ([#1241](https://github.com/BotHarness/DeepSeekBot/issues/1241)).

@@ -100,7 +100,7 @@ export function PrivateAccountControls({
   return (
     <div ref={mount}>
       {status === 'configured' ? (
-        <div className="bh-private-input-actions">
+        <div className="bh-private-input-actions bh-message-card-actions">
           <Button
             type="button"
             variant="primary"
