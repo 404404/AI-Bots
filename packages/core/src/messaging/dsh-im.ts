@@ -36,6 +36,7 @@ export interface DshImOutboundService {
     options: { expectedFingerprint: string; signal: AbortSignal; beforeSend(): boolean },
   ): Promise<{ accepted: true }>;
   approvalCardVersion?: 1;
+  approvalRuleCardVersion?: 1;
   pairingCardVersion?: 1;
   approvalCardChecked?(
     botId: string,
@@ -574,6 +575,10 @@ export function createDshImProvider(
               throw new MessagingError('rebind-required');
             if (
               !info.connected ||
+              (input.card.kind !== 'pairing' &&
+                (input.card.rules || input.card.ruleConfirmation) &&
+                (host.approvalRuleCardVersion !== 1 ||
+                  !info.capabilities.includes('approval-rule-card-checked'))) ||
               (input.card.kind === 'pairing' &&
                 (host.pairingCardVersion !== 1 ||
                   !info.capabilities.includes('pairing-card-checked'))) ||
@@ -613,6 +618,7 @@ export function createDshImProvider(
               throw providerFailure(error);
             }
           },
+          approvalRuleCardSupported: host.approvalRuleCardVersion === 1,
         }
       : {}),
     ...(host.replyContextVersion === 1 &&
@@ -748,10 +754,10 @@ export function createDshImProvider(
                         typeof raw === 'object' &&
                         raw !== null &&
                         'kind' in raw &&
-                        raw.kind === 'pairing'
+                        raw.kind === 'approval-rule'
                           ? z
                               .object({
-                                kind: z.literal('pairing'),
+                                kind: z.literal('approval-rule'),
                                 version: z.literal(1),
                                 channel: z.literal('feishu'),
                                 botId: identifier,
@@ -760,31 +766,57 @@ export function createDshImProvider(
                                 conversationId: identifier,
                                 messageId: identifier,
                                 requestId: z.string().uuid(),
-                                action: z.enum([
-                                  'select-role',
-                                  'approve-pairing',
-                                  'reject-pairing',
-                                  'next-roles',
-                                  'previous-roles',
-                                ]),
-                                roleId: z.string().uuid().optional(),
+                                action: z.enum(['preview-exact', 'confirm-exact', 'cancel-rule']),
+                                confirmationId: z.string().uuid().optional(),
                               })
                               .strict()
-                          : z
-                              .object({
-                                version: z.literal(1),
-                                channel: z.literal('feishu'),
-                                botId: identifier,
-                                fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-                                actorId: identifier,
-                                conversationId: identifier,
-                                messageId: identifier,
-                                requestId: z.string().uuid(),
-                                action: z.enum(['allowed-once', 'rejected']),
-                              })
-                              .strict()
+                          : typeof raw === 'object' &&
+                              raw !== null &&
+                              'kind' in raw &&
+                              raw.kind === 'pairing'
+                            ? z
+                                .object({
+                                  kind: z.literal('pairing'),
+                                  version: z.literal(1),
+                                  channel: z.literal('feishu'),
+                                  botId: identifier,
+                                  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+                                  actorId: identifier,
+                                  conversationId: identifier,
+                                  messageId: identifier,
+                                  requestId: z.string().uuid(),
+                                  action: z.enum([
+                                    'select-role',
+                                    'approve-pairing',
+                                    'reject-pairing',
+                                    'next-roles',
+                                    'previous-roles',
+                                  ]),
+                                  roleId: z.string().uuid().optional(),
+                                })
+                                .strict()
+                            : z
+                                .object({
+                                  version: z.literal(1),
+                                  channel: z.literal('feishu'),
+                                  botId: identifier,
+                                  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+                                  actorId: identifier,
+                                  conversationId: identifier,
+                                  messageId: identifier,
+                                  requestId: z.string().uuid(),
+                                  action: z.enum(['allowed-once', 'rejected']),
+                                })
+                                .strict()
                       ).parse(raw);
                       context.signal.throwIfAborted();
+                      if (
+                        'kind' in event &&
+                        event.kind === 'approval-rule' &&
+                        (host.approvalRuleCardVersion !== 1 ||
+                          !info.capabilities.includes('approval-rule-card-checked'))
+                      )
+                        throw new MessagingError('capability-unavailable');
                       if (
                         event.botId !== input.accountRef ||
                         event.fingerprint !== input.fingerprint

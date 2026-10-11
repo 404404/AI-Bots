@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { OperationalDatabaseModulePort } from '../database/owner.js';
+import { parseToolApprovalActor, type ToolApprovalActor } from './tool-approval-actor.js';
 
 export type ToolRuleKind = 'exact' | 'all-opaque';
 export interface ToolApprovalRule {
@@ -12,6 +13,7 @@ export interface ToolApprovalRule {
   input: string;
   createdAt: string;
   revokedAt?: string;
+  externalCreator?: ToolApprovalActor;
 }
 interface RuleRow {
   id: string;
@@ -23,8 +25,15 @@ interface RuleRow {
   input: string;
   created_at: string;
   revoked_at: string | null;
+  external_creator: string | null;
 }
 function record(row: RuleRow): ToolApprovalRule {
+  const externalCreator =
+    row.external_creator === null
+      ? undefined
+      : parseToolApprovalActor(JSON.parse(row.external_creator));
+  if (row.external_creator !== null && !externalCreator)
+    throw new Error('External tool approval rule creator is invalid');
   return {
     id: row.id,
     botSlug: row.bot_slug,
@@ -35,6 +44,7 @@ function record(row: RuleRow): ToolApprovalRule {
     input: row.input,
     createdAt: row.created_at,
     ...(row.revoked_at === null ? {} : { revokedAt: row.revoked_at }),
+    ...(externalCreator ? { externalCreator } : {}),
   };
 }
 export interface ToolApprovalRuleStore {
@@ -43,16 +53,26 @@ export interface ToolApprovalRuleStore {
     input: Pick<ToolApprovalRule, 'botSlug' | 'role' | 'scopeKey' | 'toolName' | 'input'>,
   ): ToolApprovalRule | undefined;
   createPending(
-    input: Pick<ToolApprovalRule, 'botSlug' | 'role' | 'scopeKey' | 'kind' | 'toolName' | 'input'>,
+    input: Pick<
+      ToolApprovalRule,
+      'botSlug' | 'role' | 'scopeKey' | 'kind' | 'toolName' | 'input' | 'externalCreator'
+    >,
   ): ToolApprovalRule;
   activate(botSlug: string, id: string): void;
   revoke(botSlug: string, id: string): ToolApprovalRule | undefined;
+  reconcileExternal(botSlug: string): void;
 }
 export function createToolApprovalRuleStore(
   database: OperationalDatabaseModulePort,
+  authorizeExternal?: (botSlug: string, creator: ToolApprovalActor) => boolean,
 ): ToolApprovalRuleStore {
-  return {
+  const authorized = (rule: ToolApprovalRule) => {
+    if (!rule.externalCreator) return true;
+    return authorizeExternal?.(rule.botSlug, rule.externalCreator) === true;
+  };
+  const store: ToolApprovalRuleStore = {
     list(botSlug) {
+      store.reconcileExternal(botSlug);
       const rows = database.read((connection) =>
         connection
           .prepare(
@@ -63,31 +83,39 @@ export function createToolApprovalRuleStore(
       return rows.map(record);
     },
     match(input) {
-      const row = database.read((connection) =>
+      const rows = database.read((connection) =>
         connection
           .prepare(
             `SELECT * FROM tool_approval_rules
          WHERE bot_slug = ? AND role = ? AND scope_key = ? AND active = 1 AND revoked_at IS NULL
            AND ((kind = 'exact' AND tool_name = ? AND input = ?) OR kind = 'all-opaque')
-         ORDER BY CASE kind WHEN 'exact' THEN 0 ELSE 1 END, created_at DESC LIMIT 1`,
+         ORDER BY CASE kind WHEN 'exact' THEN 0 ELSE 1 END, created_at DESC`,
           )
-          .get(input.botSlug, input.role, input.scopeKey, input.toolName, input.input),
-      ) as RuleRow | undefined;
-      return row === undefined ? undefined : record(row);
+          .all(input.botSlug, input.role, input.scopeKey, input.toolName, input.input),
+      ) as unknown as RuleRow[];
+      for (const row of rows) {
+        const rule = record(row);
+        if (authorized(rule)) return rule;
+        store.revoke(rule.botSlug, rule.id);
+      }
+      return undefined;
     },
     createPending(input) {
+      if (input.externalCreator && !parseToolApprovalActor(input.externalCreator))
+        throw new Error('External tool approval rule creator is invalid');
       const row: ToolApprovalRule = {
         ...input,
         id: randomUUID(),
         createdAt: new Date().toISOString(),
       };
+      if (!authorized(row)) throw new Error('External tool approval rule creator is unavailable');
       database.transaction(
         (connection) => {
           connection
             .prepare(
               `INSERT INTO tool_approval_rules
-           (id, bot_slug, role, scope_key, kind, tool_name, input, created_at, active)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+           (id, bot_slug, role, scope_key, kind, tool_name, input, created_at, active, external_creator)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`,
             )
             .run(
               row.id,
@@ -98,6 +126,7 @@ export function createToolApprovalRuleStore(
               row.toolName,
               row.input,
               row.createdAt,
+              row.externalCreator ? JSON.stringify(row.externalCreator) : null,
             );
         },
         ['tool-approval-rules'],
@@ -105,6 +134,15 @@ export function createToolApprovalRuleStore(
       return row;
     },
     activate(botSlug, id) {
+      const row = database.read((db) =>
+        db
+          .prepare('SELECT * FROM tool_approval_rules WHERE bot_slug = ? AND id = ?')
+          .get(botSlug, id),
+      ) as RuleRow | undefined;
+      if (!row || !authorized(record(row))) {
+        store.revoke(botSlug, id);
+        throw new Error('External tool approval rule creator is unavailable');
+      }
       database.transaction(
         (connection) => {
           const result = connection
@@ -133,5 +171,16 @@ export function createToolApprovalRuleStore(
         ['tool-approval-rules'],
       );
     },
+    reconcileExternal(botSlug) {
+      const rows = database.read((db) =>
+        db
+          .prepare(
+            'SELECT * FROM tool_approval_rules WHERE bot_slug = ? AND external_creator IS NOT NULL AND revoked_at IS NULL',
+          )
+          .all(botSlug),
+      ) as unknown as RuleRow[];
+      for (const row of rows) if (!authorized(record(row))) store.revoke(botSlug, row.id);
+    },
   };
+  return store;
 }

@@ -2548,6 +2548,10 @@ export const zh = {
   'approval.cancel': '取消',
   'approval.ruleSaved': '已保存自动批准规则并批准本次调用',
   'approval.rulesTitle': '自动批准规则',
+  'approval.ruleActive': '有效',
+  'approval.ruleInactive': '已停用',
+  'approval.externalCreator':
+    'Lark 创建人：{actor}；每次调用前检查当前配对及 approve／save-rules 权限，失效后不自动恢复。',
   'approval.ruleDetails': '查看适用范围',
   'access.title': '新事项允许所有文件访问',
   'access.description': '此 Bot 的新事项默认保持工作区写入与逐次询问。',
@@ -5483,6 +5487,10 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.cancel': 'Cancel',
   'approval.ruleSaved': 'Automatic approval rule saved; this call was approved',
   'approval.rulesTitle': 'Automatic approval rules',
+  'approval.ruleActive': 'Active',
+  'approval.ruleInactive': 'Disabled',
+  'approval.externalCreator':
+    'Lark creator: {actor}; current pairing and approve/save-rules authority are checked before each call. Disabled rules do not reactivate automatically.',
   'approval.ruleDetails': 'View scope',
   'access.title': 'Allow all file access for new Assignments',
   'access.description':

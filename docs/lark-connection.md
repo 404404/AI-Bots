@@ -348,9 +348,9 @@ private-origin check is retained; a group pairing does not create a management d
 Removing a capability or revoking/reassigning the person refuses delayed decisions. If
 reassignment invalidates the route, explicitly select/save its new current destination again.
 Legacy `/pair` management grants remain independent and do not enable ordinary chat by themselves.
-Questions, saved-rule controls, group destinations and pairing-code issuance are separate work.
+Native Questions, group execution-approval destinations and pairing-code issuance are separate work.
 
-This slice supports Lark private **Allow once** and **Reject** cards through a qualified Provider. Group approvals, native question forms, saved automatic rules and non-blocking native waits are separate slices. The released dsh-im package number alone does not imply card capability; an unavailable Provider remains unavailable.
+This slice supports Lark private **Allow once** and **Reject** cards through a qualified Provider. The #1033 source candidate adds the separately confirmed exact-rule path below. Group execution approvals, native question forms and non-blocking native waits are separate slices. The released dsh-im package number alone does not imply card capability; an unavailable Provider remains unavailable.
 
 1. Enable the app's **Events & callbacks → Callback configuration → Long connection** and add `card.action.trigger`, then publish the version. Retain the existing message read/send scopes and add `im:chat:read` so the sender can verify a private conversation. A maintainer must authorize these app changes.
 2. Send `/pair` in the Bot's Lark DM. In **External identities → IM administrator pairing**, inspect the real applicant/account and explicitly grant **Approve** and/or **Reject**. Pairing does not create ordinary DM intake or grant VPS/API access.
@@ -373,6 +373,33 @@ In the earlier isolated 2026-10-07 test, the actual Lark platform accepted both 
 ![Actual recovery: notifications off and the old request expired](/guides/lark/approvals/recovery-dark.jpg)
 
 [Light theme recovery screenshot](/guides/lark/approvals/recovery-light.jpg). After the test authority was revoked and the local Host restarted with its IM Provider disabled, the destination is **Off**, the old request is **Expired**, and the local identity is unavailable. This screen does not prove production availability; production Discord/Lark connections were verified separately after restoration. Do not use the old card for a new test.
+
+### Save an exact rule in a management DM
+
+The #1033 source candidate requires a Provider with the checked rule-card capability. Grant
+**Approve** and **Save approval rules** separately through the reviewer's Role, Group or personal
+exception. Explicit Deny wins. A natural-language policy or ordinary chat pairing alone cannot
+save a rule. Keep the existing private approval destination and App permissions.
+
+On a complete native tool card, **Allow once** remains the one-call choice. To allow future
+identical operations, choose **Allow matching operations…**, inspect the complete tool name and
+input, Bot execution role and current Workspace Grant scope, then choose **Confirm matching rule**.
+The first click only shows the confirmation; **Back** saves nothing. Truncated operations and
+native Session-wide authorization require Web review. This first IM slice does not offer the
+broader all-opaque rule.
+
+A saved exact rule matches the complete input, not similar commands. Each matching call still
+records its own native decision, and changed input or Grant scope requires another approval.
+The Web **Workspace access → Tool approval rules** list shows the same rule, external creator
+and Active/Disabled status. Current approval and rule-saving authority are checked before every
+use. Revoking the original pairing, losing effective capability or disabling its App permanently
+disables the rule; restoring permission or pairing again requires a newly confirmed rule. If a
+second current group still grants the capability and no Deny applies, removing one grant alone
+does not disable it. Existing Web Human rules retain their prior behavior.
+
+Back up the Profile before upgrading to database generation 82. Rollback needs a compatible writer
+or the pre-upgrade backup. Real Lark rendering and Human feedback for this candidate remain the
+[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033) delivery gate.
 
 ## Receipt and answer feedback (candidate)
 

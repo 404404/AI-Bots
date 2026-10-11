@@ -771,47 +771,54 @@ export function WorkspaceGrantsEntry({
               </div>
             </div>
           ) : null}
-          {rules.filter((rule) => rule.revokedAt === undefined).length === 0 ? null : (
+          {rules.length === 0 ? null : (
             <details className="bh-workspace-folder-secondary">
               <FolderSectionSummary>{t('approval.rulesTitle')}</FolderSectionSummary>
               <div className="bh-workspace-folder-table">
-                {rules
-                  .filter((rule) => rule.revokedAt === undefined)
-                  .map((rule) => (
-                    <div key={rule.id} className="bh-workspace-folder-row">
-                      <div className="bh-workspace-folder-main">
-                        <span className="bh-workspace-folder-toggle">
-                          {rule.kind === 'exact'
-                            ? t('approval.exactRule', { tool: rule.toolName })
-                            : t('approval.allRule')}
-                          {' · '}
-                          {rule.role === 'assignment'
-                            ? t('approval.assignment')
-                            : t('approval.orchestrator')}
-                        </span>
-                        <button
-                          type="button"
-                          className="bh-workspace-folder-remove"
-                          aria-label={t('approval.revokeRule')}
-                          disabled={busy !== undefined}
-                          onClick={() =>
-                            mutate(rule.id, () => actions.revokeToolApprovalRule(botSlug, rule.id))
-                          }
-                        >
-                          <IconCloseOutlineRegular />
-                        </button>
-                      </div>
-                      <details className="bh-workspace-folder-secondary">
-                        <FolderSectionSummary>{t('approval.ruleDetails')}</FolderSectionSummary>
-                        <div className="bh-note">
-                          {t('approval.cwd', { path: approvalRulePath(rule) })}
-                        </div>
-                        {rule.kind === 'exact' ? (
-                          <pre className="bh-tool-approval-input">{rule.input}</pre>
-                        ) : null}
-                      </details>
+                {rules.map((rule) => (
+                  <div key={rule.id} className="bh-workspace-folder-row">
+                    <div className="bh-workspace-folder-main">
+                      <span className="bh-workspace-folder-toggle">
+                        {rule.kind === 'exact'
+                          ? t('approval.exactRule', { tool: rule.toolName })
+                          : t('approval.allRule')}
+                        {' · '}
+                        {rule.role === 'assignment'
+                          ? t('approval.assignment')
+                          : t('approval.orchestrator')}
+                        {' · '}
+                        <Tag>
+                          {t(rule.revokedAt ? 'approval.ruleInactive' : 'approval.ruleActive')}
+                        </Tag>
+                      </span>
+                      <button
+                        type="button"
+                        className="bh-workspace-folder-remove"
+                        aria-label={t('approval.revokeRule')}
+                        disabled={busy !== undefined || rule.revokedAt !== undefined}
+                        onClick={() =>
+                          mutate(rule.id, () => actions.revokeToolApprovalRule(botSlug, rule.id))
+                        }
+                      >
+                        <IconCloseOutlineRegular />
+                      </button>
                     </div>
-                  ))}
+                    <details className="bh-workspace-folder-secondary">
+                      <FolderSectionSummary>{t('approval.ruleDetails')}</FolderSectionSummary>
+                      <div className="bh-note">
+                        {t('approval.cwd', { path: approvalRulePath(rule) })}
+                      </div>
+                      {rule.externalCreator ? (
+                        <div className="bh-note">
+                          {t('approval.externalCreator', { actor: rule.externalCreator.actorId })}
+                        </div>
+                      ) : null}
+                      {rule.kind === 'exact' ? (
+                        <pre className="bh-tool-approval-input">{rule.input}</pre>
+                      ) : null}
+                    </details>
+                  </div>
+                ))}
               </div>
             </details>
           )}

@@ -53,10 +53,10 @@ export const senderAccessInput = z.discriminatedUnion('kind', [
       expectedRevision: z.number().int().positive(),
       name: z.string().trim().min(1).max(80),
       behavior: z.string().trim().min(1).max(2000),
-      capabilities: z.array(z.enum(['approve', 'reject', 'review-pairing'])).max(3),
+      capabilities: z.array(z.enum(['approve', 'reject', 'review-pairing', 'save-rules'])).max(4),
       delegableCapabilities: z
-        .array(z.enum(['approve', 'reject', 'review-pairing']))
-        .max(3)
+        .array(z.enum(['approve', 'reject', 'review-pairing', 'save-rules']))
+        .max(4)
         .optional(),
     })
     .strict(),

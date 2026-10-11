@@ -6,6 +6,7 @@ import { createDshImProvider, type DshImOutboundService } from '../src/messaging
 import {
   MessagingProviderError,
   type MessagingApprovalAction,
+  type MessagingApprovalRuleAction,
   type MessagingInboundEvent,
 } from '../src/messaging/provider.js';
 import { ChannelToolApproval } from '../src/workspaces/tool-approval.js';
@@ -22,7 +23,7 @@ afterEach(async () => {
     core.operationalDatabase.close();
   }
 });
-async function fixture(ordinaryRole = false) {
+async function fixture(ordinaryRole = false, saveRules = false) {
   const core = createCore({ dshHome: createTempRoot('bh-lark-approval-') });
   cores.push(core);
   core.registry.create({ slug: 'ada', displayName: 'Ada' });
@@ -45,6 +46,7 @@ async function fixture(ordinaryRole = false) {
   const provider: DshImOutboundService = {
     contractVersion: 1,
     approvalCardVersion: 1,
+    ...(saveRules ? { approvalRuleCardVersion: 1 as const } : {}),
     listBots: async () => [{ botId: 'lark-qa', channel: 'feishu' }],
     listTargets: async () => [],
     describeBot: async (botId) => ({
@@ -60,6 +62,7 @@ async function fixture(ordinaryRole = false) {
         'approval-card-checked',
         'approval-card-update-checked',
         'approval-action-consumer',
+        ...(saveRules ? ['approval-rule-card-checked'] : []),
       ],
     }),
     sendChecked: async () => ({ sent: true }),
@@ -108,7 +111,7 @@ async function fixture(ordinaryRole = false) {
       expectedRevision: role.revision,
       name: role.name,
       behavior: role.behavior,
-      capabilities: ['approve', 'reject'],
+      capabilities: saveRules ? ['approve', 'reject', 'save-rules'] : ['approve', 'reject'],
     });
     role = (await core.externalMessaging.snapshot('ada')).roles![0]!;
     core.externalMessaging.pairing.request(binding.id, { ...event, text: 'Hello' }, 'conversation');
@@ -120,7 +123,11 @@ async function fixture(ordinaryRole = false) {
     kind: 'approve',
     ...(role
       ? { roleId: role.id, expectedRoleRevision: role.revision }
-      : { capabilities: ['approve' as const, 'reject' as const] }),
+      : {
+          capabilities: saveRules
+            ? ['approve' as const, 'reject' as const, 'save-rules' as const]
+            : ['approve' as const, 'reject' as const],
+        }),
   });
   await core.externalMessaging.approvals.setRoute('ada', pairing.id, 0);
   const sessionId = 'bh-approval-qa';
@@ -131,7 +138,7 @@ async function fixture(ordinaryRole = false) {
     at: new Date().toISOString(),
   });
   const agent = { session: { id: sessionId, header: { cwd: '/tmp/approval-qa' } } } as Agent;
-  const owner = new ChannelToolApproval(core.channels, core.ownership);
+  const owner = new ChannelToolApproval(core.channels, core.ownership, core.toolRules);
   owners.push(owner);
   core.externalMessaging.approvals.attach(owner, core.channels);
   const start = async (
@@ -188,11 +195,290 @@ async function fixture(ordinaryRole = false) {
     role,
     start,
     action,
+    ruleAction(
+      id: string,
+      action: MessagingApprovalRuleAction['action'],
+      confirmationId?: string,
+      actorId = 'ou_alice',
+    ) {
+      return receiver!.onAction!(
+        {
+          kind: 'approval-rule',
+          version: 1,
+          channel: 'feishu',
+          botId: 'lark-qa',
+          fingerprint,
+          actorId,
+          conversationId: 'oc_private',
+          messageId: 'om_card',
+          requestId: id,
+          action,
+          ...(confirmationId ? { confirmationId } : {}),
+        },
+        { signal: receiver!.signal },
+      );
+    },
+    repeat(callId: string, command = 'pwd') {
+      const execution = {
+        agent,
+        name: 'bash',
+        arguments: { command },
+        callId,
+        token: Symbol('repeat'),
+      } as ToolExecution;
+      owner.track(execution);
+      return {
+        execution,
+        answer: owner.ask({ agent, toolName: 'bash', callId }),
+        guard: () => owner.executionGuard(agent, callId)?.('bash', execution.arguments),
+      };
+    },
     failure(value: typeof fail) {
       fail = value;
     },
   };
 }
+
+it('exact Lark rules require a private second confirmation, are idempotent, and deny mismatched input or revoked creator authority', async () => {
+  const f = await fixture(true, true);
+  const first = await f.start();
+  await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+  expect(f.cards.mock.calls[0]![2]).toMatchObject({ rules: ['exact'] });
+  expect(
+    await f.ruleAction(first.delivery.id, 'preview-exact', undefined, 'ou_stranger'),
+  ).toMatchObject({ status: 'refused' });
+  expect(
+    await f.ruleAction(first.delivery.id, 'confirm-exact', '11111111-1111-4111-8111-111111111111'),
+  ).toMatchObject({ status: 'refused' });
+  expect(await f.ruleAction(first.delivery.id, 'preview-exact')).toMatchObject({
+    status: 'queued',
+  });
+  expect(f.core.toolRules.list('ada')).toEqual([]);
+  await vi.waitFor(() =>
+    expect(
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.presented,
+    ).toBe(true),
+  );
+  const confirmation =
+    f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+  expect(f.cards.mock.calls.at(-1)![2]).toMatchObject({
+    ruleConfirmation: { id: confirmation.id, kind: 'exact' },
+  });
+  expect(await f.ruleAction(first.delivery.id, 'preview-exact')).toMatchObject({
+    status: 'queued',
+  });
+  expect(
+    f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.id,
+  ).toBe(confirmation.id);
+  expect(await f.action(first.delivery.id)).toMatchObject({ status: 'refused' });
+  await f.ruleAction(first.delivery.id, 'confirm-exact', confirmation.id);
+  await f.ruleAction(first.delivery.id, 'confirm-exact', confirmation.id);
+  expect(await first.answer).toBe('allowed-once');
+  expect(f.owner.validAfterDecision(first.execution.agent!, first.execution.callId)).toBe(true);
+  const rules = f.core.toolRules.list('ada');
+  expect(rules).toHaveLength(1);
+  expect(rules[0]).toMatchObject({
+    kind: 'exact',
+    externalCreator: { pairingId: f.approved.id, actorId: 'ou_alice', bindingId: f.binding.id },
+  });
+  const matching = f.repeat('matching');
+  expect(await matching.answer).toBe('allowed-once');
+  expect(matching.guard()).toBe(true);
+  const mismatch = f.repeat('different-input', 'pwd --different');
+  await vi.waitFor(() => expect(f.owner.requests('ada')).toHaveLength(1));
+  const request = f.owner.requests('ada')[0]!;
+  await f.owner.decide('ada', request.messageId, 'rejected');
+  expect(await mismatch.answer).toBe('rejected');
+  const role = (await f.core.externalMessaging.snapshot('ada')).roles![0]!;
+  f.core.externalMessaging.senderAccess('ada', {
+    kind: 'edit-role',
+    id: role.id,
+    expectedRevision: role.revision,
+    name: role.name,
+    behavior: role.behavior,
+    capabilities: ['approve', 'reject'],
+  });
+  expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
+  expect(matching.guard()).toBe(false);
+  f.core.externalMessaging.senderAccess('ada', {
+    kind: 'edit-role',
+    id: role.id,
+    expectedRevision: role.revision + 1,
+    name: role.name,
+    behavior: role.behavior,
+    capabilities: ['approve', 'reject', 'save-rules'],
+  });
+  expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
+});
+
+async function savedExact() {
+  const f = await fixture(true, true);
+  const first = await f.start();
+  await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+  await f.ruleAction(first.delivery.id, 'preview-exact');
+  await vi.waitFor(() =>
+    expect(
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.presented,
+    ).toBe(true),
+  );
+  const confirmation =
+    f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+  await f.ruleAction(first.delivery.id, 'confirm-exact', confirmation.id);
+  expect(await first.answer).toBe('allowed-once');
+  return { ...f, first };
+}
+
+it('creator pairing revocation updates only its own receipt and re-pairing cannot restore the saved rule', async () => {
+  const f = await savedExact();
+  f.core.externalMessaging.pairing.review('ada', {
+    kind: 'revoke',
+    id: f.approved.id,
+    expectedRevision: f.approved.revision,
+  });
+  await vi.waitFor(() => {
+    const last = f.cards.mock.calls.at(-1)!;
+    expect(last[2]).toMatchObject({
+      title: 'Approval rule disabled / 审批规则已停用',
+      status: 'expired',
+    });
+    expect(last[2].detail).not.toContain('pwd');
+    expect(last[1]).toMatchObject({ messageId: 'om_card', conversationId: 'oc_private' });
+    expect(last[3].update).toBe(true);
+  });
+  expect(f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]).toMatchObject({
+    savedRuleStatus: 'revoked',
+  });
+  const next = f.core.externalMessaging.pairing.request(
+    f.binding.id,
+    {
+      version: 1,
+      channel: 'feishu',
+      botId: 'lark-qa',
+      fingerprint,
+      eventId: 'pair-again',
+      messageId: 'om_new_pair',
+      actor: { kind: 'user', id: 'ou_alice', name: 'Alice QA' },
+      conversation: { kind: 'dm', id: 'oc_private' },
+      mentions: [],
+      mentionedAccount: false,
+      at: new Date().toISOString(),
+      text: 'New request',
+      reply: { messageId: 'om_new_pair', conversationId: 'oc_private', actorId: 'ou_alice' },
+      replay: { kind: 'provider-redelivery', resumeCursor: false, gapPossible: true },
+    },
+    'conversation',
+  )!;
+  expect(next.id).not.toBe(f.approved.id);
+  f.core.externalMessaging.pairing.review('ada', {
+    kind: 'approve',
+    id: next.id,
+    expectedRevision: next.revision,
+    roleId: f.role!.id,
+    expectedRoleRevision: f.role!.revision,
+  });
+  expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
+  const repeated = f.repeat('after-repair');
+  await vi.waitFor(() => expect(f.owner.requests('ada')).toHaveLength(1));
+  await f.owner.decide('ada', f.owner.requests('ada')[0]!.messageId, 'rejected');
+  expect(await repeated.answer).toBe('rejected');
+});
+
+it.each(['binding', 'defaults', 'bot'] as const)(
+  '%s disablement permanently revokes an external rule before later re-enable',
+  async (kind) => {
+    const f = await savedExact();
+    if (kind === 'defaults') {
+      const prior = f.core.externalMessaging.defaults();
+      const { revision, changedAt: _changed, ...input } = prior;
+      await f.core.externalMessaging.setDefaults({
+        ...input,
+        expectedRevision: revision,
+        identityEnabled: false,
+      });
+      await f.core.externalMessaging.setDefaults({
+        ...input,
+        expectedRevision: revision + 1,
+        identityEnabled: true,
+      });
+    } else if (kind === 'binding') {
+      const disabled = await f.core.externalMessaging.identity('ada', {
+        kind: 'update',
+        id: f.binding.id,
+        expectedRevision: f.binding.revision,
+        name: f.binding.name,
+        enabled: false,
+      });
+      await f.core.externalMessaging.identity('ada', {
+        kind: 'update',
+        id: f.binding.id,
+        expectedRevision: disabled.revision,
+        name: f.binding.name,
+        enabled: true,
+      });
+    } else await f.core.externalMessaging.disableBot('ada');
+    expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
+    expect(
+      f.owner.executionGuard(f.first.execution.agent!, f.first.execution.callId)?.('bash', {
+        command: 'pwd',
+      }),
+    ).toBe(false);
+  },
+);
+
+it('removing one save-rules source preserves a standing rule while another current group still grants it', async () => {
+  const f = await savedExact();
+  f.core.externalMessaging.senderAccess('ada', {
+    kind: 'create-group',
+    bindingId: f.binding.id,
+    name: 'Independent save grant',
+    allow: ['save-rules'],
+    deny: [],
+    memberIds: [f.approved.id],
+  });
+  const role = f.role!;
+  f.core.externalMessaging.senderAccess('ada', {
+    kind: 'edit-role',
+    id: role.id,
+    expectedRevision: role.revision,
+    name: role.name,
+    behavior: role.behavior,
+    capabilities: ['approve', 'reject'],
+  });
+  expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeUndefined();
+  const repeated = f.repeat('still-authorized');
+  expect(await repeated.answer).toBe('allowed-once');
+  expect(repeated.guard()).toBe(true);
+});
+
+it('delayed exact confirmation cannot save a rule after current save-rules Deny', async () => {
+  const f = await fixture(true, true);
+  const first = await f.start();
+  await vi.waitFor(() =>
+    expect(first.delivery.delivery === 'sent' || f.cards.mock.calls.length).toBeTruthy(),
+  );
+  await f.ruleAction(first.delivery.id, 'preview-exact');
+  await vi.waitFor(() =>
+    expect(
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.presented,
+    ).toBe(true),
+  );
+  const confirmation =
+    f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+  f.core.externalMessaging.senderAccess('ada', {
+    kind: 'create-group',
+    bindingId: f.binding.id,
+    name: 'No saved rules',
+    allow: [],
+    deny: ['save-rules'],
+    memberIds: [f.approved.id],
+  });
+  expect(await f.ruleAction(first.delivery.id, 'confirm-exact', confirmation.id)).toMatchObject({
+    status: 'refused',
+  });
+  expect(f.core.toolRules.list('ada')).toEqual([]);
+  await f.owner.decide('ada', first.delivery.requestMessageId!, 'rejected');
+  expect(await first.answer).toBe('rejected');
+});
 
 it('current group grants execute Allow once/Reject and a new group Deny refuses an already delivered native card', async () => {
   const f = await fixture(true);
