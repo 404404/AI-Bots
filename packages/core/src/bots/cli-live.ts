@@ -21,6 +21,7 @@ export const LIVE_OPTIONS = {
   'message-id': { type: 'string' },
   outcome: { type: 'string' },
   'answer-stdin': { type: 'boolean' },
+  'values-stdin': { type: 'boolean' },
   since: { type: 'string' },
   workspace: { type: 'string' },
 } as const;
@@ -41,6 +42,12 @@ export const LIVE_COMMANDS = [
   },
   { command: 'tool-approval-decide', description: 'allow once or reject an owned tool approval' },
   { command: 'user-question-status', description: 'inspect a formal Human question' },
+  { command: 'ask-secret-status', description: 'inspect a private input request without values' },
+  {
+    command: 'ask-secret-submit',
+    description: 'submit confidential field JSON from stdin through the authenticated Owner',
+  },
+  { command: 'ask-secret-cancel', description: 'cancel a private input request as Owner' },
   {
     command: 'user-question-answer',
     description: 'answer a formal Human question with JSON from stdin',
@@ -58,6 +65,7 @@ interface LiveValues extends ImValues {
   body?: string;
   'body-stdin'?: boolean;
   'answer-stdin'?: boolean;
+  'values-stdin'?: boolean;
   outcome?: string;
   since?: string;
   workspace?: string;
@@ -287,12 +295,41 @@ export async function runLiveCli(
       'tool-approval-decide',
       'user-question-status',
       'user-question-answer',
+      'ask-secret-status',
+      'ask-secret-submit',
+      'ask-secret-cancel',
     ].includes(command) &&
     !messageId?.trim()
   )
     usage('--message-id is required.');
   let body: string | undefined;
   let answer: unknown;
+  let confidential: Record<string, string> | undefined;
+  if (command === 'ask-secret-submit') {
+    if (!values['values-stdin']) usage('ask-secret-submit requires --values-stdin.');
+    try {
+      const input = await (io.readStdin?.() ?? Promise.resolve(''));
+      if (input.length > 140_000) throw new Error('Private input exceeds the limit');
+      const parsed: unknown = JSON.parse(input);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+        throw new Error('Invalid private input');
+      const entries = Object.entries(parsed);
+      if (
+        entries.length < 1 ||
+        entries.length > 8 ||
+        entries.some(
+          ([key, value]) =>
+            !/^[a-z][a-z0-9_]{0,47}$/.test(key) ||
+            typeof value !== 'string' ||
+            value.length > 16_384,
+        )
+      )
+        throw new Error('Invalid private fields');
+      confidential = Object.fromEntries(entries);
+    } catch {
+      usage('Private input stdin must be a JSON object with 1–8 declared string fields.');
+    }
+  }
   if (command === 'send') {
     if ((values.body !== undefined) === (values['body-stdin'] === true))
       usage('send requires exactly one of --body or --body-stdin.');
@@ -339,6 +376,35 @@ export async function runLiveCli(
   const deadline = Date.now() + duration;
   const signal = AbortSignal.timeout(duration);
   const { rpc } = await connectLiveHost(values, io, signal);
+  if (command.startsWith('ask-secret-')) {
+    try {
+      if (command === 'ask-secret-status') {
+        const result = await rpc<{ status?: unknown }>('privateInputStatus', {
+          channelId: target,
+          messageId,
+        });
+        if (!['pending', 'configured', 'cancelled', 'expired'].includes(String(result.status)))
+          throw new Error('Invalid private status');
+        return { status: result.status };
+      }
+      const method = command === 'ask-secret-submit' ? 'privateInputSubmit' : 'privateInputCancel';
+      const result = await rpc<{ accepted?: unknown }>(method, {
+        channelId: target,
+        messageId,
+        ...(confidential === undefined ? {} : { values: confidential }),
+      });
+      if (result.accepted !== true) throw new Error('Private request was not accepted');
+      return { accepted: true };
+    } catch {
+      throw new CliLiveError(
+        'private-input-not-accepted',
+        'Private input operation was not accepted. Check Owner authentication and request status before retrying.',
+      );
+    } finally {
+      if (confidential !== undefined)
+        for (const key of Object.keys(confidential)) delete confidential[key];
+    }
+  }
   if (command === 'send') {
     const channelId = dmChannelId(target);
     const receipt = { channelId, messageId: messageId ?? `human-${randomUUID()}` };

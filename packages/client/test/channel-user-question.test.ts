@@ -102,6 +102,74 @@ function button(text: string): HTMLButtonElement | undefined {
   );
 }
 
+describe('private input card', () => {
+  const card: ChannelMessage = {
+    id: 'private-request',
+    at: message.at,
+    author: message.author,
+    body: 'Authenticate the controlled service',
+    privateInputRequest: {
+      sessionId: 'orchestrator-1',
+      account: 'controlled',
+      purpose: 'Authenticate the controlled service',
+      fields: [
+        { id: 'key', label: 'API key', required: true },
+        { id: 'secret', label: 'API secret', required: true },
+      ],
+    },
+  };
+
+  it('clears multiple private fields before awaiting the direct submission', async () => {
+    let finish!: () => void;
+    let submitted: Record<string, string> | undefined;
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValue('pending'),
+      privateInputSubmit: vi.fn((_channel, _message, values: Record<string, string>) => {
+        submitted = { ...values };
+        expect([...container.querySelectorAll('input')].every((input) => input.value === '')).toBe(
+          true,
+        );
+        return new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+      }),
+      answerUserQuestion: vi.fn(),
+      send: vi.fn(),
+    } as unknown as BridgeActions;
+    await act(async () => render(actions, undefined, card));
+    const fields = [...container.querySelectorAll('input')];
+    expect(fields.map((input) => input.type)).toEqual(['password', 'password']);
+    fields[0]!.value = 'synthetic key';
+    fields[1]!.value = '  synthetic secret  ';
+    await act(async () => button('私密提交')?.click());
+    expect(submitted).toEqual({ key: 'synthetic key', secret: '  synthetic secret  ' });
+    expect(actions.answerUserQuestion).not.toHaveBeenCalled();
+    expect(actions.send).not.toHaveBeenCalled();
+    await act(async () => finish());
+    expect(container.querySelector('input')).toBeNull();
+    expect(container.textContent).toContain('已配置私密信息');
+    expect(container.textContent).not.toContain('synthetic secret');
+  });
+
+  it('discards fields after a refused submit without displaying the remote error', async () => {
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValue('pending'),
+      privateInputSubmit: vi
+        .fn()
+        .mockRejectedValue(new Error('synthetic secret from unsafe upstream')),
+    } as unknown as BridgeActions;
+    await act(async () => render(actions, undefined, card));
+    for (const input of container.querySelectorAll('input')) input.value = 'synthetic secret';
+    await act(async () => button('私密提交')?.click());
+    expect(actions.privateInputSubmit).toHaveBeenCalledTimes(1);
+    expect([...container.querySelectorAll('input')].every((input) => input.value === '')).toBe(
+      true,
+    );
+    expect(container.textContent).toContain('未能完成请求');
+    expect(container.textContent).not.toContain('synthetic secret');
+  });
+});
+
 describe('native question card interaction', () => {
   it('keeps a late answer submitted until the native Session admits it', async () => {
     vi.useFakeTimers();
