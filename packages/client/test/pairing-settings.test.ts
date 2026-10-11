@@ -113,6 +113,7 @@ vi.mock('../src/client/combobox.js', () => ({
     ),
 }));
 import { PairingSettings } from '../src/client/pairing-settings.js';
+import { GroupDetails } from '../src/client/permission-group-settings.js';
 import { zhTranslate } from '../src/client/locale.js';
 import type { PairingRequest } from '../../core/src/messaging/pairing.js';
 const request: PairingRequest = {
@@ -131,6 +132,136 @@ const request: PairingRequest = {
   revision: 1,
   attempts: 1,
 };
+it('deleting a group explains removal of Deny and requires confirmation with the current revision', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host),
+    change = vi.fn(async () => {});
+  try {
+    await act(async () =>
+      root.render(
+        createElement(GroupDetails, {
+          group: {
+            id: 'group-id',
+            botSlug: 'ada',
+            bindingId: 'lark-qa',
+            name: 'Reviewers',
+            allow: [],
+            deny: ['approve'],
+            memberIds: [],
+            revision: 3,
+            createdAt: request.createdAt,
+            updatedAt: request.createdAt,
+          },
+          people: [],
+          bindings: [],
+          busy: false,
+          change,
+          t: zhTranslate,
+        }),
+      ),
+    );
+    const button = () =>
+      Array.from(host.querySelectorAll('button')).find(
+        (item) => item.textContent === zhTranslate('pairing.deleteGroup'),
+      )!;
+    await act(async () => button().click());
+    expect(change).not.toHaveBeenCalled();
+    const dialog = host.querySelector('[role=dialog]')!;
+    expect(dialog.textContent).toContain(zhTranslate('pairing.deleteGroupWarning'));
+    await act(async () =>
+      Array.from(dialog.querySelectorAll('button'))
+        .find((item) => item.textContent === zhTranslate('pairing.deleteGroup'))!
+        .click(),
+    );
+    expect(change).toHaveBeenCalledExactlyOnceWith({
+      kind: 'delete-group',
+      id: 'group-id',
+      expectedRevision: 3,
+    });
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+it('group member selection is scoped to approved people and personal exceptions submit exact revisions', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host),
+    change = vi.fn(async () => {});
+  const person = {
+    ...request,
+    purpose: 'conversation' as const,
+    status: 'approved' as const,
+    revision: 7,
+    roleId: 'reader',
+    effectivePermissions: { capabilities: [], deniedCapabilities: [], permissionSources: [] },
+  };
+  const button = (text: string) =>
+    Array.from(host.querySelectorAll('button')).find((item) => item.textContent === text)!;
+  await act(async () =>
+    root.render(
+      createElement(PairingSettings, {
+        requests: [
+          person,
+          { ...person, id: 'other', actorName: 'Other App', bindingId: 'other-app' },
+        ],
+        bindings: [{ id: 'lark-qa', name: 'QA Lark' }],
+        busy: false,
+        senderAccess: change,
+        refresh: async () => {},
+        review: async () => {},
+        t: zhTranslate,
+      }),
+    ),
+  );
+  await act(async () => button('授权组 (0)').click());
+  await act(async () => button('创建组').click());
+  const dialog = host.querySelector('[role="dialog"]')!;
+  expect(dialog.textContent).toContain('Alice QA');
+  expect(dialog.textContent).not.toContain('Other App');
+  const name = dialog.querySelector('input:not([type="checkbox"])')!;
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+  await act(async () => {
+    setter.call(name, 'Reviewers');
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const checkbox = (label: string) =>
+    Array.from(dialog.querySelectorAll('label'))
+      .find((item) => item.textContent?.includes(label))!
+      .querySelector('input')!;
+  await act(async () => checkbox('允许 · 批准').click());
+  await act(async () => checkbox('Alice QA').click());
+  await act(async () => button('保存组').click());
+  expect(change).toHaveBeenLastCalledWith({
+    kind: 'create-group',
+    bindingId: 'lark-qa',
+    name: 'Reviewers',
+    allow: ['approve'],
+    deny: [],
+    memberIds: [person.id],
+  });
+  await act(async () => button('人员 (2)').click());
+  await act(async () => button('个人权限例外').click());
+  const exception = host.querySelector('[role="dialog"]')!;
+  await act(async () =>
+    Array.from(exception.querySelectorAll('label'))
+      .find((item) => item.textContent?.includes('拒绝 · 批准'))!
+      .querySelector('input')!
+      .click(),
+  );
+  await act(async () => button('保存例外').click());
+  expect(change).toHaveBeenLastCalledWith({
+    kind: 'person-permissions',
+    id: person.id,
+    expectedRevision: 7,
+    allow: [],
+    deny: ['approve'],
+  });
+  await act(async () => root.unmount());
+  host.remove();
+});
+
 it('separate role editing and selected-person reassignment retain exact authority revisions', async () => {
   const host = document.createElement('div');
   document.body.append(host);

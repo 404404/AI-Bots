@@ -2003,6 +2003,16 @@ const EXTERNAL_USER_ROLE_MIGRATION: SchemaMigration = {
   },
 };
 
+const PERMISSION_GROUP_MIGRATION: SchemaMigration = {
+  generation: 79,
+  module: 'messaging',
+  description: 'Persist continuous scoped authorization groups without copying member grants',
+  migrate(database) {
+    database.exec(`CREATE TABLE messaging_permission_groups (id TEXT PRIMARY KEY, bot_slug TEXT NOT NULL, binding_id TEXT NOT NULL, body TEXT NOT NULL CHECK (json_valid(body)));
+      CREATE INDEX messaging_permission_groups_scope ON messaging_permission_groups(bot_slug, binding_id);`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2081,4 +2091,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   MEMORY_COMMIT_RECORD_MIGRATION,
   INBOX_HISTORY_MIGRATION,
   EXTERNAL_USER_ROLE_MIGRATION,
+  PERMISSION_GROUP_MIGRATION,
 ]);

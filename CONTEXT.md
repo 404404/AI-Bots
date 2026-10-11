@@ -486,6 +486,14 @@ _Avoid_: native DSH role, resource ACL, administrator (for every role)
 A Human-reviewed association of one external person with a Role for one PersonaBot and its current authenticated App Binding. It is reusable across allowed conversations in that scope, with a fresh question required after approval; it does not transfer to another Bot, App, platform or replacement Binding.
 _Avoid_: conversation membership, account-wide administrator, saved pending instruction
 
+**External Authorization Group**:
+A continuing source of explicit management Allow and Deny for currently paired external people in one PersonaBot and App Binding; a person can belong to several groups while retaining one primary behavior Role. Membership does not grant chat eligibility and does not survive revocation and a new pairing.
+_Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBAC
+
+**Person permission exception**:
+An explicit management Allow or Deny attached to one current Chat pairing, alongside its Role and group contributions; any applicable explicit Deny takes precedence. It never grants authenticated Web Human provenance.
+_Avoid_: Super Admin pairing, behavior Role override, permanent platform-user grant
+
 **Conversation entry**:
 The per-conversation anchor of one Binding's traffic, stored as a Messaging Grant. An _implicit_ entry is recorded on the first admitted default-traffic message or first proactive post; an _explicit_ entry comes from a saved send target. A _held_ entry waits for the Human (Ask me first, or a bound was reached) and keeps only metadata. A _blocked_ conversation has a durable block keyed by Bot, App fingerprint, kind and ID that refuses it until **Allow again**. Muting an entry keeps admission but never wakes the Bot.
 _Avoid_: authorization (for implicit entries), delivery target, subscription
