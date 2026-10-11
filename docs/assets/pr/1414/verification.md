@@ -61,3 +61,20 @@ T3 briefly recovered. The account bar was inspected, the original reviewer's ava
 T3 then repeatedly timed out on evaluate/open and reported unavailable. The exact task receiver was stopped and verified no longer running/listening. After corrected canonical readback, another fresh availability check preceded restoring the same isolated Profile for the authorized manual review step. The new pending request/card survived this restart; the Provider is connected. A new exact-PID cutoff bounds the manual window; no original receiver was restarted.
 
 Both PRs remain Draft, Project In Progress. Actual reviewer card selection/approval, final rendering/re-ask, a fresh reply, real Lark screenshots and Human first-flow acceptance remain outstanding. The unavailable-browser step has been requested through Human fallback.
+
+
+## First real group-only flow verified — 2026-10-11 13:34 UTC
+
+- Two distinct trusted Lark actor IDs in the same designated group. Neither has an observed private-DM route.
+- Applicant's unpaired Role-selection/Reject was denied before expiry, with unchanged pending request and zero external-message Admissions. A later fresh native @ created the new public request/card; the pending receipt survived cold restart.
+- The Human selected management Role `QA Allow once` and approved as the other, authorized actor through the real group card. Canonical `reviewedBy=paired-reviewer`, reviewer identity differs from applicant, Role revision 2, and card update is accepted. Reviewer use is `review-pairing`; explicit ceiling is `approve`. Applicant effective use is `approve`, delegation empty; no review permission is inherited.
+- Browser automation recovered in a new signed-in native T3 tab. The task independently verified the applicant avatar, designated group, final approved card without controls, Role/use/empty-delegation copy and fixed ask-again notice. At this point external-message Admissions remained zero.
+- The task sent a true native @ from the applicant with fresh marker `1414_FRESH_APPROVED_2233`. Exactly one external Source Event/Admission was observed. Admission reason is `group-mention`, final state handled with no error. Canonical Outbox is `provider-accepted` with exact reply receipt. Actual group rendering returned `323`, `paired`, Role `QA Allow once`, effective `[approve]` and empty delegation. Earlier applicant question markers did not create Admissions or execute after approval.
+- Cropped native screenshot evidence below excludes unrelated conversations and actor names. The canonical Source Event is retained separately from the handled Admission; no claim that the Source Event's own attempt fields changed to handled is made.
+- The exact task receiver was stopped at 13:34:50 UTC, with no owned process/listener left. No original receiver was restarted. Test App registration and credentials stay local, unchanged.
+
+![Actual final approved group card: approve capability, no delegation or controls](lark-approved-card.png)
+![Actual fixed ask-again notice](lark-fixed-reask.png)
+![Actual fresh-message reply with current permissions and 323](lark-fresh-reply.png)
+
+**Gate:** first-flow Human feedback has been requested; not yet accepted. Independent authorized Reject, delayed/current Deny and competing review/cold-restart decision cases remain before full issue completion. Pending-card/baseline Lark captures and person exception screenshots remain required visual review work; these final-state crops do not substitute for all matching before/after states. Keep both PRs Draft, Project In Progress. No one-time codes or other-platform expansion started.
