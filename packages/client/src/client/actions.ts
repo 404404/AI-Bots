@@ -552,6 +552,15 @@ export interface BridgeActions {
     values: Record<string, string>,
   ): Promise<void>;
   privateInputCancel?(channelId: string, messageId: string): Promise<void>;
+  privateAccountStatus?(
+    channelId: string,
+    messageId: string,
+  ): Promise<import('../../../core/src/credentials/contracts.js').PrivateAccountStatus>;
+  privateInputReplace?(channelId: string, messageId: string): Promise<void>;
+  privateAccountRevoke?(
+    channelId: string,
+    messageId: string,
+  ): Promise<import('../../../core/src/credentials/contracts.js').PrivateRevocationResult>;
   toolApprovalExecutionState?(
     channelId: string,
     messageId: string,
@@ -1265,6 +1274,43 @@ export function createActions(
       const result = await call('privateInputCancel', { channelId, messageId });
       if (!result.ok || (result.value as { accepted?: unknown }).accepted !== true)
         throw new Error('Private input cancellation was not accepted');
+    },
+    privateAccountStatus: async (channelId, messageId) => {
+      const result = await call('privateAccountStatus', { channelId, messageId });
+      if (!result.ok) throw new Error('Private account status is unavailable');
+      const value =
+        result.value as import('../../../core/src/credentials/contracts.js').PrivateAccountStatus;
+      if (
+        !['configured', 'revoked', 'superseded', 'unavailable'].includes(value.status) ||
+        typeof value.references !== 'object' ||
+        value.references === null ||
+        !Object.values(value.references).every(
+          (reference) =>
+            typeof reference === 'string' &&
+            /^private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}$/.test(reference),
+        )
+      )
+        throw new Error('Private account status is invalid');
+      return value;
+    },
+    privateInputReplace: async (channelId, messageId) => {
+      const result = await call('privateInputReplace', { channelId, messageId });
+      if (!result.ok || typeof (result.value as { messageId?: unknown }).messageId !== 'string')
+        throw new Error('Private input replacement is unavailable');
+    },
+    privateAccountRevoke: async (channelId, messageId) => {
+      const result = await call('privateAccountRevoke', { channelId, messageId });
+      if (!result.ok) throw new Error('Private account revocation is unavailable');
+      const value =
+        result.value as import('../../../core/src/credentials/contracts.js').PrivateRevocationResult;
+      if (
+        value.accepted !== true ||
+        ![value.stopped, value.completed, value.uncertain].every(
+          (count) => Number.isSafeInteger(count) && count >= 0,
+        )
+      )
+        throw new Error('Private account revocation was not accepted');
+      return value;
     },
     toolApprovalExecutionState: (channelId, messageId) =>
       loadToolApprovalExecutionState(call, channelId, messageId),

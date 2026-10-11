@@ -143,12 +143,9 @@ describe('private input committed attention and admission', () => {
       const result = await a.wait;
       expect(result.status).toBe('configured');
       expect(
-        await f.owner.consume(
-          a.agent,
-          'ada-account',
-          result.references,
-          async (resolved) => resolved,
-        ),
+        await f.owner.consume(a.agent, 'ada-account', result.references, async (resolved) => ({
+          ...resolved,
+        })),
       ).toEqual(values);
       expect(f.core.humanAttention.actionSummary().count).toBe(0);
     } finally {

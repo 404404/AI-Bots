@@ -9,6 +9,8 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 
 ### Documentation
 
+- 在[本地开发指南](../dsh-dev/SKILL.md)记录凭据提交后响应失败及启动恢复的写入顺序，通过 pinned RC1 原生 Provider 和私密账号回归测试核验；DSH／Cordis Context 不变（[#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)）。
+
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录 RC1 新 Profile 初始化、原生 credential record 对象归属和恢复排空，通过 pinned 原生 Provider 与真实私密输入 Host 核验；DSH／Cordis 词汇及 Skill 行为不变（[#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381)）。
 
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录浏览器依赖延迟读取 Node 环境变量的问题、构建期浏览器常量及真实原生弹窗复验路径，通过 DSH 0.2.0 RC1 核验（[#1373](https://github.com/BotHarness/DeepSeekBot/issues/1373)）。

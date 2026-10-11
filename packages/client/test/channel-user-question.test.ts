@@ -118,6 +118,58 @@ describe('private input card', () => {
       ],
     },
   };
+  it('offers replacement and revocation without restoring inputs and ignores a stale configured poll after revocation', async () => {
+    vi.useFakeTimers();
+    try {
+      let stale!: (value: { status: 'configured'; references: Record<string, string> }) => void;
+      const actions = {
+        privateInputStatus: vi.fn().mockResolvedValue('configured'),
+        privateAccountStatus: vi
+          .fn()
+          .mockResolvedValueOnce({ status: 'configured', references: {} })
+          .mockImplementationOnce(
+            () =>
+              new Promise((resolve) => {
+                stale = resolve;
+              }),
+          )
+          .mockResolvedValue({ status: 'revoked', references: {} }),
+        privateInputReplace: vi.fn().mockResolvedValue(undefined),
+        privateAccountRevoke: vi
+          .fn()
+          .mockResolvedValue({ accepted: true, stopped: 1, completed: 0, uncertain: 0 }),
+      } as unknown as BridgeActions;
+      await act(async () => render(actions, undefined, card));
+      expect(container.querySelector('input')).toBeNull();
+      expect(button('替换私密信息')).toBeDefined();
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2500);
+      });
+      await act(async () => button('撤销本地访问')?.click());
+      await act(async () => stale({ status: 'configured', references: {} }));
+      expect(button('替换私密信息')).toBeUndefined();
+      expect(container.textContent).toContain('本地访问已撤销');
+      expect(container.textContent).toContain('已停止 1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('converges a duplicate-tab revocation refusal to the canonical terminal state', async () => {
+    const actions = {
+      privateInputStatus: vi.fn().mockResolvedValue('configured'),
+      privateAccountStatus: vi
+        .fn()
+        .mockResolvedValueOnce({ status: 'configured', references: {} })
+        .mockResolvedValue({ status: 'revoked', references: {} }),
+      privateAccountRevoke: vi.fn().mockRejectedValue(new Error('already changed')),
+    } as unknown as BridgeActions;
+    await act(async () => render(actions, undefined, card));
+    await act(async () => button('撤销本地访问')?.click());
+    expect(container.textContent).toContain('本地访问已撤销');
+    expect(container.querySelector('[role=alert]')).toBeNull();
+    expect(button('撤销本地访问')).toBeUndefined();
+  });
 
   it('clears multiple private fields before awaiting the direct submission', async () => {
     let finish!: () => void;

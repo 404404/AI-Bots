@@ -5,6 +5,7 @@ import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { store, type ChannelMessage } from './store.js';
 import type { PrivateInputStatus } from '../../../core/src/credentials/contracts.js';
+import { PrivateAccountControls } from './private-account-controls.js';
 
 type PrivateCardMount = {
   node: HTMLFormElement;
@@ -127,6 +128,9 @@ export function PrivateInputCard({
         {t('privateInput.account')}: {request.account}
       </div>
       <div className="bh-question-prompt">{request.purpose}</div>
+      {request.replacesMessageId === undefined ? null : (
+        <div className="bh-note">{t('privateInput.replacementNote')}</div>
+      )}
       {request.expiresAt === undefined ? null : (
         <div className="bh-note">
           {t('privateInput.expiresAt', { time: new Date(request.expiresAt).toLocaleString() })}
@@ -184,6 +188,14 @@ export function PrivateInputCard({
             {t('question.retry')}
           </Button>
         </div>
+      ) : null}
+      {status === 'configured' && actions.privateAccountStatus !== undefined ? (
+        <PrivateAccountControls
+          channelId={channelId}
+          messageId={message.id}
+          actions={actions}
+          t={t}
+        />
       ) : null}
     </form>
   );

@@ -22,8 +22,19 @@ export const privateRequestSchema = z
 export type PrivateInputDeclaration = z.infer<typeof privateRequestSchema>;
 export type PrivateInputStatus = 'pending' | 'configured' | 'cancelled' | 'expired';
 export interface PrivateInputCard extends PrivateInputDeclaration {
-  sessionId: string;
+  sessionId?: string;
   expiresAt?: string;
+  replacesMessageId?: string;
+}
+export interface PrivateAccountStatus {
+  status: 'configured' | 'revoked' | 'superseded' | 'unavailable';
+  references: Record<string, string>;
+}
+export interface PrivateRevocationResult {
+  accepted: boolean;
+  stopped: number;
+  completed: number;
+  uncertain: number;
 }
 export interface PrivateInputResult {
   status: 'configured' | 'cancelled' | 'expired';

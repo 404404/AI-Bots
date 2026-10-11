@@ -818,10 +818,16 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
     )
       return false;
-    const { sessionId, expiresAt, ...declaration } = privateRequest as Record<string, unknown>;
+    const { sessionId, expiresAt, replacesMessageId, ...declaration } = privateRequest as Record<
+      string,
+      unknown
+    >;
     if (
-      typeof sessionId !== 'string' ||
-      sessionId.length === 0 ||
+      (sessionId === undefined
+        ? replacesMessageId === undefined
+        : typeof sessionId !== 'string' || sessionId.length === 0) ||
+      (replacesMessageId !== undefined &&
+        (typeof replacesMessageId !== 'string' || !/^[0-9a-f-]{36}$/.test(replacesMessageId))) ||
       (expiresAt !== undefined &&
         (typeof expiresAt !== 'string' || !Number.isFinite(Date.parse(expiresAt)))) ||
       !privateRequestSchema.safeParse(declaration).success

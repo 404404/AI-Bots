@@ -206,6 +206,34 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return { accepted: (await this.privateInputs?.cancel(true, channelId, messageId)) ?? false };
   }
 
+  async privateAccountStatus(channelId: string, messageId: string) {
+    this.requirePrivateOwner();
+    return (
+      this.privateInputs?.accountStatus(true, channelId, messageId) ?? {
+        status: 'unavailable',
+        references: {},
+      }
+    );
+  }
+
+  async privateInputReplace(channelId: string, messageId: string): Promise<{ messageId?: string }> {
+    this.requirePrivateOwner();
+    const replacement = await this.privateInputs?.replace(true, channelId, messageId);
+    return replacement === undefined ? {} : { messageId: replacement };
+  }
+
+  async privateAccountRevoke(channelId: string, messageId: string) {
+    this.requirePrivateOwner();
+    return (
+      this.privateInputs?.revoke(true, channelId, messageId) ?? {
+        accepted: false,
+        stopped: 0,
+        completed: 0,
+        uncertain: 0,
+      }
+    );
+  }
+
   private requirePrivateOwner(): void {
     const operator = (this.ctx.get('connection') as { operator?: unknown } | undefined)?.operator;
     if (operator === undefined || this.ctx.invocation?.peer !== operator)
@@ -1187,6 +1215,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'privateInputStatus',
   'privateInputSubmit',
   'privateInputCancel',
+  'privateAccountStatus',
+  'privateInputReplace',
+  'privateAccountRevoke',
   'messagingDefaults',
   'messagingDefaultsSet',
   'channelBridges',
