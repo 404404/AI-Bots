@@ -18,6 +18,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   }: ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) =>
     createElement('button', props),
   Tag: ({ children }: PropsWithChildren) => createElement('span', null, children),
+  IconChevronDownOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
   SegmentedTabs: ({
     items,
     value,
@@ -113,7 +114,8 @@ vi.mock('../src/client/combobox.js', () => ({
     ),
 }));
 import { PairingSettings } from '../src/client/pairing-settings.js';
-import { GroupDetails } from '../src/client/permission-group-settings.js';
+import { GroupDetails, GroupDialog } from '../src/client/permission-group-settings.js';
+import { BehaviorPreview } from '../src/client/behavior-permission-settings.js';
 import { zhTranslate } from '../src/client/locale.js';
 import type { PairingRequest } from '../../core/src/messaging/pairing.js';
 const request: PairingRequest = {
@@ -132,6 +134,128 @@ const request: PairingRequest = {
   revision: 1,
   attempts: 1,
 };
+it('keeps an affected person visible when a draft removes their last behavior contribution', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () =>
+      root.render(
+        createElement(BehaviorPreview, {
+          items: [],
+          groups: [],
+          people: [{ ...request, purpose: 'conversation', status: 'approved' }],
+          t: zhTranslate,
+        }),
+      ),
+    );
+    expect(host.textContent).toContain(request.actorName);
+    const toggle = host.querySelector<HTMLButtonElement>('.bh-behavior-preview-toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(host.querySelector('.bh-behavior-preview-body')).toBeNull();
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(host.querySelector('.bh-behavior-preview-body')!.id).toBe(
+      toggle.getAttribute('aria-controls'),
+    );
+    expect(host.textContent).toContain(zhTranslate('pairing.noBehaviorPermissions'));
+    expect(host.textContent).not.toContain(zhTranslate('pairing.behaviorNoAffectedPeople'));
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(host.querySelector('.bh-behavior-preview-body')).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+it('previews a cross-group behavior Deny conflict and saves stable item IDs with current revisions', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host),
+    change = vi.fn(async () => {});
+  const item = {
+    id: 'pricing-id',
+    botSlug: 'ada',
+    name: 'Pricing',
+    behavior: 'Answer pricing questions.',
+    revision: 2,
+    createdAt: request.createdAt,
+    updatedAt: request.createdAt,
+  };
+  const person = {
+    ...request,
+    purpose: 'conversation' as const,
+    status: 'approved' as const,
+    roleId: 'member',
+  };
+  const group = {
+    id: 'support-id',
+    botSlug: 'ada',
+    bindingId: request.bindingId,
+    name: 'Support',
+    allow: [],
+    deny: [],
+    memberIds: [person.id],
+    behaviorAllow: [item.id],
+    behaviorDeny: [],
+    revision: 3,
+    createdAt: request.createdAt,
+    updatedAt: request.createdAt,
+  };
+  try {
+    await act(async () =>
+      root.render(
+        createElement(GroupDialog, {
+          group,
+          groups: [{ ...group, id: 'sales-id', name: 'Sales' }, group],
+          behaviorPermissions: [item],
+          people: [person],
+          bindings: [{ id: request.bindingId, name: 'QA App' }],
+          busy: false,
+          change,
+          close: () => {},
+          t: zhTranslate,
+        }),
+      ),
+    );
+    const toggle = host.querySelector<HTMLButtonElement>('.bh-behavior-preview-toggle')!;
+    expect(toggle.getAttribute('aria-label')).toContain(zhTranslate('pairing.behaviorNoConflict'));
+    await act(async () => toggle.click());
+    const table = host.querySelector('.bh-behavior-selection table')!;
+    expect(table.querySelectorAll('th')).toHaveLength(3);
+    expect(table.querySelectorAll('input[type=checkbox]')).toHaveLength(2);
+    expect(table.querySelector('.bh-pairing-name')).toBeNull();
+    expect(table.querySelectorAll('label')[0]!.textContent).toBe('允许 · Pricing');
+    const deny = Array.from(host.querySelectorAll('label'))
+      .find((label) => label.textContent === '拒绝 · Pricing')!
+      .querySelector('input')!;
+    await act(async () => deny.click());
+    expect(table.querySelectorAll<HTMLInputElement>('input')[0]!.checked).toBe(false);
+    expect(table.querySelectorAll<HTMLInputElement>('input')[1]!.checked).toBe(true);
+    expect(toggle.getAttribute('aria-label')).toContain(zhTranslate('pairing.behaviorConflict'));
+    expect(host.textContent).toContain(zhTranslate('pairing.behaviorConflictShort'));
+    expect(host.textContent).toContain('Sales');
+    expect(host.textContent).toContain('Support');
+    await act(async () =>
+      Array.from(host.querySelectorAll('button'))
+        .find((button) => button.textContent === zhTranslate('pairing.saveGroup'))!
+        .click(),
+    );
+    expect(change).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        kind: 'edit-group',
+        id: group.id,
+        expectedRevision: 3,
+        behaviorAllow: [],
+        behaviorDeny: [item.id],
+        expectedBehaviorRevisions: { [item.id]: 2 },
+      }),
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 it('deleting a group explains removal of Deny and requires confirmation with the current revision', async () => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -218,6 +342,7 @@ it('group member selection is scoped to approved people and personal exceptions 
   await act(async () => button('授权组 (0)').click());
   await act(async () => button('创建组').click());
   const dialog = host.querySelector('[role="dialog"]')!;
+  await act(async () => button('组成员 (0)').click());
   expect(dialog.textContent).toContain('Alice QA');
   expect(dialog.textContent).not.toContain('Other App');
   const name = dialog.querySelector('input:not([type="checkbox"])')!;
@@ -230,8 +355,12 @@ it('group member selection is scoped to approved people and personal exceptions 
     Array.from(dialog.querySelectorAll('label'))
       .find((item) => item.textContent?.includes(label))!
       .querySelector('input')!;
+  await act(async () => button('管理能力').click());
   await act(async () => checkbox('允许 · 批准').click());
+  await act(async () => button('组成员 (0)').click());
   await act(async () => checkbox('Alice QA').click());
+  await act(async () => button('管理能力').click());
+  expect(checkbox('允许 · 批准').checked).toBe(true);
   await act(async () => button('保存组').click());
   expect(change).toHaveBeenLastCalledWith({
     kind: 'create-group',

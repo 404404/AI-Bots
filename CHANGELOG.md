@@ -27,6 +27,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a compact, sidebar-style affected-person preview; its Allow/Deny cells show only checkboxes with accessible names, and its body scrolls while the title and actions remain visible. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
+
 - Compatible checked Providers can add Slack received/answered reactions from canonical Inbox and source-reply facts, without blocking messaging; muted sources are excluded. The isolated candidate has native channel/DM evidence; Human QA and published Provider qualification remain pending ([#1161](https://github.com/BotHarness/DeepSeekBot/issues/1161), [guide](docs/slack-connection.md)).
 
 - Lark pairing reviewers can choose an existing Role and approve or reject from a shared source-group or private-DM card, including group-only use. Current review permission and separate delegation Allow/Deny limit management Role grants; applicants must ask again after approval ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
@@ -119,6 +121,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 ### Fixed
 
 - Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).
+
+- Core and product-managed IM Provider declarations use the minimum DSH version `>=0.1.7-0`, including previews, without an exact RC1 lock or future-version ceiling. Future versions are admitted by metadata, not automatically runtime-qualified; the 1.2.1 maintenance installation matrix is separate from this development tree ([#1425](https://github.com/BotHarness/DeepSeekBot/issues/1425)).
 
 - The reusable Lark QA App setup wizard prints links for manual navigation and reduces Windows prompt delays by caching defaults, avoiding terminal subprocesses, and saving each stage atomically while preserving other Apps ([#1385](https://github.com/BotHarness/DeepSeekBot/issues/1385)).
 

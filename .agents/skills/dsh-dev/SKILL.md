@@ -150,6 +150,15 @@ Pre-execution refusal can leave an application-owned Session ID without a DSH Se
 - `references/probe-web.mjs` — headless browser probe (console errors, failed requests, WS, internal fetch); run from the repo.
 - `dsh-ui` skill — in-harness UI rules; `docs/client-bridge.md` §7 — dev loop; ADR-0023 / #50 — bridge transport contract.
 
+## Additional verified pitfall — #1425
+
+An exact DSH peer in any composed Plugin can reject installation before its code is imported.
+The build pin is not the supported Host floor. Product declarations use `>=0.1.7-0` with native
+prerelease semantics and no future-version ceiling; preflight acceptance is not runtime qualification.
+Check Core and the product-managed Provider together. Preserve each release train's immutable
+Provider source and runtime digest, and qualify its own packages rather than borrowing a maintenance
+release's E2E result. Do not use compatibility exemptions as release evidence (#1425).
+
 ## Additional verified pitfall — #1138
 
 For a fresh pinned RC1 local Profile, let native initialization create the Profile directory before applying a task Patch. Precreating the directory makes the native default-profile initializer refuse its destination; initialization also creates an empty `cordis.patch.yml`, so merge intended entries instead of moving another file over it. Preserve native entries, then restart the helper's exact verified Host PID. This was reproduced in #1381.

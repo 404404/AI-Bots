@@ -495,8 +495,12 @@ The current explicit set of management capabilities a Pairing Reviewer may grant
 _Avoid_: own permissions imply delegation, resource ACL, cross-App administrator
 
 **External Authorization Group**:
-A continuing source of explicit management Allow and Deny for currently paired external people in one PersonaBot and App Binding; a person can belong to several groups while retaining one primary behavior Role. Membership does not grant chat eligibility and does not survive revocation and a new pairing.
+A continuing source of explicit management Allow/Deny and reusable behavior permission items for currently paired external people in one PersonaBot and App Binding; a person can belong to several groups while retaining one primary behavior Role. Membership does not grant chat eligibility and does not survive revocation and a new pairing.
 _Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBAC
+
+**Behavior permission item**:
+A named, reusable description of an external person's permitted or prohibited behavior, shared across a PersonaBot's authorization groups. Explicit Deny of the same item wins over Allow; the resulting policy guides the model within the primary Role's constraints and is not a resource ACL or management capability.
+_Avoid_: native permission, copied Role, enforced Shell policy, semantic conflict proof
 
 **Person permission exception**:
 An explicit management Allow or Deny attached to one current Chat pairing, alongside its Role and group contributions; any applicable explicit Deny takes precedence. It never grants authenticated Web Human provenance.

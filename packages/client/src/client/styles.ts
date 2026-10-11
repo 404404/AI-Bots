@@ -2951,6 +2951,22 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-panel { display: grid; gap: 12px; min-width: 0; }
 .bh-pairing-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; min-height: 260px; }
 .bh-pairing-detail { min-width: 0; max-height: 420px; overflow-y: auto; }
+.bh-group-editor-header { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; border: 0; padding: 0; margin: 0 0 16px; }
+.bh-group-editor-selection { min-width: 0; }
+.bh-group-editor-modal { gap: 12px; padding-bottom: 16px; max-height: min(680px, calc(100dvh - 48px)); }
+.bh-group-editor-modal > :last-child { flex: none; }
+.bh-group-editor-content { flex: 1; overflow: hidden; font-size: 13px; line-height: 20px; }
+.bh-group-editor-content > :first-child { flex: none; padding-top: 16px; padding-bottom: 8px; }
+.bh-group-editor-content > :last-child { flex: 1; min-height: 0; margin-top: 8px; overflow-y: auto; overscroll-behavior: contain; }
+.bh-group-editor-modal .bh-group-editor-header { gap: 12px; margin-bottom: 12px; }
+.bh-group-editor-modal .bh-pairing-workspace { gap: 12px; min-height: 0; }
+.bh-behavior-results { display: grid; gap: 8px; }
+.bh-im-pairing-request.bh-behavior-item { padding: 8px 10px; gap: 6px; font-size: 13px; line-height: 20px; }
+.bh-behavior-item .bh-pairing-behavior { margin: 0; }
+.bh-behavior-sources { display: grid; gap: 2px; font-size: 12px; line-height: 18px; }
+.bh-behavior-preview-toggle { width: 100%; }
+.bh-behavior-preview-toggle:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: -2px; }
+.bh-behavior-preview-body { padding: 4px 0 0 20px; }
 .bh-pairing-table-panel { display: grid; gap: 12px; min-width: 0; }
 .bh-pairing-table-scroll { overflow-x: auto; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-pairing-radius-panel); }
 .bh-pairing-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
@@ -2960,6 +2976,11 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-table th:nth-child(2) { width: 24%; min-width: 130px; }
 .bh-pairing-table th:last-child { min-width: 52px; white-space: nowrap; }
 .bh-pairing-table td:first-child label { font-size: 0; gap: 0; }
+.bh-behavior-selection .bh-pairing-table { min-width: 0; table-layout: fixed; }
+.bh-behavior-selection .bh-pairing-table th:first-child, .bh-behavior-selection .bh-pairing-table td:first-child { width: 60%; }
+.bh-behavior-selection .bh-pairing-table th:nth-child(2), .bh-behavior-selection .bh-pairing-table th:last-child { width: 20%; min-width: 0; }
+.bh-behavior-checkbox { gap: 0; }
+.bh-behavior-checkbox > span { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .bh-pairing-table tr[data-selected] { background: var(--dsw-alias-interactive-bg-hover); }
 .bh-pairing-table tbody tr:last-child td { border-bottom: none; }
 .bh-pairing-sort, .bh-pairing-name { padding: 0; border: none; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -2980,6 +3001,8 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-sort-indicator { color: var(--dsw-alias-label-secondary); }
 .bh-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 760px) { .bh-pairing-workspace { grid-template-columns: minmax(0, 1fr); } .bh-pairing-table { min-width: 560px; } .bh-pairing-detail { max-height: none; } }
+@media (max-width: 760px) { .bh-group-editor-header { grid-template-columns: minmax(0, 1fr); } .bh-group-editor-selection [role="tablist"] { height: auto; } .bh-group-editor-selection [role="tab"] { height: auto; min-height: 34px; padding: 8px 4px; overflow-wrap: anywhere; } }
+@media (max-width: 760px) { .bh-group-editor-modal .bh-pairing-detail { max-height: none; overflow: visible; } }
 .bh-permission-table { min-width: 0; table-layout: fixed; }
 .bh-permission-table th:first-child, .bh-permission-table td:first-child { width: 32%; }
 .bh-permission-table th:not(:first-child), .bh-permission-table td:not(:first-child) { width: 17%; min-width: 0; white-space: normal; overflow-wrap: anywhere; }

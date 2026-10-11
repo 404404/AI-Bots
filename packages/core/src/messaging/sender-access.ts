@@ -8,6 +8,7 @@ import type { MessagingGrant } from './outbound.js';
 import { readBlock } from './conversations.js';
 import { groupReceptionPolicy } from './group-policy.js';
 import { channelBridgeRoutes } from './channel-bridge.js';
+import { behaviorPermissionInputs, changeBehaviorPermission } from './behavior-permissions.js';
 import { messagingDefaults } from './defaults.js';
 import { threadReceptionPolicy } from './thread-policy.js';
 import { matchingIngests } from './conversation-ingest.js';
@@ -35,6 +36,7 @@ export interface SenderPolicy {
   revision: number;
 }
 export const senderAccessInput = z.discriminatedUnion('kind', [
+  ...behaviorPermissionInputs,
   ...permissionGroupInputs,
   z
     .object({
@@ -211,6 +213,15 @@ export function changeSenderAccess(
   raw: SenderAccessInput,
 ): void {
   const input = senderAccessInput.parse(raw);
+  if (
+    input.kind === 'create-behavior-permission' ||
+    input.kind === 'edit-behavior-permission' ||
+    input.kind === 'delete-behavior-permission'
+  ) {
+    changeBehaviorPermission(db, botSlug, input);
+    bumpSenderPolicy(db, botSlug);
+    return;
+  }
   if (
     input.kind === 'create-group' ||
     input.kind === 'edit-group' ||
