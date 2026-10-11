@@ -376,8 +376,9 @@ export const zh = {
   'pairing.saveBehaviorPermission': '保存行为权限',
   'pairing.noBehaviorPermissions': '尚无行为权限。先创建，再到组内勾选。',
   'pairing.behaviorConflict': '允许与拒绝冲突 · 拒绝优先',
+  'pairing.behaviorConflictShort': '冲突',
   'pairing.behaviorNoConflict': '无同项冲突',
-  'pairing.behaviorPreview': '受影响人员与生效预览',
+  'pairing.behaviorPreview': '生效预览',
   'pairing.behaviorNoAffectedPeople': '没有受影响的有效配对人员。',
   'pairing.behaviorHelp':
     '描述可允许或拒绝的行为，例如“回答报价问题”。多个组允许同一项会合并来源；任一组拒绝时，以拒绝为准。主角色约束仍适用。这是模型行为策略，不是文件、邮件或 Shell 的强制隔离，也不自动发现任意文字矛盾。',
@@ -3168,8 +3169,9 @@ export const en = {
   'pairing.noBehaviorPermissions':
     'No behavior permissions yet. Create an item, then select it in a group.',
   'pairing.behaviorConflict': 'Allow/Deny conflict · Deny wins',
+  'pairing.behaviorConflictShort': 'Conflict',
   'pairing.behaviorNoConflict': 'No same-item conflict',
-  'pairing.behaviorPreview': 'Affected people and effective preview',
+  'pairing.behaviorPreview': 'Effective preview',
   'pairing.behaviorNoAffectedPeople': 'No affected currently paired people.',
   'pairing.behaviorHelp':
     'Describe a behavior that can be allowed or denied, such as “answer pricing questions”. Multiple groups allowing the same item combine sources; any explicit Deny wins. Primary Role constraints still apply. This guides model behavior, not forced file, mail or Shell isolation, and does not detect arbitrary text contradictions.',

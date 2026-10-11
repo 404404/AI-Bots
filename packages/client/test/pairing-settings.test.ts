@@ -18,6 +18,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   }: ButtonHTMLAttributes<HTMLButtonElement> & { size?: string; variant?: string }) =>
     createElement('button', props),
   Tag: ({ children }: PropsWithChildren) => createElement('span', null, children),
+  IconChevronDownOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
   SegmentedTabs: ({
     items,
     value,
@@ -149,8 +150,19 @@ it('keeps an affected person visible when a draft removes their last behavior co
       ),
     );
     expect(host.textContent).toContain(request.actorName);
+    const toggle = host.querySelector<HTMLButtonElement>('.bh-behavior-preview-toggle')!;
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(host.querySelector('.bh-behavior-preview-body')).toBeNull();
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(host.querySelector('.bh-behavior-preview-body')!.id).toBe(
+      toggle.getAttribute('aria-controls'),
+    );
     expect(host.textContent).toContain(zhTranslate('pairing.noBehaviorPermissions'));
     expect(host.textContent).not.toContain(zhTranslate('pairing.behaviorNoAffectedPeople'));
+    await act(async () => toggle.click());
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(host.querySelector('.bh-behavior-preview-body')).toBeNull();
   } finally {
     await act(async () => root.unmount());
     host.remove();
@@ -206,7 +218,9 @@ it('previews a cross-group behavior Deny conflict and saves stable item IDs with
         }),
       ),
     );
-    expect(host.textContent).toContain(zhTranslate('pairing.behaviorNoConflict'));
+    const toggle = host.querySelector<HTMLButtonElement>('.bh-behavior-preview-toggle')!;
+    expect(toggle.getAttribute('aria-label')).toContain(zhTranslate('pairing.behaviorNoConflict'));
+    await act(async () => toggle.click());
     const table = host.querySelector('.bh-behavior-selection table')!;
     expect(table.querySelectorAll('th')).toHaveLength(3);
     expect(table.querySelectorAll('input[type=checkbox]')).toHaveLength(2);
@@ -218,7 +232,8 @@ it('previews a cross-group behavior Deny conflict and saves stable item IDs with
     await act(async () => deny.click());
     expect(table.querySelectorAll<HTMLInputElement>('input')[0]!.checked).toBe(false);
     expect(table.querySelectorAll<HTMLInputElement>('input')[1]!.checked).toBe(true);
-    expect(host.textContent).toContain(zhTranslate('pairing.behaviorConflict'));
+    expect(toggle.getAttribute('aria-label')).toContain(zhTranslate('pairing.behaviorConflict'));
+    expect(host.textContent).toContain(zhTranslate('pairing.behaviorConflictShort'));
     expect(host.textContent).toContain('Sales');
     expect(host.textContent).toContain('Support');
     await act(async () =>

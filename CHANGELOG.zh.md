@@ -27,7 +27,7 @@
 
 ### Added
 
-- Lark 授权组可勾选可复用的具名行为权限；宽版组编辑弹窗用标签区分管理能力、行为权限和成员，并在侧栏实时预览受影响人员；Allow／Deny 单元格只显示 checkbox，保留无障碍名称。人员显示去重后的当前权限项、每个组来源及拒绝优先的 Allow／Deny 冲突，同时保留主 Role 和独立管理能力（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。Profile schema Generation 81 升级前须备份；回退需要该备份或兼容写入版本。
+- Lark 授权组可勾选可复用的具名行为权限；宽版组编辑弹窗用标签区分管理能力、行为权限和成员，用紧凑的 sidebar 折叠交互预览受影响人员；Allow／Deny 单元格只显示 checkbox，保留无障碍名称，弹窗内容可滚动且标题与操作按钮保持可见。人员显示去重后的当前权限项、每个组来源及拒绝优先的 Allow／Deny 冲突，同时保留主 Role 和独立管理能力（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。Profile schema Generation 81 升级前须备份；回退需要该备份或兼容写入版本。
 
 - 兼容 checked Provider 可依据 Inbox 与原来源回复事实添加 Slack 收到／已回答反应，不阻塞消息处理；静音来源不打标。隔离候选已有真实频道／DM 证据，Human QA 与已发布 Provider 的资格验证仍待完成（[#1161](https://github.com/BotHarness/DeepSeekBot/issues/1161)，[指南](docs/slack-connection.md)）。
 

@@ -1,5 +1,11 @@
-import { useState, type ReactElement } from 'react';
-import { Button, Checkbox, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
+import { useId, useState, type ReactElement } from 'react';
+import {
+  Button,
+  Checkbox,
+  IconChevronDownOutlineRegular,
+  Input,
+  Tag,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   resolveBehaviorPermissions,
@@ -25,17 +31,23 @@ export function BehaviorResult({
   t: BotHarnessTranslate;
 }): ReactElement {
   return (
-    <div className="bh-im-role-form">
+    <div className="bh-behavior-results">
       {items.map((item) => (
-        <article key={item.id} className="bh-im-pairing-request">
+        <article key={item.id} className="bh-im-pairing-request bh-behavior-item">
           <div className="bh-im-actions">
             <strong>{item.name}</strong>
             <Tag>{t(item.effect === 'deny' ? 'pairing.deny' : 'pairing.allow')}</Tag>
-            {item.conflict ? <Tag>{t('pairing.behaviorConflict')}</Tag> : null}
+            {item.conflict ? (
+              <span title={t('pairing.behaviorConflict')}>
+                <Tag>{t('pairing.behaviorConflictShort')}</Tag>
+              </span>
+            ) : null}
           </div>
           <p className="bh-pairing-behavior">{item.behavior}</p>
-          <div className="bh-muted">
-            r{item.revision} ·{' '}
+          <div className="bh-muted bh-behavior-sources">
+            <span>
+              {t('pairing.behaviorRevision')} {item.revision}
+            </span>
             {item.sources.map((source) => (
               <span key={`${source.id}:${source.effect}`}>
                 {selectGroup ? (
@@ -46,7 +58,7 @@ export function BehaviorResult({
                   source.name
                 )}{' '}
                 (r{source.revision},{' '}
-                {t(source.effect === 'deny' ? 'pairing.deny' : 'pairing.allow')}) ·{' '}
+                {t(source.effect === 'deny' ? 'pairing.deny' : 'pairing.allow')})
               </span>
             ))}
           </div>
@@ -159,23 +171,62 @@ export function BehaviorPreview({
       </div>
       {results.length ? (
         results.map(({ person, result }) => (
-          <details key={person.id}>
-            <summary>
-              {person.actorName ?? person.actorId} ·{' '}
-              {result.filter((item) => item.conflict).length
-                ? t('pairing.behaviorConflict')
-                : t('pairing.behaviorNoConflict')}
-            </summary>
-            {result.length ? (
-              <BehaviorResult items={result} t={t} />
-            ) : (
-              <span className="bh-muted">{t('pairing.noBehaviorPermissions')}</span>
-            )}
-          </details>
+          <BehaviorPersonPreview key={person.id} person={person} items={result} t={t} />
         ))
       ) : (
         <span className="bh-muted">{t('pairing.behaviorNoAffectedPeople')}</span>
       )}
+    </section>
+  );
+}
+
+function BehaviorPersonPreview({
+  person,
+  items,
+  t,
+}: {
+  person: PairingRequest;
+  items: EffectiveBehaviorPermission[];
+  t: BotHarnessTranslate;
+}): ReactElement {
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
+  const conflicts = items.filter((item) => item.conflict).length;
+  const name = person.actorName ?? person.actorId;
+  return (
+    <section className="bh-behavior-person">
+      <button
+        type="button"
+        className="bh-channel-sidebar-entry-head bh-behavior-preview-toggle"
+        aria-label={`${name}: ${t(conflicts ? 'pairing.behaviorConflict' : 'pairing.behaviorNoConflict')}`}
+        aria-expanded={open}
+        aria-controls={bodyId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span
+          className={`bh-channel-sidebar-entry-chevron${open ? '' : ' bh-chevron-collapsed'}`}
+          aria-hidden="true"
+        >
+          <IconChevronDownOutlineRegular size={14} />
+        </span>
+        <span className="bh-channel-sidebar-entry-label" title={name}>
+          {name}
+        </span>
+        {conflicts ? (
+          <Tag>
+            {t('pairing.behaviorConflictShort')} ({conflicts})
+          </Tag>
+        ) : null}
+      </button>
+      {open ? (
+        <div id={bodyId} className="bh-behavior-preview-body">
+          {items.length ? (
+            <BehaviorResult items={items} t={t} />
+          ) : (
+            <span className="bh-muted">{t('pairing.noBehaviorPermissions')}</span>
+          )}
+        </div>
+      ) : null}
     </section>
   );
 }

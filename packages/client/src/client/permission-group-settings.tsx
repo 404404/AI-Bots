@@ -521,7 +521,7 @@ export function GroupDialog({
       title={t(group ? 'pairing.editGroup' : 'pairing.createGroup')}
       closeLabel={t('common.close')}
       className="bh-sidebar-modal bh-pairing-modal bh-group-editor-modal"
-      contentClassName="bh-pairing-content"
+      contentClassName="bh-pairing-content bh-group-editor-content"
       footer={
         <div className="bh-modal-footer">
           <Button size="sm" variant="toolbar" disabled={busy} onClick={close}>
