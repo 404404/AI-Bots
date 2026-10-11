@@ -27,6 +27,9 @@ import type { ApprovalService } from '@deepseek-ai/dsh-user-approval';
 import Schema from '@deepseek-ai/schemastery';
 
 import { installOrchestratorFileTools } from './workspaces/orchestrator-file-tools.js';
+import { ProtectedExecution } from './credentials/protected-execution.js';
+import { LinuxShell } from './credentials/linux-execution.js';
+import { LinuxMcp, type LinuxMcpServer } from './credentials/linux-mcp.js';
 import { nativeExecutionRoot } from './workspaces/grant-native-tools.js';
 import { createAttachmentStore, type AttachmentStore } from './attachments/store.js';
 import { createMemoryFileHttp, MEMORY_FILE_DOWNLOAD_PATH } from './memory/file-http.js';
@@ -122,6 +125,7 @@ import {
 } from './workspaces/grant-execution.js';
 import { ChannelToolApproval } from './workspaces/tool-approval.js';
 import { ChannelUserQuestions } from './channels/user-questions.js';
+import { mountPrivateInputs } from './credentials/mount.js';
 import {
   createAssignmentAccessStore,
   type AssignmentAccessStore,
@@ -199,6 +203,8 @@ export function handleCompactionEvent(
 
 export interface BotHarnessConfig {
   enabled: boolean;
+  privateInputExecution?: boolean;
+  privateInputMcpServers?: LinuxMcpServer[];
 
   agentPreset?: string;
   activityDetailConsumers?: string[];
@@ -215,7 +221,26 @@ export const DEFAULT_CONFIG: BotHarnessConfig = {
   telemetry: true,
 };
 
-export const Config = Schema.object({
+export const Config: Schema<BotHarnessConfig> = Schema.object({
+  privateInputMcpServers: Schema.array(
+    Schema.object({
+      serverName: Schema.string()
+        .required()
+        .pattern(/^[A-Za-z0-9_-]{1,32}$/),
+      command: Schema.string().required(),
+      args: Schema.array(Schema.string()).default([]),
+      workdir: Schema.string(),
+    }),
+  )
+    .default([])
+    .description(
+      'Ordinary MCP stdio servers executed inside the protected Linux workspace; no Host credentials or environment are injected.',
+    ),
+  privateInputExecution: Schema.boolean()
+    .default(false)
+    .description(
+      'Qualify this entire Profile for private input: Linux workspace Shell/MCP, fixed trusted CLI, and refusal of unqualified Host capabilities. Requires Docker Linux and the pinned command image.',
+    ),
   enabled: Schema.boolean().default(DEFAULT_CONFIG.enabled).description('启用 BotHarness core'),
   activityDetailConsumers: Schema.array(Schema.string())
     .default([])
@@ -894,6 +919,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     modelCatalog,
   );
+  const privateExecution = new ProtectedExecution((phase, details = {}) =>
+    ctx.logger.info('private-input %j', { phase, ...details }),
+  );
+  const linuxMcp = new LinuxMcp(privateExecution, dshHome, (agent, workdir) =>
+    nativeExecutionRoot(core, agent.session, 'bash', { workdir }),
+  );
   const agentAdapter = createDshBotAgentAdapter({
     agents: ctx.agents,
     defaultModel,
@@ -915,13 +946,34 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     resolveAgentPresets: () => ctx.get('agentPresets') as DshAgentPresetHost | undefined,
     publishDraft: (event) => publishDraft(event),
     onAgentSetup: (agentCtx, agent, info) => core.runBotAgentSetups(agentCtx, agent, info),
-    onOrchestratorFileSetup: (agentCtx, agent) =>
-      installOrchestratorFileTools(
+    onOrchestratorFileSetup: async (agentCtx, agent) => {
+      const disposeFiles = await installOrchestratorFileTools(
         agentCtx,
         agent,
         ctx.get('agentPresets') as DshAgentPresetHost | undefined,
         (name, args) => nativeExecutionRoot(core, agent.session, name, args),
-      ),
+        config.privateInputExecution === true
+          ? (child, shell) =>
+              new LinuxShell(child, shell, privateExecution, dshHome, agent.session.id)
+          : undefined,
+      );
+      if (config.privateInputExecution !== true) return disposeFiles;
+      try {
+        const disposeMcp =
+          config.privateInputExecution === true
+            ? await linuxMcp.install(agentCtx, agent, config.privateInputMcpServers ?? [])
+            : undefined;
+        const dispose = async () => {
+          await disposeMcp?.();
+          await disposeFiles();
+        };
+        agentCtx.effect(() => dispose, 'botharness: Linux Orchestrator execution');
+        return dispose;
+      } catch (error) {
+        await disposeFiles();
+        throw error;
+      }
+    },
     authorizeBorrow: (agent, role) => {
       const owner = core.ownership.resolve(agent.session.id);
       if (owner?.rootRole !== role) throw new Error('BotHarness Agent role mismatch');
@@ -1008,6 +1060,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   ctx.effect(() => () => core.live.close(), 'botharness: Channel live hub');
   ctx.effect(() => () => core.companions.close(), 'botharness: Window Companion feed');
   ctx.provide('botharness', core);
+  const privateInputs = mountPrivateInputs(
+    ctx,
+    core,
+    config.privateInputExecution === true,
+    privateExecution,
+    linuxMcp,
+  );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
@@ -1436,7 +1495,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
-  registerBridge(ctx, bridgeMethods);
+  registerBridge(ctx, bridgeMethods, privateInputs);
 
   ctx.inject(['skills'], (skillsCtx) => {
     const skills = (

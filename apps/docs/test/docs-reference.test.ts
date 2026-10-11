@@ -13,6 +13,22 @@ describe("generated developer reference", () => {
   it("extracts the core config from its schema and defaults", () => {
     expect(reference.config).toEqual([
       {
+        name: "privateInputMcpServers",
+        type: "LinuxMcpServer[]",
+        default: [],
+        description:
+          "Ordinary MCP stdio servers executed inside the protected Linux workspace; no Host credentials or environment are injected.",
+        source: "packages/core/src/plugin.ts",
+      },
+      {
+        name: "privateInputExecution",
+        type: "boolean",
+        default: false,
+        description:
+          "Qualify this entire Profile for private input: Linux workspace Shell/MCP, fixed trusted CLI, and refusal of unqualified Host capabilities. Requires Docker Linux and the pinned command image.",
+        source: "packages/core/src/plugin.ts",
+      },
+      {
         name: "enabled",
         type: "boolean",
         default: true,
@@ -73,6 +89,7 @@ describe("generated developer reference", () => {
       { name: "approval/request", direction: "consumes", operation: "on" },
       { name: "botharness/personabot/activity", direction: "emits", operation: "emit" },
       { name: "session/event", direction: "consumes", operation: "on" },
+      { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/pre-execute", direction: "consumes", operation: "on" },

@@ -1,0 +1,44 @@
+import { z } from 'zod';
+
+export const privateRequestSchema = z
+  .strictObject({
+    account: z.string().min(1).max(120),
+    purpose: z.string().min(1).max(1000),
+    fields: z
+      .array(
+        z.strictObject({
+          id: z.string().regex(/^[a-z][a-z0-9_]{0,47}$/),
+          label: z.string().min(1).max(120),
+          required: z.boolean(),
+        }),
+      )
+      .min(1)
+      .max(8),
+  })
+  .refine(
+    (request) => new Set(request.fields.map((field) => field.id)).size === request.fields.length,
+  );
+
+export type PrivateInputDeclaration = z.infer<typeof privateRequestSchema>;
+export type PrivateInputStatus = 'pending' | 'configured' | 'cancelled' | 'expired';
+export interface PrivateInputCard extends PrivateInputDeclaration {
+  sessionId: string;
+}
+export interface PrivateInputResult {
+  status: 'configured' | 'cancelled';
+  account: string;
+  references: Record<string, string>;
+}
+export interface PrivateInputResolution {
+  requestMessageId: string;
+  state: 'configured' | 'cancelled';
+  references: Record<string, string>;
+}
+
+export const privateSubmissionSchema = z.strictObject({
+  channelId: z.string().min(1).max(160),
+  messageId: z.string().uuid(),
+  values: z
+    .record(z.string(), z.string().max(16_384))
+    .refine((values) => Object.keys(values).length <= 8),
+});
