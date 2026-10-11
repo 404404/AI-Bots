@@ -2952,6 +2952,8 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-pairing-table th, .bh-pairing-table td { padding: 10px 8px; border-bottom: 1px solid var(--dsw-alias-border-l2); vertical-align: middle; overflow-wrap: anywhere; }
 .bh-pairing-table th { color: var(--dsw-alias-label-secondary); font-weight: 500; }
 .bh-pairing-table td:first-child, .bh-pairing-table th:first-child { width: 28px; }
+.bh-pairing-table th:nth-child(2) { width: 24%; min-width: 130px; }
+.bh-pairing-table th:last-child { min-width: 52px; white-space: nowrap; }
 .bh-pairing-table td:first-child label { font-size: 0; gap: 0; }
 .bh-pairing-table tr[data-selected] { background: var(--dsw-alias-interactive-bg-hover); }
 .bh-pairing-table tbody tr:last-child td { border-bottom: none; }
