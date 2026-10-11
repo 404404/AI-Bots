@@ -106,6 +106,57 @@ afterEach(() => {
 });
 
 describe('bridge methods', () => {
+  it('scopes Group authorization to a current member and the confirmed path', async () => {
+    const grant = {
+      id: 'grant',
+      botSlug: 'ada',
+      workspaceId: 'project',
+      workspacePath: '/project',
+      workspaceTitle: 'Project',
+      createdAt: '',
+    };
+    const create = vi.fn<WorkspaceGrantStore['create']>(async (_slug, _workspace, options) => {
+      options?.validate();
+      options?.onCreated();
+      return grant;
+    });
+    const grants: WorkspaceGrantStore = {
+      list: () => [],
+      create,
+      revoke: () => grant,
+      requireActive: () => grant,
+      setOrchestratorWrite: () => grant,
+      availableWorkspaces: () => [{ id: 'project', path: '/project', title: 'Project' }],
+    };
+    const { registry, channels, methods } = setup(
+      [],
+      ['ada', 'bea'],
+      undefined,
+      createTestOwnership(),
+      grants,
+    );
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    registry.create({ slug: 'bea', displayName: 'Bea' });
+    const group = channels.createGroup({ name: 'Team', members: ['ada'] });
+    const input = {
+      slug: 'ada',
+      workspaceId: 'project',
+      scope: { channelId: group.id, path: '/project' },
+    };
+    expect(await methods.grantCreate({ ...input, slug: 'bea' })).toMatchObject({ ok: false });
+    expect(
+      await methods.grantCreate({ ...input, scope: { ...input.scope, path: '/other' } }),
+    ).toMatchObject({ ok: false });
+    expect(create).not.toHaveBeenCalled();
+    expect(await methods.grantCreate(input)).toMatchObject({
+      ok: true,
+      value: { grant, created: true },
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    registry.setPaused('ada', true);
+    expect(await methods.grantCreate(input)).toMatchObject({ ok: false });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
   it('bounds read-only Session usage to the current DM Bot and rejects Group and missing scopes', async () => {
     const ownership = createTestOwnership({
       first: { botSlug: 'ada', rootRole: 'orchestrator' },
