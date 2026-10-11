@@ -1,0 +1,26 @@
+{
+  "head": "1710c42c3ce56e812bbd678633c2431ce87bfd24",
+  "base": "184edf23b422a69b9f04bdfde29e35e40c88f3a0",
+  "locale": "en",
+  "state": "People; zero entries; restriction unchecked",
+  "profiles": "fresh receiver-free profiles without IM accounts or credentials",
+  "desktopCSS": [
+    1280,
+    800
+  ],
+  "narrowCSS": [
+    390,
+    844
+  ],
+  "crop": "actual modal only; native DPR retained; no content synthesis",
+  "knownBaselineIssue": "Narrow tabs already crowded/overlap; no layout change in this PR",
+  "capturedAt": "2026-10-11T21:17:49.470Z",
+  "files": [
+    "before-dark-desktop.png",
+    "after-dark-desktop.png",
+    "before-light-desktop.png",
+    "after-light-desktop.png",
+    "before-light-narrow.png",
+    "after-light-narrow.png"
+  ]
+}
