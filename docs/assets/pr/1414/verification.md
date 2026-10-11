@@ -50,3 +50,12 @@ Human acceptance, real Lark card rendering, native E2E, merge and deployment are
 ## Model preparation
 
 In the separate candidate Web DM, the uniquely marked `1414_WEB_MODEL_READY` question produced the actual model reply `323` for 17 × 19. This verifies the isolated Host's model path and shared machine-local credential reuse only. This earlier Web-only model preparation did not accept the real Lark pairing flow; the later bound QA1 run is recorded separately above.
+
+
+## Later browser attempt — 2026-10-11 13:26 UTC
+
+T3 briefly recovered. The account bar was inspected, the original reviewer's avatar verified, and the inactive account in the same test organization selected. The applicant avatar and designated group were reread after navigation. Through the native mention toolbar and picker, the applicant sent `1414_APPLICANT_RETRY_2222`; the visible message had the applicant author and a real Bot mention. The prior request was visibly expired with controls absent. Canonical readback still contained only the prior approved reviewer and expired applicant, with zero external-message Admissions; no new pairing was created from this retry. Do not infer a successful application or a completed approval from visible message send.
+
+The current App/Bot identity matches the isolated configuration, the qualified Provider reports connected, and the explicit group grant still reports receiving/available. This does not establish delivery of that message's inbound event. A read-only history-list check was permission-refused; no platform permission was changed. The inbound gap remains unresolved and must be investigated against the actual message/event format rather than inferred from API health.
+
+T3 then repeatedly timed out on evaluate/open and reported unavailable. The exact task receiver was stopped; port and process checks found it no longer listening/running. No original receiver was restarted. Both PRs remain Draft, Project In Progress. Authorized card review, fresh reply, real Lark screenshots and Human first-flow acceptance remain outstanding.
