@@ -66,7 +66,15 @@ function update(path, operation) {
 
 export function registerQqTestClient(slot, configuration, { path = qqTestClientsPath() } = {}) {
   slotName(slot);
-  const allowed = new Set(['name', 'appId', 'testGroup', 'home', 'profile', 'location']);
+  const allowed = new Set([
+    'name',
+    'appId',
+    'testGroup',
+    'home',
+    'profile',
+    'location',
+    'sourceHome',
+  ]);
   if (Object.keys(configuration).some((key) => !allowed.has(key)))
     throw new Error(
       'QQ registry accepts metadata only; authorize credentials in native IM settings',
@@ -78,6 +86,9 @@ export function registerQqTestClient(slot, configuration, { path = qqTestClients
     home: text(configuration.home, 'DSH home'),
     profile: text(configuration.profile ?? 'web-dev', 'Profile'),
     location: configuration.location ?? 'local',
+    sourceHome: configuration.sourceHome
+      ? resolve(text(configuration.sourceHome, 'native authorization home'))
+      : null,
     claim: null,
   };
   if (!/^\d+$/u.test(client.testGroup) || (client.appId && !/^\d+$/u.test(client.appId)))
@@ -275,6 +286,7 @@ async function main(argv) {
         flags['--home'] ?? join(homedir(), `.dsh-botharness-qq-${slotName(slot).toLowerCase()}`),
       profile: flags['--profile'],
       location: flags['--remote'] ? 'remote' : 'local',
+      sourceHome: flags['--source-home'],
     });
   const task =
     flags['--task'] ??
@@ -309,9 +321,10 @@ async function main(argv) {
       connect: command === 'connect',
     });
     if (command === 'connect') {
-      if (!flags['--source-home']) throw new Error('Provide an authorized native --source-home');
+      const sourceHome = flags['--source-home'] ?? client.sourceHome;
+      if (!sourceHome) throw new Error('Provide or register an authorized native --source-home');
       request.appSecret = readQqCredential(
-        flags['--source-home'],
+        sourceHome,
         client.appId,
         flags['--confirmed-source-idle'],
       );

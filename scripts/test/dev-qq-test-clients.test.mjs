@@ -45,6 +45,27 @@ afterEach(() => {
 });
 
 describe('reusable QQ QA clients', () => {
+  it('retains a reusable native authorization location as metadata without changing that Profile', () => {
+    const options = fixture();
+    const sourceHome = join(directories.at(-1), 'retained-native-home');
+    mkdirSync(sourceHome);
+    writeFileSync(join(sourceHome, 'native-marker'), 'unchanged');
+    registerQqTestClient(
+      'QA2',
+      {
+        name: 'Synthetic QQ QA2',
+        appId: '100002',
+        testGroup: '123456789',
+        home: join(directories.at(-1), 'qa2-home'),
+        sourceHome,
+      },
+      options,
+    );
+    claimQqTestClient('QA2', owner, options);
+    expect(selectedQqTestClient('QA2', owner, options).sourceHome).toBe(sourceHome);
+    expect(readFileSync(join(sourceHome, 'native-marker'), 'utf8')).toBe('unchanged');
+    expect(JSON.stringify(listQqTestClients(options))).not.toContain(sourceHome);
+  });
   it('keeps an uncertain credential connect occupied and refuses another attempt or owner', () => {
     const options = fixture();
     claimQqTestClient('QA1', owner, options);

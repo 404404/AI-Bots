@@ -16,3 +16,14 @@ The welcome letter above the actual reply is preset product content. This is loc
 `02-qq-app-bound.png` is an unchanged 1280 × 800 T3 screenshot captured on 2026-10-11 at 18:10:31 UTC. It shows the native successful binding of the existing QQ QA App to the task's tutorial Bot after CLI credential reuse. Its SHA-256 is `baa38bc120008315ebab93f829ed17ec7faad900efc851101cea7e1e669445e0`.
 
 The running product and Provider revisions are the same as above; the developer CLI helper is implemented in commit `9de28161`. The full image was visually reviewed: no Secret, authorization QR, group members, native account ID, URL or machine address is visible. The binding-ready screen proves neither a received QQ event nor a visible group reply.
+
+`qq-acceptance.json` records the bounded acceptance summary at 2026-10-11 18:19:56 UTC. The Human confirmed visible matching original-group replies to `SEO_QQ_QA1_20261012_A_OK` and, after the task Host restarted, `SEO_QQ_QA1_20261012_B_OK`. Each matches a distinct canonical Source Event, handled Inbox Admission and provider-accepted Outbox intent with a receipt; both belong to the same native QQ conversation. Private source locators and raw facts are omitted. The Human's original-group observation supplies the rendering confirmation; Provider receipts alone do not. Original QQ screenshots and publicly reviewed group recordings are still unavailable.
+
+## Actual terminal recordings
+
+The four files under `terminal/` are unchanged originals from Linux `util-linux script 2.41.3`. `terminal/manifest.json` records their byte sizes and SHA-256 digests. Their headers use `+08:00`; the fresh installation began at **2026-10-11 17:33:25 UTC**, and the later source update began at **17:52:27 UTC**.
+
+- `03-source-install-retry2.typescript` and its `.timing` file record a successful fresh Profile installation of source `73c75f86`, tool versions, actual DSH help and six-component verification. This was the successful retry, not the earlier failed attempts.
+- `03-source-update-031a14db.typescript` and its `.timing` file record the subsequent actual update to the final `031a14db` product, including its qualified packaged runtime digest. They do not record a fresh install of that newer SHA.
+
+The entire command/output transcripts were inspected before copying. They contain public package references and task-specific installation paths, but no authentication input, Owner login link, IP address, host fingerprint or credential store. Raw DM API responses with private locators remain private. These are actual terminal data and timing, not a reconstructed terminal animation; a replay of them must be labeled as a replay. Public browser video editing and subtitles remain pending.

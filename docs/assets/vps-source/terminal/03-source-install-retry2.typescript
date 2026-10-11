@@ -1,0 +1,78 @@
+Script started on 2026-10-12 01:33:25+08:00 [COMMAND="runuser -u bh-seo -- bash /opt/botharness/seo-tutorial/artifacts/source-73c75f86/install-profile.sh" <not executed on terminal>]
++ export PATH=/opt/botharness/seo-tutorial/toolchain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ PATH=/opt/botharness/seo-tutorial/toolchain/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
++ export DSH_HOME=/opt/botharness/seo-tutorial/home/dsh
++ DSH_HOME=/opt/botharness/seo-tutorial/home/dsh
++ source_dir=/opt/botharness/seo-tutorial/artifacts/source-73c75f86
++ node --version
+v24.21.0
++ pnpm --version
+12.4.2
++ dsh --version
+0.2.0-rc.1
++ dsh web --help
+Usage: dsh --profile web [options]
+
+Serve the DeepSeek Harness browser UI.
+
+Options:
+  --host <host>                  bind host
+  --no-open                      do not open the Web UI in the default browser
+  --port <port>                  listen port; pass 0 to let the OS pick a free one
+  --trusted-host <authority...>  extra authority the /api browser-trust fence accepts (host or host:port; repeatable)
+  -h, --help                     show this help
+
+Examples:
+  dsh --profile web                          serve on the composed host and port
+  dsh --profile web --no-open                serve without opening a browser
+  dsh --profile web --port 8080              serve on another port
+
++ cd /opt/botharness/seo-tutorial/artifacts/source-73c75f86/kit
++ npm install --ignore-scripts
+⠙[1G[0K⠹[1G[0K⠸[1G[0K⠼[1G[0K⠴[1G[0K
+added 2 packages, and audited 3 packages in 643ms
+⠴[1G[0K
+⠴[1G[0K1 package is looking for funding
+⠴[1G[0K  run `npm fund` for details
+⠴[1G[0K
+found [32m[1m0[22m[39m vulnerabilities
+⠴[1G[0K[1mnpm[22m [96mnotice[39m
+[1mnpm[22m [96mnotice[39m New [31mmajor[39m version of npm available! [31m11.19.0[39m -> [34m12.2.0[39m
+[1mnpm[22m [96mnotice[39m Changelog: [34mhttps://github.com/npm/cli/releases/tag/v12.2.0[39m
+[1mnpm[22m [96mnotice[39m To update run: [4mnpm install -g npm@12.2.0[24m
+[1mnpm[22m [96mnotice[39m
+⠦[1G[0K+ node install-source-profile.mjs --home /opt/botharness/seo-tutorial/home/dsh --profile seo-tutorial --artifacts /opt/botharness/seo-tutorial/artifacts/source-73c75f86/product
+Downloading agent-browser@0.38.2: 0.00 B/52.98 MB
+Update available! 12.4.2 → 12.11.2.
+Changelog: https://pnpm.io/v/12.11.2
+To update, run: curl -fsSL https://get.pnpm.io/install.sh | sh -
+Downloading @img/sharp-libvips-linux-x64@1.3.3: 0.00 B/8.17 MB
+Packages are hard linked from the content-addressable store to the virtual store.
+  Content-addressable store is at: /opt/botharness/seo-tutorial/home/.local/share/pnpm/store/v11
+  Virtual store is at:             node_modules/.pnpm
+Progress: resolved 0, reused 0, downloaded 180, added 0
+Progress: resolved 0, reused 0, downloaded 188, added 0
+Downloading file:../../../../artifacts/source-73c75f86/product/botharness-im-provider-4.32.0-botharness.19.tgz: 0.00 B/9.57 MB
+Packages: +198
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 198, reused 0, downloaded 201, added 198, done
+
+dependencies:
++ deepseekbot 1.2.1-vps.20261012.sha73c75f86
+
+Done in 5.1s using pnpm v12.4.2
+{
+  "installed": {
+    "version": "1.2.1-vps.20261012.sha73c75f86",
+    "providerVersion": "4.32.0-botharness.19",
+    "source": "602baa37fa327f7069545aaadbbd34db8a8f4636",
+    "runtime": {
+      "runtimeFiles": 413,
+      "runtimeSha256": "d1c7aaf3b27d4c187cbbfd0dc2906f795f6bbeff1ccb9b61eb42383200209822"
+    }
+  },
+  "profile": "seo-tutorial",
+  "componentsVerified": true
+}
+
+Script done on 2026-10-12 01:33:32+08:00 [COMMAND_EXIT_CODE="0"]

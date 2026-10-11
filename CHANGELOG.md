@@ -162,7 +162,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
-- Documented fresh native Profile installation from qualified source-built product artifacts, including pinned tools and the distinction between installer verification and live chat acceptance ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [guide](docs/agents/source-profile-install.md)).
+- Documented a qualified 2-core, 4 GB source deployment with strict SSH, CLI installation, tailnet HTTPS and real QQ replies before and after Host restart, with public recording review still pending ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [walkthrough](docs/vps-qq-tutorial.md), [Profile installer](docs/agents/source-profile-install.md)).
 
 - Added the Product Hunt launch badge to the Chinese and English READMEs ([#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)).
 

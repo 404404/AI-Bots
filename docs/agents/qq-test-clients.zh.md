@@ -16,6 +16,8 @@ node scripts/dev-qq-test-clients.mjs list
 
 这些值是示例。暂时不知道 AppID 时，省略 `--app-id`，随后在原生 IM 设置中核对真实应用。名称不能证明应用身份。不传 `--home` 时，本机槽位各自使用 `~/.dsh-botharness-qq-qa<n>` 和 `web-dev` Profile；可用 `--home`、`--profile` 指定。任务专用 VPS Unit 还应传入 `--remote`，脚本会拒绝在本机启动该接收器。
 
+应用在本机已有原生授权时，登记时添加 `--source-home <stopped-authorized-home>`。注册表只保留路径，后续 `connect` 可以省略该选项；凭据继续保留在原生 Profile 中，直到 Provider 初始化选中的目标。没有应用的 QA3 保持未登记。
+
 元数据存放在 `~/.config/botharness/qq-test-clients.json`，沿用 [Lark 测试应用](im-test-apps.md) 的私密文件保护机制。`BOTHARNESS_QQ_TEST_CLIENTS_FILE` 可指定共享文件。Windows 与 WSL 默认使用各自的 HOME。`list` 显示槽位名称和认领信息，不显示 AppID、群号或凭据；认领信息含本机 worktree 路径，请勿公开输出。
 
 ## 认领并启动本机客户端
@@ -75,7 +77,7 @@ node scripts/dev-qq-test-clients.mjs status QA1 \
 
 创建 `knownHostsFile` 前独立核对 SSH Host key。脚本强制严格 Host key 校验、专用身份和 batch mode；选中的 Secret 只经 SSH stdin 传输，Owner 登录和 Provider 调用在远程 loopback 完成。token 文件必须位于认领 HOME 内。远程脚本不会停止或重启 Unit。连接失败或被中断时继续保留认领，拒绝盲目重试：先检查 `status` 和准确接收器，需要再次尝试时明确停止并交接。
 
-后续分支使用同一 Profile 时，旧接收器停止后认领、启动，再执行 `status`，无需重复 `connect`，也无需重新输入授权。`connected: true` 证明传输就绪，不证明群内渲染。新 Ubuntu 26.04 VPS 已用此路径实际连接已有 QA 应用，未再次输入 Secret；原 QQ 群聊天验收仍是独立检查。
+后续分支使用同一 Profile 时，旧接收器停止后认领、启动，再执行 `status`，无需重复 `connect`，也无需重新输入授权。`connected: true` 证明传输就绪，不证明群内渲染。新 Ubuntu 26.04 VPS 已用此路径实际连接已有 QA 应用，未再次输入 Secret。Human 已确认 Host 重启前后两条新 @mention 均在原群得到匹配回复；两次分别关联了不同的 canonical Source、已处理 Inbox Admission 和 provider-accepted Outbox intent。原 QQ 群截图和公开视频审核仍待完成。
 
 ![已有 QQ QA 应用绑定到教程 Bot 的原生确认画面](../assets/vps-source/02-qq-app-bound.png)
 

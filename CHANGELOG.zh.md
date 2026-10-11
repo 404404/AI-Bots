@@ -162,7 +162,7 @@
 
 ### Documentation
 
-- 补充从合格源码产品产物安装新原生 Profile 的指南，明确固定工具链，以及安装验证与真实聊天验收的区别（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[指南](docs/agents/source-profile-install.md)）。
+- 补充经 2 核 4GB 实机验证的源码部署教程，覆盖严格 SSH、CLI 安装、tailnet HTTPS 及 Host 重启前后的真实 QQ 群回复；公开录屏审阅仍待完成（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[教程](docs/vps-qq-tutorial.md)，[Profile 安装](docs/agents/source-profile-install.md)）。
 
 - 中英文 README 新增 Product Hunt 发布徽章（[#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)）。
 

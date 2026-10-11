@@ -64,7 +64,7 @@ Start that exact Profile using flags verified by its installed `dsh web --help`.
 
 Issue [#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438) used this fresh-profile installer on an actual Ubuntu 26.04 VPS with 2 vCPU and 4 GB cloud memory, using DSH 0.2.0-rc.1 and source `73c75f86aa50767be34a5c8d2cadc17b6a3e8862`. Native loopback authentication, tailnet HTTPS, a real correlated local DM and a fresh DM after the task service restarted were verified. A later source update to `031a14db43af5b3bf52e76b01c30e27828e6e9c9` retained that Bot and produced a new correlated reply.
 
-That evidence does not qualify QQ group delivery. The complete VPS/QQ tutorial and public recording review remain tracked by the issue. See [reusable QQ QA clients](qq-test-clients.md) for receiver allocation, and the [QQ connection guide](../qq-connection.md) for native authorization and real-chat acceptance.
+The separate QQ qualification subsequently correlated distinct requests before and after Host restart with handled Inbox Admissions and provider-accepted Outbox intents; the Human confirmed both matching replies in the original group. Public group images and video review remain pending. Follow the [VPS/QQ walkthrough](../vps-qq-tutorial.md), [reusable QQ QA clients](qq-test-clients.md) and [QQ connection guide](../qq-connection.md) for the full installation and acceptance boundaries.
 
 ![The actual tutorial Bot's model settings and its reply to the source-version marker](../assets/vps-source/01-real-dm-031a14db.png)
 

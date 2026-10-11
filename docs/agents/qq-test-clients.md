@@ -16,6 +16,8 @@ node scripts/dev-qq-test-clients.mjs list
 
 The values are examples. If the AppID is not yet known, omit `--app-id`, then verify the real application in native IM settings. Names do not prove application identity. With no `--home`, each local slot has its own `~/.dsh-botharness-qq-qa<n>` home and `web-dev` Profile. Override these with `--home` and `--profile`. For a task-owned VPS unit, also pass `--remote`; the script refuses to launch that receiver locally.
 
+When an App already has native authorization on this machine, add `--source-home <stopped-authorized-home>` during registration. Only its path is retained; later `connect` commands can omit that option. Credentials remain in the original native Profile until the Provider initializes the selected destination. Leave an unused QA3 unregistered.
+
 Metadata is saved in `~/.config/botharness/qq-test-clients.json`, protected using the same private-file mechanism as the [Lark test Apps](im-test-apps.md). `BOTHARNESS_QQ_TEST_CLIENTS_FILE` selects an explicit shared file. Windows and WSL have separate homes by default. `list` exposes slot names and claims, without AppIDs, group numbers or credentials. Claims contain local worktree paths; keep the output private.
 
 ## Claim and launch a local client
@@ -75,7 +77,7 @@ For a remote slot, add `--ssh-config <private-json> --remote-node /absolute/path
 
 Verify the SSH Host key independently before creating `knownHostsFile`. The helper requires strict Host-key checking, a dedicated identity and batch mode; sends the selected Secret only over SSH stdin; and performs Owner login and the Provider call on the remote loopback address. The token file must be under the claimed home. Remote scripts do not stop or restart a unit. A failed or interrupted connect remains claimed and cannot be blindly repeated: inspect `status` and the exact receiver, then stop and hand off explicitly if another attempt is required.
 
-For later branches using the same Profile, claim and launch it after the old receiver stops, then run `status`; do not repeat `connect`. This retains authorization without retyping. `connected: true` verifies transport readiness, not group rendering. On the new Ubuntu 26.04 VPS, this path actually connected the existing QA App without entering its Secret again; original-group chat acceptance remains a separate check.
+For later branches using the same Profile, claim and launch it after the old receiver stops, then run `status`; do not repeat `connect`. This retains authorization without retyping. `connected: true` verifies transport readiness, not group rendering. On the new Ubuntu 26.04 VPS, this path actually connected the existing QA App without entering its Secret again. The Human confirmed matching replies to fresh @mentions before and after Host restart; both correlated with distinct canonical Sources, handled Inbox Admissions and provider-accepted Outbox intents. Original QQ group screenshots and public video review remain pending.
 
 ![Native binding confirmation for the existing QQ QA App and the tutorial Bot](../assets/vps-source/02-qq-app-bound.png)
 
