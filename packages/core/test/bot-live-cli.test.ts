@@ -216,4 +216,58 @@ describe('live CLI over the authenticated DSH carrier', () => {
     expect(result.code).toBe(1);
     expect(result.json.error.code).toBe('host-unreachable');
   });
+
+  it('submits declared private fields once from stdin and publishes only acceptance', async () => {
+    const fields = { api_key: 'SYNTHETIC CLI KEY', api_secret: '  SYNTHETIC secret\n  ' };
+    const live = await host((method) => ({
+      ok: true,
+      value:
+        method === 'privateInputStatus'
+          ? { status: 'configured', unexpected: fields }
+          : { accepted: true, unexpected: fields },
+    }));
+    const submitted = await invoke(
+      ['ask-secret-submit', 'dm-ada', '--message-id', 'private-card', '--values-stdin'],
+      live.url,
+      JSON.stringify(fields),
+    );
+    expect(submitted.code).toBe(0);
+    expect(submitted.json).toEqual({ accepted: true });
+    expect(live.calls).toEqual([
+      {
+        method: 'privateInputSubmit',
+        args: { channelId: 'dm-ada', messageId: 'private-card', values: fields },
+      },
+    ]);
+    expect(
+      (await invoke(['ask-secret-status', 'dm-ada', '--message-id', 'private-card'], live.url))
+        .json,
+    ).toEqual({ status: 'configured' });
+    expect(
+      (await invoke(['ask-secret-cancel', 'dm-ada', '--message-id', 'private-card'], live.url))
+        .json,
+    ).toEqual({ accepted: true });
+    expect(submitted.text).not.toContain(fields.api_key);
+  });
+
+  it('does not echo confidential stdin or server error payloads and never retries submission', async () => {
+    const canary = 'SYNTHETIC CLI ERROR CANARY';
+    const live = await host(() => ({
+      ok: false,
+      error: { code: canary, message: canary },
+    }));
+    const argv = ['ask-secret-submit', 'dm-ada', '--message-id', 'private-card', '--values-stdin'];
+    const failed = await invoke(argv, live.url, JSON.stringify({ api_key: canary }));
+    expect(failed.code).toBe(1);
+    expect(failed.json.error.code).toBe('private-input-not-accepted');
+    expect(failed.text).not.toContain(canary);
+    expect(live.calls).toHaveLength(1);
+    const malformed = await invoke(argv, live.url, '{' + canary);
+    expect(malformed.json.error.code).toBe('usage');
+    expect(malformed.text).not.toContain(canary);
+    const wrongType = await invoke(argv, live.url, JSON.stringify({ api_key: [canary] }));
+    expect(wrongType.json.error.code).toBe('usage');
+    expect(wrongType.text).not.toContain(canary);
+    expect(live.calls).toHaveLength(1);
+  });
 });

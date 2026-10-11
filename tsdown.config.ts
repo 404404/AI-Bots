@@ -75,6 +75,7 @@ export default defineConfig([
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-session',
       '@deepseek-ai/dsh-tools',
+      '@deepseek-ai/dsh-scope',
     ],
   },
   {

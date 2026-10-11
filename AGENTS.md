@@ -64,6 +64,10 @@ The dev VPS lives on the Human's Tailscale tailnet. Per-machine values (SSH host
 - Hands off other sessions' stacks (e.g. `/opt/botharness/bot-seo`): observe, never restart, rebuild, or reconfigure without that session's owner.
 - Phone QA without tailnet: keep DSH loopback-bound and publish it with a Cloudflare quick tunnel; see [the phone QA runbook](docs/agents/phone-qa-tunnel.md) for trusted-host, token rotation, and stale-shell handling.
 
+### SEO research and tracking (AX)
+
+Before SEO research, blog planning, channel adaptation, or ranking tracking, read [the SEO AX adapter](docs/agents/seo-ax.md). It routes agents to the canonical bot-seo shared-VPS workflow; do not substitute a machine-local OpenSEO instance or treat multi-agent capacity as publishing permission.
+
 ## Delivery workflow — tracer bullets
 
 For a feature that crosses layers, deliver a sequence of **tracer bullets**: the smallest production-shaped end-to-end slice that reaches the owning Host module, durable authority, adapter/RPC, Client surface, and a Human-testable runtime path. Validate that slice before expanding the next one. This follows the [tracer-bullet practice](https://www.aihero.dev/tracer-bullets): build one narrow vertical path, test it immediately, get feedback, then extend it.
@@ -104,7 +108,9 @@ When creating or updating a PR, use the `visual-pr` skill to write the descripti
 For every PR, follow [merge-risk classification](docs/agents/pr-merge-risk.md) and summarize reversibility, blast radius, and review focus in one `Special things to note` bullet.
 For every PR that changes visible UI or user interactions, embed GitHub-rendered before/after screenshots in the PR `Change outline` and verify they render; follow [UI/UX PR visual evidence](docs/agents/pr-ui-visual-evidence.md) for capture and exceptions.
 
-For PRs that change architecture or data flow across modules, read [the optional PR Lens supplement](docs/agents/visual-pr-pr-lens.md) and use a diagram when it clarifies the review. Keep routine PRs on the visual-pr description alone.
+For every PR, assess whether a detailed explanation would help review; follow [PR HTML explainers](docs/agents/pr-html-explainer.md). Use the repository's `answer-me-with-html` skill for nontrivial behavior, lifecycle, permission, persistence, or cross-module changes; simple edits may omit it. Keep `visual-pr` as the PR description authority, bind explainers to the exact head SHA, and do not treat local HTML as reviewer-accessible or as runtime evidence.
+
+For PRs that change architecture or data flow across modules, read [the optional PR Lens supplement](docs/agents/visual-pr-pr-lens.md) and use a diagram when it clarifies the review. HTML explains the details; PR Lens provides focused architecture/data-flow views. Neither replaces required GitHub-rendered UI evidence or the Human-QA gate.
 
 ### Domain docs
 

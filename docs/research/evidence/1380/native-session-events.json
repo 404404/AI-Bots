@@ -1,0 +1,1084 @@
+{
+  "source": "DSH 0.2.0-rc.1 native Session Persistence",
+  "sessionId": "botharness-1c11a9e2-9725-4778-8799-eed018b3f686",
+  "nativeEventsRead": 364,
+  "omitted": [
+    "Human/assistant text",
+    "reasoning",
+    "commands",
+    "HTTP headers/bodies",
+    "approval reasons",
+    "paths",
+    "raw values"
+  ],
+  "events": [
+    {
+      "seq": 11,
+      "time": "2026-10-10T21:53:02.964Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 19,
+      "time": "2026-10-10T21:53:05.344Z",
+      "type": "tool/call",
+      "callId": "call_00_4kdH6TSN6brf9DR1rNmg3140",
+      "name": "protected_cli",
+      "consumer": "http-status-v1",
+      "references": {
+        "endpoint": "private:11920b28-38d1-4cf7-b88f-3dfd78f6d5a5:endpoint",
+        "api_key": "private:11920b28-38d1-4cf7-b88f-3dfd78f6d5a5:api_key",
+        "api_secret": "private:11920b28-38d1-4cf7-b88f-3dfd78f6d5a5:api_secret"
+      }
+    },
+    {
+      "seq": 20,
+      "time": "2026-10-10T21:53:05.350Z",
+      "type": "approval/asked",
+      "id": "3786fde6-f601-4e0a-930a-03560c6427c0",
+      "callId": "call_00_4kdH6TSN6brf9DR1rNmg3140",
+      "toolName": "protected_cli"
+    },
+    {
+      "seq": 21,
+      "time": "2026-10-10T21:55:37.708Z",
+      "type": "approval/decided",
+      "id": "3786fde6-f601-4e0a-930a-03560c6427c0",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 22,
+      "time": "2026-10-10T21:55:38.349Z",
+      "type": "tool/result",
+      "callId": "call_00_4kdH6TSN6brf9DR1rNmg3140",
+      "name": "protected_cli",
+      "isError": true
+    },
+    {
+      "seq": 27,
+      "time": "2026-10-10T21:55:40.541Z",
+      "type": "tool/call",
+      "callId": "call_00_NMeL5U6gAOUt48YH6K0E0577",
+      "name": "channel_send"
+    },
+    {
+      "seq": 28,
+      "time": "2026-10-10T21:55:40.564Z",
+      "type": "tool/result",
+      "callId": "call_00_NMeL5U6gAOUt48YH6K0E0577",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "1dded588-cd85-4ccf-b305-7657177eb565"
+      }
+    },
+    {
+      "seq": 42,
+      "time": "2026-10-10T21:58:08.977Z",
+      "type": "tool/call",
+      "callId": "call_00_HnBxMcHgW3GZlKfZ5yfb8830",
+      "name": "bash"
+    },
+    {
+      "seq": 43,
+      "time": "2026-10-10T21:58:08.982Z",
+      "type": "approval/asked",
+      "id": "c329bd39-090a-4b45-bac2-d5bccd19e0d8",
+      "callId": "call_00_HnBxMcHgW3GZlKfZ5yfb8830",
+      "toolName": "bash"
+    },
+    {
+      "seq": 44,
+      "time": "2026-10-10T21:58:08.984Z",
+      "type": "approval/decided",
+      "id": "c329bd39-090a-4b45-bac2-d5bccd19e0d8",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 45,
+      "time": "2026-10-10T21:58:11.509Z",
+      "type": "tool/result",
+      "callId": "call_00_HnBxMcHgW3GZlKfZ5yfb8830",
+      "name": "bash",
+      "isError": false
+    },
+    {
+      "seq": 50,
+      "time": "2026-10-10T21:58:15.033Z",
+      "type": "tool/call",
+      "callId": "call_00_8OkAasMfa24KbMDu5gFx4596",
+      "name": "channel_send"
+    },
+    {
+      "seq": 51,
+      "time": "2026-10-10T21:58:15.057Z",
+      "type": "tool/result",
+      "callId": "call_00_8OkAasMfa24KbMDu5gFx4596",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "f288ac43-cb00-4c45-b387-68ceb4ba379f"
+      }
+    },
+    {
+      "seq": 52,
+      "time": "2026-10-10T21:58:15.060Z",
+      "type": "tool/call",
+      "callId": "call_01_QIz7doJkjgZT79T4qrC95773",
+      "name": "ask_secret",
+      "fields": [
+        {
+          "id": "endpoint",
+          "required": true
+        },
+        {
+          "id": "api_key",
+          "required": true
+        },
+        {
+          "id": "api_secret",
+          "required": true
+        }
+      ]
+    },
+    {
+      "seq": 53,
+      "time": "2026-10-10T22:01:17.890Z",
+      "type": "tool/result",
+      "callId": "call_01_QIz7doJkjgZT79T4qrC95773",
+      "name": "ask_secret",
+      "isError": false,
+      "value": {
+        "status": "configured",
+        "references": {
+          "endpoint": "private:2d871e0c-4ac7-490d-8106-4e2a2faad141:endpoint",
+          "api_key": "private:2d871e0c-4ac7-490d-8106-4e2a2faad141:api_key",
+          "api_secret": "private:2d871e0c-4ac7-490d-8106-4e2a2faad141:api_secret"
+        }
+      }
+    },
+    {
+      "seq": 58,
+      "time": "2026-10-10T22:01:19.913Z",
+      "type": "tool/call",
+      "callId": "call_00_6T3UPRrKeoxQGRFMw0ZF8788",
+      "name": "protected_cli",
+      "consumer": "http-status-v1",
+      "references": {
+        "endpoint": "private:2d871e0c-4ac7-490d-8106-4e2a2faad141:endpoint",
+        "api_key": "private:2d871e0c-4ac7-490d-8106-4e2a2faad141:api_key",
+        "api_secret": "private:2d871e0c-4ac7-490d-8106-4e2a2faad141:api_secret"
+      }
+    },
+    {
+      "seq": 59,
+      "time": "2026-10-10T22:01:19.915Z",
+      "type": "approval/asked",
+      "id": "7cd90b02-02d8-44ce-be97-3182c38ea8c1",
+      "callId": "call_00_6T3UPRrKeoxQGRFMw0ZF8788",
+      "toolName": "protected_cli"
+    },
+    {
+      "seq": 60,
+      "time": "2026-10-10T22:01:19.916Z",
+      "type": "approval/decided",
+      "id": "7cd90b02-02d8-44ce-be97-3182c38ea8c1",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 61,
+      "time": "2026-10-10T22:01:20.615Z",
+      "type": "tool/result",
+      "callId": "call_00_6T3UPRrKeoxQGRFMw0ZF8788",
+      "name": "protected_cli",
+      "isError": false,
+      "value": {
+        "consumer": "http-status-v1",
+        "successful": true,
+        "httpStatus": 200
+      }
+    },
+    {
+      "seq": 66,
+      "time": "2026-10-10T22:01:22.236Z",
+      "type": "tool/call",
+      "callId": "call_00_ET_HdyR5Gr0FNpcN72ALJNi0979",
+      "name": "channel_send"
+    },
+    {
+      "seq": 67,
+      "time": "2026-10-10T22:01:22.251Z",
+      "type": "tool/result",
+      "callId": "call_00_ET_HdyR5Gr0FNpcN72ALJNi0979",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "34b14c07-381f-4e56-a224-79879c897e34"
+      }
+    },
+    {
+      "seq": 81,
+      "time": "2026-10-10T22:02:22.729Z",
+      "type": "tool/call",
+      "callId": "call_00_iduxEdBMUtwElPh5AC7q6383",
+      "name": "ask_secret",
+      "fields": [
+        {
+          "id": "endpoint",
+          "required": true
+        },
+        {
+          "id": "api_key",
+          "required": true
+        },
+        {
+          "id": "api_secret",
+          "required": true
+        }
+      ]
+    },
+    {
+      "seq": 82,
+      "time": "2026-10-11T04:01:26.350Z",
+      "type": "tool/result",
+      "callId": "call_00_iduxEdBMUtwElPh5AC7q6383",
+      "name": "ask_secret",
+      "isError": false,
+      "value": {
+        "status": "configured",
+        "references": {
+          "endpoint": "private:76a6fe17-8a9c-4662-8e1f-461e8d7e0d2b:endpoint",
+          "api_key": "private:76a6fe17-8a9c-4662-8e1f-461e8d7e0d2b:api_key",
+          "api_secret": "private:76a6fe17-8a9c-4662-8e1f-461e8d7e0d2b:api_secret"
+        }
+      }
+    },
+    {
+      "seq": 87,
+      "time": "2026-10-11T04:01:28.399Z",
+      "type": "tool/call",
+      "callId": "call_00_IGThQGn67nHzZpMpBYPd4784",
+      "name": "protected_cli",
+      "consumer": "http-status-v1",
+      "references": {
+        "endpoint": "private:76a6fe17-8a9c-4662-8e1f-461e8d7e0d2b:endpoint",
+        "api_key": "private:76a6fe17-8a9c-4662-8e1f-461e8d7e0d2b:api_key",
+        "api_secret": "private:76a6fe17-8a9c-4662-8e1f-461e8d7e0d2b:api_secret"
+      }
+    },
+    {
+      "seq": 88,
+      "time": "2026-10-11T04:01:28.409Z",
+      "type": "approval/asked",
+      "id": "41d5165b-e142-4f3f-8737-f068bbb429fd",
+      "callId": "call_00_IGThQGn67nHzZpMpBYPd4784",
+      "toolName": "protected_cli"
+    },
+    {
+      "seq": 89,
+      "time": "2026-10-11T04:01:28.411Z",
+      "type": "approval/decided",
+      "id": "41d5165b-e142-4f3f-8737-f068bbb429fd",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 90,
+      "time": "2026-10-11T04:01:29.470Z",
+      "type": "tool/result",
+      "callId": "call_00_IGThQGn67nHzZpMpBYPd4784",
+      "name": "protected_cli",
+      "isError": false,
+      "value": {
+        "consumer": "http-status-v1",
+        "successful": true,
+        "httpStatus": 200
+      }
+    },
+    {
+      "seq": 95,
+      "time": "2026-10-11T04:01:31.147Z",
+      "type": "tool/call",
+      "callId": "call_00_ET_L17STdXplEn62BGFoJBy3867",
+      "name": "channel_send"
+    },
+    {
+      "seq": 96,
+      "time": "2026-10-11T04:01:31.181Z",
+      "type": "tool/result",
+      "callId": "call_00_ET_L17STdXplEn62BGFoJBy3867",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "1e4a6038-761f-4a9f-94f4-6e5b649e5fd1"
+      }
+    },
+    {
+      "seq": 113,
+      "time": "2026-10-11T04:25:44.111Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 117,
+      "time": "2026-10-11T04:25:48.050Z",
+      "type": "tool/call",
+      "callId": "call_00_M3t1SXisXP7OESNeMQx82604",
+      "name": "bash"
+    },
+    {
+      "seq": 118,
+      "time": "2026-10-11T04:25:48.058Z",
+      "type": "approval/asked",
+      "id": "095303a8-c7d7-410b-bfb2-c4ca6df53d45",
+      "callId": "call_00_M3t1SXisXP7OESNeMQx82604",
+      "toolName": "bash"
+    },
+    {
+      "seq": 119,
+      "time": "2026-10-11T04:25:48.060Z",
+      "type": "approval/decided",
+      "id": "095303a8-c7d7-410b-bfb2-c4ca6df53d45",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 120,
+      "time": "2026-10-11T04:25:49.669Z",
+      "type": "tool/result",
+      "callId": "call_00_M3t1SXisXP7OESNeMQx82604",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "exitCode": 1,
+        "linuxWorkspaceProof": false,
+        "stderrProof": false
+      }
+    },
+    {
+      "seq": 125,
+      "time": "2026-10-11T04:25:52.747Z",
+      "type": "tool/call",
+      "callId": "call_00_1HxupKQlm94bvO6XqRxX6689",
+      "name": "bash"
+    },
+    {
+      "seq": 126,
+      "time": "2026-10-11T04:25:52.753Z",
+      "type": "approval/asked",
+      "id": "b49f8c0e-cf24-4b0c-9738-b74647443a89",
+      "callId": "call_00_1HxupKQlm94bvO6XqRxX6689",
+      "toolName": "bash"
+    },
+    {
+      "seq": 127,
+      "time": "2026-10-11T04:25:52.754Z",
+      "type": "approval/decided",
+      "id": "b49f8c0e-cf24-4b0c-9738-b74647443a89",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 128,
+      "time": "2026-10-11T04:25:54.498Z",
+      "type": "tool/result",
+      "callId": "call_00_1HxupKQlm94bvO6XqRxX6689",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "exitCode": 1,
+        "linuxWorkspaceProof": false,
+        "stderrProof": false
+      }
+    },
+    {
+      "seq": 133,
+      "time": "2026-10-11T04:25:56.167Z",
+      "type": "tool/call",
+      "callId": "call_00_lHVpmdaZpqiq9a4RgXYo7667",
+      "name": "bash"
+    },
+    {
+      "seq": 134,
+      "time": "2026-10-11T04:25:56.172Z",
+      "type": "approval/asked",
+      "id": "758e0e92-e4f0-412e-8056-39b5a21349a7",
+      "callId": "call_00_lHVpmdaZpqiq9a4RgXYo7667",
+      "toolName": "bash"
+    },
+    {
+      "seq": 135,
+      "time": "2026-10-11T04:25:56.173Z",
+      "type": "approval/decided",
+      "id": "758e0e92-e4f0-412e-8056-39b5a21349a7",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 136,
+      "time": "2026-10-11T04:25:57.627Z",
+      "type": "tool/result",
+      "callId": "call_00_lHVpmdaZpqiq9a4RgXYo7667",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "exitCode": 1,
+        "linuxWorkspaceProof": false,
+        "stderrProof": false
+      }
+    },
+    {
+      "seq": 141,
+      "time": "2026-10-11T04:25:59.902Z",
+      "type": "tool/call",
+      "callId": "call_00_Sy62r9pGJmHhzh6fGaT25503",
+      "name": "bash"
+    },
+    {
+      "seq": 142,
+      "time": "2026-10-11T04:25:59.909Z",
+      "type": "approval/asked",
+      "id": "2e425fbb-502a-4a4d-8960-7c1a50995c77",
+      "callId": "call_00_Sy62r9pGJmHhzh6fGaT25503",
+      "toolName": "bash"
+    },
+    {
+      "seq": 143,
+      "time": "2026-10-11T04:25:59.910Z",
+      "type": "approval/decided",
+      "id": "2e425fbb-502a-4a4d-8960-7c1a50995c77",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 144,
+      "time": "2026-10-11T04:26:01.442Z",
+      "type": "tool/result",
+      "callId": "call_00_Sy62r9pGJmHhzh6fGaT25503",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "exitCode": 1,
+        "linuxWorkspaceProof": false,
+        "stderrProof": false
+      }
+    },
+    {
+      "seq": 145,
+      "time": "2026-10-11T04:26:01.445Z",
+      "type": "tool/call",
+      "callId": "call_01_HMAmarcxCSu25irLKIfF9321",
+      "name": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 146,
+      "time": "2026-10-11T04:26:01.448Z",
+      "type": "approval/asked",
+      "id": "67ee7439-3cde-4ea4-b8be-54c6932cccd7",
+      "callId": "call_01_HMAmarcxCSu25irLKIfF9321",
+      "toolName": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 147,
+      "time": "2026-10-11T04:26:01.450Z",
+      "type": "approval/decided",
+      "id": "67ee7439-3cde-4ea4-b8be-54c6932cccd7",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 148,
+      "time": "2026-10-11T04:26:01.484Z",
+      "type": "tool/result",
+      "callId": "call_01_HMAmarcxCSu25irLKIfF9321",
+      "name": "mcp__linux_demo__workspace_probe",
+      "isError": false,
+      "value": {
+        "called": true,
+        "linuxWorkspaceProof": false,
+        "linuxWorkspace": true,
+        "unprivileged": true,
+        "hostCredentialEnvironmentFalse": true
+      }
+    },
+    {
+      "seq": 155,
+      "time": "2026-10-11T04:26:05.650Z",
+      "type": "approval/decided",
+      "id": "966bf64a-ceb8-4d2d-93bd-07fba3d104e2",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 161,
+      "time": "2026-10-11T04:26:10.576Z",
+      "type": "tool/call",
+      "callId": "call_00_gLWh2DDPMTSF37NJs7rJ7021",
+      "name": "channel_send"
+    },
+    {
+      "seq": 162,
+      "time": "2026-10-11T04:26:10.606Z",
+      "type": "tool/result",
+      "callId": "call_00_gLWh2DDPMTSF37NJs7rJ7021",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "b404be23-6127-47c6-bf40-e4d5b94324ba"
+      }
+    },
+    {
+      "seq": 177,
+      "time": "2026-10-11T04:29:57.451Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 180,
+      "time": "2026-10-11T04:29:59.105Z",
+      "type": "tool/call",
+      "callId": "call_00_GMQvgV5AUwIEitEGsGaU3893",
+      "name": "bash"
+    },
+    {
+      "seq": 181,
+      "time": "2026-10-11T04:29:59.113Z",
+      "type": "approval/asked",
+      "id": "aedbcbec-c2cb-4ed1-a63f-5ad8cef856b9",
+      "callId": "call_00_GMQvgV5AUwIEitEGsGaU3893",
+      "toolName": "bash"
+    },
+    {
+      "seq": 182,
+      "time": "2026-10-11T04:29:59.115Z",
+      "type": "approval/decided",
+      "id": "aedbcbec-c2cb-4ed1-a63f-5ad8cef856b9",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 183,
+      "time": "2026-10-11T04:30:01.275Z",
+      "type": "tool/result",
+      "callId": "call_00_GMQvgV5AUwIEitEGsGaU3893",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "exitCode": 7,
+        "linuxWorkspaceProof": true,
+        "stderrProof": true
+      }
+    },
+    {
+      "seq": 188,
+      "time": "2026-10-11T04:30:02.794Z",
+      "type": "tool/call",
+      "callId": "call_00_xovMhbaNmVd3xjQ4fSwi5705",
+      "name": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 189,
+      "time": "2026-10-11T04:30:02.798Z",
+      "type": "approval/asked",
+      "id": "9a664247-ab15-4ccf-8d66-0b05f710e2d9",
+      "callId": "call_00_xovMhbaNmVd3xjQ4fSwi5705",
+      "toolName": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 190,
+      "time": "2026-10-11T04:30:02.799Z",
+      "type": "approval/decided",
+      "id": "9a664247-ab15-4ccf-8d66-0b05f710e2d9",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 191,
+      "time": "2026-10-11T04:30:02.838Z",
+      "type": "tool/result",
+      "callId": "call_00_xovMhbaNmVd3xjQ4fSwi5705",
+      "name": "mcp__linux_demo__workspace_probe",
+      "isError": false,
+      "value": {
+        "called": true,
+        "linuxWorkspaceProof": true,
+        "linuxWorkspace": true,
+        "unprivileged": true,
+        "hostCredentialEnvironmentFalse": true
+      }
+    },
+    {
+      "seq": 196,
+      "time": "2026-10-11T04:30:06.281Z",
+      "type": "tool/call",
+      "callId": "call_00_104oxqBNB7y36YAZK1lb9234",
+      "name": "channel_send"
+    },
+    {
+      "seq": 197,
+      "time": "2026-10-11T04:30:06.306Z",
+      "type": "tool/result",
+      "callId": "call_00_104oxqBNB7y36YAZK1lb9234",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "82fa1bc0-476b-4966-8a89-bd21eb80c2ee"
+      }
+    },
+    {
+      "seq": 212,
+      "time": "2026-10-11T04:31:02.238Z",
+      "type": "tool/call",
+      "callId": "call_00_8Wl7dERUfcqNQKGy2YGN5688",
+      "name": "ask_secret",
+      "fields": [
+        {
+          "id": "endpoint",
+          "required": true
+        },
+        {
+          "id": "api_key",
+          "required": true
+        },
+        {
+          "id": "api_secret",
+          "required": true
+        }
+      ]
+    },
+    {
+      "seq": 213,
+      "time": "2026-10-11T04:31:38.923Z",
+      "type": "tool/result",
+      "callId": "call_00_8Wl7dERUfcqNQKGy2YGN5688",
+      "name": "ask_secret",
+      "isError": false,
+      "value": {
+        "status": "configured",
+        "references": {
+          "endpoint": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:endpoint",
+          "api_key": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:api_key",
+          "api_secret": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:api_secret"
+        }
+      }
+    },
+    {
+      "seq": 218,
+      "time": "2026-10-11T04:31:40.327Z",
+      "type": "tool/call",
+      "callId": "call_00_ET_SSO8k3s774ebJW8jJKO81079",
+      "name": "protected_cli",
+      "consumer": "http-status-v1",
+      "references": {
+        "endpoint": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:endpoint",
+        "api_key": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:api_key",
+        "api_secret": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:api_secret"
+      }
+    },
+    {
+      "seq": 219,
+      "time": "2026-10-11T04:31:40.333Z",
+      "type": "approval/asked",
+      "id": "8ad2e52c-5876-4447-8f29-1860925b7f90",
+      "callId": "call_00_ET_SSO8k3s774ebJW8jJKO81079",
+      "toolName": "protected_cli"
+    },
+    {
+      "seq": 220,
+      "time": "2026-10-11T04:31:40.334Z",
+      "type": "approval/decided",
+      "id": "8ad2e52c-5876-4447-8f29-1860925b7f90",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 221,
+      "time": "2026-10-11T04:31:41.409Z",
+      "type": "tool/result",
+      "callId": "call_00_ET_SSO8k3s774ebJW8jJKO81079",
+      "name": "protected_cli",
+      "isError": false,
+      "value": {
+        "consumer": "http-status-v1",
+        "successful": true,
+        "httpStatus": 200
+      }
+    },
+    {
+      "seq": 226,
+      "time": "2026-10-11T04:31:43.607Z",
+      "type": "tool/call",
+      "callId": "call_00_ET_Ql9zQzGMIK1G1nJtHwxY4768",
+      "name": "channel_send"
+    },
+    {
+      "seq": 227,
+      "time": "2026-10-11T04:31:43.637Z",
+      "type": "tool/result",
+      "callId": "call_00_ET_Ql9zQzGMIK1G1nJtHwxY4768",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "8bfb3bb6-ae2b-428f-a88c-70e0577cad9f"
+      }
+    },
+    {
+      "seq": 242,
+      "time": "2026-10-11T04:42:24.847Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 245,
+      "time": "2026-10-11T04:42:28.293Z",
+      "type": "tool/call",
+      "callId": "call_00_C8PVkyWEXBAQALvRXzqL7611",
+      "name": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 246,
+      "time": "2026-10-11T04:42:28.296Z",
+      "type": "approval/asked",
+      "id": "938e8758-a9ac-4882-8b4a-de216968c26e",
+      "callId": "call_00_C8PVkyWEXBAQALvRXzqL7611",
+      "toolName": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 247,
+      "time": "2026-10-11T04:42:28.297Z",
+      "type": "approval/decided",
+      "id": "938e8758-a9ac-4882-8b4a-de216968c26e",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 248,
+      "time": "2026-10-11T04:42:28.330Z",
+      "type": "tool/result",
+      "callId": "call_00_C8PVkyWEXBAQALvRXzqL7611",
+      "name": "mcp__linux_demo__workspace_probe",
+      "isError": false,
+      "value": {
+        "called": true,
+        "linuxWorkspaceProof": true,
+        "linuxWorkspace": true,
+        "unprivileged": true,
+        "hostCredentialEnvironmentFalse": true
+      }
+    },
+    {
+      "seq": 255,
+      "time": "2026-10-11T04:44:12.170Z",
+      "type": "tool/call",
+      "callId": "call_00_aC4KjiHfSpXKmyndUdye0908",
+      "name": "channel_send"
+    },
+    {
+      "seq": 256,
+      "time": "2026-10-11T04:44:12.195Z",
+      "type": "tool/result",
+      "callId": "call_00_aC4KjiHfSpXKmyndUdye0908",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "6ff58464-5f27-4bce-9a61-84c7a42da220"
+      }
+    },
+    {
+      "seq": 271,
+      "time": "2026-10-11T05:05:57.277Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 274,
+      "time": "2026-10-11T05:06:00.783Z",
+      "type": "tool/call",
+      "callId": "call_00_b05BeFgSy6vSHbQcUZ4e5559",
+      "name": "bash"
+    },
+    {
+      "seq": 275,
+      "time": "2026-10-11T05:06:00.791Z",
+      "type": "approval/asked",
+      "id": "c2e10585-36cf-45fb-9df0-8d28a60fbf8d",
+      "callId": "call_00_b05BeFgSy6vSHbQcUZ4e5559",
+      "toolName": "bash"
+    },
+    {
+      "seq": 276,
+      "time": "2026-10-11T05:06:00.792Z",
+      "type": "approval/decided",
+      "id": "c2e10585-36cf-45fb-9df0-8d28a60fbf8d",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 277,
+      "time": "2026-10-11T05:06:02.505Z",
+      "type": "tool/result",
+      "callId": "call_00_b05BeFgSy6vSHbQcUZ4e5559",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "exitCode": 7,
+        "linuxWorkspaceProof": true,
+        "stderrProof": false
+      }
+    },
+    {
+      "seq": 278,
+      "time": "2026-10-11T05:06:02.511Z",
+      "type": "tool/call",
+      "callId": "call_01_7JcXc1Xd5kyxFYGik4qL3344",
+      "name": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 279,
+      "time": "2026-10-11T05:06:02.518Z",
+      "type": "approval/asked",
+      "id": "38381ea6-5f1f-4d66-bbc3-9060b294073c",
+      "callId": "call_01_7JcXc1Xd5kyxFYGik4qL3344",
+      "toolName": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 280,
+      "time": "2026-10-11T05:06:02.519Z",
+      "type": "approval/decided",
+      "id": "38381ea6-5f1f-4d66-bbc3-9060b294073c",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 281,
+      "time": "2026-10-11T05:06:02.566Z",
+      "type": "tool/result",
+      "callId": "call_01_7JcXc1Xd5kyxFYGik4qL3344",
+      "name": "mcp__linux_demo__workspace_probe",
+      "isError": false,
+      "value": {
+        "called": true,
+        "linuxWorkspaceProof": true,
+        "linuxWorkspace": true,
+        "unprivileged": true,
+        "hostCredentialEnvironmentFalse": true
+      }
+    },
+    {
+      "seq": 282,
+      "time": "2026-10-11T05:06:02.569Z",
+      "type": "tool/call",
+      "callId": "call_02_tjcPc0kuhaE6yTgDKBrK3225",
+      "name": "protected_cli",
+      "consumer": "http-status-v1",
+      "references": {
+        "endpoint": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:endpoint",
+        "api_key": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:api_key",
+        "api_secret": "private:c1dbc02b-453d-4adc-ac06-ecffb49260a6:api_secret"
+      }
+    },
+    {
+      "seq": 283,
+      "time": "2026-10-11T05:06:02.575Z",
+      "type": "approval/asked",
+      "id": "a4379886-e73e-473d-8030-2820eff68850",
+      "callId": "call_02_tjcPc0kuhaE6yTgDKBrK3225",
+      "toolName": "protected_cli"
+    },
+    {
+      "seq": 284,
+      "time": "2026-10-11T05:06:02.575Z",
+      "type": "approval/decided",
+      "id": "a4379886-e73e-473d-8030-2820eff68850",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 285,
+      "time": "2026-10-11T05:06:03.250Z",
+      "type": "tool/result",
+      "callId": "call_02_tjcPc0kuhaE6yTgDKBrK3225",
+      "name": "protected_cli",
+      "isError": false,
+      "value": {
+        "consumer": "http-status-v1",
+        "successful": true,
+        "httpStatus": 200
+      }
+    },
+    {
+      "seq": 290,
+      "time": "2026-10-11T05:06:06.467Z",
+      "type": "tool/call",
+      "callId": "call_00_TZeb9jlA80cXqJenn39P7183",
+      "name": "channel_send"
+    },
+    {
+      "seq": 291,
+      "time": "2026-10-11T05:06:06.489Z",
+      "type": "tool/result",
+      "callId": "call_00_TZeb9jlA80cXqJenn39P7183",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "8cafce2d-de06-4228-81b4-f3188bd3e419"
+      }
+    },
+    {
+      "seq": 306,
+      "time": "2026-10-11T05:10:15.300Z",
+      "type": "request/header"
+    },
+    {
+      "seq": 309,
+      "time": "2026-10-11T05:10:20.072Z",
+      "type": "tool/call",
+      "callId": "call_00_pTWoJE72nyPSMJ8gkL0n2065",
+      "name": "bash"
+    },
+    {
+      "seq": 310,
+      "time": "2026-10-11T05:10:20.076Z",
+      "type": "approval/asked",
+      "id": "203ea3d0-bde8-4327-b83d-7b517ff535b9",
+      "callId": "call_00_pTWoJE72nyPSMJ8gkL0n2065",
+      "toolName": "bash"
+    },
+    {
+      "seq": 311,
+      "time": "2026-10-11T05:10:20.078Z",
+      "type": "approval/decided",
+      "id": "203ea3d0-bde8-4327-b83d-7b517ff535b9",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 312,
+      "time": "2026-10-11T05:10:22.020Z",
+      "type": "tool/result",
+      "callId": "call_00_pTWoJE72nyPSMJ8gkL0n2065",
+      "name": "bash",
+      "isError": false
+    },
+    {
+      "seq": 317,
+      "time": "2026-10-11T05:10:25.019Z",
+      "type": "tool/call",
+      "callId": "call_00_FmVi1MDh9PqGLP45zQ5r0672",
+      "name": "bash"
+    },
+    {
+      "seq": 318,
+      "time": "2026-10-11T05:10:25.021Z",
+      "type": "approval/asked",
+      "id": "1110a36e-c6d7-40ed-99be-a0d690b317b2",
+      "callId": "call_00_FmVi1MDh9PqGLP45zQ5r0672",
+      "toolName": "bash"
+    },
+    {
+      "seq": 319,
+      "time": "2026-10-11T05:10:25.022Z",
+      "type": "approval/decided",
+      "id": "1110a36e-c6d7-40ed-99be-a0d690b317b2",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 320,
+      "time": "2026-10-11T05:10:27.000Z",
+      "type": "tool/result",
+      "callId": "call_00_FmVi1MDh9PqGLP45zQ5r0672",
+      "name": "bash",
+      "isError": false,
+      "value": {
+        "formattedSpill": true,
+        "subprocessSpill": true
+      }
+    },
+    {
+      "seq": 327,
+      "time": "2026-10-11T05:10:32.322Z",
+      "type": "tool/call",
+      "callId": "call_01_3BdemI8311XwB54iLl4s7284",
+      "name": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 328,
+      "time": "2026-10-11T05:10:32.324Z",
+      "type": "approval/asked",
+      "id": "fd1a8a18-3ad1-4d3a-b1f8-18cfe5289050",
+      "callId": "call_01_3BdemI8311XwB54iLl4s7284",
+      "toolName": "mcp__linux_demo__workspace_probe"
+    },
+    {
+      "seq": 329,
+      "time": "2026-10-11T05:10:32.324Z",
+      "type": "approval/decided",
+      "id": "fd1a8a18-3ad1-4d3a-b1f8-18cfe5289050",
+      "outcome": "allowed-once"
+    },
+    {
+      "seq": 330,
+      "time": "2026-10-11T05:10:32.347Z",
+      "type": "tool/result",
+      "callId": "call_01_3BdemI8311XwB54iLl4s7284",
+      "name": "mcp__linux_demo__workspace_probe",
+      "isError": false,
+      "value": {
+        "called": true,
+        "linuxWorkspaceProof": true,
+        "linuxWorkspace": true,
+        "unprivileged": true,
+        "hostCredentialEnvironmentFalse": true
+      }
+    },
+    {
+      "seq": 335,
+      "time": "2026-10-11T05:10:38.082Z",
+      "type": "tool/call",
+      "callId": "call_00_BTIUrVZy6ViWQVegsvVN7709",
+      "name": "channel_send"
+    },
+    {
+      "seq": 336,
+      "time": "2026-10-11T05:10:38.104Z",
+      "type": "tool/result",
+      "callId": "call_00_BTIUrVZy6ViWQVegsvVN7709",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "9451e1bf-e9a8-46ab-b668-7524f3f758d3"
+      }
+    },
+    {
+      "seq": 350,
+      "time": "2026-10-11T05:13:20.963Z",
+      "type": "tool/call",
+      "callId": "call_00_k8Y6IaoXDh8OoWeduPd92517",
+      "name": "ask_secret",
+      "fields": [
+        {
+          "id": "endpoint",
+          "required": true
+        },
+        {
+          "id": "api_key",
+          "required": true
+        },
+        {
+          "id": "api_secret",
+          "required": true
+        }
+      ]
+    },
+    {
+      "seq": 351,
+      "time": "2026-10-11T05:14:49.586Z",
+      "type": "tool/result",
+      "callId": "call_00_k8Y6IaoXDh8OoWeduPd92517",
+      "name": "ask_secret",
+      "isError": false,
+      "value": {
+        "status": "cancelled",
+        "references": {}
+      }
+    },
+    {
+      "seq": 356,
+      "time": "2026-10-11T05:14:52.853Z",
+      "type": "tool/call",
+      "callId": "call_00_FjR4yiIaAcOqUlvkJVtG3552",
+      "name": "channel_send"
+    },
+    {
+      "seq": 357,
+      "time": "2026-10-11T05:14:52.884Z",
+      "type": "tool/result",
+      "callId": "call_00_FjR4yiIaAcOqUlvkJVtG3552",
+      "name": "channel_send",
+      "isError": false,
+      "value": {
+        "messageId": "901a0a87-42f4-4cab-a469-67d0ebeb67a5"
+      }
+    }
+  ]
+}
