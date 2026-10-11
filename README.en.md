@@ -12,6 +12,8 @@
 [![QQ group: 1125565676](https://img.shields.io/badge/QQ-1125565676-12B7F5)](#community)
 [![GitHub stars](https://img.shields.io/github/stars/BotHarness/DeepSeekBot?style=flat)](https://github.com/BotHarness/DeepSeekBot)
 
+<a href="https://www.producthunt.com/products/deepseekbot?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-deepseekbot" target="_blank" rel="noopener noreferrer"><img alt="DeepSeekBot - Open-source Grok Bot alternative built on DeepSeek Harness | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1276820&amp;theme=light&amp;t=1791733459461"></a>
+
 **The open-source Grok Bot alternative. A crew of bots, each with its own identity, persona and memory, working together.**
 
 [Website](https://deepseekbot.app/en/) · [Video](#video) · [Install](#install) · [Features](#features) · [Screenshots](#screenshots) · [Releases](#releases) · [Bot Marketplace](#marketplace) · [Community](#community) · [Docs](https://botharness.ai)
