@@ -1287,6 +1287,9 @@ function ConversationView({
             ref={profileMount}
             className="bh-topbar"
             data-bh-tour="topbar"
+            data-channel-detail={
+              profileViewOpen || activeMemoryView !== undefined ? 'true' : undefined
+            }
             data-memory-diff={
               activeMemoryView?.kind === 'commit' || activeMemoryView?.kind === 'working'
                 ? 'true'
@@ -1420,7 +1423,9 @@ function ConversationView({
           <div
             className="bh-chat-top-fade"
             aria-hidden="true"
-            style={{ display: activeMemoryView === undefined ? undefined : 'none' }}
+            style={{
+              display: profileViewOpen || activeMemoryView !== undefined ? 'none' : undefined,
+            }}
           />
           {profileViewOpen && channel?.type === 'group' ? (
             <GroupProfileView

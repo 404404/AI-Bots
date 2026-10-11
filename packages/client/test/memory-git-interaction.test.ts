@@ -1009,6 +1009,9 @@ describe('Memory Git graph sidebar', () => {
     });
     expect(container.querySelector('.bh-memory-commit-view')?.textContent).toContain('Memory at a');
     expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['memoryDiff']).toBe('true');
+    expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
+      'true',
+    );
     expect(chat?.style.display).toBe('none');
     expect(container.querySelector<HTMLElement>('.bh-memory-chat-composer')?.style.display).toBe(
       'none',
@@ -1050,6 +1053,9 @@ describe('Memory Git graph sidebar', () => {
     });
     expect(container.querySelector('.bh-memory-commit-view')?.textContent).toContain(
       'Current memory',
+    );
+    expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
+      'true',
     );
     await act(async () => {
       Array.from(container.querySelectorAll<HTMLButtonElement>('button'))

@@ -291,6 +291,14 @@ it('uses compact icon labels and a left context/right usage split, with keyboard
             totalTokens: null,
             status: 'unknown',
           },
+          {
+            sessionId: 'known-assignment',
+            role: 'assignment',
+            label: 'Known task',
+            updatedAt: '',
+            totalTokens: 500,
+            status: 'partial',
+          },
         ],
       }),
     );
@@ -298,12 +306,41 @@ it('uses compact icon labels and a left context/right usage split, with keyboard
     expect(popover.textContent).toContain('1.5K');
     expect(popover.textContent).toContain('Synthetic task');
     expect(popover.textContent).toContain('未知');
+    expect(
+      [...popover.querySelectorAll('[role="meter"]')].map((meter) =>
+        meter.getAttribute('aria-valuenow'),
+      ),
+    ).toEqual(['75', '25']);
+    expect(popover.querySelectorAll('.bh-composer-usage-caption')).toHaveLength(0);
+    expect(popover.querySelector('.bh-composer-usage-footer > button')?.textContent).toContain(
+      '查看详细用量',
+    );
     await act(async () =>
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })),
     );
     expect(document.body.querySelector('.bh-composer-usage-popover')).toBeNull();
     expect(document.activeElement).toBe(host.querySelector('.bh-composer-usage'));
     await clickUsage();
+    await act(async () =>
+      resolve({
+        slug: ada.slug,
+        weeks: 26,
+        since: '2026-04-01T00:00:00.000Z',
+        rows: [
+          {
+            sessionId: 'zero',
+            role: 'orchestrator',
+            label: 'orchestrator',
+            updatedAt: '',
+            totalTokens: 0,
+            status: 'ready',
+          },
+        ],
+      }),
+    );
+    expect(
+      document.body.querySelectorAll('.bh-composer-usage-popover [role="meter"]'),
+    ).toHaveLength(0);
     bot = grace;
     await render();
     await act(async () => resolve({ slug: ada.slug, weeks: 26, since: '', rows: [] }));

@@ -2679,6 +2679,7 @@ export const zh = {
   'composerContext.sessionScope': '下列会话含子会话；仅列最近任务，不等于 Bot 全部历史用量。',
   'composerContext.noSessions': '暂无会话',
   'composerContext.details': '查看详细用量',
+  'composerContext.sessionShare': '在所列会话的已知 token 用量中占比',
   'composerContext.companionUnavailable': 'Bot 小人尚未就绪或不可用',
   'composerContext.confirmGrant': '确认授权给 {name}',
   'composerContext.grantScope':
@@ -5618,6 +5619,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'Sessions include child sessions; recent tasks are not the Bot’s full historical usage.',
   'composerContext.noSessions': 'No sessions yet',
   'composerContext.details': 'See detailed usage',
+  'composerContext.sessionShare': 'Share of known token usage in the listed sessions',
   'composerContext.companionUnavailable': 'Window Companion is not ready or unavailable',
   'composerContext.confirmGrant': 'Confirm authorization for {name}',
   'composerContext.grantScope':

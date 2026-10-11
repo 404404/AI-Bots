@@ -89,6 +89,17 @@ export function DmComposerUsagePopover({
     [actions, channelId, bot.slug],
   );
   const rows = result?.rows ?? [];
+  const knownTotal = rows.reduce(
+    (total, row) =>
+      total + (row.status === 'ready' || row.status === 'partial' ? (row.totalTokens ?? 0) : 0),
+    0,
+  );
+  const sessionShare = (row: ProfileSessionUsage['rows'][number]) =>
+    knownTotal > 0 &&
+    row.totalTokens !== null &&
+    (row.status === 'ready' || row.status === 'partial')
+      ? Math.round((row.totalTokens / knownTotal) * 100)
+      : undefined;
   const sessionCount = (row: ProfileSessionUsage['rows'][number]) => {
     if (row.status === 'unavailable') return t('composerContext.unavailable');
     if (row.totalTokens === null) return t('profile.usage.unknown');
@@ -123,16 +134,12 @@ export function DmComposerUsagePopover({
           {t('composerContext.tokens', { count: profileTokenSummaryText(activity, t, true) })}
         </strong>
       </div>
-      <p className="bh-composer-usage-caption">
-        {t('composerContext.usageWindow', { weeks: activity?.weeks ?? 26 })}
-      </p>
       {failed ? (
         <p role="status">{t('composerContext.unavailable')}</p>
       ) : result === undefined ? (
         <p role="status">{t('composerContext.loading')}</p>
       ) : (
         <>
-          <p className="bh-composer-usage-caption">{t('composerContext.sessionScope')}</p>
           {(['orchestrator', 'assignment'] as const).map((role) => (
             <section key={role} className="bh-composer-usage-section">
               <h3>
@@ -148,15 +155,32 @@ export function DmComposerUsagePopover({
                 rows
                   .filter((row) => row.role === role)
                   .map((row) => (
-                    <div className="bh-composer-usage-row" key={row.sessionId}>
-                      <ChannelSidebarIcon
-                        name={role === 'orchestrator' ? 'bot' : 'list-checks'}
-                        size={14}
-                      />
-                      <span title={row.label}>
-                        {role === 'orchestrator' ? 'Orchestrator' : row.label}
-                      </span>
-                      <strong>{sessionCount(row)}</strong>
+                    <div className="bh-composer-usage-session" key={row.sessionId}>
+                      <div className="bh-composer-usage-row">
+                        <ChannelSidebarIcon
+                          name={role === 'orchestrator' ? 'bot' : 'list-checks'}
+                          size={14}
+                        />
+                        <span title={row.label}>
+                          {role === 'orchestrator' ? 'Orchestrator' : row.label}
+                        </span>
+                        <strong>
+                          {sessionCount(row)}
+                          {sessionShare(row) === undefined ? '' : ` · ${sessionShare(row)}%`}
+                        </strong>
+                      </div>
+                      {sessionShare(row) === undefined ? null : (
+                        <div
+                          className="bh-composer-usage-meter"
+                          role="meter"
+                          aria-label={t('composerContext.sessionShare')}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={sessionShare(row)}
+                        >
+                          <span style={{ width: `${sessionShare(row)}%` }} />
+                        </div>
+                      )}
                     </div>
                   ))
               )}
@@ -164,10 +188,12 @@ export function DmComposerUsagePopover({
           ))}
         </>
       )}
-      <button type="button" className="bh-composer-usage-details" onClick={onDetails}>
-        <span>{t('composerContext.details')}</span>
-        <IconChevronRightOutlineRegular size={16} />
-      </button>
+      <div className="bh-composer-usage-footer">
+        <button type="button" className="bh-composer-usage-details" onClick={onDetails}>
+          <span>{t('composerContext.details')}</span>
+          <IconChevronRightOutlineRegular size={16} />
+        </button>
+      </div>
     </div>,
     document.body,
   );

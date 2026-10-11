@@ -2325,7 +2325,7 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
   pointer-events: auto;
 }
 .bh-channel-island:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, var(--dsw-alias-bg-module-platform));
 }
 .bh-channel-island:focus-visible {
   outline: 2px solid var(--dsw-alias-label-primary);
@@ -2347,6 +2347,7 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
 .bh-channel-island-wrap {
   position: relative;
   display: inline-flex;
+  align-items: center;
   max-width: min(100%, 440px);
   pointer-events: auto;
 }
@@ -2502,7 +2503,7 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 74px 18px 24px;
+  padding: 18px 18px 24px;
 }
 .bh-profile-back {
   display: inline-flex;
@@ -6409,6 +6410,7 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 }
 .bh-memory-graph-list > .bh-memory-continue-form { margin: 6px 0 10px 24px; }
 .bh-topbar[data-memory-diff='true'] .bh-channel-island-wrap { display: none; }
+.bh-topbar[data-channel-detail='true'] { display: none; }
 .bh-memory-commit-title code { flex: none; font-family: var(--bh-memory-font-code); font-size: 12px; color: var(--dsw-alias-label-secondary); }
 .bh-memory-commit-header .bh-memory-commit-title span {
   min-width: 0;
