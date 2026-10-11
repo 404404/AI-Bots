@@ -162,6 +162,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
+- Documented fresh native Profile installation from qualified source-built product artifacts, including pinned tools and the distinction between installer verification and live chat acceptance ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [guide](docs/agents/source-profile-install.md)).
+
 - Added the Product Hunt launch badge to the Chinese and English READMEs ([#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)).
 
 - Added bilingual human contributor guides and community entry points for questions, ideas, examples and focused issues or PRs; runtime behavior is unchanged ([contributor guide](CONTRIBUTING.md), [#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)).

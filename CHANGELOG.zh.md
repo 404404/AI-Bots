@@ -162,6 +162,8 @@
 
 ### Documentation
 
+- 补充从合格源码产品产物安装新原生 Profile 的指南，明确固定工具链，以及安装验证与真实聊天验收的区别（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[指南](docs/agents/source-profile-install.md)）。
+
 - 中英文 README 新增 Product Hunt 发布徽章（[#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)）。
 
 - 新增面向人的双语贡献指南与社区入口，区分求助、想法、案例和明确的 Issue / PR；运行行为不变（[contributor guide](CONTRIBUTING.md)、[#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)）。
