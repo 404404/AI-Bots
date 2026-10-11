@@ -207,6 +207,7 @@ export function changeSenderAccess(
       behavior: input.behavior,
       capabilities: [...new Set(input.capabilities)],
       revision: role.revision + 1,
+      updatedAt: new Date().toISOString(),
     };
     db.prepare('UPDATE messaging_external_roles SET body = ? WHERE id = ? AND bot_slug = ?').run(
       JSON.stringify(next),
@@ -235,6 +236,7 @@ export function changeSenderAccess(
     const role = externalUserRoles(db, botSlug).find((item) => item.id === input.roleId);
     if (!role || role.revision !== input.expectedRoleRevision)
       throw new MessagingError('role-stale');
+    const at = new Date().toISOString();
     db.prepare('UPDATE messaging_pairings SET body = ? WHERE id = ? AND bot_slug = ?').run(
       JSON.stringify({
         ...pairing,
@@ -242,7 +244,8 @@ export function changeSenderAccess(
         roleRevision: role.revision,
         capabilities: [],
         revision: pairing.revision + 1,
-        reassignedAt: new Date().toISOString(),
+        reassignedAt: at,
+        updatedAt: at,
         reviewedBy: 'authenticated-web',
       }),
       pairing.id,

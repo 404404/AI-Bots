@@ -1,5 +1,5 @@
 import { setImmediate as tick } from 'node:timers/promises';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { createCore, type BotHarnessCore } from '../src/plugin.js';
 import { attachOperationalModule } from '../src/database/owner.js';
 import { createDshImProvider, type DshImOutboundService } from '../src/messaging/dsh-im.js';
@@ -12,6 +12,7 @@ import { createTempRoot } from './helpers.js';
 const fingerprint = 'c'.repeat(64);
 const cores: BotHarnessCore[] = [];
 afterEach(async () => {
+  vi.useRealTimers();
   for (const core of cores.splice(0)) {
     core.externalMessaging.close();
     await core.runtime.close();
@@ -523,6 +524,9 @@ it('one active run refreshes role edits and reassignment while dated permission 
   const lookup = fx.runs[0]!.externalMessaging!.senderPermissions!;
   const source = fx.sourceId('om-role-question');
   const prior = lookup(source);
+  const editedAt = new Date(Date.now() + 1000).toISOString();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(editedAt);
   const edit = {
     kind: 'edit-role' as const,
     id: role.id,
@@ -532,6 +536,7 @@ it('one active run refreshes role edits and reassignment while dated permission 
     capabilities: ['reject' as const],
   };
   fx.core.externalMessaging.senderAccess('ada', edit);
+  expect(lookup(source).role).toMatchObject({ createdAt: role.createdAt, updatedAt: editedAt });
   expect(lookup(source)).toMatchObject({
     role: { name: 'Reviewer', revision: 2, capabilities: ['reject'] },
     policyRevision: 2,
@@ -541,6 +546,7 @@ it('one active run refreshes role edits and reassignment while dated permission 
     policyRevision: 1,
   });
   expect(() => fx.core.externalMessaging.senderAccess('ada', edit)).toThrow('role-stale');
+  expect(lookup(source).role?.updatedAt).toBe(editedAt);
   expect(fx.core.externalMessaging.directory('ada', { kind: 'people' }).rows[0]).toMatchObject({
     role: { name: 'Reviewer', revision: 2 },
   });
@@ -559,7 +565,13 @@ it('one active run refreshes role edits and reassignment while dated permission 
     roleId: nextRole.id,
     expectedRoleRevision: nextRole.revision,
   };
+  const reassignedAt = new Date(Date.now() + 1000).toISOString();
+  vi.setSystemTime(reassignedAt);
   fx.core.externalMessaging.senderAccess('ada', reassignment);
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]).toMatchObject({
+    createdAt: pending.createdAt,
+    updatedAt: reassignedAt,
+  });
   expect(lookup(source)).toMatchObject({
     role: { name: 'Reader', capabilities: [] },
     policyRevision: 3,
@@ -581,6 +593,12 @@ it('one active run refreshes role edits and reassignment while dated permission 
   ).toThrow();
   expect(fx.runs).toHaveLength(1);
   expect(fx.runs[0]!.inbox).not.toContain(edit.behavior);
+  vi.useRealTimers();
+  await fx.restart();
+  expect(
+    (await fx.core.externalMessaging.snapshot('ada')).roles!.find((item) => item.id === role.id),
+  ).toMatchObject({ createdAt: role.createdAt, updatedAt: editedAt });
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]?.updatedAt).toBe(reassignedAt);
 });
 
 it('permission lookup refreshes visitor, unpaired and pending state without admissions or impersonation', async () => {
