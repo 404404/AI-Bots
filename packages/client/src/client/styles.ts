@@ -5999,6 +5999,7 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-question-card > button { justify-self: start; }
 .bh-private-input-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .bh-private-input-card { width: 520px; gap: 6px; }
+.bh-bubble:has(> .bh-private-input-card) { padding: 12px; }
 .bh-private-input-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .bh-private-input-state { margin-left: auto; }
 .bh-private-input-card .bh-question-prompt { font-weight: 400; }
