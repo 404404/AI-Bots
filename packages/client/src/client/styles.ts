@@ -2311,6 +2311,8 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
 }
 .bh-group-channel-name { display: inline-flex; align-items: center; flex: 1; min-width: 0; padding: 0; border: 0; border-radius: 4px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
 .bh-group-channel-name:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+.bh-group-channel-avatar { display: inline-flex; flex-shrink: 0; padding: 0; border: 0; border-radius: 7px; color: inherit; background: transparent; cursor: pointer; }
+.bh-group-channel-avatar:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
 .bh-group-live-activity { container-type: inline-size; min-width: 0; }
 .bh-group-live-activity-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .bh-group-activity-chip { display: inline-flex; min-width: 0; max-width: 100%; border-radius: 999px; }
@@ -5261,7 +5263,6 @@ html[data-botharness-motion='reduce'] .bh-session-workspace-heading svg {
   border-radius: inherit;
   object-fit: cover;
 }
-.bh-group-avatar-topbar { width: 22px; height: 22px; border-radius: 7px; }
 .bh-group-avatar-stack {
   position: relative;
   display: block;

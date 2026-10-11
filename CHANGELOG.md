@@ -19,6 +19,7 @@ Install DeepSeekBot on compatible DSH 0.1.7 and 0.2 Hosts, with clearer Group id
 
 - Audio and file attachments share a compact card layout, with inline audio controls and a direct file download action ([#1290](https://github.com/BotHarness/DeepSeekBot/issues/1290)).
 - Your own message header places the name on the right and the timestamp on its left ([#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298)).
+- Group Channel headers use the same avatar as the sidebar, without individual Bot Window Companion Pin buttons; Bot DM companion controls and Channel pinning remain available ([#1439](https://github.com/BotHarness/DeepSeekBot/issues/1439)).
 
 ### Fixed
 

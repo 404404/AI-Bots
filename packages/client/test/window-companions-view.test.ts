@@ -3,7 +3,11 @@ import { act, createElement, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 import { WindowCompanions } from '../src/client/window-companions.js';
-import { WindowCompanionsView, CompanionSettings } from '../src/client/window-companions-view.js';
+import {
+  WindowCompanionsView,
+  CompanionSettings,
+  CompanionPin,
+} from '../src/client/window-companions-view.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { GroupChannelHeader } from '../src/client/group-channel-header.js';
 
@@ -91,7 +95,6 @@ it('pins independently, exposes right-click controls and applies global bounded 
           'div',
           {},
           createElement(GroupChannelHeader, {
-            companion: owner,
             channel: {
               id: 'qa-group',
               type: 'group',
@@ -101,13 +104,22 @@ it('pins independently, exposes right-click controls and applies global bounded 
               updatedAt: '2026-10-08T00:00:00Z',
             },
             title: 'QA',
-            members: [
-              { personaBotId: 'ada', name: 'Ada' },
-              { personaBotId: 'grace', name: 'Grace' },
-            ],
+            bots: new Map(),
             expanded: false,
             onOpenActivity() {},
             onToggleProfile() {},
+            t: zhTranslate,
+          }),
+          createElement(CompanionPin, {
+            companion: owner,
+            botId: 'ada',
+            name: 'Ada',
+            t: zhTranslate,
+          }),
+          createElement(CompanionPin, {
+            companion: owner,
+            botId: 'grace',
+            name: 'Grace',
             t: zhTranslate,
           }),
           createElement(WindowCompanionsView, {
@@ -122,6 +134,7 @@ it('pins independently, exposes right-click controls and applies global bounded 
       ),
     );
     const pins = node.querySelectorAll<HTMLButtonElement>('.bh-companion-pin');
+    expect(node.querySelector('.bh-group-channel-header .bh-companion-pin')).toBeNull();
     expect(pins).toHaveLength(2);
     expect(pins[0]!.getAttribute('aria-label')).toContain('Ada');
     expect(pins[1]!.getAttribute('aria-label')).toContain('Grace');
