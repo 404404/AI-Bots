@@ -361,6 +361,9 @@ function stubActions(): BridgeActions {
     }),
     listWorkspaceOptions: vi.fn(async () => []),
     listWorkspaceGrants: vi.fn(async () => []),
+    authorizeGroupWorkspacePath: vi.fn(),
+    resolveWorkspaceFolder: vi.fn(),
+    readGroupWorkspaceGrant: vi.fn(),
     createWorkspaceGrant: vi.fn(async () => ({
       id: 'grant-1',
       path: '/project',

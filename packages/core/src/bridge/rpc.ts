@@ -901,12 +901,18 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.workspaceFileTarget({ slug, grantId }));
   }
 
-  grants(slug: string): { grants: WorkspaceGrant[] } {
-    return unwrap(this.methods.grants({ slug }));
+  grants(slug: string, scope?: { channelId: string; path: string }): { grants: WorkspaceGrant[] } {
+    return unwrap(this.methods.grants({ slug, ...(scope === undefined ? {} : { scope }) }));
   }
 
-  grantCreate(slug: string, workspaceId: string): Promise<{ grant: WorkspaceGrant }> {
-    return unwrapAsync(this.methods.grantCreate({ slug, workspaceId }));
+  grantCreate(
+    slug: string,
+    workspaceId: string,
+    scope?: { channelId: string; path: string },
+  ): Promise<{ grant: WorkspaceGrant; created?: boolean }> {
+    return unwrapAsync(
+      this.methods.grantCreate({ slug, workspaceId, ...(scope === undefined ? {} : { scope }) }),
+    );
   }
 
   grantRevoke(slug: string, grantId: string): { grant: WorkspaceGrant } {
