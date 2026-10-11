@@ -25,6 +25,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- Owner CLI supports private-account status, blank replacement cards and local revocation alongside stdin-only multi-field submission and cancellation, through the same Host authority as Web Chat ([#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416), [guide](docs/dev/guides/private-input-cli.md)).
+
 - Lark pairing settings manage continuing authorization groups and personal Allow/Deny exceptions; current permission queries show every source, explicit Deny overrides Allow, and removing membership withdraws only that group contribution while each person retains one behavior Role ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 
 - Added Web Chat private credential replacement and local revocation per PersonaBot/account, with current-version execution checks and bounded running-use stop reports even under remembered broad approval ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382), [guide](docs/dev/guides/private-input-cli.md)). Older binaries do not honor the new account tombstones; back up before upgrading and repair forward or restore the full pre-upgrade Profile backup.

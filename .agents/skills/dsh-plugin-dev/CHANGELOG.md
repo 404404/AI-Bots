@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Documented Owner CLI private-input lifecycle parity using the existing authenticated Host carrier; DSH/Cordis Context and Skill behavior remain unchanged ([#1416](https://github.com/BotHarness/DeepSeekBot/issues/1416), [guide](../../../docs/dev/guides/private-input-cli.md)).
+
 - Documented post-commit credential response failures and startup-recovery ordering in the [local development guide](../dsh-dev/SKILL.md), verified against the pinned RC1 native Provider and private-account regression tests; DSH/Cordis Context is unchanged ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382)).
 
 - Recorded fresh RC1 Profile initialization, native credential-record object ownership and recovery quiescence in the [local development guide](../dsh-dev/SKILL.md), verified with the pinned native Provider and real private-input Host; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1381](https://github.com/BotHarness/DeepSeekBot/issues/1381)).
