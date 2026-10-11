@@ -29,6 +29,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - Lark pairing reviewers can choose an existing Role and approve or reject from a shared source-group or private-DM card, including group-only use. Current review permission and separate delegation Allow/Deny limit management Role grants; applicants must ask again after approval ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
 
+- Bot Schedules in the opt-in protected Profile can reuse configured private references after restart under existing execution approval. Missing configuration asks for Owner action without opening an unattended private-input card ([#1383](https://github.com/BotHarness/DeepSeekBot/issues/1383)).
+
 - Lark pairing settings manage continuing authorization groups and personal Allow/Deny exceptions; current permission queries show every source, explicit Deny overrides Allow, and removing membership withdraws only that group contribution while each person retains one behavior Role ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
 
 - Added Web Chat private credential replacement and local revocation per PersonaBot/account, with current-version execution checks and bounded running-use stop reports even under remembered broad approval ([#1382](https://github.com/BotHarness/DeepSeekBot/issues/1382), [guide](docs/dev/guides/private-input-cli.md)). Older binaries do not honor the new account tombstones; back up before upgrading and repair forward or restore the full pre-upgrade Profile backup.

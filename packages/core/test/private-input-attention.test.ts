@@ -47,6 +47,7 @@ async function fixture() {
     registry: core.registry,
     credentials: () => ctx.credentials,
     isLive: () => true,
+    canRequest: () => true,
     qualified: async () => true,
     log,
     changed: (slug: string, count: number) => core.states.setPrivateInputCount(slug, count),
