@@ -22,6 +22,14 @@ The switch is Bot-wide and remains off by default. If it was already enabled for
 
 Real Slack acceptance for this candidate remains pending. Existing Provider messaging/reaction screenshots below qualify their own earlier scope, not this new pairing flow. Use an independent App and an explicitly coordinated exclusive receiver window. Before reverting to older code, disable the Slack Binding if it relies on the new restriction. See [ADR-0174](adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md).
 
+![Actual unknown Slack DM receiving the fixed waiting-for-review notice](/guides/slack/16-dm-pending-notice.png)
+
+_The initial DM creates a review request; its instruction does not run._
+
+![Actual Web Requests tab with the pending Slack applicant and an ordinary Role selected](/guides/slack/15-dm-role-review.png)
+
+_In the Bot DM sidebar, open **IM roles and pairing → Requests**, refresh if needed, inspect the applicant and receiving App, then choose an existing Role. **Approve this role** sends a fixed ask-again notice; it does not run the initial instruction. These captures verify the pending/review UI only. Fresh-reply execution-source and revocation qualification remain unresolved, so they are not a completed pairing acceptance._
+
 For reusable independent test Apps, run `node scripts/dev-im-test-apps.mjs setup slack` in an interactive terminal. The three-stage wizard saves separate Slack QA1/QA2/QA3 slots in the same private machine-local registry used by Lark; it preserves existing Lark configuration and never starts a receiver. `list slack` shows only metadata. See the [shared QA setup guide](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/agents/im-test-apps.md#reusable-slack-qa-apps).
 
 You need a Slack workspace that allows application installation, permission to create an app (or an administrator's help), and a public test channel. Create a PersonaBot in BotHarness and confirm that it can answer a local DM before testing Slack.

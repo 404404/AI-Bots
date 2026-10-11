@@ -22,6 +22,14 @@ Bot 能在哪里发言由 Slack 决定：应用被邀请进了哪些频道、安
 
 该候选的真实 Slack 验收仍待完成。下方既有 Provider 收发／反应截图只证明各自原有范围，不证明新配对闭环。使用独立 App，并明确协调独占接收窗口；若依赖新限制，回退旧代码前应停用对应 Slack Binding。详见 [ADR-0174](adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md)。
 
+![未知人员的真实 Slack 私聊收到固定等待审核提示](/guides/slack/16-dm-pending-notice.png)
+
+_第一条私聊只创建审核申请，不执行其中的指令。_
+
+![真实 Web 申请页显示 Slack 申请人，并已选中普通 Role](/guides/slack/15-dm-role-review.png)
+
+_在 Bot 私聊侧栏打开 **IM 角色与配对 → 申请**，必要时刷新，核对申请人与接收 App，再选择已有 Role。**批准此角色** 只发送固定重新提问通知，不执行第一条指令。截图只证明申请／审核界面；新消息执行来源与撤销验收仍有未解决问题，不代表完整配对验收通过。_
+
 复用独立测试 App 时，在交互终端运行 `node scripts/dev-im-test-apps.mjs setup slack`。三步向导把独立 Slack QA1／QA2／QA3 保存到 Lark 已使用的本机私密共享配置，保留既有 Lark 数据且不启动接收器；`list slack` 只显示元数据。详见[共享 QA 配置指南](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/agents/im-test-apps.md#reusable-slack-qa-apps)。
 
 你需要一个允许安装应用的 Slack 工作区、创建应用的权限（或管理员协助），以及一个公共测试频道。在 BotHarness 中创建 Bot，先确认它能回答本地 DM，再测试 Slack。
