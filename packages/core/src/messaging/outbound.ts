@@ -4,6 +4,7 @@ import {
   type ApprovalMessagingSnapshot,
 } from './approval-messaging.js';
 import { externalPermissionGroups, type ExternalPermissionGroup } from './permission-groups.js';
+import { behaviorPermissions, type BehaviorPermission } from './behavior-permissions.js';
 import { createPairingCards } from './pairing-cards.js';
 import {
   createMessagingDirectory,
@@ -215,6 +216,7 @@ export type MessagingApp = MessagingAccount & {
 
 export interface MessagingSnapshot {
   permissionGroups?: ExternalPermissionGroup[];
+  behaviorPermissions?: BehaviorPermission[];
   senderPolicy?: SenderPolicy;
   roles?: ExternalUserRole[];
   receptionHistory?: ReceptionInterval[];
@@ -1854,6 +1856,7 @@ export function createOutboundMessaging(options: {
         identities,
         roles: database.read((db) => externalUserRoles(db, botSlug)),
         permissionGroups: database.read((db) => externalPermissionGroups(db, botSlug)),
+        behaviorPermissions: database.read((db) => behaviorPermissions(db, botSlug)),
         senderPolicy: database.read((db) => readSenderPolicy(db, botSlug)),
         pairings: pairing.list(botSlug),
         approvals: approvals.snapshot(botSlug),

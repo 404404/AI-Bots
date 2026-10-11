@@ -2026,6 +2026,20 @@ const PAIRING_CARD_MIGRATION: SchemaMigration = {
   },
 };
 
+export const BEHAVIOR_PERMISSION_MIGRATION: SchemaMigration = {
+  generation: 81,
+  module: 'messaging',
+  description: 'Persist reusable Bot-scoped Group behavior permission items',
+  migrate(db) {
+    db.exec(`CREATE TABLE messaging_behavior_permissions (
+      id TEXT PRIMARY KEY,
+      bot_slug TEXT NOT NULL,
+      body TEXT NOT NULL CHECK (json_valid(body))
+    );
+    CREATE INDEX messaging_behavior_permissions_bot ON messaging_behavior_permissions(bot_slug);`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2106,4 +2120,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   EXTERNAL_USER_ROLE_MIGRATION,
   PERMISSION_GROUP_MIGRATION,
   PAIRING_CARD_MIGRATION,
+  BEHAVIOR_PERMISSION_MIGRATION,
 ]);

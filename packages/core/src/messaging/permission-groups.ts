@@ -5,10 +5,24 @@ import type { PairingCapability, PairingRequest } from './pairing.js';
 import type { ExternalUserRole } from './sender-access.js';
 import { readMessagingIdentity } from './identity.js';
 import { MessagingError } from './provider.js';
+import {
+  behaviorPermissions,
+  resolveBehaviorPermissions,
+  type BehaviorChoices,
+  type EffectiveBehaviorPermission,
+} from './behavior-permissions.js';
 
 const choices = z.array(z.enum(['approve', 'reject', 'review-pairing'])).max(3);
 const delegation = { delegateAllow: choices.optional(), delegateDeny: choices.optional() };
 const memberIds = z.array(z.string().uuid()).max(100);
+const behaviorChoices = {
+  behaviorAllow: z.array(z.string().uuid()).max(50).optional(),
+  behaviorDeny: z.array(z.string().uuid()).max(50).optional(),
+  expectedBehaviorRevisions: z
+    .record(z.string().uuid(), z.number().int().positive())
+    .refine((value) => Object.keys(value).length <= 50)
+    .optional(),
+};
 export const permissionGroupInputs = [
   z
     .object({
@@ -18,6 +32,7 @@ export const permissionGroupInputs = [
       allow: choices,
       deny: choices,
       ...delegation,
+      ...behaviorChoices,
       memberIds,
     })
     .strict(),
@@ -30,6 +45,7 @@ export const permissionGroupInputs = [
       allow: choices,
       deny: choices,
       ...delegation,
+      ...behaviorChoices,
       memberIds,
     })
     .strict(),
@@ -59,7 +75,7 @@ export interface PermissionChoices {
   delegateAllow?: PairingCapability[];
   delegateDeny?: PairingCapability[];
 }
-export interface ExternalPermissionGroup extends PermissionChoices {
+export interface ExternalPermissionGroup extends PermissionChoices, BehaviorChoices {
   id: string;
   botSlug: string;
   bindingId: string;
@@ -77,6 +93,7 @@ export interface PermissionSource extends PermissionChoices {
   revision: number;
 }
 export interface EffectivePermissions {
+  behaviorPermissions?: EffectiveBehaviorPermission[];
   capabilities: PairingCapability[];
   deniedCapabilities: PairingCapability[];
   delegableCapabilities?: PairingCapability[];
@@ -187,6 +204,18 @@ export function changePermissionGroups(db: DatabaseSync, botSlug: string, raw: G
   if (input.kind === 'create-group' && groups(db, botSlug).length >= 50)
     throw new MessagingError('permission-group-capacity');
   for (const id of input.memberIds) ordinaryPairing(db, botSlug, id, bindingId);
+  const behaviorAllow = [...new Set(input.behaviorAllow ?? existing?.behaviorAllow ?? [])];
+  const behaviorDeny = [...new Set(input.behaviorDeny ?? existing?.behaviorDeny ?? [])];
+  const currentBehavior = behaviorPermissions(db, botSlug);
+  for (const id of [...behaviorAllow, ...behaviorDeny]) {
+    const item = currentBehavior.find((item) => item.id === id);
+    if (
+      !item ||
+      ((input.behaviorAllow !== undefined || input.behaviorDeny !== undefined) &&
+        input.expectedBehaviorRevisions?.[id] !== item.revision)
+    )
+      throw new MessagingError('behavior-permission-stale');
+  }
   const group: ExternalPermissionGroup = {
     id: existing?.id ?? randomUUID(),
     botSlug,
@@ -197,6 +226,8 @@ export function changePermissionGroups(db: DatabaseSync, botSlug: string, raw: G
     delegateAllow: [...new Set(input.delegateAllow ?? existing?.delegateAllow ?? [])],
     delegateDeny: [...new Set(input.delegateDeny ?? existing?.delegateDeny ?? [])],
     memberIds: [...new Set(input.memberIds)],
+    behaviorAllow,
+    behaviorDeny,
     revision: (existing?.revision ?? 0) + 1,
     createdAt: existing?.createdAt ?? at,
     updatedAt: at,
@@ -242,12 +273,19 @@ export function effectivePairingPermissions(
       deny: [],
     }));
   const person = pairings.find((p) => p.purpose === 'conversation');
+  let currentBehavior: EffectiveBehaviorPermission[] = [];
   if (person) {
     const row = db
       .prepare('SELECT body FROM messaging_external_roles WHERE bot_slug = ? AND id = ?')
       .get(botSlug, person.roleId ?? '') as { body: string } | undefined;
     if (row) {
       const role = JSON.parse(row.body) as ExternalUserRole;
+      currentBehavior = resolveBehaviorPermissions(
+        behaviorPermissions(db, botSlug),
+        groups(db, botSlug).filter(
+          (group) => group.bindingId === bindingId && group.memberIds.includes(person.id),
+        ),
+      );
       permissionSources.push({
         kind: 'role',
         id: role.id,
@@ -285,6 +323,7 @@ export function effectivePairingPermissions(
     ...new Set(permissionSources.flatMap((source) => source.delegateDeny ?? [])),
   ];
   return {
+    ...(currentBehavior.length ? { behaviorPermissions: currentBehavior } : {}),
     capabilities: [...new Set(permissionSources.flatMap((source) => source.allow))].filter(
       (cap) => !deniedCapabilities.includes(cap),
     ),
