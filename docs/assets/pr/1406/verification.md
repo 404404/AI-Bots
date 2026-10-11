@@ -46,7 +46,7 @@ The first run exposed stale original cards despite final Lark service readbacks 
 
 Two fresh native requests then qualified the product path: Allow once decision/result seq 181/182 produced `BH1406_SHARED_CARD_ALLOW_1835`; independent Reject decision/result seq 201/202 refused the print command. Both actual original cards displayed the final execution/rejected state with zero buttons, and both result replies were read in Lark. Admissions were handled and Outbox replies provider-accepted. Their Source Events are `im-ed3109e3e4467c845f7a431bd780ee54b88f14ccccc60886374061597669c4da` and `im-425f27f45c2c442a67c6a5dd3dc5e6041ed5754908323bdbf39e64a011bc5f1f`.
 
-Earlier non-shared cards are historical failure evidence; the repair does not replay operations or claim to retrofit private copies. Human feedback on the first full tracer remains pending. No merge or deployment occurred. [Committed sanitized QA record](https://github.com/BotHarness/DeepSeekBot/blob/cefa12fac05856c182bfab4b80f565f7ec074f06/docs/qa/1406-im-group-authority-lark.md).
+Earlier non-shared cards are historical failure evidence; the repair does not replay operations or claim to retrofit private copies. Human feedback on the first full tracer was accepted on 2026-10-11. No PR merge or deployment occurred. [Committed sanitized QA record](https://github.com/BotHarness/DeepSeekBot/blob/cefa12fac05856c182bfab4b80f565f7ec074f06/docs/qa/1406-im-group-authority-lark.md).
 
 ## Receiver and permission cleanup
 
@@ -68,4 +68,6 @@ Use fresh platform-confirmed Lark messages and an eligible private management pa
 
 ## Full Provider Windows check limitation
 
-An additional `npm run check` built successfully but the unchanged update-service tests failed locally while waiting for expected durable job states. This full local attempt is not a passing suite and does not replace Provider CI. Both `plugin-src/host/update-service.mjs` and `test/update-service.test.mjs` match the qualified base; no updater changes are included in this repair. Product exact-head Linux verify passed: 4027 tests passed and 13 skipped; 481 files passed and seven skipped. Prerelease preparation also passed.
+An additional `npm run check` built successfully but finished with 3722 passed, 40 failed and seven skipped. Failures are confined to unchanged image-input settings and update-service tests (the latter reported interrupted/state-unavailable durable jobs). This full local attempt is not a passing suite and does not replace Provider CI. Both `plugin-src/host/update-service.mjs` and `test/update-service.test.mjs` match the qualified base; no updater changes are included in this repair. Product exact-head Linux verify passed: 4027 tests passed and 13 skipped; 481 files passed and seven skipped. Prerelease preparation also passed.
+
+Human first-tracer acceptance: [recorded 2026-10-11](https://github.com/BotHarness/DeepSeekBot/issues/1406#issuecomment-6107833440). Both PRs are ready for review; review/integration remains pending.

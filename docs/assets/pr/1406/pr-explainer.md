@@ -78,7 +78,7 @@ Messaging -> [(Operational Database)]: 组与个人例外
 | 重启后新的 Allow once | ok 原生结果 seq 158 成功，回复已读 |
 | 原卡片最终显示 | ok 修复共享更新后，新批准和拒绝卡片均无按钮 |
 | 接收器与权限清理 | ok 接收器已停，临时配对撤销，路由关闭，个人 Deny 恢复 |
-| 首片真人反馈 | warn 待收集 |
+| 首片真人反馈 | ok 2026-10-11 已接受 |
 | 合并与部署 | no 未执行 |
 
 [完整 UI 截图与操作步骤](https://github.com/BotHarness/DeepSeekBot/pull/1407)。
@@ -89,5 +89,5 @@ Messaging -> [(Operational Database)]: 组与个人例外
 组权限提供 Approve，临时管理配对只授予 Reject。
 原卡片缺少共享更新模式的问题已修复并实测。
 旧卡片保留为失败证据，不重放旧操作。
-Provider 修复为独立 PR，真人反馈仍待收集。
+Provider 修复为独立 PR，首片真人反馈已接受。
 
