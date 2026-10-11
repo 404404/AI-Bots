@@ -21,6 +21,7 @@ import {
 } from './conversation-ingest.js';
 import type { MessagingIdentity } from './identity.js';
 import type { BotPairing, PairingRequest } from './pairing.js';
+import { chatPairingApplies } from './chat-sender.js';
 import {
   trustedSenderReference,
   readSenderPolicy,
@@ -1672,10 +1673,11 @@ export function createInboundMessaging(options: {
     event: MessagingInboundEvent,
     signal: AbortSignal,
   ) => {
-    if (!options.pairing || provider.id !== 'dsh-im/feishu' || event.channel !== 'feishu')
+    if (!options.pairing || !chatPairingApplies(event) || provider.id !== `dsh-im/${event.channel}`)
       return false;
     signal.throwIfAborted();
     const explicit = /^\/pair(?:\s|$)/.test(event.text.trim());
+    if (explicit && event.channel === 'slack') return true;
     const row = database.read((db) =>
       db
         .prepare(
@@ -1720,7 +1722,8 @@ export function createInboundMessaging(options: {
       if (!database.read((db) => senderAdmissionAllowed(db, identity.botSlug, event))) {
         try {
           const request = options.pairing.request(row.id, event, 'conversation');
-          if (request.status === 'pending') options.onPairingRequest?.(request);
+          if (request.status === 'pending' && event.channel === 'feishu')
+            options.onPairingRequest?.(request);
           if (request.status === 'pending')
             setImmediate(() => {
               if (closed || signal.aborted || lease.controller.signal.aborted) return;

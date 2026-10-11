@@ -14,6 +14,14 @@ Where the Bot can speak is decided by Slack: the channels the app was invited to
 
 ## 1. Prepare your environment
 
+### Ordinary chat pairing preview (#1415)
+
+The #1415 source candidate reuses **Bot DM → Channel sidebar → IM roles and pairing** for Slack DMs. Enable **Require pairing for Lark conversations and Slack DMs**, create an ordinary Role, and let the unknown person send a DM to the bound app. Their first message produces only a fixed review notice and a metadata-only request. In **Requests**, assign the existing Role and approve. The fixed approval notice asks them to send a new question; only that new DM reaches the model. **People** shows the current Role and supports revocation; a new message after revocation cannot start model work until newly reviewed.
+
+The switch is Bot-wide and remains off by default. If it was already enabled for Lark, this candidate also restricts Slack DMs. Pairing belongs to one current Bot/App/Binding and verified workspace actor, survives restart and does not transfer on rebinding. Role/group behavior is prompt policy, not a hard mail, filesystem or Shell permission. Slack group pairing and native management controls are separate; `/pair` does not create a Slack management grant in this preview.
+
+Real Slack acceptance for this candidate remains pending. Existing Provider messaging/reaction screenshots below qualify their own earlier scope, not this new pairing flow. Use an independent App and an explicitly coordinated exclusive receiver window. Before reverting to older code, disable the Slack Binding if it relies on the new restriction. See [ADR-0174](adr/0174-slack-dm-chat-pairing-reuses-current-binding-authority.md).
+
 You need a Slack workspace that allows application installation, permission to create an app (or an administrator's help), and a public test channel. Create a PersonaBot in BotHarness and confirm that it can answer a local DM before testing Slack.
 
 Use a BotHarness product with its qualified IM Provider included. Do not separately install an arbitrary dsh-im version or start a second receiver for the same app.

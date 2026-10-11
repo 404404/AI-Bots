@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- A Bot's existing sender-restriction switch now also covers Slack DMs. Review or pair Slack applicants before their next request; before reverting to an older binary, disable the affected Slack Binding because it cannot enforce this gate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)).
+
 - Pairing-review cards add Profile schema Generation 80. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
 
 - External authorization groups add Profile schema Generation 79. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)).
@@ -26,6 +28,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- The reviewed ordinary-chat pairing path extends to Slack DMs through the existing People/Roles/Requests settings, current sender queries and checked original reply route; approval asks for a fresh question and revocation closes later intake. Real Slack acceptance is pending; Slack group and native management controls remain separate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415), [guide](docs/slack-connection.md)).
 
 - Lark authorization groups can select reusable named behavior permissions. A wide Group editor separates management, behavior and members into tabs beside a compact, sidebar-style affected-person preview; its Allow/Deny cells show only checkboxes with accessible names, and its body scrolls while the title and actions remain visible. People show deduplicated current items, every group source and explicit Allow/Deny conflicts with Deny priority, alongside their primary Role and separate management capabilities ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)). Profile schema Generation 81 requires an upgrade backup; rollback needs that backup or a compatible writer.
 
