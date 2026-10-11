@@ -19,8 +19,15 @@ const server = createServer((request, response) => {
     request.headers['x-api-key'] === key &&
     request.headers['x-api-secret'] === secret;
   if (accepted) authenticated++;
-  response.writeHead(accepted ? 200 : 401, { 'content-type': 'text/plain', 'x-private-echo': key });
-  response.end([key, secret, marker, Buffer.from(secret).toString('base64')].join('\n'));
+  response.writeHead(accepted ? 200 : 401, {
+    'content-type': 'text/plain',
+    ...(accepted ? { 'x-private-echo': key } : {}),
+  });
+  response.end(
+    accepted
+      ? [key, secret, marker, Buffer.from(secret).toString('base64')].join('\n')
+      : 'Authentication required',
+  );
 });
 server.listen(port, '127.0.0.1', () =>
   process.stdout.write(JSON.stringify({ phase: 'ready', port, synthetic: true }) + '\n'),

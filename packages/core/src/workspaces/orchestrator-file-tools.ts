@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Context } from '@deepseek-ai/cordis';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy';
+import type { ShellExecutor } from '@deepseek-ai/dsh-shell';
 import * as fileTools from '@deepseek-ai/dsh-tool-fs';
 import * as bashTools from '@deepseek-ai/dsh-tool-bash';
 import type { DshAgentPresetHost } from '../runtime/dsh-bot-agent-adapter.js';
@@ -14,10 +15,13 @@ export async function installOrchestratorFileTools(
   agent: Agent,
   presets: DshAgentPresetHost | undefined,
   rootFor: (name: string, args: unknown) => string,
+  shellFor?: (ctx: Context, shell: ShellExecutor) => ShellExecutor,
 ): Promise<() => Promise<void>> {
   const base = agentCtx.get('sandboxPolicy');
   const fs = presets?.serviceFor?.(agent, 'fs') ?? agentCtx.get('fs');
-  const shell = presets?.serviceFor?.(agent, 'shell') ?? agentCtx.get('shell');
+  const shell = (presets?.serviceFor?.(agent, 'shell') ?? agentCtx.get('shell')) as
+    | ShellExecutor
+    | undefined;
   if (base === undefined || fs === undefined || shell === undefined)
     throw new Error('Orchestrator native filesystem, Shell and Policy Providers are required');
   const callPolicy = new AsyncLocalStorage<Policy>();
@@ -26,7 +30,8 @@ export async function installOrchestratorFileTools(
     name: 'botharness-orchestrator-file-tools',
     apply(ctx: Context) {
       ctx.provide('fs', fs);
-      ctx.provide('shell', shell);
+      if (shellFor === undefined) ctx.provide('shell', shell);
+      else shellFor(ctx, shell);
       ctx.provide('sandboxPolicy', {
         defaultMode: base.defaultMode,
         workspaceRoot: base.workspaceRoot,

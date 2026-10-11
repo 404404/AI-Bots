@@ -4,6 +4,8 @@ import type { BotHarnessCore } from '../plugin.js';
 import { PrivateInputs } from './private-inputs.js';
 import { ProtectedExecution } from './protected-execution.js';
 import type { PrivateInputLog } from './diagnostics.js';
+import { LinuxMcp } from './linux-mcp.js';
+import { nativeExecutionRoot } from '../workspaces/grant-native-tools.js';
 
 const SAFE_TOOLS = new Set([
   'ask_secret',
@@ -19,10 +21,13 @@ export function mountPrivateInputs(
   ctx: Context,
   core: BotHarnessCore,
   enabled: boolean,
+  execution = new ProtectedExecution((phase, details = {}) =>
+    ctx.logger.info('private-input %j', { phase, ...details }),
+  ),
+  linuxMcp?: LinuxMcp,
 ): PrivateInputs {
   const log: PrivateInputLog = (phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details });
-  const execution = new ProtectedExecution(log);
   let mode: 'checking' | 'ordinary' | 'protected' | 'locked' = enabled ? 'protected' : 'checking';
   ctx.inject(['credentials'], (child) => {
     void child.credentials.listRecords().then(
@@ -58,6 +63,15 @@ export function mountPrivateInputs(
     if (mode !== 'protected' && name === 'bash')
       return 'Stored private grants require the protected Profile execution boundary';
     if (
+      mode === 'protected' &&
+      agent !== undefined &&
+      core.ownership.resolve(agent.session.id)?.rootRole === 'orchestrator'
+    ) {
+      if (name === 'bash') return undefined;
+      if (name.startsWith('mcp__') && linuxMcp !== undefined)
+        return linuxMcp.denial(ctx, agent, name);
+    }
+    if (
       !SAFE_TOOLS.has(name) ||
       (name !== 'bash' &&
         (agent === undefined || core.ownership.resolve(agent.session.id) === undefined))
@@ -71,6 +85,20 @@ export function mountPrivateInputs(
       if (mode === 'ordinary' || call.name !== 'bash') return next();
       if (mode !== 'protected')
         throw new Error('Protected execution is required for stored private grants');
+      if (
+        typeof call.arguments === 'object' &&
+        call.arguments !== null &&
+        'run_in_background' in call.arguments &&
+        call.arguments.run_in_background === true
+      )
+        throw new Error('Protected commands require a foreground command');
+      if (
+        call.agent !== undefined &&
+        core.ownership.resolve(call.agent.session.id)?.rootRole === 'orchestrator'
+      ) {
+        nativeExecutionRoot(core, call.agent.session, 'bash', call.arguments);
+        return next();
+      }
       const args = call.arguments;
       if (
         typeof args !== 'object' ||

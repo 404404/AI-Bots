@@ -6,7 +6,7 @@ import type { PrivateInputLog } from './diagnostics.js';
 
 const execute = promisify(execFile);
 export const PRIVATE_COMMAND_IMAGE =
-  'node@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1';
+  'node@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392';
 const AUTHENTICATED_STATUS_CLI = String.raw`
 let input='';
 process.stdin.setEncoding('utf8');
@@ -63,6 +63,7 @@ export class ProtectedExecution {
   #closed = false;
   readonly #children = new Set<ReturnType<typeof spawn>>();
   readonly #containers = new Set<string>();
+  readonly #groups = new Set<string>();
   constructor(readonly log: PrivateInputLog) {}
 
   async qualified(): Promise<boolean> {
@@ -197,6 +198,54 @@ export class ProtectedExecution {
       });
       this.#containers.delete(name);
     } catch {
+      try {
+        const { stdout } = await execute(
+          'docker',
+          ['ps', '--all', '--quiet', '--filter', 'name=^/' + name + '$'],
+          { windowsHide: true, timeout: 10_000, maxBuffer: 1024 },
+        );
+        if (!stdout.trim()) {
+          this.#containers.delete(name);
+          return;
+        }
+      } catch {}
+      this.log('container-cleanup-failed');
+    }
+  }
+
+  trackContainer(name: string): () => Promise<void> {
+    if (this.#closed) throw new Error('Protected execution is closed');
+    this.#containers.add(name);
+    let cleanup: Promise<void> | undefined;
+    return () => (cleanup ??= this.#remove(name));
+  }
+
+  trackContainerGroup(label: string): () => Promise<void> {
+    if (this.#closed || !/^ai\.botharness\.mcp-owner=[0-9a-f-]{36}$/.test(label))
+      throw new Error('Invalid Linux MCP owner');
+    this.#groups.add(label);
+    let cleanup: Promise<void> | undefined;
+    return () => (cleanup ??= this.#removeGroup(label));
+  }
+
+  async #removeGroup(label: string): Promise<void> {
+    try {
+      const { stdout } = await execute(
+        'docker',
+        ['ps', '--all', '--quiet', '--filter', 'label=' + label],
+        { windowsHide: true, timeout: 10_000, maxBuffer: 4096 },
+      );
+      const ids = stdout.trim().split(/\s+/).filter(Boolean);
+      if (ids.some((id) => !/^[0-9a-f]{12,64}$/.test(id)))
+        throw new Error('Invalid container identity');
+      if (ids.length)
+        await execute('docker', ['rm', '--force', ...ids], {
+          windowsHide: true,
+          timeout: 10_000,
+          maxBuffer: 4096,
+        });
+      this.#groups.delete(label);
+    } catch {
       this.log('container-cleanup-failed');
     }
   }
@@ -205,5 +254,6 @@ export class ProtectedExecution {
     this.#closed = true;
     for (const child of this.#children) child.kill();
     await Promise.allSettled([...this.#containers].map((name) => this.#remove(name)));
+    await Promise.allSettled([...this.#groups].map((label) => this.#removeGroup(label)));
   }
 }

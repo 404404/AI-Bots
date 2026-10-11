@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve, basename } from 'node:path';
+import { join, resolve } from 'node:path';
 import { zstdDecompressSync } from 'node:zlib';
 
 const home = resolve(process.argv[2] ?? '');
@@ -28,7 +28,7 @@ const violations = [];
 for (const entry of readdirSync(home, { recursive: true, withFileTypes: true })) {
   if (!entry.isFile()) continue;
   const file = join(entry.parentPath, entry.name);
-  if (basename(file) === '.credentials.yaml' || basename(file) === 'wire-canary-probe.mjs')
+  if (file === join(home, '.credentials.yaml') || file === join(home, 'wire-canary-probe.mjs'))
     continue;
   let data = readFileSync(file);
   if (file.endsWith('.zstd')) {

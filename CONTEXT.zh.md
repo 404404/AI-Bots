@@ -793,7 +793,7 @@ _避免使用_：tab、page、settings item、Channel sidebar entry
 _避免使用_：whitelist、permissions、ACL
 
 **Credential reference**：
-指向由 DSH credentials service 保存的 Feishu App Secret 的引用；secret 本身永远不会进入 config、repo 或 log。
+指向 Host 的 DSH Credentials Service 所保存私密信息的不透明引用。拥有该能力的应用定义授权范围：既有应用凭据按 IM 应用，私密输入按 PersonaBot 与账号。Agent 只获得引用和配置状态；受保护的消费者在 Host 内解析原值，不将原值返回 Chat 或模型（Spec #1378）。
 _避免使用_：secret、API key、token
 
 ### 遥测与推广活动
