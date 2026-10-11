@@ -32,7 +32,8 @@ test. Do not publish an image containing unrelated/private conversations.
 
 ## Assertions and evidence limits
 
-- Two fresh Sessions per route exercise Chinese/English "no tools" acknowledgments,
+- `BH_E2E_ROUNDS` creates that many fresh Bots per route (default two) to exercise
+  Chinese/English "no tools" acknowledgments,
   ordinary followups, short and capability questions, native question/answer cards,
   optional image followups, explicit silence, replying after silence and Group
   mention reply/FYI cases. Use `BH_E2E_SCENARIOS` to select exact scenario names.
@@ -46,6 +47,7 @@ test. Do not publish an image containing unrelated/private conversations.
   routes and Tool names, but not credentials, raw replies or private Session text.
   A failed case or transport exception yields a nonzero exit. Interrupted runs are
   partial evidence, not a completed matrix; inspect recorded counts and failures.
+  An unsettled case marks remaining cases in that round as skipped, failed entries.
 - Distinguish missing delivery from image-content errors, provider/protocol errors,
   permission waits and test-harness failures. Do not include question/approval cards
   in the count of actual answers.

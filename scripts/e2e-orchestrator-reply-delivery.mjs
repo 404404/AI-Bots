@@ -351,7 +351,24 @@ for (const selection of requested) {
         JSON.stringify({ imageScenarioIncluded: Boolean(image), results }, null, 2),
       );
       console.log(JSON.stringify(result));
-      if (!settled) break;
+      if (!settled) {
+        for (const skipped of cases.slice(cases.indexOf(scenario) + 1))
+          results.push({
+            provider,
+            model,
+            effort,
+            round,
+            scenario: skipped.name,
+            pass: false,
+            skipped: true,
+            skipReason: 'previous-scenario-unsettled',
+          });
+        writeFileSync(
+          resolve(evidence, 'reply-delivery.json'),
+          JSON.stringify({ imageScenarioIncluded: Boolean(image), results }, null, 2),
+        );
+        break;
+      }
     }
   }
 }
