@@ -4,8 +4,8 @@ subtitle: "当前权限按来源合并，显式拒绝优先"
 lang: zh
 template: doc
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1407
-base: fe84f5fd952ca7bf2d7232b8beda590eb38971ec
-head: 550898dd4cc3f11198e1eab904755826906381f1
+base: d87b39104305cd9bf2f2420ab018d9e31767741f
+head: cefa12fac05856c182bfab4b80f565f7ec074f06
 generated: 2026-10-11
 ---
 ## A 哪些行为改变了
@@ -40,7 +40,7 @@ Messaging -> [(Operational Database)]: 组与个人例外
 ```ts src=packages/core/src/messaging/permission-groups.ts lines=257-269 hl=261-265
 ```
 
-[精确 head 的当前权限解析器](https://github.com/BotHarness/DeepSeekBot/blob/550898dd4cc3f11198e1eab904755826906381f1/packages/core/src/messaging/permission-groups.ts#L193)。
+[精确 head 的当前权限解析器](https://github.com/BotHarness/DeepSeekBot/blob/cefa12fac05856c182bfab4b80f565f7ec074f06/packages/core/src/messaging/permission-groups.ts#L193)。
 
 运行验证中，两个组均允许批准和拒绝。
 个人例外拒绝批准，有效能力只剩拒绝。
@@ -71,15 +71,23 @@ Messaging -> [(Operational Database)]: 组与个人例外
 | 实际 Client 写入与重启 | ok 当前组、例外与来源保留 |
 | Web Human 实际回复 | ok WEB1406_OK |
 | 首条 Lark 当前权限查询 | ok 平台确认与模型 Tool 调用 |
-| 完整 Linux CI | ok 3994 个测试通过，13 个跳过，构建与 docs 通过 |
-| 真实 Lark 审批与延迟卡片 | warn 用户聊天可见，自动化控制中断 |
-| 首片真人反馈 | warn 待完整验收后收集 |
+| 前一 head 的完整 Linux CI | ok 3994 个测试通过，13 个跳过，构建与 docs 通过 |
+| 当前 head 的 CI | warn 已触发新检查，运行中 |
+| 真实 Lark Allow once / Reject | ok 原生结果与实际私聊回复对应 |
+| 延迟卡片遇到组 Deny | ok 无执行结果，同卡 Reject 仍有效 |
+| 重启后新的 Allow once | ok 原生结果 seq 158 成功，回复已读 |
+| 原卡片最终显示 | ok 修复共享更新后，新批准和拒绝卡片均无按钮 |
+| 接收器与权限清理 | ok 接收器已停，临时配对撤销，路由关闭，个人 Deny 恢复 |
+| 首片真人反馈 | warn 待收集 |
 | 合并与部署 | no 未执行 |
 
 [完整 UI 截图与操作步骤](https://github.com/BotHarness/DeepSeekBot/pull/1407)。
-[完整 Linux CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38121674985)。
+[当前 head 的 Linux CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38129800586)。
 
-恢复自动化控制后，确认接收窗口和真实消息平台 ID。
-验证 Allow once、独立 Reject 和延迟卡片拒绝。
-重启后再核对实际审批，然后收集真人反馈。
+本轮只运行打印标记的命令。
+独立 Reject 与延迟 Deny 均未执行命令。
+组权限提供 Approve，临时管理配对只授予 Reject。
+原卡片缺少共享更新模式的问题已修复并实测。
+旧卡片保留为失败证据，不重放旧操作。
+Provider 修复为独立 PR，真人反馈仍待收集。
 
