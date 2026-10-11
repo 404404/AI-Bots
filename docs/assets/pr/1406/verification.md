@@ -15,7 +15,7 @@ Post-merge local checks: typecheck, lint, format and build passed; 69 core pairi
 
 ## Verified Linux CI
 
-- Full Linux CI passed at previous head `550898dd`: lint, format, typecheck, slides, tests/docs, build, and generated-file consistency. 3994 tests passed and 13 skipped; 480 files passed and 7 skipped. [Successful run](https://github.com/BotHarness/DeepSeekBot/actions/runs/38121674985). Current head adopts the bounded Provider rendering repair; its [fresh CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38129800586) is running and is not inferred from the previous run.
+- Full Linux CI passed at previous head `550898dd`: lint, format, typecheck, slides, tests/docs, build, and generated-file consistency. 3994 tests passed and 13 skipped; 480 files passed and 7 skipped. [Successful run](https://github.com/BotHarness/DeepSeekBot/actions/runs/38121674985). Current head adopts the bounded Provider rendering repair; its [fresh CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38129800586) passed and is not inferred from the previous run.
 - After pin adoption, 46 relevant pin/artifact/approval tests, lint, format, typecheck and build passed. An additional unchanged POSIX directory-fsync probe has nine `EPERM` failures on native Windows; no full Windows suite is claimed green. The Provider's 105 relevant public Delivery/Lark/controller tests, build and package verification passed; its new create→patch regression failed before the fix.
 
 ## Real Lark decisions — recovered browser, 2026-10-11
