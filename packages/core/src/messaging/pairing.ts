@@ -5,6 +5,11 @@ import { OperationalDatabaseError } from '../database/owner.js';
 import { assertMessagingIdentity, readMessagingIdentity } from './identity.js';
 import { MessagingError, type MessagingInboundEvent } from './provider.js';
 import { externalUserRoles } from './sender-access.js';
+import {
+  effectivePairingPermissions,
+  type PermissionChoices,
+  type EffectivePermissions,
+} from './permission-groups.js';
 
 export const pairingCapabilities = ['approve', 'reject', 'answer', 'save-rules'] as const;
 export type PairingCapability = (typeof pairingCapabilities)[number];
@@ -56,6 +61,8 @@ export interface PairingRequest {
   purpose?: 'management' | 'conversation';
   roleId?: string;
   roleRevision?: number;
+  permissionExceptions?: PermissionChoices;
+  effectivePermissions?: EffectivePermissions;
   reply?: MessagingInboundEvent['reply'];
   notifications?: {
     key: string;
@@ -125,7 +132,21 @@ export function createBotPairing(
         externalUserRoles(db, value.botSlug).find((item) => item.id === value.roleId),
       );
       if (!role) return { ...value, status: 'unavailable', capabilities: [] };
-      return { ...value, capabilities: role.capabilities, roleRevision: role.revision };
+      const effectivePermissions = database.read((db) =>
+        effectivePairingPermissions(db, value.botSlug, value.bindingId, value.actorId),
+      );
+      return {
+        ...value,
+        capabilities: effectivePermissions.capabilities,
+        effectivePermissions,
+        roleRevision: role.revision,
+      };
+    }
+    if (value.status === 'approved') {
+      const effectivePermissions = database.read((db) =>
+        effectivePairingPermissions(db, value.botSlug, value.bindingId, value.actorId),
+      );
+      return { ...value, capabilities: effectivePermissions.capabilities, effectivePermissions };
     }
     return value;
   };
@@ -280,7 +301,7 @@ export function createBotPairing(
         }
         const reviewedAt = now().toISOString();
         const next: PairingRequest = {
-          ...value,
+          ...stored,
           status:
             input.kind === 'approve'
               ? 'approved'

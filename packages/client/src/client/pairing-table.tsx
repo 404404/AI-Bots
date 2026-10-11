@@ -16,6 +16,8 @@ export function PairingTable<Row extends { id: string }>({
   data,
   columns,
   selectedId,
+  selectedIds,
+  disabled = false,
   select,
   label,
   empty,
@@ -24,6 +26,8 @@ export function PairingTable<Row extends { id: string }>({
   data: Row[];
   columns: ColumnDef<Row>[];
   selectedId?: string | undefined;
+  selectedIds?: string[] | undefined;
+  disabled?: boolean | undefined;
   select(row: Row): void;
   label: string;
   empty: string;
@@ -38,11 +42,13 @@ export function PairingTable<Row extends { id: string }>({
     state: {
       globalFilter: filter,
       sorting,
-      rowSelection: selectedId ? { [selectedId]: true } : {},
+      rowSelection: Object.fromEntries(
+        (selectedIds ?? (selectedId ? [selectedId] : [])).map((id) => [id, true]),
+      ),
     },
     onGlobalFilterChange: setFilter,
     onSortingChange: setSorting,
-    enableMultiRowSelection: false,
+    enableMultiRowSelection: !!selectedIds,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -109,6 +115,7 @@ export function PairingTable<Row extends { id: string }>({
                       name: String(row.getValue(columns[0]?.id ?? 'name') ?? row.id),
                     })}
                     checked={row.getIsSelected()}
+                    disabled={disabled}
                     onChange={() => select(row.original)}
                   />
                 </td>
@@ -118,6 +125,7 @@ export function PairingTable<Row extends { id: string }>({
                       <button
                         type="button"
                         className="bh-pairing-name"
+                        disabled={disabled}
                         onClick={() => select(row.original)}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}

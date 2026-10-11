@@ -7,6 +7,7 @@ import { readMessagingIdentity } from './identity.js';
 import type { PairingRequest } from './pairing.js';
 import { MessagingError } from './provider.js';
 import { externalUserRoles, readSenderPolicy, trustedSenderReference } from './sender-access.js';
+import { effectivePairingPermissions } from './permission-groups.js';
 
 const querySchema = z
   .object({
@@ -63,6 +64,12 @@ function people(db: DatabaseSync, botSlug: string) {
         pairingId: pairing.id,
         pairingRevision: pairing.revision,
         role,
+        effectivePermissions: effectivePairingPermissions(
+          db,
+          botSlug,
+          identity.id,
+          pairing.actorId,
+        ),
       },
     ];
   });

@@ -1,6 +1,6 @@
 # BotHarness 架构与数据流
 
-#1383 复用既有 application-defined Bot Schedule → Source Event → Bot Inbox → Orchestrator 路径。Schedule 只保存引用；重启后仍由 native Credentials 及当前账号绑定核验真实消费，既有执行与 Channel 发送授权分别生效。受保护 Profile 允许 owning Orchestrator 使用四个 `bot_schedule_*` 管理工具。新建私密输入卡还需 Host 当前轮次的真实 Human Source Event；旧 Session 历史、目的 Channel 或模型自述不能提供此证明。无人值守缺少有效配置时立即返回安全 Owner-action 错误，不创建 waiter；详见 [ADR-0168](../adr/0168-private-input-interaction-follows-current-turn-source-events.md)。
+#1383 复用既有 application-defined Bot Schedule → Source Event → Bot Inbox → Orchestrator 路径。Schedule 只保存引用；重启后仍由 native Credentials 及当前账号绑定核验真实消费，既有执行与 Channel 发送授权分别生效。受保护 Profile 允许 owning Orchestrator 使用四个 `bot_schedule_*` 管理工具。新建私密输入卡还需 Host 当前轮次的真实 Human Source Event；旧 Session 历史、目的 Channel 或模型自述不能提供此证明。无人值守缺少有效配置时立即返回安全 Owner-action 错误，不创建 waiter；详见 [ADR-0169](../adr/0169-private-input-interaction-follows-current-turn-source-events.md)。
 
 #1382 在同一个 PrivateInputs owner 内加入 PersonaBot 创建身份与账号范围的 native Credentials 版本记录。Owner 从既有 Web Chat 卡片打开空白替换卡或撤销本地访问；新 grant 激活及 canonical Channel configured resolution 都成功后才返回引用。每次真实消费在账号串行队列内核对当前 UUID，登记 AbortSignal 后释放队列；替换／撤销写入新版本或持久 tombstone，并尝试停止既有使用。宽执行授权不能越过版本检查，停止结果区分已停止、已完成与不确定，401／403 只返回状态及安全修复建议。启动恢复先于 Owner 写入，撤销跨重启保留。详见 [ADR-0167](../adr/0167-private-account-versions-fence-consumption-and-revocation.md)；旧程序不理解 tombstone，回滚需恢复完整升级前备份或向前修复。
 
@@ -298,6 +298,10 @@ PersonaBot Profile 的 IM 连接经现有 Typert/API Gateway 选择账号和已�
 首次能力只能由认证 Web Human 显式勾选并按当前申请 revision 审核；定位码不能兑换权限，首位申请者不会自动成为管理员。能力仅覆盖当前 Bot 的批准、拒绝、回答及保存规则资格，不扩展 VPS、原生 DSH API、其他 Bot 或审批人管理。每次使用重查当前 Binding、Bot、真实 actor、能力和状态；暂停期间不可用，永久撤销后重新配对必须重新审核。该切片交付配对与 Web 审核，IM 审批／提问控件仍由后续切片接入原生权威。参数、恢复及审计边界见 [ADR-0136](../adr/0136-lark-pairing-is-reviewed-bot-scoped-operational-authority.md)。
 
 ### Lark 普通角色与自动申请（ADR-0165）
+
+[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406) adds application-defined External Authorization Groups and person exceptions at the same Messaging owner. One current Chat pairing can belong to multiple groups in its exact Bot/App Binding while keeping one primary behavior Role. Each current resolution unions Role, group, legacy management and person Allow, then removes any explicit Deny; private native delivery, decision and unused approval checks use this result. Group membership cannot approve chat or mint a management destination, and revoke/re-pair never inherits old member IDs or exceptions. Direct authenticated Web Human input retains default complete product authority and native execution approval. Generation 79 stores bounded revisioned group records in the Operational Database; existing authenticated senderAccess commands, snapshot and on-demand Tools carry the current sources without a second Consumer or cache. The Client adds Groups, scoped member selection and personal exceptions to pairing settings. See [ADR-0168](../adr/0168-external-groups-are-current-scoped-management-authority.md) for migration and boundaries.
+
+#1406 在同一 Messaging owner 增加应用定义的 External Authorization Group 与个人例外。当前 Chat pairing 可加入同一 Bot/App Binding 下的多个授权组，仍保留一个主行为 Role。每次解析先合并 Role、组、已有管理配对及个人 Allow，再扣除任意显式 Deny；私聊原生审批的投递、决定及尚未使用的批准都读取此结果。入组不批准聊天、不创建管理目的地，撤销后重新配对不继承旧成员 ID 或例外。直接认证的 Web Human 输入默认保留完整产品权限与原生执行审批。Generation 79 在 Operational Database 保存有界且按 revision 修改的组记录；沿用认证 senderAccess 命令、快照与按需 Tools 展示当前来源，不增加 Consumer 或缓存。Client 配对设置加入授权组、范围内成员选择及个人例外；迁移与边界见 ADR-0168。
 
 人员、角色与申请表格的创建／修改时间来自 Messaging owner 持久化的 JSON 元数据，不由 Client 加载时间推断；读取和通知投递记账不推进修改时间。旧记录未记录的时间保持未知。时间字段是兼容的可选元数据，沿用 Operational Database authority，不增加 SQL schema generation。
 
