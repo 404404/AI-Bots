@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Group behavior items can declare mutual exclusions. Current writers reject incompatible effective Allows; stop policy editing before reverting to a writer that ignores these declarations ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)).
+
 - A Bot's existing sender-restriction switch now also covers Slack DMs. Review or pair Slack applicants before their next request; before reverting to an older binary, disable the affected Slack Binding because it cannot enforce this gate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)).
 
 - Pairing-review cards add Profile schema Generation 80. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)).
@@ -28,6 +30,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- Group behavior items support manually declared mutual exclusions with searchable selection, affected-person/source previews and current-revision checks. Settings and Host mutations refuse incompatible effective Allows, including membership changes and removal of a protecting Deny; explicit Deny still takes precedence ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)).
 
 - The reviewed ordinary-chat pairing path extends to Slack DMs through the existing People/Roles/Requests settings, current sender queries and checked original reply route; approval asks for a fresh question and revocation closes later intake. A three-stage local wizard and private loader reuse separate Slack QA1/QA2/QA3 slots across worktrees while preserving Lark configuration; setup never starts a receiver. The bilingual guide includes actual DM-scope and full-flow screenshots, permission purposes and reinstallation. The isolated ordinary-DM flow passed native execution/revocation/restart checks and Human feedback; Slack group and native management controls remain separate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415), [guide](docs/slack-connection.md)).
 

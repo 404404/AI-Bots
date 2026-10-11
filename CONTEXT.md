@@ -502,6 +502,10 @@ _Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBA
 A named, reusable description of an external person's permitted or prohibited behavior, shared across a PersonaBot's authorization groups. Explicit Deny of the same item wins over Allow; the resulting policy guides the model within the primary Role's constraints and is not a resource ACL or management capability.
 _Avoid_: native permission, copied Role, enforced Shell policy, semantic conflict proof
 
+**Declared behavior exclusion**:
+A Human-authored mutual incompatibility between two Behavior permission items in one PersonaBot. Both items cannot be effectively allowed for the same paired person; an explicit Deny of either item resolves the incompatibility. It describes authored policy intent, not proof that arbitrary natural-language policies are consistent.
+_Avoid_: inferred text contradiction, resource isolation, group-order precedence
+
 **Person permission exception**:
 An explicit management Allow or Deny attached to one current Chat pairing, alongside its Role and group contributions; any applicable explicit Deny takes precedence. It never grants authenticated Web Human provenance.
 _Avoid_: Super Admin pairing, behavior Role override, permanent platform-user grant

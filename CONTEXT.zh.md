@@ -500,6 +500,10 @@ _避免使用_：Channel Group、平台会话群、复制 Role、原生 DSH RBAC
 一个可命名、可复用的外部人员行为描述，供同一 PersonaBot 的多个授权组引用并允许或拒绝。同项显式 Deny 优先；生效策略在主 Role 约束内指导模型，不是资源 ACL 或管理能力。
 _避免使用_：原生权限、复制 Role、强制 Shell 策略、语义冲突证明
 
+**Declared behavior exclusion**：
+Human 为同一 PersonaBot 的两个 Behavior permission item 明确声明的双向不兼容关系。不能为同一配对人员同时有效允许这两项；明确拒绝其中一项即可消除不兼容。这代表人工声明的策略意图，不证明任意自然语言策略一致。
+_避免使用_：自动推断文字矛盾、资源隔离、按组顺序决定优先级
+
 **Person permission exception**：
 绑定一次当前 Chat pairing 的显式管理 Allow／Deny，与其 Role 及授权组贡献共同生效；任意适用的显式 Deny 优先。它不会授予已认证 Web Human 的来源身份。
 _避免使用_：Super Admin 配对、行为 Role 覆盖、永久平台用户授权

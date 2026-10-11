@@ -5,6 +5,7 @@ import type { PairingCapability, PairingRequest } from './pairing.js';
 import type { ExternalUserRole } from './sender-access.js';
 import { readMessagingIdentity } from './identity.js';
 import { MessagingError } from './provider.js';
+import { assertBehaviorCompatibility } from './behavior-compatibility.js';
 import {
   behaviorPermissions,
   resolveBehaviorPermissions,
@@ -186,6 +187,12 @@ export function changePermissionGroups(db: DatabaseSync, botSlug: string, raw: G
   if (input.kind !== 'create-group' && (!existing || existing.revision !== input.expectedRevision))
     throw new MessagingError('permission-group-stale');
   if (input.kind === 'delete-group') {
+    assertBehaviorCompatibility(
+      db,
+      botSlug,
+      behaviorPermissions(db, botSlug),
+      groups(db, botSlug).filter((group) => group.id !== input.id),
+    );
     db.prepare('DELETE FROM messaging_permission_groups WHERE id = ? AND bot_slug = ?').run(
       input.id,
       botSlug,
@@ -232,6 +239,10 @@ export function changePermissionGroups(db: DatabaseSync, botSlug: string, raw: G
     createdAt: existing?.createdAt ?? at,
     updatedAt: at,
   };
+  assertBehaviorCompatibility(db, botSlug, currentBehavior, [
+    ...groups(db, botSlug).filter((entry) => entry.id !== group.id),
+    group,
+  ]);
   db.prepare(
     'INSERT INTO messaging_permission_groups (id, bot_slug, binding_id, body) VALUES (?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET body = excluded.body',
   ).run(group.id, botSlug, bindingId, JSON.stringify(group));
