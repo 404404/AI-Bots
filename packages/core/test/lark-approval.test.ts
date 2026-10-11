@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import type { Agent } from '@deepseek-ai/dsh-agent';
 import type { ToolExecution } from '@deepseek-ai/dsh-tools';
 import { createCore, type BotHarnessCore } from '../src/plugin.js';
+import { createBridgeMethods } from '../src/bridge/methods.js';
 import { createDshImProvider, type DshImOutboundService } from '../src/messaging/dsh-im.js';
 import {
   MessagingProviderError,
@@ -264,6 +265,7 @@ it('exact Lark rules require a private second confirmation, are idempotent, and 
   expect(f.cards.mock.calls.at(-1)![2]).toMatchObject({
     ruleConfirmation: { id: confirmation.id, kind: 'exact' },
   });
+  expect(f.cards.mock.calls.at(-1)![2].detail).toContain(confirmation.scopeKey);
   expect(await f.ruleAction(first.delivery.id, 'preview-exact')).toMatchObject({
     status: 'queued',
   });
@@ -327,6 +329,44 @@ async function savedExact() {
   expect(await first.answer).toBe('allowed-once');
   return { ...f, first };
 }
+
+it.each(['cancel', 'scope', 'input', 'untrack'] as const)(
+  'a %s change during canonical decision append cannot activate a standing rule',
+  async (change) => {
+    const f = await fixture(true, true);
+    const first = await f.start();
+    await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+    const append = f.core.channels.appendMessage.bind(f.core.channels);
+    let release!: () => void;
+    const delayed = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let writing = false;
+    vi.spyOn(f.core.channels, 'appendMessage').mockImplementation(async (id, message) => {
+      if (message.toolApprovalDecision) {
+        writing = true;
+        await delayed;
+      }
+      return append(id, message);
+    });
+    const confirmed = f.owner.decide(
+      'ada',
+      first.delivery.requestMessageId!,
+      'allowed-always-exact',
+    );
+    await vi.waitFor(() => expect(writing).toBe(true));
+    if (change === 'cancel') f.owner.close();
+    if (change === 'untrack') first.untrack?.();
+    if (change === 'scope')
+      Object.assign(first.execution.agent!.session.header, { cwd: '/tmp/new-scope' });
+    if (change === 'input')
+      Object.assign(first.execution.arguments as Record<string, unknown>, { command: 'changed' });
+    release();
+    expect(await confirmed).toBe(false);
+    expect(await first.answer).not.toBe('allowed-once');
+    expect(f.core.toolRules.list('ada').some((rule) => !rule.revokedAt)).toBe(false);
+  },
+);
 
 it('creator pairing revocation updates only its own receipt and re-pairing cannot restore the saved rule', async () => {
   const f = await savedExact();
@@ -424,6 +464,25 @@ it.each(['binding', 'defaults', 'bot'] as const)(
     ).toBe(false);
   },
 );
+
+it('Web revocation updates the saved-rule receipt from the same canonical rule', async () => {
+  const f = await savedExact();
+  const rule = f.core.toolRules.list('ada')[0]!;
+  expect(
+    createBridgeMethods({ ...f.core }).toolApprovalRuleRevoke({ slug: 'ada', id: rule.id }),
+  ).toMatchObject({
+    ok: true,
+  });
+  await vi.waitFor(() =>
+    expect(f.cards.mock.calls.at(-1)![2]).toMatchObject({
+      title: 'Approval rule disabled / 审批规则已停用',
+      status: 'expired',
+    }),
+  );
+  expect(f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.savedRuleStatus).toBe(
+    'revoked',
+  );
+});
 
 it('removing one save-rules source preserves a standing rule while another current group still grants it', async () => {
   const f = await savedExact();

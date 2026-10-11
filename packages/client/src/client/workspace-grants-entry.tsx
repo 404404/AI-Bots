@@ -808,6 +808,8 @@ export function WorkspaceGrantsEntry({
                       <div className="bh-note">
                         {t('approval.cwd', { path: approvalRulePath(rule) })}
                       </div>
+                      <div className="bh-note">{t('approval.ruleScope')}</div>
+                      <pre className="bh-tool-approval-input">{rule.scopeKey}</pre>
                       {rule.externalCreator ? (
                         <div className="bh-note">
                           {t('approval.externalCreator', { actor: rule.externalCreator.actorId })}

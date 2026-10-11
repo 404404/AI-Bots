@@ -451,18 +451,26 @@ export class ChannelToolApproval {
         if (rule !== undefined) this.#rules?.revoke(botSlug, rule.id);
         return false;
       }
-      if (external && (!external.authorized() || (kind && !external.rule?.authorized()))) {
+      const currentOwner = this.#ownership.resolve(tracked.sessionId);
+      if (
+        this.#pending.get(messageId) !== pending ||
+        pending.signal?.aborted ||
+        Date.parse(pending.notice.expiresAt) <= Date.now() ||
+        this.#tracked.get(callKey(pending.sessionId, pending.callId)) !== tracked ||
+        !currentOwner ||
+        currentOwner.botSlug !== tracked.botSlug ||
+        this.#scope(tracked.agent, currentOwner) !== tracked.scopeKey ||
+        inputOf(tracked.execution) !== tracked.input ||
+        tracked.execution.name !== tracked.toolName ||
+        tracked.execution.callId !== tracked.callId ||
+        (external && (!external.authorized() || (kind && !external.rule?.authorized())))
+      ) {
         if (rule) this.#rules?.revoke(botSlug, rule.id);
         this.#settle(messageId, 'unavailable');
         return false;
       }
       if (rule !== undefined) this.#rules?.activate(botSlug, rule.id);
       if (rule !== undefined) external?.onRuleSaved?.(rule);
-      if (this.#pending.get(messageId) !== pending || pending.signal?.aborted) return false;
-      if (external && !external.authorized()) {
-        this.#settle(messageId, 'unavailable');
-        return false;
-      }
       if (external && outcome !== 'rejected')
         tracked.authorized = () =>
           external.authorized() && (!kind || external.rule?.authorized() === true);

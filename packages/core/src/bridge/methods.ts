@@ -3970,6 +3970,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (slug === undefined || id === undefined) return invalidInput('slug and id are required');
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
       const rule = deps.toolRules?.revoke(slug, id);
+      if (rule) deps.externalMessaging?.approvals.refreshRules(slug);
       return rule === undefined
         ? invalidInput('Unknown tool approval rule')
         : { ok: true, value: { rule } };

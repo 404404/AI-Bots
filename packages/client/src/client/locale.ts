@@ -2548,6 +2548,7 @@ export const zh = {
   'approval.cancel': '取消',
   'approval.ruleSaved': '已保存自动批准规则并批准本次调用',
   'approval.rulesTitle': '自动批准规则',
+  'approval.ruleScope': '规则范围：执行角色、目录及 Grant ID／写入版本',
   'approval.ruleActive': '有效',
   'approval.ruleInactive': '已停用',
   'approval.externalCreator':
@@ -5487,6 +5488,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.cancel': 'Cancel',
   'approval.ruleSaved': 'Automatic approval rule saved; this call was approved',
   'approval.rulesTitle': 'Automatic approval rules',
+  'approval.ruleScope': 'Rule scope: execution role, directory and Grant IDs/write revisions',
   'approval.ruleActive': 'Active',
   'approval.ruleInactive': 'Disabled',
   'approval.externalCreator':

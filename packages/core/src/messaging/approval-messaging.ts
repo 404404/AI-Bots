@@ -199,6 +199,11 @@ export function createApprovalMessaging(options: {
   };
   const render = (value: ApprovalDelivery): MessagingApprovalCard => {
     const notice = canonical(value);
+    const ruleScope =
+      value.ruleConfirmation?.scopeKey ??
+      (value.savedRuleId
+        ? owner?.rule(value.botSlug, value.savedRuleId)?.scopeKey
+        : owner?.ruleScope(value.botSlug, value.requestMessageId ?? '')?.scopeKey);
     const labels: Record<MessagingApprovalCard['status'], string> = {
       'web-required':
         'Native session authorization; review in Web / 此请求授予原生会话权限，请在 Web 审核',
@@ -228,6 +233,11 @@ export function createApprovalMessaging(options: {
         : []),
       ...(resultText.has(value.id) ? [resultText.get(value.id)!] : []),
       ...(notice ? [notice.toolName, notice.role, notice.cwd, notice.input] : []),
+      ...(ruleScope
+        ? [
+            `Rule scope (execution role, directory, Grant IDs/write revisions) / 规则范围（执行角色、目录、Grant ID／写入版本）:\n${ruleScope}`,
+          ]
+        : []),
     ].join('\n');
     const detail =
       fullDetail.length <= 16000
