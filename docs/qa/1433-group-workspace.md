@@ -16,7 +16,40 @@ Focused regressions cover initially unloaded members, eligible-only defaults, su
 
 Updated validation: 16 focused files / 254 tests pass; typecheck, lint including ledger checks, format check and build pass.
 
-The task-owned Host has restarted from this build, and a new three-Bot fixture plus two disposable directories are prepared without creating Grants. Current T3 navigation and screenshot attempts time out while the preview reports not visible. Native default-all/subset runs and refreshed screenshots are therefore pending; earlier screenshots must not be used to satisfy the screenshot-conditioned merge instruction.
+### Refreshed native run and screenshots
+
+The task-owned isolated Host runs implementation `7204043f036833589f1413b90cee7630f4e889c8`. On October 12, 2026, T3 capture recovered; each published image was visually inspected, and stale captures were discarded. Group and DM both use the native 380 CSS px modal. Group crops are 420 × 650 screenshot pixels; the DM crop excludes surrounding private chat content.
+
+1. Open a new three-Bot Group's workspace chip: all three eligible Bots are checked by default. Enter the disposable default-all directory, preview three targets, and submit through the UI. All three rows show **New Grant created**.
+2. Return to selection, uncheck Unselected QA, and preview a separate subset directory for Selected QA and Partial QA. Remove Partial QA using canonical membership fixture setup after preview, then submit through the real UI: Selected QA succeeds and Partial QA fails with **Bot is no longer an eligible Group member**.
+3. Use **Read back and retry** twice. Successful Grant identities and counts do not change. A second three-Bot Group confirms the already authorized default-all directory: all three rows show **Authorized · reused**.
+4. Open Selected QA's existing DM Workspace Grants modal: Memory Repository and the three folder rows remain on the shared compact card surface. Capture the reuse result and DM comparison in light appearance too.
+
+Canonical readback uses `workspacePath`, not a generic `path` field:
+
+| Bot           | Default-all directory | Subset directory |
+| ------------- | --------------------- | ---------------- |
+| Selected QA   | 1 Grant               | 1 Grant          |
+| Unselected QA | 1 Grant               | 0 Grants         |
+| Partial QA    | 1 Grant               | 0 Grants         |
+
+All Grants retain `orchestratorWrite: false`; reuse/readback retries preserve their identities. The unselected Bot has no Grant for the subset directory, even though it intentionally has a Grant for the separate default-all directory. These are path-specific results, not global zero-Grant claims.
+
+| Historical default-unselected before (`53da03fb`)                                           | Current default-all selection (`7204043f`)                                                                  |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ![Historical default-unselected modal](assets/1433-group-workspace/default-before-dark.png) | ![All current eligible Bots selected by default](assets/1433-group-workspace/default-all-selected-dark.png) |
+
+| Default-all creation                                                                      | Optional subset selection                                                         |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ![Three independent new Grants](assets/1433-group-workspace/default-all-created-dark.png) | ![Unselected Bot unchecked](assets/1433-group-workspace/subset-selected-dark.png) |
+
+![Successful selected Bot and departed Bot failure](assets/1433-group-workspace/subset-partial-dark.png)
+
+| Current DM folder surface                                                       | Current Group reuse results                                                                              |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| ![Compact DM workspace modal](assets/1433-group-workspace/dm-current-light.png) | ![Three reused Bot Grants in light appearance](assets/1433-group-workspace/default-all-reused-light.png) |
+
+This run refreshes default-all/subset authorization, partial failure, reuse and retry evidence. It does not rerun the real-model Assignment: that evidence remains anchored to historical `c5f96282`. Runtime screenshots are not Human visual acceptance. Human has separately authorized merge after screenshots are supplied; exact-head checks and review findings remain independent gates. No deployment is requested.
 
 ## Historical setup and proof boundaries
 
@@ -115,13 +148,13 @@ Focused coverage includes Group selection isolation, partial failures, lost-resp
 
 The full repository suite is not declared green when unrelated failures remain. The synthetic-stdin reusable IM-app wizard failure is reproducible on the unchanged baseline. An architecture MDX failure found during validation was caused by placing this PR's paragraph before the maintained-source comment; the paragraph was moved after the comment, and the isolated docs build test passes. The final full-suite outcome is recorded in the PR rather than inferred from focused tests.
 
-Native Group E2E is not Human QA, physical-phone QA, CI, merge or deployment. No mobile-device or external IM-provider qualification is claimed by this desktop-native slice. Human QA must explicitly approve the exact PR head before merge; this task does not merge it.
+Native Group E2E is not Human QA, physical-phone QA, CI, merge or deployment. No mobile-device or external IM-provider qualification is claimed by this desktop-native slice. The later Human instruction authorizes merge after screenshots are supplied; this is not a claim that Human visually inspected the refreshed exact head. Merge still requires current checks and review findings to be resolved.
 
 ## Human acceptance path
 
 1. Launch the PR worktree with an isolated Profile using `node scripts/dev-instance.mjs --home <private-isolated-home> --port <free-port> --build`; configure a usable native model privately.
 2. Create a Group with at least three test Bots and a disposable project directory. Check Grants before the run.
-3. Use both `/workspace` and the chip. Verify no default selection, canonical directory and per-target scope. Cancel with a draft and attachment; check they remain and no Grant is created.
+3. Use both `/workspace` and the chip. Verify all currently eligible Bots are selected by default, then narrow the selection; check canonical directory and per-target scope. Cancel with a draft and attachment; check they remain and no Grant is created.
 4. Select two Bots, not the third. Remove or pause one selected Bot after preview. Confirm; check successful and failed rows independently, then retry. Verify the unselected Bot has no new Grant and successful Grant identity is stable.
 5. Normally mention the authorized Bot and ask for one harmless directory-local file operation. Inspect the actual completed Assignment, cwd and Group reply. Mention the unselected Bot without granting extra access; verify refusal and absence of its marker.
 6. Check the same Bots' existing DM sidebar Grant state. Use existing per-Bot revocation when cleaning up intentional access. Code rollback alone does not revoke Grants already created by Human confirmation.
