@@ -71,15 +71,15 @@ Messaging -> [(Operational Database)]: 组与个人例外
 | 实际 Client 写入与重启 | ok 当前组、例外与来源保留 |
 | Web Human 实际回复 | ok WEB1406_OK |
 | 首条 Lark 当前权限查询 | ok 平台确认与模型 Tool 调用 |
-| 完整 Linux CI | warn 生成页面时运行中 |
-| 真实 Lark 审批与延迟卡片 | warn 后续网页请求超时，未完成 |
+| 完整 Linux CI | ok 3994 个测试通过，13 个跳过，构建与 docs 通过 |
+| 真实 Lark 审批与延迟卡片 | warn 用户聊天可见，自动化控制中断 |
 | 首片真人反馈 | warn 待完整验收后收集 |
 | 合并与部署 | no 未执行 |
 
 [完整 UI 截图与操作步骤](https://github.com/BotHarness/DeepSeekBot/pull/1407)。
-[验证记录与实际截图来源](https://github.com/BotHarness/DeepSeekBot/blob/147a034e6abc7d717789f6fb0941787913f2a9d7/docs/assets/pr/1406/verification.md)。
+[完整 Linux CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38121674985)。
 
-恢复 Lark 网页后，确认真实消息获得平台 ID。
+恢复自动化控制后，确认接收窗口和真实消息平台 ID。
 验证 Allow once、独立 Reject 和延迟卡片拒绝。
 重启后再核对实际审批，然后收集真人反馈。
 

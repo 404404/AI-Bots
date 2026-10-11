@@ -11,9 +11,11 @@ Base: `fe84f5fd952ca7bf2d7232b8beda590eb38971ec`.
 - A real direct authenticated Web Human DM used `channel_send` and delivered `WEB1406_OK` without IM pairing or external permission configuration.
 - QA1's first current-permissions request was acknowledged by the Lark platform and admitted by the isolated Host; the real model called the current permission Tool. This is partial Lark evidence, not full approval acceptance.
 
-## Pending gates
+## Verified Linux CI
 
-- Full Linux CI rerunning after fixing the Inbox upgrade regression's old generation-78 assertion to generation 79. The first Linux run had 3993 passing tests and that single stale assertion failure; the repaired Inbox file's 10 tests pass locally. The new commit changes only that regression assertion, so the captured UI and runtime source are unchanged.
+- Full Linux CI passed at this head: lint, format, typecheck, slides, tests/docs, build, and generated-file consistency. 3994 tests passed and 13 skipped; 480 files passed and 7 skipped. [Successful run](https://github.com/BotHarness/DeepSeekBot/actions/runs/38121674985). The first run's sole stale generation-78 assertion was repaired to generation 79; that commit changes only the regression assertion, so captured UI and runtime source are unchanged.
+
+## Pending gates
 - Real Lark Allow once, independent Reject, delayed-card refusal after authority change, and post-restart approval verification remain pending.
 - Lark Web subsequently timed out on `/accounts/web/user` and other requests. Later query and pairing attempts had only optimistic client IDs and no Host admission; they do not count as delivered messages or successful QA. The Human can see chats in another Lark tab; the preview tool then explicitly reported no automation host and instructed not to retry. The task's isolated QA1 Host/receiver has been stopped while control is unavailable; its Profile remains available for resumption in a coordinated window.
 - Human feedback on the first full tracer remains pending. No merge or deployment occurred.
