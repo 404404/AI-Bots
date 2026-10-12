@@ -9,6 +9,8 @@
 
 ### Breaking Changes
 
+- 工作失败通知设置与投递元数据新增 Profile Schema Generation 83。升级前请备份；回退需要兼容写入者或升级前备份（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)）。
+
 - Lark 保存的工具规则新增 Profile Schema Generation 82，记录外部创建人。升级前请备份；回退需要兼容写入者或升级前备份（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)）。
 
 - Group 行为权限项可以声明互斥。当前写入者拒绝不兼容的有效 Allow；回退不识别此声明的旧程序前，应停止策略编辑（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。
@@ -33,9 +35,15 @@
 
 ### Added
 
+- 可选择开启的工作失败通知沿用 Bot 侧栏管理目的地，采用 RBAC 风格宽双列设置／记录弹窗，提供可搜索排序的记录、测试发送和投递状态查询，从已提交失败事实通知，不转发私密错误正文或授予决策权限。确定未发送重试有界，未知结果不重放（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)，[Lark 指南](docs/lark-connection.md#work-failure-alerts-source-candidate)）。
+
+- 「记忆演化」的提交 diff 和未提交差异在每个文件行新增「打开当前文件」：打开这个路径现在的文件，使用同一个默认应用和下拉菜单，不会打开所选提交里的版本。文件不存在时明确提示而不重建，只有该行本身是删除时才附带删除说明（[#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462)、[指南](docs/file-open.md)）。
+
+- 当前 Memory 文件阅读器、聊天普通文件卡，以及 Memory Repository 和已授权 Workspace 文件夹所在行新增「打开」分体按钮：点一下就用默认应用在 Host 上打开，箭头里列出检测到的其他应用供单次选择。可以按文件类型或为文件夹设置默认应用，也可以恢复系统默认；设置只保存在当前浏览器、对应当前 Host Profile，不修改操作系统的文件关联。没有默认或默认应用不可用时会请你选择，不会直接使用列表里的第一个应用（[#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461)、[指南](docs/file-open.md)、[ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)）。
+
 - 可选 checked QQ Provider 新增有界的分发前 Gateway、原生回调与发送回执诊断，包括白名单标识字段的哈希与长度，用于排查自身 Echo 缺失，不记录正文或原始标识；Gateway 解析与采样拒绝明确记录，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)）。
 
-- PersonaBot 新增 Bot 主色：自动模式跟随头像的主发色（上传图片时使用固定的备用色），也可以在 Profile 的头像弹窗里选择自定义颜色并预览浅色／深色效果。私聊和群聊消息上的 Bot 名字、@ 候选列表、输入框里选中的 Bot 以及已发送的 @ 都使用这个颜色，并按所在背景和主题调整明暗以保证可读。导出 zip 或分享记忆仓库时会带上这个设置，导入得到的 Bot 保持同样的颜色。删除 Bot 后，它的历史消息和用量列表里的名字仍保留最后的颜色。按 Bot 的用量图表用各自的颜色画每个 Bot 的条形，并用固定的深浅区分缓存读、其他输入和输出（[#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)）；活跃度热力图将在后续版本接入（[#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471)、[#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472)、[#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473)、[#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474)、[ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)）。
+- PersonaBot 新增 Bot 主色：自动模式跟随头像的主发色（上传图片时使用固定的备用色），也可以在 Profile 的头像弹窗里选择自定义颜色并预览浅色／深色效果。私聊和群聊消息上的 Bot 名字、@ 候选列表、输入框里选中的 Bot 以及已发送的 @ 都使用这个颜色，并按所在背景和主题调整明暗以保证可读。导出 zip 或分享记忆仓库时会带上这个设置，导入得到的 Bot 保持同样的颜色。删除 Bot 后，它的历史消息和用量列表里的名字仍保留最后的颜色。按 Bot 的用量图表和单个 Bot 自己的 token 图表使用该 Bot 的颜色，并用固定的深浅区分缓存读、其他输入和输出，单个 Bot 的活跃度热力图用它的颜色深浅表示强度，没有活动的日期保持中性色（[#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471)、[#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472)、[#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473)、[#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474)、[#1475](https://github.com/BotHarness/DeepSeekBot/issues/1475)、[#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)、[ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)）。
 
 - 获授权的 Lark 私聊审核人可另行确认精确或 all-opaque 工具规则，在 Web 查看同一范围与状态，并在当前创建人权限被撤销后停止后续自动批准。all-opaque 要求合格版本 2 Provider／账户及独立高风险确认。仅在 IM 使用的 Bot 无需先打开 Web 私聊即可收到审批卡片。外部规则不会自动批准必须在 Web 审核的原生会话授权；双语教程包含真实脱敏流程截图（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)，[Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)）。
 
@@ -157,6 +165,11 @@
 ### Fixed
 
 - 同一 DSH 地址下的两个 DeepSeekBot 浏览器标签页现在都能加载并保持响应：Channel、通讯录与 Activity 更新改走 DSH 的共用实时连接，不再各占一条浏览器连接。第三个标签页仍可能让全部页面停止响应，需待 Window Companion 流一并迁移（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
+- 主会话处理完已完成的任务汇报后，Bot 头像上的中性标记会自动消失；汇报本身仍列在收件箱里（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- Bot 空闲时，输入框上方的状态行不再因为收件箱里还有一条已完成的任务汇报而一直显示；这条汇报仍在头像和收件箱里以中性标记提示（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- 回合结束后 DSH 又补写 Session 事件（例如 `/compact` 的检查点）时，Bot 不再一直显示「正在思考」（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
 
 - Bot mode Web 在每个页面内共用选中 Channel、Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
 
