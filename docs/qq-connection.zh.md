@@ -44,6 +44,8 @@
 
 `scripts/dev-im-provider.mjs` 选定的可选开发 Provider 使用经过审查的 SDK 1.0.4 构建补丁，在 WebSocket message 进入 decode／JSON parse 之前观测，并在既有连接状态中提供有界 phase 元数据和进程内首尾计数。它不记录 raw payload 或凭据，也不增加收件、发送或 Echo 权限。每个新原生窗口都须比较捕获 phase、首尾计数、限流及采集容量。此候选与默认托管产品 Provider 独立，尚未验收自身原生 Echo；见 [Provider #26](https://github.com/DoodleBears/dsh-im/pull/26) 及其[双语观测契约](https://github.com/DoodleBears/dsh-im/blob/43902c638ac97d4eeaa6845442c5115198f1c9ec/docs/qq-native-observation.md)。
 
+[transport-J 验收](https://github.com/BotHarness/DeepSeekBot/issues/1156#issuecomment-6129948447) 使用产品 `7c9b3b6f`／Provider `43902c6`：受 guard 保护的 Profile 重启后，两个当前本地 DM 均获真实回复，Human 也确认两应用各自在 QQ 原群回了完整匹配标记。观察到的六条群帧在 SDK WebSocket、Gateway 和规范化回调三个边界全部对应，没有采集遗漏；同 App 原生自身回调与 Core Echo 事实均为零。该有界结果不证明 QQ 永不回推。[审查说明页](/evidence/issue-1156/qq-transport-observer.html) 解释维护补丁及其限制；剩余生命周期与最终版本证据继续由 #1156 跟踪。
+
 ## 群图片（开发候选）
 
 [#1157](https://github.com/BotHarness/BotHarness/issues/1157) 候选沿用仅提及接收路径，增加 PNG、JPEG、GIF 和 WebP。发送一条带说明和图片的新 @ 消息；已同步会话通过共用预览在原 Channel 消息中展示图片。仅 Inbox 接收不要求 Channel 落点，打开预览也不会唤醒 Bot。
