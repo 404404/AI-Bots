@@ -2971,10 +2971,29 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-external-identity-modal, .bh-pairing-modal, .bh-management-modal { max-height: calc(100dvh - 32px); }
 /* @bh-pairing-aliases:start — native Modal portals sit outside .bh-root.
    DSH RC1 exports no radius token; 12px matches its measured Input wrapper. */
-.bh-pairing-modal, .bh-pairing-role-modal { --bh-pairing-radius-panel: 12px; }
+.bh-pairing-modal, .bh-pairing-role-modal, .bh-management-modal { --bh-pairing-radius-panel: 12px; }
 /* @bh-pairing-aliases:end */
 .bh-external-identity-content, .bh-pairing-content, .bh-management-content { min-height: 0; overflow-y: auto; }
-.bh-sidebar-modal.bh-pairing-modal { width: min(1060px, calc(100vw - 32px)); }
+.bh-sidebar-modal.bh-pairing-modal, .bh-sidebar-modal.bh-management-modal { width: min(1060px, calc(100vw - 32px)); }
+.bh-management-workspace { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.bh-management-settings, .bh-management-records { display: grid; gap: 12px; min-width: 0; }
+.bh-management-modal .bh-im-pairing-request { border-radius: var(--bh-pairing-radius-panel); }
+.bh-management-detail { gap: 8px; }
+.bh-management-time { display: block; }
+.bh-management-modal .bh-management-state { box-sizing: border-box; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+.bh-management-records .bh-pairing-table { min-width: 0; table-layout: fixed; }
+.bh-management-records .bh-pairing-table th:nth-child(2) { width: 32%; min-width: 0; }
+.bh-management-records .bh-pairing-table th:last-child { width: 84px; min-width: 0; }
+.bh-management-records .bh-pairing-table td:last-child { white-space: nowrap; }
+@media (max-width: 760px) {
+  .bh-management-workspace { grid-template-columns: minmax(0, 1fr); }
+  .bh-management-records [role="tablist"], .bh-management-records [role="tab"] { height: auto; }
+  .bh-management-records [role="tab"] { min-height: 34px; padding: 8px 4px; white-space: normal; }
+  .bh-management-records .bh-pairing-table th:first-child, .bh-management-records .bh-pairing-table td:first-child { width: 16px; padding-inline: 6px; }
+  .bh-management-records .bh-pairing-table th:nth-child(2) { width: 28%; }
+  .bh-management-records .bh-pairing-table th:last-child { width: 56px; }
+  .bh-management-time > span { display: block; }
+}
 .bh-sidebar-modal.bh-pairing-role-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
 .bh-pairing-toolbar-gap { flex: 1; }
 .bh-pairing-panel { display: grid; gap: 12px; min-width: 0; }

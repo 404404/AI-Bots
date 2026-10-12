@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from 'react';
-import { Tag } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { ApprovalSettings } from './approval-settings.js';
 import { useClientState } from './bot-sidebar.js';
@@ -175,6 +175,13 @@ function IdentitiesForBot({
         closeLabel={t('common.close')}
         className="bh-sidebar-modal bh-external-panel-modal bh-management-modal"
         contentClassName="bh-management-content"
+        footer={
+          <div className="bh-modal-footer">
+            <Button size="sm" variant="toolbar" onClick={() => setPanel(undefined)}>
+              {t('common.close')}
+            </Button>
+          </div>
+        }
       >
         <ApprovalSettings
           key={`approval-${snapshot?.approvals?.routeRevision ?? 0}`}
