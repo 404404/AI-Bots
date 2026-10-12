@@ -143,6 +143,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- A Group Channel's composer footer shows one workspace count, the distinct workspaces its member Bots can use together, instead of each Bot's own count; a DM still shows its Bot's count ([#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)).
+
 - In a DM or Group Channel, the avatar beside a message group stays at the bottom edge of the timeline while a group taller than the view scrolls past, so you can always see who is speaking ([#1491](https://github.com/BotHarness/DeepSeekBot/pull/1491)).
 
 - Channel footers show the full effective model name without provider or inheritance labels; mobile layouts keep only the model selector, while desktop workspace and token controls remain available ([#1479](https://github.com/BotHarness/DeepSeekBot/issues/1479)).
