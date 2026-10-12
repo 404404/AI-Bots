@@ -23,6 +23,8 @@ export interface ChannelSidebarPrefsSnapshot {
   memoryTerminology: MemoryTerminology;
   entryOrders: Readonly<Record<ChannelSidebarScope, readonly string[]>>;
   hiddenEntries: Readonly<Record<ChannelSidebarScope, readonly string[]>>;
+  selectedTabs: Readonly<Record<string, string>>;
+  splitRatios: Readonly<Record<string, number>>;
 }
 
 export interface ChannelSidebarPrefs {
@@ -38,9 +40,13 @@ export interface ChannelSidebarPrefs {
     order: readonly string[],
     hidden: readonly string[],
   ): void;
+  setSelectedTab(scopeKey: string, tabId: string): void;
+  setSplitRatio(tabId: string, ratio: number): void;
   setWidth(width: number): void;
   setMemoryTerminology(terminology: MemoryTerminology): void;
 }
+
+const EMPTY_TABS: Readonly<Record<string, string>> = Object.freeze({});
 
 const EMPTY: ChannelSidebarPrefsSnapshot = Object.freeze({
   collapsedSidebars: Object.freeze([]),
@@ -49,7 +55,44 @@ const EMPTY: ChannelSidebarPrefsSnapshot = Object.freeze({
   memoryTerminology: 'memory',
   entryOrders: Object.freeze({ personabot: Object.freeze([]), channel: Object.freeze([]) }),
   hiddenEntries: Object.freeze({ personabot: Object.freeze([]), channel: Object.freeze([]) }),
+  selectedTabs: Object.freeze({}),
+  splitRatios: Object.freeze({}),
 });
+
+export const DEFAULT_SPLIT_RATIO = 0.5;
+export const MIN_SPLIT_RATIO = 0.15;
+export const MAX_SPLIT_RATIO = 0.85;
+
+export function clampSplitRatio(ratio: number): number {
+  if (!Number.isFinite(ratio)) return DEFAULT_SPLIT_RATIO;
+  return Math.min(MAX_SPLIT_RATIO, Math.max(MIN_SPLIT_RATIO, Math.round(ratio * 1000) / 1000));
+}
+
+function splitRatioMap(value: unknown): Readonly<Record<string, number>> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return Object.freeze({});
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(
+          (entry): entry is [string, number] =>
+            entry[0].length <= 200 && typeof entry[1] === 'number' && Number.isFinite(entry[1]),
+        )
+        .slice(0, 50)
+        .map(([id, ratio]) => [id, clampSplitRatio(ratio)]),
+    ),
+  );
+}
+
+const MAX_SELECTED_TABS = 200;
+
+function selectedTabMap(value: unknown): Readonly<Record<string, string>> {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return EMPTY_TABS;
+  const entries = Object.entries(value as Record<string, unknown>).filter(
+    (entry): entry is [string, string] =>
+      typeof entry[1] === 'string' && entry[1].length > 0 && entry[1].length <= 200,
+  );
+  return Object.freeze(Object.fromEntries(entries.slice(-MAX_SELECTED_TABS)));
+}
 
 function stringList(value: unknown): readonly string[] {
   return Array.isArray(value)
@@ -110,6 +153,8 @@ export function createChannelSidebarPrefs(storage: ConfigStorage | undefined): C
           personabot: entryIds(hiddenEntries['personabot']),
           channel: entryIds(hiddenEntries['channel']),
         }),
+        selectedTabs: selectedTabMap(parsed['selectedTabs']),
+        splitRatios: splitRatioMap(parsed['splitRatios']),
       };
     } catch {
       return EMPTY;
@@ -129,6 +174,8 @@ export function createChannelSidebarPrefs(storage: ConfigStorage | undefined): C
             memoryTerminology: next.memoryTerminology,
             entryOrders: next.entryOrders,
             hiddenEntries: next.hiddenEntries,
+            selectedTabs: next.selectedTabs,
+            splitRatios: next.splitRatios,
           }),
         );
       } catch {}
@@ -195,6 +242,24 @@ export function createChannelSidebarPrefs(storage: ConfigStorage | undefined): C
       setEntryLayout(scope, ids, snapshot.hiddenEntries[scope]);
     },
     setEntryLayout,
+    setSelectedTab(scopeKey, tabId) {
+      if (snapshot.selectedTabs[scopeKey] === tabId) return;
+      const rest = Object.entries(snapshot.selectedTabs).filter(([key]) => key !== scopeKey);
+      publish({
+        ...snapshot,
+        selectedTabs: Object.freeze(
+          Object.fromEntries([...rest, [scopeKey, tabId]].slice(-MAX_SELECTED_TABS)),
+        ),
+      });
+    },
+    setSplitRatio(tabId, ratio) {
+      const next = clampSplitRatio(ratio);
+      if (snapshot.splitRatios[tabId] === next) return;
+      publish({
+        ...snapshot,
+        splitRatios: Object.freeze({ ...snapshot.splitRatios, [tabId]: next }),
+      });
+    },
     setWidth(width) {
       const next = clampChannelSidebarWidth(width);
       if (next === snapshot.width) return;
