@@ -24,7 +24,7 @@ afterEach(async () => {
     core.operationalDatabase.close();
   }
 });
-async function fixture(ordinaryRole = false, saveRules = false) {
+async function fixture(ordinaryRole = false, saveRules = false, allOpaque = false) {
   const core = createCore({ dshHome: createTempRoot('bh-lark-approval-') });
   cores.push(core);
   core.registry.create({ slug: 'ada', displayName: 'Ada' });
@@ -47,7 +47,7 @@ async function fixture(ordinaryRole = false, saveRules = false) {
   const provider: DshImOutboundService = {
     contractVersion: 1,
     approvalCardVersion: 1,
-    ...(saveRules ? { approvalRuleCardVersion: 1 as const } : {}),
+    ...(saveRules ? { approvalRuleCardVersion: allOpaque ? (2 as const) : (1 as const) } : {}),
     listBots: async () => [{ botId: 'lark-qa', channel: 'feishu' }],
     listTargets: async () => [],
     describeBot: async (botId) => ({
@@ -64,6 +64,7 @@ async function fixture(ordinaryRole = false, saveRules = false) {
         'approval-card-update-checked',
         'approval-action-consumer',
         ...(saveRules ? ['approval-rule-card-checked'] : []),
+        ...(allOpaque ? ['approval-rule-all-opaque-card-checked'] : []),
       ],
     }),
     sendChecked: async () => ({ sent: true }),
@@ -219,10 +220,10 @@ async function fixture(ordinaryRole = false, saveRules = false) {
         { signal: receiver!.signal },
       );
     },
-    repeat(callId: string, command = 'pwd') {
+    repeat(callId: string, command = 'pwd', toolName = 'bash') {
       const execution = {
         agent,
-        name: 'bash',
+        name: toolName,
         arguments: { command },
         callId,
         token: Symbol('repeat'),
@@ -230,8 +231,8 @@ async function fixture(ordinaryRole = false, saveRules = false) {
       owner.track(execution);
       return {
         execution,
-        answer: owner.ask({ agent, toolName: 'bash', callId }),
-        guard: () => owner.executionGuard(agent, callId)?.('bash', execution.arguments),
+        answer: owner.ask({ agent, toolName, callId }),
+        guard: () => owner.executionGuard(agent, callId)?.(toolName, execution.arguments),
       };
     },
     failure(value: typeof fail) {
@@ -312,6 +313,140 @@ it('exact Lark rules require a private second confirmation, are idempotent, and 
   });
   expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
 });
+
+it('all-opaque needs its own displayed confirmation and cannot replace an exact nonce', async () => {
+  const f = await fixture(true, true, true);
+  const first = await f.start();
+  await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+  expect(f.cards.mock.calls[0]![2]).toMatchObject({ rules: ['exact', 'all-opaque'] });
+  await f.ruleAction(first.delivery.id, 'preview-exact');
+  await vi.waitFor(() =>
+    expect(
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.presented,
+    ).toBe(true),
+  );
+  const exact = f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+  expect(await f.ruleAction(first.delivery.id, 'preview-all-opaque')).toMatchObject({
+    status: 'refused',
+  });
+  expect(await f.ruleAction(first.delivery.id, 'confirm-all-opaque', exact.id)).toMatchObject({
+    status: 'refused',
+  });
+  await f.ruleAction(first.delivery.id, 'cancel-rule', exact.id);
+  expect(f.core.toolRules.list('ada')).toEqual([]);
+  await f.ruleAction(first.delivery.id, 'preview-all-opaque');
+  await vi.waitFor(() =>
+    expect(
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.presented,
+    ).toBe(true),
+  );
+  const broad = f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+  expect(broad.kind).toBe('all-opaque');
+  expect(broad.id).not.toBe(exact.id);
+  expect(f.cards.mock.calls.at(-1)![2].detail).toContain('ALL opaque tools and ALL inputs');
+  expect(f.cards.mock.calls.at(-1)![2].detail).toContain(broad.scopeKey);
+  expect(await f.ruleAction(first.delivery.id, 'confirm-exact', broad.id)).toMatchObject({
+    status: 'refused',
+  });
+  await f.ruleAction(first.delivery.id, 'confirm-all-opaque', broad.id);
+  await f.ruleAction(first.delivery.id, 'confirm-all-opaque', broad.id);
+  expect(await first.answer).toBe('allowed-once');
+  expect(f.core.toolRules.list('ada')).toHaveLength(1);
+  expect(f.core.toolRules.list('ada')[0]).toMatchObject({
+    kind: 'all-opaque',
+    toolName: '*',
+    input: '',
+    externalCreator: { pairingId: f.approved.id },
+  });
+  const different = f.repeat('different-tool-and-input', 'different command', 'pwsh');
+  expect(await different.answer).toBe('allowed-once');
+  expect(different.guard()).toBe(true);
+  expect(f.core.externalMessaging.approvals.snapshot('ada').deliveries).toHaveLength(1);
+  const nativeGrant = await f.start('native-session-grant', 'web-only');
+  expect(f.owner.status('ada', nativeGrant.delivery.id)).toBe('pending');
+  await vi.waitFor(() => expect(f.cards.mock.calls.at(-1)![2].status).toBe('web-required'));
+  expect(await f.action(nativeGrant.delivery.id)).toMatchObject({ status: 'refused' });
+  await f.owner.decide('ada', nativeGrant.delivery.requestMessageId!, 'rejected');
+  expect(await nativeGrant.answer).toBe('rejected');
+  Object.assign(first.execution.agent!.session.header, { cwd: '/tmp/different-scope' });
+  const changedScope = f.repeat('changed-scope', 'different command', 'pwsh');
+  await vi.waitFor(() => expect(f.owner.requests('ada')).toHaveLength(1));
+  await f.owner.decide('ada', f.owner.requests('ada')[0]!.messageId, 'rejected');
+  expect(await changedScope.answer).toBe('rejected');
+  f.core.externalMessaging.pairing.review('ada', {
+    kind: 'revoke',
+    id: f.approved.id,
+    expectedRevision: f.approved.revision,
+  });
+  expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
+});
+
+it('a version-one rule Provider cannot offer or accept an all-opaque rule', async () => {
+  const f = await fixture(true, true);
+  const first = await f.start();
+  await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+  expect(f.cards.mock.calls[0]![2]).toMatchObject({ rules: ['exact'] });
+  await expect(f.ruleAction(first.delivery.id, 'preview-all-opaque')).rejects.toMatchObject({
+    code: 'capability-unavailable',
+  });
+  expect(f.core.toolRules.list('ada')).toEqual([]);
+  await f.action(first.delivery.id, { action: 'rejected' });
+  expect(await first.answer).toBe('rejected');
+});
+
+it.each(['exact', 'all-opaque'] as const)(
+  'a delayed %s decision refuses Back and cannot activate after current save-rules Deny',
+  async (kind) => {
+    const f = await fixture(true, true, true);
+    const first = await f.start();
+    await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+    await f.ruleAction(
+      first.delivery.id,
+      kind === 'exact' ? 'preview-exact' : 'preview-all-opaque',
+    );
+    await vi.waitFor(() =>
+      expect(
+        f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation
+          ?.presented,
+      ).toBe(true),
+    );
+    const confirmation =
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+    const append = f.core.channels.appendMessage.bind(f.core.channels);
+    let release!: () => void;
+    const blocked = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let writing = false;
+    vi.spyOn(f.core.channels, 'appendMessage').mockImplementation(async (id, message) => {
+      if (message.toolApprovalDecision) {
+        writing = true;
+        await blocked;
+      }
+      return append(id, message);
+    });
+    await f.ruleAction(
+      first.delivery.id,
+      kind === 'exact' ? 'confirm-exact' : 'confirm-all-opaque',
+      confirmation.id,
+    );
+    await vi.waitFor(() => expect(writing).toBe(true));
+    expect(await f.ruleAction(first.delivery.id, 'cancel-rule', confirmation.id)).toMatchObject({
+      status: 'refused',
+    });
+    f.core.externalMessaging.senderAccess('ada', {
+      kind: 'create-group',
+      bindingId: f.binding.id,
+      name: 'Deny while append is pending',
+      allow: [],
+      deny: ['save-rules'],
+      memberIds: [f.approved.id],
+    });
+    release();
+    expect(await first.answer).not.toBe('allowed-once');
+    expect(f.core.toolRules.list('ada').some((r) => !r.revokedAt)).toBe(false);
+  },
+);
 
 async function savedExact() {
   const f = await fixture(true, true);

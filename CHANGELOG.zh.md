@@ -33,7 +33,7 @@
 
 ### Added
 
-- 获授权的 Lark 私聊审核人可另行确认精确匹配工具规则，在 Web 查看同一规则，并在当前权限被撤销后停止后续自动批准（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)，[Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)）。
+- 获授权的 Lark 私聊审核人可另行确认精确匹配工具规则，在 Web 查看同一规则，并在当前权限被撤销后停止后续自动批准。精确交互已获 Human 接受，教程保留脱敏截图；版本 2 Provider 候选新增独立披露的 all-opaque 范围，并将确认绑定规则种类，仍待其独立真实 Lark 验收。外部规则不会自动批准必须在 Web 审核的原生会话授权（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)，[Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)）。
 
 - 群聊 composer 的工作区快捷入口复用 DM 目录卡片、权限标签与原生 modal 尺寸，默认选中当前全部可授权 Bot，也可指定几个，确认目录与既有访问范围，并分别展示逐 Bot Grant 的新增、复用、失败及未知结果读回，不新增未选成员的权限（[#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)）。
 

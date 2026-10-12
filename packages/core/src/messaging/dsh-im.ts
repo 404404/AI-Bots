@@ -36,7 +36,7 @@ export interface DshImOutboundService {
     options: { expectedFingerprint: string; signal: AbortSignal; beforeSend(): boolean },
   ): Promise<{ accepted: true }>;
   approvalCardVersion?: 1;
-  approvalRuleCardVersion?: 1;
+  approvalRuleCardVersion?: 1 | 2;
   pairingCardVersion?: 1;
   approvalCardChecked?(
     botId: string,
@@ -577,8 +577,13 @@ export function createDshImProvider(
               !info.connected ||
               (input.card.kind !== 'pairing' &&
                 (input.card.rules || input.card.ruleConfirmation) &&
-                (host.approvalRuleCardVersion !== 1 ||
+                (![1, 2].includes(host.approvalRuleCardVersion ?? 0) ||
                   !info.capabilities.includes('approval-rule-card-checked'))) ||
+              (input.card.kind !== 'pairing' &&
+                (input.card.rules?.some((kind) => kind === 'all-opaque') ||
+                  input.card.ruleConfirmation?.kind === 'all-opaque') &&
+                (host.approvalRuleCardVersion !== 2 ||
+                  !info.capabilities.includes('approval-rule-all-opaque-card-checked'))) ||
               (input.card.kind === 'pairing' &&
                 (host.pairingCardVersion !== 1 ||
                   !info.capabilities.includes('pairing-card-checked'))) ||
@@ -618,7 +623,8 @@ export function createDshImProvider(
               throw providerFailure(error);
             }
           },
-          approvalRuleCardSupported: host.approvalRuleCardVersion === 1,
+          approvalRuleCardSupported: [1, 2].includes(host.approvalRuleCardVersion ?? 0),
+          approvalRuleAllOpaqueCardSupported: host.approvalRuleCardVersion === 2,
         }
       : {}),
     ...(host.replyContextVersion === 1 &&
@@ -766,7 +772,13 @@ export function createDshImProvider(
                                 conversationId: identifier,
                                 messageId: identifier,
                                 requestId: z.string().uuid(),
-                                action: z.enum(['preview-exact', 'confirm-exact', 'cancel-rule']),
+                                action: z.enum([
+                                  'preview-exact',
+                                  'confirm-exact',
+                                  'preview-all-opaque',
+                                  'confirm-all-opaque',
+                                  'cancel-rule',
+                                ]),
                                 confirmationId: z.string().uuid().optional(),
                               })
                               .strict()
@@ -813,8 +825,13 @@ export function createDshImProvider(
                       if (
                         'kind' in event &&
                         event.kind === 'approval-rule' &&
-                        (host.approvalRuleCardVersion !== 1 ||
-                          !info.capabilities.includes('approval-rule-card-checked'))
+                        (![1, 2].includes(host.approvalRuleCardVersion ?? 0) ||
+                          !info.capabilities.includes('approval-rule-card-checked') ||
+                          (['preview-all-opaque', 'confirm-all-opaque'].includes(event.action) &&
+                            (host.approvalRuleCardVersion !== 2 ||
+                              !info.capabilities.includes(
+                                'approval-rule-all-opaque-card-checked',
+                              ))))
                       )
                         throw new MessagingError('capability-unavailable');
                       if (

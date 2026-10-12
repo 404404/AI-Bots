@@ -354,7 +354,7 @@ export class ChannelToolApproval {
     external?: {
       actor: ToolApprovalActor;
       authorized(): boolean;
-      rule?: { kind: 'exact'; scopeKey: string; authorized(): boolean };
+      rule?: { kind: ToolApprovalRule['kind']; scopeKey: string; authorized(): boolean };
       onRuleSaved?(rule: ToolApprovalRule): void;
     },
   ): Promise<boolean> {
@@ -372,8 +372,9 @@ export class ChannelToolApproval {
       (pending.notice.externalDecision === 'web-only' ||
         (!['allowed-once', 'rejected'].includes(outcome) &&
           !(
-            outcome === 'allowed-always-exact' &&
-            external.rule?.kind === 'exact' &&
+            ((outcome === 'allowed-always-exact' && external.rule?.kind === 'exact') ||
+              (outcome === 'allowed-always-all' && external.rule?.kind === 'all-opaque')) &&
+            external.rule &&
             external.rule.authorized()
           )) ||
         !external.authorized())

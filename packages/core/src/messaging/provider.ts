@@ -138,8 +138,8 @@ export interface MessagingApprovalCard {
   requestId: string;
   title: string;
   detail: string;
-  rules?: ['exact'];
-  ruleConfirmation?: { id: string; kind: 'exact' };
+  rules?: ['exact'] | ['exact', 'all-opaque'];
+  ruleConfirmation?: { id: string; kind: 'exact' | 'all-opaque' };
   status:
     | 'pending'
     | 'web-required'
@@ -170,7 +170,12 @@ export interface MessagingApprovalRuleAction extends Omit<
   'kind' | 'action'
 > {
   kind: 'approval-rule';
-  action: 'preview-exact' | 'confirm-exact' | 'cancel-rule';
+  action:
+    | 'preview-exact'
+    | 'confirm-exact'
+    | 'preview-all-opaque'
+    | 'confirm-all-opaque'
+    | 'cancel-rule';
   confirmationId?: string | undefined;
 }
 
@@ -217,6 +222,7 @@ export interface MessagingSetup {
 
 export interface MessagingProvider {
   approvalRuleCardSupported?: boolean;
+  approvalRuleAllOpaqueCardSupported?: boolean;
   setup?(): Promise<MessagingSetup | undefined>;
   id: string;
   react?(input: {

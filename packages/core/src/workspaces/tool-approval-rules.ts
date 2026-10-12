@@ -50,7 +50,9 @@ function record(row: RuleRow): ToolApprovalRule {
 export interface ToolApprovalRuleStore {
   list(botSlug: string): ToolApprovalRule[];
   match(
-    input: Pick<ToolApprovalRule, 'botSlug' | 'role' | 'scopeKey' | 'toolName' | 'input'>,
+    input: Pick<ToolApprovalRule, 'botSlug' | 'role' | 'scopeKey' | 'toolName' | 'input'> & {
+      externalDecision?: 'operation' | 'web-only';
+    },
   ): ToolApprovalRule | undefined;
   createPending(
     input: Pick<
@@ -95,8 +97,12 @@ export function createToolApprovalRuleStore(
       ) as unknown as RuleRow[];
       for (const row of rows) {
         const rule = record(row);
-        if (authorized(rule)) return rule;
-        store.revoke(rule.botSlug, rule.id);
+        if (!authorized(rule)) {
+          store.revoke(rule.botSlug, rule.id);
+          continue;
+        }
+        if (rule.externalCreator && input.externalDecision === 'web-only') continue;
+        return rule;
       }
       return undefined;
     },

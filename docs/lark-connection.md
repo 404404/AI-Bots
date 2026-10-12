@@ -385,8 +385,21 @@ On a complete native tool card, **Allow once** remains the one-call choice. To a
 identical operations, choose **Allow matching operations…**, inspect the complete tool name and
 input, Bot execution role and current Workspace Grant scope, then choose **Confirm matching rule**.
 The first click only shows the confirmation; **Back** saves nothing. Truncated operations and
-native Session-wide authorization require Web review. This first IM slice does not offer the
-broader all-opaque rule.
+native Session-wide authorization require Web review.
+
+The Human accepted the exact-rule interaction on 2026-10-12. These actual QA1 captures show
+that slice; grey masks hide only the machine-local directory. They do not qualify the broader
+candidate below. Some Lark Web updates required refreshing the designated DM to show final state.
+
+![Independent matching-rule entry for a currently authorized reviewer](/guides/lark/approvals/rules/exact-entry.png)
+
+![Actual exact-rule preview with complete input and explicit confirmation](/guides/lark/approvals/rules/exact-preview.png)
+
+The preview image ends at Confirm; Back was below the visible area in that capture. Back was
+tested on the actual refreshed card and saved no rule. After a new preview and confirmation,
+the tool returned its real result and the final card removed all decision controls:
+
+![Native execution result and saved exact rule](/guides/lark/approvals/rules/exact-result.png)
 
 A saved exact rule matches the complete input, not similar commands. Each matching call still
 records its own native decision, and changed input or Grant scope requires another approval.
@@ -397,8 +410,28 @@ disables the rule; restoring permission or pairing again requires a newly confir
 second current group still grants the capability and no Deny applies, removing one grant alone
 does not disable it. Existing Web Human rules retain their prior behavior.
 
+![Known saved-rule receipt after Web revocation](/guides/lark/approvals/rules/disabled.png)
+
+### All opaque tools in one scope — source candidate
+
+After the accepted exact slice, #1033 adds a separate **All opaque tools in this scope…** entry.
+It requires Provider rule-card version 2 and the account's checked all-opaque capability;
+version 1 retains the exact-only entry. This wider path is implemented but awaits its own
+real Lark acceptance. The screenshots above show the accepted exact path, not this new path.
+
+Inspect the displayed Bot execution role, directory and Grant IDs/write revisions. The high-risk
+preview applies to **every opaque tool and every input** in that scope; future commands need not
+match the current example and may access files outside authorized folders or the network. Choose
+**Confirm ALL opaque tools** only for that intended scope. Back saves nothing; use Back before
+changing rule kind. An exact confirmation cannot authorize the broader kind.
+
+The same current Approve/Save approval rules checks, creator revocation and native audit apply.
+A different role, directory or Grant scope needs another approval. Underlying native, Workspace
+and Service authority is not enlarged. External rules cannot approve Web-only native Session
+authorizations. Web can revoke either kind; restoring capabilities cannot resurrect it.
+
 Back up the Profile before upgrading to database generation 82. Rollback needs a compatible writer
-or the pre-upgrade backup. Real Lark rendering and Human feedback for this candidate remain the
+or the pre-upgrade backup. Real all-opaque Lark rendering and Human feedback remain the
 [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033) delivery gate.
 
 ## Receipt and answer feedback (candidate)

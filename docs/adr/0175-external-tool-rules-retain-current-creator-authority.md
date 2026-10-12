@@ -1,6 +1,6 @@
 # ADR-0175: External tool rules retain current creator authority
 
-Status: Accepted design; #1033 exact-rule private Lark source candidate. Real-platform qualification and first-slice Human feedback remain required.
+Status: Accepted design; #1033 exact-rule private Lark interaction accepted by the Human on 2026-10-12. Separate all-opaque source candidate requires its own real-platform qualification.
 
 ## Decision
 
@@ -16,4 +16,6 @@ Treating an IM-created rule like an unconditional Web Human rule would let revok
 
 Web rule status and native card status read the canonical rule. After creator revocation, a bounded cleanup may update only the already-known card receipt through the same current qualified App/Binding. It carries fixed disabled-rule text, no operation arguments/results or controls, and grants no new messaging destination. Missing, disabled or replaced App identity prevents even this cleanup. A Host restart keeps confirmed rules and their provenance but does not revive a waiting native call. Database generation 82 adds nullable creator provenance; legacy Web rows remain valid. Back up before upgrading; an older writer needs the pre-upgrade backup or a compatible forward repair.
 
-The separate all-opaque IM risk disclosure/confirmation and group destinations remain later slices of their owning issues. See [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [ADR-0067](0067-workspace-grants-bound-personabot-file-access.md) and the [Lark guide](../lark-connection.md#save-an-exact-rule-in-a-management-dm).
+After exact-slice Human acceptance, the next private Lark candidate separately offers all-opaque rules. Provider rule-card version 2 and the account's `approval-rule-all-opaque-card-checked` capability are required; version 1 retains exact-only behavior. Distinct preview/confirm actions bind the displayed rule kind to its nonce, so an exact confirmation cannot grant an all-opaque rule. Back precedes switching kinds. The broader disclosure explicitly covers every opaque tool and every input in the displayed Bot/role/directory/Grant scope, including commands that may access other files or the network. It does not widen underlying native, Workspace or Service authority. The same creator provenance, post-append guards and permanent revocation apply. An externally created rule cannot match a native Session-wide request designated Web-only; existing Web Human rules retain their semantics.
+
+All-opaque actual-platform qualification and group destinations remain separate gates; group destinations belong to their owning issue. See [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [ADR-0067](0067-workspace-grants-bound-personabot-file-access.md) and the [Lark guide](../lark-connection.md#save-an-exact-rule-in-a-management-dm).
