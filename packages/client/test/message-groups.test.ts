@@ -118,4 +118,25 @@ describe('Channel message visual groups', () => {
     ]);
     expect(groups).toHaveLength(2);
   });
+
+  it('joins consecutive post traces for one Channel and keeps them apart from messages', () => {
+    const trace = (id: string, seconds: number, channelId: string): ChannelMessage => ({
+      ...message(id, seconds),
+      body: '',
+      botChannelPost: { channelId, messageId: id },
+    });
+    const groups = groupChannelMessages([
+      message('a', 0),
+      trace('t1', 1, 'group-a'),
+      trace('t2', 400, 'group-a'),
+      trace('t3', 401, 'group-b'),
+      message('b', 402),
+    ]);
+    expect(groups.map((group) => group.messages.map((item) => item.id))).toEqual([
+      ['a'],
+      ['t1', 't2'],
+      ['t3'],
+      ['b'],
+    ]);
+  });
 });

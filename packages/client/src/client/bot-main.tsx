@@ -79,6 +79,12 @@ import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
+import { BotChannelPostLine, elsewhereAction } from './bot-channel-post-line.js';
+import {
+  hiddenDmActionsSnapshot,
+  subscribeHiddenDmActions,
+  visibleDmMessages,
+} from './dm-actions.js';
 import {
   timelineWorkingRows,
   timelineWorkingRowsCover,
@@ -732,9 +738,15 @@ function ConversationView({
   const conversation = state.conversation;
   const channel = conversation.channel;
   const botNames = new Map(state.bots.map((member) => [member.slug, member.displayName]));
+  const dmBotSlug = channel?.type === 'dm' ? channel.botSlug : undefined;
+  const hiddenActions = useSyncExternalStore(
+    subscribeHiddenDmActions,
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+  );
   const messages = conversation.messages;
   const displayMessages: ChannelMessage[] = [
-    ...messages,
+    ...visibleDmMessages(messages, hiddenActions),
     ...(conversation.timeline.hasNewer ? [] : conversation.drafts).map((item) => ({
       id: item.draftId,
       at: '',
@@ -821,7 +833,11 @@ function ConversationView({
           };
   const streamingBotSlugs = new Set(conversation.drafts.map((item) => item.botSlug));
   const latestMessage = messages.findLast(
-    (item) => item.botDmAction === undefined && item.memberDeparture === undefined,
+    (item) =>
+      item.botDmAction === undefined &&
+      item.botChannelPost === undefined &&
+      item.memoryCommit === undefined &&
+      item.memberDeparture === undefined,
   );
   const workingRows = timelineWorkingRows(
     conversation.status === 'ready' && !conversation.timeline.hasNewer
@@ -1636,11 +1652,35 @@ function ConversationView({
                             t={t}
                           />
                         </div>
+                      ) : first.botChannelPost !== undefined ? (
+                        <BotChannelPostLine
+                          posts={group.messages}
+                          channels={state.channels}
+                          bots={state.bots}
+                          t={t}
+                          onOpen={(targetChannelId, messageId) => {
+                            void actions
+                              .openChannel(targetChannelId)
+                              .then(() => actions.openAround(targetChannelId, messageId));
+                          }}
+                        />
                       ) : first.memoryCommit !== undefined ? (
                         <MemoryCommitLine
                           messageId={first.id}
                           commit={first.memoryCommit}
                           bots={state.bots}
+                          action={
+                            first.noticeOrigin === undefined
+                              ? undefined
+                              : elsewhereAction(
+                                  'memory',
+                                  first.noticeOrigin.channelId,
+                                  first.memoryCommit.botSlug,
+                                  state.channels,
+                                  state.bots,
+                                  t,
+                                )
+                          }
                           t={t}
                           onOpen={() => {
                             const commit = first.memoryCommit!;

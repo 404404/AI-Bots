@@ -6824,7 +6824,13 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
   gap: 4px;
 }
 .bh-bot-dm-action-avatar { display: inline-flex; pointer-events: none; }
-.bh-memory-commit-row { container-type: inline-size; width: 100%; }
+/* Status lines stay inside the Bot bubble column: 28px avatar + 8px gap on each side. */
+.bh-memory-commit-row {
+  container-type: inline-size;
+  box-sizing: border-box;
+  width: 100%;
+  padding-inline: 36px;
+}
 @container (max-width: 720px) {
   .bh-memory-commit-line > .bh-memory-commit-files { display: none; }
 }
@@ -6866,6 +6872,7 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
 .bh-memory-commit-files { color: var(--dsw-alias-label-tertiary); }
 .bh-bot-dm-action-bot .bh-persona-avatar { border-radius: 28%; overflow: hidden; }
 .bh-bot-dm-action-name { color: var(--dsw-alias-label-primary); font-weight: 500; }
+.bh-dm-trace-line > .bh-memory-commit-subject { color: var(--dsw-alias-label-secondary); }
 .bh-bot-dm-readonly {
   padding: 14px 18px;
   text-align: center;

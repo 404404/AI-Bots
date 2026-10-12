@@ -62,12 +62,20 @@ describe('Human Inbox Channel reply', () => {
             },
           },
         });
-        expect(core.channels.readMessages(channel.id)).toHaveLength(2);
+        expect(
+          core.channels
+            .readMessages(channel.id)
+            .filter((item) => item.botChannelPost === undefined),
+        ).toHaveLength(2);
         expect(core.channels.readPosition(channel.id)).toBeUndefined();
         expect(
           await methods.channelSend({ ...payload, messageId: undefined, replyTo: 'missing' }),
         ).toMatchObject({ ok: false });
-        expect(core.channels.readMessages(channel.id)).toHaveLength(2);
+        expect(
+          core.channels
+            .readMessages(channel.id)
+            .filter((item) => item.botChannelPost === undefined),
+        ).toHaveLength(2);
       }
       core.channels.deleteGroup(channels[0]!.id);
       expect(
