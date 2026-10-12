@@ -438,8 +438,22 @@ and Service authority is not enlarged. External rules cannot approve Web-only na
 authorizations. Web can revoke either kind; restoring capabilities cannot resurrect it.
 
 Back up the Profile before upgrading to database generation 82. Rollback needs a compatible writer
-or the pre-upgrade backup. Real all-opaque Lark rendering and Human feedback remain the
-[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033) delivery gate.
+or the pre-upgrade backup.
+
+Actual QA1 calls returned different stdout markers within the same scope, each with its own
+native approval record and no second card. Adding a Workspace Grant required new approval;
+Reject prevented execution. After revocation and Host restart, the same earlier input required
+approval again and Reject prevented execution. The refreshed known receipt displayed fixed
+disabled-rule text with no controls. An interrupted revoke-card update was explicitly refreshed
+through the same idempotent revoke command; this did not execute a call.
+
+![Actual all-opaque saved-rule execution result](/guides/lark/approvals/rules/all-result.png)
+
+![Revoked rule in the refreshed private conversation](/guides/lark/approvals/rules/all-disabled.png)
+
+Exact source heads and native sequences are recorded in
+[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033). This qualification does not publish
+or upgrade the Provider artifact. Group destinations remain separate.
 
 ## Receipt and answer feedback (candidate)
 
