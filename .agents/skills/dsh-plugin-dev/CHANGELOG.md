@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Updated the supported Host floor in the [local development guide](../dsh-dev/SKILL.md) to DSH `0.2.0` and later, checked with DSH's native compatibility preflight against the product manifests; DSH/Cordis Context and Skill behavior remain unchanged ([#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)).
+
 - Recorded the native RC1 two-document HTTP/1 request-starvation reproduction and shared roster/Activity transport lifecycle in the [Client diagnostic guide](../../../docs/dev/guides/client-startup-diagnostics.md); DSH/Cordis Context and Decision Tree remain unchanged ([#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)).
 
 - Recorded audited Windows-to-Linux Profile path migration and non-root workspace permission prerequisites in the [local development guide](../dsh-dev/SKILL.md), verified against pinned DSH `0.2.0-rc.1` and the real isolated Linux Host; DSH/Cordis Context and Skill behavior remain unchanged ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [qualification](../../../docs/research/2026-10-12-private-input-linux-qualification.md)).
