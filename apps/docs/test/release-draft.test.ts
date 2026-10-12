@@ -48,6 +48,7 @@ describe("GitHub Release draft preparation", () => {
       },
       body: `- **官网 / Website:** [DeepSeekBot](https://deepseekbot.app/r/v0.2.1)
 - **安装教程 / Installation:** [中文](https://deepseekbot.app/r/v0.2.1/install) · [English](https://deepseekbot.app/r/v0.2.1/install/en)
+- **精确安装版本 / Exact install spec:** \`deepseekbot@0.2.1\`
 
 Published a clearer compatibility guide for DeepSeekBot operators.
 
@@ -96,6 +97,7 @@ Published a clearer compatibility guide for DeepSeekBot operators.
     ).toBe(true);
     expect(draft.body).toContain(`[中文](https://deepseekbot.app/r/v${version}/install)`);
     expect(draft.body).toContain(`[English](https://deepseekbot.app/r/v${version}/install/en)`);
+    expect(draft.body).toContain(`Exact install spec:** \`deepseekbot@${version}\``);
     expect(draft.body.indexOf("安装教程")).toBeLessThan(draft.body.indexOf("Published a clearer"));
   });
 
@@ -297,6 +299,7 @@ Published a clearer compatibility guide for DeepSeekBot operators.
     ).toBe(true);
     expect(draft.body).toContain("[中文](https://deepseekbot.app/r/v0.3.0-rc.1/install)");
     expect(draft.body).toContain("[English](https://deepseekbot.app/r/v0.3.0-rc.1/install/en)");
+    expect(draft.body).toContain("Exact install spec:** `deepseekbot@0.3.0-rc.1`");
     expect(draft.body).toContain("Documentation-only release: runtime behavior is unchanged.");
     expect(draft.body).not.toContain("Documentation-only patch");
   });

@@ -44,13 +44,15 @@ DeepSeekBot 是 BotHarness 开发的 MIT 开源 GrokBot 平替，作为 `deepsee
 
 ## 安装
 
-**桌面端**：打开 DeepSeek Harness 桌面端，点「插件 → 添加插件」，在「包名或地址」里输入 `deepseekbot`，保持「npm 官方源」，点「安装」。显示「已安装」后点「立即启用」（提示重启时重启当前 Profile），侧栏会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
+**桌面端**：打开 DeepSeek Harness 桌面端，点「插件 → 添加插件」，在「包名或地址」里输入 `deepseekbot@1.2.1`，保持「npm 官方源」，点「安装」。显示「已安装」后点「立即启用」（提示重启时重启当前 Profile），侧栏会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
 
-**开发者（命令行）**：需要 Node 22 以上，支持 DSH `0.2.0-rc.1` 起的 0.2 系列。
+请使用上面的完整版本号，不要改成裸包名或 `@latest`：pnpm 的新版本冷却策略可能选择较旧版本。若提示供应链审批，只确认经过验证的精确版本；不要全局关闭保护或跳过 DSH 兼容检查。安装后核对实际版本，截图或预览卡片不代表实际安装结果。详见[安装与恢复说明](docs/installation.zh.md)。
+
+**开发者（命令行）**：需要 Node 22 以上；1.2.1 的 DSH 版本声明为 `>=0.1.7-0`，未来版本的运行兼容性仍需单独验证。
 
 ```bash
 npm i -g @deepseek-ai/dsh@0.2.0-rc.1
-dsh plugin --profile web add deepseekbot
+dsh plugin --profile web add deepseekbot@1.2.1
 dsh web
 ```
 

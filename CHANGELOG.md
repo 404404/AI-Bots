@@ -180,6 +180,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
+- Public installation instructions use the qualified stable exact package version, with synchronized bilingual README/guide checks and release-age recovery guidance instead of implying bare names or `@latest` always install the newest release ([#1456](https://github.com/BotHarness/DeepSeekBot/issues/1456)).
+
 - DeepSeekBot GitHub Release announcements start with version-specific official website and Chinese/English installation links; short links preserve GitHub, release-version and entry-point attribution without changing analytics consent ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
 
 - Added an isolated Linux private-input qualification guide covering tailnet Web access, exclusive IM receiver handoff, cross-platform path metadata and explicit non-root workspace permissions ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [guide](docs/dev/guides/private-input-linux.md)). The `ask_secret` tool now tells Web and scheduled callers to omit the IM-only source selector when reusing configured accounts.
