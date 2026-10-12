@@ -11,6 +11,8 @@ import { useMemo, useRef, useState, type ReactElement } from 'react';
 
 import {
   Button,
+  FileTypeIcon,
+  fileSizeText,
   MarkdownText,
   StateDot,
   Tag,
@@ -23,6 +25,7 @@ import { openModelsSettings } from './bot-settings-open.js';
 import { currentMentionLabel } from './actor-names.js';
 import type { ChannelHumanMember } from './store.js';
 import { referenceRuns } from './channel-refs.js';
+import { attachmentReferenceRuns, messageAttachmentReferences } from './attachment-refs.js';
 import type { BridgeActions, HostDirectoryListing } from './actions.js';
 import { FolderBrowser } from './workspace-grants-entry.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -550,6 +553,35 @@ export function ChannelMessageBody({
       </button>
     );
   };
+  const attachedFiles = messageAttachmentReferences(message.attachments ?? []);
+  const renderAttachmentText = (text: string) =>
+    attachmentReferenceRuns(text, attachedFiles).map((part, index) => {
+      const item = part.attachment;
+      if (item === undefined) return <span key={index}>{part.text}</span>;
+      return (
+        <button
+          key={index}
+          type="button"
+          className="bh-inline-mention bh-composer-inline-attachment"
+          aria-label={t('composer.locateAttachment', { name: item.file.name })}
+          onClick={(event) => {
+            const attachmentIndex = attachedFiles.findIndex(
+              (candidate) => candidate.id === item.id,
+            );
+            const card = event.currentTarget
+              .closest('.bh-bubble-content')
+              ?.querySelector('.bh-message-attachments')?.children[attachmentIndex];
+            card?.scrollIntoView({ block: 'nearest' });
+            card?.querySelector<HTMLElement>('button, a')?.focus();
+          }}
+        >
+          <span className="bh-attachment-ordinal">{attachedFiles.indexOf(item) + 1}</span>
+          <FileTypeIcon path={item.file.name} size={16} />
+          <span className="bh-composer-inline-attachment-name">{item.file.name}</span>
+          <span className="bh-composer-inline-attachment-size">{fileSizeText(item.file.size)}</span>
+        </button>
+      );
+    });
   return (
     <div className="bh-bubble-content">
       {message.body.length === 0 ? null : format === 'text' ? (
@@ -575,7 +607,7 @@ export function ChannelMessageBody({
                     mentions={message.bridgeOrigin?.mentions ?? []}
                   />
                 ) : (
-                  run.text
+                  renderAttachmentText(run.text)
                 )}
               </span>
             ),

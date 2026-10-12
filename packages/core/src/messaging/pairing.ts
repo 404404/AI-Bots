@@ -5,6 +5,7 @@ import { OperationalDatabaseError } from '../database/owner.js';
 import { assertMessagingIdentity, readMessagingIdentity } from './identity.js';
 import { MessagingError, type MessagingInboundEvent } from './provider.js';
 import { externalUserRoles } from './sender-access.js';
+import { chatSenderIdentity } from './chat-sender.js';
 import {
   effectivePairingPermissions,
   type PermissionChoices,
@@ -112,6 +113,7 @@ export function createBotPairing(
   database: OperationalDatabaseModulePort,
   isBotActive: (slug: string) => boolean,
   now = () => new Date(),
+  onAuthorizationChanged?: (botSlug: string) => void,
 ): BotPairing {
   const transaction = <T>(
     operation: Parameters<OperationalDatabaseModulePort['transaction']>[0],
@@ -169,8 +171,10 @@ export function createBotPairing(
         const binding = assertMessagingIdentity(db, bindingId);
         if (
           !isBotActive(binding.botSlug) ||
-          binding.platform !== 'feishu' ||
-          event.channel !== 'feishu' ||
+          binding.platform !== event.channel ||
+          binding.providerId !== `dsh-im/${event.channel}` ||
+          !chatSenderIdentity(event) ||
+          (purpose === 'management' && event.channel !== 'feishu') ||
           event.botId !== binding.accountRef ||
           event.fingerprint !== binding.fingerprint ||
           (purpose === 'management' && event.conversation.kind !== 'dm') ||
@@ -181,8 +185,7 @@ export function createBotPairing(
           event.reply.conversationId !== event.conversation.id ||
           event.reply.messageId !== event.messageId ||
           event.actor.kind !== 'user' ||
-          !/^ou_[A-Za-z0-9]+$/.test(event.actor.id) ||
-          !/^oc_[A-Za-z0-9]+$/.test(event.conversation.id) ||
+          (event.channel === 'feishu' && !/^oc_[A-Za-z0-9]+$/.test(event.conversation.id)) ||
           (purpose === 'management' && (event.text.trim() !== '/pair' || event.attachments?.length))
         )
           throw new MessagingError('untrusted-pairing');
@@ -315,7 +318,7 @@ export function createBotPairing(
     },
     review(botSlug, raw, reviewer) {
       const input = pairingReviewInput.parse(raw);
-      return transaction<PairingRequest>((db) => {
+      const reviewed = transaction<PairingRequest>((db) => {
         const row = db
           .prepare('SELECT body FROM messaging_pairings WHERE id = ? AND bot_slug = ?')
           .get(input.id, botSlug) as { body: string } | undefined;
@@ -413,6 +416,8 @@ export function createBotPairing(
         }
         return next;
       });
+      onAuthorizationChanged?.(botSlug);
+      return reviewed;
     },
     notice(id, key, outcome) {
       return transaction<boolean>((db) => {

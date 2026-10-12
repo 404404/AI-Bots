@@ -469,10 +469,12 @@ export function createCore(
   });
   let runtime: BotRuntime | undefined;
   let companions: CompanionFeed | undefined;
+  let reconcileToolRuleCreators: ((botSlug: string) => void) | undefined;
   const sourcePolicy = createBotSourcePolicyStore(
     attachOperationalModule(operationalDatabase, 'bot-inbox'),
   );
   const externalMessaging = createOutboundMessaging({
+    onAuthorizationChanged: (slug) => reconcileToolRuleCreators?.(slug),
     onDefaultsChanged: () => live?.publishRosterCommitted(),
     onReceptionChanged: () => live?.publishRosterCommitted(),
     ...(options.capture === undefined ? {} : { capture: options.capture }),
@@ -658,7 +660,12 @@ export function createCore(
   });
   const toolRules = createToolApprovalRuleStore(
     attachOperationalModule(operationalDatabase, 'tool-approval-rules'),
+    (botSlug, creator) => externalMessaging.toolRuleCreatorAuthorized(botSlug, creator),
   );
+  reconcileToolRuleCreators = (slug) => {
+    toolRules.reconcileExternal(slug);
+    externalMessaging.approvals.refreshRules(slug);
+  };
   const assignmentAccess = createAssignmentAccessStore(
     attachOperationalModule(operationalDatabase, 'assignment-access'),
   );

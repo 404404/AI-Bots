@@ -348,9 +348,9 @@ private-origin check is retained; a group pairing does not create a management d
 Removing a capability or revoking/reassigning the person refuses delayed decisions. If
 reassignment invalidates the route, explicitly select/save its new current destination again.
 Legacy `/pair` management grants remain independent and do not enable ordinary chat by themselves.
-Questions, saved-rule controls, group destinations and pairing-code issuance are separate work.
+Native Questions, group execution-approval destinations and pairing-code issuance are separate work.
 
-This slice supports Lark private **Allow once** and **Reject** cards through a qualified Provider. Group approvals, native question forms, saved automatic rules and non-blocking native waits are separate slices. The released dsh-im package number alone does not imply card capability; an unavailable Provider remains unavailable.
+This slice supports Lark private **Allow once** and **Reject** cards through a qualified Provider. The #1033 source candidate adds the separately confirmed exact-rule path below. Group execution approvals, native question forms and non-blocking native waits are separate slices. The released dsh-im package number alone does not imply card capability; an unavailable Provider remains unavailable.
 
 1. Enable the app's **Events & callbacks → Callback configuration → Long connection** and add `card.action.trigger`, then publish the version. Retain the existing message read/send scopes and add `im:chat:read` so the sender can verify a private conversation. A maintainer must authorize these app changes.
 2. Send `/pair` in the Bot's Lark DM. In **External identities → IM administrator pairing**, inspect the real applicant/account and explicitly grant **Approve** and/or **Reject**. Pairing does not create ordinary DM intake or grant VPS/API access.
@@ -373,6 +373,87 @@ In the earlier isolated 2026-10-07 test, the actual Lark platform accepted both 
 ![Actual recovery: notifications off and the old request expired](/guides/lark/approvals/recovery-dark.jpg)
 
 [Light theme recovery screenshot](/guides/lark/approvals/recovery-light.jpg). After the test authority was revoked and the local Host restarted with its IM Provider disabled, the destination is **Off**, the old request is **Expired**, and the local identity is unavailable. This screen does not prove production availability; production Discord/Lark connections were verified separately after restoration. Do not use the old card for a new test.
+
+### Save an exact rule in a management DM
+
+The #1033 source candidate requires a Provider with the checked rule-card capability. Grant
+**Approve** and **Save approval rules** separately through the reviewer's Role, Group or personal
+exception. Explicit Deny wins. A natural-language policy or ordinary chat pairing alone cannot
+save a rule. Keep the existing private approval destination and App permissions.
+
+On a complete native tool card, **Allow once** remains the one-call choice. To allow future
+identical operations, choose **Allow matching operations…**, inspect the complete tool name and
+input, Bot execution role and current Workspace Grant scope, then choose **Confirm matching rule**.
+The first click only shows the confirmation; **Back** saves nothing. Truncated operations and
+native Session-wide authorization require Web review.
+
+The Human accepted the exact-rule interaction on 2026-10-12. These actual QA1 captures show
+that slice; grey masks hide only the machine-local directory. They do not qualify the broader
+candidate below. Some Lark Web updates required refreshing the designated DM to show final state.
+
+![Independent matching-rule entry for a currently authorized reviewer](/guides/lark/approvals/rules/exact-entry.png)
+
+![Actual exact-rule preview with complete input and explicit confirmation](/guides/lark/approvals/rules/exact-preview.png)
+
+The preview image ends at Confirm; Back was below the visible area in that capture. Back was
+tested on the actual refreshed card and saved no rule. After a new preview and confirmation,
+the tool returned its real result and the final card removed all decision controls:
+
+![Native execution result and saved exact rule](/guides/lark/approvals/rules/exact-result.png)
+
+A saved exact rule matches the complete input, not similar commands. Each matching call still
+records its own native decision, and changed input or Grant scope requires another approval.
+The Web **Workspace access → Tool approval rules** list shows the same rule, external creator
+and Active/Disabled status. Current approval and rule-saving authority are checked before every
+use. Revoking the original pairing, losing effective capability or disabling its App permanently
+disables the rule; restoring permission or pairing again requires a newly confirmed rule. If a
+second current group still grants the capability and no Deny applies, removing one grant alone
+does not disable it. Existing Web Human rules retain their prior behavior.
+
+![Known saved-rule receipt after Web revocation](/guides/lark/approvals/rules/disabled.png)
+
+### All opaque tools in one scope — source candidate
+
+After the accepted exact slice, #1033 adds a separate **All opaque tools in this scope…** entry.
+It requires Provider rule-card version 2 and the account's checked all-opaque capability;
+version 1 retains the exact-only entry. On 2026-10-12 the Human accepted the actual QA1
+all-opaque first slice. The following captures show its separate entry and high-risk preview,
+including Confirm and Back; grey masks hide only machine-local paths.
+
+![Separate all-opaque entry](/guides/lark/approvals/rules/all-entry.png)
+
+![Actual high-risk preview with Confirm and Back](/guides/lark/approvals/rules/all-preview.png)
+
+Inspect the displayed Bot execution role, directory and Grant IDs/write revisions. The high-risk
+preview applies to **every opaque tool and every input** in that scope; future commands need not
+match the current example and may access files outside authorized folders or the network. Choose
+**Confirm ALL opaque tools** only for that intended scope. Back saves nothing; use Back before
+changing rule kind. An exact confirmation cannot authorize the broader kind.
+
+The same current Approve/Save approval rules checks, creator revocation and native audit apply.
+A newly created Bot does not require opening its Web DM before a native approval can be delivered;
+the owning Host creates the canonical DM request surface when needed.
+A different role, directory or Grant scope needs another approval. Underlying native, Workspace
+and Service authority is not enlarged. External rules cannot approve Web-only native Session
+authorizations. Web can revoke either kind; restoring capabilities cannot resurrect it.
+
+Back up the Profile before upgrading to database generation 82. Rollback needs a compatible writer
+or the pre-upgrade backup.
+
+Actual QA1 calls returned different stdout markers within the same scope, each with its own
+native approval record and no second card. Adding a Workspace Grant required new approval;
+Reject prevented execution. After revocation and Host restart, the same earlier input required
+approval again and Reject prevented execution. The refreshed known receipt displayed fixed
+disabled-rule text with no controls. An interrupted revoke-card update was explicitly refreshed
+through the same idempotent revoke command; this did not execute a call.
+
+![Actual all-opaque saved-rule execution result](/guides/lark/approvals/rules/all-result.png)
+
+![Revoked rule in the refreshed private conversation](/guides/lark/approvals/rules/all-disabled.png)
+
+Exact source heads and native sequences are recorded in
+[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033). This qualification does not publish
+or upgrade the Provider artifact. Group destinations remain separate.
 
 ## Receipt and answer feedback (candidate)
 
