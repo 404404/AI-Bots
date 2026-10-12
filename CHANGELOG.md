@@ -160,6 +160,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- On a narrow or mobile window, the activity dots in a Channel list row now sit right before the message time instead of floating in the middle of the row ([#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)).
+
 - A completed Assignment report no longer keeps the neutral marker on its Bot's avatar once the Orchestrator has handled it; the report stays listed in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
 
 - The status row above the composer no longer stays visible for an idle Bot just because a completed Assignment report is waiting in the Inbox; the report keeps its neutral marker on the avatar and in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
