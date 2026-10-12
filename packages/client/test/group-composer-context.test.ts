@@ -48,6 +48,59 @@ const grant: WorkspaceGrantView = {
   orchestratorWrite: false,
 };
 
+it('hides the Group workspace footer on mobile and restores its facts and action on desktop', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  let mobile = true;
+  const listeners = new Set<() => void>();
+  vi.stubGlobal('matchMedia', () => ({
+    get matches() {
+      return mobile;
+    },
+    addEventListener: (_event: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_event: string, listener: () => void) => listeners.delete(listener),
+  }));
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  const actions = {
+    listWorkspaceGrants: async () => [grant],
+    listWorkspaceOptions: async () => [],
+  } as unknown as BridgeActions;
+  const onOpen = vi.fn();
+  try {
+    await act(async () =>
+      root.render(
+        createElement(GroupComposerContextView, {
+          channelId: 'group-mobile',
+          members: [ada],
+          actions,
+          t: zhTranslate,
+          open: false,
+          onOpen,
+          onClose() {},
+        }),
+      ),
+    );
+    expect(container.querySelector<HTMLElement>('.bh-composer-context')!.hidden).toBe(true);
+    await act(async () => {
+      mobile = false;
+      for (const listener of listeners) listener();
+    });
+    expect(container.querySelector('.bh-composer-context')!.textContent).toContain(
+      'Ada · 1 个工作区',
+    );
+    expect(container.querySelector<HTMLElement>('.bh-composer-context')!.hidden).toBe(false);
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('.bh-composer-context button')!.click(),
+    );
+    expect(onOpen).toHaveBeenCalledOnce();
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
 it('defaults to all Bots, allows narrowing, and preserves independent partial results when membership changes', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const container = document.createElement('div');
