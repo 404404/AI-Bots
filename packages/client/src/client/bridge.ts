@@ -2519,6 +2519,7 @@ export interface ToolApprovalRuleView {
   input: string;
   createdAt: string;
   revokedAt?: string;
+  externalCreator?: import('../../../core/src/workspaces/tool-approval-actor.js').ToolApprovalActor;
 }
 export async function loadToolApprovalRules(
   call: BridgeCall,

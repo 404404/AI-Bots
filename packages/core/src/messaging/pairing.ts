@@ -113,6 +113,7 @@ export function createBotPairing(
   database: OperationalDatabaseModulePort,
   isBotActive: (slug: string) => boolean,
   now = () => new Date(),
+  onAuthorizationChanged?: (botSlug: string) => void,
 ): BotPairing {
   const transaction = <T>(
     operation: Parameters<OperationalDatabaseModulePort['transaction']>[0],
@@ -317,7 +318,7 @@ export function createBotPairing(
     },
     review(botSlug, raw, reviewer) {
       const input = pairingReviewInput.parse(raw);
-      return transaction<PairingRequest>((db) => {
+      const reviewed = transaction<PairingRequest>((db) => {
         const row = db
           .prepare('SELECT body FROM messaging_pairings WHERE id = ? AND bot_slug = ?')
           .get(input.id, botSlug) as { body: string } | undefined;
@@ -415,6 +416,8 @@ export function createBotPairing(
         }
         return next;
       });
+      onAuthorizationChanged?.(botSlug);
+      return reviewed;
     },
     notice(id, key, outcome) {
       return transaction<boolean>((db) => {

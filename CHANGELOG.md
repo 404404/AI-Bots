@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Lark-saved tool rules add Profile schema Generation 82 with external creator provenance. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)).
+
 - Group behavior items can declare mutual exclusions. Current writers reject incompatible effective Allows; stop policy editing before reverting to a writer that ignores these declarations ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)).
 
 - A Bot's existing sender-restriction switch now also covers Slack DMs. Review or pair Slack applicants before their next request; before reverting to an older binary, disable the affected Slack Binding because it cannot enforce this gate ([#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)).
@@ -30,6 +32,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- Authorized Lark DM reviewers can separately confirm exact or all-opaque tool rules, inspect the same scope and status in Web, and lose future automatic approvals when current creator authority is revoked. All-opaque requires a qualified version-2 Provider/account and its own high-risk confirmation. IM-only Bots can receive approval cards before anyone opens their Web DM. External rules never auto-approve Web-only native Session authorizations; bilingual tutorials include real sanitized workflow screenshots ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)).
 
 - Group composer workspace shortcuts reuse DM directory cards, permission badges and native modal geometry to default to all currently eligible Bots with optional subset selection, confirm their directory and existing access, and report independent per-Bot Grant creation, reuse, failure and unknown-outcome readback without granting unselected members access ([#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)).
 

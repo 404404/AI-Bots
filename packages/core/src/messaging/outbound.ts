@@ -1,3 +1,4 @@
+import type { ToolApprovalActor } from '../workspaces/tool-approval-actor.js';
 import {
   createApprovalMessaging,
   type ApprovalMessaging,
@@ -267,6 +268,7 @@ export interface OutboundMessaging {
   beginProcessing(botSlug: string, sourceEventIds: readonly string[]): MessagingProcessing;
   pairing: BotPairing;
   senderAccess(botSlug: string, input: SenderAccessInput): void;
+  toolRuleCreatorAuthorized(botSlug: string, creator: ToolApprovalActor): boolean;
   senderPermissions(botSlug: string, sourceEventId: string): SenderPermissions;
   directory(botSlug: string, query: MessagingDirectoryQuery): MessagingDirectoryPage;
   reviewPairing(botSlug: string, input: PairingReviewInput): Promise<PairingRequest>;
@@ -354,6 +356,7 @@ export function createOutboundMessaging(options: {
   sourcePolicy?: BotSourcePolicyStore;
   onDefaultsChanged?: () => void;
   onReceptionChanged?: () => void;
+  onAuthorizationChanged?: (botSlug: string) => void;
   onAdmitted?(botSlug: string, sourceEventId: string): void;
   onPlaced?(commit: ChannelMessageCommit): void;
   onShared?(botSlugs: string[]): void;
@@ -619,7 +622,12 @@ export function createOutboundMessaging(options: {
     }
     return { ...entry, inspected, identityRevision: identity.revision };
   };
-  const pairing = createBotPairing(database, options.isBotActive, options.now);
+  const pairing = createBotPairing(
+    database,
+    options.isBotActive,
+    options.now,
+    options.onAuthorizationChanged,
+  );
   const approvals = createApprovalMessaging({
     database,
     pairing,
@@ -918,7 +926,34 @@ export function createOutboundMessaging(options: {
     senderAccess(botSlug, input) {
       active(botSlug);
       transaction((db) => changeSenderAccess(db, botSlug, input), ['pairing', 'bot-inbox']);
+      options.onAuthorizationChanged?.(botSlug);
       pairingCards.refresh(botSlug);
+    },
+    toolRuleCreatorAuthorized(botSlug, creator) {
+      try {
+        active(botSlug);
+        const identity = binding(creator.bindingId);
+        if (
+          identity.botSlug !== botSlug ||
+          identity.platform !== 'feishu' ||
+          identity.fingerprint !== creator.fingerprint ||
+          !identity.enabled ||
+          identity.revokedAt
+        )
+          return false;
+        pairing.assert(botSlug, creator.bindingId, creator.actorId, 'approve', creator.pairingId);
+        pairing.assert(
+          botSlug,
+          creator.bindingId,
+          creator.actorId,
+          'save-rules',
+          creator.pairingId,
+        );
+        return true;
+      } catch (error) {
+        if (!(error instanceof MessagingError)) throw error;
+        return false;
+      }
     },
     senderPermissions(botSlug, sourceEventId) {
       active(botSlug);
@@ -964,12 +999,15 @@ export function createOutboundMessaging(options: {
       const identities = database.read((db) =>
         db
           .prepare(
-            'SELECT id FROM messaging_bindings WHERE platform = ? AND enabled_inherited = 1 AND revoked_at IS NULL',
+            'SELECT id, bot_slug FROM messaging_bindings WHERE platform = ? AND enabled_inherited = 1 AND revoked_at IS NULL',
           )
           .all(value.platform),
-      ) as { id: string }[];
-      if (prior.identityEnabled !== value.identityEnabled)
+      ) as { id: string; bot_slug: string }[];
+      if (prior.identityEnabled !== value.identityEnabled) {
+        for (const botSlug of new Set(identities.map((identity) => identity.bot_slug)))
+          options.onAuthorizationChanged?.(botSlug);
         await Promise.allSettled(identities.map(({ id }) => bounded(inbound.reconcileBinding(id))));
+      }
       if (prior.typingEnabled !== value.typingEnabled) {
         const inherited = database.read((db) =>
           db
@@ -1178,6 +1216,7 @@ export function createOutboundMessaging(options: {
         ['bindings', 'grants', 'bot-inbox'],
       );
       typing.invalidate((candidate) => candidate.bindingId === value.id);
+      options.onAuthorizationChanged?.(botSlug);
       await bounded(inbound.reconcileBinding(value.id));
       options.warn?.(
         JSON.stringify({
@@ -1576,6 +1615,7 @@ export function createOutboundMessaging(options: {
         },
         ['bindings', 'grants', 'bot-inbox'],
       );
+      options.onAuthorizationChanged?.(botSlug);
       await Promise.all(dependencies.identities.map((id) => bounded(inbound.reconcileBinding(id))));
     },
     async apps() {

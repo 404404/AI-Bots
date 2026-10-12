@@ -2040,6 +2040,15 @@ export const BEHAVIOR_PERMISSION_MIGRATION: SchemaMigration = {
   },
 };
 
+export const EXTERNAL_TOOL_RULE_CREATOR_MIGRATION: SchemaMigration = {
+  generation: 82,
+  module: 'tool-approval-rules',
+  description: 'Retain external creator provenance for revocable native approval rules',
+  migrate(database) {
+    database.exec('ALTER TABLE tool_approval_rules ADD COLUMN external_creator TEXT');
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2121,4 +2130,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   PERMISSION_GROUP_MIGRATION,
   PAIRING_CARD_MIGRATION,
   BEHAVIOR_PERMISSION_MIGRATION,
+  EXTERNAL_TOOL_RULE_CREATOR_MIGRATION,
 ]);

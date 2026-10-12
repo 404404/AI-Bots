@@ -25,11 +25,12 @@ import type {
   BehaviorChoices,
 } from '../../../core/src/messaging/behavior-policy.js';
 
-const capabilities = ['approve', 'reject', 'review-pairing'] as const;
+const capabilities = ['approve', 'reject', 'review-pairing', 'save-rules'] as const;
 const capabilityLabel = {
   approve: 'pairing.approveCapability',
   reject: 'pairing.rejectCapability',
   'review-pairing': 'pairing.reviewCapability',
+  'save-rules': 'pairing.rulesCapability',
 } as const;
 const permissionKinds = ['allow', 'deny', 'delegateAllow', 'delegateDeny'] as const;
 const kindLabels = {
@@ -39,7 +40,7 @@ const kindLabels = {
   delegateDeny: 'pairing.delegateDeny',
 } as const;
 function editable(cap: PairingCapability): cap is (typeof capabilities)[number] {
-  return cap === 'approve' || cap === 'reject' || cap === 'review-pairing';
+  return cap === 'approve' || cap === 'reject' || cap === 'review-pairing' || cap === 'save-rules';
 }
 function choices(value: PermissionChoices) {
   return {
