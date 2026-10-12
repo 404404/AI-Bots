@@ -194,3 +194,6 @@ To use the Gateway Client's stream helpers (`RemoteSnapshotStream`, `RemoteJourn
 
 A `RemoteError` thrown by a stream method before or between items reaches the Client as an `error` frame with its `code` and ends that logical stream as a terminal failure, not a carrier loss; map application refusals (unknown subject, cursor ahead of the log, invalid cursor) to stable codes and let the consumer decide whether to reload state. When a stream replaces a legacy route, make the subscription a single typed frame source and let both the stream and the route encode it, so their replay and baseline rules cannot drift (#1500).
 
+## Additional verified pitfall — #1528
+
+The pinned client-modules loader claims every `<style>` without `data-plugin` for the module materializing at that moment (lazy chunks included) and removes those tags when that module is replaced, invalidated or pruned. A plugin that injects an untagged sheet from an effect can therefore lose it to another plugin's reload while it stays active: its UI renders unstyled and DSH's own UI, whose sheets are tagged, looks fine. Set `data-plugin` to the injecting module's id (and a `data-plugin-css` key) on every runtime `<style>` (#1528).
