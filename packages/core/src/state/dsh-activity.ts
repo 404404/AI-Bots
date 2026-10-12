@@ -30,9 +30,6 @@ export function sessionStateForEvent(event: DshSessionEvent): SessionState | und
   }
 }
 
-// DSH can append turn-content events outside any turn, e.g. the checkpoint
-// `user/message` of an idle `/compact`. No `turn/end` follows them, so they
-// must not reopen a closed turn's activity.
 function outsideClosedTurn(turnOpen: boolean | undefined, event: DshSessionEvent): boolean {
   return turnOpen === false && event.type !== 'turn/start' && event.type !== 'turn/end';
 }

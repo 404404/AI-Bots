@@ -142,6 +142,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- The status row above the composer no longer stays visible for an idle Bot just because a completed Assignment report is waiting in the Inbox; the report keeps its neutral marker on the avatar and in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
 - A Bot no longer stays stuck on "Thinking" after its turn has ended when DSH records more Session events afterwards, such as a `/compact` checkpoint ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
 
 - Several DM messages sent while a Bot is busy no longer make it run a separate turn for each one after they were already delivered together into the running turn ([#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)).
