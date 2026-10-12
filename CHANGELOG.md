@@ -10,6 +10,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 ### Breaking Changes
 
 - Bot DM trace lines are new Channel Notices. A binary from before this change shows them as empty Bot messages, so revert the Host and Client together ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517)).
+- DeepSeekBot now needs DSH 0.2.0 or later, previews included; DSH 0.1.7 Hosts refuse the new version at installation and should stay on DeepSeekBot 1.2.x or upgrade DSH first ([#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)).
 
 - Work-failure alert settings and delivery metadata add Profile schema Generation 83. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)).
 

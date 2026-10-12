@@ -35,11 +35,14 @@ describe('DSH native product compatibility preflight', () => {
       ).toBe(true);
     }
   });
-  it.each(['0.1.6-alpha.2', '0.1.6'])('rejects Host %s below the minimum', (version) => {
-    expect(semver.satisfies(version, productDshRange, { includePrerelease: true })).toBe(false);
-    expect(evaluatePluginCompatibility(manifests[0], {}, version)?.exempted).toBe(false);
-  });
-  it.each(['0.1.7', '0.3.0-alpha.1', '1.0.0', '1.0.1', '2.0.0'])(
+  it.each(['0.1.6', '0.1.7-alpha.1', '0.1.7-rc.2', '0.1.7'])(
+    'rejects Host %s below the minimum',
+    (version) => {
+      expect(semver.satisfies(version, productDshRange, { includePrerelease: true })).toBe(false);
+      expect(evaluatePluginCompatibility(manifests[0], {}, version)?.exempted).toBe(false);
+    },
+  );
+  it.each(['0.2.0', '0.3.0-alpha.1', '1.0.0', '1.0.1', '2.0.0'])(
     'does not impose a future Host ceiling on %s',
     (version) => {
       for (const manifest of releases) {
