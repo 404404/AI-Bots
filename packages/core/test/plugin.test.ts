@@ -392,6 +392,8 @@ describe('plugin entry', () => {
       'resume',
       'channels',
       'humanIdentity',
+      'composerIdentity',
+      'composerValidate',
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',

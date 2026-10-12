@@ -918,6 +918,11 @@ describe('Memory Git graph sidebar', () => {
     channelSidebarPrefs.setEntryExpanded('personabot:qa', 'memory-evolution', true);
     channelSidebarPrefs.setEntryExpanded('personabot:qa', 'memory-files', true);
     await act(async () => {
+      store.setComposerIdentity({
+        hostId: 'qa-host',
+        profileId: 'qa-profile',
+        humanId: 'qa-human',
+      });
       store.setRoster(
         [
           {

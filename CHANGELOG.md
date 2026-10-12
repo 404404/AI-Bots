@@ -31,6 +31,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- DM and Group composers retain device-local drafts across Channel switches and browser reloads, validate restored references, and expose concurrent-tab conflicts and storage failures; unuploaded file bytes are not retained ([#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459), [ADR-0175](docs/adr/0175-client-local-composer-recovery-is-not-message-authority.md)).
+
 - Group composer workspace shortcuts reuse DM directory cards, permission badges and native modal geometry to default to all currently eligible Bots with optional subset selection, confirm their directory and existing access, and report independent per-Bot Grant creation, reuse, failure and unknown-outcome readback without granting unselected members access ([#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)).
 
 - Group behavior items support manually declared mutual exclusions with searchable selection, affected-person/source previews and current-revision checks. Settings and Host mutations refuse incompatible effective Allows, including membership changes and removal of a protecting Deny; explicit Deny still takes precedence ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)).

@@ -72,6 +72,8 @@ import type {
 } from '../../../core/src/messaging/outbound.js';
 import type { MessagingTarget } from '../../../core/src/messaging/provider.js';
 import type { HostFileTarget } from './host-file-actions.js';
+import type { ComposerRecoveryIdentity } from '../../../core/src/bridge/composer-recovery.js';
+import { isChannelAttachmentRef } from '../../../core/src/attachments/ref.js';
 import type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 export type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
@@ -1793,6 +1795,54 @@ export async function loadChannels(
   signal?: AbortSignal,
 ): Promise<ChannelSummary[]> {
   return parseChannelRecords(await unwrap(call, 'channels', {}, signal));
+}
+
+export async function loadComposerIdentity(
+  call: BridgeCall,
+  signal?: AbortSignal,
+): Promise<ComposerRecoveryIdentity> {
+  const value = asRecord(await unwrap(call, 'composerIdentity', {}, signal));
+  if (
+    value === undefined ||
+    !['hostId', 'profileId', 'humanId'].every(
+      (key) => typeof value[key] === 'string' && (value[key] as string).length > 0,
+    )
+  )
+    throw new Error('invalid composer identity');
+  return {
+    hostId: value['hostId'] as string,
+    profileId: value['profileId'] as string,
+    humanId: value['humanId'] as string,
+  };
+}
+
+export async function validateComposerDraft(
+  call: BridgeCall,
+  channelId: string,
+  attachments: ChannelAttachmentRef[],
+  replyTo?: string,
+): Promise<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }> {
+  const value = asRecord(
+    await unwrap(call, 'composerValidate', {
+      channelId,
+      attachments,
+      ...(replyTo === undefined ? {} : { replyTo }),
+    }),
+  );
+  if (
+    value === undefined ||
+    !Array.isArray(value['attachments']) ||
+    value['attachments'].length !== attachments.length ||
+    !value['attachments'].every((ref) => ref === null || isChannelAttachmentRef(ref))
+  )
+    throw new Error('invalid composer validation');
+  const reply = value['reply'] === undefined ? undefined : parseChannelMessage(value['reply']);
+  if (value['reply'] !== undefined && reply === undefined)
+    throw new Error('invalid composer reply');
+  return {
+    ...(reply === undefined ? {} : { reply }),
+    attachments: value['attachments'] as Array<ChannelAttachmentRef | null>,
+  };
 }
 
 export async function openDmChannel(

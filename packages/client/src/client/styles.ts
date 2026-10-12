@@ -12,6 +12,13 @@ export const CSS =
   WINDOW_COMPANION_CSS +
   `
 .bh-profile-backup-dialog.bh-profile-backup-dialog { width: min(760px, 100%); max-height: 100%; }
+.bh-composer-recovery { min-width: 0; }
+.bh-composer-recovery > p, .bh-composer-recovery section > p { margin: 4px 0; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.bh-composer-draft-version { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-inbox-radius-control); }
+.bh-composer-draft-version pre { flex: 1; min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 100px; overflow-y: auto; }
+.bh-composer-recovery > p button, .bh-composer-draft-version button { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-inbox-radius-control); padding: 4px 8px; cursor: pointer; }
+.bh-composer-recovery > p button:hover, .bh-composer-draft-version button:hover { background: var(--bh-hover); }
+.bh-composer-recovery > p button:focus-visible, .bh-composer-draft-version button:focus-visible { outline: 2px solid var(--bh-accent); outline-offset: 2px; }
 .bh-profile-backup { overflow-y: auto; min-height: 0; font-size: 13px; line-height: 20px; }
 .bh-profile-backup section { border-top: 1px solid var(--dsw-alias-border-l2); padding-block: 12px; }
 .bh-profile-backup p { margin-block: 8px; }

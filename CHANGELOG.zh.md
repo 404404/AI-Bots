@@ -31,6 +31,8 @@
 
 ### Added
 
+- DM 与 Group 输入框在频道切换和浏览器刷新后保留本设备草稿，恢复时校验引用，并明确提示多标签页冲突及存储失败；未上传的文件字节不会保留（[#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459)，[ADR-0175](docs/adr/0175-client-local-composer-recovery-is-not-message-authority.md)）。
+
 - 群聊 composer 的工作区快捷入口复用 DM 目录卡片、权限标签与原生 modal 尺寸，默认选中当前全部可授权 Bot，也可指定几个，确认目录与既有访问范围，并分别展示逐 Bot Grant 的新增、复用、失败及未知结果读回，不新增未选成员的权限（[#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)）。
 
 - Group 行为权限项支持人工声明互斥，提供可搜索选择、受影响人员／来源预览及当前版本校验。设置与 Host 拒绝不兼容的有效 Allow，包括成员变更和保护性 Deny 的移除；明确拒绝仍优先（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。

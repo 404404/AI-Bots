@@ -30,6 +30,49 @@ import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 const roots: string[] = [];
 const modelOwners: OperationalDatabaseOwner[] = [];
 
+describe('composer recovery reference validation', () => {
+  it('uses current Human-visible reply and attachment facts without accepting draft text', async () => {
+    const { channels, attachments, methods } = setup();
+    const channel = channels.getOrCreateDm('ada', 'Ada')!;
+    const sent = await methods.channelSend({ channelId: channel.id, body: 'reply target' });
+    expect(sent.ok).toBe(true);
+    if (!sent.ok) throw new Error('send failed');
+    const ref = await attachments.upload({
+      name: 'note.txt',
+      data: (async function* () {
+        yield new TextEncoder().encode('file');
+      })(),
+    });
+    expect(
+      methods.composerValidate({
+        channelId: channel.id,
+        replyTo: sent.value.message.id,
+        attachments: [ref],
+      }),
+    ).toMatchObject({
+      ok: true,
+      value: { reply: { id: sent.value.message.id }, attachments: [ref] },
+    });
+    expect(
+      methods.composerValidate({
+        channelId: channel.id,
+        replyTo: 'deleted',
+        attachments: [
+          { hash: 'sha256:' + '0'.repeat(64), name: 'gone.txt', mime: 'text/plain', size: 0 },
+        ],
+      }),
+    ).toEqual({ ok: true, value: { attachments: [null] } });
+    expect(
+      methods.composerValidate({
+        channelId: channel.id,
+        attachments: [],
+        text: 'private unsent input',
+      }).ok,
+    ).toBe(false);
+    expect(methods.composerValidate({ channelId: 'missing', attachments: [] }).ok).toBe(false);
+  });
+});
+
 function tickingNow(): () => Date {
   let value = Date.parse('2026-09-19T00:00:00.000Z');
   return () => {

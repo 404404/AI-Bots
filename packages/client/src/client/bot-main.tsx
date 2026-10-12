@@ -46,7 +46,11 @@ import {
   type ChannelComposerUpload,
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
-import { conversationDraftKey, useConversationDraft } from './conversation-draft.js';
+import {
+  conversationDraftKey,
+  useConversationDraft,
+  useComposerRecovery,
+} from './conversation-draft.js';
 import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
 import { rebaseMentions } from './mentions.js';
 import { rebaseChannelRefs } from './channel-refs.js';
@@ -645,6 +649,7 @@ function ConversationView({
   const sidebar = useChannelSidebar(state);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const draftScope = conversationDraftKey(state);
+  const recovery = useComposerRecovery(draftScope, state, actions);
   const [draft, setDraft] = useConversationDraft(draftScope, 'text', '');
   const [allBotPreview, setAllBotPreview] = useState<AllBotPreview>();
   const [allBotNotice, setAllBotNotice] = useState<string>();
@@ -1144,6 +1149,7 @@ function ConversationView({
   };
 
   const startUpload = (item: ChannelComposerUpload): void => {
+    if (item.fileAvailable === false || recovery.blocked) return;
     const controller = new AbortController();
     uploadControllers.current.set(item.id, controller);
     setUploadItems((current) =>
@@ -1187,15 +1193,18 @@ function ConversationView({
       .map((file) => ({ id: crypto.randomUUID(), file, status: 'uploading' as const }));
     if (added.length === 0) return;
     const selected = insertAttachmentReferences(draft, added, selection);
-    setDraft(selected.value);
-    setMentionTokens(rebaseMentions(draft, selected.value, mentionTokens));
-    setChannelRefTokens(rebaseChannelRefs(draft, selected.value, channelRefTokens));
-    setUploadItems((current) => [...current, ...added]);
+    recovery.update({
+      text: selected.value,
+      mentions: rebaseMentions(draft, selected.value, mentionTokens),
+      channelRefs: rebaseChannelRefs(draft, selected.value, channelRefTokens),
+      uploads: [...uploadItems, ...added],
+    });
     for (const item of added) startUpload(item);
     return selected.caret;
   };
 
   const submit = async (): Promise<void> => {
+    if (recovery.blocked) return;
     const body = draft.trim();
     const leftTrim = draft.length - draft.trimStart().length;
     const submittedRefs = channelRefTokens.flatMap((token) => {
@@ -1244,10 +1253,7 @@ function ConversationView({
         .conversation.messages.filter((item) => item.failed !== undefined)
         .map((item) => item.id),
     );
-    setDraft('');
-    setMentionTokens([]);
-    setChannelRefTokens([]);
-    setUploadItems([]);
+    recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
     const submittedReplyTo = replyTarget?.id;
     try {
       const sent = await actions.send(
@@ -1785,84 +1791,134 @@ function ConversationView({
                     display: activeMemoryView === undefined ? 'contents' : 'none',
                   }}
                 >
-                  <ChannelComposer
-                    key={channelId}
-                    context={composerContext}
-                    value={draft}
-                    mentions={mentionTokens}
-                    channelRefs={channelRefTokens}
-                    channelCandidates={
-                      channel?.type === 'dm' && channel.botSlug !== undefined
-                        ? state.channels.filter((candidate) => candidate.type === 'group')
-                        : []
-                    }
-                    allBotPreview={channel?.type === 'group' ? allBotPreview : undefined}
-                    allBotNotice={allBotNotice}
-                    mentionCandidates={
-                      channel?.type === 'group'
-                        ? channelBots
-                        : channel?.type === 'dm' && channel.botSlug !== undefined
-                          ? state.bots.filter(
-                              (candidate) =>
-                                candidate.slug !== channel.botSlug &&
-                                candidate.paused !== true &&
-                                !candidate.deleted,
-                            )
+                  <div
+                    className="bh-composer-recovery"
+                    ref={recovery.mount}
+                    onFocusCapture={() => recovery.setEditing(true)}
+                    onBlurCapture={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+                        recovery.setEditing(false);
+                    }}
+                  >
+                    {draftScope === undefined ? (
+                      <p role="status">{t('composer.draftIdentityUnavailable')}</p>
+                    ) : null}
+                    {draftScope !== undefined && recovery.error !== undefined ? (
+                      <p role="alert">{t('composer.draftStorageError')}</p>
+                    ) : null}
+                    {recovery.needsValidation && recovery.versions.length <= 1 ? (
+                      <p role="status">
+                        {t(
+                          recovery.validationFailed
+                            ? 'composer.draftValidationFailed'
+                            : 'composer.draftValidating',
+                        )}{' '}
+                        {recovery.validationFailed ? (
+                          <button type="button" onClick={recovery.retry}>
+                            {t('composer.draftRetry')}
+                          </button>
+                        ) : null}
+                      </p>
+                    ) : null}
+                    {recovery.notice ? (
+                      <p role="status">{t('composer.draftReferencesChanged')}</p>
+                    ) : null}
+                    {recovery.versions.length > 1 ? (
+                      <section aria-label={t('composer.draftConflict')}>
+                        <p role="alert">{t('composer.draftConflict')}</p>
+                        {recovery.versions.map((version) => (
+                          <div className="bh-composer-draft-version" key={version.writer}>
+                            <pre>{version.draft.text.slice(0, 240)}</pre>
+                            <button type="button" onClick={() => recovery.choose(version.writer)}>
+                              {t('composer.draftUseVersion')}
+                            </button>
+                          </div>
+                        ))}
+                      </section>
+                    ) : null}
+                    <ChannelComposer
+                      key={channelId}
+                      context={composerContext}
+                      value={draft}
+                      mentions={mentionTokens}
+                      channelRefs={channelRefTokens}
+                      channelCandidates={
+                        channel?.type === 'dm' && channel.botSlug !== undefined
+                          ? state.channels.filter((candidate) => candidate.type === 'group')
                           : []
-                    }
-                    placeholder={t('composer.placeholder', { name: title })}
-                    sending={conversation.sending}
-                    focusSignal={restoreFocusSignal}
-                    attachments={uploadItems}
-                    onAddFiles={addFiles}
-                    onRetryAttachment={(id) => {
-                      const item = uploadItems.find((candidate) => candidate.id === id);
-                      if (item !== undefined) startUpload(item);
-                    }}
-                    onRemoveAttachment={(id) => {
-                      const item = uploadItems.find((candidate) => candidate.id === id);
-                      if (item !== undefined) {
-                        const next = removeAttachmentReferences(
-                          draft,
-                          item,
-                          mentionTokens,
-                          channelRefTokens,
-                        );
-                        setDraft(next.value);
-                        setMentionTokens(next.mentions);
-                        setChannelRefTokens(next.channelRefs);
                       }
-                      uploadControllers.current.get(id)?.abort();
-                      uploadControllers.current.delete(id);
-                      setUploadItems((current) => current.filter((item) => item.id !== id));
-                    }}
-                    activity={composerActivity}
-                    activityConcealed={composerActivityConcealed}
-                    onActivityOverlayResize={resizeActivityOverlay}
-                    reply={
-                      replyTarget === undefined
-                        ? undefined
-                        : {
-                            id: replyTarget.id,
-                            author: authorLabel(
-                              replyTarget,
-                              state.bots,
-                              t,
-                              channelHumanName(channel),
-                            ),
-                            body: replyTarget.body,
-                          }
-                    }
-                    t={t}
-                    onChange={(value, mentions, channelRefs) => {
-                      setDraft(value);
-                      setMentionTokens(mentions ?? []);
-                      setChannelRefTokens(channelRefs ?? []);
-                      setRestoreBlocked(false);
-                    }}
-                    onCancelReply={() => setReplyTarget(undefined)}
-                    onSubmit={submit}
-                  />
+                      allBotPreview={channel?.type === 'group' ? allBotPreview : undefined}
+                      allBotNotice={allBotNotice}
+                      mentionCandidates={
+                        channel?.type === 'group'
+                          ? channelBots
+                          : channel?.type === 'dm' && channel.botSlug !== undefined
+                            ? state.bots.filter(
+                                (candidate) =>
+                                  candidate.slug !== channel.botSlug &&
+                                  candidate.paused !== true &&
+                                  !candidate.deleted,
+                              )
+                            : []
+                      }
+                      placeholder={t('composer.placeholder', { name: title })}
+                      sending={conversation.sending || recovery.blocked}
+                      focusSignal={restoreFocusSignal}
+                      attachments={uploadItems}
+                      onAddFiles={addFiles}
+                      onRetryAttachment={(id) => {
+                        const item = uploadItems.find((candidate) => candidate.id === id);
+                        if (item !== undefined) startUpload(item);
+                      }}
+                      onRemoveAttachment={(id) => {
+                        const item = uploadItems.find((candidate) => candidate.id === id);
+                        if (item !== undefined) {
+                          const next = removeAttachmentReferences(
+                            draft,
+                            item,
+                            mentionTokens,
+                            channelRefTokens,
+                          );
+                          recovery.update({
+                            text: next.value,
+                            mentions: next.mentions,
+                            channelRefs: next.channelRefs,
+                          });
+                        }
+                        uploadControllers.current.get(id)?.abort();
+                        uploadControllers.current.delete(id);
+                        setUploadItems((current) => current.filter((item) => item.id !== id));
+                      }}
+                      activity={composerActivity}
+                      activityConcealed={composerActivityConcealed}
+                      onActivityOverlayResize={resizeActivityOverlay}
+                      reply={
+                        replyTarget === undefined
+                          ? undefined
+                          : {
+                              id: replyTarget.id,
+                              author: authorLabel(
+                                replyTarget,
+                                state.bots,
+                                t,
+                                channelHumanName(channel),
+                              ),
+                              body: replyTarget.body,
+                            }
+                      }
+                      t={t}
+                      onChange={(value, mentions, channelRefs) => {
+                        recovery.update({
+                          text: value,
+                          mentions: mentions ?? [],
+                          channelRefs: channelRefs ?? [],
+                        });
+                        setRestoreBlocked(false);
+                      }}
+                      onCancelReply={() => setReplyTarget(undefined)}
+                      onSubmit={submit}
+                    />
+                  </div>
                 </div>
               )}
               {activeMemoryView !== undefined || messageMenu === undefined || readOnlyDm ? null : (
