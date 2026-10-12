@@ -833,7 +833,11 @@ Slack external-only reports (#863) use the same canonical Outbox as Lark: an exp
 
 Native own Echo remains unqualified: accepted send receipts and visible original-group replies do not establish a platform callback of the responding App's own message. The current dual-App slice is partial #1156 delivery.
 
+The optional developer Provider's maintained SDK 1.0.4 build patch observes the WebSocket message boundary before decode/JSON, links bounded transport and Gateway metadata by process-local connection/frame counters, and exposes start/end totals through existing connection health. Diagnostics remain process evidence; they create no Source, Admission, Outbox or Echo authority and are separate from the managed product Provider pin.
+
 自身原生 Echo 尚未通过验收：发送接受回执与原群可见回复不能证明平台回推了响应应用自己的消息；当前双 App 切片属于 #1156 的阶段性交付。
+
+可选开发 Provider 的维护版 SDK 1.0.4 构建补丁在 WebSocket message 进入 decode／JSON 前观测，按进程内 connection／frame 计数关联有界传输与 Gateway 元数据，并通过既有连接健康状态提供首尾累计数。诊断仅为进程证据，不产生 Source、Admission、Outbox 或 Echo 权威，与托管产品 Provider pin 保持独立。
 
 [#1156](https://github.com/BotHarness/BotHarness/issues/1156) 沿用独立应用绑定与 Channel Bridge 模型验证两个 QQ 应用。各自应用范围的会话分别显式映射；相同文字或共同本地 Channel 不会合并外部定位，也不会借出被动回复证明。Canonical Source Event 把接收应用 reference／名称投影到 QQ Channel 来源标签和详情，群 Profile 活动保留应用身份。这些可选展示字段不增加存储或发送权限，旧投影仍可阅读；原生接受回执与 Provider Echo 观察保持独立资格。
 

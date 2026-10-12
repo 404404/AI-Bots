@@ -33,7 +33,7 @@
 
 ### Added
 
-- 可选 checked QQ Provider 新增有界的分发前 Gateway、原生回调与发送回执诊断，包括白名单标识字段的哈希与长度，用于排查自身 Echo 缺失，不记录正文或原始标识；Gateway 解析与采样拒绝明确记录，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)）。
+- 可选 checked QQ Provider 新增有界的传输、Gateway、原生回调与发送回执元数据，用于排查自身 Echo 缺失，不记录正文、凭据或原始标识；经过审查的 SDK 1.0.4 构建补丁在 decode／JSON 前观测，并提供包含尾部限流的首尾计数，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)、[传输候选 #26](https://github.com/DoodleBears/dsh-im/pull/26)）。
 
 - PersonaBot 新增 Bot 主色：自动模式跟随头像的主发色（上传图片时使用固定的备用色），也可以在 Profile 的头像弹窗里选择自定义颜色并预览浅色／深色效果。私聊和群聊消息上的 Bot 名字、@ 候选列表、输入框里选中的 Bot 以及已发送的 @ 都使用这个颜色，并按所在背景和主题调整明暗以保证可读。导出 zip 或分享记忆仓库时会带上这个设置，导入得到的 Bot 保持同样的颜色。删除 Bot 后，它的历史消息和用量列表里的名字仍保留最后的颜色。按 Bot 的用量图表用各自的颜色画每个 Bot 的条形，并用固定的深浅区分缓存读、其他输入和输出（[#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)）；活跃度热力图将在后续版本接入（[#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471)、[#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472)、[#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473)、[#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474)、[ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)）。
 

@@ -40,6 +40,10 @@
 
 当前已取得资格的 QQ Provider 声明原生回复回执，未声明 `own-text-echo`。平台接受回执不等于观察到 Echo，也不应产生另一份来源或新 attention。跨应用原生事件保持独立，不能按文字匹配隐藏。真实资格与尚待核实的原生 Echo 边界见 [#1156](https://github.com/BotHarness/BotHarness/issues/1156)。
 
+## 可选原生观测候选
+
+`scripts/dev-im-provider.mjs` 选定的可选开发 Provider 使用经过审查的 SDK 1.0.4 构建补丁，在 WebSocket message 进入 decode／JSON parse 之前观测，并在既有连接状态中提供有界 phase 元数据和进程内首尾计数。它不记录 raw payload 或凭据，也不增加收件、发送或 Echo 权限。每个新原生窗口都须比较捕获 phase、首尾计数、限流及采集容量。此候选与默认托管产品 Provider 独立，尚未验收自身原生 Echo；见 [Provider #26](https://github.com/DoodleBears/dsh-im/pull/26) 及其[双语观测契约](https://github.com/DoodleBears/dsh-im/blob/43902c638ac97d4eeaa6845442c5115198f1c9ec/docs/qq-native-observation.md)。
+
 ## 群图片（开发候选）
 
 [#1157](https://github.com/BotHarness/BotHarness/issues/1157) 候选沿用仅提及接收路径，增加 PNG、JPEG、GIF 和 WebP。发送一条带说明和图片的新 @ 消息；已同步会话通过共用预览在原 Channel 消息中展示图片。仅 Inbox 接收不要求 Channel 落点，打开预览也不会唤醒 Bot。

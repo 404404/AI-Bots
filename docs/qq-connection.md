@@ -40,6 +40,10 @@ Shared Channel reading never lends the receiving app's identity or passive reply
 
 The qualified QQ Provider currently declares native reply receipts, without `own-text-echo`. An accepted receipt is not an observed Echo; it must not create another source or new attention. Cross-app native events remain independent, and text matching must never conceal them. See [#1156](https://github.com/BotHarness/BotHarness/issues/1156) for real qualification and the outstanding native Echo boundary.
 
+## Optional native observation candidate
+
+The optional developer Provider selected by `scripts/dev-im-provider.mjs` adds a reviewed SDK 1.0.4 build patch that observes WebSocket messages before decode/JSON parsing, plus bounded phase metadata and process-local start/end counters in the existing connection status. It records no raw payload or credential and grants no intake, sending or Echo capability. Compare captured phases with the counters, suppression and capture capacity for each new native window. This candidate is separate from the default managed product Provider and has not qualified native own Echo; see [Provider #26](https://github.com/DoodleBears/dsh-im/pull/26) and its [bilingual observation contract](https://github.com/DoodleBears/dsh-im/blob/43902c638ac97d4eeaa6845442c5115198f1c9ec/docs/qq-native-observation.md).
+
 ## Use group images (development candidate)
 
 The [#1157](https://github.com/BotHarness/BotHarness/issues/1157) candidate extends the same mention-only route with PNG, JPEG, GIF and WebP images. Send a new @mention with a caption and an image. A synced conversation displays the image in its original Channel message through the shared preview. Inbox-only reception still works without Channel placement. Opening a preview does not wake a Bot.
