@@ -3542,7 +3542,12 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
 .bh-message-group-me {
   justify-content: flex-end;
 }
+/* The avatar rests at its group's last bubble and pins to the timeline's
+   bottom edge while a taller group scrolls past, so the author stays visible.
+   The sticky edge already sits inside .bh-chat-body's bottom padding. */
 .bh-message-group-avatar {
+  position: sticky;
+  bottom: 0;
   flex: 0 0 28px;
   width: 28px;
   height: 28px;
