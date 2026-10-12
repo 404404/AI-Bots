@@ -1,5 +1,10 @@
 import { expect, it, vi } from 'vitest';
-import { createTypedLive, SNAPSHOT_REMOTE_DESCRIPTORS } from '../src/client/live-snapshots.js';
+import {
+  CHANNEL_REMOTE_DESCRIPTOR,
+  createChannelFollow,
+  createTypedLive,
+  SNAPSHOT_REMOTE_DESCRIPTORS,
+} from '../src/client/live-snapshots.js';
 import {
   installTypedLive,
   openRosterActivity,
@@ -156,5 +161,90 @@ it('gives roster and Activity their own typed streams and leaves only the Channe
     unsubscribe();
     uninstall();
     vi.unstubAllGlobals();
+  }
+});
+
+it('declares the Channel stream with strict Channel ID and revision parameters', () => {
+  expect(CHANNEL_REMOTE_DESCRIPTOR).toMatchObject({ method: 'followChannel', mode: 'stream' });
+  const [channelId, after] = CHANNEL_REMOTE_DESCRIPTOR.parameters.map((parameter) =>
+    parameter.codec.create(),
+  );
+  expect(channelId!.parse('c1')).toBe('c1');
+  expect(() => channelId!.parse(1)).toThrow('Expected a Channel ID');
+  expect(after!.parse(3)).toBe(3);
+  expect(() => after!.parse(-1)).toThrow('Expected a revision');
+});
+
+it('follows a Channel from the last delivered revision and reports a terminal failure as closed', async () => {
+  const generations: ReturnType<typeof channel<unknown>>[] = [];
+  const opens: number[] = [];
+  let reopen: (() => void) | undefined;
+  let carrierFailed: (() => void) | undefined;
+  let fail: ((error: Error) => void) | undefined;
+  const remote = {
+    $stream: (options: {
+      open: (signal: AbortSignal) => AsyncIterable<unknown>;
+      carrierFailed?: () => void;
+    }) => {
+      const lifetime = new AbortController();
+      carrierFailed = options.carrierFailed;
+      return {
+        dispose: async () => lifetime.abort(),
+        async *[Symbol.asyncIterator]() {
+          for (;;) {
+            const generation = new AbortController();
+            lifetime.signal.addEventListener('abort', () => generation.abort(), { once: true });
+            const failed = new Promise<never>((_resolve, reject) => {
+              fail = reject;
+            });
+            failed.catch(() => undefined);
+            reopen = () => generation.abort();
+            const items = options.open(generation.signal)[Symbol.asyncIterator]();
+            for (;;) {
+              const next = await Promise.race([items.next(), failed]);
+              if (next.done) break;
+              yield {
+                generation: 1,
+                value: next.value,
+                signal: generation.signal,
+                accept: () => undefined,
+              };
+            }
+            if (lifetime.signal.aborted) return;
+          }
+        },
+      };
+    },
+  };
+  const follow = createChannelFollow(remote as never, () => ({
+    followChannel: (_channelId, after, signal) => {
+      opens.push(after);
+      const generation = channel<unknown>();
+      generations.push(generation);
+      return generation.items(signal) as never;
+    },
+  }));
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const frames: unknown[] = [];
+  const interrupted = vi.fn();
+  const stop = follow('c1', 3, { frame: (value) => frames.push(value), interrupted });
+  try {
+    await settle();
+    expect(opens).toEqual([3]);
+    generations[0]!.push({ type: 'opened', cursor: 3 });
+    generations[0]!.push({ type: 'entry', entry: { channelId: 'c1', revision: 4, message: {} } });
+    await settle();
+    expect(frames).toHaveLength(2);
+    carrierFailed!();
+    expect(interrupted).toHaveBeenLastCalledWith(false);
+    reopen!();
+    await settle();
+    expect(opens).toEqual([3, 4]);
+    fail!(new Error('Unknown Channel'));
+    await settle();
+    expect(interrupted).toHaveBeenLastCalledWith(true);
+  } finally {
+    stop();
+    warn.mockRestore();
   }
 });

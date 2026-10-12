@@ -65,11 +65,14 @@ import {
   SessionReturnMenuItem,
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
-import { mountChannelLive, mountRosterLive } from './channel-live.js';
+import { installChannelFollow, mountChannelLive, mountRosterLive } from './channel-live.js';
 import { installLiveSource, installTypedLive } from './messaging-defaults-live.js';
 import {
+  CHANNEL_REMOTE_DESCRIPTOR,
+  createChannelFollow,
   createTypedLive,
   SNAPSHOT_REMOTE_DESCRIPTORS,
+  type ChannelNamespace,
   type SnapshotNamespace,
 } from './live-snapshots.js';
 import {
@@ -367,7 +370,11 @@ export function apply(ctx: ClientContext): void {
     void ctx.remote
       .$mount({
         package: LIVE_REMOTE_CONTRIBUTION.package,
-        descriptors: [...LIVE_REMOTE_CONTRIBUTION.descriptors, ...SNAPSHOT_REMOTE_DESCRIPTORS],
+        descriptors: [
+          ...LIVE_REMOTE_CONTRIBUTION.descriptors,
+          ...SNAPSHOT_REMOTE_DESCRIPTORS,
+          CHANNEL_REMOTE_DESCRIPTOR,
+        ],
       })
       .then(
         () => {
@@ -390,7 +397,16 @@ export function apply(ctx: ClientContext): void {
               },
             }),
           );
+          const uninstallFollow = installChannelFollow(
+            createChannelFollow(ctx.remote, () => {
+              const mounted = namespace() as Partial<ChannelNamespace>;
+              if (mounted.followChannel === undefined)
+                throw new Error('botharness live Remote is not mounted');
+              return mounted as ChannelNamespace;
+            }),
+          );
           uninstall = () => {
+            uninstallFollow();
             uninstallSource();
             uninstallTyped();
           };

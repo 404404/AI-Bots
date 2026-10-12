@@ -1530,6 +1530,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       openLiveFrames((request) => core.live.open(request), query, resume, signal),
     followRoster: (signal) => core.live.followRoster(signal),
     followActivity: (signal) => core.live.followActivity(signal),
+    followChannel: (channelId, after, signal) => core.live.followChannel(channelId, after, signal),
   });
 
   ctx.inject(['skills'], (skillsCtx) => {

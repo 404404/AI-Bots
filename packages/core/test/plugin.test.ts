@@ -514,6 +514,7 @@ describe('plugin entry', () => {
       'liveFrames',
       'followRoster',
       'followActivity',
+      'followChannel',
     ]);
   });
 

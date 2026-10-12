@@ -3,7 +3,12 @@ import {
   RemoteStreamCarrierError,
 } from '@deepseek-ai/dsh-api-gateway/client';
 import type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client';
-import type { ActivityLiveFrame, RosterLiveFrame } from '../../../core/src/channels/live.js';
+import type {
+  ActivityLiveFrame,
+  ChannelLiveFrame,
+  RosterLiveFrame,
+} from '../../../core/src/channels/live.js';
+import type { ChannelFollow } from './channel-live.js';
 import type { TypedLive } from './messaging-defaults-live.js';
 
 const follow = Object.freeze({
@@ -28,6 +33,91 @@ export const SNAPSHOT_REMOTE_DESCRIPTORS = Object.freeze([
     method: 'followActivity',
   }),
 ]);
+
+const strict = <Value>(name: string, accepts: (value: unknown) => value is Value) =>
+  Object.freeze({
+    mode: 'strict' as const,
+    typeSymbol: `@botharness/core#botharness/followChannel:${name}`,
+    create: () => ({
+      parse: (value: unknown): Value => {
+        if (!accepts(value)) throw new TypeError(`Expected ${name}`);
+        return value;
+      },
+    }),
+  });
+
+export const CHANNEL_REMOTE_DESCRIPTOR = Object.freeze({
+  ...follow,
+  id: 'src:botharnessBridge#botharness/followChannel',
+  method: 'followChannel',
+  parameters: Object.freeze([
+    Object.freeze({
+      name: 'channelId',
+      wire: 'channelId',
+      source: 'json' as const,
+      codec: strict('a Channel ID', (value): value is string => typeof value === 'string'),
+    }),
+    Object.freeze({
+      name: 'after',
+      wire: 'after',
+      source: 'json' as const,
+      codec: strict(
+        'a revision',
+        (value): value is number => Number.isSafeInteger(value) && (value as number) >= 0,
+      ),
+    }),
+  ]),
+});
+
+export interface ChannelNamespace {
+  followChannel(
+    channelId: string,
+    after: number,
+    signal: AbortSignal,
+  ): AsyncIterable<ChannelLiveFrame>;
+}
+
+export function createChannelFollow(
+  remote: Pick<ClientRemote, '$stream'>,
+  namespace: () => ChannelNamespace,
+): ChannelFollow {
+  return (channelId, after, handlers) => {
+    const name = 'botharness Channel stream';
+    let stopped = false;
+    let cursor = after;
+    const stream = remote.$stream<ChannelLiveFrame>({
+      name,
+      open: (signal) => namespace().followChannel(channelId, cursor, signal),
+      ended: (accepted) =>
+        accepted
+          ? new RemoteStreamCarrierError(`${name} ended without a terminal result`)
+          : new Error(`${name} ended before it opened`),
+      carrierFailed: () => {
+        if (!stopped) handlers.interrupted(false);
+      },
+    });
+    const consume = async (): Promise<void> => {
+      try {
+        for await (const item of stream) {
+          if (stopped) return;
+          const frame = item.value;
+          if (frame.type === 'opened') item.accept();
+          else if (frame.type === 'entry') cursor = Math.max(cursor, frame.entry.revision);
+          handlers.frame(frame);
+        }
+      } catch (error) {
+        if (stopped) return;
+        console.warn(`botharness: ${name} failed`, error);
+        handlers.interrupted(true);
+      }
+    };
+    void consume();
+    return () => {
+      stopped = true;
+      void stream.dispose();
+    };
+  };
+}
 
 export interface SnapshotNamespace {
   followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;

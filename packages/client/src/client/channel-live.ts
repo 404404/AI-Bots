@@ -22,13 +22,17 @@ interface ChannelFrame {
   message: ReturnType<typeof parseChannelMessage>;
 }
 
-function parseFrame(value: string): ChannelFrame | undefined {
-  let decoded: unknown;
+function decode(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
   try {
-    decoded = JSON.parse(value);
+    return JSON.parse(value);
   } catch {
     return undefined;
   }
+}
+
+function parseFrame(value: unknown): ChannelFrame | undefined {
+  const decoded = decode(value);
   if (typeof decoded !== 'object' || decoded === null) return undefined;
   const record = decoded as Record<string, unknown>;
   const revision = record['revision'];
@@ -45,13 +49,8 @@ function parseFrame(value: string): ChannelFrame | undefined {
   return { channelId: record['channelId'], revision, message };
 }
 
-function parseDraft(value: string): ChannelDraft | undefined {
-  let decoded: unknown;
-  try {
-    decoded = JSON.parse(value);
-  } catch {
-    return undefined;
-  }
+function parseDraft(value: unknown): ChannelDraft | undefined {
+  const decoded = decode(value);
   if (typeof decoded !== 'object' || decoded === null) return undefined;
   const item = decoded as Record<string, unknown>;
   if (
@@ -83,9 +82,9 @@ interface DraftLifecycle {
   reason?: 'retargeted' | 'interrupted' | 'expired';
 }
 
-function parseDraftLifecycle(value: string): DraftLifecycle | undefined {
+function parseDraftLifecycle(value: unknown): DraftLifecycle | undefined {
   try {
-    const decoded: unknown = JSON.parse(value);
+    const decoded = decode(value);
     if (typeof decoded !== 'object' || decoded === null) return undefined;
     const item = decoded as Record<string, unknown>;
     if (
@@ -118,10 +117,10 @@ function parseDraftLifecycle(value: string): DraftLifecycle | undefined {
 }
 
 function parseDraftBaseline(
-  value: string,
+  value: unknown,
 ): { channelId: string; revision: number; drafts: ChannelDraft[] } | undefined {
   try {
-    const decoded: unknown = JSON.parse(value);
+    const decoded = decode(value);
     if (typeof decoded !== 'object' || decoded === null) return undefined;
     const item = decoded as Record<string, unknown>;
     if (
@@ -132,7 +131,7 @@ function parseDraftBaseline(
       !Array.isArray(item['drafts'])
     )
       return undefined;
-    const drafts = item['drafts'].map((draft) => parseDraft(JSON.stringify(draft)));
+    const drafts = item['drafts'].map((draft) => parseDraft(draft));
     if (drafts.some((draft) => draft === undefined)) return undefined;
     return {
       channelId: item['channelId'],
@@ -144,6 +143,26 @@ function parseDraftBaseline(
   }
 }
 
+export type ChannelFollow = (
+  channelId: string,
+  after: number,
+  handlers: { frame(value: unknown): void; interrupted(closed: boolean): void },
+) => () => void;
+
+let follow: ChannelFollow | undefined;
+const followListeners = new Set<() => void>();
+
+export function installChannelFollow(next: ChannelFollow): () => void {
+  const swap = (value: ChannelFollow | undefined): void => {
+    follow = value;
+    for (const listener of [...followListeners]) listener();
+  };
+  swap(next);
+  return () => {
+    if (follow === next) swap(undefined);
+  };
+}
+
 export function mountChannelLive(
   store: ClientStore,
   actions: Pick<BridgeActions, 'refreshChannelMessages'>,
@@ -151,6 +170,7 @@ export function mountChannelLive(
 ): () => void {
   let activeChannelId: string | undefined;
   let source: ChannelEventSource | undefined;
+  let stopFollow: (() => void) | undefined;
   let recovering = false;
   let disposed = false;
   let baselineSeen = false;
@@ -185,6 +205,8 @@ export function mountChannelLive(
     cancelRender();
     source?.close();
     source = undefined;
+    stopFollow?.();
+    stopFollow = undefined;
     activeChannelId = undefined;
     baselineSeen = false;
     draftCursor = 0;
@@ -243,18 +265,8 @@ export function mountChannelLive(
       channelId: channel.id,
       after: String(snapshot.conversation.revision),
     });
-    let next: ChannelEventSource;
-    try {
-      next = makeSource('/api/botharness/stream?' + query.toString());
-    } catch {
-      close();
-      console.warn('botharness: Channel live stream construction refused');
-      return;
-    }
-    source = next;
-    next.addEventListener(EVENT_NAME, (event) => {
-      if (!(event instanceof MessageEvent)) return;
-      const frame = parseFrame(event.data as string);
+    const onEntry = (data: unknown): void => {
+      const frame = parseFrame(data);
       if (frame === undefined || frame.channelId !== activeChannelId) return;
       const latest = store.getSnapshot();
       if (latest.conversation.channel?.id !== frame.channelId) return;
@@ -293,15 +305,9 @@ export function mountChannelLive(
           ? latest.conversation.messages
           : [...latest.conversation.messages.filter((item) => item.id !== message.id), message],
       });
-    });
-    next.addEventListener(ADMISSION_EVENT, (event) => {
-      if (!(event instanceof MessageEvent)) return;
-      let payload: unknown;
-      try {
-        payload = JSON.parse(event.data as string);
-      } catch {
-        return;
-      }
+    };
+    const onAdmission = (data: unknown): void => {
+      const payload = decode(data);
       if (typeof payload !== 'object' || payload === null) return;
       const item = payload as Record<string, unknown>;
       if (
@@ -333,15 +339,9 @@ export function mountChannelLive(
             : candidate,
         ),
       });
-    });
-    next.addEventListener(HUMAN_READ_EVENT, (event) => {
-      if (!(event instanceof MessageEvent)) return;
-      let payload: unknown;
-      try {
-        payload = JSON.parse(event.data as string);
-      } catch {
-        return;
-      }
+    };
+    const onHumanRead = (data: unknown): void => {
+      const payload = decode(data);
       if (typeof payload !== 'object' || payload === null) return;
       const item = payload as Record<string, unknown>;
       const revision = item['revision'];
@@ -375,10 +375,9 @@ export function mountChannelLive(
           };
         }),
       });
-    });
-    next.addEventListener(DRAFT_BASELINE_EVENT, (event) => {
-      if (!(event instanceof MessageEvent)) return;
-      const baseline = parseDraftBaseline(event.data as string);
+    };
+    const onDraftBaseline = (data: unknown): void => {
+      const baseline = parseDraftBaseline(data);
       if (baseline === undefined || baseline.channelId !== activeChannelId) return;
       baselineSeen = true;
       draftCursor = baseline.revision;
@@ -387,10 +386,9 @@ export function mountChannelLive(
       );
       activeAttempts = new Map(visibleDrafts.map((draft) => [draft.botSlug, draft.attemptId]));
       scheduleDrafts();
-    });
-    next.addEventListener(DRAFT_EVENT, (event) => {
-      if (!(event instanceof MessageEvent)) return;
-      const draft = parseDraft(event.data as string);
+    };
+    const onDraft = (data: unknown): void => {
+      const draft = parseDraft(data);
       if (draft === undefined || !acceptRevision(draft.channelId, draft.revision)) return;
       const previous = visibleDrafts.find((item) => item.draftId === draft.draftId);
       const priorAttempt = activeAttempts.get(draft.botSlug);
@@ -405,10 +403,9 @@ export function mountChannelLive(
       visibleDrafts = [...visibleDrafts.filter((item) => item.draftId !== draft.draftId), draft];
       store.setConversation({ draftNotice: undefined });
       scheduleDrafts();
-    });
-    const onLifecycle = (event: Event, abandoned: boolean): void => {
-      if (!(event instanceof MessageEvent)) return;
-      const ended = parseDraftLifecycle(event.data as string);
+    };
+    const onLifecycle = (data: unknown, abandoned: boolean): void => {
+      const ended = parseDraftLifecycle(data);
       if (ended === undefined || !acceptRevision(ended.channelId, ended.revision)) return;
       const ending = visibleDrafts.find((item) => item.draftId === ended.draftId);
       visibleDrafts = visibleDrafts.filter(
@@ -420,10 +417,8 @@ export function mountChannelLive(
       scheduleDrafts();
       if (abandoned) showAbandoned(ended.reason);
     };
-    next.addEventListener(DRAFT_SETTLED_EVENT, (event) => onLifecycle(event, false));
-    next.addEventListener(DRAFT_ABANDONED_EVENT, (event) => onLifecycle(event, true));
-    next.onerror = () => {
-      if (next.readyState === 2 && activeChannelId === channel.id) {
+    const onInterrupted = (closed: boolean): void => {
+      if (closed && activeChannelId === channel.id) {
         void recover(channel.id);
       } else if (activeChannelId === channel.id) {
         visibleDrafts = [];
@@ -432,12 +427,66 @@ export function mountChannelLive(
         scheduleDrafts();
       }
     };
+    if (follow !== undefined) {
+      stopFollow = follow(channel.id, snapshot.conversation.revision, {
+        frame(value) {
+          if (typeof value !== 'object' || value === null) return;
+          const frame = value as { type?: unknown; entry?: unknown; notification?: unknown };
+          if (frame.type === 'entry') return onEntry(frame.entry);
+          if (frame.type !== 'notification') return;
+          const notification = frame.notification;
+          if (typeof notification !== 'object' || notification === null) return;
+          const item = notification as { kind?: unknown; draft?: unknown; event?: unknown };
+          if (item.kind === 'admission') onAdmission(notification);
+          else if (item.kind === 'human-read') onHumanRead(notification);
+          else if (item.kind === 'draft-baseline') onDraftBaseline(notification);
+          else if (item.kind === 'draft') onDraft(item.draft);
+          else if (item.kind === 'draft-settled') onLifecycle(item.event, false);
+          else if (item.kind === 'draft-abandoned') onLifecycle(item.event, true);
+        },
+        interrupted: onInterrupted,
+      });
+      return;
+    }
+    let next: ChannelEventSource;
+    try {
+      next = makeSource('/api/botharness/stream?' + query.toString());
+    } catch {
+      close();
+      console.warn('botharness: Channel live stream construction refused');
+      return;
+    }
+    source = next;
+    const data = (listener: (value: unknown) => void) => (event: Event) => {
+      if (event instanceof MessageEvent) listener(event.data);
+    };
+    next.addEventListener(EVENT_NAME, data(onEntry));
+    next.addEventListener(ADMISSION_EVENT, data(onAdmission));
+    next.addEventListener(HUMAN_READ_EVENT, data(onHumanRead));
+    next.addEventListener(DRAFT_BASELINE_EVENT, data(onDraftBaseline));
+    next.addEventListener(DRAFT_EVENT, data(onDraft));
+    next.addEventListener(
+      DRAFT_SETTLED_EVENT,
+      data((value) => onLifecycle(value, false)),
+    );
+    next.addEventListener(
+      DRAFT_ABANDONED_EVENT,
+      data((value) => onLifecycle(value, true)),
+    );
+    next.onerror = () => onInterrupted(next.readyState === 2);
   };
 
+  const refollow = (): void => {
+    if (disposed || recovering) return;
+    close();
+    sync();
+  };
+  followListeners.add(refollow);
   const unsubscribe = store.subscribe(sync);
   sync();
   return () => {
     disposed = true;
+    followListeners.delete(refollow);
     unsubscribe();
     close();
   };

@@ -6,7 +6,13 @@ import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused, type LiveFrame } from '../channels/live-frames.js';
-import { LiveUnavailable, type ActivityLiveFrame, type RosterLiveFrame } from '../channels/live.js';
+import {
+  ChannelLiveRefused,
+  LiveUnavailable,
+  type ActivityLiveFrame,
+  type ChannelLiveFrame,
+  type RosterLiveFrame,
+} from '../channels/live.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
 import type {
   MessagingDefaults,
@@ -168,6 +174,11 @@ export interface BridgeLive {
   frames(query: string, resume: string, signal: AbortSignal): AsyncIterable<LiveFrame>;
   followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;
   followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
+  followChannel(
+    channelId: string,
+    after: number,
+    signal: AbortSignal,
+  ): AsyncIterable<ChannelLiveFrame>;
 }
 
 function markRemoteStreams(prototype: object, streams: readonly string[]): void {
@@ -233,6 +244,22 @@ export class BotharnessBridgeService extends TypertRemoteService {
     } catch (error) {
       if (error instanceof LiveUnavailable)
         throw toRemoteError({ code: 'unavailable', message: error.message });
+      throw error;
+    }
+  }
+
+  async *followChannel(
+    channelId: string,
+    after: number,
+    signal: AbortSignal,
+  ): AsyncGenerator<ChannelLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live.followChannel(channelId, after, signal);
+    } catch (error) {
+      if (error instanceof ChannelLiveRefused)
+        throw toRemoteError({ code: error.code, message: error.message });
       throw error;
     }
   }
@@ -1471,6 +1498,7 @@ markRemoteStreams(BotharnessBridgeService.prototype, [
   'liveFrames',
   'followRoster',
   'followActivity',
+  'followChannel',
 ]);
 
 export function registerBridge(

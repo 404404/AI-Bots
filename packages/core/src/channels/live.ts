@@ -15,11 +15,11 @@ export const CHANNEL_DRAFT_ABANDONED_EVENT = 'channel/draft-abandoned';
 export const ROSTER_CHANGED_EVENT = 'roster/changed';
 export const CONTENT_PURGED_EVENT = 'content/purged';
 
-interface PublishedDraft extends ChannelDraft {
+export interface PublishedDraft extends ChannelDraft {
   revision: number;
 }
 
-type PublishedDraftEvent =
+export type PublishedDraftEvent =
   | { type: 'update'; draft: PublishedDraft }
   | {
       type: 'settled' | 'abandoned';
@@ -47,6 +47,65 @@ export type ActivityLiveFrame =
   | { type: 'baseline'; snapshot: PersonaBotActivitySnapshot }
   | { type: 'changed'; snapshot: PersonaBotActivitySnapshot };
 
+export type ChannelLiveNotification =
+  | {
+      kind: 'admission';
+      channelId: string;
+      messageId: string;
+      deliveries: NonNullable<ChannelMessage['deliveries']>;
+      humanReceipts: NonNullable<ChannelMessage['humanReceipts']>;
+    }
+  | { kind: 'human-read'; channelId: string; humanId: string; revision: number }
+  | { kind: 'draft-baseline'; channelId: string; revision: number; drafts: PublishedDraft[] }
+  | { kind: 'draft'; draft: PublishedDraft }
+  | {
+      kind: 'draft-settled' | 'draft-abandoned';
+      event: Exclude<PublishedDraftEvent, { type: 'update' }>;
+    };
+
+export type ChannelLiveFrame =
+  | { type: 'opened'; cursor: number }
+  | { type: 'entry'; entry: { channelId: string; message: ChannelMessage; revision: number } }
+  | { type: 'notification'; notification: ChannelLiveNotification };
+
+export class ChannelLiveRefused extends Error {
+  constructor(
+    readonly code: 'not-found' | 'conflict' | 'invalid',
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ChannelLiveRefused';
+  }
+}
+
+const CHANNEL_LIVE_QUEUE_LIMIT = 4096;
+
+function encodeChannelFrame(frame: ChannelLiveFrame): string {
+  if (frame.type === 'opened') return 'retry: 1500\n\n';
+  if (frame.type === 'entry')
+    return `id: ${frame.entry.revision}\nevent: ${CHANNEL_COMMIT_EVENT}\ndata: ${JSON.stringify(frame.entry)}\n\n`;
+  const notification = frame.notification;
+  if (notification.kind === 'admission') {
+    const { kind: _kind, ...data } = notification;
+    return `event: ${CHANNEL_ADMISSION_EVENT}\ndata: ${JSON.stringify(data)}\n\n`;
+  }
+  if (notification.kind === 'human-read') {
+    const { kind: _kind, ...data } = notification;
+    return `event: ${CHANNEL_HUMAN_READ_EVENT}\ndata: ${JSON.stringify(data)}\n\n`;
+  }
+  if (notification.kind === 'draft-baseline') {
+    const { kind: _kind, ...data } = notification;
+    return `event: ${CHANNEL_DRAFT_BASELINE_EVENT}\ndata: ${JSON.stringify(data)}\n\n`;
+  }
+  if (notification.kind === 'draft')
+    return `event: ${CHANNEL_DRAFT_EVENT}\ndata: ${JSON.stringify(notification.draft)}\n\n`;
+  const name =
+    notification.kind === 'draft-settled'
+      ? CHANNEL_DRAFT_SETTLED_EVENT
+      : CHANNEL_DRAFT_ABANDONED_EVENT;
+  return `event: ${name}\ndata: ${JSON.stringify(notification.event)}\n\n`;
+}
+
 export class LiveUnavailable extends Error {
   constructor(message: string) {
     super(message);
@@ -60,6 +119,11 @@ export interface ChannelLiveHub {
   open(request: Request): Response;
   followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;
   followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
+  followChannel(
+    channelId: string,
+    after: number,
+    signal: AbortSignal,
+  ): AsyncIterable<ChannelLiveFrame>;
   publishCommitted(commit: ChannelMessageCommit): void;
   publishAdmission(channelId: string, messageId: string, message: ChannelMessage): void;
   publishHumanRead(channelId: string, humanId: string, revision: number): void;
@@ -73,21 +137,6 @@ function parseRevision(value: string | null): number | undefined {
   if (value === null || !/^(0|[1-9][0-9]*)$/.test(value)) return undefined;
   const revision = Number(value);
   return Number.isSafeInteger(revision) ? revision : undefined;
-}
-
-function frame(commit: ChannelMessageCommit): string {
-  return `id: ${commit.revision}\nevent: ${CHANNEL_COMMIT_EVENT}\ndata: ${JSON.stringify({ channelId: commit.channelId, message: commit.message, revision: commit.revision })}\n\n`;
-}
-
-function draftFrame(event: PublishedDraftEvent): string {
-  const name =
-    event.type === 'update'
-      ? CHANNEL_DRAFT_EVENT
-      : event.type === 'settled'
-        ? CHANNEL_DRAFT_SETTLED_EVENT
-        : CHANNEL_DRAFT_ABANDONED_EVENT;
-  const data = event.type === 'update' ? event.draft : event;
-  return `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
 interface ActivitySource {
@@ -413,6 +462,144 @@ export function createChannelLiveHub(
       subscriber.close();
     }
   }
+  const subscribeChannel = (
+    channelId: string,
+    after: number,
+    sink: (frame: ChannelLiveFrame) => void,
+    closed: () => void,
+  ): { close(): void } => {
+    let delivered = after;
+    let ended = false;
+    const emit = (frame: ChannelLiveFrame): void => {
+      if (ended) return;
+      try {
+        sink(frame);
+      } catch {
+        subscriber.close();
+      }
+    };
+    const subscriber: Subscriber = {
+      push(commit) {
+        if (ended || commit.revision <= delivered) return;
+        emit({
+          type: 'entry',
+          entry: {
+            channelId: commit.channelId,
+            message: commit.message,
+            revision: commit.revision,
+          },
+        });
+        if (!ended) delivered = commit.revision;
+      },
+      pushAdmission(messageId, message) {
+        emit({
+          type: 'notification',
+          notification: {
+            kind: 'admission',
+            channelId,
+            messageId,
+            deliveries: message.deliveries ?? [],
+            humanReceipts: message.humanReceipts ?? [],
+          },
+        });
+      },
+      pushHumanRead(humanId, revision) {
+        emit({
+          type: 'notification',
+          notification: { kind: 'human-read', channelId, humanId, revision },
+        });
+      },
+      pushDraft(event) {
+        emit({
+          type: 'notification',
+          notification:
+            event.type === 'update'
+              ? { kind: 'draft', draft: event.draft }
+              : event.type === 'settled'
+                ? { kind: 'draft-settled', event }
+                : { kind: 'draft-abandoned', event },
+        });
+      },
+      close() {
+        if (ended) return;
+        ended = true;
+        remove(channelId, subscriber);
+        closed();
+      },
+    };
+    let group = subscribers.get(channelId);
+    if (group === undefined) {
+      group = new Set();
+      subscribers.set(channelId, group);
+    }
+    group.add(subscriber);
+    emit({ type: 'opened', cursor: after });
+    for (const commit of channels.messagesAfter(channelId, after) ?? []) subscriber.push(commit);
+    for (const commit of channels.messagesAfter(channelId, Math.max(0, after - 100)) ?? []) {
+      if (commit.revision > after) break;
+      if (commit.message.deliveries !== undefined)
+        subscriber.pushAdmission(commit.message.id, commit.message);
+    }
+    if (channels.get(channelId)?.type === 'group') {
+      const position = channels.readPosition(channelId);
+      if (position !== undefined) subscriber.pushHumanRead('local-human', position.revision);
+    }
+    emit({
+      type: 'notification',
+      notification: {
+        kind: 'draft-baseline',
+        channelId,
+        revision: draftRevisions.get(channelId) ?? 0,
+        drafts: [...(drafts.get(channelId)?.values() ?? [])],
+      },
+    });
+    return subscriber;
+  };
+  async function* followChannel(
+    channelId: string,
+    after: number,
+    signal: AbortSignal,
+  ): AsyncGenerator<ChannelLiveFrame> {
+    if (typeof channelId !== 'string' || channels.get(channelId) === undefined)
+      throw new ChannelLiveRefused('not-found', 'Unknown Channel');
+    if (!Number.isSafeInteger(after) || after < 0)
+      throw new ChannelLiveRefused('invalid', 'Invalid Channel revision');
+    if (channels.messagesAfter(channelId, after) === undefined)
+      throw new ChannelLiveRefused('conflict', 'Channel revision is ahead of the log');
+    if (signal.aborted) return;
+    const queue: ChannelLiveFrame[] = [];
+    let ended = false;
+    let wake: (() => void) | undefined;
+    const subscription = subscribeChannel(
+      channelId,
+      after,
+      (frame) => {
+        queue.push(frame);
+        if (queue.length > CHANNEL_LIVE_QUEUE_LIMIT)
+          throw new Error('Channel live consumer is behind');
+        wake?.();
+      },
+      () => {
+        ended = true;
+        wake?.();
+      },
+    );
+    const abort = (): void => subscription.close();
+    signal.addEventListener('abort', abort, { once: true });
+    try {
+      for (;;) {
+        while (!ended && queue.length > 0) yield queue.shift()!;
+        if (ended) return;
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+        wake = undefined;
+      }
+    } finally {
+      signal.removeEventListener('abort', abort);
+      subscription.close();
+    }
+  }
   const remove = (channelId: string, subscriber: Subscriber): void => {
     const group = subscribers.get(channelId);
     group?.delete(subscriber);
@@ -422,6 +609,7 @@ export function createChannelLiveHub(
   return {
     followRoster,
     followActivity,
+    followChannel,
     open(request) {
       const url = new URL(request.url);
       if (url.searchParams.get('roster') === '1' && url.searchParams.has('channelId')) {
@@ -452,113 +640,31 @@ export function createChannelLiveHub(
       }
 
       const encoder = new TextEncoder();
-      let subscriber: Subscriber | undefined;
+      let subscription: { close(): void } | undefined;
       let heartbeat: ReturnType<typeof setInterval> | undefined;
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
-          let delivered = after;
-          let ended = false;
-          const push = (commit: ChannelMessageCommit): void => {
-            if (ended || commit.revision <= delivered) return;
-            try {
-              controller.enqueue(encoder.encode(frame(commit)));
-              delivered = commit.revision;
-            } catch {
-              subscriber?.close();
-            }
-          };
-          subscriber = {
-            push,
-            pushAdmission(messageId, message) {
-              if (ended) return;
-              try {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: ${CHANNEL_ADMISSION_EVENT}\ndata: ${JSON.stringify({
-                      channelId,
-                      messageId,
-                      deliveries: message.deliveries ?? [],
-                      humanReceipts: message.humanReceipts ?? [],
-                    })}\n\n`,
-                  ),
-                );
-              } catch {
-                this.close();
-              }
-            },
-            pushHumanRead(humanId, revision) {
-              if (ended) return;
-              try {
-                controller.enqueue(
-                  encoder.encode(
-                    `event: ${CHANNEL_HUMAN_READ_EVENT}\ndata: ${JSON.stringify({
-                      channelId,
-                      humanId,
-                      revision,
-                    })}\n\n`,
-                  ),
-                );
-              } catch {
-                this.close();
-              }
-            },
-            pushDraft(event) {
-              if (ended) return;
-              try {
-                controller.enqueue(encoder.encode(draftFrame(event)));
-              } catch {
-                this.close();
-              }
-            },
-            close() {
-              if (ended) return;
-              ended = true;
+          subscription = subscribeChannel(
+            channelId,
+            after,
+            (frame) => controller.enqueue(encoder.encode(encodeChannelFrame(frame))),
+            () => {
               if (heartbeat !== undefined) clearInterval(heartbeat);
-              remove(channelId, this);
               try {
                 controller.close();
               } catch {}
             },
-          };
-          let group = subscribers.get(channelId);
-          if (group === undefined) {
-            group = new Set();
-            subscribers.set(channelId, group);
-          }
-          group.add(subscriber);
-          controller.enqueue(encoder.encode('retry: 1500\n\n'));
-
-          for (const commit of channels.messagesAfter(channelId, after) ?? []) push(commit);
-          for (const commit of channels.messagesAfter(channelId, Math.max(0, after - 100)) ?? []) {
-            if (commit.revision > after) break;
-            if (commit.message.deliveries !== undefined) {
-              subscriber.pushAdmission(commit.message.id, commit.message);
-            }
-          }
-          if (channels.get(channelId)?.type === 'group') {
-            const position = channels.readPosition(channelId);
-            if (position !== undefined) subscriber.pushHumanRead('local-human', position.revision);
-          }
-          controller.enqueue(
-            encoder.encode(
-              `event: ${CHANNEL_DRAFT_BASELINE_EVENT}\ndata: ${JSON.stringify({
-                channelId,
-                revision: draftRevisions.get(channelId) ?? 0,
-                drafts: [...(drafts.get(channelId)?.values() ?? [])],
-              })}\n\n`,
-            ),
           );
           heartbeat = setInterval(() => {
-            if (ended) return;
             try {
               controller.enqueue(encoder.encode(': heartbeat\n\n'));
             } catch {
-              subscriber?.close();
+              subscription?.close();
             }
           }, 15_000);
         },
         cancel() {
-          subscriber?.close();
+          subscription?.close();
         },
       });
       return new Response(body, {

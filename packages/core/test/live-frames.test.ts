@@ -135,4 +135,85 @@ describe('live frames on the native stream carrier', () => {
       missing.followActivity(new AbortController().signal)[Symbol.asyncIterator]().next(),
     ).rejects.toMatchObject({ name: 'LiveUnavailable' });
   });
+
+  it('follows a Channel as opened, entries and typed notifications, and refuses like the HTTP route', async () => {
+    let live: ChannelLiveHub | undefined;
+    const store = createChannelStore({
+      rootDir: root(),
+      onCommitted: (commit) => live?.publishCommitted(commit),
+    });
+    const group = store.createGroup({ name: 'Team', members: [] });
+    const text = (id: string) => ({
+      id,
+      at: '2026-09-21T00:00:00.000Z',
+      author: { kind: 'human' as const },
+      body: id,
+    });
+    await store.appendMessage(group.id, text('one'));
+    const hub = createChannelLiveHub(store);
+    live = hub;
+    hubs.push(hub);
+    const abort = new AbortController();
+    const frames = hub.followChannel(group.id, 0, abort.signal)[Symbol.asyncIterator]();
+    expect((await frames.next()).value).toEqual({ type: 'opened', cursor: 0 });
+    expect((await frames.next()).value).toMatchObject({
+      type: 'entry',
+      entry: { channelId: group.id, revision: 1, message: { id: 'one' } },
+    });
+    let baseline = (await frames.next()).value;
+    while (baseline.type !== 'notification' || baseline.notification.kind !== 'draft-baseline')
+      baseline = (await frames.next()).value;
+    expect(baseline.notification).toEqual({
+      kind: 'draft-baseline',
+      channelId: group.id,
+      revision: 0,
+      drafts: [],
+    });
+    await store.appendMessage(group.id, text('two'));
+    expect((await frames.next()).value).toMatchObject({ type: 'entry', entry: { revision: 2 } });
+    hub.publishDraft({
+      type: 'update',
+      draft: {
+        channelId: group.id,
+        draftId: 'attempt:call',
+        attemptId: 'attempt',
+        botSlug: 'ada',
+        body: 'hi',
+      },
+    });
+    expect((await frames.next()).value).toMatchObject({
+      type: 'notification',
+      notification: { kind: 'draft', draft: { body: 'hi', revision: 1 } },
+    });
+    hub.publishHumanRead(group.id, 'local-human', 2);
+    expect((await frames.next()).value).toEqual({
+      type: 'notification',
+      notification: {
+        kind: 'human-read',
+        channelId: group.id,
+        humanId: 'local-human',
+        revision: 2,
+      },
+    });
+    const pending = frames.next();
+    abort.abort();
+    expect((await pending).done).toBe(true);
+    await store.appendMessage(group.id, text('three'));
+
+    const resumed = hub
+      .followChannel(group.id, 2, new AbortController().signal)
+      [Symbol.asyncIterator]();
+    expect((await resumed.next()).value).toEqual({ type: 'opened', cursor: 2 });
+    expect((await resumed.next()).value).toMatchObject({ type: 'entry', entry: { revision: 3 } });
+    await resumed.return?.(undefined);
+
+    const refused = async (channelId: string, after: number) =>
+      hub
+        .followChannel(channelId, after, new AbortController().signal)
+        [Symbol.asyncIterator]()
+        .next();
+    await expect(refused('missing', 0)).rejects.toMatchObject({ code: 'not-found' });
+    await expect(refused(group.id, 99)).rejects.toMatchObject({ code: 'conflict' });
+    await expect(refused(group.id, -1)).rejects.toMatchObject({ code: 'invalid' });
+  });
 });

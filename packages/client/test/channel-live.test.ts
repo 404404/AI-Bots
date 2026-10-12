@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { BridgeActions } from '../src/client/actions.js';
-import { mountChannelLive, mountRosterLive } from '../src/client/channel-live.js';
+import {
+  installChannelFollow,
+  mountChannelLive,
+  type ChannelFollow,
+  mountRosterLive,
+} from '../src/client/channel-live.js';
 import { createStore, type ChannelSummary } from '../src/client/store.js';
 
 const CHANNEL: ChannelSummary = {
@@ -106,6 +111,71 @@ function setup(refresh = vi.fn(async () => undefined), channel = CHANNEL) {
   });
   return { store, sources, dispose, refresh };
 }
+describe('Channel live Client on a typed follow stream', () => {
+  it('applies typed entries and notifications without opening a source, and recovers when closed', async () => {
+    let handlers: Parameters<ChannelFollow>[2] | undefined;
+    const opened: [string, number][] = [];
+    const stop = vi.fn();
+    const uninstall = installChannelFollow((channelId, after, next) => {
+      opened.push([channelId, after]);
+      handlers = next;
+      return stop;
+    });
+    const refresh = vi.fn(async () => undefined);
+    const { store, sources, dispose } = setup(refresh);
+    try {
+      expect(sources).toHaveLength(0);
+      expect(opened).toEqual([[CHANNEL.id, 0]]);
+      handlers!.frame({ type: 'opened', cursor: 0 });
+      handlers!.frame({
+        type: 'notification',
+        notification: { kind: 'draft-baseline', channelId: CHANNEL.id, revision: 0, drafts: [] },
+      });
+      handlers!.frame({
+        type: 'entry',
+        entry: {
+          channelId: CHANNEL.id,
+          revision: 1,
+          message: {
+            id: 'one',
+            at: '2026-09-21T00:00:01.000Z',
+            author: { kind: 'bot', slug: 'ada' },
+            body: 'one',
+          },
+        },
+      });
+      expect(store.getSnapshot().conversation.revision).toBe(1);
+      expect(store.getSnapshot().conversation.messages.map((item) => item.id)).toEqual(['one']);
+      handlers!.frame({
+        type: 'notification',
+        notification: {
+          kind: 'draft',
+          draft: {
+            channelId: CHANNEL.id,
+            draftId: 'attempt:call',
+            attemptId: 'attempt',
+            revision: 1,
+            botSlug: 'ada',
+            body: 'typing',
+          },
+        },
+      });
+      await vi.waitFor(() =>
+        expect(store.getSnapshot().conversation.drafts.map((draft) => draft.body)).toEqual([
+          'typing',
+        ]),
+      );
+      handlers!.interrupted(true);
+      await vi.waitFor(() => expect(refresh).toHaveBeenCalledWith(CHANNEL.id));
+      expect(stop).toHaveBeenCalled();
+      await vi.waitFor(() => expect(opened.length).toBeGreaterThan(1));
+    } finally {
+      dispose();
+      uninstall();
+    }
+  });
+});
+
 describe('Roster live Client', () => {
   it('refreshes only committed invalidations and recovers after a reconnect', async () => {
     vi.useFakeTimers();

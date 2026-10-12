@@ -1,7 +1,7 @@
 ---
 Status: Accepted
 Date: 2026-10-13
-Issues: [#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490), [#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498), [#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)
+Issues: [#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490), [#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498), [#1500](https://github.com/BotHarness/DeepSeekBot/issues/1500), [#1504](https://github.com/BotHarness/DeepSeekBot/issues/1504), [#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)
 ---
 
 # Application live streams use the native Remote stream carrier
@@ -21,7 +21,8 @@ Each Bot-mode Web document used to hold one long-lived HTTP response per applica
 Carrying the old SSE event frames on the new carrier is a transitional step, not the target. DSH's own plugins give each live concern its own typed stream method and consume it through the Gateway Client's helpers, and application streams follow the same shapes:
 
 - State that is replaced or patched (roster notifications with the redaction baseline, Activity) is a stream that yields one `baseline` frame per generation followed by typed increments, consumed through `RemoteSnapshotStream`. The previous state stays published while the supervisor reconnects, and a new generation's baseline replaces it.
-- An ordered log with a cursor (Channel messages by revision) is to be a journal stream consumed through `RemoteJournalStream`: an `opened` frame with cursor and page, `entry` frames, and cursorless `notification` frames for drafts, receipts and read positions.
+- An ordered log with a cursor (Channel messages by revision) uses the journal frame vocabulary: an `opened` frame carrying the cursor the generation starts from, `entry` frames in revision order, and cursorless `notification` frames for receipts, read positions and draft previews. This happens in two ordered steps. First the Channel stream is typed and rides the Gateway supervisor while the ADR-0061 timeline keeps its own windows and paging ([#1500](https://github.com/BotHarness/DeepSeekBot/issues/1500)). Then the tail-following window is handed to `RemoteJournalStream`, which also owns opening pages and gap repair; windows detached from the tail (around a read anchor or a located message) are expected to stay on `channelTimeline`, and that division needs its own ADR before implementation ([#1503](https://github.com/BotHarness/DeepSeekBot/issues/1503)).
+- A Host stream and its SSE route are two encodings of one frame source, so replay, receipts and draft baselines cannot drift apart.
 - A normal end after an accepted baseline is reported to the supervisor as a `RemoteStreamCarrierError`, so reconnection stays the Gateway's job. Only a failure before the first baseline is terminal; the application then waits and opens a new stream.
 - Separate concerns are separate logical streams. They share one socket, so nothing is gained by merging them into one stream.
 - The Client bundle declares `@deepseek-ai/dsh-api-gateway/client` as an external in its manifest, as official Client plugins do, and imports the helpers from it. They exist from DSH `0.1.7-alpha.1` on.
@@ -36,4 +37,6 @@ The marker shape, the contribution descriptor with strict parameter codecs and t
 
 [#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490) moves the shared Channel/roster/Activity stream onto the carrier as tunnelled event frames (`botharness/liveFrames`). Measured in a real isolated Host: each Bot-mode document holds two long-lived HTTP responses (HMR, Window Companion); two same-origin documents both load and answer a read-only request in 3–6 ms; a third reaches six responses and ordinary requests time out again until one closes.
 
-[#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498) gives roster and Activity their own typed streams (`botharness/followRoster`, `botharness/followActivity`) consumed through `RemoteSnapshotStream`; the frame stream then carries only the selected Channel. Channel as a journal stream and Window Companion are the following slices, after which the frame stream and its EventSource-shaped adapter are removed.
+[#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498) gives roster and Activity their own typed streams (`botharness/followRoster`, `botharness/followActivity`) consumed through `RemoteSnapshotStream`; the frame stream then carries only the selected Channel. Remaining slices are tracked under hub [#1504](https://github.com/BotHarness/DeepSeekBot/issues/1504).
+
+[#1500](https://github.com/BotHarness/DeepSeekBot/issues/1500) gives the Channel its own typed stream (`botharness/followChannel`): the Host's Channel subscription is one typed frame source that both the stream and the SSE route encode, and the Client's Channel consumer is transport-neutral. After it no production path uses the frame stream when the Remote methods are mounted. Still open: Window Companion ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)), removal of the frame stream and adapter ([#1502](https://github.com/BotHarness/DeepSeekBot/issues/1502)), and the journal-stream step ([#1503](https://github.com/BotHarness/DeepSeekBot/issues/1503)).
