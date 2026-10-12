@@ -348,11 +348,6 @@ export function GroupComposerContextView({
   );
 }
 
-/**
- * Group footer chip: the number of distinct workspaces granted to any member Bot. Grants
- * from different Bots name the same workspace when they point at the same DSH Workspace
- * id, so two Bots sharing a folder count it once.
- */
 export function groupWorkspaceChip(
   facts: (WorkspaceGrantView[] | null | undefined)[],
   t: BotHarnessTranslate,
