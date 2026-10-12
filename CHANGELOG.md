@@ -97,6 +97,14 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - From **IM apps**, an unbound app can be bound to a Bot, a bound app unbound after confirmation, and a Lark or WeChat app created for a chosen Bot when the Provider supports setup ([#1264](https://github.com/BotHarness/DeepSeekBot/issues/1264)).
 - A Group without its own avatar shows up to four of its PersonaBots' faces in the sidebar, rail and pinned grid instead of `#`; the faces stay still and don't show what each Bot is doing ([#1270](https://github.com/BotHarness/DeepSeekBot/issues/1270)).
 - While a PersonaBot thinks or works, a row under the latest message shows its avatar turning into the tool it is using and the same short status as the composer; a Group shows up to two working Bots, and the Bot's reply replaces its row as it streams in. While you're at the latest message, the status above the composer fades out, and it comes back when you scroll up into history ([#1271](https://github.com/BotHarness/DeepSeekBot/issues/1271)).
+
+- Added QQ quoted-voice intake with native platform-transcript provenance, original-audio downloads and on-demand bounded SILK playback in the Channel; one maintained-runtime application passed real voice → model → original-group text reply, Human confirmation and actual Client keyboard playback ([#1159](https://github.com/BotHarness/DeepSeekBot/issues/1159), [guide](docs/qq-connection.md)).
+
+- Added a candidate QQ group file path with direct or explicit native quoted-file association, authorized Channel downloads, independent working-copy processing and checked original-group result files; one authorized application passed real quoted-CSV processing and Human result-download verification ([#1158](https://github.com/BotHarness/DeepSeekBot/issues/1158), [guide](docs/qq-connection.md)).
+
+- The QQ image candidate reuses authorized Channel previews and native model image tools, and returns selected image results through the receiving app with a durable native receipt; actual QQ/model qualification remains tracked separately ([#1157](https://github.com/BotHarness/BotHarness/issues/1157), [QQ guide](docs/qq-connection.md)).
+
+- QQ sources in a shared Group Channel now identify their receiving app in author labels and source details, with independent app attribution in Group Profile activity; the guide explains explicit two-app mapping and own-identity reply limits ([#1156](https://github.com/BotHarness/BotHarness/issues/1156), [QQ guide](docs/qq-connection.md)).
 - QQ conversations can sync future mentions to a chosen Group Channel or remain Inbox-only, retain accepted history when sync stops, and show bounded local reception intervals across block/allow and reconnect without claiming remote backfill ([#1153](https://github.com/BotHarness/BotHarness/issues/1153), [QQ connection guide](docs/qq-connection.md)).
 
 - An official QQ Bot app can bind to a PersonaBot, admit group text @mentions into its Inbox and answer in the original group with a native acceptance receipt; the development Provider keeps passive-reply expiry and unknown send outcomes explicit ([#1152](https://github.com/BotHarness/BotHarness/issues/1152), [QQ connection guide](docs/qq-connection.md)).
@@ -146,6 +154,9 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Restored QQ group Channel mappings retain bounded retries while apps become ready after Host restart, so the first new mention reaches its mapped Channel as well as its Inbox ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
+- Fixed checked QQ self mentions in full-reception events while keeping ordinary messages and Bot authors excluded; the candidate Provider retains current Lark pairing capabilities and does not claim own Echo qualification ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 - Several DM messages sent while a Bot is busy no longer make it run a separate turn for each one after they were already delivered together into the running turn ([#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)).
 
 - Clarified that Orchestrator answers, including short acknowledgments and image descriptions, must be delivered through the Channel reply Tool rather than private Session text, while preserving intentional silence and external reply routing ([#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)).
