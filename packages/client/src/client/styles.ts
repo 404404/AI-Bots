@@ -1174,6 +1174,9 @@ html[data-botharness-motion='reduce'] .bh-avatar-botui i {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.bh-row-status + .bh-channel-message-time {
+  margin-left: 0;
+}
 .bh-role-badges {
   display: inline-flex;
   align-items: center;
