@@ -173,6 +173,8 @@
 
 ### Fixed
 
+- Bot 不再把另一个 Channel 插入的消息回复到当前回合起始的 Channel：一个回合里有多个 Channel 的消息时，Bot 每次回复都必须指明目标 Channel（[#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)）。
+
 - 同一 DSH 地址下打开更多 DeepSeekBot 标签页（直至浏览器对 DSH 自身连接的上限）也能保持响应：Window Companion 订阅同样改走 DSH 的共用实时连接（[#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)）。
 
 - 同一 DSH 地址下的两个 DeepSeekBot 浏览器标签页现在都能加载并保持响应：Channel、通讯录与 Activity 更新改走 DSH 的共用实时连接，不再各占一条浏览器连接。第三个标签页仍可能让全部页面停止响应，需待 Window Companion 流一并迁移（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。

@@ -952,7 +952,13 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
   readonly #turnSources = new Map<
     string,
-    { sessionId: string; eventIds: Set<string>; acceptedEventIds: Set<string> }
+    {
+      sessionId: string;
+      eventIds: Set<string>;
+      acceptedEventIds: Set<string>;
+      inboundChannelId: string | undefined;
+      steeredChannelIds: Set<string>;
+    }
   >();
   readonly #activeMemoryEvents = new Map<
     string,
@@ -1469,6 +1475,7 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#noteSteeredChannel(botSlug, channelId);
     this.#acceptTurnSources(
       botSlug,
       admissions.map((admission) => admission.sourceEventId),
@@ -1684,6 +1691,7 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#noteSteeredChannel(botSlug, channelId);
     this.#acceptTurnSources(
       botSlug,
       admissions.map((admission) => admission.sourceEventId),
@@ -2491,6 +2499,12 @@ class BotRuntimeImplementation implements BotRuntime {
     ].join('\n');
   }
 
+  #noteSteeredChannel(botSlug: string, channelId: string): void {
+    const turn = this.#turnSources.get(botSlug);
+    if (turn !== undefined && turn.inboundChannelId !== channelId)
+      turn.steeredChannelIds.add(channelId);
+  }
+
   #acceptTurnSources(botSlug: string, sourceEventIds: readonly string[]): void {
     const turn = this.#turnSources.get(botSlug);
     for (const id of sourceEventIds) turn?.acceptedEventIds.add(id);
@@ -3187,6 +3201,8 @@ class BotRuntimeImplementation implements BotRuntime {
       sessionId: orchestrator.sessionId,
       eventIds: turnSources,
       acceptedEventIds: new Set(turnSources),
+      inboundChannelId: channelId,
+      steeredChannelIds: new Set(),
     });
     const typingSources = [sourceEventId, ...inboxUnits.map((unit) => unit.sourceEventId)];
     for (const unit of inboxUnits) {
@@ -4745,6 +4761,20 @@ class BotRuntimeImplementation implements BotRuntime {
         return appended;
       },
       send: async (input) => {
+        const steered = this.#turnSources.get(botSlug);
+        if (
+          input.channelId === undefined &&
+          steered?.sessionId === sessionId &&
+          steered.steeredChannelIds.size > 0
+        )
+          throw new Error(
+            `This turn carries messages from several Channels (${[
+              ...(steered.inboundChannelId === undefined ? [] : [steered.inboundChannelId]),
+              ...steered.steeredChannelIds,
+            ].join(
+              ', ',
+            )}). Pass channel_id for the Channel this reply belongs to; each message names its Channel in its header.`,
+          );
         const channel = resolve(input.channelId);
         if (input.mentionBotIds?.length && channel.type !== 'group')
           throw new Error('Bot mentions require a Group Channel');
