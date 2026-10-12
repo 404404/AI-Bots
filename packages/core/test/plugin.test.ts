@@ -432,6 +432,7 @@ describe('plugin entry', () => {
       'humanAttentionIgnore',
       'humanAttentionDismiss',
       'assignments',
+      'channelAssignments',
       'assignment',
       'workspaceOptions',
       'messageAttachmentTarget',
@@ -514,6 +515,11 @@ describe('plugin entry', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
+      'followRoster',
+      'followActivity',
+      'followChannel',
+      'followCompanion',
     ]);
   });
 

@@ -26,7 +26,7 @@ describe('DSH engine declaration', () => {
     const pinned = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).devDependencies[
       '@deepseek-ai/dsh'
     ];
-    expect(semver.minVersion(range)?.version).toBe('0.1.7-0');
+    expect(semver.minVersion(range)?.version).toBe('0.2.0-0');
     expect(semver.satisfies(pinned, range, { includePrerelease: true })).toBe(true);
   });
 
@@ -36,6 +36,8 @@ describe('DSH engine declaration', () => {
       expect(semver.satisfies(version, range, { includePrerelease: true })).toBe(true);
     expect(semver.satisfies('0.2.0', range, { includePrerelease: true })).toBe(true);
     expect(semver.satisfies('0.1.6-alpha.2', range, { includePrerelease: true })).toBe(false);
+    for (const version of ['0.1.7-alpha.1', '0.1.7-rc.2', '0.1.7', '0.1.9'])
+      expect(semver.satisfies(version, range, { includePrerelease: true })).toBe(false);
     expect(semver.satisfies('0.3.0-rc.1', range, { includePrerelease: true })).toBe(true);
     expect(semver.satisfies('1.0.0', range, { includePrerelease: true })).toBe(true);
   });

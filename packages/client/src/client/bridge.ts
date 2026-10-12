@@ -17,6 +17,7 @@ import type {
   MessagingDefaultsInput,
 } from '../../../core/src/messaging/defaults.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
+import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 
 import type {
@@ -1129,6 +1130,23 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       recipientBotSlug: action['recipientBotSlug'],
     };
   }
+  let botChannelPost: ChannelMessage['botChannelPost'];
+  if (record['botChannelPost'] !== undefined) {
+    const post = asRecord(record['botChannelPost']);
+    if (
+      post === undefined ||
+      author.kind !== 'bot' ||
+      typeof post['channelId'] !== 'string' ||
+      typeof post['messageId'] !== 'string'
+    )
+      return undefined;
+    botChannelPost = { channelId: post['channelId'], messageId: post['messageId'] };
+  }
+  const botChannelPostPreview =
+    typeof record['botChannelPostPreview'] === 'string' || record['botChannelPostPreview'] === null
+      ? (record['botChannelPostPreview'] as string | null)
+      : undefined;
+  const noticeOriginChannel = asRecord(record['noticeOrigin'])?.['channelId'];
   const rawAttachments = record['attachments'];
   const attachments = Array.isArray(rawAttachments)
     ? rawAttachments.map(parseChannelAttachment)
@@ -1443,6 +1461,13 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
     ...(assignmentReply === undefined ? {} : { assignmentReply }),
     ...(botDmAction === undefined ? {} : { botDmAction }),
+    ...(botChannelPost === undefined ? {} : { botChannelPost }),
+    ...(botChannelPost === undefined || botChannelPostPreview === undefined
+      ? {}
+      : { botChannelPostPreview }),
+    ...(typeof noticeOriginChannel === 'string'
+      ? { noticeOrigin: { channelId: noticeOriginChannel } }
+      : {}),
     ...(memoryCommit === undefined ? {} : { memoryCommit }),
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
@@ -2240,6 +2265,33 @@ export async function removeGroupMember(
   return channel;
 }
 
+const ASSIGNMENT_ACTIVITIES = ['working', 'idle', 'error', 'stopping', 'stopped'];
+const ASSIGNMENT_REPORT_STATES = ['progress', 'completed', 'blocked', 'waiting-human', 'failed'];
+
+export async function loadChannelAssignments(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ChannelAssignmentSummary[]> {
+  const value = asRecord(await unwrap(call, 'channelAssignments', { channelId }));
+  const assignments = value?.['assignments'];
+  if (
+    !Array.isArray(assignments) ||
+    assignments.some(
+      (row) =>
+        typeof row?.sessionId !== 'string' ||
+        typeof row.botSlug !== 'string' ||
+        typeof row.purpose !== 'string' ||
+        !ASSIGNMENT_ACTIVITIES.includes(row.activity) ||
+        typeof row.updatedAt !== 'string' ||
+        (row.latestReport !== undefined &&
+          (!ASSIGNMENT_REPORT_STATES.includes(row.latestReport?.state) ||
+            typeof row.latestReport.summary !== 'string')),
+    )
+  )
+    throw new Error('invalid channelAssignments response');
+  return assignments;
+}
+
 export async function loadGroupWakePolicies(
   call: BridgeCall,
   channelId: string,
@@ -2316,6 +2368,63 @@ export interface TimelinePageRequest {
   limit?: number;
   olderLimit?: number;
   newerLimit?: number;
+}
+
+export interface JournalEntry {
+  channelId: string;
+  message: ChannelMessage;
+  revision: number;
+}
+export interface JournalPage {
+  entries: JournalEntry[];
+  olderCursor: string | null;
+  hasOlder: boolean;
+}
+
+export function parseJournalEntry(value: unknown): JournalEntry | undefined {
+  const record = asRecord(value);
+  const revision = record?.['revision'];
+  const message = parseChannelMessage(record?.['message']);
+  if (
+    typeof record?.['channelId'] !== 'string' ||
+    typeof revision !== 'number' ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    message === undefined
+  )
+    return undefined;
+  return { channelId: record['channelId'], message, revision };
+}
+
+export function parseJournalPage(value: unknown): JournalPage | undefined {
+  const raw = asRecord(value);
+  const entries = raw?.['entries'];
+  if (
+    !Array.isArray(entries) ||
+    !(raw?.['olderCursor'] === null || typeof raw?.['olderCursor'] === 'string') ||
+    typeof raw?.['hasOlder'] !== 'boolean'
+  )
+    return undefined;
+  const parsed = entries.map((entry) => parseJournalEntry(entry));
+  if (parsed.some((entry) => entry === undefined)) return undefined;
+  return {
+    entries: parsed as JournalEntry[],
+    olderCursor: raw['olderCursor'] as string | null,
+    hasOlder: raw['hasOlder'],
+  };
+}
+
+export async function loadJournalPage(
+  call: BridgeCall,
+  channelId: string,
+  request: { through: number; before?: number; limit?: number },
+  signal?: AbortSignal,
+): Promise<JournalPage> {
+  const page = parseJournalPage(
+    await unwrap(call, 'channelJournalPage', { channelId, ...request }, signal),
+  );
+  if (page === undefined) throw new Error('invalid channelJournalPage response');
+  return page;
 }
 
 export async function loadTimelinePage(

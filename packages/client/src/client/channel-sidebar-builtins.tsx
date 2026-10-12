@@ -41,6 +41,7 @@ import { ExternalSourceContent } from './external-source-content.js';
 import { externalPlatformLabel, externalSenderLabel } from './bridge-source-label.js';
 import { GroupAvatarCropModal } from './group-avatar-crop.js';
 import { MembersEntry, MembersHeaderAction } from './group-member-controls.js';
+import { GroupWorkEntry } from './group-work-entry.js';
 import { BotSchedulesEntry, BotSchedulesHeaderAction, ScheduleDialog } from './schedules-entry.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { SessionsEntry, type NativeSessionCatalog } from './sessions-entry.js';
@@ -836,6 +837,7 @@ export function createChannelSidebarBuiltinTabs(
       scope: 'personabot',
     },
     { id: 'memory', icon: 'files', label: t('tab.memory'), order: 2, scope: 'personabot' },
+    { id: 'screen', icon: 'monitor', label: t('tab.screen'), order: 3, scope: 'personabot' },
   ];
 }
 
@@ -907,6 +909,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'schedules',
+      defaultHidden: true,
       icon: 'alarm-clock',
       label: t('entry.schedules'),
       order: 16,
@@ -916,6 +919,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'workspace-grants',
+      surface: 'settings',
       icon: 'folder-key',
       label: t('entry.workspaceGrants'),
       order: 20,
@@ -924,6 +928,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'model',
+      surface: 'settings',
       icon: 'cpu',
       label: t('entry.model'),
       order: 25,
@@ -958,6 +963,14 @@ export function createChannelSidebarBuiltins(
       order: 28,
       scope: 'personabot',
       component: ExternalConnectorsEntry,
+    },
+    {
+      id: 'group-work',
+      icon: 'list-checks',
+      label: t('entry.groupWork'),
+      order: 5,
+      scope: 'channel',
+      component: GroupWorkEntry,
     },
     {
       id: 'members',

@@ -7,6 +7,7 @@ import {
   type BridgeCall,
   type LocalHumanIdentity,
 } from './bridge.js';
+import { subscribeMessagingDefaults } from './messaging-defaults-live.js';
 import type { ClientStore } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
 
@@ -49,18 +50,14 @@ export function HumanNameSettings({
       }
     };
     void refresh();
-    let source: EventSource | undefined;
+    let stopLive: (() => void) | undefined;
     let channels = store.getSnapshot().channels;
     const sync = (): void => {
       const snapshot = store.getSnapshot();
       if (snapshot.mode === 'bot') {
-        source?.close();
-        source = undefined;
-      } else if (source === undefined && typeof EventSource !== 'undefined') {
-        source = new EventSource('/api/botharness/stream?scope=roster');
-        source.addEventListener('roster/changed', () => void refresh());
-        source.onopen = () => void refresh();
-      }
+        stopLive?.();
+        stopLive = undefined;
+      } else stopLive ??= subscribeMessagingDefaults(() => void refresh());
       if (channels !== snapshot.channels) {
         channels = snapshot.channels;
         void refresh();
@@ -72,7 +69,7 @@ export function HumanNameSettings({
       mounted.current = false;
       controller.abort();
       unsubscribe();
-      source?.close();
+      stopLive?.();
     };
   }, [call, store]);
   const save = async (name: string | null): Promise<void> => {

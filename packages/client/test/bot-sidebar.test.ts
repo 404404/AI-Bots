@@ -146,6 +146,7 @@ function stubActions(): BridgeActions {
       throw new Error('unused');
     }),
     groupWakePolicies: vi.fn(async () => []),
+    channelAssignments: vi.fn(async () => []),
     channelBridges: vi.fn(async (channelId) => ({ channelId, bridges: [], sources: [] })),
     channelIngests: vi.fn(async (channelId) => ({ channelId, ingests: [], candidates: [] })),
     channelIngest: vi.fn(async () => undefined),
@@ -258,6 +259,7 @@ function stubActions(): BridgeActions {
     markAllRead: vi.fn(async () => undefined),
     markRead: vi.fn(async () => undefined),
     refreshChannelMessages: vi.fn(async () => undefined),
+    applyChannelTail: vi.fn(),
     dismissFailedMessage: vi.fn(() => false),
     openSession: vi.fn(() => undefined),
     refreshSessions: vi.fn(async () => undefined),

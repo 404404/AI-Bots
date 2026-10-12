@@ -7,12 +7,8 @@ import semver from 'semver';
 import { providerRuntimeDigest } from './dev-im-provider.mjs';
 import { pnpmCommand } from './dev-package-manager.mjs';
 
-export const productDshRange = '>=0.1.7-0';
+export const productDshRange = '>=0.2.0-0';
 export const productDshVersions = Object.freeze([
-  '0.1.7-alpha.1',
-  '0.1.7-alpha.2',
-  '0.1.7-rc.1',
-  '0.1.7-rc.2',
   '0.2.0-rc.1',
   '0.2.0-rc.2',
   '0.2.1-alpha.1',

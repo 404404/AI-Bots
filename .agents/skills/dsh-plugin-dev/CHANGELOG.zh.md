@@ -9,6 +9,14 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 
 ### Documentation
 
+- 在[本地开发指南](../dsh-dev/SKILL.md)记录流方法的 Host 拒绝会带错误码作为终止性 Remote 失败到达 Client，以及流与旧路由应编码同一帧源，以 DSH `0.2.0-rc.1` 上 `/api/remote.mux` 的认证拒绝核验；DSH／Cordis Context 与 Skill 行为不变（[#1500](https://github.com/BotHarness/DeepSeekBot/issues/1500)）。
+
+- 在[本地开发指南](../dsh-dev/SKILL.md)记录应用 Client 包如何声明 Gateway Client external 以使用 DSH 的 snapshot-stream 辅助类、所需的 Node 测试别名以及可重试结束的约定，以在 DSH `0.2.0-rc.1` 上启动真实 Client 并检查已发布的 `0.1.7-alpha.1`、`0.1.7-rc.2` 包核验；DSH／Cordis Context 与 Skill 行为不变（[#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498)）。
+
+- 在[本地开发指南](../dsh-dev/SKILL.md)记录应用 SSE 与原生 HMR 共用的 HTTP/1.1 连接预算，以及源码声明的流式 Remote 方法路径（Host 标记、带 strict 参数 codec 的 Client contribution、namespace 读取、终止后重试），以认证的流打开和两个、三个真实同源页面在 DSH `0.2.0-rc.1` 上核验；DSH／Cordis Context 与 Skill 行为不变（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
+
+- 将[本地开发指南](../dsh-dev/SKILL.md)中的受支持 Host 下限更新为 DSH `0.2.0` 及以上，以 DSH 原生兼容性预检对产品清单核验；DSH／Cordis Context 与 Skill 行为不变（[#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)）。
+
 - 将[本地开发指南](../dsh-dev/SKILL.md)的默认 CLI 与参考源码标签改为 DSH `0.2.0-rc.2`，以全新隔离 Web Profile、认证 API 和实际渲染的 Bot 模式核验；在 RC1 核验的 pitfall 条目保留原记录版本，DSH／Cordis Context 与 Skill 行为不变（[#1485](https://github.com/BotHarness/DeepSeekBot/issues/1485)）。
 - 在 [Client 诊断指南](../../../docs/dev/guides/client-startup-diagnostics.md)记录原生 RC1 两个文档的 HTTP/1 请求阻塞复现，以及 Roster／Activity 共用传输的生命周期；DSH／Cordis Context 与 Decision Tree 保持不变（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
 

@@ -4727,6 +4727,9 @@ html[data-botharness-motion='reduce'] .bh-composer-footer {
   outline-offset: -2px;
 }
 .bh-channel-sidebar-tab-badge { display: inline-flex; font-size: 12px; }
+.bh-channel-sidebar-tab-badge:empty { display: none; }
+.bh-channel-sidebar-tab-badge > * + * { display: none; }
+.bh-channel-sidebar-live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--dsw-alias-state-success-primary, var(--bh-accent)); }
 .bh-channel-sidebar-views { position: relative; display: inline-flex; flex: none; }
 .bh-channel-sidebar-views-menu {
   position: fixed;
@@ -6823,7 +6826,13 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
   gap: 4px;
 }
 .bh-bot-dm-action-avatar { display: inline-flex; pointer-events: none; }
-.bh-memory-commit-row { container-type: inline-size; width: 100%; }
+/* Status lines stay inside the Bot bubble column: 28px avatar + 8px gap on each side. */
+.bh-memory-commit-row {
+  container-type: inline-size;
+  box-sizing: border-box;
+  width: 100%;
+  padding-inline: 36px;
+}
 @container (max-width: 720px) {
   .bh-memory-commit-line > .bh-memory-commit-files { display: none; }
 }
@@ -6865,6 +6874,7 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
 .bh-memory-commit-files { color: var(--dsw-alias-label-tertiary); }
 .bh-bot-dm-action-bot .bh-persona-avatar { border-radius: 28%; overflow: hidden; }
 .bh-bot-dm-action-name { color: var(--dsw-alias-label-primary); font-weight: 500; }
+.bh-dm-trace-line > .bh-memory-commit-subject { color: var(--dsw-alias-label-secondary); }
 .bh-bot-dm-readonly {
   padding: 14px 18px;
   text-align: center;
@@ -7633,6 +7643,9 @@ button.bh-card-main {cursor:pointer;}
 button.bh-card-main:disabled {cursor:default;}
 .bh-card-main:focus-visible {outline:2px solid var(--dsw-alias-label-primary);outline-offset:-2px;}
 .bh-card-icon {display:grid;flex:none;place-items:center;padding-top:1px;color:var(--dsw-alias-label-primary);}
+.bh-card-leading {display:grid;flex:none;place-items:center;}
+.bh-group-work-summary {display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;flex-basis:100%;color:var(--dsw-alias-label-secondary);}
+.bh-group-work-heading {cursor:default;}
 .bh-card-body {display:flex;flex:1;flex-direction:column;gap:4px;min-width:0;}
 .bh-card-title {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:20px;}
 .bh-card-title.bh-inbox-item-summary {display:-webkit-box;white-space:normal;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:3;}

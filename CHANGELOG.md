@@ -9,6 +9,9 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Bot DM trace lines are new Channel Notices. A binary from before this change shows them as empty Bot messages, so revert the Host and Client together ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517)).
+- DeepSeekBot now needs DSH 0.2.0 or later, previews included; DSH 0.1.7 Hosts refuse the new version at installation and should stay on DeepSeekBot 1.2.x or upgrade DSH first ([#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)).
+
 - Work-failure alert settings and delivery metadata add Profile schema Generation 83. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)).
 
 - Lark-saved tool rules add Profile schema Generation 82 with external creator provenance. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)).
@@ -34,6 +37,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- A PersonaBot's DM now shows what it did elsewhere: each post in a Group or Bot DM leaves a short linked line with an excerpt, consecutive posts in one Channel collapse into one line, and Memory updates made in a Group also appear in the DM with their place. The DM's top-right settings menu hides each kind for that Bot; nothing unread or waking is added ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517), [ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)).
 
 - Opt-in work-failure alerts reuse the Bot sidebar management destination, use an RBAC-style wide two-column settings/history dialog with searchable, sortable records, test send and delivery inspection, and notify from committed failure facts without forwarding private error text or granting decision authority. Known-unsent retries are bounded; unknown sends are not replayed ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041), [Lark guide](docs/lark-connection.md#work-failure-alerts-source-candidate)).
 
@@ -171,6 +176,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ voice attachments use the same audio card as message attachments, with keyboard playback and seeking; download still saves the original voice file, while playback conversion remains explicit ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - The maintained QQ Provider retains native mention names and IDs so Channel messages use the existing external mention chips, with the native ID in hover details; original source text and App ownership remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
+- Any number of DeepSeekBot tabs on the same DSH address, up to the browser's limit for DSH's own connection, now stay responsive: the Window Companion feed also travels on DSH's shared live connection ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)).
+
+- Two browser tabs of DeepSeekBot on the same DSH address now both load and keep responding: Channel, roster and Activity updates travel on DSH's shared live connection instead of holding a browser connection each. A third tab can still stall all of them until the Window Companion stream moves as well ([#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)).
 
 - After a Human DM turn is cut off (for example by a Host restart), a Bot woken next from another Channel no longer posts that DM's answer there; the request stays in its DM. A Human DM that a Host stop interrupted before the Bot did anything is now rerun automatically when the Host starts; a turn that failed on its own still waits for a manual retry ([#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)).
 
