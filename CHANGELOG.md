@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Work-failure alert settings and delivery metadata add Profile schema Generation 83. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)).
+
 - Lark-saved tool rules add Profile schema Generation 82 with external creator provenance. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)).
 
 - Group behavior items can declare mutual exclusions. Current writers reject incompatible effective Allows; stop policy editing before reverting to a writer that ignores these declarations ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)).
@@ -32,6 +34,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- Opt-in work-failure alerts reuse the Bot sidebar management destination, use an RBAC-style wide two-column settings/history dialog with searchable, sortable records, test send and delivery inspection, and notify from committed failure facts without forwarding private error text or granting decision authority. Known-unsent retries are bounded; unknown sends are not replayed ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041), [Lark guide](docs/lark-connection.md#work-failure-alerts-source-candidate)).
 
 - Memory Evolution commit diffs and uncommitted diffs have **Open current file** on every file row: it opens the file at that path as it is now, with the same default application and dropdown, never the version in the selected commit. A missing file is reported instead of rebuilt, with a deletion note only when that row is itself a deletion ([#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462), [guide](docs/file-open.md)).
 
@@ -139,6 +143,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- Onboarding is now a getting-started checklist opened from a progress ring in the Bot-mode sidebar row (beside the exit button on mobile), so it takes no vertical space. It covers choosing a model and sending the first message, then letting the Bot remember you, connecting a chat app, setting a daily task and summoning the Window Companion, each with a direct action and a check read from that feature's own data. The interface walkthrough starts from the checklist and ends by showing how to leave Bot mode, and a quiet "Try it" chip marks the Bot-mode row until you first enter it ([#1496](https://github.com/BotHarness/DeepSeekBot/issues/1496), [ADR-0180](docs/adr/0180-onboarding-is-a-checklist-launched-from-the-bot-mode-row.md)).
+
 - In a DM or Group Channel, the avatar beside a message group stays at the bottom edge of the timeline while a group taller than the view scrolls past, so you can always see who is speaking ([#1491](https://github.com/BotHarness/DeepSeekBot/pull/1491)).
 
 - Channel footers show the full effective model name without provider or inheritance labels; mobile layouts keep only the model selector, while desktop workspace and token controls remain available ([#1479](https://github.com/BotHarness/DeepSeekBot/issues/1479)).
@@ -159,6 +165,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - Your own message headers now mirror the bubble side: the name hugs the right edge with the timestamp to its left, matching the left-side Bot order ([#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298)).
 
 ### Fixed
+
+- On a narrow or mobile window, the activity dots in a Channel list row now sit right before the message time instead of floating in the middle of the row ([#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)).
 
 - A completed Assignment report no longer keeps the neutral marker on its Bot's avatar once the Orchestrator has handled it; the report stays listed in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
 
