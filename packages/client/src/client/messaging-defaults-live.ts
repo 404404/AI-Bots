@@ -4,48 +4,188 @@ import { parseContentRedactions } from './content-redactions.js';
 const listeners = new Set<() => void>();
 const purgeListeners = new Set<(placements: PurgedPlacement[]) => void>();
 const redactions = new Map<string, PurgedPlacement>();
-export interface RosterHandlers {
-  ready(): void;
-  changed(): void;
-  purged(placements: PurgedPlacement[]): void;
-}
-export type RosterTransport = (handlers: RosterHandlers) => () => void;
+export type LiveSource = Pick<EventTarget, 'addEventListener'> & {
+  readonly readyState: number;
+  close(): void;
+};
+let makeLiveSource: ((url: string) => LiveSource) | undefined;
+let source: LiveSource | undefined;
+let sourceUrl: string | undefined;
+let activityBaseline: string | undefined;
+const consumers = new Set<SharedSource>();
+let channelConsumer: SharedSource | undefined;
+export type ActivityEventSource = Pick<EventTarget, 'addEventListener'> & {
+  readonly readyState: number;
+  close(): void;
+};
+export type ChannelEventSource = ActivityEventSource & {
+  onerror: ((event: Event) => void) | null;
+};
 
-let transport: RosterTransport | undefined;
-let stop: (() => void) | undefined;
+function releaseUnusedSource(): void {
+  if (listeners.size || consumers.size) return;
+  source?.close();
+  source = undefined;
+  sourceUrl = undefined;
+  activityBaseline = undefined;
+  redactions.clear();
+}
+
+class SharedSource extends EventTarget implements ActivityEventSource {
+  private closed = false;
+  private errorState: number | undefined;
+  onerror: ((event: Event) => void) | null = null;
+  constructor(readonly channelUrl?: string) {
+    super();
+  }
+  get readyState(): number {
+    return this.closed ? 2 : (this.errorState ?? source?.readyState ?? 2);
+  }
+  publish(type: string, data?: string, errorState?: number): void {
+    if (this.closed) return;
+    this.errorState = errorState;
+    try {
+      const event = data === undefined ? new Event(type) : new MessageEvent(type, { data });
+      this.dispatchEvent(event);
+      if (type === 'error') this.onerror?.(event);
+    } finally {
+      this.errorState = undefined;
+    }
+  }
+  close(): void {
+    if (this.closed) return;
+    this.closed = true;
+    consumers.delete(this);
+    if (channelConsumer === this) channelConsumer = undefined;
+    releaseUnusedSource();
+    if (listeners.size || consumers.size) {
+      try {
+        ensureSource();
+      } catch {
+        console.warn('botharness: live transport replacement refused');
+      }
+    }
+  }
+}
+
+function ensureSource(): void {
+  if (makeLiveSource === undefined && typeof EventSource === 'undefined') return;
+  const url = channelConsumer?.channelUrl ?? '/api/botharness/stream?scope=roster&activity=1';
+  if (source && sourceUrl === url) return;
+  const next: LiveSource = makeLiveSource?.(url) ?? new EventSource(url);
+  source?.close();
+  source = undefined;
+  sourceUrl = undefined;
+  activityBaseline = undefined;
+  source = next;
+  sourceUrl = url;
+  next.addEventListener('roster/changed', () => {
+    if (source === next) notify();
+  });
+  next.addEventListener('open', () => {
+    if (source === next) notify();
+  });
+  next.addEventListener('content/purged', (event) => {
+    if (source !== next) return;
+    const placements = parseContentRedactions(event);
+    for (const placement of placements)
+      redactions.set(JSON.stringify([placement.channelId, placement.messageId]), placement);
+    for (const callback of [...purgeListeners]) callback(placements);
+  });
+  next.addEventListener('activity/snapshot', (event) => {
+    if (source !== next || !(event instanceof MessageEvent) || typeof event.data !== 'string')
+      return;
+    activityBaseline = event.data;
+    for (const consumer of [...consumers])
+      if (consumer.channelUrl === undefined) consumer.publish('activity/snapshot', event.data);
+  });
+  for (const type of [
+    'channel/message',
+    'channel/admission',
+    'channel/human-read',
+    'channel/draft-baseline',
+    'channel/draft',
+    'channel/draft-settled',
+    'channel/draft-abandoned',
+  ]) {
+    next.addEventListener(type, (event) => {
+      if (source !== next || !(event instanceof MessageEvent) || typeof event.data !== 'string')
+        return;
+      channelConsumer?.publish(type, event.data);
+    });
+  }
+  next.addEventListener('error', () => {
+    if (source !== next) return;
+    activityBaseline = undefined;
+    if (next.readyState === 2) {
+      source = undefined;
+      sourceUrl = undefined;
+    }
+    for (const consumer of [...consumers]) consumer.publish('error', undefined, next.readyState);
+  });
+  queueMicrotask(() => {
+    if (source !== next || activityBaseline !== undefined) return;
+    for (const consumer of [...consumers])
+      if (consumer.channelUrl === undefined) consumer.publish('error', undefined, 0);
+  });
+}
+
+export function installLiveSource(make: (url: string) => LiveSource): () => void {
+  const swap = (value: ((url: string) => LiveSource) | undefined): void => {
+    makeLiveSource = value;
+    if (source === undefined) return;
+    const interrupted = source;
+    sourceUrl = undefined;
+    ensureSource();
+    if (source === interrupted) return;
+    for (const consumer of [...consumers]) consumer.publish('error', undefined, 0);
+  };
+  swap(make);
+  return () => {
+    if (makeLiveSource === make) swap(undefined);
+  };
+}
+
+export function openSharedChannel(url: string): ChannelEventSource {
+  if (channelConsumer !== undefined) throw new Error('A document already owns a live Channel');
+  const query = new URL(url, 'http://localhost').searchParams;
+  query.set('roster', '1');
+  query.set('activity', '1');
+  const consumer = new SharedSource('/api/botharness/stream?' + query.toString());
+  consumers.add(consumer);
+  channelConsumer = consumer;
+  try {
+    ensureSource();
+  } catch (error) {
+    consumers.delete(consumer);
+    channelConsumer = undefined;
+    releaseUnusedSource();
+    throw error;
+  }
+  return consumer;
+}
+
+export function openRosterActivity(): ActivityEventSource | undefined {
+  if (typeof EventSource === 'undefined') return undefined;
+  const consumer = new SharedSource();
+  consumers.add(consumer);
+  try {
+    ensureSource();
+  } catch (error) {
+    consumers.delete(consumer);
+    releaseUnusedSource();
+    throw error;
+  }
+  queueMicrotask(() => {
+    if (source?.readyState !== 1) consumer.publish('error');
+    else if (activityBaseline !== undefined)
+      consumer.publish('activity/snapshot', activityBaseline);
+  });
+  return consumer;
+}
 const notify = () => {
   for (const listener of [...listeners]) listener();
 };
-const purged = (placements: PurgedPlacement[]): void => {
-  for (const placement of placements)
-    redactions.set(JSON.stringify([placement.channelId, placement.messageId]), placement);
-  for (const callback of [...purgeListeners]) callback(placements);
-};
-const sse: RosterTransport = (handlers) => {
-  if (typeof EventSource === 'undefined') return () => {};
-  const source = new EventSource('/api/botharness/stream?scope=roster');
-  source.addEventListener('roster/changed', handlers.changed);
-  source.addEventListener('open', handlers.ready);
-  source.addEventListener('content/purged', (event) =>
-    handlers.purged(parseContentRedactions(event)),
-  );
-  return () => source.close();
-};
-const open = (): void => {
-  stop = (transport ?? sse)({ ready: notify, changed: notify, purged });
-};
-export function installRosterTransport(next: RosterTransport): () => void {
-  const swap = (value: RosterTransport | undefined): void => {
-    transport = value;
-    if (stop === undefined) return;
-    stop();
-    open();
-  };
-  swap(next);
-  return () => {
-    if (transport === next) swap(undefined);
-  };
-}
 export function subscribeMessagingDefaults(
   listener: () => void,
   onPurge?: (placements: PurgedPlacement[]) => void,
@@ -60,14 +200,10 @@ export function subscribeMessagingDefaults(
         onPurge(values.slice(offset, offset + 100));
     });
   }
-  if (stop === undefined) open();
+  ensureSource();
   return () => {
     listeners.delete(listener);
     if (onPurge) purgeListeners.delete(onPurge);
-    if (!listeners.size) {
-      stop?.();
-      stop = undefined;
-      redactions.clear();
-    }
+    releaseUnusedSource();
   };
 }

@@ -66,12 +66,12 @@ import {
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
 import { mountChannelLive, mountRosterLive } from './channel-live.js';
-import { installRosterTransport } from './messaging-defaults-live.js';
+import { installLiveSource } from './messaging-defaults-live.js';
 import {
-  createRosterRemoteTransport,
-  ROSTER_REMOTE_CONTRIBUTION,
-  type RosterRemote,
-} from './roster-remote.js';
+  createRemoteLiveSource,
+  LIVE_REMOTE_CONTRIBUTION,
+  type LiveRemote,
+} from './live-remote.js';
 import { sessionBotReference } from './mentions.js';
 import { en, LOCALE_NS, zh } from './locale.js';
 import { registerModeShadow } from './mode.js';
@@ -350,32 +350,32 @@ export function apply(ctx: ClientContext): void {
     const native = ctx.remote as Partial<Pick<typeof ctx.remote, '$mount' | '$stream'>>;
     if (typeof native.$mount !== 'function' || typeof native.$stream !== 'function')
       return () => {};
-    void ctx.remote.$mount(ROSTER_REMOTE_CONTRIBUTION).then(
+    void ctx.remote.$mount(LIVE_REMOTE_CONTRIBUTION).then(
       () => {
         if (disposed) return;
-        uninstall = installRosterTransport(
-          createRosterRemoteTransport({
-            $stream: (options) => (ctx.remote as unknown as RosterRemote).$stream(options),
-            watchRoster: (signal) => {
+        uninstall = installLiveSource(
+          createRemoteLiveSource({
+            $stream: (options) => (ctx.remote as unknown as LiveRemote).$stream(options),
+            liveFrames: (query, resume, signal) => {
               const namespace = ctx.get('remote.botharness') as
-                | { watchRoster?: (signal: AbortSignal) => AsyncIterable<unknown> }
+                | { liveFrames?: LiveRemote['liveFrames'] }
                 | undefined;
-              if (namespace?.watchRoster === undefined)
-                throw new Error('botharness roster Remote is not mounted');
-              return namespace.watchRoster(signal);
+              if (namespace?.liveFrames === undefined)
+                throw new Error('botharness live Remote is not mounted');
+              return namespace.liveFrames(query, resume, signal);
             },
           }),
         );
       },
       (error: unknown) => {
-        console.warn('botharness: roster Remote stream unavailable', error);
+        console.warn('botharness: live Remote stream unavailable', error);
       },
     );
     return () => {
       disposed = true;
       uninstall?.();
     };
-  }, 'botharness: Roster live on the native Remote stream carrier');
+  }, 'botharness: live streams on the native Remote stream carrier');
   ctx.effect(
     () =>
       mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal), {

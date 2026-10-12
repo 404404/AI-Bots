@@ -511,7 +511,7 @@ describe('plugin entry', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
-      'watchRoster',
+      'liveFrames',
     ]);
   });
 

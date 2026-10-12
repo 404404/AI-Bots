@@ -38,16 +38,8 @@ interface Subscriber {
   close(): void;
 }
 
-export type RosterLiveItem =
-  | { type: 'ready' }
-  | { type: typeof ROSTER_CHANGED_EVENT }
-  | { type: typeof CONTENT_PURGED_EVENT; placements: PurgedPlacement[] };
-
-const ROSTER_LIVE_QUEUE_LIMIT = 1024;
-
 export interface ChannelLiveHub {
   open(request: Request): Response;
-  watchRoster(signal: AbortSignal): AsyncIterable<RosterLiveItem>;
   publishCommitted(commit: ChannelMessageCommit): void;
   publishAdmission(channelId: string, messageId: string, message: ChannelMessage): void;
   publishHumanRead(channelId: string, humanId: string, revision: number): void;
@@ -81,6 +73,59 @@ function draftFrame(event: PublishedDraftEvent): string {
 interface ActivitySource {
   snapshot(): PersonaBotActivitySnapshot;
   onChange(listener: () => void): () => void;
+}
+
+function combineLiveResponses(channel: Response, roster: Response): Response {
+  const readers = [channel.body!, roster.body!].map((body) => body.getReader());
+  let ended = false;
+  let completed = 0;
+  const waiters = new Set<() => void>();
+  const resume = (): void => {
+    for (const resolve of waiters) resolve();
+    waiters.clear();
+  };
+  const stop = async (): Promise<void> => {
+    ended = true;
+    resume();
+    await Promise.allSettled(readers.map((reader) => reader.cancel()));
+  };
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const pump = async (reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> => {
+        try {
+          while (!ended) {
+            if ((controller.desiredSize ?? 0) <= 0)
+              await new Promise<void>((resolve) => waiters.add(resolve));
+            if (ended) return;
+            const chunk = await reader.read();
+            if (ended) return;
+            if (chunk.done) {
+              completed++;
+              if (completed === readers.length) {
+                ended = true;
+                resume();
+                controller.close();
+              }
+              return;
+            }
+            controller.enqueue(chunk.value);
+          }
+        } catch (error) {
+          if (ended) return;
+          controller.error(error);
+          await stop();
+        }
+      };
+      for (const reader of readers) void pump(reader);
+    },
+    pull() {
+      resume();
+    },
+    cancel() {
+      return stop();
+    },
+  });
+  return new Response(body, { headers: channel.headers });
 }
 
 export function createChannelLiveHub(
@@ -169,13 +214,36 @@ export function createChannelLiveHub(
     close(): void;
   }
   const rosterSubscribers = new Set<RosterSubscriber>();
-  const openRoster = (): Response => {
+  const openRoster = (includeActivity = false): Response => {
     const encoder = new TextEncoder();
     let subscriber: RosterSubscriber | undefined;
     let heartbeat: ReturnType<typeof setInterval> | undefined;
+    let flushActivity: (() => void) | undefined;
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         let ended = false;
+        let pendingActivity = false;
+        let offActivity: (() => void) | undefined;
+        const sendActivity = (): void => {
+          if (ended || activity === undefined) return;
+          if ((controller.desiredSize ?? 0) <= 0) {
+            pendingActivity = true;
+            return;
+          }
+          pendingActivity = false;
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `event: activity/snapshot\ndata: ${JSON.stringify(activity.snapshot())}\n\n`,
+              ),
+            );
+          } catch {
+            subscriber?.close();
+          }
+        };
+        flushActivity = () => {
+          if (pendingActivity) sendActivity();
+        };
         subscriber = {
           purge(placements) {
             if (ended) return;
@@ -201,6 +269,7 @@ export function createChannelLiveHub(
           close() {
             if (ended) return;
             ended = true;
+            offActivity?.();
             if (heartbeat !== undefined) clearInterval(heartbeat);
             rosterSubscribers.delete(this);
             try {
@@ -211,14 +280,21 @@ export function createChannelLiveHub(
         rosterSubscribers.add(subscriber);
         controller.enqueue(encoder.encode('retry: 1500\n\n'));
         subscriber.purge(redactions?.() ?? []);
+        if (includeActivity && activity !== undefined) {
+          offActivity = activity.onChange(sendActivity);
+          sendActivity();
+        }
         heartbeat = setInterval(() => {
-          if (ended) return;
+          if (ended || (controller.desiredSize ?? 0) <= 0) return;
           try {
             controller.enqueue(encoder.encode(': heartbeat\n\n'));
           } catch {
             subscriber?.close();
           }
         }, 15_000);
+      },
+      pull() {
+        flushActivity?.();
       },
       cancel() {
         subscriber?.close();
@@ -232,53 +308,6 @@ export function createChannelLiveHub(
       },
     });
   };
-  async function* watchRoster(signal: AbortSignal): AsyncGenerator<RosterLiveItem> {
-    const queue: RosterLiveItem[] = [];
-    let ended = signal.aborted;
-    let wake: (() => void) | undefined;
-    const subscriber: RosterSubscriber = {
-      purge(placements) {
-        if (ended) return;
-        for (let offset = 0; offset < placements.length; offset += 100)
-          queue.push({
-            type: CONTENT_PURGED_EVENT,
-            placements: placements.slice(offset, offset + 100),
-          });
-        if (queue.length > ROSTER_LIVE_QUEUE_LIMIT) this.close();
-        wake?.();
-      },
-      push() {
-        if (ended) return;
-        if (queue.at(-1)?.type !== ROSTER_CHANGED_EVENT) queue.push({ type: ROSTER_CHANGED_EVENT });
-        wake?.();
-      },
-      close() {
-        if (ended) return;
-        ended = true;
-        rosterSubscribers.delete(this);
-        wake?.();
-      },
-    };
-    const abort = (): void => subscriber.close();
-    signal.addEventListener('abort', abort, { once: true });
-    if (!ended) rosterSubscribers.add(subscriber);
-    try {
-      if (ended) return;
-      yield { type: 'ready' };
-      subscriber.purge(redactions?.() ?? []);
-      for (;;) {
-        while (!ended && queue.length > 0) yield queue.shift()!;
-        if (ended) return;
-        await new Promise<void>((resolve) => {
-          wake = resolve;
-        });
-        wake = undefined;
-      }
-    } finally {
-      signal.removeEventListener('abort', abort);
-      subscriber.close();
-    }
-  }
   const remove = (channelId: string, subscriber: Subscriber): void => {
     const group = subscribers.get(channelId);
     group?.delete(subscriber);
@@ -286,11 +315,19 @@ export function createChannelLiveHub(
   };
 
   return {
-    watchRoster,
     open(request) {
       const url = new URL(request.url);
+      if (url.searchParams.get('roster') === '1' && url.searchParams.has('channelId')) {
+        const channelUrl = new URL(url);
+        channelUrl.searchParams.delete('roster');
+        channelUrl.searchParams.delete('activity');
+        const response = this.open(new Request(channelUrl, { headers: request.headers }));
+        if (response.status !== 200 || response.body === null) return response;
+        return combineLiveResponses(response, openRoster(url.searchParams.get('activity') === '1'));
+      }
       if (url.searchParams.get('scope') === 'activity') return openActivity();
-      if (url.searchParams.get('scope') === 'roster') return openRoster();
+      if (url.searchParams.get('scope') === 'roster')
+        return openRoster(url.searchParams.get('activity') === '1');
       const channelId = url.searchParams.get('channelId');
       if (channelId === null || channels.get(channelId) === undefined) {
         return new Response('Unknown Channel', { status: 404 });

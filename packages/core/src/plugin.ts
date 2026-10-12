@@ -1,3 +1,4 @@
+import { openLiveFrames } from './channels/live-frames.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
@@ -1524,7 +1525,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
-  registerBridge(ctx, bridgeMethods, privateInputs, (signal) => core.live.watchRoster(signal));
+  registerBridge(ctx, bridgeMethods, privateInputs, (query, resume, signal) =>
+    openLiveFrames((request) => core.live.open(request), query, resume, signal),
+  );
 
   ctx.inject(['skills'], (skillsCtx) => {
     const skills = (

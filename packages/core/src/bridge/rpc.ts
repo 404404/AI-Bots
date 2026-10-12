@@ -5,7 +5,7 @@ import type { PairingRequest, PairingReviewInput } from '../messaging/pairing.js
 import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
-import type { RosterLiveItem } from '../channels/live.js';
+import { LiveRefused, type LiveFrame } from '../channels/live-frames.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
 import type {
   MessagingDefaults,
@@ -206,16 +206,26 @@ export class BotharnessBridgeService extends TypertRemoteService {
     ctx: Context,
     methods: BridgeMethods,
     private readonly privateInputs?: PrivateInputs,
-    private readonly rosterLive?: (signal: AbortSignal) => AsyncIterable<RosterLiveItem>,
+    private readonly live?: (
+      query: string,
+      resume: string,
+      signal: AbortSignal,
+    ) => AsyncIterable<LiveFrame>,
   ) {
     super(ctx, BRIDGE_SERVICE_KEY, { namespace: BRIDGE_NAMESPACE });
     this.methods = methods;
   }
 
-  watchRoster(signal: AbortSignal): AsyncIterable<RosterLiveItem> {
-    if (this.rosterLive === undefined)
-      throw toRemoteError({ code: 'unavailable', message: 'Roster live stream is unavailable' });
-    return this.rosterLive(signal);
+  async *liveFrames(query: string, resume: string, signal: AbortSignal): AsyncGenerator<LiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live(query, resume, signal);
+    } catch (error) {
+      if (error instanceof LiveRefused)
+        throw toRemoteError({ code: error.code, message: error.message });
+      throw error;
+    }
   }
 
   privateInputStatus(channelId: string, messageId: string): { status: PrivateInputStatus } {
@@ -1436,13 +1446,13 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'scheduleRunNow',
   'schedulePreview',
 ]);
-markRemoteStreams(BotharnessBridgeService.prototype, ['watchRoster']);
+markRemoteStreams(BotharnessBridgeService.prototype, ['liveFrames']);
 
 export function registerBridge(
   ctx: Context,
   methods: BridgeMethods,
   privateInputs?: PrivateInputs,
-  rosterLive?: (signal: AbortSignal) => AsyncIterable<RosterLiveItem>,
+  live?: (query: string, resume: string, signal: AbortSignal) => AsyncIterable<LiveFrame>,
 ): BotharnessBridgeService {
-  return new BotharnessBridgeService(ctx, methods, privateInputs, rosterLive);
+  return new BotharnessBridgeService(ctx, methods, privateInputs, live);
 }
