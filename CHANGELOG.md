@@ -180,6 +180,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Documentation
 
+- Updated the bilingual GitHub README for released 1.2.0 and 1.2.1 highlights, installation compatibility and the current app-binding path; removed the outdated unreleased preview ([#1464](https://github.com/BotHarness/DeepSeekBot/issues/1464)).
+
 - Public installation instructions use the qualified stable exact package version, with synchronized bilingual README/guide checks and release-age recovery guidance instead of implying bare names or `@latest` always install the newest release ([#1456](https://github.com/BotHarness/DeepSeekBot/issues/1456)).
 
 - DeepSeekBot GitHub Release announcements start with version-specific official website and Chinese/English installation links; short links preserve GitHub, release-version and entry-point attribution without changing analytics consent ([#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)).
