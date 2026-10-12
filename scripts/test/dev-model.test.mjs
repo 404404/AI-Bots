@@ -43,7 +43,7 @@ describe('AX native OpenCode Go reuse', () => {
     );
     expect(workspace.allowBuilds).toEqual({ koffi: true });
     expect(workspace.patchedDependencies.other).toBe('other.patch');
-    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1']).toContain(
+    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2']).toContain(
       '/patches/',
     );
   });

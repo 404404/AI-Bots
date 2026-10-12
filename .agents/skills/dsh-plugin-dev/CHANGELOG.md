@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Moved the [local development guide](../dsh-dev/SKILL.md)'s default CLI and reference-checkout tag to DSH `0.2.0-rc.2`, verified with a fresh isolated Web Profile, authenticated API and rendered Bot mode; RC1-verified pitfall entries keep their recorded version, and DSH/Cordis Context and Skill behavior remain unchanged ([#1485](https://github.com/BotHarness/DeepSeekBot/issues/1485)).
+
 - Recorded audited Windows-to-Linux Profile path migration and non-root workspace permission prerequisites in the [local development guide](../dsh-dev/SKILL.md), verified against pinned DSH `0.2.0-rc.1` and the real isolated Linux Host; DSH/Cordis Context and Skill behavior remain unchanged ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386), [qualification](../../../docs/research/2026-10-12-private-input-linux-qualification.md)).
 
 - Documented the qualified private-reference MCP consumer, native adapter/SDK boundary and trusted-server limits; DSH/Cordis Context and Skill behavior remain unchanged ([#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384), [guide](../../../docs/dev/guides/private-input-mcp.md)).
