@@ -1,4 +1,4 @@
-# ADR-0175: Client-local composer recovery is not message authority
+# ADR-0184: Client-local composer recovery is not message authority
 
 Status: Accepted
 

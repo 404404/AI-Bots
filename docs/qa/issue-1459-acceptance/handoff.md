@@ -52,7 +52,7 @@ These observations strongly isolate this reproduction to same-origin connection 
 - #1460 depends on #1459 closure and explicit Human-QA acceptance.
 - #1461 is an independent file-open/preference slice. A new task may refresh claims/PRs and claim that issue in its own worktree/branch; it should not implement file-open changes on this composer branch.
 - #1462 depends on #1461 closure and explicit Human-QA acceptance.
-- Parent issue text is the published requirement authority. #1459's committed recovery ADR is ADR-0175; the original proposed ADR-0160 number was occupied. Recheck numbering and existing authority before incorporating the proposed file-open ADR, rather than assuming untracked original-machine drafts are committed documents.
+- Parent issue text is the published requirement authority. #1459's committed recovery ADR is ADR-0184 (renumbered from 0175 when main took that number); the original proposed ADR-0160 number was occupied. Recheck numbering and existing authority before incorporating the proposed file-open ADR, rather than assuming untracked original-machine drafts are committed documents.
 
 ## Separate RC2-default request
 

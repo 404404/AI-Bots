@@ -801,7 +801,7 @@ Messaging 的 bindings／grants 事务提交，以及进程内 Consumer lease �
 
 ## Client-local composer recovery（#1459）
 
-DM 与 Group 的未发送撰写上下文由 application-defined Client recovery owner 保存于浏览器 localStorage（ADR-0175；原设计编号 0160 已被其他决策占用），不进入 Source Event、Session Persistence、Bot Memory 或 telemetry。Host/Profile 通过 Host bridge 返回持久 opaque identity，组合可信 Human 与 canonical Channel ID 隔离草稿；身份未就绪或切换时不展示旧范围输入。正文、明确 mentions／Channel references、reply ID 和已上传附件引用逐次保存，不依赖卸载事件，也不保存 File 字节。
+DM 与 Group 的未发送撰写上下文由 application-defined Client recovery owner 保存于浏览器 localStorage（ADR-0184；原设计编号 0160 已被其他决策占用），不进入 Source Event、Session Persistence、Bot Memory 或 telemetry。Host/Profile 通过 Host bridge 返回持久 opaque identity，组合可信 Human 与 canonical Channel ID 隔离草稿；身份未就绪或切换时不展示旧范围输入。正文、明确 mentions／Channel references、reply ID 和已上传附件引用逐次保存，不依赖卸载事件，也不保存 File 字节。
 
 恢复先经现有 Typert／API Gateway seam 校验当前 Human 可见回复及 Attachment owner 引用，再结合当前 roster 校验目标；失效引用保留正文并提示，未完成上传不能伪装 ready，`@all` 需重新选择。不可变版本及因果时钟保留并发标签页的双方输入，显式选择后重新校验；空闲视图同步，正在编辑的内容不被静默覆盖。存储损坏／配额／不可用明确提示，保留有效旧记录与内存输入。此切片不提供跨设备同步、发送快照或方向键历史；后两者仍由 #1460 单独实现并验收。
 
