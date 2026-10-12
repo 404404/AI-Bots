@@ -2,8 +2,8 @@
 import { act, createElement, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
-import type { BridgeActions } from '../src/client/actions.js';
-import type { BotSummary } from '../src/client/store.js';
+import { createActions, type BridgeActions } from '../src/client/actions.js';
+import { createStore, type BotSummary } from '../src/client/store.js';
 import type { WorkspaceGrantView } from '../src/client/bridge.js';
 import { useDmComposerContext } from '../src/client/dm-composer-context.js';
 import { WindowCompanions } from '../src/client/window-companions.js';
@@ -11,6 +11,94 @@ import { CompanionPin } from '../src/client/window-companions-view.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { rememberModelPlan } from '../src/client/model-plan-store.js';
 import { publishWorkspaceGrantChange } from '../src/client/workspace-grant-events.js';
+import { MOBILE_BOT_QUERY } from '../src/client/mobile-viewport.js';
+
+it('refreshes mounted inherited footers after a successful global model save without changing fixed models', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const first = { provider: 'deepseek', model: 'first' };
+  const second = { provider: 'deepseek', model: 'second' };
+  let route = first;
+  const bot = { ...ada, slug: 'footer-global-refresh' };
+  const fixed = { ...ada, slug: 'footer-fixed-refresh' };
+  const actions = createActions(async (method, payload) => {
+    if (method === 'onboardingModel') {
+      route = second;
+      return { ok: true, value: { revision: 1 } };
+    }
+    if (method === 'modelPlan')
+      return {
+        ok: true,
+        value:
+          payload.slug === fixed.slug
+            ? {
+                plan: {
+                  revision: 1,
+                  orchestrator: first,
+                  assignmentDefault: first,
+                  sourcePresetId: 'fixed',
+                  sourcePresetName: 'Fixed',
+                  assignmentModels: [],
+                  appliedAt: '',
+                },
+              }
+            : {},
+      };
+    if (method === 'modelCatalog')
+      return {
+        ok: true,
+        value: {
+          default: route,
+          models: [first, second].map((entry) => ({
+            ...entry,
+            modelName: entry.model === 'first' ? 'Full First Model' : 'Full Second Model',
+            providerName: 'DeepSeek',
+            efforts: [],
+          })),
+        },
+      };
+    if (method === 'grants') return { ok: true, value: { grants: [] } };
+    throw new Error(`Unexpected method ${method}`);
+  }, createStore());
+  function Harness() {
+    const inherited = useDmComposerContext({
+      bot,
+      channelId: `dm-${bot.slug}`,
+      actions,
+      companion: undefined,
+      activity: undefined,
+      loading: false,
+      t: zhTranslate,
+      onUsage() {},
+    });
+    const custom = useDmComposerContext({
+      bot: fixed,
+      channelId: `dm-${fixed.slug}`,
+      actions,
+      companion: undefined,
+      activity: undefined,
+      loading: false,
+      t: zhTranslate,
+      onUsage() {},
+    });
+    return createElement('div', null, inherited?.content, custom?.content);
+  }
+  try {
+    await act(async () => root.render(createElement(Harness)));
+    const labels = () =>
+      Array.from(host.querySelectorAll('.bh-composer-model'), (node) => node.textContent);
+    expect(labels()).toEqual(['Full First Model', 'Full First Model']);
+    await act(async () => {
+      await actions.onboardingModel(undefined, 0, second, true);
+    });
+    expect(labels()).toEqual(['Full Second Model', 'Full First Model']);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 
 vi.mock('../src/client/profile-cards-builtins.js', () => ({ PROFILE_ACTIVITY_WEEKS: 26 }));
 vi.mock('../src/client/model-preset-profile.js', () => ({
@@ -38,6 +126,148 @@ const ada: BotSummary = {
   createdAt: '',
 };
 const grace = { ...ada, slug: 'composer-grace', displayName: 'Grace' };
+
+it('keeps only the model in mobile layouts and restores desktop workspace and usage actions', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  let mobile = false;
+  const listeners = new Set<() => void>();
+  const matchMedia = vi.fn(() => ({
+    get matches() {
+      return mobile;
+    },
+    addEventListener: (_event: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_event: string, listener: () => void) => listeners.delete(listener),
+  }));
+  vi.stubGlobal('matchMedia', matchMedia);
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const bot = { ...ada, slug: 'footer-mobile' };
+  const route = { provider: 'deepseek', model: 'flash' };
+  const actions = {
+    modelPlanState: async () => ({}),
+    modelCatalog: async () => ({
+      default: route,
+      models: [
+        { ...route, modelName: 'DeepSeek-V41-Flash', providerName: 'DeepSeek', efforts: [] },
+      ],
+    }),
+    listWorkspaceGrants: async () => [],
+    profileSessionUsage: async () => ({ slug: bot.slug, weeks: 26, since: '', rows: [] }),
+  } as unknown as BridgeActions;
+  function Harness() {
+    return useDmComposerContext({
+      bot,
+      channelId: `dm-${bot.slug}`,
+      actions,
+      companion: undefined,
+      activity: undefined,
+      loading: false,
+      t: zhTranslate,
+      onUsage() {},
+    })?.content;
+  }
+  const resize = (next: boolean) =>
+    act(async () => {
+      mobile = next;
+      for (const listener of listeners) listener();
+    });
+  try {
+    await act(async () => root.render(createElement(Harness)));
+    expect(host.querySelectorAll('.bh-composer-context button')).toHaveLength(3);
+    await act(async () => host.querySelector<HTMLButtonElement>('.bh-composer-usage')!.click());
+    expect(document.body.querySelector('.bh-composer-usage-popover')).not.toBeNull();
+    await resize(true);
+    expect(matchMedia).toHaveBeenCalledWith(MOBILE_BOT_QUERY);
+    expect(host.querySelectorAll('.bh-composer-context button')).toHaveLength(1);
+    expect(host.querySelector('.bh-composer-context')!.textContent).toBe('DeepSeek-V41-Flash');
+    expect(document.body.querySelector('.bh-composer-usage-popover')).toBeNull();
+    await act(async () =>
+      host.querySelector<HTMLButtonElement>('.bh-composer-context button')!.click(),
+    );
+    expect(host.querySelector('[role="dialog"]')!.textContent).toContain(`model:${bot.slug}`);
+    await resize(false);
+    expect(host.querySelectorAll('.bh-composer-context button')).toHaveLength(3);
+    expect(host.querySelector('.bh-composer-context-left')!.textContent).toContain('0 个工作区');
+    expect(host.querySelector('.bh-composer-usage')).not.toBeNull();
+    expect(document.body.querySelector('.bh-composer-usage-popover')).toBeNull();
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.unstubAllGlobals();
+  }
+});
+
+it('shows the full catalog model name for inherited and custom routes and keeps the model action', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const bot = { ...ada, slug: 'footer-model-name' };
+  const route = { provider: 'deepseek', model: 'deepseek-v41-flash' };
+  const modelName = 'DeepSeek-V41-Flash';
+  const alternate = { provider: 'deepseek', model: 'long-model' };
+  const alternateName = 'DeepSeek-V41-Long/Reasoning-High-Context-Extended-Model';
+  const actions = {
+    modelPlanState: async () => ({ plan: undefined }),
+    modelCatalog: async () => ({
+      default: route,
+      models: [
+        { ...route, modelName, providerName: 'DeepSeek Provider', efforts: [] },
+        { ...alternate, modelName: alternateName, providerName: 'DeepSeek Provider', efforts: [] },
+      ],
+    }),
+    listWorkspaceGrants: async () => [],
+  } as unknown as BridgeActions;
+  function Harness() {
+    return useDmComposerContext({
+      bot,
+      channelId: `dm-${bot.slug}`,
+      actions,
+      companion: undefined,
+      activity: undefined,
+      loading: false,
+      t: zhTranslate,
+      onUsage() {},
+    })?.content;
+  }
+  try {
+    await act(async () => root.render(createElement(Harness)));
+    const model = () => host.querySelector<HTMLButtonElement>('.bh-composer-context-left button')!;
+    expect(model().textContent).toBe(modelName);
+    await act(async () =>
+      rememberModelPlan(bot.slug, {
+        revision: 2,
+        sourcePresetId: 'custom',
+        sourcePresetName: 'Custom',
+        orchestrator: alternate,
+        assignmentDefault: alternate,
+        assignmentModels: [],
+        appliedAt: '',
+      }),
+    );
+    expect(model().textContent).toBe(alternateName);
+    expect(model().getAttribute('aria-label')).not.toContain('继承全局');
+    expect(model().getAttribute('aria-label')).not.toContain('DeepSeek Provider');
+    await act(async () => model().click());
+    expect(host.querySelector('[role="dialog"]')!.textContent).toContain(`model:${bot.slug}`);
+    await act(async () =>
+      rememberModelPlan(bot.slug, {
+        revision: 3,
+        sourcePresetId: 'custom',
+        sourcePresetName: 'Custom',
+        orchestrator: route,
+        assignmentDefault: route,
+        assignmentModels: [],
+        appliedAt: '',
+      }),
+    );
+    expect(model().textContent).toBe(modelName);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 
 it('shares header pin, restores preferences, rejects unavailable and old targets, and bounds chip queries', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
