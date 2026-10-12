@@ -49,18 +49,38 @@ function readAll(): Record<string, DmActionKind[]> {
   }
 }
 
-/** Hidden action kinds for one PersonaBot DM; every kind is shown by default. */
-export function loadHiddenDmActions(botSlug: string): DmActionKind[] {
-  return readAll()[botSlug] ?? [];
+const listeners = new Set<() => void>();
+const snapshots = new Map<string, readonly DmActionKind[]>();
+const NONE: readonly DmActionKind[] = [];
+
+export function subscribeHiddenDmActions(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
-export function saveHiddenDmActions(botSlug: string, hidden: readonly DmActionKind[]): void {
+/** Hidden action kinds for one PersonaBot DM; every kind is shown by default. */
+export function hiddenDmActionsSnapshot(botSlug: string | undefined): readonly DmActionKind[] {
+  if (botSlug === undefined) return NONE;
+  const cached = snapshots.get(botSlug);
+  if (cached !== undefined) return cached;
+  const loaded = readAll()[botSlug] ?? NONE;
+  snapshots.set(botSlug, loaded);
+  return loaded;
+}
+
+export function toggleHiddenDmAction(botSlug: string, kind: DmActionKind): void {
+  const current = hiddenDmActionsSnapshot(botSlug);
+  const hidden = current.includes(kind)
+    ? current.filter((entry) => entry !== kind)
+    : [...current, kind];
   const all = readAll();
   if (hidden.length === 0) delete all[botSlug];
-  else all[botSlug] = [...hidden];
+  else all[botSlug] = hidden;
   try {
     storage()?.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch {
     // Display preference only; the DM still renders with the in-memory choice.
   }
+  snapshots.set(botSlug, hidden);
+  for (const listener of listeners) listener();
 }

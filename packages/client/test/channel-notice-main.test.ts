@@ -104,6 +104,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
+import { toggleHiddenDmAction } from '../src/client/dm-actions.js';
 import { store, type BotSummary, type ChannelSummary } from '../src/client/store.js';
 
 const AT = '2026-10-09T00:00:00Z';
@@ -365,17 +366,14 @@ describe('Channel Notices in a Group', () => {
     expect(openChannel).toHaveBeenCalledWith(group.id);
     expect(openAround).toHaveBeenCalledWith(group.id, 'g-2');
 
-    const toggle = container.querySelector<HTMLButtonElement>('.bh-dm-actions-toggle');
-    await act(async () => toggle?.click());
-    const postsItem = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
-      (item) => item.textContent === '发言（群聊和 Bot 私信）',
-    ) as HTMLButtonElement | undefined;
-    await act(async () => postsItem?.click());
+    await act(async () => toggleHiddenDmAction('mira', 'posts'));
     expect(container.querySelector('.bh-dm-trace-line')).toBeNull();
     expect(container.querySelector('.bh-memory-commit-line')).not.toBeNull();
     expect(JSON.parse(window.localStorage.getItem('botharness.dm-actions.hidden.v1')!)).toEqual({
       mira: ['posts'],
     });
+    await act(async () => toggleHiddenDmAction('mira', 'posts'));
+    expect(container.querySelector('.bh-dm-trace-line')).not.toBeNull();
     window.localStorage.clear();
   });
 
