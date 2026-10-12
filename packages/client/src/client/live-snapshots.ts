@@ -1,8 +1,19 @@
 import {
+  RemoteJournalStream,
   RemoteSnapshotStream,
   RemoteStreamCarrierError,
 } from '@deepseek-ai/dsh-api-gateway/client';
-import type { ClientRemote } from '@deepseek-ai/dsh-api-gateway/client';
+import type {
+  ClientRemote,
+  RemoteJournalFrame,
+  RemoteJournalStreamOptions,
+} from '@deepseek-ai/dsh-api-gateway/client';
+import {
+  parseJournalEntry,
+  parseJournalPage,
+  type JournalEntry,
+  type JournalPage,
+} from './bridge.js';
 import type {
   ActivityLiveFrame,
   ChannelLiveFrame,
@@ -58,12 +69,12 @@ export const CHANNEL_REMOTE_DESCRIPTOR = Object.freeze({
       codec: strict('a Channel ID', (value): value is string => typeof value === 'string'),
     }),
     Object.freeze({
-      name: 'after',
-      wire: 'after',
+      name: 'limit',
+      wire: 'limit',
       source: 'json' as const,
       codec: strict(
-        'a revision',
-        (value): value is number => Number.isSafeInteger(value) && (value as number) >= 0,
+        'a page size',
+        (value): value is number => Number.isSafeInteger(value) && (value as number) >= 1,
       ),
     }),
   ]),
@@ -72,49 +83,132 @@ export const CHANNEL_REMOTE_DESCRIPTOR = Object.freeze({
 export interface ChannelNamespace {
   followChannel(
     channelId: string,
-    after: number,
+    limit: number,
     signal: AbortSignal,
   ): AsyncIterable<ChannelLiveFrame>;
+}
+
+const CHANNEL_PAGE = 50;
+
+interface JournalRequest {
+  before?: number;
+  limit: number;
+}
+type JournalFrame = RemoteJournalFrame<JournalEntry, number, JournalPage, unknown>;
+
+class ChannelJournal extends RemoteJournalStream<
+  JournalPage,
+  JournalEntry,
+  number,
+  JournalRequest,
+  unknown
+> {
+  constructor(
+    remote: Pick<ClientRemote, '$stream'>,
+    options: RemoteJournalStreamOptions<JournalPage, JournalEntry, number, unknown>,
+    private readonly source: (
+      request: JournalRequest,
+      signal: AbortSignal,
+    ) => AsyncIterable<unknown>,
+    private readonly pages: (
+      request: JournalRequest,
+      through: number,
+      signal: AbortSignal,
+    ) => Promise<JournalPage>,
+  ) {
+    super(remote, options);
+  }
+  protected async *follow(
+    request: JournalRequest,
+    signal: AbortSignal,
+  ): AsyncGenerator<JournalFrame> {
+    for await (const value of this.source(request, signal)) {
+      const frame = value as {
+        type?: unknown;
+        cursor?: unknown;
+        page?: unknown;
+        entry?: unknown;
+        notification?: unknown;
+      };
+      if (frame.type === 'opened') {
+        const page = parseJournalPage(frame.page);
+        if (page === undefined || typeof frame.cursor !== 'number')
+          throw new Error('Invalid Channel journal opening');
+        yield { type: 'opened', cursor: frame.cursor, page };
+      } else if (frame.type === 'entry') {
+        const entry = parseJournalEntry(frame.entry);
+        if (entry === undefined) throw new Error('Invalid Channel journal entry');
+        yield { type: 'entry', entry };
+      } else if (frame.type === 'notification') {
+        yield { type: 'notification', notification: frame.notification };
+      }
+    }
+  }
+  protected readPage(
+    request: JournalRequest,
+    through: number,
+    signal: AbortSignal,
+  ): Promise<JournalPage> {
+    return this.pages(request, through, signal);
+  }
+  protected repairRequest(initial: JournalRequest): JournalRequest {
+    return { limit: initial.limit };
+  }
 }
 
 export function createChannelFollow(
   remote: Pick<ClientRemote, '$stream'>,
   namespace: () => ChannelNamespace,
+  readPage: (
+    channelId: string,
+    request: { through: number; before?: number; limit: number },
+    signal: AbortSignal,
+  ) => Promise<JournalPage>,
 ): ChannelFollow {
-  return (channelId, after, handlers) => {
-    const name = 'botharness Channel stream';
+  return (channelId, handlers) => {
+    const name = 'botharness Channel journal';
     let stopped = false;
-    let cursor = after;
-    const stream = remote.$stream<ChannelLiveFrame>({
-      name,
-      open: (signal) => namespace().followChannel(channelId, cursor, signal),
-      ended: (accepted) =>
-        accepted
-          ? new RemoteStreamCarrierError(`${name} ended without a terminal result`)
-          : new Error(`${name} ended before it opened`),
-      carrierFailed: () => {
-        if (!stopped) handlers.interrupted(false);
-      },
-    });
-    const consume = async (): Promise<void> => {
-      try {
-        for await (const item of stream) {
-          if (stopped) return;
-          const frame = item.value;
-          if (frame.type === 'opened') item.accept();
-          else if (frame.type === 'entry') cursor = Math.max(cursor, frame.entry.revision);
-          handlers.frame(frame);
-        }
-      } catch (error) {
-        if (stopped) return;
-        console.warn(`botharness: ${name} failed`, error);
-        handlers.interrupted(true);
-      }
+    const failed = (error: unknown): void => {
+      if (stopped) return;
+      console.warn(`botharness: ${name} failed`, error);
+      handlers.interrupted(true);
     };
-    void consume();
-    return () => {
-      stopped = true;
-      void stream.dispose();
+    const journal = new ChannelJournal(
+      remote,
+      {
+        name,
+        emptyCursor: 0,
+        entries: (page) => page.entries,
+        hasMore: (page) => page.hasOlder,
+        first: (entry) => entry.revision,
+        last: (entry) => entry.revision,
+        compare: (left, right) => left - right,
+        follows: (left, right) => right === left + 1,
+        publish: (change) => {
+          if (!stopped) handlers.change(change);
+        },
+        carrierFailed: () => {
+          if (!stopped) handlers.interrupted(false);
+        },
+        failed,
+      },
+      (request, signal) => namespace().followChannel(channelId, request.limit, signal),
+      (request, through, signal) =>
+        readPage(
+          channelId,
+          request.before === undefined
+            ? { through, limit: request.limit }
+            : { through, before: request.before, limit: request.limit },
+          signal,
+        ),
+    );
+    journal.open({ limit: CHANNEL_PAGE }).catch(failed);
+    return {
+      stop() {
+        stopped = true;
+        void journal.dispose();
+      },
+      prepend: (before) => journal.prepend({ before, limit: CHANNEL_PAGE }),
     };
   };
 }

@@ -4,7 +4,7 @@ import {
   type ChannelEventSource,
 } from './messaging-defaults-live.js';
 import { parseContentRedactions } from './content-redactions.js';
-import { parseChannelMessage } from './bridge.js';
+import { parseChannelMessage, type JournalEntry, type JournalPage } from './bridge.js';
 import type { BridgeActions } from './actions.js';
 import type { ChannelDraft, ClientStore } from './store.js';
 
@@ -143,13 +143,22 @@ function parseDraftBaseline(
   }
 }
 
+export type ChannelJournalChange =
+  | { type: 'replace' | 'prepend'; page: JournalPage; entries: readonly JournalEntry[] }
+  | { type: 'append'; entry: JournalEntry }
+  | { type: 'notification'; notification: unknown };
+
 export type ChannelFollow = (
   channelId: string,
-  after: number,
-  handlers: { frame(value: unknown): void; interrupted(closed: boolean): void },
-) => () => void;
+  handlers: { change(change: ChannelJournalChange): void; interrupted(closed: boolean): void },
+) => { stop(): void; prepend(before: number): Promise<void> };
 
 let follow: ChannelFollow | undefined;
+let olderPage: ((channelId: string) => Promise<void> | undefined) | undefined;
+
+export function prependChannelJournal(channelId: string): Promise<void> | undefined {
+  return olderPage?.(channelId);
+}
 const followListeners = new Set<() => void>();
 
 export function installChannelFollow(next: ChannelFollow): () => void {
@@ -165,7 +174,8 @@ export function installChannelFollow(next: ChannelFollow): () => void {
 
 export function mountChannelLive(
   store: ClientStore,
-  actions: Pick<BridgeActions, 'refreshChannelMessages'>,
+  actions: Pick<BridgeActions, 'refreshChannelMessages'> &
+    Partial<Pick<BridgeActions, 'applyChannelTail'>>,
   makeSource: (url: string) => ChannelEventSource = openSharedChannel,
 ): () => void {
   let activeChannelId: string | undefined;
@@ -428,13 +438,52 @@ export function mountChannelLive(
       }
     };
     if (follow !== undefined) {
-      stopFollow = follow(channel.id, snapshot.conversation.revision, {
-        frame(value) {
-          if (typeof value !== 'object' || value === null) return;
-          const frame = value as { type?: unknown; entry?: unknown; notification?: unknown };
-          if (frame.type === 'entry') return onEntry(frame.entry);
-          if (frame.type !== 'notification') return;
-          const notification = frame.notification;
+      let journalFirst: number | undefined;
+      const journal = follow(channel.id, {
+        change(change) {
+          if (activeChannelId !== channel.id) return;
+          if (change.type === 'append') return onEntry(change.entry);
+          if (change.type === 'replace') {
+            journalFirst = change.entries[0]?.revision;
+            actions.applyChannelTail?.(channel.id, {
+              entries: change.entries.map((entry) => ({
+                ...entry.message,
+                channelRevision: entry.revision,
+              })),
+              olderCursor: change.page.olderCursor,
+              hasOlder: change.page.hasOlder,
+            });
+            return;
+          }
+          if (change.type === 'prepend') {
+            journalFirst = change.entries[0]?.revision ?? journalFirst;
+            const latest = store.getSnapshot();
+            if (latest.conversation.channel?.id !== channel.id) return;
+            const held = new Set(latest.conversation.messages.map((message) => message.id));
+            const older = change.entries
+              .filter((entry) => !held.has(entry.message.id))
+              .map((entry) => ({ ...entry.message, channelRevision: entry.revision }));
+            const first = latest.conversation.messages.find(
+              (message) => message.channelRevision !== undefined,
+            )?.channelRevision;
+            if (
+              older.length === 0 &&
+              (change.entries.length === 0 ||
+                (first !== undefined && journalFirst !== undefined && journalFirst > first))
+            )
+              return;
+            store.setConversation({
+              messages: [...older, ...latest.conversation.messages],
+              timeline: {
+                ...latest.conversation.timeline,
+                olderCursor: change.page.olderCursor ?? latest.conversation.timeline.olderCursor,
+                hasOlder: change.page.hasOlder,
+              },
+            });
+            return;
+          }
+          if (change.type !== 'notification') return;
+          const notification = change.notification;
           if (typeof notification !== 'object' || notification === null) return;
           const item = notification as { kind?: unknown; draft?: unknown; event?: unknown };
           if (item.kind === 'admission') onAdmission(notification);
@@ -446,6 +495,30 @@ export function mountChannelLive(
         },
         interrupted: onInterrupted,
       });
+      stopFollow = () => {
+        if (olderPage === older) olderPage = undefined;
+        journal.stop();
+      };
+      const older = (channelId: string): Promise<void> | undefined => {
+        if (channelId !== channel.id || activeChannelId !== channel.id) return undefined;
+        if (store.getSnapshot().conversation.timeline.hasNewer) return undefined;
+        const catchUp = async (): Promise<void> => {
+          for (let round = 0; round < 8; round++) {
+            const first = store
+              .getSnapshot()
+              .conversation.messages.find(
+                (message) => message.channelRevision !== undefined,
+              )?.channelRevision;
+            const before = journalFirst ?? first;
+            if (before === undefined) throw new Error('Channel journal has no first revision');
+            await journal.prepend(before);
+            if (first === undefined || journalFirst === undefined || journalFirst < first) return;
+            if (journalFirst === before) return;
+          }
+        };
+        return catchUp();
+      };
+      olderPage = older;
       return;
     }
     let next: ChannelEventSource;

@@ -136,7 +136,7 @@ describe('live frames on the native stream carrier', () => {
     ).rejects.toMatchObject({ name: 'LiveUnavailable' });
   });
 
-  it('follows a Channel as opened, entries and typed notifications, and refuses like the HTTP route', async () => {
+  it('opens a Channel with its tail page, then entries and typed notifications, and reads pages fixed at a revision', async () => {
     let live: ChannelLiveHub | undefined;
     const store = createChannelStore({
       rootDir: root(),
@@ -149,71 +149,57 @@ describe('live frames on the native stream carrier', () => {
       author: { kind: 'human' as const },
       body: id,
     });
-    await store.appendMessage(group.id, text('one'));
+    for (const id of ['one', 'two', 'three']) await store.appendMessage(group.id, text(id));
     const hub = createChannelLiveHub(store);
     live = hub;
     hubs.push(hub);
     const abort = new AbortController();
-    const frames = hub.followChannel(group.id, 0, abort.signal)[Symbol.asyncIterator]();
-    expect((await frames.next()).value).toEqual({ type: 'opened', cursor: 0 });
-    expect((await frames.next()).value).toMatchObject({
-      type: 'entry',
-      entry: { channelId: group.id, revision: 1, message: { id: 'one' } },
-    });
+    const frames = hub.followChannel(group.id, 2, abort.signal)[Symbol.asyncIterator]();
+    const opened = (await frames.next()).value;
+    expect(opened).toMatchObject({ type: 'opened', cursor: 3 });
+    expect(opened.page.entries.map((entry: { revision: number }) => entry.revision)).toEqual([
+      2, 3,
+    ]);
+    expect(opened.page.entries[1].message.id).toBe('three');
+    expect(opened.page.hasOlder).toBe(true);
+    expect(typeof opened.page.olderCursor).toBe('string');
     let baseline = (await frames.next()).value;
     while (baseline.type !== 'notification' || baseline.notification.kind !== 'draft-baseline')
       baseline = (await frames.next()).value;
-    expect(baseline.notification).toEqual({
-      kind: 'draft-baseline',
-      channelId: group.id,
-      revision: 0,
-      drafts: [],
-    });
-    await store.appendMessage(group.id, text('two'));
-    expect((await frames.next()).value).toMatchObject({ type: 'entry', entry: { revision: 2 } });
-    hub.publishDraft({
-      type: 'update',
-      draft: {
-        channelId: group.id,
-        draftId: 'attempt:call',
-        attemptId: 'attempt',
-        botSlug: 'ada',
-        body: 'hi',
-      },
-    });
+    await store.appendMessage(group.id, text('four'));
     expect((await frames.next()).value).toMatchObject({
-      type: 'notification',
-      notification: { kind: 'draft', draft: { body: 'hi', revision: 1 } },
+      type: 'entry',
+      entry: { channelId: group.id, revision: 4, message: { id: 'four' } },
     });
-    hub.publishHumanRead(group.id, 'local-human', 2);
+    hub.publishHumanRead(group.id, 'local-human', 4);
     expect((await frames.next()).value).toEqual({
       type: 'notification',
       notification: {
         kind: 'human-read',
         channelId: group.id,
         humanId: 'local-human',
-        revision: 2,
+        revision: 4,
       },
     });
     const pending = frames.next();
     abort.abort();
     expect((await pending).done).toBe(true);
-    await store.appendMessage(group.id, text('three'));
 
-    const resumed = hub
-      .followChannel(group.id, 2, new AbortController().signal)
-      [Symbol.asyncIterator]();
-    expect((await resumed.next()).value).toEqual({ type: 'opened', cursor: 2 });
-    expect((await resumed.next()).value).toMatchObject({ type: 'entry', entry: { revision: 3 } });
-    await resumed.return?.(undefined);
+    const fixed = store.readHumanJournalPage(group.id, { through: 3, limit: 2 });
+    expect(fixed?.entries.map((entry) => entry.revision)).toEqual([2, 3]);
+    const older = store.readHumanJournalPage(group.id, { through: 4, before: 2, limit: 5 });
+    expect(older?.entries.map((entry) => entry.revision)).toEqual([1]);
+    expect(older?.hasOlder).toBe(false);
+    expect(store.readHumanJournalPage(group.id, { through: 99 })).toBeUndefined();
+    expect(store.readHumanJournalPage('missing', { through: 0 })).toBeUndefined();
 
-    const refused = async (channelId: string, after: number) =>
+    const refused = async (channelId: string, limit: number) =>
       hub
-        .followChannel(channelId, after, new AbortController().signal)
+        .followChannel(channelId, limit, new AbortController().signal)
         [Symbol.asyncIterator]()
         .next();
-    await expect(refused('missing', 0)).rejects.toMatchObject({ code: 'not-found' });
-    await expect(refused(group.id, 99)).rejects.toMatchObject({ code: 'conflict' });
-    await expect(refused(group.id, -1)).rejects.toMatchObject({ code: 'invalid' });
+    await expect(refused('missing', 50)).rejects.toMatchObject({ code: 'not-found' });
+    await expect(refused(group.id, 0)).rejects.toMatchObject({ code: 'invalid' });
+    await expect(refused(group.id, 9999)).rejects.toMatchObject({ code: 'invalid' });
   });
 });

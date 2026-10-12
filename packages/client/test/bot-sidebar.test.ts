@@ -255,6 +255,7 @@ function stubActions(): BridgeActions {
     markAllRead: vi.fn(async () => undefined),
     markRead: vi.fn(async () => undefined),
     refreshChannelMessages: vi.fn(async () => undefined),
+    applyChannelTail: vi.fn(),
     dismissFailedMessage: vi.fn(() => false),
     openSession: vi.fn(() => undefined),
     refreshSessions: vi.fn(async () => undefined),

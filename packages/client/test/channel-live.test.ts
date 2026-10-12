@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { BridgeActions } from '../src/client/actions.js';
 import {
   installChannelFollow,
+  prependChannelJournal,
   mountChannelLive,
   type ChannelFollow,
   mountRosterLive,
@@ -111,60 +112,93 @@ function setup(refresh = vi.fn(async () => undefined), channel = CHANNEL) {
   });
   return { store, sources, dispose, refresh };
 }
-describe('Channel live Client on a typed follow stream', () => {
-  it('applies typed entries and notifications without opening a source, and recovers when closed', async () => {
-    let handlers: Parameters<ChannelFollow>[2] | undefined;
-    const opened: [string, number][] = [];
+describe('Channel live Client on the journal stream', () => {
+  const entry = (revision: number, id: string) => ({
+    channelId: CHANNEL.id,
+    revision,
+    message: {
+      id,
+      at: '2026-09-21T00:00:01.000Z',
+      author: { kind: 'bot' as const, slug: 'ada' },
+      body: id,
+    },
+  });
+  it('applies journal changes without opening a source, pages older through it and recovers when closed', async () => {
+    let handlers: Parameters<ChannelFollow>[1] | undefined;
+    const opened: string[] = [];
+    const prepends: number[] = [];
     const stop = vi.fn();
-    const uninstall = installChannelFollow((channelId, after, next) => {
-      opened.push([channelId, after]);
+    const uninstall = installChannelFollow((channelId, next) => {
+      opened.push(channelId);
       handlers = next;
-      return stop;
+      return {
+        stop,
+        prepend: async (before) => {
+          prepends.push(before);
+          next.change({
+            type: 'prepend',
+            page: {
+              entries: [entry(4, 'four'), entry(5, 'five')],
+              olderCursor: 'c4',
+              hasOlder: true,
+            },
+            entries: [entry(4, 'four'), entry(5, 'five')],
+          });
+        },
+      };
     });
     const refresh = vi.fn(async () => undefined);
-    const { store, sources, dispose } = setup(refresh);
+    const store = createStore();
+    store.setMode('bot');
+    store.setRoster([], [CHANNEL]);
+    store.select({ kind: 'channel', channelId: CHANNEL.id });
+    store.setConversation({ status: 'ready', channel: CHANNEL, messages: [], revision: 0 });
+    const applied: unknown[] = [];
+    const dispose = mountChannelLive(store, {
+      refreshChannelMessages: refresh,
+      applyChannelTail: (channelId: string, page: { entries: { channelRevision?: number }[] }) => {
+        applied.push([channelId, page.entries.map((message) => message.channelRevision)]);
+        store.setConversation({
+          messages: page.entries as never,
+          revision: page.entries.at(-1)?.channelRevision ?? 0,
+        });
+      },
+    } as unknown as BridgeActions);
     try {
-      expect(sources).toHaveLength(0);
-      expect(opened).toEqual([[CHANNEL.id, 0]]);
-      handlers!.frame({ type: 'opened', cursor: 0 });
-      handlers!.frame({
+      expect(opened).toEqual([CHANNEL.id]);
+      const tail = [entry(6, 'six'), entry(7, 'seven')];
+      handlers!.change({
+        type: 'replace',
+        page: { entries: tail, olderCursor: 'c6', hasOlder: true },
+        entries: tail,
+      });
+      expect(applied).toEqual([[CHANNEL.id, [6, 7]]]);
+      handlers!.change({
         type: 'notification',
         notification: { kind: 'draft-baseline', channelId: CHANNEL.id, revision: 0, drafts: [] },
       });
-      handlers!.frame({
-        type: 'entry',
-        entry: {
-          channelId: CHANNEL.id,
-          revision: 1,
-          message: {
-            id: 'one',
-            at: '2026-09-21T00:00:01.000Z',
-            author: { kind: 'bot', slug: 'ada' },
-            body: 'one',
-          },
-        },
+      handlers!.change({ type: 'append', entry: entry(8, 'eight') });
+      expect(store.getSnapshot().conversation.revision).toBe(8);
+      expect(store.getSnapshot().conversation.messages.map((item) => item.id)).toEqual([
+        'six',
+        'seven',
+        'eight',
+      ]);
+
+      await prependChannelJournal(CHANNEL.id);
+      expect(prepends).toEqual([6]);
+      expect(store.getSnapshot().conversation.messages.map((item) => item.id)).toEqual([
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+      ]);
+      expect(store.getSnapshot().conversation.timeline).toMatchObject({
+        olderCursor: 'c4',
+        hasOlder: true,
       });
-      expect(store.getSnapshot().conversation.revision).toBe(1);
-      expect(store.getSnapshot().conversation.messages.map((item) => item.id)).toEqual(['one']);
-      handlers!.frame({
-        type: 'notification',
-        notification: {
-          kind: 'draft',
-          draft: {
-            channelId: CHANNEL.id,
-            draftId: 'attempt:call',
-            attemptId: 'attempt',
-            revision: 1,
-            botSlug: 'ada',
-            body: 'typing',
-          },
-        },
-      });
-      await vi.waitFor(() =>
-        expect(store.getSnapshot().conversation.drafts.map((draft) => draft.body)).toEqual([
-          'typing',
-        ]),
-      );
+
       handlers!.interrupted(true);
       await vi.waitFor(() => expect(refresh).toHaveBeenCalledWith(CHANNEL.id));
       expect(stop).toHaveBeenCalled();
@@ -173,6 +207,7 @@ describe('Channel live Client on a typed follow stream', () => {
       dispose();
       uninstall();
     }
+    expect(prependChannelJournal(CHANNEL.id)).toBeUndefined();
   });
 });
 

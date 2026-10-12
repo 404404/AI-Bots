@@ -3,6 +3,7 @@ import type { PurgedPlacement } from '../purge/contracts.js';
 import type { ChannelDraft, ChannelDraftEvent } from './draft.js';
 import type { ChannelMessage } from './channel.js';
 import type { ChannelMessageCommit, ChannelStore } from './store.js';
+import { MAX_MESSAGE_PAGE, type ChannelJournalPage } from './timeline.js';
 
 export const CHANNEL_STREAM_PATH = '/api/botharness/stream';
 export const CHANNEL_COMMIT_EVENT = 'channel/message';
@@ -64,7 +65,7 @@ export type ChannelLiveNotification =
     };
 
 export type ChannelLiveFrame =
-  | { type: 'opened'; cursor: number }
+  | { type: 'opened'; cursor: number; page?: ChannelJournalPage }
   | { type: 'entry'; entry: { channelId: string; message: ChannelMessage; revision: number } }
   | { type: 'notification'; notification: ChannelLiveNotification };
 
@@ -121,7 +122,7 @@ export interface ChannelLiveHub {
   followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
   followChannel(
     channelId: string,
-    after: number,
+    limit: number,
     signal: AbortSignal,
   ): AsyncIterable<ChannelLiveFrame>;
   publishCommitted(commit: ChannelMessageCommit): void;
@@ -557,15 +558,16 @@ export function createChannelLiveHub(
   };
   async function* followChannel(
     channelId: string,
-    after: number,
+    limit: number,
     signal: AbortSignal,
   ): AsyncGenerator<ChannelLiveFrame> {
     if (typeof channelId !== 'string' || channels.get(channelId) === undefined)
       throw new ChannelLiveRefused('not-found', 'Unknown Channel');
-    if (!Number.isSafeInteger(after) || after < 0)
-      throw new ChannelLiveRefused('invalid', 'Invalid Channel revision');
-    if (channels.messagesAfter(channelId, after) === undefined)
-      throw new ChannelLiveRefused('conflict', 'Channel revision is ahead of the log');
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_MESSAGE_PAGE)
+      throw new ChannelLiveRefused('invalid', 'Invalid Channel page size');
+    const after = channels.revision(channelId);
+    const page = channels.readHumanJournalPage(channelId, { through: after, limit });
+    if (page === undefined) throw new ChannelLiveRefused('not-found', 'Unknown Channel');
     if (signal.aborted) return;
     const queue: ChannelLiveFrame[] = [];
     let ended = false;
@@ -574,7 +576,7 @@ export function createChannelLiveHub(
       channelId,
       after,
       (frame) => {
-        queue.push(frame);
+        queue.push(frame.type === 'opened' ? { ...frame, page } : frame);
         if (queue.length > CHANNEL_LIVE_QUEUE_LIMIT)
           throw new Error('Channel live consumer is behind');
         wake?.();

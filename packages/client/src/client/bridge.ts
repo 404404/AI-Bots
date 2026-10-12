@@ -2318,6 +2318,63 @@ export interface TimelinePageRequest {
   newerLimit?: number;
 }
 
+export interface JournalEntry {
+  channelId: string;
+  message: ChannelMessage;
+  revision: number;
+}
+export interface JournalPage {
+  entries: JournalEntry[];
+  olderCursor: string | null;
+  hasOlder: boolean;
+}
+
+export function parseJournalEntry(value: unknown): JournalEntry | undefined {
+  const record = asRecord(value);
+  const revision = record?.['revision'];
+  const message = parseChannelMessage(record?.['message']);
+  if (
+    typeof record?.['channelId'] !== 'string' ||
+    typeof revision !== 'number' ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    message === undefined
+  )
+    return undefined;
+  return { channelId: record['channelId'], message, revision };
+}
+
+export function parseJournalPage(value: unknown): JournalPage | undefined {
+  const raw = asRecord(value);
+  const entries = raw?.['entries'];
+  if (
+    !Array.isArray(entries) ||
+    !(raw?.['olderCursor'] === null || typeof raw?.['olderCursor'] === 'string') ||
+    typeof raw?.['hasOlder'] !== 'boolean'
+  )
+    return undefined;
+  const parsed = entries.map((entry) => parseJournalEntry(entry));
+  if (parsed.some((entry) => entry === undefined)) return undefined;
+  return {
+    entries: parsed as JournalEntry[],
+    olderCursor: raw['olderCursor'] as string | null,
+    hasOlder: raw['hasOlder'],
+  };
+}
+
+export async function loadJournalPage(
+  call: BridgeCall,
+  channelId: string,
+  request: { through: number; before?: number; limit?: number },
+  signal?: AbortSignal,
+): Promise<JournalPage> {
+  const page = parseJournalPage(
+    await unwrap(call, 'channelJournalPage', { channelId, ...request }, signal),
+  );
+  if (page === undefined) throw new Error('invalid channelJournalPage response');
+  return page;
+}
+
 export async function loadTimelinePage(
   call: BridgeCall,
   channelId: string,

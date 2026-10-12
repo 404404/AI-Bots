@@ -54,6 +54,7 @@ import { createGroupProfileCards } from './group-profile.js';
 import { createProfileCardRegistry } from './profile-cards.js';
 import {
   createBridgeCall,
+  loadJournalPage,
   connectionRpc,
   loadActivitySnapshot,
   loadSessionBotOwner,
@@ -398,12 +399,16 @@ export function apply(ctx: ClientContext): void {
             }),
           );
           const uninstallFollow = installChannelFollow(
-            createChannelFollow(ctx.remote, () => {
-              const mounted = namespace() as Partial<ChannelNamespace>;
-              if (mounted.followChannel === undefined)
-                throw new Error('botharness live Remote is not mounted');
-              return mounted as ChannelNamespace;
-            }),
+            createChannelFollow(
+              ctx.remote,
+              () => {
+                const mounted = namespace() as Partial<ChannelNamespace>;
+                if (mounted.followChannel === undefined)
+                  throw new Error('botharness live Remote is not mounted');
+                return mounted as ChannelNamespace;
+              },
+              (channelId, request, signal) => loadJournalPage(call, channelId, request, signal),
+            ),
           );
           uninstall = () => {
             uninstallFollow();

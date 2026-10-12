@@ -254,6 +254,7 @@ describe('bridge typert service', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
       'liveFrames',
       'followRoster',
       'followActivity',
@@ -273,7 +274,13 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.liveFrames)).toEqual(['query', 'resume', 'signal']);
     expect(parameterNames(service.followRoster)).toEqual(['signal']);
     expect(parameterNames(service.followActivity)).toEqual(['signal']);
-    expect(parameterNames(service.followChannel)).toEqual(['channelId', 'after', 'signal']);
+    expect(parameterNames(service.followChannel)).toEqual(['channelId', 'limit', 'signal']);
+    expect(parameterNames(service.channelJournalPage)).toEqual([
+      'channelId',
+      'through',
+      'before',
+      'limit',
+    ]);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {

@@ -511,6 +511,7 @@ describe('plugin entry', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
       'liveFrames',
       'followRoster',
       'followActivity',

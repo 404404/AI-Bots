@@ -60,7 +60,12 @@ import {
   type ChannelStoreOptions,
   type ChannelMessageOrigin,
 } from './store.js';
-import { DEFAULT_MESSAGE_PAGE, MAX_MESSAGE_PAGE, pageChannelTimeline } from './timeline.js';
+import {
+  DEFAULT_MESSAGE_PAGE,
+  MAX_MESSAGE_PAGE,
+  pageChannelJournal,
+  pageChannelTimeline,
+} from './timeline.js';
 
 interface SqliteChannelStoreOptions extends ChannelStoreOptions {
   database: OperationalDatabaseModulePort;
@@ -2325,6 +2330,26 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       return page === undefined
         ? undefined
         : { ...page, entries: page.entries.map((message) => project(messages, message)) };
+    },
+    readHumanJournalPage(id, request) {
+      const channel = readRecord(id);
+      if (channel === undefined) return undefined;
+      const member = humanMembers(id).find((entry) => entry.human_id === LOCAL_HUMAN_ID);
+      if (channel.type === 'group' && member === undefined) return undefined;
+      const messages = allMessages(id);
+      const page = pageChannelJournal(id, messages, {
+        ...request,
+        visibleFrom: member?.visible_from_revision ?? 0,
+      });
+      return page === undefined
+        ? undefined
+        : {
+            ...page,
+            entries: page.entries.map((entry) => ({
+              ...entry,
+              message: project(messages, entry.message),
+            })),
+          };
     },
     revision: revisionOf,
     admissionChanged(channelId, messageId) {

@@ -164,87 +164,98 @@ it('gives roster and Activity their own typed streams and leaves only the Channe
   }
 });
 
-it('declares the Channel stream with strict Channel ID and revision parameters', () => {
+it('declares the Channel stream with strict Channel ID and page-size parameters', () => {
   expect(CHANNEL_REMOTE_DESCRIPTOR).toMatchObject({ method: 'followChannel', mode: 'stream' });
-  const [channelId, after] = CHANNEL_REMOTE_DESCRIPTOR.parameters.map((parameter) =>
+  const [channelId, limit] = CHANNEL_REMOTE_DESCRIPTOR.parameters.map((parameter) =>
     parameter.codec.create(),
   );
   expect(channelId!.parse('c1')).toBe('c1');
   expect(() => channelId!.parse(1)).toThrow('Expected a Channel ID');
-  expect(after!.parse(3)).toBe(3);
-  expect(() => after!.parse(-1)).toThrow('Expected a revision');
+  expect(limit!.parse(50)).toBe(50);
+  expect(() => limit!.parse(0)).toThrow('Expected a page size');
 });
 
-it('follows a Channel from the last delivered revision and reports a terminal failure as closed', async () => {
-  const generations: ReturnType<typeof channel<unknown>>[] = [];
-  const opens: number[] = [];
-  let reopen: (() => void) | undefined;
-  let carrierFailed: (() => void) | undefined;
-  let fail: ((error: Error) => void) | undefined;
+it('follows a Channel through the official journal stream: replace, append, gap repair and prepend', async () => {
+  const message = (revision: number) => ({
+    channelId: 'c1',
+    revision,
+    message: {
+      id: `m${revision}`,
+      at: '2026-09-21T00:00:00.000Z',
+      author: { kind: 'human' },
+      body: `m${revision}`,
+    },
+  });
+  const pageOf = (first: number, last: number) => ({
+    entries: Array.from({ length: Math.max(0, last - first + 1) }, (_, index) =>
+      message(first + index),
+    ),
+    olderCursor: first > 1 ? `c${first}` : null,
+    hasOlder: first > 1,
+  });
+  const feed = channel<unknown>();
+  const reads: unknown[] = [];
   const remote = {
-    $stream: (options: {
-      open: (signal: AbortSignal) => AsyncIterable<unknown>;
-      carrierFailed?: () => void;
-    }) => {
+    $stream: (options: { open: (signal: AbortSignal) => AsyncIterable<unknown> }) => {
       const lifetime = new AbortController();
-      carrierFailed = options.carrierFailed;
       return {
+        signal: lifetime.signal,
+        restart: () => undefined,
         dispose: async () => lifetime.abort(),
         async *[Symbol.asyncIterator]() {
-          for (;;) {
-            const generation = new AbortController();
-            lifetime.signal.addEventListener('abort', () => generation.abort(), { once: true });
-            const failed = new Promise<never>((_resolve, reject) => {
-              fail = reject;
-            });
-            failed.catch(() => undefined);
-            reopen = () => generation.abort();
-            const items = options.open(generation.signal)[Symbol.asyncIterator]();
-            for (;;) {
-              const next = await Promise.race([items.next(), failed]);
-              if (next.done) break;
-              yield {
-                generation: 1,
-                value: next.value,
-                signal: generation.signal,
-                accept: () => undefined,
-              };
-            }
-            if (lifetime.signal.aborted) return;
-          }
+          for await (const value of options.open(lifetime.signal))
+            yield { generation: 1, value, signal: lifetime.signal, accept: () => undefined };
         },
       };
     },
   };
-  const follow = createChannelFollow(remote as never, () => ({
-    followChannel: (_channelId, after, signal) => {
-      opens.push(after);
-      const generation = channel<unknown>();
-      generations.push(generation);
-      return generation.items(signal) as never;
+  const opens: number[] = [];
+  const follow = createChannelFollow(
+    remote as never,
+    () => ({
+      followChannel: (_channelId, limit, signal) => {
+        opens.push(limit);
+        return feed.items(signal) as never;
+      },
+    }),
+    async (channelId, request) => {
+      reads.push([channelId, request]);
+      const last = request.before === undefined ? request.through : request.before - 1;
+      return pageOf(Math.max(1, last - 1), last) as never;
     },
-  }));
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-  const frames: unknown[] = [];
+  );
+  const changes: string[] = [];
   const interrupted = vi.fn();
-  const stop = follow('c1', 3, { frame: (value) => frames.push(value), interrupted });
+  const journal = follow('c1', {
+    change: (change) =>
+      changes.push(
+        change.type === 'append'
+          ? `append ${change.entry.revision}`
+          : change.type === 'notification'
+            ? 'notification'
+            : `${change.type} ${change.entries.map((item) => item.revision).join(',')}`,
+      ),
+    interrupted,
+  });
   try {
+    feed.push({ type: 'opened', cursor: 6, page: pageOf(5, 6) });
+    feed.push({ type: 'entry', entry: message(7) });
+    feed.push({ type: 'notification', notification: { kind: 'human-read' } });
     await settle();
-    expect(opens).toEqual([3]);
-    generations[0]!.push({ type: 'opened', cursor: 3 });
-    generations[0]!.push({ type: 'entry', entry: { channelId: 'c1', revision: 4, message: {} } });
+    expect(opens).toEqual([50]);
+    expect(changes).toEqual(['replace 5,6', 'append 7', 'notification']);
+
+    feed.push({ type: 'entry', entry: message(9) });
     await settle();
-    expect(frames).toHaveLength(2);
-    carrierFailed!();
-    expect(interrupted).toHaveBeenLastCalledWith(false);
-    reopen!();
     await settle();
-    expect(opens).toEqual([3, 4]);
-    fail!(new Error('Unknown Channel'));
-    await settle();
-    expect(interrupted).toHaveBeenLastCalledWith(true);
+    expect(reads).toEqual([['c1', { through: 9, limit: 50 }]]);
+    expect(changes.at(-1)).toBe('replace 8,9');
+
+    await journal.prepend(8);
+    expect(reads.at(-1)).toEqual(['c1', { through: 9, before: 8, limit: 50 }]);
+    expect(changes.at(-1)).toBe('prepend 6,7');
+    expect(interrupted).not.toHaveBeenCalled();
   } finally {
-    stop();
-    warn.mockRestore();
+    journal.stop();
   }
 });

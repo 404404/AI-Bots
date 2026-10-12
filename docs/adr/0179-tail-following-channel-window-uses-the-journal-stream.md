@@ -40,6 +40,10 @@ Read from the published `@deepseek-ai/dsh-api-gateway` `0.2.0-rc.1` Client modul
 
 Keeping the Client's own gap detection (the state after #1500) works and is already verified, but leaves two implementations of journal repair to keep in step with DSH. Moving every window, including around and newer paging, into the helper is not possible without changing the helper. Replacing ADR-0061's opaque anchors with revision cursors everywhere would expose a storage detail the Host deliberately hides and is not needed for contiguity checks.
 
+## Implementation status
+
+[#1503](https://github.com/BotHarness/DeepSeekBot/issues/1503) implements the decision. `followChannel(channelId, limit)` opens each generation with the cursor and the tail page; `channelJournalPage(channelId, through, before?, limit?)` is the revision-bound page read; the Client's Channel consumer applies the helper's `replace`, `append`, `prepend` and `notification` changes, merges a `replace` into the window it already shows, and pages older through the helper while following. Detached windows and the SSE fallback are unchanged. Exercised in a real isolated Host on DSH `0.2.0-rc.1`: opening and merging an existing conversation without duplicates, and reopening across a Host restart with the page left open. Not yet exercised in a real Host: a live append, a gap repair, paging older than one page, and a detached window while the stream runs; these are covered by tests only.
+
 ## Verification required before this is marked implemented
 
 Reopen at the read anchor; page up with a stable viewport; locate and highlight an old message and page back to the latest; unread hint without forced scroll while away from the bottom; live message, receipt, read position and draft preview in two same-origin tabs; Host restart and carrier loss in both modes; purge of a visible message. Each in a real isolated Host, with what was and was not exercised stated.

@@ -36,6 +36,13 @@ function isBaselineModule(id: string): boolean {
 }
 
 function baselineModuleStub(id: string): Record<string, unknown> {
+  if (id === '@deepseek-ai/dsh-api-gateway/client') {
+    return {
+      RemoteJournalStream: class {},
+      RemoteSnapshotStream: class {},
+      RemoteStreamCarrierError: class extends Error {},
+    };
+  }
   if (id === '@deepseek-ai/dsh-client-store') {
     return {
       createSnapshotStore(initial: Record<string, unknown>) {
