@@ -3,9 +3,9 @@
 Captured on 2026-10-13 from an isolated real DSH Host, using baseline
 `058e727d` and the implementation on `codex/1479-channel-footer`.
 
-| View | Before | After |
-| --- | --- | --- |
-| Mobile, 390 × 844 CSS px | ![Before mobile](before-mobile.png) | ![After mobile](after-mobile.png) |
+| View                       | Before                                | After                               |
+| -------------------------- | ------------------------------------- | ----------------------------------- |
+| Mobile, 390 × 844 CSS px   | ![Before mobile](before-mobile.png)   | ![After mobile](after-mobile.png)   |
 | Desktop, 1280 × 800 CSS px | ![Before desktop](before-desktop.png) | ![After desktop](after-desktop.png) |
 
 Both pairs use English, dark theme, the same Bot, inherited DeepSeek-V41-Flash
