@@ -76,7 +76,10 @@ interface PlacementRow {
   source_event_id: string;
   payload_json: string;
   body: string;
+  home_channel_id?: string | null;
 }
+
+const POST_PREVIEW_CHARACTERS = 80;
 
 interface AdmissionRow {
   bot_slug: string;
@@ -137,6 +140,18 @@ function replyProjection(
   };
 }
 
+function noticeOrigin(
+  message: ChannelMessage,
+  row: Pick<PlacementRow, 'home_channel_id'>,
+  channelId: string,
+): Pick<ChannelMessage, 'noticeOrigin'> {
+  return isChannelNotice(message) &&
+    typeof row.home_channel_id === 'string' &&
+    row.home_channel_id !== channelId
+    ? { noticeOrigin: { channelId: row.home_channel_id } }
+    : {};
+}
+
 function sameIntent(left: ChannelMessage, right: ChannelMessage): boolean {
   return (
     JSON.stringify({
@@ -182,6 +197,8 @@ function rawMessage(message: ChannelMessage): ChannelMessage {
   const result = { ...message };
   delete result.grantRequestResolved;
   delete result.replyToPreview;
+  delete result.botChannelPostPreview;
+  delete result.noticeOrigin;
   delete result.deliveries;
   delete result.humanReceipts;
   delete result.channelRevision;
@@ -432,7 +449,8 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     const rows = database.read((db) =>
       db
         .prepare(`
-      SELECT p.revision, p.source_event_id, p.message_id, e.payload_json, e.body
+      SELECT p.revision, p.source_event_id, p.message_id, e.payload_json, e.body,
+             e.channel_id AS home_channel_id
         FROM channel_placements p
         JOIN source_events e ON e.source_event_id = p.source_event_id
        WHERE p.channel_id = ? ORDER BY p.revision
@@ -449,6 +467,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       return [
         {
           ...message,
+          ...noticeOrigin(message, row, id),
           channelRevision: row.revision,
           ...(deliveries === undefined ? {} : { deliveries }),
           ...(humanReceipts === undefined ? {} : { humanReceipts }),
@@ -457,11 +476,34 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     });
   };
 
+  const projectPostPreview = (message: ChannelMessage): ChannelMessage => {
+    const post = message.botChannelPost;
+    if (post === undefined) return message;
+    const target = database.read((db) =>
+      db
+        .prepare(`
+          SELECT e.body FROM channel_placements p
+          JOIN source_events e ON e.source_event_id = p.source_event_id
+          WHERE p.channel_id = ? AND p.message_id = ?
+        `)
+        .get(post.channelId, post.messageId),
+    ) as { body: string } | undefined;
+    if (target === undefined) return { ...message, botChannelPostPreview: null };
+    const characters = Array.from(target.body.replace(/\s+/gu, ' ').trim());
+    return {
+      ...message,
+      botChannelPostPreview:
+        characters.length > POST_PREVIEW_CHARACTERS
+          ? characters.slice(0, POST_PREVIEW_CHARACTERS).join('') + '...'
+          : characters.join(''),
+    };
+  };
+
   const project = (messages: ChannelMessage[], message: ChannelMessage): ChannelMessage =>
     projectAttachmentFiles(
       replyProjection(
         {
-          ...message,
+          ...projectPostPreview(message),
           ...(message.grantRequest
             ? { grantRequestResolved: isGrantRequestResolved(messages, message.id) }
             : {}),
@@ -611,6 +653,28 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         : undefined;
     const actionRevision =
       noticeChannel === undefined ? undefined : allMessages(noticeChannel.id).length + 1;
+    const humanDm = senderSlug === undefined ? undefined : readRecord(dmChannelId(senderSlug));
+    const traceChannel =
+      senderSlug !== undefined &&
+      (channel.type === 'group' || botDm) &&
+      humanDm?.type === 'dm' &&
+      humanDm.botSlug === senderSlug &&
+      humanDm.deletedAt === undefined &&
+      noticeChannel?.id !== humanDm.id
+        ? humanDm
+        : undefined;
+    const trace: ChannelMessage | undefined =
+      traceChannel !== undefined && senderSlug !== undefined
+        ? {
+            id: `bot-channel-post-${durable.id}`,
+            at: durable.at,
+            author: { kind: 'bot', slug: senderSlug },
+            body: '',
+            botChannelPost: { channelId: id, messageId: durable.id },
+          }
+        : undefined;
+    const traceRevision =
+      traceChannel === undefined ? undefined : allMessages(traceChannel.id).length + 1;
     let refused = false;
     try {
       database.transaction(
@@ -818,6 +882,34 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
             VALUES (?, ?, 'bot-action', 'handled', ?)
           `).run(actionSourceEventId, senderSlug, action.at);
           }
+          if (
+            trace !== undefined &&
+            traceChannel !== undefined &&
+            traceRevision !== undefined &&
+            senderSlug !== undefined
+          ) {
+            const traceSourceEventId = randomUUID();
+            db.prepare(`
+            INSERT INTO source_events (
+              source_event_id, source_kind, bot_slug, channel_id, message_id,
+              body, created_at, payload_json
+            ) VALUES (?, 'self-record', ?, ?, ?, '', ?, ?)
+          `).run(
+              traceSourceEventId,
+              senderSlug,
+              traceChannel.id,
+              trace.id,
+              trace.at,
+              JSON.stringify({
+                ...JSON.parse(eventPayload(trace)),
+                causeSourceEventId: sourceEventId,
+              }),
+            );
+            db.prepare(`
+            INSERT INTO channel_placements (channel_id, revision, source_event_id, message_id)
+            VALUES (?, ?, ?, ?)
+          `).run(traceChannel.id, traceRevision, traceSourceEventId, trace.id);
+          }
         },
         ['source-event', 'channel', 'bot-inbox'],
       );
@@ -846,6 +938,15 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       ...(action === undefined || noticeChannel === undefined || actionRevision === undefined
         ? []
         : [{ channelId: noticeChannel.id, message: action, revision: actionRevision }]),
+      ...(trace === undefined || traceChannel === undefined || traceRevision === undefined
+        ? []
+        : [
+            {
+              channelId: traceChannel.id,
+              message: { ...projectPostPreview(trace), channelRevision: traceRevision },
+              revision: traceRevision,
+            },
+          ]),
     ]) {
       try {
         options.onCommitted?.(commit);
@@ -1807,8 +1908,8 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     },
     appendMemoryCommits(input) {
       const cause = causeChannel(input.causeSourceEventId, input.botSlug, '');
-      const channel =
-        (cause === 'target' ? undefined : cause) ?? readRecord(dmChannelId(input.botSlug));
+      const dm = readRecord(dmChannelId(input.botSlug));
+      const channel = (cause === 'target' ? undefined : cause) ?? dm;
       if (channel === undefined) return [];
       const committed: ChannelMessage[] = [];
       for (const commit of input.commits) {
@@ -1830,6 +1931,9 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
           memoryCommit: { botSlug: input.botSlug, ...commit },
         };
         const revision = allMessages(channel.id).length + 1;
+        const humanDm = channel.id === dm?.id ? undefined : dm;
+        const humanDmRevision =
+          humanDm === undefined ? undefined : allMessages(humanDm.id).length + 1;
         const sourceEventId = randomUUID();
         database.transaction(
           (db) => {
@@ -1853,6 +1957,11 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
               INSERT INTO channel_placements (channel_id, revision, source_event_id, message_id)
               VALUES (?, ?, ?, ?)
             `).run(channel.id, revision, sourceEventId, message.id);
+            if (humanDm !== undefined && humanDmRevision !== undefined)
+              db.prepare(`
+                INSERT INTO channel_placements (channel_id, revision, source_event_id, message_id)
+                VALUES (?, ?, ?, ?)
+              `).run(humanDm.id, humanDmRevision, sourceEventId, message.id);
             db.prepare(`
               INSERT INTO inbox_admissions
                 (source_event_id, bot_slug, reason, attempt_state, handled_at)
@@ -1862,11 +1971,23 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
           ['source-event', 'channel', 'bot-inbox'],
         );
         committed.push(message);
-        try {
-          options.onCommitted?.({ channelId: channel.id, message, revision });
-        } catch (error) {
-          options.warn?.(`Channel post-commit notification failed: ${String(error)}`);
-        }
+        for (const commit of [
+          { channelId: channel.id, message, revision },
+          ...(humanDm === undefined || humanDmRevision === undefined
+            ? []
+            : [
+                {
+                  channelId: humanDm.id,
+                  message: { ...message, noticeOrigin: { channelId: channel.id } },
+                  revision: humanDmRevision,
+                },
+              ]),
+        ])
+          try {
+            options.onCommitted?.(commit);
+          } catch (error) {
+            options.warn?.(`Channel post-commit notification failed: ${String(error)}`);
+          }
       }
       return committed;
     },
@@ -2242,7 +2363,8 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         }
         return db
           .prepare(`
-          SELECT p.revision, p.source_event_id, p.message_id, e.payload_json, e.body
+          SELECT p.revision, p.source_event_id, p.message_id, e.payload_json, e.body,
+                 e.channel_id AS home_channel_id
             FROM channel_placements p
             JOIN source_events e ON e.source_event_id = p.source_event_id
            WHERE ${where.join(' AND ')}
@@ -2260,6 +2382,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         return [
           {
             ...message,
+            ...noticeOrigin(message, row, id),
             channelRevision: row.revision,
             ...(deliveries === undefined ? {} : { deliveries }),
             ...(humanReceipts === undefined ? {} : { humanReceipts }),
@@ -2292,7 +2415,10 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       const last = selected.at(-1);
       return {
         messages: selected.map((message) =>
-          projectAttachmentFiles(replyProjection(message, byId), options.attachments),
+          projectAttachmentFiles(
+            replyProjection(projectPostPreview(message), byId),
+            options.attachments,
+          ),
         ),
         ...(rows.length <= query.limit || last === undefined
           ? {}

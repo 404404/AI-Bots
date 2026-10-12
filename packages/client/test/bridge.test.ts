@@ -210,6 +210,51 @@ describe('bridge transport', () => {
 });
 
 describe('bridge parsers', () => {
+  it('parses a post trace and a mirrored notice origin for the Bot DM', () => {
+    const parsed = parseChannelMessages({
+      messages: [
+        {
+          id: 'bot-channel-post-g-1',
+          at: '2026-10-12T00:00:00Z',
+          author: { kind: 'bot', slug: 'ada' },
+          body: '',
+          botChannelPost: { channelId: 'group-crew', messageId: 'g-1' },
+          botChannelPostPreview: null,
+        },
+        {
+          id: 'memory-commit-1',
+          at: '2026-10-12T00:00:00Z',
+          author: { kind: 'system' },
+          body: '',
+          memoryCommit: {
+            botSlug: 'ada',
+            sha: 'a'.repeat(40),
+            subject: 'Remember',
+            authorName: 'Ada',
+            authoredAt: '2026-10-12T00:00:00Z',
+            files: [],
+            moreFiles: 0,
+          },
+          noticeOrigin: { channelId: 'group-crew' },
+        },
+        {
+          id: 'forged',
+          at: '2026-10-12T00:00:00Z',
+          author: { kind: 'human' },
+          body: '',
+          botChannelPost: { channelId: 'group-crew', messageId: 'g-1' },
+        },
+      ],
+    });
+    expect(parsed.map((item) => item.id)).toEqual(['bot-channel-post-g-1', 'memory-commit-1']);
+    const [trace, mirrored] = parsed;
+    expect(trace).toMatchObject({
+      botChannelPost: { channelId: 'group-crew', messageId: 'g-1' },
+      botChannelPostPreview: null,
+    });
+    expect(mirrored?.noticeOrigin).toEqual({ channelId: 'group-crew' });
+  });
+
   it('parses one created PersonaBot detail with list-compatible defaults', () => {
     expect(parseBotSummary({ slug: 'new-bot', displayName: 'New Bot', workspaces: [] })).toEqual({
       slug: 'new-bot',

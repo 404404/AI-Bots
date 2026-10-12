@@ -77,6 +77,15 @@ import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
+import { BotChannelPostLine, elsewhereLabel } from './bot-channel-post-line.js';
+import { DmActionsIcon } from './dm-actions-icon.js';
+import {
+  DM_ACTION_KINDS,
+  loadHiddenDmActions,
+  saveHiddenDmActions,
+  visibleDmMessages,
+  type DmActionKind,
+} from './dm-actions.js';
 import {
   timelineWorkingRows,
   timelineWorkingRowsCover,
@@ -706,6 +715,11 @@ function ConversationView({
   const [unseen, setUnseen] = useState(0);
   const [atLatest, setAtLatest] = useState(true);
   const [messageMenu, setMessageMenu] = useState<MessageMenuRequest | undefined>();
+  const [dmActionsMenuOpen, setDmActionsMenuOpen] = useState(false);
+  const [hiddenDmActions, setHiddenDmActions] = useState<{
+    botSlug: string;
+    hidden: DmActionKind[];
+  }>();
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [profileViewOpen, setProfileViewOpen] = useState(
     state.selection?.kind === 'bot' && state.selection.profile === true,
@@ -723,9 +737,24 @@ function ConversationView({
   const conversation = state.conversation;
   const channel = conversation.channel;
   const botNames = new Map(state.bots.map((member) => [member.slug, member.displayName]));
+  const dmBotSlug = channel?.type === 'dm' ? channel.botSlug : undefined;
+  const hiddenActions =
+    dmBotSlug === undefined
+      ? []
+      : hiddenDmActions?.botSlug === dmBotSlug
+        ? hiddenDmActions.hidden
+        : loadHiddenDmActions(dmBotSlug);
+  const toggleDmAction = (kind: DmActionKind): void => {
+    if (dmBotSlug === undefined) return;
+    const hidden = hiddenActions.includes(kind)
+      ? hiddenActions.filter((entry) => entry !== kind)
+      : [...hiddenActions, kind];
+    saveHiddenDmActions(dmBotSlug, hidden);
+    setHiddenDmActions({ botSlug: dmBotSlug, hidden });
+  };
   const messages = conversation.messages;
   const displayMessages: ChannelMessage[] = [
-    ...messages,
+    ...visibleDmMessages(messages, hiddenActions),
     ...(conversation.timeline.hasNewer ? [] : conversation.drafts).map((item) => ({
       id: item.draftId,
       at: '',
@@ -812,7 +841,11 @@ function ConversationView({
           };
   const streamingBotSlugs = new Set(conversation.drafts.map((item) => item.botSlug));
   const latestMessage = messages.findLast(
-    (item) => item.botDmAction === undefined && item.memberDeparture === undefined,
+    (item) =>
+      item.botDmAction === undefined &&
+      item.botChannelPost === undefined &&
+      item.memoryCommit === undefined &&
+      item.memberDeparture === undefined,
   );
   const workingRows = timelineWorkingRows(
     conversation.status === 'ready' && !conversation.timeline.hasNewer
@@ -1453,6 +1486,36 @@ function ConversationView({
                     t={t}
                   />
                 ) : null}
+                <Menu
+                  open={dmActionsMenuOpen}
+                  dense
+                  portal
+                  anchor={
+                    <button
+                      type="button"
+                      className="bh-dm-actions-toggle"
+                      aria-label={t('dmTrace.menu')}
+                      title={t('dmTrace.menu')}
+                      aria-haspopup="menu"
+                      aria-expanded={dmActionsMenuOpen}
+                      data-hidden-count={hiddenActions.length || undefined}
+                      onClick={() => setDmActionsMenuOpen((open) => !open)}
+                    >
+                      <DmActionsIcon size={16} />
+                    </button>
+                  }
+                  items={[
+                    { type: 'label' as const, id: 'heading', text: t('dmTrace.menu') },
+                    ...DM_ACTION_KINDS.map((kind) => ({
+                      id: kind,
+                      label: t(`dmTrace.kind.${kind}`),
+                    })),
+                  ]}
+                  selection="check"
+                  selectedIds={DM_ACTION_KINDS.filter((kind) => !hiddenActions.includes(kind))}
+                  onSelect={(id) => toggleDmAction(id as DmActionKind)}
+                  onClose={() => setDmActionsMenuOpen(false)}
+                />
                 {profilePopoverOpen ? (
                   <ProfilePopover
                     bot={profileBot}
@@ -1621,11 +1684,33 @@ function ConversationView({
                             t={t}
                           />
                         </div>
+                      ) : first.botChannelPost !== undefined ? (
+                        <BotChannelPostLine
+                          posts={group.messages}
+                          channels={state.channels}
+                          bots={state.bots}
+                          t={t}
+                          onOpen={(targetChannelId, messageId) => {
+                            void actions
+                              .openChannel(targetChannelId)
+                              .then(() => actions.openAround(targetChannelId, messageId));
+                          }}
+                        />
                       ) : first.memoryCommit !== undefined ? (
                         <MemoryCommitLine
                           messageId={first.id}
                           commit={first.memoryCommit}
                           bots={state.bots}
+                          place={
+                            first.noticeOrigin === undefined
+                              ? undefined
+                              : elsewhereLabel(
+                                  first.noticeOrigin.channelId,
+                                  state.channels,
+                                  state.bots,
+                                  t,
+                                )
+                          }
                           t={t}
                           onOpen={() => {
                             const commit = first.memoryCommit!;

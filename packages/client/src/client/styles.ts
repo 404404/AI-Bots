@@ -6636,6 +6636,27 @@ pre.bh-memory-commit-code { padding: 8px 18px; white-space: pre-wrap; overflow-w
 .bh-memory-commit-files { color: var(--dsw-alias-label-tertiary); }
 .bh-bot-dm-action-bot .bh-persona-avatar { border-radius: 28%; overflow: hidden; }
 .bh-bot-dm-action-name { color: var(--dsw-alias-label-primary); font-weight: 500; }
+.bh-dm-actions-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin-left: 2px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-module-platform);
+  box-shadow: 0 3px 12px color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent);
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+.bh-dm-actions-toggle:hover,
+.bh-dm-actions-toggle[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 8%, var(--dsw-alias-bg-module-platform));
+  color: var(--dsw-alias-label-primary);
+}
+.bh-dm-actions-toggle[data-hidden-count] { color: var(--dsw-alias-label-primary); }
+.bh-dm-trace-line > .bh-memory-commit-subject { color: var(--dsw-alias-label-secondary); }
 .bh-bot-dm-readonly {
   padding: 14px 18px;
   text-align: center;

@@ -196,6 +196,9 @@ export interface ChannelMessage {
       | 'ignored';
   }[];
   botDmAction?: { channelId: string; messageId: string; recipientBotSlug: string };
+  botChannelPost?: { channelId: string; messageId: string };
+  botChannelPostPreview?: string | null;
+  noticeOrigin?: { channelId: string };
   memoryCommit?: {
     botSlug: string;
     sha: string;

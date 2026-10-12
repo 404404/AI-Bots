@@ -1129,6 +1129,23 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       recipientBotSlug: action['recipientBotSlug'],
     };
   }
+  let botChannelPost: ChannelMessage['botChannelPost'];
+  if (record['botChannelPost'] !== undefined) {
+    const post = asRecord(record['botChannelPost']);
+    if (
+      post === undefined ||
+      author.kind !== 'bot' ||
+      typeof post['channelId'] !== 'string' ||
+      typeof post['messageId'] !== 'string'
+    )
+      return undefined;
+    botChannelPost = { channelId: post['channelId'], messageId: post['messageId'] };
+  }
+  const botChannelPostPreview =
+    typeof record['botChannelPostPreview'] === 'string' || record['botChannelPostPreview'] === null
+      ? (record['botChannelPostPreview'] as string | null)
+      : undefined;
+  const noticeOriginChannel = asRecord(record['noticeOrigin'])?.['channelId'];
   const rawAttachments = record['attachments'];
   const attachments = Array.isArray(rawAttachments)
     ? rawAttachments.map(parseChannelAttachment)
@@ -1443,6 +1460,13 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
     ...(assignmentReply === undefined ? {} : { assignmentReply }),
     ...(botDmAction === undefined ? {} : { botDmAction }),
+    ...(botChannelPost === undefined ? {} : { botChannelPost }),
+    ...(botChannelPost === undefined || botChannelPostPreview === undefined
+      ? {}
+      : { botChannelPostPreview }),
+    ...(typeof noticeOriginChannel === 'string'
+      ? { noticeOrigin: { channelId: noticeOriginChannel } }
+      : {}),
     ...(memoryCommit === undefined ? {} : { memoryCommit }),
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),

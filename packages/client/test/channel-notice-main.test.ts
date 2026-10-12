@@ -319,6 +319,66 @@ describe('Channel Notices in a Group', () => {
     await act(async () => store.setMemoryCommitIntent(undefined));
   });
 
+  it('shows what the Bot did elsewhere in its DM and hides each kind on request', async () => {
+    window.localStorage.clear();
+    const openChannel = vi.fn(async () => undefined);
+    const openAround = vi.fn(async () => undefined);
+    const post = (id: string, preview: string | null) => ({
+      id: `bot-channel-post-${id}`,
+      at: AT,
+      author: { kind: 'bot' as const, slug: 'mira' },
+      body: '',
+      botChannelPost: { channelId: group.id, messageId: id },
+      botChannelPostPreview: preview,
+    });
+    await act(async () => {
+      store.setRoster([bot('mira', 'Mira')], [group, mira]);
+      store.select({ kind: 'bot', slug: 'mira' });
+      store.setConversation({
+        status: 'ready',
+        channel: mira,
+        messages: [
+          { id: 'hi', at: AT, author: { kind: 'human' }, body: '你好' },
+          post('g-1', '收到'),
+          post('g-2', '已整理好需求清单'),
+          { ...commitLine, noticeOrigin: { channelId: group.id } },
+        ],
+        drafts: [],
+        error: undefined,
+        sending: false,
+      });
+      store.setSessions({ status: 'ready', items: [], error: undefined });
+      root.render(
+        createElement(BotMain, {
+          actions: proxyActions({ openChannel, openAround }),
+          channelSidebar: createChannelSidebarRegistry(),
+        }),
+      );
+    });
+    const trace = container.querySelectorAll<HTMLButtonElement>('.bh-dm-trace-line');
+    expect(trace).toHaveLength(1);
+    expect(trace[0]?.textContent).toBe('Mira在 #Launch crew 发言 2 条，最新：已整理好需求清单');
+    expect(
+      container.querySelector('.bh-memory-commit-line:not(.bh-dm-trace-line)')?.textContent,
+    ).toContain('在 #Launch crew 更新了记忆');
+    await act(async () => trace[0]?.click());
+    expect(openChannel).toHaveBeenCalledWith(group.id);
+    expect(openAround).toHaveBeenCalledWith(group.id, 'g-2');
+
+    const toggle = container.querySelector<HTMLButtonElement>('.bh-dm-actions-toggle');
+    await act(async () => toggle?.click());
+    const postsItem = Array.from(container.querySelectorAll('[role="menuitem"]')).find(
+      (item) => item.textContent === '发言（群聊和 Bot 私信）',
+    ) as HTMLButtonElement | undefined;
+    await act(async () => postsItem?.click());
+    expect(container.querySelector('.bh-dm-trace-line')).toBeNull();
+    expect(container.querySelector('.bh-memory-commit-line')).not.toBeNull();
+    expect(JSON.parse(window.localStorage.getItem('botharness.dm-actions.hidden.v1')!)).toEqual({
+      mira: ['posts'],
+    });
+    window.localStorage.clear();
+  });
+
   it('opens the commit view in the Bot DM from a pending intent', async () => {
     const memoryGitCommitDiff = vi.fn(async () => ({
       sha: commit.sha,
