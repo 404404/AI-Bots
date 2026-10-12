@@ -4,6 +4,7 @@ import { GroupChannelHeader } from './group-channel-header.js';
 import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { CompanionPin } from './window-companions-view.js';
 import { useDmComposerContext } from './dm-composer-context.js';
+import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
@@ -46,6 +47,9 @@ import {
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
 import { conversationDraftKey, useConversationDraft } from './conversation-draft.js';
+import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
+import { rebaseMentions } from './mentions.js';
+import { rebaseChannelRefs } from './channel-refs.js';
 import { channelHumanName, humanLabel } from './actor-names.js';
 import { HumanChannelNameMenu } from './human-channel-name.js';
 import type { ChannelHumanMember } from './store.js';
@@ -967,7 +971,7 @@ function ConversationView({
     messages.findLast((message) => !message.pending && !message.failed && !message.streaming)?.id,
   ]);
 
-  const composerContext = useDmComposerContext({
+  const dmComposerContext = useDmComposerContext({
     bot: channel?.type === 'dm' && !readOnlyDm ? profileBot : undefined,
     channelId,
     actions,
@@ -980,6 +984,14 @@ function ConversationView({
       setProfileViewOpen(true);
     },
   });
+
+  const groupComposerContext = useGroupComposerContext({
+    channel,
+    members: channelBots,
+    actions,
+    t,
+  });
+  const composerContext = dmComposerContext ?? groupComposerContext;
 
   const togglePinnedCard = (id: string): void => {
     setPinnedProfileCards((current) => {
@@ -1168,13 +1180,19 @@ function ConversationView({
       });
   };
 
-  const addFiles = (files: File[]): void => {
+  const addFiles = (files: File[], selection?: { start: number; end: number }): number | void => {
     const available = Math.max(0, 10 - uploadItems.length);
     const added = files
       .slice(0, available)
       .map((file) => ({ id: crypto.randomUUID(), file, status: 'uploading' as const }));
+    if (added.length === 0) return;
+    const selected = insertAttachmentReferences(draft, added, selection);
+    setDraft(selected.value);
+    setMentionTokens(rebaseMentions(draft, selected.value, mentionTokens));
+    setChannelRefTokens(rebaseChannelRefs(draft, selected.value, channelRefTokens));
     setUploadItems((current) => [...current, ...added]);
     for (const item of added) startUpload(item);
+    return selected.caret;
   };
 
   const submit = async (): Promise<void> => {
@@ -1802,6 +1820,18 @@ function ConversationView({
                       if (item !== undefined) startUpload(item);
                     }}
                     onRemoveAttachment={(id) => {
+                      const item = uploadItems.find((candidate) => candidate.id === id);
+                      if (item !== undefined) {
+                        const next = removeAttachmentReferences(
+                          draft,
+                          item,
+                          mentionTokens,
+                          channelRefTokens,
+                        );
+                        setDraft(next.value);
+                        setMentionTokens(next.mentions);
+                        setChannelRefTokens(next.channelRefs);
+                      }
                       uploadControllers.current.get(id)?.abort();
                       uploadControllers.current.delete(id);
                       setUploadItems((current) => current.filter((item) => item.id !== id));

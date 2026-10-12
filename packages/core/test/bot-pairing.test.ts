@@ -90,6 +90,254 @@ function fixture() {
     },
   };
 }
+function behaviorFixture() {
+  const f = fixture();
+  const change = (input: Parameters<typeof changeSenderAccess>[2], botSlug = 'ada') => {
+    try {
+      f.db.transaction((db) => changeSenderAccess(db, botSlug, input));
+    } catch (error) {
+      if (error instanceof Error && error.cause) throw error.cause;
+      throw error;
+    }
+  };
+  change({ kind: 'create-role', name: 'Member', behavior: 'Answer product questions.' });
+  const role = f.db.read((db) => externalUserRoles(db, 'ada')[0]!);
+  const request = f.pairing.request('binding', event(), 'conversation');
+  f.pairing.review('ada', {
+    kind: 'approve',
+    id: request.id,
+    expectedRevision: 1,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  });
+  for (const name of ['Public answers', 'Private answers'])
+    change({ kind: 'create-behavior-permission', name, behavior: `Provide ${name}.` });
+  const items = () => f.db.read((db) => behaviorPermissions(db, 'ada'));
+  const groups = () => f.db.read((db) => externalPermissionGroups(db, 'ada'));
+  const revisions = () => Object.fromEntries(items().map((item) => [item.id, item.revision]));
+  return { f, change, request, items, groups, revisions };
+}
+
+it('declared exclusion refuses new memberships and Deny-removal mutations without partial writes', () => {
+  const { f, change, request, items, groups, revisions } = behaviorFixture();
+  const [a, b] = items();
+  change({
+    kind: 'edit-behavior-permission',
+    id: a!.id,
+    expectedRevision: a!.revision,
+    name: a!.name,
+    behavior: a!.behavior,
+    excludes: [b!.id],
+    expectedExcludedRevisions: { [b!.id]: b!.revision },
+  });
+  const create = (name: string, allow: string[], deny: string[], memberIds = [request.id]) =>
+    change({
+      kind: 'create-group',
+      bindingId: 'binding',
+      name,
+      allow: [],
+      deny: [],
+      memberIds,
+      behaviorAllow: allow,
+      behaviorDeny: deny,
+      expectedBehaviorRevisions: revisions(),
+    });
+  expect(() => create('Ambiguous empty group', [a!.id, b!.id], [], [])).toThrow(
+    'behavior-permission-conflict',
+  );
+  create('Public', [a!.id], []);
+  const publicPolicy = f.db.read((db) => readSenderPermissions(db, 'ada', event(), new Date()));
+  expect(publicPolicy.effectivePermissions?.behaviorPermissions).toMatchObject([
+    { id: a!.id, effect: 'allow', conflict: false },
+  ]);
+  expect(publicPolicy.effectivePermissions?.behaviorPermissions?.[0]).not.toHaveProperty(
+    'excludes',
+  );
+  expect(items()[0]).toMatchObject({ excludes: [b!.id] });
+  create('Private', [b!.id], [], []);
+  const edit = (name: string, memberIds: string[], behaviorDeny: string[]) => {
+    const group = groups().find((g) => g.name === name)!;
+    change({
+      kind: 'edit-group',
+      id: group.id,
+      expectedRevision: group.revision,
+      name,
+      allow: [],
+      deny: [],
+      memberIds,
+      behaviorAllow: group.behaviorAllow,
+      behaviorDeny,
+      expectedBehaviorRevisions: revisions(),
+    });
+  };
+  expect(() => edit('Private', [request.id], [])).toThrow('behavior-permission-conflict');
+  expect(groups().find((g) => g.name === 'Private')).toMatchObject({ memberIds: [], revision: 1 });
+  create('Deny public', [], [a!.id]);
+  edit('Private', [request.id], []);
+  const deny = groups().find((g) => g.name === 'Deny public')!;
+  expect(() =>
+    change({ kind: 'delete-group', id: deny.id, expectedRevision: deny.revision }),
+  ).toThrow('behavior-permission-conflict');
+  expect(() => edit('Deny public', [], [a!.id])).toThrow('behavior-permission-conflict');
+  expect(groups()).toHaveLength(3);
+  const current = f.db.read((db) => readSenderPermissions(db, 'ada', event(), new Date()));
+  expect(current.effectivePermissions).toMatchObject({
+    capabilities: [],
+    delegableCapabilities: [],
+  });
+  expect(current.effectivePermissions?.behaviorPermissions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: a!.id, effect: 'deny' }),
+      expect.objectContaining({ id: b!.id, effect: 'allow' }),
+    ]),
+  );
+  edit('Private', [], []);
+  change({ kind: 'delete-group', id: deny.id, expectedRevision: deny.revision });
+  expect(groups()).toHaveLength(2);
+});
+
+it('incompatible item edits are atomic; bilateral exclusions preserve revisions and restart semantics', () => {
+  const { f, change, request, items, groups, revisions } = behaviorFixture();
+  const [a, b] = items();
+  for (const item of [a!, b!])
+    change({
+      kind: 'create-group',
+      bindingId: 'binding',
+      name: item.name,
+      allow: [],
+      deny: [],
+      memberIds: [request.id],
+      behaviorAllow: [item.id],
+      expectedBehaviorRevisions: revisions(),
+    });
+  const exclude = {
+    kind: 'edit-behavior-permission' as const,
+    id: a!.id,
+    expectedRevision: a!.revision,
+    name: a!.name,
+    behavior: a!.behavior,
+    excludes: [b!.id],
+    expectedExcludedRevisions: { [b!.id]: b!.revision },
+  };
+  expect(() => change(exclude)).toThrow('behavior-permission-conflict');
+  expect(items()).toEqual([a, b]);
+  const privateGroup = groups().find((g) => g.name === b!.name)!;
+  change({
+    kind: 'edit-group',
+    id: privateGroup.id,
+    expectedRevision: privateGroup.revision,
+    name: privateGroup.name,
+    allow: [],
+    deny: [],
+    memberIds: [],
+    behaviorAllow: [b!.id],
+    expectedBehaviorRevisions: revisions(),
+  });
+  change(exclude);
+  const updatedA = items().find((i) => i.id === a!.id)!;
+  const updatedB = items().find((i) => i.id === b!.id)!;
+  expect(updatedA).toMatchObject({ excludes: [b!.id], revision: 2 });
+  expect(updatedB).toMatchObject({ excludes: [a!.id], revision: 2 });
+  expect(() =>
+    change({ ...exclude, expectedRevision: 2, expectedExcludedRevisions: { [b!.id]: 1 } }),
+  ).toThrow('behavior-permission-stale');
+  f.owner.close();
+  const recovered = f.mount();
+  expect(recovered.db.read((db) => behaviorPermissions(db, 'ada'))).toEqual([updatedA, updatedB]);
+  recovered.db.transaction((db) =>
+    changeSenderAccess(db, 'ada', {
+      kind: 'edit-behavior-permission',
+      id: b!.id,
+      expectedRevision: 2,
+      name: b!.name,
+      behavior: b!.behavior,
+      excludes: [],
+      expectedExcludedRevisions: { [a!.id]: 2 },
+    }),
+  );
+  expect(recovered.db.read((db) => behaviorPermissions(db, 'ada'))).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: a!.id, revision: 3, excludes: [] }),
+      expect.objectContaining({ id: b!.id, revision: 3, excludes: [] }),
+    ]),
+  );
+});
+
+it('exclusion targets stay Bot-scoped and deletion cannot leave links to an absent item', () => {
+  const { f, change, items } = behaviorFixture();
+  const [a, b] = items();
+  change({ kind: 'create-behavior-permission', name: 'Other', behavior: 'Other policy.' }, 'other');
+  const other = f.db.read((db) => behaviorPermissions(db, 'other')[0]!);
+  const edit = {
+    kind: 'edit-behavior-permission' as const,
+    id: a!.id,
+    expectedRevision: 1,
+    name: a!.name,
+    behavior: a!.behavior,
+  };
+  expect(() =>
+    change({ ...edit, excludes: [other.id], expectedExcludedRevisions: { [other.id]: 1 } }),
+  ).toThrow('behavior-permission-stale');
+  expect(() =>
+    change({ ...edit, excludes: [a!.id], expectedExcludedRevisions: { [a!.id]: 1 } }),
+  ).toThrow('behavior-permission-stale');
+  change({ ...edit, excludes: [b!.id], expectedExcludedRevisions: { [b!.id]: 1 } });
+  change({ kind: 'delete-behavior-permission', id: b!.id, expectedRevision: 2 });
+  expect(items()).toEqual([expect.objectContaining({ id: a!.id, revision: 3, excludes: [] })]);
+  expect(f.db.read((db) => behaviorPermissions(db, 'other'))).toEqual([other]);
+});
+
+it('disabled-Binding approved memberships retain configuration checks, while permanently revoked membership does not block item editing', () => {
+  const { f, change, request, items, revisions } = behaviorFixture();
+  const [a, b] = items();
+  for (const item of [a!, b!])
+    change({
+      kind: 'create-group',
+      bindingId: 'binding',
+      name: item.name,
+      allow: [],
+      deny: [],
+      memberIds: [request.id],
+      behaviorAllow: [item.id],
+      expectedBehaviorRevisions: revisions(),
+    });
+  f.db.transaction((db) =>
+    db.prepare('UPDATE messaging_bindings SET enabled = 0 WHERE id = ?').run('binding'),
+  );
+  expect(f.pairing.list('ada')).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        id: request.id,
+        status: 'unavailable',
+        roleId: expect.any(String),
+      }),
+    ]),
+  );
+  const exclusion = {
+    kind: 'edit-behavior-permission' as const,
+    id: a!.id,
+    expectedRevision: 1,
+    name: a!.name,
+    behavior: a!.behavior,
+    excludes: [b!.id],
+    expectedExcludedRevisions: { [b!.id]: 1 },
+  };
+  expect(() => change(exclusion)).toThrow('behavior-permission-conflict');
+  expect(items()).toEqual([a, b]);
+  f.db.transaction((db) =>
+    db
+      .prepare('UPDATE messaging_bindings SET revoked_at = ? WHERE id = ?')
+      .run(new Date().toISOString(), 'binding'),
+  );
+  change(exclusion);
+  expect(f.pairing.list('ada')[0]).toMatchObject({ status: 'revoked' });
+  expect(items()).toEqual(
+    expect.arrayContaining([expect.objectContaining({ id: a!.id, excludes: [b!.id] })]),
+  );
+  expect(
+    f.db.read((db) => readSenderPermissions(db, 'ada', event(), new Date())).effectivePermissions,
+  ).toBeUndefined();
+});
 it('shared behavior items resolve current group sources, Deny conflicts and revisions without granting management authority', () => {
   const f = fixture();
   const change = (input: Parameters<typeof changeSenderAccess>[2]) =>

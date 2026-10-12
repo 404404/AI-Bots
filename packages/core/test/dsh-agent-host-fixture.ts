@@ -60,6 +60,8 @@ export class FakeAgentHost implements DshAgentHost {
   readonly disposed: string[] = [];
   readonly scopes = new Map<string, FakeScope>();
   readonly sessions: FakeSession[] = [];
+  readonly received = new Map<string, UserMessage[]>();
+  readonly steered = new Map<string, UserMessage[]>();
   readonly #cwdBySession = new Map<string, string | undefined>();
   readonly #live = new Map<string, Agent>();
 
@@ -136,6 +138,9 @@ export class FakeAgentHost implements DshAgentHost {
       id: sessionId,
       session,
       followup: (message: UserMessage) => {
+        const received = this.received.get(sessionId) ?? [];
+        received.push(message);
+        this.received.set(sessionId, received);
         messages.push(message);
         const currentTurn = ++turn;
         session.append('turn/start', { turn: currentTurn });
@@ -157,6 +162,11 @@ export class FakeAgentHost implements DshAgentHost {
             data: { turn: currentTurn, reason },
           });
         });
+      },
+      steer: (message: UserMessage) => {
+        const steered = this.steered.get(sessionId) ?? [];
+        steered.push(message);
+        this.steered.set(sessionId, steered);
       },
       whenIdle: () => pending,
     };

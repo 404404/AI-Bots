@@ -44,17 +44,21 @@ DeepSeekBot 是 BotHarness 开发的 MIT 开源 GrokBot 平替，作为 `deepsee
 
 ## 安装
 
-**桌面端**：打开 DeepSeek Harness 桌面端，点「插件 → 添加插件」，在「包名或地址」里输入 `deepseekbot`，保持「npm 官方源」，点「安装」。显示「已安装」后点「立即启用」（提示重启时重启当前 Profile），侧栏会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
+**桌面端**：打开 DeepSeek Harness 桌面端，点「插件 → 添加插件」，在「包名或地址」里输入 `deepseekbot@1.2.1`，保持「npm 官方源」，点「安装」。显示「已安装」后点「立即启用」（提示重启时重启当前 Profile），侧栏会出现「Bot 模式」。还没装 DSH？先[下载桌面端](https://www.deepseek.com/en/harness/)。
 
-**开发者（命令行）**：需要 Node 22 以上，支持 DSH `0.2.0-rc.1` 起的 0.2 系列。
+请使用上面的完整版本号，不要改成裸包名或 `@latest`：pnpm 的新版本冷却策略可能选择较旧版本。若提示供应链审批，只确认经过验证的精确版本；不要全局关闭保护或跳过 DSH 兼容检查。安装后核对实际版本，截图或预览卡片不代表实际安装结果。详见[安装与恢复说明](docs/installation.zh.md)。
+
+**当前稳定版：1.2.1。** 1.2.0 带来窗口伙伴、一键绑定应用和 Bot 导入导出；1.2.1 修复安装兼容限制，并改进群头像与附件卡片。详见[版本亮点](#releases)。
+
+**开发者（命令行）**：需要 Node 22 以上。1.2.1 的最低 DSH 版本声明为 `>=0.1.7-0`（含预览版）；实包安装矩阵已检查 `0.1.7-alpha.1` 至 `0.2.1-alpha.2` 的已发布版本。声明不设未来版本上限，但不代表未来版本已经过运行验证。以下以 DSH `0.2.0-rc.1` 为例。
 
 ```bash
 npm i -g @deepseek-ai/dsh@0.2.0-rc.1
-dsh plugin --profile web add deepseekbot
+dsh plugin --profile web add deepseekbot@1.2.1
 dsh web
 ```
 
-打开后进入 **Bot mode**，创建 Bot，先私聊，再建 Group 邀请成员。要接入飞书、Slack、Discord 或微信，到「设置 → IM bots」连接应用，再在 Bot 的 Profile 里绑定应用。飞书应用绑定后，私聊和 @ 它的消息直接进入 Bot 收件箱。安装后账号默认不连接，由你逐个开启。想先试试又不想动现有配置，可以换一个新的 Profile 名字。参见 [DSH 官方文档：打包与安装插件](https://deepseek-harness.github.io/deepseek-harness/develop/basic/publish)。
+打开后进入 **Bot mode**，按首次引导创建 Bot、完成一次私聊，再建 Group 邀请成员。要接入飞书、Slack、Discord 或微信，到「设置 → IM bots」连接应用，再在 Bot 的 Channel 侧栏「外部身份」里点「绑定应用」。飞书、Slack 和 Discord 应用绑定后，私聊和 @ 它的消息直接进入 Bot 收件箱，并在原处回复；个人微信只接收扫码者的私聊，不接收其他联系人或群消息。安装后账号默认不连接，由你逐个开启。想先试试又不想动现有配置，可以换一个新的 Profile 名字。参见 [DSH 官方文档：打包与安装插件](https://deepseek-harness.github.io/deepseek-harness/develop/basic/publish)。
 
 <a id="features"></a>
 
@@ -202,13 +206,14 @@ _复用 [Browser profile 验证](https://github.com/BotHarness/DeepSeekBot/pull/
 
 每个版本的核心变化，完整条目见 [CHANGELOG](CHANGELOG.zh.md) 和 [官网更新日志](https://deepseekbot.app/changelog/)。
 
-| 版本                        | 核心内容                                                                                                                                                                                                                                                                                                                                                          |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **下一版**（未发布）        | 微信原始**语音**可准备后播放；Discord 的外部平台默认值可独立保存，由 Profile 设置继承。                                                                                                                                                                                                                                                                           |
-| **1.1.0**（2026-10-06）     | Bot **定时任务**（侧栏新建，或让 Bot 自己建、改、删，锁定后 Bot 不能改）；每个 Session 都带上 Bot 的 **Soul 与核心记忆**（`SOUL.md` + `MEMORY.md`，见 [教程](docs/soul-and-core-memory.zh.md)）；Bot 设置里**一键更新并重启**；Channel 侧栏统一为**卡片样式**；微信支持**语音转写**和**图片**；Memory 自动维护 `.botharness/bot.json`；可关闭的**匿名使用统计**。 |
-| **1.0.2**（2026-10-06）     | 安装和升级后显示**更新内容**，Bot 设置里**检查 npm 新版本**；新增 [分享 Bot 教程](docs/share-bot.zh.md)；上下文读取保留准确的 `source-conflict` 拒绝。                                                                                                                                                                                                            |
-| **1.0.1**（2026-10-05）     | 首个 npm **正式版**：拥有各自身份的 PersonaBots、Git Memory、Group、Assignment、像素头像，飞书 / Lark、Slack、Discord 和微信身份（微信私聊可收发文件），以及首版 **Bot 市场**。1.0.0 未作为产品发布。                                                                                                                                                             |
-| 开发历史（截至 2026-09-20） | 首个版本之前的基础：PersonaBot 身份与文件记忆、Bot 模式的频道外壳与名册、从 Git 仓库创建 Bot、在 Host 上打开记忆文件，以及双语文档站。                                                                                                                                                                                                                            |
+| 版本                                                                                                              | 核心内容                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **[1.2.1](https://github.com/BotHarness/DeepSeekBot/releases/tag/v1.2.1)**（2026-10-12）                          | 修复 **DSH 0.1.7 / 0.2 安装兼容限制**；无自定义头像的群显示最多四个成员头像，群消息区与侧栏头像一致；**音频与文件附件卡片**提供内联播放和直接下载。                                                                                                                                                                                                               |
+| **[1.2.0](https://github.com/BotHarness/DeepSeekBot/blob/v1.2.0/CHANGELOG.zh.md#120---2026-10-08)**（2026-10-08） | 像素 **窗口伙伴**可置顶并播放 Bot 回复；飞书、Slack、Discord、微信 **绑定应用即收发**，Group 可连接外部会话；**Bot zip 导入导出**；Profile 横幅、标签和简介，设置移至 Channel 侧栏；市场展示 Profile 卡片；Bot 模式安装 Git；首次引导完成一次真实对话；微信原始语音可准备后播放。                                                                                 |
+| **1.1.0**（2026-10-06）                                                                                           | Bot **定时任务**（侧栏新建，或让 Bot 自己建、改、删，锁定后 Bot 不能改）；每个 Session 都带上 Bot 的 **Soul 与核心记忆**（`SOUL.md` + `MEMORY.md`，见 [教程](docs/soul-and-core-memory.zh.md)）；Bot 设置里**一键更新并重启**；Channel 侧栏统一为**卡片样式**；微信支持**语音转写**和**图片**；Memory 自动维护 `.botharness/bot.json`；可关闭的**匿名使用统计**。 |
+| **1.0.2**（2026-10-06）                                                                                           | 安装和升级后显示**更新内容**，Bot 设置里**检查 npm 新版本**；新增 [分享 Bot 教程](docs/share-bot.zh.md)；上下文读取保留准确的 `source-conflict` 拒绝。                                                                                                                                                                                                            |
+| **1.0.1**（2026-10-05）                                                                                           | 首个 npm **正式版**：拥有各自身份的 PersonaBots、Git Memory、Group、Assignment、像素头像，飞书 / Lark、Slack、Discord 和微信身份（微信私聊可收发文件），以及首版 **Bot 市场**。1.0.0 未作为产品发布。                                                                                                                                                             |
+| 开发历史（截至 2026-09-20）                                                                                       | 首个版本之前的基础：PersonaBot 身份与文件记忆、Bot 模式的频道外壳与名册、从 Git 仓库创建 Bot、在 Host 上打开记忆文件，以及双语文档站。                                                                                                                                                                                                                            |
 
 <a id="dsh"></a>
 
@@ -251,7 +256,7 @@ pnpm dev:client    # 隔离本地 DSH Profile 的 Client 自动构建
 pnpm docs:dev      # 文档预览：http://localhost:4321
 ```
 
-独立 Lark 测试 App 可配置一次并跨 worktree、branch 和 session 复用：`node scripts/dev-im-test-apps.mjs setup`。凭据只保存在机器本地，每次测试前仍须协调独占接收窗口；见[共享测试 App 指南](docs/agents/im-test-apps.md)。
+独立 Lark 测试 App 可配置一次并跨 worktree、branch 和 session 复用：`node scripts/dev-im-test-apps.mjs setup`；Slack 使用独立 QA1／QA2／QA3 槽，运行 `node scripts/dev-im-test-apps.mjs setup slack`。凭据保存在同一机器本地共享文件中，`list slack` 只列出 Slack 配置元数据；每次测试前仍须协调独占接收窗口。见[共享测试 App 指南](docs/agents/im-test-apps.md)。
 
 稳定的本地文档域名：`pnpm dev` → `https://docs.botharness.localhost`（首次可能请求信任本地 CA）；免 sudo 方式为 `PORTLESS_PORT=8788 PORTLESS_HTTPS=0 pnpm dev`。文档页从仓库源文件生成，请修改源文件。Slides 位于 `apps/presentations`，用 `pnpm slides:dev` 迭代。
 

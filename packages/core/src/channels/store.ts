@@ -283,7 +283,7 @@ export interface ChannelStore {
     messageId: string,
     identity: string,
   ): ChannelAttachmentRef | undefined;
-  getOrCreateDm(botSlug: string, botName: string): ChannelRecord | undefined;
+  getOrCreateDm(botSlug: string, botName?: string): ChannelRecord | undefined;
   getOrCreateBotDm(
     firstBotSlug: string,
     secondBotSlug: string,
@@ -705,7 +705,9 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
       const id = dmChannelId(botSlug);
       const existing = read(id);
       if (existing !== undefined) return existing;
-      const name = botName.trim();
+      const displayName = botName ?? options.botDisplayName?.(botSlug);
+      if (displayName === undefined) return undefined;
+      const name = displayName.trim();
       const timestamp = now().toISOString();
       const record: ChannelRecord = {
         id,

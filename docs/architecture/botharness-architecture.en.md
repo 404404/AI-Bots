@@ -2,6 +2,8 @@
 
 <!-- Maintained source, not generated: this is the English translation of `docs/architecture/botharness-architecture.md`. Edit this file (and its `diagrams/en/*.mmd` sources), not `apps/docs`. -->
 
+Group composer `/workspace` and workspace chips reuse the DM folder picker and confirmation components. Human explicitly selects current unpaused members; none are selected by default. Shared directory preview is read-only with respect to permissions: the native Workspace controller may register and resolve a DSH Workspace, but no Workspace Grant exists before confirmation. Confirmation names each Bot, canonical path, existing Assignment mode and Orchestrator write state; these settings remain unchanged. Each Bot uses the existing `grantCreate`; its optional application-defined Group scope fences current Channel membership and the confirmed directory, rechecking after asynchronous Workspace status validation immediately before the synchronous write. SQLite `workspace_grants` remains the sole permission authority, with no Channel Workspace Binding, Group Grant or shared cwd. New, reused, refused and unknown outcomes are separate. Before retrying failed/unknown members, the existing `grants` readback checks membership, revocation and current directory; failed readback prevents writes. Existing per-Bot change notifications refresh sidebar and chips. Normal delegation still uses the original Channel, Orchestrator and Assignment seams (#1433).
+
 DM composer fixed `/` actions and model/Workspace chips consume the existing model editor and PersonaBot-scoped Workspace Grant flow. Directory preview is read-only; confirmation names the Bot, resolved directory and access scope without exposing permission-mode switches. Actions consume only their own input fragment, retain the body, references and attachments, and never send a model message. Icon-labelled model and workspace-count chips sit left; compact token usage sits right. Read-only totals share the header Profile's same-Bot, same-26-week activity snapshot and missing/partial-data semantics, refreshing on committed messages, Profile opening and bounded polling. Clicking opens a popover; only its details button opens the existing Profile view. Its DM-scoped `profileSessionUsage` RPC selects the newest owned Orchestrator root and up to five recently updated Assignment roots. The existing Usage owner reads native Session Query logs on demand, applies its existing token bucket rules and inherited-prefix/ownership/deletion fences, and includes at most twenty descendants per root. These read-only rows are not a new persisted statistics authority; partial and unavailable logs remain explicit. Window Companion show/remove calls the original header pin's owner, lifecycle and Profile-local preferences, retaining the original entry without a new permission authority (#1432).
 
 BotHarness is a plugin layer on top of DSH (DeepSeek Harness) that gives an Agent a persistent product identity: a **PersonaBot**. One Orchestrator Session manages its Inbox and may coordinate multiple independent Assignment Sessions concurrently; Memory is an optional capability and Persona is optional content within it; neither is a prerequisite for chat or execution. DeepSeekBot is the first app, providing the roster, Bot Inbox, Assignment Directory, delegation, and IM integration.
@@ -318,6 +320,22 @@ The online management CLI explicitly selects the Host with `--host` or `DEEPSEEK
 ### CLI IM application authorization
 
 The application-defined CLI Consumer discovers qualified Provider setup descriptors through the existing Messaging Service `messagingApps` projection, then calls the native Connection Fetch Registry `dsh-im/app-setup` endpoint over the same authenticated DSH HTTP carrier. The Provider owns authorization attempts, expiry and native account/credential persistence; the CLI retains only an invocation's in-memory cookie and adds no store or lifecycle. Feishu credentials and WeChat verification codes enter solely through stdin into purpose-bound `setup.credentials`/`setup.verify` payloads. Stdout projects validated nonsecret state, QR artifacts, account references and fingerprints. A Human confirms WeChat scanning on a phone before the same attempt is polled. IM application authorization does not select a PersonaBot or create a Messaging Grant. See [ADR-0161](../adr/0161-cli-im-authorization-keeps-provider-attempt-authority.md) and [#1318](https://github.com/BotHarness/DeepSeekBot/issues/1318).
+
+### Conditional external tool approval rules
+
+The #1033 exact-rule private Lark candidate requires current `approve` and independent `save-rules`
+management capabilities. A distinct checked Provider callback previews the complete native operation
+and canonical role/directory/Grant scope before an explicit second confirmation. The existing Channel
+Tool Approval owner rechecks the live call, current scope and creator authority before and after its
+awaited canonical decision append, then activates the same rule store. Generation 82 records the
+verified external creator in that rule; Web Human rules retain their prior authority. Every future
+match and final native guard checks the original pairing and current Bot/App Binding capabilities.
+Authority loss permanently revokes the rule, while another still-effective source can preserve it;
+re-enable or re-pair cannot resurrect it. Web and Lark read the same canonical scope and rule status.
+Receipt-only fixed-text cleanup cannot disclose operation details or authorize a new destination.
+Native Session authorization remains Web-only; Workspace/Service authority is not enlarged. See
+[ADR-0175](../adr/0175-external-tool-rules-retain-current-creator-authority.md); real-platform feedback
+and the broader all-opaque IM confirmation remain separate gates.
 
 ## 5 · Orchestrator and Assignment control plane
 

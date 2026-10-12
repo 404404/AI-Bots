@@ -169,7 +169,7 @@ A durable, revocable, application-defined authorization for one PersonaBot and o
 _Avoid_: Service Grant, Workspace, one-time approval, cwd inference
 
 **Tool Approval Rule**:
-A Human-saved, revocable instruction to answer future DSH approval requests automatically for one PersonaBot role and Workspace Grant scope. An exact rule matches the native tool name and complete input; an all-opaque rule covers every opaque native tool in that scope. Each matching call still receives its own DSH approval decision and audit event.
+A revocable instruction, explicitly saved by the Web Human or a currently authorized external reviewer, to answer future DSH approval requests automatically for one PersonaBot role and Workspace Grant scope. An exact rule matches the native tool name and complete input; an all-opaque rule covers every opaque native tool in that scope. An external reviewer's rule depends on that original pairing and current approval/rule-saving authority; loss disables it rather than transferring it to a later pairing. Each matching call still receives its own DSH approval decision and audit event.
 _Avoid_: Workspace Grant, provider Service Grant, sandbox preset, inferred command similarity
 
 **Assignment Access Preset**:
@@ -501,6 +501,10 @@ _Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBA
 **Behavior permission item**:
 A named, reusable description of an external person's permitted or prohibited behavior, shared across a PersonaBot's authorization groups. Explicit Deny of the same item wins over Allow; the resulting policy guides the model within the primary Role's constraints and is not a resource ACL or management capability.
 _Avoid_: native permission, copied Role, enforced Shell policy, semantic conflict proof
+
+**Declared behavior exclusion**:
+A Human-authored mutual incompatibility between two Behavior permission items in one PersonaBot. Both items cannot be effectively allowed for the same paired person; an explicit Deny of either item resolves the incompatibility. It describes authored policy intent, not proof that arbitrary natural-language policies are consistent.
+_Avoid_: inferred text contradiction, resource isolation, group-order precedence
 
 **Person permission exception**:
 An explicit management Allow or Deny attached to one current Chat pairing, alongside its Role and group contributions; any applicable explicit Deny takes precedence. It never grants authenticated Web Human provenance.

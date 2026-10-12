@@ -1083,11 +1083,13 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       const id = dmChannelId(botSlug);
       const existing = readRecord(id);
       if (existing !== undefined) return existing;
+      const displayName = botName ?? options.botDisplayName?.(botSlug);
+      if (displayName === undefined) return undefined;
       const timestamp = now().toISOString();
       const record: ChannelRecord = {
         id,
         type: 'dm',
-        name: botName.trim() || botSlug,
+        name: displayName.trim() || botSlug,
         members: [botSlug],
         botSlug,
         createdAt: timestamp,

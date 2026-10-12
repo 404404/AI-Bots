@@ -686,16 +686,23 @@ function RoleDialog({
 }): ReactElement {
   const [name, setName] = useState(role?.name ?? '');
   const [behavior, setBehavior] = useState(role?.behavior ?? '');
-  const [selected, setSelected] = useState<('approve' | 'reject' | 'review-pairing')[]>(
+  const [selected, setSelected] = useState<
+    ('approve' | 'reject' | 'review-pairing' | 'save-rules')[]
+  >(
     (role?.capabilities ?? []).filter(
-      (capability): capability is 'approve' | 'reject' | 'review-pairing' =>
-        capability === 'approve' || capability === 'reject' || capability === 'review-pairing',
+      (capability): capability is 'approve' | 'reject' | 'review-pairing' | 'save-rules' =>
+        capability === 'approve' ||
+        capability === 'reject' ||
+        capability === 'review-pairing' ||
+        capability === 'save-rules',
     ),
   );
-  const [delegable, setDelegable] = useState<('approve' | 'reject' | 'review-pairing')[]>(
+  const [delegable, setDelegable] = useState<
+    ('approve' | 'reject' | 'review-pairing' | 'save-rules')[]
+  >(
     (role?.delegableCapabilities ?? []).filter(
-      (cap): cap is 'approve' | 'reject' | 'review-pairing' =>
-        cap === 'approve' || cap === 'reject' || cap === 'review-pairing',
+      (cap): cap is 'approve' | 'reject' | 'review-pairing' | 'save-rules' =>
+        cap === 'approve' || cap === 'reject' || cap === 'review-pairing' || cap === 'save-rules',
     ),
   );
   const [failed, setFailed] = useState(false);
@@ -779,7 +786,7 @@ function RoleDialog({
                 />
               </span>
             </legend>
-            {(['approve', 'reject', 'review-pairing'] as const).map((capability) => (
+            {(['approve', 'reject', 'review-pairing', 'save-rules'] as const).map((capability) => (
               <Checkbox
                 key={capability}
                 label={t(labels[capability])}
@@ -813,7 +820,7 @@ function RoleDialog({
                 t={t}
               />
             </legend>
-            {(['approve', 'reject', 'review-pairing'] as const).map((capability) => (
+            {(['approve', 'reject', 'review-pairing', 'save-rules'] as const).map((capability) => (
               <Checkbox
                 key={capability}
                 label={`${t('pairing.delegateAllow')} · ${t(labels[capability])}`}
