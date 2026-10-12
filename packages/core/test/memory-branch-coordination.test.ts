@@ -72,7 +72,7 @@ it('coordinates a dirty Memory switch with an addressed Assignment and retries i
   const agents: BotAgentAdapter = {
     async runOrchestrator(run) {
       orchestratorSessions.push(run.sessionId);
-      if (run.message === 'start assignment') {
+      if (run.message.endsWith('start assignment')) {
         const created = run.assignments.create({
           grantId: TEST_GRANT_ID,
           purpose: 'Continue related project work while Memory is being updated',

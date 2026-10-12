@@ -46,7 +46,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
     const core = createCore({
       dshHome: home,
       agents: adapter(async (run) => {
-        if (run.message !== 'Inspect Group') return;
+        if (!run.message.endsWith('Inspect Group')) return;
         const views = run.channels.read({ channelId: groupId, limit: 1 });
         expect(views).toHaveLength(1);
         returnedId = views[0]!.message.id;
@@ -104,7 +104,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
     const before = createCore({
       dshHome: home,
       agents: adapter(async (run) => {
-        if (run.bot.slug !== 'ada' || run.message !== 'Inspect Group') return;
+        if (run.bot.slug !== 'ada' || !run.message.endsWith('Inspect Group')) return;
         const found = run.channels.query({ scope: 'joined', text: 'ordinary one', limit: 1 });
         expect(found.messages.map((view) => view.message.id)).toEqual(['one']);
       }),
