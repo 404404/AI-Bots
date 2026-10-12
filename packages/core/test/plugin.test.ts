@@ -515,6 +515,7 @@ describe('plugin entry', () => {
       'followRoster',
       'followActivity',
       'followChannel',
+      'followCompanion',
     ]);
   });
 

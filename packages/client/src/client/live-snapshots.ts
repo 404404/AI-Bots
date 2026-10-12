@@ -8,6 +8,7 @@ import type {
   ChannelLiveFrame,
   RosterLiveFrame,
 } from '../../../core/src/channels/live.js';
+import type { CompanionLiveFrame } from '../../../core/src/companions/live.js';
 import type { ChannelFollow } from './channel-live.js';
 import type { TypedLive } from './messaging-defaults-live.js';
 
@@ -115,6 +116,101 @@ export function createChannelFollow(
     return () => {
       stopped = true;
       void stream.dispose();
+    };
+  };
+}
+
+const identifier = (name: string) =>
+  Object.freeze({
+    name,
+    wire: name,
+    source: 'json' as const,
+    codec: Object.freeze({
+      mode: 'strict' as const,
+      typeSymbol: `@botharness/core#botharness/followCompanion:${name}`,
+      create: () => ({
+        parse: (value: unknown): string => {
+          if (typeof value !== 'string') throw new TypeError('Expected a string');
+          return value;
+        },
+      }),
+    }),
+  });
+
+export const COMPANION_REMOTE_DESCRIPTOR = Object.freeze({
+  ...follow,
+  id: 'src:botharnessBridge#botharness/followCompanion',
+  method: 'followCompanion',
+  parameters: Object.freeze([identifier('resume'), identifier('lastEventId')]),
+});
+
+export interface CompanionNamespace {
+  followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncIterable<CompanionLiveFrame>;
+}
+
+export interface CompanionSource {
+  readonly readyState: number;
+  addEventListener(name: string, listener: (event: Event) => void): void;
+  close(): void;
+}
+
+export function createCompanionSource(
+  remote: Pick<ClientRemote, '$stream'>,
+  namespace: () => CompanionNamespace,
+): (url: string) => CompanionSource {
+  return (url) => {
+    const name = 'botharness Companion stream';
+    const resume = new URL(url, 'http://localhost').searchParams.get('resume') ?? '';
+    const events = new EventTarget();
+    let state = 0;
+    let lastEventId = '';
+    const publish = (frame: CompanionLiveFrame): void => {
+      if (state === 2) return;
+      if (frame.id !== undefined) lastEventId = frame.id;
+      state = 1;
+      events.dispatchEvent(new MessageEvent(`companion/${frame.type}`, { data: frame.value }));
+    };
+    const interrupted = (closed: boolean): void => {
+      if (state === 2) return;
+      state = closed ? 2 : 0;
+      events.dispatchEvent(new Event('error'));
+    };
+    const stream = new RemoteSnapshotStream<CompanionLiveFrame, CompanionLiveFrame>(
+      remote.$stream<CompanionLiveFrame>({
+        name,
+        open: (signal) => namespace().followCompanion(resume, lastEventId, signal),
+        ended: (accepted) =>
+          accepted
+            ? new RemoteStreamCarrierError(`${name} ended without a terminal result`)
+            : new Error(`${name} ended before its baseline`),
+        carrierFailed: () => interrupted(false),
+      }),
+      {
+        name,
+        isSnapshot: (frame): frame is CompanionLiveFrame => frame.type === 'baseline',
+        replace: publish,
+        update: publish,
+        failed: (error) => {
+          if (state === 2) return;
+          console.warn(`botharness: ${name} failed`, error);
+          interrupted(true);
+        },
+      },
+    );
+    stream.start();
+    return {
+      get readyState() {
+        return state;
+      },
+      addEventListener: (type, listener) => events.addEventListener(type, listener),
+      close() {
+        state = 2;
+        void stream.dispose();
+      },
     };
   };
 }

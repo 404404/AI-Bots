@@ -69,7 +69,11 @@ import { installChannelFollow, mountChannelLive, mountRosterLive } from './chann
 import { installLiveSource, installTypedLive } from './messaging-defaults-live.js';
 import {
   CHANNEL_REMOTE_DESCRIPTOR,
+  COMPANION_REMOTE_DESCRIPTOR,
   createChannelFollow,
+  createCompanionSource,
+  type CompanionNamespace,
+  type CompanionSource,
   createTypedLive,
   SNAPSHOT_REMOTE_DESCRIPTORS,
   type ChannelNamespace,
@@ -165,6 +169,7 @@ export function apply(ctx: ClientContext): void {
   });
   const setupRpc = connectionRpc(ctx);
   if (setupRpc) actions.appSetup = new ProviderAppSetup(setupRpc);
+  let companionSource: ((url: string) => CompanionSource) | undefined;
   const companion = new WindowCompanions({
     storage,
     exists: (botId) => botExists(call, botId),
@@ -182,7 +187,7 @@ export function apply(ctx: ClientContext): void {
         throw new Error('Invalid Companion context');
       return { profileId: value.profileId };
     },
-    source: (url) => new EventSource(url),
+    source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
       const response = await fetch('/api/botharness/companion', {
         method: 'POST',
@@ -374,6 +379,7 @@ export function apply(ctx: ClientContext): void {
           ...LIVE_REMOTE_CONTRIBUTION.descriptors,
           ...SNAPSHOT_REMOTE_DESCRIPTORS,
           CHANNEL_REMOTE_DESCRIPTOR,
+          COMPANION_REMOTE_DESCRIPTOR,
         ],
       })
       .then(
@@ -405,7 +411,16 @@ export function apply(ctx: ClientContext): void {
               return mounted as ChannelNamespace;
             }),
           );
+          companionSource = createCompanionSource(ctx.remote, () => {
+            const mounted = namespace() as Partial<CompanionNamespace>;
+            if (mounted.followCompanion === undefined)
+              throw new Error('botharness live Remote is not mounted');
+            return mounted as CompanionNamespace;
+          });
+          companion.reconnect();
           uninstall = () => {
+            companionSource = undefined;
+            companion.reconnect();
             uninstallFollow();
             uninstallSource();
             uninstallTyped();

@@ -6,6 +6,7 @@ import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused, type LiveFrame } from '../channels/live-frames.js';
+import type { CompanionLiveFrame } from '../companions/live.js';
 import {
   ChannelLiveRefused,
   LiveUnavailable,
@@ -179,6 +180,11 @@ export interface BridgeLive {
     after: number,
     signal: AbortSignal,
   ): AsyncIterable<ChannelLiveFrame>;
+  followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncIterable<CompanionLiveFrame>;
 }
 
 function markRemoteStreams(prototype: object, streams: readonly string[]): void {
@@ -259,6 +265,22 @@ export class BotharnessBridgeService extends TypertRemoteService {
       yield* this.live.followChannel(channelId, after, signal);
     } catch (error) {
       if (error instanceof ChannelLiveRefused)
+        throw toRemoteError({ code: error.code, message: error.message });
+      throw error;
+    }
+  }
+
+  async *followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncGenerator<CompanionLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live.followCompanion(resume, lastEventId, signal);
+    } catch (error) {
+      if (error instanceof LiveRefused)
         throw toRemoteError({ code: error.code, message: error.message });
       throw error;
     }
@@ -1499,6 +1521,7 @@ markRemoteStreams(BotharnessBridgeService.prototype, [
   'followRoster',
   'followActivity',
   'followChannel',
+  'followCompanion',
 ]);
 
 export function registerBridge(

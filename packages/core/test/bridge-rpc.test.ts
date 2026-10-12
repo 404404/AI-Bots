@@ -258,6 +258,7 @@ describe('bridge typert service', () => {
       'followRoster',
       'followActivity',
       'followChannel',
+      'followCompanion',
     ]);
   });
 
@@ -269,11 +270,13 @@ describe('bridge typert service', () => {
       { method: 'followRoster', mode: 'stream', invocation: { kind: 'direct' } },
       { method: 'followActivity', mode: 'stream', invocation: { kind: 'direct' } },
       { method: 'followChannel', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followCompanion', mode: 'stream', invocation: { kind: 'direct' } },
     ]);
     expect(parameterNames(service.liveFrames)).toEqual(['query', 'resume', 'signal']);
     expect(parameterNames(service.followRoster)).toEqual(['signal']);
     expect(parameterNames(service.followActivity)).toEqual(['signal']);
     expect(parameterNames(service.followChannel)).toEqual(['channelId', 'after', 'signal']);
+    expect(parameterNames(service.followCompanion)).toEqual(['resume', 'lastEventId', 'signal']);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {
