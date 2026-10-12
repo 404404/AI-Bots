@@ -32,6 +32,12 @@ Chinese Before / After:
 
 ## Current audio card and username chips
 
+The current owning App lists were independently opened in each Bot's actual Client settings. Each shows its correct native App name, available state and one current conversation. The literal crops retain the owning Bot heading, App row and Bind app entry while removing unrelated background data.
+
+![QA1 owning App list](../../../apps/docs/public/evidence/issue-1156/qq-identity-qa1-current.png)
+
+![QA2 owning App list](../../../apps/docs/public/evidence/issue-1156/qq-identity-qa2-current.png)
+
 After captures come from the actual Client on product `6d44dd549ce9cd087c98cf81bc7b923342cb1ee4`, which contains main `9a01a3ef`, with Provider `1eee207c0c23fc98aa26e329f753c1de8b910aff`, SDK 1.0.4 and DSH 0.2.0-rc.2. Both original viewports are 1280 × 800. T3 `preview_open` explicitly reported no automation Host; an independent headless Chrome used the same authenticated owned Profile. Literal pixel crops remove private author names, native conversation IDs and the voice filename. No DOM content or pixels were substituted.
 
 Audio Before is product `6ec097e2`, the same retained 1.7-second voice at the end of playback. After reuses `MessageAudio`, the component for sent attachments. Keyboard play, Home and End succeeded; download returned the original 3,254-byte SILK with the same SHA256 as its previously verified original. These are current Client playback/download checks; native voice ingestion and the Human-confirmed answer `56` remain qualified at product `6ec097e2`.
@@ -61,3 +67,11 @@ The current shared Group settings show two receiving routes, one per owning App,
 ![QA2 current receiving route](../../../apps/docs/public/evidence/issue-1156/qq-mapping-qa2-current.png)
 
 The generated [audio and mention review aid](../../../apps/docs/public/evidence/issue-1156/qq-audio-mentions-review.html) explains product code `6d44dd54` and Provider `1eee207c`. The delivery PR comment must bind the asset to its exact published head and record actual accessibility checks; local generation alone does not establish public delivery. It is an explanation, not native QQ evidence. Final current-process group replies and image/file native qualification remain pending; native own Echo remains the closure blocker.
+
+## Updated bilingual guide view
+
+These current After captures render the checked static docs build at source `0952790f`, including the audio/mention paragraph and the exact Provider `1eee207c` link. Both use the actual docs UI, dark theme and 1280 × 800 viewport; the heading is aligned with the historical Before captures above. The filtered Astro build completes 494 pages. These public-copy captures do not qualify native media ingestion or own Echo.
+
+![Current English guide After](../../../apps/docs/public/evidence/issue-1156/qq-guide-en-current.png)
+
+![Current Chinese guide After](../../../apps/docs/public/evidence/issue-1156/qq-guide-zh-current.png)
