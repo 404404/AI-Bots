@@ -154,10 +154,17 @@ function dominates(newer: Version, older: Version): boolean {
   );
 }
 
+function sameDraft(left: Version, right: Version): boolean {
+  const body = (version: Version): string =>
+    serialize({ writer: '', sequence: 0, seen: {}, draft: version.draft });
+  return body(left) === body(right);
+}
+
 export class ComposerDraftStore {
   private readonly snapshots = new Map<string, DraftSnapshot>();
   private readonly current = new Map<string, Version>();
   private readonly editing = new Set<string>();
+  private readonly twins = new Map<string, Version[]>();
   private readonly listeners = new Set<() => void>();
 
   constructor(
@@ -169,6 +176,7 @@ export class ComposerDraftStore {
     this.snapshots.clear();
     this.current.clear();
     this.editing.clear();
+    this.twins.clear();
   }
 
   subscribe = (listener: () => void): (() => void) => {
@@ -230,8 +238,19 @@ export class ComposerDraftStore {
     if (selected !== undefined) this.current.set(scope, selected);
     const unchanged =
       previous?.writer === selected?.writer && previous?.sequence === selected?.sequence;
+    const twins =
+      selected === undefined || error !== undefined
+        ? []
+        : heads.filter(
+            (version) =>
+              (version.writer !== selected.writer || version.sequence !== selected.sequence) &&
+              sameDraft(version, selected),
+          );
+    this.twins.set(scope, twins);
     const conflicts = heads.filter(
-      (version) => !unsaved || previous === undefined || !dominates(previous, version),
+      (version) =>
+        !twins.includes(version) &&
+        (!unsaved || previous === undefined || !dominates(previous, version)),
     );
     if (
       keepPrevious &&
@@ -258,6 +277,11 @@ export class ComposerDraftStore {
     const previous = this.current.get(scope);
     const seen = { ...previous?.seen };
     if (previous !== undefined) seen[previous.writer] = previous.sequence;
+    for (const version of this.twins.get(scope) ?? []) {
+      for (const [writer, sequence] of Object.entries(version.seen))
+        seen[writer] = Math.max(seen[writer] ?? 0, sequence);
+      seen[version.writer] = Math.max(seen[version.writer] ?? 0, version.sequence);
+    }
     if (resolve)
       for (const version of snapshot.versions) {
         for (const [writer, sequence] of Object.entries(version.seen))

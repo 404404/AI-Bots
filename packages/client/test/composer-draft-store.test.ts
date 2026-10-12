@@ -88,6 +88,50 @@ describe('browser-local composer drafts', () => {
     );
     expect(new ComposerDraftStore(local, 'reopened').read('channel').versions).toHaveLength(1);
   });
+  it('raises no conflict when another tab resolves to the draft this tab is already editing', () => {
+    const local = storage();
+    const first = new ComposerDraftStore(local, 'first');
+    const second = new ComposerDraftStore(local, 'second');
+    first.read('channel');
+    second.read('channel');
+    first.update('channel', { text: 'first draft' });
+    second.update('channel', { text: 'second draft' });
+    first.setEditing('channel', true);
+    second.setEditing('channel', true);
+    first.sync('channel');
+    first.choose('channel', 'first');
+    second.sync('channel');
+    expect(second.read('channel').versions).toHaveLength(2);
+    second.choose('channel', 'first');
+    first.sync('channel');
+    expect(first.read('channel').draft.text).toBe('first draft');
+    expect(first.read('channel').versions).toHaveLength(1);
+    second.update('channel', { text: 'second edit' });
+    first.sync('channel');
+    expect(first.read('channel').draft.text).toBe('first draft');
+    expect(first.read('channel').versions.map((version) => version.draft.text)).toEqual([
+      'first draft',
+      'second edit',
+    ]);
+  });
+  it('treats concurrent versions with the same draft as one and supersedes them on the next edit', () => {
+    const local = storage();
+    const first = new ComposerDraftStore(local, 'first');
+    const second = new ComposerDraftStore(local, 'second');
+    first.read('channel');
+    second.read('channel');
+    first.update('channel', { text: 'same draft' });
+    second.update('channel', { text: 'same draft' });
+    expect(local.length).toBe(2);
+    const reopened = new ComposerDraftStore(local, 'reopened');
+    expect(reopened.read('channel').draft.text).toBe('same draft');
+    expect(reopened.read('channel').versions).toHaveLength(1);
+    reopened.update('channel', { text: 'same draft, edited' });
+    expect(local.length).toBe(1);
+    first.sync('channel');
+    expect(first.read('channel').draft.text).toBe('same draft, edited');
+    expect(first.read('channel').versions).toHaveLength(1);
+  });
   it('never overwrites active input with a causally newer remote draft, but synchronizes an idle view', () => {
     const local = storage();
     const first = new ComposerDraftStore(local, 'first');
