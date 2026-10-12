@@ -1,7 +1,7 @@
 # #1041 — accepted private-Lark source slice
 
 Implementation/runtime QA head: `ad7c204acd344d24de337ada0ca5e7460853eaac`.
-Final source head: `5bae6e25e578acb8681f76e2b6a82c999d4f5502` (only ADR/tutorial status and generated font changed after runtime QA).
+Final source head: `1f1d545fa6155469e4c72f296fa7b3cafdbe0b22` (ADR/tutorial status plus main merges through f5988982; #1041 runtime and UI behavior unchanged).
 Task: `codex/local/01a12734-8226-7ae3-8d1b-db08bde64d76`.
 
 The Human accepted the first slice in this thread. The earlier capture limitation is resolved: the real Lark test/failure screenshot, accepted-route sidebar and destination-disabled sidebar were captured and visually inspected. Images are cropped to the task conversation/control; no credential or unrelated conversation is published. T3's Lark preview raster is soft, but the actual visible message DOM and notification/receipt identities were checked separately.
@@ -23,12 +23,12 @@ The Human accepted the first slice in this thread. The earlier capture limitatio
 - `lark-test-and-failure.png`: real QA1 private messages, 1280×800 CSS viewport, cropped task output.
 - `accepted-route-deliveries.png`: real management destination and two accepted/one cancelled records before negative checks.
 - `route-disabled-delivery.png`: real destination-off state and new cancelled failure record.
-- Existing matched light/dark and short-screen base/head screenshots remain valid; their runtime UI code is unchanged at the final docs-only head.
+- Existing matched light/dark and short-screen base/head screenshots remain valid; their runtime UI code is unchanged at the final source head.
 
 ## Verification limits
 
 13 failure-alert tests cover actual deadline expiry, Provider replacement, persisted pending/sending restart, ownership, deduplication, revocation, finite retries and unknown-outcome refusal. Existing approval/sidebar/database/bridge regression passed. Real negative checks cover event-off and route-off; replacement/unknown-outcome race injection remains automated coverage, not a claim of native Lark fault injection.
 
-Full implementation-head CI passed. Final docs-head CI is tracked on PR #1468. Local direct docs-package build verifies the edited guide; the umbrella docs command encountered the existing Windows `spawnSync pnpm ENOENT` shim limitation before rendering. No unrelated build-script change was made.
+Full implementation-head CI passed. Final-head CI is tracked on PR #1468. Local final-merge type/format/ledger checks and 83 related tests passed; preceding head 15cf5264 passed full CI and the 480-page docs build. Local direct docs-package build verifies the edited guide; the umbrella docs command encountered the existing Windows `spawnSync pnpm ENOENT` shim limitation before rendering. No unrelated build-script change was made.
 
 This source slice qualifies private Lark only; group/provider/native-wait/Host-down scope remains with existing owners. It is not a published release or deployment. First-slice Human feedback is accepted; PR delivery/merge remains separate.

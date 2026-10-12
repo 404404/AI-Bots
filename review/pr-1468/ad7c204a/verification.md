@@ -1,3 +1,5 @@
+> Historical checkpoint. Pending QA/capture statements below are superseded by [completed-qa.md](completed-qa.md).
+
 # PR #1468 — first work-failure alert tracer
 
 - Source base: `8392828804c71fa54ad802128526f481769adc01`.

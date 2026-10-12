@@ -1,3 +1,5 @@
+> Historical checkpoint. Pending QA/capture statements below are superseded by [completed-qa.md](completed-qa.md).
+
 ### QA1 first-slice rendering verified; screenshot capture blocked
 
 Task `codex/local/01a12734-8226-7ae3-8d1b-db08bde64d76`, source head `ad7c204acd344d24de337ada0ca5e7460853eaac`.

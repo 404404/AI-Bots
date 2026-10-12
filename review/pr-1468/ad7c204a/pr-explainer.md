@@ -5,8 +5,8 @@ lang: zh
 template: sheet
 cols: 2
 PR: https://github.com/BotHarness/DeepSeekBot/pull/1468
-base: 8392828804c71fa54ad802128526f481769adc01
-head: 5bae6e25e578acb8681f76e2b6a82c999d4f5502
+base: f59889825e75427bb30527f561bba709fe1358df
+head: 1f1d545fa6155469e4c72f296fa7b3cafdbe0b22
 generated: 2026-10-12
 ---
 
@@ -34,7 +34,7 @@ checked Provider -> Lark DM: 最终发送检查
 Messaging 校验 Bot、Session 和执行角色的归属。
 稳定的 Bot／Channel／消息标识抑制重复通知。
 普通模型文本、工具错误文本和汇总计数不会产生通知。
-[查看发送 owner](https://github.com/BotHarness/DeepSeekBot/blob/5bae6e25e578acb8681f76e2b6a82c999d4f5502/packages/core/src/messaging/failure-alerts.ts)。
+[查看发送 owner](https://github.com/BotHarness/DeepSeekBot/blob/1f1d545fa6155469e4c72f296fa7b3cafdbe0b22/packages/core/src/messaging/failure-alerts.ts)。
 
 ## C 状态与恢复
 
@@ -48,16 +48,16 @@ Messaging 校验 Bot、Session 和执行角色的归属。
 
 事件开关、路由、配对、App、Provider 和会话封锁都会参与发送检查。
 Generation 83 只保存开关与发送元数据。回退需要兼容写入器或升级前备份。
-[查看 ADR-0176](https://github.com/BotHarness/DeepSeekBot/blob/5bae6e25e578acb8681f76e2b6a82c999d4f5502/docs/adr/0176-work-failure-alerts-use-committed-facts-and-management-route.md)。
+[查看 ADR-0176](https://github.com/BotHarness/DeepSeekBot/blob/1f1d545fa6155469e4c72f296fa7b3cafdbe0b22/docs/adr/0176-work-failure-alerts-use-committed-facts-and-management-route.md)。
 
 ## D 验证与下一步
 
 13 项失败通知测试通过，覆盖去重、撤销、真实超时、Provider 替换与重启。
 75 项已有审批／侧栏测试与 33 项数据库测试通过。
-类型、格式、lint、构建与 478 页文档构建通过。
+类型、格式和发布记录检查通过；前一合并版本 CI 与 480 页文档构建通过。
 测试与失败通知均在 Lark 显示，各发送一次；原生截图与回执已核对。
 
-实现版本完整 CI 已通过；最终文档版本的 CI 在 PR 单独跟踪。
+运行时验收后合入主色分享功能，失败通知实现未改。最终版本 CI 在 PR 跟踪。
 
 关闭事件没有新增通知；关闭目的地记录 Cancelled／0 次发送。
 恢复后新消息回复 9991，通知未重放。接收器已停，QA1 窗口已释放。
