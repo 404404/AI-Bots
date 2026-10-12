@@ -426,6 +426,8 @@ match the current example and may access files outside authorized folders or the
 changing rule kind. An exact confirmation cannot authorize the broader kind.
 
 The same current Approve/Save approval rules checks, creator revocation and native audit apply.
+A newly created Bot does not require opening its Web DM before a native approval can be delivered;
+the owning Host creates the canonical DM request surface when needed.
 A different role, directory or Grant scope needs another approval. Underlying native, Workspace
 and Service authority is not enlarged. External rules cannot approve Web-only native Session
 authorizations. Web can revoke either kind; restoring capabilities cannot resurrect it.

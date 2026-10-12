@@ -29,11 +29,12 @@ async function fixture(
   saveRules = false,
   allOpaque = false,
   allOpaqueAccount = allOpaque,
+  ensureDm = true,
 ) {
   const core = createCore({ dshHome: createTempRoot('bh-lark-approval-') });
   cores.push(core);
   core.registry.create({ slug: 'ada', displayName: 'Ada' });
-  core.channels.getOrCreateDm('ada', 'Ada');
+  if (ensureDm) core.channels.getOrCreateDm('ada', 'Ada');
   let receiver: Parameters<NonNullable<DshImOutboundService['consumeInbound']>>[1] | undefined;
   let fail: 'none' | 'known' | 'unknown' = 'none';
   const cards = vi.fn<NonNullable<DshImOutboundService['approvalCardChecked']>>(
@@ -317,6 +318,17 @@ it('exact Lark rules require a private second confirmation, are idempotent, and 
     capabilities: ['approve', 'reject', 'save-rules'],
   });
   expect(f.core.toolRules.list('ada')[0]?.revokedAt).toBeDefined();
+});
+
+it('an IM-only Bot can request native approval before anyone opens its Web DM', async () => {
+  const f = await fixture(true, true, true, true, false);
+  expect(f.core.channels.get('dm-ada')).toBeUndefined();
+  const call = f.repeat('im-only-first-call');
+  await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+  const delivery = f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!;
+  expect(f.core.channels.get('dm-ada')).toMatchObject({ botSlug: 'ada', name: 'Ada', type: 'dm' });
+  await f.action(delivery.id, { action: 'rejected' });
+  expect(await call.answer).toBe('rejected');
 });
 
 it('all-opaque needs its own displayed confirmation and cannot replace an exact nonce', async () => {

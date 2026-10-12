@@ -183,7 +183,8 @@ export class ChannelToolApproval {
       return 'allowed-once';
     }
     const channelId = dmChannelId(tracked.botSlug);
-    if (this.#channels.get(channelId)?.botSlug !== tracked.botSlug) return 'unavailable';
+    const channel = this.#channels.get(channelId) ?? this.#channels.getOrCreateDm(tracked.botSlug);
+    if (channel?.botSlug !== tracked.botSlug) return 'unavailable';
     const message: ChannelMessage = {
       id: randomUUID(),
       at: new Date().toISOString(),
