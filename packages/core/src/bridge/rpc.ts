@@ -97,7 +97,11 @@ import type { ChannelReadPosition } from '../channels/store.js';
 import type { RosterSection, RosterSnapshot } from '../roster/store.js';
 import type { TopOrderEntry } from '../roster/spec.js';
 import type { ChannelTimelinePage, TimelineDirection } from '../channels/timeline.js';
-import type { AssignmentDetail, AssignmentSummary } from '../runtime/bot-runtime.js';
+import type {
+  AssignmentDetail,
+  AssignmentSummary,
+  ChannelAssignmentSummary,
+} from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
   BotSchedule,
@@ -1013,6 +1017,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.assignments({ slug }));
   }
 
+  channelAssignments(channelId: string): { assignments: ChannelAssignmentSummary[] } {
+    return unwrap(this.methods.channelAssignments({ channelId }));
+  }
+
   assignment(slug: string, sessionId: string): { assignment: AssignmentDetail } {
     return unwrap(this.methods.assignment({ slug, sessionId }));
   }
@@ -1455,6 +1463,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionIgnore',
   'humanAttentionDismiss',
   'assignments',
+  'channelAssignments',
   'assignment',
   'workspaceOptions',
   'messageAttachmentTarget',
