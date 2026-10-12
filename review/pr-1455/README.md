@@ -27,7 +27,11 @@ findings. Documentation content build passed. A real Web model reply returned 32
 testing did not pass and was stopped before merging main; timeout failures remain unresolved,
 and six telemetry cleanup EPERM failures also reproduce on the unmodified base.
 
-CI remains a separate check. No #1033 Lark receiver has started: a new exclusive QA1 window,
-initial-card/preview/confirmation/result, matching/mismatching calls, current creator revocation,
-restart, native screenshot evidence and first-slice Human acceptance remain required. Neither
-Draft PR is merge-ready. All-opaque is explicitly deferred until exact-slice feedback.
+Host CI and preparation passed. The Human authorized an exclusive QA1 window, and the exact
+native tracer completed. See [native-qa.md](native-qa.md) for the seven real tool calls,
+canonical sequence correlation, refreshed browser results and capture limitations. The task
+receiver is stopped and the window released. Native PNGs are cropped real captures with
+explicit grey local-path redactions; no raw unrelated conversation was published.
+First-slice Human acceptance remains required. Neither Draft PR is merge-ready. All-opaque
+is explicitly deferred until exact-slice feedback; baseline native-card capture and the
+preview's below-fold Back control are identified visual limits.
