@@ -17,6 +17,7 @@ import type {
 } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { ProfileCardDescriptor, ProfileCardViewProps } from './profile-cards.js';
+import { useIdentityTones } from './model-usage-charts.js';
 import { ModelUsageBreakdown } from './model-usage-breakdown.js';
 import { profileTokenSummaryText } from './profile-token-summary.js';
 import { useProfileChartTokens } from './profile-chart-theme.js';
@@ -501,6 +502,7 @@ function TokenTip({ totals, t }: { totals: TokenDayTotals; t: BotHarnessTranslat
 }
 
 function TokenUsageCard({
+  bot,
   loadUsage,
   activity,
   t,
@@ -544,6 +546,9 @@ function TokenUsageCard({
     [dayTotals, days],
   );
   const colors = useProfileChartTokens();
+  const identityColor = botNameSource(bot);
+  const identity = useIdentityTones(identityColor, colors);
+  const palette = identity.tones ?? colors;
   const definition = useMemo(
     () =>
       defineChart({
@@ -568,11 +573,11 @@ function TokenUsageCard({
           muted: colors.muted,
           grid: colors.grid,
           background: 'transparent',
-          palette: [colors.cached, colors.uncached, colors.output],
+          palette: [palette.cached, palette.uncached, palette.output],
         },
         tooltip,
       }),
-    [colors, rows],
+    [colors, rows, palette],
   );
   const total = windowTotals.cached + windowTotals.uncached + windowTotals.output;
   if (!compact)
@@ -583,11 +588,16 @@ function TokenUsageCard({
         status={activity?.modelUsageStatus ?? 'unavailable'}
         today={activity?.today ?? localDayKey(new Date())}
         firstDay={trailingProfileDays(activity?.today, weeks * 7)[0]!}
+        identityColor={identityColor}
         t={t}
       />
     );
   return (
-    <div className="bh-profile-card-body">
+    <div
+      ref={identity.host}
+      className="bh-profile-card-body"
+      data-usage-tones={identity.tones === undefined ? undefined : JSON.stringify(identity.tones)}
+    >
       <div className="bh-profile-card-total">
         {t('profile.tokens.window', {
           weeks,

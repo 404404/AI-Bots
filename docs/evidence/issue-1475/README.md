@@ -26,6 +26,29 @@ tests cover both.
 | Bea | Profile | [light](before-bea-profile-light.png) · [dark](before-bea-profile-dark.png) | [light](after-bea-profile-light.png) · [dark](after-bea-profile-dark.png) |
 | Bea | Popover | [light](before-bea-popover-light.png) · [dark](before-bea-popover-dark.png) | [light](after-bea-popover-light.png) · [dark](after-bea-popover-dark.png) |
 
+## Token charts of the same Bots
+
+Added after Human QA asked for the Bot's own token charts to match. The popover captures above
+include the token sparkline; the Profile's daily view is captured separately.
+
+| Bot | Profile daily tokens, before                                              | Profile daily tokens, after                                             |
+| --- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Ada | [light](before-ada-tokens-light.png) · [dark](before-ada-tokens-dark.png) | [light](after-ada-tokens-light.png) · [dark](after-ada-tokens-dark.png) |
+| Bea | [light](before-bea-tokens-light.png) · [dark](before-bea-tokens-dark.png) | [light](after-bea-tokens-light.png) · [dark](after-bea-tokens-dark.png) |
+
+Distinct bar fills read from the PR build, in cached / other input / output order:
+
+| Bot, view, theme  | Fills                             |
+| ----------------- | --------------------------------- |
+| ada popover light | `#b48408` · `#cdaf63` · `#decda1` |
+| ada popover dark  | `#e2b04a` · `#a08243` · `#73623e` |
+| ada profile light | `#b48408` · `#cdaf63` · `#decda1` |
+| ada profile dark  | `#e2b04a` · `#a08243` · `#73623e` |
+| bea popover light | `#1d1b22` · `#6f6e73` · `#a7a7aa` |
+| bea popover dark  | `#828088` · `#65646a` · `#515155` |
+| bea profile light | `#1d1b22` · `#6f6e73` · `#a7a7aa` |
+| bea profile dark  | `#828088` · `#65646a` · `#515155` |
+
 ## Cell colors read from the page
 
 `--bh-heat-color` is empty on the base build, where the cells mix the brand accent instead.

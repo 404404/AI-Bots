@@ -10,7 +10,11 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
 }));
 
 import { zhTranslate } from '../src/client/locale.js';
-import { botChartColor, REFERENCE_SURFACES } from '../src/client/bot-primary-color.js';
+import {
+  botChartColor,
+  botChartTones,
+  REFERENCE_SURFACES,
+} from '../src/client/bot-primary-color.js';
 import {
   createProfileCardBuiltins,
   ProfileHeatmap,
@@ -249,4 +253,34 @@ it('gives the event and Memory activity cards the saved Bot Primary Color', asyn
     expect(colors()[0]).not.toBe(gold);
     expect(colors()[0]).not.toBe('');
   }
+});
+
+it('draws the popover token chart in the Bot tones and leaves the breakdown by model alone', async () => {
+  const card = createProfileCardBuiltins(zhTranslate).find((item) => item.id === 'token-usage')!;
+  const bot = (color: string): BotSummary => ({
+    slug: 'ada',
+    displayName: 'Ada',
+    roles: [],
+    aggregateState: 'idle',
+    workspaces: [],
+    createdAt: '2026-10-01T00:00:00Z',
+    primaryColor: { mode: 'custom', color },
+  });
+  const show = (summary: BotSummary) =>
+    act(async () =>
+      root.render(
+        card.render({ bot: summary, activity: undefined, t: zhTranslate, compact: true }),
+      ),
+    );
+  const tones = (): unknown =>
+    JSON.parse(host.querySelector('[data-usage-tones]')!.getAttribute('data-usage-tones')!);
+  await show(bot('#e2b04a'));
+  expect(tones()).toEqual(botChartTones('#e2b04a', LIGHT));
+  await show(bot('#1d1b22'));
+  expect(tones()).toEqual(botChartTones('#1d1b22', LIGHT));
+  document.body.setAttribute('data-ds-dark-theme', '');
+  await show(bot('#e2b04a'));
+  await show(bot('#1d1b22'));
+  expect(tones()).toEqual(botChartTones('#1d1b22', DARK));
+  document.body.removeAttribute('data-ds-dark-theme');
 });
