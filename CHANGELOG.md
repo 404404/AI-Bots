@@ -160,6 +160,12 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- A completed Assignment report no longer keeps the neutral marker on its Bot's avatar once the Orchestrator has handled it; the report stays listed in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
+- The status row above the composer no longer stays visible for an idle Bot just because a completed Assignment report is waiting in the Inbox; the report keeps its neutral marker on the avatar and in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
+- A Bot no longer stays stuck on "Thinking" after its turn has ended when DSH records more Session events afterwards, such as a `/compact` checkpoint ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
 - Bot-mode Web documents share selected Channel, roster and Activity SSE within each page, leaving ordinary API requests responsive when two pages use the same HTTP/1 Host. Late Activity consumers retain stale status and HTTP recovery during reconnect; purge baselines and independent consumer cleanup are preserved ([#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)).
 
 - Restored QQ group Channel mappings retain bounded retries while apps become ready after Host restart, so the first new mention reaches its mapped Channel as well as its Inbox ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
