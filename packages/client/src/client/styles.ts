@@ -2942,12 +2942,12 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-modal-footer > button { white-space: nowrap; }
 .bh-modal-footer-gap { flex: 1; }
 .bh-sidebar-modal { width: min(440px, calc(100vw - 32px)); }
-.bh-external-identity-modal, .bh-pairing-modal { max-height: calc(100dvh - 32px); }
+.bh-external-identity-modal, .bh-pairing-modal, .bh-management-modal { max-height: calc(100dvh - 32px); }
 /* @bh-pairing-aliases:start — native Modal portals sit outside .bh-root.
    DSH RC1 exports no radius token; 12px matches its measured Input wrapper. */
 .bh-pairing-modal, .bh-pairing-role-modal { --bh-pairing-radius-panel: 12px; }
 /* @bh-pairing-aliases:end */
-.bh-external-identity-content, .bh-pairing-content { min-height: 0; overflow-y: auto; }
+.bh-external-identity-content, .bh-pairing-content, .bh-management-content { min-height: 0; overflow-y: auto; }
 .bh-sidebar-modal.bh-pairing-modal { width: min(1060px, calc(100vw - 32px)); }
 .bh-sidebar-modal.bh-pairing-role-modal { width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); }
 .bh-pairing-toolbar-gap { flex: 1; }

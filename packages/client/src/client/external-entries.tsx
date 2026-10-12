@@ -173,7 +173,8 @@ function IdentitiesForBot({
         onClose={() => setPanel(undefined)}
         title={t('approvalIm.title')}
         closeLabel={t('common.close')}
-        className="bh-sidebar-modal bh-external-panel-modal"
+        className="bh-sidebar-modal bh-external-panel-modal bh-management-modal"
+        contentClassName="bh-management-content"
       >
         <ApprovalSettings
           key={`approval-${snapshot?.approvals?.routeRevision ?? 0}`}
