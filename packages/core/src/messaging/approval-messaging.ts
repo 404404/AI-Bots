@@ -274,7 +274,13 @@ export function createApprovalMessaging(options: {
     try {
       const context = resolve(value.route);
       if (context.provider.approvalRuleCardSupported !== true) return false;
-      if (kind === 'all-opaque' && context.provider.approvalRuleAllOpaqueCardSupported !== true)
+      if (
+        kind === 'all-opaque' &&
+        context.provider.approvalRuleAllOpaqueCardSupported?.(
+          context.identity.accountRef,
+          context.identity.fingerprint,
+        ) !== true
+      )
         return false;
       pairing.assert(
         value.botSlug,

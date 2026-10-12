@@ -222,7 +222,7 @@ export interface MessagingSetup {
 
 export interface MessagingProvider {
   approvalRuleCardSupported?: boolean;
-  approvalRuleAllOpaqueCardSupported?: boolean;
+  approvalRuleAllOpaqueCardSupported?(accountRef: string, fingerprint: string): boolean;
   setup?(): Promise<MessagingSetup | undefined>;
   id: string;
   react?(input: {

@@ -24,7 +24,12 @@ afterEach(async () => {
     core.operationalDatabase.close();
   }
 });
-async function fixture(ordinaryRole = false, saveRules = false, allOpaque = false) {
+async function fixture(
+  ordinaryRole = false,
+  saveRules = false,
+  allOpaque = false,
+  allOpaqueAccount = allOpaque,
+) {
   const core = createCore({ dshHome: createTempRoot('bh-lark-approval-') });
   cores.push(core);
   core.registry.create({ slug: 'ada', displayName: 'Ada' });
@@ -64,7 +69,7 @@ async function fixture(ordinaryRole = false, saveRules = false, allOpaque = fals
         'approval-card-update-checked',
         'approval-action-consumer',
         ...(saveRules ? ['approval-rule-card-checked'] : []),
-        ...(allOpaque ? ['approval-rule-all-opaque-card-checked'] : []),
+        ...(allOpaqueAccount ? ['approval-rule-all-opaque-card-checked'] : []),
       ],
     }),
     sendChecked: async () => ({ sent: true }),
@@ -392,6 +397,29 @@ it('a version-one rule Provider cannot offer or accept an all-opaque rule', asyn
   expect(f.core.toolRules.list('ada')).toEqual([]);
   await f.action(first.delivery.id, { action: 'rejected' });
   expect(await first.answer).toBe('rejected');
+});
+
+it('a version-two exact-only account retains ordinary and exact controls without offering broad authority', async () => {
+  const f = await fixture(true, true, true, false);
+  const first = await f.start();
+  await vi.waitFor(() => expect(f.cards).toHaveBeenCalled());
+  expect(f.cards.mock.calls[0]![2]).toMatchObject({ rules: ['exact'], status: 'pending' });
+  await expect(f.ruleAction(first.delivery.id, 'preview-all-opaque')).rejects.toMatchObject({
+    code: 'capability-unavailable',
+  });
+  await f.ruleAction(first.delivery.id, 'preview-exact');
+  await vi.waitFor(() =>
+    expect(
+      f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]?.ruleConfirmation?.presented,
+    ).toBe(true),
+  );
+  const confirmation =
+    f.core.externalMessaging.approvals.snapshot('ada').deliveries[0]!.ruleConfirmation!;
+  await f.ruleAction(first.delivery.id, 'cancel-rule', confirmation.id);
+  await vi.waitFor(() => expect(f.cards.mock.calls.at(-1)![2]).toMatchObject({ rules: ['exact'] }));
+  await f.action(first.delivery.id);
+  expect(await first.answer).toBe('allowed-once');
+  expect(f.core.toolRules.list('ada')).toEqual([]);
 });
 
 it.each(['exact', 'all-opaque'] as const)(

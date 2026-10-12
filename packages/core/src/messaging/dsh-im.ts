@@ -347,6 +347,24 @@ export function createDshImProvider(
   )
     return undefined;
   const host = service as DshImOutboundService;
+  const allOpaqueAccounts = new Map<string, string>();
+  const rememberRuleCapability = (
+    ref: string,
+    info: Awaited<ReturnType<DshImOutboundService['describeBot']>>,
+  ) => {
+    if (
+      platform === 'feishu' &&
+      info.version === 1 &&
+      info.botId === ref &&
+      info.channel === platform &&
+      host.approvalRuleCardVersion === 2 &&
+      info.connected &&
+      info.capabilities.includes('approval-rule-card-checked') &&
+      info.capabilities.includes('approval-rule-all-opaque-card-checked')
+    )
+      allOpaqueAccounts.set(ref, info.account.fingerprint);
+    else allOpaqueAccounts.delete(ref);
+  };
   const describe = async (ref: string) => {
     let info;
     try {
@@ -365,6 +383,7 @@ export function createDshImProvider(
       !/^[a-f0-9]{64}$/.test(info.account?.fingerprint ?? '')
     )
       throw new MessagingError('provider-incompatible');
+    rememberRuleCapability(ref, info);
     return {
       ref,
       platform: info.channel,
@@ -571,6 +590,7 @@ export function createDshImProvider(
           async approvalCard(input: Parameters<NonNullable<MessagingProvider['approvalCard']>>[0]) {
             input.signal.throwIfAborted();
             const info = await host.describeBot(input.accountRef);
+            rememberRuleCapability(input.accountRef, info);
             if (info.account.fingerprint !== input.fingerprint)
               throw new MessagingError('rebind-required');
             if (
@@ -624,7 +644,8 @@ export function createDshImProvider(
             }
           },
           approvalRuleCardSupported: [1, 2].includes(host.approvalRuleCardVersion ?? 0),
-          approvalRuleAllOpaqueCardSupported: host.approvalRuleCardVersion === 2,
+          approvalRuleAllOpaqueCardSupported: (ref: string, fingerprint: string) =>
+            host.approvalRuleCardVersion === 2 && allOpaqueAccounts.get(ref) === fingerprint,
         }
       : {}),
     ...(host.replyContextVersion === 1 &&
@@ -708,6 +729,7 @@ export function createDshImProvider(
       ? {
           async consume(input: Parameters<NonNullable<MessagingProvider['consume']>>[0]) {
             const info = await host.describeBot(input.accountRef);
+            rememberRuleCapability(input.accountRef, info);
             if (
               info.account.fingerprint !== input.fingerprint ||
               !info.capabilities.includes('exclusive-text-consumer') ||
