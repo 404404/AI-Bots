@@ -225,6 +225,8 @@
 
 ### Documentation
 
+- 中英文 README 精简为面向用户的结构：宣传片和像素头像放在前面，安装和 Bot 市场链接到官网，能力集中在一张表里（含 Slack、Discord、飞书 / Lark、QQ、微信以及电脑与浏览器操作），并新增一节对比 DeepSeekBot（简称 DSB）与另一个独立项目 DS Bot（npm `ds-bot`）（[#1516](https://github.com/BotHarness/DeepSeekBot/pull/1516)）。
+
 - 更新中英文 GitHub README，补齐已发布的 1.2.0 和 1.2.1 亮点、安装兼容说明与当前应用绑定入口，移除过时的未发布预告（[#1464](https://github.com/BotHarness/DeepSeekBot/issues/1464)）。
 
 - 公开安装入口使用经过验证的稳定版精确包版本，增加双语 README/教程同步检查和新版本冷却期恢复说明，不再暗示裸包名或 `@latest` 总会安装最新版本（[#1456](https://github.com/BotHarness/DeepSeekBot/issues/1456)）。
