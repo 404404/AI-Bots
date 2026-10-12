@@ -1031,8 +1031,16 @@ class BotRuntimeImplementation implements BotRuntime {
     });
 
     if (options.database.mode === 'ready') {
-      this.#recoverInterruptedAttempts();
+      const interruptedDms = this.#recoverInterruptedAttempts();
       this.#recoverPendingChannelAdmissions();
+      for (const row of interruptedDms) {
+        const admission = this.admitDmMessage({
+          channelId: row.channel_id,
+          messageId: row.message_id,
+          body: row.body,
+        });
+        if (admission.admitted) void admission.settled.catch(() => undefined);
+      }
       this.#recoverPendingDigests();
       this.#recoverPendingAssignmentReports();
     }
@@ -3837,7 +3845,21 @@ class BotRuntimeImplementation implements BotRuntime {
     );
   }
 
-  #recoverInterruptedAttempts(): void {
+  #recoverInterruptedAttempts(): Array<{ channel_id: string; message_id: string; body: string }> {
+    const interruptedDms = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT e.channel_id, e.message_id, e.body
+          FROM source_events e
+          JOIN inbox_admissions a ON a.source_event_id = e.source_event_id
+         WHERE e.source_kind = 'human-message' AND a.reason = 'human-dm'
+           AND e.attempt_state = 'running' AND a.attempt_state = 'running'
+           AND e.side_effect_started_at IS NULL AND a.side_effect_started_at IS NULL
+           AND e.channel_id IS NOT NULL AND e.message_id IS NOT NULL
+         ORDER BY e.created_at, e.message_id
+      `)
+        .all(),
+    ) as Array<{ channel_id: string; message_id: string; body: string }>;
     this.#database.transaction(
       (database) => {
         database
@@ -3952,6 +3974,7 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       ['source-event', 'bot-inbox'],
     );
+    return interruptedDms;
   }
 
   originalAttachmentRoot(

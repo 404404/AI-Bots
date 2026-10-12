@@ -166,7 +166,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
-- After a Human DM turn is cut off (for example by a Host restart), a Bot woken next from another Channel no longer posts that DM's answer there; the request stays in its DM, where it can be retried ([#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)).
+- After a Human DM turn is cut off (for example by a Host restart), a Bot woken next from another Channel no longer posts that DM's answer there; the request stays in its DM. A Human DM that a Host stop interrupted before the Bot did anything is now rerun automatically when the Host starts; a turn that failed on its own still waits for a manual retry ([#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)).
 
 - On a narrow or mobile window, the activity dots in a Channel list row now sit right before the message time instead of floating in the middle of the row ([#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)).
 
