@@ -420,6 +420,16 @@ Web 可撤销任一种规则，恢复能力不会复活旧规则。
 准确源码和原生序列证据见 [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)。
 这项资格验证不发布或升级 Provider 工件；群目的地仍由独立功能推进。
 
+## 工作失败通知（源码候选）
+
+在「Bot DM 侧栏 → Lark 审批通知」沿用已配对的管理私聊目的地，开启「工作失败通知」。默认关闭，保存时校验当前版本。「测试失败通知」明确标为测试，不假装有工作失败；刷新同一设置可核对最近投递状态或打开原始 Session。
+
+首个源码候选在 Runtime 将其拥有的 Session 失败提交到 Channel Store 后发送固定通知，包含执行角色、Session 标识及通知编号。错误正文、提示、工具参数和凭据保留在 Web。来源会话中的聊天不会选择通知目的地；收到通知不授予决策权限。
+
+发送需要当前合格私聊目的地、真实回复来源、回执与最终发送校验。关闭路由、撤销配对、替换 App、暂停 Bot 或屏蔽会话均阻止后续发送。确定未发送最多尝试三次；结果未知须在平台核对，不能重发。重启不重放等待或结果未知的通知，开启通知不会补发历史失败。
+
+本源码候选仍需独立真实 Lark 验收与 Human 反馈，不验证群目的地、其他 Provider 或 Host/VPS-down 监控。升级 Generation 83 前请备份 Profile。准确源码与可运行路径见 [#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)。
+
 ## 接收与回答反馈（候选）
 
 [#1040](https://github.com/BotHarness/BotHarness/issues/1040) 候选在**原始入站消息**上增加可选反馈：Source Event 与 Inbox Admission 持久提交后尝试原生 `GLANCE`；只有该来源的明确回复获外部 Provider 接受后才尝试 `DONE`。Human 已选择这两个官方类型，授权复测已确认私聊原消息实际显示两者。表情不表示 Human 已读。

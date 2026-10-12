@@ -9,6 +9,8 @@
 
 ### Breaking Changes
 
+- 工作失败通知设置与投递元数据新增 Profile Schema Generation 83。升级前请备份；回退需要兼容写入者或升级前备份（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)）。
+
 - Lark 保存的工具规则新增 Profile Schema Generation 82，记录外部创建人。升级前请备份；回退需要兼容写入者或升级前备份（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)）。
 
 - Group 行为权限项可以声明互斥。当前写入者拒绝不兼容的有效 Allow；回退不识别此声明的旧程序前，应停止策略编辑（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。
@@ -32,6 +34,8 @@
 - QQ 接收区间追加 Profile schema Generation 74，并复用既有接收边界字段；升级前备份，升级后应向前修复（[#1153](https://github.com/BotHarness/BotHarness/issues/1153)）。
 
 ### Added
+
+- 可选择开启的工作失败通知沿用 Bot 侧栏管理目的地，提供测试发送和投递状态查询，从已提交失败事实通知，不转发私密错误正文或授予决策权限。确定未发送重试有界，未知结果不重放（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)，[Lark 指南](docs/lark-connection.md#work-failure-alerts-source-candidate)）。
 
 - 获授权的 Lark 私聊审核人可另行确认精确或 all-opaque 工具规则，在 Web 查看同一范围与状态，并在当前创建人权限被撤销后停止后续自动批准。all-opaque 要求合格版本 2 Provider／账户及独立高风险确认。仅在 IM 使用的 Bot 无需先打开 Web 私聊即可收到审批卡片。外部规则不会自动批准必须在 Web 审核的原生会话授权；双语教程包含真实脱敏流程截图（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)，[Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)）。
 

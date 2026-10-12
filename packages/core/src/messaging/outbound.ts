@@ -1,5 +1,10 @@
 import type { ToolApprovalActor } from '../workspaces/tool-approval-actor.js';
 import {
+  createFailureAlerts,
+  type FailureAlerts,
+  type FailureAlertSnapshot,
+} from './failure-alerts.js';
+import {
   createApprovalMessaging,
   type ApprovalMessaging,
   type ApprovalMessagingSnapshot,
@@ -223,6 +228,7 @@ export interface MessagingSnapshot {
   receptionHistory?: ReceptionInterval[];
   feedback?: { sourceEventId: string; bindingId: string; attempts: SourceFeedback }[];
   approvals?: ApprovalMessagingSnapshot;
+  failureAlerts?: FailureAlertSnapshot;
   setup?: {
     providerReady: boolean;
     receipts: {
@@ -265,6 +271,7 @@ export interface OutboundMessaging {
     authority: import('../credentials/im-origin.js').PrivateReplyAuthority,
   ): () => void;
   approvals: ApprovalMessaging;
+  failureAlerts: FailureAlerts;
   beginProcessing(botSlug: string, sourceEventIds: readonly string[]): MessagingProcessing;
   pairing: BotPairing;
   senderAccess(botSlug: string, input: SenderAccessInput): void;
@@ -353,6 +360,7 @@ export function createOutboundMessaging(options: {
   database: OperationalDatabaseModulePort;
   attachments?: AttachmentStore;
   isBotActive(slug: string): boolean;
+  ownsFailure?(slug: string, sessionId: string, role: 'orchestrator' | 'assignment'): boolean;
   sourcePolicy?: BotSourcePolicyStore;
   onDefaultsChanged?: () => void;
   onReceptionChanged?: () => void;
@@ -649,6 +657,15 @@ export function createOutboundMessaging(options: {
     routeAvailable: (request) => inbound.pairingRouteAvailable(request),
     ...(options.warn ? { warn: options.warn } : {}),
   });
+  const failureAlerts = createFailureAlerts({
+    database,
+    approvals,
+    isBotActive: options.isBotActive,
+    ownsFailure: options.ownsFailure ?? (() => false),
+    ...(options.recover === undefined ? {} : { recover: options.recover }),
+    ...(options.now === undefined ? {} : { now: options.now }),
+    ...(options.warn === undefined ? {} : { warn: options.warn }),
+  });
   const inbound = createInboundMessaging({
     onApprovalAction: (providerId, event, signal) =>
       event.kind === 'pairing'
@@ -920,6 +937,7 @@ export function createOutboundMessaging(options: {
       };
     },
     approvals,
+    failureAlerts,
     beginProcessing: (botSlug, sourceEventIds) => typing.begin(botSlug, sourceEventIds),
     inbound,
     pairing,
@@ -1900,6 +1918,7 @@ export function createOutboundMessaging(options: {
         senderPolicy: database.read((db) => readSenderPolicy(db, botSlug)),
         pairings: pairing.list(botSlug),
         approvals: approvals.snapshot(botSlug),
+        failureAlerts: failureAlerts.snapshot(botSlug),
         pairingReceivers: identities
           .filter((i) => ['feishu', 'slack'].includes(i.platform) && !i.revokedAt)
           .map((i) => ({ name: i.name, status: i.reception ?? 'unavailable' })),
@@ -2593,6 +2612,7 @@ export function createOutboundMessaging(options: {
       } finally {
         closed = true;
         approvals.close();
+        failureAlerts.close();
         pairingCards.close();
         feedback.close();
         typing.close();

@@ -455,6 +455,16 @@ Exact source heads and native sequences are recorded in
 [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033). This qualification does not publish
 or upgrade the Provider artifact. Group destinations remain separate.
 
+## Work-failure alerts (source candidate)
+
+In **Bot DM sidebar → Lark approval notifications**, use the existing paired management DM destination and enable **Work-failure alerts**. The setting is off by default and revision-checked. **Test failure alerts** sends a clearly labelled test notice; it does not pretend that work failed. Refresh the same settings view to inspect recent delivery state or open the original Session.
+
+The first source candidate sends a fixed failure notice after the Runtime commits its owned Session failure to the Channel Store. It includes execution role, Session identity and a notification reference. Error details, prompts, tool arguments and credentials stay in Web. Speaking in a source conversation does not select the alert destination, and receiving this notice grants no decision permissions.
+
+A current qualified private destination, checked reply source, receipt and final-send fence are required. Route disable, pairing revoke, App replacement, Bot pause or conversation Block prevents later dispatch. A definite unsent failure can retry at most three times; an unknown outcome requires platform inspection and cannot be resent. Restart does not replay queued or ambiguous alerts. Enabling alerts does not backfill historical failures.
+
+This source candidate still requires its own real Lark QA and Human feedback. It does not qualify group destinations, other Providers or Host/VPS-down monitoring. Back up the Profile before Generation 83 upgrades. See [#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041) for exact-head evidence and the runnable review path.
+
 ## Receipt and answer feedback (candidate)
 
 The [#1040](https://github.com/BotHarness/BotHarness/issues/1040) candidate adds optional feedback on the **original incoming message**. After its Source Event and Inbox Admission are durably committed, BotHarness attempts native `GLANCE`. Only after that source's explicit reply is accepted by the external Provider does it attempt native `DONE`. The Human selected these two official types; both rendered on original DM messages in the authorized retest. Neither reaction proves that a Human read the message.

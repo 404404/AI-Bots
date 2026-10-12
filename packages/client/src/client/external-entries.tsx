@@ -188,6 +188,13 @@ function IdentitiesForBot({
           retry={(id) => operate(() => actions.approvalRetry(slug, id), 'approval')}
           refresh={() => operate(async () => undefined, 'approval')}
           openSession={actions.openSession}
+          failureAlerts={{
+            ...(snapshot?.failureAlerts ? { snapshot: snapshot.failureAlerts } : {}),
+            save: (enabled, revision) =>
+              operate(() => actions.failureAlertsSet(slug, enabled, revision), 'approval'),
+            test: () => operate(() => actions.failureAlertsTest(slug), 'approval'),
+            retry: (id) => operate(() => actions.failureAlertsRetry(slug, id), 'approval'),
+          }}
         />
       </Modal>
     </div>

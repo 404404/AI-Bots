@@ -3,6 +3,8 @@ import { Combobox } from './combobox.js';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { ApprovalMessagingSnapshot } from '../../../core/src/messaging/approval-messaging.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { FailureAlertSettings } from './failure-alert-settings.js';
+import type { FailureAlertSnapshot } from '../../../core/src/messaging/failure-alerts.js';
 
 export function ApprovalSettings({
   snapshot,
@@ -13,6 +15,7 @@ export function ApprovalSettings({
   retry,
   refresh,
   openSession,
+  failureAlerts,
   t,
 }: {
   snapshot?: ApprovalMessagingSnapshot;
@@ -23,6 +26,12 @@ export function ApprovalSettings({
   retry(id: string): Promise<void>;
   refresh(): Promise<void>;
   openSession(sessionId: string): void;
+  failureAlerts?: {
+    snapshot?: FailureAlertSnapshot;
+    save(enabled: boolean, revision: number): Promise<void>;
+    test(): Promise<void>;
+    retry(id: string): Promise<void>;
+  };
   t: BotHarnessTranslate;
 }): ReactElement {
   const [selected, setSelected] = useState(snapshot?.route?.pairingId ?? '');
@@ -80,6 +89,9 @@ export function ApprovalSettings({
           {t('approvalIm.test')}
         </Button>
       </div>
+      {failureAlerts ? (
+        <FailureAlertSettings {...failureAlerts} busy={busy} openSession={openSession} t={t} />
+      ) : null}
       <p className="bh-muted">{t('approvalIm.once')}</p>
       {snapshot?.deliveries.map((delivery) => (
         <article key={delivery.id} className="bh-im-pairing-request">
