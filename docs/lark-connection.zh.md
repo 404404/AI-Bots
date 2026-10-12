@@ -428,7 +428,7 @@ Web 可撤销任一种规则，恢复能力不会复活旧规则。
 
 发送需要当前合格私聊目的地、真实回复来源、回执与最终发送校验。关闭路由、撤销配对、替换 App、暂停 Bot 或屏蔽会话均阻止后续发送。确定未发送最多尝试三次；结果未知须在平台核对，不能重发。重启不重放等待或结果未知的通知，开启通知不会补发历史失败。
 
-本源码候选仍需独立真实 Lark 验收与 Human 反馈，不验证群目的地、其他 Provider 或 Host/VPS-down 监控。升级 Generation 83 前请备份 Profile。准确源码与可运行路径见 [#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)。
+本源码候选的首个 Lark 私聊交付片已通过真实平台验收与 Human 反馈，不验证群目的地、其他 Provider 或 Host/VPS-down 监控；这项验收也不表示已经发布。升级 Generation 83 前请备份 Profile。准确源码与可运行路径见 [#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)。
 
 ## 接收与回答反馈（候选）
 

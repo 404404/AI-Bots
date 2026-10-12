@@ -1,6 +1,6 @@
 # Work-failure alerts use committed facts and the existing management route
 
-Status: Candidate for #1041; the first qualified private-Lark tracer still requires real-platform QA and Human feedback.
+Status: Accepted for #1041 after the first qualified private-Lark tracer passed real-platform QA and Human feedback on 2026-10-12. Source delivery and release remain separate gates.
 
 An application-defined work-failure alert observes the Runtime-owned `sessionFailure` message after the existing Channel Store commits it. Session ownership must match the message author and execution role. Ordinary model text, tool error output and aggregate attention counts do not create alerts. The stable Bot/Channel/message identity deduplicates notification intent; the canonical failure remains in the Channel Store and native execution history remains in DSH Session Persistence.
 

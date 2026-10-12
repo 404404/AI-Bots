@@ -463,7 +463,7 @@ The first source candidate sends a fixed failure notice after the Runtime commit
 
 A current qualified private destination, checked reply source, receipt and final-send fence are required. Route disable, pairing revoke, App replacement, Bot pause or conversation Block prevents later dispatch. A definite unsent failure can retry at most three times; an unknown outcome requires platform inspection and cannot be resent. Restart does not replay queued or ambiguous alerts. Enabling alerts does not backfill historical failures.
 
-This source candidate still requires its own real Lark QA and Human feedback. It does not qualify group destinations, other Providers or Host/VPS-down monitoring. Back up the Profile before Generation 83 upgrades. See [#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041) for exact-head evidence and the runnable review path.
+The source candidate's first private-Lark slice passed real-platform QA and Human feedback. It does not qualify group destinations, other Providers or Host/VPS-down monitoring, and this verification does not imply a published release. Back up the Profile before Generation 83 upgrades. See [#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041) for exact-head evidence and the runnable review path.
 
 ## Receipt and answer feedback (candidate)
 
