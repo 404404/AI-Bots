@@ -5,8 +5,9 @@ import type { PairingRequest, PairingReviewInput } from '../messaging/pairing.js
 import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
-import { LiveRefused, type LiveFrame } from '../channels/live-frames.js';
+import { LiveRefused } from '../channels/live-frames.js';
 import type { ChannelJournalPage, ChannelJournalRequest } from '../channels/timeline.js';
+import type { CompanionLiveFrame } from '../companions/live.js';
 import {
   ChannelLiveRefused,
   LiveUnavailable,
@@ -172,7 +173,6 @@ function markRemoteMethods(prototype: object, methods: readonly string[]): void 
 }
 
 export interface BridgeLive {
-  frames(query: string, resume: string, signal: AbortSignal): AsyncIterable<LiveFrame>;
   followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;
   followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
   followChannel(
@@ -181,6 +181,11 @@ export interface BridgeLive {
     signal: AbortSignal,
   ): AsyncIterable<ChannelLiveFrame>;
   journalPage(channelId: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
+  followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncIterable<CompanionLiveFrame>;
 }
 
 function markRemoteStreams(prototype: object, streams: readonly string[]): void {
@@ -278,11 +283,15 @@ export class BotharnessBridgeService extends TypertRemoteService {
     }
   }
 
-  async *liveFrames(query: string, resume: string, signal: AbortSignal): AsyncGenerator<LiveFrame> {
+  async *followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncGenerator<CompanionLiveFrame> {
     if (this.live === undefined)
       throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
     try {
-      yield* this.live.frames(query, resume, signal);
+      yield* this.live.followCompanion(resume, lastEventId, signal);
     } catch (error) {
       if (error instanceof LiveRefused)
         throw toRemoteError({ code: error.code, message: error.message });
@@ -1510,10 +1519,10 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelJournalPage',
 ]);
 markRemoteStreams(BotharnessBridgeService.prototype, [
-  'liveFrames',
   'followRoster',
   'followActivity',
   'followChannel',
+  'followCompanion',
 ]);
 
 export function registerBridge(

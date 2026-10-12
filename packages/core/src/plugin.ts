@@ -1,4 +1,4 @@
-import { openLiveFrames } from './channels/live-frames.js';
+import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
@@ -1526,12 +1526,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
   });
   registerBridge(ctx, bridgeMethods, privateInputs, {
-    frames: (query, resume, signal) =>
-      openLiveFrames((request) => core.live.open(request), query, resume, signal),
     followRoster: (signal) => core.live.followRoster(signal),
     followActivity: (signal) => core.live.followActivity(signal),
     followChannel: (channelId, limit, signal) => core.live.followChannel(channelId, limit, signal),
     journalPage: (channelId, request) => core.channels.readHumanJournalPage(channelId, request),
+    followCompanion: (resume, lastEventId, signal) =>
+      followCompanion((request) => core.companions.open(request), resume, lastEventId, signal),
   });
 
   ctx.inject(['skills'], (skillsCtx) => {

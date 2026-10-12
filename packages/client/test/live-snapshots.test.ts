@@ -1,7 +1,9 @@
 import { expect, it, vi } from 'vitest';
 import {
   CHANNEL_REMOTE_DESCRIPTOR,
+  COMPANION_REMOTE_DESCRIPTOR,
   createChannelFollow,
+  createCompanionSource,
   createTypedLive,
   SNAPSHOT_REMOTE_DESCRIPTORS,
 } from '../src/client/live-snapshots.js';
@@ -258,4 +260,60 @@ it('follows a Channel through the official journal stream: replace, append, gap 
   } finally {
     journal.stop();
   }
+});
+
+it('presents the typed Companion stream as the source the Companion owner consumes', async () => {
+  expect(COMPANION_REMOTE_DESCRIPTOR.parameters.map((parameter) => parameter.wire)).toEqual([
+    'resume',
+    'lastEventId',
+  ]);
+  const feed = channel<unknown>();
+  const opens: [string, string][] = [];
+  let carrierFailed: (() => void) | undefined;
+  const remote = {
+    $stream: (options: {
+      open: (signal: AbortSignal) => AsyncIterable<unknown>;
+      carrierFailed?: () => void;
+    }) => {
+      const lifetime = new AbortController();
+      carrierFailed = options.carrierFailed;
+      return {
+        restart: () => undefined,
+        dispose: async () => lifetime.abort(),
+        async *[Symbol.asyncIterator]() {
+          for await (const value of options.open(lifetime.signal))
+            yield { generation: 1, value, signal: lifetime.signal, accept: () => undefined };
+        },
+      };
+    },
+  };
+  const source = createCompanionSource(remote as never, () => ({
+    followCompanion: (resume, lastEventId, signal) => {
+      opens.push([resume, lastEventId]);
+      return feed.items(signal) as never;
+    },
+  }))('/api/botharness/companion?subscribe=1&resume=r1');
+  const seen: unknown[] = [];
+  source.addEventListener('companion/baseline', (event) =>
+    seen.push(['baseline', (event as MessageEvent).data]),
+  );
+  source.addEventListener('companion/message', (event) =>
+    seen.push(['message', (event as MessageEvent).data]),
+  );
+  source.addEventListener('error', () => seen.push(['error', source.readyState]));
+  await settle();
+  expect(source.readyState).toBe(0);
+  expect(opens).toEqual([['r1', '']]);
+  feed.push({ type: 'baseline', value: { consumerId: 'c1' }, id: 'c1' });
+  feed.push({ type: 'message', value: { botId: 'ada' }, id: 'c1' });
+  await settle();
+  expect(source.readyState).toBe(1);
+  expect(seen).toEqual([
+    ['baseline', { consumerId: 'c1' }],
+    ['message', { botId: 'ada' }],
+  ]);
+  carrierFailed!();
+  expect(seen.at(-1)).toEqual(['error', 0]);
+  source.close();
+  expect(source.readyState).toBe(2);
 });

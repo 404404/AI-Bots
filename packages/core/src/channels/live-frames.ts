@@ -48,12 +48,13 @@ export async function* openLiveFrames(
   query: string,
   resume: string,
   signal: AbortSignal,
+  path: string = CHANNEL_STREAM_PATH,
 ): AsyncGenerator<LiveFrame> {
   if (typeof query !== 'string' || typeof resume !== 'string' || query.length > QUERY_LIMIT)
     throw new LiveRefused('invalid', 'Invalid live stream request');
   if (signal.aborted) return;
   const response = open(
-    new Request(`http://localhost${CHANNEL_STREAM_PATH}?${query}`, {
+    new Request(`http://localhost${path}?${query}`, {
       headers: resume.length > 0 ? { 'Last-Event-ID': resume } : {},
     }),
   );

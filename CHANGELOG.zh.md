@@ -156,6 +156,8 @@
 
 ### Fixed
 
+- 同一 DSH 地址下打开更多 DeepSeekBot 标签页（直至浏览器对 DSH 自身连接的上限）也能保持响应：Window Companion 订阅同样改走 DSH 的共用实时连接（[#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)）。
+
 - 同一 DSH 地址下的两个 DeepSeekBot 浏览器标签页现在都能加载并保持响应：Channel、通讯录与 Activity 更新改走 DSH 的共用实时连接，不再各占一条浏览器连接。第三个标签页仍可能让全部页面停止响应，需待 Window Companion 流一并迁移（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
 
 - Bot mode Web 在每个页面内共用选中 Channel、Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。

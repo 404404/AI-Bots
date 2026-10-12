@@ -512,10 +512,10 @@ describe('plugin entry', () => {
       'scheduleRunNow',
       'schedulePreview',
       'channelJournalPage',
-      'liveFrames',
       'followRoster',
       'followActivity',
       'followChannel',
+      'followCompanion',
     ]);
   });
 

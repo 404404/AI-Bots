@@ -67,20 +67,19 @@ import {
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
 import { installChannelFollow, mountChannelLive, mountRosterLive } from './channel-live.js';
-import { installLiveSource, installTypedLive } from './messaging-defaults-live.js';
+import { installTypedLive } from './messaging-defaults-live.js';
 import {
   CHANNEL_REMOTE_DESCRIPTOR,
+  COMPANION_REMOTE_DESCRIPTOR,
   createChannelFollow,
+  createCompanionSource,
+  type CompanionNamespace,
+  type CompanionSource,
   createTypedLive,
   SNAPSHOT_REMOTE_DESCRIPTORS,
   type ChannelNamespace,
   type SnapshotNamespace,
 } from './live-snapshots.js';
-import {
-  createRemoteLiveSource,
-  LIVE_REMOTE_CONTRIBUTION,
-  type LiveRemote,
-} from './live-remote.js';
 import { sessionBotReference } from './mentions.js';
 import { en, LOCALE_NS, zh } from './locale.js';
 import { registerModeShadow } from './mode.js';
@@ -166,6 +165,7 @@ export function apply(ctx: ClientContext): void {
   });
   const setupRpc = connectionRpc(ctx);
   if (setupRpc) actions.appSetup = new ProviderAppSetup(setupRpc);
+  let companionSource: ((url: string) => CompanionSource) | undefined;
   const companion = new WindowCompanions({
     storage,
     exists: (botId) => botExists(call, botId),
@@ -183,7 +183,7 @@ export function apply(ctx: ClientContext): void {
         throw new Error('Invalid Companion context');
       return { profileId: value.profileId };
     },
-    source: (url) => new EventSource(url),
+    source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
       const response = await fetch('/api/botharness/companion', {
         method: 'POST',
@@ -359,22 +359,18 @@ export function apply(ctx: ClientContext): void {
     const native = ctx.remote as Partial<Pick<typeof ctx.remote, '$mount' | '$stream'>>;
     if (typeof native.$mount !== 'function' || typeof native.$stream !== 'function')
       return () => {};
-    const namespace = (): Partial<SnapshotNamespace> & {
-      liveFrames?: LiveRemote['liveFrames'];
-    } => {
-      const mounted = ctx.get('remote.botharness') as
-        | (Partial<SnapshotNamespace> & { liveFrames?: LiveRemote['liveFrames'] })
-        | undefined;
+    const namespace = (): Partial<SnapshotNamespace> => {
+      const mounted = ctx.get('remote.botharness') as Partial<SnapshotNamespace> | undefined;
       if (mounted === undefined) throw new Error('botharness live Remote is not mounted');
       return mounted;
     };
     void ctx.remote
       .$mount({
-        package: LIVE_REMOTE_CONTRIBUTION.package,
+        package: '@botharness/core',
         descriptors: [
-          ...LIVE_REMOTE_CONTRIBUTION.descriptors,
           ...SNAPSHOT_REMOTE_DESCRIPTORS,
           CHANNEL_REMOTE_DESCRIPTOR,
+          COMPANION_REMOTE_DESCRIPTOR,
         ],
       })
       .then(
@@ -386,16 +382,6 @@ export function apply(ctx: ClientContext): void {
               if (mounted.followRoster === undefined || mounted.followActivity === undefined)
                 throw new Error('botharness live Remote is not mounted');
               return mounted as SnapshotNamespace;
-            }),
-          );
-          const uninstallSource = installLiveSource(
-            createRemoteLiveSource({
-              $stream: (options) => (ctx.remote as unknown as LiveRemote).$stream(options),
-              liveFrames: (query, resume, signal) => {
-                const open = namespace().liveFrames;
-                if (open === undefined) throw new Error('botharness live Remote is not mounted');
-                return open(query, resume, signal);
-              },
             }),
           );
           const uninstallFollow = installChannelFollow(
@@ -410,9 +396,17 @@ export function apply(ctx: ClientContext): void {
               (channelId, request, signal) => loadJournalPage(call, channelId, request, signal),
             ),
           );
+          companionSource = createCompanionSource(ctx.remote, () => {
+            const mounted = namespace() as Partial<CompanionNamespace>;
+            if (mounted.followCompanion === undefined)
+              throw new Error('botharness live Remote is not mounted');
+            return mounted as CompanionNamespace;
+          });
+          companion.reconnect();
           uninstall = () => {
+            companionSource = undefined;
+            companion.reconnect();
             uninstallFollow();
-            uninstallSource();
             uninstallTyped();
           };
         },

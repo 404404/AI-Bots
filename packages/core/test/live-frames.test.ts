@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { LiveRefused, openLiveFrames, parseLiveFrame } from '../src/channels/live-frames.js';
 import { createChannelLiveHub, type ChannelLiveHub } from '../src/channels/live.js';
 import { createChannelStore } from '../src/channels/store.js';
+import { followCompanion } from '../src/companions/live.js';
 
 const roots: string[] = [];
 const hubs: ChannelLiveHub[] = [];
@@ -201,5 +202,58 @@ describe('live frames on the native stream carrier', () => {
     await expect(refused('missing', 50)).rejects.toMatchObject({ code: 'not-found' });
     await expect(refused(group.id, 0)).rejects.toMatchObject({ code: 'invalid' });
     await expect(refused(group.id, 9999)).rejects.toMatchObject({ code: 'invalid' });
+  });
+
+  it('follows the Companion feed as typed frames, passing resume identity and refusals through', async () => {
+    const requests: Request[] = [];
+    let cancelled = false;
+    const open = (request: Request): Response => {
+      requests.push(request);
+      if (new URL(request.url).searchParams.get('resume') === 'gone')
+        return new Response('Subscription unavailable', { status: 404 });
+      const encoder = new TextEncoder();
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(
+              encoder.encode(
+                'event: companion/baseline\ndata: {"consumerId":"c1","bots":[]}\nid: c1\n\n' +
+                  ': heartbeat\n\nevent: companion/message\ndata: {"botId":"ada"}\nid: c1\n\n',
+              ),
+            );
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+      );
+    };
+    const abort = new AbortController();
+    const frames = followCompanion(open, 'r1', 'last', abort.signal);
+    expect((await frames.next()).value).toEqual({
+      type: 'baseline',
+      value: { consumerId: 'c1', bots: [] },
+      id: 'c1',
+    });
+    expect((await frames.next()).value).toEqual({
+      type: 'message',
+      value: { botId: 'ada' },
+      id: 'c1',
+    });
+    const url = new URL(requests[0]!.url);
+    expect(url.pathname).toBe('/api/botharness/companion');
+    expect(url.search).toBe('?subscribe=1&resume=r1');
+    expect(requests[0]!.headers.get('Last-Event-ID')).toBe('last');
+    const pending = frames.next();
+    abort.abort();
+    expect((await pending).done).toBe(true);
+    expect(cancelled).toBe(true);
+
+    await expect(
+      followCompanion(open, 'gone', '', new AbortController().signal).next(),
+    ).rejects.toMatchObject({ name: 'LiveRefused', code: 'not-found' });
+    await expect(
+      followCompanion(open, 'x'.repeat(200), '', new AbortController().signal).next(),
+    ).rejects.toMatchObject({ code: 'invalid' });
   });
 });

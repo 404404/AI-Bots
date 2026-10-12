@@ -20,7 +20,6 @@ export interface TypedLive {
 let typed: TypedLive | undefined;
 let stopRoster: (() => void) | undefined;
 let stopActivity: (() => void) | undefined;
-let makeLiveSource: ((url: string) => LiveSource) | undefined;
 let source: LiveSource | undefined;
 let sourceUrl: string | undefined;
 let activityBaseline: string | undefined;
@@ -144,14 +143,14 @@ function ensureSource(): void {
       return;
     }
   }
-  if (makeLiveSource === undefined && typeof EventSource === 'undefined') return;
+  if (typeof EventSource === 'undefined') return;
   const shared = typed === undefined ? '&roster=1&activity=1' : '';
   const url =
     channelConsumer?.channelUrl === undefined
       ? '/api/botharness/stream?scope=roster&activity=1'
       : channelConsumer.channelUrl + shared;
   if (source && sourceUrl === url) return;
-  const next: LiveSource = makeLiveSource?.(url) ?? new EventSource(url);
+  const next: LiveSource = new EventSource(url);
   source?.close();
   source = undefined;
   sourceUrl = undefined;
@@ -225,22 +224,6 @@ export function installTypedLive(next: TypedLive): () => void {
   swap(next);
   return () => {
     if (typed === next) swap(undefined);
-  };
-}
-
-export function installLiveSource(make: (url: string) => LiveSource): () => void {
-  const swap = (value: ((url: string) => LiveSource) | undefined): void => {
-    makeLiveSource = value;
-    if (source === undefined) return;
-    const interrupted = source;
-    sourceUrl = undefined;
-    ensureSource();
-    if (source === interrupted) return;
-    for (const consumer of [...consumers]) consumer.publish('error', undefined, 0);
-  };
-  swap(make);
-  return () => {
-    if (makeLiveSource === make) swap(undefined);
   };
 }
 
