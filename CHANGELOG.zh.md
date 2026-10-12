@@ -33,6 +33,8 @@
 
 ### Added
 
+- 「记忆演化」的提交 diff 和未提交差异在每个文件行新增「打开当前文件」：打开这个路径现在的文件，使用同一个默认应用和下拉菜单，不会打开所选提交里的版本。文件不存在时明确提示而不重建，只有该行本身是删除时才附带删除说明（[#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462)、[指南](docs/file-open.md)）。
+
 - 当前 Memory 文件阅读器、聊天普通文件卡，以及 Memory Repository 和已授权 Workspace 文件夹所在行新增「打开」分体按钮：点一下就用默认应用在 Host 上打开，箭头里列出检测到的其他应用供单次选择。可以按文件类型或为文件夹设置默认应用，也可以恢复系统默认；设置只保存在当前浏览器、对应当前 Host Profile，不修改操作系统的文件关联。没有默认或默认应用不可用时会请你选择，不会直接使用列表里的第一个应用（[#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461)、[指南](docs/file-open.md)、[ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)）。
 
 - 可选 checked QQ Provider 新增有界的传输、Gateway、原生回调与发送回执元数据，用于排查自身 Echo 缺失，不记录正文、凭据或原始标识；经过审查的 SDK 1.0.4 构建补丁在 decode／JSON 前观测，并提供包含尾部限流的首尾计数，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)、[传输候选 #26](https://github.com/DoodleBears/dsh-im/pull/26)）。
@@ -157,6 +159,12 @@
 - 自己的消息头与气泡方向镜像：名字贴右边缘，时间在名字左侧，与左侧 Bot 的顺序对应（[#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298)）。
 
 ### Fixed
+
+- 主会话处理完已完成的任务汇报后，Bot 头像上的中性标记会自动消失；汇报本身仍列在收件箱里（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- Bot 空闲时，输入框上方的状态行不再因为收件箱里还有一条已完成的任务汇报而一直显示；这条汇报仍在头像和收件箱里以中性标记提示（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- 回合结束后 DSH 又补写 Session 事件（例如 `/compact` 的检查点）时，Bot 不再一直显示「正在思考」（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
 
 - Bot mode Web 在每个页面内共用选中 Channel、Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
 

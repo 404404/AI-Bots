@@ -33,6 +33,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- Memory Evolution commit diffs and uncommitted diffs have **Open current file** on every file row: it opens the file at that path as it is now, with the same default application and dropdown, never the version in the selected commit. A missing file is reported instead of rebuilt, with a deletion note only when that row is itself a deletion ([#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462), [guide](docs/file-open.md)).
+
 - The current Memory file reader, ordinary chat file cards, and the Memory Repository and authorized Workspace folder rows have an **Open** split button: one click opens on the Host in your default application, and the arrow lists other detected applications for a one-time choice. You can set a default per file type or for folders and restore the system default; the setting stays in this browser for this Host profile and never changes the operating system's file associations. A missing or unavailable default asks you to choose instead of using the first application ([#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461), [guide](docs/file-open.md), [ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)).
 
 - The optional checked QQ Provider adds bounded transport, Gateway, native callback and receipt metadata to diagnose missing own Echo without logging bodies, credentials or raw identifiers; a reviewed SDK 1.0.4 build patch observes before decode/JSON and exposes start/end counters, including tail suppression, while author qualification, reply authority and Echo capabilities remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156), [Provider candidate #25](https://github.com/DoodleBears/dsh-im/pull/25), [transport candidate #26](https://github.com/DoodleBears/dsh-im/pull/26)).
@@ -157,6 +159,12 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - Your own message headers now mirror the bubble side: the name hugs the right edge with the timestamp to its left, matching the left-side Bot order ([#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298)).
 
 ### Fixed
+
+- A completed Assignment report no longer keeps the neutral marker on its Bot's avatar once the Orchestrator has handled it; the report stays listed in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
+- The status row above the composer no longer stays visible for an idle Bot just because a completed Assignment report is waiting in the Inbox; the report keeps its neutral marker on the avatar and in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
+- A Bot no longer stays stuck on "Thinking" after its turn has ended when DSH records more Session events afterwards, such as a `/compact` checkpoint ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
 
 - Bot-mode Web documents share selected Channel, roster and Activity SSE within each page, leaving ordinary API requests responsive when two pages use the same HTTP/1 Host. Late Activity consumers retain stale status and HTTP recovery during reconnect; purge baselines and independent consumer cleanup are preserved ([#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)).
 
