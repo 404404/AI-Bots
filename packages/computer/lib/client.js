@@ -2987,6 +2987,8 @@ window.__ModuleLoader__.load({
 				if (typeof document === "undefined") return () => {};
 				const style = document.createElement("style");
 				style.setAttribute("data-botharness-computer", "client");
+				style.dataset.plugin = "@botharness/computer";
+				style.dataset.pluginCss = "@botharness/computer/client.css";
 				style.textContent = ACCESS_STYLE;
 				document.head.appendChild(style);
 				return () => {

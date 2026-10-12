@@ -173,6 +173,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
+
 - Any number of DeepSeekBot tabs on the same DSH address, up to the browser's limit for DSH's own connection, now stay responsive: the Window Companion feed also travels on DSH's shared live connection ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)).
 
 - Two browser tabs of DeepSeekBot on the same DSH address now both load and keep responding: Channel, roster and Activity updates travel on DSH's shared live connection instead of holding a browser connection each. A third tab can still stall all of them until the Window Companion stream moves as well ([#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)).
