@@ -209,8 +209,10 @@ export function ChannelSidebarSettings({
   onEdit,
   editing = false,
   onPreview,
+  onOpenSettings,
 }: {
   onPreview?: ((entryId: string | undefined) => void) | undefined;
+  onOpenSettings?: (() => void) | undefined;
   onEdit?: () => void;
   editing?: boolean;
   entries: readonly ChannelSidebarEntry[];
@@ -270,6 +272,16 @@ export function ChannelSidebarSettings({
         }
         onClose={close}
       >
+        {onOpenSettings === undefined ? null : (
+          <MenuItemButton
+            onSelect={() => {
+              close();
+              onOpenSettings();
+            }}
+          >
+            {entryProps.t('channelSettings.open')}
+          </MenuItemButton>
+        )}
         {onEdit === undefined ? null : (
           <MenuItemButton
             onSelect={() => {
@@ -294,7 +306,10 @@ export function ChannelSidebarSettings({
         {dmBotSlug === undefined ? null : (
           <DmTimelineSettings botSlug={dmBotSlug} t={entryProps.t} />
         )}
-        {settings.length === 0 && onEdit === undefined && dmBotSlug === undefined ? (
+        {settings.length === 0 &&
+        onEdit === undefined &&
+        onOpenSettings === undefined &&
+        dmBotSlug === undefined ? (
           <MenuItemButton disabled onSelect={close}>
             {entryProps.t('sidebar.settings.empty')}
           </MenuItemButton>
