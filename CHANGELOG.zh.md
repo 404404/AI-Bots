@@ -170,6 +170,8 @@
 
 - QQ 语音附件与消息附件共用音频卡片，支持键盘播放与进度调整；下载仍保存原始语音文件，播放转换仍需明确操作（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
 
+- 维护版 QQ Provider 保留原生提及的名称和 ID，让 Channel 消息复用现有外部提及块，并在悬停详情显示原生 ID；原始正文和 App 归属保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+
 - 私聊回合被打断（例如 Host 重启）后，Bot 下一次从别的 Channel 被唤醒时，不再把那条私聊的回答发到当前 Channel；该请求留在原私聊里。被 Host 停止打断、且 Bot 还没做任何操作的私聊，现在会在 Host 启动时自动重跑；回合自身失败的仍需手动重试（[#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)）。
 
 - 在窄窗口或移动端，Channel 列表行里的活动点阵现在紧贴在消息时间左侧，不再浮在行中间（[#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)）。
