@@ -38,6 +38,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- DM and Group composers retain device-local drafts across Channel switches and browser reloads, validate restored references, and expose concurrent-tab conflicts and storage failures; unuploaded file bytes are not retained ([#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
+
 - A PersonaBot's DM now shows what it did elsewhere: each post in a Group or Bot DM leaves a short linked line with an excerpt, consecutive posts in one Channel collapse into one line, and Memory updates made in a Group also appear in the DM with their place. The DM's top-right settings menu hides each kind for that Bot; nothing unread or waking is added ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517), [ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)).
 
 - Opt-in work-failure alerts reuse the Bot sidebar management destination, use an RBAC-style wide two-column settings/history dialog with searchable, sortable records, test send and delivery inspection, and notify from committed failure facts without forwarding private error text or granting decision authority. Known-unsent retries are bounded; unknown sends are not replayed ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041), [Lark guide](docs/lark-connection.md#work-failure-alerts-source-candidate)).
@@ -176,6 +178,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ voice attachments use the same audio card as message attachments, with keyboard playback and seeking; download still saves the original voice file, while playback conversion remains explicit ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - The maintained QQ Provider retains native mention names and IDs so Channel messages use the existing external mention chips, with the native ID in hover details; original source text and App ownership remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
+- DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
 
 - Any number of DeepSeekBot tabs on the same DSH address, up to the browser's limit for DSH's own connection, now stay responsive: the Window Companion feed also travels on DSH's shared live connection ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)).
 

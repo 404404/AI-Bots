@@ -40,6 +40,7 @@ import type {
 } from '../../../core/src/marketplace/client.js';
 import type { AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
 import { loadAllBotPreview } from './bridge.js';
+import { loadComposerIdentity, validateComposerDraft } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 
 import type {
@@ -301,6 +302,11 @@ export interface HostDirectoryListing {
 }
 
 export interface BridgeActions {
+  validateComposerDraft(
+    channelId: string,
+    attachments: ChannelAttachmentRef[],
+    replyTo?: string,
+  ): Promise<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }>;
   onboarding(slug?: string, action?: TutorialAction): Promise<OnboardingSnapshot>;
   onboardingModel(
     slug: string | undefined,
@@ -790,6 +796,7 @@ export function createActions(
   },
   navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
+  clientStore.setComposerIdentity(undefined);
   let activityTab = readActivityCenterTab(navigationStorage) ?? 'overview';
   const rememberActivityTab = (view: ActivityCenterTab): void => {
     activityTab = view;
@@ -860,12 +867,16 @@ export function createActions(
   };
 
   const refreshRoster = async (signal?: AbortSignal): Promise<void> => {
-    const [rosterResult, channelResult, botResult] = await Promise.allSettled([
+    const [rosterResult, channelResult, botResult, identityResult] = await Promise.allSettled([
       loadRoster(call, signal),
       loadChannels(call, signal),
       loadBots(call, signal),
+      loadComposerIdentity(call, signal),
     ]);
     if (signal?.aborted === true) return;
+    clientStore.setComposerIdentity(
+      identityResult.status === 'fulfilled' ? identityResult.value : undefined,
+    );
     if (botResult.status === 'fulfilled')
       clientStore.setRoster(botResult.value, clientStore.getSnapshot().channels);
     if (channelResult.status === 'fulfilled') {
@@ -2211,6 +2222,8 @@ export function createActions(
       await loadSessionsFor(slug, selection);
     },
     allBotPreview: (channelId) => loadAllBotPreview(call, channelId),
+    validateComposerDraft: (channelId, attachments, replyTo) =>
+      validateComposerDraft(call, channelId, attachments, replyTo),
     async send(
       body,
       replyTo,

@@ -799,6 +799,12 @@ Messaging 的 bindings／grants 事务提交，以及进程内 Consumer lease �
 
 [ADR-0113](../adr/0113-shared-external-traffic-uses-member-channel-harvest.md) 将明确收件并首次放入 Group Channel 的普通外部来源，在同一 canonical 事务中按当前活跃成员各自的频道覆盖／Bot 默认策略建立 Admission。重投不会补发给后来加入的成员或重写策略快照；直接外部 @ 仍只走接收身份的既有提及路径。每成员使用既有 Channel count/time digest、有界最旧优先 harvest、安全 turn 排队和恢复；已放入 Group 的普通来源不再走身份专属外部 digest。接收 Bot 明确设置的话题 wake 覆盖保持独立分区，不影响其他成员。来源文本保留发送者、平台、外部消息 ID 和 Source Event；共享收件不授权借用身份。群频道侧栏的唤醒策略项按成员卡片读取 Host 的实际有效策略与继承来源，编辑沿用既有审计 owner；频道连接器仍只控制收件。无远端离线回填、新队列或共享 Inbox 存储。
 
+## Client-local composer recovery（#1459）
+
+DM 与 Group 的未发送撰写上下文由 application-defined Client recovery owner 保存于浏览器 localStorage（ADR-0184；原设计编号 0160 已被其他决策占用），不进入 Source Event、Session Persistence、Bot Memory 或 telemetry。Host/Profile 通过 Host bridge 返回持久 opaque identity，组合可信 Human 与 canonical Channel ID 隔离草稿；身份未就绪或切换时不展示旧范围输入。正文、明确 mentions／Channel references、reply ID 和已上传附件引用逐次保存，不依赖卸载事件，也不保存 File 字节。
+
+恢复先经现有 Typert／API Gateway seam 校验当前 Human 可见回复及 Attachment owner 引用，再结合当前 roster 校验目标；失效引用保留正文并提示，未完成上传不能伪装 ready，`@all` 需重新选择。不可变版本及因果时钟保留并发标签页的双方输入，显式选择后重新校验；空闲视图同步，正在编辑的内容不被静默覆盖。存储损坏／配额／不可用明确提示，保留有效旧记录与内存输入。此切片不提供跨设备同步、发送快照或方向键历史；后两者仍由 #1460 单独实现并验收。
+
 ## Human 群聊全部 Bot 提及（#542）
 
 群聊组合器的 `@所有 Bot` 是临时的 Human 输入意图，预览显示当前群内已加入且未暂停的接收 Bot 人数；DM 不提供该选项，粘贴文本不携带选择权威。现有 Channel Store 使用 Registry 与成员事实生成包含名单及显示名的预览 revision。提交前及实际提交边界校验同一预览，名单改变（即使人数相同）或人数为零时返回更新后的可信预览，经既有 Typert 错误 details 显示新人数、保留草稿，并等待 Human 再次发送。

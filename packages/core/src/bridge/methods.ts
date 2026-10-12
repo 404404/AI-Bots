@@ -125,6 +125,8 @@ import {
 import { ChannelMentionTargetError, ChannelReplyTargetError } from '../channels/store.js';
 import { ChannelAttachmentError } from '../attachments/store.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
+import type { ChannelAttachmentRef } from '../attachments/ref.js';
+import type { ComposerRecoveryIdentity } from './composer-recovery.js';
 import type { ChannelReadPosition, ChannelStore, ChannelSendStatus } from '../channels/store.js';
 import { groupProfileActivity, type GroupProfileActivity } from '../channels/profile-activity.js';
 import { channelActivityToday, type ChannelActivityToday } from '../channels/activity-today.js';
@@ -479,6 +481,10 @@ export interface BridgeMethods {
   pause(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   resume(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   humanIdentity(payload: unknown): BridgeResult<LocalHumanIdentity>;
+  composerIdentity(payload: unknown): BridgeResult<ComposerRecoveryIdentity>;
+  composerValidate(
+    payload: unknown,
+  ): BridgeResult<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }>;
   humanNameSet(payload: unknown): BridgeResult<LocalHumanIdentity>;
   channelHumanNameSet(payload: unknown): BridgeResult<{ channel: ChannelListItem }>;
   channels(payload: unknown): BridgeResult<{ channels: ChannelListItem[] }>;
@@ -628,6 +634,7 @@ export interface BridgeMethods {
 }
 
 export interface BridgeMethodsDeps {
+  composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
   deletions?: PersonaBotDeletions;
@@ -2585,6 +2592,63 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     },
     humanIdentity() {
       return { ok: true, value: deps.channels.humanIdentity() };
+    },
+    composerIdentity() {
+      try {
+        if (deps.composerIdentity === undefined) throw new Error();
+        return { ok: true, value: deps.composerIdentity() };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'storage-unavailable', message: 'Composer recovery identity unavailable' },
+        };
+      }
+    },
+    composerValidate(payload) {
+      const input = z
+        .object({
+          channelId: z.string(),
+          replyTo: z.string().optional(),
+          attachments: z.array(z.unknown()).max(10),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success || !input.data.attachments.every(isChannelAttachmentRef))
+        return invalidInput('invalid composer references');
+      const channel = deps.channels.get(input.data.channelId);
+      if (
+        channel === undefined ||
+        (channel.type === 'dm'
+          ? channel.botSlug === undefined
+          : !deps.channels
+              .listHumanMembers(channel.id)
+              .some((member) => member.humanId === deps.channels.humanIdentity().humanId))
+      )
+        return invalidInput('Channel is unavailable');
+      const reply =
+        input.data.replyTo === undefined
+          ? undefined
+          : deps.channels
+              .readHumanTimeline(channel.id, {
+                direction: 'around',
+                around: input.data.replyTo,
+                olderLimit: 0,
+                newerLimit: 0,
+              })
+              ?.entries.find((message) => message.id === input.data.replyTo);
+      const attachments = input.data.attachments.map((ref) => {
+        try {
+          return deps.attachments?.current(ref) ?? null;
+        } catch (error) {
+          if (
+            error instanceof ChannelAttachmentError &&
+            ['not-found', 'invalid-ref'].includes(error.code)
+          )
+            return null;
+          throw error;
+        }
+      });
+      return { ok: true, value: { ...(reply === undefined ? {} : { reply }), attachments } };
     },
     humanNameSet(payload) {
       const input = z

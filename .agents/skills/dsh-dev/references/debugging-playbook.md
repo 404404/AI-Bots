@@ -237,6 +237,21 @@ approval, or prove cold recovery/capacity release. Preserve native pending-resul
 explanatory fields; do not mistake an extra field or harmless answer punctuation
 for a runtime failure. Keep earlier probe and Client startup failures separately.
 
+## Multi-tab HTTP/1.1 pressure can mimic identity or data-loading failures
+
+In the local #1459 RC2 probe, one Bot DM page was usable, while opening a same-origin
+peer paused recovery identity and left models/messages/metadata loading. Read-only
+browser RPCs timed out at five seconds, but an independent authenticated request
+returned `200` in 43 ms. A temporary request/response observer measured six simultaneous
+HTTP/1.1 long-lived responses: native HMR twice, application roster twice, Channel once,
+and Companion once. Navigating the peer away closed its responses and restored RPC in
+4–8 ms without restarting the Host or changing credentials; the repeated cycle failed
+again. RC2 alone did not fix this reproduction. Measure active responses and protocol,
+not just EventSource call sites or total TCP sockets. Keep native WebSocket recovery,
+cookie validation, application-defined streams, and HMR as separate mechanisms; an
+identity-loading warning is not proof of token rejection. Coordinate with the stream
+owner before changing transport. See the [local qualification report](../../../../docs/qa/issue-1459-acceptance/rc2-multitab-follow-up.md).
+
 ## Timed-question cards need the application run lifecycle
 
 For an application adapter whose tools require a live application run, qualify a late answer

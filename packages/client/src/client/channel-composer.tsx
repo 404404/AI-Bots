@@ -90,6 +90,7 @@ export interface ChannelComposerUpload {
   status: 'uploading' | 'ready' | 'error';
   ref?: ChannelAttachmentRef;
   error?: string | undefined;
+  fileAvailable?: boolean;
 }
 
 export interface ChannelComposerProps {
@@ -139,6 +140,11 @@ function AttachmentUploadStatus({
     return <span className="bh-composer-upload-status">{t('composer.uploading')}</span>;
   }
   if (item.status !== 'error') return null;
+  if (item.fileAvailable === false) {
+    return (
+      <span className="bh-composer-upload-status">{t('composer.draftAttachmentUnavailable')}</span>
+    );
+  }
   return (
     <button type="button" className="bh-composer-upload-retry" onClick={onRetry} title={item.error}>
       {t('composer.retryAttachment')}
@@ -191,6 +197,10 @@ function ComposerImageAttachment({
   const [source, setSource] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
   const sourceMount = useMountedResource<HTMLDivElement>(() => {
+    if (item.fileAvailable === false) {
+      setSource(undefined);
+      return;
+    }
     if (typeof URL.createObjectURL !== 'function') return;
     const nextSource = URL.createObjectURL(item.file);
     setSource(nextSource);

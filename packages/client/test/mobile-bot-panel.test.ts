@@ -63,6 +63,7 @@ import {
 } from '../src/client/conversation-draft.js';
 import { en, zhTranslate, type BotHarnessTranslate } from '../src/client/locale.js';
 import { store } from '../src/client/store.js';
+import { ComposerDraftStore } from '../src/client/composer-draft-store.js';
 import { BotModePrefs, type BotModePrefsSnapshot } from '../src/client/bot-mode-prefs.js';
 import type { BotModeIcon } from '../src/bot-mode-settings.js';
 import type { BridgeActions } from '../src/client/actions.js';
@@ -90,6 +91,7 @@ beforeEach(() => {
     })),
   );
   store.select(undefined);
+  localStorage.clear();
   clearConversationDrafts();
   container = document.createElement('div');
   document.body.append(container);
@@ -405,11 +407,30 @@ describe('Conversation drafts', () => {
     expect(container.textContent).toBe('dm:draftdraft:1');
   });
 
-  it('uses stable bot identity before the DM load resolves', () => {
+  it('waits for trusted Host/Profile and Channel identity before accessing persisted input', () => {
     store.select({ kind: 'bot', slug: 'alpha' });
-    expect(conversationDraftKey(store.getSnapshot())).toBe('bot:alpha');
+    store.setComposerIdentity(undefined);
+    expect(conversationDraftKey(store.getSnapshot())).toBeUndefined();
+    store.setComposerIdentity({ hostId: 'host', profileId: 'profile', humanId: 'human' });
+    store.setRoster(
+      [],
+      [
+        {
+          id: 'dm-alpha',
+          type: 'dm',
+          botSlug: 'alpha',
+          name: 'Alpha',
+          members: [],
+          createdAt: '',
+          updatedAt: '',
+        },
+        { id: 'group', type: 'group', name: 'Group', members: [], createdAt: '', updatedAt: '' },
+      ],
+    );
+    expect(conversationDraftKey(store.getSnapshot())).toBe('["host","profile","human","dm-alpha"]');
     store.select({ kind: 'channel', channelId: 'group' });
-    expect(conversationDraftKey(store.getSnapshot())).toBe('channel:group');
+    expect(conversationDraftKey(store.getSnapshot())).toBe('["host","profile","human","group"]');
+    store.setComposerIdentity(undefined);
   });
 
   it('restores reply, channel refs and uploads and keeps late failures in the originating draft', () => {
@@ -437,12 +458,17 @@ describe('Conversation drafts', () => {
         `${scope}:${text}:${reply?.id ?? ''}:${refs.length}:${uploads.length}`,
       );
     }
-    act(() => root.render(createElement(Draft, { key: 'dm', scope: 'dm' })));
-    click('dm:::0:0');
-    act(() => root.render(createElement(Draft, { key: 'group', scope: 'group' })));
+    const dm = JSON.stringify(['host', 'profile', 'human', 'dm']);
+    const group = JSON.stringify(['host', 'profile', 'human', 'group']);
+    act(() => root.render(createElement(Draft, { key: dm, scope: dm })));
+    click(`${dm}:::0:0`);
+    act(() => root.render(createElement(Draft, { key: group, scope: group })));
     act(() => restoreFailedSend?.());
-    expect(container.textContent).toBe('group:::0:0');
-    act(() => root.render(createElement(Draft, { key: 'dm', scope: 'dm' })));
-    expect(container.textContent).toBe('dm:failed send:reply:1:1');
+    expect(container.textContent).toBe(`${group}:::0:0`);
+    act(() => root.render(createElement(Draft, { key: dm, scope: dm })));
+    expect(container.textContent).toBe(`${dm}:failed send:reply:1:1`);
+    const reopened = new ComposerDraftStore(localStorage, 'reopened');
+    expect(reopened.read(dm).draft.text).toBe('failed send');
+    expect(reopened.read(group).draft.text).toBe('');
   });
 });

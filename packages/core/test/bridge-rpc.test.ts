@@ -138,6 +138,8 @@ describe('bridge typert service', () => {
       'resume',
       'channels',
       'humanIdentity',
+      'composerIdentity',
+      'composerValidate',
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',

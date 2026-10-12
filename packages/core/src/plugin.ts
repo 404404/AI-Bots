@@ -46,6 +46,8 @@ import {
   CHANNEL_ATTACHMENT_UPLOAD_PATH,
 } from './attachments/http.js';
 import { createBridgeMethods } from './bridge/methods.js';
+import { composerRecoveryIdentity } from './bridge/composer-recovery.js';
+import { homedir } from 'node:os';
 import type { BotAgentSetupInfo } from './runtime/dsh-bot-agent-adapter.js';
 import { registerBridge } from './bridge/rpc.js';
 import { mountClientDiagnostics } from './diagnostics/client-diagnostics.js';
@@ -1435,6 +1437,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     }, 'botharness: release restarter');
   });
   const bridgeMethods = createBridgeMethods({
+    composerIdentity: () =>
+      composerRecoveryIdentity(
+        join(homedir(), '.config', 'botharness', 'composer-host-id'),
+        join(core.rootDir, '..', 'composer-profile-id'),
+        core.channels.humanIdentity().humanId,
+      ),
     warn: (message) => ctx.logger.warn(message),
     registry: core.registry,
     deletions: core.deletions,
