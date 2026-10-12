@@ -33,7 +33,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
-- The optional checked QQ Provider adds bounded native callback and receipt metadata, including hashes and lengths of fixed identifier fields, to diagnose missing own Echo without logging bodies or raw identifiers; author qualification, reply authority and Echo capabilities remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156), [Provider candidate #25](https://github.com/DoodleBears/dsh-im/pull/25)).
+- The optional checked QQ Provider adds bounded pre-dispatch Gateway, native callback and receipt metadata, including hashes and lengths of fixed identifier fields, to diagnose missing own Echo without logging bodies or raw identifiers; Gateway parsing and sampling refusals are explicit, while author qualification, reply authority and Echo capabilities remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156), [Provider candidate #25](https://github.com/DoodleBears/dsh-im/pull/25)).
 
 - Authorized Lark DM reviewers can separately confirm exact or all-opaque tool rules, inspect the same scope and status in Web, and lose future automatic approvals when current creator authority is revoked. All-opaque requires a qualified version-2 Provider/account and its own high-risk confirmation. IM-only Bots can receive approval cards before anyone opens their Web DM. External rules never auto-approve Web-only native Session authorizations; bilingual tutorials include real sanitized workflow screenshots ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)).
 
