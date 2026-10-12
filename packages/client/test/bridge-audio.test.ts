@@ -13,6 +13,11 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   FileTypeIcon: () => null,
   MarkdownText: () => null,
   StateDot: () => null,
+  IconDownloadOutlineRegular: () => null,
+  IconPlayOutlineRegular: () => null,
+  IconPauseOutlineRegular: () => null,
+  Tooltip: ({ children }: { children: ReactNode }) => children,
+  fileSizeText: (size: number) => `${size} B`,
 }));
 vi.mock('../src/client/messaging-defaults-live.js', () => ({
   subscribeMessagingDefaults: () => () => {},
@@ -75,16 +80,32 @@ it('Channel voice exposes original download and prepares playback only on explic
     );
     expect(fetched).not.toHaveBeenCalled();
     expect(container.querySelector('audio')).toBeNull();
+    expect(container.querySelector('.bh-message-audio-play')?.hasAttribute('disabled')).toBe(true);
     await act(async () => {
-      container.querySelector('button')!.click();
+      [...container.querySelectorAll('button')]
+        .find((button) => button.textContent === '准备播放')!
+        .click();
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(fetched).toHaveBeenCalledTimes(1);
     expect(fetched.mock.calls[0]?.[0]).toContain('representation=playback');
     expect(container.querySelector('audio')?.getAttribute('src')).toBe('blob:voice');
-    expect(container.querySelector('audio')?.getAttribute('preload')).toBe('none');
-    expect(container.querySelector('audio')?.getAttribute('aria-label')).toBe('语音播放器');
+    expect(container.querySelector('audio')?.getAttribute('preload')).toBe('metadata');
+    expect(container.querySelector('audio')?.getAttribute('aria-label')).toBe(
+      '音频播放器: voice.silk',
+    );
     expect(container.querySelector('audio')?.hasAttribute('autoplay')).toBe(false);
+    expect(container.querySelector('a[download]')?.getAttribute('href')).not.toContain('blob:');
+    expect(container.querySelector('a[download]')?.getAttribute('href')).not.toContain(
+      'representation',
+    );
+    expect(container.querySelector('.bh-message-audio-play')?.hasAttribute('disabled')).toBe(false);
+    await act(async () => container.querySelector('audio')!.dispatchEvent(new Event('error')));
+    expect(container.querySelector('audio')).toBeNull();
+    expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    expect(container.querySelector('a[download]')?.getAttribute('href')).toContain(
+      'sourceEventId=source',
+    );
   } finally {
     await act(async () => root.unmount());
     container.remove();
