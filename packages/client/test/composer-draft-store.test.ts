@@ -23,6 +23,39 @@ function storage() {
 }
 
 describe('browser-local composer drafts', () => {
+  it('does not create new durable versions when tabs validate unchanged recovered text', () => {
+    const local = storage();
+    const first = new ComposerDraftStore(local, 'first');
+    first.update('channel', { text: 'shared draft' });
+    const originalKey = local.key(0);
+    const second = new ComposerDraftStore(local, 'second');
+    second.read('channel');
+    second.validated('channel', { mentions: [], channelRefs: [], uploads: [] }, false);
+    expect(second.read('channel').needsValidation).toBe(false);
+    expect(local.key(0)).toBe(originalKey);
+    first.sync('channel');
+    expect(first.read('channel').needsValidation).toBe(false);
+    expect(first.read('channel').draft.text).toBe('shared draft');
+    expect(local.length).toBe(1);
+  });
+  it('persists removed references once without making the other tab rewrite the normalized draft', () => {
+    const local = storage();
+    const first = new ComposerDraftStore(local, 'first');
+    first.update('channel', {
+      text: '@Gone',
+      mentions: [{ botSlug: 'gone', label: 'Gone', start: 0, end: 5 }],
+    });
+    const second = new ComposerDraftStore(local, 'second');
+    second.read('channel');
+    second.validated('channel', { mentions: [] }, true);
+    const normalizedKey = local.key(0);
+    first.sync('channel');
+    expect(first.read('channel').needsValidation).toBe(true);
+    first.validated('channel', { mentions: [] }, false);
+    expect(local.key(0)).toBe(normalizedKey);
+    expect(new ComposerDraftStore(local, 'reopened').read('channel').draft.mentions).toEqual([]);
+    expect(first.read('channel').draft.text).toBe('@Gone');
+  });
   it('recovers an unsent draft in a new browser owner without leaking across trusted scopes', () => {
     const local = storage();
     const first = new ComposerDraftStore(local, 'first-tab');

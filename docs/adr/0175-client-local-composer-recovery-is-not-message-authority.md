@@ -18,4 +18,6 @@ Submission-attempt snapshots, original submission reconciliation and Up/Down rec
 
 ## Trade-offs
 
+Reference validation that leaves the serialized draft unchanged updates only the local recovery snapshot, not its durable version. Only normalized reference changes create a new durable version. Otherwise idle tabs would repeatedly validate and rewrite each other's identical drafts, producing storage events and unnecessary Host requests.
+
 Browser-local storage is synchronous and origin-bound; clearing it, private browsing, disabled storage or quota exhaustion can prevent recovery. This is not a backup or cross-device sync service. Uploaded references can survive a reload, but local file bytes and their image previews cannot. Keeping recovery outside the Host avoids a second conversation authority and keeps unsent Human intent private from agents.

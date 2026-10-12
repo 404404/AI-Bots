@@ -311,6 +311,25 @@ export class ComposerDraftStore {
   }
 
   validated(scope: string, patch: Partial<ComposerDraft>, notice: boolean): void {
+    const snapshot = this.read(scope);
+    const previous = this.current.get(scope);
+    const draft = { ...snapshot.draft, ...patch };
+    if (previous !== undefined && serialize({ ...previous, draft }) === serialize(previous)) {
+      const version = { ...previous, draft };
+      this.current.set(scope, version);
+      this.publish(scope, {
+        ...snapshot,
+        draft,
+        versions: snapshot.versions.map((candidate) =>
+          candidate.writer === previous.writer && candidate.sequence === previous.sequence
+            ? version
+            : candidate,
+        ),
+        needsValidation: false,
+        notice,
+      });
+      return;
+    }
     this.update(scope, patch);
     this.publish(scope, { ...this.read(scope), needsValidation: false, notice });
   }
