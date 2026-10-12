@@ -2880,6 +2880,16 @@ export const zh = {
   'composer.locateAttachment': '定位附件 {name}',
   'composer.uploading': '上传中',
   'composer.retryAttachment': '重试上传',
+  'composer.draftAttachmentUnavailable': '附件不可恢复，请移除后重新添加',
+  'composer.draftIdentityUnavailable': '恢复身份尚未就绪，暂不能编辑。请刷新重试。',
+  'composer.draftStorageError': '草稿未能保存到本设备。请先复制备份；不要关闭页面。',
+  'composer.draftValidating': '正在校验恢复的草稿引用…',
+  'composer.draftValidationFailed': '无法确认草稿引用是否可用。内容已保留，校验完成前不能发送。',
+  'composer.draftReferencesChanged':
+    '部分引用已失效或需要重新选择；正文保留。请检查回复、提及和附件。',
+  'composer.draftConflict': '另一标签页有不同草稿。双方版本均保留，请选择继续编辑的版本。',
+  'composer.draftUseVersion': '使用此版本',
+  'composer.draftRetry': '重新校验',
   'composer.removeAttachment': '移除 {name}',
   'composer.previewAttachment': '预览 {name}',
   'rail.label': 'Bot 与频道',
@@ -6021,6 +6031,20 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'composer.locateAttachment': 'Locate attachment {name}',
   'composer.uploading': 'Uploading',
   'composer.retryAttachment': 'Retry upload',
+  'composer.draftAttachmentUnavailable': 'Attachment unavailable. Remove and add it again.',
+  'composer.draftIdentityUnavailable':
+    'Recovery identity is not ready; editing is paused. Refresh to retry.',
+  'composer.draftStorageError':
+    'Draft could not be saved on this device. Copy a backup before closing this page.',
+  'composer.draftValidating': 'Checking restored draft references…',
+  'composer.draftValidationFailed':
+    'Draft references could not be checked. Content is retained; sending is paused until validation succeeds.',
+  'composer.draftReferencesChanged':
+    'Some references are unavailable or need reselection. Text is retained. Check replies, mentions and attachments.',
+  'composer.draftConflict':
+    'Another tab has a different draft. Both versions are retained. Choose which one to continue editing.',
+  'composer.draftUseVersion': 'Use this version',
+  'composer.draftRetry': 'Check again',
   'composer.removeAttachment': 'Remove {name}',
   'composer.previewAttachment': 'Preview {name}',
   'rail.label': 'Bots and channels',
