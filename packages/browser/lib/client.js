@@ -3071,6 +3071,8 @@ window.__ModuleLoader__.load({
 			registerBrowserSettings(ctx, t);
 			ctx.effect(() => {
 				const sheet = document.createElement("style");
+				sheet.dataset.plugin = "@botharness/browser";
+				sheet.dataset.pluginCss = "@botharness/browser/client.css";
 				sheet.textContent = styles;
 				document.head.append(sheet);
 				return () => sheet.remove();
