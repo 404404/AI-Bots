@@ -17,8 +17,8 @@ Human 在 Bot DM 侧栏打开「管理通知」。
 通知只含固定状态、执行角色、Session 和记录标识。
 
 ```callout warn 当前验收状态
-真实 Lark 通知已获 Human 接受。新版弹窗截图已补齐，交互反馈仍待确认。
-当前版本 CI 已通过。PR 保持 Draft，尚未合并或部署。
+真实 Lark 通知已获 Human 接受。新版弹窗截图与交互已获 Human 接受。
+当前版本 CI 已通过。PR 已转为可审阅，尚未合并或部署。
 ```
 
 ## B 弹窗如何组织
@@ -62,14 +62,14 @@ Generation 83 保存开关与投递元数据。
 回退需要升级前备份或兼容写入器。
 [查看 ADR-0176](https://github.com/BotHarness/DeepSeekBot/blob/8b64c81eb8fad3c94e14fbc362043eb9cd186cfe/docs/adr/0176-work-failure-alerts-use-committed-facts-and-management-route.md)。
 
-## E 已验证与待确认
+## E 验证与反馈
 
 合并后通过 105 项相关测试、类型、格式和完整构建。
 实际 UI 已验证搜索、时间排序、记录详情和 info 提示。
 最终浅色、深色和 390×420 截图已采集。
 正文滚动，表格没有横向溢出，关闭按钮始终可见。
 
-新版 UI 的 Human 反馈仍待确认。
+Human 已接受新版 UI 的布局与交互。
 桌面截图偏软，实际 DOM 与几何测量也已核对。
 现有诊断器在移动端缺少桌面按钮时报告 shell-lost。
 移动端实际界面与交互已独立核对；诊断结果原样保留。
