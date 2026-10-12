@@ -1613,6 +1613,71 @@ describe('bridge actions', () => {
     expect(controller.getSnapshot().modelOpen).toBe(false);
   });
 
+  it('merges a journal tail page into the visible window and leaves a detached window alone', async () => {
+    const at = BOT.createdAt;
+    const item = (revision: number) => ({
+      id: `m${revision}`,
+      at,
+      author: { kind: 'human' as const },
+      body: `m${revision}`,
+      channelRevision: revision,
+    });
+    const { clientStore, actions } = setup({
+      channelTimeline: () => ({
+        revision: 5,
+        page: {
+          entries: [item(3), item(4), item(5)],
+          olderCursor: 'c3',
+          newerCursor: null,
+          hasOlder: true,
+          hasNewer: false,
+        },
+      }),
+    });
+    await actions.load();
+    await actions.openBot('ada');
+    const ids = () => clientStore.getSnapshot().conversation.messages.map((message) => message.id);
+    expect(ids()).toEqual(['m3', 'm4', 'm5']);
+
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(5), item(6)],
+      olderCursor: 'c5',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m3', 'm4', 'm5', 'm6']);
+    expect(clientStore.getSnapshot().conversation.revision).toBe(6);
+    expect(clientStore.getSnapshot().conversation.timeline.olderCursor).toBe('c3');
+
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(7), item(8)],
+      olderCursor: 'c7',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m3', 'm4', 'm5', 'm6', 'm7', 'm8']);
+
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(20), item(21)],
+      olderCursor: 'c20',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m20', 'm21']);
+    expect(clientStore.getSnapshot().conversation.timeline).toMatchObject({
+      olderCursor: 'c20',
+      hasOlder: true,
+    });
+
+    clientStore.setConversation({
+      timeline: { ...clientStore.getSnapshot().conversation.timeline, hasNewer: true },
+    });
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(30)],
+      olderCursor: 'c30',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m20', 'm21']);
+    expect(clientStore.getSnapshot().conversation.revision).toBe(30);
+  });
+
   it('generates a Host-valid UUID fallback when Web Crypto is unavailable', async () => {
     let sentId = '';
     const { actions } = setup({
