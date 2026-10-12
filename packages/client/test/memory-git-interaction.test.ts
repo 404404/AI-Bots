@@ -31,6 +31,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconChevronRightOutlineRegular: stub,
     IconChevronDownOutline14: stub,
     IconChevronDownOutlineRegular: stub,
+    IconFolderOpenOutlineRegular: stub,
+    IconSettingsOutlineRegular: stub,
     IconCloseFill14: stub,
     IconCopyOutline16: stub,
     IconCopyOutlineRegular: stub,
@@ -883,6 +885,19 @@ describe('Memory Git graph sidebar', () => {
     const actions = new Proxy(
       {
         listWorkspaceGrants: vi.fn(async () => []),
+        memoryFileTarget: vi.fn(async (_slug: string, path: string) => ({
+          path: '/host/memory/' + path,
+          relativePath: path,
+          kind: 'file' as const,
+        })),
+        memoryFileApplications: vi.fn(async () => ({ available: false, applications: [] })),
+        fileOpenPreferences: {
+          ready: async () => {},
+          get: () => undefined,
+          set: () => {},
+          clear: () => {},
+          subscribe: () => () => {},
+        },
         memorySnapshot: vi
           .fn()
           .mockResolvedValue({ head: SHA, files: ['note.md'], provisional: false }),
@@ -948,6 +963,13 @@ describe('Memory Git graph sidebar', () => {
       });
       store.setSessions({ status: 'ready', items: [], error: undefined });
       root.render(createElement(BotMain, { actions, channelSidebar: registry }));
+    });
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('[role="tab"][aria-label="记忆演化"]')!.click();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const evolution = Array.from(container.querySelectorAll('.bh-channel-sidebar-entry')).find(
@@ -1047,6 +1069,12 @@ describe('Memory Git graph sidebar', () => {
       Array.from(container.querySelectorAll<HTMLButtonElement>('button'))
         .find((button) => button.getAttribute('aria-label') === '返回对话')
         ?.click();
+    });
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('[role="tab"][aria-label="记忆文件"]')!.click();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
     await act(async () => {
       container.querySelector<HTMLButtonElement>('.bh-memory-file-tree [role="treeitem"]')?.click();

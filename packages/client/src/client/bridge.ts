@@ -4027,6 +4027,25 @@ export async function retryApprovalNotification(
   await unwrap(call, 'approvalRetry', { slug, id });
 }
 
+export async function setFailureAlerts(
+  call: BridgeCall,
+  slug: string,
+  enabled: boolean,
+  expectedRevision: number,
+): Promise<void> {
+  await unwrap(call, 'failureAlertsSet', { slug, enabled, expectedRevision });
+}
+export async function testFailureAlerts(call: BridgeCall, slug: string): Promise<void> {
+  await unwrap(call, 'failureAlertsTest', { slug });
+}
+export async function retryFailureAlerts(
+  call: BridgeCall,
+  slug: string,
+  id: string,
+): Promise<void> {
+  await unwrap(call, 'failureAlertsRetry', { slug, id });
+}
+
 export async function reviewPairing(
   call: BridgeCall,
   slug: string,

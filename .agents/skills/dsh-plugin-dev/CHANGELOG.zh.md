@@ -14,6 +14,8 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录应用 Client 包如何声明 Gateway Client external 以使用 DSH 的 snapshot-stream 辅助类、所需的 Node 测试别名以及可重试结束的约定，以在 DSH `0.2.0-rc.1` 上启动真实 Client 并检查已发布的 `0.1.7-alpha.1`、`0.1.7-rc.2` 包核验；DSH／Cordis Context 与 Skill 行为不变（[#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498)）。
 
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录应用 SSE 与原生 HMR 共用的 HTTP/1.1 连接预算，以及源码声明的流式 Remote 方法路径（Host 标记、带 strict 参数 codec 的 Client contribution、namespace 读取、终止后重试），以认证的流打开和两个、三个真实同源页面在 DSH `0.2.0-rc.1` 上核验；DSH／Cordis Context 与 Skill 行为不变（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
+
+- 将[本地开发指南](../dsh-dev/SKILL.md)的默认 CLI 与参考源码标签改为 DSH `0.2.0-rc.2`，以全新隔离 Web Profile、认证 API 和实际渲染的 Bot 模式核验；在 RC1 核验的 pitfall 条目保留原记录版本，DSH／Cordis Context 与 Skill 行为不变（[#1485](https://github.com/BotHarness/DeepSeekBot/issues/1485)）。
 - 在 [Client 诊断指南](../../../docs/dev/guides/client-startup-diagnostics.md)记录原生 RC1 两个文档的 HTTP/1 请求阻塞复现，以及 Roster／Activity 共用传输的生命周期；DSH／Cordis Context 与 Decision Tree 保持不变（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
 
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录有界 Windows→Linux Profile 路径迁移及非 root 工作区权限前提，以 pinned DSH `0.2.0-rc.1` 和真实隔离 Linux Host 核验；DSH／Cordis Context 与 Skill 行为不变（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)，[复验](../../../docs/research/2026-10-12-private-input-linux-qualification.md)）。

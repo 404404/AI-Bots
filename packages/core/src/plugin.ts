@@ -475,6 +475,10 @@ export function createCore(
     attachOperationalModule(operationalDatabase, 'bot-inbox'),
   );
   const externalMessaging = createOutboundMessaging({
+    ownsFailure: (slug, sessionId, role) => {
+      const owner = ownership.resolve(sessionId);
+      return owner?.botSlug === slug && owner.rootRole === role;
+    },
     onAuthorizationChanged: (slug) => reconcileToolRuleCreators?.(slug),
     onDefaultsChanged: () => live?.publishRosterCommitted(),
     onReceptionChanged: () => live?.publishRosterCommitted(),
@@ -512,6 +516,11 @@ export function createCore(
     botDisplayName: (botSlug) => registry.getHistorical(botSlug)?.displayName,
     rootDir: join(dshHome, 'botharness', 'channels'),
     onCommitted: (commit) => {
+      try {
+        externalMessaging.failureAlerts.committed(commit);
+      } catch {
+        options.warn?.('failure-alert-notification-enqueue-failed');
+      }
       try {
         const output = personaBotOutputCommitted(commit, ownership);
         if (output !== undefined) companions?.publish(output);
@@ -581,7 +590,14 @@ export function createCore(
         live?.publishRosterCommitted();
       if (
         topics.some((topic) =>
-          ['assignments', 'source-event', 'channel', 'human-attention', 'usage'].includes(topic),
+          [
+            'assignments',
+            'source-event',
+            'bot-inbox',
+            'channel',
+            'human-attention',
+            'usage',
+          ].includes(topic),
         )
       )
         refreshDurableAttention();

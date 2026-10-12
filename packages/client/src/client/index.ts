@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client';
@@ -15,6 +16,7 @@ import { BOT_MODE_NAMESPACE, type BotModeSettings } from '../bot-mode-settings.j
 import { privateInputLocator } from '../../../core/src/credentials/web-locator.js';
 import { watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
+import { createFileOpenPreferences } from './file-open-preferences.js';
 import { createActions, type BridgeActions } from './actions.js';
 import { ProviderAppSetup } from './provider-app-setup.js';
 import { BotModePrefs, botModePrefsFace } from './bot-mode-prefs.js';
@@ -46,7 +48,11 @@ import { MobileBotPanel } from './mobile-bot-panel.js';
 import { mobileBotViewport, subscribeMobileBotViewport } from './mobile-viewport.js';
 import { clearConversationDrafts } from './conversation-draft.js';
 import { BotSidebar, createBotPanelEntry } from './bot-sidebar.js';
-import { createChannelSidebarBuiltins } from './channel-sidebar-builtins.js';
+import { OnboardingEnterHint, OnboardingLauncher } from './onboarding-checklist-view.js';
+import {
+  createChannelSidebarBuiltinTabs,
+  createChannelSidebarBuiltins,
+} from './channel-sidebar-builtins.js';
 import { webBotModeShortcut, webShortcutBlocked } from './channel-shortcuts.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
 import { createProfileCardBuiltins } from './profile-cards-builtins.js';
@@ -141,8 +147,22 @@ export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(LOCALE_NS);
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
+  const profileContext = async (): Promise<{ profileId: string }> => {
+    const response = await fetch('/api/botharness/companion', { credentials: 'same-origin' });
+    if (!response.ok) throw new Error('Companion context unavailable');
+    const value: unknown = await response.json();
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      !('profileId' in value) ||
+      typeof value.profileId !== 'string'
+    )
+      throw new Error('Invalid Companion context');
+    return { profileId: value.profileId };
+  };
   const actions: BridgeActions = createActions(call, store, {
     nativeFiles: createNativeHostFiles(ctx.remote.session),
+    fileOpenPreferences: createFileOpenPreferences({ storage, context: profileContext }),
     pickDirectory: () => {
       const picker = ctx.get('uiWorkspace');
       if (picker === undefined) throw new Error('DSH folder picker is unavailable');
@@ -170,19 +190,7 @@ export function apply(ctx: ClientContext): void {
     storage,
     exists: (botId) => botExists(call, botId),
     onActivity: (snapshot) => store.applyActivity(snapshot),
-    context: async () => {
-      const response = await fetch('/api/botharness/companion', { credentials: 'same-origin' });
-      if (!response.ok) throw new Error('Companion context unavailable');
-      const value: unknown = await response.json();
-      if (
-        typeof value !== 'object' ||
-        value === null ||
-        !('profileId' in value) ||
-        typeof value.profileId !== 'string'
-      )
-        throw new Error('Invalid Companion context');
-      return { profileId: value.profileId };
-    },
+    context: profileContext,
     source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
       const response = await fetch('/api/botharness/companion', {
@@ -281,9 +289,12 @@ export function apply(ctx: ClientContext): void {
     let disposers: (() => void)[] = [];
     const reconcile = (): void => {
       for (const dispose of disposers) dispose();
-      disposers = createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
-        channelSidebar.register(entry),
-      );
+      disposers = [
+        ...createChannelSidebarBuiltinTabs(t).map((tab) => channelSidebar.registerTab(tab)),
+        ...createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
+          channelSidebar.register(entry),
+        ),
+      ];
     };
     reconcile();
     const unsubscribe = ctx.locale.subscribe(reconcile);
@@ -635,6 +646,11 @@ export function apply(ctx: ClientContext): void {
           void actions.openActivityCenter();
         },
         () => actions.refreshHumanInboxStatus(),
+        {
+          launcher: (translate) =>
+            createElement(OnboardingLauncher, { actions, t: translate, placement: 'row' }),
+          enterHint: (translate) => createElement(OnboardingEnterHint, { t: translate }),
+        },
       ),
     ),
   );

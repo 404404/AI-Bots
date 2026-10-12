@@ -66,7 +66,9 @@ import { isBotDmChannel, isHumanReadOnlyDmChannel } from './channel-kind.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import type { NativeSessionCatalog } from './sessions-entry.js';
 import { ActivityCenterView } from './activity-center-view.js';
-import type { ChannelSidebarRegistry } from './channel-sidebar.js';
+import { resolveChannelSidebarContext, type ChannelSidebarRegistry } from './channel-sidebar.js';
+import { ChannelSettingsDialog } from './channel-settings.js';
+import { channelSettings, channelSettingsSections } from './channel-settings-state.js';
 import { ChannelSidebar, useChannelSidebar } from './channel-sidebar-view.js';
 import { MemoryCommitView } from './memory-commit-view.js';
 import { MemoryFileView, MemoryWorkingView } from './memory-current-view.js';
@@ -83,6 +85,7 @@ import {
   TimelineWorkingRowsView,
 } from './timeline-working-rows.js';
 import { groupComposerActivity } from './group-composer-activity.js';
+import { attentionCount } from './activity-attention.js';
 import {
   EMPTY_PROFILE_CARDS,
   loadPinnedProfileCards,
@@ -653,6 +656,13 @@ function ConversationView({
   t: BotHarnessTranslate;
 }): ReactElement {
   const sidebar = useChannelSidebar(state);
+  const settingsScope = resolveChannelSidebarContext(state)?.scope ?? 'channel';
+  const settingsEntries = useSyncExternalStore(
+    channelSidebar.subscribe,
+    () => channelSidebar.entries(settingsScope),
+    () => channelSidebar.entries(settingsScope),
+  );
+  const hasChannelSettings = channelSettingsSections(settingsEntries, state).length > 0;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const draftScope = conversationDraftKey(state);
   const [draft, setDraft] = useConversationDraft(draftScope, 'text', '');
@@ -782,7 +792,7 @@ function ConversationView({
   const composerFacepile: PersonaBotFacepileItem[] =
     bot === undefined
       ? activeFacepile
-      : botActivity === undefined || (botActivity === 'idle' && bot.attention === undefined)
+      : botActivity === undefined || (botActivity === 'idle' && attentionCount(bot.attention) === 0)
         ? []
         : [
             {
@@ -1338,7 +1348,13 @@ function ConversationView({
             }
           >
             {onMobileBack !== undefined || channel === undefined ? null : (
-              <HumanChannelNameMenu key={channel.id} channel={channel} actions={actions} t={t} />
+              <HumanChannelNameMenu
+                key={channel.id}
+                channel={channel}
+                actions={actions}
+                t={t}
+                onOpenSettings={hasChannelSettings ? () => channelSettings.open() : undefined}
+              />
             )}
             {onMobileBack !== undefined ? (
               <MobileConversationHeader
@@ -1510,6 +1526,7 @@ function ConversationView({
                   actions={actions}
                   channelId={channelId}
                   sha={activeMemoryView.sha}
+                  botSlug={channel?.botSlug}
                   t={t}
                   onClose={closeMemoryView}
                 />
@@ -1529,6 +1546,7 @@ function ConversationView({
                   actions={actions}
                   channelId={channelId}
                   change={activeMemoryView.change}
+                  botSlug={channel?.botSlug}
                   t={t}
                   onClose={closeMemoryView}
                 />
@@ -1891,6 +1909,7 @@ function ConversationView({
             </>
           )}
         </section>
+        <ChannelSettingsDialog registry={channelSidebar} state={state} actions={actions} t={t} />
         <ChannelSidebar
           registry={channelSidebar}
           state={state}

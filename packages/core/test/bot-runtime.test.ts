@@ -35,7 +35,7 @@ class DeterministicAgentAdapter implements BotAgentAdapter {
     if (run.message.trim().length > 0) {
       const outcome = run.assignments.create({
         grantId: TEST_GRANT_ID,
-        purpose: `调查并回答：${run.message}`,
+        purpose: `调查并回答：${run.message.split('\n').at(-1)}`,
       });
       if (outcome.outcome === 'created' || outcome.outcome === 'reused') return;
       throw new Error(outcome.message);
@@ -476,7 +476,7 @@ describe('Bot runtime tracer bullet', () => {
           if (orchestratorAttempts === 1) throw new Error('TRANSPORT: DeepSeek API request failed');
           const outcome = run.assignments.create({
             grantId: TEST_GRANT_ID,
-            purpose: `调查并回答：${run.message}`,
+            purpose: `调查并回答：${run.message.split('\n').at(-1)}`,
           });
           if (outcome.outcome === 'created' || outcome.outcome === 'reused') return;
           throw new Error(outcome.message);
@@ -1343,7 +1343,7 @@ describe('Bot runtime tracer bullet', () => {
       channels,
       agents: {
         async runOrchestrator(run) {
-          started.push(run.message);
+          started.push(run.message.split('\n').at(-1)!);
           if (started.length === 1) await gate;
         },
         runAssignment: async () => undefined,
