@@ -26,13 +26,15 @@ async function fixture() {
     },
     async close() {},
   };
-  const core = createCore({ dshHome: createTempRoot('bh-failure-alert-'), agents });
+  const dshHome = createTempRoot('bh-failure-alert-');
+  const core = createCore({ dshHome, agents });
   cores.push(core);
   core.registry.create({ slug: 'ada', displayName: 'Ada' });
   core.channels.getOrCreateDm('ada', 'Ada');
   let receiver: Parameters<NonNullable<DshImOutboundService['consumeInbound']>>[1] | undefined;
   let disposition: 'none' | 'known' | 'unknown' = 'none';
   let qualify = async () => {};
+  let reply = async () => {};
   const texts: string[] = [];
   let receiptCount = 0;
   const replies = vi.fn<NonNullable<DshImOutboundService['replyChecked']>>(
@@ -40,6 +42,7 @@ async function fixture() {
       if (input.beforeSend && !input.beforeSend())
         throw new MessagingProviderError('authorization-changed', 'not-started');
       if (text.includes('Bot work failed') || text.includes('Work-failure alert test')) {
+        await reply();
         if (disposition !== 'none')
           throw new MessagingProviderError(
             'test-unavailable',
@@ -146,6 +149,8 @@ async function fixture() {
   const enable = () => api.failureAlertsSet({ slug: 'ada', enabled: true, expectedRevision: 0 });
   return {
     core,
+    dshHome,
+    agents,
     api,
     texts,
     replies,
@@ -159,6 +164,10 @@ async function fixture() {
     holdQualify: (value: () => Promise<void>) => {
       qualify = value;
     },
+    holdReply: (value: () => Promise<void>) => {
+      reply = value;
+    },
+    replaceProvider: () => core.externalMessaging.register(createDshImProvider(service)!),
   };
 }
 
@@ -250,7 +259,7 @@ it('a missing destination is visible without inventing a route or sending to the
   expect(f.texts).toEqual([]);
 });
 
-it.each(['disable-alert', 'disable-route', 'revoke-pairing'] as const)(
+it.each(['disable-alert', 'disable-route', 'revoke-pairing', 'replace-provider'] as const)(
   'delayed qualification cannot send after %s',
   async (change) => {
     const f = await fixture();
@@ -275,6 +284,7 @@ it.each(['disable-alert', 'disable-route', 'revoke-pairing'] as const)(
         id: f.pairing.id,
         expectedRevision: 2,
       });
+    if (change === 'replace-provider') f.replaceProvider();
     release();
     await vi.waitFor(() =>
       expect(f.core.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]?.state).toBe(
@@ -283,6 +293,68 @@ it.each(['disable-alert', 'disable-route', 'revoke-pairing'] as const)(
     );
     expect(f.texts).toEqual([]);
     expect(f.core.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]?.attempts).toBe(1);
+    if (change === 'replace-provider')
+      await f.api.failureAlertsSet({ slug: 'ada', enabled: false, expectedRevision: 1 });
+  },
+);
+
+it('qualification deadline expiry never permits the late result to dispatch', async () => {
+  const f = await fixture();
+  await f.enable();
+  let release = () => {};
+  let entered = false;
+  f.holdQualify(() => {
+    entered = true;
+    return new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  });
+  await f.fail();
+  await vi.waitFor(() => expect(entered).toBe(true));
+  await vi.waitFor(
+    () =>
+      expect(f.core.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]?.state).toBe(
+        'failed',
+      ),
+    { timeout: 17000, interval: 100 },
+  );
+  await f.api.failureAlertsSet({ slug: 'ada', enabled: false, expectedRevision: 1 });
+  release();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(f.texts).toEqual([]);
+  expect(f.core.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]?.attempts).toBe(1);
+}, 20000);
+
+it.each(['pending', 'sending'] as const)(
+  'restart reconciles persisted %s without replay',
+  async (phase) => {
+    const f = await fixture();
+    await f.enable();
+    const hold = () => new Promise<void>(() => {});
+    if (phase === 'pending') f.holdQualify(hold);
+    else f.holdReply(hold);
+    await f.fail();
+    await vi.waitFor(() =>
+      expect(f.core.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]?.state).toBe(
+        phase,
+      ),
+    );
+    f.core.externalMessaging.close();
+    await f.core.runtime.close();
+    f.core.operationalDatabase.close();
+    cores.splice(cores.indexOf(f.core), 1);
+    const restarted = createCore({ dshHome: f.dshHome, agents: f.agents });
+    cores.push(restarted);
+    expect(restarted.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]).toMatchObject({
+      state: phase === 'pending' ? 'cancelled' : 'unknown-outcome',
+      reason: 'host-restart',
+      attempts: 1,
+    });
+    expect(f.texts).toEqual([]);
+    const row = restarted.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]!;
+    expect(
+      await createBridgeMethods({ ...restarted }).failureAlertsRetry({ slug: 'ada', id: row.id }),
+    ).toMatchObject({ ok: false });
   },
 );
 
