@@ -247,10 +247,8 @@ export interface ChannelMessage {
   humanReceipts?: ChannelHumanReceipt[];
   botDmAction?: BotDmAction;
   botChannelPost?: BotChannelPost;
-  /** Read-time excerpt of the post a `botChannelPost` notice refers to; null once unavailable. */
   botChannelPostPreview?: string | null;
   memoryCommit?: ChannelMemoryCommit;
-  /** Read-time Channel where a notice shown here was recorded, when that is another Channel. */
   noticeOrigin?: { channelId: string };
   memberDeparture?: ChannelMemberDeparture;
   botCausation?: BotMessageCausation;

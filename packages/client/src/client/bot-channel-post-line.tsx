@@ -3,26 +3,49 @@ import { PersonaBotAvatar } from './avatar.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { BotSummary, ChannelMessage, ChannelSummary } from './store.js';
 
-/** Where a post or notice recorded elsewhere lives, as the Human knows that Channel. */
-export function elsewhereLabel(
+type ElsewherePlace =
+  | { kind: 'group'; name: string }
+  | { kind: 'botDm'; peers: string }
+  | { kind: 'unavailable' };
+
+function elsewherePlace(
   channelId: string,
+  actorSlug: string,
+  channels: readonly ChannelSummary[],
+  bots: readonly BotSummary[],
+): ElsewherePlace {
+  const channel = channels.find((candidate) => candidate.id === channelId);
+  if (channel === undefined) return { kind: 'unavailable' };
+  if (channel.type === 'group') return { kind: 'group', name: `#${channel.name}` };
+  const peers = channel.members
+    .filter((slug) => slug !== actorSlug)
+    .map((slug) => bots.find((bot) => bot.slug === slug)?.displayName ?? slug);
+  return { kind: 'botDm', peers: peers.join('、') };
+}
+
+export function elsewhereAction(
+  action: 'posted' | 'memory',
+  channelId: string,
+  actorSlug: string,
   channels: readonly ChannelSummary[],
   bots: readonly BotSummary[],
   t: BotHarnessTranslate,
+  count = 1,
 ): string {
-  const channel = channels.find((candidate) => candidate.id === channelId);
-  if (channel === undefined) return t('dmTrace.place.unavailable');
-  if (channel.type === 'group') return `#${channel.name}`;
-  const names = channel.members.map(
-    (slug) => bots.find((bot) => bot.slug === slug)?.displayName ?? slug,
-  );
-  return t('dmTrace.place.botDm', { names: names.join(' ↔ ') });
+  const place = elsewherePlace(channelId, actorSlug, channels, bots);
+  if (place.kind === 'botDm') {
+    if (action === 'memory') return t('memoryCommit.updatedMessaging', { name: place.peers });
+    return count === 1
+      ? t('dmTrace.messaged', { name: place.peers })
+      : t('dmTrace.messagedMany', { name: place.peers, count });
+  }
+  const label = place.kind === 'group' ? place.name : t('dmTrace.place.unavailable');
+  if (action === 'memory') return t('memoryCommit.updatedIn', { place: label });
+  return count === 1
+    ? t('dmTrace.posted', { place: label })
+    : t('dmTrace.postedMany', { place: label, count });
 }
 
-/**
- * One DM line for consecutive posts a PersonaBot made in another Channel. It names the
- * place and shows the latest post's excerpt; clicking opens that post where it lives.
- */
 export function BotChannelPostLine({
   posts,
   channels,
@@ -41,11 +64,7 @@ export function BotChannelPostLine({
   const slug = latest.author.kind === 'bot' ? latest.author.slug : '';
   const bot = bots.find((candidate) => candidate.slug === slug);
   const name = bot?.displayName ?? slug;
-  const place = elsewhereLabel(post.channelId, channels, bots, t);
-  const verb =
-    posts.length === 1
-      ? t('dmTrace.posted', { place })
-      : t('dmTrace.postedMany', { place, count: posts.length });
+  const verb = elsewhereAction('posted', post.channelId, slug, channels, bots, t, posts.length);
   const preview = latest.botChannelPostPreview;
   return (
     <div className="bh-memory-commit-row">

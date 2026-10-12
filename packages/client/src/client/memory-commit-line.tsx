@@ -45,15 +45,14 @@ export function MemoryCommitLine({
   messageId,
   commit,
   bots,
-  place,
+  action,
   t,
   onOpen,
 }: {
   messageId: string;
   commit: MemoryCommit;
   bots: readonly BotSummary[];
-  /** Channel where the commit was recorded, when this line mirrors it into the Bot DM. */
-  place?: string | undefined;
+  action?: string | undefined;
   t: BotHarnessTranslate;
   onOpen(): void;
 }): ReactElement {
@@ -89,9 +88,7 @@ export function MemoryCommitLine({
           </span>
           <span className="bh-bot-dm-action-name">{name}</span>
         </span>
-        <span>
-          {place === undefined ? t('memoryCommit.updated') : t('memoryCommit.updatedIn', { place })}
-        </span>
+        <span>{action ?? t('memoryCommit.updated')}</span>
         <span className="bh-memory-commit-subject">{commit.subject}</span>
         <code className="bh-memory-commit-sha">{commit.sha.slice(0, 7)}</code>
         {files === undefined ? null : <span className="bh-memory-commit-files">{files}</span>}

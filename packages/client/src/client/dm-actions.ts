@@ -1,13 +1,11 @@
 import type { ChannelMessage } from './store.js';
 
-/** Kinds of a PersonaBot's own actions elsewhere that its Human DM can show. */
 export type DmActionKind = 'posts' | 'memory';
 
 export const DM_ACTION_KINDS: readonly DmActionKind[] = ['posts', 'memory'];
 
 const STORAGE_KEY = 'botharness.dm-actions.hidden.v1';
 
-/** The action kind of a DM timeline line recorded elsewhere, or undefined for ordinary lines. */
 export function dmActionKind(message: ChannelMessage): DmActionKind | undefined {
   if (message.botChannelPost !== undefined) return 'posts';
   if (message.memoryCommit !== undefined && message.noticeOrigin !== undefined) return 'memory';
@@ -58,7 +56,6 @@ export function subscribeHiddenDmActions(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Hidden action kinds for one PersonaBot DM; every kind is shown by default. */
 export function hiddenDmActionsSnapshot(botSlug: string | undefined): readonly DmActionKind[] {
   if (botSlug === undefined) return NONE;
   const cached = snapshots.get(botSlug);
@@ -78,9 +75,7 @@ export function toggleHiddenDmAction(botSlug: string, kind: DmActionKind): void 
   else all[botSlug] = hidden;
   try {
     storage()?.setItem(STORAGE_KEY, JSON.stringify(all));
-  } catch {
-    // Display preference only; the DM still renders with the in-memory choice.
-  }
+  } catch {}
   snapshots.set(botSlug, hidden);
   for (const listener of listeners) listener();
 }

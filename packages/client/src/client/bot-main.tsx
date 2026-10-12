@@ -77,7 +77,7 @@ import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
-import { BotChannelPostLine, elsewhereLabel } from './bot-channel-post-line.js';
+import { BotChannelPostLine, elsewhereAction } from './bot-channel-post-line.js';
 import {
   hiddenDmActionsSnapshot,
   subscribeHiddenDmActions,
@@ -1654,11 +1654,13 @@ function ConversationView({
                           messageId={first.id}
                           commit={first.memoryCommit}
                           bots={state.bots}
-                          place={
+                          action={
                             first.noticeOrigin === undefined
                               ? undefined
-                              : elsewhereLabel(
+                              : elsewhereAction(
+                                  'memory',
                                   first.noticeOrigin.channelId,
+                                  first.memoryCommit.botSlug,
                                   state.channels,
                                   state.bots,
                                   t,

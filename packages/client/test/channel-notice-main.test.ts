@@ -324,16 +324,24 @@ describe('Channel Notices in a Group', () => {
     window.localStorage.clear();
     const openChannel = vi.fn(async () => undefined);
     const openAround = vi.fn(async () => undefined);
-    const post = (id: string, preview: string | null) => ({
+    const botDm: ChannelSummary = {
+      id: 'dm-mira-nova',
+      type: 'dm',
+      name: 'Mira ↔ Nova',
+      members: ['mira', 'nova'],
+      createdAt: AT,
+      updatedAt: AT,
+    };
+    const post = (id: string, preview: string | null, channelId = group.id) => ({
       id: `bot-channel-post-${id}`,
       at: AT,
       author: { kind: 'bot' as const, slug: 'mira' },
       body: '',
-      botChannelPost: { channelId: group.id, messageId: id },
+      botChannelPost: { channelId, messageId: id },
       botChannelPostPreview: preview,
     });
     await act(async () => {
-      store.setRoster([bot('mira', 'Mira')], [group, mira]);
+      store.setRoster([bot('mira', 'Mira'), bot('nova', 'Nova')], [group, mira, botDm]);
       store.select({ kind: 'bot', slug: 'mira' });
       store.setConversation({
         status: 'ready',
@@ -343,6 +351,8 @@ describe('Channel Notices in a Group', () => {
           post('g-1', '收到'),
           post('g-2', '已整理好需求清单'),
           { ...commitLine, noticeOrigin: { channelId: group.id } },
+          post('b-1', '能负责这次 QA 吗？', botDm.id),
+          { ...commitLine, id: 'commit-dm', noticeOrigin: { channelId: botDm.id } },
         ],
         drafts: [],
         error: undefined,
@@ -357,11 +367,12 @@ describe('Channel Notices in a Group', () => {
       );
     });
     const trace = container.querySelectorAll<HTMLButtonElement>('.bh-dm-trace-line');
-    expect(trace).toHaveLength(1);
+    expect(trace).toHaveLength(2);
     expect(trace[0]?.textContent).toBe('Mira在 #Launch crew 发言 2 条，最新：已整理好需求清单');
-    expect(
-      container.querySelector('.bh-memory-commit-line:not(.bh-dm-trace-line)')?.textContent,
-    ).toContain('在 #Launch crew 更新了记忆');
+    expect(trace[1]?.textContent).toBe('Mira私信 Nova：能负责这次 QA 吗？');
+    const memory = container.querySelectorAll('.bh-memory-commit-line:not(.bh-dm-trace-line)');
+    expect(memory[0]?.textContent).toContain('在 #Launch crew 更新了记忆');
+    expect(memory[1]?.textContent).toContain('和 Nova 私信时更新了记忆');
     await act(async () => trace[0]?.click());
     expect(openChannel).toHaveBeenCalledWith(group.id);
     expect(openAround).toHaveBeenCalledWith(group.id, 'g-2');
