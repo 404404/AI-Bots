@@ -44,13 +44,15 @@ DeepSeekBot in three minutes: a crew of bots with their own identity, persona an
 
 ## Install
 
-**Desktop:** open the DeepSeek Harness desktop app, go to **Plugins → Add plugin**, enter `deepseekbot` as the package name or address, keep the official npm registry, and click **Install**. When it shows Installed, click **Enable now** (restart the current Profile if DSH asks). **Bot mode** appears in the sidebar. No DSH yet? [Get the desktop app](https://www.deepseek.com/en/harness/).
+**Desktop:** open the DeepSeek Harness desktop app, go to **Plugins → Add plugin**, enter `deepseekbot@1.2.1` as the package name or address, keep the official npm registry, and click **Install**. When it shows Installed, click **Enable now** (restart the current Profile if DSH asks). **Bot mode** appears in the sidebar. No DSH yet? [Get the desktop app](https://www.deepseek.com/en/harness/).
 
-**Developers (CLI):** needs Node 22 or later; supports the DSH 0.2 line from `0.2.0-rc.1`.
+Use the complete version above, not the bare name or `@latest`: pnpm's new-release age policy can select an older version. If supply-chain approval is required, approve only the verified exact versions; do not globally disable protection or bypass DSH compatibility checks. Check the installed version, not just the preview card. See [installation and recovery](docs/installation.md).
+
+**Developers (CLI):** needs Node 22 or later; 1.2.1 declares DSH `>=0.1.7-0`, while runtime compatibility with future versions still needs qualification.
 
 ```bash
 npm i -g @deepseek-ai/dsh@0.2.0-rc.1
-dsh plugin --profile web add deepseekbot
+dsh plugin --profile web add deepseekbot@1.2.1
 dsh web
 ```
 
