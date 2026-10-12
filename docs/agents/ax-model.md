@@ -40,7 +40,7 @@ DeepSeek setup remains the fallback when no AX selection exists. To rotate the s
 inspect and remove the private file yourself, then rerun setup; active Hosts keep their inherited
 environment until restarted.
 
-### Native Go Session header on DSH 0.2.0 RC1
+### Native Go Session header on DSH 0.2.0 RC1 and RC2
 
 OpenCode Go requires `x-opencode-session` for the actual conversation as well as request
 attribution. The pinned native adapter forwards `sessionId` to its underlying SDK but omits
@@ -54,11 +54,11 @@ header, and retains native `User-Agent` attribution and other headers. Missing S
 stays missing; no fixed, random or substitute identity is supplied. Other Providers keep their
 existing headers. The Go qualification refuses a different DSH version until reverified.
 
-RC2 status: the repository default is now DSH `0.2.0-rc.2`. The RC2 adapter still omits the
-header, the patch applies to it unchanged, and the adapter regression
-(`scripts/test/dev-go-session.test.mjs`) passes against the patched RC2 package. A real Go DM
-reply has not been re-run on RC2, so the launcher guard still names `0.2.0-rc.1` and an opted-in
-AX launch is refused on the RC2 default until that verification is recorded.
+RC2 status: the repository default is DSH `0.2.0-rc.2`. The RC2 adapter still omits the header,
+the patch applies to it unchanged, and the adapter regression
+(`scripts/test/dev-go-session.test.mjs`) passes against the patched RC2 package. On 2026-10-13 a
+fresh opted-in isolated Profile on RC2 answered one real Go DM with a committed reply, so the
+launcher guard now names `0.2.0-rc.2`.
 
 This changes no global CLI or application permissions. Each opted-in AX home gets its own
 runtime, while model selection and the credential reference remain launch Patches. See the
