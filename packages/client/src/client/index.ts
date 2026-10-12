@@ -60,6 +60,7 @@ import { createGroupProfileCards } from './group-profile.js';
 import { createProfileCardRegistry } from './profile-cards.js';
 import {
   createBridgeCall,
+  loadJournalPage,
   connectionRpc,
   loadActivitySnapshot,
   loadSessionBotOwner,
@@ -71,7 +72,20 @@ import {
   SessionReturnMenuItem,
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
-import { mountChannelLive, mountRosterLive } from './channel-live.js';
+import { installChannelFollow, mountChannelLive, mountRosterLive } from './channel-live.js';
+import { installTypedLive } from './messaging-defaults-live.js';
+import {
+  CHANNEL_REMOTE_DESCRIPTOR,
+  COMPANION_REMOTE_DESCRIPTOR,
+  createChannelFollow,
+  createCompanionSource,
+  type CompanionNamespace,
+  type CompanionSource,
+  createTypedLive,
+  SNAPSHOT_REMOTE_DESCRIPTORS,
+  type ChannelNamespace,
+  type SnapshotNamespace,
+} from './live-snapshots.js';
 import { sessionBotReference } from './mentions.js';
 import { en, LOCALE_NS, zh } from './locale.js';
 import { registerModeShadow } from './mode.js';
@@ -171,12 +185,13 @@ export function apply(ctx: ClientContext): void {
   });
   const setupRpc = connectionRpc(ctx);
   if (setupRpc) actions.appSetup = new ProviderAppSetup(setupRpc);
+  let companionSource: ((url: string) => CompanionSource) | undefined;
   const companion = new WindowCompanions({
     storage,
     exists: (botId) => botExists(call, botId),
     onActivity: (snapshot) => store.applyActivity(snapshot),
     context: profileContext,
-    source: (url) => new EventSource(url),
+    source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
       const response = await fetch('/api/botharness/companion', {
         method: 'POST',
@@ -349,6 +364,72 @@ export function apply(ctx: ClientContext): void {
     () => (typeof EventSource === 'undefined' ? () => {} : mountRosterLive(store, actions)),
     'botharness: Roster live subscription',
   );
+  ctx.effect(() => {
+    let uninstall: (() => void) | undefined;
+    let disposed = false;
+    const native = ctx.remote as Partial<Pick<typeof ctx.remote, '$mount' | '$stream'>>;
+    if (typeof native.$mount !== 'function' || typeof native.$stream !== 'function')
+      return () => {};
+    const namespace = (): Partial<SnapshotNamespace> => {
+      const mounted = ctx.get('remote.botharness') as Partial<SnapshotNamespace> | undefined;
+      if (mounted === undefined) throw new Error('botharness live Remote is not mounted');
+      return mounted;
+    };
+    void ctx.remote
+      .$mount({
+        package: '@botharness/core',
+        descriptors: [
+          ...SNAPSHOT_REMOTE_DESCRIPTORS,
+          CHANNEL_REMOTE_DESCRIPTOR,
+          COMPANION_REMOTE_DESCRIPTOR,
+        ],
+      })
+      .then(
+        () => {
+          if (disposed) return;
+          const uninstallTyped = installTypedLive(
+            createTypedLive(ctx.remote, () => {
+              const mounted = namespace();
+              if (mounted.followRoster === undefined || mounted.followActivity === undefined)
+                throw new Error('botharness live Remote is not mounted');
+              return mounted as SnapshotNamespace;
+            }),
+          );
+          const uninstallFollow = installChannelFollow(
+            createChannelFollow(
+              ctx.remote,
+              () => {
+                const mounted = namespace() as Partial<ChannelNamespace>;
+                if (mounted.followChannel === undefined)
+                  throw new Error('botharness live Remote is not mounted');
+                return mounted as ChannelNamespace;
+              },
+              (channelId, request, signal) => loadJournalPage(call, channelId, request, signal),
+            ),
+          );
+          companionSource = createCompanionSource(ctx.remote, () => {
+            const mounted = namespace() as Partial<CompanionNamespace>;
+            if (mounted.followCompanion === undefined)
+              throw new Error('botharness live Remote is not mounted');
+            return mounted as CompanionNamespace;
+          });
+          companion.reconnect();
+          uninstall = () => {
+            companionSource = undefined;
+            companion.reconnect();
+            uninstallFollow();
+            uninstallTyped();
+          };
+        },
+        (error: unknown) => {
+          console.warn('botharness: live Remote stream unavailable', error);
+        },
+      );
+    return () => {
+      disposed = true;
+      uninstall?.();
+    };
+  }, 'botharness: live streams on the native Remote stream carrier');
   ctx.effect(
     () =>
       mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal), {

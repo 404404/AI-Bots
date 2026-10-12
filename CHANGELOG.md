@@ -173,6 +173,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Any number of DeepSeekBot tabs on the same DSH address, up to the browser's limit for DSH's own connection, now stay responsive: the Window Companion feed also travels on DSH's shared live connection ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)).
+
+- Two browser tabs of DeepSeekBot on the same DSH address now both load and keep responding: Channel, roster and Activity updates travel on DSH's shared live connection instead of holding a browser connection each. A third tab can still stall all of them until the Window Companion stream moves as well ([#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)).
+
 - After a Human DM turn is cut off (for example by a Host restart), a Bot woken next from another Channel no longer posts that DM's answer there; the request stays in its DM. A Human DM that a Host stop interrupted before the Bot did anything is now rerun automatically when the Host starts; a turn that failed on its own still waits for a manual retry ([#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)).
 
 - On a narrow or mobile window, the activity dots in a Channel list row now sit right before the message time instead of floating in the middle of the row ([#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)).

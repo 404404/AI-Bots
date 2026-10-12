@@ -514,6 +514,11 @@ describe('plugin entry', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
+      'followRoster',
+      'followActivity',
+      'followChannel',
+      'followCompanion',
     ]);
   });
 

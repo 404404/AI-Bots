@@ -28,6 +28,7 @@ import {
   testFailureAlerts,
   retryFailureAlerts,
 } from './bridge.js';
+import { prependChannelJournal } from './channel-live.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
 import type {
   MarketplaceDetail,
@@ -465,6 +466,10 @@ export interface BridgeActions {
   markAllRead(): Promise<void>;
   markRead(channelId: string, messageId: string): Promise<void>;
   refreshChannelMessages(channelId: string): Promise<void>;
+  applyChannelTail(
+    channelId: string,
+    page: { entries: ChannelMessage[]; olderCursor: string | null; hasOlder: boolean },
+  ): void;
   dismissFailedMessage(channelId: string, messageId: string): boolean;
   openSession(sessionId: string): void;
   refreshSessions(slug: string): Promise<void>;
@@ -750,7 +755,12 @@ function mergeLatestWindow(
 ): { messages: ChannelMessage[]; keptPrefix: boolean } {
   const first = incoming[0];
   const overlap = first === undefined ? -1 : previous.findIndex((item) => item.id === first.id);
-  const prefix = overlap < 0 ? [] : previous.slice(0, overlap);
+  const committed = previous.filter((item) => item.channelRevision !== undefined);
+  const continues =
+    overlap < 0 &&
+    first?.channelRevision !== undefined &&
+    committed.at(-1)?.channelRevision === first.channelRevision - 1;
+  const prefix = continues ? committed : overlap < 0 ? [] : previous.slice(0, overlap);
   const seen = new Set<string>();
   const messages = [
     ...prefix,
@@ -761,7 +771,7 @@ function mergeLatestWindow(
     seen.add(item.id);
     return true;
   });
-  return { messages, keptPrefix: overlap >= 0 };
+  return { messages, keptPrefix: overlap >= 0 || continues };
 }
 
 export function createActions(
@@ -1824,6 +1834,21 @@ export function createActions(
       clientStore.setConversation({
         timeline: { ...timeline, loadingOlder: true, olderError: undefined },
       });
+      const viaJournal = prependChannelJournal(channelId);
+      if (viaJournal !== undefined) {
+        let olderError: string | undefined;
+        try {
+          await viaJournal;
+        } catch (error) {
+          olderError = errorMessage(error);
+        }
+        const latest = clientStore.getSnapshot();
+        if (latest.conversation.channel?.id !== channelId) return;
+        clientStore.setConversation({
+          timeline: { ...latest.conversation.timeline, loadingOlder: false, olderError },
+        });
+        return;
+      }
       try {
         const { page } = await loadTimelinePage(call, channelId, {
           direction: 'older',
@@ -1961,6 +1986,31 @@ export function createActions(
         if (clientStore.getSnapshot().conversation.channel?.id !== channelId) return;
         clientStore.setConversation({ error: errorMessage(error) });
       }
+    },
+    applyChannelTail(channelId, page) {
+      const snapshot = clientStore.getSnapshot();
+      if (snapshot.conversation.channel?.id !== channelId) return;
+      const revision = Math.max(
+        snapshot.conversation.revision,
+        page.entries.at(-1)?.channelRevision ?? 0,
+      );
+      if (snapshot.conversation.timeline.hasNewer) {
+        clientStore.setConversation({ revision });
+        return;
+      }
+      const merged = mergeLatestWindow(snapshot.conversation.messages, page.entries);
+      clientStore.setConversation({
+        messages: merged.messages,
+        revision,
+        timeline: {
+          ...snapshot.conversation.timeline,
+          olderCursor: merged.keptPrefix
+            ? snapshot.conversation.timeline.olderCursor
+            : page.olderCursor,
+          hasOlder: merged.keptPrefix ? snapshot.conversation.timeline.hasOlder : page.hasOlder,
+          hasNewer: false,
+        },
+      });
     },
     async refreshChannelMessages(channelId) {
       const before = clientStore.getSnapshot().conversation.messages;

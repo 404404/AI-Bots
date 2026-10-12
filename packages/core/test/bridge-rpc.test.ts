@@ -257,7 +257,33 @@ describe('bridge typert service', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
+      'followRoster',
+      'followActivity',
+      'followChannel',
+      'followCompanion',
     ]);
+  });
+
+  it('marks the live stream methods whose final parameter is the injected signal', () => {
+    const { service } = setup();
+
+    expect(remoteMethods(service).filter((marker) => marker.mode === 'stream')).toEqual([
+      { method: 'followRoster', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followActivity', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followChannel', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followCompanion', mode: 'stream', invocation: { kind: 'direct' } },
+    ]);
+    expect(parameterNames(service.followRoster)).toEqual(['signal']);
+    expect(parameterNames(service.followActivity)).toEqual(['signal']);
+    expect(parameterNames(service.followChannel)).toEqual(['channelId', 'limit', 'signal']);
+    expect(parameterNames(service.channelJournalPage)).toEqual([
+      'channelId',
+      'through',
+      'before',
+      'limit',
+    ]);
+    expect(parameterNames(service.followCompanion)).toEqual(['resume', 'lastEventId', 'signal']);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {
