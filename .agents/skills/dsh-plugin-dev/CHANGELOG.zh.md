@@ -9,6 +9,8 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 
 ### Documentation
 
+- 将[本地开发指南](../dsh-dev/SKILL.md)中的受支持 Host 下限更新为 DSH `0.2.0` 及以上，以 DSH 原生兼容性预检对产品清单核验；DSH／Cordis Context 与 Skill 行为不变（[#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)）。
+
 - 将[本地开发指南](../dsh-dev/SKILL.md)的默认 CLI 与参考源码标签改为 DSH `0.2.0-rc.2`，以全新隔离 Web Profile、认证 API 和实际渲染的 Bot 模式核验；在 RC1 核验的 pitfall 条目保留原记录版本，DSH／Cordis Context 与 Skill 行为不变（[#1485](https://github.com/BotHarness/DeepSeekBot/issues/1485)）。
 - 在 [Client 诊断指南](../../../docs/dev/guides/client-startup-diagnostics.md)记录原生 RC1 两个文档的 HTTP/1 请求阻塞复现，以及 Roster／Activity 共用传输的生命周期；DSH／Cordis Context 与 Decision Tree 保持不变（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
 

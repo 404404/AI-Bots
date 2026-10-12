@@ -51,11 +51,11 @@
     "zod": "^4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-scope": ">=0.1.7-0",
-    "@deepseek-ai/dsh-tools": ">=0.1.7-0"
+    "@deepseek-ai/dsh-scope": ">=0.2.0-0",
+    "@deepseek-ai/dsh-tools": ">=0.2.0-0"
   },
   "engines": {
-    "dsh": ">=0.1.7-0",
+    "dsh": ">=0.2.0-0",
     "node": ">=22.16"
   },
   "dsh": {
