@@ -35,6 +35,8 @@ Typecheck, lint, format, bilingual ledgers, full build, 92 UI/file-open tests an
 
 The CLI-generated HTML review aid was inspected at 1280×800 and 390×800 using its actual published HTML content. No horizontal overflow was found; flow semantics, metadata and exact-head source links were checked. Final refresh changes only the CI sentence from running to passed. HTML remains a review aid, not runtime evidence.
 
+The published PR body was inspected on GitHub: all 11 embedded before/after/native images loaded with nonzero natural dimensions. Empty-tab capture was subsequently cropped to remove the surrounding chat while preserving the modal. Public HTML download bytes match the locally generated artifact SHA256.
+
 ## Original native Lark acceptance and future work
 
 Original private-Lark delivery/negative/restoration checks were Human-accepted at `ad7c204a`; see that revision's `completed-qa.md`. No new native IM test is claimed here. QA1 receiver remains stopped and its previous window released.
