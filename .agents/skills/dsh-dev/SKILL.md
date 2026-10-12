@@ -153,7 +153,7 @@ Pre-execution refusal can leave an application-owned Session ID without a DSH Se
 ## Additional verified pitfall — #1425
 
 An exact DSH peer in any composed Plugin can reject installation before its code is imported.
-The build pin is not the supported Host floor. Product declarations use `>=0.1.7-0` with native
+The build pin is not the supported Host floor. Product declarations use `>=0.2.0-0` (1.2.x releases declared `>=0.1.7-0`; the floor moved in #1511) with native
 prerelease semantics and no future-version ceiling; preflight acceptance is not runtime qualification.
 Check Core and the product-managed Provider together. Preserve each release train's immutable
 Provider source and runtime digest, and qualify its own packages rather than borrowing a maintenance

@@ -16,6 +16,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 - Recorded the HTTP/1.1 connection budget shared by application SSE and native HMR, and the source-declared stream-mode Remote method path (Host marker, Client contribution with strict parameter codecs, namespace lookup, terminal-end retry) in the [local development guide](../dsh-dev/SKILL.md), verified with an authenticated stream open and two and three real same-origin documents on DSH `0.2.0-rc.1`; DSH/Cordis Context and Skill behavior remain unchanged ([#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)).
 
+- Updated the supported Host floor in the [local development guide](../dsh-dev/SKILL.md) to DSH `0.2.0` and later, checked with DSH's native compatibility preflight against the product manifests; DSH/Cordis Context and Skill behavior remain unchanged ([#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)).
+
 - Moved the [local development guide](../dsh-dev/SKILL.md)'s default CLI and reference-checkout tag to DSH `0.2.0-rc.2`, verified with a fresh isolated Web Profile, authenticated API and rendered Bot mode; RC1-verified pitfall entries keep their recorded version, and DSH/Cordis Context and Skill behavior remain unchanged ([#1485](https://github.com/BotHarness/DeepSeekBot/issues/1485)).
 - Recorded the native RC1 two-document HTTP/1 request-starvation reproduction and shared roster/Activity transport lifecycle in the [Client diagnostic guide](../../../docs/dev/guides/client-startup-diagnostics.md); DSH/Cordis Context and Decision Tree remain unchanged ([#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)).
 

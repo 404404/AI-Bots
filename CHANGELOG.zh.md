@@ -9,6 +9,8 @@
 
 ### Breaking Changes
 
+- DeepSeekBot 现在需要 DSH 0.2.0 或更高版本（含预览版）；DSH 0.1.7 的 Host 会在安装时拒绝新版本，请继续使用 DeepSeekBot 1.2.x 或先升级 DSH（[#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)）。
+
 - 工作失败通知设置与投递元数据新增 Profile Schema Generation 83。升级前请备份；回退需要兼容写入者或升级前备份（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)）。
 
 - Lark 保存的工具规则新增 Profile Schema Generation 82，记录外部创建人。升级前请备份；回退需要兼容写入者或升级前备份（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)）。
