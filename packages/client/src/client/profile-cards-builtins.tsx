@@ -1,3 +1,4 @@
+import { botNameSource, paintBotHeat } from './bot-primary-color.js';
 import { useMemo, useRef, useState, type ReactElement } from 'react';
 
 import { useMountedResource } from './mounted-resource.js';
@@ -105,8 +106,10 @@ export function ProfileHeatmap({
   firstDay,
   compact = false,
   loadOlder,
+  identityColor,
   t,
 }: {
+  identityColor?: string | undefined;
   counts: ReadonlyMap<string, number>;
   details?: ReadonlyMap<string, readonly string[]> | undefined;
   label: string;
@@ -219,7 +222,11 @@ export function ProfileHeatmap({
   };
   const tipLines = hovered === undefined ? [] : (allDetails.get(hovered.day) ?? []);
   return (
-    <div className="bh-profile-heat" data-compact={compact ? 'true' : undefined}>
+    <div
+      ref={(element) => paintBotHeat(element, identityColor)}
+      className="bh-profile-heat"
+      data-compact={compact ? 'true' : undefined}
+    >
       <div
         ref={measure}
         className="bh-profile-heat-scroll"
@@ -344,6 +351,7 @@ function olderPage(
 }
 
 function EventActivityCard({
+  bot,
   activity,
   compact,
   loadActivity,
@@ -361,6 +369,7 @@ function EventActivityCard({
         today={activity?.today}
         firstDay={activity?.createdDay}
         compact={compact}
+        identityColor={botNameSource(bot)}
         loadOlder={olderPage(loadActivity, (page) => ({
           counts: countByDay(page.events),
           details: reasonDetails(page.events, t),
@@ -372,6 +381,7 @@ function EventActivityCard({
 }
 
 function MemoryActivityCard({
+  bot,
   activity,
   compact,
   loadActivity,
@@ -388,6 +398,7 @@ function MemoryActivityCard({
         today={activity?.today}
         firstDay={activity?.createdDay}
         compact={compact}
+        identityColor={botNameSource(bot)}
         loadOlder={olderPage(loadActivity, (page) => ({ counts: countByDay(page.memoryCommits) }))}
         t={t}
       />
