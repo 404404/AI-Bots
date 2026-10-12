@@ -142,6 +142,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- A Bot no longer stays stuck on "Thinking" after its turn has ended when DSH records more Session events afterwards, such as a `/compact` checkpoint ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).
+
 - Several DM messages sent while a Bot is busy no longer make it run a separate turn for each one after they were already delivered together into the running turn ([#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)).
 
 - Clarified that Orchestrator answers, including short acknowledgments and image descriptions, must be delivered through the Channel reply Tool rather than private Session text, while preserving intentional silence and external reply routing ([#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)).
