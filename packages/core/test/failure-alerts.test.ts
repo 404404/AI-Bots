@@ -318,11 +318,11 @@ it('qualification deadline expiry never permits the late result to dispatch', as
       ),
     { timeout: 17000, interval: 100 },
   );
-  await f.api.failureAlertsSet({ slug: 'ada', enabled: false, expectedRevision: 1 });
   release();
   await new Promise<void>((resolve) => setImmediate(resolve));
   expect(f.texts).toEqual([]);
   expect(f.core.externalMessaging.failureAlerts.snapshot('ada').deliveries[0]?.attempts).toBe(1);
+  await f.api.failureAlertsSet({ slug: 'ada', enabled: false, expectedRevision: 1 });
 }, 20000);
 
 it.each(['pending', 'sending'] as const)(
