@@ -1,5 +1,10 @@
 # Exact Lark rule review evidence
 
+This folder preserves the historical exact slice at Host 9b495bf6 / Provider cb7f02a.
+The Human subsequently accepted it. Current scoped-rule source review at Host f076ed9b /
+Provider bc795b9 is in [all-opaque-f076ed9b](all-opaque-f076ed9b/README.md); its actual broader
+Lark qualification remains pending. The older root HTML is not the current-head explainer.
+
 - Host PR: https://github.com/BotHarness/DeepSeekBot/pull/1455
 - Host head: `9b495bf6705959c668f1f7cac5423f65e1af5760`
 - Host base: `5134234e18ffd41d566fd94a0ccd214534f92318`
