@@ -100,6 +100,8 @@ import {
   setBotBanner as setBotBannerViaBridge,
   updateBotProfile as updateBotProfileViaBridge,
   setBotAppearance as setBotAppearanceViaBridge,
+  setBotPrimaryColor as setBotPrimaryColorViaBridge,
+  type BotPrimaryColorChoice,
   loadPartLibrary as loadPartLibraryViaBridge,
   addLibraryPart as addLibraryPartViaBridge,
   exportLibraryParts as exportLibraryPartsViaBridge,
@@ -632,6 +634,7 @@ export interface BridgeActions {
     channelId: string,
     banner: { recipe: PixelBannerRecipe } | { image: string } | null,
   ): Promise<boolean>;
+  setBotPrimaryColor(channelId: string, primaryColor: BotPrimaryColorChoice): Promise<boolean>;
   updateBotProfile(
     slug: string,
     patch: { roles?: string[]; description?: string },
@@ -2480,6 +2483,16 @@ export function createActions(
         return true;
       } catch (error) {
         console.warn('botharness: Bot banner update failed', error);
+        return false;
+      }
+    },
+    async setBotPrimaryColor(channelId, primaryColor) {
+      try {
+        const bot = await setBotPrimaryColorViaBridge(call, channelId, primaryColor);
+        clientStore.upsertBot(bot);
+        return true;
+      } catch (error) {
+        console.warn('botharness: Bot Primary Color update failed', error);
         return false;
       }
     },

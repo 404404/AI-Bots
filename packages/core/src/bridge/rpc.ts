@@ -626,6 +626,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.botAppearanceSet({ channelId, recipe }));
   }
 
+  botPrimaryColorSet(channelId: string, primaryColor: unknown): { bot: PersonaBotDetail } {
+    return unwrap(this.methods.botPrimaryColorSet({ channelId, primaryColor }));
+  }
+
   channels(): { channels: ChannelListItem[] } {
     return unwrap(this.methods.channels({}));
   }
@@ -1392,6 +1396,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'standingLimitsSet',
   'botAvatarSet',
   'botAppearanceSet',
+  'botPrimaryColorSet',
   'partLibraryList',
   'partLibraryAdd',
   'partLibraryExport',

@@ -229,6 +229,7 @@ describe('bridge typert service', () => {
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
+      'botPrimaryColorSet',
       'partLibraryList',
       'partLibraryAdd',
       'partLibraryExport',

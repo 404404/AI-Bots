@@ -486,6 +486,7 @@ describe('plugin entry', () => {
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
+      'botPrimaryColorSet',
       'partLibraryList',
       'partLibraryAdd',
       'partLibraryExport',
