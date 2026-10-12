@@ -22,6 +22,10 @@ function aliasBounds(): { start: number; end: number } {
 }
 
 describe('client styles', () => {
+  it('pins a message group avatar to the timeline bottom edge while its group scrolls past', () => {
+    expect(source).toMatch(/\.bh-message-group \{[^}]*align-items: flex-end/);
+    expect(source).toMatch(/\.bh-message-group-avatar \{[^}]*position: sticky;\s*bottom: 0;/);
+  });
   it('keeps mixed composer attachments in fixed-height cards on one horizontal scroll row', () => {
     expect(source).toMatch(/\.bh-composer-attachments \{[^}]*flex-wrap: nowrap/);
     expect(source).toMatch(/\.bh-composer-attachments \{[^}]*overflow-x: auto/);
