@@ -280,6 +280,13 @@ function stubActions(): BridgeActions {
     memoryFileApplications: vi.fn(),
     memoryFileOpen: vi.fn(),
     memoryFileDownload: vi.fn(),
+    fileOpenPreferences: {
+      ready: vi.fn(async () => {}),
+      get: vi.fn(),
+      set: vi.fn(),
+      clear: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    },
     memorySnapshot: vi.fn(async () => ({
       head: null,
       files: [],

@@ -285,6 +285,7 @@ import {
   type HostFileOpen,
   type NativeHostFiles,
 } from './host-file-actions.js';
+import { createFileOpenPreferences, type FileOpenPreferences } from './file-open-preferences.js';
 
 const GIT_INSTALL_POLL_MS = 500;
 
@@ -491,6 +492,7 @@ export interface BridgeActions {
   memoryFileApplications(slug: string, path: string): Promise<HostFileOptions>;
   memoryFileOpen(slug: string, path: string, choice: HostFileOpen): Promise<void>;
   memoryFileDownload(slug: string, path: string): Promise<void>;
+  fileOpenPreferences: FileOpenPreferences;
   memorySnapshot(channelId: string): Promise<MemorySnapshot>;
   memoryFile(
     channelId: string,
@@ -771,6 +773,7 @@ export function createActions(
     createWorkspace(input: { path: string }): Promise<{ workspaceId: string }>;
     openSession?(sessionId: string): void;
     nativeFiles?: NativeHostFiles;
+    fileOpenPreferences?: FileOpenPreferences;
   },
   navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
@@ -780,6 +783,8 @@ export function createActions(
     writeActivityCenterTab(navigationStorage, view);
   };
   let openingFile = false;
+  const fileOpenPreferences =
+    folderAccess?.fileOpenPreferences ?? createFileOpenPreferences({ storage: undefined });
   const failedByChannel = new Map<string, ChannelMessage[]>();
   const localFailedFor = (id: string): ChannelMessage[] => failedByChannel.get(id) ?? [];
   const remainingFailures = (
@@ -2045,6 +2050,7 @@ export function createActions(
         openingFile = false;
       }
     },
+    fileOpenPreferences,
     memoryFileTarget: (slug, path) => loadMemoryFileTarget(call, slug, path),
     async memoryFileApplications(slug, path) {
       const target = await loadMemoryFileTarget(call, slug, path);

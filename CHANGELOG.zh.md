@@ -37,6 +37,10 @@
 
 - 可选择开启的工作失败通知沿用 Bot 侧栏管理目的地，采用 RBAC 风格宽双列设置／记录弹窗，提供可搜索排序的记录、测试发送和投递状态查询，从已提交失败事实通知，不转发私密错误正文或授予决策权限。确定未发送重试有界，未知结果不重放（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)，[Lark 指南](docs/lark-connection.md#work-failure-alerts-source-candidate)）。
 
+- 「记忆演化」的提交 diff 和未提交差异在每个文件行新增「打开当前文件」：打开这个路径现在的文件，使用同一个默认应用和下拉菜单，不会打开所选提交里的版本。文件不存在时明确提示而不重建，只有该行本身是删除时才附带删除说明（[#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462)、[指南](docs/file-open.md)）。
+
+- 当前 Memory 文件阅读器、聊天普通文件卡，以及 Memory Repository 和已授权 Workspace 文件夹所在行新增「打开」分体按钮：点一下就用默认应用在 Host 上打开，箭头里列出检测到的其他应用供单次选择。可以按文件类型或为文件夹设置默认应用，也可以恢复系统默认；设置只保存在当前浏览器、对应当前 Host Profile，不修改操作系统的文件关联。没有默认或默认应用不可用时会请你选择，不会直接使用列表里的第一个应用（[#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461)、[指南](docs/file-open.md)、[ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)）。
+
 - 可选 checked QQ Provider 新增有界的分发前 Gateway、原生回调与发送回执诊断，包括白名单标识字段的哈希与长度，用于排查自身 Echo 缺失，不记录正文或原始标识；Gateway 解析与采样拒绝明确记录，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)）。
 
 - PersonaBot 新增 Bot 主色：自动模式跟随头像的主发色（上传图片时使用固定的备用色），也可以在 Profile 的头像弹窗里选择自定义颜色并预览浅色／深色效果。私聊和群聊消息上的 Bot 名字、@ 候选列表、输入框里选中的 Bot 以及已发送的 @ 都使用这个颜色，并按所在背景和主题调整明暗以保证可读。导出 zip 或分享记忆仓库时会带上这个设置，导入得到的 Bot 保持同样的颜色。删除 Bot 后，它的历史消息和用量列表里的名字仍保留最后的颜色。按 Bot 的用量图表和单个 Bot 自己的 token 图表使用该 Bot 的颜色，并用固定的深浅区分缓存读、其他输入和输出，单个 Bot 的活跃度热力图用它的颜色深浅表示强度，没有活动的日期保持中性色（[#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471)、[#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472)、[#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473)、[#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474)、[#1475](https://github.com/BotHarness/DeepSeekBot/issues/1475)、[#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)、[ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)）。
