@@ -1,5 +1,6 @@
 import type { PixelBannerRecipe } from '@botharness/pixel-banner';
 import { onboardingFor } from './onboarding.js';
+import { invalidateInheritedModelPlans } from './model-plan-store.js';
 import type { ProviderAppSetup } from './provider-app-setup.js';
 import type { OnboardingSnapshot, TutorialAction } from '../../../core/src/onboarding/types.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
@@ -1217,8 +1218,16 @@ export function createActions(
   };
   const actions: BridgeActions = {
     onboarding: (slug, action) => invoke('onboarding', { slug, action }),
-    onboardingModel: (slug, expectedRevision, route, globalDefault) =>
-      invoke('onboardingModel', { slug, expectedRevision, route, globalDefault }),
+    onboardingModel: async (slug, expectedRevision, route, globalDefault) => {
+      const result = await invoke<{ revision: number }>('onboardingModel', {
+        slug,
+        expectedRevision,
+        route,
+        globalDefault,
+      });
+      if (globalDefault) invalidateInheritedModelPlans();
+      return result;
+    },
     inheritModel: (slug, expectedRevision) =>
       invoke('modelPlanInherit', { slug, expectedRevision }),
     async retryMessage(channelId, messageId) {

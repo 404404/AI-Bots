@@ -18,6 +18,7 @@ import {
 } from './workspace-grants-entry.js';
 import { subscribeWorkspaceGrantChanges } from './workspace-grant-events.js';
 import { authorizeGroupMembers, type GroupGrantResult } from './group-workspace-authorization.js';
+import { useMobileBotViewport } from './mobile-viewport.js';
 
 interface PreviewMember {
   slug: string;
@@ -82,6 +83,7 @@ export function GroupComposerContextView({
   onOpen(): void;
   onClose(): void;
 }): ReactElement {
+  const mobile = useMobileBotViewport();
   const [selected, setSelected] = useState<string[]>();
   const [facts, setFacts] = useState<Record<string, WorkspaceGrantView[] | undefined>>({});
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
@@ -200,7 +202,7 @@ export function GroupComposerContextView({
   const retry = results.some((row) => row.status === 'unknown' || row.status === 'failed');
   return (
     <div ref={mount}>
-      <div className="bh-composer-context" aria-label={t('composerContext.label')}>
+      <div className="bh-composer-context" hidden={mobile} aria-label={t('composerContext.label')}>
         <button ref={factMount} type="button" onClick={onOpen}>
           <ChannelSidebarIcon name="folder-key" size={14} />
           <span>{chip}</span>
