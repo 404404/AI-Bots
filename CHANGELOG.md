@@ -9,6 +9,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Breaking Changes
 
+- Work-failure alert settings and delivery metadata add Profile schema Generation 83. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)).
+
 - Lark-saved tool rules add Profile schema Generation 82 with external creator provenance. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)).
 
 - Group behavior items can declare mutual exclusions. Current writers reject incompatible effective Allows; stop policy editing before reverting to a writer that ignores these declarations ([#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)).
@@ -32,6 +34,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ reception intervals add Profile schema Generation 74 and reuse the existing receive boundary; back up before upgrading and repair forward after upgrade ([#1153](https://github.com/BotHarness/BotHarness/issues/1153)).
 
 ### Added
+
+- Opt-in work-failure alerts reuse the Bot sidebar management destination, use an RBAC-style wide two-column settings/history dialog with searchable, sortable records, test send and delivery inspection, and notify from committed failure facts without forwarding private error text or granting decision authority. Known-unsent retries are bounded; unknown sends are not replayed ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041), [Lark guide](docs/lark-connection.md#work-failure-alerts-source-candidate)).
 
 - Memory Evolution commit diffs and uncommitted diffs have **Open current file** on every file row: it opens the file at that path as it is now, with the same default application and dropdown, never the version in the selected commit. A missing file is reported instead of rebuilt, with a deletion note only when that row is itself a deletion ([#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462), [guide](docs/file-open.md)).
 
