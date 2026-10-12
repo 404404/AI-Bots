@@ -60,7 +60,7 @@ export function FailureAlertSettings({
             </time>
             {delivery.sessionId ? (
               <Button size="sm" variant="toolbar" onClick={() => openSession(delivery.sessionId!)}>
-                {t('approvalIm.openSession')}
+                {t('failureAlerts.openSession')}
               </Button>
             ) : null}
             {delivery.state === 'failed' &&
