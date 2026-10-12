@@ -2563,12 +2563,12 @@ class BotRuntimeImplementation implements BotRuntime {
       `)
         .all(botSlug, channelId ?? '', botSlug),
     ) as Array<{ channel_id: string; message_id: string }>;
-    if (rows.length === 0) return '';
-    return (
-      '[Host: earlier Human DM turn ended without a reply]\n' +
-      rows.map((row) => `Channel: ${row.channel_id}\nMessage ID: ${row.message_id}`).join('\n') +
-      '\nThat request is not part of this turn and stays in its own Channel, where the Human can retry it. Do not answer it in any other Channel, and do not send its answer with channel_send in this turn.\n\n'
-    );
+    return rows
+      .map(
+        (row) =>
+          `[Host: your earlier turn for Human DM ${row.channel_id}, message ${row.message_id}, ended without a reply. It stays in that DM for the Human to retry; do not answer it in another Channel.]\n\n`,
+      )
+      .join('');
   }
 
   #groupMentionPrompt(channelId: string, messageId: string, body: string): string {
@@ -2601,7 +2601,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (channel?.type !== 'dm' || channel.botSlug === undefined || message?.author.kind !== 'human')
       return text;
     const selected = [...new Set((message.mentions ?? []).map((mention) => mention.botSlug))];
-    const parts = [text];
+    const parts = [`[Human DM]\nChannel: ${channelId}\nMessage ID: ${messageId}\n${text}`];
     if (message.assignmentReply !== undefined)
       parts.push(
         `[Human response to Assignment Session ${message.assignmentReply.sessionId}, report Source Event ${message.assignmentReply.sourceEventId}]\nUse assignment inspection and send_assignment_request to relay this response to the addressed Assignment. This DM is Human input; it does not itself resume the Assignment or clear its open ask.`,

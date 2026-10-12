@@ -61,17 +61,15 @@ describe('interrupted Human DM notice', () => {
       await mention('human-group-2');
 
       expect(turns.map((turn) => turn.channel)).toEqual([dm.id, group.id, group.id]);
-      expect(turns[0]!.message).not.toContain(
-        '[Host: earlier Human DM turn ended without a reply]',
-      );
+      expect(turns[0]!.message).not.toContain('[Host: your earlier turn for Human DM');
       expect(turns[1]!.message).toContain(
-        `[Host: earlier Human DM turn ended without a reply]\nChannel: ${dm.id}\nMessage ID: human-dm-interrupted\n`,
+        `[Host: your earlier turn for Human DM ${dm.id}, message human-dm-interrupted, ended without a reply. It stays in that DM for the Human to retry; do not answer it in another Channel.]`,
       );
-      expect(turns[1]!.message).toContain('Do not answer it in any other Channel');
+      expect(turns[0]!.message).toContain(
+        `[Human DM]\nChannel: ${dm.id}\nMessage ID: human-dm-interrupted\nWrite the history of bridges`,
+      );
       expect(turns[1]!.message).toContain('[Bot Inbox: direct Group mention from Human]');
-      expect(turns[2]!.message).not.toContain(
-        '[Host: earlier Human DM turn ended without a reply]',
-      );
+      expect(turns[2]!.message).not.toContain('[Host: your earlier turn for Human DM');
 
       await core.channels.appendMessage(dm.id, {
         id: 'human-dm-next',
@@ -86,9 +84,7 @@ describe('interrupted Human DM notice', () => {
       });
       if (!next.admitted) throw new Error(next.reason);
       await next.settled;
-      expect(turns[3]!.message).not.toContain(
-        '[Host: earlier Human DM turn ended without a reply]',
-      );
+      expect(turns[3]!.message).not.toContain('[Host: your earlier turn for Human DM');
     } finally {
       await core.runtime.close();
       core.operationalDatabase.close();
