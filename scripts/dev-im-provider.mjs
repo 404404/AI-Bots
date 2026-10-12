@@ -7,7 +7,7 @@ export const qualifiedImProvider = Object.freeze({
   packageVersion: '4.32.0',
   source: '43902c638ac97d4eeaa6845442c5115198f1c9ec',
   spec: 'github:DoodleBears/dsh-im#43902c638ac97d4eeaa6845442c5115198f1c9ec',
-  dsh: '0.2.0-rc.1',
+  dsh: '0.2.0-rc.2',
   runtimeFiles: 417,
   runtimeSha256: 'ffa1e461d63f8e6bc423cbb29f060fd4433d505cf677497f29a260ba43d17626',
 });
