@@ -2,6 +2,8 @@
 
 Host head: `fca0d383193791ee0f5a45cdafcd6e9a5794639f`; base: `5134234e18ffd41d566fd94a0ccd214534f92318`.
 Provider head: `bc795b9cb576c411f0c94997e025b72a94c4f1fb`; base: `99df05b7c2a14ebb6c122e4f22d655b6b9cbacc7`.
+Current PR documentation head: `dbe952ad7f7261eac377d36c3694574b1e8cddaa`; only documentation/screenshots/release wording changed after the native runtime head. Current-head Standards and Spec reviews each report zero remaining findings.
+
 Date: 2026-10-12. Exclusive QA1 App, task-isolated Host, one receiver at a time. The receiver is stopped after completed turns.
 
 The Human accepted the exact first slice previously and the all-opaque first slice during this run, before scope/revocation expansion. No merge, publication or deployment is implied.

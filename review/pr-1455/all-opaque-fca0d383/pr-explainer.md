@@ -5,18 +5,20 @@ lang: zh
 
 ## A 当前结果与验收范围
 
-精确与 all-opaque 首片均获 Human 接受。范围变化和重启门禁已实测。
+精确与 all-opaque 首片均获 Human 接受。范围变化、重启门禁及最终停用卡片已实测。
 
 | 绑定 | 值 |
 |---|---|
 | Host PR | [1455](https://github.com/BotHarness/DeepSeekBot/pull/1455) · Draft |
-| Host head | fca0d383193791ee0f5a45cdafcd6e9a5794639f |
+| Host head | dbe952ad7f7261eac377d36c3694574b1e8cddaa |
+| Native QA runtime | fca0d383193791ee0f5a45cdafcd6e9a5794639f |
 | Host base | 5134234e18ffd41d566fd94a0ccd214534f92318 |
 | Provider PR | [24](https://github.com/DoodleBears/dsh-im/pull/24) · Draft |
 | Provider head | bc795b9cb576c411f0c94997e025b72a94c4f1fb |
 | Provider base | 99df05b7c2a14ebb6c122e4f22d655b6b9cbacc7 |
 | 日期 | 2026-10-12 |
 
+最新 head 仅追加教程与截图，运行代码仍与 QA head 相同。
 页面解释源码，不代替运行证据或合并许可。
 
 ## B 两种规则分别确认
@@ -50,7 +52,7 @@ lang: zh
 Generation 82 沿用既有规则表，记录外部创建人。
 升级前备份；旧程序回退需要备份或兼容修复。
 
-代码：[审批拥有者](https://github.com/BotHarness/DeepSeekBot/blob/fca0d383193791ee0f5a45cdafcd6e9a5794639f/packages/core/src/workspaces/tool-approval.ts)、[规则存储](https://github.com/BotHarness/DeepSeekBot/blob/fca0d383193791ee0f5a45cdafcd6e9a5794639f/packages/core/src/workspaces/tool-approval-rules.ts)、[ADR-0175](https://github.com/BotHarness/DeepSeekBot/blob/fca0d383193791ee0f5a45cdafcd6e9a5794639f/docs/adr/0175-external-tool-rules-retain-current-creator-authority.md)。
+代码：[审批拥有者](https://github.com/BotHarness/DeepSeekBot/blob/dbe952ad7f7261eac377d36c3694574b1e8cddaa/packages/core/src/workspaces/tool-approval.ts)、[规则存储](https://github.com/BotHarness/DeepSeekBot/blob/dbe952ad7f7261eac377d36c3694574b1e8cddaa/packages/core/src/workspaces/tool-approval-rules.ts)、[ADR-0175](https://github.com/BotHarness/DeepSeekBot/blob/dbe952ad7f7261eac377d36c3694574b1e8cddaa/docs/adr/0175-external-tool-rules-retain-current-creator-authority.md)。
 
 ## D Provider 与账户资格
 
@@ -78,7 +80,7 @@ Questions 与群执行目的地保留独立边界。
 | 文档构建 | 476 页构建成功 |
 | 精确路径真实 Lark | 已接受；原窗口释放、接收器停止 |
 | all-opaque 真实 Lark | QA1：返回、宽确认、不同输入、范围变化、撤销重启已实测 |
-| 当前 CI | 当前 head 的完整 verify 和 preparation 均通过 |
+| 当前 CI | 运行源码 fca0d383 的完整 CI 通过；当前文档 head 请见 PR |
 
 隔离 Host 复用原端口；当前任务接收器已停止。
 真实截图包含基线卡片、宽确认与 Back、不同输入回复。
