@@ -127,7 +127,7 @@ flowchart LR
 
 浏览器只通过 RPC 访问 Host read models 和 commands。Provider adapter 只负责验证、规范化和执行能力；它不拥有 Inbox，也不能直接唤醒 Agent。DSH 继续拥有 Agent 执行、SessionPersistence、Subagent 与凭据；BotHarness 不复制这些 runtime 权威。
 
-Assignment 完成报告通过既有 Human Inbox 最新报告、忽略和来源级隐藏事实派生 `informationalCount`，进入同一有 revision 的 Activity snapshot。仅有信息时显示中性的 `i`，但不会单独让输入框活动行常驻，该行只在执行中或有待处理事项时出现；红色待处理数字不包含信息更新，同时存在时悬浮／聚焦摘要分别说明数量。打开报告本身不代表确认；忽略或隐藏才清除提示，重启可从权威事实恢复，执行状态不变。
+Assignment 完成报告通过既有 Human Inbox 最新报告、忽略和来源级隐藏事实派生 `informationalCount`，进入同一有 revision 的 Activity snapshot。仅有信息时显示中性的 `i`，但不会单独让输入框活动行常驻，该行只在执行中或有待处理事项时出现；红色待处理数字不包含信息更新，同时存在时悬浮／聚焦摘要分别说明数量。打开报告本身不代表确认；忽略、隐藏，或主会话已处理这条汇报的 Inbox 投递时清除提示，汇报本身仍列在收件箱中；重启可从权威事实恢复，执行状态不变。
 
 ## 2 · Deep modules 与所有权
 
