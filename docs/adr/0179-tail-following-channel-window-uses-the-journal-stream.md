@@ -6,7 +6,7 @@ Issues: [#1503](https://github.com/BotHarness/DeepSeekBot/issues/1503), [#1504](
 
 # The tail-following Channel window uses the journal stream; detached windows stay on timeline pages
 
-ADR-0178 puts the Channel's live frames on DSH's Remote stream carrier in the journal frame vocabulary, but the Client still owns the hard part itself: detecting a revision gap, reloading, and reopening. DSH ships `RemoteJournalStream` for exactly that work and uses it for its own session timeline. ADR-0061 separately gives the Channel timeline Host-owned opaque cursors and four windows (latest, older, newer, around). This record decides how the two divide the Channel window. The Human accepted it on 2026-10-12 with two instructions: answer the open questions with a spike before implementing, and target DSH `0.2.0` and later for this work without carrying compatibility for older Hosts.
+ADR-0181 puts the Channel's live frames on DSH's Remote stream carrier in the journal frame vocabulary, but the Client still owns the hard part itself: detecting a revision gap, reloading, and reopening. DSH ships `RemoteJournalStream` for exactly that work and uses it for its own session timeline. ADR-0061 separately gives the Channel timeline Host-owned opaque cursors and four windows (latest, older, newer, around). This record decides how the two divide the Channel window. The Human accepted it on 2026-10-12 with two instructions: answer the open questions with a spike before implementing, and target DSH `0.2.0` and later for this work without carrying compatibility for older Hosts.
 
 ## What the helper does
 
