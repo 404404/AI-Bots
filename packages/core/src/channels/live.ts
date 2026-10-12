@@ -38,8 +38,28 @@ interface Subscriber {
   close(): void;
 }
 
+export type RosterLiveFrame =
+  | { type: 'baseline'; placements: PurgedPlacement[] }
+  | { type: 'changed' }
+  | { type: 'purged'; placements: PurgedPlacement[] };
+
+export type ActivityLiveFrame =
+  | { type: 'baseline'; snapshot: PersonaBotActivitySnapshot }
+  | { type: 'changed'; snapshot: PersonaBotActivitySnapshot };
+
+export class LiveUnavailable extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LiveUnavailable';
+  }
+}
+
+const ROSTER_LIVE_QUEUE_LIMIT = 1024;
+
 export interface ChannelLiveHub {
   open(request: Request): Response;
+  followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;
+  followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
   publishCommitted(commit: ChannelMessageCommit): void;
   publishAdmission(channelId: string, messageId: string, message: ChannelMessage): void;
   publishHumanRead(channelId: string, humanId: string, revision: number): void;
@@ -308,6 +328,91 @@ export function createChannelLiveHub(
       },
     });
   };
+  async function* followRoster(signal: AbortSignal): AsyncGenerator<RosterLiveFrame> {
+    const queue: RosterLiveFrame[] = [];
+    let ended = signal.aborted;
+    let wake: (() => void) | undefined;
+    const subscriber: RosterSubscriber = {
+      purge(placements) {
+        if (ended) return;
+        queue.push({ type: 'purged', placements });
+        if (queue.length > ROSTER_LIVE_QUEUE_LIMIT) this.close();
+        wake?.();
+      },
+      push() {
+        if (ended) return;
+        if (queue.at(-1)?.type !== 'changed') queue.push({ type: 'changed' });
+        wake?.();
+      },
+      close() {
+        if (ended) return;
+        ended = true;
+        rosterSubscribers.delete(this);
+        wake?.();
+      },
+    };
+    const abort = (): void => subscriber.close();
+    signal.addEventListener('abort', abort, { once: true });
+    if (!ended) rosterSubscribers.add(subscriber);
+    try {
+      if (ended) return;
+      yield { type: 'baseline', placements: redactions?.() ?? [] };
+      for (;;) {
+        while (!ended && queue.length > 0) yield queue.shift()!;
+        if (ended) return;
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+        wake = undefined;
+      }
+    } finally {
+      signal.removeEventListener('abort', abort);
+      subscriber.close();
+    }
+  }
+  async function* followActivity(signal: AbortSignal): AsyncGenerator<ActivityLiveFrame> {
+    if (activity === undefined) throw new LiveUnavailable('Activity unavailable');
+    let ended = signal.aborted;
+    let pending = false;
+    let wake: (() => void) | undefined;
+    const subscriber = {
+      close(): void {
+        if (ended) return;
+        ended = true;
+        activitySubscribers.delete(subscriber);
+        wake?.();
+      },
+    };
+    const abort = (): void => subscriber.close();
+    signal.addEventListener('abort', abort, { once: true });
+    const unsubscribe = ended
+      ? undefined
+      : activity.onChange(() => {
+          pending = true;
+          wake?.();
+        });
+    if (!ended) activitySubscribers.add(subscriber);
+    try {
+      if (ended) return;
+      yield { type: 'baseline', snapshot: activity.snapshot() };
+      for (;;) {
+        if (ended) return;
+        if (pending) {
+          pending = false;
+          yield { type: 'changed', snapshot: activity.snapshot() };
+          continue;
+        }
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+        wake = undefined;
+      }
+    } finally {
+      signal.removeEventListener('abort', abort);
+      unsubscribe?.();
+      subscriber.close();
+    }
+  }
   const remove = (channelId: string, subscriber: Subscriber): void => {
     const group = subscribers.get(channelId);
     group?.delete(subscriber);
@@ -315,6 +420,8 @@ export function createChannelLiveHub(
   };
 
   return {
+    followRoster,
+    followActivity,
     open(request) {
       const url = new URL(request.url);
       if (url.searchParams.get('roster') === '1' && url.searchParams.has('channelId')) {

@@ -1525,9 +1525,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
-  registerBridge(ctx, bridgeMethods, privateInputs, (query, resume, signal) =>
-    openLiveFrames((request) => core.live.open(request), query, resume, signal),
-  );
+  registerBridge(ctx, bridgeMethods, privateInputs, {
+    frames: (query, resume, signal) =>
+      openLiveFrames((request) => core.live.open(request), query, resume, signal),
+    followRoster: (signal) => core.live.followRoster(signal),
+    followActivity: (signal) => core.live.followActivity(signal),
+  });
 
   ctx.inject(['skills'], (skillsCtx) => {
     const skills = (

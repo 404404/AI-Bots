@@ -28,6 +28,7 @@ const BASELINE_MODULES = new Set([
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-dockkit',
+  '@deepseek-ai/dsh-api-gateway/client',
 ]);
 
 function isBaselineModule(id: string): boolean {

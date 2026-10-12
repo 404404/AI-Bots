@@ -70,4 +70,69 @@ describe('live frames on the native stream carrier', () => {
     aborted.abort();
     expect((await openLiveFrames(open, 'scope=roster', '', aborted.signal).next()).done).toBe(true);
   });
+
+  it('follows the roster as a baseline and typed increments and releases on abort', async () => {
+    let placements = [{ sourceEventId: 'source', channelId: 'channel', messageId: 'message' }];
+    const hub = createChannelLiveHub(
+      createChannelStore({ rootDir: root() }),
+      undefined,
+      () => placements,
+    );
+    hubs.push(hub);
+    const abort = new AbortController();
+    const frames = hub.followRoster(abort.signal)[Symbol.asyncIterator]();
+    expect((await frames.next()).value).toEqual({ type: 'baseline', placements });
+    hub.publishRosterCommitted();
+    hub.publishRosterCommitted();
+    placements = [{ sourceEventId: 'new', channelId: 'shared', messageId: 'new-message' }];
+    hub.publishContentPurged();
+    expect((await frames.next()).value).toEqual({ type: 'changed' });
+    expect((await frames.next()).value).toEqual({ type: 'purged', placements });
+    const pending = frames.next();
+    abort.abort();
+    expect((await pending).done).toBe(true);
+    hub.publishRosterCommitted();
+
+    const closing = hub.followRoster(new AbortController().signal)[Symbol.asyncIterator]();
+    await closing.next();
+    const ended = closing.next();
+    hub.close();
+    expect((await ended).done).toBe(true);
+  });
+
+  it('follows Activity as a baseline and coalesced replacement snapshots', async () => {
+    let revision = 0;
+    const listeners = new Set<() => void>();
+    const activity = {
+      snapshot: () => ({ generation: 'g', revision, bots: {} }) as never,
+      onChange: (listener: () => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+    const hub = createChannelLiveHub(createChannelStore({ rootDir: root() }), activity);
+    hubs.push(hub);
+    const abort = new AbortController();
+    const frames = hub.followActivity(abort.signal)[Symbol.asyncIterator]();
+    expect((await frames.next()).value).toMatchObject({
+      type: 'baseline',
+      snapshot: { revision: 0 },
+    });
+    for (revision = 1; revision < 4; revision++) for (const listener of listeners) listener();
+    revision = 3;
+    expect((await frames.next()).value).toMatchObject({
+      type: 'changed',
+      snapshot: { revision: 3 },
+    });
+    const pending = frames.next();
+    abort.abort();
+    expect((await pending).done).toBe(true);
+    expect(listeners.size).toBe(0);
+
+    const missing = createChannelLiveHub(createChannelStore({ rootDir: root() }));
+    hubs.push(missing);
+    await expect(
+      missing.followActivity(new AbortController().signal)[Symbol.asyncIterator]().next(),
+    ).rejects.toMatchObject({ name: 'LiveUnavailable' });
+  });
 });

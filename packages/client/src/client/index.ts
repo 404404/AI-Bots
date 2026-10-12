@@ -66,7 +66,12 @@ import {
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
 import { mountChannelLive, mountRosterLive } from './channel-live.js';
-import { installLiveSource } from './messaging-defaults-live.js';
+import { installLiveSource, installTypedLive } from './messaging-defaults-live.js';
+import {
+  createTypedLive,
+  SNAPSHOT_REMOTE_DESCRIPTORS,
+  type SnapshotNamespace,
+} from './live-snapshots.js';
 import {
   createRemoteLiveSource,
   LIVE_REMOTE_CONTRIBUTION,
@@ -350,27 +355,50 @@ export function apply(ctx: ClientContext): void {
     const native = ctx.remote as Partial<Pick<typeof ctx.remote, '$mount' | '$stream'>>;
     if (typeof native.$mount !== 'function' || typeof native.$stream !== 'function')
       return () => {};
-    void ctx.remote.$mount(LIVE_REMOTE_CONTRIBUTION).then(
-      () => {
-        if (disposed) return;
-        uninstall = installLiveSource(
-          createRemoteLiveSource({
-            $stream: (options) => (ctx.remote as unknown as LiveRemote).$stream(options),
-            liveFrames: (query, resume, signal) => {
-              const namespace = ctx.get('remote.botharness') as
-                | { liveFrames?: LiveRemote['liveFrames'] }
-                | undefined;
-              if (namespace?.liveFrames === undefined)
+    const namespace = (): Partial<SnapshotNamespace> & {
+      liveFrames?: LiveRemote['liveFrames'];
+    } => {
+      const mounted = ctx.get('remote.botharness') as
+        | (Partial<SnapshotNamespace> & { liveFrames?: LiveRemote['liveFrames'] })
+        | undefined;
+      if (mounted === undefined) throw new Error('botharness live Remote is not mounted');
+      return mounted;
+    };
+    void ctx.remote
+      .$mount({
+        package: LIVE_REMOTE_CONTRIBUTION.package,
+        descriptors: [...LIVE_REMOTE_CONTRIBUTION.descriptors, ...SNAPSHOT_REMOTE_DESCRIPTORS],
+      })
+      .then(
+        () => {
+          if (disposed) return;
+          const uninstallTyped = installTypedLive(
+            createTypedLive(ctx.remote, () => {
+              const mounted = namespace();
+              if (mounted.followRoster === undefined || mounted.followActivity === undefined)
                 throw new Error('botharness live Remote is not mounted');
-              return namespace.liveFrames(query, resume, signal);
-            },
-          }),
-        );
-      },
-      (error: unknown) => {
-        console.warn('botharness: live Remote stream unavailable', error);
-      },
-    );
+              return mounted as SnapshotNamespace;
+            }),
+          );
+          const uninstallSource = installLiveSource(
+            createRemoteLiveSource({
+              $stream: (options) => (ctx.remote as unknown as LiveRemote).$stream(options),
+              liveFrames: (query, resume, signal) => {
+                const open = namespace().liveFrames;
+                if (open === undefined) throw new Error('botharness live Remote is not mounted');
+                return open(query, resume, signal);
+              },
+            }),
+          );
+          uninstall = () => {
+            uninstallSource();
+            uninstallTyped();
+          };
+        },
+        (error: unknown) => {
+          console.warn('botharness: live Remote stream unavailable', error);
+        },
+      );
     return () => {
       disposed = true;
       uninstall?.();

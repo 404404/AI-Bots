@@ -8,6 +8,18 @@ export type LiveSource = Pick<EventTarget, 'addEventListener'> & {
   readonly readyState: number;
   close(): void;
 };
+export interface TypedLive {
+  roster(handlers: {
+    baseline(placements: PurgedPlacement[]): void;
+    changed(): void;
+    purged(placements: PurgedPlacement[]): void;
+    interrupted(): void;
+  }): () => void;
+  activity(handlers: { snapshot(data: string): void; interrupted(): void }): () => void;
+}
+let typed: TypedLive | undefined;
+let stopRoster: (() => void) | undefined;
+let stopActivity: (() => void) | undefined;
 let makeLiveSource: ((url: string) => LiveSource) | undefined;
 let source: LiveSource | undefined;
 let sourceUrl: string | undefined;
@@ -22,11 +34,63 @@ export type ChannelEventSource = ActivityEventSource & {
   onerror: ((event: Event) => void) | null;
 };
 
+function publishActivity(type: string, data?: string, errorState?: number): void {
+  for (const consumer of [...consumers])
+    if (consumer.channelUrl === undefined) consumer.publish(type, data, errorState);
+}
+
+function recordPurged(placements: PurgedPlacement[]): void {
+  for (const placement of placements)
+    redactions.set(JSON.stringify([placement.channelId, placement.messageId]), placement);
+  for (let offset = 0; offset < placements.length; offset += 100)
+    for (const callback of [...purgeListeners]) callback(placements.slice(offset, offset + 100));
+}
+
+function syncTyped(): void {
+  if (typed === undefined) return;
+  if (listeners.size && stopRoster === undefined)
+    stopRoster = typed.roster({
+      baseline(placements) {
+        redactions.clear();
+        recordPurged(placements);
+        notify();
+      },
+      changed: () => notify(),
+      purged: recordPurged,
+      interrupted: () => undefined,
+    });
+  else if (!listeners.size && stopRoster !== undefined) {
+    stopRoster();
+    stopRoster = undefined;
+    redactions.clear();
+  }
+  const wanted = [...consumers].some((consumer) => consumer.channelUrl === undefined);
+  if (wanted && stopActivity === undefined)
+    stopActivity = typed.activity({
+      snapshot(data) {
+        activityBaseline = data;
+        publishActivity('activity/snapshot', data);
+      },
+      interrupted() {
+        activityBaseline = undefined;
+        publishActivity('error', undefined, 0);
+      },
+    });
+  else if (!wanted && stopActivity !== undefined) {
+    stopActivity();
+    stopActivity = undefined;
+    activityBaseline = undefined;
+  }
+}
+
 function releaseUnusedSource(): void {
-  if (listeners.size || consumers.size) return;
+  syncTyped();
+  if (typed === undefined ? listeners.size || consumers.size : channelConsumer !== undefined)
+    return;
   source?.close();
   source = undefined;
   sourceUrl = undefined;
+  if (typed !== undefined) return;
   activityBaseline = undefined;
   redactions.clear();
 }
@@ -39,7 +103,11 @@ class SharedSource extends EventTarget implements ActivityEventSource {
     super();
   }
   get readyState(): number {
-    return this.closed ? 2 : (this.errorState ?? source?.readyState ?? 2);
+    if (this.closed) return 2;
+    if (this.errorState !== undefined) return this.errorState;
+    if (typed !== undefined && this.channelUrl === undefined)
+      return activityBaseline === undefined ? 0 : 1;
+    return source?.readyState ?? 2;
   }
   publish(type: string, data?: string, errorState?: number): void {
     if (this.closed) return;
@@ -69,8 +137,19 @@ class SharedSource extends EventTarget implements ActivityEventSource {
 }
 
 function ensureSource(): void {
+  if (typed !== undefined) {
+    syncTyped();
+    if (channelConsumer === undefined) {
+      releaseUnusedSource();
+      return;
+    }
+  }
   if (makeLiveSource === undefined && typeof EventSource === 'undefined') return;
-  const url = channelConsumer?.channelUrl ?? '/api/botharness/stream?scope=roster&activity=1';
+  const shared = typed === undefined ? '&roster=1&activity=1' : '';
+  const url =
+    channelConsumer?.channelUrl === undefined
+      ? '/api/botharness/stream?scope=roster&activity=1'
+      : channelConsumer.channelUrl + shared;
   if (source && sourceUrl === url) return;
   const next: LiveSource = makeLiveSource?.(url) ?? new EventSource(url);
   source?.close();
@@ -130,6 +209,25 @@ function ensureSource(): void {
   });
 }
 
+export function installTypedLive(next: TypedLive): () => void {
+  const swap = (value: TypedLive | undefined): void => {
+    stopRoster?.();
+    stopRoster = undefined;
+    stopActivity?.();
+    stopActivity = undefined;
+    typed = value;
+    activityBaseline = undefined;
+    sourceUrl = undefined;
+    if (listeners.size || consumers.size) ensureSource();
+    else releaseUnusedSource();
+    for (const consumer of [...consumers]) consumer.publish('error', undefined, 0);
+  };
+  swap(next);
+  return () => {
+    if (typed === next) swap(undefined);
+  };
+}
+
 export function installLiveSource(make: (url: string) => LiveSource): () => void {
   const swap = (value: ((url: string) => LiveSource) | undefined): void => {
     makeLiveSource = value;
@@ -149,8 +247,6 @@ export function installLiveSource(make: (url: string) => LiveSource): () => void
 export function openSharedChannel(url: string): ChannelEventSource {
   if (channelConsumer !== undefined) throw new Error('A document already owns a live Channel');
   const query = new URL(url, 'http://localhost').searchParams;
-  query.set('roster', '1');
-  query.set('activity', '1');
   const consumer = new SharedSource('/api/botharness/stream?' + query.toString());
   consumers.add(consumer);
   channelConsumer = consumer;
@@ -166,7 +262,7 @@ export function openSharedChannel(url: string): ChannelEventSource {
 }
 
 export function openRosterActivity(): ActivityEventSource | undefined {
-  if (typeof EventSource === 'undefined') return undefined;
+  if (typed === undefined && typeof EventSource === 'undefined') return undefined;
   const consumer = new SharedSource();
   consumers.add(consumer);
   try {
@@ -177,7 +273,9 @@ export function openRosterActivity(): ActivityEventSource | undefined {
     throw error;
   }
   queueMicrotask(() => {
-    if (source?.readyState !== 1) consumer.publish('error');
+    if (typed !== undefined) {
+      if (activityBaseline !== undefined) consumer.publish('activity/snapshot', activityBaseline);
+    } else if (source?.readyState !== 1) consumer.publish('error');
     else if (activityBaseline !== undefined)
       consumer.publish('activity/snapshot', activityBaseline);
   });

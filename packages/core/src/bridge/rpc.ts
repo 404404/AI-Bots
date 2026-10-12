@@ -6,6 +6,7 @@ import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import { LiveRefused, type LiveFrame } from '../channels/live-frames.js';
+import { LiveUnavailable, type ActivityLiveFrame, type RosterLiveFrame } from '../channels/live.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
 import type {
   MessagingDefaults,
@@ -163,6 +164,12 @@ function markRemoteMethods(prototype: object, methods: readonly string[]): void 
   });
 }
 
+export interface BridgeLive {
+  frames(query: string, resume: string, signal: AbortSignal): AsyncIterable<LiveFrame>;
+  followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;
+  followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
+}
+
 function markRemoteStreams(prototype: object, streams: readonly string[]): void {
   const marked = (prototype as Record<string, RemoteMethodDescriptor | undefined>)[
     REMOTE_METHOD_DESCRIPTOR
@@ -206,21 +213,35 @@ export class BotharnessBridgeService extends TypertRemoteService {
     ctx: Context,
     methods: BridgeMethods,
     private readonly privateInputs?: PrivateInputs,
-    private readonly live?: (
-      query: string,
-      resume: string,
-      signal: AbortSignal,
-    ) => AsyncIterable<LiveFrame>,
+    private readonly live?: BridgeLive,
   ) {
     super(ctx, BRIDGE_SERVICE_KEY, { namespace: BRIDGE_NAMESPACE });
     this.methods = methods;
+  }
+
+  followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    return this.live.followRoster(signal);
+  }
+
+  async *followActivity(signal: AbortSignal): AsyncGenerator<ActivityLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live.followActivity(signal);
+    } catch (error) {
+      if (error instanceof LiveUnavailable)
+        throw toRemoteError({ code: 'unavailable', message: error.message });
+      throw error;
+    }
   }
 
   async *liveFrames(query: string, resume: string, signal: AbortSignal): AsyncGenerator<LiveFrame> {
     if (this.live === undefined)
       throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
     try {
-      yield* this.live(query, resume, signal);
+      yield* this.live.frames(query, resume, signal);
     } catch (error) {
       if (error instanceof LiveRefused)
         throw toRemoteError({ code: error.code, message: error.message });
@@ -1446,13 +1467,17 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'scheduleRunNow',
   'schedulePreview',
 ]);
-markRemoteStreams(BotharnessBridgeService.prototype, ['liveFrames']);
+markRemoteStreams(BotharnessBridgeService.prototype, [
+  'liveFrames',
+  'followRoster',
+  'followActivity',
+]);
 
 export function registerBridge(
   ctx: Context,
   methods: BridgeMethods,
   privateInputs?: PrivateInputs,
-  live?: (query: string, resume: string, signal: AbortSignal) => AsyncIterable<LiveFrame>,
+  live?: BridgeLive,
 ): BotharnessBridgeService {
   return new BotharnessBridgeService(ctx, methods, privateInputs, live);
 }

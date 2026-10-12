@@ -512,6 +512,8 @@ describe('plugin entry', () => {
       'scheduleRunNow',
       'schedulePreview',
       'liveFrames',
+      'followRoster',
+      'followActivity',
     ]);
   });
 
