@@ -307,7 +307,7 @@ function watchTheme(): void {
   if (painter !== undefined || typeof MutationObserver !== 'function') return;
   painter = new MutationObserver(() => {
     document.querySelectorAll<HTMLElement>('[data-bot-name-source]').forEach(paint);
-    document.querySelectorAll<HTMLElement>('[data-bot-heat-source]').forEach(paintHeat);
+    document.querySelectorAll<HTMLElement>('[data-bot-scale-source]').forEach(paintScale);
   });
   painter.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] });
   painter.observe(document.documentElement, {
@@ -322,27 +322,27 @@ export function botNameSource(
   return bot === undefined ? undefined : botPrimaryColorOf(bot).color;
 }
 
-function paintHeat(element: HTMLElement): void {
-  const source = element.dataset['botHeatSource'];
+function paintScale(element: HTMLElement): void {
+  const source = element.dataset['botScaleSource'];
   if (source === undefined) return;
   const color = botChartColor(
     source,
     renderedBackground(element) ?? REFERENCE_SURFACES[currentTheme()].background,
   );
-  element.dataset['botHeatColor'] = color;
-  element.style.setProperty('--bh-heat-color', color);
+  element.dataset['botScaleColor'] = color;
+  element.style.setProperty('--bh-bot-color', color);
 }
 
-export function paintBotHeat(element: HTMLElement | null, source: string | undefined): void {
+export function paintBotScale(element: HTMLElement | null, source: string | undefined): void {
   if (element === null) return;
   if (source === undefined) {
-    if (element.dataset['botHeatSource'] === undefined) return;
-    delete element.dataset['botHeatSource'];
-    delete element.dataset['botHeatColor'];
-    element.style.removeProperty('--bh-heat-color');
+    if (element.dataset['botScaleSource'] === undefined) return;
+    delete element.dataset['botScaleSource'];
+    delete element.dataset['botScaleColor'];
+    element.style.removeProperty('--bh-bot-color');
     return;
   }
-  element.dataset['botHeatSource'] = source;
-  paintHeat(element);
+  element.dataset['botScaleSource'] = source;
+  paintScale(element);
   watchTheme();
 }

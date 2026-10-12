@@ -150,7 +150,7 @@ it('shows the per-reason breakdown in the cell tooltip', async () => {
 const LIGHT = REFERENCE_SURFACES.light.background;
 const DARK = REFERENCE_SURFACES.dark.background;
 const heat = (): HTMLElement => host.querySelector<HTMLElement>('.bh-profile-heat')!;
-const heatColor = (): string => heat().style.getPropertyValue('--bh-heat-color');
+const heatColor = (): string => heat().style.getPropertyValue('--bh-bot-color');
 const levels = (): string[] =>
   [...host.querySelectorAll('.bh-profile-heat-cell')].map(
     (cell) => `${cell.getAttribute('data-day')}:${cell.getAttribute('data-level')}`,
@@ -178,13 +178,13 @@ it('uses the Bot color for intensity without changing any level, and keeps zero 
   await show();
   const neutral = levels();
   expect(heatColor()).toBe('');
-  expect(heat().hasAttribute('data-bot-heat-source')).toBe(false);
+  expect(heat().hasAttribute('data-bot-scale-source')).toBe(false);
 
   for (const source of ['#e2b04a', '#1d1b22', '#ffffff', '#2f9e8f']) {
     await show(source);
     expect(levels()).toEqual(neutral);
     expect(heatColor()).toBe(botChartColor(source, LIGHT));
-    expect(heat().dataset['botHeatSource']).toBe(source);
+    expect(heat().dataset['botScaleSource']).toBe(source);
   }
   expect(new Set(neutral.map((entry) => entry.split(':')[1])).size).toBeGreaterThanOrEqual(4);
   const zero = host.querySelector<HTMLElement>(`[data-day="${dayOffset(TODAY, -3)}"]`)!;
@@ -240,7 +240,7 @@ it('gives the event and Memory activity cards the saved Bot Primary Color', asyn
     );
   const colors = (): string[] =>
     [...host.querySelectorAll<HTMLElement>('.bh-profile-heat')].map((element) =>
-      element.style.getPropertyValue('--bh-heat-color'),
+      element.style.getPropertyValue('--bh-bot-color'),
     );
   for (const compact of [false, true]) {
     await show(bot({ mode: 'custom', color: '#1d1b22' }), compact);

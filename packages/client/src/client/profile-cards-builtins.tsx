@@ -1,4 +1,4 @@
-import { botNameSource, paintBotHeat } from './bot-primary-color.js';
+import { botNameSource, paintBotScale } from './bot-primary-color.js';
 import { useMemo, useRef, useState, type ReactElement } from 'react';
 
 import { useMountedResource } from './mounted-resource.js';
@@ -224,7 +224,7 @@ export function ProfileHeatmap({
   const tipLines = hovered === undefined ? [] : (allDetails.get(hovered.day) ?? []);
   return (
     <div
-      ref={(element) => paintBotHeat(element, identityColor)}
+      ref={(element) => paintBotScale(element, identityColor)}
       className="bh-profile-heat"
       data-compact={compact ? 'true' : undefined}
     >

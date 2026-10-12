@@ -49,6 +49,28 @@ Distinct bar fills read from the PR build, in cached / other input / output orde
 | bea profile light | `#1d1b22` · `#6f6e73` · `#a7a7aa` |
 | bea profile dark  | `#828088` · `#65646a` · `#515155` |
 
+## Composer token usage popover
+
+Also added after Human QA: the popover opened from the token count at the bottom right of the
+composer colors the Bot name and the per-Session share meters.
+
+| Bot | Before                                                                                    | After                                                                                   |
+| --- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Ada | [light](before-ada-composer-usage-light.png) · [dark](before-ada-composer-usage-dark.png) | [light](after-ada-composer-usage-light.png) · [dark](after-ada-composer-usage-dark.png) |
+| Bea | [light](before-bea-composer-usage-light.png) · [dark](before-bea-composer-usage-dark.png) | [light](after-bea-composer-usage-light.png) · [dark](after-bea-composer-usage-dark.png) |
+
+Meter fills and widths read from the PR build:
+
+| Bot, theme | Name color           | Meter fill and width      |
+| ---------- | -------------------- | ------------------------- |
+| Ada, light | `rgb(151, 110, 0)`   | `rgb(178, 130, 2)` 100%   |
+| Ada, dark  | `rgb(226, 176, 74)`  | `rgb(226, 176, 74)` 100%  |
+| Bea, light | `rgb(29, 27, 34)`    | `rgb(29, 27, 34)` 100%    |
+| Bea, dark  | `rgb(129, 127, 135)` | `rgb(116, 114, 122)` 100% |
+
+Each of these Bots has one Session, so every meter is at 100%; several meters at different widths
+were exercised only in the automated test.
+
 ## Cell colors read from the page
 
 `--bh-heat-color` is empty on the base build, where the cells mix the brand accent instead.
