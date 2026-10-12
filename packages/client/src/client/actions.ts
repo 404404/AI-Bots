@@ -1,5 +1,6 @@
 import type { PixelBannerRecipe } from '@botharness/pixel-banner';
 import { onboardingFor } from './onboarding.js';
+import { invalidateInheritedModelPlans } from './model-plan-store.js';
 import type { ProviderAppSetup } from './provider-app-setup.js';
 import type { OnboardingSnapshot, TutorialAction } from '../../../core/src/onboarding/types.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
@@ -23,8 +24,13 @@ import {
   setApprovalRoute,
   testApprovalRoute,
   retryApprovalNotification,
+  setFailureAlerts,
+  testFailureAlerts,
+  retryFailureAlerts,
 } from './bridge.js';
+import { prependChannelJournal } from './channel-live.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
+import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
 import type {
   MarketplaceDetail,
   MarketplaceEntry,
@@ -98,6 +104,8 @@ import {
   setBotBanner as setBotBannerViaBridge,
   updateBotProfile as updateBotProfileViaBridge,
   setBotAppearance as setBotAppearanceViaBridge,
+  setBotPrimaryColor as setBotPrimaryColorViaBridge,
+  type BotPrimaryColorChoice,
   loadPartLibrary as loadPartLibraryViaBridge,
   addLibraryPart as addLibraryPartViaBridge,
   exportLibraryParts as exportLibraryPartsViaBridge,
@@ -109,6 +117,7 @@ import {
   removeGroupMember,
   setGroupWakePolicy,
   loadGroupWakePolicies,
+  loadChannelAssignments,
   deleteGroupChannel,
   createPersonaBot,
   type CreatedBot,
@@ -280,6 +289,7 @@ import {
   type HostFileOpen,
   type NativeHostFiles,
 } from './host-file-actions.js';
+import { createFileOpenPreferences, type FileOpenPreferences } from './file-open-preferences.js';
 
 const GIT_INSTALL_POLL_MS = 500;
 
@@ -323,6 +333,9 @@ export interface BridgeActions {
   approvalRoute(slug: string, pairingId: string | null, expectedRevision: number): Promise<void>;
   approvalTest(slug: string): Promise<void>;
   approvalRetry(slug: string, id: string): Promise<void>;
+  failureAlertsSet(slug: string, enabled: boolean, expectedRevision: number): Promise<void>;
+  failureAlertsTest(slug: string): Promise<void>;
+  failureAlertsRetry(slug: string, id: string): Promise<void>;
   pairingReview(slug: string, input: PairingReviewInput): Promise<PairingRequest>;
   senderAccess(slug: string, input: SenderAccessInput): Promise<void>;
   messagingIdentity(slug: string, input: MessagingIdentityInput): Promise<MessagingIdentity>;
@@ -461,6 +474,10 @@ export interface BridgeActions {
   markAllRead(): Promise<void>;
   markRead(channelId: string, messageId: string): Promise<void>;
   refreshChannelMessages(channelId: string): Promise<void>;
+  applyChannelTail(
+    channelId: string,
+    page: { entries: ChannelMessage[]; olderCursor: string | null; hasOlder: boolean },
+  ): void;
   dismissFailedMessage(channelId: string, messageId: string): boolean;
   openSession(sessionId: string): void;
   refreshSessions(slug: string): Promise<void>;
@@ -488,6 +505,7 @@ export interface BridgeActions {
   memoryFileApplications(slug: string, path: string): Promise<HostFileOptions>;
   memoryFileOpen(slug: string, path: string, choice: HostFileOpen): Promise<void>;
   memoryFileDownload(slug: string, path: string): Promise<void>;
+  fileOpenPreferences: FileOpenPreferences;
   memorySnapshot(channelId: string): Promise<MemorySnapshot>;
   memoryFile(
     channelId: string,
@@ -632,6 +650,7 @@ export interface BridgeActions {
     channelId: string,
     banner: { recipe: PixelBannerRecipe } | { image: string } | null,
   ): Promise<boolean>;
+  setBotPrimaryColor(channelId: string, primaryColor: BotPrimaryColorChoice): Promise<boolean>;
   updateBotProfile(
     slug: string,
     patch: { roles?: string[]; description?: string },
@@ -671,6 +690,7 @@ export interface BridgeActions {
   decideGroupJoin(channelId: string, requestId: string, accept: boolean): Promise<boolean>;
   removeGroupMember(channelId: string, botSlug: string): Promise<boolean>;
   groupWakePolicies(channelId: string): Promise<GroupMemberWakePolicy[]>;
+  channelAssignments(channelId: string): Promise<ChannelAssignmentSummary[]>;
   setGroupWakePolicy(
     channelId: string,
     botSlug: string,
@@ -744,7 +764,12 @@ function mergeLatestWindow(
 ): { messages: ChannelMessage[]; keptPrefix: boolean } {
   const first = incoming[0];
   const overlap = first === undefined ? -1 : previous.findIndex((item) => item.id === first.id);
-  const prefix = overlap < 0 ? [] : previous.slice(0, overlap);
+  const committed = previous.filter((item) => item.channelRevision !== undefined);
+  const continues =
+    overlap < 0 &&
+    first?.channelRevision !== undefined &&
+    committed.at(-1)?.channelRevision === first.channelRevision - 1;
+  const prefix = continues ? committed : overlap < 0 ? [] : previous.slice(0, overlap);
   const seen = new Set<string>();
   const messages = [
     ...prefix,
@@ -755,7 +780,7 @@ function mergeLatestWindow(
     seen.add(item.id);
     return true;
   });
-  return { messages, keptPrefix: overlap >= 0 };
+  return { messages, keptPrefix: overlap >= 0 || continues };
 }
 
 export function createActions(
@@ -767,6 +792,7 @@ export function createActions(
     createWorkspace(input: { path: string }): Promise<{ workspaceId: string }>;
     openSession?(sessionId: string): void;
     nativeFiles?: NativeHostFiles;
+    fileOpenPreferences?: FileOpenPreferences;
   },
   navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
@@ -777,6 +803,8 @@ export function createActions(
     writeActivityCenterTab(navigationStorage, view);
   };
   let openingFile = false;
+  const fileOpenPreferences =
+    folderAccess?.fileOpenPreferences ?? createFileOpenPreferences({ storage: undefined });
   const failedByChannel = new Map<string, ChannelMessage[]>();
   const localFailedFor = (id: string): ChannelMessage[] => failedByChannel.get(id) ?? [];
   const remainingFailures = (
@@ -1225,8 +1253,16 @@ export function createActions(
   };
   const actions: BridgeActions = {
     onboarding: (slug, action) => invoke('onboarding', { slug, action }),
-    onboardingModel: (slug, expectedRevision, route, globalDefault) =>
-      invoke('onboardingModel', { slug, expectedRevision, route, globalDefault }),
+    onboardingModel: async (slug, expectedRevision, route, globalDefault) => {
+      const result = await invoke<{ revision: number }>('onboardingModel', {
+        slug,
+        expectedRevision,
+        route,
+        globalDefault,
+      });
+      if (globalDefault) invalidateInheritedModelPlans();
+      return result;
+    },
     inheritModel: (slug, expectedRevision) =>
       invoke('modelPlanInherit', { slug, expectedRevision }),
     async retryMessage(channelId, messageId) {
@@ -1812,6 +1848,21 @@ export function createActions(
       clientStore.setConversation({
         timeline: { ...timeline, loadingOlder: true, olderError: undefined },
       });
+      const viaJournal = prependChannelJournal(channelId);
+      if (viaJournal !== undefined) {
+        let olderError: string | undefined;
+        try {
+          await viaJournal;
+        } catch (error) {
+          olderError = errorMessage(error);
+        }
+        const latest = clientStore.getSnapshot();
+        if (latest.conversation.channel?.id !== channelId) return;
+        clientStore.setConversation({
+          timeline: { ...latest.conversation.timeline, loadingOlder: false, olderError },
+        });
+        return;
+      }
       try {
         const { page } = await loadTimelinePage(call, channelId, {
           direction: 'older',
@@ -1950,6 +2001,31 @@ export function createActions(
         clientStore.setConversation({ error: errorMessage(error) });
       }
     },
+    applyChannelTail(channelId, page) {
+      const snapshot = clientStore.getSnapshot();
+      if (snapshot.conversation.channel?.id !== channelId) return;
+      const revision = Math.max(
+        snapshot.conversation.revision,
+        page.entries.at(-1)?.channelRevision ?? 0,
+      );
+      if (snapshot.conversation.timeline.hasNewer) {
+        clientStore.setConversation({ revision });
+        return;
+      }
+      const merged = mergeLatestWindow(snapshot.conversation.messages, page.entries);
+      clientStore.setConversation({
+        messages: merged.messages,
+        revision,
+        timeline: {
+          ...snapshot.conversation.timeline,
+          olderCursor: merged.keptPrefix
+            ? snapshot.conversation.timeline.olderCursor
+            : page.olderCursor,
+          hasOlder: merged.keptPrefix ? snapshot.conversation.timeline.hasOlder : page.hasOlder,
+          hasNewer: false,
+        },
+      });
+    },
     async refreshChannelMessages(channelId) {
       const before = clientStore.getSnapshot().conversation.messages;
       const beforeById = new Map(before.map((message) => [message.id, message]));
@@ -2038,6 +2114,7 @@ export function createActions(
         openingFile = false;
       }
     },
+    fileOpenPreferences,
     memoryFileTarget: (slug, path) => loadMemoryFileTarget(call, slug, path),
     async memoryFileApplications(slug, path) {
       const target = await loadMemoryFileTarget(call, slug, path);
@@ -2102,6 +2179,10 @@ export function createActions(
       setApprovalRoute(call, slug, pairingId, expectedRevision),
     approvalTest: (slug) => testApprovalRoute(call, slug),
     approvalRetry: (slug, id) => retryApprovalNotification(call, slug, id),
+    failureAlertsSet: (slug, enabled, expectedRevision) =>
+      setFailureAlerts(call, slug, enabled, expectedRevision),
+    failureAlertsTest: (slug) => testFailureAlerts(call, slug),
+    failureAlertsRetry: (slug, id) => retryFailureAlerts(call, slug, id),
     pairingReview: (slug, input) => reviewPairing(call, slug, input),
     senderAccess: (slug, input) => changeExternalSenderAccess(call, slug, input),
     messagingIdentity: (slug, input) => manageMessagingIdentity(call, slug, input),
@@ -2486,6 +2567,16 @@ export function createActions(
         return false;
       }
     },
+    async setBotPrimaryColor(channelId, primaryColor) {
+      try {
+        const bot = await setBotPrimaryColorViaBridge(call, channelId, primaryColor);
+        clientStore.upsertBot(bot);
+        return true;
+      } catch (error) {
+        console.warn('botharness: Bot Primary Color update failed', error);
+        return false;
+      }
+    },
     async setGroupAvatar(channelId, avatar) {
       try {
         const channel = await setGroupAvatarViaBridge(call, channelId, avatar);
@@ -2545,6 +2636,9 @@ export function createActions(
         console.warn('botharness: Group member removal failed', error);
         return false;
       }
+    },
+    channelAssignments(channelId) {
+      return loadChannelAssignments(call, channelId);
     },
     groupWakePolicies(channelId) {
       return loadGroupWakePolicies(call, channelId);

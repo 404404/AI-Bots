@@ -23,7 +23,7 @@ The web client calls `/api/<endpoint>` over plain HTTP (`fetch` + auth cookie). 
 
 ## Dev loop (WSL, fnm node)
 
-Use the worktree's local `@deepseek-ai/dsh@0.2.0-rc.1`, not a global `dsh` binary. The launcher checks the installed version, creates an isolated Web Profile, links all Bundle members as dependencies, enables only the `deepseekbot` umbrella, and probes the authenticated API.
+Use the worktree's local `@deepseek-ai/dsh@0.2.0-rc.2`, not a global `dsh` binary. The launcher checks the installed version, creates an isolated Web Profile, links all Bundle members as dependencies, enables only the `deepseekbot` umbrella, and probes the authenticated API.
 
 ```bash
 corepack pnpm build
@@ -145,7 +145,7 @@ DSH 0.2.0 provider token reports use disjoint uncached input, output, cache-read
 
 Pre-execution refusal can leave an application-owned Session ID without a DSH Session. Before retrying that reserved identity, use Session Persistence `stat(id)` to distinguish an absent stored Session from an existing one: create only when `stat` returns `undefined`, and propagate storage failures. Do not infer persistent existence from the live Session Store or blindly resume a reserved ID. Verified against DSH 0.2.0-rc.1 in #500 with a rejected model route followed by a successful Human repair.
 
-- **DSH source checkout**: `reference/deepseek-harness` (gitignored, in this worktree) pinned to the installed tag — currently `dsh-v0.2.0-rc.1`. Read the TypeScript source (`packages/typert`, `packages/*connection*`, `packages/*gateway*`, `apps/cli/reference/README.md`) when the how/why matters; the installed `lib/*.js` is bundled output. Re-pin when DSH is bumped: `git fetch --depth 1 origin tag <tag> && git checkout <tag>`.
+- **DSH source checkout**: `reference/deepseek-harness` (gitignored, in this worktree) pinned to the installed tag — currently `dsh-v0.2.0-rc.2`. Read the TypeScript source (`packages/typert`, `packages/*connection*`, `packages/*gateway*`, `apps/cli/reference/README.md`) when the how/why matters; the installed `lib/*.js` is bundled output. Re-pin when DSH is bumped: `git fetch --depth 1 origin tag <tag> && git checkout <tag>`.
 - `references/debugging-playbook.md` — boot verification, status-code semantics, WS mux probe, bisect recipes, headless puppeteer probe.
 - `references/probe-web.mjs` — headless browser probe (console errors, failed requests, WS, internal fetch); run from the repo.
 - `dsh-ui` skill — in-harness UI rules; `docs/client-bridge.md` §7 — dev loop; ADR-0023 / #50 — bridge transport contract.
@@ -153,7 +153,7 @@ Pre-execution refusal can leave an application-owned Session ID without a DSH Se
 ## Additional verified pitfall — #1425
 
 An exact DSH peer in any composed Plugin can reject installation before its code is imported.
-The build pin is not the supported Host floor. Product declarations use `>=0.1.7-0` with native
+The build pin is not the supported Host floor. Product declarations use `>=0.2.0-0` (1.2.x releases declared `>=0.1.7-0`; the floor moved in #1511) with native
 prerelease semantics and no future-version ceiling; preflight acceptance is not runtime qualification.
 Check Core and the product-managed Provider together. Preserve each release train's immutable
 Provider source and runtime digest, and qualify its own packages rather than borrowing a maintenance
@@ -185,3 +185,14 @@ Qualify a passive model-request probe against the actual selected adapter. In #1
 In pinned RC1, an exported native `createMcpToolDefinition` input schema with `additionalProperties: false` did not itself reject extra arguments at the adapter entry. Enforce the admitted parameter set in a trusted Consumer before resolving confidential values or invoking a private transport. Verify a real native Tool call with an extra parameter, not only schema inspection. The SDK stdio Client also merges selected default environment names when `env` is supplied; explicitly override inherited names when a fixed child must exclude ambient credentials. Both behaviors were verified in #1384 with the installed native adapter and SDK.
 
 Cross-platform Profile migration needs a separate path-metadata audit. In #1386, the qualified dsh-im Provider returned `feishu-startup-config-invalid` and no accounts because its copied `integrations/dsh-feishu/workspaces.json` contained an absolute Windows workspace that is invalid on Linux. The native management `connection.status` surfaced the startup error; translating only the audited source-home workspace field and restarting the exact task-owned Host restored the same account and sole receiver. Native Session header cwd/project keys and application ownership metadata also need bounded translation; preserve immutable Session Event frames and the native credential store. A Linux bind-mounted workspace additionally needs the guest UID's POSIX access: Docker Desktop success does not qualify Host umask, directory traversal or file-write behavior. See the [Linux qualification guide](../../../docs/dev/guides/private-input-linux.md).
+
+## Additional verified pitfalls — #1490
+
+Application-defined long-lived SSE responses share the browser's HTTP/1.1 per-origin budget (about six) with native HMR. With six held, every ordinary request in every same-origin document timed out while an independent authenticated request still answered at once; the identity, model and message loading states are consequences, not a rejected token. Count long-lived responses per document (HMR included) before adding one, test with one more document than you expect to support, and carry application streams as stream-mode Remote methods on the Gateway's multiplexed socket (ADR-0181). In-flight EventSource requests do not appear in Resource Timing; read the network list instead.
+
+A source-declared stream method needs more than a unary bridge method. Host: mark it `mode: 'stream'` and name its final parameter `signal`. Client: `ctx.remote.$mount` a contribution whose descriptor repeats namespace, method, `mode`, parameters and `cancellation`; every parameter needs a `strict` codec (`create` returning an object with `parse`), while the result may stay `src-json`. Open it through `ctx.remote.$stream`. The mounted namespace is its own Cordis service: read it with `ctx.get('remote.<namespace>')` from the mounting Plugin's Context. Reading `.<namespace>` off a captured `ctx.remote` object returned nothing, and the stream never opened with no console error. The supervisor retries carrier loss only; a normal Host end or a thrown item is terminal, so the application retries it. Guard `$mount`/`$stream` for older Hosts. Verify with an authenticated open frame on `/api/remote.mux` and with a real page refresh after a Host change, not with unit stubs alone.
+
+To use the Gateway Client's stream helpers (`RemoteSnapshotStream`, `RemoteJournalStream`, `RemoteStreamCarrierError`) from an application Client bundle, declare `@deepseek-ai/dsh-api-gateway/client` under `dsh.client.external` in the package manifest and externalize the same ID in the bundler, as the official workspace and session controllers do; `dsh.client.inject` can stay empty. That module is a browser closure bundle and throws `window is not defined` when a Node test imports it, so alias it in the test runner to the package's per-file modules under `lib/types/client/`. Return a `RemoteStreamCarrierError` from `ended(accepted)` once the baseline was accepted so a normal Host end is retried by the supervisor; any other error makes the snapshot stream terminal (#1498).
+
+A `RemoteError` thrown by a stream method before or between items reaches the Client as an `error` frame with its `code` and ends that logical stream as a terminal failure, not a carrier loss; map application refusals (unknown subject, cursor ahead of the log, invalid cursor) to stable codes and let the consumer decide whether to reload state. When a stream replaces a legacy route, make the subscription a single typed frame source and let both the stream and the route encode it, so their replay and baseline rules cannot drift (#1500).
+

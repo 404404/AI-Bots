@@ -2040,6 +2040,32 @@ export const BEHAVIOR_PERMISSION_MIGRATION: SchemaMigration = {
   },
 };
 
+export const EXTERNAL_TOOL_RULE_CREATOR_MIGRATION: SchemaMigration = {
+  generation: 82,
+  module: 'tool-approval-rules',
+  description: 'Retain external creator provenance for revocable native approval rules',
+  migrate(database) {
+    database.exec('ALTER TABLE tool_approval_rules ADD COLUMN external_creator TEXT');
+  },
+};
+
+const FAILURE_ALERT_MIGRATION: SchemaMigration = {
+  generation: 83,
+  module: 'messaging',
+  description:
+    'Persist opt-in failure alerts and bounded delivery metadata on the shared management route',
+  migrate(database) {
+    database.exec(`CREATE TABLE messaging_failure_alert_settings (
+      bot_slug TEXT PRIMARY KEY, enabled INTEGER NOT NULL CHECK(enabled IN (0, 1)), revision INTEGER NOT NULL
+    );
+    CREATE TABLE messaging_failure_alert_deliveries (
+      id TEXT PRIMARY KEY, bot_slug TEXT NOT NULL, event_key TEXT NOT NULL UNIQUE,
+      body TEXT NOT NULL CHECK(json_valid(body))
+    );
+    CREATE INDEX messaging_failure_alert_deliveries_bot ON messaging_failure_alert_deliveries(bot_slug);`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2121,4 +2147,6 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   PERMISSION_GROUP_MIGRATION,
   PAIRING_CARD_MIGRATION,
   BEHAVIOR_PERMISSION_MIGRATION,
+  EXTERNAL_TOOL_RULE_CREATOR_MIGRATION,
+  FAILURE_ALERT_MIGRATION,
 ]);

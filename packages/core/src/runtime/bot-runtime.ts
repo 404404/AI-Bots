@@ -152,6 +152,16 @@ export interface AssignmentSummary {
   updatedAt: string;
 }
 
+export interface ChannelAssignmentSummary {
+  sessionId: string;
+  botSlug: string;
+  purpose: string;
+  activity: AssignmentActivity;
+  latestReport?: AssignmentReport;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AssignmentDetail extends AssignmentSummary {
   botSlug: string;
   sourceEventId: string;
@@ -505,6 +515,7 @@ export interface BotRuntime {
   admitGroupJoinRequest?(ownerDmChannelId: string, requestId: string): void;
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
+  listChannelAssignments?(channelId: string): ChannelAssignmentSummary[];
   getAssignment(botSlug: string, sessionId: string): AssignmentDetail | undefined;
 
   admitExternalSource?(botSlug: string, sourceEventId: string): void;
@@ -1031,8 +1042,16 @@ class BotRuntimeImplementation implements BotRuntime {
     });
 
     if (options.database.mode === 'ready') {
-      this.#recoverInterruptedAttempts();
+      const interruptedDms = this.#recoverInterruptedAttempts();
       this.#recoverPendingChannelAdmissions();
+      for (const row of interruptedDms) {
+        const admission = this.admitDmMessage({
+          channelId: row.channel_id,
+          messageId: row.message_id,
+          body: row.body,
+        });
+        if (admission.admitted) void admission.settled.catch(() => undefined);
+      }
       this.#recoverPendingDigests();
       this.#recoverPendingAssignmentReports();
     }
@@ -2545,6 +2564,32 @@ class BotRuntimeImplementation implements BotRuntime {
     );
   }
 
+  #interruptedDmNotice(botSlug: string, channelId: string | undefined): string {
+    const rows = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT e.channel_id, e.message_id
+          FROM inbox_admissions a
+          JOIN source_events e ON e.source_event_id = a.source_event_id
+         WHERE a.bot_slug = ? AND a.reason = 'human-dm' AND e.source_kind = 'human-message'
+           AND a.attempt_state IN ('retryable', 'needs-repair')
+           AND e.channel_id IS NOT NULL AND e.message_id IS NOT NULL AND e.channel_id != ?
+           AND e.created_at > COALESCE((
+             SELECT MAX(handled_at) FROM inbox_admissions WHERE bot_slug = ? AND handled_at IS NOT NULL
+           ), '')
+         ORDER BY e.created_at, e.message_id
+         LIMIT 5
+      `)
+        .all(botSlug, channelId ?? '', botSlug),
+    ) as Array<{ channel_id: string; message_id: string }>;
+    return rows
+      .map(
+        (row) =>
+          `[Host: your earlier turn for Human DM ${row.channel_id}, message ${row.message_id}, ended without a reply. It stays in that DM for the Human to retry; do not answer it in another Channel.]\n\n`,
+      )
+      .join('');
+  }
+
   #groupMentionPrompt(channelId: string, messageId: string, body: string): string {
     const message = this.#channels.message(channelId, messageId);
     const sender = message?.author.kind === 'bot' ? `PersonaBot ${message.author.slug}` : 'Human';
@@ -2575,7 +2620,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (channel?.type !== 'dm' || channel.botSlug === undefined || message?.author.kind !== 'human')
       return text;
     const selected = [...new Set((message.mentions ?? []).map((mention) => mention.botSlug))];
-    const parts = [text];
+    const parts = [`[Human DM]\nChannel: ${channelId}\nMessage ID: ${messageId}\n${text}`];
     if (message.assignmentReply !== undefined)
       parts.push(
         `[Human response to Assignment Session ${message.assignmentReply.sessionId}, report Source Event ${message.assignmentReply.sourceEventId}]\nUse assignment inspection and send_assignment_request to relay this response to the addressed Assignment. This DM is Human input; it does not itself resume the Assignment or clear its open ask.`,
@@ -2864,6 +2909,38 @@ class BotRuntimeImplementation implements BotRuntime {
     });
   }
 
+  listChannelAssignments(channelId: string): ChannelAssignmentSummary[] {
+    const rows = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT a.session_id, a.source_event_id, a.bot_slug, a.purpose, a.activity, a.stop_state,
+                  a.latest_report_state, a.latest_report_summary, a.latest_report_at,
+                  a.continuity_key, a.open_ask_source_event_id, a.open_ask_at,
+                  a.grant_id, a.workspace_id, a.primary_cwd, a.permission_mode,
+                  a.approval_policy, a.preset_revision, a.created_at, a.updated_at,
+                  a.model_route_json
+             FROM assignments a
+             JOIN source_events s ON s.source_event_id = a.source_event_id
+            WHERE s.channel_id = ?
+            ORDER BY a.updated_at DESC, a.session_id ASC
+            LIMIT 200`,
+        )
+        .all(channelId),
+    ) as unknown as AssignmentRow[];
+    return rows.map((row) => {
+      const assignment = assignmentFromRow(row);
+      return {
+        sessionId: assignment.sessionId,
+        botSlug: assignment.botSlug,
+        purpose: assignment.purpose,
+        activity: assignment.activity,
+        ...(assignment.latestReport === undefined ? {} : { latestReport: assignment.latestReport }),
+        createdAt: assignment.createdAt,
+        updatedAt: assignment.updatedAt,
+      };
+    });
+  }
+
   getAssignment(botSlug: string, sessionId: string): AssignmentDetail | undefined {
     const row = this.#database.read((database) =>
       database
@@ -3040,6 +3117,17 @@ class BotRuntimeImplementation implements BotRuntime {
     await this.#agents.close();
   }
 
+  #admissionHandled(sourceEventId: string, botSlug: string): boolean {
+    const row = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT attempt_state FROM inbox_admissions WHERE source_event_id = ? AND bot_slug = ?`,
+        )
+        .get(sourceEventId, botSlug),
+    ) as { attempt_state: string } | undefined;
+    return row?.attempt_state === 'handled';
+  }
+
   async #runHumanDmTurn(
     bot: PersonaBotRecord,
     channelId: string,
@@ -3051,6 +3139,7 @@ class BotRuntimeImplementation implements BotRuntime {
       throw new Error(`Source Event ${claim.sourceEventId} requires reconciliation before replay`);
     }
     if (!claim.shouldRun) return;
+    if (this.#admissionHandled(claim.sourceEventId, bot.slug)) return;
 
     const timestamp = this.#now().toISOString();
     const orchestrator = this.#ensureOrchestrator(bot, timestamp);
@@ -3242,12 +3331,15 @@ class BotRuntimeImplementation implements BotRuntime {
         message: (() => {
           const human =
             channelId === undefined ? undefined : this.#channels.listHumanMembers(channelId)[0];
-          return human === undefined || human.displayName === 'Human'
-            ? body
-            : 'Current Channel Human: ' +
+          return (
+            this.#interruptedDmNotice(bot.slug, channelId) +
+            (human === undefined || human.displayName === 'Human'
+              ? body
+              : 'Current Channel Human: ' +
                 JSON.stringify({ humanId: human.humanId, displayName: human.displayName }) +
                 '\n' +
-                body;
+                body)
+          );
         })(),
         inbox,
         inboundChannelId: channelId,
@@ -3796,7 +3888,21 @@ class BotRuntimeImplementation implements BotRuntime {
     );
   }
 
-  #recoverInterruptedAttempts(): void {
+  #recoverInterruptedAttempts(): Array<{ channel_id: string; message_id: string; body: string }> {
+    const interruptedDms = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT e.channel_id, e.message_id, e.body
+          FROM source_events e
+          JOIN inbox_admissions a ON a.source_event_id = e.source_event_id
+         WHERE e.source_kind = 'human-message' AND a.reason = 'human-dm'
+           AND e.attempt_state = 'running' AND a.attempt_state = 'running'
+           AND e.side_effect_started_at IS NULL AND a.side_effect_started_at IS NULL
+           AND e.channel_id IS NOT NULL AND e.message_id IS NOT NULL
+         ORDER BY e.created_at, e.message_id
+      `)
+        .all(),
+    ) as Array<{ channel_id: string; message_id: string; body: string }>;
     this.#database.transaction(
       (database) => {
         database
@@ -3911,6 +4017,7 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       ['source-event', 'bot-inbox'],
     );
+    return interruptedDms;
   }
 
   originalAttachmentRoot(

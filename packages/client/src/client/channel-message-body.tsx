@@ -1,3 +1,5 @@
+import { BridgeAudio } from './bridge-audio.js';
+import { BridgeFile } from './bridge-file.js';
 import { UserQuestionCard } from './user-question-card.js';
 import { PrivateInputCard } from './private-input-card.js';
 import { ToolApprovalCard } from './tool-approval-card.js';
@@ -13,11 +15,13 @@ import {
   fileSizeText,
   MarkdownText,
   StateDot,
+  Tag,
   type MarkdownLabels,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { errorMessage } from './bridge.js';
 import { PersonaBotAvatar } from './avatar.js';
+import { botNameSource, paintBotName } from './bot-primary-color.js';
 import { openModelsSettings } from './bot-settings-open.js';
 import { currentMentionLabel } from './actor-names.js';
 import type { ChannelHumanMember } from './store.js';
@@ -385,9 +389,29 @@ export function ChannelMessageBody({
   }
   if (message.bridgeMedia && message.bridgeOrigin && channelId) {
     const media = message.bridgeMedia;
-    const renderImage = (id: string, index: number) => {
-      const item = media.items.find((image) => image.id === id);
-      return item ? (
+    const renderMedia = (id: string, index: number) => {
+      const item = media.items.find((item) => item.id === id);
+      return item?.kind === 'audio' ? (
+        <BridgeAudio
+          key={index}
+          channelId={channelId}
+          sourceEventId={message.bridgeOrigin!.sourceEventId}
+          attachmentId={id}
+          name={item.name}
+          sizeBytes={item.sizeBytes}
+          t={t}
+        />
+      ) : item?.kind === 'file' ? (
+        <BridgeFile
+          key={index}
+          channelId={channelId}
+          sourceEventId={message.bridgeOrigin!.sourceEventId}
+          attachmentId={id}
+          name={item.name}
+          sizeBytes={item.sizeBytes}
+          t={t}
+        />
+      ) : item ? (
         <BridgeImage
           key={index}
           channelId={channelId}
@@ -400,6 +424,17 @@ export function ChannelMessageBody({
     };
     return (
       <div className="bh-bubble-content bh-bridge-media-content">
+        {media.voice ? (
+          <div className="bh-external-message-head">
+            <Tag tone={media.voice.transcript === 'platform' ? 'info' : 'warning'}>
+              {t(
+                media.voice.transcript === 'platform'
+                  ? 'im.voiceTranscriptPlatform'
+                  : 'im.voiceTranscriptUnavailable',
+              )}
+            </Tag>
+          </div>
+        ) : null}
         {media.parts ? (
           media.parts.map((part, index) =>
             part.kind === 'text' ? (
@@ -411,7 +446,7 @@ export function ChannelMessageBody({
                 />
               </span>
             ) : (
-              renderImage(part.id, index)
+              renderMedia(part.id, index)
             ),
           )
         ) : (
@@ -425,7 +460,7 @@ export function ChannelMessageBody({
                 />
               </div>
             ) : null}
-            {media.items.map((image, index) => renderImage(image.id, index))}
+            {media.items.map((item, index) => renderMedia(item.id, index))}
           </>
         )}
       </div>
@@ -465,7 +500,7 @@ export function ChannelMessageBody({
             t={t}
           />
         </span>
-        <span>{label}</span>
+        <span ref={(element) => paintBotName(element, botNameSource(bot))}>{label}</span>
       </>
     );
     if (actions === undefined)

@@ -278,13 +278,13 @@ describe('PersonaBot Profile surface', () => {
       );
       expect(container.querySelectorAll('.bh-profile-avatar-button').length).toBe(1);
       expect(container.querySelectorAll('.bh-profile-card').length).toBe(3);
-      const sidebarLabels = [
-        ...container.querySelectorAll('.bh-channel-sidebar .bh-channel-sidebar-entry-label'),
-      ].map((label) => label.textContent);
-      expect(sidebarLabels).toContain('模型');
-      expect(sidebarLabels).toContain('唤醒策略');
-      expect(sidebarLabels).toContain('外部身份');
-      expect(sidebarLabels).toContain('外部连接器');
+      const sidebarLabels = [...container.querySelectorAll('.bh-channel-sidebar [role="tab"]')].map(
+        (tab) => tab.getAttribute('aria-label') ?? tab.textContent,
+      );
+      expect(sidebarLabels).not.toContain('模型');
+      expect(sidebarLabels).not.toContain('唤醒策略');
+      expect(sidebarLabels).not.toContain('外部身份');
+      expect(sidebarLabels).not.toContain('外部连接器');
       expect(container.querySelectorAll('.bh-profile-pin[aria-pressed="true"]').length).toBe(2);
 
       const headerButton = (label: string) =>
@@ -411,6 +411,7 @@ describe('PersonaBot Profile surface', () => {
           createElement(BotMain, {
             actions: {
               allBotPreview: vi.fn(async () => ({ revision: '0'.repeat(64), recipients: [] })),
+              channelAssignments: vi.fn(async () => []),
             } as unknown as BridgeActions,
             channelSidebar: sidebarRegistry(),
             t: zhTranslate,

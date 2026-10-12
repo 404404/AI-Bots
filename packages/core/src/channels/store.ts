@@ -37,7 +37,10 @@ import {
 import {
   DEFAULT_MESSAGE_PAGE,
   MAX_MESSAGE_PAGE,
+  pageChannelJournal,
   pageChannelTimeline,
+  type ChannelJournalPage,
+  type ChannelJournalRequest,
   type ChannelTimelinePage,
   type ChannelTimelineRequest,
 } from './timeline.js';
@@ -283,7 +286,7 @@ export interface ChannelStore {
     messageId: string,
     identity: string,
   ): ChannelAttachmentRef | undefined;
-  getOrCreateDm(botSlug: string, botName: string): ChannelRecord | undefined;
+  getOrCreateDm(botSlug: string, botName?: string): ChannelRecord | undefined;
   getOrCreateBotDm(
     firstBotSlug: string,
     secondBotSlug: string,
@@ -376,6 +379,7 @@ export interface ChannelStore {
   queryMessages(id: string, options?: ChannelMessageQueryOptions): ChannelMessageQueryPage;
   readTimeline(id: string, request?: ChannelTimelineRequest): ChannelTimelinePage | undefined;
   readHumanTimeline(id: string, request?: ChannelTimelineRequest): ChannelTimelinePage | undefined;
+  readHumanJournalPage(id: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
   revision(id: string): number;
   messagesAfter(id: string, revision: number): ChannelMessageCommit[] | undefined;
   admissionChanged?(channelId: string, messageId: string): void;
@@ -705,7 +709,9 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
       const id = dmChannelId(botSlug);
       const existing = read(id);
       if (existing !== undefined) return existing;
-      const name = botName.trim();
+      const displayName = botName ?? options.botDisplayName?.(botSlug);
+      if (displayName === undefined) return undefined;
+      const name = displayName.trim();
       const timestamp = now().toISOString();
       const record: ChannelRecord = {
         id,
@@ -948,6 +954,20 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
       const channel = this.get(id);
       if (channel === undefined) return undefined;
       return this.readTimeline(id, request);
+    },
+    readHumanJournalPage(id, request) {
+      if (this.get(id) === undefined) return undefined;
+      const messages = readValidMessages(id);
+      const page = pageChannelJournal(id, messages, request);
+      if (page === undefined) return undefined;
+      const byId = messageIndex(messages);
+      return {
+        ...page,
+        entries: page.entries.map((entry) => ({
+          ...entry,
+          message: projectReply(entry.message, byId),
+        })),
+      };
     },
     revision: revisionOf,
     messagesAfter(id, revision) {

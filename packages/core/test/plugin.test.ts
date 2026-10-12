@@ -356,6 +356,9 @@ describe('plugin entry', () => {
       'approvalRoute',
       'approvalTest',
       'approvalRetry',
+      'failureAlertsSet',
+      'failureAlertsTest',
+      'failureAlertsRetry',
       'pairingReview',
       'senderAccess',
       'messagingApps',
@@ -431,6 +434,7 @@ describe('plugin entry', () => {
       'humanAttentionIgnore',
       'humanAttentionDismiss',
       'assignments',
+      'channelAssignments',
       'assignment',
       'workspaceOptions',
       'messageAttachmentTarget',
@@ -485,6 +489,7 @@ describe('plugin entry', () => {
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
+      'botPrimaryColorSet',
       'partLibraryList',
       'partLibraryAdd',
       'partLibraryExport',
@@ -512,6 +517,11 @@ describe('plugin entry', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
+      'followRoster',
+      'followActivity',
+      'followChannel',
+      'followCompanion',
     ]);
   });
 

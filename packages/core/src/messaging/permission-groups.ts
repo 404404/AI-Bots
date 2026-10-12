@@ -13,7 +13,7 @@ import {
   type EffectiveBehaviorPermission,
 } from './behavior-permissions.js';
 
-const choices = z.array(z.enum(['approve', 'reject', 'review-pairing'])).max(3);
+const choices = z.array(z.enum(['approve', 'reject', 'review-pairing', 'save-rules'])).max(4);
 const delegation = { delegateAllow: choices.optional(), delegateDeny: choices.optional() };
 const memberIds = z.array(z.string().uuid()).max(100);
 const behaviorChoices = {

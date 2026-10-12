@@ -41,6 +41,7 @@ import {
   channelSidebarPrefs,
   createChannelSidebarPrefs,
 } from '../src/client/channel-sidebar-prefs.js';
+import { hiddenDmActionsSnapshot } from '../src/client/dm-actions.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const mounted: { root: Root; container: HTMLDivElement }[] = [];
@@ -51,7 +52,7 @@ const props = {
   actions: {},
   t: (key: string) => key,
 } as unknown as ChannelSidebarEntryProps;
-function mount(slug = 'settings-qa', settings = true) {
+function mount(slug: string | null = 'settings-qa', settings = true) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
@@ -59,7 +60,10 @@ function mount(slug = 'settings-qa', settings = true) {
   act(() =>
     root.render(
       createElement(ChannelSidebarSettings, {
-        entryProps: { ...props, botSlug: slug },
+        entryProps:
+          slug === null
+            ? { ...props, scope: 'channel', channelId: 'group-qa', botSlug: undefined }
+            : { ...props, botSlug: slug },
         entries: settings
           ? [
               {
@@ -147,11 +151,26 @@ describe('registered Channel sidebar display settings', () => {
     expect(selected?.querySelector('svg')).not.toBeNull();
   });
   it('offers a disabled empty state when current visible entries have no settings', () => {
-    const container = mount('group-qa', false);
+    const container = mount(null, false);
     click(container, 'sidebar.settings');
     const item = container.querySelector('[role=menuitem]');
     expect(item?.textContent).toBe('sidebar.settings.empty');
     expect(item?.hasAttribute('disabled')).toBe(true);
     expect(container.textContent).not.toContain('sessions.all');
+  });
+  it('toggles which of the Bot actions elsewhere its DM shows, per Bot', () => {
+    const container = mount('timeline-qa', false);
+    click(container, 'sidebar.settings');
+    click(container, 'dmTrace.menu');
+    const item = (label: string) =>
+      [...container.querySelectorAll('button')].find((n) => n.textContent === label);
+    expect(item('dmTrace.kind.posts')?.querySelector('svg')).not.toBeNull();
+    click(container, 'dmTrace.kind.posts');
+    expect(hiddenDmActionsSnapshot('timeline-qa')).toEqual(['posts']);
+    expect(hiddenDmActionsSnapshot('timeline-other')).toEqual([]);
+    expect(item('dmTrace.kind.posts')?.querySelector('svg')).toBeNull();
+    expect(item('dmTrace.kind.memory')?.querySelector('svg')).not.toBeNull();
+    click(container, 'dmTrace.kind.posts');
+    expect(hiddenDmActionsSnapshot('timeline-qa')).toEqual([]);
   });
 });

@@ -116,6 +116,12 @@ import {
   partFileName,
 } from '../bots/part-file.js';
 import type { AvatarAppearance, RetainedAvatarAppearance } from '../bots/avatar-appearance.js';
+import {
+  currentBotPrimaryColor,
+  historicalBotPrimaryColor,
+  resolveBotPrimaryColor,
+  type BotPrimaryColor,
+} from '../bots/primary-color.js';
 import { ChannelMentionTargetError, ChannelReplyTargetError } from '../channels/store.js';
 import { ChannelAttachmentError } from '../attachments/store.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
@@ -230,6 +236,7 @@ import type {
   AssignmentDetail,
   AssignmentSummary,
   BotRuntime,
+  ChannelAssignmentSummary,
   DmAdmissionFailure,
 } from '../runtime/bot-runtime.js';
 import type {
@@ -269,6 +276,7 @@ export interface PersonaBotSummary {
   avatar?: string;
   appearance?: AvatarAppearance | RetainedAvatarAppearance;
   banner?: BotBannerSummary;
+  primaryColor?: BotPrimaryColor;
   avatarSeed?: 2;
   paused?: boolean;
   deleted?: boolean;
@@ -296,7 +304,14 @@ export interface ProfileActivityReasonDay extends ProfileActivityDay {
 }
 
 export interface OverviewUsage extends Omit<UsageOverviewResult, 'bots'> {
-  bots: Array<UsageOverviewBuckets & { slug: string; displayName: string; current: boolean }>;
+  bots: Array<
+    UsageOverviewBuckets & {
+      slug: string;
+      displayName: string;
+      current: boolean;
+      primaryColor: string;
+    }
+  >;
 }
 
 export interface ProfileTokenBuckets {
@@ -395,6 +410,17 @@ export interface BridgeMethods {
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
   approvalRoute(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
+  failureAlertsSet(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
+  failureAlertsTest(
+    payload: unknown,
+  ): Promise<
+    BridgeResult<{ delivery: import('../messaging/failure-alerts.js').FailureAlertDelivery }>
+  >;
+  failureAlertsRetry(
+    payload: unknown,
+  ): Promise<
+    BridgeResult<{ delivery: import('../messaging/failure-alerts.js').FailureAlertDelivery }>
+  >;
   approvalTest(
     payload: unknown,
   ): Promise<
@@ -501,6 +527,7 @@ export interface BridgeMethods {
   humanAttentionDismiss(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionIgnore(payload: unknown): BridgeResult<{ accepted: boolean }>;
   assignments(payload: unknown): BridgeResult<{ assignments: AssignmentSummary[] }>;
+  channelAssignments(payload: unknown): BridgeResult<{ assignments: ChannelAssignmentSummary[] }>;
   assignment(payload: unknown): BridgeResult<{ assignment: AssignmentDetail }>;
   workspaceOptions(
     payload: unknown,
@@ -573,6 +600,7 @@ export interface BridgeMethods {
   botAvatarSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botBannerSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botAppearanceSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  botPrimaryColorSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   partLibraryList(): BridgeResult<{ parts: PartLibraryEntry[] }>;
   partLibraryAdd(payload: unknown): BridgeResult<{ entry: PartLibraryEntry }>;
   partLibraryExport(payload: unknown): BridgeResult<{ fileName: string; data: string }>;
@@ -925,6 +953,9 @@ function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): Person
     roles: record.roles ?? (record.tag === undefined ? [] : [record.tag]),
     standingLimits: { ...(record.standingLimits ?? DEFAULT_STANDING_LIMITS) },
     ...(record.appearance === undefined ? {} : { appearance: record.appearance }),
+    ...(currentBotPrimaryColor(record.primaryColor) === undefined
+      ? {}
+      : { primaryColor: currentBotPrimaryColor(record.primaryColor)! }),
     ...(record.description === undefined ? {} : { description: record.description }),
     ...(record.avatar === undefined
       ? {}
@@ -1219,6 +1250,41 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (!input.success) return Promise.resolve(invalidInput('Invalid external source'));
       return messagingCall(async (service) => ({
         source: service.inbound.read(input.data.slug, input.data.sourceEventId),
+      }));
+    },
+    failureAlertsSet(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          enabled: z.boolean(),
+          expectedRevision: z.number().int().nonnegative(),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid failure-alert settings'));
+      return messagingCall(async (service) => {
+        service.failureAlerts.set(input.data.slug, input.data.enabled, input.data.expectedRevision);
+        return { updated: true as const };
+      });
+    },
+    failureAlertsTest(payload) {
+      const input = z
+        .object({ slug: z.string().min(1) })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid Bot'));
+      return messagingCall(async (service) => ({
+        delivery: await service.failureAlerts.test(input.data.slug),
+      }));
+    },
+    failureAlertsRetry(payload) {
+      const input = z
+        .object({ slug: z.string().min(1), id: z.string().uuid() })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid notification'));
+      return messagingCall(async (service) => ({
+        delivery: await service.failureAlerts.retry(input.data.slug, input.data.id),
       }));
     },
     approvalRoute(payload) {
@@ -1911,7 +1977,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         })
         .map((record) => ({
           ...summarize(record, deps.states.snapshot(record.slug)),
-          ...(deps.registry.get(record.slug) === undefined ? { deleted: true, paused: true } : {}),
+          ...(deps.registry.get(record.slug) === undefined
+            ? {
+                deleted: true,
+                paused: true,
+                primaryColor: historicalBotPrimaryColor(record.slug, record.primaryColor),
+              }
+            : {}),
         }));
       return { ok: true, value: { bots } };
     },
@@ -2486,6 +2558,21 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return result.reason === 'not-found'
           ? unknownBot(scope.botSlug)
           : invalidInput('invalid banner');
+      return { ok: true, value: detailOf(result.record) };
+    },
+    botPrimaryColorSet(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const result = deps.registry.setPrimaryColor(
+        scope.botSlug,
+        asObject(payload)['primaryColor'],
+      );
+      if (!result.ok)
+        return result.reason === 'not-found'
+          ? unknownBot(scope.botSlug)
+          : invalidInput(
+              "primaryColor must be { mode: 'automatic' } or { mode: 'custom', color: '#rrggbb' }",
+            );
       return { ok: true, value: detailOf(result.record) };
     },
     botAvatarSet(payload) {
@@ -3841,6 +3928,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         value: { assignments: deps.runtime?.listAssignments(slug) ?? [] },
       };
     },
+    channelAssignments(payload) {
+      const parsed = z.object({ channelId: z.string().min(1) }).safeParse(asObject(payload));
+      if (!parsed.success) return invalidInput('invalid Group channel');
+      const channel = deps.channels.get(parsed.data.channelId);
+      if (
+        channel?.type !== 'group' ||
+        channel.deletedAt ||
+        !deps.channels
+          .listHumanMembers(channel.id)
+          .some((member) => member.humanId === 'local-human')
+      )
+        return invalidInput('Group channel unavailable');
+      return {
+        ok: true,
+        value: { assignments: deps.runtime?.listChannelAssignments?.(channel.id) ?? [] },
+      };
+    },
     assignment(payload) {
       const source = asObject(payload);
       const slug = asNonBlank(source, 'slug');
@@ -4107,6 +4211,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (slug === undefined || id === undefined) return invalidInput('slug and id are required');
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
       const rule = deps.toolRules?.revoke(slug, id);
+      if (rule) deps.externalMessaging?.approvals.refreshRules(slug);
       return rule === undefined
         ? invalidInput('Unknown tool approval rule')
         : { ok: true, value: { rule } };
@@ -4451,10 +4556,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
             ...result,
             bots: result.bots.map((row) => {
               const bot = deps.registry.get(row.slug);
+              const historical = deps.registry.getHistorical(row.slug);
               return {
                 ...row,
-                displayName: deps.registry.getHistorical(row.slug)?.displayName ?? row.slug,
+                displayName: historical?.displayName ?? row.slug,
                 current: bot !== undefined,
+                primaryColor:
+                  bot === undefined
+                    ? historicalBotPrimaryColor(row.slug, historical?.primaryColor).retained!
+                    : resolveBotPrimaryColor({
+                        ...bot,
+                        primaryColor: currentBotPrimaryColor(bot.primaryColor),
+                      }).color,
               };
             }),
           },

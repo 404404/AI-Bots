@@ -28,6 +28,7 @@ const BASELINE_MODULES = new Set([
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-dockkit',
+  '@deepseek-ai/dsh-api-gateway/client',
 ]);
 
 function isBaselineModule(id: string): boolean {
@@ -35,6 +36,13 @@ function isBaselineModule(id: string): boolean {
 }
 
 function baselineModuleStub(id: string): Record<string, unknown> {
+  if (id === '@deepseek-ai/dsh-api-gateway/client') {
+    return {
+      RemoteJournalStream: class {},
+      RemoteSnapshotStream: class {},
+      RemoteStreamCarrierError: class extends Error {},
+    };
+  }
   if (id === '@deepseek-ai/dsh-client-store') {
     return {
       createSnapshotStore(initial: Record<string, unknown>) {
@@ -96,6 +104,7 @@ beforeAll(async () => {
     TextDecoder,
     AbortController,
     AbortSignal,
+    EventTarget,
     console,
   };
   vm.createContext(sandbox);

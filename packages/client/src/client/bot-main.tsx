@@ -63,13 +63,16 @@ import {
   type NativeChatFailureText,
 } from './channel-message-body.js';
 import { BridgeSourceAuthor } from './bridge-source-author.js';
+import { botNameColor, botNameSource, useConversationSurface } from './bot-primary-color.js';
 import { ChannelDeliveryReceipt } from './channel-delivery-receipt.js';
 import { MessageCopyAction } from './message-copy-action.js';
 import { isBotDmChannel, isHumanReadOnlyDmChannel } from './channel-kind.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import type { NativeSessionCatalog } from './sessions-entry.js';
 import { ActivityCenterView } from './activity-center-view.js';
-import type { ChannelSidebarRegistry } from './channel-sidebar.js';
+import { resolveChannelSidebarContext, type ChannelSidebarRegistry } from './channel-sidebar.js';
+import { ChannelSettingsDialog } from './channel-settings.js';
+import { channelSettings, channelSettingsSections } from './channel-settings-state.js';
 import { ChannelSidebar, useChannelSidebar } from './channel-sidebar-view.js';
 import { MemoryCommitView } from './memory-commit-view.js';
 import { MemoryFileView, MemoryWorkingView } from './memory-current-view.js';
@@ -80,12 +83,19 @@ import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
+import { BotChannelPostLine, elsewhereAction } from './bot-channel-post-line.js';
+import {
+  hiddenDmActionsSnapshot,
+  subscribeHiddenDmActions,
+  visibleDmMessages,
+} from './dm-actions.js';
 import {
   timelineWorkingRows,
   timelineWorkingRowsCover,
   TimelineWorkingRowsView,
 } from './timeline-working-rows.js';
 import { groupComposerActivity } from './group-composer-activity.js';
+import { attentionCount } from './activity-attention.js';
 import {
   EMPTY_PROFILE_CARDS,
   loadPinnedProfileCards,
@@ -383,6 +393,10 @@ function MessageGroupView({
       ? undefined
       : bots.find((candidate) => candidate.slug === currentDmBotSlug);
   const displayBot = authorBot ?? welcomeBot;
+  const surface = useConversationSurface();
+  const nameSource = first.bridgeOrigin ? undefined : botNameSource(displayBot);
+  const nameColor =
+    nameSource === undefined ? undefined : botNameColor(nameSource, surface.background);
   const avatar =
     displayBot === undefined ? undefined : (
       <PersonaBotAvatar
@@ -418,7 +432,12 @@ function MessageGroupView({
           {first.bridgeOrigin ? (
             <BridgeSourceAuthor origin={first.bridgeOrigin} t={t} />
           ) : (
-            <div className="bh-bubble-author">
+            <div
+              className="bh-bubble-author"
+              ref={nameColor === undefined ? undefined : surface.probe}
+              data-bot-name-color={nameColor}
+              style={nameColor === undefined ? undefined : { color: nameColor }}
+            >
               {welcomeBot?.displayName ?? authorLabel(first, bots, t, humanName)}
             </div>
           )}
@@ -647,6 +666,13 @@ function ConversationView({
   t: BotHarnessTranslate;
 }): ReactElement {
   const sidebar = useChannelSidebar(state);
+  const settingsScope = resolveChannelSidebarContext(state)?.scope ?? 'channel';
+  const settingsEntries = useSyncExternalStore(
+    channelSidebar.subscribe,
+    () => channelSidebar.entries(settingsScope),
+    () => channelSidebar.entries(settingsScope),
+  );
+  const hasChannelSettings = channelSettingsSections(settingsEntries, state).length > 0;
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const draftScope = conversationDraftKey(state);
   const recovery = useComposerRecovery(draftScope, state, actions);
@@ -717,9 +743,15 @@ function ConversationView({
   const conversation = state.conversation;
   const channel = conversation.channel;
   const botNames = new Map(state.bots.map((member) => [member.slug, member.displayName]));
+  const dmBotSlug = channel?.type === 'dm' ? channel.botSlug : undefined;
+  const hiddenActions = useSyncExternalStore(
+    subscribeHiddenDmActions,
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+  );
   const messages = conversation.messages;
   const displayMessages: ChannelMessage[] = [
-    ...messages,
+    ...visibleDmMessages(messages, hiddenActions),
     ...(conversation.timeline.hasNewer ? [] : conversation.drafts).map((item) => ({
       id: item.draftId,
       at: '',
@@ -777,7 +809,7 @@ function ConversationView({
   const composerFacepile: PersonaBotFacepileItem[] =
     bot === undefined
       ? activeFacepile
-      : botActivity === undefined || (botActivity === 'idle' && bot.attention === undefined)
+      : botActivity === undefined || (botActivity === 'idle' && attentionCount(bot.attention) === 0)
         ? []
         : [
             {
@@ -806,7 +838,11 @@ function ConversationView({
           };
   const streamingBotSlugs = new Set(conversation.drafts.map((item) => item.botSlug));
   const latestMessage = messages.findLast(
-    (item) => item.botDmAction === undefined && item.memberDeparture === undefined,
+    (item) =>
+      item.botDmAction === undefined &&
+      item.botChannelPost === undefined &&
+      item.memoryCommit === undefined &&
+      item.memberDeparture === undefined,
   );
   const workingRows = timelineWorkingRows(
     conversation.status === 'ready' && !conversation.timeline.hasNewer
@@ -1334,7 +1370,13 @@ function ConversationView({
             }
           >
             {onMobileBack !== undefined || channel === undefined ? null : (
-              <HumanChannelNameMenu key={channel.id} channel={channel} actions={actions} t={t} />
+              <HumanChannelNameMenu
+                key={channel.id}
+                channel={channel}
+                actions={actions}
+                t={t}
+                onOpenSettings={hasChannelSettings ? () => channelSettings.open() : undefined}
+              />
             )}
             {onMobileBack !== undefined ? (
               <MobileConversationHeader
@@ -1506,6 +1548,7 @@ function ConversationView({
                   actions={actions}
                   channelId={channelId}
                   sha={activeMemoryView.sha}
+                  botSlug={channel?.botSlug}
                   t={t}
                   onClose={closeMemoryView}
                 />
@@ -1525,6 +1568,7 @@ function ConversationView({
                   actions={actions}
                   channelId={channelId}
                   change={activeMemoryView.change}
+                  botSlug={channel?.botSlug}
                   t={t}
                   onClose={closeMemoryView}
                 />
@@ -1614,11 +1658,35 @@ function ConversationView({
                             t={t}
                           />
                         </div>
+                      ) : first.botChannelPost !== undefined ? (
+                        <BotChannelPostLine
+                          posts={group.messages}
+                          channels={state.channels}
+                          bots={state.bots}
+                          t={t}
+                          onOpen={(targetChannelId, messageId) => {
+                            void actions
+                              .openChannel(targetChannelId)
+                              .then(() => actions.openAround(targetChannelId, messageId));
+                          }}
+                        />
                       ) : first.memoryCommit !== undefined ? (
                         <MemoryCommitLine
                           messageId={first.id}
                           commit={first.memoryCommit}
                           bots={state.bots}
+                          action={
+                            first.noticeOrigin === undefined
+                              ? undefined
+                              : elsewhereAction(
+                                  'memory',
+                                  first.noticeOrigin.channelId,
+                                  first.memoryCommit.botSlug,
+                                  state.channels,
+                                  state.bots,
+                                  t,
+                                )
+                          }
                           t={t}
                           onOpen={() => {
                             const commit = first.memoryCommit!;
@@ -1937,6 +2005,7 @@ function ConversationView({
             </>
           )}
         </section>
+        <ChannelSettingsDialog registry={channelSidebar} state={state} actions={actions} t={t} />
         <ChannelSidebar
           registry={channelSidebar}
           state={state}

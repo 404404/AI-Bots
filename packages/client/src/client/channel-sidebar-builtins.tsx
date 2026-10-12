@@ -26,7 +26,11 @@ import {
   isGroupConversation,
 } from './group-entries.js';
 import { useClientState } from './bot-sidebar.js';
-import type { ChannelSidebarEntry, ChannelSidebarEntryProps } from './channel-sidebar.js';
+import type {
+  ChannelSidebarEntry,
+  ChannelSidebarEntryProps,
+  ChannelSidebarTab,
+} from './channel-sidebar.js';
 import { formatRelativeTime } from './labels.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import { MemoryEntry } from './memory-entry.js';
@@ -37,6 +41,7 @@ import { ExternalSourceContent } from './external-source-content.js';
 import { externalPlatformLabel, externalSenderLabel } from './bridge-source-label.js';
 import { GroupAvatarCropModal } from './group-avatar-crop.js';
 import { MembersEntry, MembersHeaderAction } from './group-member-controls.js';
+import { GroupWorkEntry } from './group-work-entry.js';
 import { BotSchedulesEntry, BotSchedulesHeaderAction, ScheduleDialog } from './schedules-entry.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { SessionsEntry, type NativeSessionCatalog } from './sessions-entry.js';
@@ -820,6 +825,22 @@ function ModelBadge({ botSlug, actions }: ChannelSidebarEntryProps): ReactElemen
   );
 }
 
+export function createChannelSidebarBuiltinTabs(
+  t: BotHarnessTranslate,
+): readonly ChannelSidebarTab[] {
+  return [
+    {
+      id: 'conversation',
+      icon: 'messages-square',
+      label: t('tab.conversation'),
+      order: 1,
+      scope: 'personabot',
+    },
+    { id: 'memory', icon: 'files', label: t('tab.memory'), order: 2, scope: 'personabot' },
+    { id: 'screen', icon: 'monitor', label: t('tab.screen'), order: 3, scope: 'personabot' },
+  ];
+}
+
 export function createChannelSidebarBuiltins(
   t: BotHarnessTranslate,
   prefs?: BotModePrefs,
@@ -845,6 +866,7 @@ export function createChannelSidebarBuiltins(
   return [
     {
       id: 'memory-files',
+      tab: 'memory',
       icon: 'files',
       label: t('entry.memoryFiles'),
       order: 5,
@@ -853,6 +875,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'memory-evolution',
+      tab: 'memory',
       icon: 'git-branch',
       label: t('entry.memoryEvolution'),
       order: 6,
@@ -862,6 +885,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'sessions',
+      tab: 'conversation',
       icon: 'messages-square',
       label: t('entry.sessions'),
       order: 10,
@@ -871,6 +895,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'bot-inbox',
+      tab: 'conversation',
       icon: 'inbox',
       label: t('entry.botInbox'),
       order: 15,
@@ -884,6 +909,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'schedules',
+      defaultHidden: true,
       icon: 'alarm-clock',
       label: t('entry.schedules'),
       order: 16,
@@ -893,6 +919,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'workspace-grants',
+      surface: 'settings',
       icon: 'folder-key',
       label: t('entry.workspaceGrants'),
       order: 20,
@@ -901,6 +928,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'model',
+      surface: 'settings',
       icon: 'cpu',
       label: t('entry.model'),
       order: 25,
@@ -910,6 +938,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'wake-policy',
+      surface: 'settings',
       icon: 'bell-ring',
       label: t('entry.wakePolicy'),
       order: 26,
@@ -919,6 +948,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'external-identities',
+      surface: 'settings',
       icon: 'id-card',
       label: t('entry.externalIdentities'),
       order: 27,
@@ -927,11 +957,20 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'external-connectors',
+      surface: 'settings',
       icon: 'plug',
       label: t('entry.externalConnectors'),
       order: 28,
       scope: 'personabot',
       component: ExternalConnectorsEntry,
+    },
+    {
+      id: 'group-work',
+      icon: 'list-checks',
+      label: t('entry.groupWork'),
+      order: 5,
+      scope: 'channel',
+      component: GroupWorkEntry,
     },
     {
       id: 'members',
@@ -945,6 +984,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'group-wake-policy',
+      surface: 'settings',
       icon: 'bell-ring',
       label: t('entry.wakePolicy'),
       order: 12,
@@ -954,6 +994,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'group-external-connectors',
+      surface: 'settings',
       icon: 'plug',
       label: t('entry.externalConnectors'),
       order: 14,
@@ -963,6 +1004,7 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'group-management',
+      surface: 'settings',
       icon: 'settings-2',
       label: t('entry.groupManagement'),
       order: 20,

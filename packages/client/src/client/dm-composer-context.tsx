@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
-import type { ModelRouteView, ProfileActivity, WorkspaceGrantView } from './bridge.js';
+import type {
+  ModelCatalogEntryView,
+  ModelRouteView,
+  ProfileActivity,
+  WorkspaceGrantView,
+} from './bridge.js';
 import type { ComposerContext } from './composer-shortcuts.js';
 import type { BotSummary } from './store.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -18,6 +23,7 @@ import { profileTokenSummaryText } from './profile-token-summary.js';
 import { PROFILE_ACTIVITY_WEEKS } from './profile-cards-builtins.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { DmComposerUsagePopover } from './dm-composer-usage.js';
+import { useMobileBotViewport } from './mobile-viewport.js';
 
 const subscribeUnavailable = (): (() => void) => () => {};
 const unavailableSnapshot = () => undefined;
@@ -121,6 +127,7 @@ function DmComposerContextView({
   panel: 'model' | 'workspace' | undefined;
   onClose(): void;
 }): ReactElement {
+  const mobile = useMobileBotViewport();
   const plan = useSyncExternalStore(
     subscribeModelPlans,
     () => modelPlanOf(bot.slug),
@@ -131,9 +138,17 @@ function DmComposerContextView({
   );
   const [grants, setGrants] = useState<WorkspaceGrantView[]>();
   const [inheritedRoute, setInheritedRoute] = useState<ModelRouteView>();
+  const [models, setModels] = useState<ModelCatalogEntryView[]>([]);
   const [grantError, setGrantError] = useState(false);
   const [usageOpen, setUsageOpen] = useState(false);
-  const usageTrigger = useRef<HTMLButtonElement>(null);
+  const usageTrigger = useRef<HTMLButtonElement | null>(null);
+  const usageMount = useMountedResource<HTMLButtonElement>((node) => {
+    usageTrigger.current = node;
+    return () => {
+      usageTrigger.current = null;
+      setUsageOpen(false);
+    };
+  }, []);
   const subscribeGrants = useCallback(
     (listener: () => void) => subscribeWorkspaceGrantChanges(bot.slug, listener),
     [bot.slug],
@@ -146,39 +161,49 @@ function DmComposerContextView({
   const request = useRef(0);
   const modelMount = useMountedResource<HTMLButtonElement>(() => {
     let active = true;
-    setModelStatus('loading');
-    void actions
-      .modelPlanState(bot.slug)
-      .then(async (state) => {
-        if (!active) return;
-        rememberModelPlan(bot.slug, state?.plan);
-        if (state?.repair !== undefined) {
-          setModelStatus('unavailable');
-          return;
-        }
-        if (state?.plan === undefined) {
+    let generation = 0;
+    const refresh = (): void => {
+      const current = ++generation;
+      setModelStatus('loading');
+      void actions
+        .modelPlanState(bot.slug)
+        .then(async (state) => {
+          if (!active || current !== generation) return;
+          rememberModelPlan(bot.slug, state?.plan);
+          if (state?.repair !== undefined) {
+            setModelStatus('unavailable');
+            return;
+          }
           const catalog = await actions.modelCatalog();
-          if (!active) return;
-          const route = catalog.default;
-          setInheritedRoute(
-            route !== undefined &&
-              catalog.models.some(
-                (entry) =>
-                  entry.provider === route.provider &&
-                  entry.model === route.model &&
-                  entry.credential === undefined,
-              )
-              ? route
-              : undefined,
-          );
-        } else setInheritedRoute(undefined);
-        setModelStatus('ready');
-      })
-      .catch(() => {
-        if (active) setModelStatus('unavailable');
-      });
+          if (!active || current !== generation) return;
+          setModels(catalog.models);
+          if (state?.plan === undefined) {
+            const route = catalog.default;
+            setInheritedRoute(
+              route !== undefined &&
+                catalog.models.some(
+                  (entry) =>
+                    entry.provider === route.provider &&
+                    entry.model === route.model &&
+                    entry.credential === undefined,
+                )
+                ? route
+                : undefined,
+            );
+          } else setInheritedRoute(undefined);
+          setModelStatus('ready');
+        })
+        .catch(() => {
+          if (active && current === generation) setModelStatus('unavailable');
+        });
+    };
+    refresh();
+    const unsubscribe = subscribeModelPlans(() => {
+      if (modelPlanOf(bot.slug) === undefined) refresh();
+    });
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [actions, bot.slug, plan?.revision]);
   const grantMount = useMountedResource<HTMLButtonElement>(() => {
@@ -197,13 +222,14 @@ function DmComposerContextView({
       request.current += 1;
     };
   }, [actions, bot.slug, revision]);
+  const route = plan?.orchestrator ?? inheritedRoute;
+  const modelName = models.find(
+    (entry) => entry.provider === route?.provider && entry.model === route?.model,
+  )?.modelName;
   const modelLabel =
     (modelStatus === 'unavailable'
       ? t('composerContext.unavailable')
-      : (plan?.orchestrator?.model ??
-        (inheritedRoute === undefined
-          ? undefined
-          : `${inheritedRoute.model} · ${t('onboarding.inherit')}`))) ??
+      : (modelName ?? route?.model)) ??
     t(
       modelStatus === 'loading'
         ? 'modelPreset.loading'
@@ -234,6 +260,7 @@ function DmComposerContextView({
         <div className="bh-composer-context-left">
           <button
             ref={modelMount}
+            className="bh-composer-model"
             type="button"
             onClick={() => onOpen('model')}
             aria-label={`${t('entry.model')} · ${bot.displayName} · ${modelLabel}`}
@@ -241,30 +268,34 @@ function DmComposerContextView({
             <ChannelSidebarIcon name="cpu" size={14} />
             <span>{modelLabel}</span>
           </button>
-          <button
-            ref={grantMount}
-            type="button"
-            onClick={() => onOpen('workspace')}
-            aria-label={`${t('entry.workspaceGrants')} · ${bot.displayName} · ${workspaceLabel}`}
-          >
-            <ChannelSidebarIcon name="folder-key" size={14} />
-            <span>{workspaceLabel}</span>
-          </button>
+          {mobile ? null : (
+            <button
+              ref={grantMount}
+              type="button"
+              onClick={() => onOpen('workspace')}
+              aria-label={`${t('entry.workspaceGrants')} · ${bot.displayName} · ${workspaceLabel}`}
+            >
+              <ChannelSidebarIcon name="folder-key" size={14} />
+              <span>{workspaceLabel}</span>
+            </button>
+          )}
         </div>
-        <button
-          ref={usageTrigger}
-          type="button"
-          className="bh-composer-usage"
-          onClick={() => setUsageOpen((open) => !open)}
-          aria-label={usageLabel}
-          aria-haspopup="dialog"
-          aria-expanded={usageOpen}
-        >
-          <ChannelSidebarIcon name="ruler" size={14} />
-          <span>{compactUsage}</span>
-        </button>
+        {mobile ? null : (
+          <button
+            ref={usageMount}
+            type="button"
+            className="bh-composer-usage"
+            onClick={() => setUsageOpen((open) => !open)}
+            aria-label={usageLabel}
+            aria-haspopup="dialog"
+            aria-expanded={usageOpen}
+          >
+            <ChannelSidebarIcon name="ruler" size={14} />
+            <span>{compactUsage}</span>
+          </button>
+        )}
       </div>
-      {usageOpen ? (
+      {!mobile && usageOpen ? (
         <DmComposerUsagePopover
           bot={bot}
           channelId={channelId}

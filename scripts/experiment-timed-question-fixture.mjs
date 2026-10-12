@@ -42,8 +42,8 @@ if (command === 'prepare') {
   const patchKeys = patches.items.map((pair) => pair.key.value);
   for (const key of patchKeys) {
     if (!key.startsWith('@deepseek-ai/dsh')) continue;
-    assert.ok(key.endsWith('@0.2.0-rc.1'), 'review new native patch targets before copying');
-    const target = key.replace(/@0\.2\.0-rc\.1$/u, '@' + version);
+    assert.ok(key.endsWith('@0.2.0-rc.2'), 'review new native patch targets before copying');
+    const target = key.replace(/@0\.2\.0-rc\.2$/u, '@' + version);
     const file = patches.get(key);
     assert.ok(file.startsWith('patches/'), 'patch must come from the repository patch directory');
     patches.delete(key);

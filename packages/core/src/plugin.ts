@@ -1,3 +1,4 @@
+import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
@@ -471,10 +472,16 @@ export function createCore(
   });
   let runtime: BotRuntime | undefined;
   let companions: CompanionFeed | undefined;
+  let reconcileToolRuleCreators: ((botSlug: string) => void) | undefined;
   const sourcePolicy = createBotSourcePolicyStore(
     attachOperationalModule(operationalDatabase, 'bot-inbox'),
   );
   const externalMessaging = createOutboundMessaging({
+    ownsFailure: (slug, sessionId, role) => {
+      const owner = ownership.resolve(sessionId);
+      return owner?.botSlug === slug && owner.rootRole === role;
+    },
+    onAuthorizationChanged: (slug) => reconcileToolRuleCreators?.(slug),
     onDefaultsChanged: () => live?.publishRosterCommitted(),
     onReceptionChanged: () => live?.publishRosterCommitted(),
     ...(options.capture === undefined ? {} : { capture: options.capture }),
@@ -511,6 +518,11 @@ export function createCore(
     botDisplayName: (botSlug) => registry.getHistorical(botSlug)?.displayName,
     rootDir: join(dshHome, 'botharness', 'channels'),
     onCommitted: (commit) => {
+      try {
+        externalMessaging.failureAlerts.committed(commit);
+      } catch {
+        options.warn?.('failure-alert-notification-enqueue-failed');
+      }
       try {
         const output = personaBotOutputCommitted(commit, ownership);
         if (output !== undefined) companions?.publish(output);
@@ -580,7 +592,14 @@ export function createCore(
         live?.publishRosterCommitted();
       if (
         topics.some((topic) =>
-          ['assignments', 'source-event', 'channel', 'human-attention', 'usage'].includes(topic),
+          [
+            'assignments',
+            'source-event',
+            'bot-inbox',
+            'channel',
+            'human-attention',
+            'usage',
+          ].includes(topic),
         )
       )
         refreshDurableAttention();
@@ -660,7 +679,12 @@ export function createCore(
   });
   const toolRules = createToolApprovalRuleStore(
     attachOperationalModule(operationalDatabase, 'tool-approval-rules'),
+    (botSlug, creator) => externalMessaging.toolRuleCreatorAuthorized(botSlug, creator),
   );
+  reconcileToolRuleCreators = (slug) => {
+    toolRules.reconcileExternal(slug);
+    externalMessaging.approvals.refreshRules(slug);
+  };
   const assignmentAccess = createAssignmentAccessStore(
     attachOperationalModule(operationalDatabase, 'assignment-access'),
   );
@@ -1525,7 +1549,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
-  registerBridge(ctx, bridgeMethods, privateInputs);
+  registerBridge(ctx, bridgeMethods, privateInputs, {
+    followRoster: (signal) => core.live.followRoster(signal),
+    followActivity: (signal) => core.live.followActivity(signal),
+    followChannel: (channelId, limit, signal) => core.live.followChannel(channelId, limit, signal),
+    journalPage: (channelId, request) => core.channels.readHumanJournalPage(channelId, request),
+    followCompanion: (resume, lastEventId, signal) =>
+      followCompanion((request) => core.companions.open(request), resume, lastEventId, signal),
+  });
 
   ctx.inject(['skills'], (skillsCtx) => {
     const skills = (

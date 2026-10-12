@@ -60,7 +60,7 @@ function commit(root: string, file: string, body: string, message: string): void
 }
 
 describe('Memory commit Self-Records', () => {
-  it('adds one line per commit made during a Group-caused turn, in that Group', async () => {
+  it('adds one line per commit made during a Group-caused turn, in that Group and the Bot DM', async () => {
     let groupId = '';
     let turns = 0;
     const core: Core = createCore({
@@ -104,7 +104,13 @@ describe('Memory commit Self-Records', () => {
       expect(lines[1]?.files).toEqual([{ path: 'owners.md', added: 2, deleted: 0 }]);
       expect(JSON.stringify(lines)).not.toContain('mira@example.com');
       expect(JSON.stringify(lines)).not.toContain('Launch is Friday');
-      expect(commitLines(core, 'dm-mira')).toEqual([]);
+      const dmLines = core.channels
+        .readMessages('dm-mira')
+        .reverse()
+        .filter((item) => item.memoryCommit !== undefined);
+      expect(dmLines.map((line) => line.memoryCommit!.sha)).toEqual(lines.map((line) => line.sha));
+      expect(dmLines.every((line) => line.noticeOrigin?.channelId === group.id)).toBe(true);
+      expect(core.channels.latestMessage('dm-mira')).toBeUndefined();
       expect(commitRecords(core)).toEqual([
         {
           channel_id: group.id,
