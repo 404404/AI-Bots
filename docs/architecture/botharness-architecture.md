@@ -829,6 +829,10 @@ Slack external-only reports (#863) use the same canonical Outbox as Lark: an exp
 
 [#1156](https://github.com/BotHarness/BotHarness/issues/1156) qualifies two QQ applications through the existing independent binding and Channel Bridge model. Each app-scoped conversation is explicitly mapped; neither matching text nor a shared local Channel equates external locators or lends passive reply proof. The canonical Source Event projects its receiving app reference/name into QQ Channel source labels and details, and Group Profile activity retains app identity. These optional presentation fields add no store or sending authority; earlier projections remain readable. Native acceptance receipts and observed Provider Echo remain distinct capabilities.
 
+Native own Echo remains unqualified: accepted send receipts and visible original-group replies do not establish a platform callback of the responding App's own message. The current dual-App slice is partial #1156 delivery.
+
+自身原生 Echo 尚未通过验收：发送接受回执与原群可见回复不能证明平台回推了响应应用自己的消息；当前双 App 切片属于 #1156 的阶段性交付。
+
 [#1156](https://github.com/BotHarness/BotHarness/issues/1156) 沿用独立应用绑定与 Channel Bridge 模型验证两个 QQ 应用。各自应用范围的会话分别显式映射；相同文字或共同本地 Channel 不会合并外部定位，也不会借出被动回复证明。Canonical Source Event 把接收应用 reference／名称投影到 QQ Channel 来源标签和详情，群 Profile 活动保留应用身份。这些可选展示字段不增加存储或发送权限，旧投影仍可阅读；原生接受回执与 Provider Echo 观察保持独立资格。
 
 [#1153](https://github.com/BotHarness/BotHarness/issues/1153) exposes Group Channel sync from the received QQ conversation through the existing Channel Bridge command. Inbox Admission and optional Channel placement share the canonical Source Event; disabling placement retains history. Messaging stores bounded reception metadata by Bot, Provider and authenticated app fingerprint in its own database. Local controls and public account inspections record distinguishable boundaries, while restart continuity remains explicitly unverified; no second transcript or remote backfill is introduced. Same-app rebind preserves blocks and mute preferences without restoring revoked Channel authority. See [ADR-0152](../adr/0152-qq-reception-intervals-record-local-observations.md).
