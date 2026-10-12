@@ -21,6 +21,7 @@ import {
 
 import { errorMessage } from './bridge.js';
 import { PersonaBotAvatar } from './avatar.js';
+import { botNameSource, paintBotName } from './bot-primary-color.js';
 import { openModelsSettings } from './bot-settings-open.js';
 import { currentMentionLabel } from './actor-names.js';
 import type { ChannelHumanMember } from './store.js';
@@ -499,7 +500,7 @@ export function ChannelMessageBody({
             t={t}
           />
         </span>
-        <span>{label}</span>
+        <span ref={(element) => paintBotName(element, botNameSource(bot))}>{label}</span>
       </>
     );
     if (actions === undefined)

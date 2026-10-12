@@ -33,6 +33,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- A PersonaBot now has a Bot Primary Color: Automatic follows its Avatar's main hair color (or a fixed fallback for uploaded images), and the Avatar dialog in its Profile lets you pick a Custom color with a light/dark preview. Its name on DM and Group Channel messages, in the mention list, in the composer and on sent mentions uses that color, adjusted to stay readable on each background and theme. Exporting a Bot as a zip or sharing its Memory Repository carries the choice, so an imported copy keeps the same color. A deleted Bot keeps its last color on its old messages and in the usage list. The per-Bot usage chart draws each Bot's bar in its own color, with fixed shades for cached input, other input and output ([#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)); the activity heatmap follows later ([#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471), [#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472), [#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473), [#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474), [ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)).
+
 - Authorized Lark DM reviewers can separately confirm exact or all-opaque tool rules, inspect the same scope and status in Web, and lose future automatic approvals when current creator authority is revoked. All-opaque requires a qualified version-2 Provider/account and its own high-risk confirmation. IM-only Bots can receive approval cards before anyone opens their Web DM. External rules never auto-approve Web-only native Session authorizations; bilingual tutorials include real sanitized workflow screenshots ([#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)).
 
 - Group composer workspace shortcuts reuse DM directory cards, permission badges and native modal geometry to default to all currently eligible Bots with optional subset selection, confirm their directory and existing access, and report independent per-Bot Grant creation, reuse, failure and unknown-outcome readback without granting unselected members access ([#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)).
@@ -131,6 +133,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- Channel footers show the full effective model name without provider or inheritance labels; mobile layouts keep only the model selector, while desktop workspace and token controls remain available ([#1479](https://github.com/BotHarness/DeepSeekBot/issues/1479)).
+
 - The onboarding tutorial is now a floating multi-step driver.js walkthrough of the interface — the welcome letter, conversation list, Activity Center, Bot settings, conversation header, message box, Channel sidebar and Window Companion — instead of a permanent bar at the top of Bot mode; it starts on the first Bot-mode entry, closing pauses, the guide offers **Skip tutorial**, and **Bot settings → General** restarts it, with completed Profiles seeing no onboarding bar ([#1295](https://github.com/BotHarness/BotHarness/issues/1295), [#1301](https://github.com/BotHarness/BotHarness/issues/1301), [ADR-0155](docs/adr/0155-onboarding-tutorial-is-a-floating-tour-replayed-from-bot-settings.md)).
 
 - The preset welcome message now reads as a first-person letter from the Bot, with its banner, avatar, name and tags and the suggestion questions kept as reply options; the timeline labels that message with the Bot's name instead of "System" ([#1301](https://github.com/BotHarness/BotHarness/issues/1301)).
@@ -153,6 +157,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - Restored QQ group Channel mappings retain bounded retries while apps become ready after Host restart, so the first new mention reaches its mapped Channel as well as its Inbox ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - Fixed checked QQ self mentions in full-reception events while keeping ordinary messages and Bot authors excluded; the candidate Provider retains current Lark pairing capabilities and does not claim own Echo qualification ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+- Several DM messages sent while a Bot is busy no longer make it run a separate turn for each one after they were already delivered together into the running turn ([#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)).
+
 - Clarified that Orchestrator answers, including short acknowledgments and image descriptions, must be delivered through the Channel reply Tool rather than private Session text, while preserving intentional silence and external reply routing ([#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)).
 
 - Public private-input Session evidence retains native RC1 rejected and unavailable approval outcomes while excluding decision reasons and unknown values ([#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)).

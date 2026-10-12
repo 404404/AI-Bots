@@ -25,7 +25,16 @@ import {
   type UpdatePersonaBotResult,
 } from './persona-bot.js';
 import { isBotBanner, seededBotBanner } from './bot-banner.js';
-import { readSharedBanner, readSharedPresentation } from './shared-presentation.js';
+import {
+  isBotPrimaryColor,
+  nextBotPrimaryColor,
+  retainedBotPrimaryColor,
+} from './primary-color.js';
+import {
+  readSharedBanner,
+  readSharedPresentation,
+  readSharedPrimaryColor,
+} from './shared-presentation.js';
 import { isValidSlug } from './slug.js';
 import { recordMemoryOwnership } from './deletion.js';
 import type { HttpsFallback, MemoryCloneResult } from '../memory/clone.js';
@@ -93,6 +102,8 @@ export interface PersonaBotRegistry {
   update(slug: string, patch: PersonaBotPatch): UpdatePersonaBotResult;
   setAppearance(slug: string, recipe: unknown): UpdatePersonaBotResult;
   setBanner(slug: string, banner: unknown): UpdatePersonaBotResult;
+  setPrimaryColor(slug: string, choice: unknown): UpdatePersonaBotResult;
+  retainedRecordBody(slug: string): string | undefined;
   setPaused(slug: string, paused: boolean): UpdatePersonaBotResult;
   setComputerAccess(slug: string, enabled: boolean): UpdatePersonaBotResult;
   setBrowserAccess(slug: string, enabled: boolean): UpdatePersonaBotResult;
@@ -184,6 +195,7 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
     ] as const) {
       if (record[key] !== undefined) Object.assign(result, { [key]: record[key] });
     }
+    if (record.primaryColor !== undefined) result.primaryColor = { ...record.primaryColor };
     if (record.standingLimits !== undefined)
       result.standingLimits = {
         soul: record.standingLimits.soul,
@@ -232,6 +244,13 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       !isBotBanner(parsed.banner)
     )
       delete (parsed as { banner?: unknown }).banner;
+    if (
+      typeof parsed === 'object' &&
+      parsed !== null &&
+      'primaryColor' in parsed &&
+      !isBotPrimaryColor(parsed.primaryColor)
+    )
+      delete (parsed as { primaryColor?: unknown }).primaryColor;
     if (!isPersonaBotRecord(parsed, slug)) throw new Error('Invalid PersonaBot Registry record');
     return recordSnapshot(parsed);
   };
@@ -459,10 +478,15 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       capture('bot_created');
       const shared = readSharedPresentation(defaultMemoryDir(input.slug));
       const banner = readSharedBanner(defaultMemoryDir(input.slug));
+      const primaryColor = readSharedPrimaryColor(defaultMemoryDir(input.slug));
       const presentation =
-        shared === undefined && banner === undefined
+        shared === undefined && banner === undefined && primaryColor === undefined
           ? undefined
-          : { ...shared, ...(banner === undefined ? {} : { banner }) };
+          : {
+              ...shared,
+              ...(banner === undefined ? {} : { banner }),
+              ...(primaryColor === undefined ? {} : { primaryColor }),
+            };
       if (presentation === undefined) {
         syncDescriptor(result.record, true);
         return result;
@@ -618,6 +642,24 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       syncDescriptor(updated);
       capture('banner_edited');
       return { ok: true, record: updated };
+    },
+    setPrimaryColor(slug, choice) {
+      const record = active(slug);
+      if (record === undefined) return { ok: false, reason: 'not-found' };
+      const next = nextBotPrimaryColor(record.primaryColor, choice);
+      if (next === false) return { ok: false, reason: 'invalid-input' };
+      const { primaryColor: _previous, ...rest } = record;
+      const updated = next === undefined ? rest : { ...rest, primaryColor: next };
+      write(updated);
+      syncDescriptor(updated);
+      return { ok: true, record: updated };
+    },
+    retainedRecordBody(slug) {
+      const record = active(slug);
+      if (record === undefined) return undefined;
+      return JSON.stringify(
+        recordSnapshot({ ...record, primaryColor: retainedBotPrimaryColor(record) }),
+      );
     },
     setPaused(slug, paused) {
       const record = active(slug);

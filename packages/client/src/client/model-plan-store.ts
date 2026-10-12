@@ -26,3 +26,10 @@ export function invalidateModelPlan(slug: string): void {
   plans.delete(slug);
   for (const listener of listeners) listener();
 }
+
+export function invalidateInheritedModelPlans(): void {
+  for (const [slug, plan] of plans) {
+    if (plan === null) plans.delete(slug);
+  }
+  for (const listener of listeners) listener();
+}
