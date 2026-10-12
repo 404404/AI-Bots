@@ -166,6 +166,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- After a Human DM turn is cut off (for example by a Host restart), a Bot woken next from another Channel no longer posts that DM's answer there; the request stays in its DM, where it can be retried ([#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)).
+
 - On a narrow or mobile window, the activity dots in a Channel list row now sit right before the message time instead of floating in the middle of the row ([#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)).
 
 - A completed Assignment report no longer keeps the neutral marker on its Bot's avatar once the Orchestrator has handled it; the report stays listed in the Inbox ([#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)).

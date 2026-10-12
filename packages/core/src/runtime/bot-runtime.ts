@@ -2545,6 +2545,32 @@ class BotRuntimeImplementation implements BotRuntime {
     );
   }
 
+  #interruptedDmNotice(botSlug: string, channelId: string | undefined): string {
+    const rows = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT e.channel_id, e.message_id
+          FROM inbox_admissions a
+          JOIN source_events e ON e.source_event_id = a.source_event_id
+         WHERE a.bot_slug = ? AND a.reason = 'human-dm' AND e.source_kind = 'human-message'
+           AND a.attempt_state IN ('retryable', 'needs-repair')
+           AND e.channel_id IS NOT NULL AND e.message_id IS NOT NULL AND e.channel_id != ?
+           AND e.created_at > COALESCE((
+             SELECT MAX(handled_at) FROM inbox_admissions WHERE bot_slug = ? AND handled_at IS NOT NULL
+           ), '')
+         ORDER BY e.created_at, e.message_id
+         LIMIT 5
+      `)
+        .all(botSlug, channelId ?? '', botSlug),
+    ) as Array<{ channel_id: string; message_id: string }>;
+    if (rows.length === 0) return '';
+    return (
+      '[Host: earlier Human DM turn ended without a reply]\n' +
+      rows.map((row) => `Channel: ${row.channel_id}\nMessage ID: ${row.message_id}`).join('\n') +
+      '\nThat request is not part of this turn and stays in its own Channel, where the Human can retry it. Do not answer it in any other Channel, and do not send its answer with channel_send in this turn.\n\n'
+    );
+  }
+
   #groupMentionPrompt(channelId: string, messageId: string, body: string): string {
     const message = this.#channels.message(channelId, messageId);
     const sender = message?.author.kind === 'bot' ? `PersonaBot ${message.author.slug}` : 'Human';
@@ -3254,12 +3280,15 @@ class BotRuntimeImplementation implements BotRuntime {
         message: (() => {
           const human =
             channelId === undefined ? undefined : this.#channels.listHumanMembers(channelId)[0];
-          return human === undefined || human.displayName === 'Human'
-            ? body
-            : 'Current Channel Human: ' +
+          return (
+            this.#interruptedDmNotice(bot.slug, channelId) +
+            (human === undefined || human.displayName === 'Human'
+              ? body
+              : 'Current Channel Human: ' +
                 JSON.stringify({ humanId: human.humanId, displayName: human.displayName }) +
                 '\n' +
-                body;
+                body)
+          );
         })(),
         inbox,
         inboundChannelId: channelId,

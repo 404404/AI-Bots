@@ -166,6 +166,8 @@
 
 ### Fixed
 
+- 私聊回合被打断（例如 Host 重启）后，Bot 下一次从别的 Channel 被唤醒时，不再把那条私聊的回答发到当前 Channel；该请求留在原私聊里，可在那里重试（[#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)）。
+
 - 在窄窗口或移动端，Channel 列表行里的活动点阵现在紧贴在消息时间左侧，不再浮在行中间（[#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)）。
 
 - 主会话处理完已完成的任务汇报后，Bot 头像上的中性标记会自动消失；汇报本身仍列在收件箱里（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
