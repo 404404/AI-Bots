@@ -1,5 +1,6 @@
 import type { PixelBannerRecipe } from '@botharness/pixel-banner';
 import { onboardingFor } from './onboarding.js';
+import { invalidateInheritedModelPlans } from './model-plan-store.js';
 import type { ProviderAppSetup } from './provider-app-setup.js';
 import type { OnboardingSnapshot, TutorialAction } from '../../../core/src/onboarding/types.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
@@ -97,6 +98,8 @@ import {
   setBotBanner as setBotBannerViaBridge,
   updateBotProfile as updateBotProfileViaBridge,
   setBotAppearance as setBotAppearanceViaBridge,
+  setBotPrimaryColor as setBotPrimaryColorViaBridge,
+  type BotPrimaryColorChoice,
   loadPartLibrary as loadPartLibraryViaBridge,
   addLibraryPart as addLibraryPartViaBridge,
   exportLibraryParts as exportLibraryPartsViaBridge,
@@ -626,6 +629,7 @@ export interface BridgeActions {
     channelId: string,
     banner: { recipe: PixelBannerRecipe } | { image: string } | null,
   ): Promise<boolean>;
+  setBotPrimaryColor(channelId: string, primaryColor: BotPrimaryColorChoice): Promise<boolean>;
   updateBotProfile(
     slug: string,
     patch: { roles?: string[]; description?: string },
@@ -1214,8 +1218,16 @@ export function createActions(
   };
   const actions: BridgeActions = {
     onboarding: (slug, action) => invoke('onboarding', { slug, action }),
-    onboardingModel: (slug, expectedRevision, route, globalDefault) =>
-      invoke('onboardingModel', { slug, expectedRevision, route, globalDefault }),
+    onboardingModel: async (slug, expectedRevision, route, globalDefault) => {
+      const result = await invoke<{ revision: number }>('onboardingModel', {
+        slug,
+        expectedRevision,
+        route,
+        globalDefault,
+      });
+      if (globalDefault) invalidateInheritedModelPlans();
+      return result;
+    },
     inheritModel: (slug, expectedRevision) =>
       invoke('modelPlanInherit', { slug, expectedRevision }),
     async retryMessage(channelId, messageId) {
@@ -2470,6 +2482,16 @@ export function createActions(
         return true;
       } catch (error) {
         console.warn('botharness: Bot banner update failed', error);
+        return false;
+      }
+    },
+    async setBotPrimaryColor(channelId, primaryColor) {
+      try {
+        const bot = await setBotPrimaryColorViaBridge(call, channelId, primaryColor);
+        clientStore.upsertBot(bot);
+        return true;
+      } catch (error) {
+        console.warn('botharness: Bot Primary Color update failed', error);
         return false;
       }
     },
