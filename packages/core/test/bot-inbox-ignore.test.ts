@@ -108,7 +108,7 @@ describe('explicit Bot Inbox ignore decision', () => {
     const core = createCore({
       dshHome: home,
       agents: adapter(async (run) => {
-        if (run.message !== 'Review Group') return;
+        if (!run.message.endsWith('Review Group')) return;
         expect(() => run.channels.ignore({ channelId: groupId, messageId: 'one' })).toThrow(
           'observe this message',
         );
@@ -157,7 +157,7 @@ describe('explicit Bot Inbox ignore decision', () => {
     const core = createCore({
       dshHome: home,
       agents: adapter(async (run) => {
-        if (run.message !== 'Review Group') return;
+        if (!run.message.endsWith('Review Group')) return;
         expect(() => run.channels.ignore({ channelId: groupId, messageId: 'mention' })).toThrow(
           'observe this message',
         );

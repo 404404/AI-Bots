@@ -15,7 +15,8 @@ import type {
   ChannelSidebarEntryProps,
   ChannelSidebarRegistry,
 } from './channel-sidebar.js';
-import { resolveChannelSidebarContext } from './channel-sidebar.js';
+import { resolveChannelSidebarContext, resolveChannelSidebarTabs } from './channel-sidebar.js';
+import { ChannelSidebarTabs } from './channel-sidebar-tabs.js';
 import {
   NARROW_CHANNEL_SIDEBAR_QUERY,
   resolveChannelSidebarMode,
@@ -35,6 +36,12 @@ import { useMountedResource } from './mounted-resource.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { insertEntryBefore, moveEntry, resolveEntryOrder } from './channel-sidebar-order.js';
 import { ChannelSidebarSettings } from './channel-sidebar-settings.js';
+import {
+  channelSettings,
+  channelSettingsSections,
+  isChannelSettingsSection,
+  type ChannelSettings,
+} from './channel-settings-state.js';
 
 function matchesNarrow(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -121,9 +128,11 @@ export function ChannelSidebarEntrySection({
   entryProps,
   editing = false,
   hidden = false,
+  collapsible = true,
   preview,
 }: {
   preview?: boolean | undefined;
+  collapsible?: boolean;
   editing?: boolean;
   hidden?: boolean;
   entry: ChannelSidebarEntry;
@@ -154,37 +163,51 @@ export function ChannelSidebarEntrySection({
       if (!next && expanded) onToggle();
     },
   };
+  const headContent = (
+    <>
+      <span className="bh-channel-sidebar-entry-icon" aria-hidden="true">
+        <ChannelSidebarIcon name={entry.icon} />
+      </span>
+      <span className="bh-channel-sidebar-entry-label">{entry.label}</span>
+      {Badge === undefined ? null : (
+        <span className="bh-channel-sidebar-entry-badge">
+          <Badge {...props} />
+        </span>
+      )}
+    </>
+  );
   return (
     <section className="bh-channel-sidebar-entry">
       <div className="bh-channel-sidebar-entry-header">
-        <button
-          type="button"
-          className="bh-channel-sidebar-entry-head"
-          aria-expanded={shown}
-          aria-controls={bodyId}
-          aria-disabled={expandable ? undefined : true}
-          disabled={!expandable || editing || hidden || preview !== undefined}
-          style={expandable ? undefined : { cursor: 'default', opacity: 0.6 }}
-          onClick={expandable ? onToggle : undefined}
-        >
-          {editing ? null : (
-            <span
-              className={`bh-channel-sidebar-entry-chevron${shown ? '' : ' bh-chevron-collapsed'}`}
-              aria-hidden="true"
-            >
-              <IconChevronDownOutlineRegular size={14} />
-            </span>
-          )}
-          <span className="bh-channel-sidebar-entry-icon" aria-hidden="true">
-            <ChannelSidebarIcon name={entry.icon} />
-          </span>
-          <span className="bh-channel-sidebar-entry-label">{entry.label}</span>
-          {Badge === undefined ? null : (
-            <span className="bh-channel-sidebar-entry-badge">
-              <Badge {...props} />
-            </span>
-          )}
-        </button>
+        {collapsible ? (
+          <button
+            type="button"
+            className="bh-channel-sidebar-entry-head"
+            aria-expanded={shown}
+            aria-controls={bodyId}
+            aria-disabled={expandable ? undefined : true}
+            disabled={!expandable || editing || hidden || preview !== undefined}
+            style={expandable ? undefined : { cursor: 'default', opacity: 0.6 }}
+            onClick={expandable ? onToggle : undefined}
+          >
+            {editing ? null : (
+              <span
+                className={`bh-channel-sidebar-entry-chevron${shown ? '' : ' bh-chevron-collapsed'}`}
+                aria-hidden="true"
+              >
+                <IconChevronDownOutlineRegular size={14} />
+              </span>
+            )}
+            {headContent}
+          </button>
+        ) : (
+          <div
+            className="bh-channel-sidebar-entry-head bh-channel-sidebar-entry-head-static"
+            style={expandable ? undefined : { opacity: 0.6 }}
+          >
+            {headContent}
+          </div>
+        )}
         {HeaderAction === undefined ? null : (
           <span className="bh-channel-sidebar-entry-action-slot">
             <HeaderAction {...props} />
@@ -205,11 +228,13 @@ export function ChannelSidebarContents({
   registered = entries,
   entryProps,
   controller,
+  onOpenSettings,
   prefs = channelSidebarPrefs,
 }: {
   entries: readonly ChannelSidebarEntry[];
   registered?: readonly ChannelSidebarEntry[];
   entryProps: ChannelSidebarEntryProps;
+  onOpenSettings?: (() => void) | undefined;
   controller: Pick<ChannelSidebarController, 'isEntryExpanded' | 'toggleEntry'>;
   prefs?: ChannelSidebarPrefs;
 }): ReactElement {
@@ -397,6 +422,7 @@ export function ChannelSidebarContents({
           entryProps={entryProps}
           editing={editing}
           onPreview={setPreviewEntry}
+          onOpenSettings={onOpenSettings}
           onEdit={() => setDraft({ order, hidden })}
         />
       </div>
@@ -614,7 +640,9 @@ export function ChannelSidebar({
   selectedMemoryFilePath,
   onMemoryWorkingSelect,
   selectedMemoryWorking,
+  settings = channelSettings,
 }: {
+  settings?: Pick<ChannelSettings, 'open'>;
   registry: ChannelSidebarRegistry;
   state: ClientState;
   actions: BridgeActions;
@@ -634,6 +662,11 @@ export function ChannelSidebar({
     registry.subscribe,
     () => registry.entries(scope),
     () => registry.entries(scope),
+  );
+  const tabs = useSyncExternalStore(
+    registry.subscribe,
+    () => registry.tabs(scope),
+    () => registry.tabs(scope),
   );
   const selectedBotSlug = context?.botSlug;
   const inboxMount = useMountedResource<HTMLDivElement>(() => {
@@ -673,8 +706,13 @@ export function ChannelSidebar({
           onMemoryWorkingSelect,
           selectedMemoryWorking,
         };
+  const sidebarEntries = entries.filter((entry) => !isChannelSettingsSection(entry));
   const visibleEntries =
-    entryProps === undefined ? [] : entries.filter((entry) => entry.visible?.(state) ?? true);
+    entryProps === undefined
+      ? []
+      : sidebarEntries.filter((entry) => entry.visible?.(state) ?? true);
+  const onOpenSettings =
+    channelSettingsSections(entries, state).length > 0 ? () => settings.open() : undefined;
   const dockedWidth = clampChannelSidebarWidth(controller.width);
   const panel = (
     <div
@@ -733,13 +771,22 @@ export function ChannelSidebar({
           onDoubleClick={() => controller.setWidth(DEFAULT_CHANNEL_SIDEBAR_WIDTH)}
         />
       )}
-      {entryProps === undefined ? null : (
+      {entryProps === undefined ? null : controller.mode === 'dock' ? (
+        <ChannelSidebarTabs
+          key={controller.scopeKey}
+          tabs={resolveChannelSidebarTabs(tabs, visibleEntries)}
+          entryProps={entryProps}
+          scopeKey={controller.scopeKey}
+          onOpenSettings={onOpenSettings}
+        />
+      ) : (
         <ChannelSidebarContents
           key={controller.scopeKey}
           entries={visibleEntries}
-          registered={entries}
+          registered={sidebarEntries}
           entryProps={entryProps}
           controller={controller}
+          onOpenSettings={onOpenSettings}
         />
       )}
     </div>

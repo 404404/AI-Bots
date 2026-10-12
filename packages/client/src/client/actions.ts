@@ -24,6 +24,9 @@ import {
   setApprovalRoute,
   testApprovalRoute,
   retryApprovalNotification,
+  setFailureAlerts,
+  testFailureAlerts,
+  retryFailureAlerts,
 } from './bridge.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
 import type {
@@ -321,6 +324,9 @@ export interface BridgeActions {
   approvalRoute(slug: string, pairingId: string | null, expectedRevision: number): Promise<void>;
   approvalTest(slug: string): Promise<void>;
   approvalRetry(slug: string, id: string): Promise<void>;
+  failureAlertsSet(slug: string, enabled: boolean, expectedRevision: number): Promise<void>;
+  failureAlertsTest(slug: string): Promise<void>;
+  failureAlertsRetry(slug: string, id: string): Promise<void>;
   pairingReview(slug: string, input: PairingReviewInput): Promise<PairingRequest>;
   senderAccess(slug: string, input: SenderAccessInput): Promise<void>;
   messagingIdentity(slug: string, input: MessagingIdentityInput): Promise<MessagingIdentity>;
@@ -2109,6 +2115,10 @@ export function createActions(
       setApprovalRoute(call, slug, pairingId, expectedRevision),
     approvalTest: (slug) => testApprovalRoute(call, slug),
     approvalRetry: (slug, id) => retryApprovalNotification(call, slug, id),
+    failureAlertsSet: (slug, enabled, expectedRevision) =>
+      setFailureAlerts(call, slug, enabled, expectedRevision),
+    failureAlertsTest: (slug) => testFailureAlerts(call, slug),
+    failureAlertsRetry: (slug, id) => retryFailureAlerts(call, slug, id),
     pairingReview: (slug, input) => reviewPairing(call, slug, input),
     senderAccess: (slug, input) => changeExternalSenderAccess(call, slug, input),
     messagingIdentity: (slug, input) => manageMessagingIdentity(call, slug, input),
