@@ -254,7 +254,20 @@ describe('bridge typert service', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'watchRoster',
     ]);
+  });
+
+  it('marks the roster watch as a stream whose only parameter is the injected signal', () => {
+    const { service } = setup();
+
+    expect(remoteMethods(service).filter((marker) => marker.mode === 'stream')).toEqual([
+      { method: 'watchRoster', mode: 'stream', invocation: { kind: 'direct' } },
+    ]);
+    expect(parameterNames(service.watchRoster)).toEqual(['signal']);
+    expect(() => service.watchRoster(new AbortController().signal)).toThrow(
+      'Roster live stream is unavailable',
+    );
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {

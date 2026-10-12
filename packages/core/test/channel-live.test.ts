@@ -179,6 +179,49 @@ describe('Channel post-commit stream', () => {
     await reader?.cancel();
   });
 
+  it('yields roster facts on the native stream and releases its subscriber on cancellation', async () => {
+    let placements = Array.from({ length: 101 }, (_, index) => ({
+      sourceEventId: 'source',
+      channelId: `channel-${index}`,
+      messageId: `message-${index}`,
+    }));
+    const hub = createChannelLiveHub(
+      createChannelStore({ rootDir: root() }),
+      undefined,
+      () => placements,
+    );
+    hubs.push(hub);
+    const abort = new AbortController();
+    const items = hub.watchRoster(abort.signal)[Symbol.asyncIterator]();
+    expect((await items.next()).value).toEqual({ type: 'ready' });
+    const baseline = (await items.next()).value;
+    expect(baseline).toMatchObject({ type: 'content/purged' });
+    expect(baseline.placements).toHaveLength(100);
+    expect((await items.next()).value.placements).toEqual([placements[100]]);
+    hub.publishRosterCommitted();
+    hub.publishRosterCommitted();
+    placements = [{ sourceEventId: 'new', channelId: 'shared', messageId: 'new-message' }];
+    hub.publishContentPurged();
+    expect((await items.next()).value).toEqual({ type: 'roster/changed' });
+    expect((await items.next()).value).toEqual({ type: 'content/purged', placements });
+    const pending = items.next();
+    abort.abort();
+    expect((await pending).done).toBe(true);
+    hub.publishRosterCommitted();
+    expect((await items.next()).done).toBe(true);
+
+    const reopened = hub.watchRoster(new AbortController().signal)[Symbol.asyncIterator]();
+    expect((await reopened.next()).value).toEqual({ type: 'ready' });
+    expect((await reopened.next()).value).toEqual({ type: 'content/purged', placements });
+    const closing = reopened.next();
+    hub.close();
+    expect((await closing).done).toBe(true);
+
+    const aborted = new AbortController();
+    aborted.abort();
+    expect((await hub.watchRoster(aborted.signal)[Symbol.asyncIterator]().next()).done).toBe(true);
+  });
+
   it('sends one Human read baseline on connect and one update when the position advances', async () => {
     const store = createChannelStore({ rootDir: root() });
     const group = store.createGroup({ name: 'Team', members: [] });

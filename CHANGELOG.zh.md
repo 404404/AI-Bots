@@ -144,6 +144,8 @@
 
 ### Fixed
 
+- 在第二个浏览器标签页打开 DeepSeekBot 时，该页不再停在加载占位：通讯录更新改走 DSH 的共用实时连接，不再单独占用一条连接。第二页加载完成后两页仍可能停止响应，需待其余实时流一并迁移（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
+
 - Bot 忙碌时连续发送的多条私聊消息，在已经一起送入当前回合之后，不再为每一条各自再跑一个回合（[#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)）。
 
 - 明确 Orchestrator 的回答（包括简短确认和图片描述）应通过 Channel 回复工具送达，而非仅输出到私有 Session；保留主动沉默与外部消息回复路由（[#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)）。

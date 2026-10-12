@@ -144,6 +144,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- Opening DeepSeekBot in a second browser tab no longer leaves that tab on loading placeholders: roster updates now travel on DSH's shared live connection instead of their own. Both tabs can still stop responding once the second one has loaded, until the remaining live streams move as well ([#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)).
+
 - Several DM messages sent while a Bot is busy no longer make it run a separate turn for each one after they were already delivered together into the running turn ([#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)).
 
 - Clarified that Orchestrator answers, including short acknowledgments and image descriptions, must be delivered through the Channel reply Tool rather than private Session text, while preserving intentional silence and external reply routing ([#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)).

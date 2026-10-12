@@ -9,6 +9,8 @@ artifact；DSH 版本与上游 revision 记录这些内容是基于什么版本�
 
 ### Documentation
 
+- 在[本地开发指南](../dsh-dev/SKILL.md)记录应用 SSE 与原生 HMR 共用的 HTTP/1.1 连接预算，以及源码声明的流式 Remote 方法路径（Host 标记、Client contribution、namespace 读取、终止后重试），以认证的流打开和两个真实同源页面在 DSH `0.2.0-rc.1` 上核验；DSH／Cordis Context 与 Skill 行为不变（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
+
 - 在[本地开发指南](../dsh-dev/SKILL.md)记录有界 Windows→Linux Profile 路径迁移及非 root 工作区权限前提，以 pinned DSH `0.2.0-rc.1` 和真实隔离 Linux Host 核验；DSH／Cordis Context 与 Skill 行为不变（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)，[复验](../../../docs/research/2026-10-12-private-input-linux-qualification.md)）。
 
 - 记录受保护私密引用 MCP 消费路径、native 适配器／SDK 边界及可信服务器限制；DSH/Cordis Context 与 Skill 行为不变（[#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)，[指南](../../../docs/dev/guides/private-input-mcp.md)）。

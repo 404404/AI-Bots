@@ -38,8 +38,16 @@ interface Subscriber {
   close(): void;
 }
 
+export type RosterLiveItem =
+  | { type: 'ready' }
+  | { type: typeof ROSTER_CHANGED_EVENT }
+  | { type: typeof CONTENT_PURGED_EVENT; placements: PurgedPlacement[] };
+
+const ROSTER_LIVE_QUEUE_LIMIT = 1024;
+
 export interface ChannelLiveHub {
   open(request: Request): Response;
+  watchRoster(signal: AbortSignal): AsyncIterable<RosterLiveItem>;
   publishCommitted(commit: ChannelMessageCommit): void;
   publishAdmission(channelId: string, messageId: string, message: ChannelMessage): void;
   publishHumanRead(channelId: string, humanId: string, revision: number): void;
@@ -224,6 +232,53 @@ export function createChannelLiveHub(
       },
     });
   };
+  async function* watchRoster(signal: AbortSignal): AsyncGenerator<RosterLiveItem> {
+    const queue: RosterLiveItem[] = [];
+    let ended = signal.aborted;
+    let wake: (() => void) | undefined;
+    const subscriber: RosterSubscriber = {
+      purge(placements) {
+        if (ended) return;
+        for (let offset = 0; offset < placements.length; offset += 100)
+          queue.push({
+            type: CONTENT_PURGED_EVENT,
+            placements: placements.slice(offset, offset + 100),
+          });
+        if (queue.length > ROSTER_LIVE_QUEUE_LIMIT) this.close();
+        wake?.();
+      },
+      push() {
+        if (ended) return;
+        if (queue.at(-1)?.type !== ROSTER_CHANGED_EVENT) queue.push({ type: ROSTER_CHANGED_EVENT });
+        wake?.();
+      },
+      close() {
+        if (ended) return;
+        ended = true;
+        rosterSubscribers.delete(this);
+        wake?.();
+      },
+    };
+    const abort = (): void => subscriber.close();
+    signal.addEventListener('abort', abort, { once: true });
+    if (!ended) rosterSubscribers.add(subscriber);
+    try {
+      if (ended) return;
+      yield { type: 'ready' };
+      subscriber.purge(redactions?.() ?? []);
+      for (;;) {
+        while (!ended && queue.length > 0) yield queue.shift()!;
+        if (ended) return;
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+        wake = undefined;
+      }
+    } finally {
+      signal.removeEventListener('abort', abort);
+      subscriber.close();
+    }
+  }
   const remove = (channelId: string, subscriber: Subscriber): void => {
     const group = subscribers.get(channelId);
     group?.delete(subscriber);
@@ -231,6 +286,7 @@ export function createChannelLiveHub(
   };
 
   return {
+    watchRoster,
     open(request) {
       const url = new URL(request.url);
       if (url.searchParams.get('scope') === 'activity') return openActivity();

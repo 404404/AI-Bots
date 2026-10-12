@@ -66,6 +66,12 @@ import {
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
 import { mountChannelLive, mountRosterLive } from './channel-live.js';
+import { installRosterTransport } from './messaging-defaults-live.js';
+import {
+  createRosterRemoteTransport,
+  ROSTER_REMOTE_CONTRIBUTION,
+  type RosterRemote,
+} from './roster-remote.js';
 import { sessionBotReference } from './mentions.js';
 import { en, LOCALE_NS, zh } from './locale.js';
 import { registerModeShadow } from './mode.js';
@@ -338,6 +344,38 @@ export function apply(ctx: ClientContext): void {
     () => (typeof EventSource === 'undefined' ? () => {} : mountRosterLive(store, actions)),
     'botharness: Roster live subscription',
   );
+  ctx.effect(() => {
+    let uninstall: (() => void) | undefined;
+    let disposed = false;
+    const native = ctx.remote as Partial<Pick<typeof ctx.remote, '$mount' | '$stream'>>;
+    if (typeof native.$mount !== 'function' || typeof native.$stream !== 'function')
+      return () => {};
+    void ctx.remote.$mount(ROSTER_REMOTE_CONTRIBUTION).then(
+      () => {
+        if (disposed) return;
+        uninstall = installRosterTransport(
+          createRosterRemoteTransport({
+            $stream: (options) => (ctx.remote as unknown as RosterRemote).$stream(options),
+            watchRoster: (signal) => {
+              const namespace = ctx.get('remote.botharness') as
+                | { watchRoster?: (signal: AbortSignal) => AsyncIterable<unknown> }
+                | undefined;
+              if (namespace?.watchRoster === undefined)
+                throw new Error('botharness roster Remote is not mounted');
+              return namespace.watchRoster(signal);
+            },
+          }),
+        );
+      },
+      (error: unknown) => {
+        console.warn('botharness: roster Remote stream unavailable', error);
+      },
+    );
+    return () => {
+      disposed = true;
+      uninstall?.();
+    };
+  }, 'botharness: Roster live on the native Remote stream carrier');
   ctx.effect(
     () =>
       mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal), {

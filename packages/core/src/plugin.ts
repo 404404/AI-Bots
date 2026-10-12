@@ -1524,7 +1524,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
-  registerBridge(ctx, bridgeMethods, privateInputs);
+  registerBridge(ctx, bridgeMethods, privateInputs, (signal) => core.live.watchRoster(signal));
 
   ctx.inject(['skills'], (skillsCtx) => {
     const skills = (
