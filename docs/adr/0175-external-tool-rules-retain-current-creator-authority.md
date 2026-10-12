@@ -1,6 +1,6 @@
 # ADR-0175: External tool rules retain current creator authority
 
-Status: Accepted design; #1033 exact-rule private Lark interaction accepted by the Human on 2026-10-12. Separate all-opaque source candidate requires its own real-platform qualification.
+Status: Accepted design; #1033 exact-rule private Lark interaction accepted by the Human on 2026-10-12. The all-opaque first slice was also Human-accepted on 2026-10-12; actual scope-change and revoke/restart checks passed in QA1.
 
 ## Decision
 
@@ -18,6 +18,6 @@ Web rule status and native card status read the canonical rule. After creator re
 
 After exact-slice Human acceptance, the next private Lark candidate separately offers all-opaque rules. Provider rule-card version 2 and the account's `approval-rule-all-opaque-card-checked` capability are required; version 1 retains exact-only behavior. Distinct preview/confirm actions bind the displayed rule kind to its nonce, so an exact confirmation cannot grant an all-opaque rule. Back precedes switching kinds. The broader disclosure explicitly covers every opaque tool and every input in the displayed Bot/role/directory/Grant scope, including commands that may access other files or the network. It does not widen underlying native, Workspace or Service authority. The same creator provenance, post-append guards and permanent revocation apply. An externally created rule cannot match a native Session-wide request designated Web-only; existing Web Human rules retain their semantics.
 
-All-opaque actual-platform qualification and group destinations remain separate gates; group destinations belong to their owning issue. See [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [ADR-0067](0067-workspace-grants-bound-personabot-file-access.md) and the [Lark guide](../lark-connection.md#save-an-exact-rule-in-a-management-dm).
+All-opaque actual-platform qualification is recorded with #1033 evidence; group destinations remain separate and belong to their owning issue. See [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033), [ADR-0067](0067-workspace-grants-bound-personabot-file-access.md) and the [Lark guide](../lark-connection.md#save-an-exact-rule-in-a-management-dm).
 
 Native approval delivery must not depend on the Human having opened that PersonaBot's Web DM. If the owning Channel is absent, Channel Tool Approval asks the existing Channel Store to create that Bot's DM on demand, resolving its display name from the existing registry callback. Missing identity still fails closed. This creates the canonical Channel/request surface only; it neither admits a new instruction nor grants sender or tool authority. The first actual all-opaque QA request exposed the missing-DM refusal, and a public owner/checked-Provider regression reproduces the no-Web-first path.

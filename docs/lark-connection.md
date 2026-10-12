@@ -416,8 +416,13 @@ does not disable it. Existing Web Human rules retain their prior behavior.
 
 After the accepted exact slice, #1033 adds a separate **All opaque tools in this scope…** entry.
 It requires Provider rule-card version 2 and the account's checked all-opaque capability;
-version 1 retains the exact-only entry. This wider path is implemented but awaits its own
-real Lark acceptance. The screenshots above show the accepted exact path, not this new path.
+version 1 retains the exact-only entry. On 2026-10-12 the Human accepted the actual QA1
+all-opaque first slice. The following captures show its separate entry and high-risk preview,
+including Confirm and Back; grey masks hide only machine-local paths.
+
+![Separate all-opaque entry](/guides/lark/approvals/rules/all-entry.png)
+
+![Actual high-risk preview with Confirm and Back](/guides/lark/approvals/rules/all-preview.png)
 
 Inspect the displayed Bot execution role, directory and Grant IDs/write revisions. The high-risk
 preview applies to **every opaque tool and every input** in that scope; future commands need not

@@ -389,7 +389,12 @@ Human 已于 2026-10-12 接受精确规则交互。下图来自真实 QA1 验收
 
 精确首片获接受后，#1033 新增独立「此范围内全部不透明工具…」入口。
 它要求 Provider 规则卡片版本 2 及账户的受校验 all-opaque 能力；版本 1 仍只提供精确规则。
-这一更宽路径已实现，仍待独立真实 Lark 验收。上述图片只展示已接受的精确路径。
+Human 于 2026-10-12 接受真实 QA1 的 all-opaque 首片交互。以下截图展示独立入口与高风险预览，
+包含确认和返回；灰色遮罩仅隐藏本机路径。
+
+![独立的全部不透明工具入口](/guides/lark/approvals/rules/all-entry.png)
+
+![真实高风险预览，包含确认和返回](/guides/lark/approvals/rules/all-preview.png)
 
 核对所示 Bot 执行角色、目录及 Grant ID／写入版本。高风险预览覆盖该范围的**全部不透明工具与全部参数**；
 后续命令无需匹配当前示例，可能访问授权文件夹之外的文件或网络。
@@ -402,7 +407,17 @@ Human 已于 2026-10-12 接受精确规则交互。下图来自真实 QA1 验收
 Web 可撤销任一种规则，恢复能力不会复活旧规则。
 
 升级数据库 Generation 82 前请备份 Profile；回退需要兼容写入者或升级前备份。本候选的真实
-all-opaque Lark 显示与真人反馈仍是 [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033) 的交付门槛。
+真实 QA1 在同一范围以不同输入返回不同 stdout，每次有独立原生审批记录且没有第二张卡片。
+新增工作区 Grant 后需重新审批，Reject 阻止执行。撤销并重启 Host 后，同一旧输入仍需审批，Reject 阻止执行。
+刷新已知回执后显示固定停用文字且无按钮。一次撤销卡片更新被重启中断，随后通过相同的幂等撤销命令显式刷新；
+此操作没有执行调用。
+
+![真实 all-opaque 规则保存后的执行结果](/guides/lark/approvals/rules/all-result.png)
+
+![刷新私聊后显示规则已停用](/guides/lark/approvals/rules/all-disabled.png)
+
+准确源码和原生序列证据见 [#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)。
+这项资格验证不发布或升级 Provider 工件；群目的地仍由独立功能推进。
 
 ## 接收与回答反馈（候选）
 
