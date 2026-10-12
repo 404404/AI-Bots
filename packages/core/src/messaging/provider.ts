@@ -138,6 +138,8 @@ export interface MessagingApprovalCard {
   requestId: string;
   title: string;
   detail: string;
+  rules?: ['exact'] | ['exact', 'all-opaque'];
+  ruleConfirmation?: { id: string; kind: 'exact' | 'all-opaque' };
   status:
     | 'pending'
     | 'web-required'
@@ -161,6 +163,20 @@ export interface MessagingApprovalAction {
   messageId: string;
   requestId: string;
   action: 'allowed-once' | 'rejected';
+}
+
+export interface MessagingApprovalRuleAction extends Omit<
+  MessagingApprovalAction,
+  'kind' | 'action'
+> {
+  kind: 'approval-rule';
+  action:
+    | 'preview-exact'
+    | 'confirm-exact'
+    | 'preview-all-opaque'
+    | 'confirm-all-opaque'
+    | 'cancel-rule';
+  confirmationId?: string | undefined;
 }
 
 export interface MessagingPairingCard {
@@ -187,7 +203,10 @@ export interface MessagingPairingAction {
   action: 'select-role' | 'approve-pairing' | 'reject-pairing' | 'next-roles' | 'previous-roles';
   roleId?: string | undefined;
 }
-export type MessagingCardAction = MessagingApprovalAction | MessagingPairingAction;
+export type MessagingCardAction =
+  | MessagingApprovalAction
+  | MessagingApprovalRuleAction
+  | MessagingPairingAction;
 
 export interface MessagingApprovalAck {
   accepted: true;
@@ -202,6 +221,8 @@ export interface MessagingSetup {
 }
 
 export interface MessagingProvider {
+  approvalRuleCardSupported?: boolean;
+  approvalRuleAllOpaqueCardSupported?(accountRef: string, fingerprint: string): boolean;
   setup?(): Promise<MessagingSetup | undefined>;
   id: string;
   react?(input: {

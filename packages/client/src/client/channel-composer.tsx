@@ -26,6 +26,7 @@ import {
   IconSendOutlineRegular,
   ImageLightbox,
   Tooltip,
+  fileSizeText,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import { createPortal } from 'react-dom';
 import type { PersonaBotSessionActivity } from '../../../core/src/state/tool-activity.js';
@@ -64,6 +65,7 @@ import {
   type SelectedChannelRef,
 } from './channel-refs.js';
 import type { ChannelAttachmentRef } from './store.js';
+import { deleteAttachmentReference, insertAttachmentReferences } from './attachment-refs.js';
 
 function sessionLatestSummary(session: PersonaBotSessionActivity, t: BotHarnessTranslate): string {
   if (session.activity === undefined) return personaBotActivitySummary(session.state, undefined, t);
@@ -96,7 +98,7 @@ export interface ChannelComposerProps {
   sending: boolean;
   focusSignal?: number;
   attachments?: readonly ChannelComposerUpload[] | undefined;
-  onAddFiles?(files: File[]): void;
+  onAddFiles?(files: File[], selection?: { start: number; end: number }): number | void;
   onRetryAttachment?(id: string): void;
   onRemoveAttachment?(id: string): void;
   onActivityOverlayResize?(height: number): void;
@@ -143,16 +145,47 @@ function AttachmentUploadStatus({
   );
 }
 
-function ComposerImageAttachment({
+function ComposerAttachmentCopy({
   item,
   t,
   onRetry,
-  onRemove,
 }: {
   item: ChannelComposerUpload;
   t: BotHarnessTranslate;
   onRetry: () => void;
+}): ReactElement {
+  return (
+    <span className="bh-composer-file-copy">
+      <span className="bh-composer-attachment-name" title={item.file.name}>
+        {item.file.name}
+      </span>
+      <span className="bh-composer-attachment-size">
+        {item.status === 'ready' ? (
+          fileSizeText(item.ref?.size ?? item.file.size)
+        ) : (
+          <AttachmentUploadStatus item={item} t={t} onRetry={onRetry} />
+        )}
+      </span>
+    </span>
+  );
+}
+
+function ComposerImageAttachment({
+  item,
+  ordinal,
+  t,
+  onRetry,
+  onRemove,
+  onReference,
+  sending,
+}: {
+  item: ChannelComposerUpload;
+  ordinal: number;
+  t: BotHarnessTranslate;
+  onRetry: () => void;
   onRemove: () => void;
+  onReference: () => void;
+  sending: boolean;
 }): ReactElement {
   const [source, setSource] = useState<string>();
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -168,10 +201,21 @@ function ComposerImageAttachment({
     <>
       <div
         ref={sourceMount}
-        className="bh-composer-image-attachment"
+        className="bh-composer-attachment-card bh-composer-image-attachment"
         data-status={item.status}
+        data-attachment-card={item.id}
         aria-busy={item.status === 'uploading'}
       >
+        <button
+          type="button"
+          className="bh-composer-attachment-reference bh-composer-image-reference"
+          aria-label={t('composer.referenceAttachment', { name: item.file.name })}
+          disabled={sending}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={onReference}
+        >
+          {ordinal}
+        </button>
         <button
           type="button"
           className="bh-composer-image-preview"
@@ -184,9 +228,7 @@ function ComposerImageAttachment({
             <img src={source} alt={item.file.name} draggable={false} />
           )}
         </button>
-        <div className="bh-composer-image-status">
-          <AttachmentUploadStatus item={item} t={t} onRetry={onRetry} />
-        </div>
+        <ComposerAttachmentCopy item={item} t={t} onRetry={onRetry} />
         <button
           type="button"
           className="bh-composer-attachment-remove bh-composer-image-remove"
@@ -210,30 +252,42 @@ function ComposerImageAttachment({
 
 function ComposerFileAttachment({
   item,
+  ordinal,
   t,
   onRetry,
   onRemove,
+  onReference,
+  sending,
 }: {
   item: ChannelComposerUpload;
+  ordinal: number;
   t: BotHarnessTranslate;
   onRetry: () => void;
   onRemove: () => void;
+  onReference: () => void;
+  sending: boolean;
 }): ReactElement {
   return (
     <div
-      className="bh-composer-file-attachment"
+      className="bh-composer-attachment-card bh-composer-file-attachment"
       data-status={item.status}
+      data-attachment-card={item.id}
       aria-busy={item.status === 'uploading'}
     >
       <span className="bh-composer-file-icon" aria-hidden="true">
-        <FileTypeIcon path={item.file.name} size={28} />
+        <FileTypeIcon path={item.file.name} size={24} />
       </span>
-      <span className="bh-composer-file-copy">
-        <span className="bh-composer-attachment-name" title={item.file.name}>
-          {item.file.name}
-        </span>
-        <AttachmentUploadStatus item={item} t={t} onRetry={onRetry} />
-      </span>
+      <ComposerAttachmentCopy item={item} t={t} onRetry={onRetry} />
+      <button
+        type="button"
+        className="bh-composer-attachment-reference bh-composer-file-reference"
+        aria-label={t('composer.referenceAttachment', { name: item.file.name })}
+        disabled={sending}
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onReference}
+      >
+        {ordinal}
+      </button>
       <button
         type="button"
         className="bh-composer-attachment-remove"
@@ -492,7 +546,19 @@ export function ChannelComposer({
   const requestedCaret = useRef<number | undefined>(undefined);
   const renderedAvatarKey = useRef('');
   const [avatarMounts, setAvatarMounts] = useState<MentionAvatarMount[]>([]);
+  const [attachmentMounts, setAttachmentMounts] = useState<
+    Array<{ target: HTMLElement; name: string }>
+  >([]);
+  const savedFileSelection = useRef<{ start: number; end: number } | undefined>(undefined);
+  const selectionOffsets = (): { start: number; end: number } | undefined => {
+    if (richRef.current !== null) return richSelectionOffsets(richRef.current);
+    const textarea = textareaRef.current;
+    return textarea === null
+      ? undefined
+      : { start: textarea.selectionStart, end: textarea.selectionEnd };
+  };
   const rich =
+    attachments.length > 0 ||
     allBotPreview !== undefined ||
     mentionCandidates.length > 0 ||
     mentions.length > 0 ||
@@ -608,19 +674,37 @@ export function ChannelComposer({
       }
     });
   };
+  const addFilesAtSelection = (files: File[], selection = selectionOffsets()): void => {
+    const caret = onAddFiles?.(files, selection);
+    if (caret === undefined) return;
+    requestedCaret.current = caret;
+    requestAnimationFrame(() => {
+      richRef.current?.focus();
+      if (richRef.current !== null) setRichSelection(richRef.current, caret);
+    });
+  };
   const handleFilePaste = (event: ClipboardEvent<HTMLElement>): boolean => {
     const clipboard = event.clipboardData;
     const files = Array.from(clipboard.files);
-    if (files.length === 0) {
-      for (const item of Array.from(clipboard.items)) {
-        if (item.kind !== 'file') continue;
-        const file = item.getAsFile();
-        if (file !== null) files.push(file);
-      }
+    const unmatchedFiles = [...files];
+    for (const item of Array.from(clipboard.items)) {
+      if (item.kind !== 'file') continue;
+      const file = item.getAsFile();
+      if (file === null) continue;
+      const existingIndex = unmatchedFiles.findIndex(
+        (existing) =>
+          existing.name === file.name &&
+          existing.size === file.size &&
+          existing.type === file.type &&
+          existing.lastModified === file.lastModified,
+      );
+      if (existingIndex < 0) files.push(file);
+      else unmatchedFiles.splice(existingIndex, 1);
     }
-    if (files.length === 0 || onAddFiles === undefined) return false;
+    if (files.length === 0 || onAddFiles === undefined || sending) return false;
     event.preventDefault();
-    onAddFiles(files);
+    event.stopPropagation();
+    addFilesAtSelection(files);
     return true;
   };
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -650,13 +734,43 @@ export function ChannelComposer({
       return [mention.botSlug, bot?.displayName, bot?.avatar].join(':');
     })
     .join('|');
+  const attachmentKey = attachments
+    .map((item) =>
+      [
+        item.id,
+        item.status,
+        item.ref?.fileId,
+        item.ref?.hash,
+        item.ref?.size,
+        item.file.name,
+        item.file.size,
+      ].join(':'),
+    )
+    .join('|');
+  const renderedAttachmentKey = useRef('');
+  const referenceAttachment = (item: ChannelComposerUpload): void => {
+    const selected = insertAttachmentReferences(value, [item], selectionOffsets());
+    requestedCaret.current = selected.caret;
+    onChange(
+      selected.value,
+      rebaseMentions(value, selected.value, mentions),
+      rebaseChannelRefs(value, selected.value, channelRefs),
+    );
+    setMentionQuery(undefined);
+    setChannelQuery(undefined);
+    requestAnimationFrame(() => {
+      richRef.current?.focus();
+      if (richRef.current !== null) setRichSelection(richRef.current, selected.caret);
+    });
+  };
   const richMount = useMountedResource<HTMLDivElement>(
     (editor) => {
       richRef.current = editor;
       const current = readRichMentionDraft(editor);
       if (
         sameRichMentionDraft(current, value, mentions, channelRefs) &&
-        renderedAvatarKey.current === avatarKey
+        renderedAvatarKey.current === avatarKey &&
+        renderedAttachmentKey.current === attachmentKey
       )
         return () => {
           richRef.current = null;
@@ -672,9 +786,21 @@ export function ChannelComposer({
         mentions,
         mentionCandidates,
         channelRefs,
+        attachments,
       );
       setAvatarMounts(mounts);
+      setAttachmentMounts(
+        Array.from(editor.querySelectorAll<HTMLElement>('[data-attachment-icon]')).flatMap(
+          (target) => {
+            const item = attachments.find(
+              (candidate) => candidate.id === target.dataset.attachmentIcon,
+            );
+            return item === undefined ? [] : [{ target, name: item.file.name }];
+          },
+        ),
+      );
       renderedAvatarKey.current = avatarKey;
+      renderedAttachmentKey.current = attachmentKey;
       requestedCaret.current = undefined;
       if (caret !== undefined) setRichSelection(editor, Math.min(caret, value.length));
       syncTextarea(editor);
@@ -682,12 +808,22 @@ export function ChannelComposer({
         richRef.current = null;
       };
     },
-    [value, mentions, channelRefs, mentionCandidates, channelCandidates, avatarKey, syncTextarea],
+    [
+      value,
+      mentions,
+      channelRefs,
+      mentionCandidates,
+      channelCandidates,
+      avatarKey,
+      attachmentKey,
+      syncTextarea,
+    ],
   );
   const textareaMount = useMountedResource<HTMLTextAreaElement>(
     (element) => {
       textareaRef.current = element;
       setAvatarMounts((current) => (current.length === 0 ? current : []));
+      setAttachmentMounts((current) => (current.length === 0 ? current : []));
       syncTextarea(element);
       return () => {
         textareaRef.current = null;
@@ -757,6 +893,25 @@ export function ChannelComposer({
       input instanceof HTMLTextAreaElement
         ? { start: input.selectionStart, end: input.selectionEnd }
         : richSelectionOffsets(input);
+    if (
+      (event.key === 'Backspace' || event.key === 'Delete') &&
+      !event.nativeEvent.isComposing &&
+      selection !== undefined
+    ) {
+      const deleted = deleteAttachmentReference(value, attachments, selection, event.key);
+      if (deleted !== undefined) {
+        event.preventDefault();
+        requestedCaret.current = deleted.caret;
+        onChange(
+          deleted.value,
+          rebaseMentions(value, deleted.value, mentions),
+          rebaseChannelRefs(value, deleted.value, channelRefs),
+        );
+        setMentionQuery(undefined);
+        setChannelQuery(undefined);
+        return;
+      }
+    }
     if (
       (event.key === 'Backspace' || event.key === 'Delete') &&
       !event.nativeEvent.isComposing &&
@@ -1009,22 +1164,28 @@ export function ChannelComposer({
         )}
         {attachments.length > 0 ? (
           <div className="bh-composer-attachments" aria-live="polite">
-            {attachments.map((item) =>
+            {attachments.map((item, index) =>
               isImageAttachment(item.file) ? (
                 <ComposerImageAttachment
                   key={item.id}
                   item={item}
+                  ordinal={index + 1}
                   t={t}
                   onRetry={() => onRetryAttachment?.(item.id)}
                   onRemove={() => onRemoveAttachment?.(item.id)}
+                  onReference={() => referenceAttachment(item)}
+                  sending={sending}
                 />
               ) : (
                 <ComposerFileAttachment
                   key={item.id}
                   item={item}
+                  ordinal={index + 1}
                   t={t}
                   onRetry={() => onRetryAttachment?.(item.id)}
                   onRemove={() => onRemoveAttachment?.(item.id)}
+                  onReference={() => referenceAttachment(item)}
+                  sending={sending}
                 />
               ),
             )}
@@ -1042,8 +1203,20 @@ export function ChannelComposer({
               data-placeholder={placeholder}
               contentEditable={!sending}
               suppressContentEditableWarning
+              onClick={(event) => {
+                const target = event.target;
+                if (!(target instanceof Element)) return;
+                const badge = target.closest<HTMLElement>('[data-attachment-id]');
+                if (badge === null) return;
+                const card = Array.from(
+                  event.currentTarget
+                    .closest('.bh-composer')
+                    ?.querySelectorAll<HTMLElement>('[data-attachment-card]') ?? [],
+                ).find((item) => item.dataset.attachmentCard === badge.dataset.attachmentId);
+                card?.querySelector<HTMLButtonElement>('button')?.focus();
+              }}
               onInput={(event) => emitRichChange(event.currentTarget)}
-              onPaste={(event) => {
+              onPasteCapture={(event) => {
                 if (handleFilePaste(event)) return;
                 event.preventDefault();
                 insertRichPlainText(
@@ -1091,7 +1264,7 @@ export function ChannelComposer({
                 );
                 setActiveMentionIndex(0);
               }}
-              onPaste={(event) => {
+              onPasteCapture={(event) => {
                 handleFilePaste(event);
               }}
               onKeyDown={handleKeyDown}
@@ -1112,6 +1285,13 @@ export function ChannelComposer({
             `${mount.botSlug}-${index}`,
           ),
         )}
+        {attachmentMounts.map((mount, index) =>
+          createPortal(
+            <FileTypeIcon path={mount.name} size={16} />,
+            mount.target,
+            `attachment-${index}`,
+          ),
+        )}
         <input
           ref={fileInputRef}
           className="bh-composer-file-input"
@@ -1121,7 +1301,9 @@ export function ChannelComposer({
           onChange={(event) => {
             const files = Array.from(event.currentTarget.files ?? []);
             event.currentTarget.value = '';
-            if (files.length > 0) onAddFiles?.(files);
+            if (files.length > 0)
+              addFilesAtSelection(files, savedFileSelection.current ?? selectionOffsets());
+            savedFileSelection.current = undefined;
           }}
         />
         <button
@@ -1129,7 +1311,13 @@ export function ChannelComposer({
           className="bh-composer-add-file"
           aria-label={t('composer.addAttachment')}
           disabled={sending || attachments.length >= 10}
-          onClick={() => fileInputRef.current?.click()}
+          onMouseDown={() => {
+            savedFileSelection.current = selectionOffsets();
+          }}
+          onClick={() => {
+            savedFileSelection.current ??= selectionOffsets();
+            fileInputRef.current?.click();
+          }}
         >
           <IconPaperclipOutlineRegular size={16} />
         </button>

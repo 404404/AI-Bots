@@ -169,7 +169,7 @@ _避免使用_：project、multi-root folder、group
 _避免使用_：Service Grant、Workspace、one-time approval、cwd inference
 
 **Tool Approval Rule**：
-Human 保存且可撤销的规则，针对一个 PersonaBot 角色与 Workspace Grant 范围，自动回答后续 DSH 审批请求。精确规则匹配原生工具名称与完整输入；全部不透明工具规则覆盖该范围内所有无法按路径核对的原生工具。每次命中仍产生独立的 DSH 审批决定与审计事件。
+Web Human 或当前获授权的外部审核人显式保存且可撤销的规则，针对一个 PersonaBot 角色与 Workspace Grant 范围，自动回答后续 DSH 审批请求。精确规则匹配原生工具名称与完整输入；全部不透明工具规则覆盖该范围内所有无法按路径核对的原生工具。外部审核人保存的规则依赖原配对及其当前批准／保存规则能力；失去授权会停用规则，不转移到后来的配对。每次命中仍产生独立的 DSH 审批决定与审计事件。
 _避免使用_：Workspace Grant、Provider Service Grant、sandbox preset、推断的命令相似性
 
 **Assignment Access Preset**：
@@ -499,6 +499,10 @@ _避免使用_：Channel Group、平台会话群、复制 Role、原生 DSH RBAC
 **Behavior permission item**：
 一个可命名、可复用的外部人员行为描述，供同一 PersonaBot 的多个授权组引用并允许或拒绝。同项显式 Deny 优先；生效策略在主 Role 约束内指导模型，不是资源 ACL 或管理能力。
 _避免使用_：原生权限、复制 Role、强制 Shell 策略、语义冲突证明
+
+**Declared behavior exclusion**：
+Human 为同一 PersonaBot 的两个 Behavior permission item 明确声明的双向不兼容关系。不能为同一配对人员同时有效允许这两项；明确拒绝其中一项即可消除不兼容。这代表人工声明的策略意图，不证明任意自然语言策略一致。
+_避免使用_：自动推断文字矛盾、资源隔离、按组顺序决定优先级
 
 **Person permission exception**：
 绑定一次当前 Chat pairing 的显式管理 Allow／Deny，与其 Role 及授权组贡献共同生效；任意适用的显式 Deny 优先。它不会授予已认证 Web Human 的来源身份。

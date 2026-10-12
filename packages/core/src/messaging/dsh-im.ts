@@ -36,6 +36,7 @@ export interface DshImOutboundService {
     options: { expectedFingerprint: string; signal: AbortSignal; beforeSend(): boolean },
   ): Promise<{ accepted: true }>;
   approvalCardVersion?: 1;
+  approvalRuleCardVersion?: 1 | 2;
   pairingCardVersion?: 1;
   approvalCardChecked?(
     botId: string,
@@ -346,6 +347,24 @@ export function createDshImProvider(
   )
     return undefined;
   const host = service as DshImOutboundService;
+  const allOpaqueAccounts = new Map<string, string>();
+  const rememberRuleCapability = (
+    ref: string,
+    info: Awaited<ReturnType<DshImOutboundService['describeBot']>>,
+  ) => {
+    if (
+      platform === 'feishu' &&
+      info.version === 1 &&
+      info.botId === ref &&
+      info.channel === platform &&
+      host.approvalRuleCardVersion === 2 &&
+      info.connected &&
+      info.capabilities.includes('approval-rule-card-checked') &&
+      info.capabilities.includes('approval-rule-all-opaque-card-checked')
+    )
+      allOpaqueAccounts.set(ref, info.account.fingerprint);
+    else allOpaqueAccounts.delete(ref);
+  };
   const describe = async (ref: string) => {
     let info;
     try {
@@ -364,6 +383,7 @@ export function createDshImProvider(
       !/^[a-f0-9]{64}$/.test(info.account?.fingerprint ?? '')
     )
       throw new MessagingError('provider-incompatible');
+    rememberRuleCapability(ref, info);
     return {
       ref,
       platform: info.channel,
@@ -570,10 +590,20 @@ export function createDshImProvider(
           async approvalCard(input: Parameters<NonNullable<MessagingProvider['approvalCard']>>[0]) {
             input.signal.throwIfAborted();
             const info = await host.describeBot(input.accountRef);
+            rememberRuleCapability(input.accountRef, info);
             if (info.account.fingerprint !== input.fingerprint)
               throw new MessagingError('rebind-required');
             if (
               !info.connected ||
+              (input.card.kind !== 'pairing' &&
+                (input.card.rules || input.card.ruleConfirmation) &&
+                (![1, 2].includes(host.approvalRuleCardVersion ?? 0) ||
+                  !info.capabilities.includes('approval-rule-card-checked'))) ||
+              (input.card.kind !== 'pairing' &&
+                (input.card.rules?.some((kind) => kind === 'all-opaque') ||
+                  input.card.ruleConfirmation?.kind === 'all-opaque') &&
+                (host.approvalRuleCardVersion !== 2 ||
+                  !info.capabilities.includes('approval-rule-all-opaque-card-checked'))) ||
               (input.card.kind === 'pairing' &&
                 (host.pairingCardVersion !== 1 ||
                   !info.capabilities.includes('pairing-card-checked'))) ||
@@ -613,6 +643,9 @@ export function createDshImProvider(
               throw providerFailure(error);
             }
           },
+          approvalRuleCardSupported: [1, 2].includes(host.approvalRuleCardVersion ?? 0),
+          approvalRuleAllOpaqueCardSupported: (ref: string, fingerprint: string) =>
+            host.approvalRuleCardVersion === 2 && allOpaqueAccounts.get(ref) === fingerprint,
         }
       : {}),
     ...(host.replyContextVersion === 1 &&
@@ -696,6 +729,7 @@ export function createDshImProvider(
       ? {
           async consume(input: Parameters<NonNullable<MessagingProvider['consume']>>[0]) {
             const info = await host.describeBot(input.accountRef);
+            rememberRuleCapability(input.accountRef, info);
             if (
               info.account.fingerprint !== input.fingerprint ||
               !info.capabilities.includes('exclusive-text-consumer') ||
@@ -751,10 +785,10 @@ export function createDshImProvider(
                         typeof raw === 'object' &&
                         raw !== null &&
                         'kind' in raw &&
-                        raw.kind === 'pairing'
+                        raw.kind === 'approval-rule'
                           ? z
                               .object({
-                                kind: z.literal('pairing'),
+                                kind: z.literal('approval-rule'),
                                 version: z.literal(1),
                                 channel: z.literal('feishu'),
                                 botId: identifier,
@@ -764,30 +798,67 @@ export function createDshImProvider(
                                 messageId: identifier,
                                 requestId: z.string().uuid(),
                                 action: z.enum([
-                                  'select-role',
-                                  'approve-pairing',
-                                  'reject-pairing',
-                                  'next-roles',
-                                  'previous-roles',
+                                  'preview-exact',
+                                  'confirm-exact',
+                                  'preview-all-opaque',
+                                  'confirm-all-opaque',
+                                  'cancel-rule',
                                 ]),
-                                roleId: z.string().uuid().optional(),
+                                confirmationId: z.string().uuid().optional(),
                               })
                               .strict()
-                          : z
-                              .object({
-                                version: z.literal(1),
-                                channel: z.literal('feishu'),
-                                botId: identifier,
-                                fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-                                actorId: identifier,
-                                conversationId: identifier,
-                                messageId: identifier,
-                                requestId: z.string().uuid(),
-                                action: z.enum(['allowed-once', 'rejected']),
-                              })
-                              .strict()
+                          : typeof raw === 'object' &&
+                              raw !== null &&
+                              'kind' in raw &&
+                              raw.kind === 'pairing'
+                            ? z
+                                .object({
+                                  kind: z.literal('pairing'),
+                                  version: z.literal(1),
+                                  channel: z.literal('feishu'),
+                                  botId: identifier,
+                                  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+                                  actorId: identifier,
+                                  conversationId: identifier,
+                                  messageId: identifier,
+                                  requestId: z.string().uuid(),
+                                  action: z.enum([
+                                    'select-role',
+                                    'approve-pairing',
+                                    'reject-pairing',
+                                    'next-roles',
+                                    'previous-roles',
+                                  ]),
+                                  roleId: z.string().uuid().optional(),
+                                })
+                                .strict()
+                            : z
+                                .object({
+                                  version: z.literal(1),
+                                  channel: z.literal('feishu'),
+                                  botId: identifier,
+                                  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+                                  actorId: identifier,
+                                  conversationId: identifier,
+                                  messageId: identifier,
+                                  requestId: z.string().uuid(),
+                                  action: z.enum(['allowed-once', 'rejected']),
+                                })
+                                .strict()
                       ).parse(raw);
                       context.signal.throwIfAborted();
+                      if (
+                        'kind' in event &&
+                        event.kind === 'approval-rule' &&
+                        (![1, 2].includes(host.approvalRuleCardVersion ?? 0) ||
+                          !info.capabilities.includes('approval-rule-card-checked') ||
+                          (['preview-all-opaque', 'confirm-all-opaque'].includes(event.action) &&
+                            (host.approvalRuleCardVersion !== 2 ||
+                              !info.capabilities.includes(
+                                'approval-rule-all-opaque-card-checked',
+                              ))))
+                      )
+                        throw new MessagingError('capability-unavailable');
                       if (
                         event.botId !== input.accountRef ||
                         event.fingerprint !== input.fingerprint

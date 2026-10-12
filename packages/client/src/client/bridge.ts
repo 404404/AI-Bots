@@ -2542,6 +2542,7 @@ export interface ToolApprovalRuleView {
   input: string;
   createdAt: string;
   revokedAt?: string;
+  externalCreator?: import('../../../core/src/workspaces/tool-approval-actor.js').ToolApprovalActor;
 }
 export async function loadToolApprovalRules(
   call: BridgeCall,
@@ -2732,6 +2733,35 @@ export async function createWorkspaceGrant(
   const grant = parseWorkspaceGrant(value);
   if (grant === undefined) throw new Error('invalid grantCreate response');
   return grant;
+}
+
+export async function createGroupWorkspaceGrant(
+  call: BridgeCall,
+  slug: string,
+  workspaceId: string,
+  channelId: string,
+  path: string,
+): Promise<{ grant: WorkspaceGrantView; created: boolean }> {
+  const result = asRecord(
+    await unwrap(call, 'grantCreate', { slug, workspaceId, scope: { channelId, path } }),
+  );
+  const grant = parseWorkspaceGrant(result?.['grant']);
+  if (grant === undefined || typeof result?.['created'] !== 'boolean')
+    throw new Error('invalid scoped grantCreate response');
+  return { grant, created: result['created'] };
+}
+
+export async function readGroupWorkspaceGrant(
+  call: BridgeCall,
+  slug: string,
+  channelId: string,
+  path: string,
+): Promise<WorkspaceGrantView | undefined> {
+  const result = asRecord(await unwrap(call, 'grants', { slug, scope: { channelId, path } }));
+  if (!Array.isArray(result?.['grants'])) throw new Error('invalid scoped grants response');
+  const grants = result['grants'].map(parseWorkspaceGrant);
+  if (grants.some((grant) => grant === undefined)) throw new Error('invalid scoped grant readback');
+  return grants[0];
 }
 
 export async function setWorkspaceGrantWrite(

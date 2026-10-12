@@ -32,6 +32,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPinOutlineRegular: stub,
     IconTrashOutlineRegular: stub,
     FileTypeIcon: stub,
+    fileSizeText: (size: number) => `${size} B`,
     ImageLightbox: stub,
     Input: stub,
     Menu: stub,

@@ -115,9 +115,13 @@ vi.mock('../src/client/combobox.js', () => ({
 }));
 import { PairingSettings } from '../src/client/pairing-settings.js';
 import { GroupDetails, GroupDialog } from '../src/client/permission-group-settings.js';
-import { BehaviorPreview } from '../src/client/behavior-permission-settings.js';
+import {
+  BehaviorPreview,
+  BehaviorPermissionsPanel,
+} from '../src/client/behavior-permission-settings.js';
 import { zhTranslate } from '../src/client/locale.js';
 import type { PairingRequest } from '../../core/src/messaging/pairing.js';
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 const request: PairingRequest = {
   id: 'qa-request',
   reference: 'PAIRTEST',
@@ -134,6 +138,155 @@ const request: PairingRequest = {
   revision: 1,
   attempts: 1,
 };
+
+it('refuses an incompatible Group grant in the UI and enables save only after explicit Deny resolution', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host),
+    change = vi.fn(async () => {});
+  const a = {
+    id: 'a',
+    botSlug: 'ada',
+    name: 'Public',
+    behavior: 'Public answers.',
+    excludes: ['b'],
+    revision: 2,
+    createdAt: request.createdAt,
+    updatedAt: request.createdAt,
+  };
+  const b = { ...a, id: 'b', name: 'Private', behavior: 'Private answers.', excludes: ['a'] };
+  const person = { ...request, purpose: 'conversation' as const, status: 'approved' as const };
+  const group = {
+    id: 'private',
+    botSlug: 'ada',
+    bindingId: person.bindingId,
+    name: 'Private group',
+    allow: [],
+    deny: [],
+    memberIds: [person.id],
+    behaviorAllow: [b.id],
+    revision: 1,
+    createdAt: request.createdAt,
+    updatedAt: request.createdAt,
+  };
+  try {
+    await act(async () =>
+      root.render(
+        createElement(GroupDialog, {
+          group,
+          groups: [{ ...group, id: 'public', name: 'Public group', behaviorAllow: [a.id] }, group],
+          behaviorPermissions: [a, b],
+          people: [person],
+          bindings: [{ id: person.bindingId, name: 'QA App' }],
+          busy: false,
+          change,
+          close: () => {},
+          t: zhTranslate,
+        }),
+      ),
+    );
+    const save = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === zhTranslate('pairing.saveGroup'),
+    )!;
+    expect(save.disabled).toBe(true);
+    const warning = host.querySelector('[role=alert]')!;
+    expect(warning.textContent).toContain(person.actorName);
+    expect(warning.textContent).toContain('Public ↔ Private');
+    expect(warning.textContent).toContain('Public group');
+    expect(warning.textContent).toContain('Private group');
+    await act(async () => save.click());
+    expect(change).not.toHaveBeenCalled();
+    const deny = Array.from(host.querySelectorAll('label'))
+      .find((label) => label.textContent === '拒绝 · Public')!
+      .querySelector('input')!;
+    await act(async () => deny.click());
+    expect(save.disabled).toBe(false);
+    expect(host.querySelector('[role=alert]')).toBeNull();
+    await act(async () => save.click());
+    expect(change).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        behaviorAllow: ['b'],
+        behaviorDeny: ['a'],
+        expectedBehaviorRevisions: { a: 2, b: 2 },
+      }),
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
+
+it('item editor includes a disabled-Binding person and previews bilateral exclusion removal with both endpoint revisions', async () => {
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host),
+    change = vi.fn(async () => {});
+  const a = {
+    id: 'a',
+    botSlug: 'ada',
+    name: 'Public',
+    behavior: 'Public answers.',
+    excludes: ['b'],
+    revision: 2,
+    createdAt: request.createdAt,
+    updatedAt: request.createdAt,
+  };
+  const b = { ...a, id: 'b', name: 'Private', excludes: ['a'], revision: 3 };
+  const person = {
+    ...request,
+    purpose: 'conversation' as const,
+    status: 'unavailable' as const,
+    roleId: 'member',
+  };
+  const base = {
+    botSlug: 'ada',
+    bindingId: person.bindingId,
+    allow: [],
+    deny: [],
+    memberIds: [person.id],
+    revision: 1,
+    createdAt: request.createdAt,
+    updatedAt: request.createdAt,
+  };
+  try {
+    await act(async () =>
+      root.render(
+        createElement(BehaviorPermissionsPanel, {
+          items: [a, b],
+          groups: [
+            { ...base, id: 'public', name: 'Public group', behaviorAllow: ['a'] },
+            { ...base, id: 'private', name: 'Private group', behaviorAllow: ['b'] },
+          ],
+          people: [person],
+          busy: false,
+          change,
+          t: zhTranslate,
+        }),
+      ),
+    );
+    const button = (label: string) =>
+      Array.from(host.querySelectorAll('button')).find((button) => button.textContent === label)!;
+    await act(async () => button(zhTranslate('pairing.editBehaviorPermission')).click());
+    const save = button(zhTranslate('pairing.saveBehaviorPermission'));
+    expect(save.disabled).toBe(true);
+    expect(host.querySelector('[role=alert]')?.textContent).toContain('Public ↔ Private');
+    const checkbox = host.querySelector('[role=dialog] table input[type=checkbox]')!;
+    await act(async () => (checkbox as HTMLInputElement).click());
+    expect(save.disabled).toBe(false);
+    await act(async () => save.click());
+    expect(change).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        id: 'a',
+        expectedRevision: 2,
+        excludes: [],
+        expectedExcludedRevisions: { b: 3 },
+      }),
+    );
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});
 it('keeps an affected person visible when a draft removes their last behavior contribution', async () => {
   const host = document.createElement('div');
   document.body.append(host);

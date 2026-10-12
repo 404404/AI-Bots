@@ -127,6 +127,8 @@ import {
   revokeToolApprovalRule,
   type ToolApprovalRuleView,
   createWorkspaceGrant,
+  createGroupWorkspaceGrant,
+  readGroupWorkspaceGrant,
   revokeWorkspaceGrant,
   setWorkspaceGrantWrite,
   loadToolApprovalStatus,
@@ -375,6 +377,17 @@ export interface BridgeActions {
   pickWorkspaceFolder(): Promise<string | null>;
   addWorkspaceFolder(slug: string): Promise<WorkspaceGrantView | undefined>;
   authorizeWorkspacePath(slug: string, path: string): Promise<WorkspaceGrantView>;
+  resolveWorkspaceFolder(path: string): Promise<WorkspaceOption>;
+  authorizeGroupWorkspacePath(
+    channelId: string,
+    slug: string,
+    path: string,
+  ): Promise<{ grant: WorkspaceGrantView; created: boolean }>;
+  readGroupWorkspaceGrant(
+    channelId: string,
+    slug: string,
+    path: string,
+  ): Promise<WorkspaceGrantView | undefined>;
   memoryDirectory(slug: string): Promise<string | undefined>;
   load(signal?: AbortSignal): Promise<void>;
   deletionPreview(slug: string): Promise<PersonaBotDeletionPreview>;
@@ -1241,6 +1254,22 @@ export function createActions(
       const workspace = await folderAccess.createWorkspace({ path });
       return createWorkspaceGrant(call, slug, workspace.workspaceId);
     },
+    async resolveWorkspaceFolder(path) {
+      if (folderAccess === undefined) throw new Error('DSH Workspace controller is unavailable');
+      const workspace = await folderAccess.createWorkspace({ path });
+      const resolved = (await loadWorkspaceOptions(call)).find(
+        (row) => row.id === workspace.workspaceId,
+      );
+      if (resolved === undefined) throw new Error('Resolved DSH Workspace is unavailable');
+      return resolved;
+    },
+    async authorizeGroupWorkspacePath(channelId, slug, path) {
+      if (folderAccess === undefined) throw new Error('DSH Workspace controller is unavailable');
+      const workspace = await folderAccess.createWorkspace({ path });
+      return createGroupWorkspaceGrant(call, slug, workspace.workspaceId, channelId, path);
+    },
+    readGroupWorkspaceGrant: (channelId, slug, path) =>
+      readGroupWorkspaceGrant(call, slug, channelId, path),
     async memoryDirectory(slug) {
       const result = await call('get', { slug });
       if (!result.ok) throw new BridgeCallError(result.error.code, result.error.message);

@@ -338,7 +338,7 @@ export const zh = {
   'pairing.roleCapabilities': '显式管理能力',
   'pairing.privateRoleApproval':
     '批准一次和拒绝适用于现有私聊执行审批；审核聊天配对适用于配对卡片，并受独立委派范围限制。原生问题与执行审批的群目的地由独立功能提供。行为文字不授予管理能力。',
-  'pairing.restricted': 'Lark 聊天请求必须经过配对',
+  'pairing.restricted': 'Lark 聊天与 Slack 私聊请求必须经过配对',
   'pairing.policyLimit':
     '行为权限是模型的 prompt 策略，不隔离邮件、代码或 Shell 资源。群回复对全群可见；聊天资格与管理权限独立。',
   'pairing.conversationAccess': '普通聊天配对申请',
@@ -349,7 +349,7 @@ export const zh = {
   'pairing.pendingCount': '{count} 个待处理',
   'pairing.approvedCount': '已配对 {count} 人',
   'pairing.hint':
-    '启用限制后，未配对的 Lark 私聊和群 @ 自动申请普通聊天角色；管理授权仍用私聊 /pair。申请 10 分钟后过期，审核后须发送新问题。',
+    '启用限制后，未配对的 Lark 私聊、群 @ 和 Slack 私聊自动申请普通聊天角色；Lark 管理授权仍用私聊 /pair。Slack 管理控件由独立功能提供。申请 10 分钟后过期，审核后须发送新问题。',
   'pairing.empty':
     '尚无配对申请。接收器就绪后，受限私聊或群 @ 会申请聊天角色；管理配对请在私聊发送 /pair。',
   'pairing.refresh': '刷新申请',
@@ -382,6 +382,11 @@ export const zh = {
   'pairing.noBehaviorPermissions': '尚无行为权限。先创建，再到组内勾选。',
   'pairing.behaviorConflict': '允许与拒绝冲突 · 拒绝优先',
   'pairing.behaviorConflictShort': '冲突',
+  'pairing.behaviorExclusions': '互斥权限项',
+  'pairing.behaviorExclusionHelp':
+    '勾选不能同时允许的权限项。关系双向生效，并更新双方版本；修改前检查受影响的分组和人员。明确拒绝仍优先。这里只识别人工声明的互斥，不判断任意文字矛盾。',
+  'pairing.behaviorIncompatible':
+    '存在同时允许的互斥权限，无法保存。请先移除一个允许来源或明确拒绝其中一项。',
   'pairing.behaviorNoConflict': '无同项冲突',
   'pairing.behaviorPreview': '生效预览',
   'pairing.behaviorNoAffectedPeople': '没有受影响的有效配对人员。',
@@ -2549,6 +2554,11 @@ export const zh = {
   'approval.cancel': '取消',
   'approval.ruleSaved': '已保存自动批准规则并批准本次调用',
   'approval.rulesTitle': '自动批准规则',
+  'approval.ruleScope': '规则范围：执行角色、目录及 Grant ID／写入版本',
+  'approval.ruleActive': '有效',
+  'approval.ruleInactive': '已停用',
+  'approval.externalCreator':
+    'Lark 创建人：{actor}；每次调用前检查当前配对及 approve／save-rules 权限，失效后不自动恢复。',
   'approval.ruleDetails': '查看适用范围',
   'access.title': '新事项允许所有文件访问',
   'access.description': '此 Bot 的新事项默认保持工作区写入与逐次询问。',
@@ -2693,9 +2703,31 @@ export const zh = {
   'composerContext.sessionShare': '在所列会话的已知 token 用量中占比',
   'composerContext.companionUnavailable': 'Bot 小人尚未就绪或不可用',
   'composerContext.confirmGrant': '确认授权给 {name}',
+  'groupGrant.select': '要授权的 Bot',
+  'groupGrant.noMembers': '暂无可授权 Bot',
+  'groupGrant.scope':
+    '默认选中当前全部可授权 Bot，也可指定几个；确认后逐 Bot 授权，未选 Bot 权限不变，不创建群聊权限或统一工作目录。',
+  'groupGrant.confirm': '确认目录和成员访问范围',
+  'groupGrant.permissions': '逐 Bot 授权此目录；任务权限与审批规则保持不变。',
+  'groupGrant.targets': '{count} 个 Bot',
+  'groupGrant.taskAccess': '任务权限：{mode}（不变）',
+  'groupGrant.unselected': '未选成员权限不变。',
+  'groupGrant.details': '授权规则',
+  'groupGrant.access': '任务：{mode} · 主会话：{write}',
+  'groupGrant.pending': '待授权',
+  'groupGrant.created': '已新增授权',
+  'groupGrant.existing': '已有授权 · 复用',
+  'groupGrant.confirmed': '读回确认成功',
+  'groupGrant.failed': '授权失败',
+  'groupGrant.unknown': '结果未知',
+  'groupGrant.partial':
+    '逐成员提交，不承诺全部成功；不会发送消息或自动创建任务。失败或未知结果先读回，再重试。',
+  'groupGrant.retry': '读回并重试',
   'composerContext.grantScope':
     '已解析目录：{path}。仅建立此 Bot 的 Workspace Grant；不启用 Orchestrator 项目写入，不更改 Assignment 权限或审批规则。',
   'composer.addAttachment': '添加附件',
+  'composer.referenceAttachment': '在正文中引用 {name}',
+  'composer.locateAttachment': '定位附件 {name}',
   'composer.uploading': '上传中',
   'composer.retryAttachment': '重试上传',
   'composer.removeAttachment': '移除 {name}',
@@ -3162,7 +3194,7 @@ export const en = {
   'pairing.roleCapabilities': 'Explicit management capabilities',
   'pairing.privateRoleApproval':
     'Allow once and Reject apply to existing private execution approvals. Review chat pairing applies to pairing cards with a separate delegation ceiling. Group destinations for native questions and execution approvals are separate. Behavior text does not grant management capabilities.',
-  'pairing.restricted': 'Require pairing for Lark conversation requests',
+  'pairing.restricted': 'Require pairing for Lark conversations and Slack DMs',
   'pairing.policyLimit':
     'Behavior permissions are prompt policies; they do not isolate email, code or Shell resources. Group replies are visible to the group. Chat eligibility and management powers are independent.',
   'pairing.conversationAccess': 'Conversation pairing request',
@@ -3173,7 +3205,7 @@ export const en = {
   'pairing.pendingCount': '{count} pending',
   'pairing.approvedCount': '{count} paired',
   'pairing.hint':
-    'When restricted, unpaired Lark DMs and group mentions request an ordinary chat role automatically; management requests still use /pair in a DM. Requests expire after 10 minutes. Send a new question after approval.',
+    'When restricted, unpaired Lark DMs, group mentions and Slack DMs request an ordinary chat role automatically; Lark management requests still use /pair in a DM. Slack management controls are a separate feature. Requests expire after 10 minutes. Send a new question after approval.',
   'pairing.empty':
     'No pairing requests. With a ready receiver, restricted DMs or group mentions request a chat role; management pairing uses /pair in a DM.',
   'pairing.refresh': 'Refresh requests',
@@ -3207,6 +3239,11 @@ export const en = {
     'No behavior permissions yet. Create an item, then select it in a group.',
   'pairing.behaviorConflict': 'Allow/Deny conflict · Deny wins',
   'pairing.behaviorConflictShort': 'Conflict',
+  'pairing.behaviorExclusions': 'Mutually exclusive items',
+  'pairing.behaviorExclusionHelp':
+    'Select items that cannot both be allowed. The relation works both ways and updates both revisions; review affected groups and people. Explicit Deny still wins. Only authored exclusions are checked, not arbitrary text contradictions.',
+  'pairing.behaviorIncompatible':
+    'Mutually exclusive items are both allowed. Cannot save: remove an Allow source or explicitly deny one item first.',
   'pairing.behaviorNoConflict': 'No same-item conflict',
   'pairing.behaviorPreview': 'Effective preview',
   'pairing.behaviorNoAffectedPeople': 'No affected currently paired people.',
@@ -5484,6 +5521,11 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.cancel': 'Cancel',
   'approval.ruleSaved': 'Automatic approval rule saved; this call was approved',
   'approval.rulesTitle': 'Automatic approval rules',
+  'approval.ruleScope': 'Rule scope: execution role, directory and Grant IDs/write revisions',
+  'approval.ruleActive': 'Active',
+  'approval.ruleInactive': 'Disabled',
+  'approval.externalCreator':
+    'Lark creator: {actor}; current pairing and approve/save-rules authority are checked before each call. Disabled rules do not reactivate automatically.',
   'approval.ruleDetails': 'View scope',
   'access.title': 'Allow all file access for new Assignments',
   'access.description':
@@ -5645,9 +5687,32 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'composerContext.sessionShare': 'Share of known token usage in the listed sessions',
   'composerContext.companionUnavailable': 'Window Companion is not ready or unavailable',
   'composerContext.confirmGrant': 'Confirm authorization for {name}',
+  'groupGrant.select': 'Bots to authorize',
+  'groupGrant.noMembers': 'No eligible Bots',
+  'groupGrant.scope':
+    'All currently eligible Bots are selected by default; choose a subset if needed. Confirmation authorizes each selected Bot independently. Unselected Bots keep their permissions; no Group grant or shared working directory is created.',
+  'groupGrant.confirm': 'Confirm directory and member access',
+  'groupGrant.permissions':
+    'Per-Bot access to this directory. Task access and approval rules stay unchanged.',
+  'groupGrant.targets': '{count} Bots',
+  'groupGrant.taskAccess': 'Task access: {mode} (unchanged)',
+  'groupGrant.unselected': 'Unselected members keep their permissions.',
+  'groupGrant.details': 'Authorization rules',
+  'groupGrant.access': 'Task: {mode} · Main session: {write}',
+  'groupGrant.pending': 'Pending',
+  'groupGrant.created': 'New Grant created',
+  'groupGrant.existing': 'Authorized · reused',
+  'groupGrant.confirmed': 'Confirmed by readback',
+  'groupGrant.failed': 'Failed',
+  'groupGrant.unknown': 'Unknown outcome',
+  'groupGrant.partial':
+    'Members commit independently, not atomically. No message or task is sent. Read back failed or unknown outcomes before retrying.',
+  'groupGrant.retry': 'Read back and retry',
   'composerContext.grantScope':
     'Resolved directory: {path}. Creates only this Bot’s Workspace Grant; does not enable Orchestrator project writes or change Assignment access or approval rules.',
   'composer.addAttachment': 'Add attachment',
+  'composer.referenceAttachment': 'Reference {name} in message',
+  'composer.locateAttachment': 'Locate attachment {name}',
   'composer.uploading': 'Uploading',
   'composer.retryAttachment': 'Retry upload',
   'composer.removeAttachment': 'Remove {name}',
