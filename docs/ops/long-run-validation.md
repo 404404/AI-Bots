@@ -1,6 +1,6 @@
 # Long-run validation observer
 
-The observer watches the four-week multi-Bot validation run tracked in [#1593](https://github.com/BotHarness/DeepSeekBot/issues/1593). It runs on the dev machine, never on the validation Host, so a Host outage is still reported.
+The observer watches the four-week multi-Bot validation run tracked in [#1593](https://github.com/BotHarness/DeepSeekBot/issues/1593). Prefer a machine other than the validation Host. In this run it shares the validation machine as a separate user-level cron: a stopped Host is still reported, but a whole-machine outage produces no alert.
 
 ## What it does
 
@@ -22,7 +22,7 @@ The observer watches the four-week multi-Bot validation run tracked in [#1593](h
 
 DeepSeekBot is a public repository, and Attention summaries and external origins carry names of people the Bots talk to on X and by email. Issue bodies therefore contain only ids, enums, counts and timestamps. Raw snapshots (`snapshots/*.jsonl`) and Diagnostic Bundles (`bundles/*.zip`) stay in the observer's state directory; an issue names the bundle file, not its content. A bundle is exported only for findings anchored on a Channel message.
 
-## Setup on the dev machine
+## Setup on the observer machine
 
 1. Build or install the `deepseekbot` CLI at the same tag the validation Host runs.
 2. Export `DEEPSEEKBOT_HOST` (the validation Host's tailnet HTTPS origin), `DEEPSEEKBOT_HOST_TOKEN` (its launch token), `LONG_RUN_HARNESS_TAG` and `DISCORD_WEBHOOK_URL` in a private env file (mode 0600). The launch token carries full Host authority, not read-only access, so keep it on this machine only.
