@@ -3,6 +3,7 @@ import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { credentialStoreDenial } from './credentials/store-guard.js';
 import { secretCommandDenial } from './credentials/secret-command.js';
+import { secretMcpDenial } from './credentials/secret-mcp.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
 import { createPartLibrary, type PartLibrary } from './bots/part-library.js';
 import {
@@ -1199,10 +1200,19 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     (agent) => ctx.agents.get(agent.id) === agent,
     (message) => ctx.logger.warn(message),
     (slug, count) => core.states.setQuestionCount(slug, count),
-    nativeTimedQuestions(ctx, core.runtime),
+    nativeTimedQuestions(
+      ctx,
+      core.runtime,
+      (ctx as unknown as { sessions: DshSessionStore }).sessions,
+    ),
     (sessionId) => core.runtime.askChannel?.(sessionId),
   );
   ctx.effect(() => () => userQuestions.close(), 'botharness: Channel user questions');
+  ctx.inject(['sessionProjections', 'sessionQuery', 'userQuestions'], () => {
+    void userQuestions
+      .recover(core.humanAttention.openTimedQuestionCards())
+      .catch(() => ctx.logger.warn('user-question-recovery-failed'));
+  });
   ctx.effect(
     () => core.companions.attachQuestions(userQuestions),
     'botharness: companion question observation',
@@ -1235,6 +1245,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (execution.name === 'secret_cli') {
         const commandDenial = secretCommandDenial(execution.arguments);
         if (commandDenial !== undefined) return { kind: 'deny', reason: commandDenial };
+      }
+      if (execution.name === 'secret_mcp_connect') {
+        const serverDenial = secretMcpDenial(execution.arguments);
+        if (serverDenial !== undefined) return { kind: 'deny', reason: serverDenial };
       }
       if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
         return next();
@@ -1348,7 +1362,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         owner?.rootRole === 'assignment'
           ? core.runtime.getAssignment(owner.botSlug, owner.sessionId)?.permission
           : undefined;
-      const eachUse = execution.name === 'secret_cli';
+      const eachUse = execution.name === 'secret_cli' || execution.name === 'secret_mcp_connect';
       const fullAccess =
         snapshot?.mode === 'danger-full-access' ||
         (owner?.rootRole === 'orchestrator' &&

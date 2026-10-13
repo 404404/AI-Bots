@@ -456,6 +456,7 @@ describe('plugin entry', () => {
       'userQuestionStatus',
       'userQuestionAnswer',
       'sessions',
+      'sessionArchiveSet',
       'sessionOwner',
       'botSessionIds',
       'memoryFileTarget',

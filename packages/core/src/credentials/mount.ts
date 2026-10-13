@@ -10,6 +10,7 @@ import {
   secretCommandBaseEnv,
   secretCommandPlan,
 } from './secret-command.js';
+import { SecretMcpServers, secretMcpEnv, secretMcpPlan } from './secret-mcp.js';
 import type { PrivateInputLog } from './diagnostics.js';
 import { privateInputWebUrl } from './web-locator.js';
 import { credentialStoreDenial, credentialStorePath, denyStoreRead } from './store-guard.js';
@@ -97,6 +98,32 @@ export function mountPrivateInputs(
       'botharness: credential store read denial',
     );
   });
+  const mcpServers = new SecretMcpServers();
+  ctx.effect(() => () => mcpServers.close(), 'botharness: secret MCP servers');
+  ctx.on(
+    'tools/execute',
+    async (call, next) => {
+      const result = await next();
+      if (call.agent === undefined || !call.name.startsWith('mcp__')) return result;
+      const agent = call.agent;
+      if (!mcpServers.owns(agent, call.name)) return result;
+      const masked = (value: unknown): unknown => {
+        if (typeof value === 'string') return mcpServers.mask(agent, call.name, value);
+        if (Array.isArray(value)) return value.map(masked);
+        if (
+          value !== null &&
+          typeof value === 'object' &&
+          Object.getPrototypeOf(value) === Object.prototype
+        )
+          return Object.fromEntries(
+            Object.entries(value).map(([key, entry]) => [key, masked(entry)]),
+          );
+        return value;
+      };
+      return masked(result) as typeof result;
+    },
+    { global: true },
+  );
   ctx.effect(() => () => owner.close(), 'botharness: private input owner');
   ctx.effect(() => () => execution.close(), 'botharness: protected Execution World');
   ctx.tools.guard(({ name, agent, arguments: args }) =>
@@ -454,6 +481,188 @@ export function mountPrivateInputs(
                 ),
               );
             },
+          }),
+        );
+        agentCtx.tools.register(
+          defineTool({
+            name: 'secret_mcp_connect',
+            description:
+              'Start an MCP server for yourself with secrets the Owner entered through ask_secret placed in its environment, then use its tools as mcp__<server_name>__<tool>. Use it for an integration that needs a client library or several calls; prefer secret_http for one plain HTTP request and secret_cli for one command. The Host starts the launcher directly, without a shell, inside the same file sandbox as bash with a clean environment; give the bare launcher name (for example npx or uvx), its arguments, and the environment variables the server documents, writing {{field_id}} where a secret belongs. The server stays connected for this conversation Session until you disconnect it, the account is revoked or the Host restarts; it is not available to Assignments. Starting it needs its own Human approval every time, which shows the exact program and arguments. Each later tool call follows the usual approval. Returns the tool names the server offers.',
+            parameters: {
+              server_name: {
+                type: 'string',
+                required: true,
+                description: 'Short name for the tool prefix: letters, digits, _ or -.',
+              },
+              account: {
+                type: 'string',
+                required: true,
+                description: 'Exact nonsecret account from ask_secret.',
+              },
+              references: {
+                type: 'array',
+                required: true,
+                items: { type: 'string' },
+                description: 'The opaque references from ask_secret that this server uses.',
+              },
+              program: {
+                type: 'string',
+                required: true,
+                description:
+                  'Bare name of the installed launcher, for example npx. Not a path or shell.',
+              },
+              args: {
+                type: 'array',
+                required: true,
+                items: { type: 'string' },
+                description: 'Arguments, one per item, passed as written. No secrets here.',
+              },
+              env: {
+                type: 'array',
+                required: true,
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', required: true },
+                    value: { type: 'string', required: true },
+                  },
+                  additionalProperties: false,
+                },
+                description:
+                  'Environment variables for the server; a value contains {{field_id}}, for example name GITHUB_TOKEN, value {{token}}.',
+              },
+            },
+            output: {
+              schema: { type: 'string' },
+              render: (_args, value) => [{ type: 'text', text: value }],
+            },
+            execute: async (args, call) => {
+              const references: Record<string, string> = {};
+              for (const reference of args.references) {
+                const field = /^private:[0-9a-f-]{36}:([a-z][a-z0-9_]{0,47})$/.exec(reference)?.[1];
+                if (field === undefined || references[field] !== undefined)
+                  throw new Error('references must be distinct ask_secret references');
+                references[field] = reference;
+              }
+              const refuse = (reason: string) =>
+                JSON.stringify({ consumer: 'mcp-v1', connected: false, refused: reason });
+              const cwd = agent.session.header.cwd;
+              const sandbox = ctx.get('sandbox') as unknown as
+                | {
+                    confine(
+                      argv: readonly string[],
+                      policy: { mode: 'workspace-write'; workspaceRoot: string },
+                      signal?: AbortSignal,
+                    ): Promise<{ argv: string[] }>;
+                  }
+                | undefined;
+              if (cwd === undefined || sandbox === undefined)
+                return refuse('The Shell sandbox is unavailable, so the server was not started');
+              let plan: ReturnType<typeof secretMcpPlan>;
+              try {
+                plan = secretMcpPlan(args);
+              } catch (error) {
+                if (error instanceof SecretCommandRefusal) return refuse(error.message);
+                throw error;
+              }
+              if (mcpServers.has(agent, plan.serverName))
+                return refuse('an MCP server with this server_name is already connected');
+              let confined: { argv: string[] };
+              try {
+                confined = await sandbox.confine(
+                  plan.command,
+                  { mode: 'workspace-write', workspaceRoot: cwd },
+                  call.signal,
+                );
+              } catch {
+                return refuse('The Shell sandbox is unavailable, so the server was not started');
+              }
+              return await new Promise<string>((resolve, reject) => {
+                let settled = false;
+                const settle = (text: string) => {
+                  if (settled) return;
+                  settled = true;
+                  resolve(text);
+                };
+                owner
+                  .consume(agent, args.account, references, async (values, signal) => {
+                    const env = secretMcpEnv();
+                    try {
+                      for (const [index, entry] of args.env.entries())
+                        env[plan.names[index]!] = entry.value.replace(
+                          /\{\{([a-z][a-z0-9_]{0,47})\}\}/g,
+                          (_match, field: string) => {
+                            const value = values[field];
+                            if (value === undefined)
+                              throw new SecretCommandRefusal(
+                                'A placeholder names a field that was not referenced',
+                              );
+                            return value;
+                          },
+                        );
+                      const running = await mcpServers.start(
+                        agentCtx,
+                        agent,
+                        {
+                          serverName: plan.serverName,
+                          account: args.account,
+                          argv: confined.argv,
+                          cwd,
+                        },
+                        env,
+                        Object.values(values),
+                      );
+                      settle(
+                        JSON.stringify({
+                          consumer: 'mcp-v1',
+                          connected: true,
+                          serverName: plan.serverName,
+                          tools: running.tools,
+                        }),
+                      );
+                      await new Promise<void>((stopped) => {
+                        const stop = () => void running.stop().finally(stopped);
+                        signal.addEventListener('abort', stop, { once: true });
+                        agentCtx.effect(() => stop, 'botharness: secret MCP server');
+                        running.stopped = stopped;
+                      });
+                      if (signal.aborted) throw new Error('Secret MCP server stopped');
+                    } catch (error) {
+                      if (!(error instanceof SecretCommandRefusal)) throw error;
+                      settle(refuse(error.message));
+                    } finally {
+                      for (const name of plan.names) delete env[name];
+                    }
+                  })
+                  .then(
+                    () => settle(refuse('the MCP server stopped')),
+                    (error: unknown) => (settled ? undefined : reject(error)),
+                  );
+              });
+            },
+          }),
+        );
+        agentCtx.tools.register(
+          defineTool({
+            name: 'secret_mcp_disconnect',
+            description:
+              'Stop an MCP server you started with secret_mcp_connect and remove its tools. Without server_name it lists the servers you have connected.',
+            parameters: {
+              server_name: { type: 'string', description: 'The server_name used to connect.' },
+            },
+            output: {
+              schema: { type: 'string' },
+              render: (_args, value) => [{ type: 'text', text: value }],
+            },
+            execute: async (args) =>
+              JSON.stringify(
+                args.server_name === undefined
+                  ? { servers: mcpServers.list(agent) }
+                  : {
+                      serverName: args.server_name,
+                      disconnected: await mcpServers.stop(agent, args.server_name),
+                    },
+              ),
           }),
         );
       }),

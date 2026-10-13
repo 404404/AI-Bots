@@ -251,7 +251,12 @@ export interface OwnedSessionSummary {
   cwdReference?: string;
   assignmentActivity?: 'working' | 'idle' | 'error' | 'stopping' | 'stopped';
   assignmentAccessMode?: 'workspace-write' | 'danger-full-access';
+  assignmentReportState?: 'progress' | 'completed' | 'blocked' | 'waiting-human' | 'failed';
+  assignmentExecutionWait?: 'waiting-human' | 'waiting-capacity';
+  assignmentArchived?: true;
+  assignmentPurpose?: string;
   currentOrchestrator?: boolean;
+  triageOpenCount?: number;
 }
 
 export type HumanInboxCategory = 'action' | 'info' | 'unread' | 'replies' | 'handled';
@@ -734,9 +739,15 @@ export function createStore(): ClientStore {
       update({ roster: { ...state.roster, ...patch } });
     },
     upsertChannel(channel) {
-      const previous = state.channels.find((candidate) => candidate.id === channel.id);
-      const existing = state.channels.filter((candidate) => candidate.id !== channel.id);
-      update({ channels: [{ ...previous, ...channel }, ...existing] });
+      const index = state.channels.findIndex((candidate) => candidate.id === channel.id);
+      update({
+        channels:
+          index === -1
+            ? [channel, ...state.channels]
+            : state.channels.map((candidate, at) =>
+                at === index ? { ...candidate, ...channel } : candidate,
+              ),
+      });
     },
     select(selection, options) {
       if (sameSelection(state.selection, selection)) return;

@@ -268,6 +268,7 @@ function stubActions(): BridgeActions {
     dismissFailedMessage: vi.fn(() => false),
     openSession: vi.fn(() => undefined),
     refreshSessions: vi.fn(async () => undefined),
+    setSessionArchived: vi.fn(async () => undefined),
     messageAttachmentTarget: vi.fn(async () => ({
       path: '/attachment',
       relativePath: 'attachment',
@@ -1337,7 +1338,7 @@ describe('bot sidebar rows', () => {
     expect(inherited.indexOf('旧频道')).toBeLessThan(inherited.indexOf('新频道'));
   });
 
-  it('renders loose channels in flat order under every sort mode (never auto-sorted)', () => {
+  it('sorts loose channels by latest message in updated mode and keeps flat order in manual mode', () => {
     const older = {
       ...FLAT_CHANNEL,
       id: 'c-old',
@@ -1367,7 +1368,7 @@ describe('bot sidebar rows', () => {
     };
     const auto = renderSidebar();
     expect(auto).not.toContain('未分组');
-    expect(auto.indexOf('旧频道')).toBeLessThan(auto.indexOf('新频道'));
+    expect(auto.indexOf('新频道')).toBeLessThan(auto.indexOf('旧频道'));
 
     prefs = {
       motionPreference: 'system',
