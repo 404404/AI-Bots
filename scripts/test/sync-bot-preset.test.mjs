@@ -27,11 +27,19 @@ const sample = [
   "            name: '@deepseek-ai/dsh-tool-ask-user'",
   '          - id: tool-todo',
   "            name: '@deepseek-ai/dsh-tool-todo'",
+  '              - id: tool-subagent',
+  "                name: '@deepseek-ai/dsh-tool-subagent'",
+  '                config:',
+  '                  provider: spawn',
+  '              - id: tool-subagent-fork',
+  "                name: '@deepseek-ai/dsh-tool-subagent'",
+  '                config:',
+  '                  provider: fork',
   '',
 ].join('\n');
 
 describe('PersonaBot agent preset', () => {
-  it('copies the standard preset and changes only its identity, order and question mode', () => {
+  it('copies the standard preset and changes only its identity, order, question mode and native subagent tools', () => {
     expect(botPreset(sample)).toBe(
       [
         '- insert:',
@@ -53,6 +61,16 @@ describe('PersonaBot agent preset', () => {
         '              timeout: 45',
         '          - id: tool-todo',
         "            name: '@deepseek-ai/dsh-tool-todo'",
+        '              - id: tool-subagent',
+        "                name: '@deepseek-ai/dsh-tool-subagent'",
+        '                disabled: true',
+        '                config:',
+        '                  provider: spawn',
+        '              - id: tool-subagent-fork',
+        "                name: '@deepseek-ai/dsh-tool-subagent'",
+        '                disabled: true',
+        '                config:',
+        '                  provider: fork',
       ].join('\n'),
     );
   });
