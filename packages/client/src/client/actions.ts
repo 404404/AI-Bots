@@ -454,6 +454,7 @@ export interface BridgeActions {
     messageId: string,
     path: string,
     body: (workspaceTitle: string) => string,
+    channelId?: string,
   ): Promise<void>;
   humanAssignmentContext(
     slug: string,
@@ -1744,8 +1745,8 @@ export function createActions(
       if (folderAccess === undefined) throw new Error('DSH folder picker is unavailable');
       return folderAccess.pickDirectory();
     },
-    async resolveWorkspaceGrantRequest(slug, messageId, path, body) {
-      const channelId = 'dm-' + slug;
+    async resolveWorkspaceGrantRequest(slug, messageId, path, body, sourceChannelId) {
+      const channelId = sourceChannelId ?? 'dm-' + slug;
       const readRequest = async () => {
         const messages = await actions.humanInboxContext(channelId, messageId);
         return messages.find((message) => message.id === messageId);

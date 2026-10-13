@@ -152,6 +152,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- A Bot working on a Group request now asks in that Group: tool approval cards, question cards and folder-access requests appear in the Channel the task came from instead of always in the Bot's DM. Secret input stays in the DM ([#1536](https://github.com/BotHarness/DeepSeekBot/issues/1536), [ADR-0186](docs/adr/0186-asks-follow-the-channel-the-task-came-from.md)).
+
 - A Group Channel's composer footer shows one workspace count, the distinct workspaces its member Bots can use together, instead of each Bot's own count; a DM still shows its Bot's count ([#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)).
 
 - Onboarding is now a getting-started checklist opened from a progress ring in the Bot-mode sidebar row (beside the exit button on mobile), so it takes no vertical space. It covers choosing a model and sending the first message, then letting the Bot remember you, connecting a chat app, setting a daily task and summoning the Window Companion, each with a direct action and a check read from that feature's own data. The interface walkthrough starts from the checklist and ends by showing how to leave Bot mode, and a quiet "Try it" chip marks the Bot-mode row until you first enter it ([#1496](https://github.com/BotHarness/DeepSeekBot/issues/1496), [ADR-0180](docs/adr/0180-onboarding-is-a-checklist-launched-from-the-bot-mode-row.md)).
@@ -184,6 +186,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - Memory and Workspace folders under a symlinked parent directory, such as macOS `/tmp` or a linked home folder, no longer deny every Bot file tool call as outside the authorized workspace; a folder that is itself a symlink is still refused ([#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)).
 
 - AX Go launches stage the reviewed adapter patch inside each isolated CLI and reference it relatively, fixing Windows `ERR_PNPM_PATCH_NOT_FOUND` when source and home are on different drives; model credentials and native request handling retain their existing ownership ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409), [AX guide](docs/agents/ax-model.md)).
+
+- A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
 
 - DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
 

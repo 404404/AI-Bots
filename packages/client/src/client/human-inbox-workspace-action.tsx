@@ -72,6 +72,7 @@ export function HumanInboxWorkspaceAction({
           message={message}
           actions={actions}
           resolved={message.grantRequestResolved === true}
+          channelId={source.channelId}
           beforeOpen={refreshBeforeOpen}
           workspacePickerRequest={1}
           compact

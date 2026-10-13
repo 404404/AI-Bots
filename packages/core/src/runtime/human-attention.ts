@@ -122,8 +122,8 @@ const ACTION_ATTENTION_CTE = `WITH attention AS (
             FROM source_events e
             JOIN channel_placements p ON p.source_event_id = e.source_event_id
             JOIN channel_records c ON c.channel_id = p.channel_id
-           WHERE json_extract(c.record_json, '$.type') = 'dm'
-             AND json_extract(c.record_json, '$.botSlug') IS NOT NULL
+           WHERE (json_extract(c.record_json, '$.type') = 'group'
+               OR (json_extract(c.record_json, '$.type') = 'dm' AND json_extract(c.record_json, '$.botSlug') IS NOT NULL))
              AND json_extract(c.record_json, '$.deletedAt') IS NULL
              AND e.source_kind = 'bot-message'
              AND json_extract(e.payload_json, '$.userQuestionRequest') IS NOT NULL
@@ -144,8 +144,8 @@ const ACTION_ATTENTION_CTE = `WITH attention AS (
             FROM source_events e
             JOIN channel_placements p ON p.source_event_id = e.source_event_id
             JOIN channel_records c ON c.channel_id = p.channel_id
-           WHERE json_extract(c.record_json, '$.type') = 'dm'
-             AND json_extract(c.record_json, '$.botSlug') IS NOT NULL
+           WHERE (json_extract(c.record_json, '$.type') = 'group'
+               OR (json_extract(c.record_json, '$.type') = 'dm' AND json_extract(c.record_json, '$.botSlug') IS NOT NULL))
              AND json_extract(c.record_json, '$.deletedAt') IS NULL
              AND e.source_kind = 'bot-message'
              AND json_extract(e.payload_json, '$.toolApprovalRequest') IS NOT NULL
@@ -189,8 +189,8 @@ const ACTION_ATTENTION_CTE = `WITH attention AS (
             FROM source_events e
             JOIN channel_placements p ON p.source_event_id = e.source_event_id
             JOIN channel_records c ON c.channel_id = p.channel_id
-           WHERE json_extract(c.record_json, '$.type') = 'dm'
-             AND json_extract(c.record_json, '$.botSlug') = e.bot_slug
+           WHERE (json_extract(c.record_json, '$.type') = 'group'
+               OR (json_extract(c.record_json, '$.type') = 'dm' AND json_extract(c.record_json, '$.botSlug') = e.bot_slug))
              AND json_extract(c.record_json, '$.deletedAt') IS NULL
              AND e.source_kind = 'bot-message'
              AND json_extract(e.payload_json, '$.grantRequest') = 1
@@ -461,8 +461,8 @@ SELECT 'handled:' || request.source_event_id AS id,
                OR (json_extract(request.payload_json, '$.grantRequest') = 1
                    AND json_extract(response.payload_json, '$.grantRequestResolution.requestMessageId') = request.message_id))
              AND json_extract(c.record_json, '$.deletedAt') IS NULL
-             AND json_extract(c.record_json, '$.type') = 'dm'
-             AND json_extract(c.record_json, '$.botSlug') = request.bot_slug
+             AND (json_extract(c.record_json, '$.type') = 'group'
+               OR (json_extract(c.record_json, '$.type') = 'dm' AND json_extract(c.record_json, '$.botSlug') = request.bot_slug))
              AND request.source_kind = 'bot-message'
              AND NOT EXISTS (SELECT 1 FROM source_events earlier INDEXED BY source_events_human_native_response
                WHERE earlier.source_kind = 'human-message' AND json_extract(earlier.payload_json, '$.author.kind') = 'human'

@@ -188,6 +188,7 @@ describe('Channel message body', () => {
             'grant-request',
             path,
             expect.any(Function),
+            undefined,
           );
         expect(container.textContent?.includes('已回复授权请求')).toBe(path !== null);
       } finally {
