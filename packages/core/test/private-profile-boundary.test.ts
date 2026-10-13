@@ -5,9 +5,8 @@ import type { ToolDefinition } from '@deepseek-ai/dsh-tools';
 import { describe, expect, it, vi } from 'vitest';
 import { mountPrivateInputs } from '../src/credentials/mount.js';
 import type { BotHarnessCore } from '../src/plugin.js';
-import { qualifyMessagingTool } from '../src/credentials/messaging-tools.js';
 
-async function fixture(enabled: boolean, keys: string[] = []) {
+async function fixture(keys: string[] = []) {
   const ctx = new Context();
   let guard!: (call: { name: string; agent?: Agent; arguments?: unknown }) => string | undefined;
   ctx.provide('tools', {
@@ -33,50 +32,15 @@ async function fixture(enabled: boolean, keys: string[] = []) {
     },
     contributeBotAgentSetup: contribute,
   } as unknown as BotHarnessCore;
-  mountPrivateInputs(ctx, core, enabled, undefined, undefined, undefined, '/qa/dsh-home');
-  await vi.waitFor(() =>
-    expect(guard({ name: 'read' })).toEqual(enabled ? expect.any(String) : undefined),
-  );
+  mountPrivateInputs(ctx, core, undefined, undefined, '/qa/dsh-home');
+  await vi.waitFor(() => expect(guard({ name: 'read' })).toBeUndefined());
   return { ctx, guard, contribute };
 }
 
-describe('private Profile capability boundary', () => {
-  it('allows only the exact messaging Tool Registration for an owned Orchestrator', async () => {
-    const f = await fixture(true);
-    const agent = { session: { id: 'owned' } } as Agent;
-    const tool = { name: 'bridge_reply' } as ToolDefinition;
-    expect(f.guard({ name: tool.name, agent })).toContain('not qualified');
-    const dispose = qualifyMessagingTool(agent, tool);
-    vi.mocked(f.ctx.tools.get).mockReturnValue(tool);
-    expect(f.guard({ name: tool.name, agent })).toBeUndefined();
-    vi.mocked(f.ctx.tools.get).mockReturnValue({ name: 'bridge_reply' } as ToolDefinition);
-    expect(f.guard({ name: tool.name, agent })).toContain('not qualified');
-    expect(f.guard({ name: 'bridge_post', agent })).toContain('not qualified');
-    dispose();
-    vi.mocked(f.ctx.tools.get).mockReturnValue(tool);
-    expect(f.guard({ name: tool.name, agent })).toContain('not qualified');
-    await f.ctx.fiber.dispose();
-  });
-  it('qualifies Bot Schedule management only for owned Orchestrators', async () => {
-    const f = await fixture(true);
-    const agent = { session: { id: 'owned' } } as Agent;
-    const assignment = { session: { id: 'assignment' } } as Agent;
-    for (const name of [
-      'bot_schedule_list',
-      'bot_schedule_create',
-      'bot_schedule_update',
-      'bot_schedule_delete',
-    ]) {
-      expect(f.guard({ name, agent })).toBeUndefined();
-      expect(f.guard({ name })).toContain('not qualified');
-      expect(f.guard({ name, agent: assignment })).toContain('not qualified');
-    }
-    expect(f.guard({ name: 'schedule_create', agent })).toContain('not qualified');
-    await f.ctx.fiber.dispose();
-  });
-  it('keeps ordinary Host tools in an ordinary Profile, with secret input registered and stored grants not locking Shell', async () => {
+describe('secret input capability boundary', () => {
+  it('keeps ordinary Host tools, with secret input registered and stored grants not locking Shell', async () => {
     for (const keys of [[], ['botharness-private/grant-synthetic']]) {
-      const ordinary = await fixture(false, keys);
+      const ordinary = await fixture(keys);
       expect(ordinary.guard({ name: 'mcp_example' })).toBeUndefined();
       expect(
         ordinary.guard({ name: 'read', arguments: { path: '/qa/project/a.txt' } }),
@@ -89,8 +53,8 @@ describe('private Profile capability boundary', () => {
     }
   });
 
-  it('refuses Agent access to the native credential store in an ordinary Profile', async () => {
-    const f = await fixture(false);
+  it('refuses Agent access to the native credential store', async () => {
+    const f = await fixture();
     const denied = 'native credential store';
     expect(
       f.guard({ name: 'read', arguments: { path: '/qa/dsh-home/.credentials.yaml' } }),
@@ -125,19 +89,8 @@ describe('private Profile capability boundary', () => {
     await f.ctx.fiber.dispose();
   });
 
-  it('applies the Host boundary to native Sessions and other Bots even with broad approval', async () => {
-    const f = await fixture(true);
-    const agent = { session: { id: 'owned' } } as Agent;
-    expect(f.guard({ name: 'read', agent })).toContain('not qualified');
-    expect(f.guard({ name: 'mcp_example', agent })).toContain('not qualified');
-    expect(f.guard({ name: 'channel_send', agent })).toBeUndefined();
-    expect(f.guard({ name: 'channel_send' })).toContain('not qualified');
-    expect(f.guard({ name: 'bash' })).toBeUndefined();
-    await f.ctx.fiber.dispose();
-  });
-
   it('compiles the dynamic field declaration with the pinned native schema DSL', async () => {
-    const f = await fixture(true);
+    const f = await fixture();
     const agentRoot = new Context();
     const agent = { session: { id: 'owned' } } as Agent;
     const tools: ToolDefinition[] = [];

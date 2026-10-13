@@ -1,10 +1,12 @@
 ---
-Status: Proposed
+Status: Superseded
 Date: 2026-10-11
 Issues: [#1378](https://github.com/BotHarness/DeepSeekBot/issues/1378), [#1384](https://github.com/BotHarness/DeepSeekBot/issues/1384)
 ---
 
 # Private MCP consumption uses a fixed server and bounded projection
+
+> Superseded by [ADR-0192](0192-the-docker-protected-profile-is-removed.md): the protected Profile this consumer ran in has been removed, and the consumer with it.
 
 The application-defined `ProtectedMcp` Consumer reuses DSH 0.2.0-rc.1's exported `createMcpToolDefinition` adapter and its official `@modelcontextprotocol/client@2.0.0` dependency. Its Agent-scoped Registration is `mcp__private_status__authenticated_status`. The model-facing schema contains an account and three opaque field references. Native ToolRuntime and the existing approval record that original invocation. The application-defined `PrivateInputs.consume` owner checks the actual live Agent, PersonaBot creation identity, account, canonical configured Channel proof and current native Credentials grant before resolving values. There is no new credential store, UI or approval category.
 

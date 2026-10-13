@@ -1,12 +1,7 @@
-import { execFile, spawn } from 'node:child_process';
-import { promisify } from 'node:util';
+import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { randomUUID } from 'node:crypto';
 import type { PrivateInputLog } from './diagnostics.js';
 
-const execute = promisify(execFile);
-export const PRIVATE_COMMAND_IMAGE =
-  'node@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392';
 const AUTHENTICATED_STATUS_CLI = String.raw`
 let input='';
 process.stdin.setEncoding('utf8');
@@ -110,84 +105,10 @@ export function secretHttpTarget(endpoint: string, path: string): URL {
   return target;
 }
 
-export function privateCommandArgs(name: string): string[] {
-  return [
-    'run',
-    '--rm',
-    '--interactive',
-    '--name',
-    name,
-    '--label',
-    'ai.botharness.private-command=true',
-    '--network',
-    'none',
-    '--read-only',
-    '--cap-drop',
-    'ALL',
-    '--security-opt',
-    'no-new-privileges=true',
-    '--user',
-    '65534:65534',
-    '--pids-limit',
-    '64',
-    '--memory',
-    '128m',
-    '--cpus',
-    '1',
-    '--tmpfs',
-    '/tmp:rw,noexec,nosuid,size=16m',
-    '--workdir',
-    '/tmp',
-    '--entrypoint',
-    '/bin/sh',
-    PRIVATE_COMMAND_IMAGE,
-    '-s',
-  ];
-}
 export class ProtectedExecution {
   #closed = false;
   readonly #children = new Set<ReturnType<typeof spawn>>();
-  readonly #containers = new Set<string>();
-  readonly #groups = new Set<string>();
   constructor(readonly log: PrivateInputLog) {}
-
-  async qualified(): Promise<boolean> {
-    if (this.#closed) return false;
-    try {
-      const result = await execute('docker', ['info', '--format', '{{.OSType}}'], {
-        windowsHide: true,
-        timeout: 10_000,
-        maxBuffer: 1024,
-      });
-      await execute('docker', ['image', 'inspect', PRIVATE_COMMAND_IMAGE], {
-        windowsHide: true,
-        timeout: 10_000,
-        maxBuffer: 64_000,
-      });
-      return result.stdout.trim() === 'linux';
-    } catch {
-      return false;
-    }
-  }
-
-  async command(command: string, signal: AbortSignal): Promise<string> {
-    if (command.length > 16_000 || signal.aborted || !(await this.qualified()))
-      throw new Error('Protected command execution is unavailable');
-    const name = 'botharness-private-command-' + randomUUID();
-    this.#containers.add(name);
-    const started = Date.now();
-    this.log('command-started', { program: 'isolated-shell' });
-    try {
-      const output = await this.#spawn('docker', privateCommandArgs(name), command, signal, false);
-      this.log('command-completed', {
-        program: 'isolated-shell',
-        durationMs: Date.now() - started,
-      });
-      return output;
-    } finally {
-      await this.#remove(name);
-    }
-  }
 
   async authenticatedStatus(
     values: Record<string, string>,
@@ -359,71 +280,8 @@ export class ProtectedExecution {
     });
   }
 
-  async #remove(name: string): Promise<void> {
-    try {
-      await execute('docker', ['rm', '--force', name], {
-        windowsHide: true,
-        timeout: 10_000,
-        maxBuffer: 1024,
-      });
-      this.#containers.delete(name);
-    } catch {
-      try {
-        const { stdout } = await execute(
-          'docker',
-          ['ps', '--all', '--quiet', '--filter', 'name=^/' + name + '$'],
-          { windowsHide: true, timeout: 10_000, maxBuffer: 1024 },
-        );
-        if (!stdout.trim()) {
-          this.#containers.delete(name);
-          return;
-        }
-      } catch {}
-      this.log('container-cleanup-failed');
-    }
-  }
-
-  trackContainer(name: string): () => Promise<void> {
-    if (this.#closed) throw new Error('Protected execution is closed');
-    this.#containers.add(name);
-    let cleanup: Promise<void> | undefined;
-    return () => (cleanup ??= this.#remove(name));
-  }
-
-  trackContainerGroup(label: string): () => Promise<void> {
-    if (this.#closed || !/^ai\.botharness\.mcp-owner=[0-9a-f-]{36}$/.test(label))
-      throw new Error('Invalid Linux MCP owner');
-    this.#groups.add(label);
-    let cleanup: Promise<void> | undefined;
-    return () => (cleanup ??= this.#removeGroup(label));
-  }
-
-  async #removeGroup(label: string): Promise<void> {
-    try {
-      const { stdout } = await execute(
-        'docker',
-        ['ps', '--all', '--quiet', '--filter', 'label=' + label],
-        { windowsHide: true, timeout: 10_000, maxBuffer: 4096 },
-      );
-      const ids = stdout.trim().split(/\s+/).filter(Boolean);
-      if (ids.some((id) => !/^[0-9a-f]{12,64}$/.test(id)))
-        throw new Error('Invalid container identity');
-      if (ids.length)
-        await execute('docker', ['rm', '--force', ...ids], {
-          windowsHide: true,
-          timeout: 10_000,
-          maxBuffer: 4096,
-        });
-      this.#groups.delete(label);
-    } catch {
-      this.log('container-cleanup-failed');
-    }
-  }
-
-  async close(): Promise<void> {
+  close(): void {
     this.#closed = true;
     for (const child of this.#children) child.kill();
-    await Promise.allSettled([...this.#containers].map((name) => this.#remove(name)));
-    await Promise.allSettled([...this.#groups].map((label) => this.#removeGroup(label)));
   }
 }

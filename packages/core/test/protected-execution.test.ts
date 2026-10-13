@@ -1,9 +1,6 @@
 import { createServer } from 'node:http';
-import { writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ProtectedExecution, privateCommandArgs } from '../src/credentials/protected-execution.js';
-import { createTempRoot } from './helpers.js';
+import { ProtectedExecution } from '../src/credentials/protected-execution.js';
 
 const executions: ProtectedExecution[] = [];
 afterEach(async () => {
@@ -11,40 +8,6 @@ afterEach(async () => {
 });
 
 describe('qualified CLI output boundary', () => {
-  it.skipIf(process.env.BOTHARNESS_PRIVATE_DOCKER_QA !== '1')(
-    'refuses active Host-file, environment, Docker socket and network extraction from arbitrary commands',
-    async () => {
-      const canary = 'SYNTHETIC-active-extraction-1380';
-      const file = join(createTempRoot('bh-private-host-canary-'), '.credentials.yaml');
-      writeFileSync(file, canary);
-      const quoted = "'" + file.replaceAll('\\', '/').replaceAll("'", "'\\''") + "'";
-      const execution = new ProtectedExecution(() => undefined);
-      executions.push(execution);
-      expect(await execution.qualified()).toBe(true);
-      const output = await execution.command(
-        `
-printf 'ordinary-cli-ok\\n'
-id
-env
-if test -e ${quoted}; then cat ${quoted} | base64; else printf 'host-file-unavailable\\n'; fi
-if test -e /var/run/docker.sock; then printf 'docker-socket-exposed\\n'; else printf 'docker-socket-unavailable\\n'; fi
-find / -name .credentials.yaml 2>/dev/null
-node -e "fetch('http://127.0.0.1:31381/evidence').then(()=>console.log('network-exposed')).catch(()=>console.log('network-unavailable'))"
-`,
-        new AbortController().signal,
-      );
-      expect(output).toContain('ordinary-cli-ok');
-      expect(output).toContain('uid=65534');
-      expect(output).toContain('host-file-unavailable');
-      expect(output).toContain('docker-socket-unavailable');
-      expect(output).toContain('network-unavailable');
-      expect(output).not.toContain('network-exposed');
-      expect(output).not.toContain('DEEPSEEK_API_KEY');
-      expect(output).not.toContain(canary);
-      expect(output).not.toContain(Buffer.from(canary).toString('base64'));
-    },
-  );
-
   it('authenticates a real CLI request while discarding an echoing server body, headers and errors', async () => {
     const canary = 'SYNTHETIC-output-canary-1380';
     let authenticated = false;
@@ -97,15 +60,5 @@ node -e "fetch('http://127.0.0.1:31381/evidence').then(()=>console.log('network-
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
-  });
-
-  it('does not expose mount, network, privilege or command-line environment injection', () => {
-    const args = privateCommandArgs('synthetic-probe');
-    expect(args).toContain('none');
-    expect(args).toContain('no-new-privileges=true');
-    expect(args).not.toContain('--mount');
-    expect(args).not.toContain('--volume');
-    expect(args).not.toContain('--env');
-    expect(args).not.toContain('--privileged');
   });
 });

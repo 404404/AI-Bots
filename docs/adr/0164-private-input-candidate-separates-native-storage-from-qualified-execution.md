@@ -6,7 +6,7 @@ Issues: [#1378](https://github.com/BotHarness/DeepSeekBot/issues/1378), [#1380](
 
 # Private input separates native credential storage from qualified execution
 
-> Amended by [ADR-0189](0189-secret-input-is-available-in-ordinary-profiles.md): secret input no longer requires this opt-in. The boundary below is now the optional protected tier, and stored grants no longer fail closed when the opt-in is off.
+> Amended by [ADR-0189](0189-secret-input-is-available-in-ordinary-profiles.md) and [ADR-0192](0192-the-docker-protected-profile-is-removed.md): secret input no longer requires this opt-in, and the Docker execution boundary below has been removed. The storage, binding and settlement decisions stand.
 
 The #1380 candidate reuses DSH Credentials Service for original values and uses an application-defined owner for PersonaBot/account binding and inline multi-field requests. A reference alone cannot protect a secret from an Agent that can read the native same-user credential file. The candidate therefore qualifies both the trusted CLI and every model-controlled path that could reach its Host, instead of substituting plaintext into an arbitrary Shell command.
 

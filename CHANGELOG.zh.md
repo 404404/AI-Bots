@@ -159,6 +159,7 @@
 
 - Bot 现在可以在普通 Profile 里询问密钥，不需要 Docker 或专门配置：值存进 DSH 的凭据存储并绑定到该 Bot，会话和模型只看到引用，针对凭据存储的文件工具和 Shell 命令会被拒绝。之后 Bot 可以通过 Host 带着这些密钥调用 HTTP 接口：请求发往 Owner 填写的地址，返回内容里的密钥会被掩码。Docker 隔离的 Profile 仍可按需开启（[#1562](https://github.com/BotHarness/DeepSeekBot/issues/1562)、[ADR-0189](docs/adr/0189-secret-input-is-available-in-ordinary-profiles.md)）。
 - Bot 可以带着你在卡片里填写的密钥，运行只从环境变量读取凭据的命令行工具。程序不经 shell 启动，环境变量是干净的，Bot 看到的输出里密钥会被掩码；每次运行都要单独批准，不能保存成规则。（[#1572](https://github.com/BotHarness/DeepSeekBot/issues/1572)、[ADR-0191](docs/adr/0191-a-bot-runs-a-command-line-tool-with-owner-secrets-per-approved-call.md)）
+- 删除了密钥输入中需要 Docker 的 opt-in 受保护 Profile（`privateInputExecution`、容器内 Shell 和容器内 MCP 服务）。密钥输入、通过 HTTP 和命令行使用密钥、替换、撤销以及 Owner CLI 都不受影响，也不需要 Docker。仍然设置该选项的 Profile 会按普通 Profile 启动并记录一条警告。（[#1585](https://github.com/BotHarness/DeepSeekBot/issues/1585)、[ADR-0192](docs/adr/0192-the-docker-protected-profile-is-removed.md)）
 
 - Bot 的提问卡不再卡住 Bot：45 秒内没有回答时，Bot 会继续处理别的消息，之后仍然可以在原卡片上作答。PersonaBot 现在使用产品自带的预设，开启了 DSH 的限时提问。工具审批仍需等待决定（[#1038](https://github.com/BotHarness/DeepSeekBot/issues/1038)、[ADR-0187](docs/adr/0187-personabots-use-a-product-preset-with-timed-questions.md)）。
 

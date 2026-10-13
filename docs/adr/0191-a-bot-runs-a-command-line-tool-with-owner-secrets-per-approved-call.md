@@ -18,7 +18,7 @@ An Orchestrator in an ordinary Profile has `secret_cli`. It names a bare program
 - **One approval per call.** The approval card shows the program, every argument and the placeholders. It offers allow once and reject only; a saved approval rule never covers the call, and it cannot be decided from an external IM. An invalid call is refused before any card.
 - **Bounded result.** At most two minutes; the exit code and up to 32 KB each of stdout and stderr return to the Bot with the secret masked in raw, base64, hex and URL-encoded form.
 
-`secret_cli` is not offered in the opt-in protected Profile, whose Shell runs in a container that a Host-started program would bypass.
+`secret_cli` is not offered in the opt-in protected Profile, whose Shell runs in a container that a Host-started program would bypass. (That Profile was removed by [ADR-0192](0192-the-docker-protected-profile-is-removed.md).)
 
 ## What this does not promise
 
