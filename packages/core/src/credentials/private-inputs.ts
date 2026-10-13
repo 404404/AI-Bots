@@ -47,6 +47,7 @@ type Terminal = 'cancelled' | 'expired';
 type Pending = {
   agent: Agent | undefined;
   botSlug: string;
+  channelId: string;
   botCreatedAt: string;
   request: PrivateInputDeclaration;
   expectedRevision: string | undefined;
@@ -91,6 +92,7 @@ export class PrivateInputs {
       credentials(): CredentialProvider | undefined;
       isLive(agent: Agent): boolean;
       canRequest(agent: Agent, sourceEventId?: string): boolean;
+      askChannel?(sessionId: string): string | undefined;
       origin?(agent: Agent, sourceEventId?: string): PrivateInputOrigin | undefined;
       notify?(
         botSlug: string,
@@ -160,8 +162,16 @@ export class PrivateInputs {
       Date.now() < pending.deadline &&
       owner?.botSlug === pending.botSlug &&
       owner.createdAt === pending.botCreatedAt &&
-      this.deps.channels.get(dmChannelId(pending.botSlug))?.botSlug === pending.botSlug
+      this.#cardChannel(pending.botSlug, pending.channelId)
     );
+  }
+
+  #cardChannel(botSlug: string, channelId: string): boolean {
+    const channel = this.deps.channels.get(channelId);
+    if (channel === undefined) return false;
+    return channel.type === 'group'
+      ? channel.members.includes(botSlug)
+      : channelId === dmChannelId(botSlug) && channel.botSlug === botSlug;
   }
 
   #scope(pending: Pending): PrivateAccountScope {
@@ -202,7 +212,7 @@ export class PrivateInputs {
         pending.botSlug === botSlug &&
         pending.committed &&
         this.#valid(pending) &&
-        this.#resolution(dmChannelId(botSlug), id) === undefined,
+        this.#resolution(pending.channelId, id) === undefined,
     ).length;
     try {
       this.deps.changed?.(botSlug, count);
@@ -213,13 +223,13 @@ export class PrivateInputs {
 
   activeMessageIds(): string[] {
     return [...this.#pending.entries()].flatMap(([id, pending]) =>
-      pending.committed && this.status(dmChannelId(pending.botSlug), id) === 'pending' ? [id] : [],
+      pending.committed && this.status(pending.channelId, id) === 'pending' ? [id] : [],
     );
   }
 
   #grantCommitted(grant: z.infer<typeof storedGrant>, id: string): boolean {
     if (grant.version === 1) return true;
-    if (grant.channelId !== dmChannelId(grant.botSlug)) return false;
+    if (!this.#cardChannel(grant.botSlug, grant.channelId)) return false;
     const card = this.deps.channels.message(grant.channelId, grant.requestMessageId);
     const request = card?.privateInputRequest;
     const resolution = this.#resolution(grant.channelId, grant.requestMessageId);
@@ -348,8 +358,12 @@ export class PrivateInputs {
       currentOwner.createdAt !== owner.createdAt
     )
       throw new Error('Private input request expired');
-    const channelId = dmChannelId(owner.botSlug);
-    if (this.deps.channels.get(channelId)?.botSlug !== owner.botSlug)
+    const asked = this.deps.askChannel?.(agent.session.id);
+    const channelId =
+      asked !== undefined && this.deps.channels.get(asked)?.type === 'group'
+        ? asked
+        : dmChannelId(owner.botSlug);
+    if (!this.#cardChannel(owner.botSlug, channelId))
       throw new Error('Owned conversation is unavailable');
     const scope = {
       botSlug: owner.botSlug,
@@ -415,6 +429,7 @@ export class PrivateInputs {
       binding?.revision,
       undefined,
       origin,
+      channelId,
     );
     if (origin !== undefined && this.status(channelId, opened.messageId) === 'pending') {
       try {
@@ -443,8 +458,8 @@ export class PrivateInputs {
     expectedRevision: string | undefined,
     replacesMessageId?: string,
     origin?: PrivateInputOrigin,
+    channelId = dmChannelId(owner.botSlug),
   ): Promise<{ messageId: string; result: Promise<PrivateInputResult> }> {
-    const channelId = dmChannelId(owner.botSlug);
     const id = randomUUID();
     let resolve!: Pending['resolve'];
     const result = new Promise<PrivateInputResult>((done) => {
@@ -453,6 +468,7 @@ export class PrivateInputs {
     const pending: Pending = {
       agent,
       botSlug: owner.botSlug,
+      channelId,
       botCreatedAt: owner.createdAt,
       request,
       expectedRevision,
@@ -515,7 +531,7 @@ export class PrivateInputs {
     const resolution = this.#resolution(channelId, messageId);
     if (resolution !== undefined) return resolution.state;
     const pending = this.#pending.get(messageId);
-    if (pending !== undefined && channelId === dmChannelId(pending.botSlug) && pending.committed) {
+    if (pending !== undefined && channelId === pending.channelId && pending.committed) {
       if (this.#valid(pending)) return 'pending';
       void this.#stop(messageId, pending, pending.terminal ?? 'expired');
     }
@@ -537,7 +553,7 @@ export class PrivateInputs {
 
   async #terminal(id: string, pending: Pending): Promise<boolean> {
     const state = pending.terminal ?? 'expired';
-    const channelId = dmChannelId(pending.botSlug);
+    const channelId = pending.channelId;
     let committed = false;
     try {
       const result = await this.deps.channels.appendMessageOnce(channelId, {
@@ -566,7 +582,7 @@ export class PrivateInputs {
 
   async #stop(id: string, pending: Pending, state: Terminal): Promise<boolean> {
     if (this.#pending.get(id) !== pending) return false;
-    const resolution = this.#resolution(dmChannelId(pending.botSlug), id);
+    const resolution = this.#resolution(pending.channelId, id);
     if (resolution !== undefined) {
       if (pending.operation !== undefined) await pending.operation;
       else
@@ -590,7 +606,7 @@ export class PrivateInputs {
     }
     if (pending.operation !== undefined) {
       await pending.operation;
-      return this.#resolution(dmChannelId(pending.botSlug), id)?.state === state;
+      return this.#resolution(pending.channelId, id)?.state === state;
     }
     pending.operation = this.#terminal(id, pending);
     try {
@@ -610,7 +626,7 @@ export class PrivateInputs {
     if (
       pending === undefined ||
       pending.operation !== undefined ||
-      channelId !== dmChannelId(pending.botSlug) ||
+      channelId !== pending.channelId ||
       this.status(channelId, messageId) !== 'pending'
     )
       return false;
@@ -750,7 +766,7 @@ export class PrivateInputs {
     if (
       !owner ||
       pending === undefined ||
-      channelId !== dmChannelId(pending.botSlug) ||
+      channelId !== pending.channelId ||
       this.status(channelId, messageId) !== 'pending'
     )
       return false;
@@ -893,8 +909,7 @@ export class PrivateInputs {
     if (
       this.#closed ||
       bot === undefined ||
-      channelId !== dmChannelId(bot.slug) ||
-      this.deps.channels.get(channelId)?.botSlug !== bot.slug ||
+      !this.#cardChannel(bot.slug, channelId) ||
       request === undefined ||
       resolution?.state !== 'configured' ||
       grantId === undefined
@@ -1068,6 +1083,8 @@ export class PrivateInputs {
         new AbortController().signal,
         binding?.revision,
         messageId,
+        undefined,
+        channelId,
       );
       return opened.messageId;
     });
