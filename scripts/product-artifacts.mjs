@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import semver from 'semver';
+import { readComposedReleaseLedgers } from './change-fragments.mjs';
 import { providerRuntimeDigest } from './dev-im-provider.mjs';
 import { pnpmCommand } from './dev-package-manager.mjs';
 
@@ -266,7 +267,11 @@ export function packProduct({ repoRoot, outputDirectory, providerSource, version
     const { private: _private, devDependencies: _dev, scripts: _scripts, ...release } = manifest;
     for (const path of manifest.files) copyAvailable(source, target, [path]);
     const ledgers = name === 'core' ? ['CHANGELOG.md', 'CHANGELOG.zh.md'] : [];
-    for (const ledger of ledgers) cpSync(join(repoRoot, ledger), join(target, ledger));
+    if (ledgers.length > 0) {
+      const { english, chinese } = readComposedReleaseLedgers(repoRoot);
+      writeFileSync(join(target, 'CHANGELOG.md'), english);
+      writeFileSync(join(target, 'CHANGELOG.zh.md'), chinese);
+    }
     cpSync(join(repoRoot, 'LICENSE'), join(target, 'LICENSE'));
     writeJson(join(target, 'package.json'), {
       ...release,

@@ -1,11 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import {
+  composeReleaseLedgerPair,
+  parseChangeFragment,
   parseReleaseLedger,
   validateReleaseLedger,
   validateReleaseLedgerPair,
@@ -335,6 +337,117 @@ Make release history easier to scan.
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
         "CHANGELOG.md [empty-section] Unreleased / Added must contain a change entry.",
+      );
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+const ISSUE = "https://github.com/BotHarness/BotHarness/issues/1552";
+const fragment = (section: string, en: string, zh: string) =>
+  `---\nsection: ${section}\n---\n\n## en\n\n- ${en} ([#1552](${ISSUE})).\n\n## zh\n\n- ${zh}（[#1552](${ISSUE})）。\n`;
+const ledger = (title: string, summary: string, entry: string) =>
+  `# ${title}\n\n## [Unreleased]\n\n${summary}\n\n### Added\n\n- ${entry} ([#1](https://github.com/BotHarness/BotHarness/issues/1)).\n\n## [0.1.0] - 2026-09-20\n\n${summary}\n\n### Added\n\n- ${entry} ([#1](https://github.com/BotHarness/BotHarness/issues/1)).\n`;
+
+describe("Unreleased change fragments", () => {
+  it("parses one bilingual fragment and rejects structural defects", () => {
+    const parsed = parseChangeFragment(fragment("Fixed", "Fixed a thing", "修复了一个问题"));
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.section).toBe("Fixed");
+    expect(parsed.english.map((entry) => entry.links)).toEqual([[ISSUE]]);
+    expect(parsed.chinese).toHaveLength(1);
+
+    const codes = (markdown: string) =>
+      parseChangeFragment(markdown).errors.map((error) => error.code);
+    expect(codes(fragment("Highlights", "A", "甲"))).toContain("unknown-section");
+    expect(codes("## en\n\n- A ([#1](https://github.com/o/r/issues/1)).\n")).toEqual(
+      expect.arrayContaining(["fragment-section", "empty-section"]),
+    );
+    expect(
+      codes(
+        `---\nsection: Added\n---\n\n## en\n\n- A ([#1](${ISSUE})).\n- B ([#1](${ISSUE})).\n\n## zh\n\n- 甲（[#1](${ISSUE})）。\n`,
+      ),
+    ).toContain("entry-parity");
+    expect(
+      codes(
+        `---\nsection: Added\n---\n\n## en\n\n- A ([#1](${ISSUE})).\n\n## zh\n\n- 甲（[#2](https://github.com/o/r/pull/2)）。\n`,
+      ),
+    ).toContain("link-parity");
+    expect(
+      codes(`---\nsection: Added\n---\n\n## en\n\n- No link.\n\n## zh\n\n- 没有链接。\n`),
+    ).toContain("missing-provenance");
+  });
+
+  it("appends fragments to their Unreleased sections and creates missing ones", () => {
+    const composed = composeReleaseLedgerPair(
+      ledger("DeepSeekBot Changelog", "Summary.", "Existing"),
+      ledger("DeepSeekBot 更新日志", "摘要。", "已有"),
+      [
+        parseChangeFragment(fragment("Added", "Added B", "新增乙")),
+        parseChangeFragment(fragment("Fixed", "Fixed C", "修复丙")),
+      ],
+    );
+
+    expect(validateReleaseLedgerPair(composed.english, composed.chinese)).toEqual([]);
+    const [unreleased, released] = parseReleaseLedger(composed.english).releases;
+    expect(
+      unreleased.sections.map((section) => [section.name, section.entries.map((e) => e.text)]),
+    ).toEqual([
+      [
+        "Added",
+        [
+          "Existing ([#1](https://github.com/BotHarness/BotHarness/issues/1)).",
+          `Added B ([#1552](${ISSUE})).`,
+        ],
+      ],
+      ["Fixed", [`Fixed C ([#1552](${ISSUE})).`]],
+    ]);
+    expect(released.sections[0].entries).toHaveLength(1);
+    expect(parseReleaseLedger(composed.chinese).releases[0].sections[1].name).toBe("Fixed");
+  });
+
+  it("checks fragments next to the ledgers and folds them in for a release", () => {
+    const directory = mkdtempSync(resolve(tmpdir(), "botharness-change-fragments-"));
+    try {
+      writeFileSync(resolve(directory, "CHANGELOG.md"), ledger("Changelog", "Summary.", "Existing"));
+      writeFileSync(resolve(directory, "CHANGELOG.zh.md"), ledger("更新日志", "摘要。", "已有"));
+      mkdirSync(resolve(directory, "changes"));
+      writeFileSync(resolve(directory, "changes/README.md"), "# Not a fragment\n");
+      writeFileSync(
+        resolve(directory, "changes/1552-bad.md"),
+        fragment("Highlights", "Bad", "坏"),
+      );
+      const run = (script: string, args: string[]) =>
+        spawnSync(process.execPath, [resolve(script), ...args], {
+          cwd: directory,
+          encoding: "utf8",
+        });
+      const ledgers = [resolve(directory, "CHANGELOG.md"), resolve(directory, "CHANGELOG.zh.md")];
+
+      const rejected = run("scripts/check-release-ledger.mjs", ledgers);
+      expect(rejected.status).toBe(1);
+      expect(rejected.stderr).toContain("[unknown-section] Highlights is not an allowed");
+      expect(run("scripts/fold-change-fragments.mjs", [directory]).status).toBe(1);
+      expect(existsSync(resolve(directory, "changes/1552-bad.md"))).toBe(true);
+
+      rmSync(resolve(directory, "changes/1552-bad.md"));
+      writeFileSync(
+        resolve(directory, "changes/1552-good.md"),
+        fragment("Fixed", "Fixed C", "修复丙"),
+      );
+      const accepted = run("scripts/check-release-ledger.mjs", ledgers);
+      expect(accepted.stdout).toContain("valid (1 Unreleased change fragments)");
+
+      const folded = run("scripts/fold-change-fragments.mjs", [directory]);
+      expect(folded.status).toBe(0);
+      expect(existsSync(resolve(directory, "changes/1552-good.md"))).toBe(false);
+      expect(existsSync(resolve(directory, "changes/README.md"))).toBe(true);
+      expect(readFileSync(resolve(directory, "CHANGELOG.zh.md"), "utf8")).toContain(
+        "### Fixed\n\n- 修复丙",
+      );
+      expect(run("scripts/check-release-ledger.mjs", ledgers).stdout).toContain(
+        "valid (0 Unreleased change fragments)",
       );
     } finally {
       rmSync(directory, { recursive: true, force: true });

@@ -48,3 +48,21 @@ export function validateDshSkillReleaseLedgerPair(
     upstreamSha: string;
   },
 ): ReleaseLedgerError[];
+
+export interface ChangeFragmentEntry extends ReleaseLedgerEntry {
+  lines: string[];
+}
+
+export interface ChangeFragment {
+  section?: string;
+  english: ChangeFragmentEntry[];
+  chinese: ChangeFragmentEntry[];
+  errors: ReleaseLedgerError[];
+}
+
+export function parseChangeFragment(markdown: string, source?: string): ChangeFragment;
+export function composeReleaseLedgerPair(
+  english: string,
+  chinese: string,
+  fragments: ChangeFragment[],
+): { english: string; chinese: string };
