@@ -5,7 +5,6 @@ import {
   Button,
   IconEllipsisOutlineRegular,
   IconChevronDownOutlineRegular,
-  Input,
   Menu,
   Tag,
   Tooltip,
@@ -44,10 +43,11 @@ import { MemoryEntry } from './memory-entry.js';
 import { MemoryRecovery } from './memory-recovery.js';
 import { cachedMemory, invalidateMemory } from './memory-read-cache.js';
 import { MemoryFilesEntry } from './memory-files-entry.js';
-import { Modal } from './modal.js';
+import { Note } from './ds/note.js';
+import { PanelDialog } from './ds/panel-dialog.js';
 import { ExternalSourceContent } from './external-source-content.js';
 import { externalPlatformLabel, externalSenderLabel } from './bridge-source-label.js';
-import { GroupAvatarCropModal } from './group-avatar-crop.js';
+import { DisbandGroupDialog, GroupManagementSettings } from './group-management-settings.js';
 import { MembersEntry, MembersHeaderAction } from './group-member-controls.js';
 import { GroupWorkEntry } from './group-work-entry.js';
 import { PrivateAccountsSection } from './private-accounts-section.js';
@@ -69,7 +69,7 @@ import {
   type InboxSection,
 } from './inbox-sections.js';
 import type { BotHarnessTranslate } from './locale.js';
-import type { BotAttentionItem, ChannelSummary } from './store.js';
+import type { BotAttentionItem } from './store.js';
 
 const inactiveSubscribe = (): (() => void) => () => {};
 
@@ -99,101 +99,8 @@ function inboxIcon(item: BotAttentionItem): string {
 function GroupManagementEntry(props: ChannelSidebarEntryProps): ReactElement {
   const group = useClientState().conversation.channel;
   if (group?.type !== 'group') return <></>;
-  return <GroupManagementForChannel key={group.id} {...props} group={group} />;
-}
-
-function GroupManagementForChannel({
-  actions,
-  t,
-  group,
-}: ChannelSidebarEntryProps & { group: ChannelSummary }): ReactElement {
-  const [nameState, setNameState] = useState({ source: group.name, draft: group.name });
-  if (nameState.source !== group.name) {
-    setNameState({ source: group.name, draft: group.name });
-  }
-  const name = nameState.source === group.name ? nameState.draft : group.name;
-  const [cropFile, setCropFile] = useState<File>();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-  const apply = async (result: Promise<boolean>): Promise<boolean> => {
-    setBusy(true);
-    try {
-      const ok = await result;
-      setError(!ok);
-      return ok;
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
-    <div className="bh-group-management">
-      <div className="bh-group-setting">
-        <div className="bh-group-invitations-title">{t('group.avatar')}</div>
-        <div className="bh-group-avatar-setting">
-          {group.avatar ? <img src={group.avatar} alt="" /> : <span aria-hidden="true">#</span>}
-          <label className="bh-group-manage-button">
-            {t('group.avatarChoose')}
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              disabled={busy}
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                if (file) setCropFile(file);
-                event.currentTarget.value = '';
-              }}
-            />
-          </label>
-          {group.avatar ? (
-            <button
-              type="button"
-              className="bh-group-manage-button"
-              disabled={busy}
-              onClick={() => void apply(actions.setGroupAvatar(group.id, null))}
-            >
-              {t('group.avatarRemove')}
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <form
-        className="bh-group-setting"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (name.trim() !== group.name) void apply(actions.renameChannel(group.id, name.trim()));
-        }}
-      >
-        <label htmlFor="bh-group-name">{t('group.name')}</label>
-        <div className="bh-group-setting-row">
-          <Input
-            id="bh-group-name"
-            value={name}
-            maxLength={120}
-            onChange={(event) => setNameState({ source: group.name, draft: event.target.value })}
-          />
-          <button
-            type="submit"
-            className="bh-group-manage-button"
-            disabled={busy || !name.trim() || name.trim() === group.name}
-          >
-            {t('group.save')}
-          </button>
-        </div>
-      </form>
-      {cropFile ? (
-        <GroupAvatarCropModal
-          file={cropFile}
-          t={t}
-          onClose={() => setCropFile(undefined)}
-          onSave={(avatar) => apply(actions.setGroupAvatar(group.id, avatar))}
-        />
-      ) : null}
-      {error ? (
-        <div className="bh-error" role="alert">
-          {t('members.error')}
-        </div>
-      ) : null}
-    </div>
+    <GroupManagementSettings key={group.id} actions={props.actions} t={props.t} group={group} />
   );
 }
 
@@ -209,19 +116,8 @@ function GroupManagementHeaderForChannel({
   const group = useClientState().conversation.channel;
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
   if (group?.type !== 'group' || group.id !== channelId) return <></>;
   const items: readonly MenuEntry[] = [{ id: 'disband', label: t('members.delete') }];
-  const disband = async (): Promise<void> => {
-    setBusy(true);
-    try {
-      if (await actions.deleteGroupChannel(group.id)) setConfirmOpen(false);
-      else setError(true);
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <>
       <Menu
@@ -250,29 +146,12 @@ function GroupManagementHeaderForChannel({
         onClose={() => setMenuOpen(false)}
       />
       {confirmOpen ? (
-        <Modal
-          open
+        <DisbandGroupDialog
+          group={group}
+          actions={actions}
+          t={t}
           onClose={() => setConfirmOpen(false)}
-          closeLabel={t('common.close')}
-          title={t('members.delete')}
-          description={t('members.deleteConfirm', { name: group.name })}
-          footer={
-            <>
-              <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-                {t('common.cancel')}
-              </Button>
-              <Button variant="primary" disabled={busy} onClick={() => void disband()}>
-                {t('members.delete')}
-              </Button>
-            </>
-          }
-        >
-          {error ? (
-            <div className="bh-error" role="alert">
-              {t('members.error')}
-            </div>
-          ) : null}
-        </Modal>
+        />
       ) : null}
     </>
   );
@@ -554,8 +433,10 @@ function BotInboxItemRow({
         />
       ) : null}
       {externalOpen ? (
-        <Modal
-          open
+        <PanelDialog
+          size="medium"
+          fill
+          bodyRef={previewLifecycle}
           onClose={() => {
             ++externalRequest.current;
             fileRequest.current?.abort();
@@ -572,148 +453,141 @@ function BotInboxItemRow({
             setExternalOpen(false);
           }}
           title={t('im.sourceTitle')}
-          className="bh-external-source-modal"
           closeLabel={t('common.close')}
         >
-          <div ref={previewLifecycle}>
-            {externalError ? (
-              <p role="alert">{t('im.sourceError')}</p>
-            ) : external === undefined ? (
-              <p>{t('im.sourceLoading')}</p>
-            ) : (
-              <ExternalSourceContent
-                source={external}
-                t={t}
-                messageMedia={
-                  imageAttachments.length || videoAttachments.length ? (
-                    <>
-                      {imageAttachments.map((file) => (
-                        <div className="bh-external-source-attachment" key={file.id}>
-                          {imagePreviews[file.id] ? (
-                            <img
-                              className="bh-external-source-image"
-                              src={imagePreviews[file.id]}
-                              alt={file.name}
-                            />
-                          ) : imageErrors[file.id] ? (
-                            <>
-                              <p role="alert">{t('im.fileError')}</p>
-                              <Button
-                                disabled={fileBusy !== undefined}
-                                onClick={() => void download(file.id, file.name, true)}
-                              >
-                                {t('im.imageRetry')}
-                              </Button>
-                            </>
-                          ) : (
-                            <span role="status">{t('im.fileDownloading')}</span>
-                          )}
-                        </div>
-                      ))}
-                      {videoAttachments.map((file) => (
-                        <div className="bh-external-source-video" key={file.id}>
-                          {videoPreviews[file.id] ? (
-                            <video
-                              controls
-                              preload="metadata"
-                              playsInline
-                              src={videoPreviews[file.id]}
-                              aria-label={t('im.videoPlayer')}
-                              onError={() =>
-                                setVideoErrors((value) => ({ ...value, [file.id]: true }))
-                              }
-                            />
-                          ) : null}
-                          {videoErrors[file.id] ? (
+          {externalError ? (
+            <Note tone="danger">{t('im.sourceError')}</Note>
+          ) : external === undefined ? (
+            <Note>{t('im.sourceLoading')}</Note>
+          ) : (
+            <ExternalSourceContent
+              source={external}
+              t={t}
+              messageMedia={
+                imageAttachments.length || videoAttachments.length ? (
+                  <>
+                    {imageAttachments.map((file) => (
+                      <div className="bh-external-source-attachment" key={file.id}>
+                        {imagePreviews[file.id] ? (
+                          <img
+                            className="bh-external-source-image"
+                            src={imagePreviews[file.id]}
+                            alt={file.name}
+                          />
+                        ) : imageErrors[file.id] ? (
+                          <>
+                            <p role="alert">{t('im.fileError')}</p>
                             <Button
-                              variant="primary"
                               disabled={fileBusy !== undefined}
-                              onClick={() => void download(file.id, file.name, 'video')}
+                              onClick={() => void download(file.id, file.name, true)}
                             >
-                              {fileBusy === file.id ? t('im.videoLoading') : t('im.videoRetry')}
+                              {t('im.imageRetry')}
                             </Button>
-                          ) : !videoPreviews[file.id] && !videoErrors[file.id] ? (
-                            <span role="status">{t('im.videoLoading')}</span>
-                          ) : null}
-                          {videoErrors[file.id] ? (
-                            <p role="alert">{t('im.videoUnavailable')}</p>
-                          ) : null}
-                        </div>
-                      ))}
-                    </>
-                  ) : undefined
-                }
-              >
-                {external.event.attachments?.map((file) => (
-                  <div className="bh-external-source-attachment" key={file.id}>
-                    {external.event.voice && file.mediaType?.startsWith('audio/') ? (
-                      <div className="bh-external-source-audio">
-                        {audioPreviews[file.id] ? (
-                          <audio
+                          </>
+                        ) : (
+                          <span role="status">{t('im.fileDownloading')}</span>
+                        )}
+                      </div>
+                    ))}
+                    {videoAttachments.map((file) => (
+                      <div className="bh-external-source-video" key={file.id}>
+                        {videoPreviews[file.id] ? (
+                          <video
                             controls
                             preload="metadata"
-                            src={audioPreviews[file.id]}
-                            aria-label={t('im.voiceAudioPlayer')}
+                            playsInline
+                            src={videoPreviews[file.id]}
+                            aria-label={t('im.videoPlayer')}
                             onError={() =>
-                              setAudioErrors((value) => ({ ...value, [file.id]: true }))
+                              setVideoErrors((value) => ({ ...value, [file.id]: true }))
                             }
                           />
                         ) : null}
-                        {!audioPreviews[file.id] || audioErrors[file.id] ? (
+                        {videoErrors[file.id] ? (
                           <Button
                             variant="primary"
                             disabled={fileBusy !== undefined}
-                            onClick={() => void download(file.id, 'voice.wav', 'audio')}
+                            onClick={() => void download(file.id, file.name, 'video')}
                           >
-                            {fileBusy === file.id
-                              ? t('im.voiceAudioPreparing')
-                              : audioPreviews[file.id]
-                                ? t('im.voiceAudioRetry')
-                                : t('im.voiceAudioPrepare')}
+                            {fileBusy === file.id ? t('im.videoLoading') : t('im.videoRetry')}
                           </Button>
+                        ) : !videoPreviews[file.id] && !videoErrors[file.id] ? (
+                          <span role="status">{t('im.videoLoading')}</span>
                         ) : null}
-                        <p>{t('im.voiceAudioHint')}</p>
-                        {audioErrors[file.id] ? (
-                          <p role="alert">{t('im.voiceAudioUnavailable')}</p>
+                        {videoErrors[file.id] ? (
+                          <p role="alert">{t('im.videoUnavailable')}</p>
                         ) : null}
                       </div>
-                    ) : null}
-                    <div className="bh-external-source-file">
-                      <span>
-                        {file.name}
-                        {file.sizeBytes !== undefined || file.mediaType ? (
-                          <small>
-                            {' '}
-                            ·{' '}
-                            {[
-                              file.mediaType,
-                              file.sizeBytes === undefined
-                                ? undefined
-                                : `${new Intl.NumberFormat().format(file.sizeBytes)} B`,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </small>
-                        ) : null}
-                      </span>
-                      <Button
-                        disabled={fileBusy !== undefined}
-                        onClick={() => void download(file.id, file.name)}
-                      >
-                        {fileBusy === file.id
-                          ? t('im.fileDownloading')
-                          : t(
-                              external.event.voice ? 'im.voiceDownloadOriginal' : 'im.fileDownload',
-                            )}
-                      </Button>
+                    ))}
+                  </>
+                ) : undefined
+              }
+            >
+              {external.event.attachments?.map((file) => (
+                <div className="bh-external-source-attachment" key={file.id}>
+                  {external.event.voice && file.mediaType?.startsWith('audio/') ? (
+                    <div className="bh-external-source-audio">
+                      {audioPreviews[file.id] ? (
+                        <audio
+                          controls
+                          preload="metadata"
+                          src={audioPreviews[file.id]}
+                          aria-label={t('im.voiceAudioPlayer')}
+                          onError={() => setAudioErrors((value) => ({ ...value, [file.id]: true }))}
+                        />
+                      ) : null}
+                      {!audioPreviews[file.id] || audioErrors[file.id] ? (
+                        <Button
+                          variant="primary"
+                          disabled={fileBusy !== undefined}
+                          onClick={() => void download(file.id, 'voice.wav', 'audio')}
+                        >
+                          {fileBusy === file.id
+                            ? t('im.voiceAudioPreparing')
+                            : audioPreviews[file.id]
+                              ? t('im.voiceAudioRetry')
+                              : t('im.voiceAudioPrepare')}
+                        </Button>
+                      ) : null}
+                      <p>{t('im.voiceAudioHint')}</p>
+                      {audioErrors[file.id] ? (
+                        <p role="alert">{t('im.voiceAudioUnavailable')}</p>
+                      ) : null}
                     </div>
+                  ) : null}
+                  <div className="bh-external-source-file">
+                    <span>
+                      {file.name}
+                      {file.sizeBytes !== undefined || file.mediaType ? (
+                        <small>
+                          {' '}
+                          ·{' '}
+                          {[
+                            file.mediaType,
+                            file.sizeBytes === undefined
+                              ? undefined
+                              : `${new Intl.NumberFormat().format(file.sizeBytes)} B`,
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </small>
+                      ) : null}
+                    </span>
+                    <Button
+                      disabled={fileBusy !== undefined}
+                      onClick={() => void download(file.id, file.name)}
+                    >
+                      {fileBusy === file.id
+                        ? t('im.fileDownloading')
+                        : t(external.event.voice ? 'im.voiceDownloadOriginal' : 'im.fileDownload')}
+                    </Button>
                   </div>
-                ))}
-                {fileError ? <p role="alert">{t('im.fileError')}</p> : null}
-              </ExternalSourceContent>
-            )}
-          </div>
-        </Modal>
+                </div>
+              ))}
+              {fileError ? <p role="alert">{t('im.fileError')}</p> : null}
+            </ExternalSourceContent>
+          )}
+        </PanelDialog>
       ) : null}
     </>
   );
@@ -978,13 +852,12 @@ function MemoryHeaderAction({
         }}
       />
       {!backups ? null : (
-        <Modal
-          open
+        <PanelDialog
+          size="small"
           onClose={() => setBackups(false)}
           closeLabel={t('common.close')}
           title={t('memory.backups.title')}
           description={t('memory.backups.intro')}
-          className="bh-memory-backups-dialog"
         >
           <MemoryRecovery
             actions={actions}
@@ -993,7 +866,7 @@ function MemoryHeaderAction({
             t={t}
             onRestored={() => invalidateMemory(cachedMemory(actions, channelId))}
           />
-        </Modal>
+        </PanelDialog>
       )}
     </>
   );
@@ -1066,10 +939,9 @@ function AssignmentLimitDialog({
     prefs.source.getSnapshot,
   );
   return (
-    <Modal
-      open
+    <PanelDialog
+      size="small"
       title={t('assignmentLimit.title')}
-      className="bh-assignment-limit-dialog"
       onClose={onClose}
       closeLabel={t('common.close')}
     >
@@ -1080,7 +952,7 @@ function AssignmentLimitDialog({
         save={(limit) => prefs.setAssignmentConcurrencyLimit(limit)}
         variant="dialog"
       />
-    </Modal>
+    </PanelDialog>
   );
 }
 
