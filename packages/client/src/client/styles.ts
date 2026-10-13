@@ -5224,23 +5224,6 @@ button.bh-bot-nav > svg {
 }
 
 /* Bot icon chooser: what you see is what you pick — one card per mark. */
-/* Manual path fallback inside a settings row (the picker may be absent). */
-.bh-settings-input {
-  width: 100%;
-  min-width: 0;
-  padding: 5px 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  font-size: 12px;
-}
-
-.bh-settings-input:focus {
-  outline: none;
-  border-color: var(--bh-accent);
-}
 
 
 
@@ -5316,39 +5299,6 @@ button.bh-bot-nav > svg {
   line-height: 20px;
   color: var(--dsw-alias-label-primary);
 }
-.bh-settings-section-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 16px 0 4px;
-}
-.bh-settings-section-desc {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 16px;
-  color: var(--dsw-alias-label-secondary);
-}
-.bh-settings-selector {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 8px 0 12px;
-  border: none;
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-module-platform);
-  font: inherit;
-  font-size: 13px;
-  line-height: 20px;
-  color: var(--dsw-alias-label-primary);
-  cursor: pointer;
-}
-.bh-settings-selector:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.bh-settings-chevron {
-  flex: none;
-}
 .bh-settings-row {
   display: flex;
   align-items: center;
@@ -5362,12 +5312,6 @@ button.bh-bot-nav > svg {
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-.bh-settings-row-title {
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  color: var(--dsw-alias-label-primary);
 }
 .bh-settings-row-desc {
   font-size: 12px;
