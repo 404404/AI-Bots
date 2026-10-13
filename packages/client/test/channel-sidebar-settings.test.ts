@@ -28,20 +28,12 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     icon?: ReactNode;
   }) => createElement('button', { role: 'menuitem', onClick: onSelect, disabled }, icon, children),
 }));
-import {
-  ChannelSidebarSettings,
-  MemoryDisplaySettings,
-  SessionsDisplaySettings,
-} from '../src/client/channel-sidebar-settings.js';
-import {
-  readSessionViewPreference,
-  updateSessionViewPreference,
-} from '../src/client/session-view-prefs.js';
+import { ChannelSidebarSettings } from '../src/client/channel-sidebar-settings.js';
+import { TerminologySettings } from './support/terminology-settings.js';
 import {
   channelSidebarPrefs,
   createChannelSidebarPrefs,
 } from '../src/client/channel-sidebar-prefs.js';
-import { hiddenDmActionsSnapshot } from '../src/client/dm-actions.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const mounted: { root: Root; container: HTMLDivElement }[] = [];
@@ -67,18 +59,11 @@ function mount(slug: string | null = 'settings-qa', settings = true) {
         entries: settings
           ? [
               {
-                id: 'sessions',
-                label: 'Sessions',
-                scope: 'personabot',
-                component: () => null,
-                settings: SessionsDisplaySettings,
-              },
-              {
                 id: 'memory',
                 label: 'Memory',
                 scope: 'personabot',
                 component: () => null,
-                settings: MemoryDisplaySettings,
+                settings: TerminologySettings,
               },
             ]
           : [],
@@ -104,37 +89,6 @@ afterEach(() => {
 });
 
 describe('registered Channel sidebar display settings', () => {
-  it('persists Sessions choices per Bot and preserves the other choice and collapsed workspaces', () => {
-    updateSessionViewPreference('settings-qa', () => ({
-      scope: 'current',
-      layout: 'flat',
-      collapsedWorkspaces: ['ws-one'],
-    }));
-    updateSessionViewPreference('settings-other', () => ({
-      scope: 'current',
-      layout: 'flat',
-      collapsedWorkspaces: [],
-    }));
-    const container = mount();
-    click(container, 'sidebar.settings');
-    click(container, 'entry.sessions · sessions.view');
-    click(container, 'sessions.all');
-    expect(container.querySelector('[role=menu]')).not.toBeNull();
-    expect(readSessionViewPreference('settings-qa')).toEqual({
-      scope: 'all',
-      layout: 'flat',
-      collapsedWorkspaces: ['ws-one'],
-    });
-    click(container, 'entry.sessions · sessions.layout');
-    click(container, 'sessions.layout.workspace');
-    expect(readSessionViewPreference('settings-qa')).toEqual({
-      scope: 'all',
-      layout: 'workspace',
-      collapsedWorkspaces: ['ws-one'],
-    });
-    expect(readSessionViewPreference('settings-other').scope).toBe('current');
-    expect(readSessionViewPreference('settings-other').layout).toBe('flat');
-  });
   it('keeps terminology shared across Bots and restores it from browser storage', () => {
     const first = mount('memory-qa-one');
     const second = mount('memory-qa-two');
@@ -157,20 +111,5 @@ describe('registered Channel sidebar display settings', () => {
     expect(item?.textContent).toBe('sidebar.settings.empty');
     expect(item?.hasAttribute('disabled')).toBe(true);
     expect(container.textContent).not.toContain('sessions.all');
-  });
-  it('toggles which of the Bot actions elsewhere its DM shows, per Bot', () => {
-    const container = mount('timeline-qa', false);
-    click(container, 'sidebar.settings');
-    click(container, 'dmTrace.menu');
-    const item = (label: string) =>
-      [...container.querySelectorAll('button')].find((n) => n.textContent === label);
-    expect(item('dmTrace.kind.posts')?.querySelector('svg')).not.toBeNull();
-    click(container, 'dmTrace.kind.posts');
-    expect(hiddenDmActionsSnapshot('timeline-qa')).toEqual(['posts']);
-    expect(hiddenDmActionsSnapshot('timeline-other')).toEqual([]);
-    expect(item('dmTrace.kind.posts')?.querySelector('svg')).toBeNull();
-    expect(item('dmTrace.kind.memory')?.querySelector('svg')).not.toBeNull();
-    click(container, 'dmTrace.kind.posts');
-    expect(hiddenDmActionsSnapshot('timeline-qa')).toEqual([]);
   });
 });

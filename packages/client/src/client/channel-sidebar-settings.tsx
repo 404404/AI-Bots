@@ -4,7 +4,6 @@ import {
   useId,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -15,24 +14,8 @@ import {
   MenuSurface,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
-import type {
-  ChannelSidebarEntry,
-  ChannelSidebarEntryProps,
-  ChannelSidebarSettingsProps,
-} from './channel-sidebar.js';
+import type { ChannelSidebarEntry, ChannelSidebarEntryProps } from './channel-sidebar.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
-import { channelSidebarPrefs } from './channel-sidebar-prefs.js';
-import {
-  DM_ACTION_KINDS,
-  hiddenDmActionsSnapshot,
-  subscribeHiddenDmActions,
-  toggleHiddenDmAction,
-} from './dm-actions.js';
-import {
-  sessionViewPreferenceSnapshot,
-  subscribeSessionViewPreference,
-  updateSessionViewPreference,
-} from './session-view-prefs.js';
 
 const SubmenuContext = createContext<{
   active: string | undefined;
@@ -40,7 +23,7 @@ const SubmenuContext = createContext<{
   hide(id: string): void;
 }>({ active: undefined, show: () => {}, hide: () => {} });
 
-function SettingsSubmenu({
+export function SettingsSubmenu({
   label,
   children,
   onPreview,
@@ -104,115 +87,14 @@ function SettingsSubmenu({
   );
 }
 
-export function SessionsDisplaySettings({
-  botSlug,
-  t,
-  onPreview,
-}: ChannelSidebarSettingsProps): ReactElement {
-  const slug = botSlug ?? '';
-  const preference = useSyncExternalStore(
-    (listener) => subscribeSessionViewPreference(slug, listener),
-    () => sessionViewPreferenceSnapshot(slug),
-    () => sessionViewPreferenceSnapshot(slug),
-  );
-  return (
-    <>
-      <SettingsSubmenu
-        label={t('entry.sessions') + ' · ' + t('sessions.view')}
-        onPreview={onPreview}
-      >
-        {(['current', 'all'] as const).map((scope) => (
-          <MenuItemButton
-            key={scope}
-            icon={preference.scope === scope ? <ChannelSidebarIcon name="check" /> : undefined}
-            onSelect={() => {
-              updateSessionViewPreference(slug, (current) => ({ ...current, scope }));
-            }}
-          >
-            {t(scope === 'current' ? 'sessions.current' : 'sessions.all')}
-          </MenuItemButton>
-        ))}
-      </SettingsSubmenu>
-      <SettingsSubmenu
-        label={t('entry.sessions') + ' · ' + t('sessions.layout')}
-        onPreview={onPreview}
-      >
-        {(['flat', 'workspace'] as const).map((layout) => (
-          <MenuItemButton
-            key={layout}
-            icon={preference.layout === layout ? <ChannelSidebarIcon name="check" /> : undefined}
-            onSelect={() => {
-              updateSessionViewPreference(slug, (current) => ({ ...current, layout }));
-            }}
-          >
-            {t(layout === 'flat' ? 'sessions.layout.flat' : 'sessions.layout.workspace')}
-          </MenuItemButton>
-        ))}
-      </SettingsSubmenu>
-    </>
-  );
-}
-
-export function MemoryDisplaySettings({ t, onPreview }: ChannelSidebarSettingsProps): ReactElement {
-  const terminology = useSyncExternalStore(
-    channelSidebarPrefs.subscribe,
-    () => channelSidebarPrefs.getSnapshot().memoryTerminology,
-    () => channelSidebarPrefs.getSnapshot().memoryTerminology,
-  );
-  return (
-    <SettingsSubmenu
-      label={t('entry.memoryEvolution') + ' · ' + t('memory.terminology')}
-      onPreview={onPreview}
-    >
-      {(['memory', 'git'] as const).map((term) => (
-        <MenuItemButton
-          key={term}
-          icon={terminology === term ? <ChannelSidebarIcon name="check" /> : undefined}
-          onSelect={() => {
-            channelSidebarPrefs.setMemoryTerminology(term);
-          }}
-        >
-          {t(term === 'memory' ? 'memory.terms.memory' : 'memory.terms.git')}
-        </MenuItemButton>
-      ))}
-    </SettingsSubmenu>
-  );
-}
-
-export function DmTimelineSettings({
-  botSlug,
-  t,
-}: Pick<ChannelSidebarSettingsProps, 't'> & { botSlug: string }): ReactElement {
-  const hidden = useSyncExternalStore(
-    subscribeHiddenDmActions,
-    () => hiddenDmActionsSnapshot(botSlug),
-    () => hiddenDmActionsSnapshot(botSlug),
-  );
-  return (
-    <SettingsSubmenu label={t('dmTrace.menu')}>
-      {DM_ACTION_KINDS.map((kind) => (
-        <MenuItemButton
-          key={kind}
-          icon={hidden.includes(kind) ? undefined : <ChannelSidebarIcon name="check" />}
-          onSelect={() => toggleHiddenDmAction(botSlug, kind)}
-        >
-          {t(`dmTrace.kind.${kind}`)}
-        </MenuItemButton>
-      ))}
-    </SettingsSubmenu>
-  );
-}
-
 export function ChannelSidebarSettings({
   entries,
   entryProps,
   onEdit,
   editing = false,
   onPreview,
-  onOpenSettings,
 }: {
   onPreview?: ((entryId: string | undefined) => void) | undefined;
-  onOpenSettings?: (() => void) | undefined;
   onEdit?: () => void;
   editing?: boolean;
   entries: readonly ChannelSidebarEntry[];
@@ -222,7 +104,6 @@ export function ChannelSidebarSettings({
   const [active, setActive] = useState<string | undefined>();
   const anchor = useRef<HTMLButtonElement>(null);
   const settings = entries.filter((entry) => entry.settings !== undefined);
-  const dmBotSlug = entryProps.scope === 'personabot' ? entryProps.botSlug : undefined;
   const close = () => {
     setOpen(false);
     setActive(undefined);
@@ -272,16 +153,6 @@ export function ChannelSidebarSettings({
         }
         onClose={close}
       >
-        {onOpenSettings === undefined ? null : (
-          <MenuItemButton
-            onSelect={() => {
-              close();
-              onOpenSettings();
-            }}
-          >
-            {entryProps.t('channelSettings.open')}
-          </MenuItemButton>
-        )}
         {onEdit === undefined ? null : (
           <MenuItemButton
             onSelect={() => {
@@ -303,13 +174,7 @@ export function ChannelSidebarSettings({
             />
           );
         })}
-        {dmBotSlug === undefined ? null : (
-          <DmTimelineSettings botSlug={dmBotSlug} t={entryProps.t} />
-        )}
-        {settings.length === 0 &&
-        onEdit === undefined &&
-        onOpenSettings === undefined &&
-        dmBotSlug === undefined ? (
+        {settings.length === 0 && onEdit === undefined ? (
           <MenuItemButton disabled onSelect={close}>
             {entryProps.t('sidebar.settings.empty')}
           </MenuItemButton>
