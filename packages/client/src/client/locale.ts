@@ -1394,6 +1394,8 @@ export const zh = {
   'identity.conversationCount': '{count} 个会话',
   'identity.conversations': '会话',
   'identity.conversationsEmpty': '还没有会话。私聊这个应用，或在群里 @ 它，会话就会出现在这里。',
+  'identity.discordConversationsEmpty':
+    '还没有会话。在应用已加入的服务器频道或公开帖子里 @ 这个应用，会话就会出现在这里。',
   'identity.qqConversationsEmpty':
     '还没有群会话。在已加入的 QQ 群里 @ 这个应用，群会话就会出现在这里。',
   'identity.kind.dm': '私聊',
@@ -1497,6 +1499,8 @@ export const zh = {
   'identity.done': '完成',
   'identity.readyWeixin': '已就绪：扫码者私聊 {app} 的消息，现在会进入这个 Bot 的收件箱。',
   'identity.readyQq': '官方 QQ Bot 应用已就绪：群里 @ {app} 的消息，现在会进入这个 Bot 的收件箱。',
+  'identity.readyDiscord':
+    '已就绪：服务器频道或公开帖子里 @ {app} 的消息遵循这个 Bot 的接收设置，Bot 在原处回复。',
   'identity.platform': '平台',
   'identity.name': '身份名称',
   'identity.status': '状态',
@@ -1538,6 +1542,8 @@ export const zh = {
     '绑定后，私聊和群里 @ 消息遵循这个 Bot 的接收与配对设置，Bot 在原会话回复。个人微信只接收扫码者本人的私聊。',
   'identity.bindHintQq':
     '这是通过腾讯官方授权接入的 QQ Bot 应用。绑定后，在 QQ 群里 @ 这个应用的文字消息会直接进入这个 Bot 的收件箱，Bot 以自己的应用身份在原群回复，不需要保存目标或授权会话。',
+  'identity.bindHintDiscord':
+    '绑定后，在应用已加入的服务器频道或公开帖子里 @ 它，消息遵循这个 Bot 的接收设置，Bot 在原处回复。Discord 私聊暂未支持。',
   'identity.reconnectHint':
     '重新验证同一账号与已有授权范围后启用。账号已变更时，需要明确解绑并重新绑定。',
   'identity.impact': '将使此 Bot 的 {count} 个已有授权失效：',
@@ -4671,6 +4677,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'identity.conversations': 'Conversations',
   'identity.conversationsEmpty':
     'No conversations yet. DM the app or @mention it in a group and the conversation shows up here.',
+  'identity.discordConversationsEmpty':
+    'No conversations yet. @mention this app in a server channel or public thread it belongs to and the conversation shows up here.',
   'identity.qqConversationsEmpty':
     'No group conversations yet. @mention this app in a QQ group it has joined and the group conversation shows up here.',
   'identity.kind.dm': 'DM',
@@ -4782,6 +4790,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'Connected: DMs and @mentions to {app} follow this Bot’s reception and pairing settings.',
   'identity.readyQq':
     'Official QQ Bot app ready: group @mentions to {app} now reach this Bot’s Inbox.',
+  'identity.readyDiscord':
+    'Ready: @mentions to {app} in server channels or public threads follow this Bot’s reception settings; replies stay in the original location.',
   'identity.connecting': 'Connecting {app}…',
   'identity.offline':
     '{app} can’t receive messages right now. Check its connection in IM settings.',
@@ -4831,6 +4841,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'Once bound, DMs and group @mentions follow this Bot’s reception and pairing settings; replies stay in the original conversation. Personal WeChat only receives DMs from the person who scanned it.',
   'identity.bindHintQq':
     'This QQ Bot app connects through Tencent’s official authorization. Once bound, text @mentions to this app in QQ groups reach this Bot’s Inbox. The Bot replies in the original group through its own app. No saved targets or conversation authorization needed.',
+  'identity.bindHintDiscord':
+    'Once bound, @mentions in server channels or public threads this app belongs to follow this Bot’s reception settings; replies stay in the original location. Discord DMs are not supported yet.',
   'identity.reconnectHint':
     'Revalidate this same account and existing authorized scopes before enabling. A changed account requires explicit unbind and rebind.',
   'identity.impact': 'This will invalidate {count} existing authorizations for this Bot:',

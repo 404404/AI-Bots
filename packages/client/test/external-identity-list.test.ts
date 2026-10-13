@@ -288,7 +288,7 @@ it('failed Switch writes retain the committed preference; stale Modal edits reta
   }
 });
 
-it.each(['feishu', 'qq'] as const)(
+it.each(['feishu', 'qq', 'discord'] as const)(
   '%s Bind app shows real readiness after the commit and lists its conversations',
   async (platform) => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -332,7 +332,7 @@ it.each(['feishu', 'qq'] as const)(
       createdAt: '2026-10-07T00:00:00Z',
       origin: 'implicit' as const,
       receiveScope: {
-        kind: platform === 'qq' ? ('group' as const) : ('dm' as const),
+        kind: platform === 'feishu' ? ('dm' as const) : ('group' as const),
         conversationId: 'oc_owner',
       },
       lastMessageAt: '2026-10-07T01:00:00Z',
@@ -380,6 +380,11 @@ it.each(['feishu', 'qq'] as const)(
       expect(tutorial?.rel).toBe('noopener noreferrer');
       expect(container.textContent).toContain('接收与配对设置');
       await chooseOption('应用', `dsh-im/${platform}:lark-app`, container);
+      if (platform === 'discord') {
+        const hint = container.querySelector('[role="dialog"]')!.textContent;
+        expect(hint).toContain('服务器频道或公开帖子');
+        expect(hint).not.toContain('私聊和群里 @');
+      }
       const confirm = [
         ...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'),
       ].find((b) => b.textContent === '绑定应用')!;
@@ -400,18 +405,22 @@ it.each(['feishu', 'qq'] as const)(
       expect(container.querySelector('[role="status"]')?.textContent).toContain(
         platform === 'qq'
           ? '已就绪：群里 @ Support app 的消息'
-          : '已就绪：发给 Support app 的私聊和群里 @ 它的消息',
+          : platform === 'discord'
+            ? '已就绪：服务器频道或公开帖子里 @ Support app 的消息'
+            : '已就绪：发给 Support app 的私聊和群里 @ 它的消息',
       );
       const done = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
         (b) => b.textContent === '完成',
       )!;
       await act(async () => done.click());
-      expect(container.textContent).toContain(`${platform === 'qq' ? 'QQ' : '飞书'} · 1 个会话`);
+      expect(container.textContent).toContain(
+        `${platform === 'qq' ? 'QQ' : platform === 'discord' ? 'Discord' : '飞书'} · 1 个会话`,
+      );
       const edit = container.querySelector<HTMLButtonElement>('[title="编辑身份：Support app"]')!;
       await act(async () => edit.click());
       const list = container.querySelector('[role="dialog"] section[aria-label="活跃"]')!;
       expect(list.textContent).toContain('Owner');
-      expect(list.textContent).toContain(platform === 'qq' ? '群聊' : '私聊');
+      expect(list.textContent).toContain(platform === 'feishu' ? '私聊' : '群聊');
       expect(list.textContent).toContain('最近消息');
       expect([...list.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
         '静音',
@@ -422,6 +431,9 @@ it.each(['feishu', 'qq'] as const)(
       const empty = container.querySelector('[role="dialog"]')!.textContent;
       if (platform === 'qq') {
         expect(empty).toContain('在已加入的 QQ 群里 @ 这个应用');
+        expect(empty).not.toContain('私聊这个应用');
+      } else if (platform === 'discord') {
+        expect(empty).toContain('服务器频道或公开帖子里 @ 这个应用');
         expect(empty).not.toContain('私聊这个应用');
       } else expect(empty).toContain('私聊这个应用');
     } finally {

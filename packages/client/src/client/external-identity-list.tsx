@@ -529,7 +529,11 @@ export function ExternalIdentityList({
               </div>
               <p className="bh-muted">
                 {t(
-                  selectedAccount?.platform === 'qq' ? 'identity.bindHintQq' : 'identity.bindHint',
+                  selectedAccount?.platform === 'qq'
+                    ? 'identity.bindHintQq'
+                    : selectedAccount?.platform === 'discord'
+                      ? 'identity.bindHintDiscord'
+                      : 'identity.bindHint',
                 )}
               </p>
               {appSetup && !snapshot?.appSetups?.length ? (
@@ -549,7 +553,9 @@ export function ExternalIdentityList({
                       ? 'identity.readyWeixin'
                       : selectedAccount.platform === 'qq'
                         ? 'identity.readyQq'
-                        : 'identity.ready'
+                        : selectedAccount.platform === 'discord'
+                          ? 'identity.readyDiscord'
+                          : 'identity.ready'
                     : bound?.reception === 'connecting' || bound === undefined
                       ? 'identity.connecting'
                       : 'identity.offline',
