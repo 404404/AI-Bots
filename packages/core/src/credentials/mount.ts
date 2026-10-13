@@ -10,7 +10,8 @@ import {
   secretCommandBaseEnv,
   secretCommandPlan,
 } from './secret-command.js';
-import { SecretMcpServers, secretMcpEnv, secretMcpPlan } from './secret-mcp.js';
+import { SecretMcpServers, rememberedStarts, secretMcpEnv, secretMcpPlan } from './secret-mcp.js';
+import type { SecretMcpStore } from './secret-mcp-store.js';
 import type { PrivateInputLog } from './diagnostics.js';
 import { privateInputWebUrl } from './web-locator.js';
 import { credentialStoreDenial, credentialStorePath, denyStoreRead } from './store-guard.js';
@@ -24,6 +25,7 @@ export function mountPrivateInputs(
   ),
   webUrl?: string,
   dshHome = resolveDshHome(),
+  store?: SecretMcpStore,
 ): PrivateInputs {
   if (webUrl !== undefined)
     privateInputWebUrl(webUrl, 'dm-check', '00000000-0000-0000-0000-000000000000');
@@ -100,6 +102,27 @@ export function mountPrivateInputs(
   });
   const mcpServers = new SecretMcpServers();
   ctx.effect(() => () => mcpServers.close(), 'botharness: secret MCP servers');
+  owner.mcpServers = {
+    list: (botSlug) => {
+      const connected = mcpServers.connected(botSlug);
+      return (store?.list(botSlug) ?? []).map((record) => ({
+        serverName: record.serverName,
+        account: record.account,
+        program: record.program,
+        args: record.args,
+        approvedAt: record.approvedAt,
+        connected: connected.has(record.serverName),
+      }));
+    },
+    remove: async (botSlug, serverName) => {
+      const stopped = await mcpServers.stopFor(botSlug, serverName);
+      return (store?.remove(botSlug, serverName) ?? false) || stopped > 0;
+    },
+    erase: async (botSlug) => {
+      await mcpServers.stopFor(botSlug);
+      store?.eraseBot(botSlug);
+    },
+  };
   ctx.on(
     'tools/execute',
     async (call, next) => {
@@ -483,6 +506,121 @@ export function mountPrivateInputs(
             },
           }),
         );
+        const connectServer = async (
+          input: {
+            server_name: string;
+            account: string;
+            references: string[];
+            program: string;
+            args: string[];
+            env: Array<{ name: string; value: string }>;
+          },
+          signal?: AbortSignal,
+        ): Promise<string> => {
+          const references: Record<string, string> = {};
+          for (const reference of input.references) {
+            const field = /^private:[0-9a-f-]{36}:([a-z][a-z0-9_]{0,47})$/.exec(reference)?.[1];
+            if (field === undefined || references[field] !== undefined)
+              throw new Error('references must be distinct ask_secret references');
+            references[field] = reference;
+          }
+          const refuse = (reason: string) =>
+            JSON.stringify({ consumer: 'mcp-v1', connected: false, refused: reason });
+          const cwd = agent.session.header.cwd;
+          const sandbox = ctx.get('sandbox') as unknown as
+            | {
+                confine(
+                  argv: readonly string[],
+                  policy: { mode: 'workspace-write'; workspaceRoot: string },
+                  signal?: AbortSignal,
+                ): Promise<{ argv: string[] }>;
+              }
+            | undefined;
+          if (cwd === undefined || sandbox === undefined)
+            return refuse('The Shell sandbox is unavailable, so the server was not started');
+          let plan: ReturnType<typeof secretMcpPlan>;
+          try {
+            plan = secretMcpPlan(input);
+          } catch (error) {
+            if (error instanceof SecretCommandRefusal) return refuse(error.message);
+            throw error;
+          }
+          if (mcpServers.has(agent, plan.serverName))
+            return refuse('an MCP server with this server_name is already connected');
+          let confined: { argv: string[] };
+          try {
+            confined = await sandbox.confine(
+              plan.command,
+              { mode: 'workspace-write', workspaceRoot: cwd },
+              signal,
+            );
+          } catch {
+            return refuse('The Shell sandbox is unavailable, so the server was not started');
+          }
+          return await new Promise<string>((resolve, reject) => {
+            let settled = false;
+            const settle = (text: string) => {
+              if (settled) return;
+              settled = true;
+              resolve(text);
+            };
+            owner
+              .consume(agent, input.account, references, async (values, signal) => {
+                const env = secretMcpEnv();
+                try {
+                  for (const [index, entry] of input.env.entries())
+                    env[plan.names[index]!] = entry.value.replace(
+                      /\{\{([a-z][a-z0-9_]{0,47})\}\}/g,
+                      (_match, field: string) => {
+                        const value = values[field];
+                        if (value === undefined)
+                          throw new SecretCommandRefusal(
+                            'A placeholder names a field that was not referenced',
+                          );
+                        return value;
+                      },
+                    );
+                  const running = await mcpServers.start(
+                    agentCtx,
+                    agent,
+                    {
+                      botSlug: info.botSlug,
+                      serverName: plan.serverName,
+                      account: input.account,
+                      argv: confined.argv,
+                      cwd,
+                    },
+                    env,
+                    Object.values(values),
+                  );
+                  settle(
+                    JSON.stringify({
+                      consumer: 'mcp-v1',
+                      connected: true,
+                      serverName: plan.serverName,
+                      tools: running.tools,
+                    }),
+                  );
+                  await new Promise<void>((stopped) => {
+                    const stop = () => void running.stop().finally(stopped);
+                    signal.addEventListener('abort', stop, { once: true });
+                    agentCtx.effect(() => stop, 'botharness: secret MCP server');
+                    running.stopped = stopped;
+                  });
+                  if (signal.aborted) throw new Error('Secret MCP server stopped');
+                } catch (error) {
+                  if (!(error instanceof SecretCommandRefusal)) throw error;
+                  settle(refuse(error.message));
+                } finally {
+                  for (const name of plan.names) delete env[name];
+                }
+              })
+              .then(
+                () => settle(refuse('the MCP server stopped')),
+                (error: unknown) => (settled ? undefined : reject(error)),
+              );
+          });
+        };
         agentCtx.tools.register(
           defineTool({
             name: 'secret_mcp_connect',
@@ -537,111 +675,39 @@ export function mountPrivateInputs(
               render: (_args, value) => [{ type: 'text', text: value }],
             },
             execute: async (args, call) => {
-              const references: Record<string, string> = {};
-              for (const reference of args.references) {
-                const field = /^private:[0-9a-f-]{36}:([a-z][a-z0-9_]{0,47})$/.exec(reference)?.[1];
-                if (field === undefined || references[field] !== undefined)
-                  throw new Error('references must be distinct ask_secret references');
-                references[field] = reference;
-              }
-              const refuse = (reason: string) =>
-                JSON.stringify({ consumer: 'mcp-v1', connected: false, refused: reason });
-              const cwd = agent.session.header.cwd;
-              const sandbox = ctx.get('sandbox') as unknown as
-                | {
-                    confine(
-                      argv: readonly string[],
-                      policy: { mode: 'workspace-write'; workspaceRoot: string },
-                      signal?: AbortSignal,
-                    ): Promise<{ argv: string[] }>;
-                  }
-                | undefined;
-              if (cwd === undefined || sandbox === undefined)
-                return refuse('The Shell sandbox is unavailable, so the server was not started');
-              let plan: ReturnType<typeof secretMcpPlan>;
-              try {
-                plan = secretMcpPlan(args);
-              } catch (error) {
-                if (error instanceof SecretCommandRefusal) return refuse(error.message);
-                throw error;
-              }
-              if (mcpServers.has(agent, plan.serverName))
-                return refuse('an MCP server with this server_name is already connected');
-              let confined: { argv: string[] };
-              try {
-                confined = await sandbox.confine(
-                  plan.command,
-                  { mode: 'workspace-write', workspaceRoot: cwd },
-                  call.signal,
-                );
-              } catch {
-                return refuse('The Shell sandbox is unavailable, so the server was not started');
-              }
-              return await new Promise<string>((resolve, reject) => {
-                let settled = false;
-                const settle = (text: string) => {
-                  if (settled) return;
-                  settled = true;
-                  resolve(text);
-                };
-                owner
-                  .consume(agent, args.account, references, async (values, signal) => {
-                    const env = secretMcpEnv();
-                    try {
-                      for (const [index, entry] of args.env.entries())
-                        env[plan.names[index]!] = entry.value.replace(
-                          /\{\{([a-z][a-z0-9_]{0,47})\}\}/g,
-                          (_match, field: string) => {
-                            const value = values[field];
-                            if (value === undefined)
-                              throw new SecretCommandRefusal(
-                                'A placeholder names a field that was not referenced',
-                              );
-                            return value;
-                          },
-                        );
-                      const running = await mcpServers.start(
-                        agentCtx,
-                        agent,
-                        {
-                          serverName: plan.serverName,
-                          account: args.account,
-                          argv: confined.argv,
-                          cwd,
-                        },
-                        env,
-                        Object.values(values),
-                      );
-                      settle(
-                        JSON.stringify({
-                          consumer: 'mcp-v1',
-                          connected: true,
-                          serverName: plan.serverName,
-                          tools: running.tools,
-                        }),
-                      );
-                      await new Promise<void>((stopped) => {
-                        const stop = () => void running.stop().finally(stopped);
-                        signal.addEventListener('abort', stop, { once: true });
-                        agentCtx.effect(() => stop, 'botharness: secret MCP server');
-                        running.stopped = stopped;
-                      });
-                      if (signal.aborted) throw new Error('Secret MCP server stopped');
-                    } catch (error) {
-                      if (!(error instanceof SecretCommandRefusal)) throw error;
-                      settle(refuse(error.message));
-                    } finally {
-                      for (const name of plan.names) delete env[name];
-                    }
-                  })
-                  .then(
-                    () => settle(refuse('the MCP server stopped')),
-                    (error: unknown) => (settled ? undefined : reject(error)),
-                  );
-              });
+              const result = await connectServer(args, call.signal);
+              if (rememberedStarts.delete(call.token) && mcpServers.has(agent, args.server_name))
+                store?.put({
+                  botSlug: info.botSlug,
+                  serverName: args.server_name,
+                  account: args.account,
+                  program: args.program,
+                  args: [...args.args],
+                  env: args.env.map((entry) => ({ name: entry.name, value: entry.value })),
+                  references: [...args.references],
+                });
+              return result;
             },
           }),
         );
+        queueMicrotask(() => {
+          for (const remembered of store?.list(info.botSlug) ?? [])
+            void connectServer({
+              server_name: remembered.serverName,
+              account: remembered.account,
+              references: remembered.references,
+              program: remembered.program,
+              args: remembered.args,
+              env: remembered.env,
+            }).then(
+              (result) =>
+                log(
+                  result.includes('"connected":true') ? 'mcp-reconnected' : 'mcp-reconnect-failed',
+                  { botSlug: info.botSlug },
+                ),
+              () => log('mcp-reconnect-failed', { botSlug: info.botSlug }),
+            );
+        });
         agentCtx.tools.register(
           defineTool({
             name: 'secret_mcp_disconnect',
@@ -654,15 +720,17 @@ export function mountPrivateInputs(
               schema: { type: 'string' },
               render: (_args, value) => [{ type: 'text', text: value }],
             },
-            execute: async (args) =>
-              JSON.stringify(
-                args.server_name === undefined
-                  ? { servers: mcpServers.list(agent) }
-                  : {
-                      serverName: args.server_name,
-                      disconnected: await mcpServers.stop(agent, args.server_name),
-                    },
-              ),
+            execute: async (args) => {
+              if (args.server_name === undefined)
+                return JSON.stringify({ servers: mcpServers.list(agent) });
+              const stopped = await mcpServers.stop(agent, args.server_name);
+              const forgotten = store?.remove(info.botSlug, args.server_name) ?? false;
+              return JSON.stringify({
+                serverName: args.server_name,
+                disconnected: stopped || forgotten,
+                forgotten,
+              });
+            },
           }),
         );
       }),
