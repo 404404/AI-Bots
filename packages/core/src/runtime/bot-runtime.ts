@@ -2705,7 +2705,12 @@ class BotRuntimeImplementation implements BotRuntime {
     const owner = this.#ownership.resolve(sessionId);
     if (this.#closed || owner?.rootRole !== 'orchestrator') return undefined;
     const turn = this.#turnSources.get(owner.botSlug);
-    if (turn?.sessionId !== sessionId || turn.inboundChannelId === undefined) return undefined;
+    if (
+      turn?.sessionId !== sessionId ||
+      turn.inboundChannelId === undefined ||
+      turn.steeredChannelIds.size > 0
+    )
+      return undefined;
     const channel = this.#channels.get(turn.inboundChannelId);
     if (channel === undefined) return undefined;
     if (channel.type === 'group')

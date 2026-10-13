@@ -26,6 +26,9 @@ describe('asks follow the Channel the task came from', () => {
           ready(run);
           await held;
         },
+        steerOrchestrator() {
+          return true;
+        },
         async runAssignment() {},
         requestAssignment() {
           throw new Error('No Assignment expected');
@@ -131,6 +134,19 @@ describe('asks follow the Channel the task came from', () => {
               message.grantRequest === true,
           ),
       ).toBe(false);
+
+      await core.channels.appendMessage(dm.id, {
+        id: 'steered-dm',
+        at: '2026-09-25T00:00:01.000Z',
+        author: { kind: 'human' },
+        body: 'Private task',
+      });
+      core.runtime.admitDmMessage({
+        channelId: dm.id,
+        messageId: 'steered-dm',
+        body: 'Private task',
+      });
+      expect(core.runtime.askChannel?.(run.sessionId)).toBeUndefined();
     } finally {
       release();
       questions.close();
