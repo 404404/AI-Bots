@@ -1707,6 +1707,44 @@ it('QQ blocking during native preparation fences dispatch through replyChecked',
   expect((await fx.core.externalMessaging.snapshot('ada')).blockedConversations).toHaveLength(1);
 });
 
+it('editing a proactive quota preserves a prepared source reply and its exclusive receiver', async () => {
+  const fx = await fixture('qq');
+  await fx.receive(qqMention('quota-reply'));
+  let prepared!: () => void;
+  let resume!: () => void;
+  const preparing = new Promise<void>((resolve) => {
+    prepared = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  fx.prepareReply(async () => {
+    prepared();
+    await gate;
+  });
+  const pending = fx.core.externalMessaging.reply(
+    'ada',
+    fx.sourceId('om-quota-reply'),
+    'Still reply',
+  );
+  await preparing;
+  const subscriptions = fx.subscriptions;
+  try {
+    const updated = await fx.core.externalMessaging.setPostLimit(
+      'ada',
+      fx.identity.id,
+      fx.identity.postLimitRevision!,
+      1,
+    );
+    expect(updated.revision).toBe(fx.identity.revision);
+    expect(fx.subscriptions).toBe(subscriptions);
+  } finally {
+    resume();
+  }
+  expect((await pending).state).toBe('provider-accepted');
+  expect(fx.replies).toMatchObject([{ text: 'Still reply' }]);
+});
+
 it('a muted entry is admitted silently without a run and can still be answered', async () => {
   const fx = await fixture();
   await fx.receive(mention('ask'));

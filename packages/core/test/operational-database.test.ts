@@ -130,7 +130,7 @@ describe('operational database owner', () => {
     oldWriter.close();
   });
 
-  it.each([73, 86, 87])(
+  it.each([73, 86, 87, 88])(
     'upgrades generation %s without changing QQ and WeChat reception authority',
     (generation) => {
       const dshHome = createTempRoot('botharness-qq-main-upgrade-');
@@ -168,7 +168,9 @@ describe('operational database owner', () => {
       const upgraded = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
       expect(upgraded.mode).toBe('ready');
       expect(upgraded.generation).toBe(BOT_HARNESS_SCHEMA_PLAN.targetGeneration);
-      expect(readBindings(upgraded)).toEqual(before.map((row) => ({ ...row, post_limit: 60 })));
+      expect(readBindings(upgraded)).toEqual(
+        before.map((row) => ({ ...row, post_limit: 60, post_limit_revision: 1 })),
+      );
       const module = attachOperationalModule(upgraded, 'qq-main-upgrade-history');
       expect(
         module.read((database) =>
@@ -184,7 +186,9 @@ describe('operational database owner', () => {
       );
       upgraded.close();
       const reopened = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
-      expect(readBindings(reopened)).toEqual(before.map((row) => ({ ...row, post_limit: 60 })));
+      expect(readBindings(reopened)).toEqual(
+        before.map((row) => ({ ...row, post_limit: 60, post_limit_revision: 1 })),
+      );
       expect(
         attachOperationalModule(reopened, 'qq-main-upgrade-reopen').read((database) =>
           database.prepare('SELECT body FROM messaging_reception_history').all(),

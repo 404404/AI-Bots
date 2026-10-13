@@ -1640,10 +1640,12 @@ export function createOutboundMessaging(options: {
       transaction(
         (db) => {
           active(botSlug);
-          const identity = enabledBinding(bindingId, expectedRevision);
+          const identity = enabledBinding(bindingId);
           if (identity.botSlug !== botSlug) throw new MessagingError('identity-unavailable');
+          if (identity.postLimitRevision !== expectedRevision)
+            throw new MessagingError('identity-changed');
           db.prepare(
-            'UPDATE messaging_bindings SET post_limit = ?, revision = revision + 1 WHERE id = ?',
+            'UPDATE messaging_bindings SET post_limit = ?, post_limit_revision = post_limit_revision + 1 WHERE id = ?',
           ).run(limit, bindingId);
         },
         ['bindings'],

@@ -100,6 +100,78 @@ it('the default quota is a rolling sixty posts per Binding and expires after an 
   expect(posts).toHaveLength(61);
 });
 
+it('quota edits use their own revision and reject stale edits without changing reception authority', async () => {
+  const { core, binding } = await fixture();
+  const updated = await core.externalMessaging.setPostLimit(
+    'ada',
+    binding.id,
+    binding.postLimitRevision!,
+    2,
+  );
+  expect(updated.revision).toBe(binding.revision);
+  expect(updated.postLimitRevision).toBe(binding.postLimitRevision! + 1);
+  await expect(
+    core.externalMessaging.setPostLimit('ada', binding.id, binding.postLimitRevision!, null),
+  ).rejects.toMatchObject({ code: 'identity-changed' });
+  const disabled = await core.externalMessaging.setPostLimit(
+    'ada',
+    binding.id,
+    updated.postLimitRevision!,
+    null,
+  );
+  expect(disabled.postLimit).toBeNull();
+  expect(disabled.revision).toBe(binding.revision);
+});
+
+it.each(['fingerprint', 'capability', 'cancelled', 'connection'] as const)(
+  'reachable posting rejects %s loss before the checked native operation',
+  async (lost) => {
+    const { binding, transport } = await fixture();
+    const describe = transport.describeBot;
+    transport.describeBot = async (accountRef) => {
+      if (lost === 'connection') throw new Error('Disconnected');
+      const info = await describe(accountRef);
+      return {
+        ...info,
+        account: {
+          ...info.account,
+          fingerprint: lost === 'fingerprint' ? 'b'.repeat(64) : info.account.fingerprint,
+        },
+        capabilities: lost === 'capability' ? [] : info.capabilities,
+      };
+    };
+    const native = vi.fn(async () => ({
+      sent: true as const,
+      receipt: { version: 1 as const, messageId: 'om_first', conversationId: 'oc_new' },
+    }));
+    transport.postConversationChecked = native;
+    const adapter = createDshImProvider(transport)!;
+    const controller = new AbortController();
+    if (lost === 'cancelled') controller.abort();
+    await expect(
+      adapter.postConversation!({
+        accountRef: binding.accountRef,
+        fingerprint: binding.fingerprint,
+        conversationId: 'oc_new',
+        text: 'Never send',
+        signal: controller.signal,
+        beforeSend: () => true,
+      }),
+    ).rejects.toMatchObject({
+      disposition: 'not-started',
+      code:
+        lost === 'fingerprint'
+          ? 'account-changed'
+          : lost === 'capability'
+            ? 'capability-unavailable'
+            : lost === 'cancelled'
+              ? 'cancelled'
+              : 'provider-unavailable',
+    });
+    expect(native).not.toHaveBeenCalled();
+  },
+);
+
 it('a pending native attempt reserves the last quota slot before another request can send', async () => {
   const { core, binding, transport, posts } = await fixture();
   await core.externalMessaging.setPostLimit('ada', binding.id, binding.revision, 1);
@@ -217,7 +289,7 @@ it.each(['feishu', 'discord', 'slack'] as const)(
     const updated = (await core.externalMessaging.snapshot('ada')).identities!.find(
       (value) => value.id === binding.id,
     )!;
-    await core.externalMessaging.setPostLimit('ada', binding.id, updated.revision, null);
+    await core.externalMessaging.setPostLimit('ada', binding.id, updated.postLimitRevision!, null);
     expect(
       (
         await core.externalMessaging.postConversation(

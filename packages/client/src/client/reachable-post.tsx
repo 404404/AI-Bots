@@ -44,7 +44,7 @@ export function ReachablePostDialog({
   const [limit, setLimit] = useState(
     identity.postLimit === null ? '' : String(identity.postLimit ?? 60),
   );
-  const [revision, setRevision] = useState(identity.revision);
+  const [revision, setRevision] = useState(identity.postLimitRevision ?? identity.revision);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');

@@ -1344,6 +1344,21 @@ export function createDshImProvider(
             input: Parameters<NonNullable<MessagingProvider['postConversation']>>[0],
           ) {
             try {
+              input.signal.throwIfAborted();
+              const info = await host.describeBot(input.accountRef);
+              input.signal.throwIfAborted();
+              if (info.account.fingerprint !== input.fingerprint)
+                throw new MessagingProviderError('account-changed', 'not-started');
+              if (!info.capabilities.includes('reachable-conversations-checked'))
+                throw new MessagingProviderError('capability-unavailable', 'not-started');
+            } catch (error) {
+              if (error instanceof MessagingProviderError) throw error;
+              throw new MessagingProviderError(
+                input.signal.aborted ? 'cancelled' : 'provider-unavailable',
+                'not-started',
+              );
+            }
+            try {
               const result = await host.postConversationChecked!(
                 input.accountRef,
                 input.conversationId,
