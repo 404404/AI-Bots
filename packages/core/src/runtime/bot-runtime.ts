@@ -2624,6 +2624,8 @@ class BotRuntimeImplementation implements BotRuntime {
       return `[Bot Inbox: direct message from PersonaBot ${message.author.slug}]\nChannel: ${channelId}\nMessage ID: ${messageId}\n${body}\nDecide whether a reply would be useful. You may finish without replying; if you speak in this Bot DM, use channel_send.`;
     if (channel?.type === 'group' && message?.mentions?.length)
       return this.#groupMentionPrompt(channelId, messageId, body);
+    if (channel?.type === 'group' && message?.grantRequestResolution !== undefined)
+      return `[Bot Inbox: Human answered your Workspace Grant request]\nChannel: ${channelId}\nMessage ID: ${messageId}\nMessage: ${body}\nContinue the task you requested access for; if you speak in this Group Channel, use channel_send.`;
     const mentionBody =
       channel?.type === 'dm' &&
       channel.botSlug !== undefined &&

@@ -827,7 +827,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
         defineTool({
           name: 'request_workspace_grant',
           description:
-            'Ask the Human in this PersonaBot DM to authorize a folder so the current task can continue. Use only when no active Workspace Grant fits; this does not create an Assignment.',
+            'Ask the Human to authorize a folder so the current task can continue. The request card appears in the current inbound Channel, a Group or your Human DM. Use only when no active Workspace Grant fits; this does not create an Assignment.',
           parameters: {
             reason: {
               type: 'string',

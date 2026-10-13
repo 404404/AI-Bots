@@ -1156,6 +1156,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     (sessionId, callId, signal) =>
       core.runtime.beginAssignmentApprovalWait?.(sessionId, callId, signal),
+    (sessionId) => core.runtime.askChannel?.(sessionId),
   );
   ctx.effect(
     () => core.externalMessaging.approvals.attach(toolApproval, core.channels),
@@ -1172,6 +1173,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     (message) => ctx.logger.warn(message),
     (slug, count) => core.states.setQuestionCount(slug, count),
     nativeTimedQuestions(ctx, core.runtime),
+    (sessionId) => core.runtime.askChannel?.(sessionId),
   );
   ctx.effect(() => () => userQuestions.close(), 'botharness: Channel user questions');
   ctx.effect(

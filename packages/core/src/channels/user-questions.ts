@@ -43,6 +43,7 @@ export interface ChannelQuestionResolution {
 
 export interface ChannelQuestionNotice extends ChannelQuestionRequest {
   botSlug: string;
+  channelId: string;
   messageId: string;
 }
 
@@ -100,6 +101,7 @@ export class ChannelUserQuestions {
   readonly #pending = new Map<string, Pending>();
   readonly #listeners = new Set<() => void>();
   readonly #timed: TimedQuestionPort | undefined;
+  readonly #askChannel: ((sessionId: string) => string | undefined) | undefined;
 
   constructor(
     channels: ChannelStore,
@@ -108,7 +110,9 @@ export class ChannelUserQuestions {
     warn: (message: string) => void = () => undefined,
     changed: (slug: string, count: number) => void = () => undefined,
     timed?: TimedQuestionPort,
+    askChannel?: (sessionId: string) => string | undefined,
   ) {
+    this.#askChannel = askChannel;
     this.#channels = channels;
     this.#ownership = ownership;
     this.#isLive = isLive;
@@ -122,8 +126,15 @@ export class ChannelUserQuestions {
     if (agent === undefined) return undefined;
     const owner = this.#ownership.resolve(agent.session.id);
     if (owner?.rootRole !== 'orchestrator' || !this.#isLive(agent)) return undefined;
-    const channelId = dmChannelId(owner.botSlug);
-    if (this.#channels.get(channelId)?.botSlug !== owner.botSlug) return undefined;
+    const origin = this.#askChannel?.(agent.session.id);
+    const originChannel = origin === undefined ? undefined : this.#channels.get(origin);
+    const channelId =
+      originChannel?.type === 'group' && originChannel.members.includes(owner.botSlug)
+        ? originChannel.id
+        : dmChannelId(owner.botSlug);
+    const channel = this.#channels.get(channelId);
+    if (channel === undefined) return undefined;
+    if (channel.type !== 'group' && channel.botSlug !== owner.botSlug) return undefined;
     if (request.signal?.aborted) throw new Error('DSH user question was cancelled');
     const questions = request.questions.map((question) => ({
       ...question,
@@ -231,6 +242,7 @@ export class ChannelUserQuestions {
         ? [
             {
               botSlug,
+              channelId: pending.channelId,
               messageId,
               sessionId: pending.agent.session.id,
               ...(pending.callId === undefined ? {} : { callId: pending.callId }),

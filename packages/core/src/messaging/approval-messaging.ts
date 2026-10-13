@@ -190,6 +190,7 @@ export function createApprovalMessaging(options: {
     const notice = {
       ...request,
       botSlug: value.botSlug,
+      channelId: dmChannelId(value.botSlug),
       messageId: value.requestMessageId,
       expiresAt: value.expiresAt,
     };
@@ -542,6 +543,7 @@ export function createApprovalMessaging(options: {
   const notify = (notice: ToolApprovalNotice, status: 'pending' | string) => {
     if (closed) return;
     if (status === 'pending') {
+      if (notice.channelId !== dmChannelId(notice.botSlug)) return;
       if (read(notice.messageId)) return;
       const selected = route(notice.botSlug);
       if (!selected) return;
