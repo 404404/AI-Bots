@@ -4,6 +4,10 @@ import deepSeekBotChinese from "../../../../CHANGELOG.zh.md?raw";
 import dshSkillEnglish from "../../../../.agents/skills/dsh-plugin-dev/CHANGELOG.md?raw";
 import dshSkillChinese from "../../../../.agents/skills/dsh-plugin-dev/CHANGELOG.zh.md?raw";
 import {
+  composeReleaseLedgerPair,
+  parseChangeFragment,
+} from "../../../../scripts/release-ledger.mjs";
+import {
   buildDevelopmentStatus,
   type DevelopmentStatusArtifact,
   type DevelopmentStatusModel,
@@ -12,9 +16,19 @@ import {
 
 export type StatusLocale = "en" | "zh";
 
+const changeFragments = Object.entries(
+  import.meta.glob<string>(["../../../../changes/*.md", "!../../../../changes/README.md"], {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }),
+)
+  .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+  .map(([path, markdown]) => parseChangeFragment(markdown, path));
+
 export const developmentStatus = buildDevelopmentStatus({
   projection: projection as Parameters<typeof buildDevelopmentStatus>[0]["projection"],
-  deepSeekBot: { english: deepSeekBotEnglish, chinese: deepSeekBotChinese },
+  deepSeekBot: composeReleaseLedgerPair(deepSeekBotEnglish, deepSeekBotChinese, changeFragments),
   dshSkill: { english: dshSkillEnglish, chinese: dshSkillChinese },
 });
 

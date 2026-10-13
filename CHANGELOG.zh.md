@@ -1,7 +1,8 @@
 # DeepSeekBot 更新日志
 
 这里记录 DeepSeekBot 值得关注的变化。添加或发布条目前，请先阅读
-[Release Ledger 贡献指南](docs/agents/changelog.md)。
+[Release Ledger 贡献指南](docs/agents/changelog.md)。新的 Unreleased 条目先以
+[变更碎片](changes/README.md) 提交，发版时再合入本文件。
 
 ## [Unreleased]
 

@@ -1,7 +1,8 @@
 # DeepSeekBot Changelog
 
 Notable changes to DeepSeekBot are recorded here. See the
-[Release Ledger guide](docs/agents/changelog.md) before adding or publishing an entry.
+[Release Ledger guide](docs/agents/changelog.md) before adding or publishing an entry. New
+Unreleased entries arrive as [change fragments](changes/README.md) and are folded in at release.
 
 ## [Unreleased]
 

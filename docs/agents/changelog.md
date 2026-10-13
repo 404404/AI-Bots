@@ -147,9 +147,13 @@ instruction authority; Chinese belongs in the human-facing references and releas
 
 ## Contribution and release flow
 
-1. Add one result-focused bilingual entry to the matching `Unreleased` section and run
-   `pnpm changelog:check`.
-2. During the release PR, merge entries that describe one observable result, even when several PRs
+1. Add one result-focused bilingual entry as a change fragment under [`changes/`](../../changes/README.md)
+   and run `pnpm changelog:check`. Do not edit the `Unreleased` sections of `CHANGELOG.md` and
+   `CHANGELOG.zh.md` in a feature PR: every parallel branch would then edit the same lines and
+   conflict. The check, the Development status page and candidate builds read the ledgers with
+   the fragments composed into `Unreleased`.
+2. During the release PR, run `pnpm changelog:fold` to append the fragments to `Unreleased` in
+   both ledgers and delete them. Then merge entries that describe one observable result, even when several PRs
    produced it. Preserve the necessary Issue and PR links.
 3. Give the ledger release one summary sentence.
 4. Derive the GitHub Release draft from that version, then add up to three optional Highlights and

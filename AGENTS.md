@@ -94,7 +94,7 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 ### Release Ledger
 
-DeepSeekBot release notes use the bilingual canonical Release Ledger in `CHANGELOG.md` and `CHANGELOG.zh.md`. For a user-visible change, public documentation change, release PR, revert, or prerelease, follow `docs/agents/changelog.md`; keep both ledgers structurally aligned and run `pnpm changelog:check`.
+DeepSeekBot release notes use the bilingual canonical Release Ledger in `CHANGELOG.md` and `CHANGELOG.zh.md`. For a user-visible change, public documentation change, release PR, revert, or prerelease, follow `docs/agents/changelog.md`: a feature PR adds a bilingual change fragment under `changes/` instead of editing either ledger, and runs `pnpm changelog:check`.
 
 For a DSH Skill behavior or public-documentation change, release PR, revert, or prerelease, follow
 `docs/agents/changelog.md`, update `.agents/skills/dsh-plugin-dev/CHANGELOG.md` and
