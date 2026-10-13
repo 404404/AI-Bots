@@ -1,5 +1,7 @@
 # Lark reachable-group first post — 2026-10-13
 
+For the later same-Provider inline Lark/WeChat and installed-product qualification, see [Provider .20 packaged qualification](provider20-qualification.md). The historical first-post revision boundaries below remain unchanged.
+
 Task `codex/local/01a1342d-5ce4-7872-9f9e-492a9caee393`; [claim](https://github.com/BotHarness/DeepSeekBot/issues/1115#issuecomment-6142085163), [Product #1559](https://github.com/BotHarness/DeepSeekBot/pull/1559), [Provider #27](https://github.com/DoodleBears/dsh-im/pull/27).
 
 The Human confirmed a current exclusive QA2 window and added **BotHarness Cloud QA** to the new private group **BotHarness QA2 First Post #1115 20261013**. The signed-in browser verified the actual Bot and group; there were only creation/invitation system notices, no chat messages or prior mentions. No platform permission was changed.

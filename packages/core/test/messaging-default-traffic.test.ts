@@ -1771,6 +1771,48 @@ it('ask mode holds a new conversation without a Source Event until it is allowed
   expect(fx.admissions()).toEqual([{ reason: 'group-mention', messageId: 'om-third' }]);
 });
 
+it('a held conversation permits an explicit reachable post without replaying held traffic', async () => {
+  const fx = await fixture();
+  const describeBot = fx.service.describeBot;
+  fx.service.reachableConversationVersion = 1;
+  fx.service.describeBot = async (botId) => {
+    const description = await describeBot!(botId);
+    return {
+      ...description,
+      capabilities: [...description.capabilities, 'reachable-conversations-checked'],
+    };
+  };
+  fx.service.listReachableConversations = async () => ({
+    version: 1,
+    conversations: [{ id: 'oc_team', kind: 'group', name: 'Team' }],
+    hasMore: false,
+  });
+  const posts: string[] = [];
+  fx.service.postConversationChecked = async (_account, conversationId, text, options) => {
+    expect(options.beforeSend()).toBe(true);
+    posts.push(text);
+    return { sent: true, receipt: { version: 1, messageId: 'om_explicit', conversationId } };
+  };
+  fx.replaceProvider();
+  await fx.settle();
+  await fx.update({ newConversations: 'ask' });
+  await fx.receive(mention('held'));
+  expect((await fx.core.externalMessaging.snapshot('ada')).heldConversations).toHaveLength(1);
+  expect(
+    await fx.core.externalMessaging.postConversation(
+      'ada',
+      fx.identity.id,
+      'oc_team',
+      'explicit-held-post',
+      'Explicit report',
+    ),
+  ).toMatchObject({ state: 'provider-accepted' });
+  expect(posts).toEqual(['Explicit report']);
+  expect(fx.query('SELECT count(*) AS n FROM source_events')).toEqual([{ n: 0 }]);
+  expect(fx.admissions()).toEqual([]);
+  expect(fx.runs).toEqual([]);
+});
+
 it('blocking a held conversation keeps it out of the Inbox', async () => {
   const fx = await fixture();
   await fx.update({ newConversations: 'ask' });

@@ -1,0 +1,71 @@
+# Provider .20 packaged qualification — 2026-10-14
+
+Task `codex/local/01a1342d-5ce4-7872-9f9e-492a9caee393`; [#1115 continuation claim](https://github.com/BotHarness/DeepSeekBot/issues/1115#issuecomment-6146698204), [#1111 qualification claim](https://github.com/BotHarness/DeepSeekBot/issues/1111#issuecomment-6148344093), [Product #1559](https://github.com/BotHarness/DeepSeekBot/pull/1559), [Provider #27](https://github.com/DoodleBears/dsh-im/pull/27).
+
+## Artifact identity
+
+The fresh, task-owned Profile installed all six local product tarballs under product candidate `1.2.2-qa.1115.20261013.1` using the independent official DSH `0.2.0-rc.1` CLI. Product runtime code was built from `8c94b4b0d0fd0949d964a9dcaa99ea45b5f02aff`; the three packaging/pin files carried the pending .20 selection. This is installed-artifact evidence, not npm publication or qualification of a later main-line merge.
+
+The installed Provider is `@botharness/im-provider@4.32.0-botharness.20`, derived from [`0e5b447f45e4a44d4089eac16cc1fa5673dbd66d`](https://github.com/DoodleBears/dsh-im/commit/0e5b447f45e4a44d4089eac16cc1fa5673dbd66d). The actual installed runtime was hashed after the native tests and matches the staged archive:
+
+| Provenance                        | Value                                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Source manifest SHA256            | `3331e8f771a91abf396eb4e7ed5c0acc4c3b504cdccc7d715e37062708384cc2`                                |
+| Source lock SHA256                | `3476c34c7d4515000d2617beaf2568b2a794b60de9b350cd8eafb7a2bf21adef`                                |
+| Qualified input                   | 421 runtime files; SHA256 `8ce0cccd66187db4b028c5bb414ea8d1623ea8e4c564ddd5adf02b14a10f2b86`      |
+| Scoped compiled output            | 422 runtime files; SHA256 `1bda59905abe9b761ce7c0d113acdc4b4523d96bc0293b212c4708d0c8dbb733`      |
+| Provider tarball SHA512 integrity | `sha512-cJ9kE1H+uytTDh1s9Tg8uJtho6y08wLvc9zqks1S+SrEb7HOfNoW/l4l6BKjtZXtW1KwigN0Ezlrl/siym9nfw==` |
+
+The scoped package retains the native storage and transport identity. Its actual installed manifest has `managedByProduct: true`; product-managed update sources and scoped Client registration were rebuilt rather than borrowing source-Provider acceptance. The separate development selection uses this source on DSH `0.2.0-rc.2`; source testing and the RC1 packaged run remain distinct.
+
+## Current exclusive native run
+
+The Human freshly confirmed both QA2 and the independent WeChat test account as exclusive before enabling their receivers. The preceding source Host was stopped; only this task's fresh packaged Host received. No platform permissions were changed.
+
+**Lark setup and first packaged post.** From the actual Bot DM's Channel Settings → External identities → Bind app → Create app, the Client submitted QA2 credentials through the Provider transport and automatically bound **BotHarness Cloud QA**. No native Settings visit was needed. The identity showed zero conversations. Discovery returned **BotHarness QA2 First Post #1115 20261013**, where the app had still never been @mentioned. The Client sent `BH_1115_PACKAGE20_20261013_OK` once, and the signed-in original group visibly displayed the full text. The original `BH_1115_FIRST_20261013_OK` marker was never repeated.
+
+Before this post, canonical counts were Binding 1, Grant 0, Outbox 0, attempt 0, Source Event 1, Inbox Admission 0, Channel 1, placement 1. After it, only Grant/Outbox/attempt became 1. The Grant is implicit and has no saved target; the intent has no Source Event reference. The version-1 native receipt has a message ID and matches the Grant's conversation. The existing Source Event is the welcome letter, not manufactured remote traffic.
+
+![Installed candidate before posting](package-picker-before.png)
+
+![Installed candidate acceptance](package-picker-accepted.png)
+
+![Original Lark group, before subsequent receive tests](package-original-lark-group.png)
+
+**Blocked zero-send case.** The actual Client blocked that group and confirmed revocation. Submitting `BH_1115_BLOCKED_PACKAGE20_MUST_NOT_SEND` produced the definite refusal shown below. Outbox and attempt counts stayed at 2, including the already accepted WeChat reply; the original Lark group contained no blocked marker. Allow again restored the group through the Client before receive tests.
+
+![Definite refusal in the installed candidate](package-blocked-refusal.png)
+
+**WeChat setup and owner reply.** The same installed Provider generated a real 320 × 320 pairing QR in the inline dialog. The Human scanned it with the independent test account and confirmed connection. The dialog automatically reached Ready and the owner DM became default traffic. The Human sent `请只回复 BH_1111_PACKAGE20_20261013_OK` once and confirmed the original WeChat private chat displayed the complete exact reply. Canonical Outbox and attempt record acceptance with a conversation-matched version-1 receipt whose `identityKind` is `client-acknowledgement`. This is not a native server message-ID or own Echo claim. The platform did not request a separate verification-code challenge in this run.
+
+**Lark reception.** After the #1115 first-post acceptance, the Human explicitly authorized two additional receive cases. The browser sent one group @ request for `BH_1111_LARK_PACKAGE20_AT_OK` and one QA2 DM request for `BH_1111_LARK_PACKAGE20_DM_OK`. Both complete replies rendered in their original conversations, with matched accepted native receipts. Screenshots were taken after scrolling those actual replies into view.
+
+![Original Lark group @ reply](package-lark-at-reply.png)
+
+![Original Lark DM reply](package-lark-dm-reply.png)
+
+Final canonical counts: Bindings 2, Grants 4 (one revoked Lark Grant, three active), blocks 0, Outbox 4, attempts 4, Source Events 4, Inbox Admissions 3, Channel 1, placement 1. Exactly three new remote inputs were admitted: WeChat owner DM, Lark @ and Lark DM. No standalone Provider Session answered during setup/binding. The Lark reaction-feedback status separately reported failure; text reception and reply acceptance/rendering passed. Reaction permission/display is not qualified by this run, and no permission was changed to hide that limitation.
+
+The receiver and the separate baseline UI Host were stopped by exact PID after verification. All three task ports were confirmed without listeners. No other task or QQ receiver was changed.
+
+## Visual and automated checks
+
+The actual installed picker was inspected in English/dark, Chinese/dark and English/light at 1280 × 800. The separate base `b6a7b0516bf854eef177b2e5cef5add9d2081ff7` capture shows the prior External identities entry point with no configured app/receiver. It is an explicitly labelled predecessor entry, not a data-matched bound-app comparison. Screenshots are cropped; unrelated chats and Human names/notices are covered. Pairing QR, credentials and native identifiers are not published.
+
+![Base: existing entry point, no configured app](base-external-identity-entry.png)
+
+![Installed picker in English](package-picker-en.png)
+
+![Installed picker in Chinese](package-picker-zh.png)
+
+![Installed picker in light theme](package-picker-light.png)
+
+- Provider exact `0e5b447`: Linux Node 24.21.0 `npm ci` / `npm run check` passed build, package verification and 3,827 tests. Windows and Linux source builds have matching compiled entry hashes.
+- Product exact `8c94b4b0`: Linux full suite passed 4,524 tests (13 skipped), 536 files (7 skipped), using two workers and a task-owned tmpfs `TMPDIR`. Disk-backed runs had timeout failures; no timeout was raised. Lint, format, typecheck, ledgers, build, slides and docs checks passed separately. Earlier Windows failures are not reclassified as all baseline failures.
+- Added held-conversation regression and existing reachable/default-traffic tests: 67/67 passed on Windows. Artifact/development-pin guards: 35/35. Inline setup/secret-boundary/resume Client and Service regressions: 7/7. These focused checks include the pending pin/test-only changes and do not replace a new-head full suite.
+- Packaged Client diagnostic reader reported `shell-ready`, exit 0, no earlier failure; actual DOM and native interactions were checked separately. Browser-control failures were inspected without resending markers.
+- A local byte scan of 53 BotHarness durable-state/log and native Session files found zero occurrences of the actual Lark App Secret. This scan does not claim every possible QR encoding was searched; secret/QR DTO boundaries are covered by the focused contract tests. Provider-owned credential storage remains private and is excluded from the public evidence.
+
+## Delivery gates
+
+Provider .20 is locally packaged and natively qualified above, but has not been published to npm. Product #1559 and Provider #27 remain unmerged; public stable install identity is unchanged. #1115 and #1111 remain open pending their release/merge gates. Slack and Discord reachability have automated native-API fixtures, not new real-platform acceptance. QQ proactive permission and own Echo remain separate work.
