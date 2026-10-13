@@ -4,6 +4,7 @@ import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { MemoryRecoveryCheckpoint } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { MessagingHelp } from './messaging-help.js';
 
 type RecoverySnapshot = { checkpoints: MemoryRecoveryCheckpoint[]; error?: string };
 
@@ -139,8 +140,10 @@ export function MemoryRecovery({
 
   return (
     <details className="bh-memory-recovery">
-      <summary>{t('memory.recovery.title')}</summary>
-      <p className="bh-memory-recovery-help">{t('memory.recovery.help')}</p>
+      <summary>
+        {t('memory.recovery.title')}
+        <MessagingHelp title={t('memory.recovery.title')} text={t('memory.recovery.help')} t={t} />
+      </summary>
       {(error ?? loadError) === undefined ? null : (
         <div className="bh-error" role="alert">
           {error ?? loadError}

@@ -2,6 +2,7 @@ import {
   Fragment,
   useRef,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent,
   type MouseEvent,
   type ReactElement,
@@ -26,6 +27,8 @@ import {
 } from './memory-git-lanes.js';
 import { MemoryWorkingGroups } from './memory-working-groups.js';
 import { MemoryRecovery } from './memory-recovery.js';
+import { MessagingHelp } from './messaging-help.js';
+import { memoryViewSnapshot, subscribeMemoryView } from './memory-view-prefs.js';
 import { useMountedResource } from './mounted-resource.js';
 
 import { cachedMemory, invalidateMemory } from './memory-read-cache.js';
@@ -72,7 +75,7 @@ function MemoryEntryForScope({
     version: string | null;
   }>();
   const [restores, setRestores] = useState(0);
-  const [view, setView] = useState<'graph' | 'versions'>('graph');
+  const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
   const [versions, setVersions] = useState<MemoryVersion[]>();
   const [versionsError, setVersionsError] = useState<string>();
   const [openVersion, setOpenVersion] = useState<string>();
@@ -451,9 +454,15 @@ function MemoryEntryForScope({
 
   const restoreConfirm = (sha: string, dirty: boolean): ReactElement => (
     <div className="bh-memory-restore-confirm" role="group">
-      <p>
-        {t('memory.restoreCommit.confirm')}
-        {dirty ? t('memory.restoreCommit.confirmDirty') : t('memory.restoreCommit.confirmClean')}
+      <p className="bh-memory-restore-title">
+        {t('memory.restoreCommit.title')}
+        <MessagingHelp
+          title={t('memory.restoreCommit.title')}
+          text={`${t('memory.restoreCommit.confirm')}${
+            dirty ? t('memory.restoreCommit.confirmDirty') : t('memory.restoreCommit.confirmClean')
+          }`}
+          t={t}
+        />
       </p>
       <label className="bh-memory-restore-note">
         <span>{t('memory.restoreCommit.name')}</span>
@@ -707,22 +716,6 @@ function MemoryEntryForScope({
                 ) : null}
               </>
             ) : null}
-            <div className="bh-memory-view-switch" role="group" aria-label={t('memory.view.label')}>
-              <button
-                type="button"
-                aria-pressed={view === 'graph'}
-                onClick={() => setView('graph')}
-              >
-                {t('memory.view.graph')}
-              </button>
-              <button
-                type="button"
-                aria-pressed={view === 'versions'}
-                onClick={() => setView('versions')}
-              >
-                {t('memory.view.versions')}
-              </button>
-            </div>
             {view !== 'graph' ? null : (
               <div className="bh-memory-branch-control">
                 <label htmlFor="bh-memory-branch-choice">{t('memory.branch')}</label>
@@ -787,14 +780,23 @@ function MemoryEntryForScope({
               </div>
             )}
             {restored === undefined ? null : (
-              <div className="bh-note" role="status">
+              <div className="bh-note bh-memory-restore-done" role="status">
                 {t('memory.restoreCommit.done', { sha: restored.sha.slice(0, 7) })}
-                {restored.backup === null
-                  ? null
-                  : t('memory.restoreCommit.backedUp', { sha: restored.backup.slice(0, 7) })}
-                {restored.version === null
-                  ? null
-                  : t('memory.restoreCommit.named', { name: restored.version })}
+                {restored.backup === null && restored.version === null ? null : (
+                  <MessagingHelp
+                    title={t('memory.restoreCommit.done', { sha: restored.sha.slice(0, 7) })}
+                    text={`${
+                      restored.backup === null
+                        ? ''
+                        : t('memory.restoreCommit.backedUp', { sha: restored.backup.slice(0, 7) })
+                    }${
+                      restored.version === null
+                        ? ''
+                        : t('memory.restoreCommit.named', { name: restored.version })
+                    }`.trim()}
+                    t={t}
+                  />
+                )}
               </div>
             )}
             {commitMenu === undefined ? null : (
@@ -1069,7 +1071,16 @@ function MemoryEntryForScope({
                                 }}
                               >
                                 <label className="bh-memory-restore-note">
-                                  <span>{t('memory.version.label')}</span>
+                                  <span>
+                                    {t('memory.version.label')}
+                                    {commit.sha === graph.head && graph.dirty ? (
+                                      <MessagingHelp
+                                        title={t('memory.version.label')}
+                                        text={t('memory.version.dirtyHint')}
+                                        t={t}
+                                      />
+                                    ) : null}
+                                  </span>
                                   <Input
                                     autoFocus
                                     value={nameForm.name}
@@ -1081,9 +1092,6 @@ function MemoryEntryForScope({
                                     }
                                   />
                                 </label>
-                                {commit.sha === graph.head && graph.dirty ? (
-                                  <p>{t('memory.version.dirtyHint')}</p>
-                                ) : null}
                                 <Button
                                   type="submit"
                                   variant="primary"

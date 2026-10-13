@@ -58,6 +58,7 @@ import {
 } from './sessions-entry.js';
 import { SidebarViewMenu } from './sidebar-view-menu.js';
 import { channelSidebarPrefs } from './channel-sidebar-prefs.js';
+import { memoryViewSnapshot, setMemoryView, subscribeMemoryView } from './memory-view-prefs.js';
 import { inboxLayoutSnapshot, setInboxLayout, subscribeInboxLayout } from './inbox-view-prefs.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { BotAttentionItem, ChannelSummary } from './store.js';
@@ -830,6 +831,28 @@ function BotInboxHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
   );
 }
 
+function MemoryViewTabs({ t, setExpanded }: ChannelSidebarEntryProps): ReactElement {
+  const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
+  return (
+    <span className="bh-memory-view-tabs" role="tablist" aria-label={t('memory.view.label')}>
+      {(['graph', 'versions'] as const).map((id) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={view === id}
+          onClick={() => {
+            setMemoryView(id);
+            setExpanded?.(true);
+          }}
+        >
+          {t(`memory.view.${id}`)}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 function MemoryHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
   const terminology = useSyncExternalStore(
     channelSidebarPrefs.subscribe,
@@ -837,16 +860,18 @@ function MemoryHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
     () => channelSidebarPrefs.getSnapshot().memoryTerminology,
   );
   return (
-    <SidebarViewMenu
-      label={t('memory.menu')}
-      items={[
-        { type: 'label', id: 'terminology-label', text: t('memory.terminology') },
-        { id: 'memory', label: t('memory.terms.memory') },
-        { id: 'git', label: t('memory.terms.git') },
-      ]}
-      selectedIds={[terminology]}
-      onSelect={(id) => channelSidebarPrefs.setMemoryTerminology(id === 'git' ? 'git' : 'memory')}
-    />
+    <>
+      <SidebarViewMenu
+        label={t('memory.menu')}
+        items={[
+          { type: 'label', id: 'terminology-label', text: t('memory.terminology') },
+          { id: 'memory', label: t('memory.terms.memory') },
+          { id: 'git', label: t('memory.terms.git') },
+        ]}
+        selectedIds={[terminology]}
+        onSelect={(id) => channelSidebarPrefs.setMemoryTerminology(id === 'git' ? 'git' : 'memory')}
+      />
+    </>
   );
 }
 
@@ -1051,6 +1076,8 @@ export function createChannelSidebarBuiltins(
       scope: 'personabot',
       component: MemoryEvolutionEntry,
       headerAction: MemoryHeaderAction,
+      headerLabel: t('entry.memory'),
+      headerTabs: MemoryViewTabs,
     },
     {
       id: 'sessions',

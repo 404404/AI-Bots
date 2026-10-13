@@ -2,6 +2,7 @@
 import {
   act,
   createElement,
+  Fragment,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -25,6 +26,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconAgentPresetOutline16: stub,
     IconAgentPresetOutlineRegular: stub,
     IconCheckOutlineRegular: stub,
+    IconInfoOutlineRegular: stub,
     IconPlusOutlineRegular: stub,
     IconBranchOutlineRegular: stub,
     IconChevronLeftOutlineRegular: stub,
@@ -95,7 +97,13 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     Modal: stub,
     StateDot: stub,
     Tag: stub,
-    Tooltip: ({ children }: { children: ReactNode }) => children,
+    Tooltip: ({ children, label }: { children: ReactNode; label?: ReactNode }) =>
+      createElement(
+        Fragment,
+        null,
+        children,
+        createElement('span', { hidden: true, 'data-tooltip': '' }, label),
+      ),
     relativeTime: () => ({ unit: 'now', n: 0 }),
   };
 });
@@ -103,7 +111,10 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarBuiltins } from '../src/client/channel-sidebar-builtins.js';
-import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
+import {
+  createChannelSidebarRegistry,
+  type ChannelSidebarEntryProps,
+} from '../src/client/channel-sidebar.js';
 import { channelSidebarPrefs } from '../src/client/channel-sidebar-prefs.js';
 import { store } from '../src/client/store.js';
 import type { MemoryGitGraph } from '../src/client/bridge.js';
@@ -755,16 +766,25 @@ describe('Memory Git graph sidebar', () => {
       memoryRemoveVersionName: vi.fn().mockResolvedValue(undefined),
       ...inertSubmissionActions,
     } as unknown as BridgeActions;
+    const header = createChannelSidebarBuiltins(zhTranslate).find(
+      (entry) => entry.id === 'memory-evolution',
+    )?.headerTabs;
+    const entryProps = {
+      scope: 'personabot',
+      channelId: 'dm-qa',
+      botSlug: 'qa',
+      actions,
+      onMemoryCommitSelect,
+      t: zhTranslate,
+    } as unknown as ChannelSidebarEntryProps;
     await act(async () => {
       root.render(
-        createElement(MemoryEntry, {
-          scope: 'personabot',
-          channelId: 'dm-qa',
-          botSlug: 'qa',
-          actions,
-          onMemoryCommitSelect,
-          t: zhTranslate,
-        }),
+        createElement(
+          Fragment,
+          null,
+          createElement(header!, entryProps),
+          createElement(MemoryEntry, entryProps),
+        ),
       );
     });
     const button = (text: string): HTMLButtonElement | undefined =>
@@ -772,7 +792,13 @@ describe('Memory Git graph sidebar', () => {
         (item) => item.textContent === text,
       );
     expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
-    await act(async () => button('已命名版本')?.click());
+    const toggle = (label: string): HTMLButtonElement | undefined =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find(
+        (item) => item.textContent === label,
+      );
+    expect(toggle('演化')?.getAttribute('aria-selected')).toBe('true');
+    await act(async () => toggle('版本')?.click());
+    expect(toggle('版本')?.getAttribute('aria-selected')).toBe('true');
     expect(container.querySelector('.bh-memory-graph-list')).toBeNull();
     const row = container.querySelector<HTMLButtonElement>('.bh-memory-version-row');
     expect(row?.textContent).toContain('周一');
@@ -795,7 +821,7 @@ describe('Memory Git graph sidebar', () => {
       channelId: 'dm-qa',
       tag: 'monday',
     });
-    await act(async () => button('Git 图')?.click());
+    await act(async () => toggle('演化')?.click());
     expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
   });
 
@@ -1218,9 +1244,9 @@ describe('Memory Git graph sidebar', () => {
     });
 
     const evolution = Array.from(container.querySelectorAll('.bh-channel-sidebar-entry')).find(
-      (section) =>
-        section.querySelector('.bh-channel-sidebar-entry-label')?.textContent === '记忆演化',
+      (section) => section.querySelector('.bh-memory-view-tabs') !== null,
     );
+    expect(evolution?.querySelector('.bh-channel-sidebar-entry-label')?.textContent).toBe('记忆');
     expect(evolution?.querySelector('.bh-memory-graph-heading')).toBeNull();
     expect(evolution?.querySelector('.bh-memory-graph-meta')).toBeNull();
     expect(evolution?.querySelector<HTMLInputElement>('#bh-memory-branch-choice')?.value).toBe(

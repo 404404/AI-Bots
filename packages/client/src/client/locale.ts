@@ -2613,6 +2613,7 @@ export const zh = {
   'memory.continueHere': '从这里新建并切换分支',
   'memory.restoreCommit.action': '恢复到这次提交',
   'memory.restoreCommit.menu': '恢复到这次提交',
+  'memory.restoreCommit.title': '恢复到这次提交完成后的状态',
   'memory.restoreCommit.confirm':
     '记忆文件会恢复成这次提交完成后的样子：包含这次提交的改动，不包含之后的提交。',
   'memory.restoreCommit.confirmDirty':
@@ -2621,9 +2622,9 @@ export const zh = {
   'memory.restoreCommit.submitDirty': '保存改动并恢复',
   'memory.restoreCommit.submit': '恢复',
   'memory.restoreCommit.loading': '正在恢复…',
-  'memory.restoreCommit.done': '已恢复到 {sha} 这次提交之后的状态。',
+  'memory.restoreCommit.done': '已恢复到 {sha} 之后的状态',
   'memory.restoreCommit.backedUp': '恢复前的改动已自动存成 {sha} 这个提交。',
-  'memory.restoreCommit.name': '给恢复前的版本起个名字（可选）',
+  'memory.restoreCommit.name': '恢复前的版本名称（可选）',
   'memory.restoreCommit.named': '恢复前的版本已命名为「{name}」。',
   'memory.version.action': '给这个版本起名',
   'memory.version.label': '版本名称',
@@ -2632,8 +2633,8 @@ export const zh = {
   'memory.version.remove': '移除名称「{name}」',
   'memory.version.dirtyHint': '名称会标在这次提交上，还没提交的改动不包含在内。',
   'memory.view.label': '记忆演化显示方式',
-  'memory.view.graph': 'Git 图',
-  'memory.view.versions': '已命名版本',
+  'memory.view.graph': '演化',
+  'memory.view.versions': '版本',
   'memory.versions.empty': '还没有命名的版本。在 Git 图里选中一个提交，点击「给这个版本起名」。',
   'memory.versions.current': '当前',
   'memory.versions.restore': '恢复到这个版本',
@@ -5869,6 +5870,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.continueHere': 'Create and switch branch from here',
   'memory.restoreCommit.action': 'Restore to this commit',
   'memory.restoreCommit.menu': 'Restore to this commit',
+  'memory.restoreCommit.title': 'Restore to right after this commit',
   'memory.restoreCommit.confirm':
     'Memory files go back to how they were right after this commit: its changes are kept, later commits are not.',
   'memory.restoreCommit.confirmDirty':
@@ -5878,10 +5880,10 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.restoreCommit.submitDirty': 'Save changes and restore',
   'memory.restoreCommit.submit': 'Restore',
   'memory.restoreCommit.loading': 'Restoring…',
-  'memory.restoreCommit.done': 'Restored to just after {sha}.',
+  'memory.restoreCommit.done': 'Restored to just after {sha}',
   'memory.restoreCommit.backedUp':
     ' The changes from before the restore were saved automatically as commit {sha}.',
-  'memory.restoreCommit.name': 'Name the version before restoring (optional)',
+  'memory.restoreCommit.name': 'Name for the version before restoring (optional)',
   'memory.restoreCommit.named': ' The version before restoring is named "{name}".',
   'memory.version.action': 'Name this version',
   'memory.version.label': 'Version name',
@@ -5891,8 +5893,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.version.dirtyHint':
     'The name marks this commit; changes that are not committed yet are not included.',
   'memory.view.label': 'Memory evolution view',
-  'memory.view.graph': 'Git graph',
-  'memory.view.versions': 'Named versions',
+  'memory.view.graph': 'Evolution',
+  'memory.view.versions': 'Versions',
   'memory.versions.empty':
     'No named versions yet. Select a commit in the Git graph and click Name this version.',
   'memory.versions.current': 'Current',

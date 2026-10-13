@@ -36,7 +36,7 @@ Select a commit in the graph. **Restore to this commit** appears inside that com
 
 Select any commit and click **Name this version** to give it a name you will recognise later, such as "Draft before cleanup". The name appears as a badge on that commit in the graph. Remove it with the × next to the name in the commit's block. Names are stored as Git tags, so they stay with the Memory repository and do not change any commit.
 
-Switch **Memory evolution** from **Git graph** to **Named versions** to see only the versions you named, newest first, however far back they are. Click a version to open its changes, then **Restore this version** or **Remove name**.
+The section title reads **Memory** followed by two tabs: **Evolution** shows the Git graph, and **Versions** lists only the versions you named, newest first, however far back they are. Click a version to open its changes, then **Restore this version** or **Remove name**.
 
 ## Advanced: system snapshots
 
