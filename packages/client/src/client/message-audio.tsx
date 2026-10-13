@@ -38,11 +38,15 @@ export function MessageAudio({
   name,
   size,
   url,
+  downloadUrl = url,
+  onError,
   t,
 }: {
   name: string;
-  size: number;
+  size?: number | undefined;
   url?: string | undefined;
+  downloadUrl?: string | undefined;
+  onError?: (() => void) | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
   const instanceId = useId();
@@ -51,7 +55,7 @@ export function MessageAudio({
   const [playing, setPlaying] = useState(false);
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState<number>();
-  const bars = useMemo(() => spectrumBars(name, size), [name, size]);
+  const bars = useMemo(() => spectrumBars(name, size ?? 0), [name, size]);
 
   const pauseMount = useMountedResource<HTMLDivElement>(
     (node) => {
@@ -120,8 +124,12 @@ export function MessageAudio({
             {formatAudioTime(current)} /{' '}
             {duration === undefined ? '--:--' : formatAudioTime(duration)}
           </span>
-          <span aria-hidden="true">·</span>
-          <span>{fileSizeText(size)}</span>
+          {size === undefined ? null : (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{fileSizeText(size)}</span>
+            </>
+          )}
         </span>
         <div
           ref={spectrumRef}
@@ -168,13 +176,13 @@ export function MessageAudio({
           ))}
         </div>
       </span>
-      {url === undefined ? null : (
+      {downloadUrl === undefined ? null : (
         <>
           <span className="bh-message-file-divider" aria-hidden="true" />
           <Tooltip label={t('fileAction.download')} side="bottom" delayMs={500}>
             <a
               className="bh-message-file-download"
-              href={url}
+              href={downloadUrl}
               download={name}
               aria-label={`${t('fileAction.download')}: ${name}`}
               onClick={(event) => event.stopPropagation()}
@@ -196,6 +204,7 @@ export function MessageAudio({
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
+          onError={onError}
         />
       )}
     </div>

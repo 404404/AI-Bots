@@ -55,7 +55,7 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - The current Memory file reader, ordinary chat file cards, and the Memory Repository and authorized Workspace folder rows have an **Open** split button: one click opens on the Host in your default application, and the arrow lists other detected applications for a one-time choice. You can set a default per file type or for folders and restore the system default; the setting stays in this browser for this Host profile and never changes the operating system's file associations. A missing or unavailable default asks you to choose instead of using the first application ([#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461), [guide](docs/file-open.md), [ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)).
 
-- The optional checked QQ Provider adds bounded pre-dispatch Gateway, native callback and receipt metadata, including hashes and lengths of fixed identifier fields, to diagnose missing own Echo without logging bodies or raw identifiers; Gateway parsing and sampling refusals are explicit, while author qualification, reply authority and Echo capabilities remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156), [Provider candidate #25](https://github.com/DoodleBears/dsh-im/pull/25)).
+- The optional checked QQ Provider adds bounded transport, Gateway, native callback and receipt metadata to diagnose missing own Echo without logging bodies, credentials or raw identifiers; a reviewed SDK 1.0.4 build patch observes before decode/JSON and exposes start/end counters, including tail suppression, while author qualification, reply authority and Echo capabilities remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156), [Provider candidate #25](https://github.com/DoodleBears/dsh-im/pull/25), [transport candidate #26](https://github.com/DoodleBears/dsh-im/pull/26)).
 
 - A PersonaBot now has a Bot Primary Color: Automatic follows its Avatar's main hair color (or a fixed fallback for uploaded images), and the Avatar dialog in its Profile lets you pick a Custom color with a light/dark preview. Its name on DM and Group Channel messages, in the mention list, in the composer and on sent mentions uses that color, adjusted to stay readable on each background and theme. Exporting a Bot as a zip or sharing its Memory Repository carries the choice, so an imported copy keeps the same color. A deleted Bot keeps its last color on its old messages and in the usage list. The per-Bot usage chart and a Bot's own token charts draw in its color, with fixed shades for cached input, other input and output, and a Bot's activity heatmaps use shades of its color with empty days left neutral ([#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471), [#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472), [#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473), [#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474), [#1475](https://github.com/BotHarness/DeepSeekBot/issues/1475), [#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476), [ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)).
 
@@ -188,6 +188,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- QQ voice attachments use the same audio card as message attachments, with keyboard playback and seeking; download still saves the original voice file, while playback conversion remains explicit ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
+- The maintained QQ Provider retains native mention names and IDs so Channel messages use the existing external mention chips, with the native ID in hover details; original source text and App ownership remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
 - A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
 
 - In the English UI, tool-approval requests and decisions, their replies and the sidebar preview of a Bot DM holding an approval now show English text instead of fixed Chinese ([#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)).
@@ -195,8 +199,6 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - Memory and Workspace folders under a symlinked parent directory, such as macOS `/tmp` or a linked home folder, no longer deny every Bot file tool call as outside the authorized workspace; a folder that is itself a symlink is still refused ([#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)).
 
 - AX Go launches stage the reviewed adapter patch inside each isolated CLI and reference it relatively, fixing Windows `ERR_PNPM_PATCH_NOT_FOUND` when source and home are on different drives; model credentials and native request handling retain their existing ownership ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409), [AX guide](docs/agents/ax-model.md)).
-
-- A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
 
 - DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
 

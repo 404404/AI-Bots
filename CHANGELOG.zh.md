@@ -55,7 +55,7 @@
 
 - 当前 Memory 文件阅读器、聊天普通文件卡，以及 Memory Repository 和已授权 Workspace 文件夹所在行新增「打开」分体按钮：点一下就用默认应用在 Host 上打开，箭头里列出检测到的其他应用供单次选择。可以按文件类型或为文件夹设置默认应用，也可以恢复系统默认；设置只保存在当前浏览器、对应当前 Host Profile，不修改操作系统的文件关联。没有默认或默认应用不可用时会请你选择，不会直接使用列表里的第一个应用（[#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461)、[指南](docs/file-open.md)、[ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)）。
 
-- 可选 checked QQ Provider 新增有界的分发前 Gateway、原生回调与发送回执诊断，包括白名单标识字段的哈希与长度，用于排查自身 Echo 缺失，不记录正文或原始标识；Gateway 解析与采样拒绝明确记录，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)）。
+- 可选 checked QQ Provider 新增有界的传输、Gateway、原生回调与发送回执元数据，用于排查自身 Echo 缺失，不记录正文、凭据或原始标识；经过审查的 SDK 1.0.4 构建补丁在 decode／JSON 前观测，并提供包含尾部限流的首尾计数，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)、[传输候选 #26](https://github.com/DoodleBears/dsh-im/pull/26)）。
 
 - PersonaBot 新增 Bot 主色：自动模式跟随头像的主发色（上传图片时使用固定的备用色），也可以在 Profile 的头像弹窗里选择自定义颜色并预览浅色／深色效果。私聊和群聊消息上的 Bot 名字、@ 候选列表、输入框里选中的 Bot 以及已发送的 @ 都使用这个颜色，并按所在背景和主题调整明暗以保证可读。导出 zip 或分享记忆仓库时会带上这个设置，导入得到的 Bot 保持同样的颜色。删除 Bot 后，它的历史消息和用量列表里的名字仍保留最后的颜色。按 Bot 的用量图表和单个 Bot 自己的 token 图表使用该 Bot 的颜色，并用固定的深浅区分缓存读、其他输入和输出，单个 Bot 的活跃度热力图用它的颜色深浅表示强度，没有活动的日期保持中性色（[#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471)、[#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472)、[#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473)、[#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474)、[#1475](https://github.com/BotHarness/DeepSeekBot/issues/1475)、[#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)、[ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)）。
 
@@ -188,6 +188,10 @@
 
 ### Fixed
 
+- QQ 语音附件与消息附件共用音频卡片，支持键盘播放与进度调整；下载仍保存原始语音文件，播放转换仍需明确操作（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+
+- 维护版 QQ Provider 保留原生提及的名称和 ID，让 Channel 消息复用现有外部提及块，并在悬停详情显示原生 ID；原始正文和 App 归属保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+
 - Bot 不再把另一个 Channel 插入的消息回复到当前回合起始的 Channel：一个回合里有多个 Channel 的消息时，Bot 每次回复都必须指明目标 Channel（[#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)）。
 
 - 英文界面下，工具审批请求与决定、对应的回复引用，以及含审批的 Bot 私聊在侧栏中的预览，现在显示英文，不再固定为中文（[#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)）。
@@ -195,8 +199,6 @@
 - 记忆和工作区文件夹位于符号链接父目录下（例如 macOS 的 `/tmp` 或被链接的主目录）时，Bot 的文件工具调用不再全部被判定为超出授权工作区；文件夹本身是符号链接时仍会被拒绝（[#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)）。
 
 - AX Go 启动会将经审阅的适配器补丁复制到各自的隔离 CLI，并使用相对路径引用，修复源码与 home 位于不同盘符时 Windows 的 `ERR_PNPM_PATCH_NOT_FOUND`；模型凭据和原生请求处理沿用既有归属（[#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)、[AX 指南](docs/agents/ax-model.md)）。
-
-- Bot 不再把另一个 Channel 插入的消息回复到当前回合起始的 Channel：一个回合里有多个 Channel 的消息时，Bot 每次回复都必须指明目标 Channel（[#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)）。
 
 - DeepSeekBot 界面不再随机丢失全部样式（DSH 自身界面正常）：此前其他插件重载或更新时可能连带移除 DeepSeekBot 的样式表（[#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)）。
 
