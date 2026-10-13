@@ -4,12 +4,16 @@ import {
   Input,
   Menu,
   IconEllipsisOutlineRegular,
+  IconSettingsOutlineRegular,
+  IconTrashOutlineRegular,
+  IconUserOutlineRegular,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { ChannelSummary } from './store.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { Modal } from './modal.js';
+import { PersonaBotDeletionView } from './personabot-deletion.js';
 import {
   DM_ACTION_KINDS,
   hiddenDmActionsSnapshot,
@@ -106,16 +110,19 @@ export function HumanChannelNameMenu({
   actions,
   t,
   onOpenSettings,
+  deleteBotSlug,
   settingsAttention = false,
 }: {
   channel: ChannelSummary;
   actions: BridgeActions;
   t: BotHarnessTranslate;
   onOpenSettings?: (() => void) | undefined;
+  deleteBotSlug?: string | undefined;
   settingsAttention?: boolean;
 }): ReactElement | null {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const dmBotSlug = channel.type === 'dm' ? channel.botSlug : undefined;
   const hidden = useSyncExternalStore(
     subscribeHiddenDmActions,
@@ -128,6 +135,7 @@ export function HumanChannelNameMenu({
       : [
           {
             id: 'settings',
+            icon: <IconSettingsOutlineRegular size={16} />,
             label: settingsAttention ? (
               <span className="bh-channel-settings-attention-label">
                 {t('channelSettings.open')}
@@ -144,7 +152,13 @@ export function HumanChannelNameMenu({
         ]),
     ...(channel.humanNickname === undefined
       ? []
-      : [{ id: 'nickname', label: t('humanNickname.title') }]),
+      : [
+          {
+            id: 'nickname',
+            label: t('humanNickname.title'),
+            icon: <IconUserOutlineRegular size={16} />,
+          },
+        ]),
   ];
   const items: MenuEntry[] = [
     ...channelItems,
@@ -159,6 +173,17 @@ export function HumanChannelNameMenu({
             id: `dm:${kind}`,
             label: t(`dmTrace.kind.${kind}`),
           })),
+        ]),
+    ...(deleteBotSlug === undefined
+      ? []
+      : [
+          { type: 'separator' as const, id: 'delete-separator' },
+          {
+            id: 'delete',
+            label: t('deletion.title'),
+            icon: <IconTrashOutlineRegular size={16} />,
+            danger: true,
+          },
         ]),
   ];
   if (items.length === 0) return null;
@@ -201,6 +226,7 @@ export function HumanChannelNameMenu({
           }
           setMenuOpen(false);
           if (id === 'settings') onOpenSettings?.();
+          else if (id === 'delete') setDeleting(true);
           else setDialogOpen(true);
         }}
       />
@@ -210,6 +236,15 @@ export function HumanChannelNameMenu({
           actions={actions}
           t={t}
           onClose={() => setDialogOpen(false)}
+        />
+      ) : null}
+      {deleting && deleteBotSlug !== undefined ? (
+        <PersonaBotDeletionView
+          key={deleteBotSlug}
+          slug={deleteBotSlug}
+          actions={actions}
+          t={t}
+          onClose={() => setDeleting(false)}
         />
       ) : null}
     </span>
