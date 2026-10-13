@@ -690,24 +690,42 @@ export function mountPrivateInputs(
             },
           }),
         );
-        queueMicrotask(() => {
-          for (const remembered of store?.list(info.botSlug) ?? [])
-            void connectServer({
-              server_name: remembered.serverName,
-              account: remembered.account,
-              references: remembered.references,
-              program: remembered.program,
-              args: remembered.args,
-              env: remembered.env,
-            }).then(
-              (result) =>
-                log(
-                  result.includes('"connected":true') ? 'mcp-reconnected' : 'mcp-reconnect-failed',
-                  { botSlug: info.botSlug },
-                ),
-              () => log('mcp-reconnect-failed', { botSlug: info.botSlug }),
-            );
-        });
+        const remembered = store?.list(info.botSlug) ?? [];
+        if (remembered.length > 0) {
+          let disposed = false;
+          agentCtx.effect(
+            () => () => {
+              disposed = true;
+            },
+            'botharness: secret MCP reconnect',
+          );
+          const reconnect = (attempt: number): void => {
+            if (disposed || attempt > 120) return;
+            if (ctx.agents.get(agent.id) !== agent) {
+              setTimeout(() => reconnect(attempt + 1), 250).unref();
+              return;
+            }
+            for (const server of remembered)
+              void connectServer({
+                server_name: server.serverName,
+                account: server.account,
+                references: server.references,
+                program: server.program,
+                args: server.args,
+                env: server.env,
+              }).then(
+                (result) =>
+                  log(
+                    result.includes('"connected":true')
+                      ? 'mcp-reconnected'
+                      : 'mcp-reconnect-failed',
+                    { botSlug: info.botSlug },
+                  ),
+                () => log('mcp-reconnect-failed', { botSlug: info.botSlug }),
+              );
+          };
+          reconnect(0);
+        }
         agentCtx.tools.register(
           defineTool({
             name: 'secret_mcp_disconnect',
