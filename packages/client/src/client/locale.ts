@@ -22,6 +22,7 @@ export const zh = {
   'proactive.legacy': '当前 Provider 不支持群列表，请关闭此窗口，使用「保存的发送目标（高级）」。',
   'proactive.loadError': '群列表暂不可用，请检查应用权限和连接。',
   'proactive.sendError': '未取得发送结果，请保留本次请求并核对 Outbox。',
+  'proactive.sendRefused': '此会话已屏蔽或授权已撤销，本次未发送。',
   'proactive.limitError': '未保存限额，请刷新应用后重试。',
   'proactive.unknown': '结果未知，请核对原群；不要再次发送这条消息。',
   'proactive.accepted': '平台已接受，原群消息回执已保存。',
@@ -3131,6 +3132,8 @@ export const en = {
     'This Provider cannot list groups. Close this window and use Saved send target (advanced).',
   'proactive.loadError': 'Groups are unavailable. Check app permission and connection.',
   'proactive.sendError': 'No outcome was received. Keep this request and check Outbox.',
+  'proactive.sendRefused':
+    'This conversation is blocked or its authorization was revoked. Nothing was sent.',
   'proactive.limitError': 'The limit was not saved. Refresh the app and try again.',
   'proactive.unknown': 'Unknown outcome. Check the original group; do not send this message again.',
   'proactive.accepted': 'Platform accepted; the original group receipt is retained.',

@@ -75,7 +75,7 @@ The app starts with a limit of 60 proactive posts per rolling hour. Change that 
 
 The result distinguishes platform acceptance, a definite refusal and an unknown outcome. For an unknown outcome, inspect the original group and Outbox instead of sending the message again. The first post creates a conversation entry; it does not create a local DM or inbound message.
 
-The rebuilt Lark Provider candidate is still undergoing native qualification and awaits the qualified release. This capability does not establish QQ proactive permission or own Echo.
+The rebuilt Lark slice passed a fresh-group first post and a blocked zero-send check on 2026-10-13; the qualified Provider release remains pending. This capability does not establish QQ proactive permission or own Echo.
 
 ## Edit, reconnect or unbind
 

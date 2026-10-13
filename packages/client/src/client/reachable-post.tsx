@@ -97,8 +97,18 @@ export function ReachablePostDialog({
       if (!live.current) return;
       setResult(intent);
       await refresh();
-    } catch {
-      if (live.current) setError(t('proactive.sendError'));
+    } catch (failure) {
+      if (live.current)
+        setError(
+          t(
+            failure &&
+              typeof failure === 'object' &&
+              'code' in failure &&
+              failure.code === 'grant-revoked'
+              ? 'proactive.sendRefused'
+              : 'proactive.sendError',
+          ),
+        );
     } finally {
       if (live.current) setBusy(false);
     }
