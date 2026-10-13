@@ -380,7 +380,7 @@ export function ChannelMessageBody({
     );
   }
   if (message.privateInputRequest !== undefined && actions !== undefined) {
-    return <PrivateInputCard message={message} actions={actions} t={t} />;
+    return <PrivateInputCard message={message} actions={actions} channelId={channelId} t={t} />;
   }
   if (message.userQuestionRequest !== undefined && actions !== undefined) {
     return (

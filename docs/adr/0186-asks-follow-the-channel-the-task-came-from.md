@@ -20,7 +20,6 @@ An ask raised by an Orchestrator turn is posted in that turn's inbound local Cha
 
 ## Kept in the Human DM
 
-- Secret input (`ask_secret`), so credentials and their prompts do not appear in a Group (ADR-0169).
 - Asks from an Assignment Session, which has no inbound Channel of its own.
 - Asks from a turn with no inbound local Channel, such as a Bot Schedule or an external IM source.
 
@@ -37,3 +36,9 @@ A tool approval card shows a raw tool call. Prompt guidance alone did not make t
 The Host therefore returns the first approval-gated call of an Orchestrator turn to the Bot once when a card would be shown and the Bot has not yet sent a message in the ask Channel during that turn. The returned reason names the Channel and asks for one or two sentences on what it is about to do and what it needs, then for the same call again. Calls that a saved rule approves, turns with no inbound local Channel, and Assignment Sessions are not affected. Workspace Grant requests and question cards already carry the Bot's own sentence and are left to prompt guidance.
 
 The cost is one extra model round for such a task.
+
+## Amendment: secret input follows the Channel too (#1542)
+
+The first version of this decision kept `ask_secret` in the Human DM. That limit is removed: the input card is posted in the turn's inbound local Channel like the other asks. What protects the secret does not depend on the Channel. Only the authenticated Owner can submit the card, the Channel stores the request and an opaque reference and never a value, and the reference and its account binding belong to the requesting Bot, so another Bot in the same Group cannot consume it. The stored grant keeps the card's Channel as part of its proof, and a replacement card opens in the Channel of the card it replaces. IM-origin requests are unchanged (ADR-0169): the Owner still gets a Web Chat card in the Human DM.
+
+Everyone in the Group can see that the Bot asked for a named account and its purpose. The tool guidance tells the Bot to say what the account is for and never to ask anyone to type a secret into the conversation.

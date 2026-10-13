@@ -24,14 +24,17 @@ type PrivateCardMount = {
 export function PrivateInputCard({
   message,
   actions,
+  channelId: sourceChannelId,
   t,
 }: {
   message: ChannelMessage;
   actions: BridgeActions;
+  channelId?: string | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
   const request = message.privateInputRequest!;
-  const channelId = 'dm-' + (message.author.kind === 'bot' ? message.author.slug : '');
+  const channelId =
+    sourceChannelId ?? 'dm-' + (message.author.kind === 'bot' ? message.author.slug : '');
   const id = useId();
   const mounted = useRef<PrivateCardMount>();
   const submitting = useRef(false);
