@@ -277,6 +277,7 @@ export interface OrchestratorAgentRun {
   inbox: string;
   inboundChannelId: string | undefined;
   externalMessaging?: {
+    connected(): boolean;
     senderPermissions?(sourceEventId: string): SenderPermissions;
     directory?(query: MessagingDirectoryQuery): MessagingDirectoryPage;
     targets?(): Promise<
@@ -3770,6 +3771,12 @@ class BotRuntimeImplementation implements BotRuntime {
           ? {}
           : {
               externalMessaging: {
+                connected: () => {
+                  const { identities, grants } = this.#externalMessaging!.deletionDependencies(
+                    bot.slug,
+                  );
+                  return identities.length > 0 || grants.length > 0;
+                },
                 senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
                 directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
                 targets: async () => {

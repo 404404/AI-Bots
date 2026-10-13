@@ -949,6 +949,86 @@ describe('DSH Bot Agent adapter', () => {
     }
   });
 
+  it('lists bridge Tools and the external IM prompt only on turns where the Bot has IM', async () => {
+    const listed: string[][] = [];
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onTurn: async (_session, tools) => {
+          listed.push(tools.map((tool) => tool.name).filter((name) => name.startsWith('bridge_')));
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    let connected = false;
+    const run: OrchestratorAgentRun = {
+      sessionId: 'orchestrator-ada',
+      resume: false,
+      bot: BOT,
+      message: 'Turn',
+      inbox: '',
+      inboundChannelId: 'dm-test',
+      externalMessaging: {
+        connected: () => connected,
+      } as unknown as NonNullable<OrchestratorAgentRun['externalMessaging']>,
+      channels: {
+        ...groupTools,
+        contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+        sendToBot: async () => {
+          throw new Error('unexpected Bot DM');
+        },
+        ignore: () => ({
+          sourceEventId: 'source-1',
+          ignoredAt: BOT.createdAt,
+          alreadyIgnored: false,
+        }),
+        read: () => [],
+        requestGrant: async () => undefined as never,
+        send: async () => {
+          throw new Error('unexpected send');
+        },
+      },
+      assignments: {
+        create: () => ({ outcome: 'created', assignment: ASSIGNMENT }),
+        grants: () => [],
+        list: () => [],
+        inspect: () => undefined,
+        stop: async () => ASSIGNMENT,
+        request: () => ({ assignment: ASSIGNMENT, delivery: 'followup' }),
+      },
+    };
+    const imPrompt = () =>
+      host.scopes
+        .get(run.sessionId)
+        ?.sections.some((section) => section.name === 'botharness:external-im');
+    try {
+      await adapter.runOrchestrator(run);
+      expect(listed.at(-1)).toEqual([]);
+      expect(imPrompt()).toBe(false);
+
+      connected = true;
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toHaveLength(15);
+      expect(listed.at(-1)).toContain('bridge_reply');
+      expect(imPrompt()).toBe(true);
+
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toHaveLength(15);
+
+      connected = false;
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toEqual([]);
+      expect(imPrompt()).toBe(false);
+    } finally {
+      await adapter.close();
+    }
+  });
+
   it('rejects when the durable turn outcome is an error even though the Agent becomes idle', async () => {
     const host = new FakeAgentHost({
       kind: 'error',
@@ -1142,21 +1222,6 @@ describe('DSH Bot Agent adapter', () => {
       'wait_for_assignment',
       'stop_assignment',
       'channel_list',
-      'bridge_sender_permissions',
-      'bridge_directory',
-      'bridge_targets',
-      'bridge_post',
-      'bridge_outbox',
-      'bridge_read',
-      'bridge_share',
-      'bridge_group_policy_list',
-      'bridge_group_policy_set',
-      'bridge_thread_policy_list',
-      'bridge_thread_policy_set',
-      'bridge_context',
-      'bridge_attachment_save',
-      'bridge_reply_file',
-      'bridge_reply',
       'channel_read',
       'inbox_history',
       'inbox_list',
@@ -1778,6 +1843,7 @@ it('routes external Tools through the active owning Orchestrator without a local
     inbox: 'External Inbox',
     message: 'External turn',
     externalMessaging: {
+      connected: () => true,
       senderPermissions: permissionsRead,
       directory: directoryRead,
       targets: async () => [],
