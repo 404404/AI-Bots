@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { botPreset, standardPresetSource, synced } from '../sync-bot-preset.mjs';
+import { botPreset, PRODUCT_PATCHES, standardPresetSource, synced } from '../sync-bot-preset.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const sample = [
@@ -71,8 +71,12 @@ describe('PersonaBot agent preset', () => {
   });
 
   it('keeps the committed product patch in sync with the installed DSH standard preset', () => {
-    const committed = readFileSync(join(root, 'packages/deepseekbot/cordis.patch.yml'), 'utf8');
-    expect(synced(committed, standardPresetSource(root))).toBe(committed);
-    expect(committed).toContain('agentPreset: deepseekbot');
+    expect(PRODUCT_PATCHES).toEqual(['cordis.patch.yml', 'cordis.im.patch.yml']);
+    for (const name of PRODUCT_PATCHES) {
+      const committed = readFileSync(join(root, 'packages/deepseekbot', name), 'utf8');
+      expect(synced(committed, standardPresetSource(root))).toBe(committed);
+      expect(committed).toContain('agentPreset: deepseekbot');
+      expect(committed).toContain('id: preset-deepseekbot');
+    }
   });
 });
