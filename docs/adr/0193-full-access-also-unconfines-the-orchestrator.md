@@ -12,11 +12,13 @@ The owner decided that the setting should mean what it says for the chat too, an
 
 ## Decision
 
-While a PersonaBot's access preset is `danger-full-access`, its Orchestrator runs in DSH `danger-full-access` with approval `never`. File-path checks, the unconfined-tool gate and per-call approval cards no longer apply to it. Turning the preset off returns the Orchestrator to `workspace-write` and `ask` at its next step. Existing Assignments keep the mode they were created with, as before. Orchestrator Subagents stay confined.
+Full access has a scope the Human can switch: **chat and Assignments**, the default when it is turned on, or **Assignments only**, which is ADR-0067's original behaviour. While a PersonaBot's access preset is `danger-full-access` with the chat scope, its Orchestrator runs in DSH `danger-full-access` with approval `never`. File-path checks, the unconfined-tool gate and per-call approval cards no longer apply to it. Turning the preset off returns the Orchestrator to `workspace-write` and `ask` at its next step. Existing Assignments keep the mode they were created with, as before. Orchestrator Subagents stay confined.
 
 The Host owns the Orchestrator's mode. Before each step it compares the Session with the preset and sets it when they differ. If the Session had already been aligned and was changed from outside, the Host restores it and posts one line in the Bot's DM saying where the setting lives. It no longer rejects steps silently.
 
 Three things still apply under full access: `secret_cli` asks for its own approval on every call and runs in the Shell sandbox; file tools and commands that name the credential store are refused; a tool call cannot request a sandbox escalation for itself.
+
+A Bot that already had full access on before this change keeps the Assignments-only scope, so an upgrade does not widen it silently.
 
 The switch shows a red warning at all times, before and after it is turned on, and the confirmation says that the chat Session is included.
 
