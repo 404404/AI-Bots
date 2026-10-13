@@ -403,7 +403,7 @@ Human 与 PersonaBot 的提及保存带类型的稳定目标，在显示时解�
 
 #549 切片将个人视图扩展为「提及与回复」。Orchestrator 通过 `channel_list` 发现当前 Group Human 成员，再用 `channel_send.mention_human_ids` 指定其稳定身份。Channel owner 验证当前成员关系，在已有 Source Event payload 内提交 Human 目标与显示偏移；普通文本不提供身份。一条 Bot 消息同时提及并直接回复本地 Human 时，个人视图只列一项，未读总数只计一次。现有 `replies` RPC category 和 Source Event item 身份保持兼容，可信提及用 `channel-mention` 区分。两种原因共用最近优先排序、Bot／Channel 筛选、已读状态、有界时间序上下文、原位回复及准确导航。Human 提及元数据不改变 Bot Admission 或 Wake Policy；范围仍是单一本地 Human，不新增全体 Human 广播或账号配置。
 
-#123 审批提示切片通过现有版本化 Activity 快照及实时流独立发布正数 `attention.approvalCount`，不改变执行状态。process-local 来源是拥有原生工具审批的 broker：仅在权威 Channel 卡片提交后计数，决定、取消、scope 失效或 Fiber 销毁时，先移除提示再恢复 Tool 答案。侧栏、输入框与总览头像共用这个有界数量；请求身份及原始载荷仍只留在所属审批界面。新 Host 没有 live 审批，重启不从历史请求卡片复活提示。其他 attention 类别及明确 waiting-on-Assignment 留待后续切片。
+#123 审批提示切片通过现有版本化 Activity 快照及实时流独立发布正数 `attention.approvalCount`，不改变执行状态。process-local 来源是拥有原生工具审批的 broker：仅在权威 Channel 卡片提交后计数，决定、取消、scope 失效或 Fiber 销毁时，先移除提示再恢复 Tool 答案。侧栏、输入框与总览头像共用这个有界数量；请求身份及原始载荷仍只留在所属审批界面。新 Host 没有 live 审批，重启不从历史请求卡片复活提示。原生问题 broker 同样只在卡片提交后发布 `questionCount`。限时问题卡按 Session 和调用定位，不依赖提问的 Agent：Agent 释放后仍计数；新 Host 会重新打开原 Orchestrator Session 仍持有原生问题的未决限时卡片，回答经 Bot 的轮次队列、以卡片自身的 Source Event 为锚点恢复该 Session（[ADR-0187](../adr/0187-personabots-use-a-product-preset-with-timed-questions.md)）。其他 attention 类别及明确 waiting-on-Assignment 留待后续切片。
 
 首个总览切片（#541）通过 `botharness/activityOverview` 读取现有 Human attention 投影的完整明确行动数，并连接 PersonaBot Registry、根 Session 归属、当前 activity 和 DSH 原生 live Agent 状态。首个切片当时将原生提问／审批等待和空闲 Assignment 的未答请求显示为等待或受阻；当前总览则将 Human 待办与执行状态分开，如上文所述。只有 live 且 thinking／working 的根 Session 进入正在执行列表，重启后不把旧日志的执行状态当作当前运行。视图拥有每五秒的查询刷新及卸载清理，离开视图后的旧响应不会覆盖新状态；无新增数据库表或执行权威。
 

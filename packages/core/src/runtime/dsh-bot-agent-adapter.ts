@@ -391,8 +391,6 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       });
     try {
       await this.#prepareModelRoute?.(run.bot.slug, 'orchestrator');
-      if (run.acceptNativeInput !== undefined && this.#handles.get(run.sessionId) === undefined)
-        throw new Error('Native question requires its existing live Orchestrator');
       const handle = await this.#orchestratorHandle(run);
       if (this.#stoppedBots.has(run.bot.slug)) throw new Error('PersonaBot is deleted');
       this.#orchestratorBridgeTools.get(run.sessionId)?.(
