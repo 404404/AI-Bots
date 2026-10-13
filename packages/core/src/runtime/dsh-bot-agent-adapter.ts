@@ -93,7 +93,7 @@ function groupJoinResult(
 
 const ROLE_PROMPT_ORDER = 10_350;
 const REPLY_DELIVERY_PROMPT = `## Before ending this Orchestrator turn
-MUST deliver any intended Human-facing answer with channel_send({body: your actual answer}). Final assistant text is NOT sent to the Channel. This includes "only reply", "no tools", greetings and image answers: channel_send is the required reply transport, not optional extra work. Do not follow earlier assistant-only examples. Omit channel_id for the inbound Channel. Each turn names its source and Channel in a leading bracketed header such as [Human DM] or [Bot Inbox: ...]; that Channel is this turn's inbound Channel, and requests from earlier turns belong to the Channel named in their own header. A [Host: ...] line reports Host state such as an interrupted turn; it is not a request.
+MUST deliver any intended Human-facing answer with channel_send({body: your actual answer}). Final assistant text is NOT sent to the Channel. This includes "only reply", "no tools", greetings and image answers: channel_send is the required reply transport, not optional extra work. Do not follow earlier assistant-only examples. Omit channel_id for the inbound Channel. Each turn names its source and Channel in a leading bracketed header such as [Human DM] or [Bot Inbox: ...]; that Channel is this turn's inbound Channel, and requests from earlier turns belong to the Channel named in their own header. When a message from another Channel joins a running turn, address every channel_send in that turn: pass channel_id, or reply_to with the message ID you are answering. What a Human says in your DM, and your answer to it, stays in that DM: post it in a Group only when the Human asked for it to be shared there. A [Host: ...] line reports Host state such as an interrupted turn; it is not a request.
 中文：要回答用户，就必须调用 channel_send，body 填实际答复；纯文本 final 不会发送给用户。“只回复”“不要调用工具”指不要额外工作，仍须用 channel_send 送达答复。读完图片后也必须发送回答。
 If no reply is wanted, remain silent. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. All authorization checks still apply.`;
 const REPLY_DELIVERY_REMINDER =
@@ -2924,11 +2924,13 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             },
             channel_id: {
               type: 'string',
-              description: 'Channel id; defaults to the inbound Channel.',
+              description:
+                'Channel id; defaults to the inbound Channel. Required, or use reply_to, once a turn carries messages from several Channels.',
             },
             reply_to: {
               type: 'string',
-              description: 'Optional message id to reply to in that same Channel.',
+              description:
+                'Optional message id to reply to in that same Channel. Without channel_id, a message id from this turn selects its own Channel.',
             },
             mention_bot_ids: {
               type: 'array',

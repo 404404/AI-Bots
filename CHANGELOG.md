@@ -175,6 +175,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Fixed
 
+- A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
+
 - In the English UI, tool-approval requests and decisions, their replies and the sidebar preview of a Bot DM holding an approval now show English text instead of fixed Chinese ([#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)).
 
 - Memory and Workspace folders under a symlinked parent directory, such as macOS `/tmp` or a linked home folder, no longer deny every Bot file tool call as outside the authorized workspace; a folder that is itself a symlink is still refused ([#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)).
