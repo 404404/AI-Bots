@@ -1337,9 +1337,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         owner?.rootRole === 'assignment'
           ? core.runtime.getAssignment(owner.botSlug, owner.sessionId)?.permission
           : undefined;
-      if (snapshot?.mode === 'danger-full-access') return next();
+      const eachUse = execution.name === 'secret_cli';
+      if (snapshot?.mode === 'danger-full-access' && !eachUse) return next();
       const approval = ctx.get('approval') as ApprovalService | undefined;
-      const untrack = toolApproval.track(execution);
+      const untrack = toolApproval.track(execution, eachUse ? 'each-use' : 'operation');
       if (approval === undefined || untrack === undefined) {
         return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
       }
@@ -1355,7 +1356,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           reason:
             execution.name === 'channel_attachment_open'
               ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-              : 'This tool call may access files outside the authorized folder.',
+              : eachUse
+                ? 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.'
+                : 'This tool call may access files outside the authorized folder.',
           signal: execution.signal,
         });
         if (outcome !== 'allowed-once') {

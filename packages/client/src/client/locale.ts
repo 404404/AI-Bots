@@ -2781,6 +2781,8 @@ export const zh = {
   'approval.orchestrator': 'Orchestrator',
   'approval.cwd': '工作目录：{path}',
   'approval.risk': '此工具可能访问已授权文件夹以外的内容。请检查完整输入和批准范围。',
+  'approval.secretCliRisk':
+    'Bot 想带着你填写的密钥运行一个命令行程序。这个程序会拿到密钥，也可能把它泄露出去。请核对程序名和每一个参数；这类调用每次都需要单独批准。',
   'approval.originalRisk':
     '这会修改指定附件原件。所有共享此文件的消息都将展示当前内容，独立副本不受影响。请核对上面的消息和文件。',
   'approval.channelChanged': '已切换频道，请回到此 Bot 的私聊后重试。',
@@ -6020,6 +6022,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.cwd': 'Working directory: {path}',
   'approval.risk':
     'This tool may access files outside authorized folders. Review the full input and approval scope.',
+  'approval.secretCliRisk':
+    'The Bot wants to run a command-line program with a secret you entered. The program receives the secret and could reveal it. Check the program name and every argument; each such call needs its own approval.',
   'approval.originalRisk':
     'This edits the selected original attachment. All messages sharing this file show its current contents; independent copies stay unchanged. Check the message and file above.',
   'approval.channelChanged': 'Return to this Bot DM and try again.',

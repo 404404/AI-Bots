@@ -181,7 +181,9 @@ export function ToolApprovalCard({
         {t(
           request.toolName === 'channel_attachment_open'
             ? 'approval.originalRisk'
-            : 'approval.risk',
+            : request.toolName === 'secret_cli'
+              ? 'approval.secretCliRisk'
+              : 'approval.risk',
         )}
       </div>
       {executionState === 'waiting-human' ||
@@ -210,16 +212,20 @@ export function ToolApprovalCard({
           <Button variant="primary" disabled={disabled} onClick={() => decide('allowed-once')}>
             {t('approval.allowOnce')}
           </Button>
-          <Button
-            variant="outline"
-            disabled={disabled}
-            onClick={() => decide('allowed-always-exact')}
-          >
-            {t('approval.allowExact')}
-          </Button>
-          <Button variant="outline" disabled={disabled} onClick={() => setConfirmAll(true)}>
-            {t('approval.allowAll')}
-          </Button>
+          {request.toolName === 'secret_cli' ? null : (
+            <Button
+              variant="outline"
+              disabled={disabled}
+              onClick={() => decide('allowed-always-exact')}
+            >
+              {t('approval.allowExact')}
+            </Button>
+          )}
+          {request.toolName === 'secret_cli' ? null : (
+            <Button variant="outline" disabled={disabled} onClick={() => setConfirmAll(true)}>
+              {t('approval.allowAll')}
+            </Button>
+          )}
           <Button variant="outline" disabled={disabled} onClick={() => decide('rejected')}>
             {t('approval.reject')}
           </Button>

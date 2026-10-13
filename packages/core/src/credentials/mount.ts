@@ -4,6 +4,14 @@ import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { BotHarnessCore } from '../plugin.js';
 import { PrivateInputs } from './private-inputs.js';
 import { ProtectedExecution, SecretHttpRefusal } from './protected-execution.js';
+import {
+  SecretCommandRefusal,
+  runSecretCommand,
+  secretCommandArgs,
+  secretCommandBaseEnv,
+  secretCommandEnvName,
+  secretCommandProgram,
+} from './secret-command.js';
 import type { PrivateInputLog } from './diagnostics.js';
 import { LinuxMcp } from './linux-mcp.js';
 import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
@@ -17,6 +25,7 @@ const SAFE_TOOLS = new Set([
   'ask_secret',
   'protected_cli',
   'secret_http',
+  'secret_cli',
   'bash',
   'channel_send',
   'channel_read',
@@ -408,6 +417,147 @@ export function mountPrivateInputs(
                         successful: false,
                         refused: error.message,
                       };
+                    }
+                  },
+                  call.signal,
+                ),
+              );
+            },
+          }),
+        );
+        if (mode !== 'standard') return;
+        agentCtx.tools.register(
+          defineTool({
+            name: 'secret_cli',
+            description:
+              'Run one installed command-line tool with secrets the Owner entered through ask_secret placed in its environment, for a tool that only reads its credential from an environment variable. Prefer secret_http for a plain HTTP API. The Host starts the program directly, without a shell: no pipes, redirects, variables or substitutions. Give the bare program name, its arguments, and the environment variables the tool documents, writing {{field_id}} where a secret belongs. It runs in your working folder inside the same file sandbox as bash, with a clean environment, for at most two minutes. Returns the exit code and up to 32 KB each of stdout and stderr with the secret values masked. Every call needs its own Human approval, which shows the exact program and arguments; a saved approval never covers it. Never ask the tool to print, export or store the credential.',
+            parameters: {
+              account: {
+                type: 'string',
+                required: true,
+                description: 'Exact nonsecret account from ask_secret.',
+              },
+              references: {
+                type: 'array',
+                required: true,
+                items: { type: 'string' },
+                description: 'The opaque references from ask_secret that this command uses.',
+              },
+              program: {
+                type: 'string',
+                required: true,
+                description:
+                  'Bare name of the installed tool, for example gh. Not a path, shell or interpreter.',
+              },
+              args: {
+                type: 'array',
+                required: true,
+                items: { type: 'string' },
+                description: 'Arguments, one per item, passed as written. No secrets here.',
+              },
+              env: {
+                type: 'array',
+                required: true,
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', required: true },
+                    value: { type: 'string', required: true },
+                  },
+                  additionalProperties: false,
+                },
+                description:
+                  'Environment variables for the tool; a value contains {{field_id}}, for example name GH_TOKEN, value {{token}}.',
+              },
+            },
+            output: {
+              schema: { type: 'string' },
+              render: (_args, value) => [{ type: 'text', text: value }],
+            },
+            execute: async (args, call) => {
+              const references: Record<string, string> = {};
+              for (const reference of args.references) {
+                const field = /^private:[0-9a-f-]{36}:([a-z][a-z0-9_]{0,47})$/.exec(reference)?.[1];
+                if (field === undefined || references[field] !== undefined)
+                  throw new Error('references must be distinct ask_secret references');
+                references[field] = reference;
+              }
+              const refuse = (reason: string) =>
+                JSON.stringify({ consumer: 'command-v1', successful: false, refused: reason });
+              const cwd = agent.session.header.cwd;
+              const sandbox = ctx.get('sandbox') as unknown as
+                | {
+                    confine(
+                      argv: readonly string[],
+                      policy: { mode: 'workspace-write'; workspaceRoot: string },
+                      signal?: AbortSignal,
+                    ): Promise<{ argv: string[] }>;
+                  }
+                | undefined;
+              if (cwd === undefined || sandbox === undefined)
+                return refuse('The Shell sandbox is unavailable, so the command was not started');
+              let command: string[];
+              let names: string[];
+              try {
+                command = [secretCommandProgram(args.program), ...secretCommandArgs(args.args)];
+                names = args.env.map((entry) => secretCommandEnvName(entry.name));
+                if (
+                  args.env.length === 0 ||
+                  args.env.length > 16 ||
+                  new Set(names).size !== names.length ||
+                  !args.env.some((entry) => /\{\{[a-z][a-z0-9_]{0,47}\}\}/.test(entry.value))
+                )
+                  throw new SecretCommandRefusal(
+                    'env must hold 1–16 distinct variables and at least one {{field_id}} placeholder',
+                  );
+                if (command.some((part) => /\{\{[a-z][a-z0-9_]{0,47}\}\}/.test(part)))
+                  throw new SecretCommandRefusal(
+                    'a secret placeholder is allowed only in env values, never in arguments',
+                  );
+              } catch (error) {
+                if (error instanceof SecretCommandRefusal) return refuse(error.message);
+                throw error;
+              }
+              let confined: { argv: string[] };
+              try {
+                confined = await sandbox.confine(
+                  command,
+                  { mode: 'workspace-write', workspaceRoot: cwd },
+                  call.signal,
+                );
+              } catch {
+                return refuse('The Shell sandbox is unavailable, so the command was not started');
+              }
+              return JSON.stringify(
+                await owner.consume(
+                  agent,
+                  args.account,
+                  references,
+                  async (values, signal) => {
+                    try {
+                      const env = secretCommandBaseEnv();
+                      for (const [index, entry] of args.env.entries())
+                        env[names[index]!] = entry.value.replace(
+                          /\{\{([a-z][a-z0-9_]{0,47})\}\}/g,
+                          (_match, field: string) => {
+                            const value = values[field];
+                            if (value === undefined)
+                              throw new SecretCommandRefusal(
+                                'A placeholder names a field that was not referenced',
+                              );
+                            return value;
+                          },
+                        );
+                      return await runSecretCommand(
+                        confined.argv,
+                        env,
+                        cwd,
+                        Object.values(values),
+                        signal,
+                      );
+                    } catch (error) {
+                      if (!(error instanceof SecretCommandRefusal)) throw error;
+                      return { consumer: 'command-v1', successful: false, refused: error.message };
                     }
                   },
                   call.signal,

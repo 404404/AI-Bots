@@ -558,7 +558,10 @@ export function createApprovalMessaging(options: {
         expiresAt: notice.expiresAt,
         delivery: 'pending',
         attempts: 0,
-        status: notice.externalDecision === 'web-only' ? 'web-required' : 'pending',
+        status:
+          notice.externalDecision === 'web-only' || notice.externalDecision === 'each-use'
+            ? 'web-required'
+            : 'pending',
         update: 'none',
       });
       queueMicrotask(
