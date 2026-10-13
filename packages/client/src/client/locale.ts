@@ -1173,6 +1173,17 @@ export const zh = {
   'message.delivery.needs-repair': '处理失败，需检查',
   'message.failed': '发送失败',
   'message.failedRestore': '将失败消息放回输入框修改后重发',
+  'message.unconfirmed': '结果未确认',
+  'message.unconfirmedRestore': '向 Host 核对这条消息是否已送达',
+  'composer.recallOmitted': '召回的输入未带回原来的附件和回复对象。',
+  'composer.recallDropped': '召回的输入里部分 @ 或 # 引用已失效，已改为普通文字。',
+  'composer.submissionStorageError':
+    '这次提交的输入未能保存到本设备，刷新后将无法找回；请先复制备份。',
+  'composer.submissionChecking': '正在向 Host 核对这条消息…',
+  'composer.submissionUncheckable':
+    '现在无法向 Host 确认这条消息是否已送达，没有重发。请恢复连接后再试。',
+  'composer.submissionDelivered': 'Host 已收到这条消息，无需重发。',
+  'composer.submissionNotDelivered': 'Host 没有收到这条消息。可点「发送失败」放回输入框后重发。',
   'message.restoreBlocked': '输入框已有草稿，请先处理草稿再恢复失败消息。',
   'main.group.note': '邀请 Bot 加入，或在频道侧栏的「外部连接器」中接入外部会话。',
   'main.localChat': '本地对话',
@@ -4297,6 +4308,20 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'message.delivery.needs-repair': 'Failed, needs review',
   'message.failed': 'Failed to send',
   'message.failedRestore': 'Restore failed message to composer to edit and resend',
+  'message.unconfirmed': 'Not confirmed',
+  'message.unconfirmedRestore': 'Ask the Host whether this message was delivered',
+  'composer.recallOmitted':
+    ' The recalled input does not bring back its attachments or reply target.',
+  'composer.recallDropped':
+    ' Some @ or # references in the recalled input are no longer valid and became plain text.',
+  'composer.submissionStorageError':
+    'This submission could not be saved on this device and cannot be recovered after a reload; copy it first.',
+  'composer.submissionChecking': 'Asking the Host about this message…',
+  'composer.submissionUncheckable':
+    'The Host cannot confirm right now whether this message was delivered; nothing was resent. Try again when the connection is back.',
+  'composer.submissionDelivered': 'The Host already has this message; no resend is needed.',
+  'composer.submissionNotDelivered':
+    'The Host did not receive this message. Select "Failed to send" to put it back in the input and resend.',
   'message.restoreBlocked':
     'Finish or clear the current draft before restoring the failed message.',
   'main.localChat.hint': 'Just send a message; the Bot schedules work and replies here.',
