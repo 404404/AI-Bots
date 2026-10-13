@@ -5,7 +5,7 @@ import { createTempRoot } from './helpers.js';
 
 export type TurnHook = (run: OrchestratorAgentRun) => unknown;
 
-export async function inboxFixture() {
+export async function inboxFixture(options: { triageContinuation?: boolean } = {}) {
   const home = createTempRoot('botharness-inbox-');
   const runs: OrchestratorAgentRun[] = [];
   const hooks: TurnHook[] = [];
@@ -22,14 +22,18 @@ export async function inboxFixture() {
     },
     async close() {},
   };
-  const core = createCore({ dshHome: home, agents: adapter });
+  const core = createCore({
+    dshHome: home,
+    agents: adapter,
+    triageContinuation: options.triageContinuation ?? false,
+  });
   core.registry.create({ slug: 'ada', displayName: 'Ada' });
   const dm = core.channels.getOrCreateDm('ada', 'Ada');
   if (dm === undefined) throw new Error('Missing DM');
   const probe = attachOperationalModule(core.operationalDatabase, 'inbox-test');
   let sequence = 0;
-  async function send(body: string, hook?: TurnHook) {
-    if (hook !== undefined) hooks.push(hook);
+  async function send(body: string, ...turns: TurnHook[]) {
+    hooks.push(...turns);
     sequence += 1;
     const messageId = `human-${sequence}`;
     const admission = core.runtime.admitDmMessage({ channelId: dm!.id, messageId, body });
