@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import type { Context } from '@deepseek-ai/cordis';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { BotHarnessCore } from '../plugin.js';
@@ -93,8 +94,19 @@ export function mountPrivateInputs(
       };
       const original = sandbox.confine;
       const store = credentialStorePath(dshHome);
+      const reported = new Set<string>();
       sandbox.confine = async function (this: unknown, ...args: unknown[]) {
-        return denyStoreRead(await original.apply(this, args), store);
+        const confined = await original.apply(this, args);
+        const denied = denyStoreRead(confined, store);
+        const runner = basename(confined.argv[0] ?? 'none');
+        if (denied === confined && !reported.has(runner)) {
+          reported.add(runner);
+          ctx.logger.warn(
+            'botharness: the Shell sandbox runner %s has no credential store read denial; only the command text guard applies',
+            runner,
+          );
+        }
+        return denied;
       };
       child.effect(
         () => () => {
