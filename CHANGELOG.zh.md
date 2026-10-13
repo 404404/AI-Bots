@@ -38,6 +38,8 @@
 
 ### Added
 
+- 发送后输入框清空，输入内容保留在本设备：在空的私聊或群聊输入框按 ↑ 可召回提交过的内容（包括发送失败的），按 ↓ 回到原来的草稿。没有得到回应的发送显示「结果未确认」而不是失败；它会按原提交标识向 Host 核对，不会自动重发，刷新后仍可找回（[#1460](https://github.com/BotHarness/DeepSeekBot/issues/1460)，[ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)）。
+
 - DM 与 Group 输入框在频道切换和浏览器刷新后保留本设备草稿，恢复时校验引用，并明确提示多标签页冲突及存储失败；未上传的文件字节不会保留（[#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459)，[ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)）。
 
 - PersonaBot 的私聊现在会显示它在别处做了什么：它在群聊或 Bot 私信里的每次发言都会在私聊留下一条带摘录、可跳回原消息的短行，同一会话里的连续发言合并成一行；在群里触发的记忆更新也会出现在私聊里并标明地点。私聊右上角的设置菜单可以按类型为这个 Bot 隐藏这些行；它们不算未读，也不会唤醒任何人（[#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517)，[ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)）。

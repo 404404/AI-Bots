@@ -46,6 +46,8 @@ import {
   type ChannelComposerUpload,
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
+import type { SelectedChannelRef } from './channel-refs.js';
+import { recallEntries, stepRecall, SUBMISSION_PREFIX } from './composer-submission-store.js';
 import {
   conversationDraftKey,
   useConversationDraft,
@@ -468,11 +470,15 @@ function MessageGroupView({
                   <button
                     type="button"
                     className="bh-bubble-failed-action"
-                    aria-label={t('message.failedRestore')}
+                    aria-label={t(
+                      message.unconfirmed === true
+                        ? 'message.unconfirmedRestore'
+                        : 'message.failedRestore',
+                    )}
                     title={message.failed}
                     onClick={() => onRestoreFailed(message)}
                   >
-                    {t('message.failed')}
+                    {t(message.unconfirmed === true ? 'message.unconfirmed' : 'message.failed')}
                   </button>
                 )}
                 <div
@@ -699,6 +705,85 @@ function ConversationView({
   const uploadControllers = useRef(new Map<string, AbortController>());
   const [replyTarget, setReplyTarget] = useConversationDraft(draftScope, 'reply', undefined);
   const submitting = useRef(false);
+  const recall = useRef<
+    | {
+        scope: string;
+        index: number;
+        text: string;
+        saved: { text: string; mentions: SelectedMention[]; channelRefs: SelectedChannelRef[] };
+      }
+    | undefined
+  >(undefined);
+  const [recallNotice, setRecallNotice] = useState<string>();
+  const [submissionNotice, setSubmissionNotice] = useState<string>();
+  const submissionChannelId = draftScope === undefined ? undefined : state.conversation.channel?.id;
+  const readSubmissions = () =>
+    submissionChannelId === undefined
+      ? undefined
+      : actions.submissions.snapshot(submissionChannelId);
+  const submissionSnapshot = useSyncExternalStore(
+    actions.submissions.subscribe,
+    readSubmissions,
+    readSubmissions,
+  );
+  const submissionMount = useMountedResource<HTMLSpanElement>(() => {
+    if (submissionChannelId === undefined) return;
+    const sync = (event: StorageEvent): void => {
+      if (event.key === null || event.key.startsWith(SUBMISSION_PREFIX))
+        actions.submissions.sync(submissionChannelId);
+    };
+    window.addEventListener('storage', sync);
+    void actions.submissions.reconcile(submissionChannelId);
+    return () => window.removeEventListener('storage', sync);
+  }, [actions, submissionChannelId]);
+  const recallInput = (direction: 'older' | 'newer'): boolean => {
+    if (draftScope === undefined || recovery.blocked) return false;
+    const entries = recallEntries(submissionSnapshot?.attempts ?? []);
+    const active = recall.current?.scope === draftScope ? recall.current : undefined;
+    const step = stepRecall(active, direction, draft, entries);
+    if (step.kind === 'ignore') {
+      if (recall.current !== undefined) {
+        recall.current = undefined;
+        setRecallNotice(undefined);
+      }
+      return false;
+    }
+    if (step.kind === 'stay') return true;
+    const saved =
+      active !== undefined && active.text === draft
+        ? active.saved
+        : { text: draft, mentions: mentionTokens, channelRefs: channelRefTokens };
+    if (step.kind === 'restore') {
+      recall.current = undefined;
+      setRecallNotice(undefined);
+      recovery.update(saved);
+      return true;
+    }
+    const entry = step.entry;
+    const mentions = entry.mentions.filter(
+      (mention) =>
+        state.bots.some(
+          (bot) => bot.slug === mention.botSlug && bot.paused !== true && !bot.deleted,
+        ) &&
+        (channel?.type !== 'group' || channel.members.includes(mention.botSlug)),
+    );
+    const channelRefs = entry.channelRefs.filter((ref) =>
+      state.channels.some((item) => item.id === ref.channelId && item.type === 'group'),
+    );
+    recall.current = { scope: draftScope, ...step.cursor, saved };
+    recovery.update({ text: entry.text, mentions, channelRefs });
+    const dropped =
+      mentions.length !== entry.mentions.length || channelRefs.length !== entry.channelRefs.length;
+    const omitted = entry.replyTo !== undefined || (entry.attachments?.length ?? 0) > 0;
+    setRecallNotice(
+      [
+        t('composer.recalled'),
+        omitted ? t('composer.recallOmitted') : '',
+        dropped ? t('composer.recallDropped') : '',
+      ].join(''),
+    );
+    return true;
+  };
   const followingLatest = useRef(true);
   const activityOverlayPane = useRef<HTMLElement | null>(null);
   const resizeActivityOverlay = useCallback(
@@ -1274,6 +1359,9 @@ function ConversationView({
     )
       return;
     submitting.current = true;
+    const composerFocused =
+      document.activeElement instanceof Element &&
+      document.activeElement.closest('.bh-composer-shell') !== null;
     const viewport = scrollRef.current;
     followingLatest.current =
       viewport !== null &&
@@ -1289,18 +1377,41 @@ function ConversationView({
         .conversation.messages.filter((item) => item.failed !== undefined)
         .map((item) => item.id),
     );
-    recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
     const submittedReplyTo = replyTarget?.id;
+    const submittedAttachments = submittedUploads.flatMap((item) =>
+      item.ref === undefined ? [] : [item.ref],
+    );
+    const attempt =
+      submittedFor === undefined
+        ? undefined
+        : actions.submissions.begin(submittedFor, {
+            text: body,
+            mentions: submittedMentions.flatMap((item) =>
+              item.kind === 'all-bots'
+                ? []
+                : [{ botSlug: item.botSlug, label: item.label, start: item.start, end: item.end }],
+            ),
+            channelRefs: submittedRefs,
+            ...(submittedReplyTo === undefined ? {} : { replyTo: submittedReplyTo }),
+            ...(submittedAttachments.length === 0 ? {} : { attachments: submittedAttachments }),
+          });
+    setSubmissionNotice(
+      attempt?.persisted === false ? t('composer.submissionStorageError') : undefined,
+    );
+    recall.current = undefined;
+    setRecallNotice(undefined);
+    recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
     try {
       const sent = await actions.send(
         body,
         submittedReplyTo,
-        submittedUploads.flatMap((item) => (item.ref === undefined ? [] : [item.ref])),
+        submittedAttachments,
         undefined,
         submittedMentions.filter((item) => item.kind !== 'all-bots'),
         submittedRefs,
         undefined,
         allBotMention,
+        attempt?.id,
       );
       if (sent) {
         setAllBotNotice(undefined);
@@ -1312,6 +1423,8 @@ function ConversationView({
             (item) => item.failed !== undefined && !previousFailures.has(item.id),
           );
         if (!failedEcho) {
+          if (attempt !== undefined && submittedFor !== undefined)
+            actions.submissions.cancel(submittedFor, attempt.id);
           setDraft((current) => current || body);
           setMentionTokens((current) => (current.length > 0 ? current : submittedMentions));
           setChannelRefTokens((current) => (current.length > 0 ? current : submittedRefs));
@@ -1345,6 +1458,8 @@ function ConversationView({
       } else throw error;
     } finally {
       submitting.current = false;
+      if (composerFocused && currentChannel.current === submittedFor)
+        setRestoreFocusSignal((value) => value + 1);
     }
   };
 
@@ -1761,6 +1876,26 @@ function ConversationView({
                                 setRestoreBlocked(true);
                                 return;
                               }
+                              if (message.unconfirmed === true) {
+                                setSubmissionNotice(t('composer.submissionChecking'));
+                                void actions.submissions
+                                  .check(channelId, message.id)
+                                  .then(async (status) => {
+                                    if (status === 'unknown') {
+                                      setSubmissionNotice(t('composer.submissionUncheckable'));
+                                      return;
+                                    }
+                                    await actions.submissions.reconcile(channelId);
+                                    setSubmissionNotice(
+                                      t(
+                                        status === 'committed'
+                                          ? 'composer.submissionDelivered'
+                                          : 'composer.submissionNotDelivered',
+                                      ),
+                                    );
+                                  });
+                                return;
+                              }
                               if (!actions.dismissFailedMessage(channelId, message.id)) return;
                               setDraft(message.body);
                               setMentionTokens(message.mentions ?? []);
@@ -1891,6 +2026,13 @@ function ConversationView({
                     {recovery.notice ? (
                       <p role="status">{t('composer.draftReferencesChanged')}</p>
                     ) : null}
+                    <span ref={submissionMount} hidden />
+                    {submissionSnapshot?.error !== undefined ? (
+                      <p role="alert">{t('composer.submissionStorageError')}</p>
+                    ) : submissionNotice === undefined ? null : (
+                      <p role="status">{submissionNotice}</p>
+                    )}
+                    {recallNotice === undefined ? null : <p role="status">{recallNotice}</p>}
                     {recovery.versions.length > 1 ? (
                       <section aria-label={t('composer.draftConflict')}>
                         <p role="alert">{t('composer.draftConflict')}</p>
@@ -1984,6 +2126,7 @@ function ConversationView({
                         setRestoreBlocked(false);
                       }}
                       onCancelReply={() => setReplyTarget(undefined)}
+                      onRecall={recallInput}
                       onSubmit={submit}
                     />
                   </div>

@@ -38,6 +38,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- After you send, the composer clears and the input is kept on this device: press Up in an empty DM or Group composer to recall what you submitted, including failed sends, and Down to return to your draft. A send that got no answer shows **Not confirmed** instead of failed; it is checked against the Host by its original ID, never resent automatically, and stays recoverable after a reload ([#1460](https://github.com/BotHarness/DeepSeekBot/issues/1460), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
+
 - DM and Group composers retain device-local drafts across Channel switches and browser reloads, validate restored references, and expose concurrent-tab conflicts and storage failures; unuploaded file bytes are not retained ([#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
 
 - A PersonaBot's DM now shows what it did elsewhere: each post in a Group or Bot DM leaves a short linked line with an excerpt, consecutive posts in one Channel collapse into one line, and Memory updates made in a Group also appear in the DM with their place. The DM's top-right settings menu hides each kind for that Bot; nothing unread or waking is added ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517), [ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)).

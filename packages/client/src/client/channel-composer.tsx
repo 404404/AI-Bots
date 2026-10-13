@@ -116,6 +116,7 @@ export interface ChannelComposerProps {
   t?: BotHarnessTranslate | undefined;
   onChange(value: string, mentions?: SelectedMention[], channelRefs?: SelectedChannelRef[]): void;
   onCancelReply?(): void;
+  onRecall?(direction: 'older' | 'newer'): boolean;
   onSubmit(): void | Promise<void>;
 }
 
@@ -550,6 +551,7 @@ export function ChannelComposer({
   t = zhTranslate,
   onChange,
   onCancelReply,
+  onRecall,
   onSubmit,
 }: ChannelComposerProps): ReactElement {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1026,6 +1028,18 @@ export function ChannelComposer({
       event.preventDefault();
       insertRichPlainText(input, '\n');
       emitRichChange(input);
+      return;
+    }
+    if (
+      (event.key === 'ArrowUp' || event.key === 'ArrowDown') &&
+      !event.nativeEvent.isComposing &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      onRecall?.(event.key === 'ArrowUp' ? 'older' : 'newer') === true
+    ) {
+      event.preventDefault();
       return;
     }
     if (!shouldSubmitComposerKey(event)) return;
