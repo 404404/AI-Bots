@@ -7,6 +7,7 @@ import {
   SecretCommandRefusal,
   maskSecrets,
   runSecretCommand,
+  secretCommandDenial,
   secretCommandArgs,
   secretCommandBaseEnv,
   secretCommandEnvName,
@@ -53,6 +54,23 @@ describe('Host-run secret command consumer', () => {
       SecretCommandRefusal,
     );
     expect(() => secretCommandArgs(['a\0b'])).toThrow(SecretCommandRefusal);
+  });
+
+  it('names the reason before any approval is asked for', () => {
+    const env = [{ name: 'GH_TOKEN', value: '{{token}}' }];
+    expect(secretCommandDenial({ program: 'gh', args: ['api', 'user'], env })).toBeUndefined();
+    expect(secretCommandDenial({ program: 'sh', args: ['-c', 'echo $GH_TOKEN'], env })).toContain(
+      'shell, interpreter or launcher',
+    );
+    expect(secretCommandDenial({ program: 'gh', args: ['--token', '{{token}}'], env })).toContain(
+      'never in arguments',
+    );
+    expect(
+      secretCommandDenial({ program: 'gh', args: [], env: [{ name: 'GH_TOKEN', value: 'plain' }] }),
+    ).toContain('placeholder');
+    expect(secretCommandDenial({ program: 'gh', args: 'api', env })).toBe(
+      'secret_cli arguments are invalid',
+    );
   });
 
   it('starts with a clean environment that keeps only what a tool needs to run', () => {

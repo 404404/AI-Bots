@@ -85,6 +85,57 @@ export function secretCommandEnvName(name: string): string {
   return name;
 }
 
+const PLACEHOLDER = /\{\{[a-z][a-z0-9_]{0,47}\}\}/;
+
+export function secretCommandPlan(input: {
+  program: string;
+  args: readonly string[];
+  env: readonly { name: string; value: string }[];
+}): { command: string[]; names: string[] } {
+  const command = [secretCommandProgram(input.program), ...secretCommandArgs(input.args)];
+  const names = input.env.map((entry) => secretCommandEnvName(entry.name));
+  if (
+    input.env.length === 0 ||
+    input.env.length > 16 ||
+    new Set(names).size !== names.length ||
+    !input.env.some((entry) => PLACEHOLDER.test(entry.value))
+  )
+    throw new SecretCommandRefusal(
+      'env must hold 1–16 distinct variables and at least one {{field_id}} placeholder',
+    );
+  if (command.some((part) => PLACEHOLDER.test(part)))
+    throw new SecretCommandRefusal(
+      'a secret placeholder is allowed only in env values, never in arguments',
+    );
+  return { command, names };
+}
+
+export function secretCommandDenial(args: unknown): string | undefined {
+  if (typeof args !== 'object' || args === null) return 'secret_cli arguments are invalid';
+  const input = args as { program?: unknown; args?: unknown; env?: unknown };
+  if (
+    typeof input.program !== 'string' ||
+    !Array.isArray(input.args) ||
+    !input.args.every((arg) => typeof arg === 'string') ||
+    !Array.isArray(input.env) ||
+    !input.env.every(
+      (entry: unknown) =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as { name?: unknown }).name === 'string' &&
+        typeof (entry as { value?: unknown }).value === 'string',
+    )
+  )
+    return 'secret_cli arguments are invalid';
+  try {
+    secretCommandPlan(input as Parameters<typeof secretCommandPlan>[0]);
+    return undefined;
+  } catch (error) {
+    if (error instanceof SecretCommandRefusal) return 'secret_cli refused: ' + error.message;
+    throw error;
+  }
+}
+
 export function secretCommandBaseEnv(source: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const kept =
     process.platform === 'win32'

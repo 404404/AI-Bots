@@ -2,6 +2,7 @@ import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { credentialStoreDenial } from './credentials/store-guard.js';
+import { secretCommandDenial } from './credentials/secret-command.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
 import { createPartLibrary, type PartLibrary } from './bots/part-library.js';
 import {
@@ -1224,6 +1225,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           agent.session.header.cwd,
         );
         if (storeDenial !== undefined) return { kind: 'deny', reason: storeDenial };
+      }
+      if (execution.name === 'secret_cli') {
+        const commandDenial = secretCommandDenial(execution.arguments);
+        if (commandDenial !== undefined) return { kind: 'deny', reason: commandDenial };
       }
       if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
         return next();

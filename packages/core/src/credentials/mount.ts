@@ -7,10 +7,8 @@ import { ProtectedExecution, SecretHttpRefusal } from './protected-execution.js'
 import {
   SecretCommandRefusal,
   runSecretCommand,
-  secretCommandArgs,
   secretCommandBaseEnv,
-  secretCommandEnvName,
-  secretCommandProgram,
+  secretCommandPlan,
 } from './secret-command.js';
 import type { PrivateInputLog } from './diagnostics.js';
 import { LinuxMcp } from './linux-mcp.js';
@@ -499,21 +497,7 @@ export function mountPrivateInputs(
               let command: string[];
               let names: string[];
               try {
-                command = [secretCommandProgram(args.program), ...secretCommandArgs(args.args)];
-                names = args.env.map((entry) => secretCommandEnvName(entry.name));
-                if (
-                  args.env.length === 0 ||
-                  args.env.length > 16 ||
-                  new Set(names).size !== names.length ||
-                  !args.env.some((entry) => /\{\{[a-z][a-z0-9_]{0,47}\}\}/.test(entry.value))
-                )
-                  throw new SecretCommandRefusal(
-                    'env must hold 1–16 distinct variables and at least one {{field_id}} placeholder',
-                  );
-                if (command.some((part) => /\{\{[a-z][a-z0-9_]{0,47}\}\}/.test(part)))
-                  throw new SecretCommandRefusal(
-                    'a secret placeholder is allowed only in env values, never in arguments',
-                  );
+                ({ command, names } = secretCommandPlan(args));
               } catch (error) {
                 if (error instanceof SecretCommandRefusal) return refuse(error.message);
                 throw error;

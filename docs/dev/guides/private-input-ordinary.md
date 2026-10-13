@@ -9,8 +9,9 @@ Since [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.m
 | `ask_secret`    | Posts an input card in the Channel the request came from. Only the Owner can fill it. The Bot gets back `private:<id>:<field>` references, never values.                                                    |
 | `secret_http`   | Calls an HTTP API. The Host sends the request to the endpoint the Owner typed into the card; the Bot chooses a path under it, the method, and `{{field}}` placeholders for secrets in headers, query, body. |
 | `protected_cli` | The fixed `http-status-v1` check: one GET, returns only the status code.                                                                                                                                    |
+| `secret_cli`    | Runs one installed command-line tool with secrets in its environment. The Host starts the program without a shell, in the Bot's working folder, inside the Shell sandbox, with a clean environment.         |
 
-Both consumers need the existing Human execution approval. The approval card shows references and placeholders, not values.
+Every consumer needs Human execution approval. The approval card shows references and placeholders, not values. A `secret_cli` call needs its own approval every time: the card offers allow once and reject only, and no saved rule covers it ([ADR-0191](../../adr/0191-a-bot-runs-a-command-line-tool-with-owner-secrets-per-approved-call.md)).
 
 ## What protects the secret
 
@@ -29,7 +30,18 @@ The sandbox rule does not exist in three cases, where only the refusal by comman
 
 The Host logs a warning the first time a sandbox runner gets no rule. `scripts/test/dsh-sandbox-shape.test.mjs` fails when a DSH upgrade changes the runner command line this depends on; adapt `credentials/store-guard.ts` then.
 
-Only HTTP APIs are covered. A command-line tool that needs a secret in its environment is not.
+`secret_cli` hands the secret to the program it starts. A tool that can print or forward its credential will do so if an approved call asks for it; shells and interpreters are refused as the program, which removes the trivial route and nothing more. Read the program and arguments on each card.
+
+## Command-line tools
+
+Ask the Bot to use a tool that reads its credential from the environment, for example:
+
+```text
+The tool mytool reads MYTOOL_TOKEN. Ask me for the token with ask_secret (account "mytool token"),
+then run: mytool status
+```
+
+The Bot calls `secret_cli` with `program: mytool`, `args: ["status"]` and `env: [{ name: "MYTOOL_TOKEN", value: "{{token}}" }]`. Expect an approval card that names the program and arguments and has no save-rule buttons; after approval the Bot reports the exit code and output with the token shown as `[secret]`. Asking it to run `sh -c 'echo $MYTOOL_TOKEN'` this way is refused without a card.
 
 ## Owner CLI
 
