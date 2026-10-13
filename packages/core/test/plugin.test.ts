@@ -367,6 +367,7 @@ describe('plugin entry', () => {
       'messagingTargets',
       'messagingReachable',
       'messagingPostConversation',
+      'messagingPostRequest',
       'messagingPostLimit',
       'messagingAuthorize',
       'messagingRevoke',
