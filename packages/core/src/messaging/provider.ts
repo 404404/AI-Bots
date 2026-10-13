@@ -134,9 +134,12 @@ export interface MessagingOwnEcho {
 }
 
 export interface MessagingApprovalCard {
+  kind?: undefined;
   requestId: string;
   title: string;
   detail: string;
+  rules?: ['exact'] | ['exact', 'all-opaque'];
+  ruleConfirmation?: { id: string; kind: 'exact' | 'all-opaque' };
   status:
     | 'pending'
     | 'web-required'
@@ -150,6 +153,7 @@ export interface MessagingApprovalCard {
 }
 
 export interface MessagingApprovalAction {
+  kind?: undefined;
   version: 1;
   channel: 'feishu';
   botId: string;
@@ -160,6 +164,49 @@ export interface MessagingApprovalAction {
   requestId: string;
   action: 'allowed-once' | 'rejected';
 }
+
+export interface MessagingApprovalRuleAction extends Omit<
+  MessagingApprovalAction,
+  'kind' | 'action'
+> {
+  kind: 'approval-rule';
+  action:
+    | 'preview-exact'
+    | 'confirm-exact'
+    | 'preview-all-opaque'
+    | 'confirm-all-opaque'
+    | 'cancel-rule';
+  confirmationId?: string | undefined;
+}
+
+export interface MessagingPairingCard {
+  kind: 'pairing';
+  requestId: string;
+  title: string;
+  detail: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'unavailable';
+  roles: { id: string; name: string; revision: number }[];
+  selectedRoleId?: string;
+  page: number;
+  pages: number;
+}
+export interface MessagingPairingAction {
+  kind: 'pairing';
+  version: 1;
+  channel: 'feishu';
+  botId: string;
+  fingerprint: string;
+  actorId: string;
+  conversationId: string;
+  messageId: string;
+  requestId: string;
+  action: 'select-role' | 'approve-pairing' | 'reject-pairing' | 'next-roles' | 'previous-roles';
+  roleId?: string | undefined;
+}
+export type MessagingCardAction =
+  | MessagingApprovalAction
+  | MessagingApprovalRuleAction
+  | MessagingPairingAction;
 
 export interface MessagingApprovalAck {
   accepted: true;
@@ -174,6 +221,8 @@ export interface MessagingSetup {
 }
 
 export interface MessagingProvider {
+  approvalRuleCardSupported?: boolean;
+  approvalRuleAllOpaqueCardSupported?(accountRef: string, fingerprint: string): boolean;
   setup?(): Promise<MessagingSetup | undefined>;
   id: string;
   react?(input: {
@@ -200,13 +249,13 @@ export interface MessagingProvider {
     signal: AbortSignal;
     onEvent(event: MessagingInboundEvent, signal: AbortSignal): Promise<{ accepted: true }>;
     onEcho?(event: MessagingOwnEcho, signal: AbortSignal): Promise<{ accepted: true }>;
-    onAction?(event: MessagingApprovalAction, signal: AbortSignal): Promise<MessagingApprovalAck>;
+    onAction?(event: MessagingCardAction, signal: AbortSignal): Promise<MessagingApprovalAck>;
   }): Promise<() => void>;
   approvalCard?(input: {
     accountRef: string;
     fingerprint: string;
     route: MessagingReplyRoute | MessagingReceipt;
-    card: MessagingApprovalCard;
+    card: MessagingApprovalCard | MessagingPairingCard;
     signal: AbortSignal;
     beforeSend(): boolean;
     update?: boolean;
@@ -254,7 +303,7 @@ export interface MessagingProvider {
     file: { id: string; name: string; bytes: Uint8Array; mediaType?: string };
     signal: AbortSignal;
     beforeSend?: () => boolean;
-  }): Promise<{ accepted: true }>;
+  }): Promise<{ accepted: true; receipt?: MessagingReceipt }>;
   post?(input: {
     accountRef: string;
     targetRef: string;

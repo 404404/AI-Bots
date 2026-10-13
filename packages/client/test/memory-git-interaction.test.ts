@@ -31,6 +31,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconChevronRightOutlineRegular: stub,
     IconChevronDownOutline14: stub,
     IconChevronDownOutlineRegular: stub,
+    IconFolderOpenOutlineRegular: stub,
+    IconSettingsOutlineRegular: stub,
     IconCloseFill14: stub,
     IconCopyOutline16: stub,
     IconCopyOutlineRegular: stub,
@@ -882,6 +884,20 @@ describe('Memory Git graph sidebar', () => {
     };
     const actions = new Proxy(
       {
+        listWorkspaceGrants: vi.fn(async () => []),
+        memoryFileTarget: vi.fn(async (_slug: string, path: string) => ({
+          path: '/host/memory/' + path,
+          relativePath: path,
+          kind: 'file' as const,
+        })),
+        memoryFileApplications: vi.fn(async () => ({ available: false, applications: [] })),
+        fileOpenPreferences: {
+          ready: async () => {},
+          get: () => undefined,
+          set: () => {},
+          clear: () => {},
+          subscribe: () => () => {},
+        },
         memorySnapshot: vi
           .fn()
           .mockResolvedValue({ head: SHA, files: ['note.md'], provisional: false }),
@@ -917,6 +933,11 @@ describe('Memory Git graph sidebar', () => {
     channelSidebarPrefs.setEntryExpanded('personabot:qa', 'memory-evolution', true);
     channelSidebarPrefs.setEntryExpanded('personabot:qa', 'memory-files', true);
     await act(async () => {
+      store.setComposerIdentity({
+        hostId: 'qa-host',
+        profileId: 'qa-profile',
+        humanId: 'qa-human',
+      });
       store.setRoster(
         [
           {
@@ -947,6 +968,13 @@ describe('Memory Git graph sidebar', () => {
       });
       store.setSessions({ status: 'ready', items: [], error: undefined });
       root.render(createElement(BotMain, { actions, channelSidebar: registry }));
+    });
+    await act(async () => {
+      container.querySelector<HTMLButtonElement>('[role="tab"][aria-label="记忆演化"]')!.click();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     const evolution = Array.from(container.querySelectorAll('.bh-channel-sidebar-entry')).find(
@@ -1008,6 +1036,9 @@ describe('Memory Git graph sidebar', () => {
     });
     expect(container.querySelector('.bh-memory-commit-view')?.textContent).toContain('Memory at a');
     expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['memoryDiff']).toBe('true');
+    expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
+      'true',
+    );
     expect(chat?.style.display).toBe('none');
     expect(container.querySelector<HTMLElement>('.bh-memory-chat-composer')?.style.display).toBe(
       'none',
@@ -1045,10 +1076,19 @@ describe('Memory Git graph sidebar', () => {
         ?.click();
     });
     await act(async () => {
+      container.querySelector<HTMLButtonElement>('[role="tab"][aria-label="记忆文件"]')!.click();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    await act(async () => {
       container.querySelector<HTMLButtonElement>('.bh-memory-file-tree [role="treeitem"]')?.click();
     });
     expect(container.querySelector('.bh-memory-commit-view')?.textContent).toContain(
       'Current memory',
+    );
+    expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
+      'true',
     );
     await act(async () => {
       Array.from(container.querySelectorAll<HTMLButtonElement>('button'))

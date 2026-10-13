@@ -8,11 +8,17 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createAttachmentStore } from '../src/attachments/store.js';
+import { seededAvatarFor } from '../src/bots/avatar-appearance.js';
+import { fallbackPrimaryColor, resolveBotPrimaryColor } from '../src/bots/primary-color.js';
 import { createBridgeMethods } from '../src/bridge/methods.js';
 
 import { createChannelStore, type ChannelStore } from '../src/channels/store.js';
 import type { MemoryService } from '../src/memory/service.js';
-import type { UsageProjection } from '../src/usage/usage.js';
+import {
+  createUsageProjection,
+  type UsageProjection,
+  type DshUsageSessionLogReader,
+} from '../src/usage/usage.js';
 import { createModelPresetStore } from '../src/models/presets.js';
 import type { ModelCatalog } from '../src/models/catalog.js';
 import { createModelRouteReadiness } from '../src/models/readiness.js';
@@ -25,6 +31,49 @@ import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 
 const roots: string[] = [];
 const modelOwners: OperationalDatabaseOwner[] = [];
+
+describe('composer recovery reference validation', () => {
+  it('uses current Human-visible reply and attachment facts without accepting draft text', async () => {
+    const { channels, attachments, methods } = setup();
+    const channel = channels.getOrCreateDm('ada', 'Ada')!;
+    const sent = await methods.channelSend({ channelId: channel.id, body: 'reply target' });
+    expect(sent.ok).toBe(true);
+    if (!sent.ok) throw new Error('send failed');
+    const ref = await attachments.upload({
+      name: 'note.txt',
+      data: (async function* () {
+        yield new TextEncoder().encode('file');
+      })(),
+    });
+    expect(
+      methods.composerValidate({
+        channelId: channel.id,
+        replyTo: sent.value.message.id,
+        attachments: [ref],
+      }),
+    ).toMatchObject({
+      ok: true,
+      value: { reply: { id: sent.value.message.id }, attachments: [ref] },
+    });
+    expect(
+      methods.composerValidate({
+        channelId: channel.id,
+        replyTo: 'deleted',
+        attachments: [
+          { hash: 'sha256:' + '0'.repeat(64), name: 'gone.txt', mime: 'text/plain', size: 0 },
+        ],
+      }),
+    ).toEqual({ ok: true, value: { attachments: [null] } });
+    expect(
+      methods.composerValidate({
+        channelId: channel.id,
+        attachments: [],
+        text: 'private unsent input',
+      }).ok,
+    ).toBe(false);
+    expect(methods.composerValidate({ channelId: 'missing', attachments: [] }).ok).toBe(false);
+  });
+});
 
 function tickingNow(): () => Date {
   let value = Date.parse('2026-09-19T00:00:00.000Z');
@@ -44,6 +93,7 @@ function setup(
   memory?: MemoryService,
   usage?: UsageProjection,
   modelCatalog?: ModelCatalog,
+  readUsageSessionLog?: DshUsageSessionLogReader,
 ) {
   const root = mkdtempSync(join(tmpdir(), 'botharness-bridge-'));
   roots.push(root);
@@ -87,6 +137,7 @@ function setup(
       ...(grants === undefined ? {} : { grants }),
       ...(memory === undefined ? {} : { memory }),
       ...(usage === undefined ? {} : { usage }),
+      ...(readUsageSessionLog === undefined ? {} : { readUsageSessionLog }),
       ...(runtimeFactory === undefined ? {} : { runtime: runtimeFactory(channels) }),
       ...(developerMode === undefined ? {} : { developerMode }),
       createBotId: () => botIds[botIdIndex++] ?? 'bot-test-' + botIdIndex,
@@ -100,6 +151,105 @@ afterEach(() => {
 });
 
 describe('bridge methods', () => {
+  it('scopes Group authorization to a current member and the confirmed path', async () => {
+    const grant = {
+      id: 'grant',
+      botSlug: 'ada',
+      workspaceId: 'project',
+      workspacePath: '/project',
+      workspaceTitle: 'Project',
+      createdAt: '',
+    };
+    const create = vi.fn<WorkspaceGrantStore['create']>(async (_slug, _workspace, options) => {
+      options?.validate();
+      options?.onCreated();
+      return grant;
+    });
+    const grants: WorkspaceGrantStore = {
+      list: () => [],
+      create,
+      revoke: () => grant,
+      requireActive: () => grant,
+      setOrchestratorWrite: () => grant,
+      availableWorkspaces: () => [{ id: 'project', path: '/project', title: 'Project' }],
+    };
+    const { registry, channels, methods } = setup(
+      [],
+      ['ada', 'bea'],
+      undefined,
+      createTestOwnership(),
+      grants,
+    );
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    registry.create({ slug: 'bea', displayName: 'Bea' });
+    const group = channels.createGroup({ name: 'Team', members: ['ada'] });
+    const input = {
+      slug: 'ada',
+      workspaceId: 'project',
+      scope: { channelId: group.id, path: '/project' },
+    };
+    expect(await methods.grantCreate({ ...input, slug: 'bea' })).toMatchObject({ ok: false });
+    expect(
+      await methods.grantCreate({ ...input, scope: { ...input.scope, path: '/other' } }),
+    ).toMatchObject({ ok: false });
+    expect(create).not.toHaveBeenCalled();
+    expect(await methods.grantCreate(input)).toMatchObject({
+      ok: true,
+      value: { grant, created: true },
+    });
+    expect(create).toHaveBeenCalledTimes(1);
+    registry.setPaused('ada', true);
+    expect(await methods.grantCreate(input)).toMatchObject({ ok: false });
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+  it('bounds read-only Session usage to the current DM Bot and rejects Group and missing scopes', async () => {
+    const ownership = createTestOwnership({
+      first: { botSlug: 'ada', rootRole: 'orchestrator' },
+      assignment: { botSlug: 'ada', rootRole: 'assignment' },
+      other: { botSlug: 'outsider', rootRole: 'orchestrator' },
+    });
+    ownership.claim({
+      sessionId: 'latest',
+      botSlug: 'ada',
+      rootRole: 'orchestrator',
+      at: '2026-10-12T00:00:00.000Z',
+    });
+    const usageHome = mkdtempSync(join(tmpdir(), 'botharness-session-usage-'));
+    roots.push(usageHome);
+    const owner = mountOperationalDatabase({
+      dshHome: usageHome,
+      schemaPlan: BOT_HARNESS_SCHEMA_PLAN,
+    });
+    modelOwners.push(owner);
+    const usage = createUsageProjection({ ownership, database: owner });
+    const read = vi.fn(async () => ({ events: [], inheritedEventCount: 0 }));
+    const { registry, channels, methods } = setup(
+      [],
+      ['ada'],
+      undefined,
+      ownership,
+      undefined,
+      undefined,
+      undefined,
+      usage,
+      undefined,
+      read,
+    );
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    const dm = channels.getOrCreateDm('ada', 'Ada')!;
+    const result = await methods.profileSessionUsage({ channelId: dm.id, slug: 'outsider' });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('Expected scoped usage');
+    expect(result.value.slug).toBe('ada');
+    expect(result.value.weeks).toBe(26);
+    expect(result.value.rows.map((row) => row.sessionId)).toEqual(['latest', 'assignment']);
+    expect(read.mock.calls).toHaveLength(2);
+    const group = channels.createGroup({ name: 'Group', members: ['ada'] });
+    expect((await methods.profileSessionUsage({ channelId: group.id })).ok).toBe(false);
+    expect((await methods.profileSessionUsage({ channelId: 'missing' })).ok).toBe(false);
+    expect((await methods.profileSessionUsage({})).ok).toBe(false);
+    expect(read.mock.calls).toHaveLength(2);
+  });
   it('does not expand pasted text, DM selections, empty previews or forged recipient lists', async () => {
     const { registry, channels, methods } = setup();
     registry.create({ slug: 'ada', displayName: 'Ada' });
@@ -2343,6 +2493,88 @@ describe('bridge methods', () => {
     expect(methods.botAvatarSet({ channelId: dm.id, avatar: null }).ok).toBe(true);
     expect(registry.get('ada')?.appearance).toBeUndefined();
     expect(registry.get('ada')?.avatar).toBeUndefined();
+  });
+
+  it('saves a Bot Primary Color through the DM and keeps it across rename, Avatar edits and restart', () => {
+    const image =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/ZFsAAAAASUVORK5CYII=';
+    const { root, registry, channels, methods } = setup();
+    expect(registry.create({ slug: 'ada', displayName: 'Ada' }).ok).toBe(true);
+    const dm = channels.getOrCreateDm('ada', 'Ada')!;
+    const group = channels.createGroup({ name: 'Team', members: ['ada'] });
+    const subject = () => registry.get('ada')!;
+    const listed = () => {
+      const result = methods.list({});
+      if (!result.ok) throw new Error('list failed');
+      return result.value.bots.find((bot) => bot.slug === 'ada')!;
+    };
+
+    expect(subject().primaryColor).toBeUndefined();
+    expect(listed().primaryColor).toBeUndefined();
+    expect(resolveBotPrimaryColor(subject())).toEqual({
+      mode: 'automatic',
+      source: 'hair',
+      color: seededAvatarFor('Ada', subject().avatarSeed).hairColor,
+    });
+
+    const custom = { mode: 'custom', color: '#1D1B22' };
+    expect(methods.botPrimaryColorSet({ channelId: dm.id, primaryColor: custom })).toMatchObject({
+      ok: true,
+      value: { bot: { primaryColor: { mode: 'custom', color: '#1d1b22' } } },
+    });
+    const saved = { mode: 'custom', color: '#1d1b22' };
+    expect(subject().primaryColor).toEqual(saved);
+    expect(listed().primaryColor).toEqual(saved);
+
+    for (const invalid of [
+      null,
+      'custom',
+      { mode: 'custom' },
+      { mode: 'custom', color: 'red' },
+      { mode: 'custom', color: 'url(https://evil)' },
+      { mode: 'custom', color: '#1d1b22', fallback: '#ffffff' },
+      { mode: 'automatic', color: '#1d1b22' },
+      { mode: 'theme', color: '#1d1b22' },
+    ]) {
+      expect(methods.botPrimaryColorSet({ channelId: dm.id, primaryColor: invalid })).toMatchObject(
+        { ok: false, error: { code: 'invalid-input' } },
+      );
+      expect(subject().primaryColor).toEqual(saved);
+    }
+    expect(
+      methods.botPrimaryColorSet({ channelId: group.id, primaryColor: { mode: 'automatic' } }),
+    ).toMatchObject({ ok: false, error: { code: 'invalid-input' } });
+    expect(
+      methods.botPrimaryColorSet({ channelId: 'missing', primaryColor: { mode: 'automatic' } }),
+    ).toMatchObject({ ok: false, error: { code: 'not-found' } });
+    expect(subject().primaryColor).toEqual(saved);
+
+    expect(registry.update('ada', { displayName: 'Ada Lovelace' }).ok).toBe(true);
+    const recipe = { ...seededAvatarFor('Ada', undefined), hairColor: '#3fc1b8' };
+    expect(methods.botAppearanceSet({ channelId: dm.id, recipe }).ok).toBe(true);
+    expect(methods.botAvatarSet({ channelId: dm.id, avatar: image }).ok).toBe(true);
+    expect(subject().primaryColor).toEqual(saved);
+    expect(resolveBotPrimaryColor(subject())).toMatchObject({ source: 'custom', color: '#1d1b22' });
+
+    const reopened = createTestRegistry({ rootDir: root });
+    expect(reopened.get('ada')?.primaryColor).toEqual(saved);
+
+    expect(
+      methods.botPrimaryColorSet({ channelId: dm.id, primaryColor: { mode: 'automatic' } }),
+    ).toMatchObject({ ok: true });
+    expect(subject().primaryColor).toBeUndefined();
+    expect(createTestRegistry({ rootDir: root }).get('ada')?.primaryColor).toBeUndefined();
+    const fallback = resolveBotPrimaryColor(subject());
+    expect(fallback).toEqual({
+      mode: 'automatic',
+      source: 'fallback',
+      color: fallbackPrimaryColor('ada'),
+    });
+    expect(registry.update('ada', { displayName: 'Renamed' }).ok).toBe(true);
+    expect(resolveBotPrimaryColor(subject())).toEqual(fallback);
+
+    expect(methods.botAppearanceSet({ channelId: dm.id, recipe }).ok).toBe(true);
+    expect(resolveBotPrimaryColor(subject())).toMatchObject({ source: 'hair', color: '#3fc1b8' });
   });
 
   it('sets a banner scene inside the DM and resets it to the name-seeded one', () => {

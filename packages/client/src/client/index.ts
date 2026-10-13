@@ -1,3 +1,4 @@
+import { createElement } from 'react';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client';
@@ -12,7 +13,10 @@ import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { BOT_MODE_NAMESPACE, type BotModeSettings } from '../bot-mode-settings.js';
+import { privateInputLocator } from '../../../core/src/credentials/web-locator.js';
+import { watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
+import { createFileOpenPreferences } from './file-open-preferences.js';
 import { createActions, type BridgeActions } from './actions.js';
 import { ProviderAppSetup } from './provider-app-setup.js';
 import { BotModePrefs, botModePrefsFace } from './bot-mode-prefs.js';
@@ -39,9 +43,16 @@ import {
 import { ReleaseNotesController } from './release-notes.js';
 import { TelemetryNoticeController } from './telemetry-notice.js';
 import './bot-settings-slot.js';
-import { BotMain, BotPanel } from './bot-main.js';
+import { BotMain } from './bot-main.js';
+import { MobileBotPanel } from './mobile-bot-panel.js';
+import { mobileBotViewport, subscribeMobileBotViewport } from './mobile-viewport.js';
+import { clearConversationDrafts } from './conversation-draft.js';
 import { BotSidebar, createBotPanelEntry } from './bot-sidebar.js';
-import { createChannelSidebarBuiltins } from './channel-sidebar-builtins.js';
+import { OnboardingEnterHint, OnboardingLauncher } from './onboarding-checklist-view.js';
+import {
+  createChannelSidebarBuiltinTabs,
+  createChannelSidebarBuiltins,
+} from './channel-sidebar-builtins.js';
 import { webBotModeShortcut, webShortcutBlocked } from './channel-shortcuts.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
 import { createProfileCardBuiltins } from './profile-cards-builtins.js';
@@ -49,6 +60,7 @@ import { createGroupProfileCards } from './group-profile.js';
 import { createProfileCardRegistry } from './profile-cards.js';
 import {
   createBridgeCall,
+  loadJournalPage,
   connectionRpc,
   loadActivitySnapshot,
   loadSessionBotOwner,
@@ -60,7 +72,20 @@ import {
   SessionReturnMenuItem,
 } from './session-return-action.js';
 import { mountActivityLive } from './activity-live.js';
-import { mountChannelLive, mountRosterLive } from './channel-live.js';
+import { installChannelFollow, mountChannelLive, mountRosterLive } from './channel-live.js';
+import { installTypedLive } from './messaging-defaults-live.js';
+import {
+  CHANNEL_REMOTE_DESCRIPTOR,
+  COMPANION_REMOTE_DESCRIPTOR,
+  createChannelFollow,
+  createCompanionSource,
+  type CompanionNamespace,
+  type CompanionSource,
+  createTypedLive,
+  SNAPSHOT_REMOTE_DESCRIPTORS,
+  type ChannelNamespace,
+  type SnapshotNamespace,
+} from './live-snapshots.js';
 import { sessionBotReference } from './mentions.js';
 import { en, LOCALE_NS, zh } from './locale.js';
 import { registerModeShadow } from './mode.js';
@@ -101,10 +126,12 @@ function panelInfoOf(layout: { panelInfo?: PanelInfoLike }): PanelInfoLike | und
   return layout.panelInfo;
 }
 
-function installStyles(): () => void {
+export function installStyles(): () => void {
   if (typeof document === 'undefined') return () => {};
   const style = document.createElement('style');
   style.setAttribute('data-botharness', 'client');
+  style.dataset.plugin = '@botharness/ui';
+  style.dataset.pluginCss = '@botharness/ui/client.css';
   style.textContent = CSS;
   document.head.appendChild(style);
   return () => {
@@ -113,6 +140,7 @@ function installStyles(): () => void {
 }
 
 export function apply(ctx: ClientContext): void {
+  ctx.effect(() => clearConversationDrafts);
   const storage = defaultStorage();
   const hmrView =
     typeof window === 'undefined'
@@ -121,8 +149,22 @@ export function apply(ctx: ClientContext): void {
   const t = ctx.locale.bind(LOCALE_NS);
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
+  const profileContext = async (): Promise<{ profileId: string }> => {
+    const response = await fetch('/api/botharness/companion', { credentials: 'same-origin' });
+    if (!response.ok) throw new Error('Companion context unavailable');
+    const value: unknown = await response.json();
+    if (
+      typeof value !== 'object' ||
+      value === null ||
+      !('profileId' in value) ||
+      typeof value.profileId !== 'string'
+    )
+      throw new Error('Invalid Companion context');
+    return { profileId: value.profileId };
+  };
   const actions: BridgeActions = createActions(call, store, {
     nativeFiles: createNativeHostFiles(ctx.remote.session),
+    fileOpenPreferences: createFileOpenPreferences({ storage, context: profileContext }),
     pickDirectory: () => {
       const picker = ctx.get('uiWorkspace');
       if (picker === undefined) throw new Error('DSH folder picker is unavailable');
@@ -145,24 +187,13 @@ export function apply(ctx: ClientContext): void {
   });
   const setupRpc = connectionRpc(ctx);
   if (setupRpc) actions.appSetup = new ProviderAppSetup(setupRpc);
+  let companionSource: ((url: string) => CompanionSource) | undefined;
   const companion = new WindowCompanions({
     storage,
     exists: (botId) => botExists(call, botId),
     onActivity: (snapshot) => store.applyActivity(snapshot),
-    context: async () => {
-      const response = await fetch('/api/botharness/companion', { credentials: 'same-origin' });
-      if (!response.ok) throw new Error('Companion context unavailable');
-      const value: unknown = await response.json();
-      if (
-        typeof value !== 'object' ||
-        value === null ||
-        !('profileId' in value) ||
-        typeof value.profileId !== 'string'
-      )
-        throw new Error('Invalid Companion context');
-      return { profileId: value.profileId };
-    },
-    source: (url) => new EventSource(url),
+    context: profileContext,
+    source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
       const response = await fetch('/api/botharness/companion', {
         method: 'POST',
@@ -260,9 +291,12 @@ export function apply(ctx: ClientContext): void {
     let disposers: (() => void)[] = [];
     const reconcile = (): void => {
       for (const dispose of disposers) dispose();
-      disposers = createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
-        channelSidebar.register(entry),
-      );
+      disposers = [
+        ...createChannelSidebarBuiltinTabs(t).map((tab) => channelSidebar.registerTab(tab)),
+        ...createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
+          channelSidebar.register(entry),
+        ),
+      ];
     };
     reconcile();
     const unsubscribe = ctx.locale.subscribe(reconcile);
@@ -332,6 +366,72 @@ export function apply(ctx: ClientContext): void {
     () => (typeof EventSource === 'undefined' ? () => {} : mountRosterLive(store, actions)),
     'botharness: Roster live subscription',
   );
+  ctx.effect(() => {
+    let uninstall: (() => void) | undefined;
+    let disposed = false;
+    const native = ctx.remote as Partial<Pick<typeof ctx.remote, '$mount' | '$stream'>>;
+    if (typeof native.$mount !== 'function' || typeof native.$stream !== 'function')
+      return () => {};
+    const namespace = (): Partial<SnapshotNamespace> => {
+      const mounted = ctx.get('remote.botharness') as Partial<SnapshotNamespace> | undefined;
+      if (mounted === undefined) throw new Error('botharness live Remote is not mounted');
+      return mounted;
+    };
+    void ctx.remote
+      .$mount({
+        package: '@botharness/core',
+        descriptors: [
+          ...SNAPSHOT_REMOTE_DESCRIPTORS,
+          CHANNEL_REMOTE_DESCRIPTOR,
+          COMPANION_REMOTE_DESCRIPTOR,
+        ],
+      })
+      .then(
+        () => {
+          if (disposed) return;
+          const uninstallTyped = installTypedLive(
+            createTypedLive(ctx.remote, () => {
+              const mounted = namespace();
+              if (mounted.followRoster === undefined || mounted.followActivity === undefined)
+                throw new Error('botharness live Remote is not mounted');
+              return mounted as SnapshotNamespace;
+            }),
+          );
+          const uninstallFollow = installChannelFollow(
+            createChannelFollow(
+              ctx.remote,
+              () => {
+                const mounted = namespace() as Partial<ChannelNamespace>;
+                if (mounted.followChannel === undefined)
+                  throw new Error('botharness live Remote is not mounted');
+                return mounted as ChannelNamespace;
+              },
+              (channelId, request, signal) => loadJournalPage(call, channelId, request, signal),
+            ),
+          );
+          companionSource = createCompanionSource(ctx.remote, () => {
+            const mounted = namespace() as Partial<CompanionNamespace>;
+            if (mounted.followCompanion === undefined)
+              throw new Error('botharness live Remote is not mounted');
+            return mounted as CompanionNamespace;
+          });
+          companion.reconnect();
+          uninstall = () => {
+            companionSource = undefined;
+            companion.reconnect();
+            uninstallFollow();
+            uninstallTyped();
+          };
+        },
+        (error: unknown) => {
+          console.warn('botharness: live Remote stream unavailable', error);
+        },
+      );
+    return () => {
+      disposed = true;
+      uninstall?.();
+    };
+  }, 'botharness: live streams on the native Remote stream carrier');
   ctx.effect(
     () =>
       mountActivityLive(store, undefined, (signal) => loadActivitySnapshot(call, signal), {
@@ -548,6 +648,11 @@ export function apply(ctx: ClientContext): void {
           void actions.openActivityCenter();
         },
         () => actions.refreshHumanInboxStatus(),
+        {
+          launcher: (translate) =>
+            createElement(OnboardingLauncher, { actions, t: translate, placement: 'row' }),
+          enterHint: (translate) => createElement(OnboardingEnterHint, { t: translate }),
+        },
       ),
     ),
   );
@@ -568,9 +673,12 @@ export function apply(ctx: ClientContext): void {
           prefs,
           releaseNotes,
           telemetryNotice,
+          ...botModePrefsFace(prefs),
+          exitBotMode: () => ctx.layout.selectPanel(null),
+          openBotSettings: () => botSettings.open(),
         }),
       },
-      BotPanel,
+      MobileBotPanel,
     );
     if (restoreBotMode) {
       restoreBotMode = false;
@@ -649,6 +757,10 @@ export function apply(ctx: ClientContext): void {
         BotSidebar,
       ),
     store,
+    {
+      enabled: () => !mobileBotViewport(),
+      subscribe: subscribeMobileBotViewport,
+    },
   );
   registerModeShadow(
     ctx,
@@ -709,7 +821,21 @@ export function apply(ctx: ClientContext): void {
 
   const viewToRestore =
     hmrView ?? (lastView?.mode === 'bot' ? { selection: lastView.selection } : undefined);
-  if (viewToRestore !== undefined) {
+  const privateLocator =
+    typeof window === 'undefined' ? undefined : privateInputLocator(window.location.hash);
+  if (privateLocator !== undefined) {
+    ctx.effect(
+      () =>
+        watchPrivateInputNavigation(store, privateLocator, (channelId, messageId) => {
+          ctx.layout.selectPanel(PANEL_ID);
+          void actions.openChannelAtMessage(channelId, messageId).catch(() => {
+            ctx.logger.warn('botharness: private input card locator unavailable');
+          });
+        }),
+      'botharness: private input Chat locator',
+    );
+  }
+  if (privateLocator === undefined && viewToRestore !== undefined) {
     ctx.effect(() => {
       let restored = false;
       const restore = (): void => {

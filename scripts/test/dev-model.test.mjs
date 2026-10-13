@@ -48,7 +48,7 @@ describe('AX native OpenCode Go reuse', () => {
     );
     expect(workspace.allowBuilds).toEqual({ koffi: true });
     expect(workspace.patchedDependencies.other).toBe('other.patch');
-    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1']).toBe(
+    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2']).toBe(
       GO_RUNTIME_PATCH,
     );
     const staged = join(runtime, GO_RUNTIME_PATCH);

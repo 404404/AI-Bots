@@ -289,8 +289,8 @@ async function main() {
       : JSON.parse(readFileSync(join(options.worktree, 'package.json'), 'utf8')).devDependencies[
           '@deepseek-ai/dsh'
         ];
-    if (options.axModel && version !== '0.2.0-rc.1')
-      throw new Error('AX Go session qualification requires DSH 0.2.0-rc.1');
+    if (options.axModel && version !== '0.2.0-rc.2')
+      throw new Error('AX Go session qualification requires DSH 0.2.0-rc.2');
     options.runtime = join(options.home, options.productArtifacts ? 'packaged-cli' : 'ax-cli');
     mkdirSync(options.runtime, { recursive: true });
     const runtimeWorkspace = join(options.runtime, 'pnpm-workspace.yaml');

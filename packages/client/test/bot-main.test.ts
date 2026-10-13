@@ -32,6 +32,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPinOutlineRegular: stub,
     IconTrashOutlineRegular: stub,
     FileTypeIcon: stub,
+    fileSizeText: (size: number) => `${size} B`,
     ImageLightbox: stub,
     Input: stub,
     Menu: stub,
@@ -48,6 +49,13 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
 
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotModePrefs } from '../src/client/bot-mode-prefs.js';
+import {
+  botNameColor,
+  contrastRatio,
+  parseColor,
+  REFERENCE_SURFACES,
+} from '../src/client/bot-primary-color.js';
+import { seededAvatarFor } from '../../core/src/bots/avatar-appearance.js';
 import { BotMain, committedMessageIds, resolvedGrantRequestIds } from '../src/client/bot-main.js';
 import { createChannelSidebarBuiltins } from '../src/client/channel-sidebar-builtins.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
@@ -247,6 +255,8 @@ describe('Bot main Sessions pane', () => {
       root.render(
         createElement(BotMain, {
           actions: {
+            profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+            listWorkspaceGrants: async () => [],
             modelPlanState: async () => undefined,
             botSourcePolicies: async () => [],
           } as unknown as BridgeActions,
@@ -572,6 +582,90 @@ describe('Bot main Sessions pane', () => {
       store.setConversation(previous.conversation);
     }
   });
+  it('colors DM and Group Bot author names from the saved Bot Primary Color and nothing else', () => {
+    const previous = store.getSnapshot();
+    const at = '2026-10-12T00:00:00.000Z';
+    const dm = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: at,
+      updatedAt: at,
+    };
+    const group = { ...dm, id: 'group-team', type: 'group' as const, name: 'Team' };
+    const messages: ChannelMessage[] = [
+      { id: 'human-1', at, author: { kind: 'human' }, body: 'hello' },
+      { id: 'bot-1', at, author: { kind: 'bot', slug: 'ada' }, body: 'an existing reply' },
+    ];
+    const bot = (
+      primaryColor?: { mode: 'custom'; color: string; retained?: string },
+      deleted = false,
+    ) => ({
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle' as const,
+      workspaces: [],
+      createdAt: at,
+      ...(primaryColor === undefined ? {} : { primaryColor }),
+      ...(deleted ? { deleted: true } : {}),
+    });
+    const authors = (
+      summary: ReturnType<typeof bot>,
+      channel: typeof dm | typeof group,
+    ): HTMLElement[] => {
+      store.setRoster([summary], [channel]);
+      store.select(
+        channel.type === 'dm'
+          ? { kind: 'bot', slug: 'ada' }
+          : { kind: 'channel', channelId: channel.id },
+      );
+      store.setConversation({ status: 'ready', channel, sending: false, messages });
+      const host = document.createElement('div');
+      host.innerHTML = renderToStaticMarkup(
+        createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      );
+      expect(host.querySelector('.bh-message-group [style*="color"]:not(.bh-bubble-author)')).toBe(
+        null,
+      );
+      return [...host.querySelectorAll<HTMLElement>('.bh-bubble-author')];
+    };
+    const contrast = (name: string, theme: 'light' | 'dark') =>
+      contrastRatio(parseColor(name)!.rgb, parseColor(REFERENCE_SURFACES[theme].background)!.rgb);
+    try {
+      const [human, automatic] = authors(bot(), dm);
+      expect(human!.hasAttribute('data-bot-name-color')).toBe(false);
+      expect(human!.getAttribute('style')).toBeNull();
+      const hair = seededAvatarFor('Ada', undefined).hairColor;
+      expect(automatic!.getAttribute('data-bot-name-color')).toBe(botNameColor(hair, '#ffffff'));
+
+      const white = bot({ mode: 'custom', color: '#ffffff' });
+      const light = authors(white, dm)[1]!.getAttribute('data-bot-name-color')!;
+      expect(light).not.toBe('#ffffff');
+      expect(contrast(light, 'light')).toBeGreaterThanOrEqual(4.5);
+      document.body.setAttribute('data-ds-dark-theme', '');
+      const dark = authors(white, dm)[1]!;
+      expect(dark.getAttribute('data-bot-name-color')).toBe('#ffffff');
+      expect(dark.style.color).not.toBe('');
+      expect(contrast('#ffffff', 'dark')).toBeGreaterThanOrEqual(4.5);
+
+      const [groupHuman, groupBot] = authors(white, group);
+      expect(groupHuman!.hasAttribute('data-bot-name-color')).toBe(false);
+      expect(groupBot!.getAttribute('data-bot-name-color')).toBe('#ffffff');
+      document.body.removeAttribute('data-ds-dark-theme');
+      expect(authors(white, group)[1]!.getAttribute('data-bot-name-color')).toBe(light);
+      const gone = bot({ mode: 'custom', color: '#ffffff', retained: '#1d1b22' }, true);
+      expect(authors(gone, group)[1]!.getAttribute('data-bot-name-color')).toBe('#1d1b22');
+      expect(authors(gone, dm)[1]!.getAttribute('data-bot-name-color')).toBe('#1d1b22');
+    } finally {
+      document.body.removeAttribute('data-ds-dark-theme');
+      store.setRoster(previous.bots, previous.channels);
+      store.select(previous.selection);
+      store.setConversation(previous.conversation);
+    }
+  });
   it('keeps external provenance in an author dialog control outside the unchanged bubble', () => {
     const previous = store.getSnapshot();
     const channel = {
@@ -728,6 +822,70 @@ describe('Bot main Sessions pane', () => {
   });
 });
 
+describe('DM usage refresh', () => {
+  it('retains the current snapshot while a committed-message refresh is pending', async () => {
+    const previous = store.getSnapshot();
+    const bot = {
+      slug: 'usage-refresh',
+      displayName: 'Usage refresh',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-10-11T00:00:00.000Z',
+    };
+    const channel = {
+      id: 'dm-usage-refresh',
+      type: 'dm' as const,
+      name: bot.displayName,
+      members: [bot.slug],
+      botSlug: bot.slug,
+      createdAt: bot.createdAt,
+      updatedAt: bot.createdAt,
+    };
+    const profileActivity = vi
+      .fn()
+      .mockResolvedValueOnce({ slug: bot.slug, modelUsageStatus: 'ready', modelUsageRows: [] })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const actions = {
+      profileActivity,
+      modelPlanState: async () => ({}),
+      modelCatalog: async () => ({ models: [] }),
+      listWorkspaceGrants: async () => [],
+      botSourcePolicies: async () => [],
+      markRead: async () => undefined,
+    } as unknown as BridgeActions;
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    store.setRoster([bot], [channel]);
+    store.select({ kind: 'bot', slug: bot.slug });
+    store.setConversation({ status: 'ready', channel, messages: [], sending: false });
+    const node = document.createElement('div');
+    document.body.append(node);
+    const root = createRoot(node);
+    try {
+      await act(async () =>
+        root.render(createElement(BotMain, { actions, channelSidebar: sidebarRegistry() })),
+      );
+      const before = node.querySelector('.bh-composer-usage')!.textContent;
+      expect(before).toContain('0');
+      await act(async () => {
+        store.setConversation({
+          messages: [
+            { id: 'usage-committed', at: bot.createdAt, author: { kind: 'human' }, body: 'Hello' },
+          ],
+        });
+      });
+      expect(profileActivity).toHaveBeenCalledTimes(2);
+      expect(node.querySelector('.bh-composer-usage')!.textContent).toBe(before);
+    } finally {
+      await act(async () => root.unmount());
+      node.remove();
+      store.setRoster(previous.bots, previous.channels);
+      store.select(previous.selection);
+      store.setConversation(previous.conversation);
+    }
+  });
+});
+
 describe('Bot main question developer details', () => {
   it('reacts to the shared Bot settings preference without remounting the question', async () => {
     const previous = store.getSnapshot();
@@ -758,6 +916,9 @@ describe('Bot main question developer details', () => {
       },
     };
     const actions = {
+      profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+      modelPlanState: async () => ({}),
+      listWorkspaceGrants: async () => [],
       userQuestionStatus: vi.fn().mockResolvedValue('pending'),
       markRead: vi.fn().mockResolvedValue(undefined),
     } as unknown as BridgeActions;

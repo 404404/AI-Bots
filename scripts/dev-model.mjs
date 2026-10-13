@@ -20,10 +20,10 @@ export const GO_KEY_REF = 'OPENCODE_GO_API_KEY';
 export const DEFAULT_GO_MODEL = 'deepseek-v4-flash';
 export const GO_SESSION_PATCH = resolve(
   import.meta.dirname,
-  '../patches/@deepseek-ai__dsh-llm-pi-ai@0.2.0-rc.1.patch',
+  '../patches/@deepseek-ai__dsh-llm-pi-ai@0.2.0-rc.2.patch',
 );
 
-export const GO_RUNTIME_PATCH = 'patches/dsh-llm-pi-ai-0.2.0-rc.1.patch';
+export const GO_RUNTIME_PATCH = 'patches/dsh-llm-pi-ai-0.2.0-rc.2.patch';
 
 export function axRuntimeWorkspace(source, runtime) {
   const document = parseDocument(source);
@@ -33,7 +33,7 @@ export function axRuntimeWorkspace(source, runtime) {
   mkdirSync(dirname(stagedPatch), { recursive: true });
   copyFileSync(GO_SESSION_PATCH, stagedPatch);
   document.setIn(
-    ['patchedDependencies', '@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1'],
+    ['patchedDependencies', '@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2'],
     GO_RUNTIME_PATCH,
   );
   return String(document);

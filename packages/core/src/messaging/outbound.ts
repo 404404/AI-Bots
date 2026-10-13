@@ -1,8 +1,18 @@
+import { decodeQqVoice } from '../attachments/qq-audio.js';
+import type { ToolApprovalActor } from '../workspaces/tool-approval-actor.js';
+import {
+  createFailureAlerts,
+  type FailureAlerts,
+  type FailureAlertSnapshot,
+} from './failure-alerts.js';
 import {
   createApprovalMessaging,
   type ApprovalMessaging,
   type ApprovalMessagingSnapshot,
 } from './approval-messaging.js';
+import { externalPermissionGroups, type ExternalPermissionGroup } from './permission-groups.js';
+import { behaviorPermissions, type BehaviorPermission } from './behavior-permissions.js';
+import { createPairingCards } from './pairing-cards.js';
 import {
   createMessagingDirectory,
   type MessagingDirectoryQuery,
@@ -212,11 +222,14 @@ export type MessagingApp = MessagingAccount & {
 };
 
 export interface MessagingSnapshot {
+  permissionGroups?: ExternalPermissionGroup[];
+  behaviorPermissions?: BehaviorPermission[];
   senderPolicy?: SenderPolicy;
   roles?: ExternalUserRole[];
   receptionHistory?: ReceptionInterval[];
   feedback?: { sourceEventId: string; bindingId: string; attempts: SourceFeedback }[];
   approvals?: ApprovalMessagingSnapshot;
+  failureAlerts?: FailureAlertSnapshot;
   setup?: {
     providerReady: boolean;
     receipts: {
@@ -253,10 +266,17 @@ export interface MessagingSnapshot {
 }
 
 export interface OutboundMessaging {
+  privateInputReplyAuthority(
+    botSlug: string,
+    sourceEventId: string,
+    authority: import('../credentials/im-origin.js').PrivateReplyAuthority,
+  ): () => void;
   approvals: ApprovalMessaging;
+  failureAlerts: FailureAlerts;
   beginProcessing(botSlug: string, sourceEventIds: readonly string[]): MessagingProcessing;
   pairing: BotPairing;
   senderAccess(botSlug: string, input: SenderAccessInput): void;
+  toolRuleCreatorAuthorized(botSlug: string, creator: ToolApprovalActor): boolean;
   senderPermissions(botSlug: string, sourceEventId: string): SenderPermissions;
   directory(botSlug: string, query: MessagingDirectoryQuery): MessagingDirectoryPage;
   reviewPairing(botSlug: string, input: PairingReviewInput): Promise<PairingRequest>;
@@ -265,6 +285,13 @@ export interface OutboundMessaging {
   setDefaults(input: MessagingDefaultsInput): Promise<MessagingDefaults>;
   identity(botSlug: string, input: MessagingIdentityInput): Promise<MessagingIdentity>;
   reply(botSlug: string, sourceEventId: string, text: string): Promise<OutboxIntent>;
+  privateInputNotice(
+    botSlug: string,
+    sourceEventId: string,
+    requestId: string,
+    webUrl: string,
+    authority: import('../credentials/im-origin.js').PrivateReplyAuthority,
+  ): Promise<OutboxIntent>;
   acquireFile(
     botSlug: string,
     sourceEventId: string,
@@ -275,6 +302,7 @@ export interface OutboundMessaging {
     channelId: string;
     sourceEventId: string;
     attachmentId: string;
+    representation?: 'playback';
     signal: AbortSignal;
   }): Promise<{ ref: ChannelAttachmentRef; body: ReadableStream<Uint8Array> }>;
   prepareAudio(
@@ -334,9 +362,11 @@ export function createOutboundMessaging(options: {
   database: OperationalDatabaseModulePort;
   attachments?: AttachmentStore;
   isBotActive(slug: string): boolean;
+  ownsFailure?(slug: string, sessionId: string, role: 'orchestrator' | 'assignment'): boolean;
   sourcePolicy?: BotSourcePolicyStore;
   onDefaultsChanged?: () => void;
   onReceptionChanged?: () => void;
+  onAuthorizationChanged?: (botSlug: string) => void;
   onAdmitted?(botSlug: string, sourceEventId: string): void;
   onPlaced?(commit: ChannelMessageCommit): void;
   onShared?(botSlugs: string[]): void;
@@ -378,6 +408,16 @@ export function createOutboundMessaging(options: {
   if (options.recover !== false)
     database.transaction((db) => recordLocalReception(db, now(), options.isBotActive, 'observed'));
   const providers = new Map<string, { provider: MessagingProvider; token: object }>();
+  const privateReplies = new Map<
+    string,
+    Set<import('../credentials/im-origin.js').PrivateReplyAuthority>
+  >();
+  const privateNotices = new Map<
+    string,
+    import('../credentials/im-origin.js').PrivateReplyAuthority
+  >();
+  const privateReplyKey = (botSlug: string, sourceEventId: string) =>
+    JSON.stringify([botSlug, sourceEventId]);
   const inFlight = new Map<
     string,
     { providerId: string; token: object; controller: AbortController; fileGrantId?: string }
@@ -592,7 +632,12 @@ export function createOutboundMessaging(options: {
     }
     return { ...entry, inspected, identityRevision: identity.revision };
   };
-  const pairing = createBotPairing(database, options.isBotActive, options.now);
+  const pairing = createBotPairing(
+    database,
+    options.isBotActive,
+    options.now,
+    options.onAuthorizationChanged,
+  );
   const approvals = createApprovalMessaging({
     database,
     pairing,
@@ -601,8 +646,34 @@ export function createOutboundMessaging(options: {
     isBotActive: options.isBotActive,
     ...(options.warn ? { warn: options.warn } : {}),
   });
+  const pairingCards = createPairingCards({
+    ...(options.recover === undefined ? {} : { recover: options.recover }),
+    database,
+    pairing,
+    provider(id) {
+      const entry = provider(id);
+      return { provider: entry.provider, assertCurrent: () => current(id, entry.token) };
+    },
+    isBotActive: options.isBotActive,
+    notifyApplicant: (request) => inbound.notifyPairing(request),
+    routeAvailable: (request) => inbound.pairingRouteAvailable(request),
+    ...(options.warn ? { warn: options.warn } : {}),
+  });
+  const failureAlerts = createFailureAlerts({
+    database,
+    approvals,
+    isBotActive: options.isBotActive,
+    ownsFailure: options.ownsFailure ?? (() => false),
+    ...(options.recover === undefined ? {} : { recover: options.recover }),
+    ...(options.now === undefined ? {} : { now: options.now }),
+    ...(options.warn === undefined ? {} : { warn: options.warn }),
+  });
   const inbound = createInboundMessaging({
-    onApprovalAction: (providerId, event, signal) => approvals.action(providerId, event, signal),
+    onApprovalAction: (providerId, event, signal) =>
+      event.kind === 'pairing'
+        ? pairingCards.action(providerId, event, signal)
+        : approvals.action(providerId, event, signal),
+    onPairingRequest: (request) => pairingCards.notify(request),
     pairing,
     database,
     bindingAvailable(id) {
@@ -690,6 +761,8 @@ export function createOutboundMessaging(options: {
         database,
         attachments: options.attachments,
         active: options.isBotActive,
+        prepareAudio: (botSlug, sourceEventId, attachmentId, signal) =>
+          service.prepareAudio(botSlug, sourceEventId, attachmentId, signal),
         provider(id) {
           const entry = provider(id);
           return { provider: entry.provider, assertCurrent: () => current(id, entry.token) };
@@ -743,9 +816,10 @@ export function createOutboundMessaging(options: {
     candidate(botSlug, sourceEventId) {
       if (!inbound.available(botSlug, sourceEventId)) return undefined;
       const source = inbound.read(botSlug, sourceEventId);
-      if (source.platform !== 'feishu') return undefined;
+      if (!['feishu', 'slack'].includes(source.platform)) return undefined;
       const value = grant(botSlug, source.grantId);
       if (value.botSlug !== botSlug) return undefined;
+      if (source.platform === 'slack' && value.muted) return undefined;
       const identity = enabledBinding(value.bindingId);
       const entry = provider(value.providerId);
       return {
@@ -764,6 +838,7 @@ export function createOutboundMessaging(options: {
               return (
                 !latest.revokedAt &&
                 !latest.suspendedReason &&
+                !(source.platform === 'slack' && latest.muted) &&
                 latest.revision === value.revision &&
                 inbound.available(botSlug, sourceEventId)
               );
@@ -775,14 +850,132 @@ export function createOutboundMessaging(options: {
       };
     },
   });
+  async function routedReply(
+    botSlug: string,
+    sourceEventId: string,
+    text: string,
+    noticeId?: string,
+  ): Promise<OutboxIntent> {
+    if (noticeId === undefined && /private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}/.test(text))
+      throw new MessagingError('private-reference-not-deliverable');
+    let source: ExternalSource;
+    try {
+      source = inbound.readShared(botSlug, sourceEventId);
+    } catch (error) {
+      if (error instanceof MessagingError && error.code === 'channel-unavailable')
+        throw new MessagingError('source-unavailable');
+      throw error;
+    }
+    const ingress = database.read((db) =>
+      db.prepare('SELECT bot_slug FROM messaging_grants WHERE id = ?').get(source.grantId),
+    ) as { bot_slug: string } | undefined;
+    if (ingress?.bot_slug === botSlug) {
+      const result = await service.send(
+        botSlug,
+        source.grantId,
+        noticeId ?? 'reply-' + sourceEventId,
+        text,
+        sourceEventId,
+      );
+      if (noticeId === undefined && result.state === 'provider-accepted')
+        feedback.notify(botSlug, sourceEventId, 'answered', result.id);
+      return result;
+    }
+    const rows = database.read((db) =>
+      db.prepare('SELECT body FROM messaging_grants WHERE bot_slug = ?').all(botSlug),
+    ) as { body: string }[];
+    const matches: MessagingGrant[] = [];
+    for (const row of rows) {
+      const value = JSON.parse(row.body) as MessagingGrant;
+      if (
+        value.platform !== source.platform ||
+        value.revokedAt ||
+        value.suspendedReason ||
+        (value.receiveScope !== undefined &&
+          value.receiveScope.conversationId !== source.event.conversation.id)
+      )
+        continue;
+      sourceForReply(botSlug, sourceEventId, value);
+      if (value.origin !== 'implicit') {
+        const registered = provider(value.providerId);
+        const targets = await bounded(registered.provider.targets(value.accountRef));
+        current(value.providerId, registered.token);
+        if (
+          !targets.some(
+            (target) =>
+              target.ref === value.targetRef &&
+              target.receiveScope?.conversationId === source.event.conversation.id,
+          )
+        )
+          continue;
+      }
+      const entry = await check(value);
+      if (entry.inspected.target.receiveScope?.conversationId === source.event.conversation.id)
+        matches.push(value);
+    }
+    if (matches.length !== 1)
+      throw new MessagingError(
+        matches.length ? 'reply-target-ambiguous' : 'own-reply-grant-unavailable',
+      );
+    const requestId =
+      noticeId ??
+      'reply-' +
+        createHash('sha256')
+          .update(JSON.stringify([botSlug, sourceEventId]))
+          .digest('hex');
+    return service.send(botSlug, matches[0]!.id, requestId, text, sourceEventId);
+  }
+
   const service: OutboundMessaging = {
+    privateInputReplyAuthority(botSlug, sourceEventId, authority) {
+      const key = privateReplyKey(botSlug, sourceEventId);
+      let authorities = privateReplies.get(key);
+      if (authorities === undefined) {
+        authorities = new Set();
+        privateReplies.set(key, authorities);
+      }
+      authorities.add(authority);
+      return () => {
+        authorities.delete(authority);
+        if (authorities.size === 0) privateReplies.delete(key);
+      };
+    },
     approvals,
+    failureAlerts,
     beginProcessing: (botSlug, sourceEventIds) => typing.begin(botSlug, sourceEventIds),
     inbound,
     pairing,
     senderAccess(botSlug, input) {
       active(botSlug);
       transaction((db) => changeSenderAccess(db, botSlug, input), ['pairing', 'bot-inbox']);
+      options.onAuthorizationChanged?.(botSlug);
+      pairingCards.refresh(botSlug);
+    },
+    toolRuleCreatorAuthorized(botSlug, creator) {
+      try {
+        active(botSlug);
+        const identity = binding(creator.bindingId);
+        if (
+          identity.botSlug !== botSlug ||
+          identity.platform !== 'feishu' ||
+          identity.fingerprint !== creator.fingerprint ||
+          !identity.enabled ||
+          identity.revokedAt
+        )
+          return false;
+        pairing.assert(botSlug, creator.bindingId, creator.actorId, 'approve', creator.pairingId);
+        pairing.assert(
+          botSlug,
+          creator.bindingId,
+          creator.actorId,
+          'save-rules',
+          creator.pairingId,
+        );
+        return true;
+      } catch (error) {
+        if (!(error instanceof MessagingError)) throw error;
+        return false;
+      }
     },
     senderPermissions(botSlug, sourceEventId) {
       active(botSlug);
@@ -812,6 +1005,7 @@ export function createOutboundMessaging(options: {
     },
     async reviewPairing(botSlug, input) {
       const request = pairing.review(botSlug, input);
+      pairingCards.refresh(botSlug);
       await inbound.notifyPairing(request);
       return pairing.list(botSlug).find((item) => item.id === request.id)!;
     },
@@ -827,12 +1021,15 @@ export function createOutboundMessaging(options: {
       const identities = database.read((db) =>
         db
           .prepare(
-            'SELECT id FROM messaging_bindings WHERE platform = ? AND enabled_inherited = 1 AND revoked_at IS NULL',
+            'SELECT id, bot_slug FROM messaging_bindings WHERE platform = ? AND enabled_inherited = 1 AND revoked_at IS NULL',
           )
           .all(value.platform),
-      ) as { id: string }[];
-      if (prior.identityEnabled !== value.identityEnabled)
+      ) as { id: string; bot_slug: string }[];
+      if (prior.identityEnabled !== value.identityEnabled) {
+        for (const botSlug of new Set(identities.map((identity) => identity.bot_slug)))
+          options.onAuthorizationChanged?.(botSlug);
         await Promise.allSettled(identities.map(({ id }) => bounded(inbound.reconcileBinding(id))));
+      }
       if (prior.typingEnabled !== value.typingEnabled) {
         const inherited = database.read((db) =>
           db
@@ -1041,6 +1238,7 @@ export function createOutboundMessaging(options: {
         ['bindings', 'grants', 'bot-inbox'],
       );
       typing.invalidate((candidate) => candidate.bindingId === value.id);
+      options.onAuthorizationChanged?.(botSlug);
       await bounded(inbound.reconcileBinding(value.id));
       options.warn?.(
         JSON.stringify({
@@ -1176,7 +1374,7 @@ export function createOutboundMessaging(options: {
         throw new MessagingError('source-unavailable');
       const source = inbound.read(botSlug, sourceEventId);
       if (
-        source.platform !== 'weixin' ||
+        (source.platform !== 'weixin' && source.platform !== 'qq') ||
         !source.event.voice ||
         !source.event.attachments?.some(
           (file) => file.id === attachmentId && file.mediaType?.startsWith('audio/'),
@@ -1227,7 +1425,14 @@ export function createOutboundMessaging(options: {
         validate();
         const digest = createHash('sha256')
           .update(bytes)
-          .update(JSON.stringify([sourceEventId, attachmentId, source.event.voice, 'silk-wav-v1']))
+          .update(
+            JSON.stringify([
+              sourceEventId,
+              attachmentId,
+              source.event.voice,
+              source.platform === 'qq' ? 'qq-silk-wav-v1' : 'silk-wav-v1',
+            ]),
+          )
           .digest('hex')
           .slice(0, 32);
         const uploadId = [
@@ -1242,7 +1447,10 @@ export function createOutboundMessaging(options: {
           name: 'voice.wav',
           signal: combined,
           load: async () => {
-            const wav = await decodeWeChatVoice(bytes, source.event.voice!, combined);
+            const wav =
+              source.platform === 'qq'
+                ? await decodeQqVoice(bytes, combined)
+                : await decodeWeChatVoice(bytes, source.event.voice!, combined);
             validate();
             return (async function* () {
               validate();
@@ -1300,72 +1508,35 @@ export function createOutboundMessaging(options: {
         feedback.notify(botSlug, sourceEventId, 'answered', result.id);
       return result;
     },
-    async reply(botSlug, sourceEventId, text) {
-      let source: ExternalSource;
+    reply: (botSlug, sourceEventId, text) => routedReply(botSlug, sourceEventId, text),
+    async privateInputNotice(botSlug, sourceEventId, requestId, webUrl, authority) {
+      if (!/^[0-9a-f-]{36}$/.test(requestId)) throw new MessagingError('source-unavailable');
+      if (authority.signal.aborted || !authority.current())
+        throw new MessagingError('source-unavailable');
+      const url = new URL(webUrl);
+      if (
+        !['http:', 'https:'].includes(url.protocol) ||
+        url.username ||
+        url.password ||
+        url.search ||
+        !url.hash.startsWith('#botharness-private-input=')
+      )
+        throw new MessagingError('source-unavailable');
+      const noticeId = 'private-input-' + requestId;
+      privateNotices.set(noticeId, authority);
       try {
-        source = inbound.readShared(botSlug, sourceEventId);
-      } catch (error) {
-        if (error instanceof MessagingError && error.code === 'channel-unavailable')
-          throw new MessagingError('source-unavailable');
-        throw error;
-      }
-      const ingress = database.read((db) =>
-        db.prepare('SELECT bot_slug FROM messaging_grants WHERE id = ?').get(source.grantId),
-      ) as { bot_slug: string } | undefined;
-      if (ingress?.bot_slug === botSlug) {
-        const result = await service.send(
+        const result = await routedReply(
           botSlug,
-          source.grantId,
-          'reply-' + sourceEventId,
-          text,
           sourceEventId,
+          'Owner action needed. Open the private input card in Web Chat. Do not send private values here.\n' +
+            url.href,
+          noticeId,
         );
-        if (result.state === 'provider-accepted')
-          feedback.notify(botSlug, sourceEventId, 'answered', result.id);
+        if (result.state !== 'provider-accepted') throw new MessagingError('source-unavailable');
         return result;
+      } finally {
+        if (privateNotices.get(noticeId) === authority) privateNotices.delete(noticeId);
       }
-      const rows = database.read((db) =>
-        db.prepare('SELECT body FROM messaging_grants WHERE bot_slug = ?').all(botSlug),
-      ) as { body: string }[];
-      const matches: MessagingGrant[] = [];
-      for (const row of rows) {
-        const value = JSON.parse(row.body) as MessagingGrant;
-        if (
-          value.platform !== source.platform ||
-          value.revokedAt ||
-          value.suspendedReason ||
-          (value.receiveScope !== undefined &&
-            value.receiveScope.conversationId !== source.event.conversation.id)
-        )
-          continue;
-        sourceForReply(botSlug, sourceEventId, value);
-        if (value.origin !== 'implicit') {
-          const registered = provider(value.providerId);
-          const targets = await bounded(registered.provider.targets(value.accountRef));
-          current(value.providerId, registered.token);
-          if (
-            !targets.some(
-              (target) =>
-                target.ref === value.targetRef &&
-                target.receiveScope?.conversationId === source.event.conversation.id,
-            )
-          )
-            continue;
-        }
-        const entry = await check(value);
-        if (entry.inspected.target.receiveScope?.conversationId === source.event.conversation.id)
-          matches.push(value);
-      }
-      if (matches.length !== 1)
-        throw new MessagingError(
-          matches.length ? 'reply-target-ambiguous' : 'own-reply-grant-unavailable',
-        );
-      const requestId =
-        'reply-' +
-        createHash('sha256')
-          .update(JSON.stringify([botSlug, sourceEventId]))
-          .digest('hex');
-      return service.send(botSlug, matches[0]!.id, requestId, text, sourceEventId);
     },
     register(value) {
       if (closed) throw new MessagingError('provider-unavailable');
@@ -1476,6 +1647,7 @@ export function createOutboundMessaging(options: {
         },
         ['bindings', 'grants', 'bot-inbox'],
       );
+      options.onAuthorizationChanged?.(botSlug);
       await Promise.all(dependencies.identities.map((id) => bounded(inbound.reconcileBinding(id))));
     },
     async apps() {
@@ -1755,11 +1927,14 @@ export function createOutboundMessaging(options: {
         ),
         identities,
         roles: database.read((db) => externalUserRoles(db, botSlug)),
+        permissionGroups: database.read((db) => externalPermissionGroups(db, botSlug)),
+        behaviorPermissions: database.read((db) => behaviorPermissions(db, botSlug)),
         senderPolicy: database.read((db) => readSenderPolicy(db, botSlug)),
         pairings: pairing.list(botSlug),
         approvals: approvals.snapshot(botSlug),
+        failureAlerts: failureAlerts.snapshot(botSlug),
         pairingReceivers: identities
-          .filter((i) => i.platform === 'feishu' && !i.revokedAt)
+          .filter((i) => ['feishu', 'slack'].includes(i.platform) && !i.revokedAt)
           .map((i) => ({ name: i.name, status: i.reception ?? 'unavailable' })),
         grants,
         heldConversations: database.read((db) =>
@@ -2189,7 +2364,20 @@ export function createOutboundMessaging(options: {
       let started = false;
       let timer: ReturnType<typeof setTimeout> | undefined;
       const controller = new AbortController();
+      const noticeAuthority = privateNotices.get(requestId);
+      const privateAuthorities =
+        noticeAuthority !== undefined
+          ? [noticeAuthority]
+          : sourceEventId === undefined
+            ? []
+            : [...(privateReplies.get(privateReplyKey(botSlug, sourceEventId)) ?? [])];
+      const privateReplyCurrent = () =>
+        privateAuthorities.every((authority) => !authority.signal.aborted && authority.current());
+      const abortPrivateReply = () => controller.abort();
+      for (const authority of privateAuthorities)
+        authority.signal.addEventListener('abort', abortPrivateReply, { once: true });
       try {
+        if (!privateReplyCurrent()) throw new MessagingError('source-unavailable');
         const entry = await check(grant(botSlug, grantId));
         transaction(
           (db) => {
@@ -2325,6 +2513,7 @@ export function createOutboundMessaging(options: {
                       signal: controller.signal,
                       beforeSend: () => {
                         try {
+                          if (!privateReplyCurrent()) return false;
                           active(botSlug);
                           current(acceptedGrant.providerId, entry.token);
                           enabledBinding(acceptedGrant.bindingId, acceptedIdentity);
@@ -2407,6 +2596,8 @@ export function createOutboundMessaging(options: {
               : 'unknown-outcome';
         return settle(id.id, state, reason);
       } finally {
+        for (const authority of privateAuthorities)
+          authority.signal.removeEventListener('abort', abortPrivateReply);
         if (timer !== undefined) clearTimeout(timer);
         inFlight.delete(id.id);
         const value = readIntent(id.id);
@@ -2435,6 +2626,8 @@ export function createOutboundMessaging(options: {
       } finally {
         closed = true;
         approvals.close();
+        failureAlerts.close();
+        pairingCards.close();
         feedback.close();
         typing.close();
         inbound.close();

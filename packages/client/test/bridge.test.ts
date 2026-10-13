@@ -10,6 +10,7 @@ import {
   loadMemoryGitCommitDiff,
   loadSessionBotOwner,
   loadActivityOverview,
+  loadProfileSessionUsage,
   botExists,
   parseBotSummary,
   parseChannelMessages,
@@ -61,6 +62,41 @@ const DM = {
 };
 
 describe('bridge transport', () => {
+  it('parses bounded read-only Session usage and rejects invalid counts, roles and windows', async () => {
+    const value = {
+      slug: 'ada',
+      weeks: 26,
+      since: '2026-04-13T00:00:00.000Z',
+      rows: [
+        {
+          sessionId: 'root',
+          role: 'orchestrator',
+          label: 'orchestrator',
+          updatedAt: '2026-10-12T00:00:00.000Z',
+          totalTokens: 1000,
+          status: 'ready',
+        },
+      ],
+    };
+    const handler = vi.fn(() => value);
+    expect(
+      await loadProfileSessionUsage(bridgeCall({ profileSessionUsage: handler }), 'dm-ada'),
+    ).toEqual(value);
+    expect(handler).toHaveBeenCalledWith({ channelId: 'dm-ada' });
+    for (const malformed of [
+      { ...value, weeks: 1 },
+      { ...value, rows: Array(7).fill(value.rows[0]) },
+      ...[-1, 1.5, Infinity].map((totalTokens) => ({
+        ...value,
+        rows: [{ ...value.rows[0], totalTokens }],
+      })),
+      { ...value, rows: [{ ...value.rows[0], role: 'group' }] },
+    ]) {
+      await expect(
+        loadProfileSessionUsage(bridgeCall({ profileSessionUsage: () => malformed }), 'dm-ada'),
+      ).rejects.toThrow('invalid Profile Session usage');
+    }
+  });
   it('proves Bot existence from a complete identity list and rejects malformed results', async () => {
     expect(await botExists(bridgeCall({ list: () => ({ bots: [{ slug: 'ada' }] }) }), 'ada')).toBe(
       true,
@@ -174,6 +210,51 @@ describe('bridge transport', () => {
 });
 
 describe('bridge parsers', () => {
+  it('parses a post trace and a mirrored notice origin for the Bot DM', () => {
+    const parsed = parseChannelMessages({
+      messages: [
+        {
+          id: 'bot-channel-post-g-1',
+          at: '2026-10-12T00:00:00Z',
+          author: { kind: 'bot', slug: 'ada' },
+          body: '',
+          botChannelPost: { channelId: 'group-crew', messageId: 'g-1' },
+          botChannelPostPreview: null,
+        },
+        {
+          id: 'memory-commit-1',
+          at: '2026-10-12T00:00:00Z',
+          author: { kind: 'system' },
+          body: '',
+          memoryCommit: {
+            botSlug: 'ada',
+            sha: 'a'.repeat(40),
+            subject: 'Remember',
+            authorName: 'Ada',
+            authoredAt: '2026-10-12T00:00:00Z',
+            files: [],
+            moreFiles: 0,
+          },
+          noticeOrigin: { channelId: 'group-crew' },
+        },
+        {
+          id: 'forged',
+          at: '2026-10-12T00:00:00Z',
+          author: { kind: 'human' },
+          body: '',
+          botChannelPost: { channelId: 'group-crew', messageId: 'g-1' },
+        },
+      ],
+    });
+    expect(parsed.map((item) => item.id)).toEqual(['bot-channel-post-g-1', 'memory-commit-1']);
+    const [trace, mirrored] = parsed;
+    expect(trace).toMatchObject({
+      botChannelPost: { channelId: 'group-crew', messageId: 'g-1' },
+      botChannelPostPreview: null,
+    });
+    expect(mirrored?.noticeOrigin).toEqual({ channelId: 'group-crew' });
+  });
+
   it('parses one created PersonaBot detail with list-compatible defaults', () => {
     expect(parseBotSummary({ slug: 'new-bot', displayName: 'New Bot', workspaces: [] })).toEqual({
       slug: 'new-bot',
@@ -243,6 +324,38 @@ describe('bridge parsers', () => {
 
     expect(messages.map((message) => message.id)).toEqual(['m1', 'm3']);
     expect(messages[0]?.author).toEqual({ kind: 'bot', slug: 'ada' });
+  });
+
+  it('retains optional QQ receiving-app attribution and refuses malformed fields without rejecting legacy sources', () => {
+    const base = {
+      id: 'legacy',
+      at: '2026-10-08T00:00:00Z',
+      body: 'text',
+      author: { kind: 'bridged', source: 'member' },
+      bridgeOrigin: {
+        platform: 'qq',
+        conversationId: 'group',
+        conversationName: 'Group',
+        messageId: 'native',
+        senderId: 'member',
+        sourceEventId: 'source',
+      },
+    };
+    const app = {
+      ...base,
+      id: 'app',
+      bridgeOrigin: { ...base.bridgeOrigin, accountRef: 'qq-a', accountName: 'QA' },
+    };
+    const messages = parseChannelMessages({
+      messages: [
+        base,
+        app,
+        { ...app, id: 'bad-name', bridgeOrigin: { ...app.bridgeOrigin, accountName: {} } },
+        { ...app, id: 'bad-ref', bridgeOrigin: { ...app.bridgeOrigin, accountRef: ' ' } },
+      ],
+    });
+    expect(messages.map((message) => message.id)).toEqual(['legacy', 'app']);
+    expect(messages[1]?.bridgeOrigin).toMatchObject({ accountRef: 'qq-a', accountName: 'QA' });
   });
 
   it('preserves stable Human mentions and rejects forged offsets or authors', () => {
@@ -1543,6 +1656,71 @@ describe('bridge actions', () => {
     expect(accepted).toHaveLength(1);
     expect(clientStore.getSnapshot().conversation.messages).toEqual([accepted[0]]);
     expect(controller.getSnapshot().modelOpen).toBe(false);
+  });
+
+  it('merges a journal tail page into the visible window and leaves a detached window alone', async () => {
+    const at = BOT.createdAt;
+    const item = (revision: number) => ({
+      id: `m${revision}`,
+      at,
+      author: { kind: 'human' as const },
+      body: `m${revision}`,
+      channelRevision: revision,
+    });
+    const { clientStore, actions } = setup({
+      channelTimeline: () => ({
+        revision: 5,
+        page: {
+          entries: [item(3), item(4), item(5)],
+          olderCursor: 'c3',
+          newerCursor: null,
+          hasOlder: true,
+          hasNewer: false,
+        },
+      }),
+    });
+    await actions.load();
+    await actions.openBot('ada');
+    const ids = () => clientStore.getSnapshot().conversation.messages.map((message) => message.id);
+    expect(ids()).toEqual(['m3', 'm4', 'm5']);
+
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(5), item(6)],
+      olderCursor: 'c5',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m3', 'm4', 'm5', 'm6']);
+    expect(clientStore.getSnapshot().conversation.revision).toBe(6);
+    expect(clientStore.getSnapshot().conversation.timeline.olderCursor).toBe('c3');
+
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(7), item(8)],
+      olderCursor: 'c7',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m3', 'm4', 'm5', 'm6', 'm7', 'm8']);
+
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(20), item(21)],
+      olderCursor: 'c20',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m20', 'm21']);
+    expect(clientStore.getSnapshot().conversation.timeline).toMatchObject({
+      olderCursor: 'c20',
+      hasOlder: true,
+    });
+
+    clientStore.setConversation({
+      timeline: { ...clientStore.getSnapshot().conversation.timeline, hasNewer: true },
+    });
+    actions.applyChannelTail('dm-ada', {
+      entries: [item(30)],
+      olderCursor: 'c30',
+      hasOlder: true,
+    });
+    expect(ids()).toEqual(['m20', 'm21']);
+    expect(clientStore.getSnapshot().conversation.revision).toBe(30);
   });
 
   it('generates a Host-valid UUID fallback when Web Crypto is unavailable', async () => {

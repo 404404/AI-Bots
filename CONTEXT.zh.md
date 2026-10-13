@@ -58,6 +58,10 @@ _避免使用_：profile picture、skin
 形象家族：一类 Avatar 外形，其中相互兼容的外形选项可由 Human 组合。各家族以自身视觉语言表达同一 Bot state；某个外形选项只有在明确兼容时才跨家族共享。
 _避免使用_：Soul、Bot type、mode、skin
 
+**Bot Primary Color**：
+Bot 主色：PersonaBot 的视觉身份色，默认跟随 Avatar 的主发色或稳定兜底色，Human 也可独立于 Avatar 指定自定义颜色。名字和图表使用适配主题的变体表达同一身份；它不是品牌色、活动色或结果状态色。
+_避免使用_：主题强调色、状态色、唯一 Bot 颜色、固定的初始发色
+
 **Avatar Appearance**：
 保存外形：PersonaBot 保存的视觉选择：Avatar Family、Avatar Species、兼容部件（含 Custom Part）、颜色和可编辑几何。各 Binding 使用同一组选择，暂时的动作或形变结束后恢复；它们独立于 Soul 和当前 Bot state。
 _避免使用_：Soul、pose、mood、skin
@@ -169,7 +173,7 @@ _避免使用_：project、multi-root folder、group
 _避免使用_：Service Grant、Workspace、one-time approval、cwd inference
 
 **Tool Approval Rule**：
-Human 保存且可撤销的规则，针对一个 PersonaBot 角色与 Workspace Grant 范围，自动回答后续 DSH 审批请求。精确规则匹配原生工具名称与完整输入；全部不透明工具规则覆盖该范围内所有无法按路径核对的原生工具。每次命中仍产生独立的 DSH 审批决定与审计事件。
+Web Human 或当前获授权的外部审核人显式保存且可撤销的规则，针对一个 PersonaBot 角色与 Workspace Grant 范围，自动回答后续 DSH 审批请求。精确规则匹配原生工具名称与完整输入；全部不透明工具规则覆盖该范围内所有无法按路径核对的原生工具。外部审核人保存的规则依赖原配对及其当前批准／保存规则能力；失去授权会停用规则，不转移到后来的配对。每次命中仍产生独立的 DSH 审批决定与审计事件。
 _避免使用_：Workspace Grant、Provider Service Grant、sandbox preset、推断的命令相似性
 
 **Assignment Access Preset**：
@@ -484,6 +488,30 @@ _避免使用_：原生 DSH 角色、资源 ACL、把所有角色称为管理员
 Human 审核后，将外部人员与一个 PersonaBot 及其当前已认证 App Binding 下的角色关联。可在该范围内允许的会话中复用，批准后须重新提问；不继承到其他 Bot、App、平台或重新建立的 Binding。
 _避免使用_：会话成员资格、账号级管理员、待执行旧指令
 
+**Pairing Reviewer**：
+当前已配对、拥有显式普通 Chat pairing 审核能力的外部人员，范围限定同一 PersonaBot 与 App Binding。群申请可见不代表所有人能审核；配对审核也不授予回答 Questions 或批准原生执行的能力。
+_避免使用_：所有群成员、原生执行审批人、自动首位管理员
+
+**Management Delegation Ceiling**：
+Pairing Reviewer 当前可通过 Role 授予的显式管理能力集合，包含该 Role 的再次委派能力。它与审核人可使用的能力分别解析，来源是当前 Role、授权组和个人例外；显式委派 Deny 优先。
+_避免使用_：自身权限隐式允许委派、资源 ACL、跨 App 管理员
+
+**External Authorization Group**：
+一个 PersonaBot 与 App Binding 下，为当前已配对外部人员持续提供显式管理 Allow／Deny 及可复用行为权限项的授权组；人员可属于多个授权组，同时保留一个主行为 Role。成员关系不授予聊天资格，撤销后重新配对不继承旧成员关系。
+_避免使用_：Channel Group、平台会话群、复制 Role、原生 DSH RBAC
+
+**Behavior permission item**：
+一个可命名、可复用的外部人员行为描述，供同一 PersonaBot 的多个授权组引用并允许或拒绝。同项显式 Deny 优先；生效策略在主 Role 约束内指导模型，不是资源 ACL 或管理能力。
+_避免使用_：原生权限、复制 Role、强制 Shell 策略、语义冲突证明
+
+**Declared behavior exclusion**：
+Human 为同一 PersonaBot 的两个 Behavior permission item 明确声明的双向不兼容关系。不能为同一配对人员同时有效允许这两项；明确拒绝其中一项即可消除不兼容。这代表人工声明的策略意图，不证明任意自然语言策略一致。
+_避免使用_：自动推断文字矛盾、资源隔离、按组顺序决定优先级
+
+**Person permission exception**：
+绑定一次当前 Chat pairing 的显式管理 Allow／Deny，与其 Role 及授权组贡献共同生效；任意适用的显式 Deny 优先。它不会授予已认证 Web Human 的来源身份。
+_避免使用_：Super Admin 配对、行为 Role 覆盖、永久平台用户授权
+
 **Conversation entry**：
 一个 Binding 的单个会话流量所挂靠的锚点，存为 Messaging Grant。_隐式_ 条目在第一条被接收的默认流量消息或第一次主动发送时记录；_显式_ 条目来自保存的发送目标。_等待处理_ 的条目等 Human 决定（先问我，或达到上限），只保留元数据。_已屏蔽_ 的会话有一个按 Bot、应用指纹、会话类型和 ID 记录的持久屏蔽，直到 **再次允许** 前都会被拒绝。静音的条目照常接收，但不会唤醒 Bot。
 _避免使用_：授权（指隐式条目时）、投递目标、订阅
@@ -745,7 +773,7 @@ DSH 原生 client 的左侧栏；在 Bot mode 中呈现 Roster。采用此名称
 _避免使用_：left sidebar、main sidebar、navigation
 
 **Channel sidebar**：
-Bot mode panel 中由当前所选 Channel 决定 scope 的右侧区域：group Channel 显示 membership 与 Channel management entry，PersonaBot DM 显示该 PersonaBot 自己的 Assignment、Memory、Bot Inbox 等 entry，以及它的运行配置：Model Plan、Wake Policy、外部身份、外部连接器与审批。它不是 DSH 原生、由 Session 决定 scope 的右侧栏。
+Bot mode panel 中由当前所选 Channel 决定 scope 的右侧区域：group Channel 显示 membership entry，PersonaBot DM 显示该 PersonaBot 自己的 Session、Memory、Bot Inbox 等 entry。桌面端显示为 Channel sidebar tab；窄布局下是一列可折叠 entry。运行配置不在这里，而在 Channel settings。它不是 DSH 原生、由 Session 决定 scope 的右侧栏。
 _避免使用_：PersonaBot navigation、right panel、session panel、inspector、workbench
 
 **Channel body**：
@@ -753,15 +781,27 @@ Bot mode panel 的中间区域，包含所选 Channel 的 header、primary conte
 _避免使用_：main pane、conversation view、chat panel
 
 **Channel sidebar entry**：
-Channel sidebar 中一个已注册、可折叠的 item，具有稳定 id、label、order、scope 与 renderer，可用于展示信息、提供 control，或同时承担两者。不可用的 entry 直接缺席，不显示 placeholder。
+Channel sidebar 中一个已注册的 item，具有稳定 id、label、order、scope 与 renderer，可用于展示信息、提供 control，或同时承担两者。桌面端它显示在某个 Channel sidebar tab 里；窄布局下各自折叠。以 settings surface 注册的 entry 改为 Channel settings section。不可用的 entry 直接缺席，不显示 placeholder。
 _避免使用_：widget、card、tab、destination、Channel section
 
+**Channel sidebar tab**：
+桌面端 Channel sidebar 的一个图标标签页，包含一个或多个 Channel sidebar entry（会话 = Session + Bot Inbox；记忆 = 记忆文件 + 记忆演化）。没有指定已注册 tab 的 entry 自成一个 tab。有两个可见 entry 的 tab 分成上下两个区域。Human 在 + 视图菜单中排序和隐藏 tab，这些是浏览器本地的展示偏好。
+_避免使用_：view、page、rail item
+
+**Channel settings**：
+当前 Channel 的运行配置 modal（频道设置）：PersonaBot DM 中是 Wake Policy、外部身份与外部连接器；群聊中是 Wake Policy、外部连接器与群管理。从 Channel sidebar 齿轮菜单和 Channel header 的「···」菜单打开，按 Channel settings section 组织。
+_避免使用_：Bot Settings、Profile settings、sidebar settings
+
+**Channel settings section**：
+Channel settings 中的一个分区：以 settings surface 注册的 Channel sidebar entry，因此不会出现在 Channel sidebar 中。
+_避免使用_：settings tab、settings entry
+
 **PersonaBot Profile**：
-单个 PersonaBot 可分享的身份与只读活动 surface：身份会在分享 PersonaBot 时随之带走（Display name、Avatar、Profile Banner、Bot Tag、Bot Bio）；活动包括由其 owned Session 派生的 token 用量、来自 Bot Inbox Admission 的事件活跃度，以及 Memory commit 活跃度。Model Plan、Wake Policy、外部身份、Bridge、审批等运行配置不属于它，而在 Channel sidebar 中。它以 Profile popover 的紧凑形态出现在 DM header 的头像旁，并展开为 Channel body 中的 Profile view。
+单个 PersonaBot 可分享的身份与只读活动 surface：身份会在分享 PersonaBot 时随之带走（Display name、Avatar、Profile Banner、Bot Tag、Bot Bio）；活动包括由其 owned Session 派生的 token 用量、来自 Bot Inbox Admission 的事件活跃度，以及 Memory commit 活跃度。Model Plan、Wake Policy、外部身份、Bridge、审批等运行配置不属于它，而在 Channel sidebar 与 Channel settings 中。它以 Profile popover 的紧凑形态出现在 DM header 的头像旁，并展开为 Channel body 中的 Profile view。
 _避免使用_：account、dashboard、bot page、裸用 profile、settings page
 
 **Group Profile**：
-单个 Group Channel 的名称、头像，以及基于已提交 Channel 消息的活动 surface，按天和作者展示消息数量，并区分 Human 与 PersonaBot 作者；成员 Wake Policy、Bridge 等群配置在 Channel sidebar 中。群聊 header 打开弹层及 Channel body 详情；DM Channel 只有对应的 PersonaBot Profile。
+单个 Group Channel 的名称、头像，以及基于已提交 Channel 消息的活动 surface，按天和作者展示消息数量，并区分 Human 与 PersonaBot 作者；成员 Wake Policy、Bridge 等群配置在 Channel settings 中。群聊 header 打开弹层及 Channel body 详情；DM Channel 只有对应的 PersonaBot Profile。
 _避免使用_：PersonaBot token 用量、群管理侧栏、DM Channel Profile
 
 **Approver**：
@@ -789,7 +829,7 @@ Web Client 用于读取 PersonaBot 并调用各自独立 mutation command 的 RP
 _避免使用_：remote、IPC、gateway
 
 **Bot Settings**：
-BotHarness 自有的 modal（Bot 设置），承载 profile 级的 BotHarness 配置，按自己 sidebar 中的 Bot Settings section 组织。单个 PersonaBot 或单个 Channel 的配置不在这里，而是 Channel sidebar entry。DSH 自带的设置 modal 称为 DSH settings；其中的 Bot 设置 项只负责指向 Bot Settings，App 凭据仍留在 DSH settings。
+BotHarness 自有的 modal（Bot 设置），承载 profile 级的 BotHarness 配置，按自己 sidebar 中的 Bot Settings section 组织。单个 PersonaBot 或单个 Channel 的配置不在这里，而在 Channel settings 或 Channel sidebar entry 中。DSH 自带的设置 modal 称为 DSH settings；其中的 Bot 设置 项只负责指向 Bot Settings，App 凭据仍留在 DSH settings。
 _避免使用_：Settings UI、settings page、preferences、admin panel、dashboard、web console
 
 **Bot Settings section**：

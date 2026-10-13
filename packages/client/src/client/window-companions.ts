@@ -52,9 +52,8 @@ const record = (value: unknown): Record<string, unknown> | undefined =>
     : undefined;
 function decode(event: Event): Record<string, unknown> | undefined {
   try {
-    return event instanceof MessageEvent && typeof event.data === 'string'
-      ? record(JSON.parse(event.data))
-      : undefined;
+    if (!(event instanceof MessageEvent)) return undefined;
+    return record(typeof event.data === 'string' ? JSON.parse(event.data) : event.data);
   } catch {
     return undefined;
   }
@@ -517,6 +516,17 @@ export class WindowCompanions {
     if (this.reconnectTimer !== undefined) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = undefined;
     this.reconnectAttempt = 0;
+  }
+  reconnect(): void {
+    const stream = this.stream;
+    if (this.disposed || stream === undefined) return;
+    this.resetReconnect();
+    stream.close();
+    try {
+      this.connect();
+    } catch {
+      this.scheduleReconnect();
+    }
   }
   dispose(): void {
     if (this.disposed) return;

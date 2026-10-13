@@ -1,7 +1,10 @@
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
 import { GroupChannelHeader } from './group-channel-header.js';
+import { MobileConversationHeader } from './mobile-conversation-header.js';
 import { CompanionPin } from './window-companions-view.js';
+import { useDmComposerContext } from './dm-composer-context.js';
+import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
 import { BridgeCallError, parseAllBotPreview } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
@@ -43,7 +46,14 @@ import {
   type ChannelComposerUpload,
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
-import type { SelectedChannelRef } from './channel-refs.js';
+import {
+  conversationDraftKey,
+  useConversationDraft,
+  useComposerRecovery,
+} from './conversation-draft.js';
+import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
+import { rebaseMentions } from './mentions.js';
+import { rebaseChannelRefs } from './channel-refs.js';
 import { channelHumanName, humanLabel } from './actor-names.js';
 import { HumanChannelNameMenu } from './human-channel-name.js';
 import type { ChannelHumanMember } from './store.js';
@@ -53,13 +63,16 @@ import {
   type NativeChatFailureText,
 } from './channel-message-body.js';
 import { BridgeSourceAuthor } from './bridge-source-author.js';
+import { botNameColor, botNameSource, useConversationSurface } from './bot-primary-color.js';
 import { ChannelDeliveryReceipt } from './channel-delivery-receipt.js';
 import { MessageCopyAction } from './message-copy-action.js';
 import { isBotDmChannel, isHumanReadOnlyDmChannel } from './channel-kind.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import type { NativeSessionCatalog } from './sessions-entry.js';
 import { ActivityCenterView } from './activity-center-view.js';
-import type { ChannelSidebarRegistry } from './channel-sidebar.js';
+import { resolveChannelSidebarContext, type ChannelSidebarRegistry } from './channel-sidebar.js';
+import { ChannelSettingsDialog } from './channel-settings.js';
+import { channelSettings, channelSettingsSections } from './channel-settings-state.js';
 import { ChannelSidebar, useChannelSidebar } from './channel-sidebar-view.js';
 import { MemoryCommitView } from './memory-commit-view.js';
 import { MemoryFileView, MemoryWorkingView } from './memory-current-view.js';
@@ -70,12 +83,19 @@ import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
+import { BotChannelPostLine, elsewhereAction } from './bot-channel-post-line.js';
+import {
+  hiddenDmActionsSnapshot,
+  subscribeHiddenDmActions,
+  visibleDmMessages,
+} from './dm-actions.js';
 import {
   timelineWorkingRows,
   timelineWorkingRowsCover,
   TimelineWorkingRowsView,
 } from './timeline-working-rows.js';
 import { groupComposerActivity } from './group-composer-activity.js';
+import { attentionCount } from './activity-attention.js';
 import {
   EMPTY_PROFILE_CARDS,
   loadPinnedProfileCards,
@@ -373,6 +393,10 @@ function MessageGroupView({
       ? undefined
       : bots.find((candidate) => candidate.slug === currentDmBotSlug);
   const displayBot = authorBot ?? welcomeBot;
+  const surface = useConversationSurface();
+  const nameSource = first.bridgeOrigin ? undefined : botNameSource(displayBot);
+  const nameColor =
+    nameSource === undefined ? undefined : botNameColor(nameSource, surface.background);
   const avatar =
     displayBot === undefined ? undefined : (
       <PersonaBotAvatar
@@ -408,7 +432,12 @@ function MessageGroupView({
           {first.bridgeOrigin ? (
             <BridgeSourceAuthor origin={first.bridgeOrigin} t={t} />
           ) : (
-            <div className="bh-bubble-author">
+            <div
+              className="bh-bubble-author"
+              ref={nameColor === undefined ? undefined : surface.probe}
+              data-bot-name-color={nameColor}
+              style={nameColor === undefined ? undefined : { color: nameColor }}
+            >
               {welcomeBot?.displayName ?? authorLabel(first, bots, t, humanName)}
             </div>
           )}
@@ -617,6 +646,7 @@ function EmptyConversation({
 }
 
 function ConversationView({
+  onMobileBack,
   state,
   actions,
   companion,
@@ -625,6 +655,7 @@ function ConversationView({
   nativeChatT,
   t,
 }: {
+  onMobileBack?: (() => void) | undefined;
   state: ClientState;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
@@ -635,12 +666,25 @@ function ConversationView({
   t: BotHarnessTranslate;
 }): ReactElement {
   const sidebar = useChannelSidebar(state);
+  const settingsScope = resolveChannelSidebarContext(state)?.scope ?? 'channel';
+  const settingsEntries = useSyncExternalStore(
+    channelSidebar.subscribe,
+    () => channelSidebar.entries(settingsScope),
+    () => channelSidebar.entries(settingsScope),
+  );
+  const hasChannelSettings = channelSettingsSections(settingsEntries, state).length > 0;
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const [draft, setDraft] = useState('');
+  const draftScope = conversationDraftKey(state);
+  const recovery = useComposerRecovery(draftScope, state, actions);
+  const [draft, setDraft] = useConversationDraft(draftScope, 'text', '');
   const [allBotPreview, setAllBotPreview] = useState<AllBotPreview>();
   const [allBotNotice, setAllBotNotice] = useState<string>();
-  const [mentionTokens, setMentionTokens] = useState<SelectedMention[]>([]);
-  const [channelRefTokens, setChannelRefTokens] = useState<SelectedChannelRef[]>([]);
+  const [mentionTokens, setMentionTokens] = useConversationDraft(draftScope, 'mentions', []);
+  const [channelRefTokens, setChannelRefTokens] = useConversationDraft(
+    draftScope,
+    'channelRefs',
+    [],
+  );
   const [selectedMemoryView, setSelectedMemoryView] = useState<
     { channelId: string } & (
       | { kind: 'commit'; sha: string }
@@ -649,11 +693,11 @@ function ConversationView({
     )
   >();
   const chatScrollBeforeDiff = useRef(0);
-  const [uploadItems, setUploadItems] = useState<ChannelComposerUpload[]>([]);
+  const [uploadItems, setUploadItems] = useConversationDraft(draftScope, 'uploads', []);
   const [restoreBlocked, setRestoreBlocked] = useState(false);
   const [restoreFocusSignal, setRestoreFocusSignal] = useState(0);
   const uploadControllers = useRef(new Map<string, AbortController>());
-  const [replyTarget, setReplyTarget] = useState<ChannelMessage | undefined>();
+  const [replyTarget, setReplyTarget] = useConversationDraft(draftScope, 'reply', undefined);
   const submitting = useRef(false);
   const followingLatest = useRef(true);
   const activityOverlayPane = useRef<HTMLElement | null>(null);
@@ -687,6 +731,7 @@ function ConversationView({
     state.selection?.kind === 'bot' && state.selection.profile === true,
   );
   const [profileActivity, setProfileActivity] = useState<ProfileActivity | undefined>(undefined);
+  const [profileUsageLoading, setProfileUsageLoading] = useState(true);
   const [groupProfileActivity, setGroupProfileActivity] = useState<GroupProfileActivity>();
   const [pinnedProfileCards, setPinnedProfileCards] = useState<readonly string[]>(() =>
     loadPinnedProfileCards(),
@@ -698,9 +743,15 @@ function ConversationView({
   const conversation = state.conversation;
   const channel = conversation.channel;
   const botNames = new Map(state.bots.map((member) => [member.slug, member.displayName]));
+  const dmBotSlug = channel?.type === 'dm' ? channel.botSlug : undefined;
+  const hiddenActions = useSyncExternalStore(
+    subscribeHiddenDmActions,
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+  );
   const messages = conversation.messages;
   const displayMessages: ChannelMessage[] = [
-    ...messages,
+    ...visibleDmMessages(messages, hiddenActions),
     ...(conversation.timeline.hasNewer ? [] : conversation.drafts).map((item) => ({
       id: item.draftId,
       at: '',
@@ -758,7 +809,7 @@ function ConversationView({
   const composerFacepile: PersonaBotFacepileItem[] =
     bot === undefined
       ? activeFacepile
-      : botActivity === undefined || (botActivity === 'idle' && bot.attention === undefined)
+      : botActivity === undefined || (botActivity === 'idle' && attentionCount(bot.attention) === 0)
         ? []
         : [
             {
@@ -787,7 +838,11 @@ function ConversationView({
           };
   const streamingBotSlugs = new Set(conversation.drafts.map((item) => item.botSlug));
   const latestMessage = messages.findLast(
-    (item) => item.botDmAction === undefined && item.memberDeparture === undefined,
+    (item) =>
+      item.botDmAction === undefined &&
+      item.botChannelPost === undefined &&
+      item.memoryCommit === undefined &&
+      item.memberDeparture === undefined,
   );
   const workingRows = timelineWorkingRows(
     conversation.status === 'ready' && !conversation.timeline.hasNewer
@@ -881,12 +936,38 @@ function ConversationView({
       window.clearTimeout(readMarkTimer.current);
       for (const controller of uploadControllers.current.values()) controller.abort();
       uploadControllers.current.clear();
+      setUploadItems((items) =>
+        items.map((item) =>
+          item.status === 'uploading' ? { ...item, status: 'error', error: undefined } : item,
+        ),
+      );
     };
   }, [channelId]);
 
   const profileMount = useMountedResource<HTMLDivElement>(() => {
-    if (!profilePopoverOpen && !profileViewOpen) return;
+    if (channel?.type !== 'dm' && !profilePopoverOpen && !profileViewOpen) return;
     let cancelled = false;
+    let fetching = false;
+    const refreshUsage = (): void => {
+      if (fetching || channelId === undefined || channel?.type !== 'dm') return;
+      fetching = true;
+      setProfileUsageLoading(true);
+      void actions
+        .profileActivity(channelId)
+        .then(
+          (activity) => {
+            if (!cancelled)
+              setProfileActivity(activity?.slug === channel.botSlug ? activity : undefined);
+          },
+          () => {
+            if (!cancelled) setProfileActivity(undefined);
+          },
+        )
+        .finally(() => {
+          fetching = false;
+          if (!cancelled) setProfileUsageLoading(false);
+        });
+    };
     if (channelId !== undefined) {
       if (channel?.type === 'group')
         void actions.groupProfileActivity(channelId).then(
@@ -897,17 +978,12 @@ function ConversationView({
             console.warn('botharness: Group Profile activity failed', error);
           },
         );
-      else
-        void actions.profileActivity(channelId).then(
-          (activity) => {
-            if (!cancelled) setProfileActivity(activity);
-          },
-          (error: unknown) => {
-            console.warn('botharness: Profile activity failed', error);
-          },
-        );
+      else refreshUsage();
     }
+    const usageTimer =
+      channel?.type === 'dm' ? window.setInterval(refreshUsage, 30_000) : undefined;
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (!profilePopoverOpen && !profileViewOpen) return;
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]') !== null) return;
       event.preventDefault();
@@ -923,10 +999,40 @@ function ConversationView({
     if (profilePopoverOpen) document.addEventListener('pointerdown', onPointerDown);
     return () => {
       cancelled = true;
+      window.clearInterval(usageTimer);
       document.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('pointerdown', onPointerDown);
     };
-  }, [actions, channel?.type, channelId, profilePopoverOpen, profileViewOpen]);
+  }, [
+    actions,
+    channel?.type,
+    channelId,
+    profilePopoverOpen,
+    profileViewOpen,
+    messages.findLast((message) => !message.pending && !message.failed && !message.streaming)?.id,
+  ]);
+
+  const dmComposerContext = useDmComposerContext({
+    bot: channel?.type === 'dm' && !readOnlyDm ? profileBot : undefined,
+    channelId,
+    actions,
+    companion,
+    activity: profileActivity,
+    loading: profileUsageLoading,
+    t,
+    onUsage: () => {
+      setProfilePopoverOpen(false);
+      setProfileViewOpen(true);
+    },
+  });
+
+  const groupComposerContext = useGroupComposerContext({
+    channel,
+    members: channelBots,
+    actions,
+    t,
+  });
+  const composerContext = dmComposerContext ?? groupComposerContext;
 
   const togglePinnedCard = (id: string): void => {
     setPinnedProfileCards((current) => {
@@ -1079,6 +1185,7 @@ function ConversationView({
   };
 
   const startUpload = (item: ChannelComposerUpload): void => {
+    if (item.fileAvailable === false || recovery.blocked) return;
     const controller = new AbortController();
     uploadControllers.current.set(item.id, controller);
     setUploadItems((current) =>
@@ -1115,16 +1222,25 @@ function ConversationView({
       });
   };
 
-  const addFiles = (files: File[]): void => {
+  const addFiles = (files: File[], selection?: { start: number; end: number }): number | void => {
     const available = Math.max(0, 10 - uploadItems.length);
     const added = files
       .slice(0, available)
       .map((file) => ({ id: crypto.randomUUID(), file, status: 'uploading' as const }));
-    setUploadItems((current) => [...current, ...added]);
+    if (added.length === 0) return;
+    const selected = insertAttachmentReferences(draft, added, selection);
+    recovery.update({
+      text: selected.value,
+      mentions: rebaseMentions(draft, selected.value, mentionTokens),
+      channelRefs: rebaseChannelRefs(draft, selected.value, channelRefTokens),
+      uploads: [...uploadItems, ...added],
+    });
     for (const item of added) startUpload(item);
+    return selected.caret;
   };
 
   const submit = async (): Promise<void> => {
+    if (recovery.blocked) return;
     const body = draft.trim();
     const leftTrim = draft.length - draft.trimStart().length;
     const submittedRefs = channelRefTokens.flatMap((token) => {
@@ -1173,10 +1289,7 @@ function ConversationView({
         .conversation.messages.filter((item) => item.failed !== undefined)
         .map((item) => item.id),
     );
-    setDraft('');
-    setMentionTokens([]);
-    setChannelRefTokens([]);
-    setUploadItems([]);
+    recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
     const submittedReplyTo = replyTarget?.id;
     try {
       const sent = await actions.send(
@@ -1247,16 +1360,33 @@ function ConversationView({
             ref={profileMount}
             className="bh-topbar"
             data-bh-tour="topbar"
+            data-channel-detail={
+              profileViewOpen || activeMemoryView !== undefined ? 'true' : undefined
+            }
             data-memory-diff={
               activeMemoryView?.kind === 'commit' || activeMemoryView?.kind === 'working'
                 ? 'true'
                 : undefined
             }
           >
-            {channel === undefined ? null : (
-              <HumanChannelNameMenu key={channel.id} channel={channel} actions={actions} t={t} />
+            {onMobileBack !== undefined || channel === undefined ? null : (
+              <HumanChannelNameMenu
+                key={channel.id}
+                channel={channel}
+                actions={actions}
+                t={t}
+                onOpenSettings={hasChannelSettings ? () => channelSettings.open() : undefined}
+              />
             )}
-            {channel?.type === 'group' ? (
+            {onMobileBack !== undefined ? (
+              <MobileConversationHeader
+                title={title}
+                onBack={onMobileBack}
+                onSettings={sidebar.toggle}
+                settingsOpen={sidebar.mode !== 'hidden'}
+                t={t}
+              />
+            ) : channel?.type === 'group' ? (
               <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
                 <GroupChannelHeader
                   channel={channel}
@@ -1380,7 +1510,9 @@ function ConversationView({
           <div
             className="bh-chat-top-fade"
             aria-hidden="true"
-            style={{ display: activeMemoryView === undefined ? undefined : 'none' }}
+            style={{
+              display: profileViewOpen || activeMemoryView !== undefined ? 'none' : undefined,
+            }}
           />
           {profileViewOpen && channel?.type === 'group' ? (
             <GroupProfileView
@@ -1416,6 +1548,7 @@ function ConversationView({
                   actions={actions}
                   channelId={channelId}
                   sha={activeMemoryView.sha}
+                  botSlug={channel?.botSlug}
                   t={t}
                   onClose={closeMemoryView}
                 />
@@ -1435,6 +1568,7 @@ function ConversationView({
                   actions={actions}
                   channelId={channelId}
                   change={activeMemoryView.change}
+                  botSlug={channel?.botSlug}
                   t={t}
                   onClose={closeMemoryView}
                 />
@@ -1524,11 +1658,35 @@ function ConversationView({
                             t={t}
                           />
                         </div>
+                      ) : first.botChannelPost !== undefined ? (
+                        <BotChannelPostLine
+                          posts={group.messages}
+                          channels={state.channels}
+                          bots={state.bots}
+                          t={t}
+                          onOpen={(targetChannelId, messageId) => {
+                            void actions
+                              .openChannel(targetChannelId)
+                              .then(() => actions.openAround(targetChannelId, messageId));
+                          }}
+                        />
                       ) : first.memoryCommit !== undefined ? (
                         <MemoryCommitLine
                           messageId={first.id}
                           commit={first.memoryCommit}
                           bots={state.bots}
+                          action={
+                            first.noticeOrigin === undefined
+                              ? undefined
+                              : elsewhereAction(
+                                  'memory',
+                                  first.noticeOrigin.channelId,
+                                  first.memoryCommit.botSlug,
+                                  state.channels,
+                                  state.bots,
+                                  t,
+                                )
+                          }
                           t={t}
                           onOpen={() => {
                             const commit = first.memoryCommit!;
@@ -1701,71 +1859,134 @@ function ConversationView({
                     display: activeMemoryView === undefined ? 'contents' : 'none',
                   }}
                 >
-                  <ChannelComposer
-                    key={channelId}
-                    value={draft}
-                    mentions={mentionTokens}
-                    channelRefs={channelRefTokens}
-                    channelCandidates={
-                      channel?.type === 'dm' && channel.botSlug !== undefined
-                        ? state.channels.filter((candidate) => candidate.type === 'group')
-                        : []
-                    }
-                    allBotPreview={channel?.type === 'group' ? allBotPreview : undefined}
-                    allBotNotice={allBotNotice}
-                    mentionCandidates={
-                      channel?.type === 'group'
-                        ? channelBots
-                        : channel?.type === 'dm' && channel.botSlug !== undefined
-                          ? state.bots.filter(
-                              (candidate) =>
-                                candidate.slug !== channel.botSlug &&
-                                candidate.paused !== true &&
-                                !candidate.deleted,
-                            )
+                  <div
+                    className="bh-composer-recovery"
+                    ref={recovery.mount}
+                    onFocusCapture={() => recovery.setEditing(true)}
+                    onBlurCapture={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+                        recovery.setEditing(false);
+                    }}
+                  >
+                    {draftScope === undefined ? (
+                      <p role="status">{t('composer.draftIdentityUnavailable')}</p>
+                    ) : null}
+                    {draftScope !== undefined && recovery.error !== undefined ? (
+                      <p role="alert">{t('composer.draftStorageError')}</p>
+                    ) : null}
+                    {recovery.needsValidation && recovery.versions.length <= 1 ? (
+                      <p role="status">
+                        {t(
+                          recovery.validationFailed
+                            ? 'composer.draftValidationFailed'
+                            : 'composer.draftValidating',
+                        )}{' '}
+                        {recovery.validationFailed ? (
+                          <button type="button" onClick={recovery.retry}>
+                            {t('composer.draftRetry')}
+                          </button>
+                        ) : null}
+                      </p>
+                    ) : null}
+                    {recovery.notice ? (
+                      <p role="status">{t('composer.draftReferencesChanged')}</p>
+                    ) : null}
+                    {recovery.versions.length > 1 ? (
+                      <section aria-label={t('composer.draftConflict')}>
+                        <p role="alert">{t('composer.draftConflict')}</p>
+                        {recovery.versions.map((version) => (
+                          <div className="bh-composer-draft-version" key={version.writer}>
+                            <pre>{version.draft.text.slice(0, 240)}</pre>
+                            <button type="button" onClick={() => recovery.choose(version.writer)}>
+                              {t('composer.draftUseVersion')}
+                            </button>
+                          </div>
+                        ))}
+                      </section>
+                    ) : null}
+                    <ChannelComposer
+                      key={channelId}
+                      context={composerContext}
+                      value={draft}
+                      mentions={mentionTokens}
+                      channelRefs={channelRefTokens}
+                      channelCandidates={
+                        channel?.type === 'dm' && channel.botSlug !== undefined
+                          ? state.channels.filter((candidate) => candidate.type === 'group')
                           : []
-                    }
-                    placeholder={t('composer.placeholder', { name: title })}
-                    sending={conversation.sending}
-                    focusSignal={restoreFocusSignal}
-                    attachments={uploadItems}
-                    onAddFiles={addFiles}
-                    onRetryAttachment={(id) => {
-                      const item = uploadItems.find((candidate) => candidate.id === id);
-                      if (item !== undefined) startUpload(item);
-                    }}
-                    onRemoveAttachment={(id) => {
-                      uploadControllers.current.get(id)?.abort();
-                      uploadControllers.current.delete(id);
-                      setUploadItems((current) => current.filter((item) => item.id !== id));
-                    }}
-                    activity={composerActivity}
-                    activityConcealed={composerActivityConcealed}
-                    onActivityOverlayResize={resizeActivityOverlay}
-                    reply={
-                      replyTarget === undefined
-                        ? undefined
-                        : {
-                            id: replyTarget.id,
-                            author: authorLabel(
-                              replyTarget,
-                              state.bots,
-                              t,
-                              channelHumanName(channel),
-                            ),
-                            body: replyTarget.body,
-                          }
-                    }
-                    t={t}
-                    onChange={(value, mentions, channelRefs) => {
-                      setDraft(value);
-                      setMentionTokens(mentions ?? []);
-                      setChannelRefTokens(channelRefs ?? []);
-                      setRestoreBlocked(false);
-                    }}
-                    onCancelReply={() => setReplyTarget(undefined)}
-                    onSubmit={submit}
-                  />
+                      }
+                      allBotPreview={channel?.type === 'group' ? allBotPreview : undefined}
+                      allBotNotice={allBotNotice}
+                      mentionCandidates={
+                        channel?.type === 'group'
+                          ? channelBots
+                          : channel?.type === 'dm' && channel.botSlug !== undefined
+                            ? state.bots.filter(
+                                (candidate) =>
+                                  candidate.slug !== channel.botSlug &&
+                                  candidate.paused !== true &&
+                                  !candidate.deleted,
+                              )
+                            : []
+                      }
+                      placeholder={t('composer.placeholder', { name: title })}
+                      sending={conversation.sending || recovery.blocked}
+                      focusSignal={restoreFocusSignal}
+                      attachments={uploadItems}
+                      onAddFiles={addFiles}
+                      onRetryAttachment={(id) => {
+                        const item = uploadItems.find((candidate) => candidate.id === id);
+                        if (item !== undefined) startUpload(item);
+                      }}
+                      onRemoveAttachment={(id) => {
+                        const item = uploadItems.find((candidate) => candidate.id === id);
+                        if (item !== undefined) {
+                          const next = removeAttachmentReferences(
+                            draft,
+                            item,
+                            mentionTokens,
+                            channelRefTokens,
+                          );
+                          recovery.update({
+                            text: next.value,
+                            mentions: next.mentions,
+                            channelRefs: next.channelRefs,
+                          });
+                        }
+                        uploadControllers.current.get(id)?.abort();
+                        uploadControllers.current.delete(id);
+                        setUploadItems((current) => current.filter((item) => item.id !== id));
+                      }}
+                      activity={composerActivity}
+                      activityConcealed={composerActivityConcealed}
+                      onActivityOverlayResize={resizeActivityOverlay}
+                      reply={
+                        replyTarget === undefined
+                          ? undefined
+                          : {
+                              id: replyTarget.id,
+                              author: authorLabel(
+                                replyTarget,
+                                state.bots,
+                                t,
+                                channelHumanName(channel),
+                              ),
+                              body: replyTarget.body,
+                            }
+                      }
+                      t={t}
+                      onChange={(value, mentions, channelRefs) => {
+                        recovery.update({
+                          text: value,
+                          mentions: mentions ?? [],
+                          channelRefs: channelRefs ?? [],
+                        });
+                        setRestoreBlocked(false);
+                      }}
+                      onCancelReply={() => setReplyTarget(undefined)}
+                      onSubmit={submit}
+                    />
+                  </div>
                 </div>
               )}
               {activeMemoryView !== undefined || messageMenu === undefined || readOnlyDm ? null : (
@@ -1784,6 +2005,7 @@ function ConversationView({
             </>
           )}
         </section>
+        <ChannelSettingsDialog registry={channelSidebar} state={state} actions={actions} t={t} />
         <ChannelSidebar
           registry={channelSidebar}
           state={state}
@@ -1817,6 +2039,7 @@ function ConversationView({
 }
 
 function BotMainContent({
+  onMobileBack,
   actions,
   companion,
   nativeSessions,
@@ -1825,6 +2048,7 @@ function BotMainContent({
   nativeChatT,
   t = zhTranslate,
 }: {
+  onMobileBack?: (() => void) | undefined;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
@@ -1843,6 +2067,7 @@ function BotMainContent({
       : `channel:${state.selection.channelId}`;
   return (
     <ConversationView
+      onMobileBack={onMobileBack}
       key={`${scopeKey}:${state.conversation.channel?.id ?? ''}`}
       state={state}
       actions={actions}
@@ -1876,6 +2101,7 @@ export function BotMain({
 }
 
 export function BotPanel({
+  onMobileBack,
   prefs,
   actions,
   companion,
@@ -1887,6 +2113,7 @@ export function BotPanel({
   telemetryNotice,
   t,
 }: {
+  onMobileBack?: (() => void) | undefined;
   prefs?: Pick<BotModePrefs, 'source'> | undefined;
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
@@ -1915,6 +2142,7 @@ export function BotPanel({
         <TelemetryNotice controller={telemetryNotice} releaseNotes={releaseNotes} t={t} />
       )}
       <BotMain
+        onMobileBack={onMobileBack}
         prefs={prefs}
         actions={actions}
         companion={companion}

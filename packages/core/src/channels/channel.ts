@@ -177,6 +177,11 @@ export interface BotDmAction {
   recipientBotSlug: string;
 }
 
+export interface BotChannelPost {
+  channelId: string;
+  messageId: string;
+}
+
 export interface BotMessageCausation {
   rootSourceEventId: string;
   parentSourceEventId: string;
@@ -241,7 +246,10 @@ export interface ChannelMessage {
 
   humanReceipts?: ChannelHumanReceipt[];
   botDmAction?: BotDmAction;
+  botChannelPost?: BotChannelPost;
+  botChannelPostPreview?: string | null;
   memoryCommit?: ChannelMemoryCommit;
+  noticeOrigin?: { channelId: string };
   memberDeparture?: ChannelMemberDeparture;
   botCausation?: BotMessageCausation;
 
@@ -264,12 +272,15 @@ export interface ChannelMessage {
   privateInputResolution?: PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   bridgeMedia?: {
-    items: { id: string; kind: 'image'; name: string }[];
+    voice?: Pick<import('../messaging/provider.js').MessagingVoice, 'transcript' | 'durationMs'>;
+    items: { id: string; kind: 'image' | 'file' | 'audio'; name: string; sizeBytes?: number }[];
     parts?: import('../messaging/provider.js').MessagingContentPart[];
   };
   bridgeOrigin?: {
     sourceEventId: string;
     platform: string;
+    accountRef?: string;
+    accountName?: string;
     conversationId: string;
     conversationName: string;
     messageId: string;
@@ -724,6 +735,17 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     )
       return false;
   }
+  const botChannelPost = message['botChannelPost'];
+  if (botChannelPost !== undefined) {
+    if (typeof botChannelPost !== 'object' || botChannelPost === null) return false;
+    const post = botChannelPost as Record<string, unknown>;
+    if (
+      typeof post['channelId'] !== 'string' ||
+      typeof post['messageId'] !== 'string' ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+  }
   const botCausation = message['botCausation'];
   if (botCausation !== undefined) {
     if (typeof botCausation !== 'object' || botCausation === null) return false;
@@ -773,6 +795,10 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     )
       return false;
     const origin = bridgeOrigin as Record<string, unknown>;
+    for (const key of ['accountRef', 'accountName']) {
+      if (origin[key] !== undefined && (typeof origin[key] !== 'string' || !origin[key].trim()))
+        return false;
+    }
     for (const key of [
       'sourceEventId',
       'platform',
@@ -818,10 +844,18 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
     )
       return false;
-    const { sessionId, ...declaration } = privateRequest as Record<string, unknown>;
+    const { sessionId, expiresAt, replacesMessageId, ...declaration } = privateRequest as Record<
+      string,
+      unknown
+    >;
     if (
-      typeof sessionId !== 'string' ||
-      sessionId.length === 0 ||
+      (sessionId === undefined
+        ? replacesMessageId === undefined
+        : typeof sessionId !== 'string' || sessionId.length === 0) ||
+      (replacesMessageId !== undefined &&
+        (typeof replacesMessageId !== 'string' || !/^[0-9a-f-]{36}$/.test(replacesMessageId))) ||
+      (expiresAt !== undefined &&
+        (typeof expiresAt !== 'string' || !Number.isFinite(Date.parse(expiresAt)))) ||
       !privateRequestSchema.safeParse(declaration).success
     )
       return false;
@@ -841,10 +875,11 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       ) ||
       typeof resolution.requestMessageId !== 'string' ||
       message['replyTo'] !== resolution.requestMessageId ||
-      !['configured', 'cancelled'].includes(String(resolution.state)) ||
+      !['configured', 'cancelled', 'expired'].includes(String(resolution.state)) ||
       typeof resolution.references !== 'object' ||
       resolution.references === null ||
       Array.isArray(resolution.references) ||
+      (resolution.state !== 'configured' && Object.keys(resolution.references).length > 0) ||
       !Object.values(resolution.references).every(
         (ref) =>
           typeof ref === 'string' && /^private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}$/.test(ref),

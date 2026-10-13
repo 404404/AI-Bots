@@ -1,3 +1,4 @@
+import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
@@ -45,6 +46,8 @@ import {
   CHANNEL_ATTACHMENT_UPLOAD_PATH,
 } from './attachments/http.js';
 import { createBridgeMethods } from './bridge/methods.js';
+import { composerRecoveryIdentity } from './bridge/composer-recovery.js';
+import { homedir } from 'node:os';
 import type { BotAgentSetupInfo } from './runtime/dsh-bot-agent-adapter.js';
 import { registerBridge } from './bridge/rpc.js';
 import { mountClientDiagnostics } from './diagnostics/client-diagnostics.js';
@@ -126,6 +129,7 @@ import {
 import { ChannelToolApproval } from './workspaces/tool-approval.js';
 import { ChannelUserQuestions } from './channels/user-questions.js';
 import { mountPrivateInputs } from './credentials/mount.js';
+import type { PrivateInputs } from './credentials/private-inputs.js';
 import {
   createAssignmentAccessStore,
   type AssignmentAccessStore,
@@ -204,6 +208,7 @@ export function handleCompactionEvent(
 export interface BotHarnessConfig {
   enabled: boolean;
   privateInputExecution?: boolean;
+  privateInputWebUrl?: string;
   privateInputMcpServers?: LinuxMcpServer[];
 
   agentPreset?: string;
@@ -222,6 +227,9 @@ export const DEFAULT_CONFIG: BotHarnessConfig = {
 };
 
 export const Config: Schema<BotHarnessConfig> = Schema.object({
+  privateInputWebUrl: Schema.string().description(
+    'Explicit credential-free Web origin for IM private input links; never use a login token URL.',
+  ),
   privateInputMcpServers: Schema.array(
     Schema.object({
       serverName: Schema.string()
@@ -344,6 +352,7 @@ export function createCore(
     onOutputCommitted?: (event: PersonaBotOutputCommitted) => void;
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
+    activePrivateInputMessageIds?: () => readonly string[];
     capture?: TelemetryCapture;
   } = {},
 ): BotHarnessCore {
@@ -463,10 +472,16 @@ export function createCore(
   });
   let runtime: BotRuntime | undefined;
   let companions: CompanionFeed | undefined;
+  let reconcileToolRuleCreators: ((botSlug: string) => void) | undefined;
   const sourcePolicy = createBotSourcePolicyStore(
     attachOperationalModule(operationalDatabase, 'bot-inbox'),
   );
   const externalMessaging = createOutboundMessaging({
+    ownsFailure: (slug, sessionId, role) => {
+      const owner = ownership.resolve(sessionId);
+      return owner?.botSlug === slug && owner.rootRole === role;
+    },
+    onAuthorizationChanged: (slug) => reconcileToolRuleCreators?.(slug),
     onDefaultsChanged: () => live?.publishRosterCommitted(),
     onReceptionChanged: () => live?.publishRosterCommitted(),
     ...(options.capture === undefined ? {} : { capture: options.capture }),
@@ -503,6 +518,11 @@ export function createCore(
     botDisplayName: (botSlug) => registry.getHistorical(botSlug)?.displayName,
     rootDir: join(dshHome, 'botharness', 'channels'),
     onCommitted: (commit) => {
+      try {
+        externalMessaging.failureAlerts.committed(commit);
+      } catch {
+        options.warn?.('failure-alert-notification-enqueue-failed');
+      }
       try {
         const output = personaBotOutputCommitted(commit, ownership);
         if (output !== undefined) companions?.publish(output);
@@ -553,6 +573,7 @@ export function createCore(
     humanAttentionDatabase,
     options.activeQuestionMessageIds,
     options.activeToolApprovalMessageIds,
+    options.activePrivateInputMessageIds,
   );
   const humanAttentionDecisions = createHumanAttentionDecisions(humanAttentionDatabase);
   if (operationalDatabase.mode === 'ready') {
@@ -571,7 +592,14 @@ export function createCore(
         live?.publishRosterCommitted();
       if (
         topics.some((topic) =>
-          ['assignments', 'source-event', 'channel', 'human-attention', 'usage'].includes(topic),
+          [
+            'assignments',
+            'source-event',
+            'bot-inbox',
+            'channel',
+            'human-attention',
+            'usage',
+          ].includes(topic),
         )
       )
         refreshDurableAttention();
@@ -651,7 +679,12 @@ export function createCore(
   });
   const toolRules = createToolApprovalRuleStore(
     attachOperationalModule(operationalDatabase, 'tool-approval-rules'),
+    (botSlug, creator) => externalMessaging.toolRuleCreatorAuthorized(botSlug, creator),
   );
+  reconcileToolRuleCreators = (slug) => {
+    toolRules.reconcileExternal(slug);
+    externalMessaging.approvals.refreshRules(slug);
+  };
   const assignmentAccess = createAssignmentAccessStore(
     attachOperationalModule(operationalDatabase, 'assignment-access'),
   );
@@ -988,6 +1021,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   });
   let userQuestions: ChannelUserQuestions | undefined;
   let toolApproval: ChannelToolApproval | undefined;
+  let privateInputs: PrivateInputs | undefined;
   const core = createCore({
     dshHome,
     companionProfileDir: (ctx.get('profileContext') as { dir: string } | undefined)?.dir,
@@ -995,6 +1029,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       emitPersonaBotOutputCommitted(ctx, event, (message) => ctx.logger.warn(message)),
     activeQuestionMessageIds: () => userQuestions?.activeMessageIds() ?? [],
     activeToolApprovalMessageIds: () => toolApproval?.activeMessageIds() ?? [],
+    activePrivateInputMessageIds: () => privateInputs?.activeMessageIds() ?? [],
     capture: (event, properties) => telemetry.capture(event, properties),
     warn: (message) => ctx.logger.warn(message),
     agents: agentAdapter,
@@ -1060,12 +1095,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   ctx.effect(() => () => core.live.close(), 'botharness: Channel live hub');
   ctx.effect(() => () => core.companions.close(), 'botharness: Window Companion feed');
   ctx.provide('botharness', core);
-  const privateInputs = mountPrivateInputs(
+  privateInputs = mountPrivateInputs(
     ctx,
     core,
     config.privateInputExecution === true,
     privateExecution,
     linuxMcp,
+    config.privateInputWebUrl,
   );
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
   ctx.inject(['dshIm'], (child) => {
@@ -1401,6 +1437,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     }, 'botharness: release restarter');
   });
   const bridgeMethods = createBridgeMethods({
+    composerIdentity: () =>
+      composerRecoveryIdentity(
+        join(homedir(), '.config', 'botharness', 'composer-host-id'),
+        join(core.rootDir, '..', 'composer-profile-id'),
+        core.channels.humanIdentity().humanId,
+      ),
     warn: (message) => ctx.logger.warn(message),
     registry: core.registry,
     deletions: core.deletions,
@@ -1433,6 +1475,18 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     ownership: core.ownership,
     memory: core.memory,
     ...(core.usage === undefined ? {} : { usage: core.usage }),
+    readUsageSessionLog: async (sessionId) => {
+      const query = ctx.get('sessionQuery') as unknown as
+        | {
+            readSession(
+              id: string,
+            ): Promise<{ events: readonly DshSessionEvent[]; inheritedEventCount?: number }>;
+          }
+        | undefined;
+      if (query === undefined) return undefined;
+      const snapshot = await query.readSession(sessionId);
+      return { events: snapshot.events, inheritedEventCount: snapshot.inheritedEventCount ?? 0 };
+    },
     roster: core.roster,
     runtime: core.runtime,
     attention: core.attention,
@@ -1495,7 +1549,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
-  registerBridge(ctx, bridgeMethods, privateInputs);
+  registerBridge(ctx, bridgeMethods, privateInputs, {
+    followRoster: (signal) => core.live.followRoster(signal),
+    followActivity: (signal) => core.live.followActivity(signal),
+    followChannel: (channelId, limit, signal) => core.live.followChannel(channelId, limit, signal),
+    journalPage: (channelId, request) => core.channels.readHumanJournalPage(channelId, request),
+    followCompanion: (resume, lastEventId, signal) =>
+      followCompanion((request) => core.companions.open(request), resume, lastEventId, signal),
+  });
 
   ctx.inject(['skills'], (skillsCtx) => {
     const skills = (
