@@ -2626,6 +2626,8 @@ export function createActions(
         for (const attempt of submissions.reconcilable(scope)) {
           const status = await checkSubmission(channelId, attempt.id);
           if (status === 'unknown') continue;
+          if (!submissions.reconcilable(scope).some((current) => current.id === attempt.id))
+            continue;
           changed = true;
           committed ||= status === 'committed';
           submissions.settle(

@@ -448,6 +448,21 @@ describe('submission snapshots in the send flow', () => {
     second.actions.submissions.sync('dm-ada');
     expect(second.bubbles()).toEqual(['checked elsewhere:failed']);
   });
+  it('discards a check result when the attempt was settled while the Host was being asked', async () => {
+    const view = await open(memoryStorage());
+    view.host.send = () => {
+      throw new Error('connection closed');
+    };
+    await view.actions.send('settled meanwhile');
+    const id = view.clientStore.getSnapshot().conversation.messages[0]!.id;
+    const lookup = view.handlers['channelTimeline']!;
+    view.handlers['channelTimeline'] = (payload) => {
+      if (payload['direction'] === 'around') view.actions.dismissFailedMessage('dm-ada', id);
+      return lookup(payload);
+    };
+    await view.actions.submissions.reconcile('dm-ada');
+    expect(view.history()).toEqual(['settled meanwhile:restored']);
+  });
   it('keeps submissions of another Host profile out of this one', async () => {
     const storage = memoryStorage();
     const view = await open(storage, 'profile-1');

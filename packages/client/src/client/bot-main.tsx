@@ -2018,7 +2018,10 @@ function ConversationView({
                                             : 'composer.submissionNotDelivered',
                                         ),
                                       );
-                                    });
+                                    })
+                                    .catch(() =>
+                                      setSubmissionNotice(t('composer.submissionUncheckable')),
+                                    );
                                   return;
                                 }
                                 if (!actions.dismissFailedMessage(channelId, message.id)) return;
