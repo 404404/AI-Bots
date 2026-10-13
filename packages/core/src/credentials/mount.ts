@@ -9,6 +9,8 @@ import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
 import { nativeExecutionRoot } from '../workspaces/grant-native-tools.js';
 import { isQualifiedMessagingName, messagingToolDenial } from './messaging-tools.js';
 import { privateInputWebUrl } from './web-locator.js';
+import { credentialStoreDenial } from './store-guard.js';
+import { resolveDshHome } from '../im/config-store.js';
 
 const SAFE_TOOLS = new Set([
   'ask_secret',
@@ -33,30 +35,16 @@ export function mountPrivateInputs(
   ),
   linuxMcp?: LinuxMcp,
   webUrl?: string,
+  dshHome = resolveDshHome(),
 ): PrivateInputs {
   if (webUrl !== undefined)
     privateInputWebUrl(webUrl, 'dm-check', '00000000-0000-0000-0000-000000000000');
   const log: PrivateInputLog = (phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details });
   const privateMcp = new ProtectedMcp(log);
-  let mode: 'checking' | 'ordinary' | 'protected' | 'locked' = enabled ? 'protected' : 'checking';
-  ctx.inject(['credentials'], (child) => {
-    void child.credentials.listRecords().then(
-      (records) => {
-        if (!enabled)
-          mode = records.some((record) => record.key.startsWith('botharness-private/'))
-            ? 'locked'
-            : 'ordinary';
-        void owner.recover().catch(() => log('recovery-unavailable'));
-      },
-      () => {
-        mode = 'locked';
-        log('credential-inventory-failed');
-      },
-    );
-    child.on('credentials/record-updated', (key) => {
-      if (!enabled && key.startsWith('botharness-private/')) mode = 'locked';
-    });
+  const mode: 'standard' | 'protected' = enabled ? 'protected' : 'standard';
+  ctx.inject(['credentials'], () => {
+    queueMicrotask(() => void owner.recover().catch(() => log('recovery-unavailable')));
   });
   const owner = new PrivateInputs({
     channels: core.channels,
@@ -93,20 +81,17 @@ export function mountPrivateInputs(
             );
           },
         }),
-    qualified: () =>
-      enabled && mode === 'protected' ? execution.qualified() : Promise.resolve(false),
+    qualified: () => (mode === 'protected' ? execution.qualified() : Promise.resolve(true)),
     log,
     changed: (botSlug, count) => core.states.setPrivateInputCount(botSlug, count),
   });
   ctx.effect(() => () => owner.close(), 'botharness: private input owner');
   ctx.effect(() => () => execution.close(), 'botharness: protected Execution World');
   ctx.effect(() => () => privateMcp.close(), 'botharness: protected MCP lifetime');
-  ctx.tools.guard(({ name, agent }) => {
-    if (mode === 'ordinary') return undefined;
-    if (mode !== 'protected' && name === 'bash')
-      return 'Stored private grants require the protected Profile execution boundary';
+  ctx.tools.guard(({ name, agent, arguments: args }) => {
+    if (mode === 'standard')
+      return credentialStoreDenial(name, args, dshHome, agent?.session.header.cwd);
     if (
-      mode === 'protected' &&
       agent !== undefined &&
       core.ownership.resolve(agent.session.id)?.rootRole === 'orchestrator'
     ) {
@@ -130,9 +115,7 @@ export function mountPrivateInputs(
   ctx.on(
     'tools/execute',
     async (call, next) => {
-      if (mode === 'ordinary' || call.name !== 'bash') return next();
-      if (mode !== 'protected')
-        throw new Error('Protected execution is required for stored private grants');
+      if (mode === 'standard' || call.name !== 'bash') return next();
       if (
         typeof call.arguments === 'object' &&
         call.arguments !== null &&
@@ -174,12 +157,11 @@ export function mountPrivateInputs(
     },
     { global: true },
   );
-  if (!enabled) return owner;
   ctx.effect(
     () =>
       core.contributeBotAgentSetup((agentCtx, agent, info) => {
         if (info.rootRole !== 'orchestrator') return;
-        privateMcp.register(agentCtx, agent, owner);
+        if (mode === 'protected') privateMcp.register(agentCtx, agent, owner);
         agentCtx.tools.register(
           defineTool({
             name: 'ask_secret',
