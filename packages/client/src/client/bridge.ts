@@ -17,6 +17,7 @@ import type {
   MessagingDefaultsInput,
 } from '../../../core/src/messaging/defaults.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
+import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 
 import type {
@@ -48,12 +49,15 @@ import {
 } from '../../../core/src/marketplace/client.js';
 import { parseChallenge, type AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
+import type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
+export type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
 import type { UsageOverviewPeriod } from '../../../core/src/usage/overview.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
 import type { MessagingConversationInput } from '../../../core/src/messaging/conversations.js';
 import { isPartLibraryEntry, type PartLibraryEntry } from '../../../core/src/bots/part-library.js';
 import type { PixelCustomPart } from '../../../core/src/bots/avatar-appearance.js';
+import { isBotPrimaryColor } from '../../../core/src/bots/primary-color.js';
 import type { ActivityOverview } from '../../../core/src/bridge/methods.js';
 import type { ExternalSource } from '../../../core/src/messaging/inbound.js';
 import type {
@@ -70,6 +74,8 @@ import type {
 } from '../../../core/src/messaging/outbound.js';
 import type { MessagingTarget } from '../../../core/src/messaging/provider.js';
 import type { HostFileTarget } from './host-file-actions.js';
+import type { ComposerRecoveryIdentity } from '../../../core/src/bridge/composer-recovery.js';
+import { isChannelAttachmentRef } from '../../../core/src/attachments/ref.js';
 import type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 export type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
@@ -582,6 +588,8 @@ async function unwrap(
   return result.value;
 }
 
+export type BotPrimaryColorChoice = { mode: 'automatic' } | { mode: 'custom'; color: string };
+
 export function parseBotSummary(value: unknown): BotSummary | undefined {
   const record = asRecord(value);
   if (record === undefined) return undefined;
@@ -611,6 +619,7 @@ export function parseBotSummary(value: unknown): BotSummary | undefined {
         ? { appearanceUnsupported: true as const }
         : {}),
     ...(parseBanner(record['banner']) ?? {}),
+    ...(isBotPrimaryColor(record['primaryColor']) ? { primaryColor: record['primaryColor'] } : {}),
     ...(record['avatarSeed'] === 2 ? { avatarSeed: 2 as const } : {}),
     ...(typeof record['paused'] === 'boolean' ? { paused: record['paused'] } : {}),
     ...(record['deleted'] === true ? { deleted: true } : {}),
@@ -1123,6 +1132,23 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       recipientBotSlug: action['recipientBotSlug'],
     };
   }
+  let botChannelPost: ChannelMessage['botChannelPost'];
+  if (record['botChannelPost'] !== undefined) {
+    const post = asRecord(record['botChannelPost']);
+    if (
+      post === undefined ||
+      author.kind !== 'bot' ||
+      typeof post['channelId'] !== 'string' ||
+      typeof post['messageId'] !== 'string'
+    )
+      return undefined;
+    botChannelPost = { channelId: post['channelId'], messageId: post['messageId'] };
+  }
+  const botChannelPostPreview =
+    typeof record['botChannelPostPreview'] === 'string' || record['botChannelPostPreview'] === null
+      ? (record['botChannelPostPreview'] as string | null)
+      : undefined;
+  const noticeOriginChannel = asRecord(record['noticeOrigin'])?.['channelId'];
   const rawAttachments = record['attachments'];
   const attachments = Array.isArray(rawAttachments)
     ? rawAttachments.map(parseChannelAttachment)
@@ -1148,6 +1174,10 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
         'messageId',
         'senderId',
       ].every((key) => typeof origin[key] === 'string' && origin[key].length > 0) ||
+      ['accountRef', 'accountName'].some(
+        (key) =>
+          origin[key] !== undefined && (typeof origin[key] !== 'string' || !origin[key].trim()),
+      ) ||
       (origin['threadId'] !== undefined &&
         (typeof origin['threadId'] !== 'string' || origin['threadId'].length === 0))
     )
@@ -1160,22 +1190,41 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     if (
       !bridgeOrigin ||
       !media ||
-      Object.keys(media).some((key) => !['items', 'parts'].includes(key)) ||
+      Object.keys(media).some((key) => !['items', 'parts', 'voice'].includes(key)) ||
       !Array.isArray(media['items']) ||
       media['items'].length > 32
     )
       return;
+    if (media['voice'] !== undefined) {
+      const voice = asRecord(media['voice']);
+      if (
+        bridgeOrigin.platform !== 'qq' ||
+        !voice ||
+        Object.keys(voice).some((key) => !['transcript', 'durationMs'].includes(key)) ||
+        (voice['transcript'] !== 'platform' && voice['transcript'] !== 'unavailable') ||
+        (voice['durationMs'] !== undefined &&
+          (typeof voice['durationMs'] !== 'number' ||
+            !Number.isSafeInteger(voice['durationMs']) ||
+            voice['durationMs'] < 0))
+      )
+        return;
+    }
     const ids = new Set<string>();
     for (const raw of media['items']) {
       const item = asRecord(raw);
       if (
         !item ||
-        item['kind'] !== 'image' ||
+        (item['kind'] === 'audio' && !media['voice']) ||
+        (item['kind'] !== 'image' && item['kind'] !== 'file' && item['kind'] !== 'audio') ||
         typeof item['id'] !== 'string' ||
         !/^[a-f0-9]{64}$/.test(item['id']) ||
         typeof item['name'] !== 'string' ||
         ids.has(item['id']) ||
-        Object.keys(item).some((key) => !['id', 'kind', 'name'].includes(key))
+        (item['sizeBytes'] !== undefined &&
+          (typeof item['sizeBytes'] !== 'number' ||
+            !Number.isSafeInteger(item['sizeBytes']) ||
+            item['sizeBytes'] < 0)) ||
+        Object.keys(item).some((key) => !['id', 'kind', 'name', 'sizeBytes'].includes(key))
       )
         return;
       ids.add(item['id']);
@@ -1414,6 +1463,13 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
     ...(assignmentReply === undefined ? {} : { assignmentReply }),
     ...(botDmAction === undefined ? {} : { botDmAction }),
+    ...(botChannelPost === undefined ? {} : { botChannelPost }),
+    ...(botChannelPost === undefined || botChannelPostPreview === undefined
+      ? {}
+      : { botChannelPostPreview }),
+    ...(typeof noticeOriginChannel === 'string'
+      ? { noticeOrigin: { channelId: noticeOriginChannel } }
+      : {}),
     ...(memoryCommit === undefined ? {} : { memoryCommit }),
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
@@ -1793,6 +1849,54 @@ export async function loadChannels(
   return parseChannelRecords(await unwrap(call, 'channels', {}, signal));
 }
 
+export async function loadComposerIdentity(
+  call: BridgeCall,
+  signal?: AbortSignal,
+): Promise<ComposerRecoveryIdentity> {
+  const value = asRecord(await unwrap(call, 'composerIdentity', {}, signal));
+  if (
+    value === undefined ||
+    !['hostId', 'profileId', 'humanId'].every(
+      (key) => typeof value[key] === 'string' && (value[key] as string).length > 0,
+    )
+  )
+    throw new Error('invalid composer identity');
+  return {
+    hostId: value['hostId'] as string,
+    profileId: value['profileId'] as string,
+    humanId: value['humanId'] as string,
+  };
+}
+
+export async function validateComposerDraft(
+  call: BridgeCall,
+  channelId: string,
+  attachments: ChannelAttachmentRef[],
+  replyTo?: string,
+): Promise<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }> {
+  const value = asRecord(
+    await unwrap(call, 'composerValidate', {
+      channelId,
+      attachments,
+      ...(replyTo === undefined ? {} : { replyTo }),
+    }),
+  );
+  if (
+    value === undefined ||
+    !Array.isArray(value['attachments']) ||
+    value['attachments'].length !== attachments.length ||
+    !value['attachments'].every((ref) => ref === null || isChannelAttachmentRef(ref))
+  )
+    throw new Error('invalid composer validation');
+  const reply = value['reply'] === undefined ? undefined : parseChannelMessage(value['reply']);
+  if (value['reply'] !== undefined && reply === undefined)
+    throw new Error('invalid composer reply');
+  return {
+    ...(reply === undefined ? {} : { reply }),
+    attachments: value['attachments'] as Array<ChannelAttachmentRef | null>,
+  };
+}
+
 export async function openDmChannel(
   call: BridgeCall,
   slug: string,
@@ -2061,6 +2165,17 @@ export async function setBotAppearance(
   return bot;
 }
 
+export async function setBotPrimaryColor(
+  call: BridgeCall,
+  channelId: string,
+  primaryColor: BotPrimaryColorChoice,
+): Promise<BotSummary> {
+  const value = asRecord(await unwrap(call, 'botPrimaryColorSet', { channelId, primaryColor }));
+  const bot = parseBotSummary(value?.['bot']);
+  if (bot === undefined) throw new Error('invalid botPrimaryColorSet response');
+  return bot;
+}
+
 export async function loadPartLibrary(call: BridgeCall): Promise<PartLibraryEntry[]> {
   const parts = asRecord(await unwrap(call, 'partLibraryList', {}))?.['parts'];
   if (!Array.isArray(parts)) throw new Error('invalid partLibraryList response');
@@ -2200,6 +2315,33 @@ export async function removeGroupMember(
   return channel;
 }
 
+const ASSIGNMENT_ACTIVITIES = ['working', 'idle', 'error', 'stopping', 'stopped'];
+const ASSIGNMENT_REPORT_STATES = ['progress', 'completed', 'blocked', 'waiting-human', 'failed'];
+
+export async function loadChannelAssignments(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ChannelAssignmentSummary[]> {
+  const value = asRecord(await unwrap(call, 'channelAssignments', { channelId }));
+  const assignments = value?.['assignments'];
+  if (
+    !Array.isArray(assignments) ||
+    assignments.some(
+      (row) =>
+        typeof row?.sessionId !== 'string' ||
+        typeof row.botSlug !== 'string' ||
+        typeof row.purpose !== 'string' ||
+        !ASSIGNMENT_ACTIVITIES.includes(row.activity) ||
+        typeof row.updatedAt !== 'string' ||
+        (row.latestReport !== undefined &&
+          (!ASSIGNMENT_REPORT_STATES.includes(row.latestReport?.state) ||
+            typeof row.latestReport.summary !== 'string')),
+    )
+  )
+    throw new Error('invalid channelAssignments response');
+  return assignments;
+}
+
 export async function loadGroupWakePolicies(
   call: BridgeCall,
   channelId: string,
@@ -2276,6 +2418,63 @@ export interface TimelinePageRequest {
   limit?: number;
   olderLimit?: number;
   newerLimit?: number;
+}
+
+export interface JournalEntry {
+  channelId: string;
+  message: ChannelMessage;
+  revision: number;
+}
+export interface JournalPage {
+  entries: JournalEntry[];
+  olderCursor: string | null;
+  hasOlder: boolean;
+}
+
+export function parseJournalEntry(value: unknown): JournalEntry | undefined {
+  const record = asRecord(value);
+  const revision = record?.['revision'];
+  const message = parseChannelMessage(record?.['message']);
+  if (
+    typeof record?.['channelId'] !== 'string' ||
+    typeof revision !== 'number' ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    message === undefined
+  )
+    return undefined;
+  return { channelId: record['channelId'], message, revision };
+}
+
+export function parseJournalPage(value: unknown): JournalPage | undefined {
+  const raw = asRecord(value);
+  const entries = raw?.['entries'];
+  if (
+    !Array.isArray(entries) ||
+    !(raw?.['olderCursor'] === null || typeof raw?.['olderCursor'] === 'string') ||
+    typeof raw?.['hasOlder'] !== 'boolean'
+  )
+    return undefined;
+  const parsed = entries.map((entry) => parseJournalEntry(entry));
+  if (parsed.some((entry) => entry === undefined)) return undefined;
+  return {
+    entries: parsed as JournalEntry[],
+    olderCursor: raw['olderCursor'] as string | null,
+    hasOlder: raw['hasOlder'],
+  };
+}
+
+export async function loadJournalPage(
+  call: BridgeCall,
+  channelId: string,
+  request: { through: number; before?: number; limit?: number },
+  signal?: AbortSignal,
+): Promise<JournalPage> {
+  const page = parseJournalPage(
+    await unwrap(call, 'channelJournalPage', { channelId, ...request }, signal),
+  );
+  if (page === undefined) throw new Error('invalid channelJournalPage response');
+  return page;
 }
 
 export async function loadTimelinePage(
@@ -2517,6 +2716,7 @@ export interface ToolApprovalRuleView {
   input: string;
   createdAt: string;
   revokedAt?: string;
+  externalCreator?: import('../../../core/src/workspaces/tool-approval-actor.js').ToolApprovalActor;
 }
 export async function loadToolApprovalRules(
   call: BridgeCall,
@@ -2707,6 +2907,35 @@ export async function createWorkspaceGrant(
   const grant = parseWorkspaceGrant(value);
   if (grant === undefined) throw new Error('invalid grantCreate response');
   return grant;
+}
+
+export async function createGroupWorkspaceGrant(
+  call: BridgeCall,
+  slug: string,
+  workspaceId: string,
+  channelId: string,
+  path: string,
+): Promise<{ grant: WorkspaceGrantView; created: boolean }> {
+  const result = asRecord(
+    await unwrap(call, 'grantCreate', { slug, workspaceId, scope: { channelId, path } }),
+  );
+  const grant = parseWorkspaceGrant(result?.['grant']);
+  if (grant === undefined || typeof result?.['created'] !== 'boolean')
+    throw new Error('invalid scoped grantCreate response');
+  return { grant, created: result['created'] };
+}
+
+export async function readGroupWorkspaceGrant(
+  call: BridgeCall,
+  slug: string,
+  channelId: string,
+  path: string,
+): Promise<WorkspaceGrantView | undefined> {
+  const result = asRecord(await unwrap(call, 'grants', { slug, scope: { channelId, path } }));
+  if (!Array.isArray(result?.['grants'])) throw new Error('invalid scoped grants response');
+  const grants = result['grants'].map(parseWorkspaceGrant);
+  if (grants.some((grant) => grant === undefined)) throw new Error('invalid scoped grant readback');
+  return grants[0];
 }
 
 export async function setWorkspaceGrantWrite(
@@ -3203,7 +3432,7 @@ export interface GroupProfileAuthorActivity {
   author: ChannelAuthor;
   bridgeOrigin?: Pick<
     NonNullable<ChannelMessage['bridgeOrigin']>,
-    'platform' | 'conversationId' | 'conversationName'
+    'platform' | 'conversationId' | 'conversationName' | 'accountRef' | 'accountName'
   >;
   total: number;
   days: ProfileActivityDay[];
@@ -3485,6 +3714,39 @@ export async function loadProfileUsage(
   return value as unknown as UsageQueryResult;
 }
 
+export async function loadProfileSessionUsage(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ProfileSessionUsage> {
+  const value = asRecord(await unwrap(call, 'profileSessionUsage', { channelId }));
+  if (
+    value === undefined ||
+    typeof value['slug'] !== 'string' ||
+    value['weeks'] !== 26 ||
+    typeof value['since'] !== 'string' ||
+    !Number.isFinite(Date.parse(value['since'])) ||
+    !Array.isArray(value['rows']) ||
+    value['rows'].length > 6 ||
+    !value['rows'].every((item) => {
+      const row = asRecord(item);
+      return (
+        row !== undefined &&
+        typeof row['sessionId'] === 'string' &&
+        ['orchestrator', 'assignment'].includes(String(row['role'])) &&
+        typeof row['label'] === 'string' &&
+        row['label'].length <= 160 &&
+        typeof row['updatedAt'] === 'string' &&
+        Number.isFinite(Date.parse(row['updatedAt'])) &&
+        ['ready', 'unknown', 'partial', 'unavailable'].includes(String(row['status'])) &&
+        (row['totalTokens'] === null ||
+          (Number.isSafeInteger(row['totalTokens']) && Number(row['totalTokens']) >= 0))
+      );
+    })
+  )
+    throw new Error('invalid Profile Session usage');
+  return value as unknown as ProfileSessionUsage;
+}
+
 export interface ProfileActivityWindow {
   before: string;
   weeks: number;
@@ -3574,7 +3836,11 @@ export async function loadGroupProfileActivity(
           (asRecord(entry['bridgeOrigin']) !== undefined &&
             ['platform', 'conversationId', 'conversationName'].every(
               (key) => typeof asRecord(entry['bridgeOrigin'])![key] === 'string',
-            )))
+            ) &&
+            ['accountRef', 'accountName'].every((key) => {
+              const value = asRecord(entry['bridgeOrigin'])![key];
+              return value === undefined || (typeof value === 'string' && value.trim().length > 0);
+            })))
       );
     })
   )
@@ -3861,6 +4127,25 @@ export async function retryApprovalNotification(
   id: string,
 ): Promise<void> {
   await unwrap(call, 'approvalRetry', { slug, id });
+}
+
+export async function setFailureAlerts(
+  call: BridgeCall,
+  slug: string,
+  enabled: boolean,
+  expectedRevision: number,
+): Promise<void> {
+  await unwrap(call, 'failureAlertsSet', { slug, enabled, expectedRevision });
+}
+export async function testFailureAlerts(call: BridgeCall, slug: string): Promise<void> {
+  await unwrap(call, 'failureAlertsTest', { slug });
+}
+export async function retryFailureAlerts(
+  call: BridgeCall,
+  slug: string,
+  id: string,
+): Promise<void> {
+  await unwrap(call, 'failureAlertsRetry', { slug, id });
 }
 
 export async function reviewPairing(

@@ -8,8 +8,17 @@ import { MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { BridgeActions } from '../src/client/actions.js';
 import { ChannelMessageBody } from '../src/client/channel-message-body.js';
+import { attachmentReferenceText } from '../src/client/attachment-refs.js';
 import { parseChannelMessage } from '../src/client/bridge.js';
-import { zhTranslate } from '../src/client/locale.js';
+import {
+  botNameColor,
+  contrastRatio,
+  parseColor,
+  REFERENCE_SURFACES,
+} from '../src/client/bot-primary-color.js';
+import { seededAvatarFor } from '../../core/src/bots/avatar-appearance.js';
+import { en, zhTranslate, type BotHarnessTranslate } from '../src/client/locale.js';
+import { toolApprovalText } from '../src/client/approval-text.js';
 import { WORKSPACE_GRANTS_CHANGED } from '../src/client/workspace-grants-entry.js';
 import { store, type ChannelMessage } from '../src/client/store.js';
 
@@ -70,6 +79,31 @@ function render(
 beforeEach(() => vi.mocked(MarkdownText).mockClear());
 
 describe('Channel message body', () => {
+  it('shows a sent inline reference only for an attachment owned by that message', () => {
+    const ref = { fileId: 'file:report', name: 'report.txt', mime: 'text/plain', size: 5 };
+    const text = attachmentReferenceText({
+      id: 'report',
+      file: { name: ref.name, size: ref.size },
+      ref,
+      status: 'ready',
+    });
+    const html = render({ kind: 'human' }, `use ${text}`, { attachments: [ref] });
+    expect(html).toContain('定位附件 report.txt');
+    expect(html).toContain('class="bh-attachment-ordinal">1</span>');
+    expect(html).not.toContain('bh-message-attachment-ordinal');
+    expect(html).not.toContain('attachment:file%3Areport');
+    expect(render({ kind: 'human' }, `use ${text}`)).not.toContain('定位附件 report.txt');
+    expect(render({ kind: 'human' }, `use ${text}`)).toContain('attachment:file%3Areport');
+  });
+  it.each(['text/plain', 'image/png', 'audio/mpeg'])(
+    'omits corner numbers from sent %s attachment cards',
+    (mime) => {
+      const attachments = [{ fileId: 'file:report', name: 'report', mime, size: 5 }];
+      const html = render({ kind: 'human' }, 'attached', { attachments });
+      expect(html).toContain('bh-message-attachment');
+      expect(html).not.toContain('bh-message-attachment-ordinal');
+    },
+  );
   it.each([
     ['discord', '<@123>', '<@123>next <@123> <@999>', '@QA <Bot>next @QA <Bot> <@999>'],
     ['feishu', '@_user_1', '@_user_1 @_user_10 @_user_1', '@QA <Bot> @_user_10 @QA <Bot>'],
@@ -154,6 +188,7 @@ describe('Channel message body', () => {
             'grant-request',
             path,
             expect.any(Function),
+            undefined,
           );
         expect(container.textContent?.includes('已回复授权请求')).toBe(path !== null);
       } finally {
@@ -289,6 +324,91 @@ describe('Channel message body', () => {
     expect(vi.mocked(MarkdownText).mock.calls[0]?.[0]).toMatchObject({
       text: '**please check**',
     });
+  });
+
+  it('colors sent Bot mentions by PersonaBot ID and leaves Human and Group references neutral', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const openBot = vi.fn(async () => undefined);
+    const at = '2026-10-12T00:00:00.000Z';
+    const bot = (slug: string, primaryColor?: { mode: 'custom'; color: string }) => ({
+      slug,
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: at,
+      ...(primaryColor === undefined ? {} : { primaryColor }),
+    });
+    const show = (ada: ReturnType<typeof bot>) =>
+      act(async () => {
+        root.render(
+          createElement(ChannelMessageBody, {
+            message: {
+              id: 'm-colors',
+              at,
+              author: { kind: 'human' },
+              body: '@Ada @Ada @Human #Team done',
+              mentions: [
+                { botSlug: 'ada', label: 'Ada', start: 0, end: 4 },
+                { botSlug: 'bea', label: 'Ada', start: 5, end: 9 },
+              ],
+              humanMentions: [{ humanId: 'local-human', label: 'Human', start: 10, end: 16 }],
+              channelRefs: [{ channelId: 'team', label: 'Team', start: 17, end: 22 }],
+            },
+            bots: [ada, bot('bea', { mode: 'custom', color: '#000000' })],
+            t: zhTranslate,
+            actions: { openBot } as unknown as BridgeActions,
+          }),
+        );
+      });
+    const name = (slug: string) =>
+      container.querySelector<HTMLElement>(`[data-bot-id="${slug}"] > span:last-child`)!.dataset[
+        'botNameColor'
+      ]!;
+    const contrast = (color: string, theme: 'light' | 'dark') =>
+      contrastRatio(parseColor(color)!.rgb, parseColor(REFERENCE_SURFACES[theme].background)!.rgb);
+    try {
+      await show(bot('ada', { mode: 'custom', color: '#ffffff' }));
+      expect(name('ada')).not.toBe('#ffffff');
+      expect(contrast(name('ada'), 'light')).toBeGreaterThanOrEqual(4.5);
+      expect(name('bea')).toBe('#000000');
+      const neutral = container.querySelectorAll<HTMLElement>(
+        '.bh-inline-mention:not([data-bot-id])',
+      );
+      expect(neutral).toHaveLength(2);
+      for (const item of neutral) {
+        expect(item.dataset['botNameColor']).toBeUndefined();
+        expect(item.style.color).toBe('');
+      }
+      for (const chip of container.querySelectorAll<HTMLElement>('[data-bot-id]'))
+        expect(chip.style.color).toBe('');
+
+      document.body.setAttribute('data-ds-dark-theme', '');
+      await act(async () => new Promise((done) => setTimeout(done, 0)));
+      expect(name('ada')).toBe('#ffffff');
+      expect(name('bea')).not.toBe('#000000');
+      expect(contrast(name('bea'), 'dark')).toBeGreaterThanOrEqual(4.5);
+      document.body.removeAttribute('data-ds-dark-theme');
+      await act(async () => new Promise((done) => setTimeout(done, 0)));
+
+      await show(bot('ada'));
+      expect(name('ada')).toBe(
+        botNameColor(seededAvatarFor('Ada', undefined).hairColor, '#ffffff'),
+      );
+      expect(name('bea')).toBe('#000000');
+
+      await act(async () =>
+        container.querySelector<HTMLButtonElement>('button[data-bot-id="bea"]')!.click(),
+      );
+      expect(openBot).toHaveBeenCalledExactlyOnceWith('bea');
+    } finally {
+      document.body.removeAttribute('data-ds-dark-theme');
+      await act(async () => root.unmount());
+      container.remove();
+    }
   });
 
   it('shows mixed Bot/Human targets without turning the Human into a Bot DM link', () => {
@@ -666,4 +786,59 @@ it('renders a purged welcome as a tombstone before considering onboarding action
   expect(html).toContain(zhTranslate('purge.purged'));
   expect(html).not.toContain('data-onboarding-welcome');
   expect(html).not.toContain('<button');
+});
+
+describe('Tool approval text follows the UI locale (#1293)', () => {
+  const enTranslate: BotHarnessTranslate = (key, params) => {
+    const value: unknown = Reflect.get(en, key);
+    const text = typeof value === 'string' ? value : key;
+    return text.replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? `{${name}}`));
+  };
+  const request: ChannelMessage = {
+    id: 'approval',
+    at: '2026-10-09T00:00:00.000Z',
+    author: { kind: 'bot', slug: 'ada' },
+    body: '请求批准执行 bash',
+    toolApprovalRequest: {
+      sessionId: 's1',
+      callId: 'c1',
+      toolName: 'bash',
+      role: 'orchestrator',
+      cwd: '/work',
+      input: '{}',
+      externalDecision: 'operation',
+    },
+  } as ChannelMessage;
+  const decision = (outcome: NonNullable<ChannelMessage['toolApprovalDecision']>['outcome']) =>
+    ({
+      id: 'decision-' + outcome,
+      at: '2026-10-09T00:00:01.000Z',
+      author: { kind: 'human' },
+      body: '已拒绝这一次工具调用',
+      replyTo: 'approval',
+      toolApprovalDecision: { requestMessageId: 'approval', outcome },
+    }) as ChannelMessage;
+
+  it('derives request and decision text from structured fields, not the stored body', () => {
+    expect(toolApprovalText(request, enTranslate)).toBe('Requests approval to run bash');
+    expect(toolApprovalText(decision('rejected'), enTranslate)).toBe('This call was rejected');
+    expect(toolApprovalText(decision('allowed-once'), enTranslate)).toBe('This call was approved');
+    expect(toolApprovalText(decision('allowed-always-all'), enTranslate)).toBe(
+      'Automatic approval rule saved; this call was approved',
+    );
+    expect(toolApprovalText(decision('rejected'), zhTranslate)).toBe('已拒绝这一次调用');
+    expect(toolApprovalText({}, enTranslate)).toBeUndefined();
+  });
+
+  it('renders a decision bubble in English without the Host body', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChannelMessageBody, {
+        message: decision('rejected'),
+        channelId: 'dm-ada',
+        t: enTranslate,
+      }),
+    );
+    expect(html).toContain('This call was rejected');
+    expect(html).not.toMatch(/[\u4e00-\u9fff]/u);
+  });
 });

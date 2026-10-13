@@ -311,7 +311,7 @@ live im-apps
 
 验证 Bot、模型设置、授权和 Binding 保留。再发一条**新** @mention，例如“请只回复 SEO_QQ_QA1_20261012_B_OK”。Human 同样确认原群匹配回复；这次 Source 和 Outbox 与首次不同、创建于重启之后，且属于同一原生 QQ 会话。旧进程证据不能替代这次新发送。
 
-公开的 [有限验收摘要](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/qq-acceptance.json) 不含群号、Source 定位值、凭据或机器地址。Human 已提供两次请求与回复的 QQ 原群截图，公开图仅裁剪与遮盖个人身份，消息未改写。QQ 原群视频不在这份验收内。
+公开的 [有限验收摘要](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/assets/vps-source/qq-acceptance.json) 不含群号、Source 定位值、凭据或机器地址。Human 已提供两次请求与回复的 QQ 原群截图，公开图仅裁剪与遮盖个人身份，消息未改写。QQ 原群视频不在这份验收内。
 
 ![首次及 Host 重启后 QQ 原群内可见的匹配回复](/guides/vps-source/04-qq-group-before-after.png)
 
@@ -346,12 +346,12 @@ systemctl start botharness-seo-tutorial.service
 
 ## 实际补录
 
-[空 QQ 手动接入表单实录与双语文字稿](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/video/manual-setup-transcript.md)补充原有绑定实录。[最终源码全新隔离 Profile 安装记录](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.typescript)与[原始 timing](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.timing)于 2026-10-11 19:58 UTC 实际采集，包含 Ubuntu、资源、工具版本、Unit 状态和六组件验证；这是已配置机器上的后续安装补录，没有启动第二个 Host 或 QQ 接收器。
+[空 QQ 手动接入表单实录与双语文字稿](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/assets/vps-source/video/manual-setup-transcript.md)补充原有绑定实录。[最终源码全新隔离 Profile 安装记录](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.typescript)与[原始 timing](https://deepseekbot.app/guides/vps-source/terminal/05-fresh-profile-031a14db.timing)于 2026-10-11 19:58 UTC 实际采集，包含 Ubuntu、资源、工具版本、Unit 状态和六组件验证；这是已配置机器上的后续安装补录，没有启动第二个 Host 或 QQ 接收器。
 
 ## 证据与发布检查
 
-本次实机验证了严格 SSH、tailnet-only HTTPS、原生 Owner 登录、独立 Unit、真实模型回复及两次真实 QQ 原群回复。[素材来源清单](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/README.md) 记录版本、UTC 时间、digest 与每张公开图能证明的范围。
+本次实机验证了严格 SSH、tailnet-only HTTPS、原生 Owner 登录、独立 Unit、真实模型回复及两次真实 QQ 原群回复。[素材来源清单](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/assets/vps-source/README.md) 记录版本、UTC 时间、digest 与每张公开图能证明的范围。
 
 仓库原用户指南路由已重定向到 DeepSeekBot 产品站。发布本教程时仍需核对该站的中英文目标页面；此 PR 准备的是源文档与重定向，并未部署线上教程页面。
 
-真实的 [安装及源码更新 terminal 输出/timing](https://github.com/BotHarness/DeepSeekBot/tree/codex/1438-vps-qq-tutorial/docs/assets/vps-source/terminal) 已审阅，原样公开并记录 digest。[原生 QQ 绑定实录](https://github.com/BotHarness/DeepSeekBot/blob/codex/1438-vps-qq-tutorial/docs/assets/vps-source/video/transcript.md) 提供 17 秒 MP4、中英文字幕、章节、等价文字稿及 digest；全部 516 帧已检查，保留完整原始视频数据。它展示绑定就绪，不是 QQ 原群回复。其他浏览器片段和完整教程成片仍待完成。登录链接、Owner token、模型 Key、QQ Secret、二维码、账号列表出现前暂停录制。只发布已审阅并去除无关会话和机器标识的素材。完整教程媒体交付继续由 [issue #1438](https://github.com/BotHarness/DeepSeekBot/issues/1438) 跟踪。
+真实的 [安装及源码更新 terminal 输出/timing](https://github.com/BotHarness/DeepSeekBot/tree/main/docs/assets/vps-source/terminal) 已审阅，原样公开并记录 digest。[原生 QQ 绑定实录](https://github.com/BotHarness/DeepSeekBot/blob/main/docs/assets/vps-source/video/transcript.md) 提供 17 秒 MP4、中英文字幕、章节、等价文字稿及 digest；全部 516 帧已检查，保留完整原始视频数据。它展示绑定就绪，不是 QQ 原群回复。其他浏览器片段和完整教程成片仍待完成。登录链接、Owner token、模型 Key、QQ Secret、二维码、账号列表出现前暂停录制。只发布已审阅并去除无关会话和机器标识的素材。完整教程媒体交付继续由 [issue #1438](https://github.com/BotHarness/DeepSeekBot/issues/1438) 跟踪。

@@ -28,6 +28,18 @@ export function groupChannelMessages(messages: readonly ChannelMessage[]): Messa
       Number.isFinite(at) &&
       Number.isFinite(previousAt) &&
       new Date(at).toDateString() === new Date(previousAt).toDateString();
+    if (message.botChannelPost !== undefined || previous?.botChannelPost !== undefined) {
+      if (
+        last !== undefined &&
+        message.botChannelPost !== undefined &&
+        previous?.botChannelPost?.channelId === message.botChannelPost.channelId &&
+        sameAuthor &&
+        sameDay
+      )
+        last.messages.push(message);
+      else groups.push({ key: message.id, messages: [message] });
+      continue;
+    }
     if (
       last !== undefined &&
       sameAuthor &&

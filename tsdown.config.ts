@@ -13,6 +13,7 @@ const PLATFORM_MODULES = [
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-dockkit',
+  '@deepseek-ai/dsh-api-gateway/client',
 ];
 
 function clientBundle(id: string, entry: string[], outDir: string): UserConfig {

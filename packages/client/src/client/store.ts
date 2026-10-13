@@ -6,6 +6,7 @@ import type { ActivityOverview } from '../../../core/src/bridge/methods.js';
 import type { PersonaBotToolActivity } from '../../../core/src/state/tool-activity.js';
 import type { PersonaBotActivityState } from './avatar.js';
 import type { AvatarAppearance } from '../../../core/src/bots/avatar-appearance.js';
+import type { BotPrimaryColor } from '../../../core/src/bots/primary-color.js';
 import type { GitAvailability } from './bridge.js';
 import type { RosterConfig } from './roster-config.js';
 import type { RosterSection, TopOrderEntry } from './roster.js';
@@ -33,6 +34,7 @@ export interface BotSummary {
   appearance?: AvatarAppearance;
   appearanceUnsupported?: true;
   banner?: BotBannerView;
+  primaryColor?: BotPrimaryColor;
   avatarSeed?: 2;
   paused?: boolean;
   deleted?: boolean;
@@ -194,6 +196,9 @@ export interface ChannelMessage {
       | 'ignored';
   }[];
   botDmAction?: { channelId: string; messageId: string; recipientBotSlug: string };
+  botChannelPost?: { channelId: string; messageId: string };
+  botChannelPostPreview?: string | null;
+  noticeOrigin?: { channelId: string };
   memoryCommit?: {
     botSlug: string;
     sha: string;
@@ -422,6 +427,9 @@ export interface RosterState {
 }
 
 export interface ClientState {
+  composerIdentity?:
+    | import('../../../core/src/bridge/composer-recovery.js').ComposerRecoveryIdentity
+    | undefined;
   mode: ClientMode;
   bots: readonly BotSummary[];
   channels: readonly ChannelSummary[];
@@ -458,6 +466,7 @@ export interface PersonaBotActivitySnapshot {
 }
 
 export interface ClientStore {
+  setComposerIdentity(identity: ClientState['composerIdentity']): void;
   purgeContent(placements: readonly PurgedPlacement[]): void;
   getSnapshot(): ClientState;
   subscribe(listener: () => void): () => void;
@@ -677,6 +686,9 @@ export function createStore(): ClientStore {
     },
     setMode(mode) {
       if (state.mode !== mode) update({ mode });
+    },
+    setComposerIdentity(composerIdentity) {
+      update({ composerIdentity });
     },
     setMemoryCommitIntent(memoryCommitIntent) {
       update({ memoryCommitIntent });

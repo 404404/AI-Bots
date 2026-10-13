@@ -14,13 +14,16 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   }: PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement> & { icon?: unknown }>) =>
     createElement('button', props, children),
   FileTypeIcon: () => null,
+  fileSizeText: (size: number) => `${size} B`,
   IconCloseOutlineRegular: () => null,
   IconPaperclipOutlineRegular: () => null,
   IconSendOutlineRegular: () => null,
   ImageLightbox: () => null,
 }));
 
+import { botNameColor } from '../src/client/bot-primary-color.js';
 import { ChannelComposer } from '../src/client/channel-composer.js';
+import { attachmentReferenceText } from '../src/client/attachment-refs.js';
 import { deleteSelectedMention } from '../src/client/mentions.js';
 import {
   deleteSelectedChannelRef,
@@ -36,6 +39,71 @@ import {
 } from '../src/client/rich-mention-editor.js';
 
 describe('rich mention editor', () => {
+  it('keeps a trailing line editable after an attachment and repeated line breaks', () => {
+    const editor = document.createElement('div');
+    document.body.append(editor);
+    const attachment = {
+      id: 'report',
+      file: new File(['hello'], 'report.txt'),
+      status: 'uploading' as const,
+    };
+    const reference = attachmentReferenceText(attachment);
+    renderRichMentionDraft(editor, `${reference} `, [], [], [], [attachment]);
+    setRichSelection(editor, reference.length + 1);
+    insertRichPlainText(editor, '\n');
+    expect(editor.querySelectorAll('br')).toHaveLength(2);
+    expect(readRichMentionDraft(editor).value).toBe(`${reference} \n`);
+    expect(richSelectionOffsets(editor)?.end).toBe(reference.length + 2);
+    insertRichPlainText(editor, '\n');
+    expect(editor.querySelectorAll('br')).toHaveLength(3);
+    insertRichPlainText(editor, 'next line');
+    expect(readRichMentionDraft(editor).value).toBe(`${reference} \n\nnext line`);
+    renderRichMentionDraft(editor, `${reference} \n`, [], [], [], [attachment]);
+    expect(editor.querySelectorAll('br')).toHaveLength(2);
+    setRichSelection(editor, reference.length + 2);
+    insertRichPlainText(editor, 'after render');
+    expect(readRichMentionDraft(editor).value).toBe(`${reference} \nafter render`);
+    editor.remove();
+  });
+  it('round-trips attachment identity and caret offsets beside mentions', () => {
+    const editor = document.createElement('div');
+    document.body.append(editor);
+    const attachment = {
+      id: 'report',
+      file: new File(['hello'], 'report.txt'),
+      status: 'uploading' as const,
+    };
+    const text = attachmentReferenceText(attachment);
+    const value = `@Ada use ${text} please`;
+    const mentions = [{ botSlug: 'ada', label: 'Ada', start: 0, end: 4 }];
+    renderRichMentionDraft(editor, value, mentions, [], [], [attachment]);
+    const chip = editor.querySelector<HTMLElement>('[data-attachment-id="report"]')!;
+    expect(chip.contentEditable).toBe('false');
+    expect(chip.textContent).toBe('1report.txt5 B');
+    expect(readRichMentionDraft(editor)).toEqual({ value, mentions, channelRefs: [] });
+    setRichSelection(editor, 9 + text.length);
+    expect(richSelectionOffsets(editor)).toEqual({ start: 9 + text.length, end: 9 + text.length });
+    insertRichPlainText(editor, ' next');
+    expect(readRichMentionDraft(editor).value).toBe(`@Ada use ${text} next please`);
+    editor.remove();
+  });
+  it('numbers repeated references by attachment order and renumbers after removal', () => {
+    const editor = document.createElement('div');
+    const first = { id: 'first', file: new File(['a'], 'same.txt'), status: 'ready' as const };
+    const second = { id: 'second', file: new File(['b'], 'same.txt'), status: 'ready' as const };
+    const text = attachmentReferenceText(second);
+    const value = `${text} again ${text}`;
+    renderRichMentionDraft(editor, value, [], [], [], [first, second]);
+    expect(
+      Array.from(editor.querySelectorAll('.bh-attachment-ordinal'), (node) => node.textContent),
+    ).toEqual(['2', '2']);
+    renderRichMentionDraft(editor, value, [], [], [], [second]);
+    expect(
+      Array.from(editor.querySelectorAll('.bh-attachment-ordinal'), (node) => node.textContent),
+    ).toEqual(['1', '1']);
+    expect(readRichMentionDraft(editor).value).toBe(value);
+  });
+
   it('keeps the All Bots preview through editing and shows its count without a synthetic Bot ID', () => {
     const editor = document.createElement('div');
     const preview = {
@@ -104,6 +172,90 @@ describe('rich mention editor', () => {
       expect(badge?.querySelector('img')?.getAttribute('src')).toBe('/avatars/ada.png');
       expect(editor?.querySelector('textarea')).toBeNull();
     } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
+
+  it('colors composer Bot tokens and candidate names from the saved Bot Primary Color', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const candidate = (slug: string, color?: string) => ({
+      slug,
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-10-12T00:00:00.000Z',
+      ...(color === undefined ? {} : { primaryColor: { mode: 'custom' as const, color } }),
+    });
+    const changes: Array<[string, unknown]> = [];
+    const show = (value: string, ada: ReturnType<typeof candidate>) =>
+      act(async () => {
+        root.render(
+          createElement(ChannelComposer, {
+            value,
+            mentions:
+              value === '@'
+                ? []
+                : [
+                    { botSlug: 'ada', label: 'Ada', start: 0, end: 4 },
+                    { botSlug: 'bea', label: 'Ada', start: 5, end: 9 },
+                  ],
+            mentionCandidates: [ada, candidate('bea', '#000000')],
+            placeholder: 'Message',
+            sending: false,
+            onChange: (next: string, mentions: unknown) => changes.push([next, mentions]),
+            onSubmit: () => undefined,
+          }),
+        );
+      });
+    const token = (slug: string) =>
+      container.querySelector<HTMLElement>(
+        `.bh-composer-inline-mention[data-bot-id="${slug}"] > span:last-child`,
+      )!;
+    try {
+      await show('@Ada @Ada hi #Team', candidate('ada', '#ffffff'));
+      expect(token('ada').dataset['botNameColor']).toBe(botNameColor('#ffffff', '#ffffff'));
+      expect(token('ada').dataset['botNameColor']).not.toBe('#ffffff');
+      expect(token('bea').dataset['botNameColor']).toBe('#000000');
+      expect(token('bea').style.color).not.toBe('');
+
+      document.body.setAttribute('data-ds-dark-theme', '');
+      await act(async () => new Promise((done) => setTimeout(done, 0)));
+      expect(token('ada').dataset['botNameColor']).toBe('#ffffff');
+      expect(token('bea').dataset['botNameColor']).not.toBe('#000000');
+      document.body.removeAttribute('data-ds-dark-theme');
+      await act(async () => new Promise((done) => setTimeout(done, 0)));
+
+      await show('@Ada @Ada hi #Team', candidate('ada', '#d9475a'));
+      expect(token('ada').dataset['botNameColor']).toBe(botNameColor('#d9475a', '#ffffff'));
+      const editor = container.querySelector<HTMLElement>('.bh-composer-rich-input')!;
+      expect(readRichMentionDraft(editor).mentions.map((mention) => mention.botSlug)).toEqual([
+        'ada',
+        'bea',
+      ]);
+
+      await show('@', candidate('ada', '#d9475a'));
+      const input = container.querySelector<HTMLElement>('.bh-composer-rich-input')!;
+      setRichSelection(input, 1);
+      await act(async () => {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        document.dispatchEvent(new Event('selectionchange'));
+      });
+      const names = [
+        ...container.querySelectorAll<HTMLElement>(
+          '.bh-mention-option-copy strong[data-bot-name-color]',
+        ),
+      ];
+      expect(names.map((name) => name.dataset['botNameColor'])).toEqual([
+        botNameColor('#d9475a', '#ffffff'),
+        '#000000',
+      ]);
+    } finally {
+      document.body.removeAttribute('data-ds-dark-theme');
       await act(async () => root.unmount());
       container.remove();
     }

@@ -3,10 +3,100 @@ import { describe, expect, it } from 'vitest';
 
 import { attachOperationalModule, mountOperationalDatabase } from '../src/database/owner.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
+import { defineSchemaPlan } from '../src/database/schema.js';
 import { createToolApprovalRuleStore } from '../src/workspaces/tool-approval-rules.js';
 import { createTempRoot } from './helpers.js';
 
 describe('durable tool approval rules', () => {
+  it('retains external provenance across restart and never resurrects disabled creator rules', () => {
+    const home = createTempRoot('bh-external-rule-');
+    let owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+    let authorized = true;
+    const store = () =>
+      createToolApprovalRuleStore(
+        attachOperationalModule(owner, 'tool-approval-rules'),
+        () => authorized,
+      );
+    const input = {
+      botSlug: 'ada',
+      role: 'orchestrator' as const,
+      scopeKey: 'grant-1',
+      toolName: 'bash',
+      input: '{"command":"pwd"}',
+    };
+    const externalCreator = {
+      platform: 'feishu' as const,
+      bindingId: 'binding',
+      fingerprint: 'a'.repeat(64),
+      actorId: 'ou_alice',
+      pairingId: 'pairing',
+      pairingRevision: 2,
+      conversationId: 'oc_private',
+      messageId: 'om_card',
+    };
+    try {
+      const rule = store().createPending({ ...input, kind: 'exact', externalCreator });
+      store().activate('ada', rule.id);
+      owner.close();
+      owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+      expect(store().match(input)).toMatchObject({ id: rule.id, externalCreator });
+      authorized = false;
+      store().reconcileExternal('ada');
+      expect(store().list('ada')[0]?.revokedAt).toBeDefined();
+      authorized = true;
+      expect(store().match(input)).toBeUndefined();
+      owner.close();
+      owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+      expect(store().match(input)).toBeUndefined();
+      const web = store().createPending({ ...input, kind: 'exact' });
+      store().activate('ada', web.id);
+      const another = store().createPending({ ...input, kind: 'exact', externalCreator });
+      store().activate('ada', another.id);
+      authorized = false;
+      expect(store().match(input)?.id).toBe(web.id);
+    } finally {
+      owner.close();
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it('generation 82 preserves existing Web rule semantics on upgrade', () => {
+    const home = createTempRoot('bh-rule-upgrade-');
+    let owner = mountOperationalDatabase({
+      dshHome: home,
+      schemaPlan: defineSchemaPlan(
+        BOT_HARNESS_SCHEMA_PLAN.migrations.filter((m) => m.generation <= 81),
+      ),
+    });
+    try {
+      attachOperationalModule(owner, 'tool-approval-rules').transaction((db) =>
+        db
+          .prepare(
+            "INSERT INTO tool_approval_rules (id,bot_slug,role,scope_key,kind,tool_name,input,created_at,active) VALUES ('legacy','ada','assignment','grant','exact','bash','{}','2026-10-11T00:00:00Z',1)",
+          )
+          .run(),
+      );
+      owner.close();
+      owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+      const store = createToolApprovalRuleStore(
+        attachOperationalModule(owner, 'tool-approval-rules'),
+        () => false,
+      );
+      expect(
+        store.match({
+          botSlug: 'ada',
+          role: 'assignment',
+          scopeKey: 'grant',
+          toolName: 'bash',
+          input: '{}',
+        }),
+      ).toMatchObject({ id: 'legacy' });
+      expect(store.list('ada')[0]).not.toHaveProperty('externalCreator');
+    } finally {
+      owner.close();
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
   it('matches exact calls and broad opaque calls within one Bot and scope, then revokes immediately', () => {
     const home = createTempRoot('botharness-tool-rules-');
     let owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });

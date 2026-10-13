@@ -561,3 +561,47 @@ it('removes a confirmed deleted identity across pages and fences old acknowledge
     owner.dispose();
   }
 });
+
+it('reconnects on request with the retained consumer and accepts decoded frame data', async () => {
+  const sources: { url: string; events: EventTarget; closed: boolean }[] = [];
+  const owner = new WindowCompanions({
+    context: async () => ({ profileId: 'qa' }),
+    source: (url) => {
+      const source = { url, events: new EventTarget(), closed: false };
+      sources.push(source);
+      return {
+        readyState: 1,
+        addEventListener: source.events.addEventListener.bind(source.events),
+        close() {
+          source.closed = true;
+        },
+      };
+    },
+    update: async () => undefined,
+  });
+  try {
+    await owner.start();
+    owner.select('ada');
+    await Promise.resolve();
+    expect(sources).toHaveLength(1);
+    sources[0]!.events.dispatchEvent(
+      new MessageEvent('companion/baseline', {
+        data: {
+          profileId: 'qa',
+          consumerId: 'live',
+          selectionRevision: 0,
+          bots: [],
+          activity: { generation: 'host', revision: 0, bots: [] },
+        },
+      }),
+    );
+    owner.reconnect();
+    expect(sources).toHaveLength(2);
+    expect(sources[0]!.closed).toBe(true);
+    expect(sources[1]!.url).toContain('resume=live');
+  } finally {
+    owner.dispose();
+  }
+  owner.reconnect();
+  expect(sources).toHaveLength(2);
+});

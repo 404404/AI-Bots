@@ -12,6 +12,10 @@ parity; Human review owns notability, accuracy, and prose quality.
 
 ## Artifact boundaries
 
+Public install instructions use the published stable identity in `scripts/install-release.json`, not the development package version or npm's moving `latest` tag. After publishing and verifying registry bytes and qualification evidence, update that identity, run `pnpm install:sync` and `pnpm install:check`, and review the resulting README/guide changes. The check runs in lint and rejects drift. Never advance this file during prerelease preparation or before publication.
+
+In the product Site checkout, run `BOTHARNESS=<this-qualified-checkout> pnpm install:sync` to copy the identity and synchronize only the bilingual installation guides. Site copy buttons and CLI instructions derive from this identity. Ship the two PRs through their normal review gates; this is a repeatable release-sync command, not an automatic publication or npm candidate-selection bypass. Registry candidate selection/upgrade E2E and the DSH-owned preview/install mismatch remain separate gates.
+
 | Artifact                                  | Owns                                                                                                                        |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | Release Ledger                            | The observable differences delivered by each DeepSeekBot release.                                                           |

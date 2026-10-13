@@ -5,6 +5,16 @@ import type { PairingRequest, PairingReviewInput } from '../messaging/pairing.js
 import type { SenderAccessInput } from '../messaging/sender-access.js';
 import type { ChannelHistoryItem, PurgeSource, PurgePreview } from '../purge/contracts.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
+import { LiveRefused } from '../channels/live-frames.js';
+import type { ChannelJournalPage, ChannelJournalRequest } from '../channels/timeline.js';
+import type { CompanionLiveFrame } from '../companions/live.js';
+import {
+  ChannelLiveRefused,
+  LiveUnavailable,
+  type ActivityLiveFrame,
+  type ChannelLiveFrame,
+  type RosterLiveFrame,
+} from '../channels/live.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
 import type {
   MessagingDefaults,
@@ -54,7 +64,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { UsageFilter, UsageQueryResult } from '../usage/query.js';
 import { RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { PrivateInputs } from '../credentials/private-inputs.js';
-import type { PrivateInputStatus } from '../credentials/contracts.js';
+import type { PrivateAccountSummary, PrivateInputStatus } from '../credentials/contracts.js';
 
 import type { PersonaBotPatch } from '../bots/persona-bot.js';
 import type { ModelCatalogEntry } from '../models/catalog.js';
@@ -76,6 +86,7 @@ import type {
   OwnedSessionSummary,
   OwnedSessionBot,
   ProfileActivity,
+  ProfileSessionUsage,
 } from './methods.js';
 import type { ChannelActivityToday } from '../channels/activity-today.js';
 import type { GroupProfileActivity } from '../channels/profile-activity.js';
@@ -86,7 +97,11 @@ import type { ChannelReadPosition } from '../channels/store.js';
 import type { RosterSection, RosterSnapshot } from '../roster/store.js';
 import type { TopOrderEntry } from '../roster/spec.js';
 import type { ChannelTimelinePage, TimelineDirection } from '../channels/timeline.js';
-import type { AssignmentDetail, AssignmentSummary } from '../runtime/bot-runtime.js';
+import type {
+  AssignmentDetail,
+  AssignmentSummary,
+  ChannelAssignmentSummary,
+} from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
   BotSchedule,
@@ -143,6 +158,7 @@ interface RemoteMethodDescriptor {
   readonly version: 1;
   readonly methods: readonly {
     readonly method: string;
+    readonly mode?: 'stream';
     readonly invocation: { readonly kind: 'direct' };
   }[];
 }
@@ -153,6 +169,45 @@ function markRemoteMethods(prototype: object, methods: readonly string[]): void 
     methods: methods.map((method) =>
       Object.freeze({ method, invocation: Object.freeze({ kind: 'direct' }) }),
     ),
+  };
+  Object.defineProperty(prototype, REMOTE_METHOD_DESCRIPTOR, {
+    configurable: true,
+    value: Object.freeze(descriptor),
+  });
+}
+
+export interface BridgeLive {
+  followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame>;
+  followActivity(signal: AbortSignal): AsyncIterable<ActivityLiveFrame>;
+  followChannel(
+    channelId: string,
+    limit: number,
+    signal: AbortSignal,
+  ): AsyncIterable<ChannelLiveFrame>;
+  journalPage(channelId: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
+  followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncIterable<CompanionLiveFrame>;
+}
+
+function markRemoteStreams(prototype: object, streams: readonly string[]): void {
+  const marked = (prototype as Record<string, RemoteMethodDescriptor | undefined>)[
+    REMOTE_METHOD_DESCRIPTOR
+  ];
+  const descriptor: RemoteMethodDescriptor = {
+    version: 1,
+    methods: [
+      ...(marked?.methods ?? []),
+      ...streams.map((method) =>
+        Object.freeze({
+          method,
+          mode: 'stream' as const,
+          invocation: Object.freeze({ kind: 'direct' as const }),
+        }),
+      ),
+    ],
   };
   Object.defineProperty(prototype, REMOTE_METHOD_DESCRIPTOR, {
     configurable: true,
@@ -180,9 +235,72 @@ export class BotharnessBridgeService extends TypertRemoteService {
     ctx: Context,
     methods: BridgeMethods,
     private readonly privateInputs?: PrivateInputs,
+    private readonly live?: BridgeLive,
   ) {
     super(ctx, BRIDGE_SERVICE_KEY, { namespace: BRIDGE_NAMESPACE });
     this.methods = methods;
+  }
+
+  followRoster(signal: AbortSignal): AsyncIterable<RosterLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    return this.live.followRoster(signal);
+  }
+
+  async *followActivity(signal: AbortSignal): AsyncGenerator<ActivityLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live.followActivity(signal);
+    } catch (error) {
+      if (error instanceof LiveUnavailable)
+        throw toRemoteError({ code: 'unavailable', message: error.message });
+      throw error;
+    }
+  }
+
+  channelJournalPage(
+    channelId: string,
+    through: number,
+    before?: number,
+    limit?: number,
+  ): ChannelJournalPage {
+    const page = this.live?.journalPage(channelId, { through, before, limit });
+    if (page === undefined)
+      throw toRemoteError({ code: 'not-found', message: 'Channel journal page is unavailable' });
+    return page;
+  }
+
+  async *followChannel(
+    channelId: string,
+    limit: number,
+    signal: AbortSignal,
+  ): AsyncGenerator<ChannelLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live.followChannel(channelId, limit, signal);
+    } catch (error) {
+      if (error instanceof ChannelLiveRefused)
+        throw toRemoteError({ code: error.code, message: error.message });
+      throw error;
+    }
+  }
+
+  async *followCompanion(
+    resume: string,
+    lastEventId: string,
+    signal: AbortSignal,
+  ): AsyncGenerator<CompanionLiveFrame> {
+    if (this.live === undefined)
+      throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
+    try {
+      yield* this.live.followCompanion(resume, lastEventId, signal);
+    } catch (error) {
+      if (error instanceof LiveRefused)
+        throw toRemoteError({ code: error.code, message: error.message });
+      throw error;
+    }
   }
 
   privateInputStatus(channelId: string, messageId: string): { status: PrivateInputStatus } {
@@ -220,6 +338,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
     this.requirePrivateOwner();
     const replacement = await this.privateInputs?.replace(true, channelId, messageId);
     return replacement === undefined ? {} : { messageId: replacement };
+  }
+
+  async privateAccounts(slug: string): Promise<{
+    status: 'ready' | 'unavailable';
+    accounts: PrivateAccountSummary[];
+    replaceable: boolean;
+  }> {
+    this.requirePrivateOwner();
+    const accounts =
+      typeof slug === 'string' ? await this.privateInputs?.accounts(true, slug) : undefined;
+    const replaceable = (await this.privateInputs?.replaceable().catch(() => false)) ?? false;
+    return accounts === undefined
+      ? { status: 'unavailable', accounts: [], replaceable: false }
+      : { status: 'ready', accounts, replaceable };
   }
 
   async privateAccountRevoke(channelId: string, messageId: string) {
@@ -306,6 +438,24 @@ export class BotharnessBridgeService extends TypertRemoteService {
     id: string,
   ): Promise<{ delivery: import('../messaging/approval-messaging.js').ApprovalDelivery }> {
     return unwrapAsync(this.methods.approvalRetry({ slug, id }));
+  }
+  failureAlertsSet(
+    slug: string,
+    enabled: boolean,
+    expectedRevision: number,
+  ): Promise<{ updated: true }> {
+    return unwrapAsync(this.methods.failureAlertsSet({ slug, enabled, expectedRevision }));
+  }
+  failureAlertsTest(
+    slug: string,
+  ): Promise<{ delivery: import('../messaging/failure-alerts.js').FailureAlertDelivery }> {
+    return unwrapAsync(this.methods.failureAlertsTest({ slug }));
+  }
+  failureAlertsRetry(
+    slug: string,
+    id: string,
+  ): Promise<{ delivery: import('../messaging/failure-alerts.js').FailureAlertDelivery }> {
+    return unwrapAsync(this.methods.failureAlertsRetry({ slug, id }));
   }
   pairingReview(slug: string, input: PairingReviewInput): Promise<{ pairing: PairingRequest }> {
     return unwrapAsync(this.methods.pairingReview({ slug, input }));
@@ -607,6 +757,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.botAppearanceSet({ channelId, recipe }));
   }
 
+  botPrimaryColorSet(channelId: string, primaryColor: unknown): { bot: PersonaBotDetail } {
+    return unwrap(this.methods.botPrimaryColorSet({ channelId, primaryColor }));
+  }
+
   channels(): { channels: ChannelListItem[] } {
     return unwrap(this.methods.channels({}));
   }
@@ -676,6 +830,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
 
   humanIdentity() {
     return unwrap(this.methods.humanIdentity({}));
+  }
+
+  composerIdentity() {
+    return unwrap(this.methods.composerIdentity({}));
+  }
+
+  composerValidate(channelId: string, attachments: ChannelAttachmentRef[], replyTo?: string) {
+    return unwrap(
+      this.methods.composerValidate({
+        channelId,
+        attachments,
+        ...(replyTo === undefined ? {} : { replyTo }),
+      }),
+    );
   }
 
   channelHumanNameSet(channelId: string, nickname: string | null) {
@@ -877,6 +1045,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.assignments({ slug }));
   }
 
+  channelAssignments(channelId: string): { assignments: ChannelAssignmentSummary[] } {
+    return unwrap(this.methods.channelAssignments({ channelId }));
+  }
+
   assignment(slug: string, sessionId: string): { assignment: AssignmentDetail } {
     return unwrap(this.methods.assignment({ slug, sessionId }));
   }
@@ -900,12 +1072,18 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.workspaceFileTarget({ slug, grantId }));
   }
 
-  grants(slug: string): { grants: WorkspaceGrant[] } {
-    return unwrap(this.methods.grants({ slug }));
+  grants(slug: string, scope?: { channelId: string; path: string }): { grants: WorkspaceGrant[] } {
+    return unwrap(this.methods.grants({ slug, ...(scope === undefined ? {} : { scope }) }));
   }
 
-  grantCreate(slug: string, workspaceId: string): Promise<{ grant: WorkspaceGrant }> {
-    return unwrapAsync(this.methods.grantCreate({ slug, workspaceId }));
+  grantCreate(
+    slug: string,
+    workspaceId: string,
+    scope?: { channelId: string; path: string },
+  ): Promise<{ grant: WorkspaceGrant; created?: boolean }> {
+    return unwrapAsync(
+      this.methods.grantCreate({ slug, workspaceId, ...(scope === undefined ? {} : { scope }) }),
+    );
   }
 
   grantRevoke(slug: string, grantId: string): { grant: WorkspaceGrant } {
@@ -1064,6 +1242,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.profileActivity({ channelId, before, weeks }));
   }
 
+  async profileSessionUsage(channelId: string): Promise<ProfileSessionUsage> {
+    return unwrap(await this.methods.profileSessionUsage({ channelId }));
+  }
+
   groupProfileActivity(channelId: string): GroupProfileActivity {
     return unwrap(this.methods.groupProfileActivity({ channelId }));
   }
@@ -1218,6 +1400,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'privateAccountStatus',
   'privateInputReplace',
   'privateAccountRevoke',
+  'privateAccounts',
   'messagingDefaults',
   'messagingDefaultsSet',
   'channelBridges',
@@ -1233,6 +1416,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'approvalRoute',
   'approvalTest',
   'approvalRetry',
+  'failureAlertsSet',
+  'failureAlertsTest',
+  'failureAlertsRetry',
   'pairingReview',
   'senderAccess',
   'messagingApps',
@@ -1269,6 +1455,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'resume',
   'channels',
   'humanIdentity',
+  'composerIdentity',
+  'composerValidate',
   'humanNameSet',
   'channelHumanNameSet',
   'channelDm',
@@ -1306,6 +1494,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionIgnore',
   'humanAttentionDismiss',
   'assignments',
+  'channelAssignments',
   'assignment',
   'workspaceOptions',
   'messageAttachmentTarget',
@@ -1338,6 +1527,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'memorySave',
   'memoryRepair',
   'profileActivity',
+  'profileSessionUsage',
   'overviewMemory',
   'overviewUsage',
   'profileUsage',
@@ -1359,6 +1549,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'standingLimitsSet',
   'botAvatarSet',
   'botAppearanceSet',
+  'botPrimaryColorSet',
   'partLibraryList',
   'partLibraryAdd',
   'partLibraryExport',
@@ -1386,12 +1577,20 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'scheduleHistory',
   'scheduleRunNow',
   'schedulePreview',
+  'channelJournalPage',
+]);
+markRemoteStreams(BotharnessBridgeService.prototype, [
+  'followRoster',
+  'followActivity',
+  'followChannel',
+  'followCompanion',
 ]);
 
 export function registerBridge(
   ctx: Context,
   methods: BridgeMethods,
   privateInputs?: PrivateInputs,
+  live?: BridgeLive,
 ): BotharnessBridgeService {
-  return new BotharnessBridgeService(ctx, methods, privateInputs);
+  return new BotharnessBridgeService(ctx, methods, privateInputs, live);
 }

@@ -249,6 +249,7 @@ describe('compact Human Inbox interactions', () => {
         'source',
         '/qa/project',
         expect.any(Function),
+        expect.anything(),
       );
     } finally {
       await view.close();

@@ -9,6 +9,17 @@
 
 ### Breaking Changes
 
+- Bot 私聊里的动作行是新的 Channel Notice。此前的程序会把它显示成空白的 Bot 消息，回退时请同时回退 Host 和 Client（[#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517)）。
+- DeepSeekBot 现在需要 DSH 0.2.0 或更高版本（含预览版）；DSH 0.1.7 的 Host 会在安装时拒绝新版本，请继续使用 DeepSeekBot 1.2.x 或先升级 DSH（[#1511](https://github.com/BotHarness/DeepSeekBot/issues/1511)）。
+
+- 工作失败通知设置与投递元数据新增 Profile Schema Generation 83。升级前请备份；回退需要兼容写入者或升级前备份（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)）。
+
+- Lark 保存的工具规则新增 Profile Schema Generation 82，记录外部创建人。升级前请备份；回退需要兼容写入者或升级前备份（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)）。
+
+- Group 行为权限项可以声明互斥。当前写入者拒绝不兼容的有效 Allow；回退不识别此声明的旧程序前，应停止策略编辑（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。
+
+- Bot 已启用的发送者限制现在也覆盖 Slack 私聊。下一次请求前请审核或配对 Slack 申请人；回退旧程序前应停用对应 Slack Binding，因为旧程序不能执行这条限制（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)）。
+
 - 配对审核卡片新增 Profile Schema Generation 80。升级前请备份；回退需要兼容写入者或升级前备份（[#1414](https://github.com/BotHarness/DeepSeekBot/issues/1414)）。
 
 - 外部授权组新增 Profile schema Generation 79。升级前请备份；回退需要兼容 writer 或恢复升级前备份（[#1406](https://github.com/BotHarness/DeepSeekBot/issues/1406)）。
@@ -28,6 +39,36 @@
 ### Added
 
 - 开发者可通过任务认领和专用原生 Profile，在分支间复用独立 QQ QA1/QA2/QA3 应用；CLI 可经严格 SSH 复用选中的已有原生授权，无需重复输入 Secret 或复制整份凭据存储（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[指南](docs/agents/qq-test-clients.md)）。
+
+- 消息支持多选（鼠标长按，或在消息菜单里选“多选”），多选后可以导出本地诊断包：一个 zip，包含该 Channel 从第一条到最后一条所选消息（只选一条时到现在为止）的内容并前后各多带 30 分钟，所选消息会被标记，另含参与 Bot 的私聊、收件记录、原生 Session 事件（含工具调用，正在运行的工作从它开始的那一轮算起）以及合并时间线。标准脱敏会隐藏本地目录、token、密钥字段、请求头和邮箱；Memory 文件、附件和其他 Channel 不会导出，产品也不会上传（[#1533](https://github.com/BotHarness/DeepSeekBot/issues/1533)，[ADR-0185](docs/adr/0185-diagnostic-bundles-are-local-redacted-read-only-exports.md)）。
+
+- DM 与 Group 输入框在频道切换和浏览器刷新后保留本设备草稿，恢复时校验引用，并明确提示多标签页冲突及存储失败；未上传的文件字节不会保留（[#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459)，[ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)）。
+
+- PersonaBot 的私聊现在会显示它在别处做了什么：它在群聊或 Bot 私信里的每次发言都会在私聊留下一条带摘录、可跳回原消息的短行，同一会话里的连续发言合并成一行；在群里触发的记忆更新也会出现在私聊里并标明地点。私聊右上角的设置菜单可以按类型为这个 Bot 隐藏这些行；它们不算未读，也不会唤醒任何人（[#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517)，[ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)）。
+
+- 可选择开启的工作失败通知沿用 Bot 侧栏管理目的地，采用 RBAC 风格宽双列设置／记录弹窗，提供可搜索排序的记录、测试发送和投递状态查询，从已提交失败事实通知，不转发私密错误正文或授予决策权限。确定未发送重试有界，未知结果不重放（[#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041)，[Lark 指南](docs/lark-connection.md#work-failure-alerts-source-candidate)）。
+
+- 「记忆演化」的提交 diff 和未提交差异在每个文件行新增「打开当前文件」：打开这个路径现在的文件，使用同一个默认应用和下拉菜单，不会打开所选提交里的版本。文件不存在时明确提示而不重建，只有该行本身是删除时才附带删除说明（[#1462](https://github.com/BotHarness/DeepSeekBot/issues/1462)、[指南](docs/file-open.md)）。
+
+- 当前 Memory 文件阅读器、聊天普通文件卡，以及 Memory Repository 和已授权 Workspace 文件夹所在行新增「打开」分体按钮：点一下就用默认应用在 Host 上打开，箭头里列出检测到的其他应用供单次选择。可以按文件类型或为文件夹设置默认应用，也可以恢复系统默认；设置只保存在当前浏览器、对应当前 Host Profile，不修改操作系统的文件关联。没有默认或默认应用不可用时会请你选择，不会直接使用列表里的第一个应用（[#1461](https://github.com/BotHarness/DeepSeekBot/issues/1461)、[指南](docs/file-open.md)、[ADR-0178](docs/adr/0178-file-open-defaults-are-explicit-client-preferences.md)）。
+
+- 可选 checked QQ Provider 新增有界的分发前 Gateway、原生回调与发送回执诊断，包括白名单标识字段的哈希与长度，用于排查自身 Echo 缺失，不记录正文或原始标识；Gateway 解析与采样拒绝明确记录，作者资格、回复权限与 Echo 能力保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)、[Provider 候选 #25](https://github.com/DoodleBears/dsh-im/pull/25)）。
+
+- PersonaBot 新增 Bot 主色：自动模式跟随头像的主发色（上传图片时使用固定的备用色），也可以在 Profile 的头像弹窗里选择自定义颜色并预览浅色／深色效果。私聊和群聊消息上的 Bot 名字、@ 候选列表、输入框里选中的 Bot 以及已发送的 @ 都使用这个颜色，并按所在背景和主题调整明暗以保证可读。导出 zip 或分享记忆仓库时会带上这个设置，导入得到的 Bot 保持同样的颜色。删除 Bot 后，它的历史消息和用量列表里的名字仍保留最后的颜色。按 Bot 的用量图表和单个 Bot 自己的 token 图表使用该 Bot 的颜色，并用固定的深浅区分缓存读、其他输入和输出，单个 Bot 的活跃度热力图用它的颜色深浅表示强度，没有活动的日期保持中性色（[#1471](https://github.com/BotHarness/DeepSeekBot/issues/1471)、[#1472](https://github.com/BotHarness/DeepSeekBot/issues/1472)、[#1473](https://github.com/BotHarness/DeepSeekBot/issues/1473)、[#1474](https://github.com/BotHarness/DeepSeekBot/issues/1474)、[#1475](https://github.com/BotHarness/DeepSeekBot/issues/1475)、[#1476](https://github.com/BotHarness/DeepSeekBot/issues/1476)、[ADR-0177](docs/adr/0177-bot-primary-color-is-portable-identity-not-theme-state.md)）。
+
+- 获授权的 Lark 私聊审核人可另行确认精确或 all-opaque 工具规则，在 Web 查看同一范围与状态，并在当前创建人权限被撤销后停止后续自动批准。all-opaque 要求合格版本 2 Provider／账户及独立高风险确认。仅在 IM 使用的 Bot 无需先打开 Web 私聊即可收到审批卡片。外部规则不会自动批准必须在 Web 审核的原生会话授权；双语教程包含真实脱敏流程截图（[#1033](https://github.com/BotHarness/DeepSeekBot/issues/1033)，[Lark guide](docs/lark-connection.md#save-an-exact-rule-in-a-management-dm)）。
+
+- 群聊 composer 的工作区快捷入口复用 DM 目录卡片、权限标签与原生 modal 尺寸，默认选中当前全部可授权 Bot，也可指定几个，确认目录与既有访问范围，并分别展示逐 Bot Grant 的新增、复用、失败及未知结果读回，不新增未选成员的权限（[#1433](https://github.com/BotHarness/DeepSeekBot/issues/1433)）。
+
+- Group 行为权限项支持人工声明互斥，提供可搜索选择、受影响人员／来源预览及当前版本校验。设置与 Host 拒绝不兼容的有效 Allow，包括成员变更和保护性 Deny 的移除；明确拒绝仍优先（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。
+
+- 普通聊天配对扩展到 Slack 私聊，复用人员／角色／申请设置、当前发送者权限查询及原会话 checked 回复；批准要求重新提问，撤销阻止后续接收。三步本机向导和私密加载器提供独立 Slack QA1／QA2／QA3，跨 worktree 复用且保留 Lark 配置，配置过程不启动接收器。中英文指南补充真实私聊权限与完整流程截图、权限用途及重新安装步骤。隔离普通私聊的原生执行／撤销／重启检查与 Human 反馈已通过；Slack 群聊和原生管理控件由独立功能推进（[#1415](https://github.com/BotHarness/DeepSeekBot/issues/1415)，[指南](docs/slack-connection.md)）。
+
+- Bot 私聊输入区新增既有模型、工作区授权和 Bot 小人显示／移除快捷操作；图标加文字的模型及工作区数量 chips 居左，紧凑 token 用量居右，点击展开只读 Orchestrator／最近 Assignment 用量浮层，显示 Session 相对占比进度条，底部独立详情按钮才跳转。Profile 和记忆文件详情替换整个 Channel body，不再叠加聊天 header；标题与 pin chips 居中对齐，hover 背景保持不透明。保留草稿与附件，工作区授权仍需明确确认，工作区折叠区复用 Channel sidebar 的标题与 chevron 设计（[#1432](https://github.com/BotHarness/DeepSeekBot/issues/1432)）。
+
+- 移动端 Bot 模式进入全宽会话列表，单一顶栏提供搜索／创建／退出；聊天顶栏采用返回／名称／三横线会话菜单，纯图标底栏连接会话、活动中心和既有 Bot 设置。空输入框的长提示以省略号显示，活动中心只保留一个标题，搜索边框完整可见，退出复用所选 Bot 模式图标，移动端侧栏显示设置保持在右侧边距。返回保留列表位置及按会话隔离的草稿，退出恢复宿主导航（[#1434](https://github.com/BotHarness/DeepSeekBot/issues/1434)）。仍须实体手机及 Mobile Safari Human QA。
+
+- 添加或粘贴文件、图片时可在消息光标处插入可整体编辑的行内附件引用块，展示对应附件序号、文件名和大小；顶部附件采用统一紧凑卡片、单行横向滚动，对齐序号与删除控件，保留原有文件身份；发送后仅在行内引用中保留序号，不再重复显示右下角角标；行内引用后按 Shift+Enter 换行再输入时保持在新行（[#1447](https://github.com/BotHarness/DeepSeekBot/issues/1447)）。
 
 - Lark 授权组可勾选可复用的具名行为权限；宽版组编辑弹窗用标签区分管理能力、行为权限和成员，用紧凑的 sidebar 折叠交互预览受影响人员；Allow／Deny 单元格只显示 checkbox，保留无障碍名称，弹窗内容可滚动且标题与操作按钮保持可见。人员显示去重后的当前权限项、每个组来源及拒绝优先的 Allow／Deny 冲突，同时保留主 Role 和独立管理能力（[#1423](https://github.com/BotHarness/DeepSeekBot/issues/1423)）。Profile schema Generation 81 升级前须备份；回退需要该备份或兼容写入版本。
 
@@ -77,6 +118,14 @@
 - 在 **IM 应用** 中可以把未绑定的应用绑定到 Bot、确认后解绑已绑定的应用，并在 Provider 支持时为选定的 Bot 创建 Lark 或微信应用（[#1264](https://github.com/BotHarness/DeepSeekBot/issues/1264)）。
 - 没有自定义头像的群，在侧边栏、收起的侧栏和置顶区里显示最多四个成员 Bot 的头像，代替 `#`；这些头像保持静止，不显示 Bot 正在做什么（[#1270](https://github.com/BotHarness/DeepSeekBot/issues/1270)）。
 - PersonaBot 思考或工作时，最新消息下方会出现一行：头像变成正在使用的工具，旁边是和输入框上方相同的简短状态；群里最多显示两个正在工作的 Bot，Bot 的回复开始输出时会接替这一行。停在最新消息处时，输入框上方的状态会淡出，向上翻看历史时再显示（[#1271](https://github.com/BotHarness/DeepSeekBot/issues/1271)）。
+
+- 新增 QQ 引用语音接收，保留原生平台转写来源，支持原音下载及 Channel 按需有界 SILK 播放；一个维护版运行应用已通过真实语音 → 模型 → 原群文字答复、Human 确认及实际 Client 键盘播放验收（[#1159](https://github.com/BotHarness/DeepSeekBot/issues/1159)，[指南](docs/qq-connection.md)）。
+
+- 新增 QQ 群文件候选路径，提供直接或显式原生引用文件关联、受授权的 Channel 下载、独立工作副本处理及受检原群结果文件回复；一个已授权应用已通过真实引用 CSV 处理及 Human 结果下载验收（[#1158](https://github.com/BotHarness/DeepSeekBot/issues/1158)、[指南](docs/qq-connection.md)）。
+
+- QQ 图片候选复用获授权的 Channel 预览及原生模型读图工具，使用接收应用回传选定图片结果并保存原生回执；实际 QQ／模型资格另行记录（[#1157](https://github.com/BotHarness/BotHarness/issues/1157)，[QQ 指南](docs/qq-connection.md)）。
+
+- 共享群 Channel 中的 QQ 来源在作者标签和来源详情展示接收应用，群 Profile 活动也保留独立应用归属；指南说明双应用显式映射及自身身份回复边界（[#1156](https://github.com/BotHarness/BotHarness/issues/1156)，[QQ 指南](docs/qq-connection.md)）。
 - QQ 会话可把后续提及同步到选定群 Channel 或仅进入 Inbox，停止同步后保留已接收历史，并在屏蔽／再次允许及重连后展示有界的本地接收区间，不声称补收远端历史（[#1153](https://github.com/BotHarness/BotHarness/issues/1153)，[QQ 接入指南](docs/qq-connection.md)）。
 
 - 官方 QQ Bot 应用可绑定 PersonaBot，将群文字 @ 提及收入其收件箱，并携带原生接收回执在原群答复；开发 Provider 明确保留被动答复过期和发送结果不确定状态（[#1152](https://github.com/BotHarness/BotHarness/issues/1152)、[QQ 接入指南](docs/qq-connection.md)）。
@@ -105,6 +154,16 @@
 
 ### Changed
 
+- Bot 在处理群里的请求时，现在就在这个群里询问：工具审批卡、提问卡和文件夹授权请求出现在任务所在的 Channel，不再一律发到 Bot 的私聊。密钥输入仍留在私聊（[#1536](https://github.com/BotHarness/DeepSeekBot/issues/1536)、[ADR-0186](docs/adr/0186-asks-follow-the-channel-the-task-came-from.md)）。
+
+- 群聊输入框下方只显示一个工作区数量，即所有成员 Bot 可用工作区去重后的总数，不再逐个列出 Bot；私聊仍显示该 Bot 的工作区数（[#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)）。
+
+- 新手引导改为上手清单，从侧栏「Bot 模式」那一行里的进度环打开（移动端在退出按钮旁），不再占用垂直空间。清单包括配置模型、发出第一条消息，以及让它记住你、连接聊天软件、设一个每日任务、召唤窗口伙伴；每一项都可以直接操作，完成状态读取各功能自己的数据。界面导览从清单里启动，最后一步说明怎样退出 Bot 模式；第一次进入之前，「Bot 模式」那一行会显示一个「试试看」提示（[#1496](https://github.com/BotHarness/DeepSeekBot/issues/1496)，[ADR-0180](docs/adr/0180-onboarding-is-a-checklist-launched-from-the-bot-mode-row.md)）。
+
+- 私聊和群聊里，一组消息比可视区域高时，旁边的头像会停在消息列表底边，滚动时始终能看到是谁在说话（[#1491](https://github.com/BotHarness/DeepSeekBot/pull/1491)）。
+
+- Channel 输入框下方统一显示实际生效的完整模型名，不附加 provider 或继承来源标记；移动端仅保留模型选择入口，桌面端继续显示工作区与 token 用量（[#1479](https://github.com/BotHarness/DeepSeekBot/issues/1479)）。
+
 - 新手教程改为多步 driver.js 界面导览：依次介绍欢迎信、消息列表、收件箱、Bot 设置、会话头部、输入框、右侧栏和窗口伙伴，不再是 Bot 模式内容区顶部的常驻横条；首次进入 Bot 模式自动开始，关闭即暂停，浮层内提供「跳过教程」，**Bot 设置 → 通用** 可重新开始；已完成教程的 Profile 不再看到任何教程横条（[#1295](https://github.com/BotHarness/BotHarness/issues/1295)，[#1301](https://github.com/BotHarness/BotHarness/issues/1301)，[ADR-0155](docs/adr/0155-onboarding-tutorial-is-a-floating-tour-replayed-from-bot-settings.md)）。
 
 - 预设欢迎消息改为 Bot 的第一人称来信：banner、头像、名字与标签，四张建议问题保留为回信选项；时间线里这条消息的作者显示 Bot 名字，而不是 System（[#1301](https://github.com/BotHarness/BotHarness/issues/1301)）。
@@ -121,6 +180,41 @@
 - 自己的消息头与气泡方向镜像：名字贴右边缘，时间在名字左侧，与左侧 Bot 的顺序对应（[#1298](https://github.com/BotHarness/DeepSeekBot/issues/1298)）。
 
 ### Fixed
+
+- Bot 不再把另一个 Channel 插入的消息回复到当前回合起始的 Channel：一个回合里有多个 Channel 的消息时，Bot 每次回复都必须指明目标 Channel（[#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)）。
+
+- 英文界面下，工具审批请求与决定、对应的回复引用，以及含审批的 Bot 私聊在侧栏中的预览，现在显示英文，不再固定为中文（[#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)）。
+
+- 记忆和工作区文件夹位于符号链接父目录下（例如 macOS 的 `/tmp` 或被链接的主目录）时，Bot 的文件工具调用不再全部被判定为超出授权工作区；文件夹本身是符号链接时仍会被拒绝（[#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)）。
+
+- AX Go 启动会将经审阅的适配器补丁复制到各自的隔离 CLI，并使用相对路径引用，修复源码与 home 位于不同盘符时 Windows 的 `ERR_PNPM_PATCH_NOT_FOUND`；模型凭据和原生请求处理沿用既有归属（[#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)、[AX 指南](docs/agents/ax-model.md)）。
+
+- Bot 不再把另一个 Channel 插入的消息回复到当前回合起始的 Channel：一个回合里有多个 Channel 的消息时，Bot 每次回复都必须指明目标 Channel（[#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)）。
+
+- DeepSeekBot 界面不再随机丢失全部样式（DSH 自身界面正常）：此前其他插件重载或更新时可能连带移除 DeepSeekBot 的样式表（[#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)）。
+
+- 同一 DSH 地址下打开更多 DeepSeekBot 标签页（直至浏览器对 DSH 自身连接的上限）也能保持响应：Window Companion 订阅同样改走 DSH 的共用实时连接（[#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)）。
+
+- 同一 DSH 地址下的两个 DeepSeekBot 浏览器标签页现在都能加载并保持响应：Channel、通讯录与 Activity 更新改走 DSH 的共用实时连接，不再各占一条浏览器连接。第三个标签页仍可能让全部页面停止响应，需待 Window Companion 流一并迁移（[#1490](https://github.com/BotHarness/DeepSeekBot/issues/1490)）。
+
+- 私聊回合被打断（例如 Host 重启）后，Bot 下一次从别的 Channel 被唤醒时，不再把那条私聊的回答发到当前 Channel；该请求留在原私聊里。被 Host 停止打断、且 Bot 还没做任何操作的私聊，现在会在 Host 启动时自动重跑；回合自身失败的仍需手动重试（[#1520](https://github.com/BotHarness/DeepSeekBot/issues/1520)）。
+
+- 在窄窗口或移动端，Channel 列表行里的活动点阵现在紧贴在消息时间左侧，不再浮在行中间（[#1513](https://github.com/BotHarness/DeepSeekBot/pull/1513)）。
+
+- 主会话处理完已完成的任务汇报后，Bot 头像上的中性标记会自动消失；汇报本身仍列在收件箱里（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- Bot 空闲时，输入框上方的状态行不再因为收件箱里还有一条已完成的任务汇报而一直显示；这条汇报仍在头像和收件箱里以中性标记提示（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- 回合结束后 DSH 又补写 Session 事件（例如 `/compact` 的检查点）时，Bot 不再一直显示「正在思考」（[#1489](https://github.com/BotHarness/DeepSeekBot/pull/1489)）。
+
+- Bot mode Web 在每个页面内共用选中 Channel、Roster 与 Activity SSE，让同一 HTTP/1 Host 的两个页面仍可完成普通 API 请求。断线重连期间，新 Activity 消费者保留过期状态与 HTTP 恢复；撤销基线及各消费者的独立清理保持有效（[#1451](https://github.com/BotHarness/DeepSeekBot/issues/1451)）。
+
+- QQ 应用在 Host 重启时延迟就绪后，已有群 Channel 同步会沿用有界重试恢复，首条新提及不再只进入 Inbox（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+
+- 修复全量接收事件中明确 @ 当前 QQ Bot 的 checked 收件路径，仍排除普通消息与机器人发送者；候选 Provider 保留当前 Lark 配对能力，不宣称自身 Echo 已验收（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+- Bot 忙碌时连续发送的多条私聊消息，在已经一起送入当前回合之后，不再为每一条各自再跑一个回合（[#1481](https://github.com/BotHarness/DeepSeekBot/issues/1481)）。
+
+- 明确 Orchestrator 的回答（包括简短确认和图片描述）应通过 Channel 回复工具送达，而非仅输出到私有 Session；保留主动沉默与外部消息回复路由（[#1449](https://github.com/BotHarness/DeepSeekBot/issues/1449)）。
 
 - 私密输入的公开 Session 证据保留 RC1 原生拒绝及不可用审批结果，同时排除决定理由和未知值（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)）。
 
@@ -166,13 +260,19 @@
 
 - 补充经 2 核 4GB 实机验证的源码部署教程，覆盖严格 SSH、CLI 安装、tailnet HTTPS、Host 重启前后的真实 QQ 群回复，遮盖个人身份的原群 A/B 截图，以及附双语字幕的原生绑定实录；完整教程成片仍待完成（[#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438)，[教程](docs/vps-qq-tutorial.md)，[Profile 安装](docs/agents/source-profile-install.md)）。
 
+- 中英文 README 精简为面向用户的结构：宣传片和像素头像放在前面，安装和 Bot 市场链接到官网，能力集中在一张表里（含 Slack、Discord、飞书 / Lark、QQ、微信以及电脑与浏览器操作），并新增一节对比 DeepSeekBot（简称 DSB）与另一个独立项目 DS Bot（npm `ds-bot`）（[#1516](https://github.com/BotHarness/DeepSeekBot/pull/1516)）。
+
+- 更新中英文 GitHub README，补齐已发布的 1.2.0 和 1.2.1 亮点、安装兼容说明与当前应用绑定入口，移除过时的未发布预告（[#1464](https://github.com/BotHarness/DeepSeekBot/issues/1464)）。
+
+- 公开安装入口使用经过验证的稳定版精确包版本，增加双语 README/教程同步检查和新版本冷却期恢复说明，不再暗示裸包名或 `@latest` 总会安装最新版本（[#1456](https://github.com/BotHarness/DeepSeekBot/issues/1456)）。
+
 - DeepSeekBot 的 GitHub Release 公告顶部提供按版本区分的官网与中英文安装入口；短链保留 GitHub 来源、Release 版本与入口归因，不改变统计授权行为（[#1445](https://github.com/BotHarness/DeepSeekBot/issues/1445)）。
 
 - 新增隔离 Linux 私密输入复验指南，说明 tailnet Web 访问、IM 接收器独占交接、跨平台路径元数据和非 root 工作区的明确文件权限（[#1386](https://github.com/BotHarness/DeepSeekBot/issues/1386)，[指南](docs/dev/guides/private-input-linux.md)）。`ask_secret` 工具现明确提示 Web 和 Schedule 复用已配置账号时省略仅用于 IM 的来源选择字段。
 
 - 中英文 README 新增 Product Hunt 发布徽章（[#1427](https://github.com/BotHarness/DeepSeekBot/issues/1427)）。
 
-- 新增面向人的双语贡献指南与社区入口，区分求助、想法、案例和明确的 Issue / PR；运行行为不变（[contributor guide](CONTRIBUTING.md)、[#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)）。
+- 新增面向人的双语贡献指南与社区入口，区分求助、想法、案例和明确的 Issue / PR，并提供可复制的说明用 Bug 报告示例与脱敏指引；运行行为不变（[contributor guide](CONTRIBUTING.md)、[#1396](https://github.com/BotHarness/DeepSeekBot/issues/1396)、[#1403](https://github.com/BotHarness/DeepSeekBot/issues/1403)）。
 
 - 双语 README 明确 DeepSeekBot 的项目身份、官网与安装入口及其与 DS Bot 的区别，并区分正式 npm 与当前源码的 Browser / Computer 能力范围（[#1399](https://github.com/BotHarness/DeepSeekBot/issues/1399)）。
 

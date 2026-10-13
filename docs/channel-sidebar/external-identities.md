@@ -1,6 +1,6 @@
 # External identities
 
-Open **Bot DM → Channel sidebar → External identities**. It lists the external apps bound to this Bot (Lark / Feishu, Slack, Discord, WeChat and so on). An app belongs to exactly one Bot; other Bots cannot borrow it. A Bot can bind several apps, including several of the same platform (for example two Lark apps): each app receives its own DMs and @mentions into the same Inbox, and the Bot replies through the app that received the message. Apps are listed grouped by platform.
+Open **Bot DM → ··· → Channel settings… → External identities** (or the Channel sidebar gear, **Channel sidebar settings → Channel settings…**). It lists the external apps bound to this Bot (Lark / Feishu, Slack, Discord, WeChat and so on). An app belongs to exactly one Bot; other Bots cannot borrow it. A Bot can bind several apps, including several of the same platform (for example two Lark apps): each app receives its own DMs and @mentions into the same Inbox, and the Bot replies through the app that received the message. Apps are listed grouped by platform.
 
 **Binding an app is enough.** Once bound, DMs to the app and @mentions of it in groups it belongs to go straight to this Bot’s Inbox, and the Bot replies in the same conversation. You don’t need a saved delivery target, a conversation authorization or a reception switch. Who can reach the app is decided by each platform's settings, such as Lark's availability scope, group membership and app permissions, or Discord's channel permissions.
 
@@ -8,20 +8,20 @@ The same goes for Slack and Discord: DM the app or @mention it in a channel it b
 
 The first [official QQ Bot application path](/docs/qq-connection) receives text @mentions in groups and replies in the original group. Its ready state refers to group mentions. QQ private messages, ordinary traffic and media need separate capabilities; passive replies have the platform's five-minute window.
 
-![The External identities entry with one row per bound app](/guides/channel-sidebar/18-external-identities-zh.webp)
+![External identities with one row per bound app](/guides/channel-sidebar/18-external-identities-zh.webp)
 
 ## Connection tutorials
 
-Open **+ Bind app** for direct links to the website tutorials for [Lark / Feishu](/docs/lark-connection), [Slack](/docs/slack-connection) and [WeChat](/docs/wechat-connection). **More platforms** opens this overview, including Discord. Each link has an upper-right arrow and opens in a new tab so the binding dialog stays available. Application creation, permissions and publication instructions live in those tutorials; the sidebar has no separate Lark setup card.
+Open **+ Bind app** for direct links to the website tutorials for [Lark / Feishu](/docs/lark-connection), [Slack](/docs/slack-connection) and [WeChat](/docs/wechat-connection). **More platforms** opens this overview, including Discord. Each link has an upper-right arrow and opens in a new tab so the binding dialog stays available. Application creation, permissions and publication instructions live in those tutorials; Channel settings has no separate Lark setup card.
 
 ## Read the rows
 
-| Row                             | What it shows and does                                                                                                                                               |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One row per bound app           | Local display name, a status chip (**Available**, **Paused**, **Unavailable** or **Rebind required**) and “platform · N conversation(s)”. The Switch pauses the app. |
-| **+ Bind app**                  | Bind a connected app to this Bot.                                                                                                                                    |
-| **IM administrator pairing**    | Shows “N pending” and “N paired”. Opens the pairing review dialog; see [Connect a Bot to Lark / Feishu](/docs/lark-connection).                                      |
-| **Lark approval notifications** | Shows the destination, or **Automatic notifications off**. Opens the approval notification dialog.                                                                   |
+| Row                          | What it shows and does                                                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| One row per bound app        | Local display name, a status chip (**Available**, **Paused**, **Unavailable** or **Rebind required**) and “platform · N conversation(s)”. The Switch pauses the app. |
+| **+ Bind app**               | Bind a connected app to this Bot.                                                                                                                                    |
+| **IM administrator pairing** | Shows “N pending” and “N paired”. Opens the pairing review dialog; see [Connect a Bot to Lark / Feishu](/docs/lark-connection).                                      |
+| **Management notifications** | Shows the destination, or **Automatic notifications off**. Opens the approval notification dialog.                                                                   |
 
 ## Bind an app
 

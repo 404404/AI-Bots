@@ -6,7 +6,6 @@ import type { PersonaBotActivitySnapshot } from '../state/bot-state.js';
 import { randomUUID } from 'node:crypto';
 import type { ChannelToolApproval, ToolApprovalNotice } from '../workspaces/tool-approval.js';
 import type { ChannelUserQuestions, ChannelQuestionNotice } from '../channels/user-questions.js';
-import { dmChannelId } from '../channels/channel.js';
 import {
   companionSources,
   companionSourceEnabled,
@@ -173,8 +172,8 @@ export function createCompanionFeed(source: FeedSource): CompanionFeed {
           owner.requests(bot.slug).map((request) => ({
             ...request,
             kind: 'user-question',
-            channelId: dmChannelId(bot.slug),
-            channelName: bot.name,
+            channelId: request.channelId,
+            channelName: request.groupName ?? bot.name,
           })),
         (listener) => owner.subscribe(listener),
       );
@@ -186,8 +185,8 @@ export function createCompanionFeed(source: FeedSource): CompanionFeed {
           owner.requests(bot.slug).map((request) => ({
             ...request,
             kind: 'tool-approval',
-            channelId: dmChannelId(bot.slug),
-            channelName: bot.name,
+            channelId: request.channelId,
+            channelName: request.groupName ?? bot.name,
           })),
         (listener) => owner.subscribe(listener),
       );

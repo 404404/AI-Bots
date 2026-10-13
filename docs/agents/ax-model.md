@@ -40,7 +40,7 @@ DeepSeek setup remains the fallback when no AX selection exists. To rotate the s
 inspect and remove the private file yourself, then rerun setup; active Hosts keep their inherited
 environment until restarted.
 
-### Native Go Session header on DSH 0.2.0 RC1
+### Native Go Session header on DSH 0.2.0 RC1 and RC2
 
 OpenCode Go requires `x-opencode-session` for the actual conversation as well as request
 attribution. The pinned native adapter forwards `sessionId` to its underlying SDK but omits
@@ -48,11 +48,23 @@ this header; the first real QA turn failed with HTTP 400 `MissingSessionID`.
 
 For an opted-in AX launch, the helper installs an independent pinned CLI under the isolated
 home's `ax-cli` directory (or `packaged-cli` for product-artifact qualification). It applies the
-reviewed `dsh-llm-pi-ai@0.2.0-rc.1` pnpm patch: only the Go route adds the actual
+reviewed `dsh-llm-pi-ai` pnpm patch (re-keyed to `0.2.0-rc.2`, same hunk): only the Go route adds the actual
 `GenerateOptions.sessionId`, removes case-insensitive collisions with a configured static
 header, and retains native `User-Agent` attribution and other headers. Missing Session identity
 stays missing; no fixed, random or substitute identity is supplied. Other Providers keep their
 existing headers. The Go qualification refuses a different DSH version until reverified.
+
+The helper copies the reviewed patch into that CLI's `patches/` directory and uses a relative
+path in its `pnpm-workspace.yaml`. Windows pnpm otherwise resolves a drive-qualified patch path
+under the runtime directory and fails with `ERR_PNPM_PATCH_NOT_FOUND`, especially when the source
+worktree and isolated home are on different drives. Each launch refreshes the staged bytes from
+the worktree; other workspace settings and patch entries are preserved.
+
+RC2 status: the repository default is DSH `0.2.0-rc.2`. The RC2 adapter still omits the header,
+the patch applies to it unchanged, and the adapter regression
+(`scripts/test/dev-go-session.test.mjs`) passes against the patched RC2 package. On 2026-10-13 a
+fresh opted-in isolated Profile on RC2 answered one real Go DM with a committed reply, so the
+launcher guard now names `0.2.0-rc.2`.
 
 This changes no global CLI or application permissions. Each opted-in AX home gets its own
 runtime, while model selection and the credential reference remain launch Patches. See the

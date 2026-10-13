@@ -20,6 +20,8 @@ import {
   axModelPatch,
   axRuntimeWorkspace,
   DEFAULT_GO_MODEL,
+  GO_RUNTIME_PATCH,
+  GO_SESSION_PATCH,
   resolveAxModel,
   saveAxModel,
 } from '../dev-model.mjs';
@@ -36,16 +38,24 @@ afterEach(() => {
 
 describe('AX native OpenCode Go reuse', () => {
   it('qualifies the independent CLI without replacing other workspace decisions', () => {
+    const { root } = fixture();
+    const runtime = join(root, 'isolated CLI with spaces');
     const workspace = parse(
       axRuntimeWorkspace(
         'packages: [.]\nallowBuilds: {koffi: true}\npatchedDependencies: {other: other.patch}\n',
+        runtime,
       ),
     );
     expect(workspace.allowBuilds).toEqual({ koffi: true });
     expect(workspace.patchedDependencies.other).toBe('other.patch');
-    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1']).toContain(
-      '/patches/',
+    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2']).toBe(
+      GO_RUNTIME_PATCH,
     );
+    const staged = join(runtime, GO_RUNTIME_PATCH);
+    expect(readFileSync(staged)).toEqual(readFileSync(GO_SESSION_PATCH));
+    writeFileSync(staged, 'stale patch');
+    axRuntimeWorkspace('packages: [.]\n', runtime);
+    expect(readFileSync(staged)).toEqual(readFileSync(GO_SESSION_PATCH));
   });
   it('requires explicit setup, then shares a protected key with successive launches', () => {
     const { path } = fixture();

@@ -1171,33 +1171,40 @@ window.__ModuleLoader__.load({
 				children
 			});
 		}
-		function SidebarCardRow({ icon, iconLabel, selection, title, titleClassName, hint, chips, meta, trailing, detail, onClick, disabled, muted, mainClassName, dialog, expanded, controls, state, anchor }) {
-			const body = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [icon === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: "bh-card-icon",
-				role: iconLabel === void 0 ? void 0 : "img",
-				"aria-label": iconLabel,
-				title: iconLabel,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChannelSidebarIcon, {
-					name: icon,
-					size: 16
-				})
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				className: "bh-card-body",
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
-						children: title
-					}),
-					chips === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bh-card-chips",
-						children: chips
-					}),
-					meta === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bh-card-meta",
-						children: meta
+		function SidebarCardRow({ icon, leading, iconLabel, selection, title, titleClassName, hint, chips, meta, trailing, detail, onClick, disabled, muted, mainClassName, dialog, expanded, controls, state, anchor }) {
+			const body = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				leading === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-card-leading",
+					children: leading
+				}),
+				icon === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-card-icon",
+					role: iconLabel === void 0 ? void 0 : "img",
+					"aria-label": iconLabel,
+					title: iconLabel,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChannelSidebarIcon, {
+						name: icon,
+						size: 16
 					})
-				]
-			})] });
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					className: "bh-card-body",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
+							children: title
+						}),
+						chips === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-chips",
+							children: chips
+						}),
+						meta === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-meta",
+							children: meta
+						})
+					]
+				})
+			] });
 			const className = mainClassName === void 0 ? "bh-card-main" : "bh-card-main " + mainClassName;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
 				className: "bh-card-row",
@@ -1301,6 +1308,8 @@ window.__ModuleLoader__.load({
 			"entry.takeover.active": "接管中",
 			"entry.label": "浏览器",
 			"entry.access.title": "Browser Access",
+			"entry.access.on": "Browser Access 已开启",
+			"entry.access.description": "开启后，该 Bot 的会话可以使用浏览器",
 			"entry.access.enable": "启用 Browser Access",
 			"entry.access.disable": "停用 Browser Access",
 			"entry.access.failed": "切换 Browser Access 失败",
@@ -1423,6 +1432,8 @@ window.__ModuleLoader__.load({
 			"entry.takeover.active": "Taking over",
 			"entry.label": "Browser",
 			"entry.access.title": "Browser Access",
+			"entry.access.on": "Browser Access is on",
+			"entry.access.description": "This PersonaBot's sessions may use the browser",
 			"entry.access.enable": "Enable Browser Access",
 			"entry.access.disable": "Disable Browser Access",
 			"entry.access.failed": "Failed to switch Browser Access",
@@ -2395,6 +2406,15 @@ window.__ModuleLoader__.load({
 			if (!response.ok || body.ok === false) throw new BrowserApiError(body.error ?? `HTTP ${String(response.status)}`, body.code, body.detail);
 			return body;
 		}
+		const botInfoStores = /* @__PURE__ */ new Map();
+		function botInfoStore(botSlug) {
+			const key = botSlug ?? "";
+			const existing = botInfoStores.get(key);
+			if (existing !== void 0) return existing;
+			const created = createBotInfoStore(botSlug);
+			botInfoStores.set(key, created);
+			return created;
+		}
 		function createBotInfoStore(botSlug) {
 			let info = {
 				displayName: void 0,
@@ -2403,7 +2423,7 @@ window.__ModuleLoader__.load({
 				profiles: []
 			};
 			const listeners = /* @__PURE__ */ new Set();
-			let started = false;
+			let loadedAt = Number.NEGATIVE_INFINITY;
 			const load = () => {
 				const rpc = connectionRpc;
 				if (rpc === void 0 || botSlug === void 0) return;
@@ -2431,8 +2451,8 @@ window.__ModuleLoader__.load({
 					for (const listener of listeners) listener();
 				},
 				subscribe(listener) {
-					if (!started) {
-						started = true;
+					if (listeners.size === 0 && Date.now() - loadedAt > 5e3) {
+						loadedAt = Date.now();
 						load();
 					}
 					listeners.add(listener);
@@ -2510,14 +2530,13 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function BrowserHeaderAction({ botSlug, t, setExpandable, setExpanded }) {
-			const [store] = (0, react.useState)(() => createBotInfoStore(botSlug));
+			const store = botInfoStore(botSlug);
 			const [busy, setBusy] = (0, react.useState)(false);
 			const inFlight = (0, react.useRef)(false);
 			const [error, setError] = (0, react.useState)(false);
 			const subscribe = (listener) => {
 				const sync = () => {
-					const access = store.getSnapshot().browserAccess === true;
-					setExpandable?.(access);
+					setExpandable?.(store.getSnapshot().browserAccess !== void 0);
 				};
 				const unsubscribe = store.subscribe(() => {
 					sync();
@@ -2544,7 +2563,6 @@ window.__ModuleLoader__.load({
 					}
 					const applied = result.value.bot?.browserAccess === true;
 					store.setAccess(applied);
-					setExpandable?.(applied);
 					setExpanded?.(applied);
 				}).catch(() => {
 					setError(true);
@@ -2580,7 +2598,7 @@ window.__ModuleLoader__.load({
 		}
 		function BrowserBody({ botSlug, t }) {
 			const [store] = (0, react.useState)(() => createObservationStore(botSlug));
-			const [infoStore] = (0, react.useState)(() => createBotInfoStore(botSlug));
+			const infoStore = botInfoStore(botSlug);
 			const observation = (0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot);
 			const info = (0, react.useSyncExternalStore)(infoStore.subscribe, infoStore.getSnapshot);
 			const [follow, setFollow] = (0, react.useState)(true);
@@ -3024,9 +3042,25 @@ window.__ModuleLoader__.load({
 		}
 		function createBrowserBody(t) {
 			return function BrowserBodyView(props) {
+				const store = botInfoStore(props.botSlug);
+				if ((0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot).browserAccess === false) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "bh-browser-note",
+					children: t("entry.access.description")
+				});
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BrowserBody, {
 					...props,
 					t
+				});
+			};
+		}
+		function createBrowserBadge(t) {
+			return function BrowserBadge({ botSlug }) {
+				const store = botInfoStore(botSlug);
+				if ((0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot).browserAccess !== true) return null;
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-channel-sidebar-live-dot",
+					role: "img",
+					"aria-label": t("entry.access.on")
 				});
 			};
 		}
@@ -3039,10 +3073,13 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function apply(ctx) {
+			botInfoStores.clear();
 			const t = ctx.locale.bind(LOCALE_NS);
 			registerBrowserSettings(ctx, t);
 			ctx.effect(() => {
 				const sheet = document.createElement("style");
+				sheet.dataset.plugin = "@botharness/browser";
+				sheet.dataset.pluginCss = "@botharness/browser/client.css";
 				sheet.textContent = styles;
 				document.head.append(sheet);
 				return () => sheet.remove();
@@ -3062,7 +3099,9 @@ window.__ModuleLoader__.load({
 					order: 41,
 					scope: "personabot",
 					component: createBrowserBody(t),
-					headerAction: createBrowserHeader(t)
+					headerAction: createBrowserHeader(t),
+					badge: createBrowserBadge(t),
+					tab: "screen"
 				}), "botharness-browser: channel sidebar entry");
 			});
 		}

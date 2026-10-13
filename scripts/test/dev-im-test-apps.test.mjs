@@ -7,6 +7,8 @@ import {
   imTestAppsPath,
   listImTestApps,
   loadImTestApp,
+  loadSlackImTestApp,
+  listSlackImTestApps,
   saveImTestAppValues,
 } from '../dev-im-test-apps.mjs';
 
@@ -36,6 +38,24 @@ const configuration = [
   'BH_LARK_QA2_DOMAIN=lark',
   'BH_LARK_QA2_APP_ID=cli_test_two',
   'BH_LARK_QA2_APP_SECRET=test-secret-two',
+].join('\n');
+
+const slackConfiguration = [
+  'BH_SLACK_QA_SLOT=QA2',
+  'BH_SLACK_QA1_NAME=BotHarness Slack QA',
+  'BH_SLACK_QA1_WORKSPACE_NAME=QA Workspace One',
+  'BH_SLACK_QA1_WORKSPACE_URL=https://qa-one.slack.com',
+  'BH_SLACK_QA1_APP_ID=AQAONE',
+  'BH_SLACK_QA1_BOT_TOKEN=xoxb-synthetic-bot-token-one',
+  'BH_SLACK_QA1_APP_TOKEN=xapp-synthetic-app-token-one',
+  'BH_SLACK_QA1_CONSOLE_READY=yes',
+  'BH_SLACK_QA1_RECEIVER_CHECKED_AT=2026-10-11T17:20:00Z',
+  'BH_SLACK_QA2_NAME=BotHarness Slack QA Two',
+  'BH_SLACK_QA2_WORKSPACE_NAME=QA Workspace Two',
+  'BH_SLACK_QA2_WORKSPACE_URL=https://qa-two.slack.com',
+  'BH_SLACK_QA2_APP_ID=AQATWO',
+  'BH_SLACK_QA2_BOT_TOKEN=xoxb-synthetic-bot-token-two',
+  'BH_SLACK_QA2_APP_TOKEN=xapp-synthetic-app-token-two',
 ].join('\n');
 
 describe('machine-local reusable IM test Apps', () => {
@@ -83,6 +103,81 @@ describe('machine-local reusable IM test Apps', () => {
       appSecret: 'SYNTHETIC-WIZARD-SECRET',
       consoleReady: false,
     });
+  });
+
+  it('shares Slack slots independently while preserving Lark data and legacy-readable comments', () => {
+    const options = fixture(configuration);
+    const larkBefore = loadImTestApp(undefined, options);
+    saveImTestAppValues(slackConfiguration, options);
+    expect(loadImTestApp(undefined, options)).toEqual(larkBefore);
+    expect(loadSlackImTestApp(undefined, options)).toMatchObject({
+      slot: 'QA2',
+      name: 'BotHarness Slack QA Two',
+      workspaceUrl: 'https://qa-two.slack.com',
+      botToken: 'xoxb-synthetic-bot-token-two',
+      appToken: 'xapp-synthetic-app-token-two',
+      consoleReady: false,
+    });
+    expect(loadSlackImTestApp('QA1', options)).toMatchObject({
+      name: 'BotHarness Slack QA',
+      appId: 'AQAONE',
+      consoleReady: true,
+    });
+    const stored = readFileSync(options.path, 'utf8');
+    expect(stored).toContain('# BH_SLACK_QA2_BOT_TOKEN=xoxb-synthetic-bot-token-two');
+    expect(stored).not.toMatch(/^BH_SLACK_/mu);
+    const slackBefore = loadSlackImTestApp('QA1', options);
+    saveImTestAppValues('BH_LARK_QA1_CONSOLE_READY=pending', options);
+    expect(loadSlackImTestApp('QA1', options)).toEqual(slackBefore);
+    saveImTestAppValues('BH_SLACK_QA2_NAME=Slack $(exit 99) = literal', options);
+    expect(loadSlackImTestApp('QA2', options).name).toBe('Slack $(exit 99) = literal');
+    expect(() => loadSlackImTestApp('QA3', options)).toThrow('incomplete');
+  });
+
+  it('refuses swapped tokens, unsafe metadata and duplicate Slack keys without exposing values', () => {
+    for (const text of [
+      slackConfiguration.replace('xoxb-synthetic-bot-token-one', 'xapp-synthetic-bot-token-one'),
+      slackConfiguration.replace('xapp-synthetic-app-token-one', 'xoxb-synthetic-app-token-one'),
+      slackConfiguration.replace(
+        'https://qa-one.slack.com',
+        'https://qa-one.slack.com/?token=private',
+      ),
+      slackConfiguration.replace('https://qa-one.slack.com', 'https://user@qa-one.slack.com'),
+      slackConfiguration.replace('AQAONE', 'display-name'),
+    ]) {
+      expect(() => loadSlackImTestApp('QA1', fixture(text))).toThrow(
+        'Slack test slot QA1 is incomplete; run setup slack',
+      );
+    }
+    const options = fixture(configuration);
+    expect(() =>
+      saveImTestAppValues('BH_SLACK_QA_SLOT=QA1\n# BH_SLACK_QA_SLOT=QA2', options),
+    ).toThrow('Duplicate');
+    expect(readFileSync(options.path, 'utf8')).toBe(configuration);
+  });
+
+  it('Slack CLI lists only metadata from the shared file, with no credential or idle claim', () => {
+    const options = fixture(configuration);
+    saveImTestAppValues(slackConfiguration, options);
+    const result = spawnSync(process.execPath, ['scripts/dev-im-test-apps.mjs', 'list', 'slack'], {
+      encoding: 'utf8',
+      timeout: 15_000,
+      env: { ...process.env, BOTHARNESS_IM_TEST_APPS_ENV: options.path },
+    });
+    expect(result.status).toBe(0);
+    const listed = JSON.parse(result.stdout).apps;
+    expect(listed).toEqual(listSlackImTestApps(options));
+    expect(listed[0]).toMatchObject({
+      name: 'BotHarness Slack QA',
+      workspaceName: 'QA Workspace One',
+      credentialsConfigured: true,
+      receiverAvailability: 'requires-current-window-confirmation',
+    });
+    expect(listed[2]).toMatchObject({ name: null, credentialsConfigured: false });
+    for (const value of ['xoxb-', 'xapp-', 'AQAONE', 'test-secret', 'cli_test']) {
+      expect(result.stdout).not.toContain(value);
+      expect(result.stderr).not.toContain(value);
+    }
   });
 
   it('uses a fixed user path independent of the repository and allows an explicit cross-OS file', () => {
