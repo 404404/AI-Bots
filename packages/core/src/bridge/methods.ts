@@ -461,6 +461,7 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<import('../messaging/provider.js').MessagingReachablePage>>;
   messagingPostConversation(payload: unknown): Promise<BridgeResult<{ intent: OutboxIntent }>>;
+  messagingPostRequest(payload: unknown): Promise<BridgeResult<{ intent: OutboxIntent | null }>>;
   messagingPostLimit(payload: unknown): Promise<BridgeResult<{ identity: MessagingIdentity }>>;
   messagingTargets(payload: unknown): Promise<BridgeResult<{ targets: MessagingTarget[] }>>;
   messagingAuthorize(payload: unknown): Promise<BridgeResult<{ grant: MessagingGrant }>>;
@@ -1472,6 +1473,29 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       return messagingCall((service) =>
         service.reachable(input.data.slug, input.data.bindingId, input.data.cursor),
       );
+    },
+    messagingPostRequest(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          bindingId: z.string().uuid(),
+          conversationId: z.string().min(1).max(512),
+          requestId: z.string().min(8).max(128),
+          text: z.string().trim().min(1).max(4000),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid proactive request query'));
+      return messagingCall(async (service) => ({
+        intent:
+          service.postRequest(
+            input.data.slug,
+            input.data.bindingId,
+            input.data.conversationId,
+            input.data.requestId,
+            input.data.text,
+          ) ?? null,
+      }));
     },
     messagingPostConversation(payload) {
       const input = z

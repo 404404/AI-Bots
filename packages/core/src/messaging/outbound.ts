@@ -339,6 +339,13 @@ export interface OutboundMessaging {
     requestId: string,
     text: string,
   ): Promise<OutboxIntent>;
+  postRequest(
+    botSlug: string,
+    bindingId: string,
+    conversationId: string,
+    requestId: string,
+    text: string,
+  ): OutboxIntent | undefined;
   authorize(input: {
     botSlug: string;
     providerId: string;
@@ -516,6 +523,32 @@ export function createOutboundMessaging(options: {
     ) as { body: string } | undefined;
     if (!row) throw new MessagingError('intent-unavailable');
     return JSON.parse(row.body) as StoredIntent;
+  };
+  const postRequest = (
+    botSlug: string,
+    bindingId: string,
+    conversationId: string,
+    requestId: string,
+    text: string,
+  ): StoredIntent | undefined => {
+    if (!/^[A-Za-z0-9_-]{8,128}$/.test(requestId) || !text.trim() || text.length > 4000)
+      throw new MessagingError('invalid-input');
+    const row = database.read((db) =>
+      db.prepare('SELECT id FROM messaging_outbox WHERE request_id = ?').get(requestId),
+    ) as { id: string } | undefined;
+    if (!row) return undefined;
+    const value = readIntent(row.id);
+    if (
+      value.botSlug !== botSlug ||
+      value.report?.conversationId !== conversationId ||
+      value.payloadHash !==
+        createHash('sha256')
+          .update(JSON.stringify(['report', text]))
+          .digest('hex') ||
+      grant(botSlug, value.grantId).bindingId !== bindingId
+    )
+      throw new MessagingError('request-conflict');
+    return value;
   };
   const settle = (
     id: string,
@@ -1639,6 +1672,8 @@ export function createOutboundMessaging(options: {
     },
     async postConversation(botSlug, bindingId, conversationId, requestId, text) {
       active(botSlug);
+      const prior = postRequest(botSlug, bindingId, conversationId, requestId, text);
+      if (prior) return prior;
       const identity = enabledBinding(bindingId);
       if (identity.botSlug !== botSlug) throw new MessagingError('identity-unavailable');
       const entry = provider(identity.providerId);
@@ -1724,6 +1759,10 @@ export function createOutboundMessaging(options: {
       );
       inbound.startEntry(created);
       return service.post(botSlug, created, requestId, text);
+    },
+    postRequest(botSlug, bindingId, conversationId, requestId, text) {
+      active(botSlug);
+      return postRequest(botSlug, bindingId, conversationId, requestId, text);
     },
     async post(botSlug, grantId, requestId, text) {
       const value = grant(botSlug, grantId);

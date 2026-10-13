@@ -29,6 +29,15 @@ function intent(state: OutboxIntent['state'] = 'provider-accepted'): OutboxInten
     grantRevision: 1,
     text: 'One report',
     state,
+    report: {
+      providerId: 'dsh-im/feishu',
+      accountRef: 'qa',
+      fingerprint: 'a'.repeat(64),
+      platform: 'feishu',
+      accountName: 'QA app',
+      targetName: 'New QA group',
+      conversationId: 'oc_new',
+    },
     createdAt: '2026-10-13T00:00:00Z',
   };
 }
@@ -36,6 +45,7 @@ function intent(state: OutboxIntent['state'] = 'provider-accepted'): OutboxInten
 async function fixture(
   post: NonNullable<BridgeActions['messagingPostConversation']>,
   refresh = async () => {},
+  read?: BridgeActions['messagingPostRequest'],
 ) {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const host = document.createElement('div');
@@ -74,6 +84,7 @@ async function fixture(
               hasMore: false,
             }),
             messagingPostConversation: post,
+            ...(read ? { messagingPostRequest: read } : {}),
             messagingPostLimit: async () => {},
           },
         }),
@@ -193,6 +204,50 @@ it('preserves acceptance when refreshing the conversation list fails', async () 
     expect(view.host.textContent).not.toContain(zhTranslate('proactive.sendError'));
   } finally {
     await view.dispose();
+  }
+});
+
+it('reconciles the original Outbox result on reopen through a read-only query, without posting', async () => {
+  const post = vi.fn<NonNullable<BridgeActions['messagingPostConversation']>>(async () => {
+    throw new Error('Response lost');
+  });
+  const read = vi.fn<NonNullable<BridgeActions['messagingPostRequest']>>(async () => intent());
+  const view = await fixture(post, async () => {}, read);
+  try {
+    await act(async () => view.send().click());
+    const requestId = post.mock.calls[0]?.[3];
+    await view.close();
+    await view.render();
+    expect(read.mock.calls.at(-1)?.[3]).toBe(requestId);
+    expect(view.host.textContent).toContain(zhTranslate('proactive.accepted'));
+    expect(view.send().disabled).toBe(false);
+    expect(post).toHaveBeenCalledTimes(1);
+  } finally {
+    await view.dispose();
+  }
+});
+
+it('reads an in-flight result until settled without retrying the native effect', async () => {
+  vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+  const post = vi.fn(async () => {
+    throw new Error('Response lost');
+  });
+  let state: OutboxIntent['state'] = 'in-flight';
+  const read = vi.fn(async () => intent(state));
+  const view = await fixture(post, async () => {}, read);
+  try {
+    await act(async () => view.send().click());
+    await view.close();
+    await view.render();
+    expect(view.send().disabled).toBe(true);
+    state = 'provider-accepted';
+    await act(async () => vi.advanceTimersByTimeAsync(2_000));
+    expect(view.host.textContent).toContain(zhTranslate('proactive.accepted'));
+    expect(view.send().disabled).toBe(false);
+    expect(post).toHaveBeenCalledTimes(1);
+  } finally {
+    await view.dispose();
+    vi.useRealTimers();
   }
 });
 

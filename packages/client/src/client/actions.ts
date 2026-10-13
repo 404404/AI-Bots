@@ -82,6 +82,7 @@ import {
   loadMessagingSnapshot,
   loadMessagingReachable,
   postMessagingConversation,
+  readMessagingPostRequest,
   setMessagingPostLimit,
   manageMessagingIdentity,
   manageMessagingConversation,
@@ -370,6 +371,13 @@ export interface BridgeActions {
     requestId: string,
     text: string,
   ): Promise<OutboxIntent>;
+  messagingPostRequest?(
+    slug: string,
+    bindingId: string,
+    conversationId: string,
+    requestId: string,
+    text: string,
+  ): Promise<OutboxIntent | undefined>;
   messagingPostLimit?(
     slug: string,
     bindingId: string,
@@ -2358,6 +2366,8 @@ export function createActions(
       loadMessagingReachable(call, slug, bindingId, cursor),
     messagingPostConversation: (slug, bindingId, conversationId, requestId, text) =>
       postMessagingConversation(call, slug, bindingId, conversationId, requestId, text),
+    messagingPostRequest: (slug, bindingId, conversationId, requestId, text) =>
+      readMessagingPostRequest(call, slug, bindingId, conversationId, requestId, text),
     messagingPostLimit: (slug, bindingId, expectedRevision, limit) =>
       setMessagingPostLimit(call, slug, bindingId, expectedRevision, limit),
     messagingTargets: (providerId, accountRef) =>

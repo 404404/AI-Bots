@@ -4471,6 +4471,28 @@ export async function loadMessagingReachable(
     throw new BridgeCallError('invalid-response', 'Invalid group page');
   return page as unknown as import('../../../core/src/messaging/provider.js').MessagingReachablePage;
 }
+export async function readMessagingPostRequest(
+  call: BridgeCall,
+  slug: string,
+  bindingId: string,
+  conversationId: string,
+  requestId: string,
+  text: string,
+): Promise<OutboxIntent | undefined> {
+  const record = asRecord(
+    await unwrap(call, 'messagingPostRequest', {
+      slug,
+      bindingId,
+      conversationId,
+      requestId,
+      text,
+    }),
+  );
+  if (record?.['intent'] === null) return undefined;
+  if (!record || !asRecord(record['intent']))
+    throw new BridgeCallError('invalid-response', 'Invalid intent');
+  return record['intent'] as OutboxIntent;
+}
 export async function postMessagingConversation(
   call: BridgeCall,
   slug: string,

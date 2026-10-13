@@ -23,7 +23,10 @@ export function ReachablePostDialog({
   recoveryScope: string | undefined;
   actions: Pick<
     BridgeActions,
-    'messagingReachable' | 'messagingPostConversation' | 'messagingPostLimit'
+    | 'messagingReachable'
+    | 'messagingPostConversation'
+    | 'messagingPostLimit'
+    | 'messagingPostRequest'
   >;
   t: BotHarnessTranslate;
   onClose(): void;
@@ -48,6 +51,8 @@ export function ReachablePostDialog({
   const [legacy, setLegacy] = useState(false);
   const live = useRef(false);
   const request = useSyncExternalStore(requests.subscribe, () => requests.read(group, text));
+  const selected = useRef({ group, text });
+  selected.current = { group, text };
   const load = async (next?: string) => {
     setLoading(true);
     setError('');
@@ -77,10 +82,45 @@ export function ReachablePostDialog({
   const mount = useMountedResource<HTMLDivElement>(() => {
     live.current = true;
     void load();
+    let reading = false;
+    const reconcile = async () => {
+      const draft = requests.read(selected.current.group, selected.current.text);
+      if (
+        requests.failed ||
+        reading ||
+        !actions.messagingPostRequest ||
+        !draft ||
+        !['pending', 'in-flight', 'response-lost'].includes(draft.state)
+      )
+        return;
+      reading = true;
+      try {
+        const intent = await actions.messagingPostRequest(
+          slug,
+          identity.id,
+          draft.group,
+          draft.id,
+          draft.text,
+        );
+        if (
+          intent?.botSlug === slug &&
+          intent.text === draft.text &&
+          intent.report?.conversationId === draft.group
+        )
+          requests.finish(draft, intent.state, intent.reason);
+      } catch {
+        return;
+      } finally {
+        reading = false;
+      }
+    };
+    void reconcile();
+    const timer = setInterval(() => void reconcile(), 2_000);
     return () => {
       live.current = false;
+      clearInterval(timer);
     };
-  }, [identity.id]);
+  }, [identity.id, requests]);
   const unknown = request?.state === 'unknown-outcome';
   const pending = request?.state === 'pending' || request?.state === 'in-flight';
   const send = async () => {
@@ -99,6 +139,7 @@ export function ReachablePostDialog({
     setError('');
     let current: ReturnType<typeof requests.begin> | undefined;
     let received = false;
+    const recovering = request?.state === 'response-lost';
     try {
       current = requests.begin(group, text);
       const intent = await actions.messagingPostConversation(
@@ -116,11 +157,12 @@ export function ReachablePostDialog({
         typeof failure === 'object' &&
         'code' in failure &&
         failure.code === 'grant-revoked';
-      if (current) requests.finish(current, refused ? 'grant-revoked' : 'response-lost');
+      if (current)
+        requests.finish(current, refused && !recovering ? 'grant-revoked' : 'response-lost');
       if (live.current)
         setError(
           t(
-            refused
+            refused && !recovering
               ? 'proactive.sendRefused'
               : requests.failed
                 ? 'proactive.recoveryError'

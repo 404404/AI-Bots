@@ -48,14 +48,14 @@ async function fixture(platform: 'feishu' | 'discord' | 'slack' = 'feishu') {
   cores.push(core);
   expect(core.registry.create({ slug: 'ada', displayName: 'Ada' }).ok).toBe(true);
   const provider = createDshImProvider(transport, platform)!;
-  core.externalMessaging.register(provider);
+  const unregister = core.externalMessaging.register(provider);
   const binding = await core.externalMessaging.identity('ada', {
     kind: 'bind',
     providerId: provider.id,
     accountRef: 'qa',
     fingerprint,
   });
-  return { core, binding, transport, posts, home };
+  return { core, binding, transport, posts, home, unregister };
 }
 
 it('the default quota is a rolling sixty posts per Binding and expires after an hour', async () => {
@@ -362,6 +362,90 @@ it('an unknown native post keeps its stable request identity across restart and 
   expect(duplicate.id).toBe(first.id);
   expect(duplicate.state).toBe('unknown-outcome');
   expect(effects).toBe(1);
+});
+
+it('reads the original post after unbind or Provider removal without consulting current native permission', async () => {
+  const { core, binding, transport, posts, unregister } = await fixture();
+  expect(
+    core.externalMessaging.postRequest(
+      'ada',
+      binding.id,
+      'oc_new',
+      'receipt-request',
+      'One report',
+    ),
+  ).toBeUndefined();
+  expect(posts).toHaveLength(0);
+  const accepted = await core.externalMessaging.postConversation(
+    'ada',
+    binding.id,
+    'oc_new',
+    'receipt-request',
+    'One report',
+  );
+  await core.externalMessaging.identity('ada', {
+    kind: 'unbind',
+    id: binding.id,
+    expectedRevision: binding.revision,
+  });
+  unregister();
+  transport.listTargets = async () => {
+    throw new Error('Provider is unavailable');
+  };
+  expect(
+    core.externalMessaging.postRequest('ada', binding.id, 'oc_new', 'receipt-request', 'One report')
+      ?.id,
+  ).toBe(accepted.id);
+  expect(
+    (
+      await core.externalMessaging.postConversation(
+        'ada',
+        binding.id,
+        'oc_new',
+        'receipt-request',
+        'One report',
+      )
+    ).id,
+  ).toBe(accepted.id);
+  expect(() =>
+    core.externalMessaging.postRequest(
+      'ada',
+      binding.id,
+      'oc_other',
+      'receipt-request',
+      'One report',
+    ),
+  ).toThrow('request-conflict');
+  expect(() =>
+    core.externalMessaging.postRequest(
+      'ada',
+      'another-binding',
+      'oc_new',
+      'receipt-request',
+      'One report',
+    ),
+  ).toThrow('request-conflict');
+  expect(() =>
+    core.externalMessaging.postRequest(
+      'ada',
+      binding.id,
+      'oc_new',
+      'receipt-request',
+      'Changed text',
+    ),
+  ).toThrow('request-conflict');
+  expect(
+    (
+      await core.externalMessaging.postConversation(
+        'ada',
+        binding.id,
+        'oc_new',
+        'receipt-request',
+        'One report',
+      )
+    ).state,
+  ).toBe('provider-accepted');
+  expect(posts).toEqual(['One report']);
 });
 
 it('an older Provider explains unavailable reachability and preserves checked saved-target posting', async () => {

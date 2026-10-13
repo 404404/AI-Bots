@@ -110,6 +110,7 @@ describe('bridge typert service', () => {
       'messagingTargets',
       'messagingReachable',
       'messagingPostConversation',
+      'messagingPostRequest',
       'messagingPostLimit',
       'messagingAuthorize',
       'messagingRevoke',

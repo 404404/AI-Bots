@@ -486,6 +486,17 @@ export class BotharnessBridgeService extends TypertRemoteService {
       this.methods.messagingReachable({ slug, bindingId, ...(cursor ? { cursor } : {}) }),
     );
   }
+  messagingPostRequest(
+    slug: string,
+    bindingId: string,
+    conversationId: string,
+    requestId: string,
+    text: string,
+  ): Promise<{ intent: OutboxIntent | null }> {
+    return unwrapAsync(
+      this.methods.messagingPostRequest({ slug, bindingId, conversationId, requestId, text }),
+    );
+  }
   messagingPostConversation(
     slug: string,
     bindingId: string,
@@ -1500,6 +1511,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'messagingTargets',
   'messagingReachable',
   'messagingPostConversation',
+  'messagingPostRequest',
   'messagingPostLimit',
   'messagingAuthorize',
   'messagingRevoke',
