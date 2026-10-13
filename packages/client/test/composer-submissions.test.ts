@@ -416,6 +416,38 @@ describe('submission snapshots in the send flow', () => {
     await expect(view.actions.send('newer one')).resolves.toBe(true);
     expect(view.history()).toEqual(['slow one:failed', 'newer one:sent']);
   });
+  it('a second tab follows a failure restored or newly failed in the first', async () => {
+    const storage = memoryStorage();
+    const first = await open(storage);
+    first.host.send = () => {
+      throw new BridgeCallError('invalid-input', 'rejected');
+    };
+    await first.actions.send('shared failure');
+    const second = await open(storage);
+    expect(second.bubbles()).toEqual(['shared failure:failed']);
+    const id = second.clientStore.getSnapshot().conversation.messages[0]!.id;
+    expect(second.actions.dismissFailedMessage('dm-ada', id)).toBe(true);
+    first.actions.submissions.sync('dm-ada');
+    expect(first.bubbles()).toEqual([]);
+    expect(first.actions.dismissFailedMessage('dm-ada', id)).toBe(false);
+    await first.actions.send('another failure');
+    second.actions.submissions.sync('dm-ada');
+    expect(second.bubbles()).toEqual(['another failure:failed']);
+  });
+  it('a second tab follows an unconfirmed input that the first tab settled as failed', async () => {
+    const storage = memoryStorage();
+    const first = await open(storage);
+    first.host.send = () => {
+      throw new Error('connection closed');
+    };
+    await first.actions.send('checked elsewhere');
+    const second = await open(storage);
+    expect(second.bubbles()).toEqual(['checked elsewhere:unconfirmed']);
+    await first.actions.submissions.reconcile('dm-ada');
+    expect(first.bubbles()).toEqual(['checked elsewhere:failed']);
+    second.actions.submissions.sync('dm-ada');
+    expect(second.bubbles()).toEqual(['checked elsewhere:failed']);
+  });
   it('keeps submissions of another Host profile out of this one', async () => {
     const storage = memoryStorage();
     const view = await open(storage, 'profile-1');

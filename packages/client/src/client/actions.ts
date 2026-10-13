@@ -2573,7 +2573,38 @@ export function createActions(
       },
       sync(channelId) {
         const scope = submissionScope(channelId);
-        if (scope !== undefined) submissions.sync(scope);
+        if (scope === undefined) return;
+        submissions.sync(scope);
+        const states = new Map(
+          submissions.read(scope).attempts.map((attempt) => [attempt.id, attempt.state]),
+        );
+        const settledElsewhere = (id: string): boolean =>
+          states.get(id) === 'sent' || states.get(id) === 'restored';
+        failedByChannel.set(
+          channelId,
+          (failedByChannel.get(channelId) ?? []).filter((item) => !settledElsewhere(item.id)),
+        );
+        const conversation = clientStore.getSnapshot().conversation;
+        if (conversation.channel?.id !== channelId || conversation.timeline.hasNewer) return;
+        const failures = localFailedFor(channelId);
+        const failureIds = new Set(failures.map((item) => item.id));
+        let changed = false;
+        const kept = conversation.messages.flatMap((message) => {
+          if (message.failed === undefined || !states.has(message.id)) return [message];
+          if (!failureIds.has(message.id)) {
+            changed = true;
+            return [];
+          }
+          const unconfirmed = states.get(message.id) === 'unknown';
+          if ((message.unconfirmed === true) === unconfirmed) return [message];
+          changed = true;
+          const { unconfirmed: _stale, ...rest } = message;
+          return [unconfirmed ? { ...rest, unconfirmed: true } : rest];
+        });
+        const shown = new Set(kept.map((message) => message.id));
+        const added = failures.filter((item) => !shown.has(item.id));
+        if (!changed && added.length === 0) return;
+        clientStore.setConversation({ messages: [...kept, ...added] });
       },
       check: checkSubmission,
       async reconcile(channelId) {
