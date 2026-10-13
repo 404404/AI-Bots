@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { BotHarnessCore } from '../plugin.js';
 import { PrivateInputs } from './private-inputs.js';
-import { ProtectedExecution } from './protected-execution.js';
+import { ProtectedExecution, SecretHttpRefusal } from './protected-execution.js';
 import type { PrivateInputLog } from './diagnostics.js';
 import { LinuxMcp } from './linux-mcp.js';
 import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
@@ -370,34 +370,45 @@ export function mountPrivateInputs(
                   agent,
                   args.account,
                   references,
-                  (values, signal) => {
+                  async (values, signal) => {
                     const fill = (text: string): string =>
                       text.replace(/\{\{([a-z][a-z0-9_]{0,47})\}\}/g, (_match, field: string) => {
                         const value = field === endpointField ? undefined : values[field];
                         if (value === undefined)
-                          throw new Error('A placeholder names a field that was not referenced');
+                          throw new SecretHttpRefusal(
+                            'A placeholder names a field that was not referenced',
+                          );
                         return value;
                       });
-                    return execution.authenticatedRequest(
-                      {
-                        endpoint: values[endpointField]!,
-                        path: args.path,
-                        method: args.method,
-                        headers: (args.headers ?? []).map((entry) => ({
-                          name: entry.name,
-                          value: fill(entry.value),
-                        })),
-                        query: (args.query ?? []).map((entry) => ({
-                          name: entry.name,
-                          value: fill(entry.value),
-                        })),
-                        ...(args.body === undefined ? {} : { body: fill(args.body) }),
-                      },
-                      Object.entries(values)
-                        .filter(([field]) => field !== endpointField)
-                        .map(([, value]) => value),
-                      signal,
-                    );
+                    try {
+                      return await execution.authenticatedRequest(
+                        {
+                          endpoint: values[endpointField]!,
+                          path: args.path,
+                          method: args.method,
+                          headers: (args.headers ?? []).map((entry) => ({
+                            name: entry.name,
+                            value: fill(entry.value),
+                          })),
+                          query: (args.query ?? []).map((entry) => ({
+                            name: entry.name,
+                            value: fill(entry.value),
+                          })),
+                          ...(args.body === undefined ? {} : { body: fill(args.body) }),
+                        },
+                        Object.entries(values)
+                          .filter(([field]) => field !== endpointField)
+                          .map(([, value]) => value),
+                        signal,
+                      );
+                    } catch (error) {
+                      if (!(error instanceof SecretHttpRefusal)) throw error;
+                      return {
+                        consumer: 'http-request-v1',
+                        successful: false,
+                        refused: error.message,
+                      };
+                    }
                   },
                   call.signal,
                 ),

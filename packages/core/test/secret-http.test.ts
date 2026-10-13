@@ -2,7 +2,11 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { ProtectedExecution, secretHttpTarget } from '../src/credentials/protected-execution.js';
+import {
+  ProtectedExecution,
+  SecretHttpRefusal,
+  secretHttpTarget,
+} from '../src/credentials/protected-execution.js';
 
 const servers: Server[] = [];
 afterEach(async () => {
@@ -50,6 +54,15 @@ describe('Host-run secret HTTP consumer', () => {
       'https://api.example.com/v1/items?x=1',
     );
     expect(secretHttpTarget('https://api.example.com', '').href).toBe('https://api.example.com/');
+    expect(secretHttpTarget('https://api.example.com/v1?version=2', '').href).toBe(
+      'https://api.example.com/v1?version=2',
+    );
+    expect(secretHttpTarget('https://api.example.com/v1?version=2', '/items?x=1').href).toBe(
+      'https://api.example.com/v1/items?version=2&x=1',
+    );
+    expect(() => secretHttpTarget('https://api.example.com/v1', '/../admin')).toThrow(
+      SecretHttpRefusal,
+    );
     for (const [endpoint, path] of [
       ['https://api.example.com/v1', '//evil.example/x'],
       ['https://api.example.com/v1', 'https://evil.example/x'],
@@ -57,7 +70,7 @@ describe('Host-run secret HTTP consumer', () => {
       ['https://api.example.com/v1', '/..%2f..%2fadmin/../../x'],
       ['http://api.example.com/v1', '/items'],
       ['https://user:pass@api.example.com', '/items'],
-      ['https://api.example.com/v1?key=1', '/items'],
+      ['https://api.example.com/v1#part', '/items'],
       ['ftp://api.example.com', '/items'],
       ['not a url', '/items'],
     ] as const)

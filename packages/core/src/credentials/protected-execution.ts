@@ -75,31 +75,38 @@ const SECRET_HTTP_FORBIDDEN_HEADERS = new Set([
 const SECRET_HTTP_BODY_LIMIT = 64_000;
 const SECRET_HTTP_RESPONSE_LIMIT = 32_000;
 
+export class SecretHttpRefusal extends Error {}
+
 export function secretHttpTarget(endpoint: string, path: string): URL {
   let base: URL;
   try {
     base = new URL(endpoint);
   } catch {
-    throw new Error('The Owner-supplied endpoint is not a valid URL');
+    throw new SecretHttpRefusal('The Owner-supplied endpoint is not a valid URL');
   }
   if (!['https:', 'http:'].includes(base.protocol) || base.username || base.password)
-    throw new Error('The Owner-supplied endpoint must be an http(s) URL without credentials');
+    throw new SecretHttpRefusal(
+      'The Owner-supplied endpoint must be an http(s) URL without credentials',
+    );
   if (base.protocol === 'http:' && !['127.0.0.1', 'localhost', '[::1]'].includes(base.hostname))
-    throw new Error('Plain http is allowed only for a local endpoint');
-  if (base.search !== '' || base.hash !== '')
-    throw new Error('The Owner-supplied endpoint must not carry a query or fragment');
+    throw new SecretHttpRefusal('Plain http is allowed only for a local endpoint');
+  if (base.hash !== '')
+    throw new SecretHttpRefusal('The Owner-supplied endpoint must not carry a fragment');
   if (
     path !== '' &&
     (!path.startsWith('/') || path.startsWith('//') || path.includes('\\') || /[\r\n]/.test(path))
   )
-    throw new Error('path must be empty or start with a single /');
+    throw new SecretHttpRefusal('path must be empty or start with a single /');
   const target = new URL(base.pathname.replace(/\/$/, '') + path, base.origin);
   const prefix = base.pathname.replace(/\/$/, '');
   if (
     target.origin !== base.origin ||
     (prefix !== '' && target.pathname !== prefix && !target.pathname.startsWith(prefix + '/'))
   )
-    throw new Error('path leaves the Owner-supplied endpoint');
+    throw new SecretHttpRefusal('path leaves the Owner-supplied endpoint');
+  const merged = new URLSearchParams(base.search);
+  for (const [name, value] of target.searchParams) merged.append(name, value);
+  target.search = merged.toString();
   return target;
 }
 
@@ -224,11 +231,11 @@ export class ProtectedExecution {
     signal: AbortSignal,
   ): Promise<SecretHttpResult> {
     const method = request.method.toUpperCase();
-    if (!SECRET_HTTP_METHODS.has(method)) throw new Error('method is not supported');
+    if (!SECRET_HTTP_METHODS.has(method)) throw new SecretHttpRefusal('method is not supported');
     const target = secretHttpTarget(request.endpoint, request.path);
     for (const entry of request.query) {
       if (entry.name.length === 0 || entry.name.length > 200)
-        throw new Error('query name is invalid');
+        throw new SecretHttpRefusal('query name is invalid');
       target.searchParams.append(entry.name, entry.value);
     }
     const headers: Record<string, string> = {};
@@ -240,14 +247,14 @@ export class ProtectedExecution {
         /[\r\n]/.test(entry.value) ||
         entry.value.length > 8_000
       )
-        throw new Error('header is not allowed');
+        throw new SecretHttpRefusal('header is not allowed');
       headers[name] = entry.value;
     }
     if (
       request.body !== undefined &&
       (method === 'GET' || request.body.length > SECRET_HTTP_BODY_LIMIT)
     )
-      throw new Error('body is not allowed for this request');
+      throw new SecretHttpRefusal('body is not allowed for this request');
     if (signal.aborted || this.#closed) throw new Error('Protected credential execution cancelled');
     const started = Date.now();
     this.log('credential-cli-started', { program: 'http-request-v1' });
