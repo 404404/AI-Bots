@@ -19,6 +19,7 @@ import {
   axModelEnvironment,
   axModelPatch,
   axRuntimeWorkspace,
+  goSessionQualified,
   DEFAULT_GO_MODEL,
   GO_RUNTIME_PATCH,
   GO_SESSION_PATCH,
@@ -56,6 +57,20 @@ describe('AX native OpenCode Go reuse', () => {
     writeFileSync(staged, 'stale patch');
     axRuntimeWorkspace('packages: [.]\n', runtime);
     expect(readFileSync(staged)).toEqual(readFileSync(GO_SESSION_PATCH));
+  });
+  it('keys the staged Go patch by the installed DSH and accepts rc.1 only for product artifacts', () => {
+    const { root } = fixture();
+    const runtime = join(root, 'packaged CLI');
+    const workspace = parse(axRuntimeWorkspace('packages: [.]\n', runtime, '0.2.0-rc.1'));
+    expect(workspace.patchedDependencies).toEqual({
+      '@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1': GO_RUNTIME_PATCH,
+    });
+    expect(readFileSync(join(runtime, GO_RUNTIME_PATCH))).toEqual(readFileSync(GO_SESSION_PATCH));
+    expect(goSessionQualified('0.2.0-rc.2', false)).toBe(true);
+    expect(goSessionQualified('0.2.0-rc.2', true)).toBe(true);
+    expect(goSessionQualified('0.2.0-rc.1', true)).toBe(true);
+    expect(goSessionQualified('0.2.0-rc.1', false)).toBe(false);
+    expect(goSessionQualified('0.2.1', true)).toBe(false);
   });
   it('requires explicit setup, then shares a protected key with successive launches', () => {
     const { path } = fixture();

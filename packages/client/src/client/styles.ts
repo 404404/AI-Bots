@@ -5078,36 +5078,78 @@ html[data-botharness-motion='reduce'] .bh-composer-footer {
   padding-bottom: 14px;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
-.bh-model-allowed {
-  padding-top: 14px;
-  border-top: 1px solid var(--dsw-alias-border-l2);
+.bh-model-editor-modal {
+  width: min(760px, calc(100vw - 32px));
 }
-.bh-model-allowed-row {
+.bh-model-task {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 10px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
+  gap: 8px;
+  min-width: 0;
 }
-.bh-model-allowed-name {
+.bh-model-picker-heading-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.bh-model-picker-heading-row > .bh-model-picker-heading {
+  flex: 1;
+  min-width: 0;
+}
+.bh-model-picker-heading-row > :last-child {
+  flex: none;
+}
+.bh-model-task[data-mode-switched='true'] > .bh-model-allowed,
+.bh-model-task[data-mode-switched='true'] > .bh-model-picker > :not(.bh-model-picker-heading-row) {
+  animation: bh-model-mode-enter 180ms var(--ds-ease-in-out);
+}
+@keyframes bh-model-mode-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+html[data-botharness-motion='reduce'] .bh-model-task > .bh-model-allowed,
+html[data-botharness-motion='reduce'] .bh-model-task > .bh-model-picker > * {
+  animation: none;
+}
+.bh-model-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.bh-model-card-head {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  min-height: 28px;
   font-size: 13px;
 }
-.bh-model-allowed-provider {
+.bh-model-card-provider {
   flex: 1;
   min-width: 0;
   color: var(--dsw-alias-label-secondary);
   font-size: 12px;
 }
-.bh-model-allowed-efforts {
+.bh-model-card-field {
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.bh-model-card-field > span {
+  min-width: 96px;
+  color: var(--dsw-alias-label-secondary);
+}
+.bh-model-card-efforts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
-  font-size: 12px;
 }
 .bh-model-save-preset {
   display: flex;

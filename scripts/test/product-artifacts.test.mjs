@@ -197,6 +197,25 @@ describe('packaged product selection', () => {
 });
 
 describe('release composition', () => {
+  it('ships the PersonaBot agent preset and selects it in both umbrella patches', () => {
+    for (const patch of ['cordis.patch.yml', 'cordis.im.patch.yml']) {
+      const rows = parse(
+        readFileSync(new URL(`../../packages/deepseekbot/${patch}`, import.meta.url), 'utf8'),
+      ).flatMap((row) => row.insert);
+      expect(rows.find((row) => row.id === 'botharness-core')).toMatchObject({
+        config: { agentPreset: 'deepseekbot' },
+      });
+      const preset = rows.find((row) => row.id === 'preset-deepseekbot');
+      expect(preset).toMatchObject({
+        name: '@deepseek-ai/dsh-agent-preset',
+        config: { id: 'deepseekbot' },
+      });
+      expect(preset.config.plugins.find((row) => row.id === 'tool-ask-user')).toMatchObject({
+        config: { mode: 'timed', timeout: 45 },
+      });
+    }
+  });
+
   it('ships headless Browser by default in both umbrella patches', () => {
     for (const patch of ['cordis.patch.yml', 'cordis.im.patch.yml']) {
       const rows = parse(

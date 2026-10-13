@@ -157,6 +157,8 @@
 
 ### Changed
 
+- Bot 的提问卡不再卡住 Bot：45 秒内没有回答时，Bot 会继续处理别的消息，之后仍然可以在原卡片上作答。PersonaBot 现在使用产品自带的预设，开启了 DSH 的限时提问。工具审批仍需等待决定（[#1038](https://github.com/BotHarness/DeepSeekBot/issues/1038)、[ADR-0187](docs/adr/0187-personabots-use-a-product-preset-with-timed-questions.md)）。
+
 - Bot 的密钥输入卡现在也出现在请求所在的 Channel，包括群聊。只有 Owner 能填写，Channel 里不会出现任何密钥值，引用只交给发起请求的 Bot（[#1542](https://github.com/BotHarness/DeepSeekBot/issues/1542)）。
 
 - 一个任务里第一次弹出工具审批卡之前，Bot 现在会先在对话里说明要做什么、需要对方做什么；如果它还没说话，Host 会把这次调用退回一次（[#1541](https://github.com/BotHarness/DeepSeekBot/issues/1541)）。
