@@ -10,7 +10,7 @@ it('follows a projected head while keeping cards above the toolbar and bounded a
   expect(tilted.bottom).toBe(148);
   expect(tilted.originX).toBe(430);
   const high = bubbles.place('ada', 400, 640, 1000, 800, 3, false, { x: 445, y: 740 });
-  expect(high.bottom + 152 + 16).toBeLessThanOrEqual(784);
+  expect(high.bottom + 112).toBeLessThanOrEqual(784);
   expect(high.originY).toBe(740);
   expect(high.bottom).toBeGreaterThanOrEqual(8);
   const narrow = bubbles.place('ada', 600, 0, 400, 800, 1, false, { x: 648, y: 96 });
@@ -26,10 +26,10 @@ it('retains an originating Bot across avoidance, reading and a subsequent resize
   expect(grace.bottom).not.toBe(ada.bottom);
   const reading = bubbles.place('grace', 220, 0, 400, 800, 4, true, { x: 260, y: 106 });
   expect(reading.originX).toBe(260);
-  expect(reading.cardHeight).toBeLessThanOrEqual(800 - reading.bottom - 56);
+  expect(reading.cardHeight).toBeLessThanOrEqual(800 - reading.bottom - 16);
   const resized = bubbles.place('grace', 180, 0, 360, 600, 4, true, { x: 228, y: 96 });
   expect(resized.left).toBeLessThanOrEqual(32);
-  expect(resized.bottom + 40 + resized.cardHeight).toBeLessThanOrEqual(584);
+  expect(resized.bottom + resized.cardHeight).toBeLessThanOrEqual(584);
   bubbles.remove('ada');
   bubbles.remove('grace');
   expect(bubbles.place('third', 200, 0, 400, 800, 1, false).bottom).toBe(134);

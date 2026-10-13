@@ -137,12 +137,13 @@ it.each([
           }),
         ),
       );
-      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(requestCount);
-      expect(node.querySelector('.bh-companion-cards')).toBeNull();
+      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(1);
+      expect(node.querySelector('.bh-companion-bubble')).toBeNull();
       expect(node.textContent).toContain('/qa/release');
-      expect(node.textContent).toContain('滚动查看全部');
+      if (requestCount > 1) expect(node.textContent).toContain('1/2');
+      expect(node.querySelector('.bh-companion-details')?.hasAttribute('open')).toBe(false);
       await act(() => companion.get('ada')!.advance(30_000));
-      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(requestCount);
+      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(1);
       await act(() => events.dispatchEvent(new Event('error')));
       expect(
         [...node.querySelectorAll<HTMLButtonElement>('.bh-tool-approval-card button')].every(
@@ -187,6 +188,7 @@ it.each([
       expect(decisions).toEqual([{ channelId: 'dm-ada', messageId: 'one', outcome }]);
       expect(store.getSnapshot().selection).toEqual({ kind: 'channel', channelId: 'unrelated' });
       expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(requestCount - 1);
+      expect(node.textContent).not.toContain('1/2');
       if (requestCount === 1 || movedFocus)
         expect(document.activeElement).toBe(node.querySelector('.bh-companion-character'));
       else

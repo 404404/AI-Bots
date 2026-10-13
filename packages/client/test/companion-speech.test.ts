@@ -33,6 +33,9 @@ it('derives one bounded mouth from real text reveal and keeps typing during read
     expect(owner.getSnapshot().mouth).toBe('half-open');
     owner.advance(105);
     expect(owner.getSnapshot().mouth).toBe('closed');
+    owner.advance(1000);
+    expect(owner.getSnapshot().mouth).toBe('closed');
+    owner.advance(80);
     owner.advance(420);
     expect(owner.getSnapshot().mouth).toBe('open');
     owner.reading(true);

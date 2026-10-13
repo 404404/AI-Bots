@@ -26,14 +26,13 @@ export class CompanionBubbles {
     const boundedLeft = (left: number) => Math.max(8, Math.min(left, width - 328));
     const bottom = Math.max(y + 134, origin.y + 38);
     const minimum = 8 - bottom;
-    const collapsedOverflow = !reading && cards ? (cards - 1) * 8 : 0;
-    const maximum = height - 16 - (bottom + (cards ? 152 + collapsedOverflow : 24));
+    const maximum = height - 16 - (bottom + (cards ? 112 : 24));
     const base = Math.max(minimum, Math.min(0, maximum));
     const previous = this.boxes.get(botId);
     const box = (left: number, offset: number): BubbleBox => {
       const cardHeight =
         reading && cards
-          ? Math.min(cards * 112, Math.max(112, height - bottom - 40 - offset - 16))
+          ? Math.min(cards * 112, Math.max(112, height - bottom - offset - 16))
           : 112;
       return {
         left,
@@ -44,7 +43,7 @@ export class CompanionBubbles {
         originY: origin.y,
         right: Math.min(width - 8, left + 320),
         bottom: bottom + offset,
-        top: bottom + (cards ? 40 + cardHeight + (reading ? 0 : (cards - 1) * 8) : 24) + offset,
+        top: bottom + (cards ? cardHeight : 24) + offset,
       };
     };
     let placed = box(boundedLeft(origin.x - 160), base);

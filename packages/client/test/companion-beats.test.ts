@@ -1,0 +1,42 @@
+import { expect, it } from 'vitest';
+import { beatHold, beatStart, speechBeats } from '../src/client/companion-beats.js';
+import { messageGraphemeBoundaries } from '../../core/src/channels/message-preview.js';
+
+const beats = (body: string): string[] => {
+  const ends = speechBeats(body, messageGraphemeBoundaries(body));
+  return ends.map((end) => body.slice(beatStart(ends, end), end).trim());
+};
+
+it('splits speech into sentence beats across scripts, quotes and line breaks', () => {
+  expect(beats('好的，我先看一下。然后再改！可以吗？')).toEqual([
+    '好的，我先看一下。',
+    '然后再改！',
+    '可以吗？',
+  ]);
+  expect(beats('He said "done." Then left... OK')).toEqual([
+    'He said "done."',
+    'Then left...',
+    'OK',
+  ]);
+  expect(beats('「好了。」继续\n\n下一段')).toEqual(['「好了。」', '继续', '下一段']);
+  expect(beats('version 1.2 ships')).toEqual(['version 1.2 ships']);
+  expect(beats('👩‍💻 done!')).toEqual(['👩‍💻 done!']);
+});
+
+it('caps a beat without punctuation, preferring a soft break, and never leaves an empty tail', () => {
+  const words = Array.from({ length: 30 }, (_, index) => `w${index}`).join(' ');
+  const split = beats(words);
+  expect(split.length).toBeGreaterThan(1);
+  expect(split.join(' ')).toBe(words);
+  expect(split.every((beat) => [...beat].length <= 72)).toBe(true);
+  expect(beats('x'.repeat(150)).map((beat) => beat.length)).toEqual([72, 72, 6]);
+  expect(beats('Done.\n\n')).toEqual(['Done.']);
+});
+
+it('holds a finished beat for reading time, shorter when another message waits', () => {
+  expect(beatHold('First sentence here.', false, false)).toBe(1500);
+  expect(beatHold('x'.repeat(200), false, false)).toBe(3000);
+  expect(beatHold('Hi.', true, false)).toBe(2500);
+  expect(beatHold('x'.repeat(200), true, false)).toBe(8000);
+  expect(beatHold('Hi.', true, true)).toBe(1590);
+});
