@@ -232,6 +232,36 @@ describe('Channel tool approval', () => {
     broker.close();
   });
 
+  it('asks every time for an each-use call and never saves a rule for it', async () => {
+    const state = fixture();
+    const rules = {
+      match: vi.fn(() => ({ id: 'rule-all' })),
+      createPending: vi.fn(),
+      activate: vi.fn(),
+      revoke: vi.fn(),
+      list: vi.fn(),
+    } as unknown as import('../src/workspaces/tool-approval-rules.js').ToolApprovalRuleStore;
+    const broker = new ChannelToolApproval(state.channels, state.ownership, rules);
+    broker.track(state.execution(), 'each-use');
+    expect(broker.willPrompt(state.agent, 'call-1')).toBe(true);
+    const answer = broker.ask({ agent: state.agent, toolName: 'bash', callId: 'call-1' });
+    await vi.waitFor(() => expect(state.messages).toHaveLength(1));
+    const request = state.messages[0]!;
+    expect(request.toolApprovalRequest).toMatchObject({ externalDecision: 'each-use' });
+    expect(await broker.decide(botSlug, request.id, 'allowed-always-exact')).toBe(false);
+    expect(await broker.decide(botSlug, request.id, 'allowed-always-all')).toBe(false);
+    expect(
+      await broker.decide(botSlug, request.id, 'allowed-once', {
+        actor: { kind: 'external' } as never,
+        authorized: () => true,
+      }),
+    ).toBe(false);
+    expect(rules.createPending).not.toHaveBeenCalled();
+    expect(await broker.decide(botSlug, request.id, 'allowed-once')).toBe(true);
+    expect(await answer).toBe('allowed-once');
+    broker.close();
+  });
+
   it('declines requests that do not match the exact tracked Agent and tool', async () => {
     const state = fixture();
     state.broker.track(state.execution());

@@ -138,6 +138,8 @@ export function ChannelSidebarEntrySection({
   const bodyId = useId();
   const Badge = entry.badge;
   const HeaderAction = entry.headerAction;
+  const HeaderTabs = editing ? undefined : entry.headerTabs;
+  const tabbed = HeaderTabs === undefined ? '' : ' bh-channel-sidebar-entry-head-tabbed';
   const [refreshRevision, setRefreshRevision] = useState(0);
   const [expandable, setExpandable] = useState(true);
   const expandableRef = useRef(expandable);
@@ -163,7 +165,9 @@ export function ChannelSidebarEntrySection({
       <span className="bh-channel-sidebar-entry-icon" aria-hidden="true">
         <ChannelSidebarIcon name={entry.icon} />
       </span>
-      <span className="bh-channel-sidebar-entry-label">{entry.label}</span>
+      <span className="bh-channel-sidebar-entry-label">
+        {HeaderTabs === undefined ? entry.label : (entry.headerLabel ?? entry.label)}
+      </span>
       {Badge === undefined ? null : (
         <span className="bh-channel-sidebar-entry-badge">
           <Badge {...props} />
@@ -177,7 +181,7 @@ export function ChannelSidebarEntrySection({
         {collapsible ? (
           <button
             type="button"
-            className="bh-channel-sidebar-entry-head"
+            className={`bh-channel-sidebar-entry-head${tabbed}`}
             aria-expanded={shown}
             aria-controls={bodyId}
             aria-disabled={expandable ? undefined : true}
@@ -197,11 +201,16 @@ export function ChannelSidebarEntrySection({
           </button>
         ) : (
           <div
-            className="bh-channel-sidebar-entry-head bh-channel-sidebar-entry-head-static"
+            className={`bh-channel-sidebar-entry-head bh-channel-sidebar-entry-head-static${tabbed}`}
             style={expandable ? undefined : { opacity: 0.6 }}
           >
             {headContent}
           </div>
+        )}
+        {HeaderTabs === undefined ? null : (
+          <span className="bh-channel-sidebar-entry-tabs">
+            <HeaderTabs {...props} />
+          </span>
         )}
         {HeaderAction === undefined ? null : (
           <span className="bh-channel-sidebar-entry-action-slot">

@@ -1,6 +1,8 @@
 import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
+import { credentialStoreDenial } from './credentials/store-guard.js';
+import { secretCommandDenial } from './credentials/secret-command.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
 import { createPartLibrary, type PartLibrary } from './bots/part-library.js';
 import {
@@ -357,6 +359,7 @@ export function createCore(
     workspaces?: () => DshWorkspaceLookup | undefined;
     sessionArchive?: () => NativeSessionArchive | undefined;
     autoAcceptGroupInvitations?: () => boolean;
+    triageContinuation?: boolean;
     onOutputCommitted?: (event: PersonaBotOutputCommitted) => void;
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
@@ -726,6 +729,7 @@ export function createCore(
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
   runtime = createBotRuntime({
+    triageContinuation: options.triageContinuation === true,
     inboxHistory,
     requireExecution: (slug) => profileRecovery.requireExecution(slug),
     schedules,
@@ -1038,6 +1042,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   let privateInputs: PrivateInputs | undefined;
   const core = createCore({
     dshHome,
+    triageContinuation: true,
     companionProfileDir: (ctx.get('profileContext') as { dir: string } | undefined)?.dir,
     onOutputCommitted: (event) =>
       emitPersonaBotOutputCommitted(ctx, event, (message) => ctx.logger.warn(message)),
@@ -1215,6 +1220,19 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (agent === undefined || core.ownership.resolve(agent.session.id) === undefined)
         return next();
       if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
+      if (config.privateInputExecution !== true) {
+        const storeDenial = credentialStoreDenial(
+          execution.name,
+          execution.arguments,
+          resolveDshHome(),
+          agent.session.header.cwd,
+        );
+        if (storeDenial !== undefined) return { kind: 'deny', reason: storeDenial };
+      }
+      if (execution.name === 'secret_cli') {
+        const commandDenial = secretCommandDenial(execution.arguments);
+        if (commandDenial !== undefined) return { kind: 'deny', reason: commandDenial };
+      }
       if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
         return next();
 
@@ -1327,9 +1345,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         owner?.rootRole === 'assignment'
           ? core.runtime.getAssignment(owner.botSlug, owner.sessionId)?.permission
           : undefined;
-      if (snapshot?.mode === 'danger-full-access') return next();
+      const eachUse = execution.name === 'secret_cli';
+      if (snapshot?.mode === 'danger-full-access' && !eachUse) return next();
       const approval = ctx.get('approval') as ApprovalService | undefined;
-      const untrack = toolApproval.track(execution);
+      const untrack = toolApproval.track(execution, eachUse ? 'each-use' : 'operation');
       if (approval === undefined || untrack === undefined) {
         return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
       }
@@ -1345,7 +1364,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           reason:
             execution.name === 'channel_attachment_open'
               ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-              : 'This tool call may access files outside the authorized folder.',
+              : eachUse
+                ? 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.'
+                : 'This tool call may access files outside the authorized folder.',
           signal: execution.signal,
         });
         if (outcome !== 'allowed-once') {

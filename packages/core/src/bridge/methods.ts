@@ -159,6 +159,8 @@ import {
   type MemoryAcceptedCommit,
   type MemoryAcceptedSnapshot,
   type MemoryGitGraph,
+  type MemoryVersion,
+  type MemoryVersionName,
   type MemoryGitCommitDiff,
   type MemoryWorkingChange,
   type MemoryWorkingDiff,
@@ -380,6 +382,7 @@ export interface OwnedSessionSummary {
   cwdReference?: string;
   assignmentActivity?: AssignmentActivity;
   assignmentAccessMode?: AssignmentAccessMode;
+  currentOrchestrator?: boolean;
 }
 
 export interface OwnedSessionBot {
@@ -576,6 +579,15 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ checkpoint: MemoryRecoveryCheckpoint; archivePath: string }>;
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
+  memoryRestoreCommit(payload: unknown): BridgeResult<{
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  }>;
+  memoryNameVersion(payload: unknown): BridgeResult<{ version: MemoryVersionName }>;
+  memoryVersions(payload: unknown): BridgeResult<{ versions: MemoryVersion[] }>;
+  memoryRemoveVersionName(payload: unknown): BridgeResult<{ removed: true }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
   profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
@@ -4353,12 +4365,19 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           assignment,
         ]),
       );
+      const resumed =
+        deps.runtime?.currentOrchestratorSessionId === undefined
+          ? undefined
+          : (deps.runtime.currentOrchestratorSessionId(slug) ?? null);
       const sessions = deps.ownership.rootsFor(slug).map((root) => {
         const assignment = assignments.get(root.sessionId);
         return {
           sessionId: root.sessionId,
           role: root.rootRole,
           createdAt: root.createdAt,
+          ...(resumed === undefined || root.rootRole !== 'orchestrator'
+            ? {}
+            : { currentOrchestrator: root.sessionId === resumed }),
           ...(root.cwdReference === undefined ? {} : { cwdReference: root.cwdReference }),
           ...(assignment === undefined ? {} : { assignmentActivity: assignment.activity }),
           ...(assignment?.permission === undefined
@@ -4533,6 +4552,67 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           editId,
         }),
       }));
+    },
+    memoryRestoreCommit(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const source = asObject(payload);
+      const sha = asNonBlank(source, 'sha');
+      const expectedHead = asNonBlank(source, 'expectedHead');
+      const restoreId = asNonBlank(source, 'restoreId');
+      const name = source['name'];
+      if (
+        (name !== undefined &&
+          (typeof name !== 'string' || name.length > 60 || /[\r\n]/u.test(name))) ||
+        sha === undefined ||
+        expectedHead === undefined ||
+        restoreId === undefined ||
+        !/^[0-9a-f]{40}$/u.test(sha) ||
+        !/^[0-9a-f]{40}$/u.test(expectedHead) ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(restoreId)
+      )
+        return invalidInput('valid sha, expectedHead, restoreId, and name are required');
+      return memoryCall(() =>
+        deps.memory!.restoreCommitHuman({
+          botSlug: scope.botSlug,
+          sha,
+          expectedHead,
+          restoreId,
+          ...(name === undefined ? {} : { name }),
+        }),
+      );
+    },
+    memoryVersions(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      return memoryCall(() => ({ versions: deps.memory!.versions(scope.botSlug) }));
+    },
+    memoryNameVersion(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const source = asObject(payload);
+      const sha = asNonBlank(source, 'sha');
+      const name = asNonBlank(source, 'name');
+      if (
+        sha === undefined ||
+        name === undefined ||
+        !/^[0-9a-f]{40}$/u.test(sha) ||
+        name.length > 60
+      )
+        return invalidInput('valid sha and name are required');
+      return memoryCall(() => ({
+        version: deps.memory!.nameVersionHuman({ botSlug: scope.botSlug, sha, name }),
+      }));
+    },
+    memoryRemoveVersionName(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const tag = asNonBlank(asObject(payload), 'tag');
+      if (tag === undefined || tag.length > 200) return invalidInput('valid tag is required');
+      return memoryCall(() => {
+        deps.memory!.removeVersionNameHuman({ botSlug: scope.botSlug, tag });
+        return { removed: true as const };
+      });
     },
     memoryRepair(payload) {
       const scope = dmMemory(payload);

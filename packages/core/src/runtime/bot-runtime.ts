@@ -277,6 +277,7 @@ export interface OrchestratorAgentRun {
   inbox: string;
   inboundChannelId: string | undefined;
   externalMessaging?: {
+    connected(): boolean;
     senderPermissions?(sourceEventId: string): SenderPermissions;
     directory?(query: MessagingDirectoryQuery): MessagingDirectoryPage;
     targets?(): Promise<
@@ -571,6 +572,7 @@ export interface BotRuntime {
 
 export interface BotRuntimeOptions {
   inboxHistory?: InboxHistoryQuery;
+  triageContinuation?: boolean;
   requireExecution?: (botSlug: string) => void;
   beginAssignmentWait?: (botSlug: string, orchestratorSessionId: string) => () => void;
   externalMessaging?: OutboundMessaging;
@@ -1099,6 +1101,7 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #sessionArchive: (() => NativeSessionArchive | undefined) | undefined;
   readonly #approvalCapacity: AssignmentApprovalCapacity;
   readonly #warn: ((message: string) => void) | undefined;
+  readonly #triageContinuation: boolean;
   readonly #tails = new Map<string, Promise<unknown>>();
   readonly #activeTurns = new Map<string, Promise<void>>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
@@ -1123,6 +1126,10 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #pendingHarvests = new Set<string>();
   readonly #digestTimers = new Map<string, NodeJS.Timeout>();
   readonly #snoozeTimers = new Map<string, NodeJS.Timeout>();
+  readonly #triageQueued = new Set<string>();
+  readonly #triageRunning = new Set<string>();
+  readonly #triageBaseline = new Map<string, number>();
+  readonly #triageStalled = new Map<string, Set<string>>();
   readonly #groupAdmissionRetries = new Map<string, NodeJS.Timeout>();
   readonly #digestRetryAt = new Map<string, number>();
   readonly #digestFailureCount = new Map<string, number>();
@@ -1177,6 +1184,7 @@ class BotRuntimeImplementation implements BotRuntime {
       typeof configuredLimit === 'function' ? configuredLimit : () => configuredLimit;
     this.#sessionArchive = options.sessionArchive;
     this.#warn = options.warn;
+    this.#triageContinuation = options.triageContinuation === true;
     this.#approvalCapacity = new AssignmentApprovalCapacity({
       valid: (sessionId) => this.#assignmentExecutionAvailable(sessionId),
       available: () => this.#assignmentCapacityRefusal('awakened') === undefined,
@@ -1242,6 +1250,71 @@ class BotRuntimeImplementation implements BotRuntime {
     }, delay);
     timer.unref();
     this.#snoozeTimers.set(botSlug, timer);
+  }
+
+  #queueTriage(botSlug: string): void {
+    if (!this.#triageContinuation || this.#closed || this.#triageQueued.has(botSlug)) return;
+    this.#triageQueued.add(botSlug);
+    void this.#enqueue(botSlug, () => this.#runTriageTurn(botSlug)).catch(() => undefined);
+  }
+
+  async #runTriageTurn(botSlug: string): Promise<void> {
+    this.#triageQueued.delete(botSlug);
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined || bot.paused === true) return;
+    const ids = this.#inboxTriage.openIds(botSlug);
+    const baseline = this.#triageBaseline.get(botSlug);
+    this.#triageBaseline.delete(botSlug);
+    if (ids.length === 0) {
+      this.#triageStalled.delete(botSlug);
+      return;
+    }
+    if (baseline !== undefined && ids.length >= baseline) {
+      this.#triageStalled.set(botSlug, new Set(ids));
+      return;
+    }
+    const stalled = this.#triageStalled.get(botSlug);
+    if (stalled !== undefined && ids.every((id) => stalled.has(id))) return;
+    this.#triageStalled.delete(botSlug);
+    const anchor = ids[0]!;
+    const channel = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT ${channelSql('e')} AS channel_id FROM source_events e WHERE e.source_event_id = ?`,
+        )
+        .get(anchor),
+    ) as { channel_id: string | null } | undefined;
+    const channelId = channel?.channel_id ?? this.#dmChannel(botSlug)?.id;
+    const body = `[Triage] ${ids.length} item${ids.length === 1 ? ' is' : 's are'} still open after your last turn. Give each one a destination: act on it now, resolve it with inbox_resolve once it is done or needs nothing more, snooze it with inbox_snooze when it waits on someone or a later time, or ignore noise. Check a completed Assignment report against what you asked for before resolving it. You are woken again while open items remain, unless a round leaves the open count unchanged.`;
+    this.#triageBaseline.set(botSlug, ids.length);
+    this.#triageRunning.add(botSlug);
+    try {
+      const orchestrator = this.#ensureOrchestrator(bot, this.#now().toISOString());
+      await this.#runOrchestratorTurn(
+        bot,
+        orchestrator,
+        anchor,
+        channelId,
+        body,
+        [],
+        false,
+        () => undefined,
+        [],
+        [],
+      );
+    } catch (error) {
+      this.#triageBaseline.delete(botSlug);
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'triage-turn-failed',
+          botSlug,
+          error: String(error).slice(0, 500),
+        }),
+      );
+    } finally {
+      this.#triageRunning.delete(botSlug);
+    }
   }
 
   async #runSnoozeReturnTurn(botSlug: string): Promise<void> {
@@ -2372,7 +2445,8 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#setObserved(collected.eventIds, timestamp, botSlug);
     let orchestrator: { sessionId: string; resume: boolean } | undefined;
     try {
-      orchestrator = this.#ensureOrchestrator(bot, timestamp);
+      const started = this.#ensureOrchestrator(bot, timestamp);
+      orchestrator = started;
       const sections = [
         ...claimed.items.map((item) =>
           this.#inboundChannelMessage(item.channelId, item.messageId, item.body),
@@ -2387,19 +2461,22 @@ class BotRuntimeImplementation implements BotRuntime {
         attentionCount > 1
           ? `[Bot Inbox harvest] ${attentionCount} attention items are ready. Handle them together where useful and in parallel where independent; long-running work belongs in Assignment Sessions.`
           : undefined;
-      await this.#runOrchestratorTurn(
-        bot,
-        orchestrator,
-        sourceEventId,
-        externalOnly && externalChannelId === undefined ? undefined : primaryChannelId,
-        [preamble, ...sections].filter((part): part is string => part !== undefined).join('\n\n'),
-        collected.units,
-        collected.eventIds.length > 0,
-        () => this.#markAdmissionsSideEffect(botSlug, includedIds),
-        collected.eventIds,
-        [...new Set([...includedIds, ...collected.eventIds])],
-      );
-      this.#markReportsHandled(collected.eventIds, botSlug, orchestrator.sessionId);
+      const ran = await this.#runOnLiveOrchestrator(bot, started, (session) => {
+        orchestrator = session;
+        return this.#runOrchestratorTurn(
+          bot,
+          session,
+          sourceEventId,
+          externalOnly && externalChannelId === undefined ? undefined : primaryChannelId,
+          [preamble, ...sections].filter((part): part is string => part !== undefined).join('\n\n'),
+          collected.units,
+          collected.eventIds.length > 0,
+          () => this.#markAdmissionsSideEffect(botSlug, includedIds),
+          collected.eventIds,
+          [...new Set([...includedIds, ...collected.eventIds])],
+        );
+      });
+      this.#markReportsHandled(collected.eventIds, botSlug, ran.sessionId);
       this.#settleHarvestHandled(botSlug, includedIds);
       for (const digest of claimed.digests) {
         this.#digestRetryAt.delete(`${botSlug}:${digest.channelId}`);
@@ -3125,6 +3202,7 @@ class BotRuntimeImplementation implements BotRuntime {
             current?.rootRole !== 'orchestrator' ||
             current.botSlug !== owner.botSlug ||
             !this.#ownership.contentAvailable(sessionId) ||
+            this.#sessionArchived?.(sessionId) === true ||
             !held()
           )
             return;
@@ -3152,6 +3230,7 @@ class BotRuntimeImplementation implements BotRuntime {
                 currentOwner?.rootRole !== 'orchestrator' ||
                 currentOwner.botSlug !== owner.botSlug ||
                 !this.#ownership.contentAvailable(sessionId) ||
+                this.#sessionArchived?.(sessionId) === true ||
                 !held()
               ) {
                 accept(false);
@@ -3475,23 +3554,26 @@ class BotRuntimeImplementation implements BotRuntime {
     if (this.#admissionHandled(claim.sourceEventId, bot.slug)) return;
 
     const timestamp = this.#now().toISOString();
-    const orchestrator = this.#ensureOrchestrator(bot, timestamp);
+    let orchestrator = this.#ensureOrchestrator(bot, timestamp);
 
     const collected = this.#collectInbox(bot.slug);
     this.#setObserved(collected.eventIds, timestamp, bot.slug);
     try {
       this.#observeAdmission(claim.sourceEventId, bot.slug, channelId, messageId);
-      await this.#runOrchestratorTurn(
-        bot,
-        orchestrator,
-        claim.sourceEventId,
-        channelId,
-        this.#inboundChannelMessage(channelId, messageId, body),
-        collected.units,
-        this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
-        undefined,
-        collected.eventIds,
-      );
+      await this.#runOnLiveOrchestrator(bot, orchestrator, (session) => {
+        orchestrator = session;
+        return this.#runOrchestratorTurn(
+          bot,
+          session,
+          claim.sourceEventId,
+          channelId,
+          this.#inboundChannelMessage(channelId, messageId, body),
+          collected.units,
+          this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
+          undefined,
+          collected.eventIds,
+        );
+      });
     } catch (error) {
       this.#setObserved(collected.eventIds, null, bot.slug);
       this.#markSourceEventFailed(claim.sourceEventId);
@@ -3689,6 +3771,12 @@ class BotRuntimeImplementation implements BotRuntime {
           ? {}
           : {
               externalMessaging: {
+                connected: () => {
+                  const { identities, grants } = this.#externalMessaging!.deletionDependencies(
+                    bot.slug,
+                  );
+                  return identities.length > 0 || grants.length > 0;
+                },
                 senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
                 directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
                 targets: async () => {
@@ -3964,6 +4052,8 @@ class BotRuntimeImplementation implements BotRuntime {
       this.#markReportsHandled(memoryEventIds);
       this.#settleHarvestHandled(bot.slug, [...readAdmissions]);
       this.#notifyReadAdmissions(readAdmissions);
+      if (!this.#triageRunning.has(bot.slug)) this.#triageBaseline.delete(bot.slug);
+      this.#queueTriage(bot.slug);
     } catch (error) {
       this.#setObserved(memoryEventIds, null);
       this.#settleHarvestFailure(bot.slug, [...readAdmissions], String(error));
@@ -5515,6 +5605,52 @@ class BotRuntimeImplementation implements BotRuntime {
       throw new Error(`PersonaBot ${botSlug} is not a member of Channel ${channelId}`);
     }
     return channel;
+  }
+
+  async #runOnLiveOrchestrator(
+    bot: PersonaBotRecord,
+    orchestrator: { sessionId: string; resume: boolean },
+    run: (orchestrator: { sessionId: string; resume: boolean }) => Promise<void>,
+  ): Promise<{ sessionId: string; resume: boolean }> {
+    try {
+      await run(orchestrator);
+      return orchestrator;
+    } catch (error) {
+      if (
+        this.#closed ||
+        this.#sessionArchived?.(orchestrator.sessionId) !== true ||
+        this.#turnSideEffectStarted(bot.slug)
+      )
+        throw error;
+      const replacement = this.#ensureOrchestrator(bot, this.#now().toISOString());
+      if (replacement.sessionId === orchestrator.sessionId) throw error;
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'orchestrator-archived-mid-turn',
+          botSlug: bot.slug,
+          archivedSessionId: orchestrator.sessionId,
+          sessionId: replacement.sessionId,
+        }),
+      );
+      await run(replacement);
+      return replacement;
+    }
+  }
+
+  #turnSideEffectStarted(botSlug: string): boolean {
+    return (
+      this.#database.read((database) =>
+        database
+          .prepare(
+            `SELECT 1 FROM inbox_admissions
+              WHERE bot_slug = ? AND attempt_state = 'running'
+                AND side_effect_started_at IS NOT NULL
+              LIMIT 1`,
+          )
+          .get(botSlug),
+      ) !== undefined
+    );
   }
 
   #ensureOrchestrator(bot: PersonaBotRecord, at: string): { sessionId: string; resume: boolean } {

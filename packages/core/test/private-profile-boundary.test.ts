@@ -9,7 +9,7 @@ import { qualifyMessagingTool } from '../src/credentials/messaging-tools.js';
 
 async function fixture(enabled: boolean, keys: string[] = []) {
   const ctx = new Context();
-  let guard!: (call: { name: string; agent?: Agent }) => string | undefined;
+  let guard!: (call: { name: string; agent?: Agent; arguments?: unknown }) => string | undefined;
   ctx.provide('tools', {
     register: vi.fn(),
     get: vi.fn(),
@@ -33,11 +33,9 @@ async function fixture(enabled: boolean, keys: string[] = []) {
     },
     contributeBotAgentSetup: contribute,
   } as unknown as BotHarnessCore;
-  mountPrivateInputs(ctx, core, enabled);
+  mountPrivateInputs(ctx, core, enabled, undefined, undefined, undefined, '/qa/dsh-home');
   await vi.waitFor(() =>
-    expect(guard({ name: 'read' })).toEqual(
-      enabled || keys.length > 0 ? expect.any(String) : undefined,
-    ),
+    expect(guard({ name: 'read' })).toEqual(enabled ? expect.any(String) : undefined),
   );
   return { ctx, guard, contribute };
 }
@@ -76,16 +74,55 @@ describe('private Profile capability boundary', () => {
     expect(f.guard({ name: 'schedule_create', agent })).toContain('not qualified');
     await f.ctx.fiber.dispose();
   });
-  it('preserves ordinary Host tools before opt-in but refuses downgrade with stored grants', async () => {
-    const ordinary = await fixture(false);
-    expect(ordinary.guard({ name: 'mcp_example' })).toBeUndefined();
-    expect(ordinary.guard({ name: 'bash' })).toBeUndefined();
-    expect(ordinary.contribute).not.toHaveBeenCalled();
-    await ordinary.ctx.fiber.dispose();
-    const locked = await fixture(false, ['botharness-private/grant-synthetic']);
-    expect(locked.guard({ name: 'bash' })).toContain('protected Profile');
-    expect(locked.guard({ name: 'read' })).toContain('not qualified');
-    await locked.ctx.fiber.dispose();
+  it('keeps ordinary Host tools in an ordinary Profile, with secret input registered and stored grants not locking Shell', async () => {
+    for (const keys of [[], ['botharness-private/grant-synthetic']]) {
+      const ordinary = await fixture(false, keys);
+      expect(ordinary.guard({ name: 'mcp_example' })).toBeUndefined();
+      expect(
+        ordinary.guard({ name: 'read', arguments: { path: '/qa/project/a.txt' } }),
+      ).toBeUndefined();
+      expect(
+        ordinary.guard({ name: 'bash', arguments: { command: 'ls /qa/project' } }),
+      ).toBeUndefined();
+      expect(ordinary.contribute).toHaveBeenCalledOnce();
+      await ordinary.ctx.fiber.dispose();
+    }
+  });
+
+  it('refuses Agent access to the native credential store in an ordinary Profile', async () => {
+    const f = await fixture(false);
+    const denied = 'native credential store';
+    expect(
+      f.guard({ name: 'read', arguments: { path: '/qa/dsh-home/.credentials.yaml' } }),
+    ).toContain(denied);
+    expect(
+      f.guard({ name: 'edit', arguments: { file_path: '/qa/dsh-home/.credentials.yaml' } }),
+    ).toContain(denied);
+    expect(
+      f.guard({ name: 'grep', arguments: { pattern: 'key', path: '/qa/dsh-home' } }),
+    ).toContain(denied);
+    expect(f.guard({ name: 'glob', arguments: { pattern: '**/.credentials.yaml' } })).toContain(
+      denied,
+    );
+    expect(
+      f.guard({ name: 'bash', arguments: { command: 'cat /qa/dsh-home/.credentials.yaml' } }),
+    ).toContain(denied);
+    expect(f.guard({ name: 'bash', arguments: { command: 'cat ~/.dsh/.cred*' } })).toContain(
+      denied,
+    );
+    expect(f.guard({ name: 'bash', arguments: { command: 'ls -la /qa/dsh-home' } })).toContain(
+      denied,
+    );
+    expect(
+      f.guard({ name: 'bash', arguments: { command: 'ls /qa/dsh-home/botharness/bots' } }),
+    ).toBeUndefined();
+    expect(
+      f.guard({
+        name: 'read',
+        arguments: { path: '/qa/dsh-home/botharness/bots/ada/memory/MEMORY.md' },
+      }),
+    ).toBeUndefined();
+    await f.ctx.fiber.dispose();
   });
 
   it('applies the Host boundary to native Sessions and other Bots even with broad approval', async () => {

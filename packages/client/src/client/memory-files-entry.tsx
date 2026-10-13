@@ -1,9 +1,9 @@
-import { useState, type ReactElement } from 'react';
+import { useState, useSyncExternalStore, type ReactElement } from 'react';
 import type { MemorySnapshot } from './bridge.js';
 import type { ChannelSidebarEntryProps } from './channel-sidebar.js';
 import { MemoryFileTree } from './memory-file-tree.js';
 import { useMountedResource } from './mounted-resource.js';
-import { cachedMemory } from './memory-read-cache.js';
+import { cachedMemory, subscribeMemory } from './memory-read-cache.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import { MemoryLoadFeedback } from './memory-load-feedback.js';
 import { useClientState } from './bot-sidebar.js';
@@ -32,6 +32,11 @@ function MemoryFilesForScope({
   const [error, setError] = useState<string | undefined>(cache.snapshotError);
   const [pending, setPending] = useState(false);
   const [retry, setRetry] = useState(0);
+  const invalidated = useSyncExternalStore(
+    (listener) => subscribeMemory(cache, listener),
+    () => cache.revision,
+    () => cache.revision,
+  );
 
   const mount = useMountedResource<HTMLDivElement>(() => {
     let active = true;
@@ -78,7 +83,7 @@ function MemoryFilesForScope({
       window.removeEventListener('focus', onVisible);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [actions, channelId, conversationRevision, refreshRevision, retry]);
+  }, [actions, channelId, conversationRevision, refreshRevision, retry, invalidated]);
 
   return (
     <div className="bh-memory-entry" ref={mount}>

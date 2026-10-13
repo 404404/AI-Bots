@@ -182,7 +182,9 @@ export function ToolApprovalCard({
         {t(
           request.toolName === 'channel_attachment_open'
             ? 'approval.originalRisk'
-            : 'approval.risk',
+            : request.toolName === 'secret_cli'
+              ? 'approval.secretCliRisk'
+              : 'approval.risk',
         )}
       </div>
     </>
@@ -236,22 +238,26 @@ export function ToolApprovalCard({
           >
             {t('approval.allowOnce')}
           </Button>
-          <Button
-            variant="outline"
-            size={size}
-            disabled={disabled}
-            onClick={() => decide('allowed-always-exact')}
-          >
-            {t('approval.allowExact')}
-          </Button>
-          <Button
-            variant="outline"
-            size={size}
-            disabled={disabled}
-            onClick={() => setConfirmAll(true)}
-          >
-            {t('approval.allowAll')}
-          </Button>
+          {request.toolName === 'secret_cli' ? null : (
+            <Button
+              variant="outline"
+              size={size}
+              disabled={disabled}
+              onClick={() => decide('allowed-always-exact')}
+            >
+              {t('approval.allowExact')}
+            </Button>
+          )}
+          {request.toolName === 'secret_cli' ? null : (
+            <Button
+              variant="outline"
+              size={size}
+              disabled={disabled}
+              onClick={() => setConfirmAll(true)}
+            >
+              {t('approval.allowAll')}
+            </Button>
+          )}
           <Button
             variant="outline"
             size={size}

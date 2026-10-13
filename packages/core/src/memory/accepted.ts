@@ -108,7 +108,19 @@ export interface MemoryGitCommit {
   subject: string;
   authoredAt: string;
   branches: string[];
+  versions: MemoryVersionName[];
   status: 'accepted' | 'pending' | 'needs-repair';
+}
+
+export interface MemoryVersionName {
+  tag: string;
+  name: string;
+}
+
+export interface MemoryVersion extends MemoryVersionName {
+  sha: string;
+  subject: string;
+  namedAt: string;
 }
 
 export interface MemoryGitGraph {
@@ -202,6 +214,21 @@ export interface MemoryAcceptance {
     expectedHead: string;
     editId: string;
   }): MemoryAcceptedCommit;
+  restoreCommitHuman(input: {
+    botSlug: string;
+    sha: string;
+    expectedHead: string;
+    restoreId: string;
+    name?: string;
+  }): {
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  };
+  nameVersionHuman(input: { botSlug: string; sha: string; name: string }): MemoryVersionName;
+  versions(botSlug: string): MemoryVersion[];
+  removeVersionNameHuman(input: { botSlug: string; tag: string }): void;
 }
 
 interface RepairRow {
@@ -276,6 +303,82 @@ function run(root: string, args: string[], maxBuffer = MAX_DIFF_BYTES): Buffer {
 
 function output(root: string, args: string[]): string {
   return run(root, args).toString('utf8').trim();
+}
+
+function versionNames(root: string): Map<string, MemoryVersionName[]> {
+  const names = new Map<string, MemoryVersionName[]>();
+  for (const line of output(root, [
+    'for-each-ref',
+    '--format=%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%1f%(objecttype)%1f%(refname:strip=2)%1f%(contents:subject)',
+    'refs/tags',
+  ]).split('\n')) {
+    const [sha = '', type = '', tag = '', subject = ''] = line.split('\x1f');
+    if (!/^[0-9a-f]{40}$/u.test(sha) || tag === '') continue;
+    const name = type === 'tag' && subject !== '' ? subject : tag;
+    names.set(sha, [...(names.get(sha) ?? []), { tag, name }]);
+  }
+  return names;
+}
+
+function versionList(root: string): MemoryVersion[] {
+  const versions: MemoryVersion[] = [];
+  for (const line of output(root, [
+    'for-each-ref',
+    '--sort=-creatordate',
+    '--count=500',
+    '--format=%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%1f%(if)%(*objecttype)%(then)%(*objecttype)%(else)%(objecttype)%(end)%1f%(objecttype)%1f%(refname:strip=2)%1f%(contents:subject)%1f%(if)%(*objectname)%(then)%(*subject)%(else)%(subject)%(end)%1f%(creatordate:iso-strict)',
+    'refs/tags',
+  ]).split('\n')) {
+    const [sha = '', target = '', type = '', tag = '', message = '', subject = '', namedAt = ''] =
+      line.split('\x1f');
+    if (!/^[0-9a-f]{40}$/u.test(sha) || target !== 'commit' || tag === '') continue;
+    versions.push({
+      sha,
+      tag,
+      name: type === 'tag' && message !== '' ? message : tag,
+      subject,
+      namedAt,
+    });
+  }
+  return versions;
+}
+
+function validVersionName(name: string): string {
+  const label = name.trim();
+  if (label === '' || label.length > 60 || /[\u0000-\u001f\u007f]/u.test(label))
+    throw new MemoryAcceptError(
+      'memory-invalid',
+      'Version name must be one line of 1 to 60 characters',
+    );
+  return label;
+}
+
+function nameVersion(root: string, sha: string, name: string): MemoryVersionName {
+  const label = validVersionName(name);
+  let commit: string;
+  try {
+    commit = output(root, ['rev-parse', '--verify', `${sha}^{commit}`]);
+  } catch {
+    throw new MemoryAcceptError('memory-invalid', 'Memory commit is not in this repository');
+  }
+  const exists = (tag: string): boolean => {
+    try {
+      run(root, ['show-ref', '--verify', '--quiet', `refs/tags/${tag}`]);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  let base = label.replace(/\s+/gu, '-');
+  try {
+    run(root, ['check-ref-format', `refs/tags/${base}`]);
+  } catch {
+    base = `version-${commit.slice(0, 7)}`;
+  }
+  let tag = base;
+  for (let suffix = 2; exists(tag); suffix += 1) tag = `${base}-${suffix}`;
+  run(root, ['tag', '-a', tag, '-m', label, commit]);
+  return { tag, name: label };
 }
 
 function branchOf(root: string): string {
@@ -1424,6 +1527,7 @@ export function createMemoryAcceptance(options: {
         const sha = line.slice(0, separator);
         branchMap.set(sha, [...(branchMap.get(sha) ?? []), line.slice(separator + 1)]);
       }
+      const versions = versionNames(root);
       const currentHead = head(root);
       let currentBranch: string | null;
       try {
@@ -1465,6 +1569,7 @@ export function createMemoryAcceptance(options: {
           subject,
           authoredAt,
           branches: branchMap.get(sha) ?? [],
+          versions: versions.get(sha) ?? [],
           status: sha === repairing ? 'needs-repair' : accepted.has(sha) ? 'accepted' : 'pending',
         };
       });
@@ -1919,6 +2024,119 @@ export function createMemoryAcceptance(options: {
         );
       }
       return accepted;
+    },
+    restoreCommitHuman(input) {
+      if (inFlight.has(input.botSlug) || pendingRepair(input.botSlug) !== undefined)
+        throw new MemoryAcceptError('memory-conflict', 'Memory is busy');
+      const root = repository(registry, input.botSlug);
+      const branch = branchOf(root);
+      const baseline = head(root);
+      if (baseline !== input.expectedHead)
+        throw new MemoryAcceptError('memory-conflict', 'Memory changed since the Human opened it');
+      let targetTree: string;
+      try {
+        targetTree = output(root, ['rev-parse', '--verify', `${input.sha}^{commit}^{tree}`]);
+      } catch {
+        throw new MemoryAcceptError('memory-invalid', 'Memory commit is not in this repository');
+      }
+      const saved = recovery.capture(
+        input.botSlug,
+        root,
+        {
+          origin: 'human-command',
+          originId: LOCAL_HUMAN_ID,
+          causeKind: 'human-edit',
+          causeId: input.restoreId,
+        },
+        true,
+      );
+      if (saved.branch !== branch || saved.head !== baseline)
+        throw new MemoryAcceptError('memory-conflict', 'Memory changed while it was saved');
+      if (input.name !== undefined) validVersionName(input.name);
+      let backup: string | null = null;
+      let parent = baseline;
+      if (output(root, ['rev-parse', `${baseline}^{tree}`]) !== saved.workingTree) {
+        backup = output(root, [
+          'commit-tree',
+          saved.workingTree,
+          '-p',
+          baseline,
+          '-m',
+          'Back up uncommitted Memory before restore',
+        ]);
+        parent = backup;
+      }
+      let loaded = parent;
+      if (output(root, ['rev-parse', `${parent}^{tree}`]) !== targetTree) {
+        const subject = output(root, ['log', '-1', '--format=%s', input.sha]).slice(0, 120);
+        loaded = output(root, [
+          'commit-tree',
+          targetTree,
+          '-p',
+          parent,
+          '-m',
+          `Restore Memory to ${input.sha.slice(0, 7)}: ${subject}`,
+        ]);
+      }
+      if (loaded !== baseline) run(root, ['update-ref', `refs/heads/${branch}`, loaded, baseline]);
+      run(root, ['reset', '--hard', loaded]);
+      run(root, ['clean', '-fd']);
+      let version: MemoryVersionName | null = null;
+      try {
+        if (input.name !== undefined) version = nameVersion(root, parent, input.name);
+      } catch (error) {
+        options.warn?.(
+          `memory-version-name-failed bot=${input.botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
+        );
+      }
+      try {
+        const commits = [
+          ...(backup === null ? [] : [{ sha: backup, parentSha: baseline }]),
+          ...(loaded === parent ? [] : [{ sha: loaded, parentSha: parent }]),
+        ];
+        if (commits.length > 0) {
+          accept(
+            input.botSlug,
+            branch,
+            commits.map((commit) => ({
+              ...commit,
+              actorKind: 'human' as const,
+              actorId: LOCAL_HUMAN_ID,
+              causeKind: 'human-edit' as const,
+              causeId: input.restoreId,
+              validationResult: validateCommit(root, commit.sha),
+            })),
+            acceptedHead(input.botSlug, branch),
+          );
+        }
+        recovery.capture(input.botSlug, root, {
+          origin: 'human-command',
+          originId: LOCAL_HUMAN_ID,
+          causeKind: 'human-edit',
+          causeId: input.restoreId,
+        });
+        saveObservation(input.botSlug, root, observeWorktree(root));
+      } catch (error) {
+        options.warn?.(
+          `memory-record-failed phase=after-human-commit-restore bot=${input.botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
+        );
+      }
+      return { head: loaded, backup, version, saved };
+    },
+    versions(botSlug) {
+      return versionList(graphRepository(botSlug));
+    },
+    nameVersionHuman(input) {
+      return nameVersion(repository(registry, input.botSlug), input.sha, input.name);
+    },
+    removeVersionNameHuman(input) {
+      const root = repository(registry, input.botSlug);
+      try {
+        run(root, ['show-ref', '--verify', '--quiet', `refs/tags/${input.tag}`]);
+      } catch {
+        throw new MemoryAcceptError('memory-invalid', 'Version name is not in this repository');
+      }
+      run(root, ['tag', '-d', input.tag]);
     },
   };
 }
