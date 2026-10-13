@@ -626,6 +626,7 @@ export function mountPrivateInputs(
                         agentCtx.effect(() => stop, 'botharness: secret MCP server');
                         running.stopped = stopped;
                       });
+                      if (signal.aborted) throw new Error('Secret MCP server stopped');
                     } catch (error) {
                       if (!(error instanceof SecretCommandRefusal)) throw error;
                       settle(refuse(error.message));
