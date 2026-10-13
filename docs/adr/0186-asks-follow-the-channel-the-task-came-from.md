@@ -29,3 +29,11 @@ An ask raised by an Orchestrator turn is posted in that turn's inbound local Cha
 - A turn that carries messages from several Channels asks in the Bot's Human DM. The Host cannot tell which message caused a tool call, and a card shows the tool input, so a DM task must not surface its card in a Group that happened to start the turn.
 - Everyone in a Group can see an approval card's tool name, working directory and input. A Bot that needs to keep those private can still be asked in its DM.
 - Rejected: keeping cards in the DM and posting a notice in the Group. It keeps the Human moving between two Channels for one task, which is the experience this decision removes.
+
+## Amendment: a word before the first approval card (#1541)
+
+A tool approval card shows a raw tool call. Prompt guidance alone did not make the model say anything first: in 12 real-model asks, on a long-running Bot and on a new one, the card was always the first thing the Human saw, although the Bot could quote the guidance.
+
+The Host therefore returns the first approval-gated call of an Orchestrator turn to the Bot once when a card would be shown and the Bot has not yet sent a message in the ask Channel during that turn. The returned reason names the Channel and asks for one or two sentences on what it is about to do and what it needs, then for the same call again. Calls that a saved rule approves, turns with no inbound local Channel, and Assignment Sessions are not affected. Workspace Grant requests and question cards already carry the Bot's own sentence and are left to prompt guidance.
+
+The cost is one extra model round for such a task.
