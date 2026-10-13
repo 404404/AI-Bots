@@ -7,6 +7,9 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   Button: () => null,
   Input: () => null,
   IconEllipsisOutlineRegular: () => null,
+  IconSettingsOutlineRegular: () => null,
+  IconTrashOutlineRegular: () => null,
+  IconUserOutlineRegular: () => null,
   Menu: ({
     open,
     anchor,
@@ -37,6 +40,10 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   },
 }));
 vi.mock('../src/client/modal.js', () => ({ Modal: () => null }));
+vi.mock('../src/client/personabot-deletion.js', () => ({
+  PersonaBotDeletionView: ({ slug }: { slug: string }) =>
+    createElement('div', { 'data-deleting': slug }),
+}));
 import { HumanChannelNameMenu } from '../src/client/human-channel-name.js';
 import { hiddenDmActionsSnapshot } from '../src/client/dm-actions.js';
 import type { ChannelSummary } from '../src/client/store.js';
@@ -84,6 +91,26 @@ afterEach(() => {
   localStorage.clear();
 });
 describe('channel header menu', () => {
+  it('opens the Delete Bot confirmation for the DM PersonaBot', () => {
+    act(() =>
+      root.render(
+        createElement(HumanChannelNameMenu, {
+          channel: dm,
+          actions: {} as BridgeActions,
+          t: (key: string) => key,
+          deleteBotSlug: 'header-qa',
+        }),
+      ),
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="humanNickname.menu"]')!.click());
+    expect(host.querySelector('[data-deleting]')).toBeNull();
+    act(() => item('deletion.title')!.click());
+    expect(host.querySelector('[data-deleting]')?.getAttribute('data-deleting')).toBe('header-qa');
+  });
+  it('offers no Delete Bot row without a deletable PersonaBot', () => {
+    render(dm);
+    expect(item('deletion.title')).toBeUndefined();
+  });
   it('opens Channel settings from the header menu', () => {
     const open = vi.fn();
     render(dm, open);
