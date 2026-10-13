@@ -17,7 +17,8 @@ import {
   REFERENCE_SURFACES,
 } from '../src/client/bot-primary-color.js';
 import { seededAvatarFor } from '../../core/src/bots/avatar-appearance.js';
-import { zhTranslate } from '../src/client/locale.js';
+import { en, zhTranslate, type BotHarnessTranslate } from '../src/client/locale.js';
+import { toolApprovalText } from '../src/client/approval-text.js';
 import { WORKSPACE_GRANTS_CHANGED } from '../src/client/workspace-grants-entry.js';
 import { store, type ChannelMessage } from '../src/client/store.js';
 
@@ -784,4 +785,59 @@ it('renders a purged welcome as a tombstone before considering onboarding action
   expect(html).toContain(zhTranslate('purge.purged'));
   expect(html).not.toContain('data-onboarding-welcome');
   expect(html).not.toContain('<button');
+});
+
+describe('Tool approval text follows the UI locale (#1293)', () => {
+  const enTranslate: BotHarnessTranslate = (key, params) => {
+    const value: unknown = Reflect.get(en, key);
+    const text = typeof value === 'string' ? value : key;
+    return text.replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? `{${name}}`));
+  };
+  const request: ChannelMessage = {
+    id: 'approval',
+    at: '2026-10-09T00:00:00.000Z',
+    author: { kind: 'bot', slug: 'ada' },
+    body: '请求批准执行 bash',
+    toolApprovalRequest: {
+      sessionId: 's1',
+      callId: 'c1',
+      toolName: 'bash',
+      role: 'orchestrator',
+      cwd: '/work',
+      input: '{}',
+      externalDecision: 'operation',
+    },
+  } as ChannelMessage;
+  const decision = (outcome: NonNullable<ChannelMessage['toolApprovalDecision']>['outcome']) =>
+    ({
+      id: 'decision-' + outcome,
+      at: '2026-10-09T00:00:01.000Z',
+      author: { kind: 'human' },
+      body: '已拒绝这一次工具调用',
+      replyTo: 'approval',
+      toolApprovalDecision: { requestMessageId: 'approval', outcome },
+    }) as ChannelMessage;
+
+  it('derives request and decision text from structured fields, not the stored body', () => {
+    expect(toolApprovalText(request, enTranslate)).toBe('Requests approval to run bash');
+    expect(toolApprovalText(decision('rejected'), enTranslate)).toBe('This call was rejected');
+    expect(toolApprovalText(decision('allowed-once'), enTranslate)).toBe('This call was approved');
+    expect(toolApprovalText(decision('allowed-always-all'), enTranslate)).toBe(
+      'Automatic approval rule saved; this call was approved',
+    );
+    expect(toolApprovalText(decision('rejected'), zhTranslate)).toBe('已拒绝这一次调用');
+    expect(toolApprovalText({}, enTranslate)).toBeUndefined();
+  });
+
+  it('renders a decision bubble in English without the Host body', () => {
+    const html = renderToStaticMarkup(
+      createElement(ChannelMessageBody, {
+        message: decision('rejected'),
+        channelId: 'dm-ada',
+        t: enTranslate,
+      }),
+    );
+    expect(html).toContain('This call was rejected');
+    expect(html).not.toMatch(/[\u4e00-\u9fff]/u);
+  });
 });

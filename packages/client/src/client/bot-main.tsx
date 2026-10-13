@@ -68,6 +68,7 @@ import { ChannelDeliveryReceipt } from './channel-delivery-receipt.js';
 import { MessageCopyAction } from './message-copy-action.js';
 import { isBotDmChannel, isHumanReadOnlyDmChannel } from './channel-kind.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
+import { toolApprovalReplyPreview } from './approval-text.js';
 import type { NativeSessionCatalog } from './sessions-entry.js';
 import { ActivityCenterView } from './activity-center-view.js';
 import { resolveChannelSidebarContext, type ChannelSidebarRegistry } from './channel-sidebar.js';
@@ -233,7 +234,9 @@ function ReplyQuote({
       <span className="bh-bubble-reply-author">
         {authorLabel({ ...message, author: preview.author }, bots, t, humanName)}
       </span>
-      <span className="bh-bubble-reply-body">{preview.body}</span>
+      <span className="bh-bubble-reply-body">
+        {toolApprovalReplyPreview(message, preview.body, t)}
+      </span>
     </button>
   );
 }

@@ -177,6 +177,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
 
+- In the English UI, tool-approval requests and decisions, their replies and the sidebar preview of a Bot DM holding an approval now show English text instead of fixed Chinese ([#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)).
+
+- Memory and Workspace folders under a symlinked parent directory, such as macOS `/tmp` or a linked home folder, no longer deny every Bot file tool call as outside the authorized workspace; a folder that is itself a symlink is still refused ([#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)).
+
 - AX Go launches stage the reviewed adapter patch inside each isolated CLI and reference it relatively, fixing Windows `ERR_PNPM_PATCH_NOT_FOUND` when source and home are on different drives; model credentials and native request handling retain their existing ownership ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409), [AX guide](docs/agents/ax-model.md)).
 
 - DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
