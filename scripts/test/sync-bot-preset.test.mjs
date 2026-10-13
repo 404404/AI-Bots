@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { botPreset, PRODUCT_PATCHES, standardPresetSource, synced } from '../sync-bot-preset.mjs';
+import {
+  BOT_PRESET_DESCRIPTION,
+  botPreset,
+  PRODUCT_PATCHES,
+  standardPresetSource,
+  synced,
+} from '../sync-bot-preset.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const sample = [
@@ -33,6 +39,8 @@ describe('PersonaBot agent preset', () => {
         "      name: '@deepseek-ai/dsh-agent-preset'",
         '      config:',
         '        id: deepseekbot',
+        '        name: DeepSeekBot',
+        `        description: '${BOT_PRESET_DESCRIPTION}'`,
         '        order: 5',
         '        plugins:',
         '          - id: tool-bash',
