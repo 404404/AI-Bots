@@ -165,6 +165,7 @@ node scripts/dev-instance.mjs --home /tmp/botharness-demo --port 31967
 - [Rakazo](https://github.com/elie222/rakazo)：持久 AI 队友、对话与记忆体验参考。
 - [DS Bot](https://github.com/Fei2411/DeepSeek-Bot)：同样运行在 DSH 上的另一个 Bot 插件，重心不同，值得一读。
 - [deepseek-harness-workbench-plugin](https://github.com/loadingvx/deepseek-harness-workbench-plugin)：Memory Git graph 分支线、提交列表与 diff 呈现参考。
+- [Coopanion](https://github.com/Pal-AI-Lab/Coopanion)：窗口伙伴的单气泡对话、逐句节奏、行走朝向与气泡样式参考。
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)：上游插件宿主。
 - [dsh-im](https://github.com/xmanrui/dsh-im)、[dsh-lark-link](https://github.com/amlyczz/dsh-lark-link) 与 [dsh-lark-bridge](https://github.com/imetn/dsh-lark-bridge)：IM 接入基础与可靠性、路由参考。
 
