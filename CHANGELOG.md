@@ -39,6 +39,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- Developers can reuse independent QQ QA1/QA2/QA3 Apps across branches through task claims and dedicated native Profiles, and connect a selected existing native authorization through CLI over strict SSH without retyping its Secret or copying the full credential store ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [guide](docs/agents/qq-test-clients.md)).
+
 - After you send, the composer clears and the input is kept on this device: press Up in an empty DM or Group composer to recall what you submitted, including failed sends, and Down to return to your draft. A send that got no answer shows **Not confirmed** instead of failed; it is checked against the Host by its original ID, never resent automatically, and stays recoverable after a reload ([#1460](https://github.com/BotHarness/DeepSeekBot/issues/1460), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
 
 - Messages can be multi-selected with **Select** in the message menu (right-click, or long-press on touch). An **Export** menu then saves the selected messages as a PNG image, copies them as conversation text, or exports a local diagnostic bundle: a zip with that Channel from the first to the last selected message (or from a single message until now) plus 30 minutes on each side, with the selected messages marked, the involved Bots' DMs, Inbox admissions and native Session events (tool calls included, from the start of any turn already running), and a merged timeline. Standard redaction hides local folders, tokens, secret fields, request headers and emails; Memory files, attachments and other Channels are never included, and nothing is uploaded ([#1533](https://github.com/BotHarness/DeepSeekBot/issues/1533), [ADR-0185](docs/adr/0185-diagnostic-bundles-are-local-redacted-read-only-exports.md)).
@@ -262,6 +264,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - On narrow screens, message bubbles are no longer squeezed by the always-visible reply and copy buttons; those actions move into the long-press message menu, while desktop hover and right-click behavior is unchanged ([#1346](https://github.com/BotHarness/DeepSeekBot/issues/1346)).
 
 ### Documentation
+
+- Documented a qualified 2-core, 4 GB source deployment with strict SSH, CLI installation, tailnet HTTPS, real QQ replies before and after Host restart, an original-group A/B image with private identity redacted, and an actual native binding clip with bilingual subtitles; the complete tutorial film remains pending ([#1438](https://github.com/BotHarness/DeepSeekBot/issues/1438), [walkthrough](docs/vps-qq-tutorial.md), [Profile installer](docs/agents/source-profile-install.md)).
 
 - The npm package page names DeepSeekBot (DSB), lists QQ among IM identities, notes that it is not DS Bot (`ds-bot`), and links to deepseekbot.app ([#1548](https://github.com/BotHarness/DeepSeekBot/pull/1548)).
 

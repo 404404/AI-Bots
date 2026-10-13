@@ -360,6 +360,21 @@ export const PAGES = [
     },
   },
   {
+    slug: 'docs/vps-qq-tutorial',
+    order: 13,
+    en: {
+      source: 'docs/vps-qq-tutorial.md',
+      title: 'Deploy DeepSeekBot on a Linux VPS with Tailscale and QQ',
+      description:
+        'A qualified 2-core, 4 GB source deployment with strict SSH, CLI, tailnet HTTPS and real QQ restart verification.',
+    },
+    zh: {
+      source: 'docs/vps-qq-tutorial.zh.md',
+      title: '2 核 4GB VPS 部署 DeepSeekBot：CLI、Tailscale 与 QQ',
+      description: '从严格 SSH 到源码 CLI 安装、tailnet HTTPS 和重启后的真实 QQ 群问答。',
+    },
+  },
+  {
     slug: 'docs/slack-connection',
     order: 24,
     en: {

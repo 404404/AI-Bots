@@ -1,0 +1,44 @@
+{
+  "capturedAt": "2026-10-11T19:59:14.709Z",
+  "runtimeSource": "031a14db43af5b3bf52e76b01c30e27828e6e9c9",
+  "providerVersion": "4.32.0-botharness.19",
+  "recorder": "Actual Chromium UI via Playwright 1.64.0-alpha-1790635538000; T3 explicitly unavailable",
+  "access": "Strict SSH localhost forward to the verified task VPS; authentication prepared privately before recording. This clip is not HTTPS access evidence.",
+  "processing": "Remove initial 6 seconds of page loading; encode WebM to H.264 MP4; remove container metadata. No synthetic frames or recreated UI.",
+  "originalSha256": "db9a4e8940a89894922529da3c80e0087f41687c1fc3c7ca3acd6deecc76ceb4",
+  "durationSeconds": 7.96,
+  "frames": 199,
+  "privacyReview": "All original decoded frames inspected in eight contact sheets; full-resolution blank form inspected. No key, QR, login URL, machine identity or unrelated chat; native app identifier is already masked. No credential entry or Connect mutation was recorded.",
+  "files": [
+    {
+      "file": "video/qq-manual-setup.mp4",
+      "bytes": 289183,
+      "sha256": "1d6aac39226d7103191c3e850dcdc1c6db6b8942e0ff42084a7060bffaf4c597"
+    },
+    {
+      "file": "03-qq-manual-setup.png",
+      "bytes": 130949,
+      "sha256": "a90a1135cf93ac226a8b78a3afd87dfc95fa4cc519dfb2976195328609c9d1f1"
+    },
+    {
+      "file": "video/qq-manual-setup.en.vtt",
+      "bytes": 362,
+      "sha256": "0939cc53c1224913418f99ac93002207a1e2455e2dc7140a35d147999b258831"
+    },
+    {
+      "file": "video/qq-manual-setup.zh.vtt",
+      "bytes": 343,
+      "sha256": "f0df43a85195e0340d4e79b19f657dfaf60db9ee6de7076ed275072a49231b13"
+    },
+    {
+      "file": "video/qq-manual-setup.en.srt",
+      "bytes": 364,
+      "sha256": "4feeba60c90ce9ad7f5fab3192e79eeca7ab60fdb51bf2ef53380a252542eaa2"
+    },
+    {
+      "file": "video/qq-manual-setup.zh.srt",
+      "bytes": 345,
+      "sha256": "cc0b8ea9521629938c2612a3d477250883cbad9d0ca2f384984258b2ceefc35b"
+    }
+  ]
+}
