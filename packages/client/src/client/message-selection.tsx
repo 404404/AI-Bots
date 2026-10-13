@@ -1,5 +1,12 @@
-import { createContext, useContext, type ReactElement } from 'react';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import { createContext, useContext, useRef, useState, type ReactElement } from 'react';
+import {
+  Button,
+  IconCopyOutlineRegular,
+  IconDownloadOutlineRegular,
+  IconInspectOutlineRegular,
+  IconShareOutlineRegular,
+  Menu,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { MessageSelection } from './message-selection-state.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -11,20 +18,29 @@ export function useMessageSelection(): MessageSelection | undefined {
   return useContext(MessageSelectionContext);
 }
 
+export type MessageSelectionExport = 'image' | 'diagnostics' | 'conversation';
+
 export function MessageSelectionBar({
   count,
-  onExportDiagnostics,
+  busy,
+  notice,
+  onExport,
   onCancel,
   t,
 }: {
   count: number;
-  onExportDiagnostics(): void;
+  busy: boolean;
+  notice?: string | undefined;
+  onExport(kind: MessageSelectionExport): void;
   onCancel(): void;
   t: BotHarnessTranslate;
 }): ReactElement {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuOpenRef = useRef(false);
+  menuOpenRef.current = menuOpen;
   const mount = useMountedResource<HTMLDivElement>(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape' && !event.defaultPrevented) onCancel();
+      if (event.key === 'Escape' && !event.defaultPrevented && !menuOpenRef.current) onCancel();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -38,15 +54,55 @@ export function MessageSelectionBar({
       data-message-selection
     >
       <span className="bh-selection-count" role="status">
-        {count === 0 ? t('selection.hint') : t('selection.count', { count: String(count) })}
+        {notice ??
+          (count === 0 ? t('selection.hint') : t('selection.count', { count: String(count) }))}
       </span>
       <div className="bh-selection-actions">
         <Button variant="outline" onClick={onCancel}>
           {t('common.cancel')}
         </Button>
-        <Button variant="primary" disabled={count === 0} onClick={onExportDiagnostics}>
-          {t('selection.exportDiagnostics')}
-        </Button>
+        <Menu
+          open={menuOpen}
+          portal
+          align="end"
+          side="top"
+          items={[
+            {
+              id: 'image',
+              label: t('selection.export.image'),
+              icon: <IconDownloadOutlineRegular />,
+            },
+            {
+              id: 'conversation',
+              label: t('selection.export.conversation'),
+              icon: <IconCopyOutlineRegular />,
+            },
+            {
+              id: 'diagnostics',
+              label: t('selection.export.diagnostics'),
+              icon: <IconInspectOutlineRegular />,
+            },
+          ]}
+          onSelect={(id) => {
+            setMenuOpen(false);
+            if (id === 'image' || id === 'diagnostics' || id === 'conversation') onExport(id);
+          }}
+          onClose={() => setMenuOpen(false)}
+          anchor={
+            <Button
+              variant="primary"
+              disabled={count === 0 || busy}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((value) => !value)}
+            >
+              <span className="bh-selection-export">
+                <IconShareOutlineRegular size={16} />
+                {t('selection.export')}
+              </span>
+            </Button>
+          }
+        />
       </div>
     </div>
   );

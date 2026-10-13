@@ -26,6 +26,12 @@ export const CSS =
 .bh-diagnostic-meta[data-diagnostic-scope] { margin-top: 2px; padding-left: 24px; }
 .bh-selection-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 16px 16px; padding: 10px 12px 10px 16px; border-radius: 12px; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-primary); }
 .bh-selection-count { min-width: 0; font-size: 13px; line-height: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bh-selection-export { display: inline-flex; align-items: center; gap: 6px; }
+.bh-snapshot { position: fixed; left: -100000px; top: 0; display: flex; flex-direction: column; gap: 12px; padding: 20px 24px 24px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); pointer-events: none; }
+.bh-snapshot-header { display: flex; flex-direction: column; gap: 2px; padding-bottom: 12px; border-bottom: 1px solid var(--dsw-alias-border-l2); }
+.bh-snapshot-header strong { font-size: 15px; line-height: 22px; font-weight: 600; }
+.bh-snapshot-header span { font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+.bh-snapshot-body { display: flex; flex-direction: column; gap: 12px; }
 .bh-selection-actions { display: flex; flex: none; gap: 8px; font-size: 14px; line-height: normal; }
 .bh-message-group:has(.bh-bubble-selecting) { position: relative; padding-left: 32px; }
 .bh-bubble-wrap.bh-bubble-selecting { position: static; cursor: pointer; user-select: none; }

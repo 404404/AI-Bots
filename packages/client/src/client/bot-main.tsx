@@ -121,7 +121,9 @@ import {
   MessageSelectionContext,
   useMessageSelection,
 } from './message-selection.js';
+import { buildMessageSnapshot, renderMessageSnapshot } from './message-snapshot.js';
 import {
+  conversationText,
   selectableMessage,
   selectionRange,
   toggleSelection,
@@ -286,7 +288,6 @@ export function MessageBubbleWrap({
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const origin = useRef<{ x: number; y: number } | undefined>(undefined);
   const fired = useRef(false);
-  const swallowClick = useRef(false);
   const selection = useMessageSelection();
   const selectable = selection !== undefined && selectableMessage(message);
   const checked = selection?.selected.has(message.id) === true;
@@ -325,12 +326,6 @@ export function MessageBubbleWrap({
         onContextMenu(message, event.clientX, event.clientY);
       }}
       onClickCapture={(event) => {
-        if (swallowClick.current) {
-          swallowClick.current = false;
-          event.preventDefault();
-          event.stopPropagation();
-          return;
-        }
         if (selection?.active !== true) return;
         event.preventDefault();
         event.stopPropagation();
@@ -342,37 +337,6 @@ export function MessageBubbleWrap({
           event.preventDefault();
           selection.toggle(message);
         }
-      }}
-      onMouseDown={(event) => {
-        if (event.button !== 0 || !selectable || selection?.active === true) return;
-        if ((event.target as Element).closest('a,button,input,textarea,select,[contenteditable]'))
-          return;
-        const x = event.clientX;
-        const y = event.clientY;
-        clearTimer();
-        origin.current = { x, y };
-        timer.current = setTimeout(() => {
-          timer.current = undefined;
-          origin.current = undefined;
-          swallowClick.current = true;
-          window.getSelection()?.removeAllRanges();
-          selection?.begin(message);
-        }, BUBBLE_LONG_PRESS_MS);
-      }}
-      onMouseMove={(event) => {
-        const start = origin.current;
-        if (start === undefined || timer.current === undefined) return;
-        if (
-          Math.abs(event.clientX - start.x) > BUBBLE_LONG_PRESS_TOLERANCE_PX ||
-          Math.abs(event.clientY - start.y) > BUBBLE_LONG_PRESS_TOLERANCE_PX
-        )
-          cancel();
-      }}
-      onMouseUp={() => {
-        if (timer.current !== undefined) cancel();
-      }}
-      onMouseLeave={() => {
-        if (timer.current !== undefined) cancel();
       }}
       onTouchStart={(event) => {
         if (event.touches.length !== 1) {
@@ -984,6 +948,71 @@ function ConversationView({
             ),
         };
   const cancelSelection = useCallback(() => setSelectedMessages(undefined), []);
+  const [selectionBusy, setSelectionBusy] = useState(false);
+  const [selectionNotice, setSelectionNotice] = useState<string>();
+  const flashSelectionNotice = (notice: string): void => {
+    setSelectionNotice(notice);
+    window.setTimeout(
+      () => setSelectionNotice((current) => (current === notice ? undefined : current)),
+      2500,
+    );
+  };
+  const selectionAuthor = (message: ChannelMessage): string =>
+    authorLabel(message, state.bots, t, channelHumanName(channel));
+  const copySelection = async (ids: readonly string[]): Promise<void> => {
+    const text = conversationText(ids, messages, {
+      title,
+      author: selectionAuthor,
+      attachment: t('selection.attachment'),
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      flashSelectionNotice(t('selection.copied', { count: String(ids.length) }));
+    } catch {
+      flashSelectionNotice(t('selection.failed'));
+    }
+  };
+  const exportSelectionImage = async (ids: readonly string[]): Promise<void> => {
+    const timeline = scrollRef.current;
+    const range = selectionRange(ids, messages);
+    if (timeline === null || range === undefined) return;
+    const first = messages.find((message) => message.id === range.fromMessageId);
+    const last = messages.find(
+      (message) => message.id === (range.toMessageId ?? range.fromMessageId),
+    );
+    const sheet = buildMessageSnapshot(
+      timeline,
+      ids,
+      title,
+      [first, last]
+        .filter((message) => message !== undefined)
+        .map((message) =>
+          new Date(message.at).toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+        )
+        .filter((value, index, all) => all.indexOf(value) === index)
+        .join(' – '),
+    );
+    if (sheet === undefined) return;
+    setSelectionBusy(true);
+    try {
+      const blob = await renderMessageSnapshot(timeline, sheet);
+      if (blob === undefined) throw new Error('snapshot-empty');
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `deepseekbot-messages-${new Date().toISOString().replace(/[:.]/gu, '-')}.png`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      flashSelectionNotice(t('selection.imageSaved', { count: String(ids.length) }));
+    } catch {
+      flashSelectionNotice(t('selection.failed'));
+    } finally {
+      setSelectionBusy(false);
+    }
+  };
   const memoryCommitIntent = state.memoryCommitIntent;
   const activeMemoryView =
     selectedMemoryView?.channelId === channelId
@@ -1990,11 +2019,17 @@ function ConversationView({
               channelId !== undefined ? (
                 <MessageSelectionBar
                   count={selectedIds.length}
+                  busy={selectionBusy}
+                  notice={selectionNotice}
                   t={t}
                   onCancel={cancelSelection}
-                  onExportDiagnostics={() => {
-                    const range = selectionRange(selectedIds, messages);
-                    if (range !== undefined) setDiagnosticsTarget({ channelId, ...range });
+                  onExport={(kind) => {
+                    if (kind === 'diagnostics') {
+                      const range = selectionRange(selectedIds, messages);
+                      if (range !== undefined) setDiagnosticsTarget({ channelId, ...range });
+                    } else if (kind === 'conversation') {
+                      void copySelection(selectedIds);
+                    } else void exportSelectionImage(selectedIds);
                   }}
                 />
               ) : null}
