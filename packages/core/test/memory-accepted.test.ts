@@ -334,6 +334,68 @@ describe('current Git working tree is Memory', () => {
     }
   });
 
+  it('loads an older commit as a new commit after saving uncommitted work', () => {
+    const { database, memory, root } = fixture();
+    try {
+      git(root, 'config', 'user.name', 'Test Author');
+      git(root, 'config', 'user.email', 'test@example.com');
+      writeFileSync(join(root, 'note.md'), 'first\n');
+      git(root, 'add', 'note.md');
+      git(root, 'commit', '-m', 'First note');
+      const first = git(root, 'rev-parse', 'HEAD');
+      writeFileSync(join(root, 'note.md'), 'second\n');
+      writeFileSync(join(root, 'later.md'), 'later\n');
+      git(root, 'add', '-A');
+      git(root, 'commit', '-m', 'Second note');
+      const second = git(root, 'rev-parse', 'HEAD');
+      writeFileSync(join(root, 'note.md'), 'unsaved\n');
+      writeFileSync(join(root, 'draft.md'), 'untracked\n');
+
+      expect(() =>
+        memory.loadHuman({
+          botSlug: 'atlas',
+          sha: first,
+          expectedHead: first,
+          loadId: '33333333-3333-4333-8333-333333333333',
+        }),
+      ).toThrow('Memory changed since the Human opened it');
+      expect(readFileSync(join(root, 'draft.md'), 'utf8')).toBe('untracked\n');
+
+      const result = memory.loadHuman({
+        botSlug: 'atlas',
+        sha: first,
+        expectedHead: second,
+        loadId: '44444444-4444-4444-8444-444444444444',
+      });
+      expect(git(root, 'rev-parse', 'HEAD')).toBe(result.head);
+      expect(git(root, 'rev-parse', 'HEAD^')).toBe(second);
+      expect(git(root, 'rev-parse', 'HEAD^{tree}')).toBe(git(root, 'rev-parse', `${first}^{tree}`));
+      expect(git(root, 'log', '-1', '--format=%s')).toBe(
+        `Load Memory from ${first.slice(0, 7)}: First note`,
+      );
+      expect(git(root, 'status', '--porcelain')).toBe('');
+      expect(existsSync(join(root, 'later.md'))).toBe(false);
+      expect(readFileSync(join(root, 'note.md'), 'utf8')).toBe('first\n');
+      expect(result.saved.head).toBe(second);
+      expect(git(root, 'show', `${result.saved.ref}:draft.md`)).toBe('untracked');
+      expect(git(root, 'show', `${result.saved.ref}:note.md`)).toBe('unsaved');
+      expect(memory.recoveryHistory('atlas').map((point) => point.id)).toContain(result.saved.id);
+
+      const back = memory.loadHuman({
+        botSlug: 'atlas',
+        sha: second,
+        expectedHead: result.head,
+        loadId: '55555555-5555-4555-8555-555555555555',
+      });
+      expect(git(root, 'rev-parse', `${back.head}^{tree}`)).toBe(
+        git(root, 'rev-parse', `${second}^{tree}`),
+      );
+      expect(readFileSync(join(root, 'later.md'), 'utf8')).toBe('later\n');
+    } finally {
+      database.close();
+    }
+  });
+
   it('keeps the Git directory and symlink escapes outside the Memory file API', () => {
     const { home, database, memory, root } = fixture();
     try {

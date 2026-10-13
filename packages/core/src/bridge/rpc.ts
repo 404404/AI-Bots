@@ -1209,6 +1209,15 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.memoryRestore({ channelId, checkpointId, expectedCurrentId }));
   }
 
+  memoryLoad(
+    channelId: string,
+    sha: string,
+    expectedHead: string,
+    loadId: string,
+  ): { head: string; saved: MemoryRecoveryCheckpoint } {
+    return unwrap(this.methods.memoryLoad({ channelId, sha, expectedHead, loadId }));
+  }
+
   memorySave(
     channelId: string,
     path: string,
@@ -1525,6 +1534,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'memoryRecoveryHistory',
   'memoryRestore',
   'memorySave',
+  'memoryLoad',
   'memoryRepair',
   'profileActivity',
   'profileSessionUsage',

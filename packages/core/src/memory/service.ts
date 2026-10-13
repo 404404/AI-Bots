@@ -149,6 +149,7 @@ export function createMemoryService(options: MemoryServiceOptions): MemoryServic
     recoveryHistory: (botSlug) => requireAcceptance().recoveryHistory(botSlug),
     restoreHuman: (input) => requireAcceptance().restoreHuman(input),
     saveHuman: (input) => requireAcceptance().saveHuman(input),
+    loadHuman: (input) => requireAcceptance().loadHuman(input),
     repairHuman: (input) => requireAcceptance().repairHuman(input),
     memoryDirFor,
     repositoryFor,

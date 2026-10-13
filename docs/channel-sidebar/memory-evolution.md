@@ -28,11 +28,13 @@ Select an existing branch in **Search branches**, then click **Switch**. The int
 
 From a commit diff, **Create and switch branch from this memory** opens a new-branch name field. **Create and switch** also sends a Bot request; it creates a branch from that commit rather than undoing later commits on the original branch. Confirm the operation and resulting files after the Bot completes it.
 
-## Recovery checkpoints
+## Load an earlier memory
 
-**Recovery checkpoints** preserve an observed branch, HEAD, index and working tree. Their source says when BotHarness observed or acted on the repository, not who wrote its Git files.
+Select a commit in the graph and click **Load this memory** below it, or right-click any commit. The confirmation names the commit; **Save and load** first saves the current state, including files that are not committed yet, then adds a new commit whose files match the selected commit. Later commits stay in the graph, so you can load any of them again.
 
-Choose a checkpoint only when you intend to restore that state, inspect the branch/commit in the confirmation, then use **Back up and restore**. Restoration backs up the pre-restore repository and shows the backup location. It changes current Memory, so ordinary reading and branch requests are separate procedures. A **Repair Memory** state has its own confirmation and backup procedure.
+## Saves
+
+**Saves** lists the states BotHarness saved automatically: whenever Memory changed and before every load. Each save keeps the branch, commit, staged files and uncommitted files. Select a save and use **Back up and load** to go back to it. This fully backs up the repository first and shows the backup location. A **Repair Memory** state has its own confirmation and backup procedure.
 
 The screenshots demonstrate reading the real repository and commit diff. They do not demonstrate a recovery or claim that the example repository needed repair.
 

@@ -6799,6 +6799,9 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-memory-view-icon-button:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
 .bh-memory-view-icon-button:focus-visible, .bh-memory-diff-file-header:focus-visible { outline: 2px solid var(--dsw-alias-label-primary); outline-offset: -2px; }
 .bh-memory-commit-header > .bh-memory-view-icon-button:last-child { margin-left: auto; }
+.bh-memory-load-offer { display: flex; padding: 2px 0 8px; }
+.bh-memory-load-confirm { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.bh-memory-load-confirm p { flex-basis: 100%; margin: 0; color: var(--dsw-alias-label-secondary); }
 .bh-memory-continue-form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .bh-memory-continue-form label { color: var(--dsw-alias-label-secondary); }
 .bh-memory-continue-form input { min-width: 180px; max-width: 320px; }

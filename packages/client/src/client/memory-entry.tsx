@@ -59,6 +59,8 @@ function MemoryEntryForScope({
     returnFocus: HTMLElement;
   }>();
   const [continueForm, setContinueForm] = useState<{ sha: string; branch: string }>();
+  const [loadForm, setLoadForm] = useState<{ sha: string; subject: string }>();
+  const [loadedSha, setLoadedSha] = useState<string>();
   const commitMenuAnchor = useRef<HTMLSpanElement>(null);
   const [snapshot, setSnapshot] = useState<MemorySnapshot | undefined>(cache.snapshot);
   const [graph, setGraph] = useState<MemoryGitGraph | undefined>(cache.graph);
@@ -381,6 +383,37 @@ function MemoryEntryForScope({
     }
   };
 
+  const forgetMemory = (): void => {
+    memoryRequestGeneration.current += 1;
+    cache.snapshot = undefined;
+    cache.graph = undefined;
+    cache.working = undefined;
+    cache.files.clear();
+    setRefresh((value) => value + 1);
+  };
+
+  const loadCommit = async (): Promise<void> => {
+    if (loadForm === undefined || graph === undefined || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const result = await actions.memoryLoad({
+        channelId,
+        sha: loadForm.sha,
+        expectedHead: graph.head,
+        loadId: crypto.randomUUID(),
+      });
+      setLoadedSha(loadForm.sha);
+      setLoadForm(undefined);
+      forgetMemory();
+      onMemoryCommitSelect?.(result.head);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const save = async (): Promise<void> => {
     if (file === undefined || file.binary || busy || draft === file.body) return;
     setBusy(true);
@@ -643,6 +676,11 @@ function MemoryEntryForScope({
                 {t('memory.branchRequested')} {branchRequest}
               </div>
             )}
+            {loadedSha === undefined ? null : (
+              <div className="bh-note" role="status">
+                {t('memory.load.done', { sha: loadedSha.slice(0, 7) })}
+              </div>
+            )}
             {commitMenu === undefined ? null : (
               <span className="bh-menu-anchor" style={{ left: commitMenu.x, top: commitMenu.y }}>
                 <Menu
@@ -652,12 +690,28 @@ function MemoryEntryForScope({
                   autoFocus
                   anchor={<span ref={commitMenuAnchor} aria-hidden="true" />}
                   getAnchorRect={() => commitMenuAnchor.current?.getBoundingClientRect() ?? null}
-                  items={[{ id: 'continue', label: t('memory.continueHere') }]}
-                  onSelect={() => {
-                    setContinueForm({
-                      sha: commitMenu.sha,
-                      branch: 'memory-' + commitMenu.sha.slice(0, 7),
-                    });
+                  items={[
+                    ...(commitMenu.sha === graph.head
+                      ? []
+                      : [{ id: 'load', label: t('memory.load.menu') }]),
+                    { id: 'continue', label: t('memory.continueHere') },
+                  ]}
+                  onSelect={(id) => {
+                    if (id === 'load') {
+                      setContinueForm(undefined);
+                      setLoadForm({
+                        sha: commitMenu.sha,
+                        subject:
+                          graph.commits.find((commit) => commit.sha === commitMenu.sha)?.subject ??
+                          '',
+                      });
+                    } else {
+                      setLoadForm(undefined);
+                      setContinueForm({
+                        sha: commitMenu.sha,
+                        branch: 'memory-' + commitMenu.sha.slice(0, 7),
+                      });
+                    }
                     setCommitMenu(undefined);
                   }}
                   onClose={() => {
@@ -770,6 +824,50 @@ function MemoryEntryForScope({
                         </span>
                       </span>
                     </button>
+                    {commit.sha !== selectedMemoryCommitSha ||
+                    commit.sha === graph.head ||
+                    loadForm?.sha === commit.sha ||
+                    continueForm?.sha === commit.sha ? null : (
+                      <div className="bh-memory-load-offer">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => {
+                            setContinueForm(undefined);
+                            setLoadForm({ sha: commit.sha, subject: commit.subject });
+                          }}
+                        >
+                          {t('memory.load.action')}
+                        </Button>
+                      </div>
+                    )}
+                    {loadForm?.sha !== commit.sha ? null : (
+                      <div className="bh-memory-load-confirm" role="group">
+                        <p>
+                          {t('memory.load.confirm', {
+                            sha: commit.sha.slice(0, 7),
+                            subject: loadForm.subject,
+                          })}
+                        </p>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => void loadCommit()}
+                        >
+                          {busy ? t('memory.load.loading') : t('memory.load.submit')}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy}
+                          onClick={() => setLoadForm(undefined)}
+                        >
+                          {t('common.cancel')}
+                        </Button>
+                      </div>
+                    )}
                     {continueForm?.sha !== commit.sha ? null : (
                       <form
                         className="bh-memory-continue-form"
@@ -829,14 +927,7 @@ function MemoryEntryForScope({
             channelId={channelId}
             refreshRevision={refreshRevision}
             t={t}
-            onRestored={() => {
-              memoryRequestGeneration.current += 1;
-              cache.snapshot = undefined;
-              cache.graph = undefined;
-              cache.working = undefined;
-              cache.files.clear();
-              setRefresh((value) => value + 1);
-            }}
+            onRestored={forgetMemory}
           />
         ) : null}
       </div>

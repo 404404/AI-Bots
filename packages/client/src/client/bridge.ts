@@ -3932,6 +3932,24 @@ export async function restoreMemoryCheckpoint(
   };
 }
 
+export async function loadMemoryCommit(
+  call: BridgeCall,
+  input: { channelId: string; sha: string; expectedHead: string; loadId: string },
+): Promise<{ head: string; saved: MemoryRecoveryCheckpoint }> {
+  const response = asRecord(await unwrap(call, 'memoryLoad', input));
+  const saved = asRecord(response?.['saved']);
+  if (
+    saved === undefined ||
+    typeof saved['id'] !== 'string' ||
+    typeof response?.['head'] !== 'string'
+  )
+    throw new Error('invalid Memory load result');
+  return {
+    head: response['head'] as string,
+    saved: saved as unknown as MemoryRecoveryCheckpoint,
+  };
+}
+
 export async function saveMemoryFile(
   call: BridgeCall,
   input: { channelId: string; path: string; body: string; expectedHead: string; editId: string },

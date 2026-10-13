@@ -168,13 +168,13 @@ it('requires an explicit confirmation before restoring an older Memory checkpoin
   const olderRow = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row')[1];
   await act(async () => olderRow?.click());
   const choose = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '恢复此检查点',
+    (button) => button.textContent === '读档',
   );
   await act(async () => choose?.click());
   expect(actions.memoryRestore).not.toHaveBeenCalled();
-  expect(container.textContent).toContain('当前仓库会完整备份');
+  expect(container.textContent).toContain('当前仓库会先完整备份');
   const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '备份并恢复',
+    (button) => button.textContent === '备份并读档',
   );
   await act(async () => confirm?.click());
   expect(actions.memoryRestore).toHaveBeenCalledWith({
@@ -573,6 +573,78 @@ describe('Memory Git graph sidebar', () => {
     expect(actions.send).toHaveBeenCalledWith(expect.stringContaining(SHA));
     expect(actions.send).toHaveBeenCalledWith(expect.stringContaining('memory-aaaaaaa'));
     expect(container.querySelector('.bh-memory-continue-form')).toBeNull();
+  });
+
+  it('loads an older graph commit after an explicit save-and-load confirmation', async () => {
+    const older = 'b'.repeat(40);
+    const loaded = 'c'.repeat(40);
+    const graph: MemoryGitGraph = {
+      head: SHA,
+      currentBranch: 'main',
+      branches: ['main'],
+      dirty: true,
+      commits: [
+        {
+          sha: SHA,
+          parents: [older],
+          subject: 'Newer memory',
+          authoredAt: '2026-09-26T00:00:00Z',
+          branches: ['main'],
+          status: 'accepted',
+        },
+        {
+          sha: older,
+          parents: [],
+          subject: 'Older memory',
+          authoredAt: '2026-09-25T00:00:00Z',
+          branches: [],
+          status: 'accepted',
+        },
+      ],
+      hasMore: false,
+    };
+    const onMemoryCommitSelect = vi.fn();
+    const actions = {
+      memorySnapshot: vi.fn().mockResolvedValue({ head: SHA, files: [], provisional: false }),
+      memoryGitGraph: vi.fn().mockResolvedValue(graph),
+      memoryLoad: vi.fn().mockResolvedValue({ head: loaded, saved: { id: 'saved' } }),
+      ...inertSubmissionActions,
+    } as unknown as BridgeActions;
+    await act(async () => {
+      root.render(
+        createElement(MemoryEntry, {
+          scope: 'personabot',
+          channelId: 'dm-qa',
+          botSlug: 'qa',
+          actions,
+          selectedMemoryCommitSha: older,
+          onMemoryCommitSelect,
+          t: zhTranslate,
+        }),
+      );
+    });
+    const offer = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent === '读档到这里',
+    );
+    expect(container.querySelectorAll('.bh-memory-load-offer')).toHaveLength(1);
+    await act(async () => offer?.click());
+    expect(actions.memoryLoad).not.toHaveBeenCalled();
+    expect(container.querySelector('.bh-memory-load-confirm')?.textContent).toContain(
+      '把记忆读档到 bbbbbbb「Older memory」',
+    );
+    const submit = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent === '存档并读档',
+    );
+    await act(async () => submit?.click());
+    expect(actions.memoryLoad).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      sha: older,
+      expectedHead: SHA,
+      loadId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+    });
+    expect(onMemoryCommitSelect).toHaveBeenCalledWith(loaded);
+    expect(container.querySelector('.bh-memory-load-confirm')).toBeNull();
+    expect(container.textContent).toContain('已读档到 bbbbbbb');
   });
 
   it('groups commit changes into independently collapsible files with graph badges', async () => {

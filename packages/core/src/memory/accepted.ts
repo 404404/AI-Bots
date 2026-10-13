@@ -202,6 +202,10 @@ export interface MemoryAcceptance {
     expectedHead: string;
     editId: string;
   }): MemoryAcceptedCommit;
+  loadHuman(input: { botSlug: string; sha: string; expectedHead: string; loadId: string }): {
+    head: string;
+    saved: MemoryRecoveryCheckpoint;
+  };
 }
 
 interface RepairRow {
@@ -1919,6 +1923,81 @@ export function createMemoryAcceptance(options: {
         );
       }
       return accepted;
+    },
+    loadHuman(input) {
+      if (inFlight.has(input.botSlug) || pendingRepair(input.botSlug) !== undefined)
+        throw new MemoryAcceptError('memory-conflict', 'Memory is busy');
+      const root = repository(registry, input.botSlug);
+      const branch = branchOf(root);
+      const baseline = head(root);
+      if (baseline !== input.expectedHead)
+        throw new MemoryAcceptError('memory-conflict', 'Memory changed since the Human opened it');
+      let targetTree: string;
+      try {
+        targetTree = output(root, ['rev-parse', '--verify', `${input.sha}^{commit}^{tree}`]);
+      } catch {
+        throw new MemoryAcceptError('memory-invalid', 'Memory commit is not in this repository');
+      }
+      const saved = recovery.capture(
+        input.botSlug,
+        root,
+        {
+          origin: 'human-command',
+          originId: LOCAL_HUMAN_ID,
+          causeKind: 'human-edit',
+          causeId: input.loadId,
+        },
+        true,
+      );
+      if (saved.branch !== branch || saved.head !== baseline)
+        throw new MemoryAcceptError('memory-conflict', 'Memory changed while it was saved');
+      let loaded = baseline;
+      if (output(root, ['rev-parse', `${baseline}^{tree}`]) !== targetTree) {
+        const subject = output(root, ['log', '-1', '--format=%s', input.sha]).slice(0, 120);
+        loaded = output(root, [
+          'commit-tree',
+          targetTree,
+          '-p',
+          baseline,
+          '-m',
+          `Load Memory from ${input.sha.slice(0, 7)}: ${subject}`,
+        ]);
+        run(root, ['update-ref', `refs/heads/${branch}`, loaded, baseline]);
+      }
+      run(root, ['reset', '--hard', loaded]);
+      run(root, ['clean', '-fd']);
+      try {
+        if (loaded !== baseline) {
+          accept(
+            input.botSlug,
+            branch,
+            [
+              {
+                sha: loaded,
+                parentSha: baseline,
+                actorKind: 'human',
+                actorId: LOCAL_HUMAN_ID,
+                causeKind: 'human-edit',
+                causeId: input.loadId,
+                validationResult: validateCommit(root, loaded),
+              },
+            ],
+            acceptedHead(input.botSlug, branch),
+          );
+        }
+        recovery.capture(input.botSlug, root, {
+          origin: 'human-command',
+          originId: LOCAL_HUMAN_ID,
+          causeKind: 'human-edit',
+          causeId: input.loadId,
+        });
+        saveObservation(input.botSlug, root, observeWorktree(root));
+      } catch (error) {
+        options.warn?.(
+          `memory-record-failed phase=after-human-load bot=${input.botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
+        );
+      }
+      return { head: loaded, saved };
     },
   };
 }
