@@ -154,6 +154,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- A Bot's secret-input card now also appears in the Channel the request came from, including a Group. Only the Owner can fill it, no value is shown in the Channel, and only the requesting Bot receives the references ([#1542](https://github.com/BotHarness/DeepSeekBot/issues/1542)).
+
+- Before the first tool approval card of a task, a Bot now says in the conversation what it is about to do and what it needs; the Host returns the call once if the Bot has not spoken yet ([#1541](https://github.com/BotHarness/DeepSeekBot/issues/1541)).
+
 - A Bot working on a Group request now asks in that Group: tool approval cards, question cards and folder-access requests appear in the Channel the task came from instead of always in the Bot's DM. Secret input stays in the DM ([#1536](https://github.com/BotHarness/DeepSeekBot/issues/1536), [ADR-0186](docs/adr/0186-asks-follow-the-channel-the-task-came-from.md)).
 
 - A Group Channel's composer footer shows one workspace count, the distinct workspaces its member Bots can use together, instead of each Bot's own count; a DM still shows its Bot's count ([#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)).

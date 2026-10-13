@@ -92,6 +92,53 @@ async function fixture(
   };
 }
 
+describe('private input card in the Channel the task came from', () => {
+  it('opens the card in the Group turn, accepts the Owner submission there and keeps values out of every Channel', async () => {
+    let group = '';
+    const f = await fixture(true, undefined, { askChannel: () => group });
+    try {
+      group = f.channels.createGroup({ name: 'Team', members: ['ada', 'bea'] }).id;
+      const result = f.owner.ask(f.agent, declaration, new AbortController().signal);
+      await vi.waitFor(() =>
+        expect(f.channels.readMessages(group).some((message) => message.privateInputRequest)).toBe(
+          true,
+        ),
+      );
+      const id = f.channels.readMessages(group).find((message) => message.privateInputRequest)!.id;
+      expect(f.channels.readMessages('dm-ada').some((message) => message.privateInputRequest)).toBe(
+        false,
+      );
+      expect(f.owner.status(group, id)).toBe('pending');
+      expect(f.owner.status('dm-ada', id)).not.toBe('pending');
+      expect(await f.owner.submit(true, { channelId: 'dm-ada', messageId: id, values })).toBe(
+        false,
+      );
+      expect(await f.owner.submit(false, { channelId: group, messageId: id, values })).toBe(false);
+      expect(await f.owner.submit(true, { channelId: group, messageId: id, values })).toBe(true);
+      const configured = await result;
+      expect(configured.status).toBe('configured');
+      expect(
+        await f.owner.consume(f.agent, declaration.account, configured.references, async () => ({
+          httpStatus: 200,
+        })),
+      ).toEqual({ httpStatus: 200 });
+      await expect(
+        f.owner.consume(f.bea, declaration.account, configured.references, async () => ({
+          httpStatus: 200,
+        })),
+      ).rejects.toThrow();
+      const published = JSON.stringify([
+        f.channels.readMessages(group),
+        f.channels.readMessages('dm-ada'),
+      ]);
+      expect(published).not.toContain(values.api_key);
+      expect(published).not.toContain('SYNTHETIC secret');
+    } finally {
+      await f.close();
+    }
+  });
+});
+
 describe('IM private input origin leases', () => {
   function origin() {
     const controller = new AbortController();

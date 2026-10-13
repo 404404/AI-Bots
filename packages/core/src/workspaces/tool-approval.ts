@@ -320,6 +320,13 @@ export class ChannelToolApproval {
     };
   }
 
+  willPrompt(agent: Agent, callId: string): boolean {
+    const tracked = this.#tracked.get(callKey(agent.session.id, callId));
+    return (
+      tracked !== undefined && tracked.agent === agent && this.#rules?.match(tracked) === undefined
+    );
+  }
+
   pending(botSlug: string, messageId: string): ToolApprovalNotice | undefined {
     this.cancelInvalid();
     const pending = this.#pending.get(messageId);

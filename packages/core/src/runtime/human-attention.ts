@@ -167,8 +167,8 @@ const ACTION_ATTENTION_CTE = `WITH attention AS (
             FROM source_events e
             JOIN channel_placements p ON p.source_event_id = e.source_event_id
             JOIN channel_records c ON c.channel_id = p.channel_id
-           WHERE json_extract(c.record_json, '$.type') = 'dm'
-             AND json_extract(c.record_json, '$.botSlug') = e.bot_slug
+           WHERE (json_extract(c.record_json, '$.type') = 'group'
+               OR (json_extract(c.record_json, '$.type') = 'dm' AND json_extract(c.record_json, '$.botSlug') = e.bot_slug))
              AND json_extract(c.record_json, '$.deletedAt') IS NULL
              AND e.source_kind = 'bot-message'
              AND json_extract(e.payload_json, '$.privateInputRequest') IS NOT NULL
