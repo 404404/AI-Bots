@@ -30,6 +30,7 @@ import { attachmentReferenceRuns, messageAttachmentReferences } from './attachme
 import type { BridgeActions, HostDirectoryListing } from './actions.js';
 import { FolderBrowser } from './workspace-grants-entry.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { toolApprovalText } from './approval-text.js';
 import { store, type BotSummary, type ChannelMessage } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
 
@@ -305,7 +306,7 @@ function leadingBotMentions(message: ChannelMessage):
 }
 
 export function ChannelMessageBody({
-  message,
+  message: storedMessage,
   channelId,
   t,
   actions,
@@ -344,6 +345,9 @@ export function ChannelMessageBody({
     }),
     [t],
   );
+  const approvalBody = toolApprovalText(storedMessage, t);
+  const message =
+    approvalBody === undefined ? storedMessage : { ...storedMessage, body: approvalBody };
   const format = message.format ?? (message.author.kind === 'human' ? 'text' : 'markdown');
   if (message.contentPurged) return <div className="bh-bubble-body">{t('purge.purged')}</div>;
   if (message.onboardingWelcome !== undefined && actions !== undefined && channelId !== undefined)

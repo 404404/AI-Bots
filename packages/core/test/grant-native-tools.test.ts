@@ -18,9 +18,15 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-function fixture() {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'bh-native-grant-')));
-  roots.push(root);
+function fixture(linkedParent = false) {
+  const real = realpathSync(mkdtempSync(join(tmpdir(), 'bh-native-grant-')));
+  roots.push(real);
+  let root = real;
+  if (linkedParent) {
+    mkdirSync(join(real, 'target'));
+    symlinkSync(join(real, 'target'), join(real, 'linked'));
+    root = join(real, 'linked');
+  }
   const memory = join(root, 'memory');
   const project = join(root, 'project');
   const outside = join(root, 'outside');
@@ -196,5 +202,35 @@ describe('Orchestrator execution root selection', () => {
     expect(() =>
       nativeExecutionRoot(f.core, f.orchestrator, 'bash', { workdir: f.project }),
     ).toThrow(/outside/);
+  });
+});
+
+describe('Workspace roots under a symlinked parent (#1292)', () => {
+  it('accepts Memory and Grant roots whose parent directory is a symlink', () => {
+    const f = fixture(true);
+    expect(f.gate(f.orchestrator, 'read', { file_path: 'memory.txt' })).toBeUndefined();
+    expect(
+      f.gate(f.orchestrator, 'write', { file_path: 'new.txt', content: 'remembered' }),
+    ).toBeUndefined();
+    expect(f.gate(f.oldAssignment, 'read', { file_path: 'project.txt' })).toBeUndefined();
+    expect(nativeExecutionRoot(f.core, f.orchestrator, 'bash', { command: 'pwd' })).toBe(f.memory);
+    expect(f.gate(f.oldAssignment, 'read', { file_path: 'escape/secret.txt' })).toMatch(/outside/);
+    expect(f.gate(f.oldAssignment, 'read', { file_path: join(f.outside, 'secret.txt') })).toMatch(
+      /outside/,
+    );
+  });
+
+  it('still refuses a root that is itself a symlink', () => {
+    const f = fixture();
+    const linkedMemory = join(dirname(f.memory), 'linked-memory');
+    symlinkSync(f.memory, linkedMemory);
+    const core = {
+      ...(f.core as object),
+      registry: { memoryDirFor: () => linkedMemory, get: () => ({ slug: 'ada' }) },
+    } as never;
+    const session = { id: 'orch', header: { cwd: linkedMemory } } as never;
+    expect(nativeFileToolDenial(core, session, 'read', { file_path: 'memory.txt' })).toMatch(
+      /outside/,
+    );
   });
 });
