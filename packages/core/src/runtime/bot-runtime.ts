@@ -2836,8 +2836,13 @@ class BotRuntimeImplementation implements BotRuntime {
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
     const sourceIds = [...(sources ?? [])];
-    const channel = this.#channels.get(channelId);
-    if (channel?.type !== 'dm' || channel.botSlug !== owner.botSlug) return undefined;
+    const held = (): boolean => {
+      const channel = this.#channels.get(channelId);
+      return channel?.type === 'group'
+        ? channel.members.includes(owner.botSlug)
+        : channel?.botSlug === owner.botSlug;
+    };
+    if (!held()) return undefined;
     return (deliver) => {
       let accept!: (value: boolean) => void;
       const accepted = new Promise<boolean>((resolve) => {
@@ -2847,7 +2852,6 @@ class BotRuntimeImplementation implements BotRuntime {
         try {
           const bot = this.#registry.get(owner.botSlug);
           const current = this.#ownership.resolve(sessionId);
-          const dm = this.#channels.get(channelId);
           if (
             this.#closed ||
             bot === undefined ||
@@ -2855,8 +2859,7 @@ class BotRuntimeImplementation implements BotRuntime {
             current?.rootRole !== 'orchestrator' ||
             current.botSlug !== owner.botSlug ||
             !this.#ownership.contentAvailable(sessionId) ||
-            dm?.type !== 'dm' ||
-            dm.botSlug !== owner.botSlug
+            !held()
           )
             return;
           this.#database.read((db) => {
@@ -2876,7 +2879,6 @@ class BotRuntimeImplementation implements BotRuntime {
             () => {
               const currentBot = this.#registry.get(owner.botSlug);
               const currentOwner = this.#ownership.resolve(sessionId);
-              const currentDm = this.#channels.get(channelId);
               if (
                 this.#closed ||
                 currentBot === undefined ||
@@ -2884,8 +2886,7 @@ class BotRuntimeImplementation implements BotRuntime {
                 currentOwner?.rootRole !== 'orchestrator' ||
                 currentOwner.botSlug !== owner.botSlug ||
                 !this.#ownership.contentAvailable(sessionId) ||
-                currentDm?.type !== 'dm' ||
-                currentDm.botSlug !== owner.botSlug
+                !held()
               ) {
                 accept(false);
                 return false;
