@@ -194,22 +194,26 @@ describe('machine-local reusable IM test Apps', () => {
   it('captures synthetic Discord input without echo, preserves other slots and retains Token on Enter', () => {
     const options = fixture(configuration);
     saveImTestAppValues(slackConfiguration, options);
-    saveImTestAppValues(discordConfiguration, options);
+    saveImTestAppValues(discordConfiguration.replace('QA channel two', '常规'), options);
     const larkBefore = loadImTestApp(undefined, options);
     const slackBefore = loadSlackImTestApp(undefined, options);
     const discordBefore = loadDiscordImTestApp('QA1', options);
     const token = 'SYNTHETIC.DISCORD.SECRET-qa2-new';
     const run = (input) =>
-      spawnSync(process.execPath, ['scripts/dev-im-test-apps.mjs', 'setup', 'discord'], {
-        input,
-        encoding: 'utf8',
-        timeout: 15_000,
-        env: {
-          ...process.env,
-          BOTHARNESS_IM_TEST_APPS_ENV: options.path,
-          BOTHARNESS_IM_TEST_APPS_NO_OPEN: '1',
+      spawnSync(
+        process.execPath,
+        ['scripts/dev-im-test-apps.mjs', 'setup', 'discord', '--manual'],
+        {
+          input,
+          encoding: 'utf8',
+          timeout: 15_000,
+          env: {
+            ...process.env,
+            BOTHARNESS_IM_TEST_APPS_ENV: options.path,
+            BOTHARNESS_IM_TEST_APPS_NO_OPEN: '1',
+          },
         },
-      });
+      );
     const result = run(['', 'QA2', '', '', 'y', token, '', '', '', '', 'y', ''].join('\n'));
     expect(result.error).toBeUndefined();
     expect(result.status, result.stdout + result.stderr).toBe(0);
@@ -237,6 +241,76 @@ describe('machine-local reusable IM test Apps', () => {
     expect(loadImTestApp(undefined, options)).toEqual(larkBefore);
     expect(loadSlackImTestApp(undefined, options)).toEqual(slackBefore);
     expect(loadDiscordImTestApp('QA1', options)).toEqual(discordBefore);
+  });
+
+  it('asks only for the Token when an agent has prepared Discord metadata, including Chinese names', () => {
+    const options = fixture(configuration);
+    saveImTestAppValues(slackConfiguration, options);
+    saveImTestAppValues(discordConfiguration.replace('QA channel one', '常规'), options);
+    const before = loadDiscordImTestApp('QA1', options);
+    const token = 'SYNTHETIC.DISCORD.NEW-token';
+    const result = spawnSync(
+      process.execPath,
+      ['scripts/dev-im-test-apps.mjs', 'setup', 'discord'],
+      {
+        input: `${token}\n`,
+        encoding: 'utf8',
+        timeout: 15000,
+        env: {
+          ...process.env,
+          BOTHARNESS_IM_TEST_APPS_ENV: options.path,
+          BOTHARNESS_IM_TEST_APPS_NO_OPEN: '1',
+        },
+      },
+    );
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(result.stdout).toContain('常规');
+    expect(result.stdout).toContain('Bot Token');
+    for (const forbidden of [
+      'Ready to start?',
+      '测试槽 [',
+      'App 名称:',
+      '测试服务器名称:',
+      '测试服务器 ID:',
+      '测试文字频道名称:',
+      '测试文字频道 ID',
+      token,
+    ]) {
+      expect(result.stdout).not.toContain(forbidden);
+      expect(result.stderr).not.toContain(forbidden);
+    }
+    expect(loadDiscordImTestApp('QA1', options)).toEqual({
+      ...before,
+      botToken: token,
+      consoleReady: false,
+    });
+    expect(loadImTestApp(undefined, options)).toMatchObject({ name: 'BotHarness reusable QA 1' });
+    expect(loadSlackImTestApp(undefined, options)).toMatchObject({
+      name: 'BotHarness Slack QA Two',
+    });
+  });
+
+  it('refuses a Token-only handoff with missing metadata before asking for or saving a Token', () => {
+    const options = fixture(configuration);
+    const before = readFileSync(options.path, 'utf8');
+    const result = spawnSync(
+      process.execPath,
+      ['scripts/dev-im-test-apps.mjs', 'setup', 'discord', 'QA3'],
+      {
+        input: 'SYNTHETIC.NOT-TO-BE-SAVED\n',
+        encoding: 'utf8',
+        timeout: 15000,
+        env: {
+          ...process.env,
+          BOTHARNESS_IM_TEST_APPS_ENV: options.path,
+          BOTHARNESS_IM_TEST_APPS_NO_OPEN: '1',
+        },
+      },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stdout).not.toContain('Bot Token（隐藏输入）:');
+    expect(result.stdout).not.toContain('SYNTHETIC.NOT-TO-BE-SAVED');
+    expect(readFileSync(options.path, 'utf8')).toBe(before);
   });
 
   it('atomically saves one stage while preserving other Apps, comments and literal values', () => {

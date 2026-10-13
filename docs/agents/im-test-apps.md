@@ -106,9 +106,19 @@ node scripts/dev-im-test-apps.mjs list discord
 ```
 
 Run setup in an interactive terminal, using Windows Node and Git for Windows Bash on Windows.
-The three stages select an independent test App and current exclusive window, capture its Bot
-Token with hidden input, and record its test server and text channel. Re-running preserves
-saved values on Enter. The wizard opens the Developer Portal and Discord web client; it never
+The default path asks **only for the Bot Token**, using the selected slot's already prepared
+App and test server/channel metadata. An agent checks those non-secret values in the signed-in
+browser and saves them through the private registry before handing off Token entry.
+An explicit slot can be selected without another prompt: `setup discord QA2`.
+If metadata is missing, setup stops before asking for or saving a Token. Enter preserves the
+existing Token. Token entry leaves configuration readiness pending until real identity and
+permissions are checked; it never records a fresh receiver window.
+
+For full manual configuration, run `node scripts/dev-im-test-apps.mjs setup discord QA2 --manual`.
+Its three stages select an independent App/current window, capture the Token, and record the
+test server/channel. Re-running preserves saved values on Enter. This optional fallback opens
+the Developer Portal and Discord web client; the default opens only the App's Bot page.
+If automatic opening fails, use the printed link. Neither path
 creates Apps, resets Tokens, changes permissions, installs a Provider or starts a receiver itself.
 QA1/QA2/QA3 are reusable slots, not three automatically generated Discord applications.
 
@@ -130,7 +140,8 @@ Load privately with `loadDiscordImTestApp('QA1')` from `scripts/dev-im-test-apps
 prints names and presence/readiness metadata only, with no Token or numeric IDs. Records use
 literal `# BH_DISCORD_...=...` lines so older Lark/Slack loaders ignore and preserve them. Comment
 lines still contain private credentials and retain the same ACL/file protection; never source
-the file. The loader validates syntax, not native Token ownership, installation or live readiness.
+the file. Name validation uses Unicode text, so Chinese names do not depend on the Bash locale.
+The loader validates syntax, not native Token ownership, installation or live readiness.
 The Provider must authenticate the App/Bot identity and test destination before binding.
 
 For the current checked mention/reply contract, verify the App's installation in the designated

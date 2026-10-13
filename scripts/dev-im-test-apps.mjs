@@ -257,7 +257,7 @@ export function listDiscordImTestApps({ path = imTestAppsPath() } = {}) {
   });
 }
 
-function setup(platform) {
+function setup(platform, { manual = false, slot } = {}) {
   const script = fileURLToPath(new URL(`./setup-${platform}-test-app.sh`, import.meta.url));
   let bash = 'bash';
   if (process.platform === 'win32') {
@@ -275,15 +275,24 @@ function setup(platform) {
       );
   }
   console.log('正在准备本机私密配置文件；此步骤不会启动 IM 接收器。');
-  const result = spawnSync(bash, [script.replaceAll('\\', '/')], {
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
-      BOTHARNESS_IM_TEST_APPS_ENV: imTestAppsPath().replaceAll('\\', '/'),
-      ...(process.platform === 'win32' ? { TERM: 'dumb' } : {}),
+  const result = spawnSync(
+    bash,
+    [
+      script.replaceAll('\\', '/'),
+      ...(platform === 'discord'
+        ? [manual ? '--manual' : '--token-only', ...(slot ? [slot] : [])]
+        : []),
+    ],
+    {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        PATH: `${dirname(process.execPath)}${process.platform === 'win32' ? ';' : ':'}${process.env.PATH ?? ''}`,
+        BOTHARNESS_IM_TEST_APPS_ENV: imTestAppsPath().replaceAll('\\', '/'),
+        ...(process.platform === 'win32' ? { TERM: 'dumb' } : {}),
+      },
     },
-  });
+  );
   if (result.error) throw result.error;
   process.exitCode = result.status ?? 1;
 }
@@ -308,12 +317,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
           2,
         ),
       );
-    } else if (
-      command === 'setup' &&
-      args.length <= 1 &&
-      ['lark', 'slack', 'discord'].includes(platform)
-    ) {
-      setup(platform);
+    } else if (command === 'setup' && ['lark', 'slack', 'discord'].includes(platform)) {
+      const extra = args.slice(1);
+      const slot = extra.find((value) => IM_TEST_SLOTS.includes(value));
+      const manual = extra.includes('--manual');
+      if (
+        (platform !== 'discord' && extra.length > 0) ||
+        extra.length !== new Set(extra).size ||
+        extra.filter((value) => IM_TEST_SLOTS.includes(value)).length > 1 ||
+        extra.some((value) => value !== '--manual' && !IM_TEST_SLOTS.includes(value))
+      )
+        throw new Error('usage: setup discord [QA1|QA2|QA3] [--manual]');
+      setup(platform, { manual, slot });
     } else if (command === 'protect' && args.length === 1) {
       const path = resolve(args[0]);
       protectImTestApps(path);

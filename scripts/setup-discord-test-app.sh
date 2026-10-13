@@ -220,8 +220,47 @@ write_values() {
 valid_id() {
   node -e 'const v=process.argv[1]; process.exit(/^[1-9][0-9]{16,19}$/.test(v) && BigInt(v)<(1n<<64n) ? 0 : 1)' "$1"
 }
+valid_name() {
+  node -e 'const v=process.argv[1]; process.exit(v.trim() && !/[\u0000-\u001f\u007f]/u.test(v) ? 0 : 1)' "$1"
+}
 if [[ "${BOTHARNESS_IM_TEST_APPS_NO_OPEN:-}" == 1 ]]; then
   open_url() { say "请打开：$1"; }
+fi
+
+setup_mode="${1:---token-only}"
+setup_slot="${2:-$(_existing BH_DISCORD_QA_SLOT || true)}"
+[[ "$setup_mode" == --token-only || "$setup_mode" == --manual ]] || { warn "请选择 --token-only 或 --manual。"; exit 1; }
+if [[ "$setup_mode" == --token-only ]]; then
+  [[ "$setup_slot" =~ ^QA[123]$ ]] || { warn "请先让代理准备 Discord QA 槽的应用和测试目的地。"; exit 1; }
+  prefix="BH_DISCORD_${setup_slot}"
+  app_name=$(_existing "${prefix}_NAME" || true)
+  app_id=$(_existing "${prefix}_APP_ID" || true)
+  guild_name=$(_existing "${prefix}_GUILD_NAME" || true)
+  guild_id=$(_existing "${prefix}_GUILD_ID" || true)
+  channel_name=$(_existing "${prefix}_CHANNEL_NAME" || true)
+  channel_id=$(_existing "${prefix}_CHANNEL_ID" || true)
+  if ! valid_name "$app_name" || ! valid_name "$guild_name" || ! valid_name "$channel_name" || ! valid_id "$app_id" || ! valid_id "$guild_id" || ! valid_id "$channel_id"; then
+    warn "非敏感的 App、服务器或频道资料尚未准备完整。请让代理在浏览器中核对填写；也可选择 --manual。"
+    exit 1
+  fi
+  TOTAL_STAGES=1
+  stage "输入 Discord Bot Token"
+  say "$setup_slot · $app_name · $guild_name / $channel_name"
+  say "应用和测试目的地已预填；你只需输入 Token。Enter 保留已有 Token，不重复填名称或 ID。"
+  open_url "https://discord.com/developers/applications/$app_id/bot"
+  warn "旧 Token 无法再次查看。只有确认可让旧 Token 失效并安排恢复后，才由你在页面中重置；向导不重置 Token。"
+  bot_key="${prefix}_BOT_TOKEN"
+  ask_secret "$bot_key" "Bot Token（隐藏输入）:"
+  bot_value="${!bot_key}"
+  [[ "$bot_value" =~ ^[A-Za-z0-9_.-]+$ && ${#bot_value} -ge 20 && ${#bot_value} -le 512 ]] || { warn "Bot Token 为空或格式无效。"; exit 1; }
+  write_values "$bot_key=$bot_value" "BH_DISCORD_QA_SLOT=$setup_slot" "${prefix}_CONSOLE_READY=pending"
+  say "Token 已保存，剩余身份、权限和配置由代理核对。此步骤不确认独占窗口，也不启动接收器。"
+  finish
+  exit 0
+fi
+if [[ -n "$setup_slot" ]]; then
+  [[ "$setup_slot" =~ ^QA[123]$ ]] || { warn "请选择 QA1、QA2 或 QA3。"; exit 1; }
+  IM_TEST_APP_VALUE_BH_DISCORD_QA_SLOT="$setup_slot"
 fi
 
 banner "BotHarness 共享 Discord QA App 配置"
@@ -238,7 +277,7 @@ name_key="${prefix}_NAME"
 id_key="${prefix}_APP_ID"
 ask "$name_key" "App 名称:"
 ask "$id_key" "Application ID（完整数字，不是名称或 Client Secret）:"
-[[ -n "${!name_key}" && ! "${!name_key}" =~ [[:cntrl:]] ]] || { warn "App 名称不能为空或包含控制字符。"; exit 1; }
+valid_name "${!name_key}" || { warn "App 名称不能为空或包含控制字符。"; exit 1; }
 valid_id "${!id_key}" || { warn "Application ID 必须是有效的 Discord 数字 ID。"; exit 1; }
 confirm "确认这是独立测试 App，且当前没有其他任务或设备接收它的事件？" || exit 1
 write_values "BH_DISCORD_QA_SLOT=$BH_DISCORD_QA_SLOT" "$name_key=${!name_key}" "$id_key=${!id_key}" "${prefix}_RECEIVER_CHECKED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -265,7 +304,7 @@ ask "$guild_name_key" "测试服务器名称:"
 ask "$guild_id_key" "测试服务器 ID:"
 ask "$channel_name_key" "测试文字频道名称:"
 ask "$channel_id_key" "测试文字频道 ID（公开帖子的父频道）:"
-[[ -n "${!guild_name_key}" && ! "${!guild_name_key}" =~ [[:cntrl:]] && -n "${!channel_name_key}" && ! "${!channel_name_key}" =~ [[:cntrl:]] ]] || { warn "服务器和频道名称不能为空或包含控制字符。"; exit 1; }
+valid_name "${!guild_name_key}" && valid_name "${!channel_name_key}" || { warn "服务器和频道名称不能为空或包含控制字符。"; exit 1; }
 valid_id "${!guild_id_key}" && valid_id "${!channel_id_key}" || { warn "服务器和频道 ID 必须是有效的 Discord 数字 ID。"; exit 1; }
 open_url "https://discord.com/channels/${!guild_id_key}/${!channel_id_key}"
 step "核对该 App 已安装在上述测试服务器，且频道中允许它 View Channel / 查看频道、Read Message History / 读取消息历史、Send Messages / 发送消息。测试公开帖子还需 Send Messages in Threads / 在帖子中发送消息。"
