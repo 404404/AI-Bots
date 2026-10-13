@@ -122,6 +122,10 @@ describe('asks follow the Channel the task came from', () => {
       ).toEqual({ ok: true, value: { accepted: true } });
       expect(await outcome).toBe('allowed-once');
 
+      expect(core.runtime.askNotice?.(run.sessionId, 'bash')).toContain(
+        `send one short channel_send to Group "Team" (channel_id "${group.id}")`,
+      );
+      expect(core.runtime.askNotice?.(run.sessionId, 'bash')).toBeUndefined();
       const grant = await run.channels.requestGrant('Need the handoff folder');
       expect(core.channels.message(group.id, grant.id)?.grantRequest).toBe(true);
       expect(
@@ -150,6 +154,106 @@ describe('asks follow the Channel the task came from', () => {
     } finally {
       release();
       questions.close();
+      await core.runtime.close();
+      core.operationalDatabase.close();
+    }
+  });
+});
+
+describe('the first approval card of a turn waits for a word in the Channel', () => {
+  it('returns one notice until the Bot has spoken, and none after it has', async () => {
+    let ready!: (run: OrchestratorAgentRun) => void;
+    let release!: () => void;
+    const started = new Promise<OrchestratorAgentRun>((resolve) => {
+      ready = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const core = createCore({
+      dshHome: createTempRoot('bh-ask-notice-'),
+      agents: {
+        async runOrchestrator(run) {
+          ready(run);
+          await held;
+        },
+        async runAssignment() {},
+        requestAssignment() {
+          throw new Error('No Assignment expected');
+        },
+        async close() {},
+      },
+    });
+    try {
+      core.registry.create({ slug: 'ada', displayName: 'Ada' });
+      const dm = core.channels.getOrCreateDm('ada', 'Ada')!;
+      await core.channels.appendMessage(dm.id, {
+        id: 'dm-task',
+        at: '2026-09-25T00:00:00.000Z',
+        author: { kind: 'human' },
+        body: 'Check the time',
+      });
+      core.runtime.admitDmMessage({
+        channelId: dm.id,
+        messageId: 'dm-task',
+        body: 'Check the time',
+      });
+      const run = await started;
+      const first = core.runtime.askNotice?.(run.sessionId, 'bash');
+      expect(first).toContain(
+        `send one short channel_send to your Human DM (channel_id "${dm.id}")`,
+      );
+      expect(first).toContain('Then call bash again with the same arguments');
+      expect(core.runtime.askNotice?.(run.sessionId, 'bash')).toBeUndefined();
+    } finally {
+      release();
+      await core.runtime.close();
+      core.operationalDatabase.close();
+    }
+  });
+
+  it('asks for no notice once the Bot has already spoken in the Channel this turn', async () => {
+    let ready!: (run: OrchestratorAgentRun) => void;
+    let release!: () => void;
+    const started = new Promise<OrchestratorAgentRun>((resolve) => {
+      ready = resolve;
+    });
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const core = createCore({
+      dshHome: createTempRoot('bh-ask-notice-spoken-'),
+      agents: {
+        async runOrchestrator(run) {
+          ready(run);
+          await held;
+        },
+        async runAssignment() {},
+        requestAssignment() {
+          throw new Error('No Assignment expected');
+        },
+        async close() {},
+      },
+    });
+    try {
+      core.registry.create({ slug: 'ada', displayName: 'Ada' });
+      const dm = core.channels.getOrCreateDm('ada', 'Ada')!;
+      await core.channels.appendMessage(dm.id, {
+        id: 'dm-task',
+        at: '2026-09-25T00:00:00.000Z',
+        author: { kind: 'human' },
+        body: 'Check the time',
+      });
+      core.runtime.admitDmMessage({
+        channelId: dm.id,
+        messageId: 'dm-task',
+        body: 'Check the time',
+      });
+      const run = await started;
+      await run.channels.send({ body: 'I will run date; please approve it.' });
+      expect(core.runtime.askNotice?.(run.sessionId, 'bash')).toBeUndefined();
+    } finally {
+      release();
       await core.runtime.close();
       core.operationalDatabase.close();
     }
