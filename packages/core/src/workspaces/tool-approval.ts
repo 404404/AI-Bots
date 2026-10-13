@@ -25,6 +25,7 @@ export interface ToolApprovalRequestCard {
 export interface ToolApprovalNotice extends ToolApprovalRequestCard {
   botSlug: string;
   channelId: string;
+  groupName?: string;
   messageId: string;
   expiresAt: string;
 }
@@ -229,6 +230,7 @@ export class ChannelToolApproval {
         ...message.toolApprovalRequest!,
         botSlug: tracked.botSlug,
         channelId,
+        ...(channel.type === 'group' ? { groupName: channel.name } : {}),
         messageId: message.id,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },

@@ -44,6 +44,7 @@ export interface ChannelQuestionResolution {
 export interface ChannelQuestionNotice extends ChannelQuestionRequest {
   botSlug: string;
   channelId: string;
+  groupName?: string;
   messageId: string;
 }
 
@@ -51,6 +52,7 @@ type Pending = {
   agent: Agent;
   botSlug: string;
   channelId: string;
+  groupName?: string;
   questions: AskUserQuestionItem[];
   signal?: AbortSignal;
   resolve(answer: AskUserQuestionAnswer): void;
@@ -179,6 +181,7 @@ export class ChannelUserQuestions {
       agent,
       botSlug: owner.botSlug,
       channelId,
+      ...(channel.type === 'group' ? { groupName: channel.name } : {}),
       questions,
       ...(request.signal === undefined ? {} : { signal: request.signal }),
       resolve,
@@ -243,6 +246,7 @@ export class ChannelUserQuestions {
             {
               botSlug,
               channelId: pending.channelId,
+              ...(pending.groupName === undefined ? {} : { groupName: pending.groupName }),
               messageId,
               sessionId: pending.agent.session.id,
               ...(pending.callId === undefined ? {} : { callId: pending.callId }),

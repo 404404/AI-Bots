@@ -56,7 +56,9 @@ function PendingRequest({
       }}
     >
       <div className="bh-companion-request-source">
-        {t('companion.source', { name: request.channelName })}
+        {t(request.channelId.startsWith('dm-') ? 'companion.source' : 'companion.sourceGroup', {
+          name: request.channelName,
+        })}
       </div>
       {actions && request.kind === 'tool-approval' ? (
         <ToolApprovalCard

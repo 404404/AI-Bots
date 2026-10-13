@@ -173,7 +173,7 @@ export function createCompanionFeed(source: FeedSource): CompanionFeed {
             ...request,
             kind: 'user-question',
             channelId: request.channelId,
-            channelName: bot.name,
+            channelName: request.groupName ?? bot.name,
           })),
         (listener) => owner.subscribe(listener),
       );
@@ -186,7 +186,7 @@ export function createCompanionFeed(source: FeedSource): CompanionFeed {
             ...request,
             kind: 'tool-approval',
             channelId: request.channelId,
-            channelName: bot.name,
+            channelName: request.groupName ?? bot.name,
           })),
         (listener) => owner.subscribe(listener),
       );
