@@ -15,6 +15,7 @@ import { resolveDshHome } from '../im/config-store.js';
 const SAFE_TOOLS = new Set([
   'ask_secret',
   'protected_cli',
+  'secret_http',
   'bash',
   'channel_send',
   'channel_read',
@@ -250,6 +251,125 @@ export function mountPrivateInputs(
                   args.account,
                   { endpoint: args.endpoint, api_key: args.api_key, api_secret: args.api_secret },
                   (values, signal) => execution.authenticatedStatus(values, signal),
+                  call.signal,
+                ),
+              );
+            },
+          }),
+        );
+        agentCtx.tools.register(
+          defineTool({
+            name: 'secret_http',
+            description:
+              'Call an HTTP API with secrets the Owner entered through ask_secret, without ever seeing them. The Host sends the request. The destination is the Owner-supplied endpoint field of that account; you choose only a path under it, the method, and where each secret goes. Write {{field_id}} in a header value, a query value or the body where a secret belongs and the Host substitutes it. Redirects are refused. Returns the HTTP status, content type and up to 32 KB of response text with the secret values masked. Existing Human execution approval applies.',
+            parameters: {
+              account: {
+                type: 'string',
+                required: true,
+                description: 'Exact nonsecret account from ask_secret.',
+              },
+              references: {
+                type: 'array',
+                required: true,
+                items: { type: 'string' },
+                description:
+                  'The opaque references from ask_secret that this request uses, including the one for the endpoint field.',
+              },
+              endpoint_field: {
+                type: 'string',
+                description:
+                  'Field id that holds the Owner-supplied base URL; defaults to endpoint.',
+              },
+              method: {
+                type: 'string',
+                required: true,
+                description: 'GET, POST, PUT, PATCH or DELETE.',
+              },
+              path: {
+                type: 'string',
+                required: true,
+                description:
+                  'Path and optional query under the endpoint, starting with /, or an empty string for the endpoint itself.',
+              },
+              headers: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', required: true },
+                    value: { type: 'string', required: true },
+                  },
+                  additionalProperties: false,
+                },
+                description:
+                  'Request headers; a value may contain {{field_id}}, for example "Bearer {{api_key}}".',
+              },
+              query: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', required: true },
+                    value: { type: 'string', required: true },
+                  },
+                  additionalProperties: false,
+                },
+                description: 'Extra query parameters; a value may contain {{field_id}}.',
+              },
+              body: {
+                type: 'string',
+                description: 'Request body text, up to 64 KB; may contain {{field_id}}.',
+              },
+            },
+            output: {
+              schema: { type: 'string' },
+              render: (_args, value) => [{ type: 'text', text: value }],
+            },
+            execute: async (args, call) => {
+              const endpointField = args.endpoint_field ?? 'endpoint';
+              const references: Record<string, string> = {};
+              for (const reference of args.references) {
+                const field = /^private:[0-9a-f-]{36}:([a-z][a-z0-9_]{0,47})$/.exec(reference)?.[1];
+                if (field === undefined || references[field] !== undefined)
+                  throw new Error('references must be distinct ask_secret references');
+                references[field] = reference;
+              }
+              if (references[endpointField] === undefined)
+                throw new Error('references must include the endpoint field');
+              return JSON.stringify(
+                await owner.consume(
+                  agent,
+                  args.account,
+                  references,
+                  (values, signal) => {
+                    const fill = (text: string): string =>
+                      text.replace(/\{\{([a-z][a-z0-9_]{0,47})\}\}/g, (_match, field: string) => {
+                        const value = field === endpointField ? undefined : values[field];
+                        if (value === undefined)
+                          throw new Error('A placeholder names a field that was not referenced');
+                        return value;
+                      });
+                    return execution.authenticatedRequest(
+                      {
+                        endpoint: values[endpointField]!,
+                        path: args.path,
+                        method: args.method,
+                        headers: (args.headers ?? []).map((entry) => ({
+                          name: entry.name,
+                          value: fill(entry.value),
+                        })),
+                        query: (args.query ?? []).map((entry) => ({
+                          name: entry.name,
+                          value: fill(entry.value),
+                        })),
+                        ...(args.body === undefined ? {} : { body: fill(args.body) }),
+                      },
+                      Object.entries(values)
+                        .filter(([field]) => field !== endpointField)
+                        .map(([, value]) => value),
+                      signal,
+                    );
+                  },
                   call.signal,
                 ),
               );
