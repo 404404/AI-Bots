@@ -479,10 +479,17 @@ describe('Workspace Grant execution boundary', () => {
     const state = fixture();
     const orchestrator = { id: 'botharness-orchestrator', header: { cwd: '/tmp/memory' } } as never;
     let mode: 'workspace-write' | 'danger-full-access' = 'danger-full-access';
+    let scope: 'chat' | 'assignments' = 'assignments';
     const core = {
       ...(state.core as object),
-      assignmentAccess: { get: () => ({ botSlug, mode, revision: 1 }) },
+      assignmentAccess: { get: () => ({ botSlug, mode, scope, revision: 1 }) },
     } as never;
+    expect(orchestratorPermission(core, botSlug)).toEqual({
+      mode: 'workspace-write',
+      approval: 'ask',
+    });
+    expect(grantExecutionDenial(core, orchestrator, state.policy, state.approval)).toBeUndefined();
+    scope = 'chat';
     expect(orchestratorPermission(core, botSlug)).toEqual({
       mode: 'danger-full-access',
       approval: 'never',

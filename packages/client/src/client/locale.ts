@@ -2846,8 +2846,13 @@ export const zh = {
     '危险：开启后，此 Bot 的聊天会话和之后新建的事项可以读写这台电脑上的任何文件，执行命令不再逐次询问。群聊或 IM 里别人发来的内容也可能诱导它执行操作。',
   'access.confirmTitle': '开启危险文件权限？',
   'access.confirmRisk':
-    '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。带密钥运行命令行工具仍然每次询问。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
+    '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。带密钥运行命令行工具仍然每次询问。开启后可以把范围改成“仅新事项”。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
   'access.confirmEnable': '我了解风险，开启',
+  'access.scopeTitle': '完全访问的范围',
+  'access.scopeChat': '聊天会话和新事项（默认）',
+  'access.scopeAssignments': '仅新事项：聊天会话保持受限并逐次询问',
+  'access.activeWarningAssignments':
+    '完全访问已开启（仅新事项）：之后新建的事项可访问任何文件且不再逐次提问；聊天会话仍然受限。',
   'access.activeWarning':
     '完全访问已开启：此 Bot 的聊天会话和之后新建的事项可访问任何文件，且不再逐次提问。',
   'access.sessionWarning': '此事项以危险文件权限创建；关闭 Bot 开关不会改变它。',
@@ -6132,6 +6137,11 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'access.confirmRisk':
     "This Bot's chat Session and its new Assignments may access any file outside their workspace and will not ask for each command. Content other people send in a Group or IM could steer it into acting. Running a command-line tool with a secret still asks every time. Turning this off confines the chat Session again but does not downgrade existing dangerous Assignments.",
   'access.confirmEnable': 'I understand, enable',
+  'access.scopeTitle': 'Scope of full access',
+  'access.scopeChat': 'Chat Session and new Assignments (default)',
+  'access.scopeAssignments': 'New Assignments only: the chat Session stays confined and asks',
+  'access.activeWarningAssignments':
+    'Full access is on for new Assignments only: they may access any file without asking; the chat Session stays confined.',
   'access.activeWarning':
     "Full access is on: this Bot's chat Session and its new Assignments may access any file without asking.",
   'access.sessionWarning':
