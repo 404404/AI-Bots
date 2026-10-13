@@ -25,6 +25,7 @@ import { humanLabel } from './actor-names.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { personaBotActivity } from './persona-activity.js';
 import type { BotSummary, ChannelSummary } from './store.js';
+import { IconButton } from './ds/icon-button.js';
 
 const styles = stylex.create({
   attentionHeading: {
@@ -386,20 +387,20 @@ function MembersHeaderActionForChannel({
   return (
     <>
       <Tooltip label={t('group.invite')} side="bottom" delayMs={500}>
-        <button
-          type="button"
-          className="bh-channel-sidebar-entry-action"
+        <IconButton
+          size="row"
+          tone="subtle"
           aria-label={t('group.invite')}
           aria-haspopup="dialog"
           onClick={() => setInviteOpen(true)}
         >
           <IconPlusOutlineRegular size={16} />
-        </button>
+        </IconButton>
       </Tooltip>
       <Tooltip label={t('members.attention.title')} side="bottom" delayMs={500}>
-        <button
-          type="button"
-          className="bh-channel-sidebar-entry-action bh-group-attention-trigger"
+        <IconButton
+          size="row"
+          tone="subtle"
           aria-label={t('members.attention.label', { count: pending })}
           aria-haspopup="dialog"
           onClick={() => setAttentionOpen(true)}
@@ -410,7 +411,7 @@ function MembersHeaderActionForChannel({
               {pending > 99 ? '99+' : pending}
             </span>
           ) : null}
-        </button>
+        </IconButton>
       </Tooltip>
       {inviteOpen ? (
         <InviteMemberModal

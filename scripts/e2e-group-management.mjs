@@ -101,13 +101,10 @@ if (process.argv[2] === '--remove-member') {
     await page.waitForSelector(`.bh-root [data-channel-id="${groupId}"]`);
     await page.click(`.bh-root [data-channel-id="${groupId}"]`);
     await page.evaluate(() => {
-      const section = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry')).find(
-        (entry) =>
-          ['成员', 'Members'].includes(
-            entry.querySelector('.bh-channel-sidebar-entry-label')?.textContent ?? '',
-          ),
+      const section = Array.from(document.querySelectorAll('[data-sidebar-entry]')).find((entry) =>
+        ['成员', 'Members'].includes(entry.querySelector('[data-panel-label]')?.textContent ?? ''),
       );
-      const button = section?.querySelector('.bh-channel-sidebar-entry-head');
+      const button = section?.querySelector('[data-panel-head]');
       if (button?.getAttribute('aria-expanded') === 'false') button.click();
     });
     await page.waitForSelector('.bh-member-menu-button');
@@ -248,13 +245,12 @@ if (process.argv[2] === '--join-requests' || process.argv[2] === '--seed-join-re
     await page.waitForSelector(`.bh-root [data-channel-id="${group.id}"]`);
     await page.click(`.bh-root [data-channel-id="${group.id}"]`);
     await page.evaluate(() => {
-      const section = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry')).find(
-        (entry) =>
-          ['群管理', 'Group management'].includes(
-            entry.querySelector('.bh-channel-sidebar-entry-label')?.textContent ?? '',
-          ),
+      const section = Array.from(document.querySelectorAll('[data-sidebar-entry]')).find((entry) =>
+        ['群管理', 'Group management'].includes(
+          entry.querySelector('[data-panel-label]')?.textContent ?? '',
+        ),
       );
-      const button = section?.querySelector('.bh-channel-sidebar-entry-head');
+      const button = section?.querySelector('[data-panel-head]');
       if (button?.getAttribute('aria-expanded') === 'false') button.click();
     });
     await page.waitForSelector('.bh-group-management');
@@ -357,13 +353,12 @@ try {
       id,
     );
     await page.evaluate(() => {
-      const section = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry')).find(
-        (entry) =>
-          ['群管理', 'Group management'].includes(
-            entry.querySelector('.bh-channel-sidebar-entry-label')?.textContent ?? '',
-          ),
+      const section = Array.from(document.querySelectorAll('[data-sidebar-entry]')).find((entry) =>
+        ['群管理', 'Group management'].includes(
+          entry.querySelector('[data-panel-label]')?.textContent ?? '',
+        ),
       );
-      const button = section?.querySelector('.bh-channel-sidebar-entry-head');
+      const button = section?.querySelector('[data-panel-head]');
       if (button?.getAttribute('aria-expanded') === 'false') button.click();
     });
     await page.waitForSelector('.bh-group-management');
@@ -382,7 +377,7 @@ try {
     return canvas.toDataURL('image/png').split(',')[1];
   });
   writeFileSync(avatarPath, Buffer.from(samplePng, 'base64'));
-  const membersText = await page.$eval('.bh-channel-sidebar-entry', (entry) => entry.textContent);
+  const membersText = await page.$eval('[data-sidebar-entry]', (entry) => entry.textContent);
   if (membersText?.includes('Join requests') || membersText?.includes('Disband Group'))
     throw new Error('Members section still contains management actions');
 
@@ -471,7 +466,7 @@ try {
     };
     return {
       nativeNewSession: measure('button[aria-label="New Session"], button[aria-label="新会话"]'),
-      members: measure('.bh-channel-sidebar-entry-head'),
+      members: measure('[data-panel-head]'),
       groupManagement: measure('.bh-group-management'),
     };
   });

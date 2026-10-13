@@ -70,6 +70,7 @@ import {
 } from './inbox-sections.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { BotAttentionItem } from './store.js';
+import { IconButton } from './ds/icon-button.js';
 
 const inactiveSubscribe = (): (() => void) => () => {};
 
@@ -127,15 +128,15 @@ function GroupManagementHeaderForChannel({
         align="end"
         anchor={
           <Tooltip label={t('group.more')} side="bottom" delayMs={500}>
-            <button
-              type="button"
-              className="bh-channel-sidebar-entry-action"
+            <IconButton
+              size="row"
+              tone="subtle"
               aria-label={t('group.more')}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((value) => !value)}
             >
               <IconEllipsisOutlineRegular size={16} />
-            </button>
+            </IconButton>
           </Tooltip>
         }
         items={items}

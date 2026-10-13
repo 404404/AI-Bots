@@ -46,14 +46,14 @@ try {
   );
   await page.waitForFunction(
     () =>
-      Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).some((button) =>
+      Array.from(document.querySelectorAll('[data-panel-head]')).some((button) =>
         /Sessions|会话/.test(button.textContent ?? ''),
       ),
     { timeout: 20000 },
   );
   await page.evaluate(() => {
-    const button = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).find(
-      (candidate) => /Sessions|会话/.test(candidate.textContent ?? ''),
+    const button = Array.from(document.querySelectorAll('[data-panel-head]')).find((candidate) =>
+      /Sessions|会话/.test(candidate.textContent ?? ''),
     );
     if (button?.getAttribute('aria-expanded') !== 'true') button?.click();
   });
@@ -143,14 +143,14 @@ try {
   );
   await page.waitForFunction(
     () =>
-      Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).some((button) =>
+      Array.from(document.querySelectorAll('[data-panel-head]')).some((button) =>
         /Sessions|会话/.test(button.textContent ?? ''),
       ),
     { timeout: 20000 },
   );
   await page.evaluate(() => {
-    const button = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).find(
-      (candidate) => /Sessions|会话/.test(candidate.textContent ?? ''),
+    const button = Array.from(document.querySelectorAll('[data-panel-head]')).find((candidate) =>
+      /Sessions|会话/.test(candidate.textContent ?? ''),
     );
     if (button?.getAttribute('aria-expanded') !== 'true') button?.click();
   });
@@ -215,14 +215,14 @@ try {
   );
   await page.waitForFunction(
     () =>
-      Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).some((button) =>
+      Array.from(document.querySelectorAll('[data-panel-head]')).some((button) =>
         /Sessions|会话/.test(button.textContent ?? ''),
       ),
     { timeout: 20000 },
   );
   await page.evaluate(() => {
-    const button = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).find(
-      (candidate) => /Sessions|会话/.test(candidate.textContent ?? ''),
+    const button = Array.from(document.querySelectorAll('[data-panel-head]')).find((candidate) =>
+      /Sessions|会话/.test(candidate.textContent ?? ''),
     );
     if (button?.getAttribute('aria-expanded') !== 'true') button?.click();
   });
@@ -240,14 +240,14 @@ try {
   );
   await page.waitForFunction(
     () =>
-      Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).some((button) =>
+      Array.from(document.querySelectorAll('[data-panel-head]')).some((button) =>
         /Sessions|会话/.test(button.textContent ?? ''),
       ),
     { timeout: 20000 },
   );
   await page.evaluate(() => {
-    const button = Array.from(document.querySelectorAll('.bh-channel-sidebar-entry-head')).find(
-      (candidate) => /Sessions|会话/.test(candidate.textContent ?? ''),
+    const button = Array.from(document.querySelectorAll('[data-panel-head]')).find((candidate) =>
+      /Sessions|会话/.test(candidate.textContent ?? ''),
     );
     if (button?.getAttribute('aria-expanded') !== 'true') button?.click();
   });

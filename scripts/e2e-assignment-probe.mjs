@@ -188,7 +188,7 @@ export async function captureAssignmentInbox({
     );
     await page.waitForSelector('.bh-profile-view');
     await page.evaluate(() => {
-      for (const e of document.querySelectorAll('.bh-channel-sidebar-entry-head'))
+      for (const e of document.querySelectorAll('[data-panel-head]'))
         if (
           /Bot Inbox|Bot 收件箱/.test(e.textContent ?? '') &&
           e.getAttribute('aria-expanded') !== 'true'

@@ -28,6 +28,7 @@ import { LoadingSkeleton } from './loading-skeleton.js';
 import { useMountedResource } from './mounted-resource.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { subscribeMessagingDefaults } from './messaging-defaults-live.js';
+import { IconButton } from './ds/icon-button.js';
 
 export const SCHEDULE_COST_WARNING_SECONDS = 15 * 60;
 const REFRESH_MS = 30_000;
@@ -371,15 +372,15 @@ export function BotSchedulesHeaderAction({ botSlug, t }: ChannelSidebarEntryProp
   if (botSlug === undefined) return <></>;
   return (
     <Tooltip label={t('schedule.add')} side="bottom" delayMs={500}>
-      <button
-        type="button"
-        className="bh-channel-sidebar-entry-action"
+      <IconButton
+        size="row"
+        tone="subtle"
         aria-label={t('schedule.add')}
         aria-haspopup="dialog"
         onClick={() => requestCreate(botSlug)}
       >
         <IconPlusOutlineRegular size={16} />
-      </button>
+      </IconButton>
     </Tooltip>
   );
 }

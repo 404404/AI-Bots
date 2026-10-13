@@ -20,6 +20,7 @@ import {
   subscribeHiddenDmActions,
   toggleHiddenDmAction,
 } from './dm-actions.js';
+import { IconButton } from './ds/icon-button.js';
 
 function NicknameDialog({
   channel,
@@ -176,9 +177,9 @@ export function HumanChannelNameMenu({
         dense
         align="end"
         anchor={
-          <button
-            type="button"
-            className="bh-channel-sidebar-entry-action"
+          <IconButton
+            size="row"
+            tone="subtle"
             aria-label={
               settingsAttention && onOpenSettings !== undefined
                 ? `${t('humanNickname.menu')} · ${t('channelSettings.needsAttention')}`
@@ -192,7 +193,7 @@ export function HumanChannelNameMenu({
             {settingsAttention && onOpenSettings !== undefined ? (
               <span className="bh-channel-settings-attention-dot bh-channel-options-dot" />
             ) : null}
-          </button>
+          </IconButton>
         }
         items={items}
         selectedIds={DM_ACTION_KINDS.filter((kind) => !hidden.includes(kind)).map(

@@ -27,6 +27,7 @@ export const radius = stylex.defineConsts({
   row: '8px',
   card: '10px',
   panel: 'var(--dsw-radius-panel, 16px)',
+  menuItem: 'var(--dsw-radius-md, 12px)',
   round: '50%',
 });
 
@@ -49,9 +50,12 @@ export const color = stylex.defineConsts({
   muted: 'var(--dsw-alias-label-secondary)',
   subtle: 'var(--dsw-alias-label-tertiary)',
   border: 'var(--dsw-alias-border-l2)',
+  borderSoft: 'var(--dsw-alias-border-l1)',
+  borderStrong: 'var(--dsw-alias-border-l3)',
   hover: 'var(--dsw-alias-interactive-bg-hover)',
   selected: 'var(--dsw-alias-interactive-bg-active)',
   accent: 'var(--dsw-alias-state-business-primary)',
+  onAccent: 'var(--dsw-alias-label-primary-foreground)',
   danger: 'var(--dsw-alias-state-error-primary)',
   onDanger: 'var(--dsw-alias-label-primary-foreground)',
   dangerEdge: 'var(--dsw-alias-state-error-secondary)',

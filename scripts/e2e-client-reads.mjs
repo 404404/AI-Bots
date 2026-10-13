@@ -113,7 +113,7 @@ try {
     }
     await page.waitForFunction(
       (labels) =>
-        [...document.querySelectorAll('.bh-channel-sidebar-entry-label')].some((element) =>
+        [...document.querySelectorAll('[data-panel-label]')].some((element) =>
           labels.includes(element.textContent?.trim() ?? ''),
         ),
       { timeout: 15000 },
@@ -121,13 +121,10 @@ try {
     );
     await page.evaluate(
       (labels) => {
-        const section = [...document.querySelectorAll('.bh-channel-sidebar-entry')].find(
-          (element) =>
-            labels.includes(
-              element.querySelector('.bh-channel-sidebar-entry-label')?.textContent?.trim() ?? '',
-            ),
+        const section = [...document.querySelectorAll('[data-sidebar-entry]')].find((element) =>
+          labels.includes(element.querySelector('[data-panel-label]')?.textContent?.trim() ?? ''),
         );
-        const button = section?.querySelector('.bh-channel-sidebar-entry-head');
+        const button = section?.querySelector('[data-panel-head]');
         if (button?.getAttribute('aria-expanded') === 'false') button.click();
       },
       [english, chinese],
@@ -161,15 +158,13 @@ try {
   await page.waitForSelector('.bh-workspace-grants', { timeout: 15000 }).catch(async (error) => {
     console.error(
       JSON.stringify({
-        entries: await page.$$eval('.bh-channel-sidebar-entry', (sections) =>
+        entries: await page.$$eval('[data-sidebar-entry]', (sections) =>
           sections.map((section) => ({
-            label: section.querySelector('.bh-channel-sidebar-entry-label')?.textContent?.trim(),
-            expanded: section
-              .querySelector('.bh-channel-sidebar-entry-head')
-              ?.getAttribute('aria-expanded'),
-            hasBody: section.querySelector('.bh-channel-sidebar-entry-body') !== null,
+            label: section.querySelector('[data-panel-label]')?.textContent?.trim(),
+            expanded: section.querySelector('[data-panel-head]')?.getAttribute('aria-expanded'),
+            hasBody: section.querySelector('[data-sidebar-entry-body]') !== null,
             childClasses: [
-              ...(section.querySelector('.bh-channel-sidebar-entry-body')?.children ?? []),
+              ...(section.querySelector('[data-sidebar-entry-body]')?.children ?? []),
             ].map((element) => element.className),
           })),
         ),

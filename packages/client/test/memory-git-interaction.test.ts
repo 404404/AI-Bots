@@ -1242,10 +1242,10 @@ describe('Memory Git graph sidebar', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    const evolution = Array.from(container.querySelectorAll('.bh-channel-sidebar-entry')).find(
+    const evolution = Array.from(container.querySelectorAll('[data-sidebar-entry]')).find(
       (section) => section.querySelector('.bh-memory-view-tabs') !== null,
     );
-    expect(evolution?.querySelector('.bh-channel-sidebar-entry-label')?.textContent).toBe('记忆');
+    expect(evolution?.querySelector('[data-panel-label]')?.textContent).toBe('记忆');
     expect(evolution?.querySelector('.bh-memory-graph-heading')).toBeNull();
     expect(evolution?.querySelector('.bh-memory-graph-meta')).toBeNull();
     expect(evolution?.querySelector('.bh-memory-graph-list')).not.toBeNull();
