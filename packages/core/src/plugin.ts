@@ -1199,10 +1199,19 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     (agent) => ctx.agents.get(agent.id) === agent,
     (message) => ctx.logger.warn(message),
     (slug, count) => core.states.setQuestionCount(slug, count),
-    nativeTimedQuestions(ctx, core.runtime),
+    nativeTimedQuestions(
+      ctx,
+      core.runtime,
+      (ctx as unknown as { sessions: DshSessionStore }).sessions,
+    ),
     (sessionId) => core.runtime.askChannel?.(sessionId),
   );
   ctx.effect(() => () => userQuestions.close(), 'botharness: Channel user questions');
+  ctx.inject(['sessionProjections', 'sessionQuery', 'userQuestions'], () => {
+    void userQuestions
+      .recover(core.humanAttention.openTimedQuestionCards())
+      .catch(() => ctx.logger.warn('user-question-recovery-failed'));
+  });
   ctx.effect(
     () => core.companions.attachQuestions(userQuestions),
     'botharness: companion question observation',

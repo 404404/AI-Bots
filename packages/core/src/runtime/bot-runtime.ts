@@ -537,6 +537,12 @@ export interface BotRuntime {
     sessionId: string,
     channelId: string,
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined;
+  recoverNativeQuestionInput?(
+    sessionId: string,
+    channelId: string,
+    requestMessageId: string,
+  ): ((deliver: () => boolean) => Promise<boolean>) | undefined;
+  nativeQuestionAvailable?(sessionId: string, channelId: string): boolean;
   originalAttachmentRoot?(
     sessionId: string,
     path: string,
@@ -3178,7 +3184,68 @@ class BotRuntimeImplementation implements BotRuntime {
     const sources = turn?.sessionId === sessionId ? turn.acceptedEventIds : undefined;
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
-    const sourceIds = [...(sources ?? [])];
+    return this.#nativeQuestionInput(
+      owner.botSlug,
+      sessionId,
+      channelId,
+      sourceEventId,
+      [...(sources ?? [])],
+      () => this.#markSideEffectStarted(sourceEventId),
+    );
+  }
+
+  recoverNativeQuestionInput(
+    sessionId: string,
+    channelId: string,
+    requestMessageId: string,
+  ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    if (owner?.rootRole !== 'orchestrator') return undefined;
+    const row = this.#database.read((db) =>
+      db
+        .prepare(`
+          SELECT e.source_event_id FROM source_events e
+           WHERE e.message_id = ? AND e.bot_slug = ? AND e.source_kind = 'bot-message'
+             AND ${channelSql('e')} = ?
+        `)
+        .get(requestMessageId, owner.botSlug, channelId),
+    ) as { source_event_id: string } | undefined;
+    if (row === undefined || !this.nativeQuestionAvailable(sessionId, channelId)) return undefined;
+    return this.#nativeQuestionInput(
+      owner.botSlug,
+      sessionId,
+      channelId,
+      row.source_event_id,
+      [row.source_event_id],
+      () => undefined,
+    );
+  }
+
+  nativeQuestionAvailable(sessionId: string, channelId: string): boolean {
+    const owner = this.#ownership.resolve(sessionId);
+    const bot = owner === undefined ? undefined : this.#registry.get(owner.botSlug);
+    const channel = this.#channels.get(channelId);
+    return (
+      !this.#closed &&
+      bot !== undefined &&
+      owner?.rootRole === 'orchestrator' &&
+      this.#ownership.contentAvailable(sessionId) &&
+      this.#sessionArchived?.(sessionId) !== true &&
+      (channel?.type === 'group'
+        ? channel.members.includes(owner.botSlug)
+        : channel?.botSlug === owner.botSlug)
+    );
+  }
+
+  #nativeQuestionInput(
+    botSlug: string,
+    sessionId: string,
+    channelId: string,
+    sourceEventId: string,
+    sourceIds: readonly string[],
+    markAttemptSideEffect: () => void,
+  ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
+    const owner = { botSlug };
     const held = (): boolean => {
       const channel = this.#channels.get(channelId);
       return channel?.type === 'group'
@@ -3217,7 +3284,7 @@ class BotRuntimeImplementation implements BotRuntime {
             '',
             [],
             false,
-            () => this.#markSideEffectStarted(sourceEventId),
+            markAttemptSideEffect,
             [],
             [],
             () => {
