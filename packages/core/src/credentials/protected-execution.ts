@@ -266,7 +266,9 @@ export class ProtectedExecution {
         method,
         headers,
         ...(request.body === undefined ? {} : { body: request.body }),
-        mask: secrets.filter((value) => value.length >= 6),
+        mask: [...secrets, ...new URL(request.endpoint).searchParams.values()].filter(
+          (value) => value.length >= 6,
+        ),
         limit: SECRET_HTTP_RESPONSE_LIMIT,
       }),
       signal,

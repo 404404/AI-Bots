@@ -37,6 +37,7 @@ async function echo(): Promise<{ base: string; seen: Array<Record<string, unknow
       response.end(
         JSON.stringify({
           echoed: request.headers['authorization'],
+          url: request.url,
           encoded: Buffer.from('SYNTHETIC-token-value').toString('base64'),
           ok: true,
         }),
@@ -117,7 +118,31 @@ describe('Host-run secret HTTP consumer', () => {
         echoed: 'Bearer [secret]',
         encoded: '[secret]',
         ok: true,
+        url: '/v1/items?page=2',
       });
+    } finally {
+      await execution.close();
+    }
+  });
+
+  it('keeps an Owner endpoint query on the request and masks its values in the response', async () => {
+    const { base, seen } = await echo();
+    const execution = new ProtectedExecution(() => undefined);
+    try {
+      const result = await execution.authenticatedRequest(
+        {
+          endpoint: base + '?access=SYNTHETIC-endpoint-token',
+          path: '/items',
+          method: 'GET',
+          headers: [],
+          query: [{ name: 'page', value: '2' }],
+        },
+        [],
+        new AbortController().signal,
+      );
+      expect(seen[0]).toMatchObject({ url: '/v1/items?access=SYNTHETIC-endpoint-token&page=2' });
+      expect(result.httpStatus).toBe(200);
+      expect(result.body).not.toContain('SYNTHETIC-endpoint-token');
     } finally {
       await execution.close();
     }

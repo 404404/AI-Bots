@@ -16,7 +16,7 @@
 
 - 值保存在 DSH 原生凭据存储中，绑定到发起请求的 Bot 和账号，其他 Bot 无法使用。
 - Channel 历史里只有请求和引用。
-- `secret_http` 只会把密钥发往 Owner 填写的地址。拒绝跳转；只有本机地址允许明文 http。返回文本中的密钥会以原文、base64、URL 编码三种形式被掩码；掩码只是防止意外回显，不是安全边界。
+- `secret_http` 只会把密钥发往 Owner 填写的地址。拒绝跳转；只有本机地址允许明文 http。地址可以自带查询串，它会保留在每次请求上，并和密钥一样在返回内容里被掩码。Host 在发送前拒绝的请求会以 `refused` 加原因返回，Bot 可以据此解释。返回文本中的密钥会以原文、base64、URL 编码三种形式被掩码；掩码只是防止意外回显，不是安全边界。
 - Agent 读不到凭据存储。DSH 把每条 Shell 命令放在系统沙箱中运行，Host 额外加一条“不可读取凭据存储”的规则：macOS 上是 Seatbelt 规则，Linux 的 bwrap 下用空文件遮盖。针对该存储的 Agent 文件工具，以及点名它的 Shell 命令，在弹出审批卡之前就会被拒绝。
 
 ## 限制
@@ -30,6 +30,10 @@
 某个沙箱 runner 第一次没能加上规则时，Host 会记录一条警告。DSH 升级如果改变了所依赖的 runner 命令行，`scripts/test/dsh-sandbox-shape.test.mjs` 会失败，届时需要调整 `credentials/store-guard.ts`。
 
 目前只覆盖 HTTP 接口。需要通过环境变量读取密钥的命令行工具不在范围内。
+
+## Owner CLI
+
+`deepseekbot` 的在线命令在普通 Profile 中和 Web Chat 行为一致：`ask-secret-status`、`ask-secret-submit --values-stdin`、`ask-secret-cancel`、`ask-secret-account-status`、`ask-secret-replace`、`ask-secret-revoke`、`ask-secret-accounts`。`secret_http` 的审批用 `tool-approval-decide` 决定。见 [CLI 参考](../../bot-cli.zh.md)。
 
 ## 本地验证
 

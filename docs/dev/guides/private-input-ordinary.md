@@ -16,7 +16,7 @@ Both consumers need the existing Human execution approval. The approval card sho
 
 - Values live in DSH's native credential store, bound to the requesting Bot and account. Another Bot cannot use them.
 - Channel history holds the request and the references only.
-- `secret_http` never sends a secret anywhere but the Owner-entered endpoint. Redirects are refused. Plain http is accepted only for a local address. Secret values are masked in the returned text in raw, base64 and URL-encoded form; that masking is a courtesy, not a boundary.
+- `secret_http` never sends a secret anywhere but the Owner-entered endpoint. Redirects are refused. Plain http is accepted only for a local address. The endpoint may carry its own query string, which stays on every request and is masked in the response like a secret. A request the Host refuses before sending comes back as `refused` with the reason, so the Bot can explain it. Secret values are masked in the returned text in raw, base64 and URL-encoded form; that masking is a courtesy, not a boundary.
 - An Agent cannot read the credential store. DSH runs every Shell command inside an OS sandbox, and the Host adds a rule that the store is unreadable: a Seatbelt rule on macOS, an empty-file mask under bwrap on Linux. Agent file tools that target the store, and Shell commands that name it, are refused before any approval card.
 
 ## Limits
@@ -30,6 +30,10 @@ The sandbox rule does not exist in three cases, where only the refusal by comman
 The Host logs a warning the first time a sandbox runner gets no rule. `scripts/test/dsh-sandbox-shape.test.mjs` fails when a DSH upgrade changes the runner command line this depends on; adapt `credentials/store-guard.ts` then.
 
 Only HTTP APIs are covered. A command-line tool that needs a secret in its environment is not.
+
+## Owner CLI
+
+The `deepseekbot` live commands work in an ordinary Profile exactly as in Web Chat: `ask-secret-status`, `ask-secret-submit --values-stdin`, `ask-secret-cancel`, `ask-secret-account-status`, `ask-secret-replace`, `ask-secret-revoke` and `ask-secret-accounts`. Decide the `secret_http` approval with `tool-approval-decide`. See [the CLI reference](../../bot-cli.md).
 
 ## Verify locally
 
