@@ -16,14 +16,13 @@ An ask raised by an Orchestrator turn is posted in that turn's inbound local Cha
 - Tool approval cards and user question cards use that Channel and fall back to the Human DM. Their pending notices carry the Channel, and the Human Inbox and the Window Companion read it from there.
 - `request_workspace_grant` works from a Group turn and posts its card in the Group. The Human's resolution in that Group wakes the requesting Bot as a direct mention, and the turn message says it answers the grant request.
 - Deciding, answering and resolving are accepted in the Channel that holds the card. In a Group the asking Bot is the card's author and must be a member.
-- Authority does not change: the local Human decides. Bots and external IM members cannot act on a Group card.
+- Authority does not change: the local Human decides in the Channel, and a Group card is not answerable by Bots or by Group membership alone. Delivery of a tool approval to the Bot's configured external management destination (#1019) is unchanged and now also covers a card posted in a Group; an external decision still needs that route's explicit approver capability.
 
 ## Kept in the Human DM
 
 - Secret input (`ask_secret`), so credentials and their prompts do not appear in a Group (ADR-0169).
 - Asks from an Assignment Session, which has no inbound Channel of its own.
 - Asks from a turn with no inbound local Channel, such as a Bot Schedule or an external IM source.
-- External IM approval delivery, which still addresses the request by its Human DM message; an approval card posted in a Group is not forwarded to an external approver.
 
 ## Consequences
 

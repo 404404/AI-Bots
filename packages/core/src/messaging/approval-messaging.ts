@@ -31,6 +31,7 @@ export interface ApprovalRoute {
 export interface ApprovalDelivery {
   id: string;
   botSlug: string;
+  channelId?: string;
   requestMessageId?: string;
   sessionId?: string;
   callId?: string;
@@ -182,15 +183,13 @@ export function createApprovalMessaging(options: {
   };
   const canonical = (value: ApprovalDelivery): ToolApprovalNotice | undefined => {
     if (!value.requestMessageId || !value.sessionId || !value.callId || !value.expiresAt) return;
-    const request = channels?.message(
-      dmChannelId(value.botSlug),
-      value.requestMessageId,
-    )?.toolApprovalRequest;
+    const channelId = value.channelId ?? dmChannelId(value.botSlug);
+    const request = channels?.message(channelId, value.requestMessageId)?.toolApprovalRequest;
     if (!request) return;
     const notice = {
       ...request,
       botSlug: value.botSlug,
-      channelId: dmChannelId(value.botSlug),
+      channelId,
       messageId: value.requestMessageId,
       expiresAt: value.expiresAt,
     };
@@ -543,13 +542,13 @@ export function createApprovalMessaging(options: {
   const notify = (notice: ToolApprovalNotice, status: 'pending' | string) => {
     if (closed) return;
     if (status === 'pending') {
-      if (notice.channelId !== dmChannelId(notice.botSlug)) return;
       if (read(notice.messageId)) return;
       const selected = route(notice.botSlug);
       if (!selected) return;
       write({
         id: notice.messageId,
         botSlug: notice.botSlug,
+        channelId: notice.channelId,
         requestMessageId: notice.messageId,
         sessionId: notice.sessionId,
         callId: notice.callId,
