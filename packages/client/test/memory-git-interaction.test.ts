@@ -2,6 +2,7 @@
 import {
   act,
   createElement,
+  Fragment,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -25,6 +26,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconAgentPresetOutline16: stub,
     IconAgentPresetOutlineRegular: stub,
     IconCheckOutlineRegular: stub,
+    IconInfoOutlineRegular: stub,
     IconPlusOutlineRegular: stub,
     IconBranchOutlineRegular: stub,
     IconChevronLeftOutlineRegular: stub,
@@ -39,6 +41,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconCloseOutline16: stub,
     IconEllipsisOutline16: stub,
     IconEllipsisOutlineRegular: stub,
+    IconTrashOutlineRegular: stub,
+    IconUserOutlineRegular: stub,
     IconFolderCloseRegular: stub,
     IconFolderOpenRegular: stub,
     IconFolderOpenOutline16: stub,
@@ -95,7 +99,13 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     Modal: stub,
     StateDot: stub,
     Tag: stub,
-    Tooltip: ({ children }: { children: ReactNode }) => children,
+    Tooltip: ({ children, label }: { children: ReactNode; label?: ReactNode }) =>
+      createElement(
+        Fragment,
+        null,
+        children,
+        createElement('span', { hidden: true, 'data-tooltip': '' }, label),
+      ),
     relativeTime: () => ({ unit: 'now', n: 0 }),
   };
 });
@@ -103,12 +113,17 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarBuiltins } from '../src/client/channel-sidebar-builtins.js';
-import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
+import {
+  createChannelSidebarRegistry,
+  type ChannelSidebarEntryProps,
+} from '../src/client/channel-sidebar.js';
 import { channelSidebarPrefs } from '../src/client/channel-sidebar-prefs.js';
+import { setMemoryView } from '../src/client/memory-view-prefs.js';
 import { store } from '../src/client/store.js';
 import type { MemoryGitGraph } from '../src/client/bridge.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { MemoryEntry } from '../src/client/memory-entry.js';
+import { MemoryFilesEntry } from '../src/client/memory-files-entry.js';
 import { MemoryRecovery } from '../src/client/memory-recovery.js';
 import { MemoryCommitView } from '../src/client/memory-commit-view.js';
 import { inertSubmissionActions } from './inert-submissions.js';
@@ -165,16 +180,19 @@ it('requires an explicit confirmation before restoring an older Memory checkpoin
       }),
     ),
   );
-  const olderRow = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row')[1];
-  await act(async () => olderRow?.click());
+  const rows = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row');
+  expect(rows[0]?.textContent).toContain('最新');
+  expect(rows[1]?.textContent).toContain('记忆有变化时');
+  expect(rows[1]?.textContent).not.toContain('main');
+  await act(async () => rows[1]?.click());
   const choose = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '恢复此检查点',
+    (button) => button.textContent === '恢复到这时',
   );
   await act(async () => choose?.click());
   expect(actions.memoryRestore).not.toHaveBeenCalled();
-  expect(container.textContent).toContain('当前仓库会完整备份');
+  expect(container.textContent).toContain('现在的整个记忆文件夹会先完整复制一份');
   const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '备份并恢复',
+    (button) => button.textContent === '恢复',
   );
   await act(async () => confirm?.click());
   expect(actions.memoryRestore).toHaveBeenCalledWith({
@@ -356,7 +374,7 @@ describe('Memory Git graph sidebar', () => {
     expect(reasons).toContain('Graph refresh failed');
     expect(container.textContent).toContain('更新失败');
     expect(container.querySelector('.bh-memory-retry')).not.toBeNull();
-    expect(container.querySelector('#bh-memory-branch-choice')).not.toBeNull();
+    expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
   });
 
   it('ignores a pre-repair Memory response after clearing the cache', async () => {
@@ -553,6 +571,9 @@ describe('Memory Git graph sidebar', () => {
         }),
       );
     });
+    expect(
+      Array.from(container.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent),
+    ).toContain('给这个版本起名');
     const item = Array.from(
       container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
     ).find((button) => button.textContent === '从这里新建并切换分支');
@@ -573,6 +594,244 @@ describe('Memory Git graph sidebar', () => {
     expect(actions.send).toHaveBeenCalledWith(expect.stringContaining(SHA));
     expect(actions.send).toHaveBeenCalledWith(expect.stringContaining('memory-aaaaaaa'));
     expect(container.querySelector('.bh-memory-continue-form')).toBeNull();
+  });
+
+  it('restores an older graph commit after a confirmation that names what is included, and names versions', async () => {
+    const older = 'b'.repeat(40);
+    const loaded = 'c'.repeat(40);
+    const graph: MemoryGitGraph = {
+      head: SHA,
+      currentBranch: 'main',
+      branches: ['main'],
+      dirty: true,
+      commits: [
+        {
+          sha: SHA,
+          parents: [older],
+          subject: 'Newer memory',
+          authoredAt: '2026-09-26T00:00:00Z',
+          branches: ['main'],
+          status: 'accepted',
+        },
+        {
+          sha: older,
+          parents: [],
+          subject: 'Older memory',
+          authoredAt: '2026-09-25T00:00:00Z',
+          branches: [],
+          versions: [{ tag: 'first-draft', name: '第一版草稿' }],
+          status: 'accepted',
+        },
+      ],
+      hasMore: false,
+    };
+    const onMemoryCommitSelect = vi.fn();
+    let files = ['MEMORY.md', 'draft.md'];
+    const actions = {
+      memorySnapshot: vi.fn(async () => ({ head: SHA, files, provisional: false })),
+      memoryGitGraph: vi.fn().mockResolvedValue(graph),
+      memoryFile: vi.fn(async (_channelId: string, path: string) => ({
+        path,
+        body: '',
+        head: SHA,
+      })),
+      memoryRestoreCommit: vi.fn(async () => {
+        files = ['MEMORY.md'];
+        return {
+          head: loaded,
+          backup: 'd'.repeat(40),
+          version: { tag: '整理前', name: '整理前' },
+          saved: { id: 'saved' },
+        };
+      }),
+      memoryNameVersion: vi.fn().mockResolvedValue({ tag: '周一', name: '周一' }),
+      memoryRemoveVersionName: vi.fn().mockResolvedValue(undefined),
+      ...inertSubmissionActions,
+    } as unknown as BridgeActions;
+    await act(async () => {
+      root.render(
+        createElement(
+          'div',
+          null,
+          createElement(MemoryFilesEntry, {
+            scope: 'personabot',
+            channelId: 'dm-qa',
+            botSlug: 'qa',
+            actions,
+            showLimits: false,
+            t: zhTranslate,
+          }),
+          createElement(MemoryEntry, {
+            scope: 'personabot',
+            channelId: 'dm-qa',
+            botSlug: 'qa',
+            actions,
+            selectedMemoryCommitSha: older,
+            onMemoryCommitSelect,
+            t: zhTranslate,
+          }),
+        ),
+      );
+    });
+    expect(container.querySelector('.bh-memory-entry')?.textContent).toContain('draft.md');
+    const type = async (input: HTMLInputElement | null, value: string): Promise<void> => {
+      await act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        setter?.call(input, value);
+        input?.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    };
+    const button = (text: string): HTMLButtonElement | undefined =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        (item) => item.textContent === text || item.getAttribute('aria-label') === text,
+      );
+    expect(container.querySelector('.bh-memory-version')?.textContent).toBe('第一版草稿');
+    await act(async () => button('移除名称「第一版草稿」')?.click());
+    expect(actions.memoryRemoveVersionName).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      tag: 'first-draft',
+    });
+    await act(async () => button('给这个版本起名')?.click());
+    await type(
+      container.querySelector<HTMLInputElement>('.bh-memory-restore-note input'),
+      ' 周一 ',
+    );
+    await act(async () => button('保存名称')?.click());
+    expect(actions.memoryNameVersion).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      sha: older,
+      name: '周一',
+    });
+    const offer = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent === '恢复到这次提交',
+    );
+    expect(container.querySelectorAll('.bh-memory-restore-offer')).toHaveLength(1);
+    await act(async () => offer?.click());
+    expect(actions.memoryRestoreCommit).not.toHaveBeenCalled();
+    expect(container.querySelector('.bh-memory-restore-confirm')?.textContent).toContain(
+      '包含这次提交的改动，不包含之后的提交',
+    );
+    await type(
+      container.querySelector<HTMLInputElement>('.bh-memory-restore-note input'),
+      ' 整理前 ',
+    );
+    const submit = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent === '保存改动并恢复',
+    );
+    await act(async () => submit?.click());
+    expect(actions.memoryRestoreCommit).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      sha: older,
+      expectedHead: SHA,
+      restoreId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+      name: '整理前',
+    });
+    expect(onMemoryCommitSelect).toHaveBeenCalledWith(loaded);
+    expect(container.querySelector('.bh-memory-restore-confirm')).toBeNull();
+    expect(container.textContent).toContain('已恢复到 bbbbbbb');
+    expect(container.textContent).toContain('恢复前的改动已自动存成 ddddddd 这个提交');
+    expect(container.textContent).toContain('恢复前的版本已命名为「整理前」');
+    expect(container.querySelector('.bh-memory-entry')?.textContent).not.toContain('draft.md');
+  });
+
+  it('switches the evolution view to a list of named versions', async () => {
+    const older = 'b'.repeat(40);
+    const graph: MemoryGitGraph = {
+      head: SHA,
+      currentBranch: 'main',
+      branches: ['main'],
+      dirty: false,
+      commits: [
+        {
+          sha: SHA,
+          parents: [],
+          subject: 'Newer memory',
+          authoredAt: '2026-09-26T00:00:00Z',
+          branches: ['main'],
+          status: 'accepted',
+        },
+      ],
+      hasMore: false,
+    };
+    const onMemoryCommitSelect = vi.fn();
+    const actions = {
+      memorySnapshot: vi.fn(async () => ({ head: SHA, files: [], provisional: false })),
+      memoryGitGraph: vi.fn().mockResolvedValue(graph),
+      memoryVersions: vi.fn().mockResolvedValue([
+        {
+          tag: 'monday',
+          name: '周一',
+          sha: older,
+          subject: 'Older memory',
+          namedAt: '2026-09-25T00:00:00Z',
+        },
+      ]),
+      memoryRestoreCommit: vi.fn().mockResolvedValue({
+        head: 'c'.repeat(40),
+        backup: null,
+        version: null,
+        saved: { id: 'saved' },
+      }),
+      memoryRemoveVersionName: vi.fn().mockResolvedValue(undefined),
+      ...inertSubmissionActions,
+    } as unknown as BridgeActions;
+    const header = createChannelSidebarBuiltins(zhTranslate).find(
+      (entry) => entry.id === 'memory-evolution',
+    )?.headerTabs;
+    const entryProps = {
+      scope: 'personabot',
+      channelId: 'dm-qa',
+      botSlug: 'qa',
+      actions,
+      onMemoryCommitSelect,
+      t: zhTranslate,
+    } as unknown as ChannelSidebarEntryProps;
+    await act(async () => {
+      root.render(
+        createElement(
+          Fragment,
+          null,
+          createElement(header!, entryProps),
+          createElement(MemoryEntry, entryProps),
+        ),
+      );
+    });
+    const button = (text: string): HTMLButtonElement | undefined =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        (item) => item.textContent === text,
+      );
+    expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
+    const toggle = (label: string): HTMLButtonElement | undefined =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find(
+        (item) => item.textContent === label,
+      );
+    expect(toggle('演化')?.getAttribute('aria-selected')).toBe('true');
+    await act(async () => toggle('版本')?.click());
+    expect(toggle('版本')?.getAttribute('aria-selected')).toBe('true');
+    expect(container.querySelector('.bh-memory-graph-list')).toBeNull();
+    const row = container.querySelector<HTMLButtonElement>('.bh-memory-version-row');
+    expect(row?.textContent).toContain('周一');
+    expect(row?.textContent).toContain('Older memory');
+    await act(async () => row?.click());
+    expect(onMemoryCommitSelect).toHaveBeenCalledWith(older);
+    await act(async () => button('恢复到这个版本')?.click());
+    expect(container.querySelector('.bh-memory-restore-confirm')?.textContent).toContain(
+      '包含这次提交的改动',
+    );
+    await act(async () => button('恢复')?.click());
+    expect(actions.memoryRestoreCommit).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      sha: older,
+      expectedHead: SHA,
+      restoreId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+    });
+    await act(async () => button('移除名称')?.click());
+    expect(actions.memoryRemoveVersionName).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      tag: 'monday',
+    });
+    await act(async () => toggle('演化')?.click());
+    expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
   });
 
   it('groups commit changes into independently collapsible files with graph badges', async () => {
@@ -701,7 +960,7 @@ describe('Memory Git graph sidebar', () => {
     await act(async () => row?.click());
     expect(onSelect).toHaveBeenCalledWith(SHA);
   });
-  it('loads the graph after the snapshot has seeded acceptance', async () => {
+  it('restores the graph after the snapshot has seeded acceptance', async () => {
     let resolveSnapshot!: (value: { head: string; files: []; provisional: boolean }) => void;
     let seeded = false;
     const snapshot = new Promise<{ head: string; files: []; provisional: boolean }>((resolve) => {
@@ -791,35 +1050,22 @@ describe('Memory Git graph sidebar', () => {
     await act(async () =>
       root.render(createElement(MemoryEntry, { ...props, conversationRevision: 0 })),
     );
-    const choice = container.querySelector<HTMLInputElement>('#bh-memory-branch-choice');
-    expect(choice).not.toBeNull();
-    await act(async () => choice!.focus());
-    expect(container.querySelectorAll('[role="menuitem"]')).toHaveLength(5);
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
-        choice,
-        'not-a-branch',
-      );
-      choice!.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    expect(container.querySelectorAll('[role="menuitem"]')).toHaveLength(0);
-    expect(container.textContent).toContain('没有匹配的分支');
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
-        choice,
-        'history',
-      );
-      choice!.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    expect(container.querySelectorAll('[role="menuitem"]')).toHaveLength(1);
-    expect(container.textContent).not.toContain('没有匹配的分支');
-    await act(async () =>
-      (container.querySelector('[role="menuitem"]') as HTMLButtonElement).click(),
+    await act(async () => setMemoryView('branches'));
+    const rows = [...container.querySelectorAll<HTMLButtonElement>('.bh-memory-version-row')];
+    expect(rows.map((row) => row.querySelector('.bh-memory-version-name')?.textContent)).toEqual([
+      'history-qa',
+      'main',
+      'feature/one',
+      'feature/two',
+      'release-1.0',
+    ]);
+    expect(rows[1]?.textContent).toContain('当前');
+    await act(async () => rows[1]?.click());
+    expect(container.textContent).not.toContain('切换到这个分支');
+    await act(async () => rows[0]?.click());
+    const button = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (item) => item.textContent === '切换到这个分支',
     );
-    expect(choice!.value).toBe('history-qa');
-    const button = [
-      ...container.querySelectorAll<HTMLButtonElement>('.bh-memory-branch-control button'),
-    ].find((item) => item.textContent === '切换');
     await act(async () => button?.click());
     expect(actions.send).toHaveBeenCalledWith(
       expect.stringContaining('history-qa'),
@@ -832,9 +1078,12 @@ describe('Memory Git graph sidebar', () => {
       root.render(createElement(MemoryEntry, { ...props, conversationRevision: 1 })),
     );
     expect(actions.memoryGitGraph).toHaveBeenCalledTimes(2);
-    expect(container.querySelector<HTMLInputElement>('#bh-memory-branch-choice')?.value).toBe(
-      'history-qa',
-    );
+    expect(
+      [...container.querySelectorAll('.bh-memory-version-row')]
+        .find((row) => row.textContent?.includes('当前'))
+        ?.querySelector('.bh-memory-version-name')?.textContent,
+    ).toBe('history-qa');
+    await act(async () => setMemoryView('graph'));
   });
 
   it('shows a graph query failure instead of a permanent loading indicator', async () => {
@@ -994,14 +1243,15 @@ describe('Memory Git graph sidebar', () => {
     });
 
     const evolution = Array.from(container.querySelectorAll('.bh-channel-sidebar-entry')).find(
-      (section) =>
-        section.querySelector('.bh-channel-sidebar-entry-label')?.textContent === '记忆演化',
+      (section) => section.querySelector('.bh-memory-view-tabs') !== null,
     );
+    expect(evolution?.querySelector('.bh-channel-sidebar-entry-label')?.textContent).toBe('记忆');
     expect(evolution?.querySelector('.bh-memory-graph-heading')).toBeNull();
     expect(evolution?.querySelector('.bh-memory-graph-meta')).toBeNull();
-    expect(evolution?.querySelector<HTMLInputElement>('#bh-memory-branch-choice')?.value).toBe(
-      'main',
-    );
+    expect(evolution?.querySelector('.bh-memory-graph-list')).not.toBeNull();
+    expect(
+      [...(evolution?.querySelectorAll('[role="tab"]') ?? [])].map((tab) => tab.textContent),
+    ).toEqual(['演化', '版本', '分支']);
     expect(evolution?.querySelector('.bh-memory-terminology')).toBeNull();
     expect(container.querySelector('.bh-sidebar-settings')).toBeNull();
     const terminology = () =>

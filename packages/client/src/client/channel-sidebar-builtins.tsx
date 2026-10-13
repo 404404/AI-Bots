@@ -21,8 +21,13 @@ import { AssignmentConcurrencySetting } from './assignment-concurrency-setting.j
 import { channelSettings } from './channel-settings-state.js';
 import { useMountedResource } from './mounted-resource.js';
 import { WakePolicyBadge, WakePolicyEntry } from './wake-policy-entry.js';
-import { ExternalConnectorsEntry, ExternalIdentitiesEntry } from './external-entries.js';
 import {
+  ExternalConnectorsAttention,
+  ExternalConnectorsEntry,
+  ExternalIdentitiesEntry,
+} from './external-entries.js';
+import {
+  GroupConnectorsAttention,
   GroupConnectorsEntry,
   GroupWakePolicyEntry,
   isGroupConversation,
@@ -36,6 +41,8 @@ import type {
 import { formatRelativeTime } from './labels.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import { MemoryEntry } from './memory-entry.js';
+import { MemoryRecovery } from './memory-recovery.js';
+import { cachedMemory, invalidateMemory } from './memory-read-cache.js';
 import { MemoryFilesEntry } from './memory-files-entry.js';
 import { Modal } from './modal.js';
 import { ExternalSourceContent } from './external-source-content.js';
@@ -53,6 +60,7 @@ import {
 } from './sessions-entry.js';
 import { SidebarViewMenu } from './sidebar-view-menu.js';
 import { channelSidebarPrefs } from './channel-sidebar-prefs.js';
+import { memoryViewSnapshot, setMemoryView, subscribeMemoryView } from './memory-view-prefs.js';
 import { inboxLayoutSnapshot, setInboxLayout, subscribeInboxLayout } from './inbox-view-prefs.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { BotAttentionItem, ChannelSummary } from './store.js';
@@ -65,6 +73,8 @@ const INBOX_STATE_TONE = {
   observed: 'info',
   deferred: 'neutral',
   'needs-repair': 'danger',
+  open: 'outline',
+  snoozed: 'neutral',
   handled: 'success',
   ignored: 'quiet',
 } as const;
@@ -825,23 +835,84 @@ function BotInboxHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
   );
 }
 
-function MemoryHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
+function MemoryViewTabs({ t, setExpanded }: ChannelSidebarEntryProps): ReactElement {
+  const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
+  return (
+    <span className="bh-memory-view-tabs" role="tablist" aria-label={t('memory.view.label')}>
+      {(['graph', 'versions', 'branches'] as const).map((id) => (
+        <Tooltip
+          key={id}
+          label={t(`memory.view.${id}Help`)}
+          side="bottom"
+          maxWidth={280}
+          delayMs={300}
+          portal
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            onClick={() => {
+              setMemoryView(id);
+              setExpanded?.(true);
+            }}
+          >
+            {t(`memory.view.${id}`)}
+          </button>
+        </Tooltip>
+      ))}
+    </span>
+  );
+}
+
+function MemoryHeaderAction({
+  t,
+  actions,
+  channelId,
+  refreshRevision,
+}: ChannelSidebarEntryProps): ReactElement {
   const terminology = useSyncExternalStore(
     channelSidebarPrefs.subscribe,
     () => channelSidebarPrefs.getSnapshot().memoryTerminology,
     () => channelSidebarPrefs.getSnapshot().memoryTerminology,
   );
+  const [backups, setBackups] = useState(false);
   return (
-    <SidebarViewMenu
-      label={t('memory.menu')}
-      items={[
-        { type: 'label', id: 'terminology-label', text: t('memory.terminology') },
-        { id: 'memory', label: t('memory.terms.memory') },
-        { id: 'git', label: t('memory.terms.git') },
-      ]}
-      selectedIds={[terminology]}
-      onSelect={(id) => channelSidebarPrefs.setMemoryTerminology(id === 'git' ? 'git' : 'memory')}
-    />
+    <>
+      <SidebarViewMenu
+        label={t('memory.menu')}
+        items={[
+          { type: 'label', id: 'terminology-label', text: t('memory.terminology') },
+          { id: 'memory', label: t('memory.terms.memory') },
+          { id: 'git', label: t('memory.terms.git') },
+          { type: 'separator', id: 'backups-separator' },
+          { id: 'backups', label: t('memory.backups.open') },
+        ]}
+        selectedIds={[terminology]}
+        onSelect={(id) => {
+          if (id === 'backups') setBackups(true);
+          else channelSidebarPrefs.setMemoryTerminology(id === 'git' ? 'git' : 'memory');
+        }}
+      />
+      {!backups ? null : (
+        <Modal
+          open
+          onClose={() => setBackups(false)}
+          closeLabel={t('common.close')}
+          title={t('memory.backups.title')}
+          description={t('memory.backups.intro')}
+          className="bh-memory-backups-dialog"
+        >
+          <MemoryRecovery
+            actions={actions}
+            channelId={channelId}
+            refreshRevision={refreshRevision}
+            t={t}
+            onRestored={() => invalidateMemory(cachedMemory(actions, channelId))}
+          />
+        </Modal>
+      )}
+    </>
   );
 }
 
@@ -1046,6 +1117,8 @@ export function createChannelSidebarBuiltins(
       scope: 'personabot',
       component: MemoryEvolutionEntry,
       headerAction: MemoryHeaderAction,
+      headerLabel: t('entry.memory'),
+      headerTabs: MemoryViewTabs,
     },
     {
       id: 'sessions',
@@ -1128,6 +1201,7 @@ export function createChannelSidebarBuiltins(
       order: 28,
       scope: 'personabot',
       component: ExternalConnectorsEntry,
+      attention: ExternalConnectorsAttention,
     },
     {
       id: 'private-accounts',
@@ -1174,6 +1248,7 @@ export function createChannelSidebarBuiltins(
       order: 14,
       scope: 'channel',
       component: GroupConnectorsEntry,
+      attention: GroupConnectorsAttention,
       visible: isGroupConversation,
     },
     {

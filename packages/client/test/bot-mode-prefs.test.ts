@@ -31,8 +31,9 @@ function fakeHost(initial: Partial<BotModeScopeSnapshot> = {}) {
     value: {
       botIcon: 'mascot' as const,
       autoAcceptGroupInvites: true,
-      assignmentConcurrencyLimit: 3,
+      assignmentConcurrencyLimit: 8,
       developerMode: false,
+      showBotSessions: false,
       motionPreference: 'system',
       sortMode: 'updated',
       sortModes: {},
@@ -90,8 +91,9 @@ describe('BOT-mode policy store', () => {
       motionPreference: 'system',
       botIcon: 'mascot' as const,
       autoAcceptGroupInvites: true,
-      assignmentConcurrencyLimit: 3,
+      assignmentConcurrencyLimit: 8,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'updated',
       sortModes: {},
@@ -107,6 +109,7 @@ describe('BOT-mode policy store', () => {
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
         motionPreference: 'reduce',
         sortMode: 'manual',
         sortModes: { s1: 'updated' },
@@ -122,6 +125,7 @@ describe('BOT-mode policy store', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'reduce',
       sortMode: 'manual',
       sortModes: { s1: 'updated' },
@@ -135,6 +139,7 @@ describe('BOT-mode policy store', () => {
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
         motionPreference: 'system',
         sortMode: 'updated',
         sortModes: {},
@@ -168,8 +173,9 @@ describe('BOT-mode policy store', () => {
       motionPreference: 'reduce',
       botIcon: 'mascot' as const,
       autoAcceptGroupInvites: true,
-      assignmentConcurrencyLimit: 3,
+      assignmentConcurrencyLimit: 8,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'reduce',
     });
     expect(scope.set).toHaveBeenCalledWith('motionPreference', 'reduce');
@@ -232,6 +238,7 @@ describe('BOT-mode policy store', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full' as const,
       sortMode: 'updated' as const,
       sortModes: { s1: 'manual' as const },
@@ -302,6 +309,7 @@ describe('BOT-mode policy store', () => {
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
         motionPreference: 'system',
         sortMode: 'updated',
         sortModes: {},
@@ -388,6 +396,7 @@ describe('legacy roster.json sort migration', () => {
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
         motionPreference: 'system',
         sortMode: 'updated',
         sortModes: { s1: 'updated' },
@@ -450,6 +459,7 @@ describe('roster migration sort-mode remap', () => {
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
         sortMode: 'updated',
         sortModes: { 'section-1': 'manual' },
       },
@@ -525,6 +535,7 @@ describe('roster migration sort-mode remap', () => {
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
         sortMode: 'updated',
         sortModes: { 'section-1': 'manual' },
       },
@@ -553,7 +564,7 @@ describe('Assignment limit persistence', () => {
         settle = resolve;
       });
     const pending = prefs.setAssignmentConcurrencyLimit(5);
-    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(3);
+    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(8);
     scope.push({ value: { ...scope.host.getSnapshot().value!, assignmentConcurrencyLimit: 5 } });
     settle!(true);
     expect(await pending).toBe(true);
@@ -589,6 +600,6 @@ describe('Assignment limit persistence', () => {
       throw new Error('Host unavailable');
     };
     await expect(prefs.setAssignmentConcurrencyLimit(2)).rejects.toThrow('Host unavailable');
-    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(3);
+    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(8);
   });
 });

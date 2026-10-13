@@ -29,8 +29,12 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconFolderOpenOutlineRegular: icon('IconFolderOpenOutlineRegular'),
     IconGlobeOutlineRegular: icon('IconGlobeOutlineRegular'),
     IconNewChatOutlineRegular: icon('IconNewChatOutlineRegular'),
+    IconPinFillRegular: icon('IconPinFillRegular'),
+    IconPinOutlineRegular: icon('IconPinOutlineRegular'),
     IconPlusOutlineRegular: icon('IconPlusOutlineRegular'),
     IconSearchOutlineRegular: icon('IconSearchOutlineRegular'),
+    IconSettingsOutlineRegular: icon('IconSettingsOutlineRegular'),
+    IconShareOutlineRegular: icon('IconShareOutlineRegular'),
     IconTrashOutlineRegular: icon('IconTrashOutlineRegular'),
     IconTriangleRightFill14: icon('IconTriangleRightFill14'),
     HoverCard: (props: { anchor: ReactNode; content: ReactNode }) =>
@@ -360,6 +364,16 @@ function stubActions(): BridgeActions {
     memoryRestore: vi.fn(async () => {
       throw new Error('not configured');
     }),
+    memoryRestoreCommit: vi.fn(async () => {
+      throw new Error('not configured');
+    }),
+    memoryNameVersion: vi.fn(async () => {
+      throw new Error('not configured');
+    }),
+    memoryRemoveVersionName: vi.fn(async () => {
+      throw new Error('not configured');
+    }),
+    memoryVersions: vi.fn(async () => []),
     botSourcePolicies: vi.fn(async () => []),
     botSchedules: vi.fn(async () => []),
     createBotSchedule: vi.fn(async () => {
@@ -486,6 +500,7 @@ let prefs: BotModePrefsSnapshot = {
   autoAcceptGroupInvites: true,
   assignmentConcurrencyLimit: 3,
   developerMode: false,
+  showBotSessions: false,
   effectiveMotion: 'full',
   sortMode: 'updated',
   sortModes: {},
@@ -548,6 +563,7 @@ beforeEach(() => {
     autoAcceptGroupInvites: true,
     assignmentConcurrencyLimit: 3,
     developerMode: false,
+    showBotSessions: false,
     effectiveMotion: 'full',
     sortMode: 'updated',
     sortModes: {},
@@ -1162,6 +1178,7 @@ describe('bot sidebar rows', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'manual',
       sortModes: {},
@@ -1207,6 +1224,7 @@ describe('bot sidebar rows', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'updated',
       sortModes: { s1: 'manual' },
@@ -1292,6 +1310,7 @@ describe('bot sidebar rows', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'updated',
       sortModes: { s1: 'manual' },
@@ -1307,6 +1326,7 @@ describe('bot sidebar rows', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'manual',
       sortModes: {},
@@ -1338,6 +1358,7 @@ describe('bot sidebar rows', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'updated',
       sortModes: {},
@@ -1354,6 +1375,7 @@ describe('bot sidebar rows', () => {
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
       effectiveMotion: 'full',
       sortMode: 'manual',
       sortModes: {},
@@ -1601,6 +1623,42 @@ describe('bot sidebar rows', () => {
     expect(onSetPinned).toHaveBeenLastCalledWith(DM_CHANNEL.id, false);
     menu.onSelect?.('hide');
     expect(onHide).toHaveBeenLastCalledWith(DM_CHANNEL.id);
+  });
+
+  it('gives every Channel menu row an icon and offers Delete Bot last as a danger row', () => {
+    const share = vi.fn();
+    const companion = vi.fn();
+    const remove = vi.fn();
+    renderToStaticMarkup(
+      createElement(ChannelMoveMenu, {
+        menu: { channelId: DM_CHANNEL.id, x: 40, y: 80 },
+        sections: [section('s1', '工作流', [])],
+        currentSectionId: 's1',
+        t: zhTranslate as never,
+        companionAction: { label: '显示为窗口伙伴', run: companion },
+        shareAction: { label: '分享', run: share },
+        deleteAction: { label: '删除 Bot', run: remove },
+        onPick: vi.fn(),
+        onClose: vi.fn(),
+      }),
+    );
+
+    const menu = captured.menus.at(-1);
+    if (menu === undefined) throw new Error('PersonaBot menu not rendered');
+    const rows = menu.items.filter((item) => item['type'] === undefined);
+    expect(rows.map((item) => item['id'])).toEqual([
+      'companion',
+      'share',
+      'pin',
+      'move',
+      'rename',
+      'hide',
+      'delete',
+    ]);
+    for (const row of rows) expect(row['icon']).toBeDefined();
+    expect(rows.at(-1)?.['danger']).toBe(true);
+    menu.onSelect?.('delete');
+    expect(remove).toHaveBeenCalledOnce();
   });
 
   it('renders a deleted section channel as a loose channel with no bucket', () => {

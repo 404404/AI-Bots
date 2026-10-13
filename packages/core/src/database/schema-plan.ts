@@ -2066,8 +2066,52 @@ const FAILURE_ALERT_MIGRATION: SchemaMigration = {
   },
 };
 
-const PROACTIVE_POST_LIMIT_MIGRATION: SchemaMigration = {
+const ASSIGNMENT_ARCHIVE_MIGRATION: SchemaMigration = {
   generation: 84,
+  module: 'assignments',
+  description: 'Mirror the DSH Session archive on Orchestrator-archived Assignments (ADR-0188)',
+  migrate(database) {
+    database.exec('ALTER TABLE assignments ADD COLUMN archived_at TEXT');
+  },
+};
+
+const INBOX_RESOLUTION_MIGRATION: SchemaMigration = {
+  generation: 85,
+  module: 'bot-inbox',
+  description: 'Keep Inbox Admissions open until the Orchestrator resolves them (ADR-0188)',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE inbox_admissions ADD COLUMN opened_at TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN resolved_at TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN resolution TEXT
+        CHECK (resolution IS NULL OR resolution IN ('done', 'ignored'));
+      ALTER TABLE inbox_admissions ADD COLUMN resolution_note TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN resolved_by_session_id TEXT;
+      CREATE INDEX inbox_admissions_open
+        ON inbox_admissions (bot_slug, opened_at)
+        WHERE opened_at IS NOT NULL AND resolved_at IS NULL AND ignored_at IS NULL;
+    `);
+  },
+};
+
+const INBOX_SNOOZE_MIGRATION: SchemaMigration = {
+  generation: 86,
+  module: 'bot-inbox',
+  description: 'Let the Orchestrator snooze open Inbox Admissions until a time (ADR-0188)',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE inbox_admissions ADD COLUMN snoozed_until TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN snoozed_at TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN snooze_note TEXT;
+      CREATE INDEX inbox_admissions_snoozed
+        ON inbox_admissions (bot_slug, snoozed_until)
+        WHERE snoozed_until IS NOT NULL AND resolved_at IS NULL;
+    `);
+  },
+};
+
+const PROACTIVE_POST_LIMIT_MIGRATION: SchemaMigration = {
+  generation: 87,
   module: 'messaging',
   description: 'Persist per-app proactive post limits',
   migrate(database) {
@@ -2160,5 +2204,8 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   BEHAVIOR_PERMISSION_MIGRATION,
   EXTERNAL_TOOL_RULE_CREATOR_MIGRATION,
   FAILURE_ALERT_MIGRATION,
+  ASSIGNMENT_ARCHIVE_MIGRATION,
+  INBOX_RESOLUTION_MIGRATION,
+  INBOX_SNOOZE_MIGRATION,
   PROACTIVE_POST_LIMIT_MIGRATION,
 ]);

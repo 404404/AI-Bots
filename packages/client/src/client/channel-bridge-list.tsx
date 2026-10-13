@@ -27,6 +27,44 @@ function stateKey(row: ChannelBridgeRow) {
           : 'bridge.state.unavailable';
 }
 
+export function bridgeNeedsAttention(row: ChannelBridgeRow): boolean {
+  return row.enabled && stateKey(row) === 'bridge.state.unavailable';
+}
+
+export function ChannelBridgeAttention({
+  channelId,
+  actions,
+  report,
+}: {
+  channelId: string;
+  actions: Pick<BridgeActions, 'channelBridges'>;
+  report(needsAttention: boolean): void;
+}): ReactElement {
+  const reportRef = useRef(report);
+  reportRef.current = report;
+  const mount = useMountedResource<HTMLSpanElement>(() => {
+    let current = true;
+    let request = 0;
+    const read = (): void => {
+      const sequence = ++request;
+      void Promise.resolve()
+        .then(() => actions.channelBridges(channelId))
+        .then((snapshot) => {
+          if (current && sequence === request)
+            reportRef.current(snapshot.bridges.some(bridgeNeedsAttention));
+        })
+        .catch(() => undefined);
+    };
+    read();
+    const unsubscribe = subscribeMessagingDefaults(read);
+    return () => {
+      current = false;
+      unsubscribe();
+    };
+  }, [actions, channelId]);
+  return <span hidden ref={mount} />;
+}
+
 function conditionKey(row: ChannelBridgeRow) {
   return row.platform === 'weixin'
     ? 'bridge.ownerDM'

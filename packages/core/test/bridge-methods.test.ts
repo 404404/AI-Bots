@@ -250,6 +250,53 @@ describe('bridge methods', () => {
     expect((await methods.profileSessionUsage({})).ok).toBe(false);
     expect(read.mock.calls).toHaveLength(2);
   });
+  it('reports the Orchestrator Session the runtime resumes, not an archived newer one', async () => {
+    const ownership = createTestOwnership({
+      resumed: { botSlug: 'ada', rootRole: 'orchestrator' },
+    });
+    ownership.claim({
+      sessionId: 'archived',
+      botSlug: 'ada',
+      rootRole: 'orchestrator',
+      at: '2026-10-12T00:00:00.000Z',
+    });
+    const usageHome = mkdtempSync(join(tmpdir(), 'botharness-session-usage-'));
+    roots.push(usageHome);
+    const owner = mountOperationalDatabase({
+      dshHome: usageHome,
+      schemaPlan: BOT_HARNESS_SCHEMA_PLAN,
+    });
+    modelOwners.push(owner);
+    const usage = createUsageProjection({ ownership, database: owner });
+    const read = vi.fn(async () => ({ events: [], inheritedEventCount: 0 }));
+    let current: string | undefined = 'resumed';
+    const runtime = {
+      listAssignments: () => [],
+      currentOrchestratorSessionId: () => current,
+    } as unknown as BotRuntime;
+    const { registry, channels, methods } = setup(
+      [],
+      ['ada'],
+      () => runtime,
+      ownership,
+      undefined,
+      undefined,
+      undefined,
+      usage,
+      undefined,
+      read,
+    );
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    const dm = channels.getOrCreateDm('ada', 'Ada')!;
+    const rows = async () => {
+      const result = await methods.profileSessionUsage({ channelId: dm.id });
+      if (!result.ok) throw new Error('Expected scoped usage');
+      return result.value.rows.map((row) => row.sessionId);
+    };
+    expect(await rows()).toEqual(['resumed']);
+    current = undefined;
+    expect(await rows()).toEqual([]);
+  });
   it('does not expand pasted text, DM selections, empty previews or forged recipient lists', async () => {
     const { registry, channels, methods } = setup();
     registry.create({ slug: 'ada', displayName: 'Ada' });
@@ -2130,6 +2177,27 @@ describe('bridge methods', () => {
     expect(result.value.sessions.map((session) => session.sessionId)).not.toContain('session-3');
   });
 
+  it('marks which Orchestrator Session the runtime resumes', () => {
+    const ownership = createTestOwnership({
+      resumed: { botSlug: 'ada', rootRole: 'orchestrator' },
+      archived: { botSlug: 'ada', rootRole: 'orchestrator' },
+      work: { botSlug: 'ada', rootRole: 'assignment' },
+    });
+    const runtime = {
+      listAssignments: () => [],
+      currentOrchestratorSessionId: () => 'resumed',
+    } as unknown as BotRuntime;
+    const { methods } = setup([], ['ada'], () => runtime, ownership);
+    methods.create({ slug: 'ada', displayName: 'Ada' });
+
+    const result = methods.sessions({ slug: 'ada' });
+    if (!result.ok) throw new Error('Expected Sessions');
+    const flags = Object.fromEntries(
+      result.value.sessions.map((session) => [session.sessionId, session.currentOrchestrator]),
+    );
+    expect(flags).toEqual({ resumed: true, archived: false, work: undefined });
+  });
+
   it('projects each Assignment access snapshot independently of the Bot default', () => {
     const ownership = createTestOwnership({
       'session-orchestrator': { botSlug: 'ada', rootRole: 'orchestrator' },
@@ -2252,6 +2320,32 @@ describe('bridge methods', () => {
       ok: false,
       error: { code: 'invalid-input', message: 'sessionId is required' },
     });
+  });
+
+  it('lists the root Sessions of every current PersonaBot for the native Session list', () => {
+    const ownership = createTestOwnership({
+      'session-orchestrator': { botSlug: 'ada', rootRole: 'orchestrator' },
+      'session-assignment': { botSlug: 'ada', rootRole: 'assignment' },
+      'session-gone': { botSlug: 'bob', rootRole: 'orchestrator' },
+    });
+    ownership.claim({
+      sessionId: 'session-child',
+      botSlug: 'ada',
+      rootRole: 'assignment',
+      parentSessionId: 'session-assignment',
+      provenance: 'subagent',
+      at: '2026-09-19T00:00:01.000Z',
+    });
+    const { methods } = setup([], ['ada'], undefined, ownership);
+    methods.create({ slug: 'ada', displayName: 'Ada' });
+
+    const result = methods.botSessionIds({});
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect([...result.value.sessionIds].sort()).toEqual([
+      'session-assignment',
+      'session-orchestrator',
+    ]);
   });
 
   it('rejects malformed or unknown session reads', () => {

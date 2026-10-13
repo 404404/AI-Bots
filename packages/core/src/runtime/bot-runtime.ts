@@ -47,6 +47,12 @@ import {
   type InboxHistoryPage,
   type InboxHistoryQuery,
 } from './inbox-history.js';
+import { channelSql, OPEN_ADMISSION_SQL, SNOOZED_SQL } from './attention.js';
+import {
+  createInboxTriage,
+  type InboxTriage,
+  type OrchestratorInboxTriage,
+} from './inbox-triage.js';
 import { join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
@@ -149,8 +155,36 @@ export interface AssignmentSummary {
   openAsk?: AssignmentOpenAsk;
   permission?: AssignmentPermissionSnapshot;
   modelRoute?: ModelRoute;
+  archivedAt?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AssignmentDirectoryQuery {
+  query?: string;
+  activity?: AssignmentActivity[];
+  includeArchived?: boolean;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AssignmentDirectoryPage {
+  assignments: AssignmentSummary[];
+  nextCursor?: string;
+}
+
+export type AssignmentArchiveOutcome =
+  | { outcome: 'archived'; assignment: AssignmentSummary }
+  | {
+      outcome: 'refused';
+      code: 'assignment-active';
+      assignment: AssignmentSummary;
+      message: string;
+    };
+
+export interface NativeSessionArchive {
+  archiveSession(sessionId: string): Promise<void>;
+  unarchiveSession(sessionId: string): Promise<void>;
 }
 
 export interface ChannelAssignmentSummary {
@@ -225,10 +259,14 @@ export interface OrchestratorAssignmentAccess {
     model?: ModelRoute;
   }): AssignmentRequestOutcome;
   stop(sessionId: string): Promise<AssignmentSummary>;
+  query?(input: AssignmentDirectoryQuery): AssignmentDirectoryPage;
+  archive?(sessionId: string): Promise<AssignmentArchiveOutcome>;
+  unarchive?(sessionId: string): Promise<{ outcome: 'unarchived'; assignment: AssignmentSummary }>;
 }
 
 export interface OrchestratorAgentRun {
   inboxHistory?(input?: InboxHistoryInput): InboxHistoryPage;
+  triage?: OrchestratorInboxTriage;
   acceptNativeInput?: () => boolean;
   requireContent?(): void;
   sessionId: string;
@@ -239,6 +277,7 @@ export interface OrchestratorAgentRun {
   inbox: string;
   inboundChannelId: string | undefined;
   externalMessaging?: {
+    connected(): boolean;
     senderPermissions?(sourceEventId: string): SenderPermissions;
     directory?(query: MessagingDirectoryQuery): MessagingDirectoryPage;
     targets?(): Promise<
@@ -536,6 +575,7 @@ export interface BotRuntime {
   admitGroupJoinRequest?(ownerDmChannelId: string, requestId: string): void;
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
+  currentOrchestratorSessionId?(botSlug: string): string | undefined;
   listChannelAssignments?(channelId: string): ChannelAssignmentSummary[];
   getAssignment(botSlug: string, sessionId: string): AssignmentDetail | undefined;
 
@@ -550,6 +590,7 @@ export interface BotRuntime {
 
 export interface BotRuntimeOptions {
   inboxHistory?: InboxHistoryQuery;
+  triageContinuation?: boolean;
   requireExecution?: (botSlug: string) => void;
   beginAssignmentWait?: (botSlug: string, orchestratorSessionId: string) => () => void;
   externalMessaging?: OutboundMessaging;
@@ -592,7 +633,11 @@ export interface BotRuntimeOptions {
 
   orchestratorCwd?: (bot: PersonaBotRecord) => string | undefined;
 
+  sessionArchived?: (sessionId: string) => boolean;
+
   assignmentConcurrencyLimit?: number | (() => number);
+
+  sessionArchive?: () => NativeSessionArchive | undefined;
 
   warn?: (message: string) => void;
   now?: () => Date;
@@ -622,6 +667,7 @@ interface AssignmentRow {
   approval_policy: string | null;
   preset_revision: number | null;
   model_route_json: string | null;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -809,6 +855,98 @@ function assignmentFromRow(row: AssignmentRow): AssignmentDetail {
     ...(openAsk === undefined ? {} : { openAsk }),
     ...(permissionFromRow(row) === undefined ? {} : { permission: permissionFromRow(row)! }),
     ...(modelRouteFromRow(row) === undefined ? {} : { modelRoute: modelRouteFromRow(row)! }),
+    ...(isArchivedRow(row) ? { archivedAt: row.archived_at } : {}),
+  };
+}
+
+function isArchivedRow(row: AssignmentRow): row is AssignmentRow & { archived_at: string } {
+  return typeof row.archived_at === 'string';
+}
+
+export const DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT = 8;
+const ASSIGNMENT_DIRECTORY_DEFAULT_LIMIT = 20;
+const ASSIGNMENT_DIRECTORY_MAX_LIMIT = 50;
+const ASSIGNMENT_ACTIVITIES: readonly AssignmentActivity[] = [
+  'working',
+  'idle',
+  'error',
+  'stopping',
+  'stopped',
+];
+
+function encodeDirectoryCursor(assignment: AssignmentSummary): string {
+  return Buffer.from(
+    JSON.stringify({ u: assignment.updatedAt, s: assignment.sessionId }),
+    'utf8',
+  ).toString('base64url');
+}
+
+function decodeDirectoryCursor(cursor: string): { updatedAt: string; sessionId: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+  } catch {
+    parsed = undefined;
+  }
+  const fields = parsed as { u?: unknown; s?: unknown } | null | undefined;
+  if (typeof fields?.u !== 'string' || typeof fields.s !== 'string')
+    throw new Error('Invalid Assignment Directory cursor; restart from the first page');
+  return { updatedAt: fields.u, sessionId: fields.s };
+}
+
+export function queryAssignmentDirectory(
+  assignments: readonly AssignmentSummary[],
+  input: AssignmentDirectoryQuery,
+): AssignmentDirectoryPage {
+  const limit = input.limit ?? ASSIGNMENT_DIRECTORY_DEFAULT_LIMIT;
+  if (!Number.isInteger(limit) || limit < 1 || limit > ASSIGNMENT_DIRECTORY_MAX_LIMIT)
+    throw new Error(
+      `Assignment Directory limit must be an integer from 1 to ${ASSIGNMENT_DIRECTORY_MAX_LIMIT}`,
+    );
+  const activity = input.activity === undefined ? undefined : new Set(input.activity);
+  for (const value of activity ?? [])
+    if (!ASSIGNMENT_ACTIVITIES.includes(value))
+      throw new Error(`Unknown Assignment activity filter: ${String(value)}`);
+  const text = input.query?.trim().toLocaleLowerCase();
+  const after = input.cursor === undefined ? undefined : decodeDirectoryCursor(input.cursor);
+  const matches = assignments.filter((assignment) => {
+    if (input.includeArchived !== true && assignment.archivedAt !== undefined) return false;
+    if (activity !== undefined && !activity.has(assignment.activity)) return false;
+    if (text !== undefined && text !== '') {
+      const haystack = [
+        assignment.purpose,
+        assignment.continuityKey ?? '',
+        assignment.latestReport?.summary ?? '',
+      ]
+        .join('\n')
+        .toLocaleLowerCase();
+      if (!haystack.includes(text)) return false;
+    }
+    if (after !== undefined)
+      return (
+        assignment.updatedAt < after.updatedAt ||
+        (assignment.updatedAt === after.updatedAt && assignment.sessionId > after.sessionId)
+      );
+    return true;
+  });
+  const ordered = [...matches].sort((left, right) =>
+    left.updatedAt === right.updatedAt
+      ? left.sessionId < right.sessionId
+        ? -1
+        : left.sessionId > right.sessionId
+          ? 1
+          : 0
+      : left.updatedAt < right.updatedAt
+        ? 1
+        : -1,
+  );
+  const page = ordered.slice(0, limit);
+  const last = page.at(-1);
+  return {
+    assignments: page,
+    ...(ordered.length > limit && last !== undefined
+      ? { nextCursor: encodeDirectoryCursor(last) }
+      : {}),
   };
 }
 
@@ -962,6 +1100,7 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #registry: PersonaBotRegistry;
   readonly #channels: ChannelStore;
   readonly #inboxHistory: InboxHistoryQuery;
+  readonly #inboxTriage: InboxTriage;
   readonly #sourcePolicy: BotSourcePolicyStore;
   readonly #schedules: BotRuntimeOptions['schedules'];
   readonly #agents: BotAgentAdapter;
@@ -973,11 +1112,14 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #readAssignmentReportPage: BotRuntimeOptions['readAssignmentReportPage'];
   readonly #now: () => Date;
   readonly #createSessionId: () => string;
+  readonly #sessionArchived: ((sessionId: string) => boolean) | undefined;
   readonly #createEventId: () => string;
   readonly #createMessageId: () => string;
   readonly #assignmentConcurrencyLimit: () => number;
+  readonly #sessionArchive: (() => NativeSessionArchive | undefined) | undefined;
   readonly #approvalCapacity: AssignmentApprovalCapacity;
   readonly #warn: ((message: string) => void) | undefined;
+  readonly #triageContinuation: boolean;
   readonly #tails = new Map<string, Promise<unknown>>();
   readonly #activeTurns = new Map<string, Promise<void>>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
@@ -1001,12 +1143,18 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #steerSettlements = new Set<Promise<void>>();
   readonly #pendingHarvests = new Set<string>();
   readonly #digestTimers = new Map<string, NodeJS.Timeout>();
+  readonly #snoozeTimers = new Map<string, NodeJS.Timeout>();
+  readonly #triageQueued = new Set<string>();
+  readonly #triageRunning = new Set<string>();
+  readonly #triageBaseline = new Map<string, number>();
+  readonly #triageStalled = new Map<string, Set<string>>();
   readonly #groupAdmissionRetries = new Map<string, NodeJS.Timeout>();
   readonly #digestRetryAt = new Map<string, number>();
   readonly #digestFailureCount = new Map<string, number>();
   readonly #inboxFactoryRetries = new Map<string, { attempts: number; timer?: NodeJS.Timeout }>();
   readonly #assignmentRuns = new Map<string, Promise<void>>();
   readonly #assignmentAcceptances = new Set<string>();
+  readonly #assignmentArchives = new Set<string>();
   readonly #assignmentNotices = new Set<Promise<void>>();
   readonly #waitLifetime = new AbortController();
   readonly #waitOptions: Pick<BotRuntimeOptions, 'database' | 'beginAssignmentWait'>;
@@ -1023,6 +1171,7 @@ class BotRuntimeImplementation implements BotRuntime {
       createSessionOwnership(attachOperationalModule(options.database, 'session-ownership'));
     this.#workspaceRoot = options.workspaceRoot;
     this.#orchestratorCwd = options.orchestratorCwd;
+    this.#sessionArchived = options.sessionArchived;
     this.#registry = options.registry;
     this.#requireExecution = options.requireExecution;
     this.#channels = options.channels;
@@ -1033,6 +1182,7 @@ class BotRuntimeImplementation implements BotRuntime {
         options.channels,
         options.now,
       );
+    this.#inboxTriage = createInboxTriage(this.#database, options.channels, options.now);
     this.#sourcePolicy =
       options.sourcePolicy ?? createBotSourcePolicyStore(this.#database, options.now);
     this.#schedules = options.schedules;
@@ -1046,10 +1196,13 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#createSessionId = options.createSessionId ?? (() => `botharness-${randomUUID()}`);
     this.#createEventId = options.createEventId ?? (() => randomUUID());
     this.#createMessageId = options.createMessageId ?? (() => randomUUID());
-    const configuredLimit = options.assignmentConcurrencyLimit ?? 3;
+    const configuredLimit =
+      options.assignmentConcurrencyLimit ?? DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT;
     this.#assignmentConcurrencyLimit =
       typeof configuredLimit === 'function' ? configuredLimit : () => configuredLimit;
+    this.#sessionArchive = options.sessionArchive;
     this.#warn = options.warn;
+    this.#triageContinuation = options.triageContinuation === true;
     this.#approvalCapacity = new AssignmentApprovalCapacity({
       valid: (sessionId) => this.#assignmentExecutionAvailable(sessionId),
       available: () => this.#assignmentCapacityRefusal('awakened') === undefined,
@@ -1083,6 +1236,188 @@ class BotRuntimeImplementation implements BotRuntime {
       }
       this.#recoverPendingDigests();
       this.#recoverPendingAssignmentReports();
+      for (const bot of this.#registry.list()) this.#armSnooze(bot.slug);
+    }
+  }
+
+  #armSnooze(botSlug: string): void {
+    const prior = this.#snoozeTimers.get(botSlug);
+    if (prior !== undefined) clearTimeout(prior);
+    this.#snoozeTimers.delete(botSlug);
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined) return;
+    const next = this.#database.read((database) =>
+      database
+        .prepare(`
+          SELECT MIN(snoozed_until) AS next FROM inbox_admissions
+           WHERE bot_slug = ? AND snoozed_until IS NOT NULL AND resolved_at IS NULL
+        `)
+        .get(botSlug),
+    ) as { next: string | null } | undefined;
+    if (next?.next == null) return;
+    const delay = Math.min(
+      2_147_483_647,
+      Math.max(bot.paused === true ? 60_000 : 1, Date.parse(next.next) - this.#now().getTime()),
+    );
+    const timer = setTimeout(() => {
+      this.#snoozeTimers.delete(botSlug);
+      if (this.#closed) return;
+      void this.#enqueue(botSlug, () => this.#runSnoozeReturnTurn(botSlug))
+        .finally(() => this.#armSnooze(botSlug))
+        .catch(() => undefined);
+    }, delay);
+    timer.unref();
+    this.#snoozeTimers.set(botSlug, timer);
+  }
+
+  #queueTriage(botSlug: string): void {
+    if (!this.#triageContinuation || this.#closed || this.#triageQueued.has(botSlug)) return;
+    this.#triageQueued.add(botSlug);
+    void this.#enqueue(botSlug, () => this.#runTriageTurn(botSlug)).catch(() => undefined);
+  }
+
+  async #runTriageTurn(botSlug: string): Promise<void> {
+    this.#triageQueued.delete(botSlug);
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined || bot.paused === true) return;
+    const ids = this.#inboxTriage.openIds(botSlug);
+    const baseline = this.#triageBaseline.get(botSlug);
+    this.#triageBaseline.delete(botSlug);
+    if (ids.length === 0) {
+      this.#triageStalled.delete(botSlug);
+      return;
+    }
+    if (baseline !== undefined && ids.length >= baseline) {
+      this.#triageStalled.set(botSlug, new Set(ids));
+      return;
+    }
+    const stalled = this.#triageStalled.get(botSlug);
+    if (stalled !== undefined && ids.every((id) => stalled.has(id))) return;
+    this.#triageStalled.delete(botSlug);
+    const anchor = ids[0]!;
+    const channel = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT ${channelSql('e')} AS channel_id FROM source_events e WHERE e.source_event_id = ?`,
+        )
+        .get(anchor),
+    ) as { channel_id: string | null } | undefined;
+    const channelId = channel?.channel_id ?? this.#dmChannel(botSlug)?.id;
+    const body = `[Triage] ${ids.length} item${ids.length === 1 ? ' is' : 's are'} still open after your last turn. Give each one a destination: act on it now, resolve it with inbox_resolve once it is done or needs nothing more, snooze it with inbox_snooze when it waits on someone or a later time, or ignore noise. Check a completed Assignment report against what you asked for before resolving it. You are woken again while open items remain, unless a round leaves the open count unchanged.`;
+    this.#triageBaseline.set(botSlug, ids.length);
+    this.#triageRunning.add(botSlug);
+    try {
+      const orchestrator = this.#ensureOrchestrator(bot, this.#now().toISOString());
+      await this.#runOrchestratorTurn(
+        bot,
+        orchestrator,
+        anchor,
+        channelId,
+        body,
+        [],
+        false,
+        () => undefined,
+        [],
+        [],
+      );
+    } catch (error) {
+      this.#triageBaseline.delete(botSlug);
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'triage-turn-failed',
+          botSlug,
+          error: String(error).slice(0, 500),
+        }),
+      );
+    } finally {
+      this.#triageRunning.delete(botSlug);
+    }
+  }
+
+  async #runSnoozeReturnTurn(botSlug: string): Promise<void> {
+    if (this.#closed) return;
+    const bot = this.#registry.get(botSlug);
+    if (bot === undefined || bot.paused === true) return;
+    const timestamp = this.#now().toISOString();
+    const due = this.#database.transaction(
+      (database) => {
+        const rows = database
+          .prepare(`
+            SELECT a.source_event_id, a.snoozed_until, a.snooze_note, e.body,
+                   ${channelSql('e')} AS channel_id,
+                   CASE WHEN ${OPEN_ADMISSION_SQL} AND ${SNOOZED_SQL} THEN 1 ELSE 0 END AS hidden
+              FROM inbox_admissions a
+              JOIN source_events e ON e.source_event_id = a.source_event_id
+             WHERE a.bot_slug = ? AND a.snoozed_until IS NOT NULL AND a.snoozed_until <= ?
+               AND a.resolved_at IS NULL
+             ORDER BY a.snoozed_until, e.created_at
+          `)
+          .all(botSlug, timestamp) as unknown as Array<{
+          source_event_id: string;
+          snoozed_until: string;
+          snooze_note: string | null;
+          body: string;
+          channel_id: string | null;
+          hidden: number;
+        }>;
+        for (const row of rows)
+          database
+            .prepare(
+              'UPDATE inbox_admissions SET snoozed_until = NULL WHERE source_event_id = ? AND bot_slug = ?',
+            )
+            .run(row.source_event_id, botSlug);
+        return rows.filter((row) => row.hidden === 1);
+      },
+      ['bot-inbox'],
+    );
+    const anchor = due[0];
+    if (anchor === undefined) return;
+    const channelId = anchor.channel_id ?? this.#dmChannel(botSlug)?.id;
+    const body = [
+      `[Snooze returned] ${due.length} item${due.length === 1 ? '' : 's'} you snoozed ${due.length === 1 ? 'is' : 'are'} back. Decide what each needs now, then resolve it, act on it, or snooze it again.`,
+      ...due.map(
+        (row) =>
+          `- [Source Event ${row.source_event_id}] snoozed until ${row.snoozed_until}${row.snooze_note === null ? '' : `, note: ${JSON.stringify(row.snooze_note)}`}: ${JSON.stringify(row.body.replace(/\s+/g, ' ').slice(0, 300))}`,
+      ),
+    ].join('\n');
+    try {
+      const orchestrator = this.#ensureOrchestrator(bot, timestamp);
+      await this.#runOrchestratorTurn(
+        bot,
+        orchestrator,
+        anchor.source_event_id,
+        channelId,
+        body,
+        [],
+        false,
+        () => undefined,
+        [],
+        [],
+      );
+    } catch (error) {
+      const retryAt = new Date(this.#now().getTime() + 300_000).toISOString();
+      this.#database.transaction(
+        (database) => {
+          for (const row of due)
+            database
+              .prepare(`
+                UPDATE inbox_admissions SET snoozed_until = ?
+                 WHERE source_event_id = ? AND bot_slug = ? AND resolved_at IS NULL
+                   AND snoozed_until IS NULL
+              `)
+              .run(retryAt, row.source_event_id, botSlug);
+        },
+        ['bot-inbox'],
+      );
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'snooze-return-failed',
+          botSlug,
+          error: String(error).slice(0, 500),
+        }),
+      );
     }
   }
 
@@ -1756,11 +2091,14 @@ class BotRuntimeImplementation implements BotRuntime {
         UPDATE inbox_admissions
            SET attempt_state = ?,
                handled_at = CASE WHEN ? THEN ? ELSE handled_at END,
+               opened_at = CASE WHEN ? THEN COALESCE(opened_at, ?) ELSE opened_at END,
                last_error = CASE WHEN ? THEN NULL ELSE 'Steered Orchestrator turn failed' END
          WHERE source_event_id = ? AND bot_slug = ? AND attempt_state = 'running'
       `)
             .run(
               succeeded ? 'handled' : 'needs-repair',
+              succeeded ? 1 : 0,
+              this.#now().toISOString(),
               succeeded ? 1 : 0,
               this.#now().toISOString(),
               succeeded ? 1 : 0,
@@ -2125,7 +2463,8 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#setObserved(collected.eventIds, timestamp, botSlug);
     let orchestrator: { sessionId: string; resume: boolean } | undefined;
     try {
-      orchestrator = this.#ensureOrchestrator(bot, timestamp);
+      const started = this.#ensureOrchestrator(bot, timestamp);
+      orchestrator = started;
       const sections = [
         ...claimed.items.map((item) =>
           this.#inboundChannelMessage(item.channelId, item.messageId, item.body),
@@ -2140,19 +2479,22 @@ class BotRuntimeImplementation implements BotRuntime {
         attentionCount > 1
           ? `[Bot Inbox harvest] ${attentionCount} attention items are ready. Handle them together where useful and in parallel where independent; long-running work belongs in Assignment Sessions.`
           : undefined;
-      await this.#runOrchestratorTurn(
-        bot,
-        orchestrator,
-        sourceEventId,
-        externalOnly && externalChannelId === undefined ? undefined : primaryChannelId,
-        [preamble, ...sections].filter((part): part is string => part !== undefined).join('\n\n'),
-        collected.units,
-        collected.eventIds.length > 0,
-        () => this.#markAdmissionsSideEffect(botSlug, includedIds),
-        collected.eventIds,
-        [...new Set([...includedIds, ...collected.eventIds])],
-      );
-      this.#markReportsHandled(collected.eventIds, botSlug, orchestrator.sessionId);
+      const ran = await this.#runOnLiveOrchestrator(bot, started, (session) => {
+        orchestrator = session;
+        return this.#runOrchestratorTurn(
+          bot,
+          session,
+          sourceEventId,
+          externalOnly && externalChannelId === undefined ? undefined : primaryChannelId,
+          [preamble, ...sections].filter((part): part is string => part !== undefined).join('\n\n'),
+          collected.units,
+          collected.eventIds.length > 0,
+          () => this.#markAdmissionsSideEffect(botSlug, includedIds),
+          collected.eventIds,
+          [...new Set([...includedIds, ...collected.eventIds])],
+        );
+      });
+      this.#markReportsHandled(collected.eventIds, botSlug, ran.sessionId);
       this.#settleHarvestHandled(botSlug, includedIds);
       for (const digest of claimed.digests) {
         this.#digestRetryAt.delete(`${botSlug}:${digest.channelId}`);
@@ -2571,10 +2913,11 @@ class BotRuntimeImplementation implements BotRuntime {
         for (const id of sourceEventIds)
           database
             .prepare(`
-          UPDATE inbox_admissions SET attempt_state = 'handled', handled_at = ?
+          UPDATE inbox_admissions
+             SET attempt_state = 'handled', handled_at = ?, opened_at = COALESCE(opened_at, ?)
            WHERE source_event_id = ? AND bot_slug = ? AND attempt_state = 'running'
         `)
-            .run(this.#now().toISOString(), id, botSlug);
+            .run(this.#now().toISOString(), this.#now().toISOString(), id, botSlug);
       },
       ['bot-inbox'],
     );
@@ -2877,6 +3220,7 @@ class BotRuntimeImplementation implements BotRuntime {
             current?.rootRole !== 'orchestrator' ||
             current.botSlug !== owner.botSlug ||
             !this.#ownership.contentAvailable(sessionId) ||
+            this.#sessionArchived?.(sessionId) === true ||
             !held()
           )
             return;
@@ -2904,6 +3248,7 @@ class BotRuntimeImplementation implements BotRuntime {
                 currentOwner?.rootRole !== 'orchestrator' ||
                 currentOwner.botSlug !== owner.botSlug ||
                 !this.#ownership.contentAvailable(sessionId) ||
+                this.#sessionArchived?.(sessionId) === true ||
                 !held()
               ) {
                 accept(false);
@@ -2955,6 +3300,16 @@ class BotRuntimeImplementation implements BotRuntime {
     return run;
   }
 
+  currentOrchestratorSessionId(botSlug: string): string | undefined {
+    return this.#ownership
+      .rootsFor(botSlug, 'orchestrator')
+      .find(
+        (root) =>
+          this.#ownership.contentAvailable(root.sessionId) &&
+          this.#sessionArchived?.(root.sessionId) !== true,
+      )?.sessionId;
+  }
+
   listAssignments(botSlug: string): AssignmentSummary[] {
     const rows = this.#database.read((database) =>
       database
@@ -2964,7 +3319,7 @@ class BotRuntimeImplementation implements BotRuntime {
                   continuity_key, open_ask_source_event_id, open_ask_at,
                   grant_id, workspace_id, primary_cwd, permission_mode,
                   approval_policy, preset_revision, created_at, updated_at
-                  , model_route_json, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
+                  , model_route_json, archived_at, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
              FROM assignments
             WHERE bot_slug = ?
             ORDER BY updated_at DESC, session_id ASC`,
@@ -3023,7 +3378,7 @@ class BotRuntimeImplementation implements BotRuntime {
                   continuity_key, open_ask_source_event_id, open_ask_at,
                   grant_id, workspace_id, primary_cwd, permission_mode,
                   approval_policy, preset_revision, created_at, updated_at
-                  , model_route_json, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
+                  , model_route_json, archived_at, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
              FROM assignments
             WHERE bot_slug = ? AND session_id = ?`,
         )
@@ -3171,6 +3526,8 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#typingAssignments.clear();
     for (const timer of this.#digestTimers.values()) clearTimeout(timer);
     this.#digestTimers.clear();
+    for (const timer of this.#snoozeTimers.values()) clearTimeout(timer);
+    this.#snoozeTimers.clear();
     for (const timer of this.#groupAdmissionRetries.values()) clearTimeout(timer);
     this.#groupAdmissionRetries.clear();
     this.#digestRetryAt.clear();
@@ -3215,23 +3572,26 @@ class BotRuntimeImplementation implements BotRuntime {
     if (this.#admissionHandled(claim.sourceEventId, bot.slug)) return;
 
     const timestamp = this.#now().toISOString();
-    const orchestrator = this.#ensureOrchestrator(bot, timestamp);
+    let orchestrator = this.#ensureOrchestrator(bot, timestamp);
 
     const collected = this.#collectInbox(bot.slug);
     this.#setObserved(collected.eventIds, timestamp, bot.slug);
     try {
       this.#observeAdmission(claim.sourceEventId, bot.slug, channelId, messageId);
-      await this.#runOrchestratorTurn(
-        bot,
-        orchestrator,
-        claim.sourceEventId,
-        channelId,
-        this.#inboundChannelMessage(channelId, messageId, body),
-        collected.units,
-        this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
-        undefined,
-        collected.eventIds,
-      );
+      await this.#runOnLiveOrchestrator(bot, orchestrator, (session) => {
+        orchestrator = session;
+        return this.#runOrchestratorTurn(
+          bot,
+          session,
+          claim.sourceEventId,
+          channelId,
+          this.#inboundChannelMessage(channelId, messageId, body),
+          collected.units,
+          this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
+          undefined,
+          collected.eventIds,
+        );
+      });
     } catch (error) {
       this.#setObserved(collected.eventIds, null, bot.slug);
       this.#markSourceEventFailed(claim.sourceEventId);
@@ -3259,10 +3619,10 @@ class BotRuntimeImplementation implements BotRuntime {
         database
           .prepare(`
           UPDATE inbox_admissions
-             SET handled_at = ?, attempt_state = 'handled'
+             SET handled_at = ?, attempt_state = 'handled', opened_at = COALESCE(opened_at, ?)
            WHERE source_event_id = ? AND bot_slug = ?
         `)
-          .run(handledAt, claim.sourceEventId, bot.slug);
+          .run(handledAt, handledAt, claim.sourceEventId, bot.slug);
       },
       ['source-event', 'bot-inbox'],
     );
@@ -3386,7 +3746,12 @@ class BotRuntimeImplementation implements BotRuntime {
         : { units: [], eventIds: [] };
       memoryEventIds = memoryInbox.eventIds;
       const units = [...inboxUnits, ...memoryInbox.units];
-      const inbox = units.length === 0 ? '' : renderInbox(units);
+      const inbox = [
+        units.length === 0 ? '' : renderInbox(units),
+        this.#inboxTriage.openSummary(bot.slug),
+      ]
+        .filter((part) => part.length > 0)
+        .join('\n\n');
       this.#setObserved(memoryEventIds, this.#now().toISOString());
       if (observeMemory)
         this.#activeMemoryEvents.set(bot.slug, {
@@ -3424,6 +3789,12 @@ class BotRuntimeImplementation implements BotRuntime {
           ? {}
           : {
               externalMessaging: {
+                connected: () => {
+                  const { identities, grants } = this.#externalMessaging!.deletionDependencies(
+                    bot.slug,
+                  );
+                  return identities.length > 0 || grants.length > 0;
+                },
                 senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
                 directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
                 reachable: async (bindingId, cursor) => {
@@ -3618,6 +3989,14 @@ class BotRuntimeImplementation implements BotRuntime {
               },
             }),
         inboxHistory: (input) => this.#inboxHistory.list(bot.slug, input),
+        triage: this.#inboxTriage.access({
+          botSlug: bot.slug,
+          sessionId: orchestrator.sessionId,
+          current: () => [...turnSources, ...readAdmissions],
+          changed: (changedChannelId, messageId) =>
+            this.#channels.admissionChanged?.(changedChannelId, messageId),
+          snoozed: () => this.#armSnooze(bot.slug),
+        }),
         channels: this.#channelAccess(
           bot.slug,
           channelId,
@@ -3742,6 +4121,8 @@ class BotRuntimeImplementation implements BotRuntime {
       this.#markReportsHandled(memoryEventIds);
       this.#settleHarvestHandled(bot.slug, [...readAdmissions]);
       this.#notifyReadAdmissions(readAdmissions);
+      if (!this.#triageRunning.has(bot.slug)) this.#triageBaseline.delete(bot.slug);
+      this.#queueTriage(bot.slug);
     } catch (error) {
       this.#setObserved(memoryEventIds, null);
       this.#settleHarvestFailure(bot.slug, [...readAdmissions], String(error));
@@ -3829,6 +4210,9 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       grants: () => this.#grants?.list(bot.slug) ?? [],
       list: () => this.listAssignments(bot.slug),
+      query: (input) => queryAssignmentDirectory(this.listAssignments(bot.slug), input),
+      archive: (sessionId) => this.#archiveAssignment(bot, sessionId, markSideEffect),
+      unarchive: (sessionId) => this.#unarchiveAssignment(bot, sessionId, markSideEffect),
       inspect: (sessionId) => this.getAssignment(bot.slug, sessionId),
       tail: async (sessionId) => {
         if (this.getAssignment(bot.slug, sessionId) === undefined)
@@ -4710,6 +5094,9 @@ class BotRuntimeImplementation implements BotRuntime {
               .prepare(`
                 UPDATE inbox_admissions
                    SET ignored_at = ?, ignored_by_session_id = ?,
+                       resolved_at = COALESCE(resolved_at, ?),
+                       resolution = COALESCE(resolution, 'ignored'),
+                       resolved_by_session_id = COALESCE(resolved_by_session_id, ?),
                        observed_at = COALESCE(observed_at, ?),
                        attempt_state = CASE
                          WHEN attempt_state IN ('pending', 'retryable', 'running') THEN 'handled'
@@ -4719,7 +5106,16 @@ class BotRuntimeImplementation implements BotRuntime {
                          ELSE handled_at END
                  WHERE source_event_id = ? AND bot_slug = ? AND ignored_at IS NULL
               `)
-              .run(ignoredAt, sessionId, ignoredAt, ignoredAt, row.source_event_id, botSlug);
+              .run(
+                ignoredAt,
+                sessionId,
+                ignoredAt,
+                sessionId,
+                ignoredAt,
+                ignoredAt,
+                row.source_event_id,
+                botSlug,
+              );
             return { sourceEventId: row.source_event_id, ignoredAt, alreadyIgnored: false };
           },
           ['bot-inbox'],
@@ -5280,11 +5676,55 @@ class BotRuntimeImplementation implements BotRuntime {
     return channel;
   }
 
+  async #runOnLiveOrchestrator(
+    bot: PersonaBotRecord,
+    orchestrator: { sessionId: string; resume: boolean },
+    run: (orchestrator: { sessionId: string; resume: boolean }) => Promise<void>,
+  ): Promise<{ sessionId: string; resume: boolean }> {
+    try {
+      await run(orchestrator);
+      return orchestrator;
+    } catch (error) {
+      if (
+        this.#closed ||
+        this.#sessionArchived?.(orchestrator.sessionId) !== true ||
+        this.#turnSideEffectStarted(bot.slug)
+      )
+        throw error;
+      const replacement = this.#ensureOrchestrator(bot, this.#now().toISOString());
+      if (replacement.sessionId === orchestrator.sessionId) throw error;
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'orchestrator-archived-mid-turn',
+          botSlug: bot.slug,
+          archivedSessionId: orchestrator.sessionId,
+          sessionId: replacement.sessionId,
+        }),
+      );
+      await run(replacement);
+      return replacement;
+    }
+  }
+
+  #turnSideEffectStarted(botSlug: string): boolean {
+    return (
+      this.#database.read((database) =>
+        database
+          .prepare(
+            `SELECT 1 FROM inbox_admissions
+              WHERE bot_slug = ? AND attempt_state = 'running'
+                AND side_effect_started_at IS NOT NULL
+              LIMIT 1`,
+          )
+          .get(botSlug),
+      ) !== undefined
+    );
+  }
+
   #ensureOrchestrator(bot: PersonaBotRecord, at: string): { sessionId: string; resume: boolean } {
-    const existing = this.#ownership
-      .rootsFor(bot.slug, 'orchestrator')
-      .find((root) => this.#ownership.contentAvailable(root.sessionId));
-    if (existing !== undefined) return { sessionId: existing.sessionId, resume: true };
+    const existing = this.currentOrchestratorSessionId(bot.slug);
+    if (existing !== undefined) return { sessionId: existing, resume: true };
     const sessionId = this.#createSessionId();
     const cwdReference = this.#orchestratorCwdReference(bot);
     this.#ownership.claim({
@@ -5442,6 +5882,11 @@ class BotRuntimeImplementation implements BotRuntime {
   ): AssignmentRequestOutcome {
     const row = this.#assignmentRow(bot.slug, input.sessionId);
     if (row === undefined) throw new Error(`Unknown Assignment Session: ${input.sessionId}`);
+    if (isArchivedRow(row) || this.#assignmentArchives.has(input.sessionId)) {
+      throw new Error(
+        `Assignment Session ${input.sessionId} is archived; call unarchive_assignment before sending it a request`,
+      );
+    }
     if (row.stop_state !== 'running') {
       throw new Error(`Assignment Session ${input.sessionId} is stopped or stopping`);
     }
@@ -5653,6 +6098,97 @@ class BotRuntimeImplementation implements BotRuntime {
     return this.#requireAssignmentSummary(bot.slug, sessionId);
   }
 
+  async #archiveAssignment(
+    bot: PersonaBotRecord,
+    sessionId: string,
+    markSideEffect: () => void,
+  ): Promise<AssignmentArchiveOutcome> {
+    const row = this.#assignmentRow(bot.slug, sessionId);
+    if (row === undefined) throw new Error(`Unknown Assignment Session: ${sessionId}`);
+    if (isArchivedRow(row))
+      return {
+        outcome: 'archived',
+        assignment: this.#requireAssignmentSummary(bot.slug, sessionId),
+      };
+    const active = (message: string): AssignmentArchiveOutcome => ({
+      outcome: 'refused',
+      code: 'assignment-active',
+      assignment: this.#requireAssignmentSummary(bot.slug, sessionId),
+      message,
+    });
+    if (
+      row.activity === 'working' ||
+      row.stop_state === 'requested' ||
+      this.#assignmentAcceptances.has(sessionId)
+    )
+      return active(
+        `Assignment Session ${sessionId} is still active; nothing was archived. Wait for it to settle or call stop_assignment first.`,
+      );
+    const archive = this.#sessionArchive?.();
+    if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+    if (this.#assignmentArchives.has(sessionId))
+      return active(
+        `Assignment Session ${sessionId} is already being archived; inspect it shortly.`,
+      );
+    this.#assignmentArchives.add(sessionId);
+    try {
+      markSideEffect();
+      try {
+        await archive.archiveSession(sessionId);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'WorkspaceActiveSessionError')
+          return active(
+            `DSH reports Session ${sessionId} still has running work; nothing was archived. Stop it first, then retry.`,
+          );
+        throw error;
+      }
+      this.#database.transaction(
+        (database) => {
+          database
+            .prepare(
+              `UPDATE assignments SET archived_at = ?, continuity_key = NULL
+                WHERE bot_slug = ? AND session_id = ? AND archived_at IS NULL`,
+            )
+            .run(this.#now().toISOString(), bot.slug, sessionId);
+        },
+        ['assignments'],
+      );
+    } finally {
+      this.#assignmentArchives.delete(sessionId);
+    }
+    return { outcome: 'archived', assignment: this.#requireAssignmentSummary(bot.slug, sessionId) };
+  }
+
+  async #unarchiveAssignment(
+    bot: PersonaBotRecord,
+    sessionId: string,
+    markSideEffect: () => void,
+  ): Promise<{ outcome: 'unarchived'; assignment: AssignmentSummary }> {
+    const row = this.#assignmentRow(bot.slug, sessionId);
+    if (row === undefined) throw new Error(`Unknown Assignment Session: ${sessionId}`);
+    if (isArchivedRow(row)) {
+      const archive = this.#sessionArchive?.();
+      if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+      markSideEffect();
+      await archive.unarchiveSession(sessionId);
+      this.#database.transaction(
+        (database) => {
+          database
+            .prepare(
+              `UPDATE assignments SET archived_at = NULL
+                WHERE bot_slug = ? AND session_id = ? AND archived_at IS NOT NULL`,
+            )
+            .run(bot.slug, sessionId);
+        },
+        ['assignments'],
+      );
+    }
+    return {
+      outcome: 'unarchived',
+      assignment: this.#requireAssignmentSummary(bot.slug, sessionId),
+    };
+  }
+
   #publishAssignmentRefusal(row: AssignmentRow, error: unknown): void {
     const channel = this.#dmChannel(row.bot_slug);
     if (channel === undefined) return;
@@ -5792,7 +6328,7 @@ class BotRuntimeImplementation implements BotRuntime {
       activeCount,
       limit,
       retryable: true,
-      message: `Assignment Concurrency Limit ${limit} reached; retryable: true. Nothing was ${action}. Wait for active work to settle before retrying.`,
+      message: `Assignment Concurrency Limit ${limit} reached; retryable: true. Nothing was ${action}. Wait for active work to settle before retrying; keep the item that asked for this open, or snooze it with inbox_snooze until then, and do not resolve it.`,
     };
   }
 
@@ -6531,13 +7067,20 @@ class BotRuntimeImplementation implements BotRuntime {
       (database) => {
         database
           .prepare(`
-            UPDATE inbox_admissions SET attempt_state = 'handled', handled_at = ?
+            UPDATE inbox_admissions
+               SET attempt_state = 'handled', handled_at = ?, opened_at = COALESCE(opened_at, ?)
              WHERE reason IN ('assignment-report', 'assignment-lifecycle', 'memory-change', 'schedule', 'group-mention', 'group-ordinary', 'human-dm')
                AND attempt_state = 'running'
                AND (? IS NULL OR bot_slug = ?)
                AND source_event_id IN (${placeholders})
           `)
-          .run(this.#now().toISOString(), botSlug ?? null, botSlug ?? null, ...sourceEventIds);
+          .run(
+            this.#now().toISOString(),
+            this.#now().toISOString(),
+            botSlug ?? null,
+            botSlug ?? null,
+            ...sourceEventIds,
+          );
         if (sessionId !== undefined)
           database
             .prepare(`

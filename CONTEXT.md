@@ -133,8 +133,12 @@ The DSH Agent executing inside one Assignment Session. It reports only to its Pe
 _Avoid_: worker, PersonaBot, Orchestrator, Assignment Session
 
 **Assignment Directory**:
-The PersonaBot-scoped durable read model through which its current Orchestrator explicitly lists and addresses owned Assignment Sessions, including purpose, Continuity Key, Workspace, DSH-derived activity/last-run facts, dependencies, latest semantic report, and aggregate descendant activity. It keeps execution facts separate from reported outcomes, is rebuilt from Session Ownership and DSH facts, and is queried when needed rather than injected wholesale into every turn. Listings use filtered, ordered, opaque-cursor pagination and never flatten DSH Subagents into top-level Assignment rows.
+The PersonaBot-scoped durable read model through which its current Orchestrator explicitly lists and addresses owned Assignment Sessions, including purpose, Continuity Key, Workspace, DSH-derived activity/last-run facts, dependencies, latest semantic report, and aggregate descendant activity. It keeps execution facts separate from reported outcomes, is rebuilt from Session Ownership and DSH facts, and is queried when needed rather than injected wholesale into every turn. Listings use filtered, ordered, opaque-cursor pagination with text search, hide Archived Assignments by default, and never flatten DSH Subagents into top-level Assignment rows.
 _Avoid_: task list, AgentHandle map, cwd scan, Orchestrator memory
+
+**Archived Assignment**:
+An Assignment whose Orchestrator explicitly archived it through DSH's native Session archive after it settled. It leaves the default Assignment Directory listing and native Session lists, gives up its Continuity Key, refuses Assignment Requests, and keeps its history; unarchiving restores it. Nothing archives an Assignment automatically (ADR-0188).
+_Avoid_: deleted Assignment, stopped Assignment, auto-archive, hidden flag
 
 **Continuity Key**:
 A stable PersonaBot-local key explicitly assigned to one continuing line of work. It names at most one resumable Assignment Session and may select it only when ownership, Workspace mapping, model, and dependency requirements still match. An active holder must first become idle/completed or be explicitly stopped and superseded before the key moves.
@@ -161,7 +165,7 @@ A durable Host-origin Source Event emitted only for a meaningful execution bound
 _Avoid_: Assignment Report, fabricated agent message, per-turn directory snapshot
 
 **Assignment Concurrency Limit**:
-The profile-wide maximum number of independent Assignment Sessions allowed to execute concurrently. It is a single Human-configured BotHarness setting in v1; a create or wake attempt beyond the limit fails immediately with machine-readable fields and an LLM-readable explanation, without creating a queue, intent, or DSH Session.
+The profile-wide maximum number of independent Assignment Sessions allowed to execute concurrently. It is a single Human-configured BotHarness setting in v1, defaulting to 8; a create or wake attempt beyond the limit fails immediately with machine-readable fields and an LLM-readable explanation, without creating a queue, intent, or DSH Session.
 _Avoid_: dispatch queue, per-Bot quota, hidden model budget, total Session count
 
 **Workspace**:
@@ -523,7 +527,7 @@ A Binding's choice for a conversation that has no entry yet: `auto` (Admit autom
 _Avoid_: whitelist, approval mode, auto-reply
 
 **Bot Inbox**:
-The PersonaBot-level view of Source Events admitted for its attention, whether or not an event belongs to a Channel. It is not a second content store: reading is an explicit act, and ignoring is allowed.
+The PersonaBot-level view of Source Events admitted for its attention, whether or not an event belongs to a Channel. It is not a second content store: reading is an explicit act, and ignoring is allowed. An admitted item is unread until a turn observes it, then open until the Orchestrator resolves it as done or ignored; finishing a turn resolves nothing. A snoozed item is open but hidden until its time, or until a new event arrives in the same conversation, and then wakes the Orchestrator. While unsnoozed open items remain after a turn, the Host wakes the Orchestrator again to triage them, until a round makes no progress (ADR-0188).
 _Avoid_: queue, mailbox, backlog
 
 **Inbox Admission**:
@@ -547,7 +551,7 @@ A versioned Host rule or authorization whose exact revision must participate in 
 _Avoid_: all bot state, model instruction, settings (bare)
 
 **Attention Decision**:
-An auditable PersonaBot fact that an Inbox Admission was observed, deferred, ignored, or handled; pending state is derived from these facts rather than stored as a delivery lifecycle. Observation records what actually reached the Bot, while handling follows successful completion of the turn that included it. Observation is an internal audit/detail fact, not an additional primary Inbox status.
+An auditable PersonaBot fact that an Inbox Admission was observed, deferred, ignored, or handled; pending state is derived from these facts rather than stored as a delivery lifecycle. Observation records what actually reached the Bot, while handling follows successful completion of the turn that included it. Handling only opens an item: the Orchestrator's explicit resolve, with outcome done or ignored and a note, is the decision that closes them. Observation is an internal audit/detail fact, not an additional primary Inbox status.
 _Avoid_: mailbox status, Agent delivery state, consumed flag
 
 **Observation**:

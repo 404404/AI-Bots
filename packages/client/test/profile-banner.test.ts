@@ -15,6 +15,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
       createElement('button', { type: 'button', ...props }),
     IconCloseOutlineRegular: stub,
     IconEllipsisOutlineRegular: stub,
+    IconTrashOutlineRegular: stub,
     IconShareOutlineRegular: stub,
     Menu: stub,
     Tag: ({ children }: PropsWithChildren) => createElement('span', null, children),

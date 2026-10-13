@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { BotScheduleError } from '../src/schedules/bot-schedules.js';
+import { requiresHumanToolApproval } from '../src/workspaces/grant-execution.js';
 import type { AssignmentAgentRun, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { FakeAgentHost, FAKE_BOT as BOT } from './dsh-agent-host-fixture.js';
 
@@ -948,6 +949,87 @@ describe('DSH Bot Agent adapter', () => {
     }
   });
 
+  it('lists bridge Tools and the external IM prompt only on turns where the Bot has IM', async () => {
+    const listed: string[][] = [];
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onTurn: async (_session, tools) => {
+          listed.push(tools.map((tool) => tool.name).filter((name) => name.startsWith('bridge_')));
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    let connected = false;
+    const run: OrchestratorAgentRun = {
+      sessionId: 'orchestrator-ada',
+      resume: false,
+      bot: BOT,
+      message: 'Turn',
+      inbox: '',
+      inboundChannelId: 'dm-test',
+      externalMessaging: {
+        connected: () => connected,
+      } as unknown as NonNullable<OrchestratorAgentRun['externalMessaging']>,
+      channels: {
+        ...groupTools,
+        contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+        sendToBot: async () => {
+          throw new Error('unexpected Bot DM');
+        },
+        ignore: () => ({
+          sourceEventId: 'source-1',
+          ignoredAt: BOT.createdAt,
+          alreadyIgnored: false,
+        }),
+        read: () => [],
+        requestGrant: async () => undefined as never,
+        send: async () => {
+          throw new Error('unexpected send');
+        },
+      },
+      assignments: {
+        create: () => ({ outcome: 'created', assignment: ASSIGNMENT }),
+        grants: () => [],
+        list: () => [],
+        inspect: () => undefined,
+        stop: async () => ASSIGNMENT,
+        request: () => ({ assignment: ASSIGNMENT, delivery: 'followup' }),
+      },
+    };
+    const imPrompt = () =>
+      host.scopes
+        .get(run.sessionId)
+        ?.sections.some((section) => section.name === 'botharness:external-im');
+    try {
+      await adapter.runOrchestrator(run);
+      expect(listed.at(-1)).toEqual([]);
+      expect(imPrompt()).toBe(false);
+
+      connected = true;
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toHaveLength(16);
+      expect(listed.at(-1)).toContain('bridge_reply');
+      expect(listed.at(-1)).toContain('bridge_reachable_groups');
+      expect(imPrompt()).toBe(true);
+
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toHaveLength(16);
+
+      connected = false;
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toEqual([]);
+      expect(imPrompt()).toBe(false);
+    } finally {
+      await adapter.close();
+    }
+  });
+
   it('rejects when the durable turn outcome is an error even though the Agent becomes idle', async () => {
     const host = new FakeAgentHost({
       kind: 'error',
@@ -1134,29 +1216,18 @@ describe('DSH Bot Agent adapter', () => {
       'request_workspace_grant',
       'list_workspace_grants',
       'list_assignments',
+      'archive_assignment',
+      'unarchive_assignment',
       'inspect_assignment',
       'send_assignment_request',
       'wait_for_assignment',
       'stop_assignment',
       'channel_list',
-      'bridge_sender_permissions',
-      'bridge_directory',
-      'bridge_targets',
-      'bridge_reachable_groups',
-      'bridge_post',
-      'bridge_outbox',
-      'bridge_read',
-      'bridge_share',
-      'bridge_group_policy_list',
-      'bridge_group_policy_set',
-      'bridge_thread_policy_list',
-      'bridge_thread_policy_set',
-      'bridge_context',
-      'bridge_attachment_save',
-      'bridge_reply_file',
-      'bridge_reply',
       'channel_read',
       'inbox_history',
+      'inbox_list',
+      'inbox_resolve',
+      'inbox_snooze',
       'inbox_ignore',
       'channel_attachment_open',
       'channel_attachment_save',
@@ -1183,6 +1254,12 @@ describe('DSH Bot Agent adapter', () => {
       'bot_dm_send',
       'channel_send',
     ]);
+    expect(
+      host.scopes
+        .get('orchestrator-ada')
+        ?.tools.map((tool) => tool.name)
+        .filter((name) => name !== 'channel_attachment_open' && requiresHumanToolApproval(name)),
+    ).toEqual([]);
     const channelSend = host.scopes
       .get('orchestrator-ada')
       ?.tools.find((tool) => tool.name === 'channel_send');
@@ -1792,6 +1869,7 @@ it('routes external Tools through the active owning Orchestrator without a local
     inbox: 'External Inbox',
     message: 'External turn',
     externalMessaging: {
+      connected: () => true,
       senderPermissions: permissionsRead,
       directory: directoryRead,
       reachable: async () => [
@@ -2084,6 +2162,129 @@ describe('Bot Schedule Tools', () => {
       expect(updated).toEqual([{ enabled: false }]);
       expect(denial).toContain('bot_schedule_create');
       expect(allowed).toBeUndefined();
+    } finally {
+      await adapter.close();
+    }
+  });
+});
+
+describe('Assignment Directory Tools', () => {
+  it('forward list filters and archive decisions to the Orchestrator run', async () => {
+    const calls: Array<Promise<unknown>> = [];
+    const queries: unknown[] = [];
+    const archived: string[] = [];
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onAgentCreated: () => {
+          const scope = host.scopes.get('orchestrator-ada');
+          const tool = (name: string) => {
+            const found = scope?.tools.find((candidate) => candidate.name === name);
+            if (found === undefined) throw new Error(`${name} not registered`);
+            return found;
+          };
+          calls.push(
+            tool('list_assignments').execute(
+              {
+                query: 'release',
+                activity: ['idle'],
+                include_archived: true,
+                limit: 5,
+                cursor: 'c1',
+              },
+              {} as ToolRunContext,
+            ),
+          );
+          calls.push(
+            tool('archive_assignment').execute({ session_id: 'a-1' }, {} as ToolRunContext),
+          );
+          calls.push(
+            tool('archive_assignment').execute({ session_id: 'busy' }, {} as ToolRunContext),
+          );
+          calls.push(
+            tool('unarchive_assignment').execute({ session_id: 'a-1' }, {} as ToolRunContext),
+          );
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    await adapter.runOrchestrator({
+      sessionId: 'orchestrator-ada',
+      resume: false,
+      bot: BOT,
+      message: 'Tidy up finished work',
+      inboundChannelId: 'dm-test',
+      inbox: '',
+      channels: {
+        ...groupTools,
+        contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+        sendToBot: async () => {
+          throw new Error('unexpected Bot DM');
+        },
+        ignore: () => {
+          throw new Error('unexpected ignore');
+        },
+        read: () => [],
+        requestGrant: async () => {
+          throw new Error('unexpected Grant request');
+        },
+        send: async (input) => ({
+          id: 'bot-1',
+          at: BOT.createdAt,
+          author: { kind: 'bot', slug: BOT.slug },
+          body: input.body,
+        }),
+      },
+      assignments: {
+        create: () => ({ outcome: 'created', assignment: ASSIGNMENT }),
+        grants: () => [],
+        list: () => [],
+        query: (input) => {
+          queries.push(input);
+          return { assignments: [ASSIGNMENT], nextCursor: 'c2' };
+        },
+        archive: async (sessionId) => {
+          if (sessionId === 'busy')
+            return {
+              outcome: 'refused',
+              code: 'assignment-active',
+              assignment: { ...ASSIGNMENT, sessionId, activity: 'working' },
+              message: 'still active',
+            };
+          archived.push(sessionId);
+          return {
+            outcome: 'archived',
+            assignment: { ...ASSIGNMENT, sessionId, archivedAt: BOT.createdAt },
+          };
+        },
+        unarchive: async (sessionId) => ({
+          outcome: 'unarchived',
+          assignment: { ...ASSIGNMENT, sessionId },
+        }),
+        inspect: () => undefined,
+        stop: async () => ASSIGNMENT,
+        request: () => {
+          throw new Error('unexpected Assignment request');
+        },
+      },
+    });
+    try {
+      const results = (await Promise.all(calls)).map((value) => JSON.parse(String(value)));
+      expect(queries).toEqual([
+        { query: 'release', activity: ['idle'], includeArchived: true, limit: 5, cursor: 'c1' },
+      ]);
+      expect(results).toMatchObject([
+        { assignments: [{ sessionId: ASSIGNMENT.sessionId }], nextCursor: 'c2' },
+        { outcome: 'archived', sessionId: 'a-1', archivedAt: BOT.createdAt },
+        { outcome: 'refused', code: 'assignment-active', sessionId: 'busy', activity: 'working' },
+        { outcome: 'unarchived', sessionId: 'a-1' },
+      ]);
+      expect(archived).toEqual(['a-1']);
     } finally {
       await adapter.close();
     }

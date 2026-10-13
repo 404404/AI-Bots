@@ -40,6 +40,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconCloseOutline16: stub,
     IconEllipsisOutline16: stub,
     IconEllipsisOutlineRegular: stub,
+    IconTrashOutlineRegular: stub,
+    IconUserOutlineRegular: stub,
     IconFolderCloseRegular: stub,
     IconFolderOpenRegular: stub,
     IconFolderOpenOutline16: stub,

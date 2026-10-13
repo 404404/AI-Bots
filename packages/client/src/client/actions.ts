@@ -221,6 +221,10 @@ import {
   loadMemoryWorkingDiff,
   loadMemoryRecoveryHistory,
   restoreMemoryCheckpoint,
+  restoreMemoryCommit,
+  nameMemoryVersion,
+  loadMemoryVersions,
+  removeMemoryVersionName,
   saveMemoryFile,
   repairMemory,
   loadTimelinePage,
@@ -247,6 +251,8 @@ import {
   type MemoryWorkingDiff,
   type MemoryWorkingKind,
   type MemoryRecoveryCheckpoint,
+  type MemoryVersion,
+  type MemoryVersionName,
   type MemoryRepairEvent,
   type ProfileActivity,
   type ProfileActivityWindow,
@@ -580,6 +586,25 @@ export interface BridgeActions {
     checkpointId: string;
     expectedCurrentId: string;
   }): Promise<{ checkpoint: MemoryRecoveryCheckpoint; archivePath: string }>;
+  memoryRestoreCommit(input: {
+    channelId: string;
+    sha: string;
+    expectedHead: string;
+    restoreId: string;
+    name?: string;
+  }): Promise<{
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  }>;
+  memoryNameVersion(input: {
+    channelId: string;
+    sha: string;
+    name: string;
+  }): Promise<MemoryVersionName>;
+  memoryRemoveVersionName(input: { channelId: string; tag: string }): Promise<void>;
+  memoryVersions(channelId: string): Promise<MemoryVersion[]>;
   memoryRepair(input: {
     channelId: string;
     expectedHead: string;
@@ -2353,6 +2378,10 @@ export function createActions(
       loadMemoryWorkingDiff(call, channelId, path, kind),
     memoryRecoveryHistory: (channelId) => loadMemoryRecoveryHistory(call, channelId),
     memoryRestore: (input) => restoreMemoryCheckpoint(call, input),
+    memoryRestoreCommit: (input) => restoreMemoryCommit(call, input),
+    memoryNameVersion: (input) => nameMemoryVersion(call, input),
+    memoryRemoveVersionName: (input) => removeMemoryVersionName(call, input),
+    memoryVersions: (channelId) => loadMemoryVersions(call, channelId),
     memorySave: (input) => saveMemoryFile(call, input),
     memoryRepair: (input) => repairMemory(call, input),
     openSession(sessionId) {

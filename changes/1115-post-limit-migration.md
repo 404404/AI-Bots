@@ -4,8 +4,8 @@ section: Breaking Changes
 
 ## en
 
-- Per-app proactive post limits add Profile schema Generation 84. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup. Earlier experimental #1115 generation 75/77 Profiles must remain isolated because their migration histories differ ([#1115](https://github.com/BotHarness/DeepSeekBot/issues/1115)).
+- Per-app proactive post limits add Profile schema Generation 87. Back up before upgrading; rollback requires a compatible writer or the pre-upgrade backup. Earlier experimental #1115 generation 75/77/84 Profiles must remain isolated because their migration histories differ ([#1115](https://github.com/BotHarness/DeepSeekBot/issues/1115)).
 
 ## zh
 
-- 应用主动发帖限额新增 Profile Schema Generation 84。升级前请备份；回退需使用兼容 writer 或升级前备份。此前 #1115 的实验 Generation 75/77 Profile 迁移历史不同，必须继续隔离（[#1115](https://github.com/BotHarness/DeepSeekBot/issues/1115)）。
+- 应用主动发帖限额新增 Profile Schema Generation 87。升级前请备份；回退需使用兼容 writer 或升级前备份。此前 #1115 的实验 Generation 75/77/84 Profile 迁移历史不同，必须继续隔离（[#1115](https://github.com/BotHarness/DeepSeekBot/issues/1115)）。

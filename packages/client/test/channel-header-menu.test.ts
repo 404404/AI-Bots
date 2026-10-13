@@ -2,11 +2,14 @@
 import { act, createElement, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-type Item = { id: string; type?: string; label?: string; text?: string };
+type Item = { id: string; type?: string; label?: ReactNode; text?: string };
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   Button: () => null,
   Input: () => null,
   IconEllipsisOutlineRegular: () => null,
+  IconSettingsOutlineRegular: () => null,
+  IconTrashOutlineRegular: () => null,
+  IconUserOutlineRegular: () => null,
   Menu: ({
     open,
     anchor,
@@ -37,6 +40,10 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   },
 }));
 vi.mock('../src/client/modal.js', () => ({ Modal: () => null }));
+vi.mock('../src/client/personabot-deletion.js', () => ({
+  PersonaBotDeletionView: ({ slug }: { slug: string }) =>
+    createElement('div', { 'data-deleting': slug }),
+}));
 import { HumanChannelNameMenu } from '../src/client/human-channel-name.js';
 import { hiddenDmActionsSnapshot } from '../src/client/dm-actions.js';
 import type { ChannelSummary } from '../src/client/store.js';
@@ -84,11 +91,55 @@ afterEach(() => {
   localStorage.clear();
 });
 describe('channel header menu', () => {
+  it('opens the Delete Bot confirmation for the DM PersonaBot', () => {
+    act(() =>
+      root.render(
+        createElement(HumanChannelNameMenu, {
+          channel: dm,
+          actions: {} as BridgeActions,
+          t: (key: string) => key,
+          deleteBotSlug: 'header-qa',
+        }),
+      ),
+    );
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="humanNickname.menu"]')!.click());
+    expect(host.querySelector('[data-deleting]')).toBeNull();
+    act(() => item('deletion.title')!.click());
+    expect(host.querySelector('[data-deleting]')?.getAttribute('data-deleting')).toBe('header-qa');
+  });
+  it('offers no Delete Bot row without a deletable PersonaBot', () => {
+    render(dm);
+    expect(item('deletion.title')).toBeUndefined();
+  });
   it('opens Channel settings from the header menu', () => {
     const open = vi.fn();
     render(dm, open);
     act(() => item('channelSettings.open')!.click());
     expect(open).toHaveBeenCalledOnce();
+  });
+  it('shows a red dot on the menu and its settings row while a section needs attention', () => {
+    act(() =>
+      root.render(
+        createElement(HumanChannelNameMenu, {
+          channel: dm,
+          actions: {} as BridgeActions,
+          t: (key: string) => key,
+          onOpenSettings: vi.fn(),
+          settingsAttention: true,
+        }),
+      ),
+    );
+    const trigger = host.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]')!;
+    expect(trigger.getAttribute('aria-label')).toBe(
+      'humanNickname.menu · channelSettings.needsAttention',
+    );
+    expect(trigger.querySelector('.bh-channel-settings-attention-dot')).not.toBeNull();
+    act(() => trigger.click());
+    expect(
+      item('channelSettings.open')
+        ?.querySelector('.bh-channel-settings-attention-dot')
+        ?.getAttribute('aria-label'),
+    ).toBe('channelSettings.needsAttention');
   });
   it('toggles which of the Bot actions elsewhere its DM shows, per Bot', () => {
     render(dm);

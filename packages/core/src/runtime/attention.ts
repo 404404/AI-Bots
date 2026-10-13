@@ -8,8 +8,49 @@ export type BotAttentionState =
   | 'observed'
   | 'deferred'
   | 'needs-repair'
+  | 'open'
+  | 'snoozed'
   | 'handled'
   | 'ignored';
+
+export const OPEN_ADMISSION_SQL = `(a.attempt_state = 'handled' AND a.opened_at IS NOT NULL
+  AND a.resolved_at IS NULL AND a.ignored_at IS NULL)`;
+
+export function channelSql(event: string): string {
+  return `COALESCE(${event}.channel_id, (SELECT p.channel_id FROM channel_placements p
+  WHERE p.source_event_id = ${event}.source_event_id ORDER BY p.channel_id LIMIT 1))`;
+}
+
+export function conversationSql(event: string): string {
+  return `CASE
+    WHEN ${event}.assignment_session_id IS NOT NULL THEN 'assignment:' || ${event}.assignment_session_id
+    WHEN ${channelSql(event)} IS NOT NULL THEN 'channel:' || ${channelSql(event)}
+    WHEN ${event}.source_kind = 'schedule' THEN 'schedule:' || COALESCE(json_extract(${event}.payload_json, '$.schedule.id'), ${event}.source_event_id)
+    ELSE 'event:' || ${event}.source_event_id
+  END`;
+}
+
+export const SNOOZED_SQL = `(a.snoozed_until IS NOT NULL AND NOT EXISTS (
+  SELECT 1 FROM inbox_admissions later_admission
+    JOIN source_events later ON later.source_event_id = later_admission.source_event_id
+   WHERE later_admission.bot_slug = a.bot_slug
+     AND later.created_at > a.snoozed_at
+     AND later.source_event_id <> a.source_event_id
+     AND ${conversationSql('later')} = ${conversationSql('e')}))`;
+
+export const ATTENTION_STATE_SQL = `CASE
+    WHEN a.attempt_state = 'needs-repair' THEN 'needs-repair'
+    WHEN a.ignored_at IS NOT NULL AND a.attempt_state = 'handled' THEN 'ignored'
+    WHEN a.resolution = 'ignored' THEN 'ignored'
+    WHEN ${OPEN_ADMISSION_SQL} AND ${SNOOZED_SQL} THEN 'snoozed'
+    WHEN ${OPEN_ADMISSION_SQL} THEN 'open'
+    WHEN a.attempt_state = 'handled' THEN 'handled'
+    WHEN a.attempt_state = 'running' THEN 'processing'
+    WHEN a.attempt_state = 'retryable' OR
+      (a.reason = 'group-ordinary' AND a.wake_count IS NOT NULL AND a.attempt_state = 'pending')
+      THEN 'deferred'
+    ELSE 'pending'
+  END`;
 
 export interface BotAttentionItem {
   id: string;
@@ -133,16 +174,7 @@ export function createBotAttentionQuery(
                  schedule.schedule_id AS available_schedule_id,
                  e.body, e.payload_json, e.created_at, json_extract(e.payload_json, '$.author.kind') AS author_kind,
                  json_extract(e.payload_json, '$.author.slug') AS author_slug,
-                 CASE
-                   WHEN a.attempt_state = 'needs-repair' THEN 'needs-repair'
-                   WHEN a.ignored_at IS NOT NULL AND a.attempt_state = 'handled' THEN 'ignored'
-                   WHEN a.attempt_state = 'handled' THEN 'handled'
-                   WHEN a.attempt_state = 'running' THEN 'processing'
-                   WHEN a.attempt_state IN ('running', 'retryable') OR
-                        (a.reason = 'group-ordinary' AND a.wake_count IS NOT NULL AND a.attempt_state = 'pending')
-                     THEN 'deferred'
-                   ELSE 'pending'
-                 END AS state
+                 ${ATTENTION_STATE_SQL} AS state
           FROM inbox_admissions a
           JOIN source_events e ON e.source_event_id = a.source_event_id
           LEFT JOIN channel_placements p ON p.source_event_id = e.source_event_id

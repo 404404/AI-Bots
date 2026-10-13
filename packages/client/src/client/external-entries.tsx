@@ -5,8 +5,8 @@ import type { MessagingIdentityView } from '../../../core/src/messaging/identity
 
 import { ApprovalSettings } from './approval-settings.js';
 import { useClientState } from './bot-sidebar.js';
-import { ChannelBridgeList } from './channel-bridge-list.js';
-import type { ChannelSidebarEntryProps } from './channel-sidebar.js';
+import { ChannelBridgeAttention, ChannelBridgeList } from './channel-bridge-list.js';
+import type { ChannelSettingsAttentionProps, ChannelSidebarEntryProps } from './channel-sidebar.js';
 import { ExternalIdentityList } from './external-identity-list.js';
 import { MessagingGrantRow } from './messaging-grant.js';
 import { useMessagingSnapshot } from './messaging-store.js';
@@ -231,6 +231,14 @@ export function ExternalIdentitiesEntry({
 }: ChannelSidebarEntryProps): ReactElement {
   if (botSlug === undefined) return <></>;
   return <IdentitiesForBot key={botSlug} slug={botSlug} actions={actions} t={t} />;
+}
+
+export function ExternalConnectorsAttention({
+  channelId,
+  actions,
+  report,
+}: ChannelSettingsAttentionProps): ReactElement {
+  return <ChannelBridgeAttention channelId={channelId} actions={actions} report={report} />;
 }
 
 export function ExternalConnectorsEntry({

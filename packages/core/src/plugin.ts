@@ -1,6 +1,7 @@
 import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
+import { credentialStoreDenial } from './credentials/store-guard.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
 import { createPartLibrary, type PartLibrary } from './bots/part-library.js';
 import {
@@ -111,9 +112,11 @@ import { createMemoryService, type MemoryService } from './memory/service.js';
 import { createRosterStore, type RosterStore } from './roster/store.js';
 import {
   createBotRuntime,
+  DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT,
   type AssignmentEventTail,
   type BotAgentAdapter,
   type BotRuntime,
+  type NativeSessionArchive,
 } from './runtime/bot-runtime.js';
 import { createBotAttentionQuery, type BotAttentionQuery } from './runtime/attention.js';
 import { createInboxHistoryQuery, type InboxHistoryQuery } from './runtime/inbox-history.js';
@@ -353,7 +356,9 @@ export function createCore(
       offset: number,
     ) => Promise<AssignmentReportPage>;
     workspaces?: () => DshWorkspaceLookup | undefined;
+    sessionArchive?: () => NativeSessionArchive | undefined;
     autoAcceptGroupInvitations?: () => boolean;
+    triageContinuation?: boolean;
     onOutputCommitted?: (event: PersonaBotOutputCommitted) => void;
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
@@ -723,10 +728,13 @@ export function createCore(
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
   runtime = createBotRuntime({
+    triageContinuation: options.triageContinuation === true,
     inboxHistory,
     requireExecution: (slug) => profileRecovery.requireExecution(slug),
     schedules,
-    assignmentConcurrencyLimit: () => assignmentLimits.at(-1)?.read() ?? 3,
+    assignmentConcurrencyLimit: () =>
+      assignmentLimits.at(-1)?.read() ?? DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT,
+    ...(options.sessionArchive === undefined ? {} : { sessionArchive: options.sessionArchive }),
     beginAssignmentWait: (slug, sessionId) => states.beginAssignmentWait(slug, sessionId),
     database: operationalDatabase,
     externalMessaging,
@@ -748,6 +756,8 @@ export function createCore(
     assignmentAccess,
     workspaceRoot: join(dshHome, 'botharness', 'runtime-workspaces'),
     orchestratorCwd,
+    sessionArchived: (sessionId) =>
+      options.workspaces?.()?.archivedSessionIds?.includes(sessionId) === true,
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
   if (operationalDatabase.mode === 'ready') runtime.reconcileMemoryChangesOnStartup?.();
@@ -1031,6 +1041,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   let privateInputs: PrivateInputs | undefined;
   const core = createCore({
     dshHome,
+    triageContinuation: true,
     companionProfileDir: (ctx.get('profileContext') as { dir: string } | undefined)?.dir,
     onOutputCommitted: (event) =>
       emitPersonaBotOutputCommitted(ctx, event, (message) => ctx.logger.warn(message)),
@@ -1071,6 +1082,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       return readAssignmentReportPage(query, sessionId, acceptedSummary, offset);
     },
     workspaces: () => ctx.get('workspaceRegistry') as unknown as DshWorkspaceLookup | undefined,
+    sessionArchive: () =>
+      ctx.get('workspaceRegistry') as unknown as NativeSessionArchive | undefined,
   });
   publishDraft = (event) => core.live.publishDraft(event);
   ctx.effect(() => () => core.operationalDatabase.close(), 'botharness: operational database');
@@ -1206,6 +1219,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (agent === undefined || core.ownership.resolve(agent.session.id) === undefined)
         return next();
       if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
+      if (config.privateInputExecution !== true) {
+        const storeDenial = credentialStoreDenial(
+          execution.name,
+          execution.arguments,
+          resolveDshHome(),
+          agent.session.header.cwd,
+        );
+        if (storeDenial !== undefined) return { kind: 'deny', reason: storeDenial };
+      }
       if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
         return next();
 

@@ -15,13 +15,18 @@ import {
   IconAgentPresetOutlineRegular,
   IconChevronDownOutlineRegular,
   IconCloseFillRegular,
+  IconEditOutlineRegular,
   IconEllipsisOutlineRegular,
   IconFolderOpenOutlineRegular,
   IconGlobeOutlineRegular,
   IconNewChatOutlineRegular,
+  IconPinFillRegular,
+  IconPinOutlineRegular,
   IconPlusOutlineRegular,
   IconSearchOutlineRegular,
   IconSettingsOutlineRegular,
+  IconShareOutlineRegular,
+  IconTrashOutlineRegular,
   HoverCard,
   Menu,
   Tag,
@@ -79,6 +84,8 @@ import { toolApprovalText } from './approval-text.js';
 import { personaBotActivity } from './persona-activity.js';
 import { CreatePersonaBotModal } from './persona-bot-create.js';
 import { BotZipShareDialog, ImportBotZipModal } from './bot-zip.js';
+import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
+import { PersonaBotDeletionView } from './personabot-deletion.js';
 import { GitUnavailableNotice, gitReady } from './git-unavailable-notice.js';
 import { MarketplaceModal } from './marketplace.js';
 import {
@@ -814,6 +821,7 @@ export function BotSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [channelMenu, setChannelMenu] = useState<ChannelMenuRequest | undefined>(undefined);
   const [sharing, setSharing] = useState<BotSummary | undefined>(undefined);
+  const [deleting, setDeleting] = useState<BotSummary | undefined>(undefined);
   const [channelSelection, setChannelSelection] = useState<ChannelSelection>({
     ids: [],
     anchorId: undefined,
@@ -2486,6 +2494,20 @@ export function BotSidebar({
               },
             };
           })()}
+          deleteAction={(() => {
+            const botId = state.channels.find(
+              (channel) => channel.id === channelMenu.channelId && channel.type === 'dm',
+            )?.botSlug;
+            const bot = state.bots.find((item) => item.slug === botId);
+            if (bot === undefined || bot.deleted === true) return undefined;
+            return {
+              label: t('deletion.title'),
+              run: () => {
+                setDeleting(bot);
+                setChannelMenu(undefined);
+              },
+            };
+          })()}
           companionAction={(() => {
             const botId = state.channels.find(
               (channel) => channel.id === channelMenu.channelId,
@@ -2543,6 +2565,15 @@ export function BotSidebar({
           actions={actions}
           t={t}
           onClose={() => setSharing(undefined)}
+        />
+      )}
+      {deleting === undefined ? null : (
+        <PersonaBotDeletionView
+          key={deleting.slug}
+          slug={deleting.slug}
+          actions={actions}
+          t={t}
+          onClose={() => setDeleting(undefined)}
         />
       )}
     </div>
@@ -2626,11 +2657,13 @@ export function BulkChannelMenu({
     {
       id: allPinned ? 'unpin' : 'pin',
       label: t(allPinned ? 'bulk.unpin' : 'bulk.pin', { items: itemsLabel }),
+      icon: allPinned ? <IconPinFillRegular size={16} /> : <IconPinOutlineRegular size={16} />,
     },
     { type: 'separator', id: 'bulk-pin-separator' },
     {
       id: 'move',
       label: t('bulk.move', { items: itemsLabel }),
+      icon: <IconFolderOpenOutlineRegular size={16} />,
       submenu: [
         { id: NEW_SECTION_MOVE_TARGET, label: t('move.newSection') },
         ...sections.map((section) => ({ id: section.id, label: section.name })),
@@ -2638,7 +2671,11 @@ export function BulkChannelMenu({
       ],
     },
     { type: 'separator', id: 'bulk-action-separator' },
-    { id: 'hide', label: t('bulk.hide', { items: itemsLabel }) },
+    {
+      id: 'hide',
+      label: t('bulk.hide', { items: itemsLabel }),
+      icon: <ChannelSidebarIcon name="eye-off" size={16} />,
+    },
   ];
   return (
     <span ref={menuMount} className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
@@ -2665,6 +2702,7 @@ export function BulkChannelMenu({
 export function ChannelMoveMenu({
   companionAction,
   shareAction,
+  deleteAction,
   menu,
   sections,
   currentSectionId,
@@ -2679,6 +2717,7 @@ export function ChannelMoveMenu({
 }: {
   companionAction?: { label: string; run(): void } | undefined;
   shareAction?: { label: string; run(): void } | undefined;
+  deleteAction?: { label: string; run(): void } | undefined;
   menu: ChannelMenuRequest;
   sections: readonly RosterSection[];
   currentSectionId: string | undefined;
@@ -2704,22 +2743,46 @@ export function ChannelMoveMenu({
       window.clearTimeout(timer);
     };
   }, []);
-  const pinItems: readonly MenuEntry[] = [
-    { id: pinned ? 'unpin' : 'pin', label: t(pinned ? 'pin.remove' : 'pin.add') },
-  ];
-  const hideItems: readonly MenuEntry[] = [
-    { type: 'separator', id: 'hide-separator' },
-    { id: 'hide', label: t('hidden.action') },
-  ];
   const items: readonly MenuEntry[] = [
-    ...(companionAction === undefined ? [] : [{ id: 'companion', label: companionAction.label }]),
-    ...(shareAction === undefined ? [] : [{ id: 'share', label: shareAction.label }]),
-    ...pinItems,
+    ...(companionAction === undefined
+      ? []
+      : [
+          {
+            id: 'companion',
+            label: companionAction.label,
+            icon: <ChannelSidebarIcon name="monitor" size={16} />,
+          },
+        ]),
+    ...(shareAction === undefined
+      ? []
+      : [{ id: 'share', label: shareAction.label, icon: <IconShareOutlineRegular size={16} /> }]),
+    {
+      id: pinned ? 'unpin' : 'pin',
+      label: t(pinned ? 'pin.remove' : 'pin.add'),
+      icon: pinned ? <IconPinFillRegular size={16} /> : <IconPinOutlineRegular size={16} />,
+    },
     { type: 'separator', id: 'pin-separator' },
-    ...channelMoveMenuItems(t, sections, currentSectionId),
+    ...channelMoveMenuItems(t, sections, currentSectionId).map((entry) =>
+      'type' in entry ? entry : { ...entry, icon: <IconFolderOpenOutlineRegular size={16} /> },
+    ),
     { type: 'separator', id: 'channel-action-separator' },
-    { id: 'rename', label: t('channel.rename') },
-    ...hideItems,
+    { id: 'rename', label: t('channel.rename'), icon: <IconEditOutlineRegular size={16} /> },
+    { type: 'separator', id: 'hide-separator' },
+    {
+      id: 'hide',
+      label: t('hidden.action'),
+      icon: <ChannelSidebarIcon name="eye-off" size={16} />,
+    },
+    ...(deleteAction === undefined
+      ? []
+      : [
+          {
+            id: 'delete',
+            label: deleteAction.label,
+            icon: <IconTrashOutlineRegular size={16} />,
+            danger: true,
+          },
+        ]),
   ];
   return (
     <span ref={menuMount} className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
@@ -2738,6 +2801,10 @@ export function ChannelMoveMenu({
           }
           if (id === 'share') {
             shareAction?.run();
+            return;
+          }
+          if (id === 'delete') {
+            deleteAction?.run();
             return;
           }
           if (id === 'pin' || id === 'unpin') {

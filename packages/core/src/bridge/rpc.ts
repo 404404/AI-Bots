@@ -116,6 +116,8 @@ import type {
   MemoryAcceptedCommit,
   MemoryAcceptedSnapshot,
   MemoryGitGraph,
+  MemoryVersion,
+  MemoryVersionName,
   MemoryGitCommitDiff,
   MemoryWorkingChange,
   MemoryWorkingDiff,
@@ -1185,6 +1187,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.sessionOwner({ sessionId }));
   }
 
+  botSessionIds(): { sessionIds: string[] } {
+    return unwrap(this.methods.botSessionIds({}));
+  }
+
   memoryFileTarget(slug: string, path: string): { target: MemoryFileTarget } {
     return unwrap(this.methods.memoryFileTarget({ slug, path }));
   }
@@ -1237,6 +1243,35 @@ export class BotharnessBridgeService extends TypertRemoteService {
     archivePath: string;
   } {
     return unwrap(this.methods.memoryRestore({ channelId, checkpointId, expectedCurrentId }));
+  }
+
+  memoryRestoreCommit(
+    channelId: string,
+    sha: string,
+    expectedHead: string,
+    restoreId: string,
+    name?: string,
+  ): {
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  } {
+    return unwrap(
+      this.methods.memoryRestoreCommit({ channelId, sha, expectedHead, restoreId, name }),
+    );
+  }
+
+  memoryNameVersion(channelId: string, sha: string, name: string): { version: MemoryVersionName } {
+    return unwrap(this.methods.memoryNameVersion({ channelId, sha, name }));
+  }
+
+  memoryVersions(channelId: string): { versions: MemoryVersion[] } {
+    return unwrap(this.methods.memoryVersions({ channelId }));
+  }
+
+  memoryRemoveVersionName(channelId: string, tag: string): { removed: true } {
+    return unwrap(this.methods.memoryRemoveVersionName({ channelId, tag }));
   }
 
   memorySave(
@@ -1546,6 +1581,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'userQuestionAnswer',
   'sessions',
   'sessionOwner',
+  'botSessionIds',
   'memoryFileTarget',
   'memorySnapshot',
   'memoryFile',
@@ -1558,6 +1594,10 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'memoryRecoveryHistory',
   'memoryRestore',
   'memorySave',
+  'memoryRestoreCommit',
+  'memoryNameVersion',
+  'memoryRemoveVersionName',
+  'memoryVersions',
   'memoryRepair',
   'profileActivity',
   'profileSessionUsage',
