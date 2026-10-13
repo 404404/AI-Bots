@@ -116,6 +116,7 @@ import {
   type ChannelSidebarEntryProps,
 } from '../src/client/channel-sidebar.js';
 import { channelSidebarPrefs } from '../src/client/channel-sidebar-prefs.js';
+import { setMemoryView } from '../src/client/memory-view-prefs.js';
 import { store } from '../src/client/store.js';
 import type { MemoryGitGraph } from '../src/client/bridge.js';
 import { zhTranslate } from '../src/client/locale.js';
@@ -368,7 +369,7 @@ describe('Memory Git graph sidebar', () => {
     expect(reasons).toContain('Graph refresh failed');
     expect(container.textContent).toContain('更新失败');
     expect(container.querySelector('.bh-memory-retry')).not.toBeNull();
-    expect(container.querySelector('#bh-memory-branch-choice')).not.toBeNull();
+    expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
   });
 
   it('ignores a pre-repair Memory response after clearing the cache', async () => {
@@ -565,6 +566,9 @@ describe('Memory Git graph sidebar', () => {
         }),
       );
     });
+    expect(
+      Array.from(container.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent),
+    ).toContain('给这个版本起名');
     const item = Array.from(
       container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
     ).find((button) => button.textContent === '从这里新建并切换分支');
@@ -1041,35 +1045,22 @@ describe('Memory Git graph sidebar', () => {
     await act(async () =>
       root.render(createElement(MemoryEntry, { ...props, conversationRevision: 0 })),
     );
-    const choice = container.querySelector<HTMLInputElement>('#bh-memory-branch-choice');
-    expect(choice).not.toBeNull();
-    await act(async () => choice!.focus());
-    expect(container.querySelectorAll('[role="menuitem"]')).toHaveLength(5);
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
-        choice,
-        'not-a-branch',
-      );
-      choice!.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    expect(container.querySelectorAll('[role="menuitem"]')).toHaveLength(0);
-    expect(container.textContent).toContain('没有匹配的分支');
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
-        choice,
-        'history',
-      );
-      choice!.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    expect(container.querySelectorAll('[role="menuitem"]')).toHaveLength(1);
-    expect(container.textContent).not.toContain('没有匹配的分支');
-    await act(async () =>
-      (container.querySelector('[role="menuitem"]') as HTMLButtonElement).click(),
+    await act(async () => setMemoryView('branches'));
+    const rows = [...container.querySelectorAll<HTMLButtonElement>('.bh-memory-version-row')];
+    expect(rows.map((row) => row.querySelector('.bh-memory-version-name')?.textContent)).toEqual([
+      'history-qa',
+      'main',
+      'feature/one',
+      'feature/two',
+      'release-1.0',
+    ]);
+    expect(rows[1]?.textContent).toContain('当前');
+    await act(async () => rows[1]?.click());
+    expect(container.textContent).not.toContain('切换到这个分支');
+    await act(async () => rows[0]?.click());
+    const button = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (item) => item.textContent === '切换到这个分支',
     );
-    expect(choice!.value).toBe('history-qa');
-    const button = [
-      ...container.querySelectorAll<HTMLButtonElement>('.bh-memory-branch-control button'),
-    ].find((item) => item.textContent === '切换');
     await act(async () => button?.click());
     expect(actions.send).toHaveBeenCalledWith(
       expect.stringContaining('history-qa'),
@@ -1082,9 +1073,12 @@ describe('Memory Git graph sidebar', () => {
       root.render(createElement(MemoryEntry, { ...props, conversationRevision: 1 })),
     );
     expect(actions.memoryGitGraph).toHaveBeenCalledTimes(2);
-    expect(container.querySelector<HTMLInputElement>('#bh-memory-branch-choice')?.value).toBe(
-      'history-qa',
-    );
+    expect(
+      [...container.querySelectorAll('.bh-memory-version-row')]
+        .find((row) => row.textContent?.includes('当前'))
+        ?.querySelector('.bh-memory-version-name')?.textContent,
+    ).toBe('history-qa');
+    await act(async () => setMemoryView('graph'));
   });
 
   it('shows a graph query failure instead of a permanent loading indicator', async () => {
@@ -1249,9 +1243,10 @@ describe('Memory Git graph sidebar', () => {
     expect(evolution?.querySelector('.bh-channel-sidebar-entry-label')?.textContent).toBe('记忆');
     expect(evolution?.querySelector('.bh-memory-graph-heading')).toBeNull();
     expect(evolution?.querySelector('.bh-memory-graph-meta')).toBeNull();
-    expect(evolution?.querySelector<HTMLInputElement>('#bh-memory-branch-choice')?.value).toBe(
-      'main',
-    );
+    expect(evolution?.querySelector('.bh-memory-graph-list')).not.toBeNull();
+    expect(
+      [...(evolution?.querySelectorAll('[role="tab"]') ?? [])].map((tab) => tab.textContent),
+    ).toEqual(['演化', '版本', '分支']);
     expect(evolution?.querySelector('.bh-memory-terminology')).toBeNull();
     expect(container.querySelector('.bh-sidebar-settings')).toBeNull();
     const terminology = () =>

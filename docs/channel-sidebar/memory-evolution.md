@@ -20,13 +20,13 @@ Open **Bot DM → Channel sidebar → Memory evolution**. This entry separates t
 | HEAD and branch labels                  | The checked-out commit and references in the Git graph.                                                                  |
 | Recorded / Git commit / Needs repair    | BotHarness checkpoint annotations on Git history; they do not establish who authored the files or approve their content. |
 
-Change the terminology with the gear in the **Memory evolution** title → **Terminology**. This changes labels and grouping, not repository contents.
+Change the terminology with the gear in the **Memory** title → **Terminology**. This changes labels and grouping, not repository contents.
 
 ## Request a branch switch
 
-Select an existing branch in **Search branches**, then click **Switch**. The interface sends a request to this Bot’s Orchestrator; selecting an item alone does not check out a branch. Wait for the Bot’s result and verify the displayed branch and current files. If Git refuses because of unfinished changes, keep the changes and inspect the Bot’s report.
+A branch is another line of development for Memory. It is rarely needed, so it has its own **Branches** tab, which lists every branch and marks the current one. Open another branch and click **Switch to this branch**; the interface sends a request to this Bot’s Orchestrator. Wait for the Bot’s result and verify the displayed branch and current files. If Git refuses because of unfinished changes, keep the changes and inspect the Bot’s report.
 
-From a commit diff, **Create and switch branch from this memory** opens a new-branch name field. **Create and switch** also sends a Bot request; it creates a branch from that commit rather than undoing later commits on the original branch. Confirm the operation and resulting files after the Bot completes it.
+To start a new line from a commit, right-click it in **Evolution** and choose **Create and switch branch from here**, which opens a new-branch name field. **Create and switch** also sends a Bot request; it creates a branch from that commit rather than undoing later commits on the original branch. Confirm the operation and resulting files after the Bot completes it.
 
 ## Restore an earlier memory
 
@@ -36,7 +36,9 @@ Select a commit in the graph. **Restore to this commit** appears inside that com
 
 Select any commit and click **Name this version** to give it a name you will recognise later, such as "Draft before cleanup". The name appears as a badge on that commit in the graph. Remove it with the × next to the name in the commit's block. Names are stored as Git tags, so they stay with the Memory repository and do not change any commit.
 
-The section title reads **Memory** followed by two tabs: **Evolution** shows the Git graph, and **Versions** lists only the versions you named, newest first, however far back they are. Click a version to open its changes, then **Restore this version** or **Remove name**.
+You can also right-click a commit and choose **Name this version**.
+
+The section title reads **Memory** followed by three tabs: **Evolution** shows the Git graph, **Versions** lists only the versions you named, and **Branches** lists every branch (see above). **Versions** shows them newest first, however far back they are. Click a version to open its changes, then **Restore this version** or **Remove name**.
 
 ## Advanced: system snapshots
 

@@ -2574,17 +2574,12 @@ export const zh = {
   'memory.recovery.restore': '复制并恢复',
   'memory.recovery.restoring': '正在恢复…',
   'memory.recovery.done': '已恢复 · 查看原仓库备份位置',
-  'memory.branch': '分支',
-  'memory.searchBranch': '搜索分支',
-  'memory.noBranches': '没有匹配的分支',
-  'memory.switchBranch': '切换',
   'memory.branchRequested': '已发送切换请求：',
   'memory.branchRequestFailed': '无法发送切换请求，请重试。',
   'memory.branchSwitchPrompt':
     '请把你的 Memory Repository 切换到已有分支 {branch}。切换后，请在同一个 Orchestrator Session 用原生工具确认当前分支和工作树内容，并在此频道报告。若 Git 因未完成改动而拒绝切换，请保留改动并说明冲突。',
   'memory.acceptedOnMainOnly': '当前分支的文件暂时无法预览；Git 历史仍可查看。',
   'memory.detached': '分离 HEAD',
-  'memory.dirty': '有未提交改动',
   'memory.unstaged': '未暂存',
   'memory.staged': '已暂存',
   'memory.untracked': '未跟踪',
@@ -2635,6 +2630,12 @@ export const zh = {
   'memory.view.label': '记忆演化显示方式',
   'memory.view.graph': '演化',
   'memory.view.versions': '版本',
+  'memory.view.branches': '分支',
+  'memory.branches.empty': '还没有分支。',
+  'memory.branches.switch': '切换到这个分支',
+  'memory.branches.switchHelp':
+    '分支是记忆的另一条发展路线。切换会请 Bot 来完成，之后记忆文件会变成那条路线上的样子。要从某次提交开一条新路线，在演化里右键那次提交即可。',
+  'memory.branches.dirtyHelp': '现在有还没提交的改动，Git 可能会拒绝切换，Bot 会告诉你原因。',
   'memory.versions.empty': '还没有命名的版本。在 Git 图里选中一个提交，点击「给这个版本起名」。',
   'memory.versions.current': '当前',
   'memory.versions.restore': '恢复到这个版本',
@@ -5830,10 +5831,6 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.recovery.restore': 'Copy and restore',
   'memory.recovery.restoring': 'Restoring…',
   'memory.recovery.done': 'Restored · Show original repository backup',
-  'memory.branch': 'Branch',
-  'memory.searchBranch': 'Search branches',
-  'memory.noBranches': 'No matching branches',
-  'memory.switchBranch': 'Switch',
   'memory.branchRequested': 'Switch requested:',
   'memory.branchRequestFailed': 'Could not send the switch request. Try again.',
   'memory.branchSwitchPrompt':
@@ -5841,7 +5838,6 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.acceptedOnMainOnly':
     'Memory file preview is unavailable on this branch; Git history remains visible.',
   'memory.detached': 'Detached HEAD',
-  'memory.dirty': 'Uncommitted changes',
   'memory.unstaged': 'Unstaged',
   'memory.staged': 'Staged',
   'memory.untracked': 'Untracked',
@@ -5895,6 +5891,13 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.view.label': 'Memory evolution view',
   'memory.view.graph': 'Evolution',
   'memory.view.versions': 'Versions',
+  'memory.view.branches': 'Branches',
+  'memory.branches.empty': 'No branches yet.',
+  'memory.branches.switch': 'Switch to this branch',
+  'memory.branches.switchHelp':
+    'A branch is another line of development for Memory. The Bot makes the switch, and the Memory files then show that line. To start a new line from a commit, right-click it in Evolution.',
+  'memory.branches.dirtyHelp':
+    ' There are uncommitted changes, so Git may refuse the switch; the Bot will explain why.',
   'memory.versions.empty':
     'No named versions yet. Select a commit in the Git graph and click Name this version.',
   'memory.versions.current': 'Current',

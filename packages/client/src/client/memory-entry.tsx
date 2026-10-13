@@ -55,10 +55,7 @@ function MemoryEntryForScope({
   const cache = cachedMemory(actions, channelId);
   const initialPath = cache.snapshot?.files[0];
   const [refresh, setRefresh] = useState(0);
-  const [branchChoice, setBranchChoice] = useState('');
-  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
-  const [branchFilter, setBranchFilter] = useState('');
-  const skipBranchFocus = useRef(false);
+  const [openBranch, setOpenBranch] = useState<string>();
   const [branchRequest, setBranchRequest] = useState<string>();
   const [commitMenu, setCommitMenu] = useState<{
     sha: string;
@@ -132,22 +129,6 @@ function MemoryEntryForScope({
   const [snapshotError, setSnapshotError] = useState<string | undefined>(cache.snapshotError);
   const [graphError, setGraphError] = useState<string | undefined>(cache.graphError);
   const lanes = layoutMemoryGitLanes(graph?.commits ?? []);
-  const branchQuery = branchFilter.trim().toLocaleLowerCase();
-  const filteredBranches = (graph?.branches ?? []).filter((branch) =>
-    branch.toLocaleLowerCase().includes(branchQuery),
-  );
-  const closeBranchMenu = (): void => {
-    skipBranchFocus.current = true;
-    setTimeout(() => {
-      skipBranchFocus.current = false;
-    }, 0);
-    setBranchFilter('');
-    setBranchMenuOpen(false);
-  };
-  const selectBranch = (branch: string): void => {
-    setBranchChoice(branch);
-    closeBranchMenu();
-  };
 
   const graphMount = useMountedResource<HTMLDivElement>(() => {
     let active = true;
@@ -179,11 +160,6 @@ function MemoryEntryForScope({
             setGraph(merged);
             cache.graphError = undefined;
             setGraphError(undefined);
-            setBranchChoice((current) =>
-              next.branches.includes(current)
-                ? current
-                : (next.currentBranch ?? next.branches[0] ?? ''),
-            );
           },
           (failure: unknown) => {
             if (active && requestGeneration === memoryRequestGeneration.current) {
@@ -358,12 +334,10 @@ function MemoryEntryForScope({
     }
   };
 
-  const requestBranchSwitch = async (): Promise<void> => {
-    if (graph === undefined || branchChoice === '' || branchChoice === graph.currentBranch || busy)
-      return;
+  const requestBranchSwitch = async (target: string): Promise<void> => {
+    if (graph === undefined || target === graph.currentBranch || busy) return;
     setBusy(true);
     setError(undefined);
-    const target = branchChoice;
     try {
       const sent = await actions.send(
         t('memory.branchSwitchPrompt', { branch: JSON.stringify(target) }),
@@ -716,64 +690,6 @@ function MemoryEntryForScope({
                 ) : null}
               </>
             ) : null}
-            {view !== 'graph' ? null : (
-              <div className="bh-memory-branch-control">
-                <label htmlFor="bh-memory-branch-choice">{t('memory.branch')}</label>
-                {graph.dirty ? (
-                  <span className="bh-memory-graph-dirty">{t('memory.dirty')}</span>
-                ) : null}
-                <Menu
-                  className="bh-memory-branch-picker"
-                  listClassName="bh-memory-branch-menu"
-                  open={branchMenuOpen}
-                  portal
-                  selectedId={branchChoice}
-                  items={filteredBranches.map((branch) => ({ id: branch, label: branch }))}
-                  onSelect={selectBranch}
-                  onClose={closeBranchMenu}
-                  anchor={
-                    <Input
-                      id="bh-memory-branch-choice"
-                      type="search"
-                      value={branchMenuOpen ? branchFilter : branchChoice}
-                      placeholder={t('memory.searchBranch')}
-                      aria-label={t('memory.searchBranch')}
-                      aria-haspopup="menu"
-                      aria-expanded={branchMenuOpen}
-                      autoComplete="off"
-                      onFocus={() => {
-                        if (skipBranchFocus.current) return;
-                        setBranchFilter('');
-                        setBranchMenuOpen(true);
-                      }}
-                      onChange={(event) => {
-                        setBranchFilter(event.target.value);
-                        setBranchMenuOpen(true);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter' || !branchMenuOpen) return;
-                        const match = filteredBranches[0];
-                        if (match === undefined) return;
-                        event.preventDefault();
-                        selectBranch(match);
-                      }}
-                    />
-                  }
-                >
-                  {filteredBranches.length > 0 ? null : (
-                    <div className="bh-memory-branch-empty">{t('memory.noBranches')}</div>
-                  )}
-                </Menu>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy || branchChoice === '' || branchChoice === graph.currentBranch}
-                  onClick={() => void requestBranchSwitch()}
-                >
-                  {t('memory.switchBranch')}
-                </Button>
-              </div>
-            )}
             {branchRequest === undefined || branchRequest === graph.currentBranch ? null : (
               <div className="bh-note" role="status">
                 {t('memory.branchRequested')} {branchRequest}
@@ -812,12 +728,18 @@ function MemoryEntryForScope({
                     ...(commitMenu.sha === graph.head
                       ? []
                       : [{ id: 'restore', label: t('memory.restoreCommit.menu') }]),
+                    { id: 'name', label: t('memory.version.action') },
                     { id: 'continue', label: t('memory.continueHere') },
                   ]}
                   onSelect={(id) => {
                     if (id === 'restore') {
                       setContinueForm(undefined);
+                      setNameForm(undefined);
                       setRestoreForm({ sha: commitMenu.sha, name: '' });
+                    } else if (id === 'name') {
+                      setContinueForm(undefined);
+                      setRestoreForm(undefined);
+                      setNameForm({ sha: commitMenu.sha, name: '' });
                     } else {
                       setRestoreForm(undefined);
                       setContinueForm({
@@ -834,7 +756,76 @@ function MemoryEntryForScope({
                 />
               </span>
             )}
-            {view === 'versions' ? (
+            {view === 'branches' ? (
+              <div
+                className="bh-memory-version-list"
+                role="list"
+                aria-label={t('memory.view.branches')}
+              >
+                {graph.branches.length === 0 ? (
+                  <div className="bh-note">{t('memory.branches.empty')}</div>
+                ) : (
+                  graph.branches.map((branch) => {
+                    const open = openBranch === branch;
+                    const current = branch === graph.currentBranch;
+                    const tip = graph.commits.find((commit) => commit.branches.includes(branch));
+                    return (
+                      <Fragment key={branch}>
+                        <button
+                          type="button"
+                          role="listitem"
+                          className="bh-memory-version-row"
+                          aria-expanded={open}
+                          data-expanded={open || undefined}
+                          onClick={() => {
+                            setOpenBranch(open ? undefined : branch);
+                            if (tip !== undefined) onMemoryCommitSelect?.(tip.sha);
+                          }}
+                        >
+                          <span className="bh-memory-version-name" data-branch="">
+                            {branch}
+                          </span>
+                          <span className="bh-memory-graph-detail">
+                            {tip === undefined ? null : (
+                              <span className="bh-memory-graph-hash">{tip.sha.slice(0, 7)}</span>
+                            )}
+                            {current ? (
+                              <span className="bh-memory-graph-head-label">
+                                {t('memory.versions.current')}
+                              </span>
+                            ) : null}
+                          </span>
+                          {tip === undefined ? null : (
+                            <span className="bh-memory-version-subject">{tip.subject}</span>
+                          )}
+                        </button>
+                        {!open || current ? null : (
+                          <div className="bh-memory-version-panel">
+                            <div className="bh-memory-restore-actions">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => void requestBranchSwitch(branch)}
+                              >
+                                {t('memory.branches.switch')}
+                              </Button>
+                              <MessagingHelp
+                                title={t('memory.branches.switch')}
+                                text={`${t('memory.branches.switchHelp')}${
+                                  graph.dirty ? t('memory.branches.dirtyHelp') : ''
+                                }`}
+                                t={t}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </Fragment>
+                    );
+                  })
+                )}
+              </div>
+            ) : view === 'versions' ? (
               <div
                 className="bh-memory-version-list"
                 role="list"

@@ -1,6 +1,6 @@
 import { defaultStorage, type ConfigStorage } from './roster-config.js';
 
-export type MemoryView = 'graph' | 'versions';
+export type MemoryView = 'graph' | 'versions' | 'branches';
 
 export const MEMORY_VIEW_PREFERENCES_KEY = 'botharness/memory-view.v1';
 
@@ -10,11 +10,11 @@ let snapshot: MemoryView | undefined;
 export function readMemoryView(storage: ConfigStorage | undefined = defaultStorage()): MemoryView {
   try {
     const record: unknown = JSON.parse(storage?.getItem(MEMORY_VIEW_PREFERENCES_KEY) ?? '{}');
-    return typeof record === 'object' &&
-      record !== null &&
-      (record as Record<string, unknown>)['view'] === 'versions'
-      ? 'versions'
-      : 'graph';
+    const view =
+      typeof record === 'object' && record !== null
+        ? (record as Record<string, unknown>)['view']
+        : undefined;
+    return view === 'versions' || view === 'branches' ? view : 'graph';
   } catch {
     return 'graph';
   }

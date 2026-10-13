@@ -835,7 +835,7 @@ function MemoryViewTabs({ t, setExpanded }: ChannelSidebarEntryProps): ReactElem
   const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
   return (
     <span className="bh-memory-view-tabs" role="tablist" aria-label={t('memory.view.label')}>
-      {(['graph', 'versions'] as const).map((id) => (
+      {(['graph', 'versions', 'branches'] as const).map((id) => (
         <button
           key={id}
           type="button"
