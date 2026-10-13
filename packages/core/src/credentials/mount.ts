@@ -103,7 +103,7 @@ export function mountPrivateInputs(
   const mcpServers = new SecretMcpServers();
   const liveOrchestrators = new Map<
     import('@deepseek-ai/dsh-agent').Agent,
-    (server: SecretMcpRecord) => void
+    { botSlug: string; connect(server: SecretMcpRecord): void }
   >();
   ctx.effect(() => () => mcpServers.close(), 'botharness: secret MCP servers');
   owner.mcpServers = {
@@ -123,9 +123,23 @@ export function mountPrivateInputs(
           args: record.args,
           approvedAt: record.approvedAt,
           connected: connected.has(record.serverName),
+          enabled: store?.isEnabled(botSlug, record) ?? false,
+          own: record.botSlug === botSlug,
           ownerSlug: record.botSlug,
           ownerName: core.registry.get(record.botSlug)?.displayName ?? record.botSlug,
         }));
+    },
+    setEnabled: async (botSlug, serverName, enabled) => {
+      const record = (store?.listAll() ?? []).find(
+        (candidate) => candidate.serverName === serverName && candidate.botSlug !== botSlug,
+      );
+      if (record === undefined || store === undefined) return false;
+      store.setEnabled(botSlug, record.botSlug, serverName, enabled);
+      if (enabled) {
+        for (const live of liveOrchestrators.values())
+          if (live.botSlug === botSlug) live.connect(record);
+      } else await mcpServers.stopInstance(botSlug, serverName);
+      return true;
     },
     remove: async (_botSlug, serverName) => {
       let removed = false;
@@ -652,7 +666,7 @@ export function mountPrivateInputs(
           defineTool({
             name: 'secret_mcp_connect',
             description:
-              'Start an MCP server for yourself with secrets the Owner entered through ask_secret placed in its environment, then use its tools as mcp__<server_name>__<tool>. Use it for an integration that needs a client library or several calls; prefer secret_http for one plain HTTP request and secret_cli for one command. The Host starts the launcher directly, without a shell, inside the same file sandbox as bash with a clean environment; give the bare launcher name (for example npx or uvx), its arguments, and the environment variables the server documents, writing {{field_id}} where a secret belongs. The server stays connected for this conversation Session until you disconnect it or the account is revoked; it is not available to Assignments. Starting it needs a Human approval that shows the exact program and arguments; the Human may choose to remember it, and a remembered server is connected automatically for every PersonaBot in this Profile when its Session starts, so check whether its tools are already present before connecting again. Each later tool call follows the usual approval. Returns the tool names the server offers.',
+              'Start an MCP server for yourself with secrets the Owner entered through ask_secret placed in its environment, then use its tools as mcp__<server_name>__<tool>. Use it for an integration that needs a client library or several calls; prefer secret_http for one plain HTTP request and secret_cli for one command. The Host starts the launcher directly, without a shell, inside the same file sandbox as bash with a clean environment; give the bare launcher name (for example npx or uvx), its arguments, and the environment variables the server documents, writing {{field_id}} where a secret belongs. The server stays connected for this conversation Session until you disconnect it or the account is revoked; it is not available to Assignments. Starting it needs a Human approval that shows the exact program and arguments; the Human may choose to remember it, and a remembered server is connected automatically when your Session starts and can be enabled for other PersonaBots in their settings, so check whether its tools are already present before connecting again. Each later tool call follows the usual approval. Returns the tool names the server offers.',
             parameters: {
               server_name: {
                 type: 'string',
@@ -707,8 +721,8 @@ export function mountPrivateInputs(
                 rememberedStarts.delete(call.token) &&
                 mcpServers.has(agent, args.server_name) &&
                 store !== undefined
-              ) {
-                const saved = store.put({
+              )
+                store.put({
                   botSlug: info.botSlug,
                   serverName: args.server_name,
                   account: args.account,
@@ -717,9 +731,6 @@ export function mountPrivateInputs(
                   env: args.env.map((entry) => ({ name: entry.name, value: entry.value })),
                   references: [...args.references],
                 });
-                for (const [other, connect] of liveOrchestrators)
-                  if (other !== agent) connect(saved);
-              }
               return result;
             },
           }),
@@ -747,7 +758,7 @@ export function mountPrivateInputs(
           );
         };
         let disposed = false;
-        liveOrchestrators.set(agent, connectRemembered);
+        liveOrchestrators.set(agent, { botSlug: info.botSlug, connect: connectRemembered });
         agentCtx.effect(
           () => () => {
             disposed = true;
@@ -755,7 +766,7 @@ export function mountPrivateInputs(
           },
           'botharness: secret MCP reconnect',
         );
-        const remembered = store?.listAll() ?? [];
+        const remembered = store?.enabled(info.botSlug) ?? [];
         if (remembered.length > 0) {
           const reconnect = (attempt: number): void => {
             if (disposed || attempt > 120) return;
@@ -763,9 +774,7 @@ export function mountPrivateInputs(
               setTimeout(() => reconnect(attempt + 1), 250).unref();
               return;
             }
-            const own = remembered.filter((server) => server.botSlug === info.botSlug);
-            const shared = remembered.filter((server) => server.botSlug !== info.botSlug);
-            for (const server of [...own, ...shared]) connectRemembered(server);
+            for (const server of remembered) connectRemembered(server);
           };
           reconnect(0);
         }

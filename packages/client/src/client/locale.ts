@@ -2860,8 +2860,8 @@ export const zh = {
   'approval.secretCliRisk':
     'Bot 想带着你填写的密钥运行一个命令行程序。这个程序会拿到密钥，也可能把它泄露出去。请核对程序名和每一个参数；这类调用每次都需要单独批准。',
   'approval.secretMcpRisk':
-    'Bot 想带着你填写的密钥启动一个 MCP 服务。这个程序会拿到密钥并持续运行，直到断开、撤销账号或重启；它也可能把密钥泄露出去。请核对程序名和每一个参数。选“批准并记住”后，这个 Profile 里的所有 Bot 都会自动连上它并使用这份密钥，重启后也一样，直到你在设置里移除。',
-  'approval.allowAndRemember': '批准并记住（所有 Bot 可用）',
+    'Bot 想带着你填写的密钥启动一个 MCP 服务。这个程序会拿到密钥并持续运行，直到断开、撤销账号或重启；它也可能把密钥泄露出去。请核对程序名和每一个参数。选“批准并记住”后，这个 Bot 每次启动都会自动连上它；其他 Bot 可以在各自的设置里启用它并使用这份密钥，直到你在设置里移除。',
+  'approval.allowAndRemember': '批准并记住（其他 Bot 可在设置里启用）',
   'approval.serverRemembered': '已批准并记住这个服务',
   'privateAccounts.mcpTitle': '已记住的 MCP 服务',
   'privateAccounts.mcpConnected': '已连接',
@@ -2869,8 +2869,9 @@ export const zh = {
   'privateAccounts.mcpCommand': '启动命令：{command}',
   'privateAccounts.mcpAccount': '使用的密钥：{account}',
   'privateAccounts.mcpApprovedAt': '{time}批准',
-  'privateAccounts.mcpShared': '所有 Bot 可用',
-  'privateAccounts.mcpSharedBy': '由 {bot} 配置 · 所有 Bot 可用',
+  'privateAccounts.mcpShared': '由这个 Bot 配置 · 其他 Bot 可在各自的设置里启用',
+  'privateAccounts.mcpSharedBy': '由 {bot} 配置 · 打开开关后这个 Bot 也能使用',
+  'privateAccounts.mcpEnable': '在这个 Bot 启用 {server}',
   'privateAccounts.mcpRemove': '移除',
   'privateAccounts.mcpRemoveConfirm':
     '移除 MCP 服务“{server}”？所有 Bot 上的它都会立即停止，之后不再自动连接。',
@@ -6210,8 +6211,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.secretCliRisk':
     'The Bot wants to run a command-line program with a secret you entered. The program receives the secret and could reveal it. Check the program name and every argument; each such call needs its own approval.',
   'approval.secretMcpRisk':
-    'The Bot wants to start an MCP server with a secret you entered. The program receives the secret and keeps running until it is disconnected, the account is revoked or the Host restarts; it could reveal the secret. Check the program name and every argument. With Allow and remember, every Bot in this Profile connects it and uses this secret, also after a restart, until you remove it in settings.',
-  'approval.allowAndRemember': 'Allow and remember (all Bots)',
+    'The Bot wants to start an MCP server with a secret you entered. The program receives the secret and keeps running until it is disconnected, the account is revoked or the Host restarts; it could reveal the secret. Check the program name and every argument. With Allow and remember, this Bot reconnects it whenever it starts; other Bots can enable it in their settings and use this secret, until you remove it in settings.',
+  'approval.allowAndRemember': 'Allow and remember (other Bots can enable it)',
   'approval.serverRemembered': 'Allowed and remembered this server',
   'privateAccounts.mcpTitle': 'Remembered MCP servers',
   'privateAccounts.mcpConnected': 'Connected',
@@ -6219,8 +6220,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'privateAccounts.mcpCommand': 'Command: {command}',
   'privateAccounts.mcpAccount': 'Secret used: {account}',
   'privateAccounts.mcpApprovedAt': 'Approved {time}',
-  'privateAccounts.mcpShared': 'Available to all Bots',
-  'privateAccounts.mcpSharedBy': 'Set up by {bot} · available to all Bots',
+  'privateAccounts.mcpShared': 'Set up by this Bot · other Bots can enable it in their settings',
+  'privateAccounts.mcpSharedBy': 'Set up by {bot} · turn on to let this Bot use it',
+  'privateAccounts.mcpEnable': 'Enable {server} for this Bot',
   'privateAccounts.mcpRemove': 'Remove',
   'privateAccounts.mcpRemoveConfirm':
     'Remove the MCP server "{server}"? It stops now for every Bot and will not reconnect.',

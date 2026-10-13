@@ -256,6 +256,14 @@ export class SecretMcpServers {
     return names;
   }
 
+  async stopInstance(botSlug: string, serverName: string): Promise<number> {
+    const matches = [...this.#running.values()].flatMap((servers) =>
+      [...servers].filter(([name, running]) => running.botSlug === botSlug && name === serverName),
+    );
+    await Promise.allSettled(matches.map(([, running]) => running.stop()));
+    return matches.length;
+  }
+
   async stopOwned(ownerSlug: string, serverName?: string): Promise<number> {
     const matches = [...this.#running.values()].flatMap((servers) =>
       [...servers].filter(

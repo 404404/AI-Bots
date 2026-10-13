@@ -76,9 +76,12 @@ export class PrivateInputs {
       args: string[];
       approvedAt: string;
       connected: boolean;
+      enabled: boolean;
+      own: boolean;
       ownerSlug: string;
       ownerName: string;
     }>;
+    setEnabled(botSlug: string, serverName: string, enabled: boolean): Promise<boolean>;
     remove(botSlug: string, serverName: string): Promise<boolean>;
     erase(botSlug: string): Promise<void>;
   };
