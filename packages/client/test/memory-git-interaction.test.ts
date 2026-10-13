@@ -111,6 +111,7 @@ import { zhTranslate } from '../src/client/locale.js';
 import { MemoryEntry } from '../src/client/memory-entry.js';
 import { MemoryRecovery } from '../src/client/memory-recovery.js';
 import { MemoryCommitView } from '../src/client/memory-commit-view.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 const SHA = 'a'.repeat(40);
 let container: HTMLDivElement;
@@ -150,6 +151,7 @@ it('requires an explicit confirmation before restoring an older Memory checkpoin
   const actions = {
     memoryRecoveryHistory: vi.fn().mockResolvedValue([current, older]),
     memoryRestore: vi.fn().mockResolvedValue({ checkpoint: older, archivePath: '/backup/memory' }),
+    ...inertSubmissionActions,
   } as unknown as BridgeActions;
   const onRestored = vi.fn();
   await act(async () =>
@@ -209,6 +211,7 @@ describe('Memory Git graph sidebar', () => {
         .mockResolvedValueOnce({ head: SHA, files: [], provisional: false })
         .mockImplementation(() => new Promise<never>(() => undefined)),
       memoryGitGraph: vi.fn().mockResolvedValue(graph),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -251,6 +254,7 @@ describe('Memory Git graph sidebar', () => {
         .fn()
         .mockResolvedValueOnce([{ path: 'note.md', kind: 'unstaged', status: 'M' }])
         .mockReturnValue(pending),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -293,6 +297,7 @@ describe('Memory Git graph sidebar', () => {
         .fn()
         .mockResolvedValueOnce({ path: 'notes.md', body: 'Original', head: SHA })
         .mockReturnValueOnce(pendingFile),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -332,6 +337,7 @@ describe('Memory Git graph sidebar', () => {
           hasMore: false,
         })
         .mockRejectedValueOnce(new Error('Graph refresh failed')),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -375,6 +381,7 @@ describe('Memory Git graph sidebar', () => {
         hasMore: false,
       }),
       memoryRepair: vi.fn().mockResolvedValue({ backupPath: 'backup' }),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -434,6 +441,7 @@ describe('Memory Git graph sidebar', () => {
         .fn()
         .mockResolvedValueOnce({ sha: savedHead })
         .mockResolvedValue({ sha: 'c'.repeat(40) }),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -479,6 +487,7 @@ describe('Memory Git graph sidebar', () => {
         files: [{ path: 'history.md', status: 'A' }],
         diff: '',
       }),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     await act(async () => {
       root.render(
@@ -520,6 +529,7 @@ describe('Memory Git graph sidebar', () => {
       memorySnapshot: vi.fn().mockResolvedValue({ head: SHA, files: [], provisional: false }),
       memoryGitGraph: vi.fn().mockResolvedValue(graph),
       send: vi.fn().mockResolvedValue(true),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     await act(async () => {
       root.render(
@@ -583,6 +593,7 @@ describe('Memory Git graph sidebar', () => {
           '+added',
         ].join('\n'),
       }),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     await act(async () => {
       root.render(
@@ -663,6 +674,7 @@ describe('Memory Git graph sidebar', () => {
     const actions = {
       memorySnapshot: vi.fn().mockRejectedValue(new Error('Memory Repository must be on main')),
       memoryGitGraph: vi.fn().mockResolvedValue(graph),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const onSelect = vi.fn();
 
@@ -717,6 +729,7 @@ describe('Memory Git graph sidebar', () => {
           hasMore: false,
         } satisfies MemoryGitGraph;
       }),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
 
     await act(async () => {
@@ -766,6 +779,7 @@ describe('Memory Git graph sidebar', () => {
         .mockResolvedValueOnce(graph('main'))
         .mockResolvedValue(graph('history-qa')),
       send: vi.fn().mockResolvedValue(true),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const props = {
       scope: 'personabot' as const,
@@ -827,6 +841,7 @@ describe('Memory Git graph sidebar', () => {
     const actions = {
       memorySnapshot: vi.fn().mockResolvedValue({ head: SHA, files: [], provisional: false }),
       memoryGitGraph: vi.fn().mockRejectedValue(new Error('Unknown Memory Git commit')),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     await act(async () => {
       root.render(
@@ -884,6 +899,7 @@ describe('Memory Git graph sidebar', () => {
     };
     const actions = new Proxy(
       {
+        ...inertSubmissionActions,
         listWorkspaceGrants: vi.fn(async () => []),
         memoryFileTarget: vi.fn(async (_slug: string, path: string) => ({
           path: '/host/memory/' + path,

@@ -805,7 +805,9 @@ Messaging 的 bindings／grants 事务提交，以及进程内 Consumer lease �
 
 DM 与 Group 的未发送撰写上下文由 application-defined Client recovery owner 保存于浏览器 localStorage（ADR-0184；原设计编号 0160 已被其他决策占用），不进入 Source Event、Session Persistence、Bot Memory 或 telemetry。Host/Profile 通过 Host bridge 返回持久 opaque identity，组合可信 Human 与 canonical Channel ID 隔离草稿；身份未就绪或切换时不展示旧范围输入。正文、明确 mentions／Channel references、reply ID 和已上传附件引用逐次保存，不依赖卸载事件，也不保存 File 字节。
 
-恢复先经现有 Typert／API Gateway seam 校验当前 Human 可见回复及 Attachment owner 引用，再结合当前 roster 校验目标；失效引用保留正文并提示，未完成上传不能伪装 ready，`@all` 需重新选择。不可变版本及因果时钟保留并发标签页的双方输入，显式选择后重新校验；空闲视图同步，正在编辑的内容不被静默覆盖。存储损坏／配额／不可用明确提示，保留有效旧记录与内存输入。此切片不提供跨设备同步、发送快照或方向键历史；后两者仍由 #1460 单独实现并验收。
+恢复先经现有 Typert／API Gateway seam 校验当前 Human 可见回复及 Attachment owner 引用，再结合当前 roster 校验目标；失效引用保留正文并提示，未完成上传不能伪装 ready，`@all` 需重新选择。不可变版本及因果时钟保留并发标签页的双方输入，显式选择后重新校验；空闲视图同步，正在编辑的内容不被静默覆盖。存储损坏／配额／不可用明确提示，保留有效旧记录与内存输入。此切片不提供跨设备同步。
+
+提交快照与输入召回（#1460）在同一恢复范围下增加一份有界的提交尝试列表（`composer-submission-store`，localStorage `botharness.submissions.v1:`）。通过本地校验的提交先以原 client message ID 保存正文、明确 tokens、reply ID 与已上传引用，再清空输入框；提交前被拒绝的输入撤回记录、仍是草稿。状态为 pending／sent／failed／unknown／restored：Host 明确拒绝为 failed，请求没有得到回答为 unknown（界面显示「结果未确认」，不称未发送），页面关闭时遗留的 pending 按 unknown 处理。unknown 只通过向 owning Host 按原 message ID 查询来核对：已提交则记为 sent 并由规范消息取代本地气泡，明确不存在则转为 failed 并可放回输入框，查询不到结果则保持 unknown 且不允许放回；不自动重发，也没有重试队列。Host 的 `channelSend` 对相同 ID 加相同内容返回已有消息，因此 ACK 丢失不会产生重复消息。空输入框按 ↑ 召回本 Channel 的提交尝试（含失败与未确认），↑↓ 浏览，越过最新一条回到召回前的草稿；召回只填入正文与仍有效的明确 tokens，不发送，不带回附件与回复对象并给出提示；编辑后方向键恢复光标移动，IME 与候选菜单优先。普通历史保留最近 100 条且不超过 256 KiB，按最旧裁剪；failed 与 unknown 不受该预算淘汰。这份列表是恢复数据而非消息日志，规范消息仍由 Host 拥有。
 
 ## Human 群聊全部 Bot 提及（#542）
 
