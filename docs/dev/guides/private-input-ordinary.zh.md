@@ -1,0 +1,65 @@
+# 在普通 Profile 中使用私密输入
+
+自 [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md) 起，PersonaBot 在任何 Profile 中都可以询问密钥，不需要 Docker，也不需要显式开启。本指南说明这一默认档。需要 Docker 隔离的 opt-in Profile 见 [CLI 验证指南](private-input-cli.md)。
+
+## Bot 可以做什么
+
+| 工具            | 作用                                                                                                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ask_secret`    | 在请求所在的 Channel 发出输入卡片。只有 Owner 能填写。Bot 拿到的是 `private:<id>:<字段>` 引用，拿不到值。                                                   |
+| `secret_http`   | 调用 HTTP 接口。请求由 Host 发往 Owner 在卡片里填写的地址；Bot 只能指定该地址下的路径、方法，以及用 `{{字段}}` 标出密钥在请求头、查询参数或请求体中的位置。 |
+| `protected_cli` | 固定的 `http-status-v1` 检查：发一次 GET，只返回状态码。                                                                                                    |
+
+两个使用方都需要现有的 Human 执行审批。审批卡上只有引用和占位符，没有值。
+
+## 密钥靠什么保护
+
+- 值保存在 DSH 原生凭据存储中，绑定到发起请求的 Bot 和账号，其他 Bot 无法使用。
+- Channel 历史里只有请求和引用。
+- `secret_http` 只会把密钥发往 Owner 填写的地址。拒绝跳转；只有本机地址允许明文 http。返回文本中的密钥会以原文、base64、URL 编码三种形式被掩码；掩码只是防止意外回显，不是安全边界。
+- Agent 读不到凭据存储。DSH 把每条 Shell 命令放在系统沙箱中运行，Host 额外加一条“不可读取凭据存储”的规则：macOS 上是 Seatbelt 规则，Linux 的 bwrap 下用空文件遮盖。针对该存储的 Agent 文件工具，以及点名它的 Shell 命令，在弹出审批卡之前就会被拒绝。
+
+## 限制
+
+以下三种情况没有沙箱规则，只剩按命令文本拒绝这一层，间接访问该文件的命令识别不出来：
+
+- 以 `danger-full-access` 模式运行的命令，DSH 不对它使用沙箱；
+- DSH 使用 Landlock 而不是 bwrap 的 Linux 主机；
+- Windows，DSH 的 Windows 沙箱不限制读取。
+
+某个沙箱 runner 第一次没能加上规则时，Host 会记录一条警告。DSH 升级如果改变了所依赖的 runner 命令行，`scripts/test/dsh-sandbox-shape.test.mjs` 会失败，届时需要调整 `credentials/store-guard.ts`。
+
+目前只覆盖 HTTP 接口。需要通过环境变量读取密钥的命令行工具不在范围内。
+
+## 本地验证
+
+只使用隔离的 DSH home 和合成数据。
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
+node scripts/dev-instance.mjs --home <隔离的 DSH_HOME> --port 31380
+node scripts/ask-secret-fixture.mjs 31381
+```
+
+打开输出的 Web 地址，选择一个模型可用的 PersonaBot，在它的私聊中发送，或在群里 @ 它：
+
+```text
+请用 ask_secret 为账号 synthetic-http 请求三个必填字段：
+endpoint（标签 接口地址）、api_key（标签 API key）、api_secret（标签 API secret）。
+我提交后，用 secret_http 发一次 GET，路径 /status?marker=SYNTHETIC-1380-url-A，
+请求头 x-api-key 用 {{api_key}}，x-api-secret 用 {{api_secret}}。
+告诉我 HTTP 状态码和返回内容。
+```
+
+在卡片中填写这些合成值：
+
+| 字段       | 合成值                    |
+| ---------- | ------------------------- |
+| 接口地址   | `http://127.0.0.1:31381`  |
+| API key    | `SYNTHETIC-1380-key-A`    |
+| API secret | `SYNTHETIC-1380-secret-A` |
+
+预期：卡片出现在你提问的 Channel；提交后字段清空；`secret_http` 的审批卡显示路径、占位符和 `private:` 引用；Bot 报告状态码 200，返回内容里的 key、secret 及其 base64 形式显示为 `[secret]`；`http://127.0.0.1:31381/evidence` 的 `authenticated` 加一；任何 Channel 消息中都不出现这两个合成密钥。
+
+验证存储保护：让 Bot 执行 `wc -c <隔离的 DSH_HOME>/.credentials.yaml`，会在弹出审批卡之前被拒绝。间接指向该文件的命令会触发沙箱规则：macOS 上报 `Operation not permitted`。bwrap 下应当读到空文件；这条路径只有单元测试，尚未在 Linux 上实跑。
