@@ -92,6 +92,11 @@ describe('Workspace Grant execution boundary', () => {
     expect(requiresHumanToolApproval('channel_list')).toBe(false);
     expect(requiresHumanToolApproval('inbox_ignore')).toBe(false);
     expect(requiresHumanToolApproval('inbox_history')).toBe(false);
+    expect(requiresHumanToolApproval('inbox_list')).toBe(false);
+    expect(requiresHumanToolApproval('inbox_resolve')).toBe(false);
+    expect(requiresHumanToolApproval('inbox_snooze')).toBe(false);
+    expect(requiresHumanToolApproval('archive_assignment')).toBe(false);
+    expect(requiresHumanToolApproval('unarchive_assignment')).toBe(false);
     for (const tool of [
       'group_create',
       'group_invite_bot',

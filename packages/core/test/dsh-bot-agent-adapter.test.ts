@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { BotScheduleError } from '../src/schedules/bot-schedules.js';
+import { requiresHumanToolApproval } from '../src/workspaces/grant-execution.js';
 import type { AssignmentAgentRun, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { FakeAgentHost, FAKE_BOT as BOT } from './dsh-agent-host-fixture.js';
 
@@ -1187,6 +1188,12 @@ describe('DSH Bot Agent adapter', () => {
       'bot_dm_send',
       'channel_send',
     ]);
+    expect(
+      host.scopes
+        .get('orchestrator-ada')
+        ?.tools.map((tool) => tool.name)
+        .filter((name) => name !== 'channel_attachment_open' && requiresHumanToolApproval(name)),
+    ).toEqual([]);
     const channelSend = host.scopes
       .get('orchestrator-ada')
       ?.tools.find((tool) => tool.name === 'channel_send');
