@@ -66,4 +66,4 @@ endpoint（标签 接口地址）、api_key（标签 API key）、api_secret（�
 
 预期：卡片出现在你提问的 Channel；提交后字段清空；`secret_http` 的审批卡显示路径、占位符和 `private:` 引用；Bot 报告状态码 200，返回内容里的 key、secret 及其 base64 形式显示为 `[secret]`；`http://127.0.0.1:31381/evidence` 的 `authenticated` 加一；任何 Channel 消息中都不出现这两个合成密钥。
 
-验证存储保护：让 Bot 执行 `wc -c <隔离的 DSH_HOME>/.credentials.yaml`，会在弹出审批卡之前被拒绝。间接指向该文件的命令会触发沙箱规则：macOS 上报 `Operation not permitted`。bwrap 下应当读到空文件；这条路径只有单元测试，尚未在 Linux 上实跑。
+验证存储保护：让 Bot 执行 `wc -c <隔离的 DSH_HOME>/.credentials.yaml`，会在弹出审批卡之前被拒绝。间接指向该文件的命令会触发沙箱规则：macOS 上报 `Operation not permitted`。bwrap 下读取会报 `Permission denied`；这一点在 Linux 容器里用 DSH 生成的命令行实跑过（只读和 workspace-write 两种策略），但没有在 Linux 上跑完整的 Host。
