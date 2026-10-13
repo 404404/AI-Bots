@@ -766,8 +766,9 @@ export function WorkspaceGrantsEntry({
               }
             />
           </SidebarCardList>
+          <div className="bh-access-hint">{t('access.hint')}</div>
           {access?.mode === 'danger-full-access' ? (
-            <div className="bh-access-warning" role="status">
+            <div className="bh-access-warning bh-access-warning-active" role="status">
               {t('access.activeWarning')}
             </div>
           ) : null}
