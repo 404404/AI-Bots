@@ -1,17 +1,18 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { Button, Input } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { MessagingIdentityView } from '../../../core/src/messaging/identity.js';
 import type { MessagingReachablePage } from '../../../core/src/messaging/provider.js';
-import type { OutboxIntent } from '../../../core/src/messaging/outbound.js';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { Modal } from './modal.js';
 import { Combobox } from './combobox.js';
 import { useMountedResource } from './mounted-resource.js';
+import { reachablePostRequests } from './reachable-post-requests.js';
 
 export function ReachablePostDialog({
   slug,
   identity,
+  recoveryScope,
   actions,
   t,
   onClose,
@@ -19,6 +20,7 @@ export function ReachablePostDialog({
 }: {
   slug: string;
   identity: MessagingIdentityView;
+  recoveryScope: string | undefined;
   actions: Pick<
     BridgeActions,
     'messagingReachable' | 'messagingPostConversation' | 'messagingPostLimit'
@@ -27,10 +29,15 @@ export function ReachablePostDialog({
   onClose(): void;
   refresh(): Promise<void>;
 }): ReactElement {
+  const requests = reachablePostRequests(
+    recoveryScope === undefined
+      ? undefined
+      : JSON.stringify([recoveryScope, slug, identity.id, identity.fingerprint]),
+  );
   const [groups, setGroups] = useState<MessagingReachablePage['conversations']>([]);
   const [cursor, setCursor] = useState<string>();
-  const [group, setGroup] = useState('');
-  const [text, setText] = useState('');
+  const [group, setGroup] = useState(requests.last?.group ?? '');
+  const [text, setText] = useState(requests.last?.text ?? '');
   const [limit, setLimit] = useState(
     identity.postLimit === null ? '' : String(identity.postLimit ?? 60),
   );
@@ -38,10 +45,9 @@ export function ReachablePostDialog({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [result, setResult] = useState<OutboxIntent>();
   const [legacy, setLegacy] = useState(false);
   const live = useRef(false);
-  const request = useRef<{ id: string; group: string; text: string }>();
+  const request = useSyncExternalStore(requests.subscribe, () => requests.read(group, text));
   const load = async (next?: string) => {
     setLoading(true);
     setError('');
@@ -75,42 +81,62 @@ export function ReachablePostDialog({
       live.current = false;
     };
   }, [identity.id]);
-  const unknown =
-    result?.state === 'unknown-outcome' &&
-    request.current?.group === group &&
-    request.current.text === text;
+  const unknown = request?.state === 'unknown-outcome';
+  const pending = request?.state === 'pending' || request?.state === 'in-flight';
   const send = async () => {
-    if (busy || loading || unknown || !group || !text.trim() || !actions.messagingPostConversation)
+    if (
+      busy ||
+      loading ||
+      unknown ||
+      pending ||
+      requests.failed ||
+      !group ||
+      !text.trim() ||
+      !actions.messagingPostConversation
+    )
       return;
     setBusy(true);
     setError('');
-    if (!request.current || request.current.group !== group || request.current.text !== text)
-      request.current = { id: crypto.randomUUID(), group, text };
+    let current: ReturnType<typeof requests.begin> | undefined;
+    let received = false;
     try {
+      current = requests.begin(group, text);
       const intent = await actions.messagingPostConversation(
         slug,
         identity.id,
         group,
-        request.current.id,
+        current.id,
         text,
       );
-      if (!live.current) return;
-      setResult(intent);
-      await refresh();
+      received = true;
+      requests.finish(current, intent.state, intent.reason);
     } catch (failure) {
+      const refused =
+        failure &&
+        typeof failure === 'object' &&
+        'code' in failure &&
+        failure.code === 'grant-revoked';
+      if (current) requests.finish(current, refused ? 'grant-revoked' : 'response-lost');
       if (live.current)
         setError(
           t(
-            failure &&
-              typeof failure === 'object' &&
-              'code' in failure &&
-              failure.code === 'grant-revoked'
+            refused
               ? 'proactive.sendRefused'
-              : 'proactive.sendError',
+              : requests.failed
+                ? 'proactive.recoveryError'
+                : 'proactive.sendError',
           ),
         );
-    } finally {
-      if (live.current) setBusy(false);
+    }
+    if (live.current) {
+      if (received) {
+        try {
+          await refresh();
+        } catch {
+          setError(t('proactive.refreshError'));
+        }
+      }
+      setBusy(false);
     }
   };
   const saveLimit = async () => {
@@ -149,7 +175,16 @@ export function ReachablePostDialog({
           </Button>
           <Button
             variant="primary"
-            disabled={busy || loading || legacy || unknown || !group || !text.trim()}
+            disabled={
+              busy ||
+              loading ||
+              legacy ||
+              unknown ||
+              pending ||
+              requests.failed ||
+              !group ||
+              !text.trim()
+            }
             onClick={() => void send()}
           >
             {t('proactive.send')}
@@ -170,7 +205,6 @@ export function ReachablePostDialog({
                 value={group}
                 onSelect={(value) => {
                   setGroup(value);
-                  setResult(undefined);
                 }}
                 label={t('proactive.group')}
                 toggleLabel={t('proactive.group')}
@@ -200,7 +234,6 @@ export function ReachablePostDialog({
                 disabled={busy}
                 onChange={(event) => {
                   setText(event.currentTarget.value);
-                  setResult(undefined);
                 }}
               />
             </div>
@@ -219,21 +252,27 @@ export function ReachablePostDialog({
             {t('proactive.saveLimit')}
           </Button>
         </div>
-        {error ? (
+        {error || requests.failed ? (
           <p role="alert" className="bh-error">
-            {error}
+            {error || t('proactive.recoveryError')}
           </p>
         ) : null}
-        {result ? (
+        {request ? (
           <p role="status">
             {t(
-              result.state === 'unknown-outcome'
-                ? 'proactive.unknown'
-                : result.state === 'provider-accepted'
-                  ? 'proactive.accepted'
-                  : result.reason === 'post-rate-limited'
-                    ? 'proactive.rateLimited'
-                    : 'proactive.failed',
+              pending
+                ? 'proactive.pending'
+                : request.state === 'response-lost'
+                  ? 'proactive.sendError'
+                  : request.state === 'unknown-outcome'
+                    ? 'proactive.unknown'
+                    : request.state === 'provider-accepted'
+                      ? 'proactive.accepted'
+                      : request.reason === 'post-rate-limited'
+                        ? 'proactive.rateLimited'
+                        : request.state === 'grant-revoked'
+                          ? 'proactive.sendRefused'
+                          : 'proactive.failed',
             )}
           </p>
         ) : null}

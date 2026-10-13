@@ -336,8 +336,6 @@ function providerFailure(error: unknown): MessagingProviderError {
     'send-permission-denied',
     'send-preflight-unavailable',
     'target-rejected',
-    'send-preflight-unavailable',
-    'target-rejected',
     'reaction-permission-denied',
     'reaction-provider-rejected',
   ].includes(code);

@@ -36,8 +36,9 @@ it.each([
         root.render(
           createElement(ReachablePostDialog, {
             slug: 'ada',
+            recoveryScope: 'qa-test-owner',
             identity: {
-              id: 'binding',
+              id: crypto.randomUUID(),
               botSlug: 'ada',
               providerId: 'dsh-im/feishu',
               platform: 'feishu',
@@ -102,7 +103,7 @@ it.each([
       expect(button.disabled).toBe(disabled);
       await act(async () => button.click());
       expect(posts).toEqual(disabled ? ['One report'] : ['One report', 'One report']);
-      expect(new Set(requests).size).toBe(1);
+      expect(new Set(requests).size).toBe(outcome === 'grant-revoked' ? 2 : 1);
     } finally {
       await act(async () => root.unmount());
       host.remove();

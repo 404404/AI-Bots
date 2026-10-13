@@ -23,6 +23,9 @@ export const zh = {
     '当前 Provider 需要更新才能列出可发送的群聊。请关闭此窗口并更新 Provider；已有「保存的发送目标（高级）」仍可使用。',
   'proactive.loadError': '群列表暂不可用，请检查应用权限和连接。',
   'proactive.sendError': '未取得发送结果，请保留本次请求并核对 Outbox。',
+  'proactive.refreshError': '发送结果已收到，但会话列表未能刷新。',
+  'proactive.pending': '正在发送，请等待本次请求的结果。',
+  'proactive.recoveryError': '无法保留发送恢复状态，请核对 Outbox 后再继续。',
   'proactive.sendRefused': '此会话已屏蔽或授权已撤销，本次未发送。',
   'proactive.limitError': '未保存限额，请刷新应用后重试。',
   'proactive.unknown': '结果未知，请核对原群；不要再次发送这条消息。',
@@ -3191,6 +3194,11 @@ export const en = {
     'Update this Provider to list groups it can speak in. Close this window and update the Provider; existing Saved send target (advanced) entries remain available.',
   'proactive.loadError': 'Groups are unavailable. Check app permission and connection.',
   'proactive.sendError': 'No outcome was received. Keep this request and check Outbox.',
+  'proactive.refreshError':
+    'The send result was received, but the conversation list could not refresh.',
+  'proactive.pending': 'Posting. Wait for this request to finish.',
+  'proactive.recoveryError':
+    'Send recovery state could not be retained. Check Outbox before continuing.',
   'proactive.sendRefused':
     'This conversation is blocked or its authorization was revoked. Nothing was sent.',
   'proactive.limitError': 'The limit was not saved. Refresh the app and try again.',

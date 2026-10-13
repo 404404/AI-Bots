@@ -72,6 +72,15 @@ function IdentitiesForBot({
           key={postIdentity.id}
           slug={slug}
           identity={postIdentity}
+          recoveryScope={
+            state.composerIdentity === undefined
+              ? undefined
+              : JSON.stringify([
+                  state.composerIdentity.hostId,
+                  state.composerIdentity.profileId,
+                  state.composerIdentity.humanId,
+                ])
+          }
           actions={actions}
           t={t}
           refresh={refresh}
