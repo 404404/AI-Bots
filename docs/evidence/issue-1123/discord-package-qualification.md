@@ -36,7 +36,7 @@ The complete request's Source Event is `im-e7239aa78fb3a52fd3503cc759db19bee56c0
 
 The exact task-owned Host was stopped at **2026-10-13 20:34 UTC** after capturing the result and reading the canonical facts; its process and listening port were absent afterwards. The exclusive QA1 window ended. A byte scan of 54 task-owned BotHarness state/log and native Session files found zero occurrences of the actual Bot Token; Provider credential storage was excluded and remains private.
 
-## Captures and remaining delivery gates
+## Initial captures and historical delivery checkpoint
 
 The following are real captures from this native run at 1280 × 800. The Discord capture hides only unrelated server navigation and account controls before capture; the designated channel and actual messages are unchanged. The native Client captures are English/dark and contain only task-owned QA data.
 
@@ -48,8 +48,40 @@ The following are real captures from this native run at 1280 × 800. The Discord
 
 ![Native empty Discord conversation list before the first mention](../../assets/pr/1123-discord-conversations-empty.png)
 
-These are after-state/runtime captures. They are **not** matched base/head before/after pairs. The earlier base checkout has been prepared, but its native before states were not captured before admission changed the Profile from zero to one conversation. Recreating those native states now requires another coordinated receiver window; the finished test's window is not reused. Matched visual evidence remains a PR delivery gate.
+These initial captures are after-state/runtime evidence, not matched base/head pairs. At this checkpoint, the original receiver window had ended and the Profile had one conversation. The following final run resolves the previously missing matched evidence without reusing that expired window.
 
 Focused checks passed: 32 registry/Client tests, 75 earlier Product discovery/default-traffic/Discord regressions, and 28 exact Provider-source Discord tests. Lint, whole-repository formatting, typecheck and both Release Ledgers passed on `f61f0f20`; the installed artifacts were built successfully.
 
-The full Windows suite remains **not green**: 4,496 passed, 144 failed, 36 skipped. Failures include filesystem/`fsync` errors, Windows path/mode assumptions, timeouts and a Client-bundle VM failure; they have not all been attributed. This record does not call them all baseline failures. Linux CI, matched visual evidence and review remain separate gates; #1123 and #1107 stay open pending delivery. Discord DMs, pairing and interactions remain the separate #1042 qualification scope and were not tested here.
+The historical full Windows run was **not green**: 4,496 passed, 144 failed, 36 skipped. Failures included filesystem/`fsync` errors, Windows path/mode assumptions, timeouts and a Client-bundle VM failure. This record does not reclassify every failure as baseline. The final Linux full suite and official CI below provide the complete supported verification run; native Windows package acceptance is recorded separately. Discord DMs, pairing and interactions remain #1042 and were not tested here.
+
+## Final integration, matched UI and native qualification
+
+The Product branch integrated main `e363a647876cf7cc41ee649e1de52c0604558ef5` in merge `510e1b84871d2137ab6ad5482f4b1d67872eb7a8`. The conflict resolution preserves main's design-system `FormDialog`/`Field` composition and the three Discord-specific hints. No Core, Browser or Computer runtime source differs from that main revision.
+
+The Human explicitly granted this task a continuous **10-hour exclusive QA1 window**, starting from the confirmation recorded at 2026-10-13 20:49 UTC. This is live task authorization, not a lease inferred from the registry's old timestamp. Within that window, only one task-owned receiver ran at a time, with the unchanged `external-consumer` configuration and existing platform permissions.
+
+Two installed candidates were built from exact source: baseline `e363a647` as `0.1.0-alpha.1-qa.1123.base`, and final runtime/test head `a457b52b0bbe6bc277ba041b72114b3d9d178c5c` as `0.1.0-alpha.1-qa.1123.final`. Both use official DSH RC1 and the same immutable Provider .20 archive/digest above. They ran serially in one new isolated Profile. Actual Client binding, readiness and the empty conversation list were captured before external traffic, in English/Chinese and light/dark at 1280 × 800: **12 matched pairs / 24 real screenshots**. Between locales/revisions, the same task Bot was unbound and rebound with zero Grants and zero Outbox intents; no external message was sent for capture. See [all matched comparisons](ui-comparison.md).
+
+The final head's actual local DM returned `BH_1123_FINAL_LOCAL_MODEL_20261014_OK`. Its genuine original-channel request and reply were then verified through the signed-in Discord web client and independent read-only native REST:
+
+| Final native record  | Message ID            | Result                                                                        |
+| -------------------- | --------------------- | ----------------------------------------------------------------------------- |
+| Full @ request       | `1559676576705286167` | `@BotHarness Cloud QA 请只回复 BH_1123_FINAL_AT_20261014_OK`                  |
+| Bot reply            | `1559676609038917795` | Exact `BH_1123_FINAL_AT_20261014_OK`, original channel, reply to that request |
+| Unmentioned negative | `1559676793584099359` | `BH_1123_FINAL_UNMENTIONED_20261014_MUST_IGNORE`; no mentions or reply        |
+
+There was exactly **one** external Source Event (`im-1e063ba97839cbe5d748777c49017635127cf436ccfd51f5563179cc1e2eee08`), **one** handled/resolved `group-mention` Admission, **one** `provider-accepted` Outbox intent/receipt, and **one** implicit conversation Grant. The negative contributed zero Source Events, Admissions and Outbox intents throughout more than 90 seconds of observation. The Client listed the actual `DeepSeekBot Cloud QA #常规` conversation afterward. No initial-marker retry or additional external message was used in this final run.
+
+![Final original-channel request, exact reply and ignored negative](../../assets/pr/1123-discord-final-channel.png)
+
+![Final native Client conversation row](../../assets/pr/1123-discord-final-conversation.png)
+
+The final task Host was stopped at **2026-10-13 21:20:57 UTC**; its process was absent and the local port refused connections. A fresh byte scan of 54 task-owned BotHarness state/log and native Session files found zero actual Bot Token occurrences. Credentials remain in the private Provider store. Neither the unused remainder of the window nor this evidence starts a receiver.
+
+## Final full verification and closure scope
+
+The existing Client bundle test reproduced its build failure on both baseline main and the integrated head. The inline `tsdown.build` call also auto-loaded the nine-output root configuration, causing repeated builds into the same overridden output directory. Adding `config: false` confines the test to its explicitly supplied bundle options; all six existing bundle contract assertions pass on Windows and Linux. No assertion, timeout or runtime build guard was relaxed. This matches the pinned implementation and [tsdown's documented config-discovery behavior](https://tsdown.dev/options/config-file#disabling-the-config-file).
+
+On exact `a457b52b`, a clean Linux checkout using Node 24.21.0 / pnpm 12.4.2 passed lint, formatting, typecheck, slides preparation, all **4,713 tests** (10 skipped; 560 files passed, 6 skipped), and build. Two test workers and a task-owned tmpfs temporary directory were used without changing test timeouts or assertions. [Official GitHub verify run 38466649850](https://github.com/BotHarness/DeepSeekBot/actions/runs/38466649850) independently passed the repository's complete lint/format/typecheck/test/build/docs pipeline with the same full test counts. Native Windows acceptance, full Linux tests and CI are distinct evidence.
+
+#1123's maintained checked Provider and unsupported-with-reason discovery already landed through #1559; current automated regressions retain both behaviors. This PR completes the missing native checked binding qualification, truthful Discord copy, reusable QA setup and visual evidence. All seven original #1107 slices are closed; #1123 is its last remaining native child. PR #1618 can close #1123 and #1107 on merge. Discord DM/pairing/interaction qualification remains #1042, consistent with #1107's explicit scope boundary.
