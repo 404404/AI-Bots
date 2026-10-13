@@ -54,6 +54,12 @@ header, and retains native `User-Agent` attribution and other headers. Missing S
 stays missing; no fixed, random or substitute identity is supplied. Other Providers keep their
 existing headers. The Go qualification refuses a different DSH version until reverified.
 
+The helper copies the reviewed patch into that CLI's `patches/` directory and uses a relative
+path in its `pnpm-workspace.yaml`. Windows pnpm otherwise resolves a drive-qualified patch path
+under the runtime directory and fails with `ERR_PNPM_PATCH_NOT_FOUND`, especially when the source
+worktree and isolated home are on different drives. Each launch refreshes the staged bytes from
+the worktree; other workspace settings and patch entries are preserved.
+
 RC2 status: the repository default is DSH `0.2.0-rc.2`. The RC2 adapter still omits the header,
 the patch applies to it unchanged, and the adapter regression
 (`scripts/test/dev-go-session.test.mjs`) passes against the patched RC2 package. On 2026-10-13 a

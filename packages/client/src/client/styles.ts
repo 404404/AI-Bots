@@ -1656,14 +1656,19 @@ html[data-botharness-motion='reduce'] .bh-section-chevron {
 }
 
 /* 创建失败提示留在 Modal 体内；Modal 在 body 下，不能依赖 .bh-root 前缀。 */
- .bh-bot-deletion { display: grid; gap: 12px; }
+ .bh-bot-deletion { display: grid; gap: 16px; }
 .bh-bot-deletion p { margin: 0; }
-.bh-bot-deletion-path { overflow-wrap: anywhere; font-family: var(--dsw-font-family-mono); }
-.bh-bot-deletion-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.bh-bot-deletion-choice { display: flex; align-items: center; gap: 8px; }
-.bh-bot-deletion-confirm { color: var(--dsw-alias-state-error-primary); }
-.bh-bot-deletion dl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
-.bh-bot-deletion dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bh-bot-deletion-lead { font-size: 14px; line-height: 22px; color: var(--dsw-alias-label-primary); }
+.bh-bot-deletion-notices { display: grid; gap: 8px; }
+.bh-bot-deletion-heading { margin: 0; font-size: 12px; font-weight: 500; line-height: 16px; color: var(--dsw-alias-label-secondary); }
+.bh-bot-deletion-notice { display: flex; gap: 10px; min-width: 0; padding: 10px 12px; border-radius: 10px; background: var(--dsw-alias-bg-module-platform); }
+.bh-bot-deletion-notice-icon { display: inline-flex; flex: none; padding-top: 2px; color: var(--dsw-alias-label-secondary); }
+.bh-bot-deletion-notice[data-tone="danger"] .bh-bot-deletion-notice-icon { color: var(--dsw-alias-state-error-primary); }
+.bh-bot-deletion-notice-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+.bh-bot-deletion-notice-title { font-size: 13px; font-weight: 500; line-height: 20px; color: var(--dsw-alias-label-primary); }
+.bh-bot-deletion-path { overflow-wrap: anywhere; font-family: var(--dsw-font-family-mono); font-size: 11px; line-height: 16px; }
+.bh-bot-deletion-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-left: -8px; }
+.bh-bot-deletion-choice { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 13px; color: var(--dsw-alias-label-primary); }
 
 .bh-modal-error {
   margin-top: 8px;
@@ -2732,6 +2737,7 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-primary-color-row-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; }
 .bh-primary-color-row-title { font-size: 13px; color: var(--dsw-alias-label-primary); }
 .bh-primary-color-modal { width: min(520px, calc(100vw - 32px)); }
+.bh-sidebar-modal.bh-bot-deletion-modal { width: min(560px, calc(100vw - 32px)); }
 .bh-primary-color-editor { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .bh-primary-color-editor > p { margin: 0; }
 .bh-primary-color-custom { display: flex; flex-direction: column; gap: 10px; }
@@ -6139,6 +6145,52 @@ button.bh-bot-nav > svg {
 }
 .bh-channel-settings-options {
   padding-top: 4px;
+}
+.bh-channel-settings-caption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--bh-bot-settings-radius-md);
+  background: var(--dsw-alias-bg-module-platform);
+}
+.bh-channel-settings-caption-avatar {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-weight: 600;
+}
+.bh-channel-settings-caption-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bh-channel-settings-caption-kind {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--dsw-alias-label-secondary);
+}
+.bh-channel-settings-caption-title {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--bh-bot-settings-label);
+}
+.bh-bot-settings-content[data-narrow] > .bh-channel-settings-caption {
+  margin: 16px 16px 0;
 }
 .bh-bot-settings-content[data-narrow] .bh-bot-settings-header {
   align-items: center;

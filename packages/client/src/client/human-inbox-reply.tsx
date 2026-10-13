@@ -14,6 +14,7 @@ import { channelHumanName, currentMentionLabel, humanLabel } from './actor-names
 import type { ChannelHumanMember } from './store.js';
 import { referenceRuns } from './channel-refs.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { toolApprovalReplyPreview } from './approval-text.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { BotSummary, ChannelAuthor, ChannelMessage, HumanAttentionItem } from './store.js';
 
@@ -323,7 +324,7 @@ export function HumanInboxReply({
                     {message.replyToPreview ? (
                       <blockquote>
                         <strong>{authorName(message.replyToPreview.author)}</strong>
-                        <p>{message.replyToPreview.body}</p>
+                        <p>{toolApprovalReplyPreview(message, message.replyToPreview.body, t)}</p>
                       </blockquote>
                     ) : null}
                     {isNativeAction && message.id === messageId ? (

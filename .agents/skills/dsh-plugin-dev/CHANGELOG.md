@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded Windows pnpm absolute patch-path failure, isolated CLI staging and real DM verification in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)).
+
 - Recorded in the [local development guide](../dsh-dev/SKILL.md) that a stream method's Host refusal reaches the Client as a terminal Remote failure with its code, and that a stream and its legacy route should encode one frame source, verified with authenticated refusals on `/api/remote.mux` on DSH `0.2.0-rc.1`; DSH/Cordis Context and Skill behavior remain unchanged ([#1500](https://github.com/BotHarness/DeepSeekBot/issues/1500)).
 
 - Recorded how an application Client bundle declares the Gateway Client external to use DSH's snapshot-stream helper, the Node test alias it needs and the retryable-end convention in the [local development guide](../dsh-dev/SKILL.md), verified by booting the real Client on DSH `0.2.0-rc.1` and by inspecting the published `0.1.7-alpha.1` and `0.1.7-rc.2` packages; DSH/Cordis Context and Skill behavior remain unchanged ([#1498](https://github.com/BotHarness/DeepSeekBot/issues/1498)).

@@ -75,6 +75,7 @@ import {
 } from './channel-drag.js';
 import { needsYou, toBotState } from './labels.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { toolApprovalText } from './approval-text.js';
 import { personaBotActivity } from './persona-activity.js';
 import { CreatePersonaBotModal } from './persona-bot-create.js';
 import { BotZipShareDialog, ImportBotZipModal } from './bot-zip.js';
@@ -392,11 +393,12 @@ function channelPreview(
       { name: message.memberDeparture.displayName },
     );
   const body =
-    attachmentReferenceLabels(message.body, message.attachments ?? [])
+    toolApprovalText(message, t) ??
+    (attachmentReferenceLabels(message.body, message.attachments ?? [])
       .replace(/\s+/gu, ' ')
       .trim() ||
-    message.attachments?.[0]?.name ||
-    t('roster.latestActivity');
+      message.attachments?.[0]?.name ||
+      t('roster.latestActivity'));
   const author =
     message.author.kind === 'human'
       ? t('rail.you')
