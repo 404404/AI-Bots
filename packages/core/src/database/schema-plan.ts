@@ -2066,6 +2066,17 @@ const FAILURE_ALERT_MIGRATION: SchemaMigration = {
   },
 };
 
+const PROACTIVE_POST_LIMIT_MIGRATION: SchemaMigration = {
+  generation: 84,
+  module: 'messaging',
+  description: 'Persist per-app proactive post limits',
+  migrate(database) {
+    database.exec(
+      'ALTER TABLE messaging_bindings ADD COLUMN post_limit INTEGER DEFAULT 60 CHECK (post_limit IS NULL OR post_limit >= 1);',
+    );
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2149,4 +2160,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   BEHAVIOR_PERMISSION_MIGRATION,
   EXTERNAL_TOOL_RULE_CREATOR_MIGRATION,
   FAILURE_ALERT_MIGRATION,
+  PROACTIVE_POST_LIMIT_MIGRATION,
 ]);

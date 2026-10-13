@@ -164,7 +164,7 @@ describe('operational database owner', () => {
     const upgraded = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
     expect(upgraded.mode).toBe('ready');
     expect(upgraded.generation).toBe(BOT_HARNESS_SCHEMA_PLAN.targetGeneration);
-    expect(readBindings(upgraded)).toEqual(before);
+    expect(readBindings(upgraded)).toEqual(before.map((row) => ({ ...row, post_limit: 60 })));
     const module = attachOperationalModule(upgraded, 'qq-main-upgrade-history');
     expect(
       module.read((database) =>
@@ -180,7 +180,7 @@ describe('operational database owner', () => {
     );
     upgraded.close();
     const reopened = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
-    expect(readBindings(reopened)).toEqual(before);
+    expect(readBindings(reopened)).toEqual(before.map((row) => ({ ...row, post_limit: 60 })));
     expect(
       attachOperationalModule(reopened, 'qq-main-upgrade-reopen').read((database) =>
         database.prepare('SELECT body FROM messaging_reception_history').all(),
