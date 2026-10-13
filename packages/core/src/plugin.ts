@@ -1911,6 +1911,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     details: toolDetails,
     ownership: core.ownership,
     states: core.states,
+    running: (sessionId) =>
+      ctx.agents
+        .list()
+        .some((agent) => agent.session.id === sessionId && agent.status === 'running'),
     describeCall: (sessionId, name, args) => {
       const agent = ctx.agents.list().find((candidate) => candidate.session.id === sessionId);
       if (agent === undefined) return undefined;
@@ -1969,6 +1973,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           () => core.registry.get(owner.botSlug)?.modelPlan,
         );
       }
+    },
+    { global: true },
+  );
+  ctx.on(
+    'agent/status',
+    ({ agent, status }) => {
+      if (status === 'idle') activity.handleAgentIdle(agent.session.id);
     },
     { global: true },
   );
