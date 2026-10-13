@@ -122,6 +122,10 @@ describe('asks follow the Channel the task came from', () => {
       ).toEqual({ ok: true, value: { accepted: true } });
       expect(await outcome).toBe('allowed-once');
 
+      expect(core.runtime.askNotice?.(run.sessionId, 'bash')).toContain(
+        `send one short channel_send to Group "Team" (channel_id "${group.id}")`,
+      );
+      expect(core.runtime.askNotice?.(run.sessionId, 'bash')).toBeUndefined();
       const grant = await run.channels.requestGrant('Need the handoff folder');
       expect(core.channels.message(group.id, grant.id)?.grantRequest).toBe(true);
       expect(

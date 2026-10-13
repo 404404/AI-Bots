@@ -65,6 +65,7 @@ import type { MemoryService } from '../memory/service.js';
 import {
   isBotDmChannel,
   MAX_BOT_HOPS,
+  dmChannelId,
   type GroupInvitation,
   type GroupJoinRequest,
   type GroupWakePolicyView,
@@ -473,6 +474,7 @@ export type DmMessageAdmission =
 export interface BotRuntime {
   canRequestPrivateInput?(sessionId: string, sourceEventId?: string): boolean;
   askChannel?(sessionId: string): string | undefined;
+  askNotice?(sessionId: string, toolName: string): string | undefined;
   bindPrivateInputOrigin?(
     sessionId: string,
     sourceEventId?: string,
@@ -970,6 +972,8 @@ class BotRuntimeImplementation implements BotRuntime {
       acceptedEventIds: Set<string>;
       inboundChannelId: string | undefined;
       steeredChannelIds: Set<string>;
+      spokenChannelIds: Set<string>;
+      askNoticed: boolean;
     }
   >();
   readonly #activeMemoryEvents = new Map<
@@ -2718,6 +2722,22 @@ class BotRuntimeImplementation implements BotRuntime {
     return channel.botSlug === owner.botSlug ? channel.id : undefined;
   }
 
+  askNotice(sessionId: string, toolName: string): string | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    if (this.#closed || owner?.rootRole !== 'orchestrator') return undefined;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (turn?.sessionId !== sessionId || turn.inboundChannelId === undefined || turn.askNoticed)
+      return undefined;
+    const channelId = this.askChannel(sessionId) ?? dmChannelId(owner.botSlug);
+    if (turn.spokenChannelIds.has(channelId)) return undefined;
+    const channel = this.#channels.get(channelId);
+    if (channel === undefined) return undefined;
+    turn.askNoticed = true;
+    const where =
+      channel.type === 'group' ? `Group ${JSON.stringify(channel.name)}` : 'your Human DM';
+    return `Not shown to the Human yet. First tell them what is going on, as a colleague would: send one short channel_send to ${where} (channel_id ${JSON.stringify(channelId)}) saying in a sentence or two what you are about to do and what you need from them. Then call ${toolName} again with the same arguments and the request will be shown. This is asked once per turn.`;
+  }
+
   canRequestPrivateInput(sessionId: string, selected?: string): boolean {
     const owner = this.#ownership.resolve(sessionId);
     if (
@@ -3266,6 +3286,8 @@ class BotRuntimeImplementation implements BotRuntime {
       acceptedEventIds: new Set(turnSources),
       inboundChannelId: channelId,
       steeredChannelIds: new Set(),
+      spokenChannelIds: new Set(),
+      askNoticed: false,
     });
     const typingSources = [sourceEventId, ...inboxUnits.map((unit) => unit.sourceEventId)];
     for (const unit of inboxUnits) {
@@ -4866,6 +4888,7 @@ class BotRuntimeImplementation implements BotRuntime {
               )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
           );
         const channel = resolve(input.channelId);
+        if (steered?.sessionId === sessionId) steered.spokenChannelIds.add(channel.id);
         if (input.mentionBotIds?.length && channel.type !== 'group')
           throw new Error('Bot mentions require a Group Channel');
         if (input.mentionHumanIds?.length && channel.type !== 'group')
