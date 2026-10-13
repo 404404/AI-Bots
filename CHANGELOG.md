@@ -177,6 +177,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 - AX Go launches stage the reviewed adapter patch inside each isolated CLI and reference it relatively, fixing Windows `ERR_PNPM_PATCH_NOT_FOUND` when source and home are on different drives; model credentials and native request handling retain their existing ownership ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409), [AX guide](docs/agents/ax-model.md)).
 
+- A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
+
 - DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
 
 - Any number of DeepSeekBot tabs on the same DSH address, up to the browser's limit for DSH's own connection, now stay responsive: the Window Companion feed also travels on DSH's shared live connection ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)).
