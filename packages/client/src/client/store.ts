@@ -231,6 +231,7 @@ export interface ChannelMessage {
   replyToPreview?: ChannelReplyPreview | null;
   pending?: boolean;
   failed?: string;
+  unconfirmed?: boolean;
   streaming?: boolean;
 }
 

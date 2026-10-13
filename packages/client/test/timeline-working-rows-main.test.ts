@@ -102,6 +102,7 @@ import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
 import { store, type BotSummary, type ChannelSummary } from '../src/client/store.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 const AT = '2026-10-09T00:00:00Z';
 let container: HTMLDivElement;
@@ -133,7 +134,7 @@ const group: ChannelSummary = {
   updatedAt: AT,
 };
 const actions = new Proxy(
-  { listWorkspaceGrants: vi.fn(async () => []) },
+  { ...inertSubmissionActions, listWorkspaceGrants: vi.fn(async () => []) },
   { get: (target, key) => Reflect.get(target, key) ?? vi.fn(async () => undefined) },
 ) as unknown as BridgeActions;
 

@@ -1,14 +1,21 @@
-import { useState, type ReactElement } from 'react';
+import { useState, useSyncExternalStore, type ReactElement } from 'react';
 import {
   Button,
   Input,
   Menu,
   IconEllipsisOutlineRegular,
+  type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { ChannelSummary } from './store.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { Modal } from './modal.js';
+import {
+  DM_ACTION_KINDS,
+  hiddenDmActionsSnapshot,
+  subscribeHiddenDmActions,
+  toggleHiddenDmAction,
+} from './dm-actions.js';
 
 function NicknameDialog({
   channel,
@@ -107,11 +114,32 @@ export function HumanChannelNameMenu({
 }): ReactElement | null {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const items = [
+  const dmBotSlug = channel.type === 'dm' ? channel.botSlug : undefined;
+  const hidden = useSyncExternalStore(
+    subscribeHiddenDmActions,
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+    () => hiddenDmActionsSnapshot(dmBotSlug),
+  );
+  const channelItems = [
     ...(onOpenSettings === undefined ? [] : [{ id: 'settings', label: t('channelSettings.open') }]),
     ...(channel.humanNickname === undefined
       ? []
       : [{ id: 'nickname', label: t('humanNickname.title') }]),
+  ];
+  const items: MenuEntry[] = [
+    ...channelItems,
+    ...(dmBotSlug === undefined
+      ? []
+      : [
+          ...(channelItems.length === 0
+            ? []
+            : [{ type: 'separator' as const, id: 'dm-separator' }]),
+          { type: 'label' as const, id: 'dm-label', text: t('dmTrace.menu') },
+          ...DM_ACTION_KINDS.map((kind) => ({
+            id: `dm:${kind}`,
+            label: t(`dmTrace.kind.${kind}`),
+          })),
+        ]),
   ];
   if (items.length === 0) return null;
   return (
@@ -134,8 +162,16 @@ export function HumanChannelNameMenu({
           </button>
         }
         items={items}
+        selectedIds={DM_ACTION_KINDS.filter((kind) => !hidden.includes(kind)).map(
+          (kind) => `dm:${kind}`,
+        )}
         onClose={() => setMenuOpen(false)}
         onSelect={(id) => {
+          const kind = DM_ACTION_KINDS.find((k) => id === `dm:${k}`);
+          if (kind !== undefined) {
+            if (dmBotSlug !== undefined) toggleHiddenDmAction(dmBotSlug, kind);
+            return;
+          }
           setMenuOpen(false);
           if (id === 'settings') onOpenSettings?.();
           else setDialogOpen(true);

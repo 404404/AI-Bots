@@ -22,6 +22,7 @@ import {
   IconCheckOutlineRegular,
   IconChecklistOutlineRegular,
   IconCopyOutlineRegular,
+  IconGoalOutlineRegular,
   IconPanelLeftOutlineRegular,
   Menu,
   Tooltip,
@@ -48,6 +49,8 @@ import {
   type ChannelComposerUpload,
 } from './channel-composer.js';
 import type { SelectedMention } from './mentions.js';
+import type { SelectedChannelRef } from './channel-refs.js';
+import { recallEntries, stepRecall, SUBMISSION_PREFIX } from './composer-submission-store.js';
 import {
   conversationDraftKey,
   useConversationDraft,
@@ -121,7 +124,9 @@ import {
   MessageSelectionContext,
   useMessageSelection,
 } from './message-selection.js';
+import { buildMessageSnapshot, renderMessageSnapshot } from './message-snapshot.js';
 import {
+  conversationText,
   selectableMessage,
   selectionRange,
   toggleSelection,
@@ -286,7 +291,6 @@ export function MessageBubbleWrap({
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const origin = useRef<{ x: number; y: number } | undefined>(undefined);
   const fired = useRef(false);
-  const swallowClick = useRef(false);
   const selection = useMessageSelection();
   const selectable = selection !== undefined && selectableMessage(message);
   const checked = selection?.selected.has(message.id) === true;
@@ -325,12 +329,6 @@ export function MessageBubbleWrap({
         onContextMenu(message, event.clientX, event.clientY);
       }}
       onClickCapture={(event) => {
-        if (swallowClick.current) {
-          swallowClick.current = false;
-          event.preventDefault();
-          event.stopPropagation();
-          return;
-        }
         if (selection?.active !== true) return;
         event.preventDefault();
         event.stopPropagation();
@@ -342,37 +340,6 @@ export function MessageBubbleWrap({
           event.preventDefault();
           selection.toggle(message);
         }
-      }}
-      onMouseDown={(event) => {
-        if (event.button !== 0 || !selectable || selection?.active === true) return;
-        if ((event.target as Element).closest('a,button,input,textarea,select,[contenteditable]'))
-          return;
-        const x = event.clientX;
-        const y = event.clientY;
-        clearTimer();
-        origin.current = { x, y };
-        timer.current = setTimeout(() => {
-          timer.current = undefined;
-          origin.current = undefined;
-          swallowClick.current = true;
-          window.getSelection()?.removeAllRanges();
-          selection?.begin(message);
-        }, BUBBLE_LONG_PRESS_MS);
-      }}
-      onMouseMove={(event) => {
-        const start = origin.current;
-        if (start === undefined || timer.current === undefined) return;
-        if (
-          Math.abs(event.clientX - start.x) > BUBBLE_LONG_PRESS_TOLERANCE_PX ||
-          Math.abs(event.clientY - start.y) > BUBBLE_LONG_PRESS_TOLERANCE_PX
-        )
-          cancel();
-      }}
-      onMouseUp={() => {
-        if (timer.current !== undefined) cancel();
-      }}
-      onMouseLeave={() => {
-        if (timer.current !== undefined) cancel();
       }}
       onTouchStart={(event) => {
         if (event.touches.length !== 1) {
@@ -554,11 +521,15 @@ function MessageGroupView({
                   <button
                     type="button"
                     className="bh-bubble-failed-action"
-                    aria-label={t('message.failedRestore')}
+                    aria-label={t(
+                      message.unconfirmed === true
+                        ? 'message.unconfirmedRestore'
+                        : 'message.failedRestore',
+                    )}
                     title={message.failed}
                     onClick={() => onRestoreFailed(message)}
                   >
-                    {t('message.failed')}
+                    {t(message.unconfirmed === true ? 'message.unconfirmed' : 'message.failed')}
                   </button>
                 )}
                 <div
@@ -667,8 +638,8 @@ function MessageActionMenu({
         items={[
           ...(request.message.pending === true || request.message.streaming === true
             ? []
-            : [{ id: 'reply', label: t('message.reply') }]),
-          { id: 'locate', label: t('message.locate') },
+            : [{ id: 'reply', label: t('message.reply'), icon: <ReplyIcon /> }]),
+          { id: 'locate', label: t('message.locate'), icon: <IconGoalOutlineRegular /> },
           { id: 'copy', label: t('message.copy'), icon: <IconCopyOutlineRegular /> },
           ...(onSelect === undefined || !selectableMessage(request.message)
             ? []
@@ -796,6 +767,81 @@ function ConversationView({
   const uploadControllers = useRef(new Map<string, AbortController>());
   const [replyTarget, setReplyTarget] = useConversationDraft(draftScope, 'reply', undefined);
   const submitting = useRef(false);
+  const recall = useRef<
+    | {
+        scope: string;
+        index: number;
+        text: string;
+        saved: { text: string; mentions: SelectedMention[]; channelRefs: SelectedChannelRef[] };
+      }
+    | undefined
+  >(undefined);
+  const [recallNotice, setRecallNotice] = useState<string>();
+  const [submissionNotice, setSubmissionNotice] = useState<string>();
+  const submissionChannelId = draftScope === undefined ? undefined : state.conversation.channel?.id;
+  const readSubmissions = () =>
+    submissionChannelId === undefined
+      ? undefined
+      : actions.submissions.snapshot(submissionChannelId);
+  const submissionSnapshot = useSyncExternalStore(
+    actions.submissions.subscribe,
+    readSubmissions,
+    readSubmissions,
+  );
+  const submissionMount = useMountedResource<HTMLSpanElement>(() => {
+    if (submissionChannelId === undefined) return;
+    const sync = (event: StorageEvent): void => {
+      if (event.key === null || event.key.startsWith(SUBMISSION_PREFIX))
+        actions.submissions.sync(submissionChannelId);
+    };
+    window.addEventListener('storage', sync);
+    void actions.submissions.reconcile(submissionChannelId);
+    return () => window.removeEventListener('storage', sync);
+  }, [actions, submissionChannelId]);
+  const recallInput = (direction: 'older' | 'newer'): boolean => {
+    if (draftScope === undefined || recovery.blocked) return false;
+    const entries = recallEntries(submissionSnapshot?.attempts ?? []);
+    const active = recall.current?.scope === draftScope ? recall.current : undefined;
+    const step = stepRecall(active, direction, draft, entries);
+    if (step.kind === 'ignore') {
+      if (recall.current !== undefined) {
+        recall.current = undefined;
+        setRecallNotice(undefined);
+      }
+      return false;
+    }
+    if (step.kind === 'stay') return true;
+    const saved =
+      active !== undefined && active.text === draft
+        ? active.saved
+        : { text: draft, mentions: mentionTokens, channelRefs: channelRefTokens };
+    if (step.kind === 'restore') {
+      recall.current = undefined;
+      setRecallNotice(undefined);
+      recovery.update(saved);
+      return true;
+    }
+    const entry = step.entry;
+    const mentions = entry.mentions.filter(
+      (mention) =>
+        state.bots.some(
+          (bot) => bot.slug === mention.botSlug && bot.paused !== true && !bot.deleted,
+        ) &&
+        (channel?.type !== 'group' || channel.members.includes(mention.botSlug)),
+    );
+    const channelRefs = entry.channelRefs.filter((ref) =>
+      state.channels.some((item) => item.id === ref.channelId && item.type === 'group'),
+    );
+    recall.current = { scope: draftScope, ...step.cursor, saved };
+    recovery.update({ text: entry.text, mentions, channelRefs });
+    const dropped =
+      mentions.length !== entry.mentions.length || channelRefs.length !== entry.channelRefs.length;
+    const omitted = entry.replyTo !== undefined || (entry.attachments?.length ?? 0) > 0;
+    const notice =
+      (omitted ? t('composer.recallOmitted') : '') + (dropped ? t('composer.recallDropped') : '');
+    setRecallNotice(notice === '' ? undefined : notice.trim());
+    return true;
+  };
   const followingLatest = useRef(true);
   const activityOverlayPane = useRef<HTMLElement | null>(null);
   const resizeActivityOverlay = useCallback(
@@ -984,6 +1030,71 @@ function ConversationView({
             ),
         };
   const cancelSelection = useCallback(() => setSelectedMessages(undefined), []);
+  const [selectionBusy, setSelectionBusy] = useState(false);
+  const [selectionNotice, setSelectionNotice] = useState<string>();
+  const flashSelectionNotice = (notice: string): void => {
+    setSelectionNotice(notice);
+    window.setTimeout(
+      () => setSelectionNotice((current) => (current === notice ? undefined : current)),
+      2500,
+    );
+  };
+  const selectionAuthor = (message: ChannelMessage): string =>
+    authorLabel(message, state.bots, t, channelHumanName(channel));
+  const copySelection = async (ids: readonly string[]): Promise<void> => {
+    const text = conversationText(ids, messages, {
+      title,
+      author: selectionAuthor,
+      attachment: t('selection.attachment'),
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      flashSelectionNotice(t('selection.copied', { count: String(ids.length) }));
+    } catch {
+      flashSelectionNotice(t('selection.failed'));
+    }
+  };
+  const exportSelectionImage = async (ids: readonly string[]): Promise<void> => {
+    const timeline = scrollRef.current;
+    const range = selectionRange(ids, messages);
+    if (timeline === null || range === undefined) return;
+    const first = messages.find((message) => message.id === range.fromMessageId);
+    const last = messages.find(
+      (message) => message.id === (range.toMessageId ?? range.fromMessageId),
+    );
+    const sheet = buildMessageSnapshot(
+      timeline,
+      ids,
+      title,
+      [first, last]
+        .filter((message) => message !== undefined)
+        .map((message) =>
+          new Date(message.at).toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          }),
+        )
+        .filter((value, index, all) => all.indexOf(value) === index)
+        .join(' – '),
+    );
+    if (sheet === undefined) return;
+    setSelectionBusy(true);
+    try {
+      const blob = await renderMessageSnapshot(timeline, sheet);
+      if (blob === undefined) throw new Error('snapshot-empty');
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `deepseekbot-messages-${new Date().toISOString().replace(/[:.]/gu, '-')}.png`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      flashSelectionNotice(t('selection.imageSaved', { count: String(ids.length) }));
+    } catch {
+      flashSelectionNotice(t('selection.failed'));
+    } finally {
+      setSelectionBusy(false);
+    }
+  };
   const memoryCommitIntent = state.memoryCommitIntent;
   const activeMemoryView =
     selectedMemoryView?.channelId === channelId
@@ -1400,6 +1511,9 @@ function ConversationView({
     )
       return;
     submitting.current = true;
+    const composerFocused =
+      document.activeElement instanceof Element &&
+      document.activeElement.closest('.bh-composer-shell') !== null;
     const viewport = scrollRef.current;
     followingLatest.current =
       viewport !== null &&
@@ -1415,18 +1529,41 @@ function ConversationView({
         .conversation.messages.filter((item) => item.failed !== undefined)
         .map((item) => item.id),
     );
-    recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
     const submittedReplyTo = replyTarget?.id;
+    const submittedAttachments = submittedUploads.flatMap((item) =>
+      item.ref === undefined ? [] : [item.ref],
+    );
+    const attempt =
+      submittedFor === undefined
+        ? undefined
+        : actions.submissions.begin(submittedFor, {
+            text: body,
+            mentions: submittedMentions.flatMap((item) =>
+              item.kind === 'all-bots'
+                ? []
+                : [{ botSlug: item.botSlug, label: item.label, start: item.start, end: item.end }],
+            ),
+            channelRefs: submittedRefs,
+            ...(submittedReplyTo === undefined ? {} : { replyTo: submittedReplyTo }),
+            ...(submittedAttachments.length === 0 ? {} : { attachments: submittedAttachments }),
+          });
+    setSubmissionNotice(
+      attempt?.persisted === false ? t('composer.submissionStorageError') : undefined,
+    );
+    recall.current = undefined;
+    setRecallNotice(undefined);
+    recovery.update({ text: '', mentions: [], channelRefs: [], uploads: [] });
     try {
       const sent = await actions.send(
         body,
         submittedReplyTo,
-        submittedUploads.flatMap((item) => (item.ref === undefined ? [] : [item.ref])),
+        submittedAttachments,
         undefined,
         submittedMentions.filter((item) => item.kind !== 'all-bots'),
         submittedRefs,
         undefined,
         allBotMention,
+        attempt?.id,
       );
       if (sent) {
         setAllBotNotice(undefined);
@@ -1438,6 +1575,8 @@ function ConversationView({
             (item) => item.failed !== undefined && !previousFailures.has(item.id),
           );
         if (!failedEcho) {
+          if (attempt !== undefined && submittedFor !== undefined)
+            actions.submissions.cancel(submittedFor, attempt.id);
           setDraft((current) => current || body);
           setMentionTokens((current) => (current.length > 0 ? current : submittedMentions));
           setChannelRefTokens((current) => (current.length > 0 ? current : submittedRefs));
@@ -1471,6 +1610,8 @@ function ConversationView({
       } else throw error;
     } finally {
       submitting.current = false;
+      if (composerFocused && currentChannel.current === submittedFor)
+        setRestoreFocusSignal((value) => value + 1);
     }
   };
 
@@ -1890,6 +2031,29 @@ function ConversationView({
                                   setRestoreBlocked(true);
                                   return;
                                 }
+                                if (message.unconfirmed === true) {
+                                  setSubmissionNotice(t('composer.submissionChecking'));
+                                  void actions.submissions
+                                    .check(channelId, message.id)
+                                    .then(async (status) => {
+                                      if (status === 'unknown') {
+                                        setSubmissionNotice(t('composer.submissionUncheckable'));
+                                        return;
+                                      }
+                                      await actions.submissions.reconcile(channelId);
+                                      setSubmissionNotice(
+                                        t(
+                                          status === 'committed'
+                                            ? 'composer.submissionDelivered'
+                                            : 'composer.submissionNotDelivered',
+                                        ),
+                                      );
+                                    })
+                                    .catch(() =>
+                                      setSubmissionNotice(t('composer.submissionUncheckable')),
+                                    );
+                                  return;
+                                }
                                 if (!actions.dismissFailedMessage(channelId, message.id)) return;
                                 setDraft(message.body);
                                 setMentionTokens(message.mentions ?? []);
@@ -1990,11 +2154,17 @@ function ConversationView({
               channelId !== undefined ? (
                 <MessageSelectionBar
                   count={selectedIds.length}
+                  busy={selectionBusy}
+                  notice={selectionNotice}
                   t={t}
                   onCancel={cancelSelection}
-                  onExportDiagnostics={() => {
-                    const range = selectionRange(selectedIds, messages);
-                    if (range !== undefined) setDiagnosticsTarget({ channelId, ...range });
+                  onExport={(kind) => {
+                    if (kind === 'diagnostics') {
+                      const range = selectionRange(selectedIds, messages);
+                      if (range !== undefined) setDiagnosticsTarget({ channelId, ...range });
+                    } else if (kind === 'conversation') {
+                      void copySelection(selectedIds);
+                    } else void exportSelectionImage(selectedIds);
                   }}
                 />
               ) : null}
@@ -2043,6 +2213,13 @@ function ConversationView({
                     {recovery.notice ? (
                       <p role="status">{t('composer.draftReferencesChanged')}</p>
                     ) : null}
+                    <span ref={submissionMount} hidden />
+                    {submissionSnapshot?.error !== undefined ? (
+                      <p role="alert">{t('composer.submissionStorageError')}</p>
+                    ) : submissionNotice === undefined ? null : (
+                      <p role="status">{submissionNotice}</p>
+                    )}
+                    {recallNotice === undefined ? null : <p role="status">{recallNotice}</p>}
                     {recovery.versions.length > 1 ? (
                       <section aria-label={t('composer.draftConflict')}>
                         <p role="alert">{t('composer.draftConflict')}</p>
@@ -2136,6 +2313,7 @@ function ConversationView({
                         setRestoreBlocked(false);
                       }}
                       onCancelReply={() => setReplyTarget(undefined)}
+                      onRecall={recallInput}
                       onSubmit={submit}
                     />
                   </div>

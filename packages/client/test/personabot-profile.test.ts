@@ -75,6 +75,7 @@ import { createProfileCardBuiltins } from '../src/client/profile-cards-builtins.
 import { createProfileCardRegistry } from '../src/client/profile-cards.js';
 import { ProfilePopover } from '../src/client/personabot-profile.js';
 import { store } from '../src/client/store.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 function sidebarRegistry() {
   const registry = createChannelSidebarRegistry();
@@ -211,6 +212,7 @@ describe('PersonaBot Profile surface', () => {
         },
       ]),
       refreshBotInbox: vi.fn(async () => undefined),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const container = document.createElement('div');
     document.body.append(container);
@@ -412,6 +414,7 @@ describe('PersonaBot Profile surface', () => {
             actions: {
               allBotPreview: vi.fn(async () => ({ revision: '0'.repeat(64), recipients: [] })),
               channelAssignments: vi.fn(async () => []),
+              ...inertSubmissionActions,
             } as unknown as BridgeActions,
             channelSidebar: sidebarRegistry(),
             t: zhTranslate,

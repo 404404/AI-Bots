@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  conversationText,
   MESSAGE_SELECTION_LIMIT,
   selectionRange,
   toggleSelection,
@@ -37,5 +38,28 @@ describe('message selection', () => {
     });
     expect(selectionRange(['b'], messages)).toEqual({ fromMessageId: 'b', messageIds: ['b'] });
     expect(selectionRange(['gone'], messages)).toBeUndefined();
+  });
+
+  it('copies the selection as a time-ordered conversation with attachment names', () => {
+    const messages = [
+      message('a', 1, { body: '  @Mira hello  ' }),
+      message('b', 5, { author: { kind: 'bot', slug: 'mira' }, body: 'hi' }),
+      message('c', 9, {
+        body: '',
+        attachments: [{ name: 'log.txt' }] as NonNullable<ChannelMessage['attachments']>,
+      }),
+      message('skip', 3, { body: 'not selected' }),
+    ];
+    const text = conversationText(['c', 'a', 'b'], messages, {
+      title: '产品讨论',
+      author: (item) => (item.author.kind === 'bot' ? 'Mira' : 'You'),
+      attachment: 'Attachment',
+    });
+    const lines = text.split('\n');
+    expect(lines[0]).toBe('产品讨论');
+    expect(text).not.toContain('not selected');
+    expect(text.indexOf('@Mira hello')).toBeLessThan(text.indexOf('hi'));
+    expect(text).toMatch(/^You {2}\d{4}-\d{2}-\d{2} \d{2}:\d{2}\n@Mira hello$/mu);
+    expect(text).toContain('[Attachment: log.txt]');
   });
 });

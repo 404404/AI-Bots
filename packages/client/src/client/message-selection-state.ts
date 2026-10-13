@@ -39,3 +39,30 @@ export function selectionRange(
     messageIds: picked.map((message) => message.id),
   };
 }
+
+function stamp(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return value;
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function conversationText(
+  ids: readonly string[],
+  messages: readonly ChannelMessage[],
+  options: { title: string; author(message: ChannelMessage): string; attachment: string },
+): string {
+  const blocks = messages
+    .filter((message) => ids.includes(message.id))
+    .sort((left, right) => Date.parse(left.at) - Date.parse(right.at))
+    .flatMap((message) => {
+      const lines = [
+        ...(message.body.trim().length > 0 ? [message.body.trim()] : []),
+        ...(message.attachments ?? []).map((ref) => `[${options.attachment}: ${ref.name}]`),
+      ];
+      return lines.length === 0
+        ? []
+        : [`${options.author(message)}  ${stamp(message.at)}\n${lines.join('\n')}`];
+    });
+  return [options.title, ...blocks].join('\n\n') + '\n';
+}
