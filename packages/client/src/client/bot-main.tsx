@@ -22,6 +22,7 @@ import {
   IconCheckOutlineRegular,
   IconChecklistOutlineRegular,
   IconCopyOutlineRegular,
+  IconGoalOutlineRegular,
   IconPanelLeftOutlineRegular,
   Menu,
   Tooltip,
@@ -631,8 +632,8 @@ function MessageActionMenu({
         items={[
           ...(request.message.pending === true || request.message.streaming === true
             ? []
-            : [{ id: 'reply', label: t('message.reply') }]),
-          { id: 'locate', label: t('message.locate') },
+            : [{ id: 'reply', label: t('message.reply'), icon: <ReplyIcon /> }]),
+          { id: 'locate', label: t('message.locate'), icon: <IconGoalOutlineRegular /> },
           { id: 'copy', label: t('message.copy'), icon: <IconCopyOutlineRegular /> },
           ...(onSelect === undefined || !selectableMessage(request.message)
             ? []

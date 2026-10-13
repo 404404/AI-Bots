@@ -46,7 +46,7 @@ describe('message selection', () => {
       message('b', 5, { author: { kind: 'bot', slug: 'mira' }, body: 'hi' }),
       message('c', 9, {
         body: '',
-        attachments: [{ name: 'log.txt' }] as ChannelMessage['attachments'],
+        attachments: [{ name: 'log.txt' }] as NonNullable<ChannelMessage['attachments']>,
       }),
       message('skip', 3, { body: 'not selected' }),
     ];
