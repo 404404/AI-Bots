@@ -2,13 +2,19 @@ import {
   Fragment,
   useRef,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent,
   type MouseEvent,
   type ReactElement,
 } from 'react';
 import { Button, Input, Menu } from '@deepseek-ai/dsh-client-ui-primitives';
 
-import type { MemoryGitGraph, MemorySnapshot, MemoryWorkingChange } from './bridge.js';
+import type {
+  MemoryGitGraph,
+  MemorySnapshot,
+  MemoryVersion,
+  MemoryWorkingChange,
+} from './bridge.js';
 import type { ChannelSidebarEntryProps } from './channel-sidebar.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import {
@@ -20,10 +26,11 @@ import {
   MEMORY_GRAPH_ROW_HEIGHT,
 } from './memory-git-lanes.js';
 import { MemoryWorkingGroups } from './memory-working-groups.js';
-import { MemoryRecovery } from './memory-recovery.js';
+import { MessagingHelp } from './messaging-help.js';
+import { memoryViewSnapshot, subscribeMemoryView } from './memory-view-prefs.js';
 import { useMountedResource } from './mounted-resource.js';
 
-import { cachedMemory } from './memory-read-cache.js';
+import { cachedMemory, invalidateMemory, subscribeMemory } from './memory-read-cache.js';
 import { MemoryLoadFeedback } from './memory-load-feedback.js';
 
 export function MemoryEntry(
@@ -47,10 +54,7 @@ function MemoryEntryForScope({
   const cache = cachedMemory(actions, channelId);
   const initialPath = cache.snapshot?.files[0];
   const [refresh, setRefresh] = useState(0);
-  const [branchChoice, setBranchChoice] = useState('');
-  const [branchMenuOpen, setBranchMenuOpen] = useState(false);
-  const [branchFilter, setBranchFilter] = useState('');
-  const skipBranchFocus = useRef(false);
+  const [openBranch, setOpenBranch] = useState<string>();
   const [branchRequest, setBranchRequest] = useState<string>();
   const [commitMenu, setCommitMenu] = useState<{
     sha: string;
@@ -59,6 +63,38 @@ function MemoryEntryForScope({
     returnFocus: HTMLElement;
   }>();
   const [continueForm, setContinueForm] = useState<{ sha: string; branch: string }>();
+  const [restoreForm, setRestoreForm] = useState<{ sha: string; name: string }>();
+  const [nameForm, setNameForm] = useState<{ sha: string; name: string }>();
+  const [restored, setRestored] = useState<{
+    sha: string;
+    backup: string | null;
+    version: string | null;
+  }>();
+  const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
+  const invalidated = useSyncExternalStore(
+    (listener) => subscribeMemory(cache, listener),
+    () => cache.revision,
+    () => cache.revision,
+  );
+  const [versions, setVersions] = useState<MemoryVersion[]>();
+  const [versionsError, setVersionsError] = useState<string>();
+  const [openVersion, setOpenVersion] = useState<string>();
+  const versionsMount = useMountedResource<HTMLDivElement>(() => {
+    let active = true;
+    void actions.memoryVersions(channelId).then(
+      (next) => {
+        if (!active) return;
+        setVersions(next);
+        setVersionsError(undefined);
+      },
+      (failure: unknown) => {
+        if (active) setVersionsError(failure instanceof Error ? failure.message : String(failure));
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [actions, channelId, refresh, refreshRevision]);
   const commitMenuAnchor = useRef<HTMLSpanElement>(null);
   const [snapshot, setSnapshot] = useState<MemorySnapshot | undefined>(cache.snapshot);
   const [graph, setGraph] = useState<MemoryGitGraph | undefined>(cache.graph);
@@ -96,22 +132,6 @@ function MemoryEntryForScope({
   const [snapshotError, setSnapshotError] = useState<string | undefined>(cache.snapshotError);
   const [graphError, setGraphError] = useState<string | undefined>(cache.graphError);
   const lanes = layoutMemoryGitLanes(graph?.commits ?? []);
-  const branchQuery = branchFilter.trim().toLocaleLowerCase();
-  const filteredBranches = (graph?.branches ?? []).filter((branch) =>
-    branch.toLocaleLowerCase().includes(branchQuery),
-  );
-  const closeBranchMenu = (): void => {
-    skipBranchFocus.current = true;
-    setTimeout(() => {
-      skipBranchFocus.current = false;
-    }, 0);
-    setBranchFilter('');
-    setBranchMenuOpen(false);
-  };
-  const selectBranch = (branch: string): void => {
-    setBranchChoice(branch);
-    closeBranchMenu();
-  };
 
   const graphMount = useMountedResource<HTMLDivElement>(() => {
     let active = true;
@@ -143,11 +163,6 @@ function MemoryEntryForScope({
             setGraph(merged);
             cache.graphError = undefined;
             setGraphError(undefined);
-            setBranchChoice((current) =>
-              next.branches.includes(current)
-                ? current
-                : (next.currentBranch ?? next.branches[0] ?? ''),
-            );
           },
           (failure: unknown) => {
             if (active && requestGeneration === memoryRequestGeneration.current) {
@@ -207,7 +222,7 @@ function MemoryEntryForScope({
       active = false;
       clearTimeout(graphTimer);
     };
-  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles]);
+  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles, invalidated]);
 
   const workingMount = useMountedResource<HTMLDivElement>(() => {
     if (showFiles) return;
@@ -261,7 +276,7 @@ function MemoryEntryForScope({
       window.removeEventListener('focus', onVisible);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles]);
+  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles, invalidated]);
 
   const fileMount = useMountedResource<HTMLDivElement>(() => {
     let active = true;
@@ -322,12 +337,10 @@ function MemoryEntryForScope({
     }
   };
 
-  const requestBranchSwitch = async (): Promise<void> => {
-    if (graph === undefined || branchChoice === '' || branchChoice === graph.currentBranch || busy)
-      return;
+  const requestBranchSwitch = async (target: string): Promise<void> => {
+    if (graph === undefined || target === graph.currentBranch || busy) return;
     setBusy(true);
     setError(undefined);
-    const target = branchChoice;
     try {
       const sent = await actions.send(
         t('memory.branchSwitchPrompt', { branch: JSON.stringify(target) }),
@@ -381,6 +394,106 @@ function MemoryEntryForScope({
     }
   };
 
+  const forgetMemory = (): void => {
+    memoryRequestGeneration.current += 1;
+    invalidateMemory(cache);
+    setRefresh((value) => value + 1);
+  };
+
+  const nameVersion = async (): Promise<void> => {
+    if (nameForm === undefined || nameForm.name.trim() === '' || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await actions.memoryNameVersion({ channelId, sha: nameForm.sha, name: nameForm.name.trim() });
+      setNameForm(undefined);
+      forgetMemory();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeVersionName = async (tag: string): Promise<void> => {
+    if (busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await actions.memoryRemoveVersionName({ channelId, tag });
+      forgetMemory();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restoreConfirm = (sha: string, dirty: boolean): ReactElement => (
+    <div className="bh-memory-restore-confirm" role="group">
+      <p className="bh-memory-restore-title">
+        {t('memory.restoreCommit.title')}
+        <MessagingHelp
+          title={t('memory.restoreCommit.title')}
+          text={`${t('memory.restoreCommit.confirm')}${
+            dirty ? t('memory.restoreCommit.confirmDirty') : t('memory.restoreCommit.confirmClean')
+          }`}
+          t={t}
+        />
+      </p>
+      <label className="bh-memory-restore-note">
+        <span>{t('memory.restoreCommit.name')}</span>
+        <Input
+          value={restoreForm?.name ?? ''}
+          maxLength={60}
+          placeholder={t('memory.version.placeholder')}
+          disabled={busy}
+          onChange={(event) => setRestoreForm({ sha: sha, name: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') void restoreCommit();
+          }}
+        />
+      </label>
+      <Button variant="primary" size="sm" disabled={busy} onClick={() => void restoreCommit()}>
+        {busy
+          ? t('memory.restoreCommit.loading')
+          : dirty
+            ? t('memory.restoreCommit.submitDirty')
+            : t('memory.restoreCommit.submit')}
+      </Button>
+      <Button variant="ghost" size="sm" disabled={busy} onClick={() => setRestoreForm(undefined)}>
+        {t('common.cancel')}
+      </Button>
+    </div>
+  );
+
+  const restoreCommit = async (): Promise<void> => {
+    if (restoreForm === undefined || graph === undefined || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const result = await actions.memoryRestoreCommit({
+        channelId,
+        sha: restoreForm.sha,
+        expectedHead: graph.head,
+        restoreId: crypto.randomUUID(),
+        ...(restoreForm.name.trim() === '' ? {} : { name: restoreForm.name.trim() }),
+      });
+      setRestored({
+        sha: restoreForm.sha,
+        backup: result.backup,
+        version: result.version?.name ?? null,
+      });
+      setRestoreForm(undefined);
+      forgetMemory();
+      onMemoryCommitSelect?.(result.head);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const save = async (): Promise<void> => {
     if (file === undefined || file.binary || busy || draft === file.body) return;
     setBusy(true);
@@ -423,10 +536,7 @@ function MemoryEntryForScope({
         repairId: crypto.randomUUID(),
       });
       memoryRequestGeneration.current += 1;
-      cache.snapshot = undefined;
-      cache.graph = undefined;
-      cache.working = undefined;
-      cache.files.clear();
+      invalidateMemory(cache);
       setSnapshot(undefined);
       setGraph(undefined);
       setWorking([]);
@@ -582,65 +692,29 @@ function MemoryEntryForScope({
                 ) : null}
               </>
             ) : null}
-            <div className="bh-memory-branch-control">
-              <label htmlFor="bh-memory-branch-choice">{t('memory.branch')}</label>
-              {graph.dirty ? (
-                <span className="bh-memory-graph-dirty">{t('memory.dirty')}</span>
-              ) : null}
-              <Menu
-                className="bh-memory-branch-picker"
-                listClassName="bh-memory-branch-menu"
-                open={branchMenuOpen}
-                portal
-                selectedId={branchChoice}
-                items={filteredBranches.map((branch) => ({ id: branch, label: branch }))}
-                onSelect={selectBranch}
-                onClose={closeBranchMenu}
-                anchor={
-                  <Input
-                    id="bh-memory-branch-choice"
-                    type="search"
-                    value={branchMenuOpen ? branchFilter : branchChoice}
-                    placeholder={t('memory.searchBranch')}
-                    aria-label={t('memory.searchBranch')}
-                    aria-haspopup="menu"
-                    aria-expanded={branchMenuOpen}
-                    autoComplete="off"
-                    onFocus={() => {
-                      if (skipBranchFocus.current) return;
-                      setBranchFilter('');
-                      setBranchMenuOpen(true);
-                    }}
-                    onChange={(event) => {
-                      setBranchFilter(event.target.value);
-                      setBranchMenuOpen(true);
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'Enter' || !branchMenuOpen) return;
-                      const match = filteredBranches[0];
-                      if (match === undefined) return;
-                      event.preventDefault();
-                      selectBranch(match);
-                    }}
-                  />
-                }
-              >
-                {filteredBranches.length > 0 ? null : (
-                  <div className="bh-memory-branch-empty">{t('memory.noBranches')}</div>
-                )}
-              </Menu>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy || branchChoice === '' || branchChoice === graph.currentBranch}
-                onClick={() => void requestBranchSwitch()}
-              >
-                {t('memory.switchBranch')}
-              </Button>
-            </div>
             {branchRequest === undefined || branchRequest === graph.currentBranch ? null : (
               <div className="bh-note" role="status">
                 {t('memory.branchRequested')} {branchRequest}
+              </div>
+            )}
+            {restored === undefined ? null : (
+              <div className="bh-note bh-memory-restore-done" role="status">
+                {t('memory.restoreCommit.done', { sha: restored.sha.slice(0, 7) })}
+                {restored.backup === null && restored.version === null ? null : (
+                  <MessagingHelp
+                    title={t('memory.restoreCommit.done', { sha: restored.sha.slice(0, 7) })}
+                    text={`${
+                      restored.backup === null
+                        ? ''
+                        : t('memory.restoreCommit.backedUp', { sha: restored.backup.slice(0, 7) })
+                    }${
+                      restored.version === null
+                        ? ''
+                        : t('memory.restoreCommit.named', { name: restored.version })
+                    }`.trim()}
+                    t={t}
+                  />
+                )}
               </div>
             )}
             {commitMenu === undefined ? null : (
@@ -652,12 +726,29 @@ function MemoryEntryForScope({
                   autoFocus
                   anchor={<span ref={commitMenuAnchor} aria-hidden="true" />}
                   getAnchorRect={() => commitMenuAnchor.current?.getBoundingClientRect() ?? null}
-                  items={[{ id: 'continue', label: t('memory.continueHere') }]}
-                  onSelect={() => {
-                    setContinueForm({
-                      sha: commitMenu.sha,
-                      branch: 'memory-' + commitMenu.sha.slice(0, 7),
-                    });
+                  items={[
+                    ...(commitMenu.sha === graph.head
+                      ? []
+                      : [{ id: 'restore', label: t('memory.restoreCommit.menu') }]),
+                    { id: 'name', label: t('memory.version.action') },
+                    { id: 'continue', label: t('memory.continueHere') },
+                  ]}
+                  onSelect={(id) => {
+                    if (id === 'restore') {
+                      setContinueForm(undefined);
+                      setNameForm(undefined);
+                      setRestoreForm({ sha: commitMenu.sha, name: '' });
+                    } else if (id === 'name') {
+                      setContinueForm(undefined);
+                      setRestoreForm(undefined);
+                      setNameForm({ sha: commitMenu.sha, name: '' });
+                    } else {
+                      setRestoreForm(undefined);
+                      setContinueForm({
+                        sha: commitMenu.sha,
+                        branch: 'memory-' + commitMenu.sha.slice(0, 7),
+                      });
+                    }
                     setCommitMenu(undefined);
                   }}
                   onClose={() => {
@@ -667,178 +758,456 @@ function MemoryEntryForScope({
                 />
               </span>
             )}
-            <div className="bh-memory-graph-list" role="list" aria-label={t('memory.gitGraph')}>
-              {graph.commits.map((commit, index) => {
-                const row = lanes[index]!;
-                const width = row.width * MEMORY_GRAPH_LANE_WIDTH;
-                return (
-                  <Fragment key={commit.sha}>
-                    <button
-                      type="button"
-                      role="listitem"
-                      className={
-                        commit.sha === selectedMemoryCommitSha
-                          ? 'bh-memory-graph-row bh-memory-row-selected'
-                          : 'bh-memory-graph-row'
-                      }
-                      aria-pressed={commit.sha === selectedMemoryCommitSha}
-                      onClick={() => onMemoryCommitSelect?.(commit.sha)}
-                      onContextMenu={(event) => openCommitMenu(commit.sha, event)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))
-                          openCommitMenu(commit.sha, event);
-                      }}
-                      title={commit.sha}
-                    >
-                      <svg
-                        className="bh-memory-graph-svg"
-                        width={width}
-                        height={MEMORY_GRAPH_ROW_HEIGHT}
-                        viewBox={'0 0 ' + width + ' ' + MEMORY_GRAPH_ROW_HEIGHT}
-                        aria-hidden="true"
-                      >
-                        {row.through.map((lane) => (
-                          <path
-                            key={'through-' + lane}
-                            data-lane={lane % 4}
-                            d={
-                              'M ' +
-                              memoryGraphLaneX(lane) +
-                              ' -0.5 V ' +
-                              (MEMORY_GRAPH_ROW_HEIGHT + 0.5)
-                            }
-                          />
-                        ))}
-                        {row.fromAbove ? (
-                          <path
-                            data-lane={row.lane % 4}
-                            d={'M ' + memoryGraphLaneX(row.lane) + ' -0.5 V ' + MEMORY_GRAPH_NODE_Y}
-                          />
-                        ) : null}
-                        {row.joins.map((lane) => (
-                          <path
-                            key={'join-' + lane}
-                            data-lane={lane % 4}
-                            d={memoryGraphRailPath(lane, row.lane, 'incoming')}
-                          />
-                        ))}
-                        {row.toParents.map((lane, parentIndex) => (
-                          <path
-                            key={'parent-' + parentIndex}
-                            data-lane={lane % 4}
-                            d={memoryGraphRailPath(row.lane, lane, 'outgoing')}
-                          />
-                        ))}
-                        <circle
-                          cx={memoryGraphLaneX(row.lane)}
-                          cy={MEMORY_GRAPH_NODE_Y}
-                          r={commit.sha === graph.head ? 4 : 3.5}
-                          data-lane={row.lane % 4}
-                          data-head={commit.sha === graph.head || undefined}
-                        />
-                      </svg>
-                      <span className="bh-memory-graph-text">
-                        <span className="bh-memory-graph-top">
-                          <span className="bh-memory-graph-subject">{commit.subject}</span>
-                          {commit.branches.map((branch) => (
-                            <span
-                              key={branch}
-                              className="bh-memory-ref"
-                              data-current={branch === graph.currentBranch || undefined}
-                              title={branch}
-                            >
-                              {branch}
-                            </span>
-                          ))}
-                        </span>
-                        <span className="bh-memory-graph-detail">
-                          <span className="bh-memory-graph-hash">{commit.sha.slice(0, 7)}</span>
-                          {commit.sha === graph.head ? (
-                            <span className="bh-memory-graph-head-label">HEAD</span>
-                          ) : null}
-                          <span
-                            className={
-                              'bh-memory-commit-status bh-memory-commit-status-' + commit.status
-                            }
-                          >
-                            {commit.status === 'accepted'
-                              ? t('memory.gitStatus.accepted')
-                              : commit.status === 'needs-repair'
-                                ? t('memory.gitStatus.needs-repair')
-                                : t('memory.gitStatus.pending')}
-                          </span>
-                        </span>
-                      </span>
-                    </button>
-                    {continueForm?.sha !== commit.sha ? null : (
-                      <form
-                        className="bh-memory-continue-form"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          void requestContinue();
-                        }}
-                      >
-                        <label htmlFor="bh-memory-new-branch">
-                          {t('memory.newBranch')} · <code>{continueForm.sha.slice(0, 7)}</code>
-                        </label>
-                        <Input
-                          id="bh-memory-new-branch"
-                          autoFocus
-                          value={continueForm.branch}
-                          onChange={(event) =>
-                            setContinueForm({ ...continueForm, branch: event.currentTarget.value })
-                          }
-                        />
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          type="submit"
-                          disabled={busy || continueForm.branch.trim() === ''}
-                        >
-                          {t('memory.createAndSwitch')}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          type="button"
-                          onClick={() => setContinueForm(undefined)}
-                        >
-                          {t('common.cancel')}
-                        </Button>
-                      </form>
-                    )}
-                  </Fragment>
-                );
-              })}
-            </div>
-            {graph.hasMore ? (
-              <button
-                type="button"
-                className="bh-memory-graph-more"
-                disabled={loadingMore}
-                onClick={() => void loadMore()}
+            {view === 'branches' ? (
+              <div
+                className="bh-memory-version-list"
+                role="list"
+                aria-label={t('memory.view.branches')}
               >
-                {loadingMore ? t('memory.loading') : t('memory.loadMore')}
-              </button>
-            ) : null}
+                {graph.branches.length === 0 ? (
+                  <div className="bh-note">{t('memory.branches.empty')}</div>
+                ) : (
+                  graph.branches.map((branch) => {
+                    const open = openBranch === branch;
+                    const current = branch === graph.currentBranch;
+                    const tip = graph.commits.find((commit) => commit.branches.includes(branch));
+                    return (
+                      <Fragment key={branch}>
+                        <button
+                          type="button"
+                          role="listitem"
+                          className="bh-memory-version-row"
+                          aria-expanded={open}
+                          data-expanded={open || undefined}
+                          onClick={() => {
+                            setOpenBranch(open ? undefined : branch);
+                            if (tip !== undefined) onMemoryCommitSelect?.(tip.sha);
+                          }}
+                        >
+                          <span className="bh-memory-version-name" data-branch="">
+                            {branch}
+                          </span>
+                          <span className="bh-memory-graph-detail">
+                            {tip === undefined ? null : (
+                              <span className="bh-memory-graph-hash">{tip.sha.slice(0, 7)}</span>
+                            )}
+                            {current ? (
+                              <span className="bh-memory-graph-head-label">
+                                {t('memory.versions.current')}
+                              </span>
+                            ) : null}
+                          </span>
+                          {tip === undefined ? null : (
+                            <span className="bh-memory-version-subject">{tip.subject}</span>
+                          )}
+                        </button>
+                        {!open || current ? null : (
+                          <div className="bh-memory-version-panel">
+                            <div className="bh-memory-restore-actions">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => void requestBranchSwitch(branch)}
+                              >
+                                {t('memory.branches.switch')}
+                              </Button>
+                              <MessagingHelp
+                                title={t('memory.branches.switch')}
+                                text={`${t('memory.branches.switchHelp')}${
+                                  graph.dirty ? t('memory.branches.dirtyHelp') : ''
+                                }`}
+                                t={t}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </Fragment>
+                    );
+                  })
+                )}
+              </div>
+            ) : view === 'versions' ? (
+              <div
+                className="bh-memory-version-list"
+                role="list"
+                aria-label={t('memory.view.versions')}
+                ref={versionsMount}
+              >
+                {versionsError === undefined ? null : (
+                  <div className="bh-error" role="alert">
+                    {versionsError}
+                  </div>
+                )}
+                {versions === undefined ? (
+                  versionsError === undefined ? (
+                    <LoadingSkeleton kind="sidebar" label={t('memory.loading')} />
+                  ) : null
+                ) : versions.length === 0 ? (
+                  <div className="bh-note">{t('memory.versions.empty')}</div>
+                ) : (
+                  versions.map((version) => {
+                    const open = openVersion === version.tag;
+                    return (
+                      <Fragment key={version.tag}>
+                        <button
+                          type="button"
+                          role="listitem"
+                          className={
+                            version.sha === selectedMemoryCommitSha
+                              ? 'bh-memory-version-row bh-memory-row-selected'
+                              : 'bh-memory-version-row'
+                          }
+                          aria-expanded={open}
+                          data-expanded={open || undefined}
+                          title={version.tag}
+                          onClick={() => {
+                            setOpenVersion(open ? undefined : version.tag);
+                            setRestoreForm(undefined);
+                            onMemoryCommitSelect?.(version.sha);
+                          }}
+                        >
+                          <span className="bh-memory-version-name">{version.name}</span>
+                          <span className="bh-memory-graph-detail">
+                            <span className="bh-memory-graph-hash">{version.sha.slice(0, 7)}</span>
+                            {version.sha === graph.head ? (
+                              <span className="bh-memory-graph-head-label">
+                                {t('memory.versions.current')}
+                              </span>
+                            ) : null}
+                            <span>{new Date(version.namedAt).toLocaleString()}</span>
+                          </span>
+                          <span className="bh-memory-version-subject">{version.subject}</span>
+                        </button>
+                        {!open ? null : (
+                          <div className="bh-memory-version-panel">
+                            {restoreForm?.sha === version.sha ? (
+                              restoreConfirm(version.sha, graph.dirty)
+                            ) : (
+                              <div className="bh-memory-restore-actions">
+                                {version.sha === graph.head ? null : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() => setRestoreForm({ sha: version.sha, name: '' })}
+                                  >
+                                    {t('memory.versions.restore')}
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => void removeVersionName(version.tag)}
+                                >
+                                  {t('memory.versions.removeName')}
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </Fragment>
+                    );
+                  })
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="bh-memory-graph-list" role="list" aria-label={t('memory.gitGraph')}>
+                  {graph.commits.map((commit, index) => {
+                    const row = lanes[index]!;
+                    const width = row.width * MEMORY_GRAPH_LANE_WIDTH;
+                    const restorePanel =
+                      continueForm?.sha !== commit.sha &&
+                      (restoreForm?.sha === commit.sha ||
+                        nameForm?.sha === commit.sha ||
+                        commit.sha === selectedMemoryCommitSha);
+                    return (
+                      <Fragment key={commit.sha}>
+                        <button
+                          type="button"
+                          role="listitem"
+                          className={
+                            commit.sha === selectedMemoryCommitSha
+                              ? 'bh-memory-graph-row bh-memory-row-selected'
+                              : 'bh-memory-graph-row'
+                          }
+                          aria-pressed={commit.sha === selectedMemoryCommitSha}
+                          data-expanded={restorePanel || undefined}
+                          onClick={() => onMemoryCommitSelect?.(commit.sha)}
+                          onContextMenu={(event) => openCommitMenu(commit.sha, event)}
+                          onKeyDown={(event) => {
+                            if (
+                              event.key === 'ContextMenu' ||
+                              (event.shiftKey && event.key === 'F10')
+                            )
+                              openCommitMenu(commit.sha, event);
+                          }}
+                          title={commit.sha}
+                        >
+                          <svg
+                            className="bh-memory-graph-svg"
+                            width={width}
+                            height={MEMORY_GRAPH_ROW_HEIGHT}
+                            viewBox={'0 0 ' + width + ' ' + MEMORY_GRAPH_ROW_HEIGHT}
+                            aria-hidden="true"
+                          >
+                            {row.through.map((lane) => (
+                              <path
+                                key={'through-' + lane}
+                                data-lane={lane % 4}
+                                d={
+                                  'M ' +
+                                  memoryGraphLaneX(lane) +
+                                  ' -0.5 V ' +
+                                  (MEMORY_GRAPH_ROW_HEIGHT + 0.5)
+                                }
+                              />
+                            ))}
+                            {row.fromAbove ? (
+                              <path
+                                data-lane={row.lane % 4}
+                                d={
+                                  'M ' +
+                                  memoryGraphLaneX(row.lane) +
+                                  ' -0.5 V ' +
+                                  MEMORY_GRAPH_NODE_Y
+                                }
+                              />
+                            ) : null}
+                            {row.joins.map((lane) => (
+                              <path
+                                key={'join-' + lane}
+                                data-lane={lane % 4}
+                                d={memoryGraphRailPath(lane, row.lane, 'incoming')}
+                              />
+                            ))}
+                            {row.toParents.map((lane, parentIndex) => (
+                              <path
+                                key={'parent-' + parentIndex}
+                                data-lane={lane % 4}
+                                d={memoryGraphRailPath(row.lane, lane, 'outgoing')}
+                              />
+                            ))}
+                            <circle
+                              cx={memoryGraphLaneX(row.lane)}
+                              cy={MEMORY_GRAPH_NODE_Y}
+                              r={commit.sha === graph.head ? 4 : 3.5}
+                              data-lane={row.lane % 4}
+                              data-head={commit.sha === graph.head || undefined}
+                            />
+                          </svg>
+                          <span className="bh-memory-graph-text">
+                            <span className="bh-memory-graph-top">
+                              <span className="bh-memory-graph-subject">{commit.subject}</span>
+                              {(commit.versions ?? []).map((version) => (
+                                <span
+                                  key={'version-' + version.tag}
+                                  className="bh-memory-version"
+                                  title={version.name}
+                                >
+                                  {version.name}
+                                </span>
+                              ))}
+                              {commit.branches.map((branch) => (
+                                <span
+                                  key={branch}
+                                  className="bh-memory-ref"
+                                  data-current={branch === graph.currentBranch || undefined}
+                                  title={branch}
+                                >
+                                  {branch}
+                                </span>
+                              ))}
+                            </span>
+                            <span className="bh-memory-graph-detail">
+                              <span className="bh-memory-graph-hash">{commit.sha.slice(0, 7)}</span>
+                              {commit.sha === graph.head ? (
+                                <span className="bh-memory-graph-head-label">HEAD</span>
+                              ) : null}
+                              <span
+                                className={
+                                  'bh-memory-commit-status bh-memory-commit-status-' + commit.status
+                                }
+                              >
+                                {commit.status === 'accepted'
+                                  ? t('memory.gitStatus.accepted')
+                                  : commit.status === 'needs-repair'
+                                    ? t('memory.gitStatus.needs-repair')
+                                    : t('memory.gitStatus.pending')}
+                              </span>
+                            </span>
+                          </span>
+                        </button>
+                        {!restorePanel ? null : (
+                          <div className="bh-memory-graph-panel">
+                            <span className="bh-memory-graph-rail" style={{ width }}>
+                              <svg className="bh-memory-graph-svg" width={width} aria-hidden="true">
+                                {[...new Set([...row.through, ...row.toParents])].map((lane) => (
+                                  <path
+                                    key={'rail-' + lane}
+                                    data-lane={lane % 4}
+                                    d={'M ' + memoryGraphLaneX(lane) + ' 0 V 2000'}
+                                  />
+                                ))}
+                              </svg>
+                            </span>
+                            {restoreForm?.sha === commit.sha ? (
+                              restoreConfirm(commit.sha, graph.dirty)
+                            ) : nameForm?.sha === commit.sha ? (
+                              <form
+                                className="bh-memory-restore-confirm"
+                                onSubmit={(event) => {
+                                  event.preventDefault();
+                                  void nameVersion();
+                                }}
+                              >
+                                <label className="bh-memory-restore-note">
+                                  <span>
+                                    {t('memory.version.label')}
+                                    {commit.sha === graph.head && graph.dirty ? (
+                                      <MessagingHelp
+                                        title={t('memory.version.label')}
+                                        text={t('memory.version.dirtyHint')}
+                                        t={t}
+                                      />
+                                    ) : null}
+                                  </span>
+                                  <Input
+                                    autoFocus
+                                    value={nameForm.name}
+                                    maxLength={60}
+                                    placeholder={t('memory.version.placeholder')}
+                                    disabled={busy}
+                                    onChange={(event) =>
+                                      setNameForm({ sha: commit.sha, name: event.target.value })
+                                    }
+                                  />
+                                </label>
+                                <Button
+                                  type="submit"
+                                  variant="primary"
+                                  size="sm"
+                                  disabled={busy || nameForm.name.trim() === ''}
+                                >
+                                  {t('memory.version.save')}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => setNameForm(undefined)}
+                                >
+                                  {t('common.cancel')}
+                                </Button>
+                              </form>
+                            ) : (
+                              <div className="bh-memory-restore-offer">
+                                {(commit.versions ?? []).map((version) => (
+                                  <span key={version.tag} className="bh-memory-version-chip">
+                                    <span title={version.tag}>{version.name}</span>
+                                    <button
+                                      type="button"
+                                      aria-label={t('memory.version.remove', {
+                                        name: version.name,
+                                      })}
+                                      disabled={busy}
+                                      onClick={() => void removeVersionName(version.tag)}
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))}
+                                <span className="bh-memory-restore-actions">
+                                  {commit.sha === graph.head ? null : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={busy}
+                                      onClick={() => {
+                                        setContinueForm(undefined);
+                                        setNameForm(undefined);
+                                        setRestoreForm({ sha: commit.sha, name: '' });
+                                      }}
+                                    >
+                                      {t('memory.restoreCommit.action')}
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={busy}
+                                    onClick={() => {
+                                      setRestoreForm(undefined);
+                                      setNameForm({ sha: commit.sha, name: '' });
+                                    }}
+                                  >
+                                    {t('memory.version.action')}
+                                  </Button>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {continueForm?.sha !== commit.sha ? null : (
+                          <form
+                            className="bh-memory-continue-form"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              void requestContinue();
+                            }}
+                          >
+                            <label htmlFor="bh-memory-new-branch">
+                              {t('memory.newBranch')} · <code>{continueForm.sha.slice(0, 7)}</code>
+                            </label>
+                            <Input
+                              id="bh-memory-new-branch"
+                              autoFocus
+                              value={continueForm.branch}
+                              onChange={(event) =>
+                                setContinueForm({
+                                  ...continueForm,
+                                  branch: event.currentTarget.value,
+                                })
+                              }
+                            />
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              type="submit"
+                              disabled={busy || continueForm.branch.trim() === ''}
+                            >
+                              {t('memory.createAndSwitch')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              type="button"
+                              onClick={() => setContinueForm(undefined)}
+                            >
+                              {t('common.cancel')}
+                            </Button>
+                          </form>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                </div>
+                {graph.hasMore ? (
+                  <button
+                    type="button"
+                    className="bh-memory-graph-more"
+                    disabled={loadingMore}
+                    onClick={() => void loadMore()}
+                  >
+                    {loadingMore ? t('memory.loading') : t('memory.loadMore')}
+                  </button>
+                ) : null}
+              </>
+            )}
           </>
         )}
-        {!showFiles ? (
-          <MemoryRecovery
-            actions={actions}
-            channelId={channelId}
-            refreshRevision={refreshRevision}
-            t={t}
-            onRestored={() => {
-              memoryRequestGeneration.current += 1;
-              cache.snapshot = undefined;
-              cache.graph = undefined;
-              cache.working = undefined;
-              cache.files.clear();
-              setRefresh((value) => value + 1);
-            }}
-          />
-        ) : null}
       </div>
     </div>
   );

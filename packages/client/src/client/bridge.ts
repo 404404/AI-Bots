@@ -3345,7 +3345,56 @@ export interface MemoryGitCommit {
   subject: string;
   authoredAt: string;
   branches: string[];
+  versions?: MemoryVersionName[];
   status: 'accepted' | 'pending' | 'needs-repair';
+}
+
+export interface MemoryVersionName {
+  tag: string;
+  name: string;
+}
+
+export interface MemoryVersion extends MemoryVersionName {
+  sha: string;
+  subject: string;
+  namedAt: string;
+}
+
+export async function loadMemoryVersions(
+  call: BridgeCall,
+  channelId: string,
+): Promise<MemoryVersion[]> {
+  const response = asRecord(await unwrap(call, 'memoryVersions', { channelId }));
+  const versions = response?.['versions'];
+  if (!Array.isArray(versions)) throw new Error('invalid Memory versions');
+  return versions.flatMap((item) => {
+    const version = asRecord(item);
+    return typeof version?.['tag'] === 'string' &&
+      typeof version['name'] === 'string' &&
+      typeof version['sha'] === 'string' &&
+      typeof version['subject'] === 'string' &&
+      typeof version['namedAt'] === 'string'
+      ? [
+          {
+            tag: version['tag'],
+            name: version['name'],
+            sha: version['sha'],
+            subject: version['subject'],
+            namedAt: version['namedAt'],
+          },
+        ]
+      : [];
+  });
+}
+
+function parseVersionNames(value: unknown): MemoryVersionName[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const version = asRecord(item);
+    return typeof version?.['tag'] === 'string' && typeof version['name'] === 'string'
+      ? [{ tag: version['tag'], name: version['name'] }]
+      : [];
+  });
 }
 
 export interface MemoryGitGraph {
@@ -3636,7 +3685,14 @@ export async function loadMemoryGitGraph(
     })
   )
     throw new Error('invalid Memory Git graph');
-  return response as unknown as MemoryGitGraph;
+  const graph = response as unknown as MemoryGitGraph;
+  return {
+    ...graph,
+    commits: graph.commits.map((commit) => ({
+      ...commit,
+      versions: parseVersionNames((commit as unknown as Record<string, unknown>)['versions']),
+    })),
+  };
 }
 
 export async function loadMemoryGitCommitDiff(
@@ -3946,6 +4002,49 @@ export async function restoreMemoryCheckpoint(
     checkpoint: checkpoint as unknown as MemoryRecoveryCheckpoint,
     archivePath: response['archivePath'] as string,
   };
+}
+
+export async function restoreMemoryCommit(
+  call: BridgeCall,
+  input: { channelId: string; sha: string; expectedHead: string; restoreId: string; name?: string },
+): Promise<{
+  head: string;
+  backup: string | null;
+  version: MemoryVersionName | null;
+  saved: MemoryRecoveryCheckpoint;
+}> {
+  const response = asRecord(await unwrap(call, 'memoryRestoreCommit', input));
+  const saved = asRecord(response?.['saved']);
+  if (
+    saved === undefined ||
+    typeof saved['id'] !== 'string' ||
+    typeof response?.['head'] !== 'string' ||
+    (response['backup'] !== null && typeof response['backup'] !== 'string')
+  )
+    throw new Error('invalid Memory restore result');
+  return {
+    head: response['head'] as string,
+    backup: response['backup'] as string | null,
+    version: parseVersionNames([response['version']])[0] ?? null,
+    saved: saved as unknown as MemoryRecoveryCheckpoint,
+  };
+}
+
+export async function nameMemoryVersion(
+  call: BridgeCall,
+  input: { channelId: string; sha: string; name: string },
+): Promise<MemoryVersionName> {
+  const response = asRecord(await unwrap(call, 'memoryNameVersion', input));
+  const version = parseVersionNames([response?.['version']])[0];
+  if (version === undefined) throw new Error('invalid Memory version name result');
+  return version;
+}
+
+export async function removeMemoryVersionName(
+  call: BridgeCall,
+  input: { channelId: string; tag: string },
+): Promise<void> {
+  await unwrap(call, 'memoryRemoveVersionName', input);
 }
 
 export async function saveMemoryFile(
