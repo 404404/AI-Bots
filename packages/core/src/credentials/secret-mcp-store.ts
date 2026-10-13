@@ -24,6 +24,7 @@ interface Row {
 
 export interface SecretMcpStore {
   list(botSlug: string): SecretMcpRecord[];
+  listAll(): SecretMcpRecord[];
   put(record: Omit<SecretMcpRecord, 'approvedAt'>): SecretMcpRecord;
   remove(botSlug: string, serverName: string): boolean;
   eraseBot(botSlug: string): void;
@@ -50,6 +51,15 @@ export function createSecretMcpStore(database: OperationalDatabaseModulePort): S
           connection
             .prepare('SELECT * FROM bot_secret_mcp_servers WHERE bot_slug = ? ORDER BY server_name')
             .all(botSlug),
+        ) as unknown as Row[]
+      ).map(record);
+    },
+    listAll() {
+      return (
+        database.read((connection) =>
+          connection
+            .prepare('SELECT * FROM bot_secret_mcp_servers ORDER BY approved_at, server_name')
+            .all(),
         ) as unknown as Row[]
       ).map(record);
     },

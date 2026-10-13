@@ -137,6 +137,7 @@ it('lists remembered MCP servers and removes one after confirmation', async () =
         args: ['-y', '@modelcontextprotocol/server-github'],
         approvedAt: '2026-10-13T00:00:00.000Z',
         connected: true,
+        ownerName: 'Ada',
       },
     ],
   };
@@ -147,6 +148,7 @@ it('lists remembered MCP servers and removes one after confirmation', async () =
   expect(card.textContent).toContain(zhTranslate('privateAccounts.mcpConnected'));
   expect(card.textContent).toContain('npx -y @modelcontextprotocol/server-github');
   expect(card.textContent).toContain('GitHub token');
+  expect(card.textContent).toContain(zhTranslate('privateAccounts.mcpSharedBy', { bot: 'Ada' }));
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
   await act(async () => button(zhTranslate('privateAccounts.mcpRemove')).click());
   expect(remove).not.toHaveBeenCalled();

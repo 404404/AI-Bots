@@ -265,6 +265,11 @@ function PrivateAccountsPanel({ botSlug, actions, t }: ChannelSidebarEntryProps)
                   <span className="bh-card-meta-line">
                     {t('privateAccounts.mcpAccount', { account: server.account })}
                   </span>
+                  <span className="bh-card-meta-line">
+                    {server.ownerName === undefined
+                      ? t('privateAccounts.mcpShared')
+                      : t('privateAccounts.mcpSharedBy', { bot: server.ownerName })}
+                  </span>
                   <span
                     className="bh-card-meta-line"
                     title={new Date(server.approvedAt).toLocaleString()}

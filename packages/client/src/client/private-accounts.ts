@@ -14,6 +14,7 @@ export interface PrivateMcpServer {
   args: string[];
   approvedAt: string;
   connected: boolean;
+  ownerName?: string;
 }
 
 const STATUSES = ['configured', 'replacing', 'unavailable'];
@@ -95,6 +96,7 @@ export function parsePrivateAccountList(value: unknown): PrivateAccountList {
         args: [...row.args],
         approvedAt: row.approvedAt,
         connected: row.connected,
+        ...(typeof row.ownerName === 'string' ? { ownerName: row.ownerName } : {}),
       };
     },
   );

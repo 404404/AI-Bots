@@ -27,6 +27,12 @@ describe('remembered secret MCP servers', () => {
       owner.close();
       owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
       expect(store().list('ada')).toEqual([saved]);
+      expect(
+        store()
+          .listAll()
+          .map((entry) => entry.botSlug)
+          .sort(),
+      ).toEqual(['ada', 'bob']);
       store().put({ ...input, args: ['-y', 'other-server'] });
       expect(store().list('ada')).toHaveLength(1);
       expect(store().list('ada')[0]?.args).toEqual(['-y', 'other-server']);
