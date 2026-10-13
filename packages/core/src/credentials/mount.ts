@@ -625,7 +625,7 @@ export function mountPrivateInputs(
           defineTool({
             name: 'secret_mcp_connect',
             description:
-              'Start an MCP server for yourself with secrets the Owner entered through ask_secret placed in its environment, then use its tools as mcp__<server_name>__<tool>. Use it for an integration that needs a client library or several calls; prefer secret_http for one plain HTTP request and secret_cli for one command. The Host starts the launcher directly, without a shell, inside the same file sandbox as bash with a clean environment; give the bare launcher name (for example npx or uvx), its arguments, and the environment variables the server documents, writing {{field_id}} where a secret belongs. The server stays connected for this conversation Session until you disconnect it, the account is revoked or the Host restarts; it is not available to Assignments. Starting it needs its own Human approval every time, which shows the exact program and arguments. Each later tool call follows the usual approval. Returns the tool names the server offers.',
+              'Start an MCP server for yourself with secrets the Owner entered through ask_secret placed in its environment, then use its tools as mcp__<server_name>__<tool>. Use it for an integration that needs a client library or several calls; prefer secret_http for one plain HTTP request and secret_cli for one command. The Host starts the launcher directly, without a shell, inside the same file sandbox as bash with a clean environment; give the bare launcher name (for example npx or uvx), its arguments, and the environment variables the server documents, writing {{field_id}} where a secret belongs. The server stays connected for this conversation Session until you disconnect it or the account is revoked; it is not available to Assignments. Starting it needs a Human approval that shows the exact program and arguments; the Human may choose to remember it, and a remembered server is reconnected automatically when your Session starts, so check whether its tools are already present before connecting again. Each later tool call follows the usual approval. Returns the tool names the server offers.',
             parameters: {
               server_name: {
                 type: 'string',
@@ -730,7 +730,7 @@ export function mountPrivateInputs(
           defineTool({
             name: 'secret_mcp_disconnect',
             description:
-              'Stop an MCP server you started with secret_mcp_connect and remove its tools. Without server_name it lists the servers you have connected.',
+              'Stop an MCP server you started with secret_mcp_connect, remove its tools and forget it so it is not reconnected. Without server_name it lists the servers you have connected.',
             parameters: {
               server_name: { type: 'string', description: 'The server_name used to connect.' },
             },

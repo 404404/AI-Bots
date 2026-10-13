@@ -236,6 +236,9 @@ function PrivateAccountsPanel({ botSlug, actions, t }: ChannelSidebarEntryProps)
         </SidebarCardList>
       ) : null}
       {load.status === 'ready' && (load.list.mcpServers ?? []).length > 0 ? (
+        <div className="bh-note">{t('privateAccounts.mcpTitle')}</div>
+      ) : null}
+      {load.status === 'ready' && (load.list.mcpServers ?? []).length > 0 ? (
         <SidebarCardList label={t('privateAccounts.mcpTitle')}>
           {(load.list.mcpServers ?? []).map((server) => (
             <SidebarCardRow
