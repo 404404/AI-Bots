@@ -77,6 +77,8 @@ export interface ChannelSidebarEntry {
   scope: ChannelSidebarScope;
   component: ComponentType<ChannelSidebarEntryProps>;
   headerAction?: ComponentType<ChannelSidebarEntryProps>;
+  headerLabel?: string;
+  headerTabs?: ComponentType<ChannelSidebarEntryProps>;
   badge?: ComponentType<ChannelSidebarEntryProps>;
   visible?: (state: ClientState) => boolean;
   tab?: string;

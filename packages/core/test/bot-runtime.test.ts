@@ -1532,6 +1532,75 @@ it('requests a folder in the DM and resumes the same Orchestrator after Human au
   owner.close();
 });
 
+async function archivedMidTurn(sendFirst: boolean) {
+  const home = createTempRoot('botharness-archived-mid-turn-');
+  const registry = createTestRegistry({ rootDir: join(home, 'bots'), now: FIXED_NOW });
+  expect(registry.create({ slug: 'ada', displayName: 'Ada' }).ok).toBe(true);
+  const channels = createChannelStore({ rootDir: join(home, 'channels'), now: FIXED_NOW });
+  const dm = channels.getOrCreateDm('ada', 'Ada')!;
+  const owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+  const archived = new Set<string>();
+  const runs: Array<{ sessionId: string; resume: boolean }> = [];
+  let nextSession = 0;
+  const runtime = createBotRuntime({
+    database: owner,
+    registry,
+    channels,
+    sessionArchived: (sessionId) => archived.has(sessionId),
+    agents: {
+      runOrchestrator: async (run) => {
+        runs.push({ sessionId: run.sessionId, resume: run.resume });
+        if (runs.length === 1) {
+          if (sendFirst) await run.channels.send({ body: 'partial' });
+          archived.add(run.sessionId);
+          throw new Error('Session is archived');
+        }
+        await run.channels.send({ body: 'answered' });
+      },
+      runAssignment: async () => undefined,
+      requestAssignment: () => ({
+        delivery: 'followup' as const,
+        accepted: Promise.resolve(),
+        done: Promise.resolve(),
+      }),
+      close: async () => undefined,
+    },
+    now: FIXED_NOW,
+    createSessionId: () => `session-${++nextSession}`,
+    createEventId: () => `event-${++nextSession}`,
+    createMessageId: () => `message-${++nextSession}`,
+  });
+  await channels.appendMessage(dm.id, {
+    id: 'human-1',
+    at: FIXED_NOW().toISOString(),
+    author: { kind: 'human' },
+    body: 'hello',
+  });
+  await admit(runtime, { channelId: dm.id, messageId: 'human-1', body: 'hello' }).catch(
+    () => undefined,
+  );
+  await runtime.whenIdle();
+  const bodies = channels.readMessages(dm.id).map((message) => message.body);
+  await runtime.close();
+  owner.close();
+  return { runs, bodies };
+}
+
+it('replays a DM on a new Orchestrator Session when DSH archives the old one mid-turn', async () => {
+  const { runs, bodies } = await archivedMidTurn(false);
+  expect(runs).toHaveLength(2);
+  expect(runs[1]!.sessionId).not.toBe(runs[0]!.sessionId);
+  expect(runs[1]!.resume).toBe(false);
+  expect(bodies).toContain('answered');
+});
+
+it('does not replay a DM whose archived turn already acted', async () => {
+  const { runs, bodies } = await archivedMidTurn(true);
+  expect(runs).toHaveLength(1);
+  expect(bodies).toContain('partial');
+  expect(bodies).not.toContain('answered');
+});
+
 it('starts a new Orchestrator Session when DSH archived the current one', async () => {
   const home = createTempRoot('botharness-archived-orchestrator-');
   const registry = createTestRegistry({ rootDir: join(home, 'bots'), now: FIXED_NOW });
@@ -1580,8 +1649,10 @@ it('starts a new Orchestrator Session when DSH archived the current one', async 
   const first = runs[0]!.sessionId;
   expect(runs.map((run) => run.sessionId)).toEqual([first, first]);
   expect(runs[1]!.resume).toBe(true);
+  expect(runtime.currentOrchestratorSessionId?.('ada')).toBe(first);
 
   archived.add(first);
+  expect(runtime.currentOrchestratorSessionId?.('ada')).toBeUndefined();
   await say('human-3', 'hello again');
   const replacement = runs[2]!;
   expect(replacement.sessionId).not.toBe(first);
@@ -1590,6 +1661,7 @@ it('starts a new Orchestrator Session when DSH archived the current one', async 
 
   await say('human-4', 'and again');
   expect(runs[3]).toEqual({ sessionId: replacement.sessionId, resume: true });
+  expect(runtime.currentOrchestratorSessionId?.('ada')).toBe(replacement.sessionId);
   await runtime.close();
   owner.close();
 });

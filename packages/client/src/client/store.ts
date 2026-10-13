@@ -251,6 +251,7 @@ export interface OwnedSessionSummary {
   cwdReference?: string;
   assignmentActivity?: 'working' | 'idle' | 'error' | 'stopping' | 'stopped';
   assignmentAccessMode?: 'workspace-write' | 'danger-full-access';
+  currentOrchestrator?: boolean;
 }
 
 export type HumanInboxCategory = 'action' | 'info' | 'unread' | 'replies' | 'handled';
@@ -360,6 +361,7 @@ export type BotAttentionStatus =
   | 'deferred'
   | 'needs-repair'
   | 'open'
+  | 'snoozed'
   | 'handled'
   | 'ignored';
 
