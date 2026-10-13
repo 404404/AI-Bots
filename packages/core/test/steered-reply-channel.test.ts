@@ -66,14 +66,26 @@ describe('reply Channel in a turn that carries several Channels', () => {
       expect(steered[0]).toContain(`Channel: ${dm.id}`);
 
       await expect(run.channels.send({ body: 'Private answer' })).rejects.toThrow(
-        `This turn carries messages from several Channels (${group.id}, ${dm.id}). Pass channel_id`,
+        `This turn carries messages from several Channels: Group "Team" (channel_id "${group.id}"); Human DM (channel_id "${dm.id}"). Call channel_send again with channel_id`,
+      );
+      const quoted = await run.channels.send({ replyTo: 'steered-dm', body: 'Quoted answer' });
+      expect(core.channels.message(dm.id, quoted.id)?.body).toBe('Quoted answer');
+      const quotedGroup = await run.channels.send({
+        replyTo: 'group-mention',
+        body: 'Quoted group',
+      });
+      expect(core.channels.message(group.id, quotedGroup.id)?.body).toBe('Quoted group');
+      await expect(run.channels.send({ replyTo: 'missing', body: 'Nowhere' })).rejects.toThrow(
+        'This turn carries messages from several Channels',
       );
       const answer = await run.channels.send({ channelId: dm.id, body: 'Private answer' });
       expect(core.channels.message(dm.id, answer.id)?.body).toBe('Private answer');
       const groupAgain = await run.channels.send({ channelId: group.id, body: 'Group follow-up' });
       expect(core.channels.message(group.id, groupAgain.id)?.body).toBe('Group follow-up');
       expect(
-        core.channels.readMessages(group.id).some((message) => message.body === 'Private answer'),
+        core.channels
+          .readMessages(group.id)
+          .some((message) => ['Private answer', 'Quoted answer'].includes(message.body)),
       ).toBe(false);
     } finally {
       release();

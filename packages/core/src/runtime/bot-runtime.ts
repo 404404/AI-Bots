@@ -4805,18 +4805,39 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       send: async (input) => {
         const steered = this.#turnSources.get(botSlug);
-        if (
-          input.channelId === undefined &&
-          steered?.sessionId === sessionId &&
-          steered.steeredChannelIds.size > 0
-        )
+        const turnChannelIds =
+          steered?.sessionId === sessionId && steered.steeredChannelIds.size > 0
+            ? [
+                ...(steered.inboundChannelId === undefined ? [] : [steered.inboundChannelId]),
+                ...steered.steeredChannelIds,
+              ]
+            : [];
+        const repliedChannelIds =
+          input.channelId === undefined && input.replyTo !== undefined
+            ? turnChannelIds.filter(
+                (id) => this.#channels.message(id, input.replyTo!) !== undefined,
+              )
+            : [];
+        if (input.channelId === undefined && repliedChannelIds.length === 1)
+          input = { ...input, channelId: repliedChannelIds[0]! };
+        if (input.channelId === undefined && turnChannelIds.length > 0)
           throw new Error(
-            `This turn carries messages from several Channels (${[
-              ...(steered.inboundChannelId === undefined ? [] : [steered.inboundChannelId]),
-              ...steered.steeredChannelIds,
-            ].join(
-              ', ',
-            )}). Pass channel_id for the Channel this reply belongs to; each message names its Channel in its header.`,
+            `This turn carries messages from several Channels: ${turnChannelIds
+              .map((id) => {
+                const candidate = this.#channels.get(id);
+                const kind =
+                  candidate === undefined
+                    ? 'Channel'
+                    : candidate.type === 'group'
+                      ? `Group ${JSON.stringify(candidate.name)}`
+                      : isBotDmChannel(candidate)
+                        ? 'Bot DM'
+                        : 'Human DM';
+                return `${kind} (channel_id ${JSON.stringify(id)})`;
+              })
+              .join(
+                '; ',
+              )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
           );
         const channel = resolve(input.channelId);
         if (input.mentionBotIds?.length && channel.type !== 'group')
