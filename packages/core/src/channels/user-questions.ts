@@ -278,10 +278,14 @@ export class ChannelUserQuestions {
     });
   }
 
-  status(botSlug: string, messageId: string): ChannelQuestionStatus {
+  status(
+    botSlug: string,
+    messageId: string,
+    channelId = dmChannelId(botSlug),
+  ): ChannelQuestionStatus {
     const pending = this.#pending.get(messageId);
     if (pending === undefined) {
-      const messages = this.#channels.readMessages(dmChannelId(botSlug));
+      const messages = this.#channels.readMessages(channelId);
       const message = messages.find((entry) => entry.id === messageId);
       return message?.userQuestionRequest?.callId !== undefined &&
         messages.some(
