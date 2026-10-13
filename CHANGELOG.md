@@ -152,6 +152,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- A Bot's question card no longer holds the Bot: after 45 seconds without an answer the Bot goes on with other messages, and the card can still be answered later. PersonaBots now run on a product preset that turns on DSH's timed questions. Tool approvals still wait for a decision ([#1038](https://github.com/BotHarness/DeepSeekBot/issues/1038), [ADR-0187](docs/adr/0187-personabots-use-a-product-preset-with-timed-questions.md)).
+
 - A Bot's secret-input card now also appears in the Channel the request came from, including a Group. Only the Owner can fill it, no value is shown in the Channel, and only the requesting Bot receives the references ([#1542](https://github.com/BotHarness/DeepSeekBot/issues/1542)).
 
 - Before the first tool approval card of a task, a Bot now says in the conversation what it is about to do and what it needs; the Host returns the call once if the Bot has not spoken yet ([#1541](https://github.com/BotHarness/DeepSeekBot/issues/1541)).

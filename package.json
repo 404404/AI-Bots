@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint && node scripts/check-source-policy.mjs && pnpm changelog:check && node scripts/check-adr-numbers.mjs && pnpm install:check",
+    "lint": "oxlint && node scripts/check-source-policy.mjs && pnpm changelog:check && node scripts/check-adr-numbers.mjs && node scripts/sync-bot-preset.mjs --check && pnpm install:check",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
