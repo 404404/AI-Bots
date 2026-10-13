@@ -161,6 +161,8 @@ release's E2E result. Do not use compatibility exemptions as release evidence (#
 
 ## Additional verified pitfall — #1138
 
+In #1459, two real composer tabs showed repeated recovery checks; the store regression independently reproduced redundant durable writes for unchanged recovered text. Publishing a new identical version makes peer tabs request validation again. A no-op validation must retain the durable version, while removal of an invalid reference is persisted once. Keep transient validated reference metadata in the local snapshot without publishing a new unchanged record; verify both idle synchronization and explicit conflict selection against the rebuilt Host. A passing HTTP API probe alone does not qualify a browser whose request slots are occupied.
+
 For a fresh pinned RC1 local Profile, let native initialization create the Profile directory before applying a task Patch. Precreating the directory makes the native default-profile initializer refuse its destination; initialization also creates an empty `cordis.patch.yml`, so merge intended entries instead of moving another file over it. Preserve native entries, then restart the helper's exact verified Host PID. This was reproduced in #1381.
 
 The pinned native local Credentials Provider retains record objects in its cache. A trusted private-input owner that clears its incoming submission object must copy the values into the atomic grant payload before handing it to the Provider; otherwise clearing the request also clears the cached grant. Validate the published Host through an actual credential consumer, not only disk serialization. A Fiber's disposal must also drain already-started recovery writes before its storage Providers can close. These native ownership and lifecycle interactions were verified in #1381; the request settlement policy remains application-defined.
@@ -194,3 +196,6 @@ To use the Gateway Client's stream helpers (`RemoteSnapshotStream`, `RemoteJourn
 
 A `RemoteError` thrown by a stream method before or between items reaches the Client as an `error` frame with its `code` and ends that logical stream as a terminal failure, not a carrier loss; map application refusals (unknown subject, cursor ahead of the log, invalid cursor) to stable codes and let the consumer decide whether to reload state. When a stream replaces a legacy route, make the subscription a single typed frame source and let both the stream and the route encode it, so their replay and baseline rules cannot drift (#1500).
 
+## Additional verified pitfall — #1528
+
+The pinned client-modules loader claims every `<style>` without `data-plugin` for the module materializing at that moment (lazy chunks included) and removes those tags when that module is replaced, invalidated or pruned. A plugin that injects an untagged sheet from an effect can therefore lose it to another plugin's reload while it stays active: its UI renders unstyled and DSH's own UI, whose sheets are tagged, looks fine. Set `data-plugin` to the injecting module's id (and a `data-plugin-css` key) on every runtime `<style>` (#1528).

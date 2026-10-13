@@ -201,6 +201,8 @@ export function createAttachmentStore(options: {
     acquired: (id) => real.acquired(id),
     fileTarget: (id) => real.target(id),
     current(ref) {
+      if (purged.has(ref.fileId ?? ref.hash))
+        throw new ChannelAttachmentError('Attachment content was purged', 'not-found');
       return ref.fileId === undefined
         ? inspect(rootDir, ref.hash, ref.name)
         : real.current(ref.fileId);

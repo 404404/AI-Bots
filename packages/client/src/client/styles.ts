@@ -12,6 +12,13 @@ export const CSS =
   WINDOW_COMPANION_CSS +
   `
 .bh-profile-backup-dialog.bh-profile-backup-dialog { width: min(760px, 100%); max-height: 100%; }
+.bh-composer-recovery { min-width: 0; }
+.bh-composer-recovery > p, .bh-composer-recovery section > p { margin: 4px 0; font-size: 12px; color: var(--dsw-alias-label-secondary); }
+.bh-composer-draft-version { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-inbox-radius-control); }
+.bh-composer-draft-version pre { flex: 1; min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 100px; overflow-y: auto; }
+.bh-composer-recovery > p button, .bh-composer-draft-version button { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); border: 1px solid var(--dsw-alias-border-l2); border-radius: var(--bh-inbox-radius-control); padding: 4px 8px; cursor: pointer; }
+.bh-composer-recovery > p button:hover, .bh-composer-draft-version button:hover { background: var(--bh-hover); }
+.bh-composer-recovery > p button:focus-visible, .bh-composer-draft-version button:focus-visible { outline: 2px solid var(--bh-accent); outline-offset: 2px; }
 .bh-profile-backup { overflow-y: auto; min-height: 0; font-size: 13px; line-height: 20px; }
 .bh-profile-backup section { border-top: 1px solid var(--dsw-alias-border-l2); padding-block: 12px; }
 .bh-profile-backup p { margin-block: 8px; }
@@ -7644,6 +7651,9 @@ button.bh-card-main {cursor:pointer;}
 button.bh-card-main:disabled {cursor:default;}
 .bh-card-main:focus-visible {outline:2px solid var(--dsw-alias-label-primary);outline-offset:-2px;}
 .bh-card-icon {display:grid;flex:none;place-items:center;padding-top:1px;color:var(--dsw-alias-label-primary);}
+.bh-card-leading {display:grid;flex:none;place-items:center;}
+.bh-group-work-summary {display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;flex-basis:100%;color:var(--dsw-alias-label-secondary);}
+.bh-group-work-heading {cursor:default;}
 .bh-card-body {display:flex;flex:1;flex-direction:column;gap:4px;min-width:0;}
 .bh-card-title {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:500;line-height:20px;}
 .bh-card-title.bh-inbox-item-summary {display:-webkit-box;white-space:normal;overflow-wrap:anywhere;-webkit-box-orient:vertical;-webkit-line-clamp:3;}

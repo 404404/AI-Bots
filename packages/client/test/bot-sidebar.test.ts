@@ -117,6 +117,7 @@ function stubActions(): BridgeActions {
     onboardingModel: vi.fn(),
     inheritModel: vi.fn(),
     retryMessage: vi.fn(),
+    validateComposerDraft: vi.fn(),
     deletionPreview: vi.fn(),
     deletionConfirm: vi.fn(),
     deletionRetry: vi.fn(),
@@ -146,6 +147,7 @@ function stubActions(): BridgeActions {
       throw new Error('unused');
     }),
     groupWakePolicies: vi.fn(async () => []),
+    channelAssignments: vi.fn(async () => []),
     channelBridges: vi.fn(async (channelId) => ({ channelId, bridges: [], sources: [] })),
     channelIngests: vi.fn(async (channelId) => ({ channelId, ingests: [], candidates: [] })),
     channelIngest: vi.fn(async () => undefined),

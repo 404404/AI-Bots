@@ -427,6 +427,9 @@ export interface RosterState {
 }
 
 export interface ClientState {
+  composerIdentity?:
+    | import('../../../core/src/bridge/composer-recovery.js').ComposerRecoveryIdentity
+    | undefined;
   mode: ClientMode;
   bots: readonly BotSummary[];
   channels: readonly ChannelSummary[];
@@ -463,6 +466,7 @@ export interface PersonaBotActivitySnapshot {
 }
 
 export interface ClientStore {
+  setComposerIdentity(identity: ClientState['composerIdentity']): void;
   purgeContent(placements: readonly PurgedPlacement[]): void;
   getSnapshot(): ClientState;
   subscribe(listener: () => void): () => void;
@@ -682,6 +686,9 @@ export function createStore(): ClientStore {
     },
     setMode(mode) {
       if (state.mode !== mode) update({ mode });
+    },
+    setComposerIdentity(composerIdentity) {
+      update({ composerIdentity });
     },
     setMemoryCommitIntent(memoryCommitIntent) {
       update({ memoryCommitIntent });

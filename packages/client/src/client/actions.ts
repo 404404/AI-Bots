@@ -30,6 +30,7 @@ import {
 } from './bridge.js';
 import { prependChannelJournal } from './channel-live.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
+import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
 import type {
   MarketplaceDetail,
   MarketplaceEntry,
@@ -39,6 +40,7 @@ import type {
 } from '../../../core/src/marketplace/client.js';
 import type { AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
 import { loadAllBotPreview } from './bridge.js';
+import { loadComposerIdentity, validateComposerDraft } from './bridge.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 
 import type {
@@ -115,6 +117,7 @@ import {
   removeGroupMember,
   setGroupWakePolicy,
   loadGroupWakePolicies,
+  loadChannelAssignments,
   deleteGroupChannel,
   createPersonaBot,
   type CreatedBot,
@@ -299,6 +302,11 @@ export interface HostDirectoryListing {
 }
 
 export interface BridgeActions {
+  validateComposerDraft(
+    channelId: string,
+    attachments: ChannelAttachmentRef[],
+    replyTo?: string,
+  ): Promise<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }>;
   onboarding(slug?: string, action?: TutorialAction): Promise<OnboardingSnapshot>;
   onboardingModel(
     slug: string | undefined,
@@ -682,6 +690,7 @@ export interface BridgeActions {
   decideGroupJoin(channelId: string, requestId: string, accept: boolean): Promise<boolean>;
   removeGroupMember(channelId: string, botSlug: string): Promise<boolean>;
   groupWakePolicies(channelId: string): Promise<GroupMemberWakePolicy[]>;
+  channelAssignments(channelId: string): Promise<ChannelAssignmentSummary[]>;
   setGroupWakePolicy(
     channelId: string,
     botSlug: string,
@@ -787,6 +796,7 @@ export function createActions(
   },
   navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
+  clientStore.setComposerIdentity(undefined);
   let activityTab = readActivityCenterTab(navigationStorage) ?? 'overview';
   const rememberActivityTab = (view: ActivityCenterTab): void => {
     activityTab = view;
@@ -857,12 +867,16 @@ export function createActions(
   };
 
   const refreshRoster = async (signal?: AbortSignal): Promise<void> => {
-    const [rosterResult, channelResult, botResult] = await Promise.allSettled([
+    const [rosterResult, channelResult, botResult, identityResult] = await Promise.allSettled([
       loadRoster(call, signal),
       loadChannels(call, signal),
       loadBots(call, signal),
+      loadComposerIdentity(call, signal),
     ]);
     if (signal?.aborted === true) return;
+    clientStore.setComposerIdentity(
+      identityResult.status === 'fulfilled' ? identityResult.value : undefined,
+    );
     if (botResult.status === 'fulfilled')
       clientStore.setRoster(botResult.value, clientStore.getSnapshot().channels);
     if (channelResult.status === 'fulfilled') {
@@ -2208,6 +2222,8 @@ export function createActions(
       await loadSessionsFor(slug, selection);
     },
     allBotPreview: (channelId) => loadAllBotPreview(call, channelId),
+    validateComposerDraft: (channelId, attachments, replyTo) =>
+      validateComposerDraft(call, channelId, attachments, replyTo),
     async send(
       body,
       replyTo,
@@ -2620,6 +2636,9 @@ export function createActions(
         console.warn('botharness: Group member removal failed', error);
         return false;
       }
+    },
+    channelAssignments(channelId) {
+      return loadChannelAssignments(call, channelId);
     },
     groupWakePolicies(channelId) {
       return loadGroupWakePolicies(call, channelId);

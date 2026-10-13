@@ -97,7 +97,11 @@ import type { ChannelReadPosition } from '../channels/store.js';
 import type { RosterSection, RosterSnapshot } from '../roster/store.js';
 import type { TopOrderEntry } from '../roster/spec.js';
 import type { ChannelTimelinePage, TimelineDirection } from '../channels/timeline.js';
-import type { AssignmentDetail, AssignmentSummary } from '../runtime/bot-runtime.js';
+import type {
+  AssignmentDetail,
+  AssignmentSummary,
+  ChannelAssignmentSummary,
+} from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
   BotSchedule,
@@ -814,6 +818,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.humanIdentity({}));
   }
 
+  composerIdentity() {
+    return unwrap(this.methods.composerIdentity({}));
+  }
+
+  composerValidate(channelId: string, attachments: ChannelAttachmentRef[], replyTo?: string) {
+    return unwrap(
+      this.methods.composerValidate({
+        channelId,
+        attachments,
+        ...(replyTo === undefined ? {} : { replyTo }),
+      }),
+    );
+  }
+
   channelHumanNameSet(channelId: string, nickname: string | null) {
     return unwrap(this.methods.channelHumanNameSet({ channelId, nickname }));
   }
@@ -1011,6 +1029,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
 
   assignments(slug: string): { assignments: AssignmentSummary[] } {
     return unwrap(this.methods.assignments({ slug }));
+  }
+
+  channelAssignments(channelId: string): { assignments: ChannelAssignmentSummary[] } {
+    return unwrap(this.methods.channelAssignments({ channelId }));
   }
 
   assignment(slug: string, sessionId: string): { assignment: AssignmentDetail } {
@@ -1418,6 +1440,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'resume',
   'channels',
   'humanIdentity',
+  'composerIdentity',
+  'composerValidate',
   'humanNameSet',
   'channelHumanNameSet',
   'channelDm',
@@ -1455,6 +1479,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionIgnore',
   'humanAttentionDismiss',
   'assignments',
+  'channelAssignments',
   'assignment',
   'workspaceOptions',
   'messageAttachmentTarget',

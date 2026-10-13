@@ -38,6 +38,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- DM and Group composers retain device-local drafts across Channel switches and browser reloads, validate restored references, and expose concurrent-tab conflicts and storage failures; unuploaded file bytes are not retained ([#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
+
 - A PersonaBot's DM now shows what it did elsewhere: each post in a Group or Bot DM leaves a short linked line with an excerpt, consecutive posts in one Channel collapse into one line, and Memory updates made in a Group also appear in the DM with their place. The DM's top-right settings menu hides each kind for that Bot; nothing unread or waking is added ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517), [ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)).
 
 - Opt-in work-failure alerts reuse the Bot sidebar management destination, use an RBAC-style wide two-column settings/history dialog with searchable, sortable records, test send and delivery inspection, and notify from committed failure facts without forwarding private error text or granting decision authority. Known-unsent retries are bounded; unknown sends are not replayed ([#1041](https://github.com/BotHarness/DeepSeekBot/issues/1041), [Lark guide](docs/lark-connection.md#work-failure-alerts-source-candidate)).
@@ -174,6 +176,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 ### Fixed
 
 - A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
+
+- DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
 
 - Any number of DeepSeekBot tabs on the same DSH address, up to the browser's limit for DSH's own connection, now stay responsive: the Window Companion feed also travels on DSH's shared live connection ([#1501](https://github.com/BotHarness/DeepSeekBot/issues/1501)).
 

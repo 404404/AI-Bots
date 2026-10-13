@@ -17,6 +17,7 @@ import type {
   MessagingDefaultsInput,
 } from '../../../core/src/messaging/defaults.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
+import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 
 import type {
@@ -73,6 +74,8 @@ import type {
 } from '../../../core/src/messaging/outbound.js';
 import type { MessagingTarget } from '../../../core/src/messaging/provider.js';
 import type { HostFileTarget } from './host-file-actions.js';
+import type { ComposerRecoveryIdentity } from '../../../core/src/bridge/composer-recovery.js';
+import { isChannelAttachmentRef } from '../../../core/src/attachments/ref.js';
 import type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 export type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
@@ -1846,6 +1849,54 @@ export async function loadChannels(
   return parseChannelRecords(await unwrap(call, 'channels', {}, signal));
 }
 
+export async function loadComposerIdentity(
+  call: BridgeCall,
+  signal?: AbortSignal,
+): Promise<ComposerRecoveryIdentity> {
+  const value = asRecord(await unwrap(call, 'composerIdentity', {}, signal));
+  if (
+    value === undefined ||
+    !['hostId', 'profileId', 'humanId'].every(
+      (key) => typeof value[key] === 'string' && (value[key] as string).length > 0,
+    )
+  )
+    throw new Error('invalid composer identity');
+  return {
+    hostId: value['hostId'] as string,
+    profileId: value['profileId'] as string,
+    humanId: value['humanId'] as string,
+  };
+}
+
+export async function validateComposerDraft(
+  call: BridgeCall,
+  channelId: string,
+  attachments: ChannelAttachmentRef[],
+  replyTo?: string,
+): Promise<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }> {
+  const value = asRecord(
+    await unwrap(call, 'composerValidate', {
+      channelId,
+      attachments,
+      ...(replyTo === undefined ? {} : { replyTo }),
+    }),
+  );
+  if (
+    value === undefined ||
+    !Array.isArray(value['attachments']) ||
+    value['attachments'].length !== attachments.length ||
+    !value['attachments'].every((ref) => ref === null || isChannelAttachmentRef(ref))
+  )
+    throw new Error('invalid composer validation');
+  const reply = value['reply'] === undefined ? undefined : parseChannelMessage(value['reply']);
+  if (value['reply'] !== undefined && reply === undefined)
+    throw new Error('invalid composer reply');
+  return {
+    ...(reply === undefined ? {} : { reply }),
+    attachments: value['attachments'] as Array<ChannelAttachmentRef | null>,
+  };
+}
+
 export async function openDmChannel(
   call: BridgeCall,
   slug: string,
@@ -2262,6 +2313,33 @@ export async function removeGroupMember(
   const channel = parseChannelRecord(value?.['channel']);
   if (channel === undefined) throw new Error('invalid channelGroupMemberRemove response');
   return channel;
+}
+
+const ASSIGNMENT_ACTIVITIES = ['working', 'idle', 'error', 'stopping', 'stopped'];
+const ASSIGNMENT_REPORT_STATES = ['progress', 'completed', 'blocked', 'waiting-human', 'failed'];
+
+export async function loadChannelAssignments(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ChannelAssignmentSummary[]> {
+  const value = asRecord(await unwrap(call, 'channelAssignments', { channelId }));
+  const assignments = value?.['assignments'];
+  if (
+    !Array.isArray(assignments) ||
+    assignments.some(
+      (row) =>
+        typeof row?.sessionId !== 'string' ||
+        typeof row.botSlug !== 'string' ||
+        typeof row.purpose !== 'string' ||
+        !ASSIGNMENT_ACTIVITIES.includes(row.activity) ||
+        typeof row.updatedAt !== 'string' ||
+        (row.latestReport !== undefined &&
+          (!ASSIGNMENT_REPORT_STATES.includes(row.latestReport?.state) ||
+            typeof row.latestReport.summary !== 'string')),
+    )
+  )
+    throw new Error('invalid channelAssignments response');
+  return assignments;
 }
 
 export async function loadGroupWakePolicies(

@@ -125,6 +125,8 @@ import {
 import { ChannelMentionTargetError, ChannelReplyTargetError } from '../channels/store.js';
 import { ChannelAttachmentError } from '../attachments/store.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
+import type { ChannelAttachmentRef } from '../attachments/ref.js';
+import type { ComposerRecoveryIdentity } from './composer-recovery.js';
 import type { ChannelReadPosition, ChannelStore, ChannelSendStatus } from '../channels/store.js';
 import { groupProfileActivity, type GroupProfileActivity } from '../channels/profile-activity.js';
 import { channelActivityToday, type ChannelActivityToday } from '../channels/activity-today.js';
@@ -234,6 +236,7 @@ import type {
   AssignmentDetail,
   AssignmentSummary,
   BotRuntime,
+  ChannelAssignmentSummary,
   DmAdmissionFailure,
 } from '../runtime/bot-runtime.js';
 import type {
@@ -478,6 +481,10 @@ export interface BridgeMethods {
   pause(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   resume(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   humanIdentity(payload: unknown): BridgeResult<LocalHumanIdentity>;
+  composerIdentity(payload: unknown): BridgeResult<ComposerRecoveryIdentity>;
+  composerValidate(
+    payload: unknown,
+  ): BridgeResult<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }>;
   humanNameSet(payload: unknown): BridgeResult<LocalHumanIdentity>;
   channelHumanNameSet(payload: unknown): BridgeResult<{ channel: ChannelListItem }>;
   channels(payload: unknown): BridgeResult<{ channels: ChannelListItem[] }>;
@@ -520,6 +527,7 @@ export interface BridgeMethods {
   humanAttentionDismiss(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionIgnore(payload: unknown): BridgeResult<{ accepted: boolean }>;
   assignments(payload: unknown): BridgeResult<{ assignments: AssignmentSummary[] }>;
+  channelAssignments(payload: unknown): BridgeResult<{ assignments: ChannelAssignmentSummary[] }>;
   assignment(payload: unknown): BridgeResult<{ assignment: AssignmentDetail }>;
   workspaceOptions(
     payload: unknown,
@@ -626,6 +634,7 @@ export interface BridgeMethods {
 }
 
 export interface BridgeMethodsDeps {
+  composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
   deletions?: PersonaBotDeletions;
@@ -2584,6 +2593,63 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     humanIdentity() {
       return { ok: true, value: deps.channels.humanIdentity() };
     },
+    composerIdentity() {
+      try {
+        if (deps.composerIdentity === undefined) throw new Error();
+        return { ok: true, value: deps.composerIdentity() };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'storage-unavailable', message: 'Composer recovery identity unavailable' },
+        };
+      }
+    },
+    composerValidate(payload) {
+      const input = z
+        .object({
+          channelId: z.string(),
+          replyTo: z.string().optional(),
+          attachments: z.array(z.unknown()).max(10),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success || !input.data.attachments.every(isChannelAttachmentRef))
+        return invalidInput('invalid composer references');
+      const channel = deps.channels.get(input.data.channelId);
+      if (
+        channel === undefined ||
+        (channel.type === 'dm'
+          ? channel.botSlug === undefined
+          : !deps.channels
+              .listHumanMembers(channel.id)
+              .some((member) => member.humanId === deps.channels.humanIdentity().humanId))
+      )
+        return invalidInput('Channel is unavailable');
+      const reply =
+        input.data.replyTo === undefined
+          ? undefined
+          : deps.channels
+              .readHumanTimeline(channel.id, {
+                direction: 'around',
+                around: input.data.replyTo,
+                olderLimit: 0,
+                newerLimit: 0,
+              })
+              ?.entries.find((message) => message.id === input.data.replyTo);
+      const attachments = input.data.attachments.map((ref) => {
+        try {
+          return deps.attachments?.current(ref) ?? null;
+        } catch (error) {
+          if (
+            error instanceof ChannelAttachmentError &&
+            ['not-found', 'invalid-ref'].includes(error.code)
+          )
+            return null;
+          throw error;
+        }
+      });
+      return { ok: true, value: { ...(reply === undefined ? {} : { reply }), attachments } };
+    },
     humanNameSet(payload) {
       const input = z
         .object({ displayName: z.string().max(128).nullable() })
@@ -3860,6 +3926,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       return {
         ok: true,
         value: { assignments: deps.runtime?.listAssignments(slug) ?? [] },
+      };
+    },
+    channelAssignments(payload) {
+      const parsed = z.object({ channelId: z.string().min(1) }).safeParse(asObject(payload));
+      if (!parsed.success) return invalidInput('invalid Group channel');
+      const channel = deps.channels.get(parsed.data.channelId);
+      if (
+        channel?.type !== 'group' ||
+        channel.deletedAt ||
+        !deps.channels
+          .listHumanMembers(channel.id)
+          .some((member) => member.humanId === 'local-human')
+      )
+        return invalidInput('Group channel unavailable');
+      return {
+        ok: true,
+        value: { assignments: deps.runtime?.listChannelAssignments?.(channel.id) ?? [] },
       };
     },
     assignment(payload) {
