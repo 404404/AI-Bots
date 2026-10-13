@@ -133,8 +133,8 @@ try {
   const openMemory = async (index) => {
     await select(dms[index].id);
     await expand('Memory files', '记忆文件');
-    await page.waitForSelector(`.bh-memory-tree-row[data-path="${filePath}"]`, { timeout: 15000 });
-    await page.click(`.bh-memory-tree-row[data-path="${filePath}"]`);
+    await page.waitForSelector(`[role="treeitem"][data-path="${filePath}"]`, { timeout: 15000 });
+    await page.click(`[role="treeitem"][data-path="${filePath}"]`);
     await page.waitForFunction(
       (text) => document.querySelector('.bh-memory-commit-code')?.textContent?.includes(text),
       { timeout: 15000 },
@@ -153,7 +153,7 @@ try {
   await page.waitForSelector('.bh-member-menu-button', { timeout: 15000 });
   await openMemory(1);
   await expand('Sessions', '会话');
-  await page.waitForSelector('.bh-sessions', { timeout: 15000 });
+  await page.waitForSelector('[data-sessions]', { timeout: 15000 });
   await expand('Workspace Grants', '工作区授权');
   await page.waitForSelector('.bh-workspace-grants', { timeout: 15000 }).catch(async (error) => {
     console.error(
@@ -177,7 +177,7 @@ try {
   await expand('Workspace Grants', '工作区授权');
   await expand('Sessions', '会话');
   await page.waitForSelector('.bh-workspace-grants', { timeout: 15000 });
-  await page.waitForSelector('.bh-sessions', { timeout: 15000 });
+  await page.waitForSelector('[data-sessions]', { timeout: 15000 });
   assert.deepEqual(errors, []);
   console.log(
     JSON.stringify({

@@ -579,7 +579,7 @@ try {
       {},
       memoryPath,
     );
-    await page.$$eval('.bh-inbox-group, .bh-inbox-history', (elements) => {
+    await page.$$eval('[data-inbox-group], .bh-inbox-history', (elements) => {
       for (const element of elements)
         if (!element.open) element.querySelector(':scope > summary')?.click();
     });

@@ -38,11 +38,12 @@ const styles = stylex.create({
       ':is([aria-expanded=true])': color.fg,
     },
   },
+  inline: { width: sizes.inlineIcon, height: sizes.inlineIcon, borderRadius: radius.control },
   icon: { width: sizes.icon, height: sizes.icon },
   row: { width: sizes.row, height: sizes.row },
 });
 
-export type IconButtonSize = 'icon' | 'row';
+export type IconButtonSize = 'inline' | 'icon' | 'row';
 export type IconButtonTone = 'muted' | 'subtle';
 
 export interface IconButtonProps extends Omit<

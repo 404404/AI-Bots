@@ -18,6 +18,7 @@ export const text = stylex.defineConsts({
   titleLine: '20px',
   headingSize: '16px',
   headingLine: '24px',
+  regular: '400',
   strong: '500',
   heavy: '600',
 });
@@ -54,6 +55,7 @@ export const color = stylex.defineConsts({
   borderStrong: 'var(--dsw-alias-border-l3)',
   hover: 'var(--dsw-alias-interactive-bg-hover)',
   selected: 'var(--dsw-alias-interactive-bg-active)',
+  navSelected: 'var(--dsw-specific-sidebar-nav-item-active)',
   accent: 'var(--dsw-alias-state-business-primary)',
   onAccent: 'var(--dsw-alias-label-primary-foreground)',
   danger: 'var(--dsw-alias-state-error-primary)',

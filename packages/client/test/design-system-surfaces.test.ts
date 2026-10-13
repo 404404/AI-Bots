@@ -15,6 +15,7 @@ import type {
 import { ChannelSidebarEntrySection } from '../src/client/channel-sidebar-view.js';
 import { ComposerContextBar } from '../src/client/composer-context-bar.js';
 import { ChipButton } from '../src/client/ds/chip-button.js';
+import { GroupHeading } from '../src/client/ds/group-heading.js';
 import { IconButton } from '../src/client/ds/icon-button.js';
 import { PanelHeader } from '../src/client/ds/panel-header.js';
 
@@ -169,5 +170,42 @@ describe('design-system surfaces', () => {
       }),
     );
     expect(host.querySelector<HTMLElement>('[role="group"]')!.hidden).toBe(true);
+  });
+
+  it('toggles a list group from its heading button', () => {
+    const onToggle = vi.fn();
+    render(
+      createElement(GroupHeading, {
+        label: 'Working',
+        count: '1 / 8',
+        countLabel: '1 running of 8',
+        expanded: true,
+        onToggle,
+      }),
+    );
+    const heading = button('Working1 / 8');
+    expect(heading.getAttribute('aria-expanded')).toBe('true');
+    expect(heading.querySelector('[title="1 running of 8"]')?.textContent).toBe('1 / 8');
+    act(() => heading.click());
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a static list group heading without a button', () => {
+    render(createElement(GroupHeading, { label: 'Waiting', count: 2 }));
+    expect(host.querySelectorAll('button')).toHaveLength(0);
+    expect(host.textContent).toBe('Waiting2');
+  });
+
+  it('uses the heading as the summary of a disclosure group', () => {
+    render(
+      createElement(
+        'details',
+        { open: true },
+        createElement(GroupHeading, { summary: true, quiet: true, label: 'Snoozed', count: 3 }),
+        createElement('p', null, 'items'),
+      ),
+    );
+    const summary = host.querySelector('details > summary')!;
+    expect(summary.textContent).toBe('Snoozed3');
   });
 });
