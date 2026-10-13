@@ -115,6 +115,7 @@ const BOT_TOOL_NAMES = new Set([
   'bridge_sender_permissions',
   'bridge_directory',
   'bridge_targets',
+  'bridge_reachable_groups',
   'bridge_post',
   'bridge_outbox',
   'bridge_read',
