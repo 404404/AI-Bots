@@ -2033,7 +2033,8 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             ids: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Source Event ids to resolve, 1–200. Do not combine with filter fields.',
+              description:
+                'Source Event ids from [Open Inbox] or inbox_list, or the Message ID shown in a turn header, to resolve; 1–200. Do not combine with filter fields.',
             },
             ...INBOX_FILTER_PARAMETERS,
             outcome: {
@@ -2079,7 +2080,8 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             ids: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Source Event ids to snooze, 1–200. Do not combine with filter fields.',
+              description:
+                'Source Event ids from [Open Inbox] or inbox_list, or the Message ID shown in a turn header, to snooze; 1–200. Do not combine with filter fields.',
             },
             ...INBOX_FILTER_PARAMETERS,
             until_time: {
