@@ -106,22 +106,21 @@ export function mountPrivateInputs(
       const result = await next();
       if (call.agent === undefined || !call.name.startsWith('mcp__')) return result;
       const agent = call.agent;
-      const output = result as { content?: unknown };
-      if (!Array.isArray(output.content)) return result;
-      return {
-        ...result,
-        content: output.content.map((block: unknown) =>
-          typeof block === 'object' &&
-          block !== null &&
-          (block as { type?: unknown }).type === 'text' &&
-          typeof (block as { text?: unknown }).text === 'string'
-            ? {
-                ...block,
-                text: mcpServers.mask(agent, call.name, (block as { text: string }).text),
-              }
-            : block,
-        ),
-      } as typeof result;
+      if (!mcpServers.owns(agent, call.name)) return result;
+      const masked = (value: unknown): unknown => {
+        if (typeof value === 'string') return mcpServers.mask(agent, call.name, value);
+        if (Array.isArray(value)) return value.map(masked);
+        if (
+          value !== null &&
+          typeof value === 'object' &&
+          Object.getPrototypeOf(value) === Object.prototype
+        )
+          return Object.fromEntries(
+            Object.entries(value).map(([key, entry]) => [key, masked(entry)]),
+          );
+        return value;
+      };
+      return masked(result) as typeof result;
     },
     { global: true },
   );

@@ -139,6 +139,12 @@ export class SecretMcpServers {
     return this.#running.get(agent)?.has(serverName) === true;
   }
 
+  owns(agent: Agent, toolName: string): boolean {
+    for (const serverName of this.#running.get(agent)?.keys() ?? [])
+      if (toolName.startsWith(`mcp__${serverName}__`)) return true;
+    return false;
+  }
+
   mask(agent: Agent, toolName: string, text: string): string {
     for (const [serverName, running] of this.#running.get(agent) ?? [])
       if (toolName.startsWith(`mcp__${serverName}__`)) return maskSecrets(text, running.secrets);
