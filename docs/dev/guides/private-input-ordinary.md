@@ -1,6 +1,6 @@
 # Secret input in an ordinary Profile
 
-Since [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md) a PersonaBot can ask for a secret in any Profile. No Docker, no opt-in. This guide covers that default tier. The opt-in Docker-fenced Profile is in the [CLI guide](private-input-cli.md).
+Since [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md) a PersonaBot can ask for a secret in any Profile. No Docker, no opt-in.
 
 ## What the Bot can do
 

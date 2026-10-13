@@ -14,7 +14,7 @@ Secret input has two tiers that share one card, one store and one reference form
 
 - **Ordinary Profile, the default.** An Orchestrator has `ask_secret`, the fixed `protected_cli` consumer and `secret_http`. Values go to the native Credentials Service bound to the requesting Bot and account; the Channel and the model get opaque references only; only the authenticated Owner can submit. The fixed consumer already runs in a Host child process, not in the container, so it needs no Docker.
 - **Store guard, two layers.** DSH already runs every Shell command inside an OS sandbox that limits writes. In an ordinary Profile the Host adds one rule to that sandbox: the credential store cannot be read. On macOS this is a Seatbelt `deny file-read*` for the store; under bwrap the store is masked with an empty file. The kernel enforces it, so a command reaches the same refusal however it names the file. As a second layer the Host refuses Agent file tools whose target is the store or the DSH home that holds it, and Shell commands that name the store in their text. Both layers apply after a Human approval too, to every Agent in the Profile.
-- **Protected Profile, still opt-in.** `privateInputExecution` keeps the ADR-0164 boundary unchanged for anyone who needs it.
+- **Protected Profile, still opt-in.** `privateInputExecution` keeps the ADR-0164 boundary unchanged for anyone who needs it. (Removed later by [ADR-0192](0192-the-docker-protected-profile-is-removed.md).)
 
 A Profile that holds private grants without the opt-in no longer has its Shell locked. That lock existed because such a Profile could not consume its grants safely; it now can.
 

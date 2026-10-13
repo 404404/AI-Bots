@@ -11,38 +11,16 @@ import {
   secretCommandPlan,
 } from './secret-command.js';
 import type { PrivateInputLog } from './diagnostics.js';
-import { LinuxMcp } from './linux-mcp.js';
-import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
-import { nativeExecutionRoot } from '../workspaces/grant-native-tools.js';
-import { isQualifiedMessagingName, messagingToolDenial } from './messaging-tools.js';
 import { privateInputWebUrl } from './web-locator.js';
 import { credentialStoreDenial, credentialStorePath, denyStoreRead } from './store-guard.js';
 import { resolveDshHome } from '../im/config-store.js';
 
-const SAFE_TOOLS = new Set([
-  'ask_secret',
-  'protected_cli',
-  'secret_http',
-  'secret_cli',
-  'bash',
-  'channel_send',
-  'channel_read',
-  'channel_list',
-  'ask_user_question',
-  'inbox_ignore',
-  'bot_schedule_list',
-  'bot_schedule_create',
-  'bot_schedule_update',
-  'bot_schedule_delete',
-]);
 export function mountPrivateInputs(
   ctx: Context,
   core: BotHarnessCore,
-  enabled: boolean,
   execution = new ProtectedExecution((phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details }),
   ),
-  linuxMcp?: LinuxMcp,
   webUrl?: string,
   dshHome = resolveDshHome(),
 ): PrivateInputs {
@@ -50,8 +28,6 @@ export function mountPrivateInputs(
     privateInputWebUrl(webUrl, 'dm-check', '00000000-0000-0000-0000-000000000000');
   const log: PrivateInputLog = (phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details });
-  const privateMcp = new ProtectedMcp(log);
-  const mode: 'standard' | 'protected' = enabled ? 'protected' : 'standard';
   ctx.inject(['credentials'], () => {
     queueMicrotask(() => void owner.recover().catch(() => log('recovery-unavailable')));
   });
@@ -90,115 +66,46 @@ export function mountPrivateInputs(
             );
           },
         }),
-    qualified: () => (mode === 'protected' ? execution.qualified() : Promise.resolve(true)),
+    qualified: () => Promise.resolve(true),
     log,
     changed: (botSlug, count) => core.states.setPrivateInputCount(botSlug, count),
   });
-  if (mode === 'standard')
-    ctx.inject(['sandbox'], (child) => {
-      const sandbox = child.get('sandbox') as unknown as {
-        confine(...args: unknown[]): Promise<{ argv: string[] }>;
-      };
-      const original = sandbox.confine;
-      const store = credentialStorePath(dshHome);
-      const reported = new Set<string>();
-      sandbox.confine = async function (this: unknown, ...args: unknown[]) {
-        const confined = await original.apply(this, args);
-        const denied = denyStoreRead(confined, store);
-        const runner = basename(confined.argv[0] ?? 'none');
-        if (denied === confined && !reported.has(runner)) {
-          reported.add(runner);
-          ctx.logger.warn(
-            'botharness: the Shell sandbox runner %s has no credential store read denial; only the command text guard applies',
-            runner,
-          );
-        }
-        return denied;
-      };
-      child.effect(
-        () => () => {
-          sandbox.confine = original;
-        },
-        'botharness: credential store read denial',
-      );
-    });
+  ctx.inject(['sandbox'], (child) => {
+    const sandbox = child.get('sandbox') as unknown as {
+      confine(...args: unknown[]): Promise<{ argv: string[] }>;
+    };
+    const original = sandbox.confine;
+    const store = credentialStorePath(dshHome);
+    const reported = new Set<string>();
+    sandbox.confine = async function (this: unknown, ...args: unknown[]) {
+      const confined = await original.apply(this, args);
+      const denied = denyStoreRead(confined, store);
+      const runner = basename(confined.argv[0] ?? 'none');
+      if (denied === confined && !reported.has(runner)) {
+        reported.add(runner);
+        ctx.logger.warn(
+          'botharness: the Shell sandbox runner %s has no credential store read denial; only the command text guard applies',
+          runner,
+        );
+      }
+      return denied;
+    };
+    child.effect(
+      () => () => {
+        sandbox.confine = original;
+      },
+      'botharness: credential store read denial',
+    );
+  });
   ctx.effect(() => () => owner.close(), 'botharness: private input owner');
   ctx.effect(() => () => execution.close(), 'botharness: protected Execution World');
-  ctx.effect(() => () => privateMcp.close(), 'botharness: protected MCP lifetime');
-  ctx.tools.guard(({ name, agent, arguments: args }) => {
-    if (mode === 'standard')
-      return credentialStoreDenial(name, args, dshHome, agent?.session.header.cwd);
-    if (
-      agent !== undefined &&
-      core.ownership.resolve(agent.session.id)?.rootRole === 'orchestrator'
-    ) {
-      if (name === 'bash') return undefined;
-      if (isQualifiedMessagingName(name)) return messagingToolDenial(ctx, agent, name);
-      if (name === PRIVATE_MCP_TOOL) return privateMcp.denial(ctx, agent);
-      if (name.startsWith('mcp__') && linuxMcp !== undefined)
-        return linuxMcp.denial(ctx, agent, name);
-    }
-    if (
-      !SAFE_TOOLS.has(name) ||
-      (name.startsWith('bot_schedule_') &&
-        (agent === undefined ||
-          core.ownership.resolve(agent.session.id)?.rootRole !== 'orchestrator')) ||
-      (name !== 'bash' &&
-        (agent === undefined || core.ownership.resolve(agent.session.id) === undefined))
-    )
-      return 'This protected Profile has not qualified that Host capability; use an ordinary Profile for nonsecret Host tools';
-    return undefined;
-  });
-  ctx.on(
-    'tools/execute',
-    async (call, next) => {
-      if (mode === 'standard' || call.name !== 'bash') return next();
-      if (
-        typeof call.arguments === 'object' &&
-        call.arguments !== null &&
-        'run_in_background' in call.arguments &&
-        call.arguments.run_in_background === true
-      )
-        throw new Error('Protected commands require a foreground command');
-      if (
-        call.agent !== undefined &&
-        core.ownership.resolve(call.agent.session.id)?.rootRole === 'orchestrator'
-      ) {
-        nativeExecutionRoot(core, call.agent.session, 'bash', call.arguments);
-        return next();
-      }
-      const args = call.arguments;
-      if (
-        typeof args !== 'object' ||
-        args === null ||
-        !('command' in args) ||
-        typeof args.command !== 'string' ||
-        ('run_in_background' in args && args.run_in_background === true)
-      )
-        throw new Error('Protected commands require a foreground command');
-      const text = await execution.command(args.command, call.signal);
-      return {
-        isError: false,
-        value: {
-          kind: 'foreground',
-          exitCode: 0,
-          signal: null,
-          timedOut: false,
-          aborted: false,
-          timeoutMs: 30_000,
-          stdout: { text, truncated: false },
-          stderr: { text: '', truncated: true },
-        },
-        content: [{ type: 'text', text }],
-      };
-    },
-    { global: true },
+  ctx.tools.guard(({ name, agent, arguments: args }) =>
+    credentialStoreDenial(name, args, dshHome, agent?.session.header.cwd),
   );
   ctx.effect(
     () =>
       core.contributeBotAgentSetup((agentCtx, agent, info) => {
         if (info.rootRole !== 'orchestrator') return;
-        if (mode === 'protected') privateMcp.register(agentCtx, agent, owner);
         agentCtx.tools.register(
           defineTool({
             name: 'ask_secret',
@@ -423,7 +330,6 @@ export function mountPrivateInputs(
             },
           }),
         );
-        if (mode !== 'standard') return;
         agentCtx.tools.register(
           defineTool({
             name: 'secret_cli',
