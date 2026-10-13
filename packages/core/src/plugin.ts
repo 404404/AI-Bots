@@ -1,6 +1,7 @@
 import { followCompanion } from './companions/live.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
+import { credentialStoreDenial } from './credentials/store-guard.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
 import { createPartLibrary, type PartLibrary } from './bots/part-library.js';
 import {
@@ -1218,6 +1219,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (agent === undefined || core.ownership.resolve(agent.session.id) === undefined)
         return next();
       if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
+      if (config.privateInputExecution !== true) {
+        const storeDenial = credentialStoreDenial(
+          execution.name,
+          execution.arguments,
+          resolveDshHome(),
+          agent.session.header.cwd,
+        );
+        if (storeDenial !== undefined) return { kind: 'deny', reason: storeDenial };
+      }
       if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
         return next();
 
