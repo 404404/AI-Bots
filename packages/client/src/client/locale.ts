@@ -678,6 +678,9 @@ export const zh = {
   'groupAutoAccept.row.title': '自动接受入群邀请',
   'groupAutoAccept.row.description':
     '直接加入受邀群聊，不唤醒 Bot。关闭后由受邀 Bot 决定是否加入。',
+  'botSessions.row.title': '在会话列表显示 Bot 会话',
+  'botSessions.row.description':
+    'Bot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。',
   'developer.row.title': '开发者模式',
   'developer.row.description': '显示 Session 来源、工作区授权历史和高级选项',
   'roster.menu.label': '更多',
@@ -2637,6 +2640,7 @@ export const zh = {
   'inbox.state.processing': '处理中',
   'inbox.state.deferred': '稍后处理',
   'inbox.state.needs-repair': '需要修复',
+  'inbox.state.open': '待办',
   'inbox.state.handled': '已处理',
   'inbox.state.ignored': '已忽略',
   'entry.schedules': '定时任务',
@@ -3800,6 +3804,9 @@ export const en = {
   'groupAutoAccept.row.title': 'Auto-accept Group invitations',
   'groupAutoAccept.row.description':
     'Join invited Groups without waking the Bot. When off, the invited Bot decides whether to join.',
+  'botSessions.row.title': 'Show Bot sessions in the session list',
+  'botSessions.row.description':
+    "Bot Orchestrator and Assignment sessions stay out of DeepSeek Harness's session list by default. Turn this on to show them.",
   'developer.row.title': 'Developer mode',
   'developer.row.description':
     'Show Session provenance, workspace access history and advanced options',
@@ -5866,6 +5873,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'inbox.state.processing': 'Processing',
   'inbox.state.deferred': 'Deferred',
   'inbox.state.needs-repair': 'Needs repair',
+  'inbox.state.open': 'Open',
   'inbox.state.handled': 'Handled',
   'inbox.state.ignored': 'Ignored',
   'entry.schedules': 'Schedules',

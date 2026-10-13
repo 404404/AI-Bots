@@ -3,6 +3,7 @@ import { BANNER_SCENES, seededBannerRecipe } from '@botharness/pixel-banner';
 import {
   Button,
   IconEllipsisOutlineRegular,
+  IconTrashOutlineRegular,
   Menu,
   Tag,
   type MenuEntry,
@@ -452,7 +453,14 @@ export function ProfileHeader({
 }): ReactElement {
   const [panel, setPanel] = useState<'edit' | 'avatar' | 'banner'>();
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuItems: readonly MenuEntry[] = [{ id: 'delete', label: t('deletion.title') }];
+  const menuItems: readonly MenuEntry[] = [
+    {
+      id: 'delete',
+      label: t('deletion.title'),
+      icon: <IconTrashOutlineRegular size={16} />,
+      danger: true,
+    },
+  ];
   return (
     <header className="bh-profile-header">
       <div className="bh-profile-banner">

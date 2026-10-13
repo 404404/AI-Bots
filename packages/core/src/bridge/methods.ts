@@ -556,6 +556,7 @@ export interface BridgeMethods {
   userQuestionAnswer(payload: unknown): Promise<BridgeResult<{ accepted: boolean }>>;
   sessions(payload: unknown): BridgeResult<{ sessions: OwnedSessionSummary[] }>;
   sessionOwner(payload: unknown): BridgeResult<{ owner: OwnedSessionBot | null }>;
+  botSessionIds(payload: unknown): BridgeResult<{ sessionIds: string[] }>;
   messageAttachmentTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
@@ -3534,9 +3535,15 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('cursor must be a Source Event ID');
       if (
         state !== undefined &&
-        !['pending', 'processing', 'observed', 'deferred', 'needs-repair', 'handled'].includes(
-          String(state),
-        )
+        ![
+          'pending',
+          'processing',
+          'observed',
+          'deferred',
+          'needs-repair',
+          'open',
+          'handled',
+        ].includes(String(state))
       )
         return invalidInput('unknown Bot attention state');
       try {
@@ -4387,6 +4394,12 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           },
         },
       };
+    },
+    botSessionIds() {
+      const sessionIds = deps.registry
+        .list()
+        .flatMap((bot) => deps.ownership.rootsFor(bot.slug).map((root) => root.sessionId));
+      return { ok: true, value: { sessionIds } };
     },
     memoryFileTarget(payload) {
       const source = asObject(payload);

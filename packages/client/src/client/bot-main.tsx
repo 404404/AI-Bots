@@ -1656,6 +1656,11 @@ function ConversationView({
                 channel={channel}
                 actions={actions}
                 t={t}
+                deleteBotSlug={
+                  profileBot === undefined || profileBot.deleted === true
+                    ? undefined
+                    : profileBot.slug
+                }
                 onOpenSettings={
                   hasChannelSettings
                     ? () => channelSettings.open(settingsAttention[0]?.id)
