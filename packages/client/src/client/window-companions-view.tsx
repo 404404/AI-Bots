@@ -142,20 +142,12 @@ export function CompanionSettings({
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
-          const layers = Number(data.get('layers'));
           const retention = Number(data.get('retention'));
-          if (
-            !Number.isInteger(layers) ||
-            layers < 1 ||
-            layers > 10 ||
-            !Number.isInteger(retention) ||
-            retention < 1 ||
-            retention > 100
-          ) {
+          if (!Number.isInteger(retention) || retention < 1 || retention > 100) {
             setError(true);
             return;
           }
-          companion.configureCapacity({ layers, retention });
+          companion.configureCapacity({ layers: state.capacity.layers, retention });
           setError(false);
         }}
       >
@@ -165,20 +157,6 @@ export function CompanionSettings({
           {error ? <div role="alert">{t('companion.capacityError')}</div> : null}
         </div>
         <div className="bh-companion-capacity-controls">
-          <label htmlFor={`${id}-layers`}>
-            {t('companion.layers')}
-            <Input
-              id={`${id}-layers`}
-              name="layers"
-              type="number"
-              min={1}
-              max={10}
-              step={1}
-              required
-              defaultValue={state.capacity.layers}
-              disabled={!state.ready}
-            />
-          </label>
           <label htmlFor={`${id}-retention`}>
             {t('companion.retention')}
             <Input

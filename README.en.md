@@ -165,6 +165,7 @@ Questions, ideas and the Bots you build are all welcome.
 - [Rakazo](https://github.com/elie222/rakazo): persistent AI teammates, conversations, and memory.
 - [DS Bot](https://github.com/Fei2411/DeepSeek-Bot): another Bot plugin for DSH with a different focus, worth a read.
 - [deepseek-harness-workbench-plugin](https://github.com/loadingvx/deepseek-harness-workbench-plugin): Memory Git graph rails, commit lists, and diff presentation.
+- [Coopanion](https://github.com/Pal-AI-Lab/Coopanion): the Window Companion's single speech bubble, sentence pacing, walking direction, and bubble style.
 - [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the upstream plugin host.
 - [dsh-im](https://github.com/xmanrui/dsh-im), [dsh-lark-link](https://github.com/amlyczz/dsh-lark-link), and [dsh-lark-bridge](https://github.com/imetn/dsh-lark-bridge): IM integration foundations and reliability/routing references.
 

@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ReactElement,
 } from 'react';
 import {
@@ -13,7 +14,7 @@ import {
   IconNewChatOutlineRegular,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
-import { PersonaBotAvatar, personaBotPresentationSummary } from './avatar.js';
+import { PersonaBotAvatar } from './avatar.js';
 import { attentionCount } from './activity-attention.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -27,6 +28,7 @@ import { companionMessageIdentity } from '../../../core/src/companions/sources.j
 import { companionBabble, type CompanionSound } from './companion-sound.js';
 import type { BridgeActions } from './actions.js';
 import { CompanionRequests } from './companion-requests-view.js';
+import { beatStart } from './companion-beats.js';
 import type { AvatarAnchor } from './avatar-anchor.js';
 
 function avatarLimitation(
@@ -36,13 +38,8 @@ function avatarLimitation(
   if (bot?.avatar && !bot.appearance) return 'imageOnly';
   return;
 }
-const statusVisible = (state: CompanionViewState): boolean =>
-  Boolean(
-    (state.selection?.activity && state.activity && state.activity.state !== 'idle') ||
-    state.bot?.paused ||
-    avatarLimitation(state.bot) ||
-    state.sync !== 'live',
-  );
+const speaking = (state: CompanionViewState): boolean =>
+  state.cards.length > 0 || state.requests.length > 0;
 
 const tails = new Set<HTMLElement>();
 const followTails = (): void => {
@@ -57,7 +54,15 @@ const followTail = (node: HTMLElement): void => {
   tails.add(node);
 };
 
-function CompanionMessageText({ text, context }: { text: string; context: boolean }): ReactElement {
+function CompanionMessageText({
+  text,
+  context,
+  typing,
+}: {
+  text: string;
+  context: boolean;
+  typing: boolean;
+}): ReactElement {
   const following = useRef(true);
   const viewport = useMountedResource<HTMLParagraphElement>(
     (node) => {
@@ -76,6 +81,7 @@ function CompanionMessageText({ text, context }: { text: string; context: boolea
       }}
     >
       {text}
+      {typing ? <span className="bh-companion-caret" aria-hidden="true" /> : null}
     </p>
   );
 }
@@ -159,6 +165,7 @@ export function WindowCompanionView({
     | undefined
   >(undefined);
   const direction = useRef(1);
+  const [stride, setStride] = useState<'left' | 'right' | undefined>(undefined);
   const hovering = useRef(false);
   const exit = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clickReset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -249,18 +256,14 @@ export function WindowCompanionView({
       const placeBubble = (next: CompanionPoint, sampled: ReturnType<AvatarAnchor['read']>) => {
         const state = latest.current;
         if (state.selection) {
-          if (statusVisible(state) || state.cards.length || state.requests.length) {
+          if (speaking(state)) {
             const placement = bubbleOwner.place(
               state.selection.botId,
               next.x,
               next.y,
               next.width,
               viewport.current.height,
-              state.requests.length
-                ? 4
-                : state.reading
-                  ? state.cards.length
-                  : Math.min(state.cards.length, state.capacity.layers),
+              state.requests.length ? 4 : 1,
               state.reading || state.requests.length > 0,
               sampled
                 ? {
@@ -339,6 +342,7 @@ export function WindowCompanionView({
             state.bot?.paused !== true &&
             state.sync === 'live' &&
             !state.reading &&
+            !speaking(state) &&
             motion.point.phase === 'rest' &&
             !pointer.current &&
             !reduced,
@@ -348,6 +352,7 @@ export function WindowCompanionView({
           placeBubble(next, sampled);
           if (walking && (next.x <= 8 || next.x >= Math.max(8, next.width - 104)))
             direction.current *= -1;
+          setStride(walking ? (direction.current > 0 ? 'right' : 'left') : undefined);
           if (next !== previousPoint) setPoint(next);
           if (previousPoint.phase !== 'rest' && next.phase === 'rest') persistPosition();
         }
@@ -358,9 +363,7 @@ export function WindowCompanionView({
         read: () => {
           const state = latest.current;
           sampled =
-            !document.hidden &&
-            stageVisible &&
-            (statusVisible(state) || state.cards.length || state.requests.length)
+            !document.hidden && stageVisible && speaking(state)
               ? anchor.current?.read()
               : undefined;
         },
@@ -422,6 +425,21 @@ export function WindowCompanionView({
     },
     [companion, view.selection?.botId, bubbleOwner, frameOwner, sound],
   );
+  const popKey = view.cards[0] ? view.cards[0].channelId + '\n' + view.cards[0].messageId : '';
+  const pop = useMountedResource<HTMLElement>(
+    (node) => {
+      if (!popKey || reducedMotion() || typeof node.animate !== 'function') return;
+      const animation = node.animate(
+        [
+          { transform: 'scale(.5)', opacity: 0 },
+          { transform: 'none', opacity: 1 },
+        ],
+        { duration: 260, easing: 'cubic-bezier(.3, 1.5, .5, 1)' },
+      );
+      return () => animation.cancel();
+    },
+    [popKey],
+  );
   if (!view.selection || !view.bot) return null;
   const { selection, bot, activity } = view;
   const state = bot.paused ? 'idle' : (activity?.state ?? 'idle');
@@ -429,11 +447,6 @@ export function WindowCompanionView({
   const limitation = limitationKey ? t(`companion.${limitationKey}`) : undefined;
   const attention = activity?.attention;
   const items: MenuEntry[] = [
-    {
-      id: 'activity',
-      label: t('companion.activity'),
-      icon: <span aria-hidden="true">{selection.activity ? '✓' : ''}</span>,
-    },
     {
       id: 'dm',
       label: t('companion.dm'),
@@ -456,27 +469,52 @@ export function WindowCompanionView({
     ...(openSettings ? [{ id: 'settings', label: t('companion.settings') }] : []),
     { id: 'remove', label: t('companion.remove') },
   ];
-  const cards = view.reading ? view.cards : view.cards.slice(-view.capacity.layers);
+  const head = view.cards[0];
+  const queued = view.cards.length - 1 + view.pending;
+  const headIdentity = head ? companionMessageIdentity(head.channelId, head.messageId) : '';
+  const headContext = head
+    ? [
+        head.source === 'bot-dm' ? head.participants?.join(' ↔ ') : '',
+        head.canOpen === false || unavailable.has(headIdentity)
+          ? t('companion.sourceUnavailable')
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+  const condition =
+    [
+      view.sync !== 'live' ? t('companion.stale') : bot.paused ? t('companion.archived') : '',
+      limitation ?? '',
+    ]
+      .filter(Boolean)
+      .join(' · ') || undefined;
+  const facing = speaking(view) ? 'front' : stride;
   const bubbleLeft = bubble
     ? bubble.left - point.x
     : Math.max(-point.x + 8, Math.min(-108, point.width - point.x - 328));
-  const bubbleBottom = (bubble?.bottom ?? point.y + 134) - point.y;
+  const bubbleBottom = (bubble?.bottom ?? point.y + 100) - point.y;
   const connector =
-    bubble && (statusVisible(view) || view.cards.length || view.requests.length)
+    bubble && speaking(view)
       ? {
           x: Math.max(
-            bubble.left + 12,
-            Math.min(bubble.originX, bubble.left + Math.min(308, point.width - 28)),
+            bubble.left + 24,
+            Math.min(bubble.originX, bubble.left + Math.min(276, point.width - 40)),
           ),
-          y: viewport.current.height - bubble.bottom - (statusVisible(view) ? 0 : 40),
+          y: viewport.current.height - bubble.bottom,
         }
       : undefined;
+  const tail = connector && bubble ? connector.x - bubble.left : undefined;
+  const tethered =
+    connector !== undefined &&
+    bubble !== undefined &&
+    (bubble.bottom - bubble.originY > 24 || Math.abs(connector.x - bubble.originX) > 1);
   return (
     <div ref={mount} className="bh-root bh-companion-stage">
-      {connector && bubble ? (
+      {tethered && connector && bubble ? (
         <svg className="bh-companion-tether" aria-hidden="true">
           <path
-            d={`M ${bubble.originX} ${viewport.current.height - bubble.originY} V ${connector.y + 8} H ${connector.x} V ${connector.y}`}
+            d={`M ${bubble.originX} ${viewport.current.height - bubble.originY} V ${connector.y + 16} H ${connector.x} V ${connector.y + 10}`}
           />
         </svg>
       ) : null}
@@ -489,6 +527,7 @@ export function WindowCompanionView({
         data-sync={view.sync}
         data-motion={point.phase}
         data-bot={bot.slug}
+        data-toolbar={point.x > point.width - 150 ? 'left' : 'right'}
         style={{
           left: 0,
           bottom: 0,
@@ -516,20 +555,6 @@ export function WindowCompanionView({
           if (!event.currentTarget.contains(event.relatedTarget)) leave();
         }}
       >
-        {statusVisible(view) ? (
-          <div
-            className="bh-companion-activity"
-            style={{ left: bubbleLeft, bottom: bubbleBottom }}
-            role="status"
-          >
-            {view.sync !== 'live'
-              ? t('companion.stale')
-              : bot.paused
-                ? t('companion.archived')
-                : personaBotPresentationSummary(state, activity?.activity, undefined, t)}
-            {limitation ? ` · ${limitation}` : null}
-          </div>
-        ) : null}
         {view.requests.length ? (
           <CompanionRequests
             requests={view.requests}
@@ -540,123 +565,94 @@ export function WindowCompanionView({
             restoreFocus={() => {
               if (character.current?.isConnected) character.current.focus();
             }}
-            style={{
-              left: bubbleLeft,
-              bottom: bubbleBottom + 40,
-              maxHeight:
-                bubble?.cardHeight ??
-                Math.min(
-                  448,
-                  Math.max(112, viewport.current.height - point.y - bubbleBottom - 40 - 16),
-                ),
-            }}
-          />
-        ) : view.cards.length ? (
-          <ol
-            className="bh-companion-cards"
-            aria-label={t('companion.messages')}
-            style={{
-              left: bubbleLeft,
-              bottom: bubbleBottom + 40,
-              height: view.reading
-                ? (bubble?.cardHeight ??
+            style={
+              {
+                left: bubbleLeft,
+                bottom: bubbleBottom,
+                ...(tail === undefined ? {} : { '--bh-companion-tail': `${tail}px` }),
+                maxHeight:
+                  bubble?.cardHeight ??
                   Math.min(
-                    cards.length * 112,
-                    Math.max(112, viewport.current.height - point.y - bubbleBottom - 40 - 16),
-                  ))
-                : 112,
-            }}
+                    448,
+                    Math.max(112, viewport.current.height - point.y - bubbleBottom - 16),
+                  ),
+              } as CSSProperties
+            }
+          />
+        ) : head ? (
+          <article
+            ref={pop}
+            className="bh-companion-bubble"
+            aria-label={t('companion.messages')}
+            style={
+              {
+                left: bubbleLeft,
+                bottom: bubbleBottom,
+                ...(tail === undefined ? {} : { '--bh-companion-tail': `${tail}px` }),
+              } as CSSProperties
+            }
           >
-            {cards.map((card, index) => {
-              const identity = companionMessageIdentity(card.channelId, card.messageId);
-              const layer = cards.length - index - 1;
-              const context = [
-                card.source === 'bot-dm' ? card.participants?.join(' ↔ ') : '',
-                card.canOpen === false || unavailable.has(identity)
-                  ? t('companion.sourceUnavailable')
-                  : '',
-              ]
-                .filter(Boolean)
-                .join(' · ');
-              return (
-                <li
-                  key={identity}
-                  ref={(node) => {
-                    if (node) node.inert = !view.reading && layer !== 0;
+            <header>
+              <div className="bh-companion-source">
+                <button
+                  type="button"
+                  disabled={head.canOpen === false}
+                  title={head.canOpen === false ? t('companion.sourceUnavailable') : undefined}
+                  onClick={async () => {
+                    if (head.canOpen === false) return;
+                    try {
+                      await openChannel(head.channelId, head.messageId);
+                      setUnavailable(
+                        (prior) => new Set([...prior].filter((id) => id !== headIdentity)),
+                      );
+                    } catch {
+                      setUnavailable(
+                        (prior) =>
+                          new Set([...prior, headIdentity].slice(-view.capacity.retention)),
+                      );
+                    }
                   }}
-                  className="bh-companion-card"
-                  style={{
-                    top: view.reading ? index * 112 : 0,
-                    transform: view.reading
-                      ? 'none'
-                      : `translateY(${-layer * 8}px) scale(${1 - layer * 0.04})`,
-                    zIndex: view.reading ? 1 : index + 1,
-                  }}
-                  aria-hidden={!view.reading && layer !== 0}
                 >
-                  <header>
-                    <div className="bh-companion-source">
-                      <button
-                        type="button"
-                        disabled={card.canOpen === false}
-                        title={
-                          card.canOpen === false ? t('companion.sourceUnavailable') : undefined
-                        }
-                        onClick={async () => {
-                          if (card.canOpen === false) return;
-                          try {
-                            await openChannel(card.channelId, card.messageId);
-                            setUnavailable(
-                              (prior) => new Set([...prior].filter((id) => id !== identity)),
-                            );
-                          } catch {
-                            setUnavailable(
-                              (prior) =>
-                                new Set([...prior, identity].slice(-view.capacity.retention)),
-                            );
-                          }
-                        }}
-                      >
-                        {t(
-                          card.source === 'shared-group' || card.source === 'bot-group'
-                            ? 'companion.sourceGroup'
-                            : 'companion.source',
-                          { name: card.channelName },
-                        )}
-                      </button>
-                      {context && <small title={context}>{context}</small>}
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={t('companion.dismiss')}
-                      onClick={(event) => {
-                        if (document.activeElement === event.currentTarget) {
-                          const controls = [
-                            ...root.current!.querySelectorAll<HTMLButtonElement>(
-                              '.bh-companion-card header > button',
-                            ),
-                          ];
-                          const current = controls.indexOf(event.currentTarget);
-                          (
-                            controls[current + 1] ??
-                            controls[current - 1] ??
-                            character.current
-                          )?.focus();
-                        }
-                        companion.dismiss(card.messageId, card.channelId);
-                      }}
-                    >
-                      <IconCloseFillRegular size={14} />
-                    </button>
-                  </header>
-                  <CompanionMessageText
-                    text={card.body.slice(0, card.shown)}
-                    context={Boolean(context)}
-                  />
-                </li>
-              );
-            })}
-          </ol>
+                  {t(
+                    head.source === 'shared-group' || head.source === 'bot-group'
+                      ? 'companion.sourceGroup'
+                      : 'companion.source',
+                    { name: head.channelName },
+                  )}
+                </button>
+                {headContext && <small title={headContext}>{headContext}</small>}
+              </div>
+              {queued > 0 ? (
+                <span
+                  className="bh-companion-queue"
+                  title={t('companion.queued', { count: queued })}
+                  aria-label={t('companion.queued', { count: queued })}
+                >
+                  +{queued}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                aria-label={t('companion.dismiss')}
+                onClick={(event) => {
+                  if (document.activeElement === event.currentTarget && queued === 0)
+                    character.current?.focus();
+                  companion.dismiss(head.messageId, head.channelId);
+                }}
+              >
+                <IconCloseFillRegular size={14} />
+              </button>
+            </header>
+            <CompanionMessageText
+              text={
+                view.reading
+                  ? head.body.slice(0, head.shown)
+                  : head.body.slice(beatStart(head.beats, head.shown), head.shown).trim()
+              }
+              context={Boolean(headContext)}
+              typing={head.shown < head.body.length}
+            />
+          </article>
         ) : null}
         <div className="bh-companion-toolbar" data-open={menu}>
           <button
@@ -708,7 +704,6 @@ export function WindowCompanionView({
                 if (onRemove) onRemove(bot.slug);
                 else companion.remove();
               }
-              if (id === 'activity') companion.configure({ activity: !selection.activity });
               if (id === 'dm') companion.configure({ dm: !selection.dm });
               if (id === 'group') companion.configure({ group: !selection.group });
               if (id === 'walking') companion.configure({ walking: !selection.walking });
@@ -718,7 +713,6 @@ export function WindowCompanionView({
               closeMenu();
             }}
           />
-          {view.pending ? <span role="status">+{view.pending}</span> : null}
         </div>
         {attentionCount(attention) > 0 || attention?.informationalCount ? (
           <button
@@ -738,7 +732,10 @@ export function WindowCompanionView({
             rotate: `${point.tilt}deg`,
             transform: `scale(${1 + point.squash}, ${1 - point.squash})`,
           }}
+          data-facing={facing ?? 'saved'}
           aria-label={t('companion.drag', { name: bot.name })}
+          aria-description={condition}
+          title={condition}
           onClick={() => {
             if (!suppressClick.current) openDm(bot.slug);
           }}
@@ -819,6 +816,7 @@ export function WindowCompanionView({
             surface="companion"
             anchorRef={anchorRef}
             mouth={view.mouth}
+            facing={facing}
             indicator={false}
             still={bot.paused}
             t={t}

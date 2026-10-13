@@ -57,6 +57,7 @@ export interface PersonaBotAvatarProps {
   surface?: 'portrait' | 'companion' | undefined;
   still?: boolean | undefined;
   mouth?: PixelMouthState | undefined;
+  facing?: 'front' | 'left' | 'right' | undefined;
   anchorRef?: ((anchor: AvatarAnchor | undefined) => void) | undefined;
 }
 
@@ -352,6 +353,7 @@ export function PersonaBotAvatar({
   surface = 'portrait',
   still = false,
   mouth = 'saved',
+  facing,
   anchorRef,
   t = zhTranslate,
 }: PersonaBotAvatarProps): ReactElement {
@@ -376,7 +378,7 @@ export function PersonaBotAvatar({
       anchorRef(createAvatarAnchor(node));
       return () => anchorRef(undefined);
     },
-    [anchorRef, appearance, seededRecipe, src, size, state, surface],
+    [anchorRef, appearance, seededRecipe, src, size, state, surface, facing],
   );
 
   return (
@@ -408,6 +410,7 @@ export function PersonaBotAvatar({
           surface={surface}
           still={still}
           mouth={mouth}
+          facing={facing}
         />
       ) : (
         <AvatarMedia key={src ?? ''} personaBotId={personaBotId} name={name} src={src} />

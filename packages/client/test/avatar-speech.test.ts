@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 import { PersonaBotAvatar } from '../src/client/avatar.js';
 import {
+  avatarSvg,
   DEFAULT_ILLUSTRATED_RECIPE,
   type PixelMouthState,
 } from '../../core/src/bots/avatar-appearance.js';
@@ -265,6 +266,56 @@ it('changes the mouth from its retained opacities without computed-style reads o
     Reflect.deleteProperty(document, 'hidden');
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    node.remove();
+  }
+});
+
+it('draws the companion figure turned to a requested facing without the thinking turn layers', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const node = document.createElement('div');
+  document.body.append(node);
+  const root = createRoot(node);
+  const recipe = { ...DEFAULT_ILLUSTRATED_RECIPE, pose: 'front' as const };
+  const markup = async (facing?: 'front' | 'left' | 'right') => {
+    await act(() =>
+      root.render(
+        createElement(PersonaBotAvatar, {
+          personaBotId: 'ada',
+          name: 'Ada',
+          size: 96,
+          state: 'thinking',
+          surface: 'companion',
+          appearance: { recipe, revision: 'a'.repeat(64) },
+          facing,
+        }),
+      ),
+    );
+    return face(node);
+  };
+  const face = (root: ParentNode) =>
+    [...root.querySelectorAll('.bh-illustrated-head rect')]
+      .map((rect) => ['x', 'y', 'width', 'fill'].map((name) => rect.getAttribute(name)).join(','))
+      .join(' ');
+  const expected = (pose: 'front' | 'left' | 'right') => {
+    const template = document.createElement('template');
+    template.innerHTML = avatarSvg(
+      { ...recipe, pose },
+      { surface: 'companion', mouthLayers: true },
+    );
+    return face(template.content);
+  };
+  try {
+    const saved = await markup();
+    expect(node.querySelector('[data-avatar-turn]')).not.toBeNull();
+    const left = await markup('left');
+    expect(left).toBe(expected('left'));
+    expect(node.querySelector('[data-avatar-turn]')).toBeNull();
+    expect(await markup('right')).toBe(expected('right'));
+    expect(await markup('front')).toBe(expected('front'));
+    expect(left).not.toBe(expected('right'));
+    expect(saved).toBe(expected('front'));
+  } finally {
+    await act(() => root.unmount());
     node.remove();
   }
 });

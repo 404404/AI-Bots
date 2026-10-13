@@ -1,4 +1,4 @@
-import { useRef, type ReactElement, type CSSProperties } from 'react';
+import { useRef, useState, type ReactElement, type CSSProperties } from 'react';
 import type { CompanionRequest } from '../../../core/src/companions/feed.js';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -55,11 +55,6 @@ function PendingRequest({
           ownedFocus.current = false;
       }}
     >
-      <div className="bh-companion-request-source">
-        {t(request.channelId.startsWith('dm-') ? 'companion.source' : 'companion.sourceGroup', {
-          name: request.channelName,
-        })}
-      </div>
       {actions && request.kind === 'tool-approval' ? (
         <ToolApprovalCard
           message={{
@@ -114,11 +109,20 @@ export function CompanionRequests({
   messageCount: number;
 }): ReactElement {
   const root = useRef<HTMLElement>(null);
+  const [chosen, setChosen] = useState<string | undefined>(undefined);
+  const found = requests.findIndex((request) => request.messageId === chosen);
+  const index = found < 0 ? 0 : found;
+  const request = requests[index]!;
   const release = (): void => {
-    const next = root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    const next =
+      root.current?.querySelector<HTMLElement>(
+        'li button:not(:disabled), li input:not(:disabled)',
+      ) ?? root.current?.querySelector<HTMLElement>('ol');
     if (next?.isConnected) next.focus();
     else restoreFocus();
   };
+  const step = (offset: number): void =>
+    setChosen(requests[(index + offset + requests.length) % requests.length]!.messageId);
   return (
     <section
       ref={root}
@@ -127,20 +131,52 @@ export function CompanionRequests({
       style={style}
     >
       <header>
-        {t('companion.requestCount', { count: requests.length })}
-        {messageCount ? <div>{t('companion.messagesWaiting', { count: messageCount })}</div> : null}
+        <span className="bh-companion-request-source">
+          {t(request.channelId.startsWith('dm-') ? 'companion.source' : 'companion.sourceGroup', {
+            name: request.channelName,
+          })}
+        </span>
+        {messageCount ? (
+          <span
+            className="bh-companion-queue"
+            title={t('companion.messagesWaiting', { count: messageCount })}
+            aria-label={t('companion.messagesWaiting', { count: messageCount })}
+          >
+            +{messageCount}
+          </span>
+        ) : null}
+        {requests.length > 1 ? (
+          <span className="bh-companion-request-nav">
+            <button
+              type="button"
+              aria-label={t('companion.previousRequest')}
+              onClick={() => step(-1)}
+            >
+              ‹
+            </button>
+            <span
+              aria-label={t('companion.requestPosition', {
+                index: index + 1,
+                count: requests.length,
+              })}
+            >
+              {index + 1}/{requests.length}
+            </span>
+            <button type="button" aria-label={t('companion.nextRequest')} onClick={() => step(1)}>
+              ›
+            </button>
+          </span>
+        ) : null}
       </header>
-      <ol tabIndex={0} aria-label={t('companion.requestList')}>
-        {requests.map((request) => (
-          <PendingRequest
-            key={request.messageId}
-            request={request}
-            actions={actions}
-            live={live}
-            t={t}
-            onReleaseFocus={release}
-          />
-        ))}
+      <ol tabIndex={-1}>
+        <PendingRequest
+          key={request.messageId}
+          request={request}
+          actions={actions}
+          live={live}
+          t={t}
+          onReleaseFocus={release}
+        />
       </ol>
     </section>
   );

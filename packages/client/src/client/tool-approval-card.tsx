@@ -167,9 +167,10 @@ export function ToolApprovalCard({
       });
   };
   const disabled = busy || (companionTarget !== undefined && !qualified());
-  return (
-    <div ref={approvalMount} className="bh-tool-approval-card">
-      <div className="bh-grant-request-title">{t('approval.requestTitle')}</div>
+  const compact = companionTarget !== undefined;
+  const size = compact ? 'sm' : 'md';
+  const details = (
+    <>
       <div className="bh-note">
         {request.role === 'assignment' ? t('approval.assignment') : t('approval.orchestrator')}
         {' · '}
@@ -186,6 +187,26 @@ export function ToolApprovalCard({
               : 'approval.risk',
         )}
       </div>
+    </>
+  );
+  return (
+    <div ref={approvalMount} className="bh-tool-approval-card" data-compact={compact || undefined}>
+      {compact ? (
+        <>
+          <div className="bh-grant-request-title">
+            {t('approval.requestTitle')} · <code>{request.toolName}</code>
+          </div>
+          <details className="bh-companion-details">
+            <summary>{t('companion.details')}</summary>
+            {details}
+          </details>
+        </>
+      ) : (
+        <>
+          <div className="bh-grant-request-title">{t('approval.requestTitle')}</div>
+          {details}
+        </>
+      )}
       {executionState === 'waiting-human' ||
       executionState === 'waiting-capacity' ||
       executionState === 'needs-repair' ? (
@@ -209,12 +230,18 @@ export function ToolApprovalCard({
         </div>
       ) : status === 'pending' && !confirmAll ? (
         <div className="bh-tool-approval-actions bh-message-card-actions">
-          <Button variant="primary" disabled={disabled} onClick={() => decide('allowed-once')}>
+          <Button
+            variant="primary"
+            size={size}
+            disabled={disabled}
+            onClick={() => decide('allowed-once')}
+          >
             {t('approval.allowOnce')}
           </Button>
           {request.toolName === 'secret_cli' ? null : (
             <Button
               variant="outline"
+              size={size}
               disabled={disabled}
               onClick={() => decide('allowed-always-exact')}
             >
@@ -222,11 +249,21 @@ export function ToolApprovalCard({
             </Button>
           )}
           {request.toolName === 'secret_cli' ? null : (
-            <Button variant="outline" disabled={disabled} onClick={() => setConfirmAll(true)}>
+            <Button
+              variant="outline"
+              size={size}
+              disabled={disabled}
+              onClick={() => setConfirmAll(true)}
+            >
               {t('approval.allowAll')}
             </Button>
           )}
-          <Button variant="outline" disabled={disabled} onClick={() => decide('rejected')}>
+          <Button
+            variant="outline"
+            size={size}
+            disabled={disabled}
+            onClick={() => decide('rejected')}
+          >
             {t('approval.reject')}
           </Button>
         </div>
@@ -261,12 +298,18 @@ export function ToolApprovalCard({
             <div className="bh-tool-approval-actions bh-message-card-actions">
               <Button
                 variant="primary"
+                size={size}
                 disabled={disabled}
                 onClick={() => decide('allowed-always-all')}
               >
                 {t('approval.confirmAll')}
               </Button>
-              <Button variant="outline" disabled={busy} onClick={() => setConfirmAll(false)}>
+              <Button
+                variant="outline"
+                size={size}
+                disabled={busy}
+                onClick={() => setConfirmAll(false)}
+              >
                 {t('approval.cancel')}
               </Button>
             </div>
