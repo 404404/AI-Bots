@@ -3933,18 +3933,18 @@ export async function restoreMemoryCheckpoint(
   };
 }
 
-export async function loadMemoryCommit(
+export async function restoreMemoryCommit(
   call: BridgeCall,
-  input: { channelId: string; sha: string; expectedHead: string; loadId: string },
+  input: { channelId: string; sha: string; expectedHead: string; restoreId: string },
 ): Promise<{ head: string; saved: MemoryRecoveryCheckpoint }> {
-  const response = asRecord(await unwrap(call, 'memoryLoad', input));
+  const response = asRecord(await unwrap(call, 'memoryRestoreCommit', input));
   const saved = asRecord(response?.['saved']);
   if (
     saved === undefined ||
     typeof saved['id'] !== 'string' ||
     typeof response?.['head'] !== 'string'
   )
-    throw new Error('invalid Memory load result');
+    throw new Error('invalid Memory restore result');
   return {
     head: response['head'] as string,
     saved: saved as unknown as MemoryRecoveryCheckpoint,

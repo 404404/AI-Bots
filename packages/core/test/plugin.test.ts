@@ -466,7 +466,7 @@ describe('plugin entry', () => {
       'memoryRecoveryHistory',
       'memoryRestore',
       'memorySave',
-      'memoryLoad',
+      'memoryRestoreCommit',
       'memoryRepair',
       'profileActivity',
       'profileSessionUsage',

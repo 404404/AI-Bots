@@ -202,7 +202,12 @@ export interface MemoryAcceptance {
     expectedHead: string;
     editId: string;
   }): MemoryAcceptedCommit;
-  loadHuman(input: { botSlug: string; sha: string; expectedHead: string; loadId: string }): {
+  restoreCommitHuman(input: {
+    botSlug: string;
+    sha: string;
+    expectedHead: string;
+    restoreId: string;
+  }): {
     head: string;
     saved: MemoryRecoveryCheckpoint;
   };
@@ -1924,7 +1929,7 @@ export function createMemoryAcceptance(options: {
       }
       return accepted;
     },
-    loadHuman(input) {
+    restoreCommitHuman(input) {
       if (inFlight.has(input.botSlug) || pendingRepair(input.botSlug) !== undefined)
         throw new MemoryAcceptError('memory-conflict', 'Memory is busy');
       const root = repository(registry, input.botSlug);
@@ -1945,7 +1950,7 @@ export function createMemoryAcceptance(options: {
           origin: 'human-command',
           originId: LOCAL_HUMAN_ID,
           causeKind: 'human-edit',
-          causeId: input.loadId,
+          causeId: input.restoreId,
         },
         true,
       );
@@ -1960,7 +1965,7 @@ export function createMemoryAcceptance(options: {
           '-p',
           baseline,
           '-m',
-          `Load Memory from ${input.sha.slice(0, 7)}: ${subject}`,
+          `Restore Memory to ${input.sha.slice(0, 7)}: ${subject}`,
         ]);
         run(root, ['update-ref', `refs/heads/${branch}`, loaded, baseline]);
       }
@@ -1978,7 +1983,7 @@ export function createMemoryAcceptance(options: {
                 actorKind: 'human',
                 actorId: LOCAL_HUMAN_ID,
                 causeKind: 'human-edit',
-                causeId: input.loadId,
+                causeId: input.restoreId,
                 validationResult: validateCommit(root, loaded),
               },
             ],
@@ -1989,12 +1994,12 @@ export function createMemoryAcceptance(options: {
           origin: 'human-command',
           originId: LOCAL_HUMAN_ID,
           causeKind: 'human-edit',
-          causeId: input.loadId,
+          causeId: input.restoreId,
         });
         saveObservation(input.botSlug, root, observeWorktree(root));
       } catch (error) {
         options.warn?.(
-          `memory-record-failed phase=after-human-load bot=${input.botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
+          `memory-record-failed phase=after-human-commit-restore bot=${input.botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
         );
       }
       return { head: loaded, saved };

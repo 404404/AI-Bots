@@ -109,6 +109,7 @@ import { store } from '../src/client/store.js';
 import type { MemoryGitGraph } from '../src/client/bridge.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { MemoryEntry } from '../src/client/memory-entry.js';
+import { MemoryFilesEntry } from '../src/client/memory-files-entry.js';
 import { MemoryRecovery } from '../src/client/memory-recovery.js';
 import { MemoryCommitView } from '../src/client/memory-commit-view.js';
 import { inertSubmissionActions } from './inert-submissions.js';
@@ -168,13 +169,13 @@ it('requires an explicit confirmation before restoring an older Memory checkpoin
   const olderRow = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row')[1];
   await act(async () => olderRow?.click());
   const choose = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '读档',
+    (button) => button.textContent === '恢复到这个备份',
   );
   await act(async () => choose?.click());
   expect(actions.memoryRestore).not.toHaveBeenCalled();
   expect(container.textContent).toContain('当前仓库会先完整备份');
   const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '备份并读档',
+    (button) => button.textContent === '备份并恢复',
   );
   await act(async () => confirm?.click());
   expect(actions.memoryRestore).toHaveBeenCalledWith({
@@ -575,7 +576,7 @@ describe('Memory Git graph sidebar', () => {
     expect(container.querySelector('.bh-memory-continue-form')).toBeNull();
   });
 
-  it('loads an older graph commit after an explicit save-and-load confirmation', async () => {
+  it('restores an older graph commit after a backup-and-restore confirmation that names what is included', async () => {
     const older = 'b'.repeat(40);
     const loaded = 'c'.repeat(40);
     const graph: MemoryGitGraph = {
@@ -604,47 +605,70 @@ describe('Memory Git graph sidebar', () => {
       hasMore: false,
     };
     const onMemoryCommitSelect = vi.fn();
+    let files = ['MEMORY.md', 'draft.md'];
     const actions = {
-      memorySnapshot: vi.fn().mockResolvedValue({ head: SHA, files: [], provisional: false }),
+      memorySnapshot: vi.fn(async () => ({ head: SHA, files, provisional: false })),
       memoryGitGraph: vi.fn().mockResolvedValue(graph),
-      memoryLoad: vi.fn().mockResolvedValue({ head: loaded, saved: { id: 'saved' } }),
+      memoryFile: vi.fn(async (_channelId: string, path: string) => ({
+        path,
+        body: '',
+        head: SHA,
+      })),
+      memoryRestoreCommit: vi.fn(async () => {
+        files = ['MEMORY.md'];
+        return { head: loaded, saved: { id: 'saved' } };
+      }),
       ...inertSubmissionActions,
     } as unknown as BridgeActions;
     await act(async () => {
       root.render(
-        createElement(MemoryEntry, {
-          scope: 'personabot',
-          channelId: 'dm-qa',
-          botSlug: 'qa',
-          actions,
-          selectedMemoryCommitSha: older,
-          onMemoryCommitSelect,
-          t: zhTranslate,
-        }),
+        createElement(
+          'div',
+          null,
+          createElement(MemoryFilesEntry, {
+            scope: 'personabot',
+            channelId: 'dm-qa',
+            botSlug: 'qa',
+            actions,
+            showLimits: false,
+            t: zhTranslate,
+          }),
+          createElement(MemoryEntry, {
+            scope: 'personabot',
+            channelId: 'dm-qa',
+            botSlug: 'qa',
+            actions,
+            selectedMemoryCommitSha: older,
+            onMemoryCommitSelect,
+            t: zhTranslate,
+          }),
+        ),
       );
     });
+    expect(container.querySelector('.bh-memory-entry')?.textContent).toContain('draft.md');
     const offer = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent === '读档到这里',
+      (button) => button.textContent === '恢复到这次提交',
     );
-    expect(container.querySelectorAll('.bh-memory-load-offer')).toHaveLength(1);
+    expect(container.querySelectorAll('.bh-memory-restore-offer')).toHaveLength(1);
     await act(async () => offer?.click());
-    expect(actions.memoryLoad).not.toHaveBeenCalled();
-    expect(container.querySelector('.bh-memory-load-confirm')?.textContent).toContain(
-      '把记忆读档到 bbbbbbb「Older memory」',
+    expect(actions.memoryRestoreCommit).not.toHaveBeenCalled();
+    expect(container.querySelector('.bh-memory-restore-confirm')?.textContent).toContain(
+      '包含这次提交的改动，不包含之后的提交',
     );
     const submit = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent === '存档并读档',
+      (button) => button.textContent === '备份并恢复',
     );
     await act(async () => submit?.click());
-    expect(actions.memoryLoad).toHaveBeenCalledWith({
+    expect(actions.memoryRestoreCommit).toHaveBeenCalledWith({
       channelId: 'dm-qa',
       sha: older,
       expectedHead: SHA,
-      loadId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+      restoreId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
     });
     expect(onMemoryCommitSelect).toHaveBeenCalledWith(loaded);
-    expect(container.querySelector('.bh-memory-load-confirm')).toBeNull();
-    expect(container.textContent).toContain('已读档到 bbbbbbb');
+    expect(container.querySelector('.bh-memory-restore-confirm')).toBeNull();
+    expect(container.textContent).toContain('已恢复到 bbbbbbb');
+    expect(container.querySelector('.bh-memory-entry')?.textContent).not.toContain('draft.md');
   });
 
   it('groups commit changes into independently collapsible files with graph badges', async () => {
@@ -773,7 +797,7 @@ describe('Memory Git graph sidebar', () => {
     await act(async () => row?.click());
     expect(onSelect).toHaveBeenCalledWith(SHA);
   });
-  it('loads the graph after the snapshot has seeded acceptance', async () => {
+  it('restores the graph after the snapshot has seeded acceptance', async () => {
     let resolveSnapshot!: (value: { head: string; files: []; provisional: boolean }) => void;
     let seeded = false;
     const snapshot = new Promise<{ head: string; files: []; provisional: boolean }>((resolve) => {

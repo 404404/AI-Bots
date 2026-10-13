@@ -334,7 +334,7 @@ describe('current Git working tree is Memory', () => {
     }
   });
 
-  it('loads an older commit as a new commit after saving uncommitted work', () => {
+  it('restores an older commit as a new commit after saving uncommitted work', () => {
     const { database, memory, root } = fixture();
     try {
       git(root, 'config', 'user.name', 'Test Author');
@@ -352,26 +352,26 @@ describe('current Git working tree is Memory', () => {
       writeFileSync(join(root, 'draft.md'), 'untracked\n');
 
       expect(() =>
-        memory.loadHuman({
+        memory.restoreCommitHuman({
           botSlug: 'atlas',
           sha: first,
           expectedHead: first,
-          loadId: '33333333-3333-4333-8333-333333333333',
+          restoreId: '33333333-3333-4333-8333-333333333333',
         }),
       ).toThrow('Memory changed since the Human opened it');
       expect(readFileSync(join(root, 'draft.md'), 'utf8')).toBe('untracked\n');
 
-      const result = memory.loadHuman({
+      const result = memory.restoreCommitHuman({
         botSlug: 'atlas',
         sha: first,
         expectedHead: second,
-        loadId: '44444444-4444-4444-8444-444444444444',
+        restoreId: '44444444-4444-4444-8444-444444444444',
       });
       expect(git(root, 'rev-parse', 'HEAD')).toBe(result.head);
       expect(git(root, 'rev-parse', 'HEAD^')).toBe(second);
       expect(git(root, 'rev-parse', 'HEAD^{tree}')).toBe(git(root, 'rev-parse', `${first}^{tree}`));
       expect(git(root, 'log', '-1', '--format=%s')).toBe(
-        `Load Memory from ${first.slice(0, 7)}: First note`,
+        `Restore Memory to ${first.slice(0, 7)}: First note`,
       );
       expect(git(root, 'status', '--porcelain')).toBe('');
       expect(existsSync(join(root, 'later.md'))).toBe(false);
@@ -381,11 +381,11 @@ describe('current Git working tree is Memory', () => {
       expect(git(root, 'show', `${result.saved.ref}:note.md`)).toBe('unsaved');
       expect(memory.recoveryHistory('atlas').map((point) => point.id)).toContain(result.saved.id);
 
-      const back = memory.loadHuman({
+      const back = memory.restoreCommitHuman({
         botSlug: 'atlas',
         sha: second,
         expectedHead: result.head,
-        loadId: '55555555-5555-4555-8555-555555555555',
+        restoreId: '55555555-5555-4555-8555-555555555555',
       });
       expect(git(root, 'rev-parse', `${back.head}^{tree}`)).toBe(
         git(root, 'rev-parse', `${second}^{tree}`),

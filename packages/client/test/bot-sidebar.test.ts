@@ -360,7 +360,7 @@ function stubActions(): BridgeActions {
     memoryRestore: vi.fn(async () => {
       throw new Error('not configured');
     }),
-    memoryLoad: vi.fn(async () => {
+    memoryRestoreCommit: vi.fn(async () => {
       throw new Error('not configured');
     }),
     botSourcePolicies: vi.fn(async () => []),

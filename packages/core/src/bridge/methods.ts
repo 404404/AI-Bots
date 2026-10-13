@@ -575,7 +575,9 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ checkpoint: MemoryRecoveryCheckpoint; archivePath: string }>;
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
-  memoryLoad(payload: unknown): BridgeResult<{ head: string; saved: MemoryRecoveryCheckpoint }>;
+  memoryRestoreCommit(
+    payload: unknown,
+  ): BridgeResult<{ head: string; saved: MemoryRecoveryCheckpoint }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
   profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
@@ -4521,24 +4523,24 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         }),
       }));
     },
-    memoryLoad(payload) {
+    memoryRestoreCommit(payload) {
       const scope = dmMemory(payload);
       if (!('botSlug' in scope)) return scope;
       const source = asObject(payload);
       const sha = asNonBlank(source, 'sha');
       const expectedHead = asNonBlank(source, 'expectedHead');
-      const loadId = asNonBlank(source, 'loadId');
+      const restoreId = asNonBlank(source, 'restoreId');
       if (
         sha === undefined ||
         expectedHead === undefined ||
-        loadId === undefined ||
+        restoreId === undefined ||
         !/^[0-9a-f]{40}$/u.test(sha) ||
         !/^[0-9a-f]{40}$/u.test(expectedHead) ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(loadId)
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(restoreId)
       )
-        return invalidInput('valid sha, expectedHead, and loadId are required');
+        return invalidInput('valid sha, expectedHead, and restoreId are required');
       return memoryCall(() =>
-        deps.memory!.loadHuman({ botSlug: scope.botSlug, sha, expectedHead, loadId }),
+        deps.memory!.restoreCommitHuman({ botSlug: scope.botSlug, sha, expectedHead, restoreId }),
       );
     },
     memoryRepair(payload) {

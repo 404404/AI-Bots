@@ -218,7 +218,7 @@ import {
   loadMemoryWorkingDiff,
   loadMemoryRecoveryHistory,
   restoreMemoryCheckpoint,
-  loadMemoryCommit,
+  restoreMemoryCommit,
   saveMemoryFile,
   repairMemory,
   loadTimelinePage,
@@ -560,11 +560,11 @@ export interface BridgeActions {
     checkpointId: string;
     expectedCurrentId: string;
   }): Promise<{ checkpoint: MemoryRecoveryCheckpoint; archivePath: string }>;
-  memoryLoad(input: {
+  memoryRestoreCommit(input: {
     channelId: string;
     sha: string;
     expectedHead: string;
-    loadId: string;
+    restoreId: string;
   }): Promise<{ head: string; saved: MemoryRecoveryCheckpoint }>;
   memoryRepair(input: {
     channelId: string;
@@ -2333,7 +2333,7 @@ export function createActions(
       loadMemoryWorkingDiff(call, channelId, path, kind),
     memoryRecoveryHistory: (channelId) => loadMemoryRecoveryHistory(call, channelId),
     memoryRestore: (input) => restoreMemoryCheckpoint(call, input),
-    memoryLoad: (input) => loadMemoryCommit(call, input),
+    memoryRestoreCommit: (input) => restoreMemoryCommit(call, input),
     memorySave: (input) => saveMemoryFile(call, input),
     memoryRepair: (input) => repairMemory(call, input),
     openSession(sessionId) {
