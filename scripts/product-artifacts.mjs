@@ -43,11 +43,13 @@ export function productManifest(manifest, version) {
       directory: 'packages/deepseekbot',
     },
     description:
-      'DeepSeekBot: the open-source Grok Bot alternative for DeepSeek Harness. PersonaBots with their own identity, Git Memory, Groups and Lark, Slack, Discord and WeChat identities.',
-    homepage: 'https://deepseekbot.botharness.ai/en/',
+      'DeepSeekBot (DSB): the open-source Grok Bot alternative for DeepSeek Harness. PersonaBots with their own identity, Git Memory, Groups and Lark, Slack, Discord, QQ and WeChat identities. Not the same project as DS Bot (ds-bot).',
+    homepage: 'https://deepseekbot.app/en/',
     bugs: { url: 'https://github.com/BotHarness/BotHarness/issues' },
     keywords: [
       'deepseekbot',
+      'dsb',
+      'deepseek-bot',
       'deepseek',
       'deepseek-harness',
       'dsh',
@@ -61,6 +63,7 @@ export function productManifest(manifest, version) {
       'slack',
       'discord',
       'wechat',
+      'qq',
     ],
     publishConfig: { access: 'public' },
     dependencies: {
