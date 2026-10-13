@@ -1,6 +1,6 @@
 import { useMemo, useSyncExternalStore, type ReactElement } from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
-import { BridgeFile } from './bridge-file.js';
+import { MessageAudio } from './message-audio.js';
 import { createBridgeAudioResource } from './bridge-audio-resource.js';
 import type { BotHarnessTranslate } from './locale.js';
 
@@ -37,23 +37,19 @@ export function BridgeAudio({
   } as const;
   return (
     <div className="bh-external-source-audio">
-      <BridgeFile
-        channelId={channelId}
-        sourceEventId={sourceEventId}
-        attachmentId={attachmentId}
+      <MessageAudio
+        key={state.url ?? 'unprepared'}
         name={name}
-        sizeBytes={sizeBytes}
+        size={sizeBytes}
+        url={state.url}
+        downloadUrl={
+          '/api/botharness/attachment?' +
+          new URLSearchParams({ channelId, sourceEventId, attachmentId })
+        }
+        onError={resource.fail}
         t={t}
       />
-      {state.url ? (
-        <audio
-          controls
-          preload="none"
-          src={state.url}
-          aria-label={t('im.voiceAudioPlayer')}
-          onError={resource.fail}
-        />
-      ) : (
+      {state.url ? null : (
         <Button
           variant="primary"
           disabled={state.loading === true}

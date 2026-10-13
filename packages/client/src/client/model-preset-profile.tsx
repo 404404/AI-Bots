@@ -1,5 +1,11 @@
 import { useRef, useState, type ReactElement } from 'react';
-import { Button, Checkbox, Input, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
+import {
+  Button,
+  Checkbox,
+  Input,
+  SegmentedControl,
+  Tag,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { BridgeActions } from './actions.js';
 import type {
@@ -45,6 +51,7 @@ interface ModelDraft {
   orchestrator: ModelChoice;
   assignment: ModelChoice;
   allowed: AssignmentModelOptionView[];
+  advanced: boolean;
   presetId: string;
 }
 
@@ -78,22 +85,73 @@ function draftOf(
       effort: source.assignmentDefault.reasoningEffort ?? '',
     },
     allowed: allowedOf(source.assignmentDefault, source.assignmentModels),
+    advanced:
+      (source.assignmentModels?.length ?? 1) > 1 ||
+      source.assignmentModels?.some(
+        (option) => option.note !== undefined || option.allowedEfforts.length > 1,
+      ) === true,
     presetId,
   };
 }
 
+function withNote(
+  option: AssignmentModelOptionView,
+  note: string | undefined,
+): AssignmentModelOptionView {
+  const { note: _previous, ...rest } = option;
+  const trimmed = note?.trim() ?? '';
+  return trimmed === '' ? rest : { ...rest, note: trimmed };
+}
+
+function assignmentChoice(draft: ModelDraft): ModelChoice {
+  if (!draft.advanced) return draft.assignment;
+  const option = draft.allowed.find((item) => modelKey(item) === draft.assignment.key);
+  return { key: draft.assignment.key, effort: option?.defaultEffort ?? draft.assignment.effort };
+}
+
+function assignmentRoute(draft: ModelDraft): ModelRouteView {
+  const { key, effort } = assignmentChoice(draft);
+  return routeOfKey(key, effort);
+}
+
 function finalAllowed(draft: ModelDraft): AssignmentModelOptionView[] {
-  const effort = draft.assignment.effort;
-  const others = draft.allowed.filter((option) => modelKey(option) !== draft.assignment.key);
-  const existing = draft.allowed.find((option) => modelKey(option) === draft.assignment.key);
-  const route = routeOfKey(draft.assignment.key, effort);
-  const allowedEfforts = existing?.allowedEfforts.includes(effort)
-    ? existing.allowedEfforts
-    : [...(existing?.allowedEfforts ?? []), effort];
-  return [
-    { provider: route.provider, model: route.model, allowedEfforts, defaultEffort: effort },
-    ...others,
-  ];
+  if (draft.advanced) return draft.allowed.map((option) => withNote(option, option.note));
+  const {
+    provider,
+    model,
+    reasoningEffort = '',
+  } = routeOfKey(draft.assignment.key, draft.assignment.effort);
+  return [{ provider, model, allowedEfforts: [reasoningEffort], defaultEffort: reasoningEffort }];
+}
+
+function withAdvanced(draft: ModelDraft, advanced: boolean): ModelDraft {
+  if (!advanced) return { ...draft, advanced, assignment: assignmentChoice(draft) };
+  const { key, effort } = draft.assignment;
+  const existing = draft.allowed.find((option) => modelKey(option) === key);
+  const route = routeOfKey(key, effort);
+  const allowed =
+    existing === undefined
+      ? [
+          {
+            provider: route.provider,
+            model: route.model,
+            allowedEfforts: [effort],
+            defaultEffort: effort,
+          },
+          ...draft.allowed,
+        ]
+      : draft.allowed.map((option) =>
+          modelKey(option) === key
+            ? {
+                ...option,
+                allowedEfforts: option.allowedEfforts.includes(effort)
+                  ? option.allowedEfforts
+                  : [...option.allowedEfforts, effort],
+                defaultEffort: effort,
+              }
+            : option,
+        );
+  return { ...draft, advanced, allowed };
 }
 
 export function ModelPresetProfile({
@@ -117,6 +175,7 @@ export function ModelPresetProfile({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const [editorOpen, setEditorOpen] = useState(false);
+  const [modeSwitched, setModeSwitched] = useState(false);
 
   const acceptPlan = (
     current: ModelPlanView | undefined,
@@ -209,6 +268,7 @@ export function ModelPresetProfile({
     setDraft(undefined);
     setPresetName(undefined);
     setError(undefined);
+    setModeSwitched(false);
     setEditorOpen(true);
     void load();
   };
@@ -247,7 +307,7 @@ export function ModelPresetProfile({
               slug,
               plan?.revision ?? revision,
               routeOfKey(draft.orchestrator.key, draft.orchestrator.effort),
-              routeOfKey(draft.assignment.key, draft.assignment.effort),
+              assignmentRoute(draft),
               finalAllowed(draft),
             );
       finish(applied);
@@ -267,7 +327,7 @@ export function ModelPresetProfile({
       const preset = await actions.createModelPreset(
         name,
         routeOfKey(draft.orchestrator.key, draft.orchestrator.effort),
-        routeOfKey(draft.assignment.key, draft.assignment.effort),
+        assignmentRoute(draft),
         finalAllowed(draft),
       );
       setPresets((current) => [...current, preset]);
@@ -326,109 +386,226 @@ export function ModelPresetProfile({
     </>
   );
 
-  const allowedEditor =
-    draft === undefined || catalog === undefined ? null : (
-      <div className="bh-model-allowed">
-        <div className="bh-model-picker-heading">
-          <strong>{t('modelPreset.allowedTitle')}</strong>
-          <span>{t('modelPreset.allowedHint')}</span>
-        </div>
-        {draft.allowed
-          .filter((option) => modelKey(option) !== draft.assignment.key)
-          .map((option) => {
-            const key = modelKey(option);
-            const entry = catalog.find((item) => modelKey(item) === key);
-            const name = entry?.modelName ?? option.model;
-            return (
-              <div key={key} className="bh-model-allowed-row">
-                <div className="bh-model-allowed-name">
-                  <span>{name}</span>
-                  <span className="bh-model-allowed-provider">
-                    {entry?.providerName ?? option.provider}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    disabled={busy}
-                    aria-label={t('modelPreset.removeAllowed', { model: name })}
-                    onClick={() =>
-                      edit({ allowed: draft.allowed.filter((item) => modelKey(item) !== key) })
-                    }
-                  >
-                    ×
-                  </Button>
-                </div>
-                <div
-                  className="bh-model-allowed-efforts"
-                  aria-label={t('modelPreset.allowedEfforts')}
-                >
-                  {[
-                    { id: '', name: t('modelPreset.providerDefault') },
-                    ...(entry?.efforts ?? []),
-                  ].map((effort) => (
-                    <Checkbox
-                      key={effort.id}
-                      label={effort.name}
-                      checked={option.allowedEfforts.includes(effort.id)}
-                      disabled={
-                        busy ||
-                        (option.allowedEfforts.length === 1 &&
-                          option.allowedEfforts.includes(effort.id))
-                      }
-                      onChange={(checked) => {
-                        const allowedEfforts = checked
-                          ? [...option.allowedEfforts, effort.id]
-                          : option.allowedEfforts.filter((id) => id !== effort.id);
-                        if (allowedEfforts.length === 0) return;
-                        edit({
-                          allowed: draft.allowed.map((item) =>
-                            modelKey(item) === key
-                              ? {
-                                  ...item,
-                                  allowedEfforts,
-                                  defaultEffort: allowedEfforts.includes(item.defaultEffort)
-                                    ? item.defaultEffort
-                                    : allowedEfforts[0]!,
-                                }
-                              : item,
-                          ),
-                        });
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        <Combobox
-          value=""
-          options={modelOptions.filter(
-            (option) => !draft.allowed.some((item) => modelKey(item) === option.value),
-          )}
-          onSelect={(key) => {
-            const entry = catalog.find((item) => modelKey(item) === key);
-            if (entry === undefined) return;
-            const effort = entry.defaultEffort ?? '';
-            edit({
-              allowed: [
-                ...draft.allowed,
-                {
-                  provider: entry.provider,
-                  model: entry.model,
-                  allowedEfforts: [effort],
-                  defaultEffort: effort,
-                },
-              ],
-            });
-          }}
-          label={t('modelPreset.addAllowed')}
-          toggleLabel={t('modelPreset.showModels')}
-          placeholder={t('modelPreset.addAllowed')}
-          emptyLabel={t('modelPreset.noMatch')}
-          disabled={busy}
-        />
-      </div>
+  const effortsOf = (entry: ModelCatalogEntryView | undefined) => [
+    { id: '', name: t('modelPreset.providerDefault') },
+    ...(entry?.efforts ?? []),
+  ];
+  const editAllowed = (
+    key: string,
+    change: (option: AssignmentModelOptionView) => AssignmentModelOptionView,
+  ): void =>
+    setDraft((current) =>
+      current === undefined
+        ? current
+        : {
+            ...current,
+            presetId: '',
+            allowed: current.allowed.map((item) => (modelKey(item) === key ? change(item) : item)),
+          },
     );
 
+  const modelCard = (option: AssignmentModelOptionView, isDefault: boolean) => {
+    const key = modelKey(option);
+    const entry = catalog?.find((item) => modelKey(item) === key);
+    const name = entry?.modelName ?? option.model;
+    const efforts = effortsOf(entry);
+    const allowedEfforts = efforts.filter((effort) => option.allowedEfforts.includes(effort.id));
+    return (
+      <li key={key} className="bh-card-row bh-model-card">
+        <div className="bh-model-card-head">
+          <strong>{name}</strong>
+          <span className="bh-model-card-provider">{entry?.providerName ?? option.provider}</span>
+          {isDefault ? (
+            <Tag tone="neutral">{t('modelPreset.defaultModel')}</Tag>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => edit({ assignment: { key, effort: option.defaultEffort } })}
+              >
+                {t('modelPreset.makeDefault')}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                aria-label={t('modelPreset.removeAllowed', { model: name })}
+                onClick={() =>
+                  setDraft((current) =>
+                    current === undefined
+                      ? current
+                      : {
+                          ...current,
+                          presetId: '',
+                          allowed: current.allowed.filter((item) => modelKey(item) !== key),
+                        },
+                  )
+                }
+              >
+                ×
+              </Button>
+            </>
+          )}
+        </div>
+        <div className="bh-model-card-field">
+          <span>{t('modelPreset.allowedEfforts')}</span>
+          <div className="bh-model-card-efforts">
+            {efforts.map((effort) => (
+              <Checkbox
+                key={effort.id}
+                label={effort.name}
+                checked={option.allowedEfforts.includes(effort.id)}
+                disabled={
+                  busy ||
+                  (option.allowedEfforts.length === 1 && option.allowedEfforts.includes(effort.id))
+                }
+                onChange={(checked) =>
+                  editAllowed(key, (item) => {
+                    const next = efforts
+                      .map((candidate) => candidate.id)
+                      .filter((id) =>
+                        id === effort.id ? checked : item.allowedEfforts.includes(id),
+                      );
+                    if (next.length === 0) return item;
+                    return {
+                      ...item,
+                      allowedEfforts: next,
+                      defaultEffort: next.includes(item.defaultEffort)
+                        ? item.defaultEffort
+                        : next[0]!,
+                    };
+                  })
+                }
+              />
+            ))}
+          </div>
+        </div>
+        {allowedEfforts.length > 1 && (
+          <div className="bh-model-card-field">
+            <span>{t('modelPreset.defaultEffort')}</span>
+            <SegmentedControl
+              id={`bh-model-card-effort-${key}`}
+              value={option.defaultEffort}
+              options={allowedEfforts.map((effort) => ({ value: effort.id, label: effort.name }))}
+              onChange={(defaultEffort) => editAllowed(key, (item) => ({ ...item, defaultEffort }))}
+              label={`${name} · ${t('modelPreset.defaultEffort')}`}
+              disabled={busy}
+            />
+          </div>
+        )}
+        <Input
+          aria-label={t('modelPreset.noteLabel', { model: name })}
+          placeholder={t('modelPreset.notePlaceholder')}
+          value={option.note ?? ''}
+          maxLength={500}
+          disabled={busy}
+          onChange={(event) => {
+            const note = event.target.value;
+            editAllowed(key, (item) => ({ ...item, note }));
+          }}
+        />
+      </li>
+    );
+  };
+
+  const modeControl =
+    draft === undefined ? null : (
+      <SegmentedControl
+        id="bh-model-task-mode"
+        value={draft.advanced ? 'advanced' : 'simple'}
+        options={[
+          { value: 'simple', label: t('modelPreset.modeSimple') },
+          { value: 'advanced', label: t('modelPreset.modeAdvanced') },
+        ]}
+        onChange={(mode) => {
+          setModeSwitched(true);
+          setDraft((current) =>
+            current === undefined || current.advanced === (mode === 'advanced')
+              ? current
+              : current.advanced
+                ? { ...withAdvanced(current, false), presetId: '' }
+                : withAdvanced(current, true),
+          );
+        }}
+        label={t('modelPreset.mode')}
+        disabled={busy}
+      />
+    );
+
+  const taskEditor =
+    draft === undefined || catalog === undefined ? null : (
+      <section
+        className="bh-model-task"
+        aria-label={t('modelPreset.assignment')}
+        data-mode-switched={modeSwitched || undefined}
+      >
+        {draft.advanced ? (
+          <div className="bh-model-picker-heading-row">
+            <div className="bh-model-picker-heading">
+              <strong>{t('modelPreset.assignment')}</strong>
+              <span>{t('modelPreset.allowedHint')}</span>
+            </div>
+            {modeControl}
+          </div>
+        ) : (
+          <ModelPicker
+            title={t('modelPreset.assignment')}
+            hint={t('modelPreset.assignmentHint')}
+            choice={draft.assignment}
+            catalog={catalog}
+            options={modelOptions}
+            onChange={(assignment) =>
+              edit({
+                assignment,
+                allowed:
+                  assignment.key === draft.assignment.key
+                    ? draft.allowed
+                    : draft.allowed.filter((option) => modelKey(option) !== draft.assignment.key),
+              })
+            }
+            disabled={busy}
+            action={modeControl}
+            t={t}
+          />
+        )}
+        {draft.advanced && (
+          <div className="bh-model-allowed">
+            <Combobox
+              value=""
+              options={modelOptions.filter(
+                (option) => !draft.allowed.some((item) => modelKey(item) === option.value),
+              )}
+              onSelect={(key) => {
+                const entry = catalog.find((item) => modelKey(item) === key);
+                if (entry === undefined) return;
+                const effort = entry.defaultEffort ?? '';
+                edit({
+                  allowed: [
+                    {
+                      provider: entry.provider,
+                      model: entry.model,
+                      allowedEfforts: [effort],
+                      defaultEffort: effort,
+                    },
+                    ...draft.allowed,
+                  ],
+                });
+              }}
+              label={t('modelPreset.addAllowed')}
+              toggleLabel={t('modelPreset.showModels')}
+              placeholder={t('modelPreset.addAllowed')}
+              emptyLabel={t('modelPreset.noMatch')}
+              disabled={busy}
+            />
+            <ul className="bh-card-list bh-model-cards" aria-label={t('modelPreset.allowedTitle')}>
+              {draft.allowed.map((option) =>
+                modelCard(option, modelKey(option) === draft.assignment.key),
+              )}
+            </ul>
+          </div>
+        )}
+      </section>
+    );
   return (
     <div
       ref={loadPlanOnMount}
@@ -493,6 +670,7 @@ export function ModelPresetProfile({
       {editorOpen && (
         <Modal
           open
+          className="bh-model-editor-modal"
           onClose={() => setEditorOpen(false)}
           closeLabel={t('common.close')}
           title={t('modelPreset.title')}
@@ -554,27 +732,7 @@ export function ModelPresetProfile({
                   disabled={busy}
                   t={t}
                 />
-                <ModelPicker
-                  title={t('modelPreset.assignment')}
-                  hint={t('modelPreset.assignmentHint')}
-                  choice={draft.assignment}
-                  catalog={catalog}
-                  options={modelOptions}
-                  onChange={(assignment) =>
-                    edit({
-                      assignment,
-                      allowed:
-                        assignment.key === draft.assignment.key
-                          ? draft.allowed
-                          : draft.allowed.filter(
-                              (option) => modelKey(option) !== draft.assignment.key,
-                            ),
-                    })
-                  }
-                  disabled={busy}
-                  t={t}
-                />
-                {allowedEditor}
+                {taskEditor}
                 {presetName !== undefined && (
                   <div className="bh-model-save-preset">
                     <Input

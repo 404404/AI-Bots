@@ -105,6 +105,12 @@ describe('Channel message body', () => {
     },
   );
   it.each([
+    [
+      'qq',
+      '<@APP_MEMBER>',
+      '<@APP_MEMBER> next <@APP_MEMBER> <@UNKNOWN>',
+      '@QA <Bot> next @QA <Bot> <@UNKNOWN>',
+    ],
     ['discord', '<@123>', '<@123>next <@123> <@999>', '@QA <Bot>next @QA <Bot> <@999>'],
     ['feishu', '@_user_1', '@_user_1 @_user_10 @_user_1', '@QA <Bot> @_user_10 @QA <Bot>'],
     ['slack', '<@U123>', '<@U123> next <@U123>', '@QA <Bot> next @QA <Bot>'],
