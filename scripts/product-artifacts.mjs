@@ -217,6 +217,7 @@ export function stageProvider(source, target, repoRoot) {
     ),
   );
   symlinkSync(join(source, 'node_modules'), join(target, 'node_modules'), 'dir');
+  writeJson(join(target, 'tsconfig.json'), { compilerOptions: { alwaysStrict: true } });
   const env = { ...process.env, DSH_IM_CLIENT_ID: productImProvider.name };
   run(process.execPath, ['plugin-src/client/build.mjs'], { cwd: target, env });
   run(process.execPath, ['plugin-src/host/build.mjs'], { cwd: target, env });
