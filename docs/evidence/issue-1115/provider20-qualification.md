@@ -66,6 +66,34 @@ The actual installed picker was inspected in English/dark, Chinese/dark and Engl
 - Packaged Client diagnostic reader reported `shell-ready`, exit 0, no earlier failure; actual DOM and native interactions were checked separately. Browser-control failures were inspected without resending markers.
 - A local byte scan of 53 BotHarness durable-state/log and native Session files found zero occurrences of the actual Lark App Secret. This scan does not claim every possible QR encoding was searched; secret/QR DTO boundaries are covered by the focused contract tests. Provider-owned credential storage remains private and is excluded from the public evidence.
 
-## Delivery gates
+## Final main-line Product recheck
+
+Product runtime [`822bff0bc6c4a3b0508cd34837d5b7deb8b5d214`](https://github.com/BotHarness/DeepSeekBot/commit/822bff0bc6c4a3b0508cd34837d5b7deb8b5d214) integrates main `40dffd7a65e4123b86fead860f65f3d2de070e29` (see the merge commit's actual parent identity). Main migrations 84–86 were preserved; the proactive limit is Generation 87 and the current decision is [ADR-0192](../../adr/0192-reachable-posts-reuse-messaging-authority-and-outbox.md). Earlier task-only Generation 84 Profiles remain isolated. The connected-app Tool selection from main includes both `bridge_post` and `bridge_reachable_groups`; its positive, negative and resume cases passed.
+
+A fresh Profile installed product candidate `1.2.2-qa.1115.20261014.2` under official RC1. The `.20` Provider archive is byte-identical to the QR/owner-DM-qualified archive above, not just equal in version or provenance. The Human again confirmed a current exclusive QA2 window and authorized exactly one new proactive post and one DM request. Inline Lark creation/binding reached Available with zero conversations; discovery listed the designated group.
+
+The Client sent `BH_1115_MAIN87_POST_OK` once. The browser scrolled the actual Bot message into view and verified its complete rendering in the original group. One implicit Grant and one accepted Outbox/attempt were created without a Source Event reference; Source/Inbox/Channel/placement counts stayed 1/0/1/1. This is a new-Profile dispatch check, not another claim that the now-mentioned group was unmentioned.
+
+![Final Product before native dispatch](main87-picker-before.png)
+
+![Final Product accepted receipt](main87-picker-accepted.png)
+
+![Actual original group on the final Product](main87-original-group.png)
+
+The browser then sent one `请只回复 BH_1115_MAIN87_DM_OK` in QA2's verified original DM. The complete exact reply rendered and was scrolled into view. Final counts are Binding 1, Grants 2, Outbox 2, attempts 2, blocks 0, Source Events 2, Inbox Admissions 1, Channel 1, placement 1. Both native receipts match their Grant conversations; only the DM reply has an inbound Source Event. No original first marker was repeated, and no further WeChat scan or input was needed.
+
+![Actual original DM on the final Product](main87-original-dm.png)
+
+The actual installed Provider was hashed again: 422 runtime files, the same `1bda5990…` digest above, with scoped name/version and product-managed updates. The Client diagnostic reader reported `shell-ready`, exit 0, no prior failure. A fresh scan of 53 application-owned state/log and Session files found no actual Lark App Secret. The exact task Host was stopped; the four task ports had zero listeners and QA2's window was released.
+
+A separate clean checkout of final base `40dffd7a65e4123b86fead860f65f3d2de070e29` was built and opened in the actual browser at the matching 1280 × 800, English/dark presentation. The image shows the predecessor External identities entry point without any configured Provider app; no receiver was started. The new picker has no direct predecessor. That baseline Host was also stopped by exact PID; all five task ports were confirmed without listeners.
+
+![Final base entry point, no configured app or receiver](base-current-external-identity-entry.png)
+
+[GitHub verify for runtime `822bff0b`](https://github.com/BotHarness/DeepSeekBot/actions/runs/38422833435) passed lint, format, typecheck, slides, all tests, build and generated-artifact checks: **4,591 tests passed, 13 skipped; 546 files passed, 7 skipped**. Separately, exact intermediate merge `ace46d25` passed the Linux local full suite (4,583 tests, 13 skipped; 545 files, 7 skipped) and lint/format/typecheck/build/slides/docs checks with two workers and task tmpfs. These results retain their exact revision/environment boundaries. Any later documentation-only evidence commit does not change the qualified runtime bytes.
+
+[GitHub package preparation for `822bff0b`](https://github.com/BotHarness/DeepSeekBot/actions/runs/38422833504) independently passed the full checks, read the reviewed `.20` pin, prepared/dry-ran the package set and uploaded its review artifact. The exact locally natively qualified `.20` tarball also passed `npm publish --dry-run --access public --tag next`. Neither operation published anything to the registry.
+
+## Remaining delivery gates
 
 Provider .20 is locally packaged and natively qualified above, but has not been published to npm. Product #1559 and Provider #27 remain unmerged; public stable install identity is unchanged. #1115 and #1111 remain open pending their release/merge gates. Slack and Discord reachability have automated native-API fixtures, not new real-platform acceptance. QQ proactive permission and own Echo remain separate work.
