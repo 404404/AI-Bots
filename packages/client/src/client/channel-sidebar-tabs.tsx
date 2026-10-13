@@ -22,7 +22,7 @@ import { ChannelSidebarSettings } from './channel-sidebar-settings.js';
 import { ChannelSidebarEntrySection } from './channel-sidebar-view.js';
 import { useMountedResource } from './mounted-resource.js';
 import { sidebarStyles } from './channel-sidebar-styles.js';
-import { withHook } from './ds/hook.js';
+import { hooked } from './ds/hooked.js';
 import { IconButton } from './ds/icon-button.js';
 import { color, radius, size, space, text } from './ds/tokens.stylex.js';
 
@@ -210,7 +210,7 @@ export function ChannelSidebarTabs({
   const entries = tabs.flatMap((tab) => tab.entries);
   return (
     <>
-      <div {...withHook('bh-channel-sidebar-head', stylex.props(styles.head))}>
+      <div {...hooked('bh-channel-sidebar-head', styles.head)}>
         <div
           ref={list}
           {...stylex.props(styles.tabs)}
@@ -254,7 +254,7 @@ export function ChannelSidebarTabs({
                   <ChannelSidebarIcon name={tab.icon} />
                   {selected ? <span>{tab.label}</span> : null}
                   {tab.badges.length === 0 ? null : (
-                    <span {...withHook('bh-channel-sidebar-tab-badge', stylex.props(styles.badge))}>
+                    <span {...hooked('bh-channel-sidebar-tab-badge', styles.badge)}>
                       {tab.badges.map((Badge, badgeIndex) => (
                         <Badge key={badgeIndex} {...entryProps} />
                       ))}

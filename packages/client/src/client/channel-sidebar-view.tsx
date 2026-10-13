@@ -39,7 +39,7 @@ import { insertEntryBefore, moveEntry, resolveEntryOrder } from './channel-sideb
 import { ChannelSidebarSettings } from './channel-sidebar-settings.js';
 import { isChannelSettingsSection } from './channel-settings-state.js';
 import { sidebarStyles } from './channel-sidebar-styles.js';
-import { withHook } from './ds/hook.js';
+import { hooked } from './ds/hooked.js';
 import { PanelHeader } from './ds/panel-header.js';
 import { space } from './ds/tokens.stylex.js';
 
@@ -425,7 +425,7 @@ export function ChannelSidebarContents({
       <div
         data-sidebar-entries=""
         {...(editing
-          ? withHook('bh-sidebar-editing', stylex.props(sidebarStyles.entries))
+          ? hooked('bh-sidebar-editing', sidebarStyles.entries)
           : stylex.props(sidebarStyles.entries))}
         ref={dragMount}
         onDragOver={(event) => {
