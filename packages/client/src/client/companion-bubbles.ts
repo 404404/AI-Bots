@@ -24,7 +24,7 @@ export class CompanionBubbles {
     origin = { x: x + 48, y: y + 96 },
   ): BubblePlacement {
     const boundedLeft = (left: number) => Math.max(8, Math.min(left, width - 328));
-    const bottom = Math.max(y + 134, origin.y + 38);
+    const bottom = Math.max(y + 100, origin.y + 16);
     const minimum = 8 - bottom;
     const maximum = height - 16 - (bottom + (cards ? 112 : 24));
     const base = Math.max(minimum, Math.min(0, maximum));

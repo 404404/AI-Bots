@@ -299,7 +299,7 @@ it('pins independently, exposes right-click controls and applies global bounded 
       });
     expect(
       node.querySelector<HTMLElement>('[data-bot="ada"] .bh-companion-bubble')!.style.bottom,
-    ).toBe('134px');
+    ).toBe('112px');
     const ada = node.querySelector<HTMLElement>('[data-bot="ada"]')!;
     await act(() =>
       ada.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })),

@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ReactElement,
 } from 'react';
 import {
@@ -53,7 +54,15 @@ const followTail = (node: HTMLElement): void => {
   tails.add(node);
 };
 
-function CompanionMessageText({ text, context }: { text: string; context: boolean }): ReactElement {
+function CompanionMessageText({
+  text,
+  context,
+  typing,
+}: {
+  text: string;
+  context: boolean;
+  typing: boolean;
+}): ReactElement {
   const following = useRef(true);
   const viewport = useMountedResource<HTMLParagraphElement>(
     (node) => {
@@ -72,6 +81,7 @@ function CompanionMessageText({ text, context }: { text: string; context: boolea
       }}
     >
       {text}
+      {typing ? <span className="bh-companion-caret" aria-hidden="true" /> : null}
     </p>
   );
 }
@@ -155,6 +165,7 @@ export function WindowCompanionView({
     | undefined
   >(undefined);
   const direction = useRef(1);
+  const [stride, setStride] = useState<'left' | 'right' | undefined>(undefined);
   const hovering = useRef(false);
   const exit = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clickReset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -331,6 +342,7 @@ export function WindowCompanionView({
             state.bot?.paused !== true &&
             state.sync === 'live' &&
             !state.reading &&
+            !speaking(state) &&
             motion.point.phase === 'rest' &&
             !pointer.current &&
             !reduced,
@@ -340,6 +352,7 @@ export function WindowCompanionView({
           placeBubble(next, sampled);
           if (walking && (next.x <= 8 || next.x >= Math.max(8, next.width - 104)))
             direction.current *= -1;
+          setStride(walking ? (direction.current > 0 ? 'right' : 'left') : undefined);
           if (next !== previousPoint) setPoint(next);
           if (previousPoint.phase !== 'rest' && next.phase === 'rest') persistPosition();
         }
@@ -412,6 +425,21 @@ export function WindowCompanionView({
     },
     [companion, view.selection?.botId, bubbleOwner, frameOwner, sound],
   );
+  const popKey = view.cards[0] ? view.cards[0].channelId + '\n' + view.cards[0].messageId : '';
+  const pop = useMountedResource<HTMLElement>(
+    (node) => {
+      if (!popKey || reducedMotion() || typeof node.animate !== 'function') return;
+      const animation = node.animate(
+        [
+          { transform: 'scale(.5)', opacity: 0 },
+          { transform: 'none', opacity: 1 },
+        ],
+        { duration: 260, easing: 'cubic-bezier(.3, 1.5, .5, 1)' },
+      );
+      return () => animation.cancel();
+    },
+    [popKey],
+  );
   if (!view.selection || !view.bot) return null;
   const { selection, bot, activity } = view;
   const state = bot.paused ? 'idle' : (activity?.state ?? 'idle');
@@ -461,26 +489,32 @@ export function WindowCompanionView({
     ]
       .filter(Boolean)
       .join(' · ') || undefined;
+  const facing = speaking(view) ? 'front' : stride;
   const bubbleLeft = bubble
     ? bubble.left - point.x
     : Math.max(-point.x + 8, Math.min(-108, point.width - point.x - 328));
-  const bubbleBottom = (bubble?.bottom ?? point.y + 134) - point.y;
+  const bubbleBottom = (bubble?.bottom ?? point.y + 100) - point.y;
   const connector =
     bubble && speaking(view)
       ? {
           x: Math.max(
-            bubble.left + 12,
-            Math.min(bubble.originX, bubble.left + Math.min(308, point.width - 28)),
+            bubble.left + 24,
+            Math.min(bubble.originX, bubble.left + Math.min(276, point.width - 40)),
           ),
           y: viewport.current.height - bubble.bottom,
         }
       : undefined;
+  const tail = connector && bubble ? connector.x - bubble.left : undefined;
+  const tethered =
+    connector !== undefined &&
+    bubble !== undefined &&
+    (bubble.bottom - bubble.originY > 24 || Math.abs(connector.x - bubble.originX) > 1);
   return (
     <div ref={mount} className="bh-root bh-companion-stage">
-      {connector && bubble ? (
+      {tethered && connector && bubble ? (
         <svg className="bh-companion-tether" aria-hidden="true">
           <path
-            d={`M ${bubble.originX} ${viewport.current.height - bubble.originY} V ${connector.y + 8} H ${connector.x} V ${connector.y}`}
+            d={`M ${bubble.originX} ${viewport.current.height - bubble.originY} V ${connector.y + 16} H ${connector.x} V ${connector.y + 10}`}
           />
         </svg>
       ) : null}
@@ -493,6 +527,7 @@ export function WindowCompanionView({
         data-sync={view.sync}
         data-motion={point.phase}
         data-bot={bot.slug}
+        data-toolbar={point.x > point.width - 150 ? 'left' : 'right'}
         style={{
           left: 0,
           bottom: 0,
@@ -530,19 +565,32 @@ export function WindowCompanionView({
             restoreFocus={() => {
               if (character.current?.isConnected) character.current.focus();
             }}
-            style={{
-              left: bubbleLeft,
-              bottom: bubbleBottom,
-              maxHeight:
-                bubble?.cardHeight ??
-                Math.min(448, Math.max(112, viewport.current.height - point.y - bubbleBottom - 16)),
-            }}
+            style={
+              {
+                left: bubbleLeft,
+                bottom: bubbleBottom,
+                ...(tail === undefined ? {} : { '--bh-companion-tail': `${tail}px` }),
+                maxHeight:
+                  bubble?.cardHeight ??
+                  Math.min(
+                    448,
+                    Math.max(112, viewport.current.height - point.y - bubbleBottom - 16),
+                  ),
+              } as CSSProperties
+            }
           />
         ) : head ? (
           <article
+            ref={pop}
             className="bh-companion-bubble"
             aria-label={t('companion.messages')}
-            style={{ left: bubbleLeft, bottom: bubbleBottom }}
+            style={
+              {
+                left: bubbleLeft,
+                bottom: bubbleBottom,
+                ...(tail === undefined ? {} : { '--bh-companion-tail': `${tail}px` }),
+              } as CSSProperties
+            }
           >
             <header>
               <div className="bh-companion-source">
@@ -602,6 +650,7 @@ export function WindowCompanionView({
                   : head.body.slice(beatStart(head.beats, head.shown), head.shown).trim()
               }
               context={Boolean(headContext)}
+              typing={head.shown < head.body.length}
             />
           </article>
         ) : null}
@@ -683,6 +732,7 @@ export function WindowCompanionView({
             rotate: `${point.tilt}deg`,
             transform: `scale(${1 + point.squash}, ${1 - point.squash})`,
           }}
+          data-facing={facing ?? 'saved'}
           aria-label={t('companion.drag', { name: bot.name })}
           aria-description={condition}
           title={condition}
@@ -766,6 +816,7 @@ export function WindowCompanionView({
             surface="companion"
             anchorRef={anchorRef}
             mouth={view.mouth}
+            facing={facing}
             indicator={false}
             still={bot.paused}
             t={t}

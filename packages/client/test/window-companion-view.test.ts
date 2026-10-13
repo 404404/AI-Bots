@@ -335,7 +335,7 @@ it('sounds only fresh playback and silences a Bot on background, stale sync, arc
   }
 });
 
-it('keeps the Avatar tether aligned through resize and the first reduced-motion release commit', async () => {
+it('keeps the bubble tail on the Avatar head through resize and the first reduced-motion release commit', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const frames = new Map<number, FrameRequestCallback>();
   let frameId = 0;
@@ -390,6 +390,14 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
   const node = document.createElement('div');
   document.body.append(node);
   const root = createRoot(node);
+  const tailX = () => {
+    const bubble = node.querySelector<HTMLElement>('.bh-companion-bubble')!;
+    return (
+      Number.parseFloat(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).left) +
+      Number.parseFloat(bubble.style.left) +
+      Number.parseFloat(bubble.style.getPropertyValue('--bh-companion-tail'))
+    );
+  };
   const frame = () => {
     const due = [...frames.values()];
     frames.clear();
@@ -408,22 +416,17 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
       ),
     );
     await act(frame);
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 570 504 /u,
-    );
-    expect(node.querySelector<HTMLElement>('.bh-companion-bubble')?.style.bottom).toBe('134px');
+    expect(tailX()).toBe(570);
+    expect(node.querySelector('.bh-companion-tether')).toBeNull();
+    expect(node.querySelector<HTMLElement>('.bh-companion-bubble')?.style.bottom).toBe('112px');
     stage = new DOMRect(100, 60, 650, 500);
     await act(() => window.dispatchEvent(new Event('resize')));
     await act(frame);
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 570 404 /u,
-    );
+    expect(tailX()).toBe(570);
     stage = new DOMRect(100, 60, 320, 500);
     await act(() => window.dispatchEvent(new Event('resize')));
     expect(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).left).toBe('216px');
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 264 404 /u,
-    );
+    expect(tailX()).toBe(264);
     await act(() => {
       document.documentElement.dataset['botharnessMotion'] = 'reduce';
     });
@@ -441,14 +444,10 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
     expect(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).bottom).toBe(
       '300px',
     );
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 164 104 /u,
-    );
+    expect(tailX()).toBe(164);
     await act(() => pointer('pointerup', 164, 150));
     expect(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).bottom).toBe('0px');
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 164 404 /u,
-    );
+    expect(tailX()).toBe(164);
     const visibility = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
     await act(() => document.dispatchEvent(new Event('visibilitychange')));
     expect(frames.size).toBe(0);
@@ -460,6 +459,98 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
     measurement.mockRestore();
     vi.unstubAllGlobals();
     delete document.documentElement.dataset['botharnessMotion'];
+  }
+});
+
+it('turns the Avatar toward its walk and faces front without walking while it speaks', async () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
+  const measurement = vi
+    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+    .mockReturnValue(new DOMRect(0, 0, 800, 600));
+  const events = new EventTarget();
+  const companion = new WindowCompanion({
+    context: async () => ({ profileId: 'qa' }),
+    source: () => ({ addEventListener: events.addEventListener.bind(events), close() {} }),
+  });
+  await companion.start();
+  companion.select('ada');
+  companion.configure({ walking: true, position: 0.5 });
+  events.dispatchEvent(
+    new MessageEvent('companion/baseline', {
+      data: JSON.stringify({
+        profileId: 'qa',
+        bot: { slug: 'ada', name: 'Ada', paused: false },
+        activity: { generation: 'host', revision: 0, bots: [] },
+      }),
+    }),
+  );
+  const node = document.createElement('div');
+  document.body.append(node);
+  const root = createRoot(node);
+  let now = performance.now();
+  const frame = () => {
+    now += 50;
+    const due = [...frames.values()];
+    frames.clear();
+    for (const callback of due) callback(now);
+  };
+  const facing = () =>
+    node.querySelector<HTMLElement>('.bh-companion-character')?.dataset['facing'];
+  const left = () => companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).left;
+  try {
+    await act(() =>
+      root.render(
+        createElement(WindowCompanionView, {
+          companion,
+          openDm() {},
+          openAttention() {},
+          openChannel() {},
+          t: zhTranslate,
+        }),
+      ),
+    );
+    await act(frame);
+    await act(frame);
+    expect(facing()).toBe('right');
+    events.dispatchEvent(
+      new MessageEvent('companion/message', {
+        data: JSON.stringify({
+          generation: 'host',
+          botId: 'ada',
+          channelId: 'dm',
+          channelName: 'Ada',
+          messageId: 'hello',
+          body: 'Hello there.',
+          source: 'own-dm',
+        }),
+      }),
+    );
+    await act(frame);
+    expect(facing()).toBe('front');
+    const standing = left();
+    await act(frame);
+    await act(frame);
+    expect(left()).toBe(standing);
+    await act(() => companion.dismiss('hello', 'dm'));
+    await act(frame);
+    await act(frame);
+    expect(facing()).toBe('right');
+    expect(left()).not.toBe(standing);
+    await act(() => companion.configure({ walking: false }));
+    await act(frame);
+    expect(facing()).toBe('saved');
+  } finally {
+    await act(() => root.unmount());
+    companion.dispose();
+    node.remove();
+    measurement.mockRestore();
+    vi.unstubAllGlobals();
   }
 });
 
