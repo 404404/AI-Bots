@@ -775,13 +775,9 @@ function ConversationView({
     const dropped =
       mentions.length !== entry.mentions.length || channelRefs.length !== entry.channelRefs.length;
     const omitted = entry.replyTo !== undefined || (entry.attachments?.length ?? 0) > 0;
-    setRecallNotice(
-      [
-        t('composer.recalled'),
-        omitted ? t('composer.recallOmitted') : '',
-        dropped ? t('composer.recallDropped') : '',
-      ].join(''),
-    );
+    const notice =
+      (omitted ? t('composer.recallOmitted') : '') + (dropped ? t('composer.recallDropped') : '');
+    setRecallNotice(notice === '' ? undefined : notice.trim());
     return true;
   };
   const followingLatest = useRef(true);

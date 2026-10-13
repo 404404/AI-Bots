@@ -4,7 +4,7 @@ Captured through the real UI of isolated Hosts on DSH **0.2.0-rc.2**, macOS, Chi
 
 ## Screens
 
-- [before-recall-dark.jpg](before-recall-dark.jpg) / [after-recall-dark.jpg](after-recall-dark.jpg): Up in the empty composer after a sent message. Before, nothing happens. After, the submitted text returns with the note that it is not sent automatically.
+- [before-recall-dark.jpg](before-recall-dark.jpg) / [after-recall-dark.jpg](after-recall-dark.jpg): Up in the empty composer after a sent message. Before, nothing happens. After, the submitted text returns to the composer; nothing is sent and no extra text is shown.
 - [before-offline-dark.jpg](before-offline-dark.jpg) / [after-offline-dark.jpg](after-offline-dark.jpg): Enter while the Host is stopped. Both clear the composer and keep a bubble; before labels it **发送失败**, after labels it **结果未确认** because no answer came back. DSH's own reconnect toasts partly cover the bubble in both.
 - [before-reopen-dark.jpg](before-reopen-dark.jpg) / [after-reopen-dark.jpg](after-reopen-dark.jpg): the Host restarted and the page reopened. Before, the input is gone. After, the entry is still there; the Host was asked for its original ID, did not have it, and the bubble became **发送失败** with the restore action. Nothing was resent.
 

@@ -1133,9 +1133,8 @@ export const zh = {
   'message.failedRestore': '将失败消息放回输入框修改后重发',
   'message.unconfirmed': '结果未确认',
   'message.unconfirmedRestore': '向 Host 核对这条消息是否已送达',
-  'composer.recalled': '已召回之前提交的输入，不会自动发送。',
-  'composer.recallOmitted': '未带回原来的附件和回复对象。',
-  'composer.recallDropped': '部分 @ 或 # 引用已失效，已改为普通文字。',
+  'composer.recallOmitted': '召回的输入未带回原来的附件和回复对象。',
+  'composer.recallDropped': '召回的输入里部分 @ 或 # 引用已失效，已改为普通文字。',
   'composer.submissionStorageError':
     '这次提交的输入未能保存到本设备，刷新后将无法找回；请先复制备份。',
   'composer.submissionChecking': '正在向 Host 核对这条消息…',
@@ -4199,9 +4198,10 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'message.failedRestore': 'Restore failed message to composer to edit and resend',
   'message.unconfirmed': 'Not confirmed',
   'message.unconfirmedRestore': 'Ask the Host whether this message was delivered',
-  'composer.recalled': 'Recalled an earlier submission; it is not sent automatically.',
-  'composer.recallOmitted': ' Its attachments and reply target were not brought back.',
-  'composer.recallDropped': ' Some @ or # references are no longer valid and became plain text.',
+  'composer.recallOmitted':
+    ' The recalled input does not bring back its attachments or reply target.',
+  'composer.recallDropped':
+    ' Some @ or # references in the recalled input are no longer valid and became plain text.',
   'composer.submissionStorageError':
     'This submission could not be saved on this device and cannot be recovered after a reload; copy it first.',
   'composer.submissionChecking': 'Asking the Host about this message…',
