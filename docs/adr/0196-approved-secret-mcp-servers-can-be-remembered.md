@@ -6,7 +6,7 @@ Issues: [#1606](https://github.com/BotHarness/DeepSeekBot/issues/1606), [#1571](
 
 # Approved secret MCP servers can be remembered
 
-ADR-0194 let a Bot start an MCP server with Owner secrets after an approval for each start, and kept nothing: after a Host restart the Bot had to ask again and the Human had to approve again. There was also no place to see which servers a Bot uses. ADR-0194 left both for a later decision.
+ADR-0195 let a Bot start an MCP server with Owner secrets after an approval for each start, and kept nothing: after a Host restart the Bot had to ask again and the Human had to approve again. There was also no place to see which servers a Bot uses. ADR-0195 left both for a later decision.
 
 ## Decision
 
@@ -18,7 +18,7 @@ The approval card for starting a server offers three choices: allow once, allow 
 
 Remembering is not a Tool Approval Rule. It covers exactly the stored start for that Bot; a start with any different program, argument or variable is a new request with a new card. It can be chosen only on the Web card, not from an external IM.
 
-## What this changes in ADR-0194
+## What this changes in ADR-0195
 
 "One approval per start" becomes "one approval per distinct server". A remembered server runs again without a card, so a launcher that fetches a package may run a newer version of that package than the one first approved. The settings row shows the command so the Human can see what will run; removal is one click.
 

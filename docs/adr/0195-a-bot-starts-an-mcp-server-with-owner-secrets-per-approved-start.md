@@ -6,7 +6,7 @@ Issues: [#1571](https://github.com/BotHarness/DeepSeekBot/issues/1571), [#1562](
 
 # A Bot starts an MCP server with Owner secrets, one approved start at a time
 
-> Amended by [ADR-0195](0195-approved-secret-mcp-servers-can-be-remembered.md): the Human may remember an approved server, which is then reconnected when the Bot's Session starts.
+> Amended by [ADR-0196](0196-approved-secret-mcp-servers-can-be-remembered.md): the Human may remember an approved server, which is then reconnected when the Bot's Session starts.
 
 `secret_http` covers one HTTP request and `secret_cli` one command (ADR-0189, ADR-0191). An integration that needs a client library or several related calls is usually published as an MCP server that reads its credential from the environment. DSH can run such a server from Profile configuration, but only with the secret written into that configuration or the Host's own environment, for every Agent in the Profile. The fixed MCP consumer of ADR-0170 went away with the protected Profile (ADR-0192).
 

@@ -2125,7 +2125,7 @@ const ASSIGNMENT_ACCESS_SCOPE_MIGRATION: SchemaMigration = {
 const SECRET_MCP_SERVER_MIGRATION: SchemaMigration = {
   generation: 88,
   module: 'secret-mcp',
-  description: 'Remember Human-approved secret MCP servers per PersonaBot (ADR-0195)',
+  description: 'Remember Human-approved secret MCP servers per PersonaBot (ADR-0196)',
   migrate(database) {
     database.exec(`
       CREATE TABLE bot_secret_mcp_servers (
