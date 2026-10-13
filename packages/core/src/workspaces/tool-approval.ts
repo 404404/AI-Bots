@@ -19,7 +19,7 @@ export interface ToolApprovalRequestCard {
   role: 'orchestrator' | 'assignment';
   cwd: string;
   input: string;
-  externalDecision?: 'operation' | 'web-only';
+  externalDecision?: 'operation' | 'web-only' | 'each-use';
 }
 
 export interface ToolApprovalNotice extends ToolApprovalRequestCard {
@@ -122,7 +122,7 @@ export class ChannelToolApproval {
 
   track(
     execution: ToolExecution,
-    externalDecision: 'operation' | 'web-only' = 'operation',
+    externalDecision: 'operation' | 'web-only' | 'each-use' = 'operation',
   ): (() => void) | undefined {
     const agent = execution.agent;
     if (agent === undefined) return undefined;
@@ -183,7 +183,7 @@ export class ChannelToolApproval {
       this.#scope(request.agent, owner) !== tracked.scopeKey
     )
       return 'unavailable';
-    if (this.#rules?.match(tracked) !== undefined) {
+    if (tracked.externalDecision !== 'each-use' && this.#rules?.match(tracked) !== undefined) {
       tracked.automatic = true;
       return 'allowed-once';
     }
@@ -323,7 +323,9 @@ export class ChannelToolApproval {
   willPrompt(agent: Agent, callId: string): boolean {
     const tracked = this.#tracked.get(callKey(agent.session.id, callId));
     return (
-      tracked !== undefined && tracked.agent === agent && this.#rules?.match(tracked) === undefined
+      tracked !== undefined &&
+      tracked.agent === agent &&
+      (tracked.externalDecision === 'each-use' || this.#rules?.match(tracked) === undefined)
     );
   }
 
@@ -387,6 +389,11 @@ export class ChannelToolApproval {
       pending.deciding ||
       !pending.committed ||
       Date.parse(pending.notice.expiresAt) <= Date.now()
+    )
+      return false;
+    if (
+      pending.notice.externalDecision === 'each-use' &&
+      (external !== undefined || !['allowed-once', 'rejected'].includes(outcome))
     )
       return false;
     if (
@@ -526,7 +533,8 @@ export class ChannelToolApproval {
       }
     | undefined {
     const notice = this.pending(botSlug, messageId);
-    if (!notice || notice.externalDecision === 'web-only') return;
+    if (!notice || notice.externalDecision === 'web-only' || notice.externalDecision === 'each-use')
+      return;
     const tracked = this.#tracked.get(callKey(notice.sessionId, notice.callId));
     if (!tracked || this.validAfterDecision(tracked.agent, tracked.callId) !== true) return;
     return {

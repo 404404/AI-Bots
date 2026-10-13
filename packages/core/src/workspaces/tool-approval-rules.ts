@@ -51,7 +51,7 @@ export interface ToolApprovalRuleStore {
   list(botSlug: string): ToolApprovalRule[];
   match(
     input: Pick<ToolApprovalRule, 'botSlug' | 'role' | 'scopeKey' | 'toolName' | 'input'> & {
-      externalDecision?: 'operation' | 'web-only';
+      externalDecision?: 'operation' | 'web-only' | 'each-use';
     },
   ): ToolApprovalRule | undefined;
   createPending(
