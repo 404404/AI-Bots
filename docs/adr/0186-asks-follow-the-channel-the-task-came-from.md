@@ -26,6 +26,6 @@ An ask raised by an Orchestrator turn is posted in that turn's inbound local Cha
 
 ## Consequences
 
-- A turn that carries messages from several Channels asks in the Channel it started in. Routing an ask to the Channel of the message that caused it is left to the multi-Channel reply work (#1527).
+- A turn that carries messages from several Channels asks in the Bot's Human DM. The Host cannot tell which message caused a tool call, and a card shows the tool input, so a DM task must not surface its card in a Group that happened to start the turn.
 - Everyone in a Group can see an approval card's tool name, working directory and input. A Bot that needs to keep those private can still be asked in its DM.
 - Rejected: keeping cards in the DM and posting a notice in the Group. It keeps the Human moving between two Channels for one task, which is the experience this decision removes.
