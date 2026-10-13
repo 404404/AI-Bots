@@ -31,6 +31,7 @@ import {
 import { prependChannelJournal } from './channel-live.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
 import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
+import { parsePrivateAccountList, type PrivateAccountList } from './private-accounts.js';
 import type {
   MarketplaceDetail,
   MarketplaceEntry,
@@ -290,6 +291,11 @@ import {
   type NativeHostFiles,
 } from './host-file-actions.js';
 import { createFileOpenPreferences, type FileOpenPreferences } from './file-open-preferences.js';
+import {
+  ComposerSubmissionStore,
+  type SubmissionAttempt,
+  type SubmissionSnapshot,
+} from './composer-submission-store.js';
 
 const GIT_INSTALL_POLL_MS = 500;
 
@@ -453,6 +459,7 @@ export interface BridgeActions {
     messageId: string,
     path: string,
     body: (workspaceTitle: string) => string,
+    channelId?: string,
   ): Promise<void>;
   humanAssignmentContext(
     slug: string,
@@ -596,7 +603,8 @@ export interface BridgeActions {
     channelId: string,
     messageId: string,
   ): Promise<import('../../../core/src/credentials/contracts.js').PrivateAccountStatus>;
-  privateInputReplace?(channelId: string, messageId: string): Promise<void>;
+  privateInputReplace?(channelId: string, messageId: string): Promise<string>;
+  privateAccounts?(slug: string): Promise<PrivateAccountList>;
   privateAccountRevoke?(
     channelId: string,
     messageId: string,
@@ -629,7 +637,21 @@ export interface BridgeActions {
     channelRefs?: ChannelMessage['channelRefs'],
     grantRequestResolution?: ChannelMessage['grantRequestResolution'],
     allBotMention?: AllBotMention,
+    submissionId?: string,
   ): Promise<boolean>;
+  submissions: {
+    subscribe(listener: () => void): () => void;
+    snapshot(channelId: string): SubmissionSnapshot | undefined;
+    begin(
+      channelId: string,
+      attempt: Pick<SubmissionAttempt, 'text' | 'mentions' | 'channelRefs'> &
+        Partial<Pick<SubmissionAttempt, 'replyTo' | 'attachments'>>,
+    ): { id: string; persisted: boolean } | undefined;
+    cancel(channelId: string, id: string): void;
+    sync(channelId: string): void;
+    check(channelId: string, id: string): Promise<'committed' | 'absent' | 'unknown'>;
+    reconcile(channelId: string): Promise<void>;
+  };
   createBot(input: CreatePersonaBotInput, sectionId?: string): Promise<CreatedBot>;
   openCreatedBot(bot: BotSummary, sectionId?: string): Promise<void>;
   importBotZip(file: File, sectionId?: string): Promise<BotSummary>;
@@ -793,6 +815,7 @@ export function createActions(
     openSession?(sessionId: string): void;
     nativeFiles?: NativeHostFiles;
     fileOpenPreferences?: FileOpenPreferences;
+    submissions?: ComposerSubmissionStore;
   },
   navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
@@ -805,8 +828,70 @@ export function createActions(
   let openingFile = false;
   const fileOpenPreferences =
     folderAccess?.fileOpenPreferences ?? createFileOpenPreferences({ storage: undefined });
+  const submissions =
+    folderAccess?.submissions ??
+    new ComposerSubmissionStore(
+      (() => {
+        try {
+          return typeof localStorage === 'undefined' ? undefined : localStorage;
+        } catch {
+          return undefined;
+        }
+      })(),
+    );
+  const submissionScope = (channelId: string): string | undefined => {
+    const identity = clientStore.getSnapshot().composerIdentity;
+    return identity === undefined
+      ? undefined
+      : JSON.stringify([identity.hostId, identity.profileId, identity.humanId, channelId]);
+  };
+  const submissionEcho = (attempt: SubmissionAttempt): ChannelMessage => ({
+    id: attempt.id,
+    at: attempt.at,
+    author: { kind: 'human' },
+    body: attempt.text,
+    ...(attempt.mentions.length === 0 ? {} : { mentions: attempt.mentions }),
+    ...(attempt.channelRefs.length === 0 ? {} : { channelRefs: attempt.channelRefs }),
+    ...(attempt.attachments === undefined ? {} : { attachments: attempt.attachments }),
+    ...(attempt.replyTo === undefined ? {} : { replyTo: attempt.replyTo, replyToPreview: null }),
+    pending: false,
+    failed: attempt.error ?? '',
+    ...(attempt.state === 'unknown' ? { unconfirmed: true } : {}),
+  });
+  const settleSubmission = (
+    channelId: string,
+    id: string,
+    state: SubmissionAttempt['state'],
+    error?: string,
+  ): void => {
+    const scope = submissionScope(channelId);
+    if (scope !== undefined) submissions.settle(scope, id, state, error);
+  };
   const failedByChannel = new Map<string, ChannelMessage[]>();
-  const localFailedFor = (id: string): ChannelMessage[] => failedByChannel.get(id) ?? [];
+  const localFailedFor = (id: string): ChannelMessage[] => {
+    const held = failedByChannel.get(id) ?? [];
+    const scope = submissionScope(id);
+    if (scope === undefined) return held;
+    const heldIds = new Set(held.map((message) => message.id));
+    const active = new Set(
+      clientStore
+        .getSnapshot()
+        .conversation.messages.filter((message) => message.pending === true)
+        .map((message) => message.id),
+    );
+    return [
+      ...held,
+      ...submissions
+        .read(scope)
+        .attempts.filter(
+          (attempt) =>
+            (attempt.state === 'failed' || attempt.state === 'unknown') &&
+            !heldIds.has(attempt.id) &&
+            !active.has(attempt.id),
+        )
+        .map(submissionEcho),
+    ];
+  };
   const remainingFailures = (
     channelId: string,
     committed: readonly ChannelMessage[],
@@ -815,9 +900,32 @@ export function createActions(
     const current = localFailedFor(channelId);
     const next = current.filter((message) => !committedIds.has(message.id));
     if (next.length !== current.length) {
-      failedByChannel.set(channelId, next);
+      for (const message of current)
+        if (committedIds.has(message.id)) settleSubmission(channelId, message.id, 'sent');
+      failedByChannel.set(
+        channelId,
+        (failedByChannel.get(channelId) ?? []).filter((message) => !committedIds.has(message.id)),
+      );
     }
     return next;
+  };
+  const checkSubmission = async (
+    channelId: string,
+    id: string,
+  ): Promise<'committed' | 'absent' | 'unknown'> => {
+    try {
+      const { page } = await loadTimelinePage(call, channelId, {
+        direction: 'around',
+        around: id,
+        olderLimit: 0,
+        newerLimit: 0,
+      });
+      return page.entries.some((message) => message.id === id) ? 'committed' : 'absent';
+    } catch (error) {
+      return error instanceof BridgeCallError && error.code === 'invalid-input'
+        ? 'absent'
+        : 'unknown';
+    }
   };
   const currentSelection = (): ConversationSelection | undefined =>
     clientStore.getSnapshot().selection;
@@ -1374,8 +1482,17 @@ export function createActions(
     },
     privateInputReplace: async (channelId, messageId) => {
       const result = await call('privateInputReplace', { channelId, messageId });
-      if (!result.ok || typeof (result.value as { messageId?: unknown }).messageId !== 'string')
+      const replacement = result.ok
+        ? (result.value as { messageId?: unknown }).messageId
+        : undefined;
+      if (typeof replacement !== 'string')
         throw new Error('Private input replacement is unavailable');
+      return replacement;
+    },
+    privateAccounts: async (slug) => {
+      const result = await call('privateAccounts', { slug });
+      if (!result.ok) throw new Error('Private accounts are unavailable');
+      return parsePrivateAccountList(result.value);
     },
     privateAccountRevoke: async (channelId, messageId) => {
       const result = await call('privateAccountRevoke', { channelId, messageId });
@@ -1733,8 +1850,8 @@ export function createActions(
       if (folderAccess === undefined) throw new Error('DSH folder picker is unavailable');
       return folderAccess.pickDirectory();
     },
-    async resolveWorkspaceGrantRequest(slug, messageId, path, body) {
-      const channelId = 'dm-' + slug;
+    async resolveWorkspaceGrantRequest(slug, messageId, path, body, sourceChannelId) {
+      const channelId = sourceChannelId ?? 'dm-' + slug;
       const readRequest = async () => {
         const messages = await actions.humanInboxContext(channelId, messageId);
         return messages.find((message) => message.id === messageId);
@@ -2233,6 +2350,7 @@ export function createActions(
       channelRefs,
       grantRequestResolution,
       allBotMention,
+      submissionId,
     ) {
       let snapshot = clientStore.getSnapshot();
       const channel = snapshot.conversation.channel;
@@ -2278,7 +2396,21 @@ export function createActions(
       snapshot = clientStore.getSnapshot();
       if (snapshot.conversation.channel?.id !== channel.id || snapshot.conversation.sending)
         return false;
-      const localId = nextLocalEchoId();
+      const localId = submissionId ?? nextLocalEchoId();
+      const scope = submissionScope(channel.id);
+      if (
+        scope !== undefined &&
+        !submissions.read(scope).attempts.some((attempt) => attempt.id === localId)
+      )
+        submissions.record(scope, {
+          id: localId,
+          at: new Date().toISOString(),
+          text,
+          mentions: mentions ?? [],
+          channelRefs: channelRefs ?? [],
+          ...(replyTo === undefined ? {} : { replyTo }),
+          ...(attachments === undefined || attachments.length === 0 ? {} : { attachments }),
+        });
       onboardingFor(actions).markSubmitted(channel.id, text);
       clientStore.setConversation({
         sending: true,
@@ -2327,6 +2459,7 @@ export function createActions(
           allBotMention,
         );
         remainingFailures(channel.id, [message]);
+        settleSubmission(channel.id, localId, 'sent');
         const selection = currentSelection();
         const latest = clientStore.getSnapshot();
         if (latest.conversation.channel?.id === channel.id) {
@@ -2364,6 +2497,7 @@ export function createActions(
             : undefined;
         if (matching !== undefined && matching.pending !== true && matching.failed === undefined) {
           remainingFailures(channel.id, [matching]);
+          settleSubmission(channel.id, localId, 'sent');
           clientStore.setConversation({ sending: false, error: undefined });
           return true;
         }
@@ -2385,17 +2519,26 @@ export function createActions(
               messages: cached.messages.filter((message) => message.id !== localId),
             }));
           }
+          if (scope !== undefined) submissions.discard(scope, localId);
           if (error instanceof BridgeCallError && error.code === 'all-bot-preview-changed')
             throw error;
           return false;
         }
+        const unconfirmed = !(error instanceof BridgeCallError);
+        settleSubmission(
+          channel.id,
+          localId,
+          unconfirmed ? 'unknown' : 'failed',
+          errorMessage(error),
+        );
         const failedEcho: ChannelMessage = {
           ...localEcho,
           pending: false,
           failed: errorMessage(error),
+          ...(unconfirmed ? { unconfirmed: true } : {}),
         };
         failedByChannel.set(channel.id, [
-          ...localFailedFor(channel.id).filter((message) => message.id !== localId),
+          ...(failedByChannel.get(channel.id) ?? []).filter((message) => message.id !== localId),
           failedEcho,
         ]);
         if (latest.conversation.channel?.id === channel.id) {
@@ -2419,6 +2562,101 @@ export function createActions(
         return false;
       }
     },
+    submissions: {
+      subscribe: submissions.subscribe,
+      snapshot(channelId) {
+        const scope = submissionScope(channelId);
+        return scope === undefined ? undefined : submissions.read(scope);
+      },
+      begin(channelId, attempt) {
+        const scope = submissionScope(channelId);
+        if (scope === undefined) return undefined;
+        const id = nextLocalEchoId();
+        const persisted = submissions.record(scope, {
+          ...attempt,
+          id,
+          at: new Date().toISOString(),
+        });
+        return { id, persisted };
+      },
+      cancel(channelId, id) {
+        const scope = submissionScope(channelId);
+        if (scope !== undefined) submissions.discard(scope, id);
+      },
+      sync(channelId) {
+        const scope = submissionScope(channelId);
+        if (scope === undefined) return;
+        submissions.sync(scope);
+        const states = new Map(
+          submissions.read(scope).attempts.map((attempt) => [attempt.id, attempt.state]),
+        );
+        const settledElsewhere = (id: string): boolean =>
+          states.get(id) === 'sent' || states.get(id) === 'restored';
+        failedByChannel.set(
+          channelId,
+          (failedByChannel.get(channelId) ?? []).filter((item) => !settledElsewhere(item.id)),
+        );
+        const conversation = clientStore.getSnapshot().conversation;
+        if (conversation.channel?.id !== channelId || conversation.timeline.hasNewer) return;
+        const failures = localFailedFor(channelId);
+        const failureIds = new Set(failures.map((item) => item.id));
+        let changed = false;
+        const kept = conversation.messages.flatMap((message) => {
+          if (message.failed === undefined || !states.has(message.id)) return [message];
+          if (!failureIds.has(message.id)) {
+            changed = true;
+            return [];
+          }
+          const unconfirmed = states.get(message.id) === 'unknown';
+          if ((message.unconfirmed === true) === unconfirmed) return [message];
+          changed = true;
+          const { unconfirmed: _stale, ...rest } = message;
+          return [unconfirmed ? { ...rest, unconfirmed: true } : rest];
+        });
+        const shown = new Set(kept.map((message) => message.id));
+        const added = failures.filter((item) => !shown.has(item.id));
+        if (!changed && added.length === 0) return;
+        clientStore.setConversation({ messages: [...kept, ...added] });
+      },
+      check: checkSubmission,
+      async reconcile(channelId) {
+        const scope = submissionScope(channelId);
+        if (scope === undefined) return;
+        let committed = false;
+        let changed = false;
+        for (const attempt of submissions.reconcilable(scope)) {
+          const status = await checkSubmission(channelId, attempt.id);
+          if (status === 'unknown') continue;
+          if (!submissions.reconcilable(scope).some((current) => current.id === attempt.id))
+            continue;
+          changed = true;
+          committed ||= status === 'committed';
+          submissions.settle(
+            scope,
+            attempt.id,
+            status === 'committed' ? 'sent' : 'failed',
+            status === 'committed' ? undefined : attempt.error,
+          );
+          failedByChannel.set(
+            channelId,
+            (failedByChannel.get(channelId) ?? []).filter((item) => item.id !== attempt.id),
+          );
+        }
+        const conversation = clientStore.getSnapshot().conversation;
+        if (!changed || conversation.channel?.id !== channelId) return;
+        const failures = new Map(localFailedFor(channelId).map((item) => [item.id, item]));
+        clientStore.setConversation({
+          messages: conversation.messages.flatMap((message) =>
+            message.failed === undefined
+              ? [message]
+              : failures.has(message.id)
+                ? [failures.get(message.id)!]
+                : [],
+          ),
+        });
+        if (committed) await actions.refreshChannelMessages(channelId);
+      },
+    },
     dismissFailedMessage(channelId, messageId) {
       const conversation = clientStore.getSnapshot().conversation;
       if (conversation.channel?.id !== channelId) return false;
@@ -2428,8 +2666,9 @@ export function createActions(
       if (failed === undefined) return false;
       failedByChannel.set(
         channelId,
-        localFailedFor(channelId).filter((item) => item.id !== messageId),
+        (failedByChannel.get(channelId) ?? []).filter((item) => item.id !== messageId),
       );
+      settleSubmission(channelId, messageId, 'restored');
       clientStore.setConversation({
         messages: conversation.messages.filter((message) => message.id !== messageId),
         error: undefined,

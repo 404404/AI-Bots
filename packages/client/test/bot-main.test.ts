@@ -63,6 +63,7 @@ import { ChannelSidebarEntrySection } from '../src/client/channel-sidebar-view.j
 import { zhTranslate } from '../src/client/locale.js';
 import { store, type ChannelMessage } from '../src/client/store.js';
 import { WindowCompanions } from '../src/client/window-companions.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 describe('Channel read position candidates', () => {
   it('does not resolve a Grant request from a pending or failed local echo', () => {
@@ -103,7 +104,7 @@ const entryProps = {
   scope: 'personabot' as const,
   channelId: 'dm-ada',
   botSlug: 'ada',
-  actions: {} as BridgeActions,
+  actions: { ...inertSubmissionActions } as BridgeActions,
   t: zhTranslate,
 };
 
@@ -142,7 +143,7 @@ describe('Bot main Sessions pane', () => {
     const container = document.createElement('div');
     container.innerHTML = renderToStaticMarkup(
       createElement(BotMain, {
-        actions: {} as BridgeActions,
+        actions: { ...inertSubmissionActions } as BridgeActions,
         channelSidebar: sidebarRegistry(),
       }),
     );
@@ -174,7 +175,10 @@ describe('Bot main Sessions pane', () => {
     const registry = sidebarRegistry();
     const render = () =>
       renderToStaticMarkup(
-        createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: registry }),
+        createElement(BotMain, {
+          actions: { ...inertSubmissionActions } as BridgeActions,
+          channelSidebar: registry,
+        }),
       );
 
     store.setRoster([bot], [first, second]);
@@ -259,6 +263,7 @@ describe('Bot main Sessions pane', () => {
             listWorkspaceGrants: async () => [],
             modelPlanState: async () => undefined,
             botSourcePolicies: async () => [],
+            ...inertSubmissionActions,
           } as unknown as BridgeActions,
           channelSidebar: sidebarRegistry(),
           companion,
@@ -292,7 +297,10 @@ describe('Bot main Sessions pane', () => {
     store.select({ kind: 'channel', channelId: channel.id });
     store.setConversation(beforeChannelSelection.conversation);
     const channelMarkup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(channelMarkup).toContain('<span class="bh-title">Ada</span>');
     expect(channelMarkup).not.toContain('bh-channel-sidebar-title');
@@ -324,7 +332,10 @@ describe('Bot main Sessions pane', () => {
     store.setSessions({ status: 'ready', items: [], error: undefined });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
 
     expect(markup).toContain('class="bh-channel-island bh-group-channel-header"');
@@ -440,7 +451,10 @@ describe('Bot main Sessions pane', () => {
     store.setSessions({ status: 'ready', items: [], error: undefined });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('bh-bubble-pending');
     expect(markup).toContain('发送中');
@@ -484,7 +498,10 @@ describe('Bot main Sessions pane', () => {
       sending: false,
     });
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('hello');
     expect(markup).toContain('bh-bubble-failed');
@@ -518,7 +535,10 @@ describe('Bot main Sessions pane', () => {
     });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('bh-bot-dm-readonly');
     expect(markup).not.toContain('class="bh-memory-chat-composer"');
@@ -565,7 +585,7 @@ describe('Bot main Sessions pane', () => {
       });
       const markup = renderToStaticMarkup(
         createElement(BotMain, {
-          actions: {} as BridgeActions,
+          actions: { ...inertSubmissionActions } as BridgeActions,
           channelSidebar: sidebarRegistry(),
         }),
       );
@@ -625,7 +645,10 @@ describe('Bot main Sessions pane', () => {
       store.setConversation({ status: 'ready', channel, sending: false, messages });
       const host = document.createElement('div');
       host.innerHTML = renderToStaticMarkup(
-        createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+        createElement(BotMain, {
+          actions: { ...inertSubmissionActions } as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
       );
       expect(host.querySelector('.bh-message-group [style*="color"]:not(.bh-bubble-author)')).toBe(
         null,
@@ -704,7 +727,7 @@ describe('Bot main Sessions pane', () => {
       });
       const markup = renderToStaticMarkup(
         createElement(BotMain, {
-          actions: {} as BridgeActions,
+          actions: { ...inertSubmissionActions } as BridgeActions,
           channelSidebar: sidebarRegistry(),
         }),
       );
@@ -763,7 +786,10 @@ describe('Bot main Sessions pane', () => {
     });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('data-group-size="2"');
     expect(markup).toContain('data-group-position="first"');
@@ -808,7 +834,10 @@ describe('Bot main Sessions pane', () => {
     store.setConversation({ status: 'ready', channel, messages: [reply], sending: false });
     const render = () =>
       renderToStaticMarkup(
-        createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+        createElement(BotMain, {
+          actions: { ...inertSubmissionActions } as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
       );
     const linked = render();
     expect(linked).toContain('class="bh-bubble-reply"');
@@ -853,6 +882,7 @@ describe('DM usage refresh', () => {
       listWorkspaceGrants: async () => [],
       botSourcePolicies: async () => [],
       markRead: async () => undefined,
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     store.setRoster([bot], [channel]);
@@ -921,6 +951,7 @@ describe('Bot main question developer details', () => {
       listWorkspaceGrants: async () => [],
       userQuestionStatus: vi.fn().mockResolvedValue('pending'),
       markRead: vi.fn().mockResolvedValue(undefined),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const prefs = new BotModePrefs();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

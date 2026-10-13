@@ -38,6 +38,10 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- After you send, the composer clears and the input is kept on this device: press Up in an empty DM or Group composer to recall what you submitted, including failed sends, and Down to return to your draft. A send that got no answer shows **Not confirmed** instead of failed; it is checked against the Host by its original ID, never resent automatically, and stays recoverable after a reload ([#1460](https://github.com/BotHarness/DeepSeekBot/issues/1460), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
+
+- Messages can be multi-selected (long-press with the mouse, or **Select** in the message menu) and exported as a local diagnostic bundle: a zip with that Channel from the first to the last selected message (or from a single message until now) plus 30 minutes on each side, with the selected messages marked, the involved Bots' DMs, Inbox admissions and native Session events (tool calls included, from the start of any turn already running), and a merged timeline. Standard redaction hides local folders, tokens, secret fields, request headers and emails; Memory files, attachments and other Channels are never included, and nothing is uploaded ([#1533](https://github.com/BotHarness/DeepSeekBot/issues/1533), [ADR-0185](docs/adr/0185-diagnostic-bundles-are-local-redacted-read-only-exports.md)).
+
 - DM and Group composers retain device-local drafts across Channel switches and browser reloads, validate restored references, and expose concurrent-tab conflicts and storage failures; unuploaded file bytes are not retained ([#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459), [ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)).
 
 - A PersonaBot's DM now shows what it did elsewhere: each post in a Group or Bot DM leaves a short linked line with an excerpt, consecutive posts in one Channel collapse into one line, and Memory updates made in a Group also appear in the DM with their place. The DM's top-right settings menu hides each kind for that Bot; nothing unread or waking is added ([#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517), [ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)).
@@ -150,6 +154,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- A Bot working on a Group request now asks in that Group: tool approval cards, question cards and folder-access requests appear in the Channel the task came from instead of always in the Bot's DM. Secret input stays in the DM ([#1536](https://github.com/BotHarness/DeepSeekBot/issues/1536), [ADR-0186](docs/adr/0186-asks-follow-the-channel-the-task-came-from.md)).
+
 - A Group Channel's composer footer shows one workspace count, the distinct workspaces its member Bots can use together, instead of each Bot's own count; a DM still shows its Bot's count ([#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)).
 
 - Onboarding is now a getting-started checklist opened from a progress ring in the Bot-mode sidebar row (beside the exit button on mobile), so it takes no vertical space. It covers choosing a model and sending the first message, then letting the Bot remember you, connecting a chat app, setting a daily task and summoning the Window Companion, each with a direct action and a check read from that feature's own data. The interface walkthrough starts from the checklist and ends by showing how to leave Bot mode, and a quiet "Try it" chip marks the Bot-mode row until you first enter it ([#1496](https://github.com/BotHarness/DeepSeekBot/issues/1496), [ADR-0180](docs/adr/0180-onboarding-is-a-checklist-launched-from-the-bot-mode-row.md)).
@@ -178,6 +184,14 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - QQ voice attachments use the same audio card as message attachments, with keyboard playback and seeking; download still saves the original voice file, while playback conversion remains explicit ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
 
 - The maintained QQ Provider retains native mention names and IDs so Channel messages use the existing external mention chips, with the native ID in hover details; original source text and App ownership remain unchanged ([#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)).
+
+- A Bot no longer answers a message from another Channel in the Channel its current turn started in: when a turn carries messages from several Channels, the Bot must name the target Channel for each reply ([#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)).
+
+- In the English UI, tool-approval requests and decisions, their replies and the sidebar preview of a Bot DM holding an approval now show English text instead of fixed Chinese ([#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)).
+
+- Memory and Workspace folders under a symlinked parent directory, such as macOS `/tmp` or a linked home folder, no longer deny every Bot file tool call as outside the authorized workspace; a folder that is itself a symlink is still refused ([#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)).
+
+- AX Go launches stage the reviewed adapter patch inside each isolated CLI and reference it relatively, fixing Windows `ERR_PNPM_PATCH_NOT_FOUND` when source and home are on different drives; model credentials and native request handling retain their existing ownership ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409), [AX guide](docs/agents/ax-model.md)).
 
 - DeepSeekBot screens no longer lose all their styling at random while DSH's own UI stays styled: reloading or updating another plugin could remove DeepSeekBot's stylesheets ([#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)).
 

@@ -38,6 +38,10 @@
 
 ### Added
 
+- 发送后输入框清空，输入内容保留在本设备：在空的私聊或群聊输入框按 ↑ 可召回提交过的内容（包括发送失败的），按 ↓ 回到原来的草稿。没有得到回应的发送显示「结果未确认」而不是失败；它会按原提交标识向 Host 核对，不会自动重发，刷新后仍可找回（[#1460](https://github.com/BotHarness/DeepSeekBot/issues/1460)，[ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)）。
+
+- 消息支持多选（鼠标长按，或在消息菜单里选“多选”），多选后可以导出本地诊断包：一个 zip，包含该 Channel 从第一条到最后一条所选消息（只选一条时到现在为止）的内容并前后各多带 30 分钟，所选消息会被标记，另含参与 Bot 的私聊、收件记录、原生 Session 事件（含工具调用，正在运行的工作从它开始的那一轮算起）以及合并时间线。标准脱敏会隐藏本地目录、token、密钥字段、请求头和邮箱；Memory 文件、附件和其他 Channel 不会导出，产品也不会上传（[#1533](https://github.com/BotHarness/DeepSeekBot/issues/1533)，[ADR-0185](docs/adr/0185-diagnostic-bundles-are-local-redacted-read-only-exports.md)）。
+
 - DM 与 Group 输入框在频道切换和浏览器刷新后保留本设备草稿，恢复时校验引用，并明确提示多标签页冲突及存储失败；未上传的文件字节不会保留（[#1459](https://github.com/BotHarness/DeepSeekBot/issues/1459)，[ADR-0184](docs/adr/0184-client-local-composer-recovery-is-not-message-authority.md)）。
 
 - PersonaBot 的私聊现在会显示它在别处做了什么：它在群聊或 Bot 私信里的每次发言都会在私聊留下一条带摘录、可跳回原消息的短行，同一会话里的连续发言合并成一行；在群里触发的记忆更新也会出现在私聊里并标明地点。私聊右上角的设置菜单可以按类型为这个 Bot 隐藏这些行；它们不算未读，也不会唤醒任何人（[#1517](https://github.com/BotHarness/DeepSeekBot/pull/1517)，[ADR-0182](docs/adr/0182-the-bot-dm-is-the-bot-timeline.md)）。
@@ -150,6 +154,8 @@
 
 ### Changed
 
+- Bot 在处理群里的请求时，现在就在这个群里询问：工具审批卡、提问卡和文件夹授权请求出现在任务所在的 Channel，不再一律发到 Bot 的私聊。密钥输入仍留在私聊（[#1536](https://github.com/BotHarness/DeepSeekBot/issues/1536)、[ADR-0186](docs/adr/0186-asks-follow-the-channel-the-task-came-from.md)）。
+
 - 群聊输入框下方只显示一个工作区数量，即所有成员 Bot 可用工作区去重后的总数，不再逐个列出 Bot；私聊仍显示该 Bot 的工作区数（[#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)）。
 
 - 新手引导改为上手清单，从侧栏「Bot 模式」那一行里的进度环打开（移动端在退出按钮旁），不再占用垂直空间。清单包括配置模型、发出第一条消息，以及让它记住你、连接聊天软件、设一个每日任务、召唤窗口伙伴；每一项都可以直接操作，完成状态读取各功能自己的数据。界面导览从清单里启动，最后一步说明怎样退出 Bot 模式；第一次进入之前，「Bot 模式」那一行会显示一个「试试看」提示（[#1496](https://github.com/BotHarness/DeepSeekBot/issues/1496)，[ADR-0180](docs/adr/0180-onboarding-is-a-checklist-launched-from-the-bot-mode-row.md)）。
@@ -178,6 +184,14 @@
 - QQ 语音附件与消息附件共用音频卡片，支持键盘播放与进度调整；下载仍保存原始语音文件，播放转换仍需明确操作（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
 
 - 维护版 QQ Provider 保留原生提及的名称和 ID，让 Channel 消息复用现有外部提及块，并在悬停详情显示原生 ID；原始正文和 App 归属保持不变（[#1156](https://github.com/BotHarness/DeepSeekBot/issues/1156)）。
+
+- Bot 不再把另一个 Channel 插入的消息回复到当前回合起始的 Channel：一个回合里有多个 Channel 的消息时，Bot 每次回复都必须指明目标 Channel（[#1527](https://github.com/BotHarness/DeepSeekBot/issues/1527)）。
+
+- 英文界面下，工具审批请求与决定、对应的回复引用，以及含审批的 Bot 私聊在侧栏中的预览，现在显示英文，不再固定为中文（[#1293](https://github.com/BotHarness/DeepSeekBot/issues/1293)）。
+
+- 记忆和工作区文件夹位于符号链接父目录下（例如 macOS 的 `/tmp` 或被链接的主目录）时，Bot 的文件工具调用不再全部被判定为超出授权工作区；文件夹本身是符号链接时仍会被拒绝（[#1292](https://github.com/BotHarness/DeepSeekBot/issues/1292)）。
+
+- AX Go 启动会将经审阅的适配器补丁复制到各自的隔离 CLI，并使用相对路径引用，修复源码与 home 位于不同盘符时 Windows 的 `ERR_PNPM_PATCH_NOT_FOUND`；模型凭据和原生请求处理沿用既有归属（[#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)、[AX 指南](docs/agents/ax-model.md)）。
 
 - DeepSeekBot 界面不再随机丢失全部样式（DSH 自身界面正常）：此前其他插件重载或更新时可能连带移除 DeepSeekBot 的样式表（[#1528](https://github.com/BotHarness/DeepSeekBot/pull/1528)）。
 

@@ -300,7 +300,10 @@ async function main() {
         "packages: [.]\nallowBuilds:\n  '@deepseek-ai/dsh-subprocess-local': true\n  '@google/genai': false\n  koffi: true\n  node-pty: true\n  protobufjs: false\n",
       );
     if (options.axModel)
-      writeFileSync(runtimeWorkspace, axRuntimeWorkspace(readFileSync(runtimeWorkspace, 'utf8')));
+      writeFileSync(
+        runtimeWorkspace,
+        axRuntimeWorkspace(readFileSync(runtimeWorkspace, 'utf8'), options.runtime),
+      );
     writeFileSync(
       join(options.runtime, 'package.json'),
       `${JSON.stringify({ name: 'botharness-isolated-cli-qa', private: true, devDependencies: { '@deepseek-ai/dsh': version } }, null, 2)}\n`,

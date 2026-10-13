@@ -64,7 +64,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import type { UsageFilter, UsageQueryResult } from '../usage/query.js';
 import { RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type { PrivateInputs } from '../credentials/private-inputs.js';
-import type { PrivateInputStatus } from '../credentials/contracts.js';
+import type { PrivateAccountSummary, PrivateInputStatus } from '../credentials/contracts.js';
 
 import type { PersonaBotPatch } from '../bots/persona-bot.js';
 import type { ModelCatalogEntry } from '../models/catalog.js';
@@ -338,6 +338,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
     this.requirePrivateOwner();
     const replacement = await this.privateInputs?.replace(true, channelId, messageId);
     return replacement === undefined ? {} : { messageId: replacement };
+  }
+
+  async privateAccounts(slug: string): Promise<{
+    status: 'ready' | 'unavailable';
+    accounts: PrivateAccountSummary[];
+    replaceable: boolean;
+  }> {
+    this.requirePrivateOwner();
+    const accounts =
+      typeof slug === 'string' ? await this.privateInputs?.accounts(true, slug) : undefined;
+    const replaceable = (await this.privateInputs?.replaceable().catch(() => false)) ?? false;
+    return accounts === undefined
+      ? { status: 'unavailable', accounts: [], replaceable: false }
+      : { status: 'ready', accounts, replaceable };
   }
 
   async privateAccountRevoke(channelId: string, messageId: string) {
@@ -1386,6 +1400,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'privateAccountStatus',
   'privateInputReplace',
   'privateAccountRevoke',
+  'privateAccounts',
   'messagingDefaults',
   'messagingDefaultsSet',
   'channelBridges',

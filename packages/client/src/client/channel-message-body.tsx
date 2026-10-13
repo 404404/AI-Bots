@@ -30,6 +30,7 @@ import { attachmentReferenceRuns, messageAttachmentReferences } from './attachme
 import type { BridgeActions, HostDirectoryListing } from './actions.js';
 import { FolderBrowser } from './workspace-grants-entry.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { toolApprovalText } from './approval-text.js';
 import { store, type BotSummary, type ChannelMessage } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
 
@@ -154,10 +155,12 @@ export function GrantRequestCard({
   workspacePickerRequest,
   compact = false,
   beforeOpen,
+  channelId,
   t,
 }: {
   message: ChannelMessage;
   actions: BridgeActions;
+  channelId?: string | undefined;
   workspacePickerRequest?: number | undefined;
   resolved: boolean;
   compact?: boolean;
@@ -201,8 +204,12 @@ export function GrantRequestCard({
     setError(undefined);
     void (async () => {
       try {
-        await actions.resolveWorkspaceGrantRequest(botSlug, message.id, path, (name) =>
-          t('grant.requestApprovedMessage', { name }),
+        await actions.resolveWorkspaceGrantRequest(
+          botSlug,
+          message.id,
+          path,
+          (name) => t('grant.requestApprovedMessage', { name }),
+          channelId,
         );
         setCompleted(true);
         setListing(undefined);
@@ -305,7 +312,7 @@ function leadingBotMentions(message: ChannelMessage):
 }
 
 export function ChannelMessageBody({
-  message,
+  message: storedMessage,
   channelId,
   t,
   actions,
@@ -344,6 +351,9 @@ export function ChannelMessageBody({
     }),
     [t],
   );
+  const approvalBody = toolApprovalText(storedMessage, t);
+  const message =
+    approvalBody === undefined ? storedMessage : { ...storedMessage, body: approvalBody };
   const format = message.format ?? (message.author.kind === 'human' ? 'text' : 'markdown');
   if (message.contentPurged) return <div className="bh-bubble-body">{t('purge.purged')}</div>;
   if (message.onboardingWelcome !== undefined && actions !== undefined && channelId !== undefined)
@@ -360,7 +370,13 @@ export function ChannelMessageBody({
     );
   if (message.toolApprovalRequest !== undefined && actions !== undefined) {
     return (
-      <ToolApprovalCard message={message} actions={actions} decision={toolApprovalDecision} t={t} />
+      <ToolApprovalCard
+        message={message}
+        actions={actions}
+        decision={toolApprovalDecision}
+        channelId={channelId}
+        t={t}
+      />
     );
   }
   if (message.privateInputRequest !== undefined && actions !== undefined) {
@@ -372,6 +388,7 @@ export function ChannelMessageBody({
         message={message}
         actions={actions}
         resolution={userQuestionResolution}
+        channelId={channelId}
         t={t}
       />
     );
@@ -382,6 +399,7 @@ export function ChannelMessageBody({
         message={message}
         actions={actions}
         resolved={grantRequestResolved || message.grantRequestResolved === true}
+        channelId={channelId}
         workspacePickerRequest={workspacePickerRequest}
         t={t}
       />

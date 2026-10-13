@@ -24,6 +24,8 @@ export interface ToolApprovalRequestCard {
 
 export interface ToolApprovalNotice extends ToolApprovalRequestCard {
   botSlug: string;
+  channelId: string;
+  groupName?: string;
   messageId: string;
   expiresAt: string;
 }
@@ -85,6 +87,7 @@ export class ChannelToolApproval {
       ) => AssignmentApprovalWaitLease | undefined)
     | undefined;
   readonly #scope: (agent: Agent, owner: SessionOwnershipRecord) => string | undefined;
+  readonly #askChannel: ((sessionId: string) => string | undefined) | undefined;
   readonly #tracked = new Map<string, TrackedCall>();
   readonly #pending = new Map<string, Pending>();
   readonly #listeners = new Set<
@@ -105,7 +108,9 @@ export class ChannelToolApproval {
       callId: string,
       signal: AbortSignal,
     ) => AssignmentApprovalWaitLease | undefined,
+    askChannel?: (sessionId: string) => string | undefined,
   ) {
+    this.#askChannel = askChannel;
     this.#channels = channels;
     this.#ownership = ownership;
     this.#rules = rules;
@@ -182,9 +187,16 @@ export class ChannelToolApproval {
       tracked.automatic = true;
       return 'allowed-once';
     }
-    const channelId = dmChannelId(tracked.botSlug);
+    const origin =
+      tracked.role === 'orchestrator' ? this.#askChannel?.(tracked.sessionId) : undefined;
+    const originChannel = origin === undefined ? undefined : this.#channels.get(origin);
+    const channelId =
+      originChannel?.type === 'group' && originChannel.members.includes(tracked.botSlug)
+        ? originChannel.id
+        : dmChannelId(tracked.botSlug);
     const channel = this.#channels.get(channelId) ?? this.#channels.getOrCreateDm(tracked.botSlug);
-    if (channel?.botSlug !== tracked.botSlug) return 'unavailable';
+    if (channel === undefined) return 'unavailable';
+    if (channel.type !== 'group' && channel.botSlug !== tracked.botSlug) return 'unavailable';
     const message: ChannelMessage = {
       id: randomUUID(),
       at: new Date().toISOString(),
@@ -217,6 +229,8 @@ export class ChannelToolApproval {
       notice: {
         ...message.toolApprovalRequest!,
         botSlug: tracked.botSlug,
+        channelId,
+        ...(channel.type === 'group' ? { groupName: channel.name } : {}),
         messageId: message.id,
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },

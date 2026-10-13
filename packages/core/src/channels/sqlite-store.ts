@@ -7,7 +7,11 @@ import {
   type RetainedAttachmentMessage,
 } from '../attachments/legacy-migration.js';
 import { projectAttachmentFiles } from '../attachments/message-files.js';
-import { assertGrantRequestReply, isGrantRequestResolved } from './grant-request.js';
+import {
+  assertGrantRequestReply,
+  grantRequester,
+  isGrantRequestResolved,
+} from './grant-request.js';
 import {
   assertAssignmentHumanReply,
   AssignmentReplyTargetError,
@@ -708,7 +712,8 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
               .prepare(
                 'SELECT 1 FROM workspace_grants WHERE id = ? AND bot_slug = ? AND revoked_at IS NULL',
               )
-              .get(durable.grantRequestResolution.grantId, channel.botSlug!) === undefined
+              .get(durable.grantRequestResolution.grantId, grantRequester(durable, previous)!) ===
+              undefined
           )
             throw new ChannelReplyTargetError();
           for (const mention of humanMentions) {
@@ -771,7 +776,14 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
               : durable.author.kind === 'human'
                 ? channel.type === 'dm' && channel.botSlug !== undefined
                   ? [{ botSlug: channel.botSlug, reason: 'human-dm' }]
-                  : [...new Set(mentions.map((item) => item.botSlug))].map((botSlug) => ({
+                  : [
+                      ...new Set([
+                        ...mentions.map((item) => item.botSlug),
+                        ...(channel.type === 'group' && grantRequester(durable, previous)
+                          ? [grantRequester(durable, previous)!]
+                          : []),
+                      ]),
+                    ].map((botSlug) => ({
                       botSlug,
                       reason: 'group-mention',
                     }))

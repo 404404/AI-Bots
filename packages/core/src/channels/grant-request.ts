@@ -22,14 +22,24 @@ export function assertGrantRequestReply(
   if (resolution === undefined) return;
   const request = messages.find((entry) => entry.id === resolution.requestMessageId);
   if (
-    channel.type !== 'dm' ||
-    channel.botSlug === undefined ||
     message.author.kind !== 'human' ||
     message.replyTo !== resolution.requestMessageId ||
     request?.grantRequest !== true ||
     request.author.kind !== 'bot' ||
-    request.author.slug !== channel.botSlug ||
+    (channel.type === 'dm'
+      ? channel.botSlug !== request.author.slug
+      : !channel.members.includes(request.author.slug)) ||
     isGrantRequestResolved(messages, request.id)
   )
     throw new ChannelReplyTargetError();
+}
+
+export function grantRequester(
+  message: ChannelMessage,
+  messages: readonly ChannelMessage[],
+): string | undefined {
+  const resolution = message.grantRequestResolution;
+  if (resolution === undefined) return undefined;
+  const author = messages.find((entry) => entry.id === resolution.requestMessageId)?.author;
+  return author?.kind === 'bot' ? author.slug : undefined;
 }

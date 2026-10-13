@@ -64,7 +64,8 @@ export function companionRequests(value: unknown, botSlug: string): CompanionReq
     if (
       !record(item) ||
       item['botSlug'] !== botSlug ||
-      item['channelId'] !== `dm-${botSlug}` ||
+      typeof item['channelId'] !== 'string' ||
+      !item['channelId'] ||
       typeof item['messageId'] !== 'string' ||
       !item['messageId'] ||
       typeof item['sessionId'] !== 'string' ||

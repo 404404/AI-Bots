@@ -378,3 +378,43 @@ describe('mounted Channel composer', () => {
     expect(observers.every((observer) => observer.disconnect.mock.calls.length === 1)).toBe(true);
   });
 });
+
+describe('Up/Down recall keys', () => {
+  const press = async (key: string, init: KeyboardEventInit = {}): Promise<KeyboardEvent> => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+    await act(async () => {
+      host.querySelector<HTMLElement>('textarea, [contenteditable]')!.dispatchEvent(event);
+    });
+    return event;
+  };
+  const mount = async (onRecall: (direction: 'older' | 'newer') => boolean) =>
+    act(async () =>
+      root.render(
+        createElement(ChannelComposer, {
+          value: '',
+          placeholder: 'Message',
+          sending: false,
+          onChange: () => undefined,
+          onSubmit: () => undefined,
+          onRecall,
+        }),
+      ),
+    );
+  it('offers plain arrows to recall and keeps the key only when recall handled it', async () => {
+    const onRecall = vi.fn((direction: 'older' | 'newer') => direction === 'older');
+    await mount(onRecall);
+    expect((await press('ArrowUp')).defaultPrevented).toBe(true);
+    expect(onRecall).toHaveBeenLastCalledWith('older');
+    expect((await press('ArrowDown')).defaultPrevented).toBe(false);
+    expect(onRecall).toHaveBeenLastCalledWith('newer');
+  });
+  it('leaves IME composition and modified arrows alone', async () => {
+    const onRecall = vi.fn(() => true);
+    await mount(onRecall);
+    await press('ArrowUp', { isComposing: true });
+    await press('ArrowUp', { shiftKey: true });
+    await press('ArrowDown', { altKey: true });
+    await press('ArrowUp', { metaKey: true });
+    expect(onRecall).not.toHaveBeenCalled();
+  });
+});

@@ -348,7 +348,8 @@ it('accepts only formal well-formed questions qualified for the selected Bot', (
       [
         { ...request, kind: 'message' },
         { ...request, botSlug: 'bea' },
-        { ...request, channelId: 'group' },
+        { ...request, channelId: '' },
+        { ...request, channelId: 7 },
         { ...request, questions: [] },
         { ...request, callId: '' },
         { ...request, callId: 7 },

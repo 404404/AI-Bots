@@ -12,6 +12,11 @@ import {
 import { createOutboundMessaging, type OutboundMessaging } from './messaging/outbound.js';
 import { createProfileRecovery, type ProfileRecovery } from './portability/recovery.js';
 import { createProfileBackupHttp, PROFILE_BACKUP_PATH } from './portability/http.js';
+import {
+  createDiagnosticBundleHttp,
+  DIAGNOSTIC_BUNDLE_PATH,
+  DIAGNOSTIC_BUNDLE_PREVIEW_PATH,
+} from './diagnostics/bundle-http.js';
 import { mountContentPurge } from './purge/owner.js';
 import type { ContentPurge } from './purge/contracts.js';
 import { createDshImProvider } from './messaging/dsh-im.js';
@@ -353,6 +358,7 @@ export function createCore(
     activeQuestionMessageIds?: () => readonly string[];
     activeToolApprovalMessageIds?: () => readonly string[];
     activePrivateInputMessageIds?: () => readonly string[];
+    erasePrivateAccounts?: (slug: string) => Promise<unknown>;
     capture?: TelemetryCapture;
   } = {},
 ): BotHarnessCore {
@@ -797,6 +803,7 @@ export function createCore(
       for (const rule of toolRules.list(slug)) toolRules.revoke(slug, rule.id);
       await runtime?.stopBot?.(slug);
       await externalMessaging.disableBot(slug);
+      await options.erasePrivateAccounts?.(slug);
     },
     changed: () => live?.publishRosterCommitted(),
     log: (event) => options.warn?.(JSON.stringify(event)),
@@ -1030,6 +1037,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     activeQuestionMessageIds: () => userQuestions?.activeMessageIds() ?? [],
     activeToolApprovalMessageIds: () => toolApproval?.activeMessageIds() ?? [],
     activePrivateInputMessageIds: () => privateInputs?.activeMessageIds() ?? [],
+    erasePrivateAccounts: async (slug) => privateInputs?.eraseBot(slug),
     capture: (event, properties) => telemetry.capture(event, properties),
     warn: (message) => ctx.logger.warn(message),
     agents: agentAdapter,
@@ -1156,6 +1164,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     (sessionId, callId, signal) =>
       core.runtime.beginAssignmentApprovalWait?.(sessionId, callId, signal),
+    (sessionId) => core.runtime.askChannel?.(sessionId),
   );
   ctx.effect(
     () => core.externalMessaging.approvals.attach(toolApproval, core.channels),
@@ -1172,6 +1181,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     (message) => ctx.logger.warn(message),
     (slug, count) => core.states.setQuestionCount(slug, count),
     nativeTimedQuestions(ctx, core.runtime),
+    (sessionId) => core.runtime.askChannel?.(sessionId),
   );
   ctx.effect(() => () => userQuestions.close(), 'botharness: Channel user questions');
   ctx.effect(
@@ -1728,6 +1738,45 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
             fetch: profileBackupHttp,
           }),
         'botharness: complete environment backup ' + suffix,
+      );
+    const dshVersion = installedDshVersion();
+    const diagnosticBundleHttp = createDiagnosticBundleHttp({
+      source: {
+        channels: core.channels,
+        inboxHistory: core.inboxHistory,
+        ownership: core.ownership,
+        botName: (slug) => core.registry.get(slug)?.displayName,
+        readSession: async (sessionId) => {
+          const query = ctx.get('sessionQuery') as unknown as
+            | { readSession(id: string): Promise<{ events: readonly DshSessionEvent[] }> }
+            | undefined;
+          if (query !== undefined) return (await query.readSession(sessionId)).events;
+          return dshSessions.get(sessionId)?.snapshotEvents();
+        },
+        environment: {
+          version: runningRelease.version,
+          ...(dshVersion === undefined ? {} : { dshVersion }),
+          platform: process.platform,
+          arch: process.arch,
+          node: process.version,
+        },
+      },
+      homes: [
+        { path: dshHome, label: '$DSH_HOME' },
+        { path: homedir(), label: '~' },
+      ],
+      log: (message) => ctx.logger.info(message),
+    });
+    for (const path of [DIAGNOSTIC_BUNDLE_PATH, DIAGNOSTIC_BUNDLE_PREVIEW_PATH])
+      connectionCtx.effect(
+        () =>
+          connection.fetch.register({
+            path,
+            methods: ['POST'],
+            requestBody: 'buffered',
+            fetch: diagnosticBundleHttp,
+          }),
+        'botharness: diagnostic bundle ' + path,
       );
     connectionCtx.effect(
       () =>

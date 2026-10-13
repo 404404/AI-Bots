@@ -106,6 +106,7 @@ import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
 import { toggleHiddenDmAction } from '../src/client/dm-actions.js';
 import { store, type BotSummary, type ChannelSummary } from '../src/client/store.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 const AT = '2026-10-09T00:00:00Z';
 let container: HTMLDivElement;
@@ -152,6 +153,7 @@ describe('Channel Notices in a Group', () => {
     const openAround = vi.fn(async () => undefined);
     const noticeActions = new Proxy(
       {
+        ...inertSubmissionActions,
         fileOpenPreferences: {
           ready: async () => {},
           get: () => undefined,
@@ -280,6 +282,7 @@ describe('Channel Notices in a Group', () => {
   function proxyActions(overrides: Record<string, unknown>): BridgeActions {
     return new Proxy(
       {
+        ...inertSubmissionActions,
         fileOpenPreferences: {
           ready: async () => {},
           get: () => undefined,

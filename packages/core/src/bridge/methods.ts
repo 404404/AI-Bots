@@ -987,6 +987,15 @@ function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBo
 }
 
 export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
+  const askingBot = (channelId: string, messageId: string): string | undefined => {
+    const channel = deps.channels.get(channelId);
+    if (channel === undefined) return undefined;
+    if (channel.type === 'dm') return channel.botSlug;
+    const author = deps.channels.message(channelId, messageId)?.author;
+    return author?.kind === 'bot' && channel.members.includes(author.slug)
+      ? author.slug
+      : undefined;
+  };
   const channelView = (channel: ChannelRecord): ChannelListItem => {
     const humanNickname = deps.channels.humanNickname(channel.id);
     return {
@@ -3387,17 +3396,20 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       )
         return invalidInput('Grant approval replies must reference an active Workspace Grant');
       if (grantRequestResolution !== undefined) {
-        if (channel.type !== 'dm' || channel.botSlug === undefined)
-          return invalidInput('Grant request resolution requires a PersonaBot DM');
+        const requester =
+          grantRequestTarget?.grantRequest === true && grantRequestTarget.author.kind === 'bot'
+            ? grantRequestTarget.author.slug
+            : undefined;
         if (
-          grantRequestTarget?.grantRequest !== true ||
-          grantRequestTarget.author.kind !== 'bot' ||
-          grantRequestTarget.author.slug !== channel.botSlug
+          requester === undefined ||
+          (channel.type === 'dm'
+            ? channel.botSlug !== requester
+            : !channel.members.includes(requester))
         )
-          return invalidInput('Grant request is unavailable in this DM');
+          return invalidInput('Grant request is unavailable in this Channel');
         if (
           !deps.grants
-            ?.list(channel.botSlug)
+            ?.list(requester)
             .some(
               (grant) =>
                 grant.id === grantRequestResolution.grantId && grant.revokedAt === undefined,
@@ -4223,10 +4235,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (channelId === undefined || messageId === undefined) {
         return invalidInput('channelId and messageId are required');
       }
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined) {
-        return invalidInput('Tool approval is available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined) {
+        return invalidInput('Tool approval is available only in a PersonaBot DM or Group');
       }
+      const channel = { botSlug: asker };
       const request = deps.channels.message(channelId, messageId)?.toolApprovalRequest;
       if (request === undefined) {
         return invalidInput('Unknown tool approval request');
@@ -4269,10 +4282,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       ) {
         return invalidInput('channelId, messageId, and a valid outcome are required');
       }
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined) {
-        return invalidInput('Tool approval is available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined) {
+        return invalidInput('Tool approval is available only in a PersonaBot DM or Group');
       }
+      const channel = { botSlug: asker };
       if (deps.channels.message(channelId, messageId)?.toolApprovalRequest === undefined) {
         return invalidInput('Unknown tool approval request');
       }
@@ -4286,9 +4300,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const messageId = asNonBlank(source, 'messageId');
       if (channelId === undefined || messageId === undefined)
         return invalidInput('channelId and messageId are required');
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined)
-        return invalidInput('Questions are available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined)
+        return invalidInput('Questions are available only in a PersonaBot DM or Group');
+      const channel = { botSlug: asker };
       if (deps.channels.message(channelId, messageId)?.userQuestionRequest === undefined)
         return invalidInput('Unknown user question');
       return {
@@ -4303,9 +4318,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const answer = asObject(source['answer']);
       if (channelId === undefined || messageId === undefined || !Array.isArray(answer['answers']))
         return invalidInput('channelId, messageId, and answers are required');
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined)
-        return invalidInput('Questions are available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined)
+        return invalidInput('Questions are available only in a PersonaBot DM or Group');
+      const channel = { botSlug: asker };
       if (deps.channels.message(channelId, messageId)?.userQuestionRequest === undefined)
         return invalidInput('Unknown user question');
       const accepted = await deps.userQuestions?.answer(
