@@ -57,3 +57,32 @@ export function credentialStoreDenial(
 function escape(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+export function credentialStorePath(dshHome: string): string {
+  return join(canonical(dshHome), CREDENTIAL_STORE_FILE);
+}
+
+export function denyStoreRead<T extends { argv: string[] }>(confined: T, store: string): T {
+  const argv = confined.argv;
+  const runner = basename(argv[0] ?? '');
+  if (runner === 'sandbox-exec' && argv[1] === '-p' && typeof argv[2] === 'string') {
+    const rule = `(deny file-read* (literal ${JSON.stringify(store)}))`;
+    if (argv[2].includes(rule)) return confined;
+    return { ...confined, argv: [argv[0]!, '-p', `${argv[2]} ${rule}`, ...argv.slice(3)] };
+  }
+  if (runner === 'bwrap') {
+    const separator = argv.indexOf('--');
+    if (separator < 0) return confined;
+    return {
+      ...confined,
+      argv: [
+        ...argv.slice(0, separator),
+        '--ro-bind-try',
+        '/dev/null',
+        store,
+        ...argv.slice(separator),
+      ],
+    };
+  }
+  return confined;
+}

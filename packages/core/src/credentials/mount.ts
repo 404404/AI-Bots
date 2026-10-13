@@ -9,7 +9,7 @@ import { PRIVATE_MCP_TOOL, ProtectedMcp } from './protected-mcp.js';
 import { nativeExecutionRoot } from '../workspaces/grant-native-tools.js';
 import { isQualifiedMessagingName, messagingToolDenial } from './messaging-tools.js';
 import { privateInputWebUrl } from './web-locator.js';
-import { credentialStoreDenial } from './store-guard.js';
+import { credentialStoreDenial, credentialStorePath, denyStoreRead } from './store-guard.js';
 import { resolveDshHome } from '../im/config-store.js';
 
 const SAFE_TOOLS = new Set([
@@ -86,6 +86,23 @@ export function mountPrivateInputs(
     log,
     changed: (botSlug, count) => core.states.setPrivateInputCount(botSlug, count),
   });
+  if (mode === 'standard')
+    ctx.inject(['sandbox'], (child) => {
+      const sandbox = child.get('sandbox') as unknown as {
+        confine(...args: unknown[]): Promise<{ argv: string[] }>;
+      };
+      const original = sandbox.confine;
+      const store = credentialStorePath(dshHome);
+      sandbox.confine = async function (this: unknown, ...args: unknown[]) {
+        return denyStoreRead(await original.apply(this, args), store);
+      };
+      child.effect(
+        () => () => {
+          sandbox.confine = original;
+        },
+        'botharness: credential store read denial',
+      );
+    });
   ctx.effect(() => () => owner.close(), 'botharness: private input owner');
   ctx.effect(() => () => execution.close(), 'botharness: protected Execution World');
   ctx.effect(() => () => privateMcp.close(), 'botharness: protected MCP lifetime');
