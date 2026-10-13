@@ -1,4 +1,4 @@
-# Private input CLI candidate
+# Private account lifecycle and Owner CLI
 
 ## Scheduled reuse after Host restart (#1383)
 
@@ -22,25 +22,7 @@ Set fixture delay to 9000 ms, start one real Bot call, observe `/evidence` incre
 
 Version-three grants require both the current native account record and canonical configured Channel proof. Startup recovery finishes before Owner mutations. Partial persistence failures publish no configured reference set; a committed account head without its final Channel proof remains unusable and can be repaired with a fresh private request. Older binaries ignore the new account tombstones: back up before upgrading, repair forward or restore the complete pre-upgrade Profile backup. See [ADR-0167](../../adr/0167-private-account-versions-fence-consumption-and-revocation.md).
 
-Since [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md) `ask_secret`, `secret_http` and the fixed CLI also work in an ordinary Profile without Docker (see the [ordinary Profile guide](private-input-ordinary.md)); this guide covers the opt-in protected Profile, which adds the container boundary. This is the opt-in #1380/#1381 qualification path, not a completed v1.3 capability. Human accepted the real PersonaBot inline Web input and authenticated fixed-CLI result in #1380. [ADR-0164](../../adr/0164-private-input-candidate-separates-native-storage-from-qualified-execution.md) records its execution boundary; [ADR-0166](../../adr/0166-private-input-settlement-commits-before-continuation.md) records request settlement and recovery.
-
-Use a dedicated, isolated DSH home with pinned `0.2.0-rc.1`, Docker running Linux containers, and the exact image below. Do not enable this candidate on a production or shared home. It changes all Agent tool access in this Profile, including native Sessions and other Bots.
-
-```powershell
-pnpm install --frozen-lockfile
-pnpm build
-docker pull node@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
-node scripts/dev-instance.mjs --home <isolated-DSH_HOME> --port 31380
-```
-
-Add this complete config to that isolated Profile's existing `botharness-core` patch, preserving any other intended config keys. Patch replacement is not a deep merge. Stop the launcher's exact PID and restart the same isolated Profile through the helper.
-
-```yaml
-- id: botharness-core
-  config:
-    privateInputExecution: true
-    telemetry: false
-```
+These checks run in any Profile; secret input needs no opt-in and no Docker ([ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md), [ordinary Profile guide](private-input-ordinary.md)). The Docker-protected Profile this guide once qualified was removed ([ADR-0192](../../adr/0192-the-docker-protected-profile-is-removed.md)). Use a dedicated, isolated DSH home, started with `node scripts/dev-instance.mjs --home <isolated-DSH_HOME> --port 31380`.
 
 Start the controlled service in a second task-owned terminal:
 
@@ -68,21 +50,7 @@ Fill the inline password fields with these synthetic values only:
 
 Click **Submit privately**. Fields must clear immediately, terminal status must become configured, and the next existing execution approval card must contain only `private:<grant UUID>:<field>` references. Approve once. The Bot must report HTTP 200 in this same DM; `/evidence` on the fixture must increment `authenticated`. Its response deliberately echoes both raw and base64 canaries in body/headers, which the trusted CLI discards.
 
-Repeat execution with references without another input request; reject once and verify no service request occurs. Then exercise the existing broad remembered allowance, including its confirmation, and repeat. Broad approval is execution convenience only: another real Bot using the references must receive a safe grant refusal before the fixture count changes. Missing refs, a wrong account, unsupported consumers and unavailable Docker must fail safely.
-
-Ordinary `bash` uses its native Consumer and approval without ask-secret. Its scoped LinuxShell Provider starts the container through native Subprocess argv, mounts the currently authorized canonical root at `/workspace`, and translates cwd. Bot Memory and current writable Workspace Grants provide authority; a root containing the Host home is rejected. Only the exact Bot Memory subtree may be mounted from within that home. Roots overlapping linked Host Bundle code, its interpreter, Profile data or the Host temporary-directory root are rejected to prevent credential reads and later Host execution of Agent-written code. Request `printf 'linux-workspace-ok\n' > proof.txt; cat proof.txt; pwd; id; printf 'native-error-stream\n' >&2; exit 7` in the DM. Verify persisted file contents, cwd `/workspace`, UID 65534, separate stderr and actual exit code 7. Normal container network access is available, but no Host credentials, ambient environment or Docker socket are forwarded. Git metadata is read-only to prevent Agent-written hooks/config from being executed later by Host Git.
-
-On a Linux Host, the authorized root must also grant UID/GID `65534:65534` the intended POSIX file access. BotHarness authorization does not override filesystem permissions or silently change ownership. Prepare only the authorized workspace or exact Bot Memory subtree through ownership, a dedicated group or ACLs; verify access to existing files and files created later. Keep the credential home private and Host-managed `.git` protected. A Host-created `0700` directory or `0600` file remains inaccessible to the guest. Docker Desktop success does not prove Linux access. See the [Linux qualification guide](private-input-linux.md).
-
-Configure an ordinary nonsecret MCP demo through the existing opt-in Profile, then stop the launcher's exact Host PID and restart it with the same helper:
-
-```powershell
-node scripts/setup-private-input-mcp-demo.mjs <isolated-DSH_HOME>
-```
-
-The setup preserves other patch entries and installs `privateInputMcpServers` with the published demo source. Request `mcp__linux_demo__workspace_probe` from the same real Bot; it must read `linux-workspace-ok` from the file above, report `/workspace`, UID 65534 and `hostCredentialEnvironment:false`. This uses the native MCP Client and stdio SDK. Its protocol-negotiation probe siblings share an owner label for cleanup; no fixed container name is reused. Qualification checks exact native ToolDefinition identity and current workspace authority. Reconnect/new generations fail closed and require reactivation. Two real Bots may use the same server name in separate native Agent Scopes; the published build must share DSH Scope with the Host.
-
-`privateInputMcpServers` declares a serverName, Guest command/args and optional Host-side authorized workdir. Guest executables must exist in the pinned image or mounted workspace. It does not inject secret references or support arbitrary Host/HTTP MCP servers. Windows commands, unrestricted Host file tools, background Jobs, Git metadata writes, Browser, Computer and delegation remain unqualified in this Profile. Default Profiles without private grants keep their original invocation paths. This local qualification used a Windows Host with Linux containers; Linux-server workspace permissions and full compatibility remain #1386.
+Repeat execution with references without another input request; reject once and verify no service request occurs. Then exercise the existing broad remembered allowance, including its confirmation, and repeat. Broad approval is execution convenience only: another real Bot using the references must receive a safe grant refusal before the fixture count changes. Missing refs, a wrong account and unsupported consumers must fail safely.
 
 The CLI can also settle the same inline private card using the authenticated Owner carrier:
 
@@ -108,18 +76,6 @@ Open one pending card in two independent authenticated browser contexts, fill on
 
 Ask the second Bot for a fresh card, use native Session stop while it waits, then attempt a late Owner submission. It must return `accepted:false`, commit expired with no references, and never start credential use. Bot pause only controls new admissions; it does not stop its existing native turn and is not this check. Create another pending request with an explicit DM, then restart the exact isolated Host. The lost card must become durably expired without recreating its waiter or waking the stopped Bot; existing configured references remain usable when the first Bot receives a new explicit DM instruction. Do not interpret automatic re-execution as successful recovery. Version-two grants require the configured Channel commit, so a native write with failed Channel persistence cannot publish a usable partial result.
 
-Initialize a fresh native Profile before adding its Patch; do not precreate its Profile directory or overwrite native patch entries. Stop the helper's verified exact Host PID before rebuilding/restarting. Keep local tokens and full native Sessions private. Publish allowlisted event projections and aggregate canary counts only.
-
-Run deterministic active extraction independently of any model's willingness to attempt it:
-
-```powershell
-$env:BOTHARNESS_PRIVATE_DOCKER_QA = '1'
-pnpm exec vitest run packages/core/test/protected-execution.test.ts --maxWorkers=1
-pnpm exec vitest run packages/core/test/linux-execution.test.ts packages/core/test/linux-mcp.test.ts --maxWorkers=1
-```
-
-This checks both the stricter unmounted command world and the mounted Linux world: Host-file/base64, environment, Docker socket, Git metadata protection and authorized file persistence. It also exercises the actual native MCP SDK and fixed-CLI output against an echoing service. MCP qualification excludes pre-existing Agent-owned tools and inherited global/ancestor Host tools, including registrations arriving during server startup with the same namespace prefix. Concurrent Guest tools continue to work. The ordinary suite skips Docker qualification when the opt-in environment variable is absent.
-
 Qualification also inspects actual model request bodies, persisted request headers/messages/results/errors, ordinary Channel history, developer logs and Spill using synthetic raw, URL-encoded and base64 patterns. Native credential records and task-owned synthetic instrumentation are allowed destinations; publishing their contents is unnecessary. A model refusing an extraction prompt is not boundary evidence. Node's one-shot zstd decompressor reads one concatenated frame at a time: advance by `engine.bytesWritten` to scan the entire native Session artifact, not only its header.
 
 For model adapters using `/messages`, `/chat/completions` or `/responses`, launch the isolated helper with a process-local `NODE_OPTIONS=--import=<file URL of scripts/ask-secret-wire-probe.mjs>` and `BOTHARNESS_PRIVATE_WIRE_EVIDENCE=<task-owned evidence file>`, then restore those environment variables in the launching terminal. On Windows the import must be a `file:///` URL. Keep the synthetic canary list outside DSH_HOME and point `BOTHARNESS_PRIVATE_CANARY_FILE` to it. The passive probe leaves requests unchanged and writes only body-availability, request sizes and synthetic-match counts, never bodies or authentication headers. Confirm it observes actual requests after private submission and reports every body available; an unsupported body is incomplete evidence. The trusted credential CLI scrubs these environment variables. This instrumentation qualifies the observed adapter and fixed canaries, not every provider or arbitrary encoding.
@@ -132,4 +88,4 @@ The scan must report `nativeStoreContainsSyntheticValues: true` and no violation
 
 The request supports 1–8 dynamic confidential strings, preserving significant whitespace, with no defaults or original-value readback. References are bound to the actual live Orchestrator, Bot creation identity and account. The three-field schema belongs only to `http-status-v1`; it is not an email/provider configuration model. Host failure diagnostics contain stable phases, request/Bot/Session identifiers and durations, never raw values or subprocess errors.
 
-Do not disable/remove the Plugin or revert to an older binary while private grants remain. Restore the isolated pre-trial home or purge only application-owned native grants before rollback. IM initiation, credential-consuming MCP and Linux-server verification require their separate slices. Account lifecycle and Schedule qualification remain limited to this opt-in execution boundary.
+Do not disable/remove the Plugin or revert to an older binary while private grants remain. Restore the isolated pre-trial home or purge only application-owned native grants before rollback. IM initiation is covered in the [IM guide](private-input-im.md).

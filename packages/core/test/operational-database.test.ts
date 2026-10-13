@@ -130,7 +130,7 @@ describe('operational database owner', () => {
     oldWriter.close();
   });
 
-  it.each([73, 86])(
+  it.each([73, 86, 87])(
     'upgrades generation %s without changing QQ and WeChat reception authority',
     (generation) => {
       const dshHome = createTempRoot('botharness-qq-main-upgrade-');

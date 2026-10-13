@@ -37,6 +37,7 @@ export function UserQuestionCard({
   const [error, setError] = useState<string | undefined>();
   const [statusError, setStatusError] = useState(false);
   const [statusRetry, setStatusRetry] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const inputId = useId();
   const target = useRef(companionTarget);
   target.current = companionTarget;
@@ -158,10 +159,18 @@ export function UserQuestionCard({
       });
   };
   const disabled = status !== 'pending' || busy || (companionTarget !== undefined && !qualified());
+  const compact = companionTarget !== undefined;
+  const detailed =
+    !compact ||
+    expanded ||
+    !request.questions.some(
+      (question) =>
+        question.detail !== undefined || question.options?.some((option) => option.description),
+    );
 
   return (
-    <div ref={questionMount} className="bh-question-card">
-      <div className="bh-grant-request-title">{t('question.title')}</div>
+    <div ref={questionMount} className="bh-question-card" data-compact={compact || undefined}>
+      {compact ? null : <div className="bh-grant-request-title">{t('question.title')}</div>}
       {developerMode ? (
         <details className="bh-question-source">
           <summary>{t('question.source')}</summary>
@@ -174,14 +183,16 @@ export function UserQuestionCard({
             <div className="bh-note">{question.header}</div>
           ) : null}
           <div className="bh-question-prompt">{question.question}</div>
-          {question.detail === undefined ? null : <div className="bh-note">{question.detail}</div>}
+          {question.detail === undefined || !detailed ? null : (
+            <div className="bh-note">{question.detail}</div>
+          )}
           {question.options?.length ? (
             <SidebarCardList label={question.question} className="bh-message-card-list">
               {question.options.map((option) => (
                 <SidebarCardRow
                   key={option.label}
                   title={option.label}
-                  meta={option.description}
+                  meta={detailed ? option.description : undefined}
                   selection={{
                     checked: (selected[question.id] ?? []).includes(option.label),
                     multiple: question.multiSelect === true,
@@ -218,9 +229,24 @@ export function UserQuestionCard({
       ))}
       {status === 'pending' ? (
         <div className="bh-message-card-actions">
-          <Button variant="primary" disabled={disabled} onClick={submit}>
+          <Button
+            variant="primary"
+            size={compact ? 'sm' : 'md'}
+            disabled={disabled}
+            onClick={submit}
+          >
             {t('question.submit')}
           </Button>
+          {compact && (!detailed || expanded) ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={expanded}
+              onClick={() => setExpanded((current) => !current)}
+            >
+              {t('companion.details')}
+            </Button>
+          ) : null}
         </div>
       ) : (
         <div className="bh-note" role="status">

@@ -41,7 +41,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconNewChatOutlineRegular: () => null,
 }));
 
-it('follows revealed message tails independently and preserves upward reading until returning to the bottom', async () => {
+it('speaks one sentence beat at a time and follows the whole message while reading', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.stubGlobal('requestAnimationFrame', () => 1);
   vi.stubGlobal('cancelAnimationFrame', () => {});
@@ -62,15 +62,14 @@ it('follows revealed message tails independently and preserves upward reading un
   const node = document.createElement('div');
   document.body.append(node);
   const root = createRoot(node);
-  let firstHeight = 180;
-  let secondHeight = 90;
+  let messageHeight = 0;
   const height = vi
     .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
     .mockImplementation(function (this: HTMLElement) {
-      if (!this.matches('.bh-companion-card p') || !this.textContent) return 0;
-      return this.textContent.startsWith('A') ? firstHeight : secondHeight;
+      return this.matches('.bh-companion-bubble p') ? messageHeight : 0;
     });
   const viewport = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(54);
+  const text = () => node.querySelector('.bh-companion-bubble p')?.textContent;
   try {
     await act(() =>
       root.render(
@@ -84,44 +83,59 @@ it('follows revealed message tails independently and preserves upward reading un
       ),
     );
     await act(() => {
-      for (const letter of ['A', 'B'])
-        send('companion/message', {
-          generation: 'host',
-          botId: 'ada',
-          channelId: 'dm',
-          channelName: 'Ada',
-          messageId: letter,
-          body: letter.repeat(200),
-          source: 'own-dm',
-        });
+      send('companion/message', {
+        generation: 'host',
+        botId: 'ada',
+        channelId: 'dm',
+        channelName: 'Ada',
+        messageId: 'long',
+        body: 'First sentence here. Second one follows! ' + 'C'.repeat(150),
+        source: 'own-dm',
+      });
+      send('companion/message', {
+        generation: 'host',
+        botId: 'ada',
+        channelId: 'dm',
+        channelName: 'Ada',
+        messageId: 'queued',
+        body: 'Queued reply.',
+        source: 'own-dm',
+      });
       companion.advance(350);
     });
-    const [first, second] = [
-      ...node.querySelectorAll<HTMLParagraphElement>('.bh-companion-card p'),
-    ];
-    expect(first!.scrollTop).toBe(126);
-    expect(second!.scrollTop).toBe(36);
-    await act(() => {
-      first!.scrollTop = 18;
-      first!.dispatchEvent(new Event('scroll'));
-    });
-    firstHeight = 216;
-    secondHeight = 126;
+    expect(node.querySelectorAll('.bh-companion-bubble')).toHaveLength(1);
+    expect(node.querySelector('.bh-companion-queue')?.textContent).toBe('+1');
+    expect(text()).toBe('First sent');
     await act(() => companion.advance(350));
-    expect(first!.scrollTop).toBe(18);
-    expect(second!.scrollTop).toBe(72);
-    expect(first!.textContent).toBe('A'.repeat(20));
+    expect(text()).toBe('First sentence here.');
+    await act(() => companion.advance(1000));
+    expect(text()).toBe('First sentence here.');
+    await act(() => companion.advance(500));
+    await act(() => companion.advance(70));
+    expect(text()).toBe('S');
+    messageHeight = 180;
+    await act(() => companion.reading(true));
+    const paragraph = node.querySelector<HTMLParagraphElement>('.bh-companion-bubble p')!;
+    expect(paragraph.textContent).toBe('First sentence here. S');
+    expect(paragraph.scrollTop).toBe(126);
     await act(() => {
-      first!.scrollTop = 162;
-      first!.dispatchEvent(new Event('scroll'));
+      paragraph.scrollTop = 18;
+      paragraph.dispatchEvent(new Event('scroll'));
     });
-    firstHeight = 252;
+    messageHeight = 216;
     await act(() => companion.advance(350));
-    expect(first!.scrollTop).toBe(198);
-    await act(() => companion.advance(30_000, true));
-    expect(first!.textContent).toBe('A'.repeat(200));
-    expect(second!.textContent).toBe('B'.repeat(200));
-    expect(node.querySelectorAll('.bh-companion-card p')[0]).toBe(first);
+    expect(paragraph.scrollTop).toBe(18);
+    expect(paragraph.textContent).toBe('First sentence here. Second one ');
+    await act(() => {
+      paragraph.scrollTop = 162;
+      paragraph.dispatchEvent(new Event('scroll'));
+    });
+    messageHeight = 252;
+    await act(() => companion.advance(350));
+    expect(paragraph.scrollTop).toBe(198);
+    await act(() => companion.reading(false));
+    expect(text()).toBe('Second one follows!');
+    expect(node.querySelector('.bh-companion-bubble p')).toBe(paragraph);
   } finally {
     await act(() => root.unmount());
     companion.dispose();
@@ -136,20 +150,35 @@ it('measures every revealed tail before scrolling any of them in one commit', as
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.stubGlobal('requestAnimationFrame', () => 1);
   vi.stubGlobal('cancelAnimationFrame', () => {});
-  const events = new EventTarget();
-  const companion = new WindowCompanion({
-    context: async () => ({ profileId: 'qa' }),
-    source: () => ({ addEventListener: events.addEventListener.bind(events), close() {} }),
-  });
-  const send = (type: string, value: unknown) =>
-    events.dispatchEvent(new MessageEvent(type, { data: JSON.stringify(value) }));
-  await companion.start();
-  companion.select('ada');
-  send('companion/baseline', {
-    profileId: 'qa',
-    bot: { slug: 'ada', name: 'Ada', paused: false },
-    activity: { generation: 'host', revision: 0, bots: [] },
-  });
+  const owners = await Promise.all(
+    ['ada', 'grace', 'linus'].map(async (slug) => {
+      const events = new EventTarget();
+      const companion = new WindowCompanion({
+        context: async () => ({ profileId: 'qa' }),
+        source: () => ({ addEventListener: events.addEventListener.bind(events), close() {} }),
+      });
+      const send = (type: string, value: unknown) =>
+        events.dispatchEvent(new MessageEvent(type, { data: JSON.stringify(value) }));
+      await companion.start();
+      companion.select(slug);
+      send('companion/baseline', {
+        profileId: 'qa',
+        bot: { slug, name: slug, paused: false },
+        activity: { generation: 'host', revision: 0, bots: [] },
+      });
+      send('companion/message', {
+        generation: 'host',
+        botId: slug,
+        channelId: 'dm',
+        channelName: slug,
+        messageId: slug,
+        body: 'x'.repeat(200),
+        source: 'own-dm',
+      });
+      companion.reading(true);
+      return companion;
+    }),
+  );
   const node = document.createElement('div');
   document.body.append(node);
   const root = createRoot(node);
@@ -157,7 +186,7 @@ it('measures every revealed tail before scrolling any of them in one commit', as
   const height = vi
     .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
     .mockImplementation(function (this: HTMLElement) {
-      if (!this.matches('.bh-companion-card p')) return 0;
+      if (!this.matches('.bh-companion-bubble p')) return 0;
       order.push('measure');
       return 180;
     });
@@ -165,39 +194,34 @@ it('measures every revealed tail before scrolling any of them in one commit', as
   const scroll = vi.spyOn(HTMLElement.prototype, 'scrollTop', 'set').mockImplementation(function (
     this: HTMLElement,
   ) {
-    if (this.matches('.bh-companion-card p')) order.push('scroll');
+    if (this.matches('.bh-companion-bubble p')) order.push('scroll');
   });
   try {
     await act(() =>
       root.render(
-        createElement(WindowCompanionView, {
-          companion,
-          openDm() {},
-          openAttention() {},
-          openChannel() {},
-          t: zhTranslate,
-        }),
+        createElement(
+          'div',
+          {},
+          ...owners.map((companion, index) =>
+            createElement(WindowCompanionView, {
+              key: index,
+              companion,
+              openDm() {},
+              openAttention() {},
+              openChannel() {},
+              t: zhTranslate,
+            }),
+          ),
+        ),
       ),
     );
-    await act(() => {
-      for (const letter of ['A', 'B', 'C'])
-        send('companion/message', {
-          generation: 'host',
-          botId: 'ada',
-          channelId: 'dm',
-          channelName: 'Ada',
-          messageId: letter,
-          body: letter.repeat(200),
-          source: 'own-dm',
-        });
-      companion.advance(350);
-    });
+    await act(() => owners.forEach((companion) => companion.advance(350)));
     order.length = 0;
-    await act(() => companion.advance(350));
+    await act(() => owners.forEach((companion) => companion.advance(350)));
     expect(order).toEqual(['measure', 'measure', 'measure', 'scroll', 'scroll', 'scroll']);
   } finally {
     await act(() => root.unmount());
-    companion.dispose();
+    owners.forEach((companion) => companion.dispose());
     node.remove();
     height.mockRestore();
     viewport.mockRestore();
@@ -311,7 +335,7 @@ it('sounds only fresh playback and silences a Bot on background, stale sync, arc
   }
 });
 
-it('keeps the Avatar tether aligned through resize and the first reduced-motion release commit', async () => {
+it('keeps the bubble tail on the Avatar head through resize and the first reduced-motion release commit', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const frames = new Map<number, FrameRequestCallback>();
   let frameId = 0;
@@ -350,9 +374,30 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
       }),
     }),
   );
+  events.dispatchEvent(
+    new MessageEvent('companion/message', {
+      data: JSON.stringify({
+        generation: 'host',
+        botId: 'ada',
+        channelId: 'dm',
+        channelName: 'Ada',
+        messageId: 'tether',
+        body: 'Still here.',
+        source: 'own-dm',
+      }),
+    }),
+  );
   const node = document.createElement('div');
   document.body.append(node);
   const root = createRoot(node);
+  const tailX = () => {
+    const bubble = node.querySelector<HTMLElement>('.bh-companion-bubble')!;
+    return (
+      Number.parseFloat(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).left) +
+      Number.parseFloat(bubble.style.left) +
+      Number.parseFloat(bubble.style.getPropertyValue('--bh-companion-tail'))
+    );
+  };
   const frame = () => {
     const due = [...frames.values()];
     frames.clear();
@@ -371,22 +416,17 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
       ),
     );
     await act(frame);
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 570 504 /u,
-    );
-    expect(node.querySelector<HTMLElement>('.bh-companion-activity')?.style.bottom).toBe('134px');
+    expect(tailX()).toBe(570);
+    expect(node.querySelector('.bh-companion-tether')).toBeNull();
+    expect(node.querySelector<HTMLElement>('.bh-companion-bubble')?.style.bottom).toBe('112px');
     stage = new DOMRect(100, 60, 650, 500);
     await act(() => window.dispatchEvent(new Event('resize')));
     await act(frame);
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 570 404 /u,
-    );
+    expect(tailX()).toBe(570);
     stage = new DOMRect(100, 60, 320, 500);
     await act(() => window.dispatchEvent(new Event('resize')));
     expect(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).left).toBe('216px');
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 264 404 /u,
-    );
+    expect(tailX()).toBe(264);
     await act(() => {
       document.documentElement.dataset['botharnessMotion'] = 'reduce';
     });
@@ -404,14 +444,10 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
     expect(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).bottom).toBe(
       '300px',
     );
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 164 104 /u,
-    );
+    expect(tailX()).toBe(164);
     await act(() => pointer('pointerup', 164, 150));
     expect(companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).bottom).toBe('0px');
-    expect(node.querySelector('.bh-companion-tether path')?.getAttribute('d')).toMatch(
-      /^M 164 404 /u,
-    );
+    expect(tailX()).toBe(164);
     const visibility = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
     await act(() => document.dispatchEvent(new Event('visibilitychange')));
     expect(frames.size).toBe(0);
@@ -423,6 +459,98 @@ it('keeps the Avatar tether aligned through resize and the first reduced-motion 
     measurement.mockRestore();
     vi.unstubAllGlobals();
     delete document.documentElement.dataset['botharnessMotion'];
+  }
+});
+
+it('turns the Avatar toward its walk and faces front without walking while it speaks', async () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let frameId = 0;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    frames.set(++frameId, callback);
+    return frameId;
+  });
+  vi.stubGlobal('cancelAnimationFrame', (id: number) => frames.delete(id));
+  const measurement = vi
+    .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+    .mockReturnValue(new DOMRect(0, 0, 800, 600));
+  const events = new EventTarget();
+  const companion = new WindowCompanion({
+    context: async () => ({ profileId: 'qa' }),
+    source: () => ({ addEventListener: events.addEventListener.bind(events), close() {} }),
+  });
+  await companion.start();
+  companion.select('ada');
+  companion.configure({ walking: true, position: 0.5 });
+  events.dispatchEvent(
+    new MessageEvent('companion/baseline', {
+      data: JSON.stringify({
+        profileId: 'qa',
+        bot: { slug: 'ada', name: 'Ada', paused: false },
+        activity: { generation: 'host', revision: 0, bots: [] },
+      }),
+    }),
+  );
+  const node = document.createElement('div');
+  document.body.append(node);
+  const root = createRoot(node);
+  let now = performance.now();
+  const frame = () => {
+    now += 50;
+    const due = [...frames.values()];
+    frames.clear();
+    for (const callback of due) callback(now);
+  };
+  const facing = () =>
+    node.querySelector<HTMLElement>('.bh-companion-character')?.dataset['facing'];
+  const left = () => companionPosition(node.querySelector<HTMLElement>('.bh-companion')!).left;
+  try {
+    await act(() =>
+      root.render(
+        createElement(WindowCompanionView, {
+          companion,
+          openDm() {},
+          openAttention() {},
+          openChannel() {},
+          t: zhTranslate,
+        }),
+      ),
+    );
+    await act(frame);
+    await act(frame);
+    expect(facing()).toBe('right');
+    events.dispatchEvent(
+      new MessageEvent('companion/message', {
+        data: JSON.stringify({
+          generation: 'host',
+          botId: 'ada',
+          channelId: 'dm',
+          channelName: 'Ada',
+          messageId: 'hello',
+          body: 'Hello there.',
+          source: 'own-dm',
+        }),
+      }),
+    );
+    await act(frame);
+    expect(facing()).toBe('front');
+    const standing = left();
+    await act(frame);
+    await act(frame);
+    expect(left()).toBe(standing);
+    await act(() => companion.dismiss('hello', 'dm'));
+    await act(frame);
+    await act(frame);
+    expect(facing()).toBe('right');
+    expect(left()).not.toBe(standing);
+    await act(() => companion.configure({ walking: false }));
+    await act(frame);
+    expect(facing()).toBe('saved');
+  } finally {
+    await act(() => root.unmount());
+    companion.dispose();
+    node.remove();
+    measurement.mockRestore();
+    vi.unstubAllGlobals();
   }
 });
 
@@ -507,6 +635,10 @@ it('enables Group playback from the native menu and explains why a Bot-only sour
     )!;
     await act(() => shared.click());
     expect(openChannel).toHaveBeenCalledExactlyOnceWith('design', 'group');
+    await act(() =>
+      node.querySelector<HTMLButtonElement>('.bh-companion-bubble header > button')!.click(),
+    );
+    expect(node.querySelector('.bh-companion-bubble')).toBeNull();
     await menu('Bot 加入的所有会话');
     expect(new URL(paths.at(-1)!, 'http://localhost').searchParams.get('visibility')).toBe(
       'all-bot',
@@ -555,6 +687,10 @@ it('enables Group playback from the native menu and explains why a Bot-only sour
       ),
     );
     await act(() => companion.advance(1000));
+    expect(node.querySelectorAll('.bh-companion-bubble')).toHaveLength(1);
+    expect(node.querySelector('.bh-companion-queue')?.textContent).toBe('+1');
+    await menu('播放私聊消息');
+    expect(companion.getSnapshot().cards.map((card) => card.messageId)).toEqual(['private-group']);
     const privateSource = [...node.querySelectorAll<HTMLButtonElement>('button')].find(
       (item) => item.textContent === '群聊 · Bot workroom',
     )!;
@@ -562,19 +698,14 @@ it('enables Group playback from the native menu and explains why a Bot-only sour
     expect(node.textContent).toContain('当前无法读取原会话，仍可查看消息来源。');
     await act(() => privateSource.click());
     expect(openChannel).toHaveBeenCalledTimes(2);
-    await menu('播放私聊消息');
-    expect(companion.getSnapshot().cards.map((card) => card.messageId)).toEqual([
-      'group',
-      'private-group',
-    ]);
     expect(companion.getSnapshot().activity?.state).toBe('thinking');
     const character = node.querySelector<HTMLButtonElement>('.bh-companion-character')!;
     await act(() => character.focus());
-    const dismiss = node.querySelector<HTMLButtonElement>('.bh-companion-card header > button')!;
+    const dismiss = node.querySelector<HTMLButtonElement>('.bh-companion-bubble header > button')!;
     await act(() => dismiss.focus());
     await act(() => dismiss.click());
-    expect(document.activeElement?.getAttribute('aria-label')).toBe('关闭气泡');
-    expect(companion.getSnapshot().reading).toBe(true);
+    expect(node.querySelector('.bh-companion-bubble')).toBeNull();
+    expect(document.activeElement).toBe(character);
     await act(() =>
       events.dispatchEvent(
         new MessageEvent('companion/activity', {
@@ -604,9 +735,9 @@ it('enables Group playback from the native menu and explains why a Bot-only sour
         }),
       ),
     );
-    await act(() => companion.configure({ activity: false }));
-    expect(node.textContent).toContain('已归档');
-    expect(node.textContent).toContain('此版本无法播放形象动作，使用保存的快照');
+    expect(node.textContent).not.toContain('已归档');
+    expect(character.title).toContain('已归档');
+    expect(character.title).toContain('此版本无法播放形象动作，使用保存的快照');
     expect(node.querySelector('img')?.getAttribute('src')).toBe('/snapshot?v=unknown');
     expect(node.querySelector('[data-static="true"]')).not.toBeNull();
     expect(node.querySelector('[data-state="working"]')).toBeNull();
@@ -992,7 +1123,8 @@ it('drags inside the shell, lands on the floor without opening DM, persists keyb
       owner.configure({ activity: false });
       events.dispatchEvent(new Event('error'));
     });
-    expect(surface.textContent).toContain('同步中断');
+    expect(surface.dataset['sync']).toBe('stale');
+    expect(character.title).toContain('同步中断');
     expect(frames.size).toBeGreaterThan(0);
     const focusVisible = vi.spyOn(character, 'matches').mockReturnValue(false);
     await act(() =>
@@ -1019,7 +1151,7 @@ it('drags inside the shell, lands on the floor without opening DM, persists keyb
   }
 });
 
-it('avoids overlapping archived and static-image labels even when Activity playback is disabled', async () => {
+it('keeps two speaking companions from overlapping and moves their condition onto the Avatar instead of a status line', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const { CompanionBubbles } = await import('../src/client/companion-bubbles.js');
   const frames = new Map<number, FrameRequestCallback>();
@@ -1064,10 +1196,23 @@ it('avoids overlapping archived and static-image labels even when Activity playb
             bot: {
               slug,
               name: slug,
-              paused: slug === 'ada',
+              paused: false,
               ...(slug === 'grace' ? { avatar: '/image' } : {}),
             },
             activity: { generation: 'host', revision: 1, bots: [] },
+          }),
+        }),
+      );
+      events.dispatchEvent(
+        new MessageEvent('companion/message', {
+          data: JSON.stringify({
+            generation: 'host',
+            botId: slug,
+            channelId: 'dm',
+            channelName: slug,
+            messageId: 'hello',
+            body: 'Hello there.',
+            source: 'own-dm',
           }),
         }),
       );
@@ -1097,16 +1242,18 @@ it('avoids overlapping archived and static-image labels even when Activity playb
       frames.clear();
       for (const callback of due) callback(performance.now() + 50);
     });
-    const labels = [...node.querySelectorAll<HTMLElement>('.bh-companion-activity')];
-    expect(labels).toHaveLength(2);
-    expect(labels[0]!.textContent).toContain('已归档');
-    expect(labels[1]!.textContent).toContain('静态图片');
-    expect(labels[0]!.style.bottom).not.toBe(labels[1]!.style.bottom);
+    expect(node.querySelector('.bh-companion-activity')).toBeNull();
+    const characters = [...node.querySelectorAll<HTMLElement>('.bh-companion-character')];
+    expect(characters[0]!.title).toBe('');
+    expect(characters[1]!.title).toContain('静态图片');
+    const speech = [...node.querySelectorAll<HTMLElement>('.bh-companion-bubble')];
+    expect(speech).toHaveLength(2);
+    expect(speech[0]!.style.bottom).not.toBe(speech[1]!.style.bottom);
     expect(
-      labels.every(
-        (label) =>
-          Number.parseFloat(label.style.bottom) >= 8 &&
-          Number.parseFloat(label.style.bottom) <= 728,
+      speech.every(
+        (bubble) =>
+          Number.parseFloat(bubble.style.bottom) >= 8 &&
+          Number.parseFloat(bubble.style.bottom) <= 728,
       ),
     ).toBe(true);
   } finally {

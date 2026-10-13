@@ -31,13 +31,13 @@ import type {} from '@deepseek-ai/dsh-agent';
 import type {} from '@deepseek-ai/dsh-session';
 import type {} from '@deepseek-ai/dsh-system-prompt';
 import type {} from '@deepseek-ai/dsh-tools';
-import type { ApprovalService } from '@deepseek-ai/dsh-user-approval';
+import { setApprovalPolicy, type ApprovalService } from '@deepseek-ai/dsh-user-approval';
+import { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy';
+import { randomUUID } from 'node:crypto';
 import Schema from '@deepseek-ai/schemastery';
 
 import { installOrchestratorFileTools } from './workspaces/orchestrator-file-tools.js';
 import { ProtectedExecution } from './credentials/protected-execution.js';
-import { LinuxShell } from './credentials/linux-execution.js';
-import { LinuxMcp, type LinuxMcpServer } from './credentials/linux-mcp.js';
 import { nativeExecutionRoot } from './workspaces/grant-native-tools.js';
 import { createAttachmentStore, type AttachmentStore } from './attachments/store.js';
 import { createMemoryFileHttp, MEMORY_FILE_DOWNLOAD_PATH } from './memory/file-http.js';
@@ -132,6 +132,7 @@ import {
 import {
   grantExecutionDenial,
   grantToolExecutionDenial,
+  orchestratorPermission,
   isSafeMemoryDirectoryListing,
   requiresHumanToolApproval,
 } from './workspaces/grant-execution.js';
@@ -218,7 +219,6 @@ export interface BotHarnessConfig {
   enabled: boolean;
   privateInputExecution?: boolean;
   privateInputWebUrl?: string;
-  privateInputMcpServers?: LinuxMcpServer[];
 
   agentPreset?: string;
   activityDetailConsumers?: string[];
@@ -239,24 +239,10 @@ export const Config: Schema<BotHarnessConfig> = Schema.object({
   privateInputWebUrl: Schema.string().description(
     'Explicit credential-free Web origin for IM private input links; never use a login token URL.',
   ),
-  privateInputMcpServers: Schema.array(
-    Schema.object({
-      serverName: Schema.string()
-        .required()
-        .pattern(/^[A-Za-z0-9_-]{1,32}$/),
-      command: Schema.string().required(),
-      args: Schema.array(Schema.string()).default([]),
-      workdir: Schema.string(),
-    }),
-  )
-    .default([])
-    .description(
-      'Ordinary MCP stdio servers executed inside the protected Linux workspace; no Host credentials or environment are injected.',
-    ),
   privateInputExecution: Schema.boolean()
     .default(false)
     .description(
-      'Qualify this entire Profile for private input: Linux workspace Shell/MCP, fixed trusted CLI, and refusal of unqualified Host capabilities. Requires Docker Linux and the pinned command image.',
+      'Removed. The Docker-protected Profile no longer exists; a Profile that sets this starts as an ordinary Profile and logs a warning.',
     ),
   enabled: Schema.boolean().default(DEFAULT_CONFIG.enabled).description('启用 BotHarness core'),
   activityDetailConsumers: Schema.array(Schema.string())
@@ -973,9 +959,6 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const privateExecution = new ProtectedExecution((phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details }),
   );
-  const linuxMcp = new LinuxMcp(privateExecution, dshHome, (agent, workdir) =>
-    nativeExecutionRoot(core, agent.session, 'bash', { workdir }),
-  );
   const agentAdapter = createDshBotAgentAdapter({
     agents: ctx.agents,
     defaultModel,
@@ -997,34 +980,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     resolveAgentPresets: () => ctx.get('agentPresets') as DshAgentPresetHost | undefined,
     publishDraft: (event) => publishDraft(event),
     onAgentSetup: (agentCtx, agent, info) => core.runBotAgentSetups(agentCtx, agent, info),
-    onOrchestratorFileSetup: async (agentCtx, agent) => {
-      const disposeFiles = await installOrchestratorFileTools(
+    onOrchestratorFileSetup: (agentCtx, agent) =>
+      installOrchestratorFileTools(
         agentCtx,
         agent,
         ctx.get('agentPresets') as DshAgentPresetHost | undefined,
         (name, args) => nativeExecutionRoot(core, agent.session, name, args),
-        config.privateInputExecution === true
-          ? (child, shell) =>
-              new LinuxShell(child, shell, privateExecution, dshHome, agent.session.id)
-          : undefined,
-      );
-      if (config.privateInputExecution !== true) return disposeFiles;
-      try {
-        const disposeMcp =
-          config.privateInputExecution === true
-            ? await linuxMcp.install(agentCtx, agent, config.privateInputMcpServers ?? [])
-            : undefined;
-        const dispose = async () => {
-          await disposeMcp?.();
-          await disposeFiles();
-        };
-        agentCtx.effect(() => dispose, 'botharness: Linux Orchestrator execution');
-        return dispose;
-      } catch (error) {
-        await disposeFiles();
-        throw error;
-      }
-    },
+      ),
     authorizeBorrow: (agent, role) => {
       const owner = core.ownership.resolve(agent.session.id);
       if (owner?.rootRole !== role) throw new Error('BotHarness Agent role mismatch');
@@ -1117,14 +1079,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   ctx.effect(() => () => core.live.close(), 'botharness: Channel live hub');
   ctx.effect(() => () => core.companions.close(), 'botharness: Window Companion feed');
   ctx.provide('botharness', core);
-  privateInputs = mountPrivateInputs(
-    ctx,
-    core,
-    config.privateInputExecution === true,
-    privateExecution,
-    linuxMcp,
-    config.privateInputWebUrl,
-  );
+  if (config.privateInputExecution === true)
+    ctx.logger.warn(
+      'botharness: privateInputExecution is set, but the Docker-protected Profile was removed. This Profile runs as an ordinary Profile: secret input stays available, and Agent tools are no longer fenced by a container.',
+    );
+  privateInputs = mountPrivateInputs(ctx, core, privateExecution, config.privateInputWebUrl);
   ctx.effect(() => () => core.externalMessaging.close(), 'botharness: external messaging');
   ctx.inject(['dshIm'], (child) => {
     for (const platform of ['feishu', 'slack', 'discord', 'weixin', 'qq'] as const) {
@@ -1136,6 +1095,51 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const permissionDenial = (session: import('@deepseek-ai/dsh-session').Session) =>
     grantExecutionDenial(core, session, ctx.get('sandboxPolicy'), ctx.get('approval'));
 
+  const appliedPermission = new Map<string, string>();
+  ctx.effect(() => () => appliedPermission.clear(), 'botharness: Orchestrator permission record');
+  const alignOrchestratorPermission = (agent: import('@deepseek-ai/dsh-agent').Agent): void => {
+    const session = agent.session;
+    const owner = core.ownership.resolve(session.id);
+    const policy = ctx.get('sandboxPolicy') as
+      | import('@deepseek-ai/dsh-sandbox-policy').SandboxPolicyService
+      | undefined;
+    const approval = ctx.get('approval') as ApprovalService | undefined;
+    if (
+      owner?.rootRole !== 'orchestrator' ||
+      owner.provenance === 'subagent' ||
+      owner.parentSessionId !== undefined ||
+      policy === undefined ||
+      approval === undefined
+    )
+      return;
+    const expected = orchestratorPermission(core, owner.botSlug);
+    const key = expected.mode + '+' + expected.approval;
+    if (
+      policy.resolve({ session }).mode === expected.mode &&
+      approval.overrideOf(session) === expected.approval
+    ) {
+      appliedPermission.set(session.id, key);
+      return;
+    }
+    const changedOutside = appliedPermission.get(session.id) === key;
+    setSandboxMode(session, expected.mode);
+    setApprovalPolicy(session, expected.approval);
+    appliedPermission.set(session.id, key);
+    if (!changedOutside) return;
+    ctx.logger.warn(
+      'botharness: restored the permission mode of an Orchestrator Session that was changed outside the PersonaBot access setting',
+    );
+    const channel = core.channels.getOrCreateDm(owner.botSlug);
+    if (channel !== undefined)
+      void core.channels
+        .appendMessage(channel.id, {
+          id: randomUUID(),
+          at: new Date().toISOString(),
+          author: { kind: 'bot', slug: owner.botSlug },
+          body: '这个会话的权限模式被单独改动过，Host 已把它恢复。聊天会话的权限由此 Bot 工作区设置里的“完全访问”开关决定，不能在会话里单独修改。',
+        })
+        .catch(() => undefined);
+  };
   ctx.on(
     'agent/pre-step',
     async ({ agent, signal }, next) => {
@@ -1144,6 +1148,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       } catch {
         return { kind: 'reject' };
       }
+      alignOrchestratorPermission(agent);
       return permissionDenial(agent.session) === undefined ? next() : { kind: 'reject' };
     },
     { global: true },
@@ -1220,15 +1225,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (agent === undefined || core.ownership.resolve(agent.session.id) === undefined)
         return next();
       if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
-      if (config.privateInputExecution !== true) {
-        const storeDenial = credentialStoreDenial(
-          execution.name,
-          execution.arguments,
-          resolveDshHome(),
-          agent.session.header.cwd,
-        );
-        if (storeDenial !== undefined) return { kind: 'deny', reason: storeDenial };
-      }
+      const storeDenial = credentialStoreDenial(
+        execution.name,
+        execution.arguments,
+        resolveDshHome(),
+        agent.session.header.cwd,
+      );
+      if (storeDenial !== undefined) return { kind: 'deny', reason: storeDenial };
       if (execution.name === 'secret_cli') {
         const commandDenial = secretCommandDenial(execution.arguments);
         if (commandDenial !== undefined) return { kind: 'deny', reason: commandDenial };
@@ -1346,7 +1349,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           ? core.runtime.getAssignment(owner.botSlug, owner.sessionId)?.permission
           : undefined;
       const eachUse = execution.name === 'secret_cli';
-      if (snapshot?.mode === 'danger-full-access' && !eachUse) return next();
+      const fullAccess =
+        snapshot?.mode === 'danger-full-access' ||
+        (owner?.rootRole === 'orchestrator' &&
+          owner.provenance !== 'subagent' &&
+          orchestratorPermission(core, owner.botSlug).mode === 'danger-full-access');
+      if (fullAccess && !eachUse) return next();
       const approval = ctx.get('approval') as ApprovalService | undefined;
       const untrack = toolApproval.track(execution, eachUse ? 'each-use' : 'operation');
       if (approval === undefined || untrack === undefined) {
@@ -1357,18 +1365,25 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           ? core.runtime.askNotice?.(agent.session.id, execution.name)
           : undefined;
         if (notice !== undefined) return { kind: 'deny', reason: notice };
-        const outcome = await approval.request({
-          agent,
-          toolName: execution.name,
-          callId: execution.callId,
-          reason:
-            execution.name === 'channel_attachment_open'
-              ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-              : eachUse
-                ? 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.'
-                : 'This tool call may access files outside the authorized folder.',
-          signal: execution.signal,
-        });
+        const outcome = eachUse
+          ? ((await toolApproval.ask({
+              agent,
+              toolName: execution.name,
+              callId: execution.callId,
+              signal: execution.signal,
+            })) ?? 'unavailable')
+          : await approval.request({
+              agent,
+              toolName: execution.name,
+              callId: execution.callId,
+              reason:
+                execution.name === 'channel_attachment_open'
+                  ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
+                  : eachUse
+                    ? 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.'
+                    : 'This tool call may access files outside the authorized folder.',
+              signal: execution.signal,
+            });
         if (outcome !== 'allowed-once') {
           return { kind: 'deny', reason: 'Human approval was ' + outcome };
         }

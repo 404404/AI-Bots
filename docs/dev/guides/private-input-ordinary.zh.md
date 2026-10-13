@@ -1,6 +1,6 @@
 # 在普通 Profile 中使用私密输入
 
-自 [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md) 起，PersonaBot 在任何 Profile 中都可以询问密钥，不需要 Docker，也不需要显式开启。本指南说明这一默认档。需要 Docker 隔离的 opt-in Profile 见 [CLI 验证指南](private-input-cli.md)。
+自 [ADR-0189](../../adr/0189-secret-input-is-available-in-ordinary-profiles.md) 起，PersonaBot 在任何 Profile 中都可以询问密钥，不需要 Docker，也不需要显式开启。
 
 ## Bot 可以做什么
 

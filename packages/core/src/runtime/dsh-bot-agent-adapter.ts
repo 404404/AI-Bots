@@ -17,7 +17,6 @@ import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { ReasoningEffortId } from '@deepseek-ai/dsh-llm';
 import { SessionId, type SessionLogOffset } from '@deepseek-ai/dsh-session';
 import { defineTool } from '@deepseek-ai/dsh-tools';
-import { qualifyMessagingTool } from '../credentials/messaging-tools.js';
 import type { InboxOpenFilter } from './inbox-triage.js';
 import { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy';
 import { setApprovalPolicy } from '@deepseek-ai/dsh-user-approval';
@@ -611,9 +610,6 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       if (borrowed) borrowedDisposers.push(disposeSelection);
       const registerTool = (tool: Parameters<typeof agentCtx.tools.register>[0]) => {
         const dispose = agentCtx.tools.register(tool);
-        const unqualify = qualifyMessagingTool(agent, tool);
-        agentCtx.effect(() => unqualify, 'botharness: messaging Tool qualification');
-        if (borrowed) borrowedDisposers.push(unqualify);
         if (borrowed) borrowedDisposers.push(dispose);
         return dispose;
       };
@@ -2087,7 +2083,8 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             ids: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Source Event ids to resolve, 1–200. Do not combine with filter fields.',
+              description:
+                'Source Event ids from [Open Inbox] or inbox_list, or the Message ID shown in a turn header, to resolve; 1–200. Do not combine with filter fields.',
             },
             ...INBOX_FILTER_PARAMETERS,
             outcome: {
@@ -2133,7 +2130,8 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             ids: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Source Event ids to snooze, 1–200. Do not combine with filter fields.',
+              description:
+                'Source Event ids from [Open Inbox] or inbox_list, or the Message ID shown in a turn header, to snooze; 1–200. Do not combine with filter fields.',
             },
             ...INBOX_FILTER_PARAMETERS,
             until_time: {
@@ -3338,8 +3336,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             text: EXTERNAL_IM_PROMPT,
           }),
         ];
-        for (const tool of bridgeTools)
-          disposers.push(agentCtx.tools.register(tool), qualifyMessagingTool(agent, tool));
+        for (const tool of bridgeTools) disposers.push(agentCtx.tools.register(tool));
         bridgeDisposers = disposers;
       };
       listBridgeTools(run.externalMessaging?.connected() ?? false);

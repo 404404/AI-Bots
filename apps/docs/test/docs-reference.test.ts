@@ -21,19 +21,11 @@ describe("generated developer reference", () => {
         source: 'packages/core/src/plugin.ts',
       },
       {
-        name: "privateInputMcpServers",
-        type: "LinuxMcpServer[]",
-        default: [],
-        description:
-          "Ordinary MCP stdio servers executed inside the protected Linux workspace; no Host credentials or environment are injected.",
-        source: "packages/core/src/plugin.ts",
-      },
-      {
         name: "privateInputExecution",
         type: "boolean",
         default: false,
         description:
-          "Qualify this entire Profile for private input: Linux workspace Shell/MCP, fixed trusted CLI, and refusal of unqualified Host capabilities. Requires Docker Linux and the pinned command image.",
+          "Removed. The Docker-protected Profile no longer exists; a Profile that sets this starts as an ordinary Profile and logs a warning.",
         source: "packages/core/src/plugin.ts",
       },
       {
@@ -97,7 +89,6 @@ describe("generated developer reference", () => {
       { name: "approval/request", direction: "consumes", operation: "on" },
       { name: "botharness/personabot/activity", direction: "emits", operation: "emit" },
       { name: "session/event", direction: "consumes", operation: "on" },
-      { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/pre-execute", direction: "consumes", operation: "on" },

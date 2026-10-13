@@ -2110,8 +2110,20 @@ const INBOX_SNOOZE_MIGRATION: SchemaMigration = {
   },
 };
 
-const PROACTIVE_POST_LIMIT_MIGRATION: SchemaMigration = {
+const ASSIGNMENT_ACCESS_SCOPE_MIGRATION: SchemaMigration = {
   generation: 87,
+  module: 'assignment-access',
+  description: 'Record whether full access also covers the Orchestrator (ADR-0193)',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE bot_assignment_access ADD COLUMN scope TEXT NOT NULL DEFAULT 'assignments'
+        CHECK (scope IN ('chat', 'assignments'));
+    `);
+  },
+};
+
+const PROACTIVE_POST_LIMIT_MIGRATION: SchemaMigration = {
+  generation: 88,
   module: 'messaging',
   description: 'Persist per-app proactive post limits',
   migrate(database) {
@@ -2207,5 +2219,6 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   ASSIGNMENT_ARCHIVE_MIGRATION,
   INBOX_RESOLUTION_MIGRATION,
   INBOX_SNOOZE_MIGRATION,
+  ASSIGNMENT_ACCESS_SCOPE_MIGRATION,
   PROACTIVE_POST_LIMIT_MIGRATION,
 ]);
