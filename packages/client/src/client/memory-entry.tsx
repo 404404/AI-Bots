@@ -61,6 +61,7 @@ function MemoryEntryForScope({
   const [continueForm, setContinueForm] = useState<{ sha: string; branch: string }>();
   const [loadForm, setLoadForm] = useState<{ sha: string; subject: string }>();
   const [loadedSha, setLoadedSha] = useState<string>();
+  const [loads, setLoads] = useState(0);
   const commitMenuAnchor = useRef<HTMLSpanElement>(null);
   const [snapshot, setSnapshot] = useState<MemorySnapshot | undefined>(cache.snapshot);
   const [graph, setGraph] = useState<MemoryGitGraph | undefined>(cache.graph);
@@ -404,6 +405,7 @@ function MemoryEntryForScope({
         loadId: crypto.randomUUID(),
       });
       setLoadedSha(loadForm.sha);
+      setLoads((value) => value + 1);
       setLoadForm(undefined);
       forgetMemory();
       onMemoryCommitSelect?.(result.head);
@@ -925,7 +927,7 @@ function MemoryEntryForScope({
           <MemoryRecovery
             actions={actions}
             channelId={channelId}
-            refreshRevision={refreshRevision}
+            refreshRevision={`${refreshRevision ?? 0}:${loads}`}
             t={t}
             onRestored={forgetMemory}
           />

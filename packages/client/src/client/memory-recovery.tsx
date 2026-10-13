@@ -69,7 +69,7 @@ function createRecoveryStore(actions: BridgeActions, channelId: string) {
 function recoveryStore(
   actions: BridgeActions,
   channelId: string,
-  refreshRevision: number | undefined,
+  refreshRevision: number | string | undefined,
 ) {
   let channels = stores.get(actions);
   if (channels === undefined) {
@@ -95,7 +95,7 @@ export function MemoryRecovery({
 }: {
   actions: BridgeActions;
   channelId: string;
-  refreshRevision: number | undefined;
+  refreshRevision: number | string | undefined;
   onRestored: () => void;
   t: BotHarnessTranslate;
 }): ReactElement {
