@@ -1,10 +1,11 @@
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { createCore, type BotHarnessCore } from '../src/plugin.js';
 import { createDshImProvider, type DshImOutboundService } from '../src/messaging/dsh-im.js';
 import { createTempRoot } from './helpers.js';
 
 const cores: BotHarnessCore[] = [];
 afterEach(async () => {
+  vi.useRealTimers();
   for (const core of cores.splice(0)) {
     core.externalMessaging.close();
     await core.runtime.close();
@@ -56,6 +57,123 @@ async function fixture(platform: 'feishu' | 'discord' | 'slack' = 'feishu') {
   });
   return { core, binding, transport, posts, home };
 }
+
+it('the default quota is a rolling sixty posts per Binding and expires after an hour', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  const began = new Date('2026-10-13T00:00:00.000Z');
+  vi.setSystemTime(began);
+  const { core, binding, posts } = await fixture();
+  for (let index = 0; index < 60; index++) {
+    expect(
+      (
+        await core.externalMessaging.postConversation(
+          'ada',
+          binding.id,
+          'oc_new',
+          `quota-post-${index}`,
+          `Report ${index}`,
+        )
+      ).state,
+    ).toBe('provider-accepted');
+  }
+  const denied = await core.externalMessaging.postConversation(
+    'ada',
+    binding.id,
+    'oc_new',
+    'quota-denied',
+    'Never',
+  );
+  expect(denied).toMatchObject({ state: 'failed', reason: 'post-rate-limited' });
+  expect(posts).toHaveLength(60);
+  vi.setSystemTime(new Date(began.getTime() + 3600001));
+  expect(
+    (
+      await core.externalMessaging.postConversation(
+        'ada',
+        binding.id,
+        'oc_new',
+        'quota-expired',
+        'Next hour',
+      )
+    ).state,
+  ).toBe('provider-accepted');
+  expect(posts).toHaveLength(61);
+});
+
+it('a pending native attempt reserves the last quota slot before another request can send', async () => {
+  const { core, binding, transport, posts } = await fixture();
+  await core.externalMessaging.setPostLimit('ada', binding.id, binding.revision, 1);
+  let enter!: () => void;
+  let release!: () => void;
+  const entered = new Promise<void>((resolve) => {
+    enter = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  transport.postConversationChecked = async (_app, conversationId, text, options) => {
+    enter();
+    await gate;
+    expect(options.beforeSend()).toBe(true);
+    posts.push(text);
+    return { sent: true, receipt: { version: 1, messageId: 'om_pending', conversationId } };
+  };
+  const first = core.externalMessaging.postConversation(
+    'ada',
+    binding.id,
+    'oc_new',
+    'concurrent-first',
+    'First',
+  );
+  await entered;
+  try {
+    expect(
+      await core.externalMessaging.postConversation(
+        'ada',
+        binding.id,
+        'oc_new',
+        'concurrent-second',
+        'Never',
+      ),
+    ).toMatchObject({ state: 'failed', reason: 'post-rate-limited' });
+    expect(posts).toEqual([]);
+  } finally {
+    release();
+  }
+  expect((await first).state).toBe('provider-accepted');
+  expect(posts).toEqual(['First']);
+});
+
+it('muting a conversation controls reception and still permits an explicit proactive post', async () => {
+  const { core, binding, posts } = await fixture();
+  await core.externalMessaging.postConversation(
+    'ada',
+    binding.id,
+    'oc_new',
+    'before-mute',
+    'First',
+  );
+  const grant = (await core.externalMessaging.snapshot('ada')).grants[0]!;
+  await core.externalMessaging.conversation('ada', {
+    kind: 'mute',
+    grantId: grant.id,
+    expectedRevision: grant.preferenceRevision ?? 0,
+    muted: true,
+  });
+  expect(
+    (
+      await core.externalMessaging.postConversation(
+        'ada',
+        binding.id,
+        'oc_new',
+        'after-mute',
+        'Explicit report',
+      )
+    ).state,
+  ).toBe('provider-accepted');
+  expect((await core.externalMessaging.snapshot('ada')).grants[0]?.muted).toBe(true);
+  expect(posts).toEqual(['First', 'Explicit report']);
+});
 
 it.each(['feishu', 'discord', 'slack'] as const)(
   '%s bound app posts to a reachable group without saved targets or an inbound Source Event',

@@ -19,7 +19,8 @@ export const zh = {
   'proactive.limit': '每小时主动发送上限',
   'proactive.limitHint': '默认 60 条；留空可关闭限额。未知结果也会占用名额。',
   'proactive.saveLimit': '保存限额',
-  'proactive.legacy': '当前 Provider 不支持群列表，请关闭此窗口，使用「保存的发送目标（高级）」。',
+  'proactive.legacy':
+    '当前 Provider 需要更新才能列出可发送的群聊。请关闭此窗口并更新 Provider；已有「保存的发送目标（高级）」仍可使用。',
   'proactive.loadError': '群列表暂不可用，请检查应用权限和连接。',
   'proactive.sendError': '未取得发送结果，请保留本次请求并核对 Outbox。',
   'proactive.sendRefused': '此会话已屏蔽或授权已撤销，本次未发送。',
@@ -3129,7 +3130,7 @@ export const en = {
     'Default: 60. Leave blank to disable the limit. Unknown outcomes also consume a slot.',
   'proactive.saveLimit': 'Save limit',
   'proactive.legacy':
-    'This Provider cannot list groups. Close this window and use Saved send target (advanced).',
+    'Update this Provider to list groups it can speak in. Close this window and update the Provider; existing Saved send target (advanced) entries remain available.',
   'proactive.loadError': 'Groups are unavailable. Check app permission and connection.',
   'proactive.sendError': 'No outcome was received. Keep this request and check Outbox.',
   'proactive.sendRefused':
