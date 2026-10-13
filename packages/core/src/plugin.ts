@@ -3,6 +3,7 @@ import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { credentialStoreDenial } from './credentials/store-guard.js';
 import { secretCommandDenial } from './credentials/secret-command.js';
+import { secretMcpDenial } from './credentials/secret-mcp.js';
 import { createBotOnboarding, type BotOnboarding } from './onboarding/service.js';
 import { createPartLibrary, type PartLibrary } from './bots/part-library.js';
 import {
@@ -1245,6 +1246,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         const commandDenial = secretCommandDenial(execution.arguments);
         if (commandDenial !== undefined) return { kind: 'deny', reason: commandDenial };
       }
+      if (execution.name === 'secret_mcp_connect') {
+        const serverDenial = secretMcpDenial(execution.arguments);
+        if (serverDenial !== undefined) return { kind: 'deny', reason: serverDenial };
+      }
       if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
         return next();
 
@@ -1357,7 +1362,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         owner?.rootRole === 'assignment'
           ? core.runtime.getAssignment(owner.botSlug, owner.sessionId)?.permission
           : undefined;
-      const eachUse = execution.name === 'secret_cli';
+      const eachUse = execution.name === 'secret_cli' || execution.name === 'secret_mcp_connect';
       const fullAccess =
         snapshot?.mode === 'danger-full-access' ||
         (owner?.rootRole === 'orchestrator' &&

@@ -29,6 +29,7 @@ export function ToolApprovalCard({
   companionTarget?: (CompanionRequestTarget & { callId: string }) | undefined;
 }): ReactElement {
   const request = message.toolApprovalRequest!;
+  const eachUse = request.toolName === 'secret_cli' || request.toolName === 'secret_mcp_connect';
   const [acceptedDecision, setAcceptedDecision] = useState<typeof decision>();
   const effectiveDecision = decision ?? acceptedDecision;
   const botSlug = message.author.kind === 'bot' ? message.author.slug : undefined;
@@ -184,7 +185,9 @@ export function ToolApprovalCard({
             ? 'approval.originalRisk'
             : request.toolName === 'secret_cli'
               ? 'approval.secretCliRisk'
-              : 'approval.risk',
+              : request.toolName === 'secret_mcp_connect'
+                ? 'approval.secretMcpRisk'
+                : 'approval.risk',
         )}
       </div>
     </>
@@ -238,7 +241,7 @@ export function ToolApprovalCard({
           >
             {t('approval.allowOnce')}
           </Button>
-          {request.toolName === 'secret_cli' ? null : (
+          {eachUse ? null : (
             <Button
               variant="outline"
               size={size}
@@ -248,7 +251,7 @@ export function ToolApprovalCard({
               {t('approval.allowExact')}
             </Button>
           )}
-          {request.toolName === 'secret_cli' ? null : (
+          {eachUse ? null : (
             <Button
               variant="outline"
               size={size}

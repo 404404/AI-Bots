@@ -91,6 +91,7 @@ describe("generated developer reference", () => {
       { name: "session/event", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
+      { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/pre-execute", direction: "consumes", operation: "on" },
       { name: "tools/result", direction: "consumes", operation: "on" },
       { name: "user-questions/request", direction: "consumes", operation: "on" },
