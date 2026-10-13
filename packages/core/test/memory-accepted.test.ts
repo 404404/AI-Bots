@@ -334,7 +334,7 @@ describe('current Git working tree is Memory', () => {
     }
   });
 
-  it('restores an older commit after committing uncommitted work as a noted backup', () => {
+  it('restores an older commit after committing uncommitted work and naming the version before it', () => {
     const { database, memory, root } = fixture();
     try {
       git(root, 'config', 'user.name', 'Test Author');
@@ -366,12 +366,16 @@ describe('current Git working tree is Memory', () => {
         sha: first,
         expectedHead: second,
         restoreId: '44444444-4444-4444-8444-444444444444',
-        note: 'Draft before restoring',
+        name: '整理前 的草稿',
       });
       expect(git(root, 'rev-parse', 'HEAD')).toBe(result.head);
       expect(git(root, 'rev-parse', 'HEAD^')).toBe(result.backup);
       expect(git(root, 'rev-parse', 'HEAD^^')).toBe(second);
-      expect(git(root, 'log', '-1', '--format=%s', result.backup!)).toBe('Draft before restoring');
+      expect(git(root, 'log', '-1', '--format=%s', result.backup!)).toBe(
+        'Back up uncommitted Memory before restore',
+      );
+      expect(result.version).toEqual({ tag: '整理前-的草稿', name: '整理前 的草稿' });
+      expect(git(root, 'rev-parse', '整理前-的草稿^{commit}')).toBe(result.backup);
       expect(git(root, 'show', `${result.backup}:draft.md`)).toBe('untracked');
       expect(git(root, 'show', `${result.backup}:note.md`)).toBe('unsaved');
       expect(git(root, 'rev-parse', 'HEAD^{tree}')).toBe(git(root, 'rev-parse', `${first}^{tree}`));
@@ -393,6 +397,28 @@ describe('current Git working tree is Memory', () => {
         restoreId: '55555555-5555-4555-8555-555555555555',
       });
       expect(back.backup).toBeNull();
+      expect(back.version).toBeNull();
+      const named = memory.nameVersionHuman({
+        botSlug: 'atlas',
+        sha: first,
+        name: '整理前 的草稿',
+      });
+      expect(named).toEqual({ tag: '整理前-的草稿-2', name: '整理前 的草稿' });
+      expect(memory.nameVersionHuman({ botSlug: 'atlas', sha: first, name: 'a..b' }).tag).toBe(
+        `version-${first.slice(0, 7)}`,
+      );
+      expect(() => memory.nameVersionHuman({ botSlug: 'atlas', sha: first, name: ' ' })).toThrow(
+        'Version name',
+      );
+      const graph = memory.gitGraph('atlas');
+      expect(graph.commits.find((commit) => commit.sha === first)?.versions).toEqual([
+        { tag: `version-${first.slice(0, 7)}`, name: 'a..b' },
+        { tag: '整理前-的草稿-2', name: '整理前 的草稿' },
+      ]);
+      memory.removeVersionNameHuman({ botSlug: 'atlas', tag: '整理前-的草稿-2' });
+      expect(
+        memory.gitGraph('atlas').commits.find((commit) => commit.sha === first)?.versions,
+      ).toEqual([{ tag: `version-${first.slice(0, 7)}`, name: 'a..b' }]);
       expect(git(root, 'rev-parse', `${back.head}^`)).toBe(result.head);
       expect(git(root, 'rev-parse', `${back.head}^{tree}`)).toBe(
         git(root, 'rev-parse', `${second}^{tree}`),

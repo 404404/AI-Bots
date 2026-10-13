@@ -116,6 +116,7 @@ import type {
   MemoryAcceptedCommit,
   MemoryAcceptedSnapshot,
   MemoryGitGraph,
+  MemoryVersionName,
   MemoryGitCommitDiff,
   MemoryWorkingChange,
   MemoryWorkingDiff,
@@ -1214,11 +1215,24 @@ export class BotharnessBridgeService extends TypertRemoteService {
     sha: string,
     expectedHead: string,
     restoreId: string,
-    note?: string,
-  ): { head: string; backup: string | null; saved: MemoryRecoveryCheckpoint } {
+    name?: string,
+  ): {
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  } {
     return unwrap(
-      this.methods.memoryRestoreCommit({ channelId, sha, expectedHead, restoreId, note }),
+      this.methods.memoryRestoreCommit({ channelId, sha, expectedHead, restoreId, name }),
     );
+  }
+
+  memoryNameVersion(channelId: string, sha: string, name: string): { version: MemoryVersionName } {
+    return unwrap(this.methods.memoryNameVersion({ channelId, sha, name }));
+  }
+
+  memoryRemoveVersionName(channelId: string, tag: string): { removed: true } {
+    return unwrap(this.methods.memoryRemoveVersionName({ channelId, tag }));
   }
 
   memorySave(
@@ -1538,6 +1552,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'memoryRestore',
   'memorySave',
   'memoryRestoreCommit',
+  'memoryNameVersion',
+  'memoryRemoveVersionName',
   'memoryRepair',
   'profileActivity',
   'profileSessionUsage',

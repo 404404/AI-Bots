@@ -363,6 +363,12 @@ function stubActions(): BridgeActions {
     memoryRestoreCommit: vi.fn(async () => {
       throw new Error('not configured');
     }),
+    memoryNameVersion: vi.fn(async () => {
+      throw new Error('not configured');
+    }),
+    memoryRemoveVersionName: vi.fn(async () => {
+      throw new Error('not configured');
+    }),
     botSourcePolicies: vi.fn(async () => []),
     botSchedules: vi.fn(async () => []),
     createBotSchedule: vi.fn(async () => {

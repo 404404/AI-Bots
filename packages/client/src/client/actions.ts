@@ -219,6 +219,8 @@ import {
   loadMemoryRecoveryHistory,
   restoreMemoryCheckpoint,
   restoreMemoryCommit,
+  nameMemoryVersion,
+  removeMemoryVersionName,
   saveMemoryFile,
   repairMemory,
   loadTimelinePage,
@@ -245,6 +247,7 @@ import {
   type MemoryWorkingDiff,
   type MemoryWorkingKind,
   type MemoryRecoveryCheckpoint,
+  type MemoryVersionName,
   type MemoryRepairEvent,
   type ProfileActivity,
   type ProfileActivityWindow,
@@ -565,8 +568,19 @@ export interface BridgeActions {
     sha: string;
     expectedHead: string;
     restoreId: string;
-    note?: string;
-  }): Promise<{ head: string; backup: string | null; saved: MemoryRecoveryCheckpoint }>;
+    name?: string;
+  }): Promise<{
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  }>;
+  memoryNameVersion(input: {
+    channelId: string;
+    sha: string;
+    name: string;
+  }): Promise<MemoryVersionName>;
+  memoryRemoveVersionName(input: { channelId: string; tag: string }): Promise<void>;
   memoryRepair(input: {
     channelId: string;
     expectedHead: string;
@@ -2335,6 +2349,8 @@ export function createActions(
     memoryRecoveryHistory: (channelId) => loadMemoryRecoveryHistory(call, channelId),
     memoryRestore: (input) => restoreMemoryCheckpoint(call, input),
     memoryRestoreCommit: (input) => restoreMemoryCommit(call, input),
+    memoryNameVersion: (input) => nameMemoryVersion(call, input),
+    memoryRemoveVersionName: (input) => removeMemoryVersionName(call, input),
     memorySave: (input) => saveMemoryFile(call, input),
     memoryRepair: (input) => repairMemory(call, input),
     openSession(sessionId) {

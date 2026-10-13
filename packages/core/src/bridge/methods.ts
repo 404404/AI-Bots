@@ -159,6 +159,7 @@ import {
   type MemoryAcceptedCommit,
   type MemoryAcceptedSnapshot,
   type MemoryGitGraph,
+  type MemoryVersionName,
   type MemoryGitCommitDiff,
   type MemoryWorkingChange,
   type MemoryWorkingDiff,
@@ -575,9 +576,14 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ checkpoint: MemoryRecoveryCheckpoint; archivePath: string }>;
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
-  memoryRestoreCommit(
-    payload: unknown,
-  ): BridgeResult<{ head: string; backup: string | null; saved: MemoryRecoveryCheckpoint }>;
+  memoryRestoreCommit(payload: unknown): BridgeResult<{
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  }>;
+  memoryNameVersion(payload: unknown): BridgeResult<{ version: MemoryVersionName }>;
+  memoryRemoveVersionName(payload: unknown): BridgeResult<{ removed: true }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
   profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
@@ -4530,10 +4536,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const sha = asNonBlank(source, 'sha');
       const expectedHead = asNonBlank(source, 'expectedHead');
       const restoreId = asNonBlank(source, 'restoreId');
-      const note = source['note'];
+      const name = source['name'];
       if (
-        (note !== undefined &&
-          (typeof note !== 'string' || note.length > 200 || /[\r\n]/u.test(note))) ||
+        (name !== undefined &&
+          (typeof name !== 'string' || name.length > 60 || /[\r\n]/u.test(name))) ||
         sha === undefined ||
         expectedHead === undefined ||
         restoreId === undefined ||
@@ -4541,16 +4547,43 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         !/^[0-9a-f]{40}$/u.test(expectedHead) ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(restoreId)
       )
-        return invalidInput('valid sha, expectedHead, restoreId, and note are required');
+        return invalidInput('valid sha, expectedHead, restoreId, and name are required');
       return memoryCall(() =>
         deps.memory!.restoreCommitHuman({
           botSlug: scope.botSlug,
           sha,
           expectedHead,
           restoreId,
-          ...(note === undefined ? {} : { note }),
+          ...(name === undefined ? {} : { name }),
         }),
       );
+    },
+    memoryNameVersion(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const source = asObject(payload);
+      const sha = asNonBlank(source, 'sha');
+      const name = asNonBlank(source, 'name');
+      if (
+        sha === undefined ||
+        name === undefined ||
+        !/^[0-9a-f]{40}$/u.test(sha) ||
+        name.length > 60
+      )
+        return invalidInput('valid sha and name are required');
+      return memoryCall(() => ({
+        version: deps.memory!.nameVersionHuman({ botSlug: scope.botSlug, sha, name }),
+      }));
+    },
+    memoryRemoveVersionName(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const tag = asNonBlank(asObject(payload), 'tag');
+      if (tag === undefined || tag.length > 200) return invalidInput('valid tag is required');
+      return memoryCall(() => {
+        deps.memory!.removeVersionNameHuman({ botSlug: scope.botSlug, tag });
+        return { removed: true as const };
+      });
     },
     memoryRepair(payload) {
       const scope = dmMemory(payload);

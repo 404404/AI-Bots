@@ -2616,15 +2616,21 @@ export const zh = {
   'memory.restoreCommit.confirm':
     '记忆文件会恢复成这次提交完成后的样子：包含这次提交的改动，不包含之后的提交。',
   'memory.restoreCommit.confirmDirty':
-    '还没提交的改动会先存成一个提交，留在 Git 图里，之后随时能恢复回来。',
+    '还没提交的改动会先自动存成一个提交，留在 Git 图里，之后随时能恢复回来。',
   'memory.restoreCommit.confirmClean': '当前状态已经在 Git 图里，之后随时能恢复回来。',
-  'memory.restoreCommit.note': '给还没提交的改动写个备注（可选）',
-  'memory.restoreCommit.notePlaceholder': '例如：恢复前的草稿',
   'memory.restoreCommit.submitDirty': '保存改动并恢复',
   'memory.restoreCommit.submit': '恢复',
   'memory.restoreCommit.loading': '正在恢复…',
   'memory.restoreCommit.done': '已恢复到 {sha} 这次提交之后的状态。',
-  'memory.restoreCommit.backedUp': '恢复前的改动保存在 {sha} 这个提交里。',
+  'memory.restoreCommit.backedUp': '恢复前的改动已自动存成 {sha} 这个提交。',
+  'memory.restoreCommit.name': '给恢复前的版本起个名字（可选）',
+  'memory.restoreCommit.named': '恢复前的版本已命名为「{name}」。',
+  'memory.version.action': '给这个版本起名',
+  'memory.version.label': '版本名称',
+  'memory.version.placeholder': '例如：整理前的草稿',
+  'memory.version.save': '保存名称',
+  'memory.version.remove': '移除名称「{name}」',
+  'memory.version.dirtyHint': '名称会标在这次提交上，还没提交的改动不包含在内。',
   'memory.newBranch': '新分支名称',
   'memory.createAndSwitch': '创建并切换',
   'memory.continuePrompt':
@@ -5859,17 +5865,24 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.restoreCommit.confirm':
     'Memory files go back to how they were right after this commit: its changes are kept, later commits are not.',
   'memory.restoreCommit.confirmDirty':
-    ' Changes that are not committed yet are saved as a commit in the Git graph first, so you can restore them later.',
+    ' Changes that are not committed yet are saved automatically as a commit in the Git graph first, so you can restore them later.',
   'memory.restoreCommit.confirmClean':
     ' The current state is already in the Git graph, so you can restore it later.',
-  'memory.restoreCommit.note': 'Note for the uncommitted changes (optional)',
-  'memory.restoreCommit.notePlaceholder': 'For example: draft before restoring',
   'memory.restoreCommit.submitDirty': 'Save changes and restore',
   'memory.restoreCommit.submit': 'Restore',
   'memory.restoreCommit.loading': 'Restoring…',
   'memory.restoreCommit.done': 'Restored to just after {sha}.',
   'memory.restoreCommit.backedUp':
-    ' The changes from before the restore are saved in commit {sha}.',
+    ' The changes from before the restore were saved automatically as commit {sha}.',
+  'memory.restoreCommit.name': 'Name the version before restoring (optional)',
+  'memory.restoreCommit.named': ' The version before restoring is named "{name}".',
+  'memory.version.action': 'Name this version',
+  'memory.version.label': 'Version name',
+  'memory.version.placeholder': 'For example: draft before cleanup',
+  'memory.version.save': 'Save name',
+  'memory.version.remove': 'Remove the name "{name}"',
+  'memory.version.dirtyHint':
+    'The name marks this commit; changes that are not committed yet are not included.',
   'memory.newBranch': 'New branch name',
   'memory.createAndSwitch': 'Create and switch',
   'memory.continuePrompt':

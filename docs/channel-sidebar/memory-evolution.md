@@ -30,7 +30,11 @@ From a commit diff, **Create and switch branch from this memory** opens a new-br
 
 ## Restore an earlier memory
 
-Select a commit in the graph. **Restore to this commit** appears inside that commit's block; you can also right-click any commit. The confirmation says that Memory returns to how it was right after this commit: the commit's own changes are included and later commits are not. If Memory has changes that are not committed yet, they are first saved as an ordinary commit in the graph. You can give that commit a note; without one it is called "Back up uncommitted Memory before restore". **Save changes and restore** (or **Restore** when there is nothing uncommitted) then adds a new commit whose files match the selected commit. Every point you can go back to stays in the same graph, and **Memory files** refreshes as soon as the restore finishes.
+Select a commit in the graph. **Restore to this commit** appears inside that commit's block; you can also right-click any commit. The confirmation says that Memory returns to how it was right after this commit: the commit's own changes are included and later commits are not. If Memory has changes that are not committed yet, they are first saved automatically as an ordinary commit in the graph. You can also give the version before restoring a name. **Save changes and restore** (or **Restore** when there is nothing uncommitted) then adds a new commit whose files match the selected commit. Every point you can go back to stays in the same graph, and **Memory files** refreshes as soon as the restore finishes.
+
+## Name a version
+
+Select any commit and click **Name this version** to give it a name you will recognise later, such as "Draft before cleanup". The name appears as a badge on that commit in the graph. Remove it with the × next to the name in the commit's block. Names are stored as Git tags, so they stay with the Memory repository and do not change any commit.
 
 ## Advanced: system snapshots
 

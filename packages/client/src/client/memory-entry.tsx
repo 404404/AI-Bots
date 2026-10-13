@@ -59,8 +59,13 @@ function MemoryEntryForScope({
     returnFocus: HTMLElement;
   }>();
   const [continueForm, setContinueForm] = useState<{ sha: string; branch: string }>();
-  const [restoreForm, setRestoreForm] = useState<{ sha: string; note: string }>();
-  const [restored, setRestored] = useState<{ sha: string; backup: string | null }>();
+  const [restoreForm, setRestoreForm] = useState<{ sha: string; name: string }>();
+  const [nameForm, setNameForm] = useState<{ sha: string; name: string }>();
+  const [restored, setRestored] = useState<{
+    sha: string;
+    backup: string | null;
+    version: string | null;
+  }>();
   const [restores, setRestores] = useState(0);
   const commitMenuAnchor = useRef<HTMLSpanElement>(null);
   const [snapshot, setSnapshot] = useState<MemorySnapshot | undefined>(cache.snapshot);
@@ -390,6 +395,35 @@ function MemoryEntryForScope({
     setRefresh((value) => value + 1);
   };
 
+  const nameVersion = async (): Promise<void> => {
+    if (nameForm === undefined || nameForm.name.trim() === '' || busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await actions.memoryNameVersion({ channelId, sha: nameForm.sha, name: nameForm.name.trim() });
+      setNameForm(undefined);
+      forgetMemory();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeVersionName = async (tag: string): Promise<void> => {
+    if (busy) return;
+    setBusy(true);
+    setError(undefined);
+    try {
+      await actions.memoryRemoveVersionName({ channelId, tag });
+      forgetMemory();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : String(failure));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const restoreCommit = async (): Promise<void> => {
     if (restoreForm === undefined || graph === undefined || busy) return;
     setBusy(true);
@@ -400,9 +434,13 @@ function MemoryEntryForScope({
         sha: restoreForm.sha,
         expectedHead: graph.head,
         restoreId: crypto.randomUUID(),
-        ...(restoreForm.note.trim() === '' ? {} : { note: restoreForm.note.trim() }),
+        ...(restoreForm.name.trim() === '' ? {} : { name: restoreForm.name.trim() }),
       });
-      setRestored({ sha: restoreForm.sha, backup: result.backup });
+      setRestored({
+        sha: restoreForm.sha,
+        backup: result.backup,
+        version: result.version?.name ?? null,
+      });
       setRestores((value) => value + 1);
       setRestoreForm(undefined);
       forgetMemory();
@@ -679,6 +717,9 @@ function MemoryEntryForScope({
                 {restored.backup === null
                   ? null
                   : t('memory.restoreCommit.backedUp', { sha: restored.backup.slice(0, 7) })}
+                {restored.version === null
+                  ? null
+                  : t('memory.restoreCommit.named', { name: restored.version })}
               </div>
             )}
             {commitMenu === undefined ? null : (
@@ -699,7 +740,7 @@ function MemoryEntryForScope({
                   onSelect={(id) => {
                     if (id === 'restore') {
                       setContinueForm(undefined);
-                      setRestoreForm({ sha: commitMenu.sha, note: '' });
+                      setRestoreForm({ sha: commitMenu.sha, name: '' });
                     } else {
                       setRestoreForm(undefined);
                       setContinueForm({
@@ -721,9 +762,10 @@ function MemoryEntryForScope({
                 const row = lanes[index]!;
                 const width = row.width * MEMORY_GRAPH_LANE_WIDTH;
                 const restorePanel =
-                  commit.sha !== graph.head &&
                   continueForm?.sha !== commit.sha &&
-                  (restoreForm?.sha === commit.sha || commit.sha === selectedMemoryCommitSha);
+                  (restoreForm?.sha === commit.sha ||
+                    nameForm?.sha === commit.sha ||
+                    commit.sha === selectedMemoryCommitSha);
                 return (
                   <Fragment key={commit.sha}>
                     <button
@@ -794,6 +836,15 @@ function MemoryEntryForScope({
                       <span className="bh-memory-graph-text">
                         <span className="bh-memory-graph-top">
                           <span className="bh-memory-graph-subject">{commit.subject}</span>
+                          {(commit.versions ?? []).map((version) => (
+                            <span
+                              key={'version-' + version.tag}
+                              className="bh-memory-version"
+                              title={version.name}
+                            >
+                              {version.name}
+                            </span>
+                          ))}
                           {commit.branches.map((branch) => (
                             <span
                               key={branch}
@@ -837,21 +888,7 @@ function MemoryEntryForScope({
                             ))}
                           </svg>
                         </span>
-                        {restoreForm?.sha !== commit.sha ? (
-                          <div className="bh-memory-restore-offer">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={busy}
-                              onClick={() => {
-                                setContinueForm(undefined);
-                                setRestoreForm({ sha: commit.sha, note: '' });
-                              }}
-                            >
-                              {t('memory.restoreCommit.action')}
-                            </Button>
-                          </div>
-                        ) : (
+                        {restoreForm?.sha === commit.sha ? (
                           <div className="bh-memory-restore-confirm" role="group">
                             <p>
                               {t('memory.restoreCommit.confirm')}
@@ -859,23 +896,21 @@ function MemoryEntryForScope({
                                 ? t('memory.restoreCommit.confirmDirty')
                                 : t('memory.restoreCommit.confirmClean')}
                             </p>
-                            {!graph.dirty ? null : (
-                              <label className="bh-memory-restore-note">
-                                <span>{t('memory.restoreCommit.note')}</span>
-                                <Input
-                                  value={restoreForm.note}
-                                  maxLength={200}
-                                  placeholder={t('memory.restoreCommit.notePlaceholder')}
-                                  disabled={busy}
-                                  onChange={(event) =>
-                                    setRestoreForm({ sha: commit.sha, note: event.target.value })
-                                  }
-                                  onKeyDown={(event) => {
-                                    if (event.key === 'Enter') void restoreCommit();
-                                  }}
-                                />
-                              </label>
-                            )}
+                            <label className="bh-memory-restore-note">
+                              <span>{t('memory.restoreCommit.name')}</span>
+                              <Input
+                                value={restoreForm.name}
+                                maxLength={60}
+                                placeholder={t('memory.version.placeholder')}
+                                disabled={busy}
+                                onChange={(event) =>
+                                  setRestoreForm({ sha: commit.sha, name: event.target.value })
+                                }
+                                onKeyDown={(event) => {
+                                  if (event.key === 'Enter') void restoreCommit();
+                                }}
+                              />
+                            </label>
                             <Button
                               variant="primary"
                               size="sm"
@@ -896,6 +931,90 @@ function MemoryEntryForScope({
                             >
                               {t('common.cancel')}
                             </Button>
+                          </div>
+                        ) : nameForm?.sha === commit.sha ? (
+                          <form
+                            className="bh-memory-restore-confirm"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              void nameVersion();
+                            }}
+                          >
+                            <label className="bh-memory-restore-note">
+                              <span>{t('memory.version.label')}</span>
+                              <Input
+                                autoFocus
+                                value={nameForm.name}
+                                maxLength={60}
+                                placeholder={t('memory.version.placeholder')}
+                                disabled={busy}
+                                onChange={(event) =>
+                                  setNameForm({ sha: commit.sha, name: event.target.value })
+                                }
+                              />
+                            </label>
+                            {commit.sha === graph.head && graph.dirty ? (
+                              <p>{t('memory.version.dirtyHint')}</p>
+                            ) : null}
+                            <Button
+                              type="submit"
+                              variant="primary"
+                              size="sm"
+                              disabled={busy || nameForm.name.trim() === ''}
+                            >
+                              {t('memory.version.save')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={busy}
+                              onClick={() => setNameForm(undefined)}
+                            >
+                              {t('common.cancel')}
+                            </Button>
+                          </form>
+                        ) : (
+                          <div className="bh-memory-restore-offer">
+                            {(commit.versions ?? []).map((version) => (
+                              <span key={version.tag} className="bh-memory-version-chip">
+                                <span title={version.tag}>{version.name}</span>
+                                <button
+                                  type="button"
+                                  aria-label={t('memory.version.remove', { name: version.name })}
+                                  disabled={busy}
+                                  onClick={() => void removeVersionName(version.tag)}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                            <span className="bh-memory-restore-actions">
+                              {commit.sha === graph.head ? null : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    setContinueForm(undefined);
+                                    setNameForm(undefined);
+                                    setRestoreForm({ sha: commit.sha, name: '' });
+                                  }}
+                                >
+                                  {t('memory.restoreCommit.action')}
+                                </Button>
+                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={busy}
+                                onClick={() => {
+                                  setRestoreForm(undefined);
+                                  setNameForm({ sha: commit.sha, name: '' });
+                                }}
+                              >
+                                {t('memory.version.action')}
+                              </Button>
+                            </span>
                           </div>
                         )}
                       </div>

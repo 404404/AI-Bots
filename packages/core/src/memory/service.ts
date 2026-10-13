@@ -150,6 +150,8 @@ export function createMemoryService(options: MemoryServiceOptions): MemoryServic
     restoreHuman: (input) => requireAcceptance().restoreHuman(input),
     saveHuman: (input) => requireAcceptance().saveHuman(input),
     restoreCommitHuman: (input) => requireAcceptance().restoreCommitHuman(input),
+    nameVersionHuman: (input) => requireAcceptance().nameVersionHuman(input),
+    removeVersionNameHuman: (input) => requireAcceptance().removeVersionNameHuman(input),
     repairHuman: (input) => requireAcceptance().repairHuman(input),
     memoryDirFor,
     repositoryFor,
