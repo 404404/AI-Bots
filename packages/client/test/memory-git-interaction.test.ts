@@ -178,16 +178,19 @@ it('requires an explicit confirmation before restoring an older Memory checkpoin
       }),
     ),
   );
-  const olderRow = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row')[1];
-  await act(async () => olderRow?.click());
+  const rows = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row');
+  expect(rows[0]?.textContent).toContain('最新');
+  expect(rows[1]?.textContent).toContain('记忆有变化时');
+  expect(rows[1]?.textContent).not.toContain('main');
+  await act(async () => rows[1]?.click());
   const choose = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '恢复到这个快照',
+    (button) => button.textContent === '恢复到这时',
   );
   await act(async () => choose?.click());
   expect(actions.memoryRestore).not.toHaveBeenCalled();
-  expect(container.textContent).toContain('当前整个记忆文件夹会先完整复制一份');
+  expect(container.textContent).toContain('现在的整个记忆文件夹会先完整复制一份');
   const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '复制并恢复',
+    (button) => button.textContent === '恢复',
   );
   await act(async () => confirm?.click());
   expect(actions.memoryRestore).toHaveBeenCalledWith({

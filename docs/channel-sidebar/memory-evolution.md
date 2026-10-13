@@ -40,9 +40,9 @@ You can also right-click a commit and choose **Name this version**.
 
 The section title reads **Memory** followed by three tabs: **Evolution** shows the Git graph, **Versions** lists only the versions you named, and **Branches** lists every branch (see above). **Versions** shows them newest first, however far back they are. Click a version to open its changes, then **Restore this version** or **Remove name**.
 
-## Advanced: system snapshots
+## Restore from an automatic backup
 
-**Advanced · System snapshots** lists the snapshots BotHarness takes automatically when Memory changes or a Bot session ends. Each snapshot keeps the branch, commit, staged files and uncommitted files in hidden Git objects that do not appear in the graph. They are a last-resort safety net; for everyday time travel, use the graph. Select a snapshot and use **Copy and restore** to go back to it. This fully backs up the repository first and shows the backup location. A **Repair Memory** state has its own confirmation and backup procedure.
+BotHarness also backs up Memory automatically when it changes, when a conversation ends, and before you restore, including files that are not committed yet. These backups stay out of the panel because Evolution and Versions cover everyday time travel. If Memory was damaged by accident and you cannot find it there, open the gear in the **Memory** title and choose **Restore from an automatic backup…**. Each backup shows when it was taken and why. Pick one, click **Restore to this point**, then **Restore**. The whole Memory folder is copied first, and the dialog shows where that copy is. A **Repair Memory** state has its own confirmation and backup procedure.
 
 The screenshots demonstrate reading the real repository and commit diff. They do not demonstrate a recovery or claim that the example repository needed repair.
 

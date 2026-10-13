@@ -2555,25 +2555,23 @@ export const zh = {
   'memory.saving': '正在保存…',
   'memory.history': '提交历史',
   'memory.gitGraph': 'Git 历史',
-  'memory.recovery.title': '高级 · 系统快照',
-  'memory.recovery.help':
-    '系统在记忆变化、Bot 会话结束时自动拍下的快照，包括还没提交的文件，作为最后一道保险。快照不在 Git 图里；平时要回到过去，直接在上面的 Git 图里选提交即可。',
-  'memory.recovery.current': '当前',
-  'memory.recovery.origin.host-observation': 'Host 观察',
-  'memory.recovery.origin.agent-session': 'Bot 会话结束',
-  'memory.recovery.origin.human-command': '你在本机的操作',
-  'memory.recovery.cause': '记录原因',
-  'memory.recovery.cause.memory-scan': '观察到记忆状态',
-  'memory.recovery.cause.source-event': '处理来源事件',
-  'memory.recovery.cause.human-edit': '本地修改',
-  'memory.recovery.cause.turn-abort': '会话结束',
-  'memory.recovery.cause.human-restore': '恢复',
-  'memory.recovery.choose': '恢复到这个快照',
-  'memory.recovery.confirm':
-    '把记忆恢复到 {branch} · {sha} 这个快照？当前整个记忆文件夹会先完整复制一份。',
-  'memory.recovery.restore': '复制并恢复',
-  'memory.recovery.restoring': '正在恢复…',
-  'memory.recovery.done': '已恢复 · 查看原仓库备份位置',
+  'memory.backups.open': '从自动备份恢复…',
+  'memory.backups.title': '自动备份',
+  'memory.backups.intro':
+    '记忆有变化、一次对话结束、或你恢复记忆之前，系统都会自动备份一次，连还没提交的文件也在内。平时回到过去用「演化」或「版本」就够了；只有记忆被意外改坏、上面都找不回来时，才需要这里。',
+  'memory.backups.empty': '还没有自动备份。',
+  'memory.backups.latest': '最新',
+  'memory.backups.cause.memory-scan': '记忆有变化时',
+  'memory.backups.cause.source-event': 'Bot 处理消息时',
+  'memory.backups.cause.human-edit': '你修改记忆时',
+  'memory.backups.cause.turn-abort': '一次对话结束时',
+  'memory.backups.cause.human-restore': '恢复记忆之前',
+  'memory.backups.choose': '恢复到这时',
+  'memory.backups.confirm':
+    '把记忆恢复到 {time} 时的样子？恢复前，现在的整个记忆文件夹会先完整复制一份，不会丢。',
+  'memory.backups.restore': '恢复',
+  'memory.backups.restoring': '正在恢复…',
+  'memory.backups.done': '已恢复 · 查看之前那份副本的位置',
   'memory.branchRequested': '已发送切换请求：',
   'memory.branchRequestFailed': '无法发送切换请求，请重试。',
   'memory.branchSwitchPrompt':
@@ -2631,6 +2629,12 @@ export const zh = {
   'memory.view.graph': '演化',
   'memory.view.versions': '版本',
   'memory.view.branches': '分支',
+  'memory.view.graphHelp':
+    '记忆是怎么一步步变成现在这样的。每个点是一次提交，点开可以看改了什么，也可以恢复到那次提交完成后的状态。',
+  'memory.view.versionsHelp':
+    '你起过名字的版本，方便以后一眼找到。要给版本起名，在「演化」里右键某个提交（或选中后点「给这个版本起名」）。',
+  'memory.view.branchesHelp':
+    '分支是记忆的另一条发展路线，平时用不到。这里可以切换分支；要新开一条，在「演化」里右键某个提交，选「从这里新建并切换分支」。',
   'memory.branches.empty': '还没有分支。',
   'memory.branches.switch': '切换到这个分支',
   'memory.branches.switchHelp':
@@ -5812,25 +5816,23 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.saving': 'Saving…',
   'memory.history': 'Commit history',
   'memory.gitGraph': 'Git history',
-  'memory.recovery.title': 'Advanced · System snapshots',
-  'memory.recovery.help':
-    'Snapshots the system takes automatically when Memory changes or a Bot session ends, including files that are not committed yet. They are a last-resort safety net and do not appear in the Git graph; to go back in time, pick a commit in the graph above.',
-  'memory.recovery.current': 'Current',
-  'memory.recovery.origin.host-observation': 'Host observation',
-  'memory.recovery.origin.agent-session': 'Bot session ended',
-  'memory.recovery.origin.human-command': 'Your local action',
-  'memory.recovery.cause': 'Recorded cause',
-  'memory.recovery.cause.memory-scan': 'Memory state observed',
-  'memory.recovery.cause.source-event': 'Source event processed',
-  'memory.recovery.cause.human-edit': 'Local edit',
-  'memory.recovery.cause.turn-abort': 'Session ended',
-  'memory.recovery.cause.human-restore': 'Restored',
-  'memory.recovery.choose': 'Restore this snapshot',
-  'memory.recovery.confirm':
-    'Restore Memory to the snapshot at {branch} · {sha}? The whole Memory folder is copied first.',
-  'memory.recovery.restore': 'Copy and restore',
-  'memory.recovery.restoring': 'Restoring…',
-  'memory.recovery.done': 'Restored · Show original repository backup',
+  'memory.backups.open': 'Restore from an automatic backup…',
+  'memory.backups.title': 'Automatic backups',
+  'memory.backups.intro':
+    'The system backs up Memory automatically when it changes, when a conversation ends, and before you restore, including files that are not committed yet. To go back in time, Evolution or Versions is usually enough; use these only when Memory was damaged by accident and you cannot find it there.',
+  'memory.backups.empty': 'No automatic backups yet.',
+  'memory.backups.latest': 'Latest',
+  'memory.backups.cause.memory-scan': 'When Memory changed',
+  'memory.backups.cause.source-event': 'While the Bot handled a message',
+  'memory.backups.cause.human-edit': 'When you edited Memory',
+  'memory.backups.cause.turn-abort': 'When a conversation ended',
+  'memory.backups.cause.human-restore': 'Before a restore',
+  'memory.backups.choose': 'Restore to this point',
+  'memory.backups.confirm':
+    'Restore Memory to how it was at {time}? The whole Memory folder is copied first, so nothing is lost.',
+  'memory.backups.restore': 'Restore',
+  'memory.backups.restoring': 'Restoring…',
+  'memory.backups.done': 'Restored · Show where the earlier copy is',
   'memory.branchRequested': 'Switch requested:',
   'memory.branchRequestFailed': 'Could not send the switch request. Try again.',
   'memory.branchSwitchPrompt':
@@ -5892,6 +5894,12 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.view.graph': 'Evolution',
   'memory.view.versions': 'Versions',
   'memory.view.branches': 'Branches',
+  'memory.view.graphHelp':
+    'How Memory got to where it is, step by step. Each dot is a commit: open it to see what changed, or restore Memory to right after it.',
+  'memory.view.versionsHelp':
+    'Versions you named so you can find them later. To name one, right-click a commit in Evolution (or select it and click Name this version).',
+  'memory.view.branchesHelp':
+    'A branch is another line of development for Memory and is rarely needed. Switch branches here; to start a new one, right-click a commit in Evolution and choose Create and switch branch from here.',
   'memory.branches.empty': 'No branches yet.',
   'memory.branches.switch': 'Switch to this branch',
   'memory.branches.switchHelp':

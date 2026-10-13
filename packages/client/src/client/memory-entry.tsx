@@ -26,12 +26,11 @@ import {
   MEMORY_GRAPH_ROW_HEIGHT,
 } from './memory-git-lanes.js';
 import { MemoryWorkingGroups } from './memory-working-groups.js';
-import { MemoryRecovery } from './memory-recovery.js';
 import { MessagingHelp } from './messaging-help.js';
 import { memoryViewSnapshot, subscribeMemoryView } from './memory-view-prefs.js';
 import { useMountedResource } from './mounted-resource.js';
 
-import { cachedMemory, invalidateMemory } from './memory-read-cache.js';
+import { cachedMemory, invalidateMemory, subscribeMemory } from './memory-read-cache.js';
 import { MemoryLoadFeedback } from './memory-load-feedback.js';
 
 export function MemoryEntry(
@@ -71,8 +70,12 @@ function MemoryEntryForScope({
     backup: string | null;
     version: string | null;
   }>();
-  const [restores, setRestores] = useState(0);
   const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
+  const invalidated = useSyncExternalStore(
+    (listener) => subscribeMemory(cache, listener),
+    () => cache.revision,
+    () => cache.revision,
+  );
   const [versions, setVersions] = useState<MemoryVersion[]>();
   const [versionsError, setVersionsError] = useState<string>();
   const [openVersion, setOpenVersion] = useState<string>();
@@ -219,7 +222,7 @@ function MemoryEntryForScope({
       active = false;
       clearTimeout(graphTimer);
     };
-  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles]);
+  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles, invalidated]);
 
   const workingMount = useMountedResource<HTMLDivElement>(() => {
     if (showFiles) return;
@@ -273,7 +276,7 @@ function MemoryEntryForScope({
       window.removeEventListener('focus', onVisible);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles]);
+  }, [actions, channelId, refresh, refreshRevision, conversationRevision, showFiles, invalidated]);
 
   const fileMount = useMountedResource<HTMLDivElement>(() => {
     let active = true;
@@ -481,7 +484,6 @@ function MemoryEntryForScope({
         backup: result.backup,
         version: result.version?.name ?? null,
       });
-      setRestores((value) => value + 1);
       setRestoreForm(undefined);
       forgetMemory();
       onMemoryCommitSelect?.(result.head);
@@ -1206,15 +1208,6 @@ function MemoryEntryForScope({
             )}
           </>
         )}
-        {!showFiles ? (
-          <MemoryRecovery
-            actions={actions}
-            channelId={channelId}
-            refreshRevision={`${refreshRevision ?? 0}:${restores}`}
-            t={t}
-            onRestored={forgetMemory}
-          />
-        ) : null}
       </div>
     </div>
   );

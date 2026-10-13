@@ -1,10 +1,9 @@
-import { useState, useSyncExternalStore, type ReactElement } from 'react';
+import { Fragment, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { BridgeActions } from './actions.js';
 import type { MemoryRecoveryCheckpoint } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { MessagingHelp } from './messaging-help.js';
 
 type RecoverySnapshot = { checkpoints: MemoryRecoveryCheckpoint[]; error?: string };
 
@@ -139,11 +138,7 @@ export function MemoryRecovery({
   };
 
   return (
-    <details className="bh-memory-recovery">
-      <summary>
-        {t('memory.recovery.title')}
-        <MessagingHelp title={t('memory.recovery.title')} text={t('memory.recovery.help')} t={t} />
-      </summary>
+    <div className="bh-memory-recovery">
       {(error ?? loadError) === undefined ? null : (
         <div className="bh-error" role="alert">
           {error ?? loadError}
@@ -151,71 +146,79 @@ export function MemoryRecovery({
       )}
       {archivePath === undefined ? null : (
         <details className="bh-note bh-memory-recovery-archive" role="status">
-          <summary>{t('memory.recovery.done')}</summary>
+          <summary>{t('memory.backups.done')}</summary>
           <code>{archivePath}</code>
         </details>
       )}
-      <div className="bh-memory-recovery-list" role="list" aria-label={t('memory.recovery.title')}>
+      {checkpoints.length === 0 && loadError === undefined ? (
+        <div className="bh-note">{t('memory.backups.empty')}</div>
+      ) : null}
+      <div className="bh-memory-recovery-list" role="list" aria-label={t('memory.backups.title')}>
         {checkpoints.map((point, index) => (
-          <button
-            type="button"
-            role="listitem"
-            key={point.id}
-            data-checkpoint-id={point.id}
-            className="bh-memory-recovery-row"
-            aria-pressed={point.id === selectedId}
-            onClick={() => {
-              setSelectedId(point.id);
-              setConfirming(false);
-            }}
-          >
-            <span className="bh-memory-recovery-main">
-              <span>
-                {point.branch} · {point.head.slice(0, 7)}
+          <Fragment key={point.id}>
+            <button
+              type="button"
+              role="listitem"
+              data-checkpoint-id={point.id}
+              className="bh-memory-recovery-row"
+              aria-pressed={point.id === selectedId}
+              title={`${point.branch} · ${point.head.slice(0, 7)}`}
+              onClick={() => {
+                setSelectedId(point.id === selectedId ? undefined : point.id);
+                setConfirming(false);
+              }}
+            >
+              <span className="bh-memory-recovery-main">
+                <span>{new Date(point.capturedAt).toLocaleString()}</span>
+                {index === 0 ? (
+                  <span className="bh-memory-ref">{t('memory.backups.latest')}</span>
+                ) : null}
               </span>
-              {index === 0 ? (
-                <span className="bh-memory-ref">{t('memory.recovery.current')}</span>
-              ) : null}
-            </span>
-            <span className="bh-memory-recovery-meta">
-              {new Date(point.capturedAt).toLocaleString()} ·{' '}
-              {t(`memory.recovery.origin.${point.origin}`)}
-            </span>
-          </button>
+              <span className="bh-memory-recovery-meta">
+                {t(`memory.backups.cause.${point.causeKind}`)}
+              </span>
+            </button>
+            {point.id !== selectedId || index === 0 ? null : (
+              <div className="bh-memory-recovery-confirm">
+                {confirming ? (
+                  <>
+                    <p>
+                      {t('memory.backups.confirm', {
+                        time: new Date(point.capturedAt).toLocaleString(),
+                      })}
+                    </p>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => void restore()}
+                    >
+                      {busy ? t('memory.backups.restoring') : t('memory.backups.restore')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy}
+                      onClick={() => setConfirming(false)}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => setConfirming(true)}
+                  >
+                    {t('memory.backups.choose')}
+                  </Button>
+                )}
+              </div>
+            )}
+          </Fragment>
         ))}
       </div>
-      {selected === undefined ? null : (
-        <div className="bh-memory-recovery-selection">
-          <div>
-            {t('memory.recovery.cause')}: {t(`memory.recovery.cause.${selected.causeKind}`)}
-          </div>
-          {selected.id === current?.id ? null : confirming ? (
-            <div className="bh-memory-recovery-confirm">
-              <p>
-                {t('memory.recovery.confirm', {
-                  branch: selected.branch,
-                  sha: selected.head.slice(0, 7),
-                })}
-              </p>
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => void restore()}>
-                {busy ? t('memory.recovery.restoring') : t('memory.recovery.restore')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() => setConfirming(false)}
-              >
-                {t('memory.repairCancel')}
-              </Button>
-            </div>
-          ) : (
-            <Button variant="outline" size="sm" disabled={busy} onClick={() => setConfirming(true)}>
-              {t('memory.recovery.choose')}
-            </Button>
-          )}
-        </div>
-      )}
-    </details>
+    </div>
   );
 }

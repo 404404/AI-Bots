@@ -41,6 +41,8 @@ import type {
 import { formatRelativeTime } from './labels.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import { MemoryEntry } from './memory-entry.js';
+import { MemoryRecovery } from './memory-recovery.js';
+import { cachedMemory, invalidateMemory } from './memory-read-cache.js';
 import { MemoryFilesEntry } from './memory-files-entry.js';
 import { Modal } from './modal.js';
 import { ExternalSourceContent } from './external-source-content.js';
@@ -836,29 +838,43 @@ function MemoryViewTabs({ t, setExpanded }: ChannelSidebarEntryProps): ReactElem
   return (
     <span className="bh-memory-view-tabs" role="tablist" aria-label={t('memory.view.label')}>
       {(['graph', 'versions', 'branches'] as const).map((id) => (
-        <button
+        <Tooltip
           key={id}
-          type="button"
-          role="tab"
-          aria-selected={view === id}
-          onClick={() => {
-            setMemoryView(id);
-            setExpanded?.(true);
-          }}
+          label={t(`memory.view.${id}Help`)}
+          side="bottom"
+          maxWidth={280}
+          delayMs={300}
+          portal
         >
-          {t(`memory.view.${id}`)}
-        </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            onClick={() => {
+              setMemoryView(id);
+              setExpanded?.(true);
+            }}
+          >
+            {t(`memory.view.${id}`)}
+          </button>
+        </Tooltip>
       ))}
     </span>
   );
 }
 
-function MemoryHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
+function MemoryHeaderAction({
+  t,
+  actions,
+  channelId,
+  refreshRevision,
+}: ChannelSidebarEntryProps): ReactElement {
   const terminology = useSyncExternalStore(
     channelSidebarPrefs.subscribe,
     () => channelSidebarPrefs.getSnapshot().memoryTerminology,
     () => channelSidebarPrefs.getSnapshot().memoryTerminology,
   );
+  const [backups, setBackups] = useState(false);
   return (
     <>
       <SidebarViewMenu
@@ -867,10 +883,33 @@ function MemoryHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
           { type: 'label', id: 'terminology-label', text: t('memory.terminology') },
           { id: 'memory', label: t('memory.terms.memory') },
           { id: 'git', label: t('memory.terms.git') },
+          { type: 'separator', id: 'backups-separator' },
+          { id: 'backups', label: t('memory.backups.open') },
         ]}
         selectedIds={[terminology]}
-        onSelect={(id) => channelSidebarPrefs.setMemoryTerminology(id === 'git' ? 'git' : 'memory')}
+        onSelect={(id) => {
+          if (id === 'backups') setBackups(true);
+          else channelSidebarPrefs.setMemoryTerminology(id === 'git' ? 'git' : 'memory');
+        }}
       />
+      {!backups ? null : (
+        <Modal
+          open
+          onClose={() => setBackups(false)}
+          closeLabel={t('common.close')}
+          title={t('memory.backups.title')}
+          description={t('memory.backups.intro')}
+          className="bh-memory-backups-dialog"
+        >
+          <MemoryRecovery
+            actions={actions}
+            channelId={channelId}
+            refreshRevision={refreshRevision}
+            t={t}
+            onRestored={() => invalidateMemory(cachedMemory(actions, channelId))}
+          />
+        </Modal>
+      )}
     </>
   );
 }
