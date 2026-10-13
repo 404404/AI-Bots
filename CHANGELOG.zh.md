@@ -157,6 +157,8 @@
 
 ### Changed
 
+- Bot 现在可以在普通 Profile 里询问密钥，不需要 Docker 或专门配置：值存进 DSH 的凭据存储并绑定到该 Bot，会话和模型只看到引用，针对凭据存储的文件工具和 Shell 命令会被拒绝。Docker 隔离的 Profile 仍可按需开启（[#1562](https://github.com/BotHarness/DeepSeekBot/issues/1562)、[ADR-0189](docs/adr/0189-secret-input-is-available-in-ordinary-profiles.md)）。
+
 - Bot 的提问卡不再卡住 Bot：45 秒内没有回答时，Bot 会继续处理别的消息，之后仍然可以在原卡片上作答。PersonaBot 现在使用产品自带的预设，开启了 DSH 的限时提问。工具审批仍需等待决定（[#1038](https://github.com/BotHarness/DeepSeekBot/issues/1038)、[ADR-0187](docs/adr/0187-personabots-use-a-product-preset-with-timed-questions.md)）。
 
 - Bot 的密钥输入卡现在也出现在请求所在的 Channel，包括群聊。只有 Owner 能填写，Channel 里不会出现任何密钥值，引用只交给发起请求的 Bot（[#1542](https://github.com/BotHarness/DeepSeekBot/issues/1542)）。
