@@ -36,6 +36,8 @@ Select a commit in the graph. **Restore to this commit** appears inside that com
 
 Select any commit and click **Name this version** to give it a name you will recognise later, such as "Draft before cleanup". The name appears as a badge on that commit in the graph. Remove it with the × next to the name in the commit's block. Names are stored as Git tags, so they stay with the Memory repository and do not change any commit.
 
+Switch **Memory evolution** from **Git graph** to **Named versions** to see only the versions you named, newest first, however far back they are. Click a version to open its changes, then **Restore this version** or **Remove name**.
+
 ## Advanced: system snapshots
 
 **Advanced · System snapshots** lists the snapshots BotHarness takes automatically when Memory changes or a Bot session ends. Each snapshot keeps the branch, commit, staged files and uncommitted files in hidden Git objects that do not appear in the graph. They are a last-resort safety net; for everyday time travel, use the graph. Select a snapshot and use **Copy and restore** to go back to it. This fully backs up the repository first and shows the backup location. A **Repair Memory** state has its own confirmation and backup procedure.

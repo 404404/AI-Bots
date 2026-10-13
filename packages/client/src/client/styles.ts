@@ -6866,6 +6866,17 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-memory-graph-rail { position: relative; flex: none; overflow: hidden; }
 .bh-memory-graph-rail svg { position: absolute; inset: 0; height: 100%; }
 .bh-memory-restore-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; padding-bottom: 10px; }
+.bh-memory-view-switch { display: inline-flex; align-self: flex-start; width: fit-content; gap: 2px; margin: 4px 0 8px; padding: 2px; border-radius: 8px; background: var(--dsw-alias-bg-secondary, var(--bh-selected)); }
+.bh-memory-view-switch > button { border: 0; border-radius: 6px; padding: 3px 10px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; }
+.bh-memory-view-switch > button[aria-pressed='true'] { background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 8%); }
+.bh-memory-version-list { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bh-memory-version-row { display: flex; flex-direction: column; align-items: stretch; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--bh-memory-radius-row); background: transparent; color: var(--dsw-alias-label-primary); text-align: left; cursor: pointer; }
+.bh-memory-version-row:hover { background: var(--bh-hover, var(--bh-selected)); }
+.bh-memory-version-row[data-expanded='true'] { border-bottom-left-radius: 0; border-bottom-right-radius: 0; background: var(--bh-selected); }
+.bh-memory-version-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bh-memory-version-name::before { content: '★ '; color: var(--dsw-alias-state-success-primary); }
+.bh-memory-version-subject { overflow: hidden; color: var(--dsw-alias-label-secondary); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.bh-memory-version-panel { margin-top: -2px; padding: 0 10px 10px; border-radius: 0 0 var(--bh-memory-radius-row) var(--bh-memory-radius-row); background: var(--bh-selected); }
 .bh-memory-restore-actions { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
 .bh-memory-version { flex: none; max-width: 40%; overflow: hidden; padding: 0 6px; border-radius: 999px; background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 12%, transparent); color: var(--dsw-alias-state-success-primary); font-size: 11px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
 .bh-memory-version::before { content: '★ '; }

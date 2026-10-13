@@ -415,6 +415,19 @@ describe('current Git working tree is Memory', () => {
         { tag: `version-${first.slice(0, 7)}`, name: 'a..b' },
         { tag: '整理前-的草稿-2', name: '整理前 的草稿' },
       ]);
+      expect(memory.versions('atlas').map((version) => [version.tag, version.sha])).toEqual(
+        expect.arrayContaining([
+          ['整理前-的草稿', result.backup],
+          ['整理前-的草稿-2', first],
+          [`version-${first.slice(0, 7)}`, first],
+        ]),
+      );
+      expect(
+        memory.versions('atlas').find((version) => version.tag === '整理前-的草稿'),
+      ).toMatchObject({
+        name: '整理前 的草稿',
+        subject: 'Back up uncommitted Memory before restore',
+      });
       memory.removeVersionNameHuman({ botSlug: 'atlas', tag: '整理前-的草稿-2' });
       expect(
         memory.gitGraph('atlas').commits.find((commit) => commit.sha === first)?.versions,

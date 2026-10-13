@@ -117,6 +117,12 @@ export interface MemoryVersionName {
   name: string;
 }
 
+export interface MemoryVersion extends MemoryVersionName {
+  sha: string;
+  subject: string;
+  namedAt: string;
+}
+
 export interface MemoryGitGraph {
   head: string;
   currentBranch: string | null;
@@ -221,6 +227,7 @@ export interface MemoryAcceptance {
     saved: MemoryRecoveryCheckpoint;
   };
   nameVersionHuman(input: { botSlug: string; sha: string; name: string }): MemoryVersionName;
+  versions(botSlug: string): MemoryVersion[];
   removeVersionNameHuman(input: { botSlug: string; tag: string }): void;
 }
 
@@ -311,6 +318,29 @@ function versionNames(root: string): Map<string, MemoryVersionName[]> {
     names.set(sha, [...(names.get(sha) ?? []), { tag, name }]);
   }
   return names;
+}
+
+function versionList(root: string): MemoryVersion[] {
+  const versions: MemoryVersion[] = [];
+  for (const line of output(root, [
+    'for-each-ref',
+    '--sort=-creatordate',
+    '--count=500',
+    '--format=%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)%1f%(if)%(*objecttype)%(then)%(*objecttype)%(else)%(objecttype)%(end)%1f%(objecttype)%1f%(refname:strip=2)%1f%(contents:subject)%1f%(if)%(*objectname)%(then)%(*subject)%(else)%(subject)%(end)%1f%(creatordate:iso-strict)',
+    'refs/tags',
+  ]).split('\n')) {
+    const [sha = '', target = '', type = '', tag = '', message = '', subject = '', namedAt = ''] =
+      line.split('\x1f');
+    if (!/^[0-9a-f]{40}$/u.test(sha) || target !== 'commit' || tag === '') continue;
+    versions.push({
+      sha,
+      tag,
+      name: type === 'tag' && message !== '' ? message : tag,
+      subject,
+      namedAt,
+    });
+  }
+  return versions;
 }
 
 function validVersionName(name: string): string {
@@ -2092,6 +2122,9 @@ export function createMemoryAcceptance(options: {
         );
       }
       return { head: loaded, backup, version, saved };
+    },
+    versions(botSlug) {
+      return versionList(graphRepository(botSlug));
     },
     nameVersionHuman(input) {
       return nameVersion(repository(registry, input.botSlug), input.sha, input.name);

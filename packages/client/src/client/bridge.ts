@@ -3339,6 +3339,39 @@ export interface MemoryVersionName {
   name: string;
 }
 
+export interface MemoryVersion extends MemoryVersionName {
+  sha: string;
+  subject: string;
+  namedAt: string;
+}
+
+export async function loadMemoryVersions(
+  call: BridgeCall,
+  channelId: string,
+): Promise<MemoryVersion[]> {
+  const response = asRecord(await unwrap(call, 'memoryVersions', { channelId }));
+  const versions = response?.['versions'];
+  if (!Array.isArray(versions)) throw new Error('invalid Memory versions');
+  return versions.flatMap((item) => {
+    const version = asRecord(item);
+    return typeof version?.['tag'] === 'string' &&
+      typeof version['name'] === 'string' &&
+      typeof version['sha'] === 'string' &&
+      typeof version['subject'] === 'string' &&
+      typeof version['namedAt'] === 'string'
+      ? [
+          {
+            tag: version['tag'],
+            name: version['name'],
+            sha: version['sha'],
+            subject: version['subject'],
+            namedAt: version['namedAt'],
+          },
+        ]
+      : [];
+  });
+}
+
 function parseVersionNames(value: unknown): MemoryVersionName[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {

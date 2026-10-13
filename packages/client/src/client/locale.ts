@@ -2631,6 +2631,13 @@ export const zh = {
   'memory.version.save': '保存名称',
   'memory.version.remove': '移除名称「{name}」',
   'memory.version.dirtyHint': '名称会标在这次提交上，还没提交的改动不包含在内。',
+  'memory.view.label': '记忆演化显示方式',
+  'memory.view.graph': 'Git 图',
+  'memory.view.versions': '已命名版本',
+  'memory.versions.empty': '还没有命名的版本。在 Git 图里选中一个提交，点击「给这个版本起名」。',
+  'memory.versions.current': '当前',
+  'memory.versions.restore': '恢复到这个版本',
+  'memory.versions.removeName': '移除名称',
   'memory.newBranch': '新分支名称',
   'memory.createAndSwitch': '创建并切换',
   'memory.continuePrompt':
@@ -5883,6 +5890,14 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'memory.version.remove': 'Remove the name "{name}"',
   'memory.version.dirtyHint':
     'The name marks this commit; changes that are not committed yet are not included.',
+  'memory.view.label': 'Memory evolution view',
+  'memory.view.graph': 'Git graph',
+  'memory.view.versions': 'Named versions',
+  'memory.versions.empty':
+    'No named versions yet. Select a commit in the Git graph and click Name this version.',
+  'memory.versions.current': 'Current',
+  'memory.versions.restore': 'Restore this version',
+  'memory.versions.removeName': 'Remove name',
   'memory.newBranch': 'New branch name',
   'memory.createAndSwitch': 'Create and switch',
   'memory.continuePrompt':

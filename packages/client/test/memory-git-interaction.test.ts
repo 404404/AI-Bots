@@ -714,6 +714,91 @@ describe('Memory Git graph sidebar', () => {
     expect(container.querySelector('.bh-memory-entry')?.textContent).not.toContain('draft.md');
   });
 
+  it('switches the evolution view to a list of named versions', async () => {
+    const older = 'b'.repeat(40);
+    const graph: MemoryGitGraph = {
+      head: SHA,
+      currentBranch: 'main',
+      branches: ['main'],
+      dirty: false,
+      commits: [
+        {
+          sha: SHA,
+          parents: [],
+          subject: 'Newer memory',
+          authoredAt: '2026-09-26T00:00:00Z',
+          branches: ['main'],
+          status: 'accepted',
+        },
+      ],
+      hasMore: false,
+    };
+    const onMemoryCommitSelect = vi.fn();
+    const actions = {
+      memorySnapshot: vi.fn(async () => ({ head: SHA, files: [], provisional: false })),
+      memoryGitGraph: vi.fn().mockResolvedValue(graph),
+      memoryVersions: vi.fn().mockResolvedValue([
+        {
+          tag: 'monday',
+          name: '周一',
+          sha: older,
+          subject: 'Older memory',
+          namedAt: '2026-09-25T00:00:00Z',
+        },
+      ]),
+      memoryRestoreCommit: vi.fn().mockResolvedValue({
+        head: 'c'.repeat(40),
+        backup: null,
+        version: null,
+        saved: { id: 'saved' },
+      }),
+      memoryRemoveVersionName: vi.fn().mockResolvedValue(undefined),
+      ...inertSubmissionActions,
+    } as unknown as BridgeActions;
+    await act(async () => {
+      root.render(
+        createElement(MemoryEntry, {
+          scope: 'personabot',
+          channelId: 'dm-qa',
+          botSlug: 'qa',
+          actions,
+          onMemoryCommitSelect,
+          t: zhTranslate,
+        }),
+      );
+    });
+    const button = (text: string): HTMLButtonElement | undefined =>
+      Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+        (item) => item.textContent === text,
+      );
+    expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
+    await act(async () => button('已命名版本')?.click());
+    expect(container.querySelector('.bh-memory-graph-list')).toBeNull();
+    const row = container.querySelector<HTMLButtonElement>('.bh-memory-version-row');
+    expect(row?.textContent).toContain('周一');
+    expect(row?.textContent).toContain('Older memory');
+    await act(async () => row?.click());
+    expect(onMemoryCommitSelect).toHaveBeenCalledWith(older);
+    await act(async () => button('恢复到这个版本')?.click());
+    expect(container.querySelector('.bh-memory-restore-confirm')?.textContent).toContain(
+      '包含这次提交的改动',
+    );
+    await act(async () => button('恢复')?.click());
+    expect(actions.memoryRestoreCommit).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      sha: older,
+      expectedHead: SHA,
+      restoreId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+    });
+    await act(async () => button('移除名称')?.click());
+    expect(actions.memoryRemoveVersionName).toHaveBeenCalledWith({
+      channelId: 'dm-qa',
+      tag: 'monday',
+    });
+    await act(async () => button('Git 图')?.click());
+    expect(container.querySelector('.bh-memory-graph-list')).not.toBeNull();
+  });
+
   it('groups commit changes into independently collapsible files with graph badges', async () => {
     const actions = {
       memoryGitCommitDiff: vi.fn().mockResolvedValue({

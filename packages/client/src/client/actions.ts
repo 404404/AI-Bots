@@ -220,6 +220,7 @@ import {
   restoreMemoryCheckpoint,
   restoreMemoryCommit,
   nameMemoryVersion,
+  loadMemoryVersions,
   removeMemoryVersionName,
   saveMemoryFile,
   repairMemory,
@@ -247,6 +248,7 @@ import {
   type MemoryWorkingDiff,
   type MemoryWorkingKind,
   type MemoryRecoveryCheckpoint,
+  type MemoryVersion,
   type MemoryVersionName,
   type MemoryRepairEvent,
   type ProfileActivity,
@@ -581,6 +583,7 @@ export interface BridgeActions {
     name: string;
   }): Promise<MemoryVersionName>;
   memoryRemoveVersionName(input: { channelId: string; tag: string }): Promise<void>;
+  memoryVersions(channelId: string): Promise<MemoryVersion[]>;
   memoryRepair(input: {
     channelId: string;
     expectedHead: string;
@@ -2351,6 +2354,7 @@ export function createActions(
     memoryRestoreCommit: (input) => restoreMemoryCommit(call, input),
     memoryNameVersion: (input) => nameMemoryVersion(call, input),
     memoryRemoveVersionName: (input) => removeMemoryVersionName(call, input),
+    memoryVersions: (channelId) => loadMemoryVersions(call, channelId),
     memorySave: (input) => saveMemoryFile(call, input),
     memoryRepair: (input) => repairMemory(call, input),
     openSession(sessionId) {

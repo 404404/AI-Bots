@@ -469,6 +469,7 @@ describe('plugin entry', () => {
       'memoryRestoreCommit',
       'memoryNameVersion',
       'memoryRemoveVersionName',
+      'memoryVersions',
       'memoryRepair',
       'profileActivity',
       'profileSessionUsage',

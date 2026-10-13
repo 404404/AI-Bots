@@ -212,6 +212,7 @@ describe('bridge typert service', () => {
       'memoryRestoreCommit',
       'memoryNameVersion',
       'memoryRemoveVersionName',
+      'memoryVersions',
       'memoryRepair',
       'profileActivity',
       'profileSessionUsage',

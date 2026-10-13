@@ -159,6 +159,7 @@ import {
   type MemoryAcceptedCommit,
   type MemoryAcceptedSnapshot,
   type MemoryGitGraph,
+  type MemoryVersion,
   type MemoryVersionName,
   type MemoryGitCommitDiff,
   type MemoryWorkingChange,
@@ -583,6 +584,7 @@ export interface BridgeMethods {
     saved: MemoryRecoveryCheckpoint;
   }>;
   memoryNameVersion(payload: unknown): BridgeResult<{ version: MemoryVersionName }>;
+  memoryVersions(payload: unknown): BridgeResult<{ versions: MemoryVersion[] }>;
   memoryRemoveVersionName(payload: unknown): BridgeResult<{ removed: true }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
@@ -4557,6 +4559,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           ...(name === undefined ? {} : { name }),
         }),
       );
+    },
+    memoryVersions(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      return memoryCall(() => ({ versions: deps.memory!.versions(scope.botSlug) }));
     },
     memoryNameVersion(payload) {
       const scope = dmMemory(payload);
