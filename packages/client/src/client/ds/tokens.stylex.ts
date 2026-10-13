@@ -65,5 +65,6 @@ export const color = stylex.defineConsts({
   warningSoft: 'var(--dsw-alias-state-warn-tertiary)',
   success: 'var(--dsw-alias-state-success-primary)',
   surface: 'var(--dsw-alias-bg-module-platform)',
+  elevated: 'var(--dsw-alias-button-elevated-fill)',
   base: 'var(--dsw-alias-bg-base)',
 });

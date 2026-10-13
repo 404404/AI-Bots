@@ -13,6 +13,8 @@ import type {
   ChannelSidebarEntryProps,
 } from '../src/client/channel-sidebar.js';
 import { ChannelSidebarEntrySection } from '../src/client/channel-sidebar-view.js';
+import { ComposerContextBar } from '../src/client/composer-context-bar.js';
+import { ChipButton } from '../src/client/ds/chip-button.js';
 import { IconButton } from '../src/client/ds/icon-button.js';
 import { PanelHeader } from '../src/client/ds/panel-header.js';
 
@@ -130,5 +132,42 @@ describe('design-system surfaces', () => {
     const body = document.getElementById(button('Sessions').getAttribute('aria-controls')!);
     expect(body?.textContent).toBe('session list');
     expect(button('New session')).toBeDefined();
+  });
+
+  it('groups composer context chips under one named group', () => {
+    const onModel = vi.fn();
+    render(
+      createElement(ComposerContextBar, {
+        label: 'Conversation context',
+        trailing: createElement(ChipButton, {
+          label: '1.3M tokens',
+          'aria-label': 'Usage',
+          'aria-expanded': false,
+        }),
+        children: createElement(ChipButton, {
+          label: 'DeepSeek',
+          wrap: true,
+          'aria-label': 'Model · DeepSeek',
+          onClick: onModel,
+        }),
+      }),
+    );
+    const group = host.querySelector('[role="group"]')!;
+    expect(group.getAttribute('aria-label')).toBe('Conversation context');
+    expect(group.hasAttribute('hidden')).toBe(false);
+    act(() => button('Model · DeepSeek').click());
+    expect(onModel).toHaveBeenCalledTimes(1);
+    expect(button('Usage').textContent).toBe('1.3M tokens');
+  });
+
+  it('hides the composer context group on request', () => {
+    render(
+      createElement(ComposerContextBar, {
+        label: 'Conversation context',
+        hidden: true,
+        children: createElement(ChipButton, { label: '1 workspace', 'aria-label': 'Workspaces' }),
+      }),
+    );
+    expect(host.querySelector<HTMLElement>('[role="group"]')!.hidden).toBe(true);
   });
 });

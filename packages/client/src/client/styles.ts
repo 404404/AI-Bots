@@ -1265,12 +1265,6 @@ html[data-botharness-motion='reduce'] .bh-avatar-botui i {
   color: var(--dsw-alias-label-secondary);
   font-weight: 600;
 }
-.bh-channel-mark-sm {
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  font-size: 12px;
-}
 
 /* Conversation rows share the DM geometry so Groups also show a message preview. */
 .bh-channel-row {
@@ -2137,8 +2131,6 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
 .bh-channel-island > :first-child {
   flex: 0 0 auto;
 }
-.bh-group-channel-name { display: inline-flex; align-items: center; flex: 1; min-width: 0; padding: 0; border: 0; border-radius: 4px; color: inherit; background: transparent; font: inherit; cursor: pointer; }
-.bh-group-channel-name:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
 .bh-group-live-activity { container-type: inline-size; min-width: 0; }
 .bh-group-live-activity-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; }
 .bh-group-activity-chip { display: inline-flex; min-width: 0; max-width: 100%; border-radius: 999px; }
@@ -2995,14 +2987,6 @@ button.bh-profile-heat-cell:focus-visible {
   background: var(--dsw-alias-bg-base);
   mask-image: linear-gradient(to bottom, var(--dsw-alias-label-primary) 16%, transparent 100%);
   pointer-events: none;
-}
-.bh-topbar .bh-title {
-  flex: 1 1 auto;
-  min-width: 56px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .bh-content {
   flex: 1;
