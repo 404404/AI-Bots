@@ -103,7 +103,7 @@ export function mountPrivateInputs(
   const mcpServers = new SecretMcpServers();
   const liveOrchestrators = new Map<
     import('@deepseek-ai/dsh-agent').Agent,
-    { botSlug: string; connect(server: SecretMcpRecord): void }
+    { botSlug: string; connect(server: SecretMcpRecord): Promise<void> }
   >();
   ctx.effect(() => () => mcpServers.close(), 'botharness: secret MCP servers');
   owner.mcpServers = {
@@ -136,8 +136,18 @@ export function mountPrivateInputs(
       if (record === undefined || store === undefined) return false;
       store.setEnabled(botSlug, record.botSlug, serverName, enabled);
       if (enabled) {
-        for (const live of liveOrchestrators.values())
-          if (live.botSlug === botSlug) live.connect(record);
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        await Promise.race([
+          Promise.all(
+            [...liveOrchestrators.values()]
+              .filter((live) => live.botSlug === botSlug)
+              .map((live) => live.connect(record)),
+          ),
+          new Promise((resolve) => {
+            timer = setTimeout(resolve, 10_000);
+          }),
+        ]);
+        clearTimeout(timer);
       } else await mcpServers.stopInstance(botSlug, serverName);
       return true;
     },
@@ -735,9 +745,9 @@ export function mountPrivateInputs(
             },
           }),
         );
-        const connectRemembered = (server: SecretMcpRecord): void => {
-          if (mcpServers.has(agent, server.serverName)) return;
-          void connectServer(
+        const connectRemembered = (server: SecretMcpRecord): Promise<void> => {
+          if (mcpServers.has(agent, server.serverName)) return Promise.resolve();
+          return connectServer(
             {
               server_name: server.serverName,
               account: server.account,
@@ -774,7 +784,7 @@ export function mountPrivateInputs(
               setTimeout(() => reconnect(attempt + 1), 250).unref();
               return;
             }
-            for (const server of remembered) connectRemembered(server);
+            for (const server of remembered) void connectRemembered(server);
           };
           reconnect(0);
         }
