@@ -472,6 +472,7 @@ export type DmMessageAdmission =
 
 export interface BotRuntime {
   canRequestPrivateInput?(sessionId: string, sourceEventId?: string): boolean;
+  askChannel?(sessionId: string): string | undefined;
   bindPrivateInputOrigin?(
     sessionId: string,
     sourceEventId?: string,
@@ -2684,6 +2685,18 @@ class BotRuntimeImplementation implements BotRuntime {
     if (changed) this.#channels.admissionChanged?.(channelId, messageId);
   }
 
+  askChannel(sessionId: string): string | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    if (this.#closed || owner?.rootRole !== 'orchestrator') return undefined;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (turn?.sessionId !== sessionId || turn.inboundChannelId === undefined) return undefined;
+    const channel = this.#channels.get(turn.inboundChannelId);
+    if (channel === undefined) return undefined;
+    if (channel.type === 'group')
+      return channel.members.includes(owner.botSlug) ? channel.id : undefined;
+    return channel.botSlug === owner.botSlug ? channel.id : undefined;
+  }
+
   canRequestPrivateInput(sessionId: string, selected?: string): boolean {
     const owner = this.#ownership.resolve(sessionId);
     if (
@@ -4768,8 +4781,14 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       requestGrant: async (reason) => {
         const channel = resolve();
-        if (channel.type !== 'dm' || channel.botSlug !== botSlug) {
-          throw new Error('Workspace Grant requests must be sent in this PersonaBot DM');
+        if (
+          channel.type === 'group'
+            ? !channel.members.includes(botSlug)
+            : channel.botSlug !== botSlug
+        ) {
+          throw new Error(
+            'Workspace Grant requests must be sent in a Group this PersonaBot belongs to or in its Human DM',
+          );
         }
         const body = requireNonBlank(reason, 'Workspace Grant request reason');
         beforeSend();
