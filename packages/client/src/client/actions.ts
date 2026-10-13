@@ -565,7 +565,8 @@ export interface BridgeActions {
     sha: string;
     expectedHead: string;
     restoreId: string;
-  }): Promise<{ head: string; saved: MemoryRecoveryCheckpoint }>;
+    note?: string;
+  }): Promise<{ head: string; backup: string | null; saved: MemoryRecoveryCheckpoint }>;
   memoryRepair(input: {
     channelId: string;
     expectedHead: string;

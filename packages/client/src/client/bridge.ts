@@ -3935,18 +3935,20 @@ export async function restoreMemoryCheckpoint(
 
 export async function restoreMemoryCommit(
   call: BridgeCall,
-  input: { channelId: string; sha: string; expectedHead: string; restoreId: string },
-): Promise<{ head: string; saved: MemoryRecoveryCheckpoint }> {
+  input: { channelId: string; sha: string; expectedHead: string; restoreId: string; note?: string },
+): Promise<{ head: string; backup: string | null; saved: MemoryRecoveryCheckpoint }> {
   const response = asRecord(await unwrap(call, 'memoryRestoreCommit', input));
   const saved = asRecord(response?.['saved']);
   if (
     saved === undefined ||
     typeof saved['id'] !== 'string' ||
-    typeof response?.['head'] !== 'string'
+    typeof response?.['head'] !== 'string' ||
+    (response['backup'] !== null && typeof response['backup'] !== 'string')
   )
     throw new Error('invalid Memory restore result');
   return {
     head: response['head'] as string,
+    backup: response['backup'] as string | null,
     saved: saved as unknown as MemoryRecoveryCheckpoint,
   };
 }

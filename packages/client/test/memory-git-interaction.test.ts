@@ -169,13 +169,13 @@ it('requires an explicit confirmation before restoring an older Memory checkpoin
   const olderRow = container.querySelectorAll<HTMLButtonElement>('.bh-memory-recovery-row')[1];
   await act(async () => olderRow?.click());
   const choose = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '恢复到这个备份',
+    (button) => button.textContent === '恢复到这个快照',
   );
   await act(async () => choose?.click());
   expect(actions.memoryRestore).not.toHaveBeenCalled();
-  expect(container.textContent).toContain('当前仓库会先完整备份');
+  expect(container.textContent).toContain('当前整个记忆文件夹会先完整复制一份');
   const confirm = [...container.querySelectorAll<HTMLButtonElement>('button')].find(
-    (button) => button.textContent === '备份并恢复',
+    (button) => button.textContent === '复制并恢复',
   );
   await act(async () => confirm?.click());
   expect(actions.memoryRestore).toHaveBeenCalledWith({
@@ -616,7 +616,7 @@ describe('Memory Git graph sidebar', () => {
       })),
       memoryRestoreCommit: vi.fn(async () => {
         files = ['MEMORY.md'];
-        return { head: loaded, saved: { id: 'saved' } };
+        return { head: loaded, backup: 'd'.repeat(40), saved: { id: 'saved' } };
       }),
       ...inertSubmissionActions,
     } as unknown as BridgeActions;
@@ -655,8 +655,14 @@ describe('Memory Git graph sidebar', () => {
     expect(container.querySelector('.bh-memory-restore-confirm')?.textContent).toContain(
       '包含这次提交的改动，不包含之后的提交',
     );
+    const note = container.querySelector<HTMLInputElement>('.bh-memory-restore-note input');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      setter?.call(note, ' Draft before restoring ');
+      note?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     const submit = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
-      (button) => button.textContent === '备份并恢复',
+      (button) => button.textContent === '保存改动并恢复',
     );
     await act(async () => submit?.click());
     expect(actions.memoryRestoreCommit).toHaveBeenCalledWith({
@@ -664,10 +670,12 @@ describe('Memory Git graph sidebar', () => {
       sha: older,
       expectedHead: SHA,
       restoreId: expect.stringMatching(/^[0-9a-f-]{36}$/u),
+      note: 'Draft before restoring',
     });
     expect(onMemoryCommitSelect).toHaveBeenCalledWith(loaded);
     expect(container.querySelector('.bh-memory-restore-confirm')).toBeNull();
     expect(container.textContent).toContain('已恢复到 bbbbbbb');
+    expect(container.textContent).toContain('恢复前的改动保存在 ddddddd 这个提交里');
     expect(container.querySelector('.bh-memory-entry')?.textContent).not.toContain('draft.md');
   });
 

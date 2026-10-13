@@ -577,7 +577,7 @@ export interface BridgeMethods {
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
   memoryRestoreCommit(
     payload: unknown,
-  ): BridgeResult<{ head: string; saved: MemoryRecoveryCheckpoint }>;
+  ): BridgeResult<{ head: string; backup: string | null; saved: MemoryRecoveryCheckpoint }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
   profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
@@ -4530,7 +4530,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const sha = asNonBlank(source, 'sha');
       const expectedHead = asNonBlank(source, 'expectedHead');
       const restoreId = asNonBlank(source, 'restoreId');
+      const note = source['note'];
       if (
+        (note !== undefined &&
+          (typeof note !== 'string' || note.length > 200 || /[\r\n]/u.test(note))) ||
         sha === undefined ||
         expectedHead === undefined ||
         restoreId === undefined ||
@@ -4538,9 +4541,15 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         !/^[0-9a-f]{40}$/u.test(expectedHead) ||
         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(restoreId)
       )
-        return invalidInput('valid sha, expectedHead, and restoreId are required');
+        return invalidInput('valid sha, expectedHead, restoreId, and note are required');
       return memoryCall(() =>
-        deps.memory!.restoreCommitHuman({ botSlug: scope.botSlug, sha, expectedHead, restoreId }),
+        deps.memory!.restoreCommitHuman({
+          botSlug: scope.botSlug,
+          sha,
+          expectedHead,
+          restoreId,
+          ...(note === undefined ? {} : { note }),
+        }),
       );
     },
     memoryRepair(payload) {

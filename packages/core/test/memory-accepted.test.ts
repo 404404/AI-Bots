@@ -334,7 +334,7 @@ describe('current Git working tree is Memory', () => {
     }
   });
 
-  it('restores an older commit as a new commit after saving uncommitted work', () => {
+  it('restores an older commit after committing uncommitted work as a noted backup', () => {
     const { database, memory, root } = fixture();
     try {
       git(root, 'config', 'user.name', 'Test Author');
@@ -366,9 +366,14 @@ describe('current Git working tree is Memory', () => {
         sha: first,
         expectedHead: second,
         restoreId: '44444444-4444-4444-8444-444444444444',
+        note: 'Draft before restoring',
       });
       expect(git(root, 'rev-parse', 'HEAD')).toBe(result.head);
-      expect(git(root, 'rev-parse', 'HEAD^')).toBe(second);
+      expect(git(root, 'rev-parse', 'HEAD^')).toBe(result.backup);
+      expect(git(root, 'rev-parse', 'HEAD^^')).toBe(second);
+      expect(git(root, 'log', '-1', '--format=%s', result.backup!)).toBe('Draft before restoring');
+      expect(git(root, 'show', `${result.backup}:draft.md`)).toBe('untracked');
+      expect(git(root, 'show', `${result.backup}:note.md`)).toBe('unsaved');
       expect(git(root, 'rev-parse', 'HEAD^{tree}')).toBe(git(root, 'rev-parse', `${first}^{tree}`));
       expect(git(root, 'log', '-1', '--format=%s')).toBe(
         `Restore Memory to ${first.slice(0, 7)}: First note`,
@@ -387,6 +392,8 @@ describe('current Git working tree is Memory', () => {
         expectedHead: result.head,
         restoreId: '55555555-5555-4555-8555-555555555555',
       });
+      expect(back.backup).toBeNull();
+      expect(git(root, 'rev-parse', `${back.head}^`)).toBe(result.head);
       expect(git(root, 'rev-parse', `${back.head}^{tree}`)).toBe(
         git(root, 'rev-parse', `${second}^{tree}`),
       );

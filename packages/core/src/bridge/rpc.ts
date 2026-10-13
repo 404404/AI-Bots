@@ -1214,8 +1214,11 @@ export class BotharnessBridgeService extends TypertRemoteService {
     sha: string,
     expectedHead: string,
     restoreId: string,
-  ): { head: string; saved: MemoryRecoveryCheckpoint } {
-    return unwrap(this.methods.memoryRestoreCommit({ channelId, sha, expectedHead, restoreId }));
+    note?: string,
+  ): { head: string; backup: string | null; saved: MemoryRecoveryCheckpoint } {
+    return unwrap(
+      this.methods.memoryRestoreCommit({ channelId, sha, expectedHead, restoreId, note }),
+    );
   }
 
   memorySave(

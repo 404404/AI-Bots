@@ -207,8 +207,10 @@ export interface MemoryAcceptance {
     sha: string;
     expectedHead: string;
     restoreId: string;
+    note?: string;
   }): {
     head: string;
+    backup: string | null;
     saved: MemoryRecoveryCheckpoint;
   };
 }
@@ -1956,37 +1958,52 @@ export function createMemoryAcceptance(options: {
       );
       if (saved.branch !== branch || saved.head !== baseline)
         throw new MemoryAcceptError('memory-conflict', 'Memory changed while it was saved');
-      let loaded = baseline;
-      if (output(root, ['rev-parse', `${baseline}^{tree}`]) !== targetTree) {
+      const note = input.note?.trim() ?? '';
+      let backup: string | null = null;
+      let parent = baseline;
+      if (output(root, ['rev-parse', `${baseline}^{tree}`]) !== saved.workingTree) {
+        backup = output(root, [
+          'commit-tree',
+          saved.workingTree,
+          '-p',
+          baseline,
+          '-m',
+          note === '' ? 'Back up uncommitted Memory before restore' : note,
+        ]);
+        parent = backup;
+      }
+      let loaded = parent;
+      if (output(root, ['rev-parse', `${parent}^{tree}`]) !== targetTree) {
         const subject = output(root, ['log', '-1', '--format=%s', input.sha]).slice(0, 120);
         loaded = output(root, [
           'commit-tree',
           targetTree,
           '-p',
-          baseline,
+          parent,
           '-m',
           `Restore Memory to ${input.sha.slice(0, 7)}: ${subject}`,
         ]);
-        run(root, ['update-ref', `refs/heads/${branch}`, loaded, baseline]);
       }
+      if (loaded !== baseline) run(root, ['update-ref', `refs/heads/${branch}`, loaded, baseline]);
       run(root, ['reset', '--hard', loaded]);
       run(root, ['clean', '-fd']);
       try {
-        if (loaded !== baseline) {
+        const commits = [
+          ...(backup === null ? [] : [{ sha: backup, parentSha: baseline }]),
+          ...(loaded === parent ? [] : [{ sha: loaded, parentSha: parent }]),
+        ];
+        if (commits.length > 0) {
           accept(
             input.botSlug,
             branch,
-            [
-              {
-                sha: loaded,
-                parentSha: baseline,
-                actorKind: 'human',
-                actorId: LOCAL_HUMAN_ID,
-                causeKind: 'human-edit',
-                causeId: input.restoreId,
-                validationResult: validateCommit(root, loaded),
-              },
-            ],
+            commits.map((commit) => ({
+              ...commit,
+              actorKind: 'human' as const,
+              actorId: LOCAL_HUMAN_ID,
+              causeKind: 'human-edit' as const,
+              causeId: input.restoreId,
+              validationResult: validateCommit(root, commit.sha),
+            })),
             acceptedHead(input.botSlug, branch),
           );
         }
@@ -2002,7 +2019,7 @@ export function createMemoryAcceptance(options: {
           `memory-record-failed phase=after-human-commit-restore bot=${input.botSlug} reason=${error instanceof Error ? error.name : 'unknown'}`,
         );
       }
-      return { head: loaded, saved };
+      return { head: loaded, backup, saved };
     },
   };
 }

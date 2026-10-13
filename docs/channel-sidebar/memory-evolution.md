@@ -30,11 +30,11 @@ From a commit diff, **Create and switch branch from this memory** opens a new-br
 
 ## Restore an earlier memory
 
-Select a commit in the graph. **Restore to this commit** appears inside that commit's block; you can also right-click any commit. The confirmation says that Memory returns to how it was right after this commit: the commit's own changes are included and later commits are not. **Back up and restore** first backs up the current state, including files that are not committed yet, then adds a new commit whose files match the selected commit. Later commits stay in the graph, so you can restore any of them again. **Memory files** refreshes as soon as the restore finishes.
+Select a commit in the graph. **Restore to this commit** appears inside that commit's block; you can also right-click any commit. The confirmation says that Memory returns to how it was right after this commit: the commit's own changes are included and later commits are not. If Memory has changes that are not committed yet, they are first saved as an ordinary commit in the graph. You can give that commit a note; without one it is called "Back up uncommitted Memory before restore". **Save changes and restore** (or **Restore** when there is nothing uncommitted) then adds a new commit whose files match the selected commit. Every point you can go back to stays in the same graph, and **Memory files** refreshes as soon as the restore finishes.
 
-## Automatic backups
+## Advanced: system snapshots
 
-**Automatic backups** lists the states BotHarness backed up automatically: whenever Memory changed and before every restore. Each backup keeps the branch, commit, staged files and uncommitted files. Select a backup and use **Back up and restore** to go back to it. This fully backs up the repository first and shows the backup location. A **Repair Memory** state has its own confirmation and backup procedure.
+**Advanced · System snapshots** lists the snapshots BotHarness takes automatically when Memory changes or a Bot session ends. Each snapshot keeps the branch, commit, staged files and uncommitted files in hidden Git objects that do not appear in the graph. They are a last-resort safety net; for everyday time travel, use the graph. Select a snapshot and use **Copy and restore** to go back to it. This fully backs up the repository first and shows the backup location. A **Repair Memory** state has its own confirmation and backup procedure.
 
 The screenshots demonstrate reading the real repository and commit diff. They do not demonstrate a recovery or claim that the example repository needed repair.
 

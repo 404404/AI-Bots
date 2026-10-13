@@ -59,8 +59,8 @@ function MemoryEntryForScope({
     returnFocus: HTMLElement;
   }>();
   const [continueForm, setContinueForm] = useState<{ sha: string; branch: string }>();
-  const [restoreForm, setRestoreForm] = useState<{ sha: string }>();
-  const [restoredSha, setRestoredSha] = useState<string>();
+  const [restoreForm, setRestoreForm] = useState<{ sha: string; note: string }>();
+  const [restored, setRestored] = useState<{ sha: string; backup: string | null }>();
   const [restores, setRestores] = useState(0);
   const commitMenuAnchor = useRef<HTMLSpanElement>(null);
   const [snapshot, setSnapshot] = useState<MemorySnapshot | undefined>(cache.snapshot);
@@ -400,8 +400,9 @@ function MemoryEntryForScope({
         sha: restoreForm.sha,
         expectedHead: graph.head,
         restoreId: crypto.randomUUID(),
+        ...(restoreForm.note.trim() === '' ? {} : { note: restoreForm.note.trim() }),
       });
-      setRestoredSha(restoreForm.sha);
+      setRestored({ sha: restoreForm.sha, backup: result.backup });
       setRestores((value) => value + 1);
       setRestoreForm(undefined);
       forgetMemory();
@@ -672,9 +673,12 @@ function MemoryEntryForScope({
                 {t('memory.branchRequested')} {branchRequest}
               </div>
             )}
-            {restoredSha === undefined ? null : (
+            {restored === undefined ? null : (
               <div className="bh-note" role="status">
-                {t('memory.restoreCommit.done', { sha: restoredSha.slice(0, 7) })}
+                {t('memory.restoreCommit.done', { sha: restored.sha.slice(0, 7) })}
+                {restored.backup === null
+                  ? null
+                  : t('memory.restoreCommit.backedUp', { sha: restored.backup.slice(0, 7) })}
               </div>
             )}
             {commitMenu === undefined ? null : (
@@ -695,7 +699,7 @@ function MemoryEntryForScope({
                   onSelect={(id) => {
                     if (id === 'restore') {
                       setContinueForm(undefined);
-                      setRestoreForm({ sha: commitMenu.sha });
+                      setRestoreForm({ sha: commitMenu.sha, note: '' });
                     } else {
                       setRestoreForm(undefined);
                       setContinueForm({
@@ -841,7 +845,7 @@ function MemoryEntryForScope({
                               disabled={busy}
                               onClick={() => {
                                 setContinueForm(undefined);
-                                setRestoreForm({ sha: commit.sha });
+                                setRestoreForm({ sha: commit.sha, note: '' });
                               }}
                             >
                               {t('memory.restoreCommit.action')}
@@ -849,7 +853,29 @@ function MemoryEntryForScope({
                           </div>
                         ) : (
                           <div className="bh-memory-restore-confirm" role="group">
-                            <p>{t('memory.restoreCommit.confirm')}</p>
+                            <p>
+                              {t('memory.restoreCommit.confirm')}
+                              {graph.dirty
+                                ? t('memory.restoreCommit.confirmDirty')
+                                : t('memory.restoreCommit.confirmClean')}
+                            </p>
+                            {!graph.dirty ? null : (
+                              <label className="bh-memory-restore-note">
+                                <span>{t('memory.restoreCommit.note')}</span>
+                                <Input
+                                  value={restoreForm.note}
+                                  maxLength={200}
+                                  placeholder={t('memory.restoreCommit.notePlaceholder')}
+                                  disabled={busy}
+                                  onChange={(event) =>
+                                    setRestoreForm({ sha: commit.sha, note: event.target.value })
+                                  }
+                                  onKeyDown={(event) => {
+                                    if (event.key === 'Enter') void restoreCommit();
+                                  }}
+                                />
+                              </label>
+                            )}
                             <Button
                               variant="primary"
                               size="sm"
@@ -858,7 +884,9 @@ function MemoryEntryForScope({
                             >
                               {busy
                                 ? t('memory.restoreCommit.loading')
-                                : t('memory.restoreCommit.submit')}
+                                : graph.dirty
+                                  ? t('memory.restoreCommit.submitDirty')
+                                  : t('memory.restoreCommit.submit')}
                             </Button>
                             <Button
                               variant="ghost"
