@@ -14,9 +14,11 @@ export function ToolApprovalCard({
   decision,
   t,
   companionTarget,
+  channelId: sourceChannelId,
 }: {
   message: ChannelMessage;
   actions: BridgeActions;
+  channelId?: string | undefined;
   decision?:
     | 'allowed-once'
     | 'allowed-always-exact'
@@ -30,6 +32,7 @@ export function ToolApprovalCard({
   const [acceptedDecision, setAcceptedDecision] = useState<typeof decision>();
   const effectiveDecision = decision ?? acceptedDecision;
   const botSlug = message.author.kind === 'bot' ? message.author.slug : undefined;
+  const cardChannelId = sourceChannelId ?? 'dm-' + botSlug;
   const [status, setStatus] = useState<
     'loading' | 'pending' | 'expired' | 'decided' | 'unavailable'
   >(decision === undefined ? 'loading' : 'decided');
@@ -48,7 +51,7 @@ export function ToolApprovalCard({
       current !== undefined &&
       current.live &&
       current.botSlug === botSlug &&
-      current.channelId === 'dm-' + botSlug &&
+      current.channelId === cardChannelId &&
       current.sessionId === request.sessionId &&
       current.callId === request.callId
     );
@@ -62,7 +65,7 @@ export function ToolApprovalCard({
     if (companionTarget && effectiveDecision === undefined) setStatus('loading');
     const refreshExecution = (): void => {
       if (request.role !== 'assignment' || actions.toolApprovalExecutionState === undefined) return;
-      void actions.toolApprovalExecutionState('dm-' + botSlug, message.id).then(
+      void actions.toolApprovalExecutionState(cardChannelId, message.id).then(
         (value) => {
           if (!active) return;
           setExecutionState(value);
@@ -81,7 +84,7 @@ export function ToolApprovalCard({
       );
     };
     const refreshStatus = (): void => {
-      void actions.toolApprovalStatus('dm-' + botSlug, message.id).then(
+      void actions.toolApprovalStatus(cardChannelId, message.id).then(
         (value) => {
           if (active) {
             setStatus((current) =>
@@ -114,7 +117,7 @@ export function ToolApprovalCard({
     if (companionTarget && !qualified()) return;
     setBusy(true);
     setError(undefined);
-    const channelId = 'dm-' + botSlug;
+    const channelId = cardChannelId;
     if (
       !companionTarget &&
       store.getSnapshot().selection?.kind !== 'inbox' &&

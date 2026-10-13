@@ -150,6 +150,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Changed
 
+- A Bot working on a Group request now asks in that Group: tool approval cards, question cards and folder-access requests appear in the Channel the task came from instead of always in the Bot's DM. Secret input stays in the DM ([#1536](https://github.com/BotHarness/DeepSeekBot/issues/1536), [ADR-0186](docs/adr/0186-asks-follow-the-channel-the-task-came-from.md)).
+
 - A Group Channel's composer footer shows one workspace count, the distinct workspaces its member Bots can use together, instead of each Bot's own count; a DM still shows its Bot's count ([#1515](https://github.com/BotHarness/DeepSeekBot/pull/1515)).
 
 - Onboarding is now a getting-started checklist opened from a progress ring in the Bot-mode sidebar row (beside the exit button on mobile), so it takes no vertical space. It covers choosing a model and sending the first message, then letting the Bot remember you, connecting a chat app, setting a daily task and summoning the Window Companion, each with a direct action and a check read from that feature's own data. The interface walkthrough starts from the checklist and ends by showing how to leave Bot mode, and a quiet "Try it" chip marks the Bot-mode row until you first enter it ([#1496](https://github.com/BotHarness/DeepSeekBot/issues/1496), [ADR-0180](docs/adr/0180-onboarding-is-a-checklist-launched-from-the-bot-mode-row.md)).

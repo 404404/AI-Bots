@@ -15,9 +15,11 @@ export function UserQuestionCard({
   resolution,
   t,
   companionTarget,
+  channelId: sourceChannelId,
 }: {
   message: ChannelMessage;
   actions: BridgeActions;
+  channelId?: string | undefined;
   resolution?: 'answered' | 'cancelled' | undefined;
   t: BotHarnessTranslate;
   companionTarget?: CompanionRequestTarget | undefined;
@@ -25,6 +27,7 @@ export function UserQuestionCard({
   const developerMode = useContext(MessageDeveloperMode);
   const request = message.userQuestionRequest!;
   const botSlug = message.author.kind === 'bot' ? message.author.slug : undefined;
+  const cardChannelId = sourceChannelId ?? 'dm-' + botSlug;
   const [status, setStatus] = useState<
     'loading' | 'pending' | 'submitted' | 'expired' | 'answered' | 'cancelled'
   >(resolution ?? 'loading');
@@ -45,7 +48,7 @@ export function UserQuestionCard({
       current !== undefined &&
       current.live &&
       current.botSlug === botSlug &&
-      current.channelId === 'dm-' + botSlug &&
+      current.channelId === cardChannelId &&
       current.sessionId === request.sessionId
     );
   };
@@ -60,7 +63,7 @@ export function UserQuestionCard({
       if (companionTarget) setStatus('loading');
       setStatusError(false);
       const refresh = (): void => {
-        void actions.userQuestionStatus('dm-' + botSlug, message.id).then(
+        void actions.userQuestionStatus(cardChannelId, message.id).then(
           (value) => {
             if (active) {
               setStatus(value);
@@ -96,7 +99,7 @@ export function UserQuestionCard({
   const submit = (): void => {
     if (botSlug === undefined || submitting.current || status !== 'pending') return;
     if (companionTarget && !qualified()) return;
-    const channelId = 'dm-' + botSlug;
+    const channelId = cardChannelId;
     if (
       !companionTarget &&
       store.getSnapshot().selection?.kind !== 'inbox' &&

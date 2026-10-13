@@ -67,6 +67,7 @@ function PendingRequest({
             body: '',
             toolApprovalRequest: request,
           }}
+          channelId={request.channelId}
           actions={actions}
           t={t}
           companionTarget={{
@@ -83,6 +84,7 @@ function PendingRequest({
             body: '',
             userQuestionRequest: request,
           }}
+          channelId={request.channelId}
           actions={actions}
           t={t}
           companionTarget={companionTarget}
