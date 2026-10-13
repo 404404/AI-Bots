@@ -101,6 +101,15 @@ describe('asks follow the Channel the task came from', () => {
         }),
       ).toEqual({ ok: true, value: { accepted: true } });
       expect((await answer)?.answers).toEqual([{ id: 'which', selected: ['A'] }]);
+      expect(
+        core.channels
+          .readMessages(group.id)
+          .some(
+            (message) =>
+              message.userQuestionResolution?.requestMessageId === question.id &&
+              message.userQuestionResolution.state === 'answered',
+          ),
+      ).toBe(true);
 
       approvals.track({
         agent,

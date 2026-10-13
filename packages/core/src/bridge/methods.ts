@@ -4308,7 +4308,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('Unknown user question');
       return {
         ok: true,
-        value: { status: deps.userQuestions?.status(channel.botSlug, messageId) ?? 'expired' },
+        value: {
+          status: deps.userQuestions?.status(channel.botSlug, messageId, channelId) ?? 'expired',
+        },
       };
     },
     async userQuestionAnswer(payload) {
