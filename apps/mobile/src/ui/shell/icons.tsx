@@ -171,7 +171,3 @@ export function FolderIcon(props: IconProps) {
     />
   );
 }
-
-export function ChevronRightIcon(props: IconProps) {
-  return <Glyph {...props} d="m9 6 6 6-6 6" />;
-}
