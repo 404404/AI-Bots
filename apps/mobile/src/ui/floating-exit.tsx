@@ -1,5 +1,5 @@
-import { useMemo, useRef } from 'react';
-import { Animated, PanResponder, Pressable, useWindowDimensions } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Animated, PanResponder, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -15,7 +15,7 @@ import { useTheme } from './theme';
 
 let remembered: FloatingPoint | undefined;
 
-export function FloatingClose({ onClose }: { onClose(): void }) {
+export function FloatingExit({ onExit }: { onExit(): void }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const window = useWindowDimensions();
@@ -29,12 +29,15 @@ export function FloatingClose({ onClose }: { onClose(): void }) {
   const start = snapFloating(remembered ?? initialFloating(bounds), bounds);
   const position = useRef(new Animated.ValueXY(start)).current;
   const origin = useRef(start);
+  const [onLeft, setOnLeft] = useState(start.x < bounds.width / 2);
+  const [tip, setTip] = useState(false);
 
   const responder = useMemo(
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponderCapture: (_, gesture) =>
           Math.abs(gesture.dx) + Math.abs(gesture.dy) > 6,
+        onPanResponderTerminationRequest: () => false,
         onPanResponderGrant: () => {
           position.stopAnimation((value) => {
             origin.current = value;
@@ -52,6 +55,7 @@ export function FloatingClose({ onClose }: { onClose(): void }) {
             boundsRef.current,
           );
           remembered = next;
+          setOnLeft(next.x < boundsRef.current.width / 2);
           origin.current = next;
           Animated.spring(position, { toValue: next, useNativeDriver: false }).start();
         },
@@ -72,10 +76,13 @@ export function FloatingClose({ onClose }: { onClose(): void }) {
       }}
     >
       <Pressable
-        onPress={onClose}
+        onPress={onExit}
+        onLongPress={() => setTip(true)}
+        onPressOut={() => setTip(false)}
+        delayLongPress={350}
         accessibilityRole="button"
-        accessibilityLabel={t.closeFullClient}
-        accessibilityHint={t.closeFullClientHint}
+        accessibilityLabel={t.exitWebMode}
+        accessibilityHint={t.exitWebModeHint}
         style={({ pressed }) => ({
           width: FLOATING_SIZE,
           height: FLOATING_SIZE,
@@ -93,15 +100,50 @@ export function FloatingClose({ onClose }: { onClose(): void }) {
           elevation: 6,
         })}
       >
-        <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
           <Path
-            d="M6 6l12 12M18 6L6 18"
+            d="M10 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20H10"
             stroke={theme.ink}
-            strokeWidth={2.2}
+            strokeWidth={2}
             strokeLinecap="round"
+          />
+          <Path
+            d="M14 8l4 4-4 4M18 12H9"
+            stroke={theme.ink}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
         </Svg>
       </Pressable>
+      {tip ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            height: FLOATING_SIZE,
+            justifyContent: 'center',
+            ...(onLeft ? { left: FLOATING_SIZE + 8 } : { right: FLOATING_SIZE + 8 }),
+          }}
+        >
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 10,
+              backgroundColor: theme.ink,
+            }}
+          >
+            <Text
+              numberOfLines={1}
+              style={{ color: theme.background, fontSize: 14, fontWeight: '600' }}
+            >
+              {t.exitWebMode}
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </Animated.View>
   );
 }

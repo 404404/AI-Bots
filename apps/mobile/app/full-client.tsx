@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { fullClientSource, fullClientTarget, type FullClientParams } from '../src/host/full-client';
 import { useHostSession, useHostSnapshot } from '../src/host/host-session';
-import { FloatingClose } from '../src/ui/floating-close';
+import { FloatingExit } from '../src/ui/floating-exit';
 import { FullClientView } from '../src/ui/full-client-view';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
@@ -90,7 +90,7 @@ export default function FullClientScreen() {
           ) : null}
         </View>
       )}
-      <FloatingClose onClose={close} />
+      <FloatingExit onExit={close} />
     </View>
   );
 }
