@@ -58,14 +58,13 @@ Agents verify native UI on a Mac with Xcode: they drive a development build on t
      --launch-url "exp+deepseekbot://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
    npx agent-device snapshot -i                      # @e8 [text-field] "deepseekbot://pair?p=…" …
    npx agent-device fill @e8 "not-a-link" --settle   # the link field's ref from the snapshot
-   npx agent-device press 200 140 --settle           # tap the hint text: the keyboard covers Pair
    npx agent-device press 'label="Pair"' --settle
    npx agent-device wait text "This is not a DeepSeekBot pairing code."
    npx agent-device screenshot /tmp/pair.png
    npx agent-device close
    ```
 
-   iOS asks "Open in DeepSeekBot Dev?" before the launch link. agent-device accepts it only when the Simulator is in English; otherwise `snapshot -i` shows the alert and you press its Open button by ref. The first launch after a reset shows the dev menu onboarding: press **Continue**, then **Close**. On the pair screen the keyboard covers the Pair button; tap the hint text to end editing first.
+   iOS asks "Open in DeepSeekBot Dev?" before the launch link. agent-device accepts it only when the Simulator is in English; otherwise `snapshot -i` shows the alert and you press its Open button by ref. The first launch after a reset shows the dev menu onboarding: press **Continue**, then **Close**.
 
 3. **Regression flows.** `.maestro/pair-screen.yaml` launches a clean app with no permissions, connects it to Metro, checks the unpaired pair screen and the refusal of a bad pasted link. Maestro needs Java 17 or later (`brew install openjdk@21`, then point `JAVA_HOME` at it):
 
