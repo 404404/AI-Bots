@@ -24,6 +24,8 @@ export interface ChannelWireMessage extends WireMessage {
   privateInputRequest?: unknown;
   sessionFailure?: unknown;
   grantRequest?: true;
+  toolApprovalDecision?: unknown;
+  userQuestionResolution?: unknown;
 }
 
 export interface BridgeMediaItem {
