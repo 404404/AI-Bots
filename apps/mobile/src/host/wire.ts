@@ -16,13 +16,23 @@ export type WireAuthor =
 
 export interface ChannelWireMessage extends WireMessage {
   author: WireAuthor;
-  attachments?: readonly unknown[];
-  bridgeMedia?: { items: readonly unknown[] };
+  attachments?: readonly AttachmentRef[];
+  bridgeMedia?: { items: readonly BridgeMediaItem[] };
+  bridgeOrigin?: { sourceEventId: string };
   toolApprovalRequest?: unknown;
   userQuestionRequest?: unknown;
   privateInputRequest?: unknown;
   sessionFailure?: unknown;
   grantRequest?: true;
+  toolApprovalDecision?: unknown;
+  userQuestionResolution?: unknown;
+}
+
+export interface BridgeMediaItem {
+  id: string;
+  kind: 'image' | 'file' | 'audio';
+  name: string;
+  sizeBytes?: number;
 }
 
 export interface AttachmentRef {
@@ -103,10 +113,32 @@ export type RosterLiveFrame =
   | { type: 'latest'; channelId: string; message: WireMessage }
   | { type: 'purged'; placements: unknown[] };
 
+export interface WireToolActivity {
+  effect: 'thinking-dots' | 'searching' | 'coding' | 'executing' | 'generic-working';
+  toolName?: string;
+  publicDetail?: string;
+  activeToolCount: number;
+}
+
+export interface WireSessionActivity {
+  id: string;
+  role: 'orchestrator' | 'assignment' | 'subagent';
+  name?: string;
+  state: Exclude<AggregatedState, 'idle'>;
+  activity?: WireToolActivity;
+}
+
+export interface WireBotActivity {
+  slug: string;
+  state: AggregatedState;
+  activity?: WireToolActivity;
+  sessions?: readonly WireSessionActivity[];
+}
+
 export interface ActivitySnapshot {
   generation: string;
   revision: number;
-  bots: readonly { slug: string; state: AggregatedState }[];
+  bots: readonly WireBotActivity[];
 }
 
 export type ActivityLiveFrame =

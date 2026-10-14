@@ -52,13 +52,54 @@ export function webChannelShortcutLabel(index: number): string | undefined {
   return `Alt+${index === 9 ? 0 : index + 1}`;
 }
 
-export function webBotModeShortcut(
-  code: string,
+export function webModalOpen(root: { querySelector(selector: string): unknown }): boolean {
+  return root.querySelector(openModalSelector) !== null;
+}
+
+export function steppedConversationId(
+  order: readonly string[],
+  currentId: string | undefined,
+  direction: -1 | 1,
+  eligible: (id: string) => boolean = () => true,
+): string | undefined {
+  if (order.length === 0) return undefined;
+  const start = currentId === undefined ? -1 : order.indexOf(currentId);
+  for (let step = 1; step <= order.length; step += 1) {
+    const index =
+      start < 0
+        ? direction > 0
+          ? step - 1
+          : order.length - step
+        : (start + direction * step + order.length * step) % order.length;
+    const id = order[index]!;
+    if (id === currentId) continue;
+    if (eligible(id)) return id;
+  }
+  return undefined;
+}
+
+const quickSwitcherBlockSelector = '[role="dialog"], [role="alertdialog"], dialog';
+
+export function webQuickSwitcherBlocked(
+  target: EventTarget | null,
+  root: { querySelector(selector: string): unknown },
+): boolean {
+  if (
+    typeof Element !== 'undefined' &&
+    target instanceof Element &&
+    target.closest(quickSwitcherBlockSelector) !== null
+  ) {
+    return true;
+  }
+  return root.querySelector(openModalSelector) !== null;
+}
+
+export function webShortcutHelpQuestion(
+  key: string,
   keys: {
-    alt: boolean;
     ctrl: boolean;
     meta: boolean;
-    shift: boolean;
+    alt: boolean;
     altGraph?: boolean;
     composing?: boolean;
     repeat?: boolean;
@@ -66,11 +107,10 @@ export function webBotModeShortcut(
   },
 ): boolean {
   return (
-    code === 'Backquote' &&
-    keys.alt &&
+    key === '?' &&
     !keys.ctrl &&
     !keys.meta &&
-    !keys.shift &&
+    !keys.alt &&
     !keys.altGraph &&
     !keys.composing &&
     !keys.repeat &&

@@ -7,7 +7,8 @@
 ```bash
 deepseekbot create --name <name> [--persona <text> | --persona-stdin]
                    [--description <text>] [--role <tag> ...]
-                   [--preset <model-preset-id>] [--home <dsh-home>]
+                   [--preset <model-preset-id>] [--memory-location <absolute-dir>]
+                   [--home <dsh-home>]
 deepseekbot create --name <name> --from-git <url | owner/repo> [...]
 deepseekbot create [--name <name>] --from-zip <file> [...]
 deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -43,6 +44,8 @@ deepseekbot search <words>
 ```
 
 Exactly one source per create. `--name` is required for blank and GitHub bots; for bundle imports it overrides the name from `.botharness/bot.json` (or the file name). A `--from-git` value accepts a full Git URL (`https://`, `ssh://`, `git@host:path`) or an `owner/repo` shorthand for `https://github.com/owner/repo.git`, which also covers Bot Marketplace entries through their clone URL. A `--from-dir` bundle skips `.git` as files but packs it as history when present.
+
+`--memory-location <absolute-dir>` keeps a blank bot's Memory outside the DSH data folder (for example on another drive): the Bot's Memory repository is created in a new `<dir>/<bot-id>` folder, and `dataDir` reports that path. The path must be an existing absolute folder and the per-Bot folder must not exist yet (`invalid-memory-dir`); imports keep the default location. The create dialog offers the same choice under **Advanced settings → Memory location**.
 
 `--home` points at the target `DSH_HOME`; a fresh directory works with zero clicks. Without it, `DSH_HOME` from the environment is used. Stop the Host before offline database commands: the profile writer lease is exclusive (`lease-unavailable`). Secret file commands can run online; live commands below use authenticated Host RPC.
 
@@ -134,7 +137,10 @@ deepseekbot channel-timeline <channel> [--direction older|newer|around] [--curso
 deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
 deepseekbot channel-mark-read <channel> --message-id <message-id>
 deepseekbot channel-mark-all-read
+deepseekbot channel-unread
+deepseekbot channel-mute <channel> [--off]
 deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
+deepseekbot channel-bot-stop <channel> --bot <id>
 deepseekbot channel-history
 deepseekbot channel-history-sources <channel> [--before <cursor>]
 deepseekbot channel-purge-preview <channel> --source-event <id> [--source-event <id> …]
@@ -142,9 +148,50 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply.
+Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply. `channel-unread` lists the unread Bot message count of each Channel that has any; these are the numbers the sidebar shows on each row. `channel-mute` mutes a Channel the way the sidebar menu does: it keeps its row greyed and its unread messages out of the Activity total; `--off` unmutes it. `channel-bot-stop` stops the Bot's current turn, as the Stop button on the working status does: the Bot goes idle, the Channel records that the Human stopped it, and a Bot that is not working is refused with `not-working`. Assignments the Bot delegated keep running.
 
 `group-delete` and `channel-purge-confirm` cannot be undone and need `--confirm`. `channel-history` lists deleted groups whose content can still be purged. Purging works in two steps like the history page: `channel-purge-preview` lists the messages, Bot admissions, files and effects the chosen Source Events would remove and returns a short-lived `token`; `channel-purge-confirm` reads `{"token": …}` from stdin for the same Source Events and fails coded when the scope changed. Pick Source Events from `channel-history-sources`, which pages with the `before` cursor it returns.
+
+### Bot profile, roster and Part Library
+
+These commands set a Bot's look and wake rules, arrange the sidebar and manage Custom Parts through the same Host calls as the Web UI ([#1702](https://github.com/BotHarness/DeepSeekBot/issues/1702)):
+
+```bash
+deepseekbot bot-avatar-set <bot-id> --file ./avatar.png
+deepseekbot bot-banner-set <bot-id> --file ./banner.png
+printf '{"scene":"…","seed":7}' | deepseekbot bot-banner-set <bot-id> --recipe-stdin
+deepseekbot bot-banner-set <bot-id> --clear
+deepseekbot bot-appearance-set <bot-id> --recipe-stdin < recipe.json
+deepseekbot bot-primary-color-set <bot-id> --color '#3366ff'
+deepseekbot bot-primary-color-set <bot-id> --automatic
+deepseekbot bot-source-policies <bot-id>
+deepseekbot bot-source-policy-set <bot-id> --source-class group-ordinary --wake digest --digest-count 5 --digest-interval 600
+deepseekbot bot-source-policy-set <bot-id> --source-class human-dm --delivery turn
+deepseekbot bot-source-policy-reset <bot-id> --source-class group-ordinary
+deepseekbot bot-standing-limits-set <bot-id> --soul 4000 --core-memory 8000
+deepseekbot developer-mode-set --enabled
+deepseekbot roster
+deepseekbot roster-section-create "Work bots"
+deepseekbot roster-batch move <channel-id> <channel-id> --section <section-id>
+deepseekbot roster-batch pin <channel-id>
+deepseekbot roster-pins-set <channel-id> <channel-id>
+deepseekbot roster-hidden-set
+deepseekbot roster-section-rename <section-id> --name "Play"
+deepseekbot roster-section-reorder <section-id> <section-id>
+deepseekbot roster-top-reorder section:<section-id> channel:<channel-id>
+deepseekbot roster-section-remove <section-id> --confirm
+deepseekbot human-identity
+deepseekbot human-name-set --name "Vain"
+deepseekbot channel-human-name-set <channel-id> --nickname "Boss"
+deepseekbot part-library
+deepseekbot part-library-import --file ./parts.zip
+deepseekbot part-library-import-image --file ./hat.png --slot <slot> --colors 4 --name Hat
+deepseekbot part-library-add --part-stdin --name Bob < part.json
+deepseekbot part-library-export --out /tmp/part-library.zip
+deepseekbot part-library-export --part-id <part-id> --out /tmp/part.png
+```
+
+Images are read from a file path: an avatar is a PNG, JPEG or WebP; a banner is a 3:1 PNG; `--clear` returns the avatar to its default and the banner to the seeded scene. `bot-appearance-set` takes the same pixel recipe as the avatar editor and redraws the avatar from it. `--source-class` is `assignment-report` (`--wake conditional|immediate`), `group-ordinary` (`--wake immediate|digest|mentions|silent` with `--digest-count` and `--digest-interval` seconds), or `human-dm`, `bot-dm` and `group-mention` (`--delivery steer|turn`). Roster commands take Channel ids (`dm-<bot-id>` for a DM); `roster-pins-set` and `roster-hidden-set` replace the whole list, so pass no ids to clear it, and `roster-batch move` without `--section` moves to the top level. `roster-section-remove` needs `--confirm` and moves the section's Channels to the top level. With `--host` or `DEEPSEEKBOT_HOST`, `human-name-set` and `channel-human-name-set` use the Host; with `--home` they keep their offline path. `part-library-export` writes the part PNG, or a zip of the whole library, to `--out` and prints its file name and size; `--part-stdin` exports a worn part given as JSON.
 
 ### IM apps from the CLI
 
