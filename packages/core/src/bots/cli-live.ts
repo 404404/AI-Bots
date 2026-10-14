@@ -33,6 +33,7 @@ export const LIVE_OPTIONS = {
   bot: { type: 'string' },
   conversation: { type: 'string' },
   out: { type: 'string' },
+  'args-stdin': { type: 'boolean' },
   target: { type: 'string' },
 } as const;
 
@@ -44,6 +45,8 @@ const DEVICE_COMMANDS = [
   'computer-start',
   'computer-status',
   'computer-stop',
+  'browser-tools',
+  'browser-tool',
 ] as const;
 
 const IM_CONTROL_COMMANDS = [
@@ -156,6 +159,15 @@ export const LIVE_COMMANDS = [
   },
   { command: 'computer-status', description: 'read the profile Computer target and state' },
   { command: 'computer-stop', description: 'stop the profile Computer' },
+  {
+    command: 'browser-tools',
+    description: 'list the Browser tools a Bot can call, with input schemas',
+  },
+  {
+    command: 'browser-tool',
+    description:
+      'run one Browser tool directly for a Bot, without the model (args JSON from stdin)',
+  },
 ] as const;
 
 interface LiveValues extends ImValues {
@@ -183,6 +195,7 @@ interface LiveValues extends ImValues {
   bot?: string;
   conversation?: string;
   out?: string;
+  'args-stdin'?: boolean;
   target?: string;
 }
 
@@ -943,13 +956,34 @@ async function runDeviceCommand(
   values: LiveValues,
   io: BotCreateCliIo,
 ): Promise<unknown> {
-  const computer = command.startsWith('computer-');
-  if (computer ? rest.length !== 0 : rest.length !== 1 || !rest[0]?.trim())
+  const computer = command.startsWith('computer-') || command === 'browser-tools';
+  const positionals = command === 'browser-tool' ? 2 : computer ? 0 : 1;
+  if (rest.length !== positionals || rest.some((value) => !value.trim()))
     usage(
-      computer
-        ? `${command} takes no positional arguments.`
-        : `${command} needs exactly one bot id.`,
+      command === 'browser-tool'
+        ? 'browser-tool needs a bot id and a tool name.'
+        : computer
+          ? `${command} takes no positional arguments.`
+          : `${command} needs exactly one bot id.`,
     );
+  let toolArgs: Record<string, unknown> = {};
+  if (command === 'browser-tool' && values['args-stdin'] === true) {
+    try {
+      const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+        throw new Error('not an object');
+      toolArgs = parsed as Record<string, unknown>;
+    } catch {
+      usage('--args-stdin must be a JSON object of tool arguments.');
+    }
+  }
+  if (
+    command === 'browser-tool' &&
+    values.out !== undefined &&
+    !values.out.startsWith('/') &&
+    !/^[A-Za-z]:[\\/]/u.test(values.out)
+  )
+    usage('--out must be an absolute file path.');
   const slug = rest[0]?.trim() ?? '';
   if (command === 'browser-frame') {
     const out = values.out ?? '';
@@ -975,6 +1009,30 @@ async function runDeviceCommand(
       throw new CliLiveError('host-protocol-error', `The Host returned no JSON for ${path}.`);
     }
   };
+  if (command === 'browser-tools') return json('/api/browser/tools');
+  if (command === 'browser-tool') {
+    const result = record(
+      await json('/api/browser/tool', { slug, tool: rest[1]!.trim(), args: toolArgs }),
+    );
+    let saved = false;
+    const content = (Array.isArray(result['content']) ? result['content'] : []).map((value) => {
+      const item = record(value);
+      if (item['type'] !== 'image' || typeof item['data'] !== 'string') return item;
+      const bytes = Buffer.from(item['data'], 'base64');
+      if (values.out !== undefined && !saved) {
+        writeFileSync(values.out, bytes, { mode: 0o600 });
+        saved = true;
+        return {
+          type: 'image',
+          mimeType: item['mimeType'],
+          path: values.out,
+          bytes: bytes.byteLength,
+        };
+      }
+      return { type: 'image', mimeType: item['mimeType'], bytes: bytes.byteLength };
+    });
+    return { ...result, content };
+  }
   if (command === 'browser-open') return json('/api/browser/open', { slug });
   if (command === 'browser-takeover')
     return json('/api/browser/takeover', { slug, active: values.enabled === true });
