@@ -133,7 +133,7 @@ describe('Human Inbox tool approval', () => {
         expect(container.querySelector('.bh-human-inbox-detail')).not.toBeNull();
         expect(container.querySelector('[role="dialog"]')).toBeNull();
         expect(container.querySelector('.bh-tool-approval-input')?.textContent).toBe(
-          '{"command":"echo QA_RELEASE"}',
+          '$ echo QA_RELEASE',
         );
         expect(container.textContent).toContain('/qa/release');
         expect(container.querySelector('textarea')).toBeNull();
