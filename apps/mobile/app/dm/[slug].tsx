@@ -3,6 +3,7 @@ import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
+import { botSettings } from '../../src/host/bot-settings';
 import type { HostClient } from '../../src/host/client';
 import type {
   CardResolution,
@@ -35,14 +36,18 @@ import { ApprovalCard } from '../../src/ui/chat/approval-card';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
+import { modelLabel, useComposerContext, workspaceLabel } from '../../src/ui/chat/composer-context';
+import { ComposerFooter } from '../../src/ui/chat/composer-footer';
 import { ImageViewer } from '../../src/ui/chat/image-viewer';
 import { MessageActions } from '../../src/ui/chat/message-actions';
+import { ModelSheet } from '../../src/ui/chat/model-sheet';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
 import { copyMessage } from '../../src/ui/chat/message-menu';
 import { chatRows, type ChatRow } from '../../src/ui/chat/message-groups';
 import { QuestionCard } from '../../src/ui/chat/question-card';
 import { StatusStrip } from '../../src/ui/chat/status-strip';
 import { TimeSeparator } from '../../src/ui/chat/time-separator';
+import { WorkspaceSheet } from '../../src/ui/chat/workspace-sheet';
 import { AccentProvider, useDesignTheme } from '../../src/ui/design/theme';
 import { space } from '../../src/ui/design/tokens';
 import { OpenFullClientButton } from '../../src/ui/open-full-client';
@@ -172,6 +177,13 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
   const [reactError, setReactError] = useState(false);
+  const [settingsSheet, setSettingsSheet] = useState<'model' | 'workspace'>();
+  const [workspaceOpened, setWorkspaceOpened] = useState(0);
+  const settings = useMemo(
+    () => (client === undefined || slug === undefined ? undefined : botSettings(client, slug)),
+    [client, slug],
+  );
+  const context = useComposerContext(settings);
   const now = new Date();
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
@@ -456,6 +468,27 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           }}
           onStopDictation={dictation.stop}
           onCancelDictation={dictation.cancel}
+          {...(bot === undefined
+            ? {}
+            : {
+                footer: (
+                  <ComposerFooter
+                    mountRef={context.mount}
+                    botName={bot.displayName}
+                    model={modelLabel(context.model)}
+                    workspace={workspaceLabel(context.grants)}
+                    onModel={() => {
+                      if (context.model.status !== 'ready') context.reloadModel();
+                      setSettingsSheet('model');
+                    }}
+                    onWorkspace={() => {
+                      context.openWorkspace();
+                      setWorkspaceOpened((count) => count + 1);
+                      setSettingsSheet('workspace');
+                    }}
+                  />
+                ),
+              })}
         />
       </KeyboardAvoidingView>
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
@@ -464,6 +497,35 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
         onClose={() => setActionsFor(undefined)}
         onReact={(message, emoji, active) => react(message.id, emoji, active)}
         onCopy={copyMessage}
+      />
+      <ModelSheet
+        visible={settingsSheet === 'model'}
+        botName={bot?.displayName ?? slug ?? ''}
+        model={context.model}
+        onRetry={context.reloadModel}
+        onChoose={async (model, entry) => {
+          await settings?.chooseModel(model, entry);
+          context.reloadModel();
+        }}
+        onPreset={async (presetId) => {
+          await settings?.applyPreset(presetId);
+          context.reloadModel();
+        }}
+        onClose={() => setSettingsSheet(undefined)}
+      />
+      <WorkspaceSheet
+        key={workspaceOpened}
+        visible={settingsSheet === 'workspace'}
+        botName={bot?.displayName ?? slug ?? ''}
+        settings={settings}
+        grants={context.grants}
+        access={context.access}
+        templates={context.templates}
+        onRetryGrants={context.reloadGrants}
+        onGrantsChanged={context.reloadGrants}
+        onAccess={context.setAccess}
+        onTemplates={context.setTemplates}
+        onClose={() => setSettingsSheet(undefined)}
       />
     </>
   );

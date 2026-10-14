@@ -23,7 +23,7 @@ export function SettingsRow({
   trailing?: ReactNode;
   selected?: boolean;
   accessibilityLabel?: string;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
 }) {
   const theme = useDesignTheme();
   return (
