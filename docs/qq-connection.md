@@ -82,6 +82,8 @@ If a task finishes after QQ's five-minute reply window, `bridge_reply` records t
 
 The saved-target Web send action uses the same checked post and native receipt. Provider acceptance is separate from seeing the result in QQ. Real delayed-task, refusal and current-artifact qualification remain tracked in [#1154](https://github.com/BotHarness/DeepSeekBot/issues/1154); ordinary group observation and intentional participation remain [#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155).
 
+**Qualified test application:** on 2026-10-14, the QA2 app on the `0df23253` worktree Host, DSH `0.2.0-rc.2` and the immutable `.20` Provider completed a genuine QQ-requested Schedule after 400.542 seconds. Its original reply was retained as `reply-window-expired`; a separate owned, authorized original-group post received a native receipt, and the Human confirmed one correct result. A real shared-hourly-limit refusal retained another result locally. Both original test Apps resumed normal replies after restoration. This qualifies that tested source/runtime path; final packed-product execution and matched visual evidence remain separate gates. See the [qualification record](research/2026-10-14-qq-delayed-native-qualification.md).
+
 | Behavior        | Current contract                                                |
 | --------------- | --------------------------------------------------------------- |
 | Input           | Text from a trusted `GROUP_AT_MESSAGE_CREATE` event             |
