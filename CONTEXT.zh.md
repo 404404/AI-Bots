@@ -773,7 +773,7 @@ bot-mode sidebar 中展示 PersonaBot 与 Channel 及其 state 的列表。
 _避免使用_：dashboard、bot list
 
 **App Sidebar**：
-client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode 中由 BotHarness 换成自己的 Bot mode sidebar（Roster、Bot mode 设置、退出 Bot mode），其他插件在左栏的内容在 Bot mode 期间隐藏（提议中，ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
+client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode（宽度 960 px 及以上）中由 BotHarness 换成自己的 Bot mode sidebar（活动中心、Roster、Bot 设置、退出 Bot mode），这一栏的宽度、拖动调整和收起仍由 DSH 负责；其他插件在左栏的内容在 Bot mode 期间隐藏（ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
 _避免使用_：left sidebar、main sidebar、navigation
 
 **Channel sidebar**：

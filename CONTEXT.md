@@ -775,7 +775,7 @@ The bot-mode sidebar list of PersonaBots and Channels, with their state.
 _Avoid_: dashboard, bot list
 
 **App Sidebar**:
-The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode BotHarness replaces it with its own Bot mode sidebar (Roster, Bot mode settings, Exit Bot mode), and other plugins' left-column contributions are hidden until Bot mode ends (proposed, ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
+The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode (960 px and wider) BotHarness replaces it with its own Bot mode sidebar (Activity Center, Roster, Bot settings, Exit Bot mode) while DSH still sizes, resizes and collapses the column, and other plugins' left-column contributions are hidden until Bot mode ends (ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
 _Avoid_: left sidebar, main sidebar, navigation
 
 **Channel sidebar**:

@@ -227,6 +227,8 @@ export const zh = {
   'onboarding.tour.exit.title': 'Bot 模式入口',
   'onboarding.tour.exit.hint':
     '再点一次这里就回到 DSH；鼠标悬停时，旁边的进度环可以随时打开上手清单。',
+  'onboarding.tour.exit.titleSidebar': '退出 Bot 模式',
+  'onboarding.tour.exit.hintSidebar': '点这里回到 DSH；「消息」旁边的进度环可以随时打开上手清单。',
   'onboarding.tour.sessions.list.title': '「会话」标签',
   'onboarding.tour.sessions.list.hint':
     'Bot 每次干活都会开一个 DSH 会话；侧栏的「会话」标签把它们都列出来，运行中的会标出状态。',
@@ -275,6 +277,7 @@ export const zh = {
   'onboarding.checklist.tour': '认识界面',
   'onboarding.checklist.skip': '跳过教程',
   'onboarding.checklist.exitHint': '想回到 DSH？再点一次侧栏的「Bot 模式」。',
+  'onboarding.checklist.exitHintSidebar': '想回到 DSH？点侧栏底部的「退出 Bot 模式」。',
   'onboarding.checklist.exitHintMobile': '想回到 DSH？点右上角的 Bot 头像。',
   'onboarding.checklist.page': '第 {current}/{total} 项',
   'onboarding.checklist.prev': '上一项',
@@ -670,6 +673,9 @@ export const zh = {
   'botSettings.section.about': '关于',
   'panel.label': 'Bot 模式',
   'panel.settings': 'Bot 设置',
+  'panel.exit': '退出 Bot 模式',
+  'panel.sidebar.open': '打开侧边栏',
+  'panel.sidebar.collapse': '收起侧边栏',
   'icon.row.title': 'Bot 图标',
   'icon.row.description': '选择 Bot 在应用侧边栏与设置导航中使用的标记',
   'icon.menu.label': 'Bot 图标',
@@ -3598,6 +3604,9 @@ export const en = {
   'onboarding.tour.exit.title': 'Bot mode',
   'onboarding.tour.exit.hint':
     'Click here again to go back to DSH; hover it to find the progress ring that reopens the getting-started list.',
+  'onboarding.tour.exit.titleSidebar': 'Exit Bot mode',
+  'onboarding.tour.exit.hintSidebar':
+    'Click here to go back to DSH. The progress ring next to Messages reopens the getting-started list.',
   'onboarding.tour.sessions.list.title': 'The Sessions tab',
   'onboarding.tour.sessions.list.hint':
     'Every piece of work your Bot does runs as a DSH session; the Sessions tab in the sidebar lists them all, with status for running ones.',
@@ -3649,6 +3658,8 @@ export const en = {
   'onboarding.checklist.tour': 'Show me around',
   'onboarding.checklist.skip': 'Skip tutorial',
   'onboarding.checklist.exitHint': 'Back to DSH? Click "Bot mode" in the sidebar again.',
+  'onboarding.checklist.exitHintSidebar':
+    'Back to DSH? Click "Exit Bot mode" at the bottom of the sidebar.',
   'onboarding.checklist.exitHintMobile': 'Back to DSH? Tap the Bot icon at the top right.',
   'onboarding.checklist.page': 'Step {current} of {total}',
   'onboarding.checklist.prev': 'Previous step',
@@ -4062,6 +4073,9 @@ export const en = {
   'botSettings.section.about': 'About',
   'panel.label': 'Bot mode',
   'panel.settings': 'Bot settings',
+  'panel.exit': 'Exit Bot mode',
+  'panel.sidebar.open': 'Open sidebar',
+  'panel.sidebar.collapse': 'Collapse sidebar',
   'icon.row.title': 'Bot icon',
   'icon.row.description': 'Choose the mark for the Bot in the app sidebar and Settings navigation',
   'icon.menu.label': 'Bot icon',
