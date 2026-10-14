@@ -244,6 +244,7 @@ import {
   reorderTopOrder,
   sendChannelMessage,
   setRosterHidden,
+  setChannelMute,
   setRosterPins,
   type BridgeCall,
   type MemoryAcceptedCommit,
@@ -802,6 +803,7 @@ export interface BridgeActions {
   setChannelPinned(channelId: string, pinned: boolean): Promise<boolean>;
   reorderPinnedChannels(order: readonly string[], beforePublish: () => void): Promise<boolean>;
   setChannelHidden(channelId: string, hidden: boolean): Promise<boolean>;
+  setChannelMuted(channelId: string, muted: boolean): Promise<boolean>;
   batchRoster(input: RosterBatchInput): Promise<boolean>;
   movePinnedChannel(
     channelId: string,
@@ -1064,6 +1066,7 @@ export function createActions(
       clientStore.setRosterState({
         pins: snapshot.pins,
         hidden: snapshot.hidden,
+        muted: snapshot.muted,
         sections: snapshot.sections,
         topOrder: snapshot.topOrder,
         readOnly: false,
@@ -3130,12 +3133,19 @@ export function createActions(
         await setRosterHidden(call, next);
       });
     },
+    async setChannelMuted(channelId, muted) {
+      if (clientStore.getSnapshot().roster.muted.includes(channelId) === muted) return true;
+      return rosterMutate(async () => {
+        await setChannelMute(call, channelId, muted);
+      });
+    },
     async batchRoster(input) {
       try {
         const snapshot = await applyRosterBatch(call, input);
         clientStore.setRosterState({
           pins: snapshot.pins,
           hidden: snapshot.hidden,
+          muted: snapshot.muted,
           sections: snapshot.sections,
           topOrder: snapshot.topOrder,
           readOnly: false,

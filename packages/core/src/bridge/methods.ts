@@ -625,6 +625,7 @@ export interface BridgeMethods {
   topReorder(payload: unknown): Promise<BridgeResult<{ topOrder: TopOrderEntry[] }>>;
   pinsSet(payload: unknown): Promise<BridgeResult<{ pins: string[] }>>;
   hiddenSet(payload: unknown): Promise<BridgeResult<{ hidden: string[] }>>;
+  channelMuteSet(payload: unknown): Promise<BridgeResult<{ muted: string[] }>>;
   rosterBatch(payload: unknown): Promise<BridgeResult<RosterSnapshot>>;
   developerModeSet(payload: unknown): BridgeResult<{ accepted: boolean }>;
   computerAccessSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
@@ -898,6 +899,7 @@ const topReorderPayload = z.object({
 });
 const pinsSetPayload = z.object({ pins: z.array(z.string()) });
 const hiddenSetPayload = z.object({ hidden: z.array(z.string()) });
+const channelMuteSetPayload = z.object({ channelId: z.string().trim().min(1), muted: z.boolean() });
 const rosterBatchPayload = z.object({
   action: z.enum(['pin', 'unpin', 'hide', 'move']),
   channelIds: z
@@ -5086,6 +5088,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const parsed = hiddenSetPayload.safeParse(payload);
       if (!parsed.success) return invalidInput('invalid hiddenSet payload');
       return rosterWrite(async () => ({ hidden: await deps.roster.hiddenSet(parsed.data.hidden) }));
+    },
+    async channelMuteSet(payload) {
+      const parsed = channelMuteSetPayload.safeParse(payload);
+      if (!parsed.success) return invalidInput('channelId and a boolean muted are required');
+      const { channelId, muted } = parsed.data;
+      if (muted && deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
+      return rosterWrite(async () => ({ muted: await deps.roster.mutedSet(channelId, muted) }));
     },
     async rosterBatch(payload) {
       const parsed = rosterBatchPayload.safeParse(payload);

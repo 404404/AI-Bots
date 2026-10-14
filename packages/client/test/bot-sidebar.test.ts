@@ -264,6 +264,7 @@ function stubActions(): BridgeActions {
     markAllRead: vi.fn(async () => undefined),
     markRead: vi.fn(async () => undefined),
     markChannelRead: vi.fn(async () => undefined),
+    setChannelMuted: vi.fn(async () => true),
     refreshChannelMessages: vi.fn(async () => undefined),
     applyChannelTail: vi.fn(),
     dismissFailedMessage: vi.fn(() => false),
@@ -489,6 +490,7 @@ function setRoster(patch?: Partial<RosterSnapshot>): void {
   store.setRosterState({
     pins: [],
     hidden: [],
+    muted: [],
     sections: [],
     topOrder: undefined,
     readOnly: false,
@@ -835,6 +837,16 @@ describe('bot sidebar rows', () => {
     expect(wide).toMatch(/<span class="bh-unread-count" aria-label="3 条未读">3<\/span>/u);
     store.setHumanInbox({ channelUnread: { [DM_CHANNEL.id]: 120 } });
     expect(renderSidebar(false)).toContain('>99+</span>');
+  });
+
+  it('greys a muted conversation and its unread count and marks it with a muted bell', () => {
+    store.setRoster([BOT], [DM_CHANNEL]);
+    setRoster({ muted: [DM_CHANNEL.id] });
+    store.setHumanInbox({ channelUnread: { [DM_CHANNEL.id]: 2 } });
+    const markup = renderSidebar();
+    expect(markup).toContain('bh-muted');
+    expect(markup).toContain('aria-label="已免打扰"');
+    expect(markup).toContain('bh-unread-count bh-unread-count-muted');
   });
 
   it('shows recent activity for a bodyless latest DM message', () => {
@@ -1679,6 +1691,29 @@ describe('bot sidebar rows', () => {
     ]);
     menu.onSelect?.('mark-read');
     expect(read).toHaveBeenCalledOnce();
+  });
+
+  it('offers Mute or Unmute beside Mark as read on the Channel menu', () => {
+    const mute = vi.fn();
+    for (const muted of [false, true]) {
+      renderToStaticMarkup(
+        createElement(ChannelMoveMenu, {
+          menu: { channelId: DM_CHANNEL.id, x: 40, y: 80 },
+          sections: [],
+          currentSectionId: undefined,
+          muteAction: { label: muted ? '取消免打扰' : '免打扰', muted, run: mute },
+          t: zhTranslate as never,
+          onPick: vi.fn(),
+          onClose: vi.fn(),
+        }),
+      );
+      const menu = captured.menus.at(-1);
+      if (menu === undefined) throw new Error('Channel menu not rendered');
+      const id = muted ? 'unmute' : 'mute';
+      expect(menu.items.slice(0, 2).map((item) => item['id'])).toEqual([id, 'read-separator']);
+      menu.onSelect?.(id);
+    }
+    expect(mute).toHaveBeenCalledTimes(2);
   });
 
   it('gives every Channel menu row an icon and offers Delete Bot last as a danger row', () => {

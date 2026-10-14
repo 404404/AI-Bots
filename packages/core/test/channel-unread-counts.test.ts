@@ -4,6 +4,7 @@ import { createBridgeMethods } from '../src/bridge/methods.js';
 import { createCore } from '../src/plugin.js';
 import type { BotAgentAdapter } from '../src/runtime/bot-runtime.js';
 import { createTempRoot } from './helpers.js';
+import { createFakeRosterDomain } from './roster-fixture.js';
 
 function adapter(): BotAgentAdapter {
   return {
@@ -52,6 +53,49 @@ describe('Channel unread counts', () => {
       await core.channels.markRead(group.id, 'second');
       expect(counts()).toEqual([{ channelId: dm.id, unreadCount: 1 }]);
       expect(core.humanAttention.status().unreadCount).toBe(1);
+    } finally {
+      await core.runtime.close();
+      core.operationalDatabase.close();
+    }
+  });
+
+  it('keeps a muted Channel out of the unread total while still counting it per Channel', async () => {
+    const core = createCore({
+      dshHome: createTempRoot('botharness-channel-mute-'),
+      agents: adapter(),
+    });
+    try {
+      await core.roster.attach(createFakeRosterDomain().facility);
+      core.registry.create({ slug: 'ada', displayName: 'Ada' });
+      const group = core.channels.createGroup({ name: 'Team', members: ['ada'] });
+      const dm = core.channels.getOrCreateDm('ada', 'Ada')!;
+      for (const [index, channelId] of [group.id, group.id, dm.id].entries())
+        await core.channels.appendMessage(channelId, {
+          id: 'message-' + index,
+          at: new Date(Date.UTC(2026, 9, 14, 2, index)).toISOString(),
+          author: { kind: 'bot', slug: 'ada' },
+          body: 'Update ' + index,
+        });
+      const methods = createBridgeMethods({ ...core });
+      expect(core.humanAttention.status().unreadCount).toBe(3);
+      expect(await methods.channelMuteSet({ channelId: group.id, muted: true })).toEqual({
+        ok: true,
+        value: { muted: [group.id] },
+      });
+      expect(core.humanAttention.status().unreadCount).toBe(1);
+      expect(methods.channelUnreadCounts({})).toMatchObject({
+        ok: true,
+        value: { channels: expect.arrayContaining([{ channelId: group.id, unreadCount: 2 }]) },
+      });
+      expect(methods.rosterGet({})).toMatchObject({ ok: true, value: { muted: [group.id] } });
+      expect(await methods.channelMuteSet({ channelId: 'missing', muted: true })).toMatchObject({
+        ok: false,
+      });
+      expect(await methods.channelMuteSet({ channelId: group.id, muted: false })).toEqual({
+        ok: true,
+        value: { muted: [] },
+      });
+      expect(core.humanAttention.status().unreadCount).toBe(3);
     } finally {
       await core.runtime.close();
       core.operationalDatabase.close();

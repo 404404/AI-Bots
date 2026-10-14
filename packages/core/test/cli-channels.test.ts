@@ -115,6 +115,8 @@ describe('Channel and group CLI commands', () => {
       [['channel-mark-read', 'grp-1', '--message-id', 'm-1']],
       [['channel-mark-all-read']],
       [['channel-unread']],
+      [['channel-mute', 'grp-1']],
+      [['channel-mute', 'grp-1', '--off']],
       [['channel-retry', 'dm-ada', '--message-id', 'm-2']],
       [['channel-purge-preview', 'grp-1', '--source-event', 's-1', '--source-event', 's-1']],
       [
@@ -189,6 +191,8 @@ describe('Channel and group CLI commands', () => {
       { method: 'channelMarkRead', args: { channelId: 'grp-1', messageId: 'm-1' } },
       { method: 'channelMarkAllRead', args: {} },
       { method: 'channelUnreadCounts', args: {} },
+      { method: 'channelMuteSet', args: { channelId: 'grp-1', muted: true } },
+      { method: 'channelMuteSet', args: { channelId: 'grp-1', muted: false } },
       { method: 'channelRetry', args: { channelId: 'dm-ada', messageId: 'm-2' } },
       { method: 'channelPurgePreview', args: { channelId: 'grp-1', sourceEventIds: ['s-1'] } },
       {
@@ -226,6 +230,7 @@ describe('Channel and group CLI commands', () => {
       [['channel-rename']],
       [['channel-mark-all-read', 'grp-1']],
       [['channel-unread', 'grp-1']],
+      [['channel-mute']],
       [['group-avatar-set', 'grp-1']],
       [['group-avatar-set', 'grp-1', '--clear', '--avatar-file', text]],
       [['group-avatar-set', 'grp-1', '--avatar-file', text]],

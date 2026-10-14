@@ -3389,6 +3389,15 @@ export async function setRosterHidden(
   await unwrap(call, 'hiddenSet', { hidden }, signal);
 }
 
+export async function setChannelMute(
+  call: BridgeCall,
+  channelId: string,
+  muted: boolean,
+  signal?: AbortSignal,
+): Promise<void> {
+  await unwrap(call, 'channelMuteSet', { channelId, muted }, signal);
+}
+
 export interface MemoryAcceptedCommit {
   botSlug: string;
   sha: string;

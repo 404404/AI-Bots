@@ -434,6 +434,7 @@ export interface SessionsState {
 export interface RosterState {
   pins: readonly string[];
   hidden: readonly string[];
+  muted: readonly string[];
   sections: readonly RosterSection[];
   topOrder: readonly TopOrderEntry[] | undefined;
   readOnly: boolean;
@@ -554,6 +555,7 @@ function initialRoster(): RosterState {
   return {
     pins: [],
     hidden: [],
+    muted: [],
     sections: [],
     topOrder: undefined,
     readOnly: false,

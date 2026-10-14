@@ -418,11 +418,30 @@ export function unreadCountLabel(count: number): string {
   return count > 99 ? '99+' : String(count);
 }
 
-function UnreadCount({ count, t }: { count: number; t: BotHarnessTranslate }): ReactElement | null {
+function UnreadCount({
+  count,
+  muted = false,
+  t,
+}: {
+  count: number;
+  muted?: boolean;
+  t: BotHarnessTranslate;
+}): ReactElement | null {
   if (count <= 0) return null;
   return (
-    <span className="bh-unread-count" aria-label={t('roster.unreadCount', { count })}>
+    <span
+      className={`bh-unread-count${muted ? ' bh-unread-count-muted' : ''}`}
+      aria-label={t('roster.unreadCount', { count })}
+    >
       {unreadCountLabel(count)}
+    </span>
+  );
+}
+
+function MutedMark({ t }: { t: BotHarnessTranslate }): ReactElement {
+  return (
+    <span className="bh-muted-mark" role="img" aria-label={t('roster.muted')}>
+      <ChannelSidebarIcon name="bell-off" size={12} />
     </span>
   );
 }
@@ -463,6 +482,7 @@ function BotRow({
   channel,
   preview,
   unread,
+  muted,
   activity,
   selected,
   multiSelected,
@@ -479,6 +499,7 @@ function BotRow({
   channel: ChannelSummary;
   preview: string;
   unread: number;
+  muted: boolean;
   activity: PersonaBotActivityState;
   selected: boolean;
   multiSelected: boolean;
@@ -504,7 +525,7 @@ function BotRow({
       <button
         type="button"
         data-channel-id={channel.id}
-        className={`bh-contact${unread > 0 ? ' bh-has-unread' : ''}${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
+        className={`bh-contact${unread > 0 ? ' bh-has-unread' : ''}${muted ? ' bh-muted' : ''}${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
         aria-pressed={multiSelected}
         aria-keyshortcuts={shortcut}
         title={shortcut === undefined ? undefined : t('shortcut.web.open', { key: shortcut })}
@@ -561,6 +582,7 @@ function BotRow({
         <span className="bh-body">
           <span className="bh-top">
             <span className="bh-name">{bot.displayName}</span>
+            {muted ? <MutedMark t={t} /> : null}
             {needsYou(botState) ? (
               <span className="bh-unread" title={t('roster.needsYou')} />
             ) : null}
@@ -569,7 +591,7 @@ function BotRow({
           </span>
           <span className="bh-bottom">
             <span className="bh-msg">{preview}</span>
-            <UnreadCount count={unread} t={t} />
+            <UnreadCount count={unread} muted={muted} t={t} />
           </span>
         </span>
         {showShortcutHints && shortcut !== undefined ? (
@@ -586,6 +608,7 @@ function ChannelRow({
   bots,
   preview,
   unread,
+  muted,
   selected,
   multiSelected,
   onActivate,
@@ -601,6 +624,7 @@ function ChannelRow({
   bots: ReadonlyMap<string, BotSummary>;
   preview: string;
   unread: number;
+  muted: boolean;
   selected: boolean;
   multiSelected: boolean;
   onActivate: (event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -620,7 +644,7 @@ function ChannelRow({
     <button
       type="button"
       data-channel-id={channel.id}
-      className={`bh-channel-row${unread > 0 ? ' bh-has-unread' : ''}${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
+      className={`bh-channel-row${unread > 0 ? ' bh-has-unread' : ''}${muted ? ' bh-muted' : ''}${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
       aria-pressed={multiSelected}
       aria-keyshortcuts={shortcut}
       title={shortcut === undefined ? undefined : t('shortcut.web.open', { key: shortcut })}
@@ -688,11 +712,12 @@ function ChannelRow({
       <span className="bh-body">
         <span className="bh-top">
           <span className="bh-name">{channel.name}</span>
+          {muted ? <MutedMark t={t} /> : null}
           <ChannelMessageTime channel={channel} />
         </span>
         <span className="bh-bottom">
           <span className="bh-msg">{preview}</span>
-          <UnreadCount count={unread} t={t} />
+          <UnreadCount count={unread} muted={muted} t={t} />
         </span>
       </span>
       {showShortcutHints && shortcut !== undefined ? (
@@ -710,6 +735,7 @@ function RailChannel({
   bot,
   activity,
   unread,
+  muted,
   selected,
   shortcut,
   showShortcutHints,
@@ -722,6 +748,7 @@ function RailChannel({
   bot: BotSummary | undefined;
   activity: PersonaBotActivityState | undefined;
   unread: number;
+  muted: boolean;
   selected: boolean;
   shortcut?: string | undefined;
   showShortcutHints: boolean;
@@ -777,7 +804,7 @@ function RailChannel({
               size={32}
             />
           )}
-          <UnreadCount count={unread} t={t} />
+          <UnreadCount count={unread} muted={muted} t={t} />
           {showShortcutHints && shortcut !== undefined ? (
             <kbd className="bh-shortcut-badge" aria-hidden="true">
               {shortcut.slice(4)}
@@ -865,6 +892,7 @@ export function BotSidebar({
 }: SidebarProps): ReactElement {
   const state = useClientState();
   const channelUnread = state.humanInbox.channelUnread;
+  const mutedChannelSet = new Set(state.roster.muted);
   const prefs = useBotModePrefs((value) => value);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -1160,7 +1188,10 @@ export function BotSidebar({
         navigationIdsRef.current,
         currentId,
         step.direction,
-        step.unreadOnly ? (candidate) => (unread[candidate] ?? 0) > 0 : undefined,
+        step.unreadOnly
+          ? (candidate) =>
+              (unread[candidate] ?? 0) > 0 && !snapshot.roster.muted.includes(candidate)
+          : undefined,
       );
       const channel = snapshot.channels.find((candidate) => candidate.id === id);
       if (channel === undefined) return;
@@ -1607,6 +1638,7 @@ export function BotSidebar({
           channel={channel}
           preview={preview}
           unread={channelUnread[channel.id] ?? 0}
+          muted={mutedChannelSet.has(channel.id)}
           activity={personaBotActivity(state, bot)}
           selected={selectedBot === bot.slug || selectedChannel === channel.id}
           multiSelected={selectedChannelSet.has(channel.id)}
@@ -1628,6 +1660,7 @@ export function BotSidebar({
         bots={botBySlug}
         preview={preview}
         unread={channelUnread[channel.id] ?? 0}
+        muted={mutedChannelSet.has(channel.id)}
         selected={selectedChannel === channel.id}
         multiSelected={selectedChannelSet.has(channel.id)}
         onActivate={(event) => activateChannel(channel, event)}
@@ -1652,6 +1685,7 @@ export function BotSidebar({
           bot={bot}
           activity={bot === undefined ? undefined : personaBotActivity(state, bot)}
           unread={channelUnread[channel.id] ?? 0}
+          muted={mutedChannelSet.has(channel.id)}
           selected={
             selectedChannel === channel.id || (bot !== undefined && selectedBot === bot.slug)
           }
@@ -2113,7 +2147,11 @@ export function BotSidebar({
                         )}
                       </span>
                       {bot === undefined ? null : <RoleBadges roles={bot.roles} />}
-                      <UnreadCount count={channelUnread[channel.id] ?? 0} t={t} />
+                      <UnreadCount
+                        count={channelUnread[channel.id] ?? 0}
+                        muted={mutedChannelSet.has(channel.id)}
+                        t={t}
+                      />
                       {showShortcutHints && shortcutFor(channel.id) !== undefined ? (
                         <kbd className="bh-shortcut-badge" aria-hidden="true">
                           {shortcutFor(channel.id)?.slice(4)}
@@ -2609,6 +2647,17 @@ export function BotSidebar({
                 }
               : undefined
           }
+          muteAction={(() => {
+            const muted = mutedChannelSet.has(channelMenu.channelId);
+            return {
+              label: t(muted ? 'roster.unmute' : 'roster.mute'),
+              muted,
+              run: () => {
+                void actions.setChannelMuted(channelMenu.channelId, !muted);
+                setChannelMenu(undefined);
+              },
+            };
+          })()}
           shareAction={(() => {
             const botId = state.channels.find(
               (channel) => channel.id === channelMenu.channelId && channel.type === 'dm',
@@ -2830,6 +2879,7 @@ export function BulkChannelMenu({
 
 export function ChannelMoveMenu({
   readAction,
+  muteAction,
   companionAction,
   shareAction,
   deleteAction,
@@ -2846,6 +2896,7 @@ export function ChannelMoveMenu({
   onClose,
 }: {
   readAction?: { label: string; run(): void } | undefined;
+  muteAction?: { label: string; muted: boolean; run(): void } | undefined;
   companionAction?: { label: string; run(): void } | undefined;
   shareAction?: { label: string; run(): void } | undefined;
   deleteAction?: { label: string; run(): void } | undefined;
@@ -2879,8 +2930,19 @@ export function ChannelMoveMenu({
       ? []
       : [
           { id: 'mark-read', label: readAction.label, icon: <IconCheckOutlineRegular size={16} /> },
-          { type: 'separator' as const, id: 'read-separator' },
         ]),
+    ...(muteAction === undefined
+      ? []
+      : [
+          {
+            id: muteAction.muted ? 'unmute' : 'mute',
+            label: muteAction.label,
+            icon: <ChannelSidebarIcon name={muteAction.muted ? 'bell' : 'bell-off'} size={16} />,
+          },
+        ]),
+    ...(readAction === undefined && muteAction === undefined
+      ? []
+      : [{ type: 'separator' as const, id: 'read-separator' }]),
     ...(companionAction === undefined
       ? []
       : [
@@ -2934,6 +2996,10 @@ export function ChannelMoveMenu({
         onSelect={(id) => {
           if (id === 'mark-read') {
             readAction?.run();
+            return;
+          }
+          if (id === 'mute' || id === 'unmute') {
+            muteAction?.run();
             return;
           }
           if (id === 'companion') {

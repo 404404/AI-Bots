@@ -1419,6 +1419,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   hiddenSet(hidden: string[]): Promise<{ hidden: string[] }> {
     return unwrapAsync(this.methods.hiddenSet({ hidden }));
   }
+  channelMuteSet(channelId: string, muted: boolean): Promise<{ muted: string[] }> {
+    return unwrapAsync(this.methods.channelMuteSet({ channelId, muted }));
+  }
 
   rosterBatch(
     action: 'pin' | 'unpin' | 'hide' | 'move',
@@ -1685,6 +1688,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'topReorder',
   'pinsSet',
   'hiddenSet',
+  'channelMuteSet',
   'rosterBatch',
   'developerModeSet',
   'computerAccessSet',

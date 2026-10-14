@@ -1238,6 +1238,19 @@ html[data-botharness-motion='reduce'] .bh-avatar-botui i {
   height: 16px;
   padding: 0 ${space.x1};
 }
+.bh-unread-count-muted {
+  background: var(--dsw-alias-button-elevated-fill);
+  color: var(--dsw-alias-label-secondary);
+}
+.bh-muted .bh-name,
+.bh-muted .bh-msg {
+  color: var(--dsw-alias-label-tertiary);
+}
+.bh-muted-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
 .bh-shortcut-active .bh-unread-count {
   visibility: hidden;
 }
