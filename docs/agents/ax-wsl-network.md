@@ -12,7 +12,7 @@ One relay instance binds only to the Windows WSL virtual-adapter IPv4, accepts o
 
 1. Confirm the intended DSH profile, `DSH_HOME`, process, and port. Do not conflate a healthy HTML page with a healthy authenticated `/api` endpoint (see the `dsh-dev` debugging playbook).
 2. Test the same provider host from WSL and Windows. A prompt `401` without credentials proves network reachability; a timeout before HTTP does not. Check a second ordinary host from WSL if the provider itself might be down.
-3. Keep a red-capable application probe. For a PersonaBot DM, the Human message committing is only the first leg; `node scripts/e2e-personabot-first-dm.mjs --expect-reply` also requires a committed Bot reply containing a fresh nonce and visible in the UI.
+3. Keep a red-capable application probe. For a PersonaBot DM, the Human message committing is only the first leg; the [Bot DM reply](../../.agents/skills/verify-deepseekbot/features/bot-dm-reply.md) journey also requires a committed Bot reply that is visible in the UI.
 
 ## Start and verify the restricted bridge
 
