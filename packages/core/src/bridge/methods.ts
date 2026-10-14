@@ -420,6 +420,9 @@ export interface BridgeMethods {
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
+  channelBotStop(
+    payload: unknown,
+  ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
   approvalRoute(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
   failureAlertsSet(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
   failureAlertsTest(
@@ -541,6 +544,9 @@ export interface BridgeMethods {
   humanAttention(payload: unknown): BridgeResult<HumanAttentionPage>;
   humanAssignmentContext(payload: unknown): BridgeResult<{ context: HumanAssignmentContext }>;
   humanAttentionStatus(payload: unknown): BridgeResult<{ unreadCount: number; hasAction: boolean }>;
+  channelUnreadCounts(
+    payload: unknown,
+  ): BridgeResult<{ channels: Array<{ channelId: string; unreadCount: number }> }>;
   humanAttentionDismiss(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionIgnore(payload: unknown): BridgeResult<{ accepted: boolean }>;
   assignments(payload: unknown): BridgeResult<{ assignments: AssignmentSummary[] }>;
@@ -622,6 +628,7 @@ export interface BridgeMethods {
   topReorder(payload: unknown): Promise<BridgeResult<{ topOrder: TopOrderEntry[] }>>;
   pinsSet(payload: unknown): Promise<BridgeResult<{ pins: string[] }>>;
   hiddenSet(payload: unknown): Promise<BridgeResult<{ hidden: string[] }>>;
+  channelMuteSet(payload: unknown): Promise<BridgeResult<{ muted: string[] }>>;
   rosterBatch(payload: unknown): Promise<BridgeResult<RosterSnapshot>>;
   developerModeSet(payload: unknown): BridgeResult<{ accepted: boolean }>;
   computerAccessSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
@@ -895,6 +902,7 @@ const topReorderPayload = z.object({
 });
 const pinsSetPayload = z.object({ pins: z.array(z.string()) });
 const hiddenSetPayload = z.object({ hidden: z.array(z.string()) });
+const channelMuteSetPayload = z.object({ channelId: z.string().trim().min(1), muted: z.boolean() });
 const rosterBatchPayload = z.object({
   action: z.enum(['pin', 'unpin', 'hide', 'move']),
   channelIds: z
@@ -925,7 +933,14 @@ function createFailure(
     case 'invalid-input':
       return invalidInput('invalid PersonaBot input');
     case 'invalid-memory-dir':
-      return invalidInput('memoryDir must be an absolute path');
+      return {
+        ok: false,
+        error: {
+          code: 'invalid-memory-dir',
+          message:
+            'The Memory location must be an existing absolute folder that does not already hold this Bot.',
+        },
+      };
     case 'git-not-found':
       return {
         ok: false,
@@ -1765,6 +1780,44 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(error instanceof Error ? error.message : 'Retry unavailable');
       }
     },
+    async channelBotStop(payload) {
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
+      const botSlug = asNonBlank(source, 'botSlug');
+      if (!channelId || !botSlug) return invalidInput('channelId and botSlug are required');
+      const channel = deps.channels.get(channelId);
+      if (channel === undefined || channel.deletedAt) return unknownChannel(channelId);
+      const bot = deps.registry.get(botSlug);
+      if (bot === undefined) return unknownBot(botSlug);
+      if (
+        channel.type === 'group' ? !channel.members.includes(botSlug) : channel.botSlug !== botSlug
+      )
+        return invalidInput(`${bot.displayName} is not in this Channel`);
+      const stopped = await deps.runtime?.stopTurn?.(botSlug);
+      if (stopped === undefined)
+        return {
+          ok: false,
+          error: { code: 'not-working', message: `${bot.displayName} is not working right now` },
+        };
+      const human = deps.channels.listHumanMembers(channelId)[0]?.displayName ?? 'Human';
+      const appended = await deps.channels.appendMessage(channelId, {
+        id: `turn-stopped-${randomUUID()}`,
+        at: new Date().toISOString(),
+        author: { kind: 'system' },
+        body: `${human} stopped ${bot.displayName}.`,
+        turnStop: {
+          botSlug,
+          botName: bot.displayName,
+          humanName: human,
+          sessionId: stopped.sessionId,
+        },
+      });
+      if (appended === undefined) return unknownChannel(channelId);
+      return {
+        ok: true,
+        value: { stopped: { botSlug, sessionId: stopped.sessionId, messageId: appended.id } },
+      };
+    },
     async modelCatalog() {
       if (deps.modelCatalog === undefined) return unavailable();
       try {
@@ -2208,7 +2261,9 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const preset = parseOptional(source, 'preset');
       const workspaces = parseWorkspaces(source);
       const avatar = parseOptional(source, 'avatar');
+      const memoryLocation = parseOptional(source, 'memoryLocation');
       if (
+        !memoryLocation.ok ||
         !persona.ok ||
         !roles.ok ||
         !description.ok ||
@@ -2230,6 +2285,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         ...(preset.value === undefined ? {} : { preset: preset.value }),
         ...(workspaces.value === undefined ? {} : { workspaces: workspaces.value }),
         ...(avatar.value === undefined ? {} : { avatar: avatar.value }),
+        ...(memoryLocation.value === undefined ? {} : { memoryLocation: memoryLocation.value }),
       });
       if (!result.ok) return createFailure(slug, result);
       return { ok: true, value: detailOf(result.record) };
@@ -3980,6 +4036,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(String(error));
       }
     },
+    channelUnreadCounts() {
+      try {
+        return { ok: true, value: { channels: deps.humanAttention?.unreadByChannel() ?? [] } };
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+    },
     humanAssignmentContext(payload) {
       const source = asObject(payload);
       const slug = asSlug(payload);
@@ -5076,6 +5139,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const parsed = hiddenSetPayload.safeParse(payload);
       if (!parsed.success) return invalidInput('invalid hiddenSet payload');
       return rosterWrite(async () => ({ hidden: await deps.roster.hiddenSet(parsed.data.hidden) }));
+    },
+    async channelMuteSet(payload) {
+      const parsed = channelMuteSetPayload.safeParse(payload);
+      if (!parsed.success) return invalidInput('channelId and a boolean muted are required');
+      const { channelId, muted } = parsed.data;
+      if (muted && deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
+      return rosterWrite(async () => ({ muted: await deps.roster.mutedSet(channelId, muted) }));
     },
     async rosterBatch(payload) {
       const parsed = rosterBatchPayload.safeParse(payload);

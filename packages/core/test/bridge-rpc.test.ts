@@ -122,6 +122,7 @@ describe('bridge typert service', () => {
       'onboardingModel',
       'modelPlanInherit',
       'channelRetry',
+      'channelBotStop',
       'modelCatalog',
       'modelPresets',
       'modelPresetCreate',
@@ -169,6 +170,7 @@ describe('bridge typert service', () => {
       'channelReadPosition',
       'channelMarkRead',
       'channelMarkAllRead',
+      'channelUnreadCounts',
       'channelAllBotPreview',
       'channelSend',
       'channelSendStatus',
@@ -238,6 +240,7 @@ describe('bridge typert service', () => {
       'topReorder',
       'pinsSet',
       'hiddenSet',
+      'channelMuteSet',
       'rosterBatch',
       'developerModeSet',
       'computerAccessSet',
@@ -323,6 +326,7 @@ describe('bridge typert service', () => {
       'preset',
       'workspaces',
       'avatar',
+      'memoryLocation',
     ]);
     expect(parameterNames(service.update)).toEqual(['slug', 'patch']);
     expect(parameterNames(service.pause)).toEqual(['slug']);
@@ -400,6 +404,7 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.topReorder)).toEqual(['order']);
     expect(parameterNames(service.pinsSet)).toEqual(['pins']);
     expect(parameterNames(service.hiddenSet)).toEqual(['hidden']);
+    expect(parameterNames(service.channelMuteSet)).toEqual(['channelId', 'muted']);
     expect(parameterNames(service.rosterBatch)).toEqual(['action', 'channelIds', 'sectionId']);
   });
 
