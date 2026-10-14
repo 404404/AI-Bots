@@ -23,7 +23,9 @@ import {
   IconChecklistOutlineRegular,
   IconCopyOutlineRegular,
   IconGoalOutlineRegular,
+  IconNewChatOutlineRegular,
   IconPanelLeftOutlineRegular,
+  IconUserOutlineRegular,
   Menu,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -57,7 +59,8 @@ import {
   useComposerRecovery,
 } from './conversation-draft.js';
 import { insertAttachmentReferences, removeAttachmentReferences } from './attachment-refs.js';
-import { rebaseMentions } from './mentions.js';
+import { appendMention, rebaseMentions } from './mentions.js';
+import { AtSignIcon } from './at-sign-icon.js';
 import { rebaseChannelRefs } from './channel-refs.js';
 import { channelHumanName, humanLabel } from './actor-names.js';
 import { HumanChannelNameMenu } from './human-channel-name.js';
@@ -409,6 +412,7 @@ function MessageGroupView({
   focusMessageId,
   currentDmBotSlug,
   onContextMenu,
+  onAvatarMenu,
   onReply,
   onJumpReply,
   onRestoreFailed,
@@ -426,6 +430,7 @@ function MessageGroupView({
   currentDmBotSlug?: string | undefined;
   bots: readonly BotSummary[];
   onContextMenu(message: ChannelMessage, x: number, y: number): void;
+  onAvatarMenu?: ((botSlug: string, x: number, y: number) => void) | undefined;
   onReply?: ((message: ChannelMessage) => void) | undefined;
   onRestoreFailed(message: ChannelMessage): void;
   onJumpReply(messageId: string): void;
@@ -477,7 +482,22 @@ function MessageGroupView({
           type="button"
           className="bh-message-group-avatar bh-message-group-avatar-link"
           aria-label={t('message.mention.openDm', { bot: displayBot?.displayName ?? '' })}
+          {...(onAvatarMenu === undefined ? {} : { 'aria-haspopup': 'menu' as const })}
           onClick={() => void actions.openBot(author.slug)}
+          onContextMenu={
+            onAvatarMenu === undefined
+              ? undefined
+              : (event) => {
+                  event.preventDefault();
+                  const box = event.currentTarget.getBoundingClientRect();
+                  const keyboard = event.clientX === 0 && event.clientY === 0;
+                  onAvatarMenu(
+                    author.slug,
+                    keyboard ? box.left : event.clientX,
+                    keyboard ? box.bottom : event.clientY,
+                  );
+                }
+          }
         >
           {avatar}
         </button>
@@ -661,6 +681,62 @@ function MessageActionMenu({
           else if (id === 'copy') {
             void navigator.clipboard?.writeText(request.message.body);
           } else if (id === 'select') onSelect?.(request.message);
+          onClose();
+        }}
+        onClose={onClose}
+      />
+    </span>
+  );
+}
+
+export interface AvatarMenuRequest {
+  botSlug: string;
+  x: number;
+  y: number;
+}
+
+export function BotAvatarMenu({
+  request,
+  canMention,
+  onMessage,
+  onMention,
+  onProfile,
+  onClose,
+  t,
+}: {
+  request: AvatarMenuRequest;
+  canMention: boolean;
+  onMessage(botSlug: string): void;
+  onMention(botSlug: string): void;
+  onProfile(botSlug: string): void;
+  onClose(): void;
+  t: BotHarnessTranslate;
+}): ReactElement {
+  const proxy = useRef<HTMLSpanElement | null>(null);
+  return (
+    <span className="bh-menu-anchor" style={{ left: request.x, top: request.y }}>
+      <Menu
+        open
+        portal
+        dense
+        autoFocus
+        anchor={<span ref={proxy} aria-hidden="true" />}
+        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
+        items={[
+          {
+            id: 'message',
+            label: t('message.avatar.message'),
+            icon: <IconNewChatOutlineRegular />,
+          },
+          ...(canMention
+            ? [{ id: 'mention', label: t('message.avatar.mention'), icon: <AtSignIcon /> }]
+            : []),
+          { id: 'profile', label: t('message.avatar.profile'), icon: <IconUserOutlineRegular /> },
+        ]}
+        onSelect={(id) => {
+          if (id === 'message') onMessage(request.botSlug);
+          else if (id === 'mention') onMention(request.botSlug);
+          else if (id === 'profile') onProfile(request.botSlug);
           onClose();
         }}
         onClose={onClose}
@@ -883,6 +959,7 @@ function ConversationView({
   const [unseen, setUnseen] = useState(0);
   const [atLatest, setAtLatest] = useState(true);
   const [messageMenu, setMessageMenu] = useState<MessageMenuRequest | undefined>();
+  const [avatarMenu, setAvatarMenu] = useState<AvatarMenuRequest | undefined>();
   const [diagnosticsTarget, setDiagnosticsTarget] = useState<
     | { channelId: string; fromMessageId: string; toMessageId?: string; messageIds: string[] }
     | undefined
@@ -2034,8 +2111,17 @@ function ConversationView({
                               }
                               bots={state.bots}
                               onContextMenu={(message, x, y) => {
+                                setAvatarMenu(undefined);
                                 setMessageMenu({ message, x, y });
                               }}
+                              onAvatarMenu={
+                                channel?.type === 'group'
+                                  ? (botSlug, x, y) => {
+                                      setMessageMenu(undefined);
+                                      setAvatarMenu({ botSlug, x, y });
+                                    }
+                                  : undefined
+                              }
                               onReply={
                                 readOnlyDm ? undefined : (message) => setReplyTarget(message)
                               }
@@ -2353,6 +2439,36 @@ function ConversationView({
                   onClose={() => {
                     setMessageMenu(undefined);
                   }}
+                />
+              )}
+              {activeMemoryView !== undefined ||
+              avatarMenu === undefined ||
+              channel?.type !== 'group' ? null : (
+                <BotAvatarMenu
+                  request={avatarMenu}
+                  canMention={channelBots.some(
+                    (member) => member.slug === avatarMenu.botSlug && member.deleted !== true,
+                  )}
+                  t={t}
+                  onMessage={(botSlug) => void actions.openBot(botSlug)}
+                  onMention={(botSlug) => {
+                    const member = channelBots.find((candidate) => candidate.slug === botSlug);
+                    if (member === undefined) return;
+                    const next = appendMention(
+                      draft,
+                      mentionTokens,
+                      member.slug,
+                      member.displayName,
+                    );
+                    recovery.update({
+                      text: next.value,
+                      mentions: next.mentions,
+                      channelRefs: rebaseChannelRefs(draft, next.value, channelRefTokens),
+                    });
+                    setRestoreFocusSignal((value) => value + 1);
+                  }}
+                  onProfile={(botSlug) => void actions.openBot(botSlug, 'profile')}
+                  onClose={() => setAvatarMenu(undefined)}
                 />
               )}
               {diagnosticsTarget === undefined ? null : (
