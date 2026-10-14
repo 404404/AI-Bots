@@ -4,7 +4,13 @@
 appId: ai.botharness.deepseekbot.dev
 ---
 - tapOn: 'Me'
-- tapOn: 'Notifications'
+- extendedWaitUntil:
+    visible: 'Computers.*'
+    timeout: 10000
+# The Activity tab icon is also labelled "notifications"; match the Me row.
+- tapOn:
+    text: 'Notifications'
+    below: 'Computers.*'
 - extendedWaitUntil:
     visible: ${EXPECT}
     timeout: 15000

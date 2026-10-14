@@ -31,3 +31,4 @@ The phone app keeps every paired computer and shows one. A push notification nam
 - The Host writes an item's summary in the computer's language, so a Chinese Mac shows "请求批准执行 bash" in an English app.
 - Maestro grants every permission on `launchApp` by default, so the notification prompt does not appear in the journey. To see the denied state, launch with `permissions: { all: unset }` and tap Don't Allow.
 - A Maestro step can outlast a Host's keep-alive timeout, so the journey's next `fetch` may write to a closed pooled socket (`EPIPE`); it retries a Host call once.
+- A run needs several GB free: the development build (about 2.5 GB in DerivedData), a fresh Simulator and Metro's cache. With a full disk `xcodebuild` fails with unrelated-looking compile errors before it says "No space left on device". Maestro's debug output stays in the evidence folder, which each run replaces.

@@ -253,7 +253,15 @@ async function main() {
       join(paths.evidence, `${label}.png`),
     ]);
   const flow = async (label, file, env = {}) => {
-    const args = ['--device', udid, 'test', '--platform', 'ios'];
+    const args = [
+      '--device',
+      udid,
+      'test',
+      '--platform',
+      'ios',
+      '--debug-output',
+      join(paths.evidence, 'maestro', label),
+    ];
     for (const [key, value] of Object.entries(env)) args.push('-e', `${key}=${value}`);
     args.push(join(flows, file));
     const child = spawn(maestro, args, {
@@ -328,15 +336,11 @@ async function main() {
       run('xcrun', ['simctl', 'install', udid, options.app]);
       steps.push(`installed ${options.app}`);
     } else {
-      const built = run(
-        'npx',
-        ['expo', 'run:ios', '--device', udid, '--no-bundler'],
-        {
-          cwd: mobile,
-          timeout: 3_600_000,
-          env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', CI: '1' },
-        },
-      );
+      const built = run('npx', ['expo', 'run:ios', '--device', udid, '--no-bundler'], {
+        cwd: mobile,
+        timeout: 3_600_000,
+        env: { ...process.env, LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', CI: '1' },
+      });
       const app = /Installing (\S+\.app)/u.exec(built)?.[1];
       steps.push(
         `built the development build${app === undefined ? '' : ` (reuse it with --app ${app})`}`,
@@ -428,7 +432,19 @@ async function main() {
       });
       const item = await until(async () => {
         const { items } = await a.rpc('humanAttention', { category: 'action' });
-        return items.find((entry) => entry.kind === 'tool-approval' && entry.createdAt > since);
+        const found = items.find(
+          (entry) => entry.kind === 'tool-approval' && entry.createdAt > since,
+        );
+        if (found !== undefined) return found;
+        const { page } = await a.rpc('channelTimeline', { channelId: `dm-${a.bot.slug}` });
+        const failure = page.entries.find(
+          (entry) => entry.sessionFailure !== undefined && entry.at > since,
+        );
+        if (failure !== undefined)
+          throw new Error(
+            `${a.bot.displayName}'s session failed (${failure.sessionFailure.code}: ${failure.sessionFailure.detail}); fix the model or rerun with --no-approval`,
+          );
+        return undefined;
       }, 'a Tool approval on Mac A (this step needs a working model; skip it with --no-approval)');
       await open(
         '5a-tap-approval-other-host',

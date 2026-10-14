@@ -7,7 +7,9 @@ appId: ai.botharness.deepseekbot.dev
     visible: 'Computers.*'
     timeout: 10000
 - assertVisible: '${FROM}.*'
-- assertVisible: 'Notifications'
+- assertVisible:
+    text: 'Notifications'
+    below: 'Computers.*'
 - tapOn: 'Computers.*'
 - extendedWaitUntil:
     visible: 'Pair a new computer'
