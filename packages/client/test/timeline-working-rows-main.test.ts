@@ -13,6 +13,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   const stub = () => null;
   return {
     IconCodeOutlineRegular: () => null,
+    HoverCard: ({ anchor }: { anchor: unknown }) => anchor,
     Button: ({
       children,
       variant: _variant,
@@ -52,6 +53,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconSearchOutline16: stub,
     IconSendOutline16: stub,
     IconSendOutlineRegular: stub,
+    IconStopFillRegular: stub,
     IconTrashOutline16: stub,
     FileTypeIcon: stub,
     ImageLightbox: stub,
@@ -205,9 +207,11 @@ describe('timeline working rows in the Channel body', () => {
     ).not.toBeNull();
     expect(working?.getAttribute('aria-hidden')).toBe('true');
     expect(container.querySelectorAll('.bh-composer-activity-summary[aria-live]')).toHaveLength(1);
+    expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe('停止 Mira');
 
     await setBots([bot('mira', 'Mira', 'idle')], dm);
     expect(chat.querySelector('.bh-timeline-working')).toBeNull();
+    expect(container.querySelector('.bh-stop-btn')).toBeNull();
   });
 
   it('shows one row per active Bot in a Group and skips waiting Bots', async () => {
@@ -217,6 +221,9 @@ describe('timeline working rows in the Channel body', () => {
       bot('kai', 'Kai', 'waiting'),
     ]);
     expect(rowNames()).toEqual(['mira', 'nova']);
+    expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe(
+      '停止 2 个 Bot',
+    );
   });
 
   it('replaces the row with the Bot streaming draft', async () => {
