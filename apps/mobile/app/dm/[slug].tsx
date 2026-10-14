@@ -13,6 +13,7 @@ import {
   useHostSession,
   useHostSnapshot,
 } from '../../src/host/host-session';
+import { useDictation } from '../../src/host/speech';
 import { botColor } from '../../src/ui/bot-color';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
@@ -63,6 +64,7 @@ function DmConversation({ slug }: { slug: string | undefined }) {
   const [draft, setDraft] = useState('');
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
+  const dictation = useDictation(setDraft);
   const [stop, setStop] = useState<StopOutcome | { status: 'stopping' } | undefined>();
   const [shareError, setShareError] = useState(false);
   const [viewing, setViewing] = useState<MessageAttachment>();
@@ -84,6 +86,7 @@ function DmConversation({ slug }: { slug: string | undefined }) {
     const body = draft.trim();
     if ((body === '' && files.length === 0) || conversation === undefined) return;
     conversation.send(body, files);
+    if (dictation.state.status !== 'idle') dictation.cancel();
     setDraft('');
     setFiles([]);
   };
@@ -126,7 +129,13 @@ function DmConversation({ slug }: { slug: string | undefined }) {
                   ? t.stopNotWorking(bot.displayName)
                   : stop?.status === 'failed'
                     ? `${t.stopFailed} ${stop.reason}`
-                    : undefined;
+                    : dictation.state.status === 'denied'
+                      ? t.dictationDenied
+                      : dictation.state.status === 'unavailable'
+                        ? t.dictationUnavailable
+                        : dictation.state.status === 'failed'
+                          ? t.dictationFailed
+                          : undefined;
 
   return (
     <>
@@ -142,6 +151,7 @@ function DmConversation({ slug }: { slug: string | undefined }) {
         }}
       />
       <KeyboardAvoidingView
+        ref={dictation.mountRef}
         style={{ flex: 1, backgroundColor: theme.color.base }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={headerHeight}
@@ -227,10 +237,18 @@ function DmConversation({ slug }: { slug: string | undefined }) {
           disabled={conversation === undefined}
           files={files}
           canAttach={files.length < MAX_PICKED}
+          dictation={dictation.state.status}
+          canDictate={conversation !== undefined}
           onChange={setDraft}
           onSend={send}
           onPick={pick}
           onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+          onDictate={() => {
+            setAttachError(false);
+            dictation.start();
+          }}
+          onStopDictation={dictation.stop}
+          onCancelDictation={dictation.cancel}
         />
       </KeyboardAvoidingView>
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
