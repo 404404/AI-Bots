@@ -16,6 +16,7 @@ import {
 import { AssignmentConcurrencySetting } from './assignment-concurrency-setting.js';
 import { BotIcon } from './bot-icon.js';
 import type { BotModePrefsFace } from './bot-mode-prefs.js';
+import { isApplePlatform, KeyCombo, type ShortcutKey } from './ds/kbd.js';
 import { Select } from './ds/select.js';
 import { SettingsRow } from './ds/settings-row.js';
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
@@ -35,18 +36,34 @@ const ICON_OPTIONS: readonly { id: BotModeIcon; label: BotHarnessKey }[] = [
   { id: 'bot', label: 'icon.bot' },
 ];
 
-const MOTION_OPTIONS: readonly { id: BotModeMotionPreference; label: BotHarnessKey }[] = [
+const MOTION_OPTIONS: readonly {
+  id: BotModeMotionPreference;
+  label: BotHarnessKey;
+}[] = [
   { id: 'system', label: 'motion.system' },
   { id: 'reduce', label: 'motion.reduce' },
   { id: 'full', label: 'motion.full' },
 ];
 
-const SEND_KEY_OPTIONS: readonly { id: BotModeSendKey; label: BotHarnessKey }[] = [
-  { id: 'enter', label: 'sendKey.enter' },
-  { id: 'mod-enter', label: 'sendKey.modEnter' },
+const SEND_KEY_OPTIONS: readonly {
+  id: BotModeSendKey;
+  send: readonly ShortcutKey[];
+  newline: readonly ShortcutKey[];
+}[] = [
+  { id: 'enter', send: ['Enter'], newline: ['Shift', 'Enter'] },
+  { id: 'mod-enter', send: ['Mod', 'Enter'], newline: ['Enter'] },
 ];
 
 const styles = stylex.create({
+  sendKey: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: space.x2,
+    whiteSpace: 'nowrap',
+  },
+  sendKeySeparator: {
+    color: color.muted,
+  },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(112px, 1fr))',
@@ -63,19 +80,29 @@ const styles = stylex.create({
     paddingInline: space.x2,
     borderWidth: border.hairline,
     borderStyle: 'solid',
-    borderColor: { default: color.border, ':is([aria-checked=true])': color.accent },
+    borderColor: {
+      default: color.border,
+      ':is([aria-checked=true])': color.accent,
+    },
     borderRadius: radius.md,
     backgroundColor: {
       default: 'transparent',
       ':hover': color.hover,
       ':is([aria-checked=true])': color.selected,
     },
-    color: { default: color.muted, ':hover': color.fg, ':is([aria-checked=true])': color.fg },
+    color: {
+      default: color.muted,
+      ':hover': color.fg,
+      ':is([aria-checked=true])': color.fg,
+    },
     fontFamily: 'inherit',
     fontSize: text.metaSize,
     lineHeight: text.metaLine,
     cursor: 'pointer',
-    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
+    outline: {
+      default: 'none',
+      ':focus-visible': `${border.focus} solid ${color.accent}`,
+    },
   },
   art: {
     pointerEvents: 'none',
@@ -158,7 +185,10 @@ export function MotionSetting({
         <Select
           label={t('motion.menu.label')}
           value={prefs.motionPreference}
-          options={MOTION_OPTIONS.map((option) => ({ value: option.id, label: t(option.label) }))}
+          options={MOTION_OPTIONS.map((option) => ({
+            value: option.id,
+            label: t(option.label),
+          }))}
           onChange={(id) => {
             if (isBotModeMotionPreference(id)) setMotionPreference(id);
           }}
@@ -194,7 +224,10 @@ export function SortSetting({
         <Select
           label={t('sort.menu.label')}
           value={prefs.sortMode}
-          options={SORT_OPTIONS.map((option) => ({ value: option.id, label: t(option.label) }))}
+          options={SORT_OPTIONS.map((option) => ({
+            value: option.id,
+            label: t(option.label),
+          }))}
           onChange={(id) => {
             if (isBotModeSortMode(id)) setSortMode(id);
           }}
@@ -208,7 +241,8 @@ export function SendKeySetting({
   t,
   useBotModePrefs,
   setSendKey,
-}: BotModeSettingRowProps): ReactElement {
+  apple = isApplePlatform(),
+}: BotModeSettingRowProps & { apple?: boolean }): ReactElement {
   const sendKey = useBotModePrefs((value) => value.sendKey);
   return (
     <SettingsRow
@@ -219,7 +253,18 @@ export function SendKeySetting({
         <Select
           label={t('sendKey.row.title')}
           value={sendKey}
-          options={SEND_KEY_OPTIONS.map((option) => ({ value: option.id, label: t(option.label) }))}
+          options={SEND_KEY_OPTIONS.map((option) => ({
+            value: option.id,
+            label: (
+              <span data-send-key={option.id} {...stylex.props(styles.sendKey)}>
+                <KeyCombo keys={option.send} apple={apple} />
+                <span>{t('sendKey.send')}</span>
+                <span {...stylex.props(styles.sendKeySeparator)}>·</span>
+                <KeyCombo keys={option.newline} apple={apple} />
+                <span>{t('sendKey.newline')}</span>
+              </span>
+            ),
+          }))}
           onChange={(id) => {
             if (isBotModeSendKey(id)) setSendKey(id);
           }}
