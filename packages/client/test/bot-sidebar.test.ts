@@ -34,6 +34,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPlusOutlineRegular: icon('IconPlusOutlineRegular'),
     IconSearchOutlineRegular: icon('IconSearchOutlineRegular'),
     IconSettingsOutlineRegular: icon('IconSettingsOutlineRegular'),
+    IconUserOutlineRegular: icon('IconUserOutlineRegular'),
     IconShareOutlineRegular: icon('IconShareOutlineRegular'),
     IconTrashOutlineRegular: icon('IconTrashOutlineRegular'),
     IconTriangleRightFill14: icon('IconTriangleRightFill14'),
@@ -1661,6 +1662,51 @@ describe('bot sidebar rows', () => {
     expect(rows.at(-1)?.['danger']).toBe(true);
     menu.onSelect?.('delete');
     expect(remove).toHaveBeenCalledOnce();
+  });
+
+  it('offers Channel settings first, then nickname and DM action toggles beside Rename', () => {
+    const openSettings = vi.fn();
+    const editNickname = vi.fn();
+    const toggle = vi.fn();
+    renderToStaticMarkup(
+      createElement(ChannelMoveMenu, {
+        menu: { channelId: DM_CHANNEL.id, x: 40, y: 80 },
+        sections: [section('s1', '工作流', [])],
+        currentSectionId: 's1',
+        t: zhTranslate as never,
+        settingsAction: { attention: true, run: openSettings },
+        nicknameAction: editNickname,
+        dmActions: { hidden: ['memory'], toggle },
+        onPick: vi.fn(),
+        onClose: vi.fn(),
+      }),
+    );
+
+    const menu = captured.menus.at(-1);
+    if (menu === undefined) throw new Error('PersonaBot menu not rendered');
+    expect(menu.items.map((item) => item['id'])).toEqual([
+      'settings',
+      'settings-separator',
+      'pin',
+      'pin-separator',
+      'move',
+      'channel-action-separator',
+      'rename',
+      'nickname',
+      'dm-actions',
+      'hide-separator',
+      'hide',
+    ]);
+    const dmRow = menu.items.find((item) => item['id'] === 'dm-actions') as
+      | { submenu?: readonly { id: string }[] }
+      | undefined;
+    expect(dmRow?.submenu?.map((item) => item.id)).toEqual(['dm:posts', 'dm:memory']);
+    menu.onSelect?.('settings');
+    expect(openSettings).toHaveBeenCalledOnce();
+    menu.onSelect?.('nickname');
+    expect(editNickname).toHaveBeenCalledOnce();
+    menu.onSelect?.('dm:memory');
+    expect(toggle).toHaveBeenCalledWith('memory');
   });
 
   it('renders a deleted section channel as a loose channel with no bucket', () => {
