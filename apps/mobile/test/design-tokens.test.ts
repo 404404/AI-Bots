@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { palette as dshPalette, render } from '../scripts/generate-palette.mjs';
 import { palette } from '../src/ui/design/palette.generated';
+import { BUTTON_TONES, buttonColors } from '../src/ui/design/controls';
 import { distance, LAYER_PARENT, LAYERS, SEPARATION } from '../src/ui/design/layers';
 import { headerBand, resolveTheme, withAccent } from '../src/ui/design/resolve-theme';
 import { botColor } from '../src/ui/bot-color';
@@ -143,10 +144,39 @@ describe('Layers and their states', () => {
   });
 });
 
+describe('Button tones', () => {
+  it('stand apart from the layer they sit on and from each other, with readable labels', () => {
+    for (const scheme of ['light', 'dark'] as const)
+      for (const accent of [undefined, '#d9475a', '#c79a2b', '#000000']) {
+        const theme = resolveTheme(scheme, accent === undefined ? {} : { accent });
+        for (const on of ['canvas', 'raised', 'sheet'] as const) {
+          const behind = theme.layer[on].fill;
+          const tones = BUTTON_TONES.map((tone) => [tone, buttonColors(theme, tone, on)] as const);
+          for (const [tone, colors] of tones) {
+            const where = `${scheme} ${accent ?? 'default'} ${tone} on ${on}`;
+            expect(distance(colors.fill, behind), where).toBeGreaterThanOrEqual(SEPARATION);
+            expect(distance(colors.pressed, colors.fill), where).toBeGreaterThanOrEqual(
+              SEPARATION / 2,
+            );
+            expect(contrastOf(colors.label, colors.fill), where).toBeGreaterThanOrEqual(4.5);
+          }
+          for (let a = 0; a < tones.length; a += 1)
+            for (let b = a + 1; b < tones.length; b += 1)
+              expect(
+                distance(tones[a]![1].fill, tones[b]![1].fill),
+                `${scheme} ${accent ?? 'default'} ${tones[a]![0]}~${tones[b]![0]} on ${on}`,
+              ).toBeGreaterThanOrEqual(SEPARATION);
+        }
+      }
+  });
+});
+
 function contrastOf(a: string, b: string): number {
+  const full = (hex: string) =>
+    hex.length === 4 ? [...hex.slice(1)].map((digit) => digit + digit).join('') : hex.slice(1);
   const lum = (hex: string) =>
     [16, 8, 0]
-      .map((shift) => ((Number.parseInt(hex.slice(1), 16) >> shift) & 0xff) / 255)
+      .map((shift) => ((Number.parseInt(full(hex), 16) >> shift) & 0xff) / 255)
       .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
       .reduce((sum, c, index) => sum + c * [0.2126, 0.7152, 0.0722][index]!, 0);
   const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x) as [number, number];
