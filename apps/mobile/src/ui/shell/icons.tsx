@@ -54,6 +54,16 @@ export function WorkingIcon(props: IconProps) {
   );
 }
 
+export function StopIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      focused
+      d="M8 7h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
+    />
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return <Glyph {...props} d="m6 9 6 6 6-6" />;
 }
