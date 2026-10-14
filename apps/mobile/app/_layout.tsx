@@ -18,11 +18,16 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: theme.background },
         }}
       >
-        <Stack.Screen name="index" options={{ title: t.roster, headerLargeTitle: true }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
+        <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
         <Stack.Screen
           name="full-client"
-          options={{ title: t.fullClient, presentation: 'modal', gestureEnabled: false }}
+          options={{
+            title: t.fullClient,
+            presentation: 'modal',
+            gestureEnabled: false,
+          }}
         />
       </Stack>
     </SafeAreaProvider>

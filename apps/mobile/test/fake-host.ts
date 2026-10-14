@@ -22,6 +22,7 @@ export class FakeHost {
   }>();
   readonly requests: string[] = [];
   readonly unreachable = new Set<string>();
+  readonly answers = new Map<string, (args: Record<string, unknown>) => unknown>();
 
   readonly carrier: HostCarrier = {
     request: async (url, init) => {
@@ -46,7 +47,20 @@ export class FakeHost {
       const refusal = this.refusal(init.headers?.['authorization']);
       if (refusal !== undefined) return response(401, JSON.stringify({ code: refusal }));
       const method = parsed.pathname.replace('/botharness-device/api/botharness/', '') as Rpc;
-      const body = JSON.parse(init.body ?? '{}') as { rpcId: string };
+      const body = JSON.parse(init.body ?? '{}') as {
+        rpcId: string;
+        payload: { args: Record<string, unknown> };
+      };
+      const answer = this.answers.get(method);
+      if (answer !== undefined)
+        return response(
+          200,
+          JSON.stringify({
+            type: 'server-response',
+            rpcId: body.rpcId,
+            result: answer(body.payload.args),
+          }),
+        );
       const recordedBody = recorded(method) as { rpcId: string };
       return response(200, JSON.stringify({ ...recordedBody, rpcId: body.rpcId }));
     },

@@ -21,6 +21,7 @@ import type { WindowCompanions } from './window-companions.js';
 import { startInternalTour, type InternalTourSpec } from './internal-tour.js';
 import { OnboardingChecklist, markBotModeEntered } from './onboarding-checklist-view.js';
 import { checklistSettled } from './onboarding-checklist.js';
+import { startBotSessionsTour, takeSessionsTourReturn } from './onboarding-sessions-tour.js';
 
 export function OnboardingModelDialog({
   actions,
@@ -411,7 +412,10 @@ export function OnboardingOverlay({
     let active = true;
     let key = '';
     markBotModeEntered();
-    void enter();
+    const returned = takeSessionsTourReturn();
+    void enter().then(() => {
+      if (active && returned) controller.openChecklist();
+    });
     const unsubscribe = store.subscribe(() => {
       const snapshot = store.getSnapshot();
       const channel = snapshot.conversation.channel;
@@ -440,6 +444,7 @@ export function OnboardingOverlay({
     return () => {
       active = false;
       controller.pauseGuide();
+      controller.closeSessionsTour(false);
       controller.closeChecklist();
       unsubscribe();
       unsubscribeCompanion?.();
@@ -478,10 +483,18 @@ export function OnboardingOverlay({
     state.modelOpen,
     state.sendOpen,
   ]);
+  const sessionsTourMount = useMountedResource<HTMLSpanElement>(() => {
+    if (!state.sessionsTourOpen || state.receipt?.tutorial !== 'active') return;
+    return startBotSessionsTour(t, {
+      onClosed: () => controller.closeSessionsTour(true),
+      onSkip: () => controller.skipTutorial(),
+    });
+  }, [state.sessionsTourOpen, state.receipt?.tutorial]);
   return (
     <>
       <span ref={mount} hidden aria-hidden="true" />
       <span ref={tourMount} hidden />
+      <span ref={sessionsTourMount} hidden />
       <OnboardingChecklist actions={actions} t={t} />
       {state.error && !state.modelOpen && !state.sendOpen ? (
         <div role="alert" className="bh-root bh-onboarding-notice">
