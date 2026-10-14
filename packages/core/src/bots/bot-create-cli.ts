@@ -182,6 +182,14 @@ Usage:
   deepseekbot settings-set <namespace> --patch-stdin
   deepseekbot workspace-create <absolute-path>
   deepseekbot group-create <name> --member <bot-id> [--member <bot-id> ...]
+  deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
+  deepseekbot im-app-status <platform>
+  deepseekbot im-app-remove <platform> --app <app-id>
+  deepseekbot im-bind <id> --app <app-id>
+  deepseekbot im-unbind <id> --app <app-id>
+  deepseekbot im-status <id>
+  deepseekbot channel-connect <channel> --bot <id> --conversation <external-id> [--app <app-id>]
+  deepseekbot channel-ingests <channel>
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
   deepseekbot bot-sessions <id> [--limit <1-100>]
   deepseekbot bot-activity <id> [--limit <1-100>]
