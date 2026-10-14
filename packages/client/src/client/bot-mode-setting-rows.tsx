@@ -258,10 +258,10 @@ export function SendKeySetting({
             label: (
               <span data-send-key={option.id} {...stylex.props(styles.sendKey)}>
                 <KeyCombo keys={option.send} apple={apple} />
-                <span>{t('sendKey.send')}</span>
+                <span>{t('shortcuts.send')}</span>
                 <span {...stylex.props(styles.sendKeySeparator)}>·</span>
                 <KeyCombo keys={option.newline} apple={apple} />
-                <span>{t('sendKey.newline')}</span>
+                <span>{t('shortcuts.newline')}</span>
               </span>
             ),
           }))}
