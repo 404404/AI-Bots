@@ -6,8 +6,18 @@ import type { PickSource, PickedFile } from '../../host/pick-files';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
-import { ArrowUpIcon, CameraIcon, CloseIcon, FileIcon, PhotoIcon, PlusIcon } from '../shell/icons';
+import {
+  ArrowUpIcon,
+  CameraIcon,
+  CloseIcon,
+  FileIcon,
+  MicIcon,
+  PhotoIcon,
+  PlusIcon,
+  StopIcon,
+} from '../shell/icons';
 import { t } from '../strings';
+import { composerActions, dictating, type DictationStatus } from './dictation';
 
 const SOURCES: Array<{ source: PickSource; label: string; Icon: typeof PhotoIcon }> = [
   { source: 'photos', label: t.attachPhotos, Icon: PhotoIcon },
@@ -110,6 +120,35 @@ function AttachmentTile({ file, onRemove }: { file: PickedFile; onRemove(): void
   );
 }
 
+function DictationLine({ status }: { status: DictationStatus }) {
+  const theme = useDesignTheme();
+  const dot = space.x2;
+  return (
+    <View
+      accessibilityLiveRegion="polite"
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.x2,
+        paddingHorizontal: space.x5,
+        paddingTop: space.x3,
+      }}
+    >
+      <View
+        style={{
+          width: dot,
+          height: dot,
+          borderRadius: radius.round,
+          backgroundColor: status === 'listening' ? theme.color.accent : theme.color.subtle,
+        }}
+      />
+      <Text variant="meta" tone="muted">
+        {status === 'listening' ? t.dictationListening : t.dictationStarting}
+      </Text>
+    </View>
+  );
+}
+
 function AttachMenu({ onPick }: { onPick(source: PickSource): void }) {
   const theme = useDesignTheme();
   return (
@@ -163,25 +202,42 @@ export function Composer({
   disabled,
   files,
   canAttach,
+  dictation,
+  canDictate,
   onChange,
   onSend,
   onPick,
   onRemove,
+  onDictate,
+  onStopDictation,
+  onCancelDictation,
 }: {
   value: string;
   placeholder: string;
   disabled: boolean;
   files: PickedFile[];
   canAttach: boolean;
+  dictation: DictationStatus;
+  canDictate: boolean;
   onChange(next: string): void;
   onSend(): void;
   onPick(source: PickSource): void;
   onRemove(id: string): void;
+  onDictate(): void;
+  onStopDictation(): void;
+  onCancelDictation(): void;
 }) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
-  const ready = (value.trim() !== '' || files.length > 0) && !disabled;
+  const listening = dictating(dictation);
+  const actions = composerActions({
+    text: value,
+    files: files.length,
+    disabled,
+    dictation,
+    canDictate,
+  });
   const toggleMenu = () => {
     if (!menu) Keyboard.dismiss();
     setMenu(!menu);
@@ -216,6 +272,7 @@ export function Composer({
             ))}
           </ScrollView>
         ) : null}
+        {listening ? <DictationLine status={dictation} /> : null}
         <View
           style={{
             flexDirection: 'row',
@@ -225,7 +282,11 @@ export function Composer({
             paddingVertical: space.x3,
           }}
         >
-          {canAttach ? (
+          {listening ? (
+            <RoundButton label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
+              <CloseIcon color={theme.color.muted} size={theme.type.title.line} />
+            </RoundButton>
+          ) : canAttach ? (
             <RoundButton
               label={menu ? t.closeAttach : t.attach}
               filled={false}
@@ -246,25 +307,44 @@ export function Composer({
             placeholderTextColor={theme.color.subtle}
             accessibilityLabel={placeholder}
             multiline
+            editable={!listening}
             style={{
               flex: 1,
               maxHeight: theme.touch * 3,
               minHeight: theme.touch - space.x4,
               paddingVertical: (theme.touch - space.x4 - theme.type.body.line) / 2,
-              paddingLeft: canAttach ? 0 : space.x3,
+              paddingLeft: canAttach || listening ? 0 : space.x3,
               color: theme.color.fg,
               fontSize: theme.type.body.size,
               lineHeight: theme.type.body.line,
             }}
           />
-          {ready ? (
-            <RoundButton label={t.send} filled onPress={onSend}>
-              <ArrowUpIcon color={theme.color.onAccent} size={theme.type.title.line} />
-            </RoundButton>
-          ) : null}
+          {actions.map((action) =>
+            action === 'mic' ? (
+              <RoundButton
+                key={action}
+                label={t.dictate}
+                filled={false}
+                onPress={() => {
+                  setMenu(false);
+                  onDictate();
+                }}
+              >
+                <MicIcon color={theme.color.muted} size={theme.type.title.line} />
+              </RoundButton>
+            ) : action === 'stop' ? (
+              <RoundButton key={action} label={t.stopDictation} filled onPress={onStopDictation}>
+                <StopIcon color={theme.color.onAccent} size={theme.type.title.line} />
+              </RoundButton>
+            ) : (
+              <RoundButton key={action} label={t.send} filled onPress={onSend}>
+                <ArrowUpIcon color={theme.color.onAccent} size={theme.type.title.line} />
+              </RoundButton>
+            ),
+          )}
         </View>
       </View>
-      {menu && canAttach ? (
+      {menu && canAttach && !listening ? (
         <AttachMenu
           onPick={(source) => {
             setMenu(false);

@@ -63,7 +63,8 @@ References:
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
   - **+** opens Photos, Camera and File below the pill. Picked files show as removable tiles inside the pill, up to 10 per message. Send appears once there is text or a file.
   - Sending uploads each file to the Host first. A retry keeps the uploads that already finished.
-  - The mic and the status strip's **Stop** wait on Host support; until then, dictation comes from the keyboard.
+  - The mic dictates on the phone: speech recognition fills the field while a line in the pill says it is listening, and the Human edits the text before sending. **Stop** ends it and keeps the text; the **×** that replaces **+** cancels it and clears the text. A refused microphone or speech permission shows a notice and leaves the mic in place.
+  - The status strip's **Stop** waits on Host support.
 
 **Bot profile** (a form sheet)
 
