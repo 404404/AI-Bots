@@ -54,14 +54,21 @@ References:
     - The viewer follows the Photos app: pinch zooms around the fingers (up to 5×, springing back to fit below 1×), double-tap zooms to 2.5× at the tapped point and back, one finger pans a zoomed image, a vertical swipe at fit size closes it with the backdrop fading, and a single tap hides or shows the close and share buttons. The close button, Android back and the iOS escape gesture also close it.
   - Reactions are small chips on the bubble corner.
   - Delivery: pending shows at 70% opacity, failed offers "Not sent · Tap to retry", and sent shows nothing.
-- **Action cards** sit in the chat stream and share one layout: title and explanation, an optional preview, then buttons.
+- **Action cards** sit in the chat stream, and the same rules apply wherever they appear (DM, Activity, Human Inbox, web Inbox). Show only what the Human needs to decide; everything else waits behind Details.
+  - Layout, top to bottom:
+    1. A header row: the category on the left (Terminal, Browser, Files, Tool, or the question's header), and a status pill on the right ("Needs you", `warningSoft` with `warning` text) while the request is open. There is no eyebrow, and the Bot's name is not repeated.
+    2. One key sentence saying what is asked ("Run this command", or the question itself).
+    3. An optional preview on the `well` layer: the command in mono, at most two lines.
+    4. **Details**, collapsed by default and expanded in place. It holds the tool, working folder and every argument on the `well` layer. There is no separate sheet.
+    5. The buttons.
   - Card kinds:
-    - **Question**: lettered options, single or multiple choice, then Submit.
-    - **Tool approval**: Allow once / Always allow / Deny. "Details ›" under the command opens a form sheet.
+    - **Question**: lettered options in one `well` group, with dividers between rows. A single choice answers on tap, with no Submit. Multiple choice or several questions end with Submit. In a DM the Other answer field becomes "Or reply in the chat below.", and a message sent while one single-part question is open answers it.
+    - **Tool approval**: Allow once / Always allow / Deny.
     - **Takeover**: a computer screenshot, then Take over / Done / Not now.
-  - At most one primary button per card.
-  - Reading more (a "Details ›" link) sits apart from the decisions. Decisions stack in one full-width column: the primary first, the destructive one last.
-  - A decided card collapses to one line. A card decided on another device says so.
+  - Buttons are pills with no outline. The primary is a neutral high-contrast fill (`fg` with a `base` label), the secondary a subtle solid fill one step off the layer, and Deny a red label on the layer's `danger` tint. A card has at most one primary. Three or more decisions stack full width (primary first, destructive last); two sit in a row, sized to their labels.
+  - No keyboard shortcut hints, no explanatory boilerplate, and no paths or ids outside Details.
+  - Regions are told apart by layer fills, not borders. The card is `raised` with no outline, and an outline appears only on the focused card (`edge.focus` in the accent).
+  - A decided card collapses to one line: a coloured dot, then "subject · outcome" (for example "bash · Allowed once"). A card decided on another device or expired says so.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
   - **+** opens Photos, Camera and File below the pill. Picked files show as removable tiles inside the pill, up to 10 per message. Send appears once there is text or a file.
@@ -90,7 +97,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 
 - `chosen` is the accent over the fill, 13% in light and 30% in dark. On `well` it equals DSH `state-business-tertiary`, and it follows a Bot's accent.
 - A state is pushed further from its fill until it stands apart from the fill, the layer under it and the other states (`SEPARATION` in `layers.ts`; `test/design-tokens.test.ts` checks every scheme and accent). DSH's dark `interactive-bg-active` over `bg-base` equals `bg-module-platform`, so without this a selected row in a card looks like the card.
-- Buttons take their colours from `buttonColors(theme, tone, on)` (`controls.ts`) for the layer they sit `on`: primary is the accent (darkened until its label reaches 4.5:1), secondary is the layer's `selected` with its `edge` (or the next layer's fill when that is too close to the primary), and danger is the layer's `danger` with `dangerEdge` and a red label. Each fill stands apart from the layer and from the other tones, and each label reaches 4.5:1.
+- Buttons take their colours from `buttonColors(theme, tone, on)` (`controls.ts`) for the layer they sit `on`: primary is the neutral high-contrast fill, secondary is the layer's `selected` (or the next layer's fill when that is too close to the primary), and danger is the layer's `danger` with a red label, all without an outline (see Action cards). Each fill stands apart from the layer and from the other tones, and each label reaches 4.5:1.
 - Translucent roles (`hover`, `selected`, `divider`, `border*`, `dangerSoft`) are never a `backgroundColor`; `test/style-guard.test.ts` enforces this. Translucent edges stay allowed.
 
 ## Components
