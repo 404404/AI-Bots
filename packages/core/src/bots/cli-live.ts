@@ -1324,7 +1324,18 @@ async function runDeviceCommand(
     return json('/api/computer/takeover', { active: values.enabled === true });
   if (command === 'computer-input') return json('/api/computer/input', toolArgs);
   if (command === 'computer-frame') {
-    const desktop = record(await json('/api/computer/frame'));
+    const { response, bytes: answer } = await http('/api/computer/frame');
+    if (response.status === 204)
+      throw new CliLiveError('no-frame', 'The Computer has not produced a frame yet; try again.');
+    let desktop: Record<string, unknown>;
+    try {
+      desktop = record(JSON.parse(new TextDecoder().decode(answer)));
+    } catch {
+      throw new CliLiveError(
+        'host-protocol-error',
+        'The Host returned no JSON for /api/computer/frame.',
+      );
+    }
     if (typeof desktop['data'] !== 'string')
       throw new CliLiveError('host-protocol-error', 'The Host returned no Computer frame.');
     const bytes = Buffer.from(desktop['data'], 'base64');

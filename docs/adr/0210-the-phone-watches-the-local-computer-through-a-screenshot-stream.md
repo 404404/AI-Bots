@@ -28,7 +28,7 @@ The A/B test in [the research note](../research/2026-10-14-local-computer-frame-
 
 ## Consequences
 
-- **Take control pauses the Bot.** `POST /api/computer/takeover` sets a pause that refuses every Bot Computer tool call, screenshots included, so the Bot cannot move focus or read the screen while the Human types a password. Human input is refused unless the pause is on. The pause is a lease: frame polls and input renew it, and it lapses 30 s after the phone stops, so a closed app cannot leave the Bot stuck. The Computer is shared by the profile, so the pause applies to every Bot.
+- **Take control pauses the Bot.** `POST /api/computer/takeover` sets a pause that refuses every Bot Computer tool call, screenshots included, so the Bot cannot move focus or read the screen while the Human types a password. Taking control waits (up to 10 s) for Bot calls already in progress to finish, and a Bot call that finishes after the pause started is refused, so a screenshot taken in that window never reaches the Bot. Human input is refused unless the pause is on. The pause is a lease: frame polls and input renew it, and it lapses 30 s after the phone stops, so a closed app cannot leave the Bot stuck. The Computer is shared by the profile, so the pause applies to every Bot.
 - The phone has a password keyboard. It is a secure text field: no echo, no predictive text, and the system can offer saved passwords. Characters go straight to the driver's `type_text`.
 - Every input is recorded in diagnostics as a `computer-action` with its kind and character count, never the typed text.
 - Frames are not stored. The Host keeps only the latest one in memory while a viewer polls.

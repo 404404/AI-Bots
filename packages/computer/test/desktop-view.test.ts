@@ -139,6 +139,34 @@ describe('desktop view frames', () => {
     expect(await fallback.next(undefined)).toMatchObject({ data: 'a', mimeType: 'image/png' });
   });
 
+  it('keeps a shared capture alive when one poller gives up', async () => {
+    let release: (() => void) | undefined;
+    const signals: (AbortSignal | undefined)[] = [];
+    const view = createDesktopView({
+      driver: {
+        async call(_tool: string, _args: Record<string, unknown>, signal?: AbortSignal) {
+          signals.push(signal);
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+          return shot('a');
+        },
+      },
+      isRunning: () => true,
+      intervalMs: 0,
+      encode: async () => undefined,
+    });
+    const leaving = new AbortController();
+    const first = view.next(undefined, leaving.signal);
+    const second = view.next(undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    leaving.abort();
+    expect(await first).toBeUndefined();
+    release?.();
+    expect(await second).toMatchObject({ seq: 1, data: 'a' });
+    expect(signals).toEqual([undefined]);
+  });
+
   it('answers with no frame when the screen stays the same until the wait ends', async () => {
     const view = createDesktopView({
       driver: fakeDriver(['a']),

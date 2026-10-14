@@ -48,6 +48,8 @@ import { ViewerProxy, proxyUpgrade, viewerUpgradePaths } from './viewer.js';
 
 export const name = 'botharness-computer';
 
+const TAKEOVER_DRAIN_MS = 10_000;
+
 export interface ComputerConfig {
   target: ComputerTarget;
   enabled: boolean;
@@ -761,6 +763,7 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
             409,
           );
         const paused = desktopView.setPaused(body['active']);
+        if (paused) await toolProvider.drain(TAKEOVER_DRAIN_MS);
         activity.touch();
         diagnostics.record('computer-action', `viewer takeover ${paused ? 'on' : 'off'}`);
         return json({ ok: true, paused });

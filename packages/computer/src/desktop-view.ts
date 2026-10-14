@@ -223,6 +223,16 @@ const wait = (ms: number, signal?: AbortSignal): Promise<void> =>
     signal?.addEventListener('abort', done);
   });
 
+function untilAborted<T>(work: Promise<T>, signal?: AbortSignal): Promise<T | undefined> {
+  if (signal === undefined) return work;
+  if (signal.aborted) return Promise.resolve(undefined);
+  return new Promise((resolve, reject) => {
+    const abort = (): void => resolve(undefined);
+    signal.addEventListener('abort', abort, { once: true });
+    work.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+  });
+}
+
 export function createDesktopView(options: {
   driver: Pick<CuaDriver, 'call'>;
   isRunning: () => boolean;
@@ -253,17 +263,16 @@ export function createDesktopView(options: {
   let published = 0;
   let lastCaptureMs = 0;
 
-  const capture = (signal?: AbortSignal): Promise<DesktopFrame | undefined> => {
+  const capture = (): Promise<DesktopFrame | undefined> => {
     capturing ??= (async () => {
       const gap = lastStarted + intervalMs - now();
-      if (gap > 0) await wait(gap, signal);
+      if (gap > 0) await wait(gap);
       lastStarted = now();
       captures += 1;
-      const result = await options.driver.call(
-        'get_desktop_state',
-        { max_image_dimension: VIEWER_MAX_DIMENSION, session: VIEWER_SESSION },
-        signal,
-      );
+      const result = await options.driver.call('get_desktop_state', {
+        max_image_dimension: VIEWER_MAX_DIMENSION,
+        session: VIEWER_SESSION,
+      });
       lastCaptureMs = now() - lastStarted;
       const shot = desktopCapture(result);
       if (shot === undefined)
@@ -308,7 +317,7 @@ export function createDesktopView(options: {
       const deadline = now() + waitMs;
       while (signal?.aborted !== true) {
         requireRunning();
-        const current = (await capture(signal)) ?? latest;
+        const current = (await untilAborted(capture(), signal)) ?? latest;
         if (current !== undefined && (after === undefined || current.seq > after)) return current;
         if (now() >= deadline) return undefined;
       }

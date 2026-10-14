@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { inflateSync } from 'node:zlib';
 
@@ -232,6 +233,7 @@ async function main() {
     );
     if (answer.status === 204) continue;
     const text = await answer.text();
+    if (!answer.ok) throw new Error(`frame request failed ${answer.status}: ${text.slice(0, 200)}`);
     const receivedAt = Date.now();
     const body = JSON.parse(text);
     if (body.ok !== true) throw new Error(`frame refused: ${text.slice(0, 200)}`);
@@ -259,5 +261,5 @@ async function main() {
   );
 }
 
-if (process.argv[1] !== undefined && resolve(process.argv[1]) === new URL(import.meta.url).pathname)
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   await main();

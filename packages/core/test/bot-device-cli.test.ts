@@ -212,6 +212,13 @@ describe('Agent Browser and Computer commands', () => {
     ]);
   });
 
+  it('reports no-frame when the Computer has not produced a frame yet', async () => {
+    const live = await host(() => ({ status: 204, bytes: Buffer.alloc(0) }));
+    const result = await invoke(['computer-frame', '--out', '/tmp/never.png'], live.url);
+    expect(result.code).not.toBe(0);
+    expect(result.json.error).toMatchObject({ code: 'no-frame' });
+  });
+
   it('reports a Host refusal from a browser or Computer route as a coded error', async () => {
     const live = await host(() => ({
       status: 409,
