@@ -414,7 +414,7 @@ printf '{"title":"Water the plants"}' | deepseekbot todo-tool <bot-id> todos_add
 
 ### Auto approval (Approval Templates)
 
-A PersonaBot can select one Approval Template ([ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)). While one is selected, an Approval Reviewer answers the Bot's tool approvals by the template before any card is posted. This release ships two read-only templates, `cautious` and `get-work-done`.
+A PersonaBot can select one Approval Template ([ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)). While one is selected, an Approval Reviewer answers the Bot's operation approvals (Shell commands that leave the sandbox, file tools, opening an attachment) by the template before any card is posted. Secret tools, Browser and Computer authorization, and any call that changes approval policy still go to the Human as cards. This release ships two read-only templates, `cautious` and `get-work-done`.
 
 ```bash
 deepseekbot approval-templates [--bot <bot-id>]

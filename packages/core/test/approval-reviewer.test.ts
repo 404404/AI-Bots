@@ -127,6 +127,12 @@ describe('Approval Templates', () => {
     expect(changesApprovalPolicy('deepseekbot bot approval-template set ada off')).toBe(true);
     expect(changesApprovalPolicy('{"method":"botApprovalTemplateSet"}')).toBe(true);
     expect(changesApprovalPolicy('deepseekbot approval-reviewer model set bot')).toBe(true);
+    expect(
+      changesApprovalPolicy(
+        `sqlite3 ~/.dsh/botharness/botharness.db "update persona_bots set body = '{}'"`,
+      ),
+    ).toBe(true);
+    expect(changesApprovalPolicy('DELETE FROM tool_approval_rules')).toBe(true);
     expect(changesApprovalPolicy('deepseekbot approval-templates')).toBe(false);
     expect(changesApprovalPolicy('deepseekbot approval-template-show cautious')).toBe(false);
     expect(changesApprovalPolicy('git status')).toBe(false);
