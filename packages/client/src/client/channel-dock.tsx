@@ -69,8 +69,6 @@ const DOCK_THEME: DockviewTheme = {
   dndPanelOverlay: 'content',
 };
 
-const FLOATING_SIZE = { width: 360, height: 420 };
-
 function matches(query: string): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
     ? window.matchMedia(query).matches
@@ -110,7 +108,6 @@ interface DockContextValue {
   runtime(entryId: string): EntryRuntime;
   setRuntime(entryId: string, next: Partial<EntryRuntime>): void;
   close(panelId: string): void;
-  toggleFloating(panelId: string): void;
   t: BotHarnessTranslate;
 }
 
@@ -179,8 +176,6 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
   const Badge = shown ? entry.badge : undefined;
   const HeaderAction = shown ? entry.headerAction : undefined;
   const HeaderTabs = shown ? entry.headerTabs : undefined;
-  const floating = api.location.type === 'floating';
-  const floatLabel = dock.t(floating ? 'dock.dock' : 'dock.float', { label: entry.label });
   const closeLabel = dock.t('dock.close', { label: entry.label });
   return (
     <div className="bh-dock-header" data-dock-header={entryId}>
@@ -198,16 +193,6 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
             onMouseDown={(event) => event.stopPropagation()}
           >
             {HeaderAction === undefined || props === undefined ? null : <HeaderAction {...props} />}
-            <Tooltip label={floatLabel} side="bottom" delayMs={500}>
-              <IconButton
-                tone="subtle"
-                aria-label={floatLabel}
-                data-dock-float={entryId}
-                onClick={() => dock.toggleFloating(api.id)}
-              >
-                <ChannelSidebarIcon name={floating ? 'panel-right' : 'picture-in-picture-2'} />
-              </IconButton>
-            </Tooltip>
             <Tooltip label={closeLabel} side="bottom" delayMs={500}>
               <IconButton
                 tone="subtle"
@@ -415,12 +400,6 @@ export function ChannelDock({
         return updated;
       }),
     close,
-    toggleFloating: (panelId) => {
-      const panel = api?.getPanel(panelId);
-      if (api === undefined || panel === undefined || panelId === CHANNEL_BODY_PANEL) return;
-      if (panel.api.location.type === 'floating') panel.group.api.moveTo({ position: 'right' });
-      else api.addFloatingGroup(panel, FLOATING_SIZE);
-    },
     t,
   };
 
@@ -438,6 +417,7 @@ export function ChannelDock({
           defaultTabComponent={ChannelDockTab}
           singleTabMode="fullwidth"
           disableTabsOverflowList
+          disableFloatingGroups
           theme={DOCK_THEME}
           dndEdges={{
             size: { value: 24, type: 'pixels' },

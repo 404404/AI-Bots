@@ -41,13 +41,6 @@ export const CHANNEL_DOCK_CSS =
   --dv-tabs-container-scrollbar-color: ${color.border};
   --dv-dropdown-border-radius: ${radius.sm};
   --dv-overlay-z-index: 999;
-  --dv-floating-box-shadow: var(--dsw-elevation-prominent);
-  --dv-floating-border: ${border.hairline} solid ${color.divider};
-  --dv-floating-group-border: ${border.hairline} solid ${color.divider};
-  --dv-floating-group-dragging-opacity: 0.7;
-  --dv-floating-titlebar-height: ${space.x4};
-  --dv-floating-titlebar-background-color: ${color.surface};
-  --dv-floating-titlebar-border-bottom: ${border.hairline} solid ${color.divider};
   --dv-context-menu-background-color: ${color.base};
   --dv-context-menu-color: ${color.fg};
 }

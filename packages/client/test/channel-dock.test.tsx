@@ -144,6 +144,7 @@ describe('desktop Bot mode dock', () => {
     );
     expect(host.querySelector('[data-dock-close="sessions"]')).not.toBeNull();
     expect(host.querySelector(`[data-dock-close="${CHANNEL_BODY_PANEL}"]`)).toBeNull();
+    expect(host.querySelector('[data-dock-float]')).toBeNull();
   });
 
   it('shows an empty state for a panel the active Channel has nothing for', async () => {
@@ -195,16 +196,6 @@ describe('desktop Bot mode dock', () => {
     await render([...builtins, computer]);
     expect(Object.keys(panels())).toContain('computer');
     expect(readChannelDock(storage)!.parked['computer']).toBeUndefined();
-  });
-
-  it('floats a panel inside the window and docks it back', async () => {
-    await render(builtins);
-    await click('[data-dock-float="bot-inbox"]');
-    expect(readChannelDock(storage)!.layout.floatingGroups?.[0]?.data?.views).toEqual([
-      'bot-inbox',
-    ]);
-    await click('[data-dock-float="bot-inbox"]');
-    expect(readChannelDock(storage)!.layout.floatingGroups ?? []).toEqual([]);
   });
 
   it('resets to the default layout', async () => {

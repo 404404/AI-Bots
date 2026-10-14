@@ -175,18 +175,11 @@ export function pruneChannelDock(
     if (!keep(id) && parked[id] === undefined) parked[id] = { direction: 'right' };
   if (root === undefined || !collectPanels(root).includes(CHANNEL_BODY_PANEL))
     return { layout: undefined, parked };
-  const floatingGroups = (layout.floatingGroups ?? []).filter((group) => {
-    const views = group.data?.views;
-    if (views === undefined || views.length === 0) return false;
-    if (views.every(keep)) return true;
-    for (const id of views) if (!keep(id)) parked[id] ??= { direction: 'right' };
-    return false;
-  });
-  const panels = Object.fromEntries(Object.entries(layout.panels).filter(([id]) => keep(id)));
-  const groups = new Set([
-    ...collectGroups(root),
-    ...floatingGroups.map((group) => group.data?.id),
-  ]);
+  for (const group of layout.floatingGroups ?? [])
+    for (const id of group.data?.views ?? []) parked[id] ??= { direction: 'right' };
+  const docked = new Set(collectPanels(root));
+  const panels = Object.fromEntries(Object.entries(layout.panels).filter(([id]) => docked.has(id)));
+  const groups = new Set(collectGroups(root));
   return {
     layout: {
       grid: { ...layout.grid, root },
@@ -194,7 +187,6 @@ export function pruneChannelDock(
       ...(layout.activeGroup !== undefined && groups.has(layout.activeGroup)
         ? { activeGroup: layout.activeGroup }
         : {}),
-      ...(floatingGroups.length > 0 ? { floatingGroups } : {}),
     },
     parked,
   };

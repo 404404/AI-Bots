@@ -104,7 +104,7 @@ describe('pruning panels that are not registered', () => {
     expect(pruneChannelDock(layout, (id) => id !== CHANNEL_BODY_PANEL).layout).toBeUndefined();
   });
 
-  it('drops a floating group whose panel is gone', () => {
+  it('docks nothing from a floating group', () => {
     const floating = {
       ...layout,
       floatingGroups: [
@@ -114,8 +114,12 @@ describe('pruning panels that are not registered', () => {
         },
       ],
     } as SerializedDockview;
-    const result = pruneChannelDock(floating, (id) => id !== 'schedules');
+    const result = pruneChannelDock(
+      { ...floating, panels: { ...floating.panels, schedules: { id: 'schedules' } } },
+      () => true,
+    );
     expect(result.layout!.floatingGroups).toBeUndefined();
+    expect(Object.keys(result.layout!.panels)).not.toContain('schedules');
     expect(result.parked['schedules']).toEqual({ direction: 'right' });
   });
 });

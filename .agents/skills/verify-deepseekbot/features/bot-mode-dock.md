@@ -7,7 +7,6 @@ On a desktop-width window (961px and wider), Bot mode lays out the Channel body 
 - `default-layout` opens the Channel body with Sessions above Bot Inbox on the right. Other panels start closed.
 - `panels-menu` lists every registered panel from the `Panels` button, reopens a closed one where it was, and has `Reset layout`.
 - `close` closes any panel except the Channel body.
-- `float` floats a panel inside the window and docks it back to the right.
 - `drag-split` drags a panel by its header to split beside another panel or the layout edge. A drop on a panel's center is refused, so panels never become tabs.
 - `persist` saves the layout to `localStorage` key `botharness.bot-mode-layout` (versioned dockview serialization) and restores it on reload.
 - `narrow` falls back to the overlay sidebar below 961px and returns to the dock when widened.
@@ -15,7 +14,7 @@ On a desktop-width window (961px and wider), Bot mode lays out the Channel body 
 ## How to get to it (user POV)
 
 - Enter Bot mode in a window at least 961px wide and open any Channel.
-- Use the `Panels` button at the top right of the Channel body, or the float and close buttons in each panel header.
+- Use the `Panels` button at the top right of the Channel body, or the close button in each panel header.
 
 ## Driving it with verify-app
 
@@ -23,7 +22,6 @@ Preconditions: a fresh instance that passes `doctor`.
 
 - **Default layout.** Run `node scripts/verify-app.mjs shot dock --name <n> --bot-mode`. The ARIA file has `region "Bot mode layout"`, `button "Panels"`, `button "Close Sessions"` and `button "Close Bot Inbox"`, and no close button for the Channel body.
 - **Close and reopen.** Add `--click "Close Bot Inbox" --click Panels --click "Bot Inbox"`. Bot Inbox is back below Sessions.
-- **Float.** Add `--click "Float Bot Inbox"`. The screenshot shows Bot Inbox floating over the Channel body, and the header now has `Dock Bot Inbox`.
 - **Narrow.** `shot` captures at 1440px. From a Puppeteer script, `page.setViewport({ width: 900, height: 800 })` after Bot mode loads: the ARIA tree has no `region "Bot mode layout"` and the old sidebar toggle is back. Widen again and the dock returns.
 - **Canonical state.** The layout is browser state, not Host state: read `localStorage.getItem('botharness.bot-mode-layout')` from the page. `version` is `1` and `layout.panels` lists the open panels.
 

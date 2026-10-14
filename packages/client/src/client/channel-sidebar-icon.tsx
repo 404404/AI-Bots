@@ -485,14 +485,6 @@ const glyphs: Record<string, readonly [string, Record<string, string | number>][
     ['circle', { cx: '15', cy: '5', r: '1' }],
     ['circle', { cx: '15', cy: '19', r: '1' }],
   ],
-  'picture-in-picture-2': [
-    ['path', { d: 'M21 9V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h4' }],
-    ['rect', { width: '10', height: '7', x: '12', y: '13', rx: '2' }],
-  ],
-  'panel-right': [
-    ['rect', { width: '18', height: '18', x: '3', y: '3', rx: '2' }],
-    ['path', { d: 'M15 3v18' }],
-  ],
   x: [
     ['path', { d: 'M18 6 6 18' }],
     ['path', { d: 'm6 6 12 12' }],
