@@ -2866,7 +2866,7 @@ export const zh = {
   'approval.secretCliRisk':
     'Bot 想带着你填写的密钥运行一个命令行程序。这个程序会拿到密钥，也可能把它泄露出去。请核对程序名和每一个参数；这类调用每次都需要单独批准。',
   'approval.secretMcpRisk':
-    'Bot 想带着你填写的密钥启动一个 MCP 服务。这个程序会拿到密钥并持续运行，直到断开、撤销账号或重启；它也可能把密钥泄露出去。请核对程序名和每一个参数。选“批准并记住”后，这个 Bot 每次启动都会自动连上它；其他 Bot 可以在各自的设置里启用它并使用这份密钥，直到你在设置里移除。',
+    'Bot 想带着你填写的密钥启动一个 MCP 服务。这个程序会拿到密钥并持续运行，直到断开、撤销账号或重启；它也可能把密钥泄露出去。它还能把自己的说明写进 Bot 的系统提示，它的工具描述和返回结果也会进入 Bot 的上下文，可能影响 Bot 的行为。请只连接你信任的服务。请核对程序名和每一个参数。选“批准并记住”后，这个 Bot 每次启动都会自动连上它；其他 Bot 可以在各自的设置里启用它并使用这份密钥，直到你在设置里移除。',
   'approval.allowAndRemember': '批准并记住（其他 Bot 可在设置里启用）',
   'approval.serverRemembered': '已批准并记住这个服务',
   'privateAccounts.mcpTitle': '已记住的 MCP 服务',
@@ -6223,7 +6223,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.secretCliRisk':
     'The Bot wants to run a command-line program with a secret you entered. The program receives the secret and could reveal it. Check the program name and every argument; each such call needs its own approval.',
   'approval.secretMcpRisk':
-    'The Bot wants to start an MCP server with a secret you entered. The program receives the secret and keeps running until it is disconnected, the account is revoked or the Host restarts; it could reveal the secret. Check the program name and every argument. With Allow and remember, this Bot reconnects it whenever it starts; other Bots can enable it in their settings and use this secret, until you remove it in settings.',
+    'The Bot wants to start an MCP server with a secret you entered. The program receives the secret and keeps running until it is disconnected, the account is revoked or the Host restarts; it could reveal the secret. It can also add its own instructions to the system prompt of the Bot, and its tool descriptions and results enter the context of the Bot and can influence what it does. Connect only a server you trust. Check the program name and every argument. With Allow and remember, this Bot reconnects it whenever it starts; other Bots can enable it in their settings and use this secret, until you remove it in settings.',
   'approval.allowAndRemember': 'Allow and remember (other Bots can enable it)',
   'approval.serverRemembered': 'Allowed and remembered this server',
   'privateAccounts.mcpTitle': 'Remembered MCP servers',
