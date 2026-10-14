@@ -5059,6 +5059,12 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-question-source code { display: block; margin-top: ${space.x2}; overflow-wrap: anywhere; }
 .bh-question-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: ${space.x2}; min-width: 0; }
 .bh-question-prompt { font-weight: ${text.strong}; white-space: pre-wrap; }
+.bh-question-letter { display: grid; place-items: center; width: 22px; height: 22px; border-radius: ${radius.round}; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; font-weight: ${text.strong}; line-height: 1; }
+.bh-question-letter[data-multiple] { border-radius: ${radius.xs}; }
+.bh-question-card .bh-card-row[data-selected='true'] .bh-question-letter { background: var(--bh-accent); color: ${color.onAccent}; }
+.bh-question-card label.bh-card-main { position: relative; }
+.bh-question-card .bh-card-checkbox { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.bh-question-card label.bh-card-main:has(.bh-card-checkbox:focus-visible) { outline: ${border.focus} solid var(--dsw-alias-label-primary); outline-offset: -2px; }
 .bh-question-custom { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, ${text.bodySize}); }
 .bh-tool-approval-input {
   margin: 0;

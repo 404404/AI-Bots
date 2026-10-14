@@ -188,9 +188,18 @@ export function UserQuestionCard({
           )}
           {question.options?.length ? (
             <SidebarCardList label={question.question} className="bh-message-card-list">
-              {question.options.map((option) => (
+              {question.options.map((option, index) => (
                 <SidebarCardRow
                   key={option.label}
+                  leading={
+                    <span
+                      className="bh-question-letter"
+                      data-multiple={question.multiSelect === true || undefined}
+                      aria-hidden="true"
+                    >
+                      {String.fromCharCode(65 + (index % 26))}
+                    </span>
+                  }
                   title={option.label}
                   meta={detailed ? option.description : undefined}
                   selection={{

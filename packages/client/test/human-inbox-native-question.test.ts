@@ -157,7 +157,7 @@ describe('Human Inbox native question', () => {
         );
         expect(container.textContent).toContain('Please check the release.');
         expect(container.textContent).toContain('The separate check is queued.');
-        await act(async () => button('CanarySmall launch')!.click());
+        await act(async () => button('ACanarySmall launch')!.click());
         if (outcome === 'custom') {
           const input = container.querySelector<HTMLInputElement>('input')!;
           await act(async () => {
@@ -167,7 +167,7 @@ describe('Human Inbox native question', () => {
             );
             input.dispatchEvent(new Event('input', { bubbles: true }));
           });
-          expect(button('CanarySmall launch')?.getAttribute('aria-pressed')).toBe('false');
+          expect(button('ACanarySmall launch')?.getAttribute('aria-pressed')).toBe('false');
         }
         await act(async () => button('回答并继续')!.click());
         expect(
