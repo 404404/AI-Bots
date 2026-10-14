@@ -165,10 +165,6 @@ function compareEntries(left: ChannelSidebarEntry, right: ChannelSidebarEntry): 
   return (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id);
 }
 
-/**
- * With `dockPanels`, every entry outside Channel settings is also a `channel` Dock panel,
- * and entries that share a tab open stacked next to each other (ADR-0203).
- */
 export function createChannelSidebarRegistry(dockPanels?: DockPanelHost): ChannelSidebarRegistry {
   const entries = new Map<string, ChannelSidebarEntry>();
   const tabs = new Map<string, ChannelSidebarTab>();

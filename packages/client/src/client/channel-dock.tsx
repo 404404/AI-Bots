@@ -295,9 +295,7 @@ function buildDefaultLayout(api: DockviewApi, entries: ReadonlyMap<string, DockP
 export interface ChannelDockProps {
   body: ReactNode;
   panels: readonly DockPanelRegistration[];
-  /** The active Channel, handed to `channel` panels registered through `dockPanels`. */
   channel?: DockPanelChannel | undefined;
-  /** The `dockPanels` Service this layout serves while it is mounted. */
   registry?: DockPanelHost | undefined;
   entryProps: ChannelSidebarEntryProps | undefined;
   shows(entry: ChannelSidebarEntry): boolean;
@@ -500,7 +498,6 @@ function ChannelDockPanelsMenu({
   const label = t('dock.panels');
   const items: MenuEntry[] = [
     { type: 'label', id: 'bh:dock-panels', text: label },
-    // Group-only Channel sidebar entries stay after the rest, as in the old + Views menu.
     ...[...panels]
       .sort((left, right) => groupRank(left) - groupRank(right))
       .map((panel) => ({

@@ -2,15 +2,8 @@ import type { ComponentType } from 'react';
 
 import type { ChannelSidebarEntry } from './channel-sidebar.js';
 
-/** `channel` panels follow the active Channel; `global` panels do not (ADR-0203). */
 export type DockPanelScope = 'global' | 'channel';
 
-/**
- * Where a panel opens the first time, before the Human has moved it: the
- * leftmost column, below the Channel body, the right column, or a bottom row
- * across the layout. With `relativeTo` open, the panel stacks right after that
- * panel instead. A panel the Human has closed reopens where it was.
- */
 export interface DockPanelPosition {
   readonly zone: 'left' | 'center' | 'right' | 'bottom';
   readonly relativeTo?: string | undefined;
@@ -23,14 +16,12 @@ export interface DockPanelChannel {
 }
 
 export interface DockPanelProps {
-  /** The active Channel for a `channel` panel; always undefined for a `global` panel. */
   readonly channel: DockPanelChannel | undefined;
 }
 
 export interface DockPanel {
   readonly id: string;
   readonly title: string;
-  /** A Channel sidebar glyph name, such as `list-todo`; unknown names draw a generic panel glyph. */
   readonly icon?: string | undefined;
   readonly scope: DockPanelScope;
   readonly defaultPosition?: DockPanelPosition | undefined;
@@ -38,12 +29,10 @@ export interface DockPanel {
   readonly component: ComponentType<DockPanelProps>;
 }
 
-/** A registered panel; `entry` is set when it came through the `channelSidebar` Consumer. */
 export interface DockPanelRegistration extends DockPanel {
   readonly entry?: ChannelSidebarEntry | undefined;
 }
 
-/** What the mounted Bot mode layout lends the Service while it is on screen. */
 export interface DockPanelLayout {
   open(id: string): void;
   close(id: string): void;
@@ -52,7 +41,6 @@ export interface DockPanelLayout {
 export interface DockPanelRegistry {
   register(panel: DockPanel): () => void;
   panels(): readonly DockPanelRegistration[];
-  /** Ids of the panels open in the Bot mode layout; empty while no layout is mounted. */
   openPanels(): readonly string[];
   isOpen(id: string): boolean;
   open(id: string): void;
@@ -62,11 +50,8 @@ export interface DockPanelRegistry {
 }
 
 export interface DockPanelHost extends DockPanelRegistry {
-  /** The `channelSidebar` compatibility path: a Channel sidebar entry as a `channel` panel. */
   registerEntry(entry: ChannelSidebarEntry, defaultPosition?: DockPanelPosition): () => void;
-  /** Called by the mounted layout; returns the detach. */
   attach(layout: DockPanelLayout): () => void;
-  /** Called by the mounted layout after every layout change. */
   reportOpen(ids: readonly string[]): void;
 }
 
@@ -76,7 +61,6 @@ function compare(left: DockPanelRegistration, right: DockPanelRegistration): num
   return (left.order ?? 0) - (right.order ?? 0) || left.id.localeCompare(right.id);
 }
 
-/** The dock's panels when no `dockPanels` Service is supplied, as in isolated tests. */
 export function dockPanelsFromEntries(
   entries: readonly ChannelSidebarEntry[],
 ): readonly DockPanelRegistration[] {
