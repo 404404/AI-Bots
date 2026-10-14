@@ -1,8 +1,16 @@
 import { useState, type ReactElement } from 'react';
-import { approvalFileChange } from './approval-diff.js';
+import { approvalFileChange, approvalShellCommand } from './approval-diff.js';
 import type { BotHarnessTranslate } from './locale.js';
 
 export const APPROVAL_INPUT_PREVIEW_LINES = 12;
+export const APPROVAL_INPUT_PREVIEW_CHARS = 480;
+
+function preview(value: string): string {
+  const lines = value.split('\n').slice(0, APPROVAL_INPUT_PREVIEW_LINES).join('\n');
+  return lines.length > APPROVAL_INPUT_PREVIEW_CHARS
+    ? lines.slice(0, APPROVAL_INPUT_PREVIEW_CHARS) + '…'
+    : lines;
+}
 
 export function ApprovalInput({
   toolName,
@@ -15,8 +23,12 @@ export function ApprovalInput({
 }): ReactElement {
   const [expanded, setExpanded] = useState(false);
   const fileChange = approvalFileChange(toolName, input);
-  const lineCount = fileChange?.lines.length ?? input.split('\n').length;
-  const foldable = lineCount > APPROVAL_INPUT_PREVIEW_LINES;
+  const shell = fileChange === undefined ? approvalShellCommand(toolName, input) : undefined;
+  const shown = shell?.command ?? input;
+  const lineCount = fileChange?.lines.length ?? shown.split('\n').length;
+  const foldable =
+    lineCount > APPROVAL_INPUT_PREVIEW_LINES ||
+    (fileChange === undefined && shown.length > APPROVAL_INPUT_PREVIEW_CHARS);
   const folded = foldable && !expanded;
   const toggle = foldable ? (
     <button
@@ -25,16 +37,31 @@ export function ApprovalInput({
       aria-expanded={expanded}
       onClick={() => setExpanded((value) => !value)}
     >
-      {t(expanded ? 'approval.collapseInput' : 'approval.expandInput', {
-        count: String(lineCount),
-      })}
+      {t(expanded ? 'approval.collapseInput' : 'approval.expandInput')}
     </button>
   ) : null;
+  if (shell !== undefined)
+    return (
+      <figure className="bh-tool-approval-input-block bh-tool-approval-shell">
+        {shell.description === undefined ? null : <figcaption>{shell.description}</figcaption>}
+        <pre
+          className="bh-tool-approval-input"
+          data-folded={folded || undefined}
+          aria-label={t('approval.commandLabel')}
+        >
+          <span className="bh-tool-approval-diff-mark" aria-hidden="true">
+            ${' '}
+          </span>
+          {folded ? preview(shell.command) : shell.command}
+        </pre>
+        {toggle}
+      </figure>
+    );
   if (fileChange === undefined)
     return (
       <div className="bh-tool-approval-input-block">
         <pre className="bh-tool-approval-input" data-folded={folded || undefined}>
-          {folded ? input.split('\n').slice(0, APPROVAL_INPUT_PREVIEW_LINES).join('\n') : input}
+          {folded ? preview(input) : input}
         </pre>
         {toggle}
       </div>

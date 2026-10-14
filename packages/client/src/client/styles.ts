@@ -5081,6 +5081,7 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-tool-approval-input-block { display: grid; gap: ${space.x2}; min-width: 0; margin: 0; }
 .bh-tool-approval-input[data-folded] { max-height: none; overflow: hidden; }
 .bh-tool-approval-fold { justify-self: start; padding: 0; border: 0; background: transparent; color: ${color.accent}; font: inherit; font-size: ${text.metaSize}; cursor: pointer; }
+.bh-tool-approval-shell figcaption { color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; }
 .bh-tool-approval-diff figcaption { display: flex; align-items: center; gap: ${space.x3}; min-width: 0; font-size: ${text.metaSize}; }
 .bh-tool-approval-diff figcaption code { min-width: 0; overflow-wrap: anywhere; }
 .bh-tool-approval-diff-stat[data-kind='add'] { color: ${color.success}; }

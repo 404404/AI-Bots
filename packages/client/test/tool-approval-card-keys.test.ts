@@ -4,7 +4,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BridgeActions } from '../src/client/actions.js';
 import { approvalCountdown } from '../src/client/approval-countdown.js';
-import { approvalFileChange, diffLines } from '../src/client/approval-diff.js';
+import {
+  approvalFileChange,
+  approvalShellCommand,
+  diffLines,
+} from '../src/client/approval-diff.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { store, type ChannelMessage } from '../src/client/store.js';
 import { ToolApprovalCard } from '../src/client/tool-approval-card.js';
@@ -156,6 +160,25 @@ describe('Tool approval countdown', () => {
   });
 });
 
+describe('Tool approval shell command', () => {
+  it('shows the command as shell text with its description and folds a long one', async () => {
+    const command =
+      "printf '%s\\n' " + Array.from({ length: 80 }, (_, i) => `'line ${i}'`).join(' ');
+    const card = await render(
+      message('bash', JSON.stringify({ command, description: 'Write notes' })),
+    );
+    expect(card.querySelector('.bh-tool-approval-shell figcaption')?.textContent).toBe(
+      'Write notes',
+    );
+    const pre = card.querySelector('.bh-tool-approval-shell pre')!;
+    expect(pre.textContent).toContain("printf '%s\\n'");
+    expect(pre.textContent).not.toContain('"command"');
+    expect(pre.textContent!.endsWith('…')).toBe(true);
+    await act(async () => card.querySelector<HTMLButtonElement>('.bh-tool-approval-fold')!.click());
+    expect(pre.textContent).toContain("'line 79'");
+  });
+});
+
 describe('Tool approval file diff', () => {
   it('diffs an edit line by line', () => {
     expect(diffLines('a\nb\nc\n', 'a\nB\nc\nd\n')).toEqual([
@@ -184,6 +207,11 @@ describe('Tool approval file diff', () => {
       ),
     ).toMatchObject({ path: 'c.ts', added: 1, removed: 1 });
     expect(approvalFileChange('bash', '{"command":"ls"}')).toBeUndefined();
+    expect(approvalShellCommand('bash', '{"command":"ls -la","description":"List"}')).toEqual({
+      command: 'ls -la',
+      description: 'List',
+    });
+    expect(approvalShellCommand('edit', '{"command":"ls"}')).toBeUndefined();
     expect(approvalFileChange('edit', 'not json')).toBeUndefined();
   });
 
@@ -195,7 +223,7 @@ describe('Tool approval file diff', () => {
     expect(card.querySelector('figcaption')?.textContent).toBe('/qa/notes.md+30−0');
     expect(card.querySelectorAll('.bh-tool-approval-diff-line')).toHaveLength(12);
     const toggle = card.querySelector<HTMLButtonElement>('.bh-tool-approval-fold')!;
-    expect(toggle.textContent).toBe('展开全部（30 行）');
+    expect(toggle.textContent).toBe('展开全部');
     await act(async () => toggle.click());
     expect(card.querySelectorAll('.bh-tool-approval-diff-line')).toHaveLength(30);
   });

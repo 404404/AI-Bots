@@ -78,18 +78,35 @@ function change(path: string, lines: ApprovalDiffLine[]): ApprovalFileChange {
 const text = (value: unknown): string | undefined =>
   typeof value === 'string' ? value : undefined;
 
+function parseArgs(input: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(input);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function approvalShellCommand(
+  toolName: string,
+  input: string,
+): { command: string; description?: string } | undefined {
+  if (toolName !== 'bash') return undefined;
+  const args = parseArgs(input);
+  const command = text(args?.['command']);
+  if (command === undefined || command.trim() === '') return undefined;
+  const description = text(args?.['description'])?.trim();
+  return description ? { command, description } : { command };
+}
+
 export function approvalFileChange(
   toolName: string,
   input: string,
 ): ApprovalFileChange | undefined {
-  let args: Record<string, unknown>;
-  try {
-    const parsed: unknown = JSON.parse(input);
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined;
-    args = parsed as Record<string, unknown>;
-  } catch {
-    return undefined;
-  }
+  const args = parseArgs(input);
+  if (args === undefined) return undefined;
   if (toolName === 'write') {
     const path = text(args['file_path']);
     const content = text(args['content']);
