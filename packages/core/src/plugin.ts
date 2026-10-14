@@ -1396,7 +1396,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
       const eachUse = execution.name === 'secret_cli' || execution.name === 'secret_mcp_connect';
       const fullAccess = sessionHasFullAccess(core, agent.session.id);
-      if (fullAccess && !eachUse) return next();
+      if (fullAccess) return next();
       const approval = ctx.get('approval') as ApprovalService | undefined;
       const untrack = toolApproval.track(
         execution,
