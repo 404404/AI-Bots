@@ -44,9 +44,7 @@ describe.skipIf(live === undefined)('Bot profile against a live isolated Host', 
     const soul = await web<{ file?: MemoryFile }>('memoryFile', { channelId, path: 'SOUL.md' });
     expect(soul.file?.body.trim()).toContain('Standing rules:');
     expect(profile.identity).toEqual({ status: 'ready', value: soul.file?.body.trim() });
-    expect(profile.memory.status === 'ready' && profile.memory.value.files).toEqual(
-      [...snapshot.snapshot.files].sort((a, b) => a.localeCompare(b)),
-    );
+    expect(profile.memory).toEqual({ status: 'ready', value: { files: snapshot.snapshot.files } });
     expect(profile.routines).toEqual({ status: 'ready', value: [] });
     expect(profile.files).toEqual({ status: 'ready', value: [] });
   }, 60_000);

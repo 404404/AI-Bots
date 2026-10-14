@@ -10,6 +10,9 @@ vi.mock('../src/ui/bot-avatar', () => ({
 }));
 vi.mock('../src/ui/shell/icons', () => ({
   ActivityIcon: () => null,
+  ChevronRightIcon: () => null,
+  FileIcon: () => null,
+  FolderIcon: () => null,
   ComputerIcon: () => null,
   MessageIcon: () => null,
 }));
@@ -54,7 +57,6 @@ const full: BotProfile = {
   memory: {
     status: 'ready',
     value: {
-      core: profileWire.rpc.memoryFile['MEMORY.md'].file.body,
       files: profileWire.rpc.memorySnapshot.snapshot.files,
     },
   },
@@ -72,7 +74,7 @@ const empty: BotProfile = {
   files: { status: 'ready', value: [] },
 };
 
-const actions = () => ({ onMessage: vi.fn(), onNotifications: vi.fn() });
+const actions = () => ({ onMessage: vi.fn(), onNotifications: vi.fn(), onOpenMemory: vi.fn() });
 const button = (view: HTMLElement, label: string) =>
   view.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
 const headers = (view: HTMLElement) =>
@@ -100,8 +102,8 @@ describe('Bot profile sheet', () => {
     expect(text).toContain(profileWire.bot.description);
     expect(text).toContain('researcher');
     expect(text).toContain('Standing rules:');
-    expect(text).toContain('Vain prefers summaries under 100 words.');
-    expect(text).toContain('notes/reading.md');
+    expect(text).not.toContain('Vain prefers summaries under 100 words.');
+    expect(text).not.toContain('reading.md');
     expect(text).toContain('Morning digest');
     expect(text).toContain(t.routineDaily('09:00'));
     expect(text).toContain(t.routineEvery(3600));
@@ -156,5 +158,28 @@ describe('Bot profile sheet', () => {
     await act(async () => button(view, t.profileNotifications)!.click());
     expect(handlers.onMessage).toHaveBeenCalledTimes(1);
     expect(handlers.onNotifications).toHaveBeenCalledTimes(1);
+  });
+
+  it('lists the top of the Memory tree and opens a folder or a file', async () => {
+    const handlers = actions();
+    const view = await render(
+      <BotProfileSheet bot={bot} channels={[]} load={async () => full} actions={handlers} />,
+    );
+    const memory = [...view.querySelectorAll('section')][1]!;
+    expect(
+      [...memory.querySelectorAll('button')].map((node) => node.getAttribute('aria-label')),
+    ).toEqual([
+      `.botharness, ${t.memoryItems(2)}`,
+      `notes, ${t.memoryItems(1)}`,
+      '.gitattributes',
+      'MEMORY.md',
+      'SOUL.md',
+    ]);
+    await act(async () => button(view, `notes, ${t.memoryItems(1)}`)!.click());
+    await act(async () => button(view, 'MEMORY.md')!.click());
+    expect(handlers.onOpenMemory.mock.calls).toEqual([
+      [{ kind: 'folder', name: 'notes', path: 'notes', count: 1 }],
+      [{ kind: 'file', name: 'MEMORY.md', path: 'MEMORY.md' }],
+    ]);
   });
 });

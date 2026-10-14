@@ -93,3 +93,24 @@ export const Switch = (props: Props) =>
     onChange: () =>
       (props['onValueChange'] as ((value: boolean) => void) | undefined)?.(props['value'] !== true),
   });
+
+export const FlatList = (props: {
+  data: unknown[];
+  keyExtractor(item: unknown): string;
+  renderItem(info: { item: unknown; index: number }): ReactNode;
+  ListEmptyComponent?: ReactNode;
+  ref?: unknown;
+}) =>
+  createElement(
+    'div',
+    { ref: props.ref },
+    ...(props.data.length === 0
+      ? [props.ListEmptyComponent ?? null]
+      : props.data.map((item, index) =>
+          createElement(
+            Fragment,
+            { key: props.keyExtractor(item) },
+            props.renderItem({ item, index }),
+          ),
+        )),
+  );

@@ -1,7 +1,12 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 
-import type { BotProfile, ProfilePart } from '../../host/bot-profile';
+import {
+  memoryEntries,
+  type BotProfile,
+  type MemoryEntry,
+  type ProfilePart,
+} from '../../host/bot-profile';
 import type { RosterBot, RosterChannel } from '../../host/client';
 import type { ScheduleTrigger } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
@@ -12,6 +17,7 @@ import { Text } from '../primitives/text';
 import { ActivityIcon, ComputerIcon, MessageIcon } from '../shell/icons';
 import { t } from '../strings';
 import { botStateTone } from './bot-tone';
+import { MemoryEntryRow } from './memory-browser';
 
 const AVATAR = 72;
 const ICON = 22;
@@ -24,6 +30,7 @@ export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 type RowBody =
   | { kind: 'text'; label?: string; body: string }
   | { kind: 'item'; title: string; detail?: string }
+  | { kind: 'entry'; entry: MemoryEntry }
   | { kind: 'note'; text: string }
   | { kind: 'failed'; error: string }
   | { kind: 'loading' };
@@ -34,6 +41,7 @@ export interface BotProfileActions {
   onMessage(): void;
   onComputer?(): void;
   onNotifications(): void;
+  onOpenMemory(entry: MemoryEntry): void;
 }
 
 function frame(section: ProfileSection, bodies: RowBody[]): Row[] {
@@ -86,12 +94,9 @@ export function profileRows(
     ),
     memory: frame(
       'memory',
-      partRows(profile?.memory, 'memory', (memory) => [
-        ...(memory.core === undefined
-          ? []
-          : [{ kind: 'text', label: t.coreMemory, body: memory.core } as const]),
-        ...memory.files.map((path) => ({ kind: 'item', title: path }) as const),
-      ]),
+      partRows(profile?.memory, 'memory', (memory) =>
+        memoryEntries(memory.files, '').map((entry) => ({ kind: 'entry', entry })),
+      ),
     ),
     routines: frame(
       'routines',
@@ -216,13 +221,19 @@ function ProfileRow({
   expanded,
   onToggle,
   onRetry,
+  onOpenMemory,
 }: {
   row: Row;
   expanded: boolean;
   onToggle(): void;
   onRetry(): void;
+  onOpenMemory(entry: MemoryEntry): void;
 }) {
   const theme = useDesignTheme();
+  if (row.kind === 'entry')
+    return (
+      <MemoryEntryRow entry={row.entry} first={row.first} last={row.last} onOpen={onOpenMemory} />
+    );
   const shape = {
     backgroundColor: theme.color.elevated,
     paddingHorizontal: space.x5,
@@ -351,6 +362,7 @@ export function BotProfileSheet({
           row={item}
           expanded={expanded.has(item.key)}
           onRetry={read}
+          onOpenMemory={actions.onOpenMemory}
           onToggle={() =>
             setExpanded((current) => {
               const next = new Set(current);

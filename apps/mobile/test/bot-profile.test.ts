@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { botChannels, loadBotProfile } from '../src/host/bot-profile';
+import {
+  botChannels,
+  loadBotProfile,
+  loadMemoryFile,
+  loadMemoryFiles,
+  memoryEntries,
+} from '../src/host/bot-profile';
 import { createHostClient } from '../src/host/client';
 import { FakeHost } from './fake-host';
 import profileWire from './fixtures/profile-wire.json';
@@ -40,12 +46,7 @@ describe('Bot profile', () => {
     });
     expect(profile.memory).toEqual({
       status: 'ready',
-      value: {
-        core: profileWire.rpc.memoryFile['MEMORY.md'].file.body.trim(),
-        files: [...profileWire.rpc.memorySnapshot.snapshot.files].sort((a, b) =>
-          a.localeCompare(b),
-        ),
-      },
+      value: { files: profileWire.rpc.memorySnapshot.snapshot.files },
     });
     expect(profile.routines).toEqual({
       status: 'ready',
@@ -62,7 +63,6 @@ describe('Bot profile', () => {
       expect.arrayContaining([
         ['memorySnapshot', { channelId: dm }],
         ['memoryFile', { channelId: dm, path: 'SOUL.md' }],
-        ['memoryFile', { channelId: dm, path: 'MEMORY.md' }],
         ['scheduleList', { slug }],
         ['grants', { slug }],
       ]),
@@ -121,5 +121,41 @@ describe('Bot profile', () => {
       ).map((entry) => entry.id),
     ).toEqual(['team']);
     expect(botChannels(undefined, slug)).toEqual([]);
+  });
+
+  it('turns the Memory repository into a folder tree, folders first', () => {
+    const files = profileWire.rpc.memorySnapshot.snapshot.files;
+    expect(memoryEntries(files, '')).toEqual([
+      { kind: 'folder', name: '.botharness', path: '.botharness', count: 2 },
+      { kind: 'folder', name: 'notes', path: 'notes', count: 1 },
+      { kind: 'file', name: '.gitattributes', path: '.gitattributes' },
+      { kind: 'file', name: 'MEMORY.md', path: 'MEMORY.md' },
+      { kind: 'file', name: 'SOUL.md', path: 'SOUL.md' },
+    ]);
+    expect(memoryEntries(files, 'notes')).toEqual([
+      { kind: 'file', name: 'reading.md', path: 'notes/reading.md' },
+    ]);
+    expect(memoryEntries(['a/b/c.md', 'a/d.md'], 'a')).toEqual([
+      { kind: 'folder', name: 'b', path: 'a/b', count: 1 },
+      { kind: 'file', name: 'd.md', path: 'a/d.md' },
+    ]);
+    expect(memoryEntries(files, 'missing')).toEqual([]);
+  });
+
+  it('reads the file list and one file through the DM for the Memory browser', async () => {
+    const fake = host();
+    const hostClient = client(fake);
+
+    expect(await loadMemoryFiles(hostClient, { slug, dmChannelId: dm })).toEqual(
+      profileWire.rpc.memorySnapshot.snapshot.files,
+    );
+    expect(await loadMemoryFile(hostClient, { slug, dmChannelId: dm }, 'MEMORY.md')).toEqual(
+      profileWire.rpc.memoryFile['MEMORY.md'].file,
+    );
+    expect(await loadMemoryFile(hostClient, { slug, dmChannelId: dm }, 'gone.md')).toBeUndefined();
+    expect(fake.calls.at(-1)).toEqual({
+      method: 'memoryFile',
+      args: { channelId: dm, path: 'gone.md' },
+    });
   });
 });

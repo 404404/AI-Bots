@@ -2,15 +2,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
-import { botChannels, loadBotProfile } from '../../src/host/bot-profile';
-import { fullClientParams } from '../../src/host/full-client';
-import { useHostSession, useHostSnapshot } from '../../src/host/host-session';
-import { botColor } from '../../src/ui/bot-color';
-import { BotProfileSheet } from '../../src/ui/chat/bot-profile';
-import { AccentProvider, useDesignTheme } from '../../src/ui/design/theme';
-import { space } from '../../src/ui/design/tokens';
-import { Text } from '../../src/ui/primitives/text';
-import { t } from '../../src/ui/strings';
+import { botChannels, loadBotProfile } from '../../../src/host/bot-profile';
+import { fullClientParams } from '../../../src/host/full-client';
+import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
+import { botColor } from '../../../src/ui/bot-color';
+import { BotProfileSheet } from '../../../src/ui/chat/bot-profile';
+import { AccentProvider, useDesignTheme } from '../../../src/ui/design/theme';
+import { space } from '../../../src/ui/design/tokens';
+import { Text } from '../../../src/ui/primitives/text';
+import { t } from '../../../src/ui/strings';
 
 export default function BotProfileScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -51,6 +51,11 @@ export default function BotProfileScreen() {
               }
             : {}),
           onNotifications: () => router.push('/notifications'),
+          onOpenMemory: (entry) =>
+            router.push({
+              pathname: '/bot/[slug]/memory',
+              params: { slug: bot.slug, path: entry.path, kind: entry.kind },
+            }),
         }}
       />
     </AccentProvider>
