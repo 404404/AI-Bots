@@ -4,7 +4,7 @@ import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { Note } from './ds/note.js';
 import { Select } from './ds/select.js';
 import { useMountedResource } from './mounted-resource.js';
-import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
+import { SettingsRow, SettingsSection } from './ds/settings-row.js';
 import type { ApprovalTemplateView } from './bridge.js';
 import { errorMessage } from './bridge.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -66,17 +66,18 @@ export function ApprovalTemplateEntry({
     return null;
   const chosen = templates.find((template) => template.name === selected);
   return (
-    <div ref={mount} data-approval-template>
-      <SidebarCardList className="bh-assignment-access-card">
-        <SidebarCardRow
-          icon="shield-check"
+    <>
+      <SettingsSection title={t('autoApproval.section')}>
+        <SettingsRow
+          rootRef={mount}
+          data={{ 'data-approval-template': '' }}
           title={t('autoApproval.title')}
-          meta={
+          description={
             chosen === undefined
               ? t('autoApproval.hintOff')
               : t('autoApproval.hintOn', { description: templateDescription(t, chosen) })
           }
-          trailing={
+          control={
             <Select
               label={t('autoApproval.title')}
               value={selected ?? OFF}
@@ -107,13 +108,13 @@ export function ApprovalTemplateEntry({
             />
           }
         />
-      </SidebarCardList>
+      </SettingsSection>
       {error === undefined ? null : (
         <Note tone="danger" inset>
           {error}
         </Note>
       )}
-    </div>
+    </>
   );
 }
 
