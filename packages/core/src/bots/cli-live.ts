@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
@@ -32,7 +32,19 @@ export const LIVE_OPTIONS = {
   app: { type: 'string' },
   bot: { type: 'string' },
   conversation: { type: 'string' },
+  out: { type: 'string' },
+  target: { type: 'string' },
 } as const;
+
+const DEVICE_COMMANDS = [
+  'browser-open',
+  'browser-frame',
+  'browser-takeover',
+  'browser-stop',
+  'computer-start',
+  'computer-status',
+  'computer-stop',
+] as const;
 
 const IM_CONTROL_COMMANDS = [
   'im-app-add',
@@ -128,6 +140,22 @@ export const LIVE_COMMANDS = [
     description: "connect an external group conversation to a Channel through a Bot's binding",
   },
   { command: 'channel-ingests', description: "list a Channel's connected external conversations" },
+  { command: 'browser-open', description: "start a Bot's Browser and open its tab for viewing" },
+  {
+    command: 'browser-frame',
+    description: "save the current picture of a Bot's Browser to a file",
+  },
+  {
+    command: 'browser-takeover',
+    description: "pause a Bot's Browser for Human input (--enabled) or hand it back (--disabled)",
+  },
+  { command: 'browser-stop', description: "stop a Bot's Browser" },
+  {
+    command: 'computer-start',
+    description: 'start the profile Computer with explicit authorization',
+  },
+  { command: 'computer-status', description: 'read the profile Computer target and state' },
+  { command: 'computer-stop', description: 'stop the profile Computer' },
 ] as const;
 
 interface LiveValues extends ImValues {
@@ -154,6 +182,8 @@ interface LiveValues extends ImValues {
   app?: string;
   bot?: string;
   conversation?: string;
+  out?: string;
+  target?: string;
 }
 
 function usage(message: string): never {
@@ -332,7 +362,51 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
     }
     return payload as T;
   };
-  return { rpc, importBotZip };
+  const http = async (
+    path: string,
+    body?: Record<string, unknown>,
+  ): Promise<{ response: Response; bytes: Uint8Array }> => {
+    const response = await request(new URL(path, base), {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        cookie,
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(await response.arrayBuffer());
+    } catch {
+      throw new CliLiveError(
+        'host-unreachable',
+        'The Host response was interrupted before the command deadline.',
+      );
+    }
+    if (response.status === 401 || response.status === 403)
+      throw new CliLiveError(
+        'host-unauthorized',
+        'Host login was refused; refresh its launch token.',
+      );
+    if (!response.ok) {
+      let detail: Record<string, unknown> = {};
+      try {
+        detail = record(JSON.parse(new TextDecoder().decode(bytes)));
+      } catch {
+        detail = { error: new TextDecoder().decode(bytes).slice(0, 200) };
+      }
+      throw new CliLiveError(
+        typeof detail['code'] === 'string' ? scrub(detail['code']) : 'host-refused',
+        scrub(
+          typeof detail['error'] === 'string' && detail['error'] !== ''
+            ? detail['error']
+            : `The Host refused ${path} with HTTP ${String(response.status)}.`,
+        ),
+      );
+    }
+    return { response, bytes };
+  };
+  return { rpc, importBotZip, http };
 }
 
 export async function runLiveCli(
@@ -362,6 +436,13 @@ export async function runLiveCli(
         });
       throw error;
     }
+  }
+  if (DEVICE_COMMANDS.some((entry) => entry === command))
+    return runDeviceCommand(command as (typeof DEVICE_COMMANDS)[number], rest, values, io);
+  if (command === 'grants') {
+    if (rest.length !== 1 || !rest[0]?.trim()) usage('grants needs exactly one bot id.');
+    const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+    return (await connectLiveHost(values, io, signal)).rpc('grants', { slug: rest[0].trim() });
   }
   if (IM_CONTROL_COMMANDS.some((entry) => entry === command))
     return runImControlCommand(command as (typeof IM_CONTROL_COMMANDS)[number], rest, values, io);
@@ -854,4 +935,67 @@ async function runImControlCommand(
       conversation: { kind: 'group', id: values.conversation!.trim() },
     },
   });
+}
+
+async function runDeviceCommand(
+  command: (typeof DEVICE_COMMANDS)[number],
+  rest: string[],
+  values: LiveValues,
+  io: BotCreateCliIo,
+): Promise<unknown> {
+  const computer = command.startsWith('computer-');
+  if (computer ? rest.length !== 0 : rest.length !== 1 || !rest[0]?.trim())
+    usage(
+      computer
+        ? `${command} takes no positional arguments.`
+        : `${command} needs exactly one bot id.`,
+    );
+  const slug = rest[0]?.trim() ?? '';
+  if (command === 'browser-frame') {
+    const out = values.out ?? '';
+    if (!out.startsWith('/') && !/^[A-Za-z]:[\\/]/u.test(out))
+      usage('browser-frame requires --out <absolute-file>.');
+  }
+  if (command === 'browser-takeover' && values.enabled === values.disabled)
+    usage('browser-takeover needs exactly one of --enabled or --disabled.');
+  if (
+    command === 'computer-start' &&
+    values.target !== undefined &&
+    values.target !== 'local' &&
+    values.target !== 'container'
+  )
+    usage('--target must be local or container.');
+  const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+  const { http } = await connectLiveHost(values, io, signal);
+  const json = async (path: string, body?: Record<string, unknown>) => {
+    const { bytes } = await http(path, body);
+    try {
+      return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
+    } catch {
+      throw new CliLiveError('host-protocol-error', `The Host returned no JSON for ${path}.`);
+    }
+  };
+  if (command === 'browser-open') return json('/api/browser/open', { slug });
+  if (command === 'browser-takeover')
+    return json('/api/browser/takeover', { slug, active: values.enabled === true });
+  if (command === 'browser-stop') return json('/api/browser/stop', { slug });
+  if (command === 'computer-start')
+    return json('/api/computer/start', {
+      authorize: true,
+      ...(values.target === undefined ? {} : { target: values.target }),
+    });
+  if (command === 'computer-status') return json('/api/computer/status');
+  if (command === 'computer-stop') return json('/api/computer/stop', { authorize: true });
+  const { response, bytes } = await http(
+    `/botharness-browser/viewer/local/frame?slug=${encodeURIComponent(slug)}`,
+  );
+  writeFileSync(values.out!, bytes, { mode: 0o600 });
+  const width = Number(response.headers.get('x-viewport-width'));
+  const height = Number(response.headers.get('x-viewport-height'));
+  return {
+    path: values.out,
+    bytes: bytes.byteLength,
+    mimeType: response.headers.get('content-type'),
+    ...(width > 0 && height > 0 ? { viewport: { width, height } } : {}),
+  };
 }
