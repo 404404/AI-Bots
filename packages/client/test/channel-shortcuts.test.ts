@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   steppedConversationId,
+  isMacPlatform,
   webBotModeShortcut,
+  webQuickSwitcherBlocked,
+  webQuickSwitcherLabel,
+  webQuickSwitcherShortcut,
   webChannelShortcutIndex,
   webChannelShortcutLabel,
   webConversationStepLabel,
@@ -59,6 +63,54 @@ describe('web channel number shortcuts', () => {
     expect(selector).toContain('dialog[open]');
     expect(selector).toContain('[role="alertdialog"][aria-modal="true"]');
     expect(webShortcutBlocked(null, { querySelector: () => null })).toBe(false);
+  });
+
+  it('opens the quick switcher with Ctrl+K, or Command+K on macOS', () => {
+    const none = { alt: false, ctrl: false, meta: false, shift: false };
+    const ctrl = { ...none, ctrl: true, mac: false };
+    const cmd = { ...none, meta: true, mac: true };
+    expect(webQuickSwitcherShortcut('k', 'KeyK', ctrl)).toBe(true);
+    expect(webQuickSwitcherShortcut('K', 'KeyK', ctrl)).toBe(true);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', cmd)).toBe(true);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, mac: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...cmd, mac: false })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, meta: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, shift: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, alt: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, altGraph: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, composing: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, repeat: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...ctrl, prevented: true })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyK', { ...none, mac: false })).toBe(false);
+    expect(webQuickSwitcherShortcut('k', 'KeyV', ctrl)).toBe(true);
+    expect(webQuickSwitcherShortcut('t', 'KeyK', ctrl)).toBe(false);
+    expect(webQuickSwitcherShortcut('л', 'KeyK', ctrl)).toBe(true);
+    expect(webQuickSwitcherShortcut('j', 'KeyJ', ctrl)).toBe(false);
+    expect(webQuickSwitcherLabel(false)).toBe('Ctrl+K');
+    expect(webQuickSwitcherLabel(true)).toBe('⌘K');
+  });
+
+  it('detects macOS from the browser platform', () => {
+    expect(isMacPlatform({ platform: 'MacIntel' })).toBe(true);
+    expect(isMacPlatform({ userAgentData: { platform: 'macOS' } })).toBe(true);
+    expect(isMacPlatform({ platform: 'iPad' })).toBe(true);
+    expect(isMacPlatform({ platform: 'Win32' })).toBe(false);
+    expect(isMacPlatform({ userAgentData: { platform: 'Linux' }, platform: 'MacIntel' })).toBe(
+      false,
+    );
+  });
+
+  it('keeps the quick switcher available in text fields but not over a modal', () => {
+    let selector = '';
+    const modalRoot = {
+      querySelector(value: string): object {
+        selector = value;
+        return {};
+      },
+    };
+    expect(webQuickSwitcherBlocked(null, modalRoot)).toBe(true);
+    expect(selector).toContain('[role="dialog"][aria-modal="true"]');
+    expect(webQuickSwitcherBlocked(null, { querySelector: () => null })).toBe(false);
   });
 });
 

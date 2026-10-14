@@ -63,8 +63,15 @@ import {
   webChannelShortcutLabel,
   webConversationStepShortcut,
   webModalOpen,
+  isMacPlatform,
+  webChannelShortcutIndex,
+  webChannelShortcutLabel,
+  webQuickSwitcherBlocked,
+  webQuickSwitcherShortcut,
   webShortcutBlocked,
 } from './channel-shortcuts.js';
+import { QuickSwitcher } from './quick-switcher.js';
+import { quickSwitcherEntries, type QuickSwitcherEntry } from './quick-switcher-rank.js';
 import {
   reconcileChannelSelection,
   selectChannels,
@@ -900,6 +907,7 @@ export function BotSidebar({
   const [pinSortMenuOpen, setPinSortMenuOpen] = useState(false);
   const [hiddenManagerOpen, setHiddenManagerOpen] = useState(false);
   const [channelHistoryOpen, setChannelHistoryOpen] = useState(false);
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
   const [sectionMenuId, setSectionMenuId] = useState<string | undefined>(undefined);
   const [sectionCreateMenuId, setSectionCreateMenuId] = useState<string | undefined>(undefined);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -1231,8 +1239,30 @@ export function BotSidebar({
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('blur', clearHints);
     document.addEventListener('keydown', onSelectionEscape);
+    const onQuickSwitcher = (event: KeyboardEvent): void => {
+      if (
+        !webQuickSwitcherShortcut(event.key, event.code, {
+          alt: event.altKey,
+          ctrl: event.ctrlKey,
+          meta: event.metaKey,
+          shift: event.shiftKey,
+          mac: isMacPlatform(),
+          altGraph: event.getModifierState('AltGraph'),
+          composing: event.isComposing,
+          repeat: event.repeat,
+          prevented: event.defaultPrevented,
+        })
+      ) {
+        return;
+      }
+      if (webQuickSwitcherBlocked(event.target, document)) return;
+      event.preventDefault();
+      setShowShortcutHints(false);
+      setQuickSwitcherOpen(true);
+    };
     document.addEventListener('keydown', onChannelShortcut);
     document.addEventListener('keydown', onConversationStep);
+    document.addEventListener('keydown', onQuickSwitcher);
     document.addEventListener('dragover', acceptDrag);
     document.addEventListener('drop', acceptDrop);
     return () => {
@@ -1243,6 +1273,7 @@ export function BotSidebar({
       document.removeEventListener('keydown', onSelectionEscape);
       document.removeEventListener('keydown', onChannelShortcut);
       document.removeEventListener('keydown', onConversationStep);
+      document.removeEventListener('keydown', onQuickSwitcher);
       document.removeEventListener('dragover', acceptDrag);
       document.removeEventListener('drop', acceptDrop);
       if (pinZoneArmTimer.current !== undefined) window.clearTimeout(pinZoneArmTimer.current);
@@ -1609,6 +1640,21 @@ export function BotSidebar({
       ),
     );
     if (gesture !== 'plain') return;
+    void (channel.botSlug === undefined
+      ? actions.openChannel(channel.id)
+      : actions.openBot(channel.botSlug));
+  };
+
+  const openQuickSwitcherEntry = ({ channel }: QuickSwitcherEntry): void => {
+    setQuickSwitcherOpen(false);
+    setChannelSelection((current) =>
+      selectChannels(
+        reconcileChannelSelection(current, visibleChannelIds),
+        visibleChannelIds,
+        channel.id,
+        'plain',
+      ),
+    );
     void (channel.botSlug === undefined
       ? actions.openChannel(channel.id)
       : actions.openBot(channel.botSlug));
@@ -2637,6 +2683,17 @@ export function BotSidebar({
             if (createSectionId === deleteTarget.id) setCreateRequest(undefined);
             setDeleteTarget(undefined);
           }}
+        />
+      ) : null}
+      {quickSwitcherOpen ? (
+        <QuickSwitcher
+          entries={quickSwitcherEntries(state.channels, state.bots, state.roster.hidden)}
+          bots={botBySlug}
+          activityOf={(bot) => personaBotActivity(state, bot)}
+          mac={isMacPlatform()}
+          t={t}
+          onOpen={openQuickSwitcherEntry}
+          onClose={() => setQuickSwitcherOpen(false)}
         />
       ) : null}
       {channelHistoryOpen ? (

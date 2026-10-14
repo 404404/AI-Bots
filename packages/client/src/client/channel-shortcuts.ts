@@ -130,3 +130,68 @@ export function steppedConversationId(
   }
   return undefined;
 }
+
+const quickSwitcherBlockSelector = '[role="dialog"], [role="alertdialog"], dialog';
+
+export function webQuickSwitcherBlocked(
+  target: EventTarget | null,
+  root: { querySelector(selector: string): unknown },
+): boolean {
+  if (
+    typeof Element !== 'undefined' &&
+    target instanceof Element &&
+    target.closest(quickSwitcherBlockSelector) !== null
+  ) {
+    return true;
+  }
+  return root.querySelector(openModalSelector) !== null;
+}
+
+export function webQuickSwitcherShortcut(
+  key: string,
+  code: string,
+  keys: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+    mac: boolean;
+    altGraph?: boolean;
+    composing?: boolean;
+    repeat?: boolean;
+    prevented?: boolean;
+  },
+): boolean {
+  const modifier = keys.mac ? keys.meta && !keys.ctrl : keys.ctrl && !keys.meta;
+  if (
+    !modifier ||
+    keys.alt ||
+    keys.shift ||
+    keys.altGraph ||
+    keys.composing ||
+    keys.repeat ||
+    keys.prevented
+  ) {
+    return false;
+  }
+  const lower = key.toLowerCase();
+  if (/^[a-z]$/u.test(lower)) return lower === 'k';
+  return code === 'KeyK';
+}
+
+export function webQuickSwitcherLabel(mac: boolean): string {
+  return mac ? '⌘K' : 'Ctrl+K';
+}
+
+export function isMacPlatform(navigatorLike?: {
+  platform?: string;
+  userAgentData?: { platform?: string } | undefined;
+}): boolean {
+  const source =
+    navigatorLike ??
+    (typeof navigator === 'undefined'
+      ? undefined
+      : (navigator as Navigator & { userAgentData?: { platform?: string } }));
+  const platform = source?.userAgentData?.platform ?? source?.platform ?? '';
+  return /mac|iphone|ipad|ipod/iu.test(platform);
+}
