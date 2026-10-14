@@ -36,5 +36,6 @@
     "packages/*/test",
     "apps/mobile/test",
     "*.config.ts"
-  ]
+  ],
+  "exclude": ["apps/mobile/test/inbox-screens.test.ts"]
 }

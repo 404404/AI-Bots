@@ -1,4 +1,5 @@
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router/js-tabs';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,12 +10,12 @@ import {
   View,
 } from 'react-native';
 
-import type { RosterBot, RosterChannel } from '../src/host/client';
-import { hostSession, useHostSession, useHostSnapshot } from '../src/host/host-session';
-import { BotAvatar } from '../src/ui/bot-avatar';
-import { ConnectionBanner } from '../src/ui/connection-banner';
-import { t } from '../src/ui/strings';
-import { stateColor, useTheme } from '../src/ui/theme';
+import type { RosterBot, RosterChannel } from '../../src/host/client';
+import { hostSession, useHostSession, useHostSnapshot } from '../../src/host/host-session';
+import { BotAvatar } from '../../src/ui/bot-avatar';
+import { ConnectionBanner } from '../../src/ui/connection-banner';
+import { t } from '../../src/ui/strings';
+import { stateColor, useTheme } from '../../src/ui/theme';
 
 type Row = { kind: 'bot'; bot: RosterBot } | { kind: 'channel'; channel: RosterChannel };
 
@@ -57,13 +58,14 @@ export default function RosterScreen() {
 
   return (
     <>
-      <Stack.Screen
+      <Tabs.Screen
         options={{
           headerRight: () => (
             <Pressable
               onPress={() => void hostSession.unpair()}
               accessibilityRole="button"
               hitSlop={8}
+              style={{ paddingHorizontal: 16 }}
             >
               <Text style={{ color: theme.accent, fontSize: 16 }}>{t.unpair}</Text>
             </Pressable>

@@ -58,6 +58,8 @@ export interface HostClient {
   stop(): void;
   retryNow(): void;
   refresh(): Promise<void>;
+  call<T>(method: string, args?: Record<string, unknown>): Promise<T>;
+  onLive(listener: (source: 'roster' | 'activity') => void): () => void;
 }
 
 export interface HostClientOptions {
@@ -79,6 +81,15 @@ class CredentialRefused extends Error {
 }
 
 class Unreachable extends Error {}
+
+export class MethodRefused extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 const defaultBackoff = (attempt: number): number => Math.min(15_000, 500 * 2 ** (attempt - 1));
 
@@ -107,6 +118,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
   const backoff = options.backoff ?? defaultBackoff;
   const timeoutMs = options.timeoutMs ?? 10_000;
   const listeners = new Set<() => void>();
+  const liveListeners = new Set<(source: 'roster' | 'activity') => void>();
   let snapshot: HostSnapshot = { connection: { status: 'stopped', route } };
   let bots: PersonaBotSummary[] | undefined;
   let channels = new Map<string, ChannelListItem>();
@@ -178,7 +190,12 @@ export function createHostClient(options: HostClientOptions): HostClient {
     try {
       return await work(controller.signal);
     } catch (error) {
-      if (error instanceof CredentialRefused || error instanceof Unreachable) throw error;
+      if (
+        error instanceof CredentialRefused ||
+        error instanceof Unreachable ||
+        error instanceof MethodRefused
+      )
+        throw error;
       throw new Unreachable(
         controller.signal.aborted
           ? 'The Host did not answer in time.'
@@ -226,7 +243,8 @@ export function createHostClient(options: HostClientOptions): HostClient {
       const result = record(envelope['result']);
       if (envelope['type'] !== 'server-response' || result['ok'] !== true) {
         const error = record(result['error']);
-        throw new Unreachable(
+        throw new MethodRefused(
+          typeof error['code'] === 'string' ? error['code'] : 'refused',
           typeof error['message'] === 'string' ? error['message'] : `${name} was refused.`,
         );
       }
@@ -259,6 +277,10 @@ export function createHostClient(options: HostClientOptions): HostClient {
       }
     })();
     return reloading;
+  };
+
+  const notifyLive = (source: 'roster' | 'activity'): void => {
+    for (const listener of liveListeners) listener(source);
   };
 
   const applyActivity = (frame: ActivityLiveFrame): void => {
@@ -313,12 +335,16 @@ export function createHostClient(options: HostClientOptions): HostClient {
           if (frame.type === 'baseline') {
             baselines.roster = true;
             if (baselines.activity) resolveReady();
-          } else applyRoster(frame);
+          } else {
+            applyRoster(frame);
+            notifyLive('roster');
+          }
         });
         follow('botharness/followActivity', (value) => {
           const frame = value as ActivityLiveFrame;
           if (frame.type !== 'baseline' && frame.type !== 'changed') return;
           applyActivity(frame);
+          if (frame.type === 'changed') notifyLive('activity');
           if (frame.type === 'baseline') {
             baselines.activity = true;
             if (baselines.roster) resolveReady();
@@ -442,6 +468,19 @@ export function createHostClient(options: HostClientOptions): HostClient {
     async refresh() {
       if (snapshot.connection.status === 'connected') await reload();
       else this.retryNow();
+    },
+    async call<T>(method: string, args: Record<string, unknown> = {}) {
+      try {
+        return await call<T>(method, args);
+      } catch (error) {
+        if (!(error instanceof CredentialRefused) || error.stage !== 'session') throw error;
+        await login();
+        return await call<T>(method, args);
+      }
+    },
+    onLive(listener) {
+      liveListeners.add(listener);
+      return () => liveListeners.delete(listener);
     },
   };
 }
