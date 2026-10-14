@@ -19,6 +19,7 @@ import type { ComposerShortcut } from './composer-shortcuts.js';
 import {
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -98,14 +99,20 @@ import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { toolApprovalReplyPreview } from './approval-text.js';
 import type { NativeSessionCatalog } from './sessions-entry.js';
 import { ActivityCenterView } from './activity-center-view.js';
-import { resolveChannelSidebarContext, type ChannelSidebarRegistry } from './channel-sidebar.js';
+import {
+  resolveChannelSidebarContext,
+  type ChannelSidebarEntryProps,
+  type ChannelSidebarRegistry,
+} from './channel-sidebar.js';
 import { ChannelSettingsAttention, ChannelSettingsDialog } from './channel-settings.js';
 import {
   channelSettings,
   channelSettingsAttentionSections,
   channelSettingsSections,
+  isChannelSettingsSection,
 } from './channel-settings-state.js';
 import { ChannelSidebar, useChannelSidebar } from './channel-sidebar-view.js';
+import { ChannelDock, useChannelDockActive } from './channel-dock.js';
 import { MemoryCommitView } from './memory-commit-view.js';
 import { MemoryFileView, MemoryWorkingView } from './memory-current-view.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
@@ -1024,6 +1031,28 @@ function ConversationView({
   t: BotHarnessTranslate;
 }): ReactElement {
   const sidebar = useChannelSidebar(state);
+  const docked = useChannelDockActive();
+  const dockBotEntries = useSyncExternalStore(
+    channelSidebar.subscribe,
+    () => channelSidebar.entries('personabot'),
+    () => channelSidebar.entries('personabot'),
+  );
+  const dockGroupEntries = useSyncExternalStore(
+    channelSidebar.subscribe,
+    () => channelSidebar.entries('channel'),
+    () => channelSidebar.entries('channel'),
+  );
+  const dockEntries = useMemo(
+    () =>
+      [...dockBotEntries, ...dockGroupEntries].filter((entry) => !isChannelSettingsSection(entry)),
+    [dockBotEntries, dockGroupEntries],
+  );
+  const dockBotSlug = resolveChannelSidebarContext(state)?.botSlug;
+  const dockInboxMount = useMountedResource<HTMLSpanElement>(() => {
+    if (!docked || dockBotSlug === undefined) return;
+    const timer = window.setInterval(() => void actions.refreshBotInbox(dockBotSlug), 10_000);
+    return () => window.clearInterval(timer);
+  }, [docked, dockBotSlug, actions]);
   const sendKey = useContext(ComposerSendKeyContext);
   const settingsScope = resolveChannelSidebarContext(state)?.scope ?? 'channel';
   const settingsEntries = useSyncExternalStore(
@@ -2188,911 +2217,912 @@ function ConversationView({
       />
     );
 
+  const dockContext = resolveChannelSidebarContext(state);
+  const dockEntryProps: ChannelSidebarEntryProps | undefined =
+    dockContext?.channel === undefined
+      ? undefined
+      : {
+          scope: dockContext.scope,
+          channelId: dockContext.channel.id,
+          conversationRevision: state.conversation.revision,
+          botSlug: dockContext.botSlug,
+          actions,
+          t,
+          selectedMemoryCommitSha,
+          selectedMemoryFilePath:
+            activeMemoryView?.kind === 'file' ? activeMemoryView.path : undefined,
+          selectedMemoryWorking:
+            activeMemoryView?.kind === 'working' ? activeMemoryView.change : undefined,
+          onMemoryCommitSelect: (sha) => openMemoryView({ kind: 'commit', sha }),
+          onMemoryFileSelect: (path) => openMemoryView({ kind: 'file', path }),
+          onMemoryWorkingSelect: (change) => openMemoryView({ kind: 'working', change }),
+        };
+  const chatPane = (
+    <section
+      className="bh-chat-pane"
+      data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
+      {...fileDrop.handlers}
+    >
+      {fileDrop.active ? (
+        <ConversationFileDropOverlay
+          label={t('composer.dropFiles')}
+          hint={t('composer.dropLimit')}
+        />
+      ) : null}
+      <div
+        ref={profileMount}
+        className="bh-topbar"
+        data-bh-tour="topbar"
+        data-channel-detail={profileViewOpen || activeMemoryView !== undefined ? 'true' : undefined}
+        data-memory-diff={
+          activeMemoryView?.kind === 'commit' || activeMemoryView?.kind === 'working'
+            ? 'true'
+            : undefined
+        }
+      >
+        {onMobileBack !== undefined ? (
+          <MobileConversationHeader
+            title={title}
+            onBack={onMobileBack}
+            onSettings={sidebar.toggle}
+            settingsOpen={sidebar.mode !== 'hidden'}
+            t={t}
+          />
+        ) : channel?.type === 'group' ? (
+          <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
+            {channelHeaderMenu(
+              {
+                label: t('groupProfile.label'),
+                icon: <ChannelSidebarIcon name="id-card" size={16} />,
+                run: () => setProfilePopoverOpen(true),
+              },
+              (menu) => (
+                <GroupChannelHeader
+                  channel={channel}
+                  title={title}
+                  members={channelFacepile}
+                  companion={companion}
+                  expanded={profilePopoverOpen}
+                  menu={menu}
+                  t={t}
+                  onOpenActivity={() => setProfilePopoverOpen(true)}
+                  onToggleProfile={() => setProfilePopoverOpen((open) => !open)}
+                />
+              ),
+            )}
+            {profilePopoverOpen ? (
+              <GroupProfilePopover
+                members={channelFacepile}
+                channel={channel}
+                activity={
+                  groupProfileActivity?.channelId === channel.id ? groupProfileActivity : undefined
+                }
+                cards={profileCards}
+                pinned={pinnedGroupProfileCards}
+                botNames={botNames}
+                t={t}
+                onExpand={() => {
+                  setProfilePopoverOpen(false);
+                  setSelectedMemoryView(undefined);
+                  setProfileViewOpen(true);
+                }}
+              />
+            ) : null}
+          </span>
+        ) : profileBot === undefined ? (
+          <span className="bh-companion-chip">
+            {channelHeaderMenu(
+              {
+                label: t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse'),
+                icon: <ChannelSidebarIcon name="panels-top-left" size={16} />,
+                run: sidebar.toggle,
+              },
+              (menu) => (
+                <button
+                  type="button"
+                  className="bh-channel-island"
+                  {...(menu === undefined
+                    ? {
+                        'aria-label': `${title} — ${t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse')}`,
+                        'aria-controls': 'bh-channel-sidebar',
+                        'aria-expanded': sidebar.mode !== 'hidden',
+                        onClick: sidebar.toggle,
+                      }
+                    : {
+                        'aria-label': channelMenuLabel(menu),
+                        'aria-haspopup': 'menu' as const,
+                        'aria-expanded': menu.open,
+                        onClick: menu.toggle,
+                      })}
+                >
+                  {bot !== undefined ? (
+                    <PersonaBotAvatar
+                      t={t}
+                      personaBotId={bot.slug}
+                      name={bot.displayName}
+                      src={bot.avatar}
+                      appearance={bot.appearance}
+                      avatarSeed={bot.avatarSeed}
+                      state={botActivity}
+                      size={22}
+                      indicator={false}
+                    />
+                  ) : channelFacepile.length > 0 ? (
+                    <PersonaBotFacepile items={channelFacepile} size={22} indicator={false} t={t} />
+                  ) : (
+                    <ChannelMark />
+                  )}
+                  <ConversationTitle>{title}</ConversationTitle>
+                  {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
+                </button>
+              ),
+            )}
+            {bot && companion ? (
+              <CompanionPin companion={companion} botId={bot.slug} name={bot.displayName} t={t} />
+            ) : null}
+          </span>
+        ) : (
+          <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
+            {channelHeaderMenu(
+              {
+                label: t('profile.label'),
+                icon: <ChannelSidebarIcon name="id-card" size={16} />,
+                run: () => setProfilePopoverOpen(true),
+              },
+              (menu) => (
+                <button
+                  type="button"
+                  className="bh-channel-island"
+                  {...(menu === undefined
+                    ? {
+                        'aria-haspopup': 'dialog' as const,
+                        'aria-expanded': profilePopoverOpen,
+                        'aria-label': t('profile.openAvatar', { name: profileBot.displayName }),
+                        onClick: () => setProfilePopoverOpen((open) => !open),
+                      }
+                    : {
+                        'aria-haspopup': 'menu' as const,
+                        'aria-expanded': menu.open,
+                        'aria-label': channelMenuLabel(menu),
+                        onClick: menu.toggle,
+                      })}
+                >
+                  <PersonaBotAvatar
+                    t={t}
+                    personaBotId={profileBot.slug}
+                    name={profileBot.displayName}
+                    src={profileBot.avatar}
+                    appearance={profileBot.appearance}
+                    avatarSeed={profileBot.avatarSeed}
+                    state={profileBotActivity}
+                    size={22}
+                    indicator={false}
+                  />
+                  <ConversationTitle>{title}</ConversationTitle>
+                  {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
+                </button>
+              ),
+            )}
+            {companion ? (
+              <CompanionPin
+                companion={companion}
+                botId={profileBot.slug}
+                name={profileBot.displayName}
+                t={t}
+              />
+            ) : null}
+            {profilePopoverOpen ? (
+              <ProfilePopover
+                bot={profileBot}
+                activity={profileActivity}
+                cards={profileCards}
+                pinned={pinnedProfileCards}
+                t={t}
+                onExpand={() => {
+                  setProfilePopoverOpen(false);
+                  setSelectedMemoryView(undefined);
+                  setProfileViewOpen(true);
+                }}
+              />
+            ) : null}
+          </span>
+        )}
+      </div>
+      <div
+        className="bh-chat-top-fade"
+        aria-hidden="true"
+        style={{
+          display: profileViewOpen || activeMemoryView !== undefined ? 'none' : undefined,
+        }}
+      />
+      {profileViewOpen && channel?.type === 'group' ? (
+        <GroupProfileView
+          channel={channel}
+          activity={
+            groupProfileActivity?.channelId === channel.id ? groupProfileActivity : undefined
+          }
+          cards={profileCards}
+          pinned={pinnedGroupProfileCards}
+          botNames={botNames}
+          t={t}
+          onTogglePin={togglePinnedGroupCard}
+          onClose={() => setProfileViewOpen(false)}
+        />
+      ) : profileViewOpen && profileBot !== undefined && channel !== undefined ? (
+        <ProfileView
+          bot={profileBot}
+          channel={channel}
+          activity={profileActivity}
+          cards={profileCards}
+          pinned={pinnedProfileCards}
+          actions={actions}
+          t={t}
+          onTogglePin={togglePinnedCard}
+          onClose={() => setProfileViewOpen(false)}
+        />
+      ) : (
+        <>
+          {activeMemoryView === undefined ||
+          channelId === undefined ? null : activeMemoryView.kind === 'commit' ? (
+            <MemoryCommitView
+              key={`${channelId}:${activeMemoryView.sha}`}
+              actions={actions}
+              channelId={channelId}
+              sha={activeMemoryView.sha}
+              botSlug={channel?.botSlug}
+              t={t}
+              onClose={closeMemoryView}
+            />
+          ) : activeMemoryView.kind === 'file' ? (
+            <MemoryFileView
+              key={`${channelId}:${activeMemoryView.path}`}
+              actions={actions}
+              channelId={channelId}
+              path={activeMemoryView.path}
+              botSlug={channel?.botSlug}
+              t={t}
+              onClose={closeMemoryView}
+            />
+          ) : (
+            <MemoryWorkingView
+              key={`${channelId}:${activeMemoryView.change.kind}:${activeMemoryView.change.path}`}
+              actions={actions}
+              channelId={channelId}
+              change={activeMemoryView.change}
+              botSlug={channel?.botSlug}
+              t={t}
+              onClose={closeMemoryView}
+            />
+          )}
+          {searchTop === undefined ||
+          channelId === undefined ||
+          activeMemoryView !== undefined ||
+          actions.searchChannel === undefined ? null : (
+            <ConversationSearch
+              top={searchTop}
+              search={(query, cursor) => actions.searchChannel!(channelId, query, cursor)}
+              onJump={(messageId) => void actions.openAround(channelId, messageId)}
+              onClose={() => {
+                setSearchTop(undefined);
+                searchReturnFocus.current?.focus();
+                searchReturnFocus.current = null;
+              }}
+              label={selectionAuthor}
+              time={(at) => fullTime(at, t)}
+              t={t}
+            />
+          )}
+          <div
+            className="bh-chat-body"
+            ref={timelineMount}
+            onScroll={onTimelineScroll}
+            onTransitionEnd={(event) => {
+              if (
+                event.target === event.currentTarget &&
+                event.propertyName === 'padding-bottom' &&
+                followingLatest.current
+              )
+                event.currentTarget.scrollTop = event.currentTarget.scrollHeight;
+            }}
+            style={{ display: activeMemoryView === undefined ? undefined : 'none' }}
+          >
+            {conversation.timeline.hasOlder ? (
+              <div className="bh-timeline-top-sentinel">
+                {conversation.timeline.loadingOlder ? (
+                  <span>{t('messages.older.loading')}</span>
+                ) : conversation.timeline.olderError !== undefined ? (
+                  <button type="button" onClick={() => loadOlderAtTop(true)}>
+                    {t('messages.retry')}
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => loadOlderAtTop()}>
+                    {t('messages.older.view')}
+                  </button>
+                )}
+              </div>
+            ) : null}
+            {conversation.status === 'loading' && messages.length === 0 ? (
+              <LoadingSkeleton kind="messages" label={t('messages.loading')} />
+            ) : null}
+            {conversation.status === 'error' && conversation.error !== undefined ? (
+              <div className="bh-error">{t('messages.error', { error: conversation.error })}</div>
+            ) : null}
+            {conversation.draftNotice !== undefined ? (
+              <div className="bh-note" role="status">
+                {conversation.draftNotice === 'interrupted'
+                  ? t('message.draftInterrupted')
+                  : t('message.draftExpired')}
+              </div>
+            ) : null}
+            {displayMessages.length === 0 && conversation.status !== 'loading' ? (
+              <EmptyConversation channel={channel} bot={bot} t={t} />
+            ) : null}
+            <MessageSelectionContext.Provider value={messageSelection}>
+              {messageGroups.map((group, index, groups) => {
+                const first = group.messages[0]!;
+                const previous = groups[index - 1]?.messages.at(-1);
+                const firstDay = Number.isFinite(Date.parse(first.at))
+                  ? new Date(first.at).toDateString()
+                  : undefined;
+                const previousDay =
+                  previous !== undefined && Number.isFinite(Date.parse(previous.at))
+                    ? new Date(previous.at).toDateString()
+                    : undefined;
+                return (
+                  <div key={group.key} className="bh-message-block">
+                    {unreadAfter !== undefined && previous?.id === unreadAfter ? (
+                      <TimelineUnreadDivider label={t('messages.newDivider')} />
+                    ) : null}
+                    {firstDay !== undefined && firstDay !== previousDay ? (
+                      <div className="bh-message-day">
+                        {new Date(first.at).toLocaleDateString(t('main.date.locale'), {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </div>
+                    ) : null}
+                    {first.turnStop !== undefined ? (
+                      <div className="bh-member-departure" data-message-id={first.id}>
+                        <span>
+                          {t('turn.stopped', {
+                            human: first.turnStop.humanName,
+                            name: first.turnStop.botName,
+                          })}
+                        </span>
+                      </div>
+                    ) : first.memberDeparture !== undefined ? (
+                      <div className="bh-member-departure" data-message-id={first.id}>
+                        <span>
+                          {t(
+                            first.memberDeparture.departureType === 'removed'
+                              ? 'member.removed'
+                              : 'member.left',
+                            { name: first.memberDeparture.displayName },
+                          )}
+                        </span>
+                        <ChannelDeliveryReceipt
+                          message={first}
+                          bots={state.bots}
+                          humanMembers={channel?.humanMembers ?? []}
+                          t={t}
+                        />
+                      </div>
+                    ) : first.botChannelPost !== undefined ? (
+                      <BotChannelPostLine
+                        posts={group.messages}
+                        channels={state.channels}
+                        bots={state.bots}
+                        t={t}
+                        onOpen={(targetChannelId, messageId) => {
+                          void actions
+                            .openChannel(targetChannelId)
+                            .then(() => actions.openAround(targetChannelId, messageId));
+                        }}
+                      />
+                    ) : first.memoryCommit !== undefined ? (
+                      <MemoryCommitLine
+                        messageId={first.id}
+                        commit={first.memoryCommit}
+                        bots={state.bots}
+                        action={
+                          first.noticeOrigin === undefined
+                            ? undefined
+                            : elsewhereAction(
+                                'memory',
+                                first.noticeOrigin.channelId,
+                                first.memoryCommit.botSlug,
+                                state.channels,
+                                state.bots,
+                                t,
+                              )
+                        }
+                        t={t}
+                        onOpen={() => {
+                          const commit = first.memoryCommit!;
+                          if (channel?.type === 'dm' && channel.botSlug === commit.botSlug) {
+                            openMemoryView({ kind: 'commit', sha: commit.sha });
+                            return;
+                          }
+                          const dm = state.channels.find(
+                            (candidate) =>
+                              candidate.type === 'dm' && candidate.botSlug === commit.botSlug,
+                          );
+                          if (dm !== undefined)
+                            store.setMemoryCommitIntent({
+                              channelId: dm.id,
+                              sha: commit.sha,
+                            });
+                          void actions.openBot(commit.botSlug);
+                        }}
+                      />
+                    ) : first.botDmAction === undefined ? (
+                      <OnboardingMemoryNavigation.Provider
+                        value={{
+                          file: (path) => openMemoryView({ kind: 'file', path }),
+                          commit: (sha) => openMemoryView({ kind: 'commit', sha }),
+                          working: (change) => openMemoryView({ kind: 'working', change }),
+                        }}
+                      >
+                        <MessageGroupView
+                          humanMembers={channel?.humanMembers ?? []}
+                          group={group}
+                          channelId={channelId}
+                          actions={actions}
+                          gallery={imageGallery.gallery}
+                          nativeChatT={nativeChatT}
+                          resolvedGrantRequests={resolvedGrantRequestIds(displayMessages)}
+                          toolApprovalDecisions={
+                            new Map(
+                              displayMessages
+                                .filter((item) => item.toolApprovalDecision !== undefined)
+                                .map((item) => [
+                                  item.toolApprovalDecision!.requestMessageId,
+                                  item.toolApprovalDecision!.outcome,
+                                ]),
+                            )
+                          }
+                          userQuestionResolutions={
+                            new Map(
+                              displayMessages
+                                .filter((item) => item.userQuestionResolution !== undefined)
+                                .map((item) => [
+                                  item.userQuestionResolution!.requestMessageId,
+                                  item.userQuestionResolution!.state,
+                                ]),
+                            )
+                          }
+                          focusMessageId={conversation.focusMessageId}
+                          currentDmBotSlug={
+                            channel?.type === 'dm' && !botDm ? channel.botSlug : undefined
+                          }
+                          bots={state.bots}
+                          onContextMenu={(message, x, y) => {
+                            setAvatarMenu(undefined);
+                            setMessageMenu({ message, x, y });
+                          }}
+                          onAvatarMenu={
+                            channel?.type === 'group'
+                              ? (botSlug, x, y) => {
+                                  setMessageMenu(undefined);
+                                  setAvatarMenu({ botSlug, x, y });
+                                }
+                              : undefined
+                          }
+                          onReply={readOnlyDm ? undefined : (message) => setReplyTarget(message)}
+                          onReact={reactToMessage}
+                          onJumpReply={(messageId) => {
+                            if (channelId !== undefined)
+                              void actions.openAround(channelId, messageId);
+                          }}
+                          onRestoreFailed={(message) => {
+                            if (channelId === undefined) return;
+                            if (
+                              draft.length > 0 ||
+                              uploadItems.length > 0 ||
+                              conversation.sending
+                            ) {
+                              setRestoreBlocked(true);
+                              return;
+                            }
+                            if (message.unconfirmed === true) {
+                              setSubmissionNotice(t('composer.submissionChecking'));
+                              void actions.submissions
+                                .check(channelId, message.id)
+                                .then(async (status) => {
+                                  if (status === 'unknown') {
+                                    setSubmissionNotice(t('composer.submissionUncheckable'));
+                                    return;
+                                  }
+                                  await actions.submissions.reconcile(channelId);
+                                  setSubmissionNotice(
+                                    t(
+                                      status === 'committed'
+                                        ? 'composer.submissionDelivered'
+                                        : 'composer.submissionNotDelivered',
+                                    ),
+                                  );
+                                })
+                                .catch(() =>
+                                  setSubmissionNotice(t('composer.submissionUncheckable')),
+                                );
+                              return;
+                            }
+                            if (!actions.dismissFailedMessage(channelId, message.id)) return;
+                            setDraft(message.body);
+                            setMentionTokens(message.mentions ?? []);
+                            setChannelRefTokens(message.channelRefs ?? []);
+                            setUploadItems(
+                              (message.attachments ?? []).map((ref) => ({
+                                id: crypto.randomUUID(),
+                                file: new File([], ref.name, { type: ref.mime }),
+                                ref,
+                                status: 'ready' as const,
+                              })),
+                            );
+                            setReplyTarget(
+                              message.replyTo === undefined
+                                ? undefined
+                                : messages.find((candidate) => candidate.id === message.replyTo),
+                            );
+                            setRestoreBlocked(false);
+                            setRestoreFocusSignal((value) => value + 1);
+                          }}
+                          t={t}
+                        />
+                      </OnboardingMemoryNavigation.Provider>
+                    ) : (
+                      <button
+                        type="button"
+                        className="bh-bot-dm-action"
+                        data-message-id={first.id}
+                        onClick={() => {
+                          const action = first.botDmAction!;
+                          void actions
+                            .openChannel(action.channelId)
+                            .then(() => actions.openAround(action.channelId, action.messageId));
+                        }}
+                      >
+                        <BotDmActionLabel
+                          senderSlug={first.author.kind === 'bot' ? first.author.slug : undefined}
+                          senderName={authorLabel(first, state.bots, t, channelHumanName(channel))}
+                          recipientSlug={first.botDmAction.recipientBotSlug}
+                          recipientName={memberName(state.bots, first.botDmAction.recipientBotSlug)}
+                          bots={state.bots}
+                          t={t}
+                        />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </MessageSelectionContext.Provider>
+            {imageGallery.lightbox}
+            <TimelineWorkingRowsView rows={workingRows} t={t} />
+            {conversation.timeline.hasNewer ? (
+              <div className="bh-timeline-newer-sentinel">
+                {conversation.timeline.loadingNewer ? (
+                  <span>{t('messages.newer.loading')}</span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (channelId !== undefined) void actions.loadNewer(channelId);
+                    }}
+                  >
+                    {conversation.timeline.newerError === undefined
+                      ? t('messages.newer.view')
+                      : t('messages.retry')}
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
+          {activeMemoryView === undefined && (unseen > 0 || conversation.timeline.hasNewer) ? (
+            <button type="button" className="bh-timeline-new" onClick={jumpToLatest}>
+              {conversation.timeline.hasNewer
+                ? t('messages.latest')
+                : t(unseen === 1 ? 'messages.unseenOne' : 'messages.unseen', {
+                    count: unseen,
+                  })}
+            </button>
+          ) : null}
+          {activeMemoryView === undefined && restoreBlocked ? (
+            <div className="bh-note" role="alert">
+              {t('message.restoreBlocked')}
+            </div>
+          ) : null}
+          {activeMemoryView === undefined &&
+          selectedIds !== undefined &&
+          channelId !== undefined ? (
+            <MessageSelectionBar
+              count={selectedIds.length}
+              busy={selectionBusy}
+              notice={selectionNotice}
+              t={t}
+              onCancel={cancelSelection}
+              onExport={(kind) => {
+                if (kind === 'diagnostics') {
+                  const range = selectionRange(selectedIds, messages);
+                  if (range !== undefined) setDiagnosticsTarget({ channelId, ...range });
+                } else if (kind === 'conversation') {
+                  void copySelection(selectedIds);
+                } else void exportSelectionImage(selectedIds);
+              }}
+            />
+          ) : null}
+          {readOnlyDm && selectedIds === undefined ? (
+            <div className="bh-bot-dm-readonly">{t('botDm.readOnly')}</div>
+          ) : null}
+          {readOnlyDm ? null : (
+            <div
+              className="bh-memory-chat-composer"
+              style={{
+                display:
+                  activeMemoryView === undefined && selectedIds === undefined ? 'contents' : 'none',
+              }}
+            >
+              <div
+                className="bh-composer-recovery"
+                ref={recovery.mount}
+                onFocusCapture={() => recovery.setEditing(true)}
+                onBlurCapture={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+                    recovery.setEditing(false);
+                }}
+              >
+                {draftScope === undefined ? (
+                  <p role="status">{t('composer.draftIdentityUnavailable')}</p>
+                ) : null}
+                {draftScope !== undefined && recovery.error !== undefined ? (
+                  <p role="alert">{t('composer.draftStorageError')}</p>
+                ) : null}
+                {recovery.needsValidation && recovery.versions.length <= 1 ? (
+                  <p role="status">
+                    {t(
+                      recovery.validationFailed
+                        ? 'composer.draftValidationFailed'
+                        : 'composer.draftValidating',
+                    )}{' '}
+                    {recovery.validationFailed ? (
+                      <button type="button" onClick={recovery.retry}>
+                        {t('composer.draftRetry')}
+                      </button>
+                    ) : null}
+                  </p>
+                ) : null}
+                {recovery.notice ? (
+                  <p role="status">{t('composer.draftReferencesChanged')}</p>
+                ) : null}
+                <span ref={submissionMount} hidden />
+                {submissionSnapshot?.error !== undefined ? (
+                  <p role="alert">{t('composer.submissionStorageError')}</p>
+                ) : submissionNotice === undefined ? null : (
+                  <p role="status">{submissionNotice}</p>
+                )}
+                {recallNotice === undefined ? null : <p role="status">{recallNotice}</p>}
+                {recovery.versions.length > 1 ? (
+                  <section aria-label={t('composer.draftConflict')}>
+                    <p role="alert">{t('composer.draftConflict')}</p>
+                    {recovery.versions.map((version) => (
+                      <div className="bh-composer-draft-version" key={version.writer}>
+                        <pre>{version.draft.text.slice(0, 240)}</pre>
+                        <button type="button" onClick={() => recovery.choose(version.writer)}>
+                          {t('composer.draftUseVersion')}
+                        </button>
+                      </div>
+                    ))}
+                  </section>
+                ) : null}
+                <ChannelComposer
+                  key={channelId}
+                  context={composerContext}
+                  sendKey={sendKey}
+                  value={draft}
+                  mentions={mentionTokens}
+                  channelRefs={channelRefTokens}
+                  channelCandidates={
+                    channel?.type === 'dm' && channel.botSlug !== undefined
+                      ? state.channels.filter((candidate) => candidate.type === 'group')
+                      : []
+                  }
+                  allBotPreview={channel?.type === 'group' ? allBotPreview : undefined}
+                  allBotNotice={allBotNotice}
+                  stop={composerStop}
+                  mentionCandidates={
+                    channel?.type === 'group'
+                      ? channelBots
+                      : channel?.type === 'dm' && channel.botSlug !== undefined
+                        ? state.bots.filter(
+                            (candidate) =>
+                              candidate.slug !== channel.botSlug &&
+                              candidate.paused !== true &&
+                              !candidate.deleted,
+                          )
+                        : []
+                  }
+                  placeholder={t('composer.placeholder', { name: title })}
+                  sending={conversation.sending || recovery.blocked}
+                  focusSignal={restoreFocusSignal}
+                  attachments={uploadItems}
+                  onAddFiles={addFiles}
+                  onRetryAttachment={(id) => {
+                    const item = uploadItems.find((candidate) => candidate.id === id);
+                    if (item !== undefined) startUpload(item);
+                  }}
+                  onRemoveAttachment={(id) => {
+                    const item = uploadItems.find((candidate) => candidate.id === id);
+                    if (item !== undefined) {
+                      const next = removeAttachmentReferences(
+                        draft,
+                        item,
+                        mentionTokens,
+                        channelRefTokens,
+                      );
+                      recovery.update({
+                        text: next.value,
+                        mentions: next.mentions,
+                        channelRefs: next.channelRefs,
+                      });
+                    }
+                    uploadControllers.current.get(id)?.abort();
+                    uploadControllers.current.delete(id);
+                    setUploadItems((current) => current.filter((item) => item.id !== id));
+                  }}
+                  activity={composerActivity}
+                  activityConcealed={composerActivityConcealed}
+                  onActivityOverlayResize={resizeActivityOverlay}
+                  reply={
+                    replyTarget === undefined
+                      ? undefined
+                      : {
+                          id: replyTarget.id,
+                          author: authorLabel(
+                            replyTarget,
+                            state.bots,
+                            t,
+                            channelHumanName(channel),
+                          ),
+                          body: replyTarget.body,
+                        }
+                  }
+                  t={t}
+                  onChange={(value, mentions, channelRefs) => {
+                    recovery.update({
+                      text: value,
+                      mentions: mentions ?? [],
+                      channelRefs: channelRefs ?? [],
+                    });
+                    setRestoreBlocked(false);
+                  }}
+                  onCancelReply={() => setReplyTarget(undefined)}
+                  onRecall={recallInput}
+                  onSubmit={submit}
+                />
+              </div>
+            </div>
+          )}
+          {activeMemoryView !== undefined || messageMenu === undefined || readOnlyDm ? null : (
+            <MessageActionMenu
+              request={messageMenu}
+              t={t}
+              {...(reactToMessage === undefined || !reactableMessage(messageMenu.message)
+                ? {}
+                : { onReact: setReactionMenu })}
+              onLocate={(messageId) => {
+                if (channelId !== undefined) void actions.openAround(channelId, messageId);
+              }}
+              onReply={(message) => setReplyTarget(message)}
+              {...(messageSelection === undefined ? {} : { onSelect: messageSelection.begin })}
+              onClose={() => {
+                setMessageMenu(undefined);
+              }}
+            />
+          )}
+          {reactionMenu === undefined || reactToMessage === undefined ? null : (
+            <MessageReactionSurface
+              message={
+                messages.find((message) => message.id === reactionMenu.message.id) ??
+                reactionMenu.message
+              }
+              anchor={() => ({
+                left: reactionMenu.x,
+                top: reactionMenu.y,
+                width: 0,
+                bottom: reactionMenu.y,
+              })}
+              onReact={(emoji, active) => reactToMessage(reactionMenu.message, emoji, active)}
+              onClose={() => setReactionMenu(undefined)}
+              t={t}
+            />
+          )}
+          {activeMemoryView !== undefined ||
+          avatarMenu === undefined ||
+          channel?.type !== 'group' ? null : (
+            <BotAvatarMenu
+              request={avatarMenu}
+              canMention={channelBots.some(
+                (member) => member.slug === avatarMenu.botSlug && member.deleted !== true,
+              )}
+              t={t}
+              onMessage={(botSlug) => void actions.openBot(botSlug)}
+              onMention={(botSlug) => {
+                const member = channelBots.find((candidate) => candidate.slug === botSlug);
+                if (member === undefined) return;
+                const next = appendMention(draft, mentionTokens, member.slug, member.displayName);
+                recovery.update({
+                  text: next.value,
+                  mentions: next.mentions,
+                  channelRefs: rebaseChannelRefs(draft, next.value, channelRefTokens),
+                });
+                setRestoreFocusSignal((value) => value + 1);
+              }}
+              onProfile={(botSlug) => void actions.openBot(botSlug, 'profile')}
+              onClose={() => setAvatarMenu(undefined)}
+            />
+          )}
+          {diagnosticsTarget === undefined ? null : (
+            <DiagnosticBundleDialog
+              selection={diagnosticsTarget}
+              t={t}
+              onClose={() => setDiagnosticsTarget(undefined)}
+              onDownloaded={cancelSelection}
+            />
+          )}
+        </>
+      )}
+    </section>
+  );
   return (
     <div ref={conversationMount} className="bh-root bh-main">
       <span ref={allBotPreviewMount} hidden />
       <span ref={searchShortcutMount} hidden />
-      <div className="bh-chat-layout" data-sidebar={sidebar.mode}>
-        <section
-          className="bh-chat-pane"
-          data-activity-concealed={composerActivityConcealed ? 'true' : undefined}
-          {...fileDrop.handlers}
-        >
-          {fileDrop.active ? (
-            <ConversationFileDropOverlay
-              label={t('composer.dropFiles')}
-              hint={t('composer.dropLimit')}
-            />
-          ) : null}
-          <div
-            ref={profileMount}
-            className="bh-topbar"
-            data-bh-tour="topbar"
-            data-channel-detail={
-              profileViewOpen || activeMemoryView !== undefined ? 'true' : undefined
-            }
-            data-memory-diff={
-              activeMemoryView?.kind === 'commit' || activeMemoryView?.kind === 'working'
-                ? 'true'
-                : undefined
-            }
-          >
-            {onMobileBack !== undefined ? (
-              <MobileConversationHeader
-                title={title}
-                onBack={onMobileBack}
-                onSettings={sidebar.toggle}
-                settingsOpen={sidebar.mode !== 'hidden'}
-                t={t}
-              />
-            ) : channel?.type === 'group' ? (
-              <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
-                {channelHeaderMenu(
-                  {
-                    label: t('groupProfile.label'),
-                    icon: <ChannelSidebarIcon name="id-card" size={16} />,
-                    run: () => setProfilePopoverOpen(true),
-                  },
-                  (menu) => (
-                    <GroupChannelHeader
-                      channel={channel}
-                      title={title}
-                      members={channelFacepile}
-                      companion={companion}
-                      expanded={profilePopoverOpen}
-                      menu={menu}
-                      t={t}
-                      onOpenActivity={() => setProfilePopoverOpen(true)}
-                      onToggleProfile={() => setProfilePopoverOpen((open) => !open)}
-                    />
-                  ),
-                )}
-                {profilePopoverOpen ? (
-                  <GroupProfilePopover
-                    members={channelFacepile}
-                    channel={channel}
-                    activity={
-                      groupProfileActivity?.channelId === channel.id
-                        ? groupProfileActivity
-                        : undefined
-                    }
-                    cards={profileCards}
-                    pinned={pinnedGroupProfileCards}
-                    botNames={botNames}
-                    t={t}
-                    onExpand={() => {
-                      setProfilePopoverOpen(false);
-                      setSelectedMemoryView(undefined);
-                      setProfileViewOpen(true);
-                    }}
-                  />
-                ) : null}
-              </span>
-            ) : profileBot === undefined ? (
-              <span className="bh-companion-chip">
-                {channelHeaderMenu(
-                  {
-                    label: t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse'),
-                    icon: <ChannelSidebarIcon name="panels-top-left" size={16} />,
-                    run: sidebar.toggle,
-                  },
-                  (menu) => (
-                    <button
-                      type="button"
-                      className="bh-channel-island"
-                      {...(menu === undefined
-                        ? {
-                            'aria-label': `${title} — ${t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse')}`,
-                            'aria-controls': 'bh-channel-sidebar',
-                            'aria-expanded': sidebar.mode !== 'hidden',
-                            onClick: sidebar.toggle,
-                          }
-                        : {
-                            'aria-label': channelMenuLabel(menu),
-                            'aria-haspopup': 'menu' as const,
-                            'aria-expanded': menu.open,
-                            onClick: menu.toggle,
-                          })}
-                    >
-                      {bot !== undefined ? (
-                        <PersonaBotAvatar
-                          t={t}
-                          personaBotId={bot.slug}
-                          name={bot.displayName}
-                          src={bot.avatar}
-                          appearance={bot.appearance}
-                          avatarSeed={bot.avatarSeed}
-                          state={botActivity}
-                          size={22}
-                          indicator={false}
-                        />
-                      ) : channelFacepile.length > 0 ? (
-                        <PersonaBotFacepile
-                          items={channelFacepile}
-                          size={22}
-                          indicator={false}
-                          t={t}
-                        />
-                      ) : (
-                        <ChannelMark />
-                      )}
-                      <ConversationTitle>{title}</ConversationTitle>
-                      {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
-                    </button>
-                  ),
-                )}
-                {bot && companion ? (
-                  <CompanionPin
-                    companion={companion}
-                    botId={bot.slug}
-                    name={bot.displayName}
-                    t={t}
-                  />
-                ) : null}
-              </span>
-            ) : (
-              <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
-                {channelHeaderMenu(
-                  {
-                    label: t('profile.label'),
-                    icon: <ChannelSidebarIcon name="id-card" size={16} />,
-                    run: () => setProfilePopoverOpen(true),
-                  },
-                  (menu) => (
-                    <button
-                      type="button"
-                      className="bh-channel-island"
-                      {...(menu === undefined
-                        ? {
-                            'aria-haspopup': 'dialog' as const,
-                            'aria-expanded': profilePopoverOpen,
-                            'aria-label': t('profile.openAvatar', { name: profileBot.displayName }),
-                            onClick: () => setProfilePopoverOpen((open) => !open),
-                          }
-                        : {
-                            'aria-haspopup': 'menu' as const,
-                            'aria-expanded': menu.open,
-                            'aria-label': channelMenuLabel(menu),
-                            onClick: menu.toggle,
-                          })}
-                    >
-                      <PersonaBotAvatar
-                        t={t}
-                        personaBotId={profileBot.slug}
-                        name={profileBot.displayName}
-                        src={profileBot.avatar}
-                        appearance={profileBot.appearance}
-                        avatarSeed={profileBot.avatarSeed}
-                        state={profileBotActivity}
-                        size={22}
-                        indicator={false}
-                      />
-                      <ConversationTitle>{title}</ConversationTitle>
-                      {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
-                    </button>
-                  ),
-                )}
-                {companion ? (
-                  <CompanionPin
-                    companion={companion}
-                    botId={profileBot.slug}
-                    name={profileBot.displayName}
-                    t={t}
-                  />
-                ) : null}
-                {profilePopoverOpen ? (
-                  <ProfilePopover
-                    bot={profileBot}
-                    activity={profileActivity}
-                    cards={profileCards}
-                    pinned={pinnedProfileCards}
-                    t={t}
-                    onExpand={() => {
-                      setProfilePopoverOpen(false);
-                      setSelectedMemoryView(undefined);
-                      setProfileViewOpen(true);
-                    }}
-                  />
-                ) : null}
-              </span>
-            )}
-          </div>
-          <div
-            className="bh-chat-top-fade"
-            aria-hidden="true"
-            style={{
-              display: profileViewOpen || activeMemoryView !== undefined ? 'none' : undefined,
-            }}
+      <span ref={dockInboxMount} hidden />
+      <div className="bh-chat-layout" data-sidebar={docked ? 'dock' : sidebar.mode}>
+        {docked ? (
+          <ChannelDock
+            body={chatPane}
+            entries={dockEntries}
+            entryProps={dockEntryProps}
+            shows={(entry) => entry.scope === settingsScope && (entry.visible?.(state) ?? true)}
+            t={t}
           />
-          {profileViewOpen && channel?.type === 'group' ? (
-            <GroupProfileView
-              channel={channel}
-              activity={
-                groupProfileActivity?.channelId === channel.id ? groupProfileActivity : undefined
-              }
-              cards={profileCards}
-              pinned={pinnedGroupProfileCards}
-              botNames={botNames}
-              t={t}
-              onTogglePin={togglePinnedGroupCard}
-              onClose={() => setProfileViewOpen(false)}
-            />
-          ) : profileViewOpen && profileBot !== undefined && channel !== undefined ? (
-            <ProfileView
-              bot={profileBot}
-              channel={channel}
-              activity={profileActivity}
-              cards={profileCards}
-              pinned={pinnedProfileCards}
-              actions={actions}
-              t={t}
-              onTogglePin={togglePinnedCard}
-              onClose={() => setProfileViewOpen(false)}
-            />
-          ) : (
-            <>
-              {activeMemoryView === undefined ||
-              channelId === undefined ? null : activeMemoryView.kind === 'commit' ? (
-                <MemoryCommitView
-                  key={`${channelId}:${activeMemoryView.sha}`}
-                  actions={actions}
-                  channelId={channelId}
-                  sha={activeMemoryView.sha}
-                  botSlug={channel?.botSlug}
-                  t={t}
-                  onClose={closeMemoryView}
-                />
-              ) : activeMemoryView.kind === 'file' ? (
-                <MemoryFileView
-                  key={`${channelId}:${activeMemoryView.path}`}
-                  actions={actions}
-                  channelId={channelId}
-                  path={activeMemoryView.path}
-                  botSlug={channel?.botSlug}
-                  t={t}
-                  onClose={closeMemoryView}
-                />
-              ) : (
-                <MemoryWorkingView
-                  key={`${channelId}:${activeMemoryView.change.kind}:${activeMemoryView.change.path}`}
-                  actions={actions}
-                  channelId={channelId}
-                  change={activeMemoryView.change}
-                  botSlug={channel?.botSlug}
-                  t={t}
-                  onClose={closeMemoryView}
-                />
-              )}
-              {searchTop === undefined ||
-              channelId === undefined ||
-              activeMemoryView !== undefined ||
-              actions.searchChannel === undefined ? null : (
-                <ConversationSearch
-                  top={searchTop}
-                  search={(query, cursor) => actions.searchChannel!(channelId, query, cursor)}
-                  onJump={(messageId) => void actions.openAround(channelId, messageId)}
-                  onClose={() => {
-                    setSearchTop(undefined);
-                    searchReturnFocus.current?.focus();
-                    searchReturnFocus.current = null;
-                  }}
-                  label={selectionAuthor}
-                  time={(at) => fullTime(at, t)}
-                  t={t}
-                />
-              )}
-              <div
-                className="bh-chat-body"
-                ref={timelineMount}
-                onScroll={onTimelineScroll}
-                onTransitionEnd={(event) => {
-                  if (
-                    event.target === event.currentTarget &&
-                    event.propertyName === 'padding-bottom' &&
-                    followingLatest.current
-                  )
-                    event.currentTarget.scrollTop = event.currentTarget.scrollHeight;
-                }}
-                style={{ display: activeMemoryView === undefined ? undefined : 'none' }}
-              >
-                {conversation.timeline.hasOlder ? (
-                  <div className="bh-timeline-top-sentinel">
-                    {conversation.timeline.loadingOlder ? (
-                      <span>{t('messages.older.loading')}</span>
-                    ) : conversation.timeline.olderError !== undefined ? (
-                      <button type="button" onClick={() => loadOlderAtTop(true)}>
-                        {t('messages.retry')}
-                      </button>
-                    ) : (
-                      <button type="button" onClick={() => loadOlderAtTop()}>
-                        {t('messages.older.view')}
-                      </button>
-                    )}
-                  </div>
-                ) : null}
-                {conversation.status === 'loading' && messages.length === 0 ? (
-                  <LoadingSkeleton kind="messages" label={t('messages.loading')} />
-                ) : null}
-                {conversation.status === 'error' && conversation.error !== undefined ? (
-                  <div className="bh-error">
-                    {t('messages.error', { error: conversation.error })}
-                  </div>
-                ) : null}
-                {conversation.draftNotice !== undefined ? (
-                  <div className="bh-note" role="status">
-                    {conversation.draftNotice === 'interrupted'
-                      ? t('message.draftInterrupted')
-                      : t('message.draftExpired')}
-                  </div>
-                ) : null}
-                {displayMessages.length === 0 && conversation.status !== 'loading' ? (
-                  <EmptyConversation channel={channel} bot={bot} t={t} />
-                ) : null}
-                <MessageSelectionContext.Provider value={messageSelection}>
-                  {messageGroups.map((group, index, groups) => {
-                    const first = group.messages[0]!;
-                    const previous = groups[index - 1]?.messages.at(-1);
-                    const firstDay = Number.isFinite(Date.parse(first.at))
-                      ? new Date(first.at).toDateString()
-                      : undefined;
-                    const previousDay =
-                      previous !== undefined && Number.isFinite(Date.parse(previous.at))
-                        ? new Date(previous.at).toDateString()
-                        : undefined;
-                    return (
-                      <div key={group.key} className="bh-message-block">
-                        {unreadAfter !== undefined && previous?.id === unreadAfter ? (
-                          <TimelineUnreadDivider label={t('messages.newDivider')} />
-                        ) : null}
-                        {firstDay !== undefined && firstDay !== previousDay ? (
-                          <div className="bh-message-day">
-                            {new Date(first.at).toLocaleDateString(t('main.date.locale'), {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                            })}
-                          </div>
-                        ) : null}
-                        {first.turnStop !== undefined ? (
-                          <div className="bh-member-departure" data-message-id={first.id}>
-                            <span>
-                              {t('turn.stopped', {
-                                human: first.turnStop.humanName,
-                                name: first.turnStop.botName,
-                              })}
-                            </span>
-                          </div>
-                        ) : first.memberDeparture !== undefined ? (
-                          <div className="bh-member-departure" data-message-id={first.id}>
-                            <span>
-                              {t(
-                                first.memberDeparture.departureType === 'removed'
-                                  ? 'member.removed'
-                                  : 'member.left',
-                                { name: first.memberDeparture.displayName },
-                              )}
-                            </span>
-                            <ChannelDeliveryReceipt
-                              message={first}
-                              bots={state.bots}
-                              humanMembers={channel?.humanMembers ?? []}
-                              t={t}
-                            />
-                          </div>
-                        ) : first.botChannelPost !== undefined ? (
-                          <BotChannelPostLine
-                            posts={group.messages}
-                            channels={state.channels}
-                            bots={state.bots}
-                            t={t}
-                            onOpen={(targetChannelId, messageId) => {
-                              void actions
-                                .openChannel(targetChannelId)
-                                .then(() => actions.openAround(targetChannelId, messageId));
-                            }}
-                          />
-                        ) : first.memoryCommit !== undefined ? (
-                          <MemoryCommitLine
-                            messageId={first.id}
-                            commit={first.memoryCommit}
-                            bots={state.bots}
-                            action={
-                              first.noticeOrigin === undefined
-                                ? undefined
-                                : elsewhereAction(
-                                    'memory',
-                                    first.noticeOrigin.channelId,
-                                    first.memoryCommit.botSlug,
-                                    state.channels,
-                                    state.bots,
-                                    t,
-                                  )
-                            }
-                            t={t}
-                            onOpen={() => {
-                              const commit = first.memoryCommit!;
-                              if (channel?.type === 'dm' && channel.botSlug === commit.botSlug) {
-                                openMemoryView({ kind: 'commit', sha: commit.sha });
-                                return;
-                              }
-                              const dm = state.channels.find(
-                                (candidate) =>
-                                  candidate.type === 'dm' && candidate.botSlug === commit.botSlug,
-                              );
-                              if (dm !== undefined)
-                                store.setMemoryCommitIntent({
-                                  channelId: dm.id,
-                                  sha: commit.sha,
-                                });
-                              void actions.openBot(commit.botSlug);
-                            }}
-                          />
-                        ) : first.botDmAction === undefined ? (
-                          <OnboardingMemoryNavigation.Provider
-                            value={{
-                              file: (path) => openMemoryView({ kind: 'file', path }),
-                              commit: (sha) => openMemoryView({ kind: 'commit', sha }),
-                              working: (change) => openMemoryView({ kind: 'working', change }),
-                            }}
-                          >
-                            <MessageGroupView
-                              humanMembers={channel?.humanMembers ?? []}
-                              group={group}
-                              channelId={channelId}
-                              actions={actions}
-                              gallery={imageGallery.gallery}
-                              nativeChatT={nativeChatT}
-                              resolvedGrantRequests={resolvedGrantRequestIds(displayMessages)}
-                              toolApprovalDecisions={
-                                new Map(
-                                  displayMessages
-                                    .filter((item) => item.toolApprovalDecision !== undefined)
-                                    .map((item) => [
-                                      item.toolApprovalDecision!.requestMessageId,
-                                      item.toolApprovalDecision!.outcome,
-                                    ]),
-                                )
-                              }
-                              userQuestionResolutions={
-                                new Map(
-                                  displayMessages
-                                    .filter((item) => item.userQuestionResolution !== undefined)
-                                    .map((item) => [
-                                      item.userQuestionResolution!.requestMessageId,
-                                      item.userQuestionResolution!.state,
-                                    ]),
-                                )
-                              }
-                              focusMessageId={conversation.focusMessageId}
-                              currentDmBotSlug={
-                                channel?.type === 'dm' && !botDm ? channel.botSlug : undefined
-                              }
-                              bots={state.bots}
-                              onContextMenu={(message, x, y) => {
-                                setAvatarMenu(undefined);
-                                setMessageMenu({ message, x, y });
-                              }}
-                              onAvatarMenu={
-                                channel?.type === 'group'
-                                  ? (botSlug, x, y) => {
-                                      setMessageMenu(undefined);
-                                      setAvatarMenu({ botSlug, x, y });
-                                    }
-                                  : undefined
-                              }
-                              onReply={
-                                readOnlyDm ? undefined : (message) => setReplyTarget(message)
-                              }
-                              onReact={reactToMessage}
-                              onJumpReply={(messageId) => {
-                                if (channelId !== undefined)
-                                  void actions.openAround(channelId, messageId);
-                              }}
-                              onRestoreFailed={(message) => {
-                                if (channelId === undefined) return;
-                                if (
-                                  draft.length > 0 ||
-                                  uploadItems.length > 0 ||
-                                  conversation.sending
-                                ) {
-                                  setRestoreBlocked(true);
-                                  return;
-                                }
-                                if (message.unconfirmed === true) {
-                                  setSubmissionNotice(t('composer.submissionChecking'));
-                                  void actions.submissions
-                                    .check(channelId, message.id)
-                                    .then(async (status) => {
-                                      if (status === 'unknown') {
-                                        setSubmissionNotice(t('composer.submissionUncheckable'));
-                                        return;
-                                      }
-                                      await actions.submissions.reconcile(channelId);
-                                      setSubmissionNotice(
-                                        t(
-                                          status === 'committed'
-                                            ? 'composer.submissionDelivered'
-                                            : 'composer.submissionNotDelivered',
-                                        ),
-                                      );
-                                    })
-                                    .catch(() =>
-                                      setSubmissionNotice(t('composer.submissionUncheckable')),
-                                    );
-                                  return;
-                                }
-                                if (!actions.dismissFailedMessage(channelId, message.id)) return;
-                                setDraft(message.body);
-                                setMentionTokens(message.mentions ?? []);
-                                setChannelRefTokens(message.channelRefs ?? []);
-                                setUploadItems(
-                                  (message.attachments ?? []).map((ref) => ({
-                                    id: crypto.randomUUID(),
-                                    file: new File([], ref.name, { type: ref.mime }),
-                                    ref,
-                                    status: 'ready' as const,
-                                  })),
-                                );
-                                setReplyTarget(
-                                  message.replyTo === undefined
-                                    ? undefined
-                                    : messages.find(
-                                        (candidate) => candidate.id === message.replyTo,
-                                      ),
-                                );
-                                setRestoreBlocked(false);
-                                setRestoreFocusSignal((value) => value + 1);
-                              }}
-                              t={t}
-                            />
-                          </OnboardingMemoryNavigation.Provider>
-                        ) : (
-                          <button
-                            type="button"
-                            className="bh-bot-dm-action"
-                            data-message-id={first.id}
-                            onClick={() => {
-                              const action = first.botDmAction!;
-                              void actions
-                                .openChannel(action.channelId)
-                                .then(() => actions.openAround(action.channelId, action.messageId));
-                            }}
-                          >
-                            <BotDmActionLabel
-                              senderSlug={
-                                first.author.kind === 'bot' ? first.author.slug : undefined
-                              }
-                              senderName={authorLabel(
-                                first,
-                                state.bots,
-                                t,
-                                channelHumanName(channel),
-                              )}
-                              recipientSlug={first.botDmAction.recipientBotSlug}
-                              recipientName={memberName(
-                                state.bots,
-                                first.botDmAction.recipientBotSlug,
-                              )}
-                              bots={state.bots}
-                              t={t}
-                            />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </MessageSelectionContext.Provider>
-                {imageGallery.lightbox}
-                <TimelineWorkingRowsView rows={workingRows} t={t} />
-                {conversation.timeline.hasNewer ? (
-                  <div className="bh-timeline-newer-sentinel">
-                    {conversation.timeline.loadingNewer ? (
-                      <span>{t('messages.newer.loading')}</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (channelId !== undefined) void actions.loadNewer(channelId);
-                        }}
-                      >
-                        {conversation.timeline.newerError === undefined
-                          ? t('messages.newer.view')
-                          : t('messages.retry')}
-                      </button>
-                    )}
-                  </div>
-                ) : null}
-              </div>
-              {activeMemoryView === undefined && (unseen > 0 || conversation.timeline.hasNewer) ? (
-                <button type="button" className="bh-timeline-new" onClick={jumpToLatest}>
-                  {conversation.timeline.hasNewer
-                    ? t('messages.latest')
-                    : t(unseen === 1 ? 'messages.unseenOne' : 'messages.unseen', {
-                        count: unseen,
-                      })}
-                </button>
-              ) : null}
-              {activeMemoryView === undefined && restoreBlocked ? (
-                <div className="bh-note" role="alert">
-                  {t('message.restoreBlocked')}
-                </div>
-              ) : null}
-              {activeMemoryView === undefined &&
-              selectedIds !== undefined &&
-              channelId !== undefined ? (
-                <MessageSelectionBar
-                  count={selectedIds.length}
-                  busy={selectionBusy}
-                  notice={selectionNotice}
-                  t={t}
-                  onCancel={cancelSelection}
-                  onExport={(kind) => {
-                    if (kind === 'diagnostics') {
-                      const range = selectionRange(selectedIds, messages);
-                      if (range !== undefined) setDiagnosticsTarget({ channelId, ...range });
-                    } else if (kind === 'conversation') {
-                      void copySelection(selectedIds);
-                    } else void exportSelectionImage(selectedIds);
-                  }}
-                />
-              ) : null}
-              {readOnlyDm && selectedIds === undefined ? (
-                <div className="bh-bot-dm-readonly">{t('botDm.readOnly')}</div>
-              ) : null}
-              {readOnlyDm ? null : (
-                <div
-                  className="bh-memory-chat-composer"
-                  style={{
-                    display:
-                      activeMemoryView === undefined && selectedIds === undefined
-                        ? 'contents'
-                        : 'none',
-                  }}
-                >
-                  <div
-                    className="bh-composer-recovery"
-                    ref={recovery.mount}
-                    onFocusCapture={() => recovery.setEditing(true)}
-                    onBlurCapture={(event) => {
-                      if (!event.currentTarget.contains(event.relatedTarget as Node | null))
-                        recovery.setEditing(false);
-                    }}
-                  >
-                    {draftScope === undefined ? (
-                      <p role="status">{t('composer.draftIdentityUnavailable')}</p>
-                    ) : null}
-                    {draftScope !== undefined && recovery.error !== undefined ? (
-                      <p role="alert">{t('composer.draftStorageError')}</p>
-                    ) : null}
-                    {recovery.needsValidation && recovery.versions.length <= 1 ? (
-                      <p role="status">
-                        {t(
-                          recovery.validationFailed
-                            ? 'composer.draftValidationFailed'
-                            : 'composer.draftValidating',
-                        )}{' '}
-                        {recovery.validationFailed ? (
-                          <button type="button" onClick={recovery.retry}>
-                            {t('composer.draftRetry')}
-                          </button>
-                        ) : null}
-                      </p>
-                    ) : null}
-                    {recovery.notice ? (
-                      <p role="status">{t('composer.draftReferencesChanged')}</p>
-                    ) : null}
-                    <span ref={submissionMount} hidden />
-                    {submissionSnapshot?.error !== undefined ? (
-                      <p role="alert">{t('composer.submissionStorageError')}</p>
-                    ) : submissionNotice === undefined ? null : (
-                      <p role="status">{submissionNotice}</p>
-                    )}
-                    {recallNotice === undefined ? null : <p role="status">{recallNotice}</p>}
-                    {recovery.versions.length > 1 ? (
-                      <section aria-label={t('composer.draftConflict')}>
-                        <p role="alert">{t('composer.draftConflict')}</p>
-                        {recovery.versions.map((version) => (
-                          <div className="bh-composer-draft-version" key={version.writer}>
-                            <pre>{version.draft.text.slice(0, 240)}</pre>
-                            <button type="button" onClick={() => recovery.choose(version.writer)}>
-                              {t('composer.draftUseVersion')}
-                            </button>
-                          </div>
-                        ))}
-                      </section>
-                    ) : null}
-                    <ChannelComposer
-                      key={channelId}
-                      context={composerContext}
-                      sendKey={sendKey}
-                      value={draft}
-                      mentions={mentionTokens}
-                      channelRefs={channelRefTokens}
-                      channelCandidates={
-                        channel?.type === 'dm' && channel.botSlug !== undefined
-                          ? state.channels.filter((candidate) => candidate.type === 'group')
-                          : []
-                      }
-                      allBotPreview={channel?.type === 'group' ? allBotPreview : undefined}
-                      allBotNotice={allBotNotice}
-                      stop={composerStop}
-                      mentionCandidates={
-                        channel?.type === 'group'
-                          ? channelBots
-                          : channel?.type === 'dm' && channel.botSlug !== undefined
-                            ? state.bots.filter(
-                                (candidate) =>
-                                  candidate.slug !== channel.botSlug &&
-                                  candidate.paused !== true &&
-                                  !candidate.deleted,
-                              )
-                            : []
-                      }
-                      placeholder={t('composer.placeholder', { name: title })}
-                      sending={conversation.sending || recovery.blocked}
-                      focusSignal={restoreFocusSignal}
-                      attachments={uploadItems}
-                      onAddFiles={addFiles}
-                      onRetryAttachment={(id) => {
-                        const item = uploadItems.find((candidate) => candidate.id === id);
-                        if (item !== undefined) startUpload(item);
-                      }}
-                      onRemoveAttachment={(id) => {
-                        const item = uploadItems.find((candidate) => candidate.id === id);
-                        if (item !== undefined) {
-                          const next = removeAttachmentReferences(
-                            draft,
-                            item,
-                            mentionTokens,
-                            channelRefTokens,
-                          );
-                          recovery.update({
-                            text: next.value,
-                            mentions: next.mentions,
-                            channelRefs: next.channelRefs,
-                          });
-                        }
-                        uploadControllers.current.get(id)?.abort();
-                        uploadControllers.current.delete(id);
-                        setUploadItems((current) => current.filter((item) => item.id !== id));
-                      }}
-                      activity={composerActivity}
-                      activityConcealed={composerActivityConcealed}
-                      onActivityOverlayResize={resizeActivityOverlay}
-                      reply={
-                        replyTarget === undefined
-                          ? undefined
-                          : {
-                              id: replyTarget.id,
-                              author: authorLabel(
-                                replyTarget,
-                                state.bots,
-                                t,
-                                channelHumanName(channel),
-                              ),
-                              body: replyTarget.body,
-                            }
-                      }
-                      t={t}
-                      onChange={(value, mentions, channelRefs) => {
-                        recovery.update({
-                          text: value,
-                          mentions: mentions ?? [],
-                          channelRefs: channelRefs ?? [],
-                        });
-                        setRestoreBlocked(false);
-                      }}
-                      onCancelReply={() => setReplyTarget(undefined)}
-                      onRecall={recallInput}
-                      onSubmit={submit}
-                    />
-                  </div>
-                </div>
-              )}
-              {activeMemoryView !== undefined || messageMenu === undefined || readOnlyDm ? null : (
-                <MessageActionMenu
-                  request={messageMenu}
-                  t={t}
-                  {...(reactToMessage === undefined || !reactableMessage(messageMenu.message)
-                    ? {}
-                    : { onReact: setReactionMenu })}
-                  onLocate={(messageId) => {
-                    if (channelId !== undefined) void actions.openAround(channelId, messageId);
-                  }}
-                  onReply={(message) => setReplyTarget(message)}
-                  {...(messageSelection === undefined ? {} : { onSelect: messageSelection.begin })}
-                  onClose={() => {
-                    setMessageMenu(undefined);
-                  }}
-                />
-              )}
-              {reactionMenu === undefined || reactToMessage === undefined ? null : (
-                <MessageReactionSurface
-                  message={
-                    messages.find((message) => message.id === reactionMenu.message.id) ??
-                    reactionMenu.message
-                  }
-                  anchor={() => ({
-                    left: reactionMenu.x,
-                    top: reactionMenu.y,
-                    width: 0,
-                    bottom: reactionMenu.y,
-                  })}
-                  onReact={(emoji, active) => reactToMessage(reactionMenu.message, emoji, active)}
-                  onClose={() => setReactionMenu(undefined)}
-                  t={t}
-                />
-              )}
-              {activeMemoryView !== undefined ||
-              avatarMenu === undefined ||
-              channel?.type !== 'group' ? null : (
-                <BotAvatarMenu
-                  request={avatarMenu}
-                  canMention={channelBots.some(
-                    (member) => member.slug === avatarMenu.botSlug && member.deleted !== true,
-                  )}
-                  t={t}
-                  onMessage={(botSlug) => void actions.openBot(botSlug)}
-                  onMention={(botSlug) => {
-                    const member = channelBots.find((candidate) => candidate.slug === botSlug);
-                    if (member === undefined) return;
-                    const next = appendMention(
-                      draft,
-                      mentionTokens,
-                      member.slug,
-                      member.displayName,
-                    );
-                    recovery.update({
-                      text: next.value,
-                      mentions: next.mentions,
-                      channelRefs: rebaseChannelRefs(draft, next.value, channelRefTokens),
-                    });
-                    setRestoreFocusSignal((value) => value + 1);
-                  }}
-                  onProfile={(botSlug) => void actions.openBot(botSlug, 'profile')}
-                  onClose={() => setAvatarMenu(undefined)}
-                />
-              )}
-              {diagnosticsTarget === undefined ? null : (
-                <DiagnosticBundleDialog
-                  selection={diagnosticsTarget}
-                  t={t}
-                  onClose={() => setDiagnosticsTarget(undefined)}
-                  onDownloaded={cancelSelection}
-                />
-              )}
-            </>
-          )}
-        </section>
+        ) : (
+          chatPane
+        )}
         <ChannelSettingsDialog registry={channelSidebar} state={state} actions={actions} t={t} />
         <ChannelSettingsAttention registry={channelSidebar} state={state} actions={actions} t={t} />
-        <ChannelSidebar
-          registry={channelSidebar}
-          state={state}
-          actions={actions}
-          controller={sidebar}
-          t={t}
-          selectedMemoryCommitSha={selectedMemoryCommitSha}
-          selectedMemoryFilePath={
-            activeMemoryView?.kind === 'file' ? activeMemoryView.path : undefined
-          }
-          selectedMemoryWorking={
-            activeMemoryView?.kind === 'working' ? activeMemoryView.change : undefined
-          }
-          onMemoryCommitSelect={(sha) => openMemoryView({ kind: 'commit', sha })}
-          onMemoryFileSelect={(path) => openMemoryView({ kind: 'file', path })}
-          onMemoryWorkingSelect={(change) => openMemoryView({ kind: 'working', change })}
-        />
-        <button
-          type="button"
-          className="bh-sidebar-toggle"
-          aria-label={sidebar.mode === 'hidden' ? t('sidebar.expand') : t('sidebar.collapse')}
-          aria-expanded={sidebar.mode !== 'hidden'}
-          aria-controls="bh-channel-sidebar"
-          onClick={sidebar.toggle}
-        >
-          <IconPanelLeftOutlineRegular size={16} />
-        </button>
+        {docked ? null : (
+          <>
+            <ChannelSidebar
+              registry={channelSidebar}
+              state={state}
+              actions={actions}
+              controller={sidebar}
+              t={t}
+              selectedMemoryCommitSha={selectedMemoryCommitSha}
+              selectedMemoryFilePath={
+                activeMemoryView?.kind === 'file' ? activeMemoryView.path : undefined
+              }
+              selectedMemoryWorking={
+                activeMemoryView?.kind === 'working' ? activeMemoryView.change : undefined
+              }
+              onMemoryCommitSelect={(sha) => openMemoryView({ kind: 'commit', sha })}
+              onMemoryFileSelect={(path) => openMemoryView({ kind: 'file', path })}
+              onMemoryWorkingSelect={(change) => openMemoryView({ kind: 'working', change })}
+            />
+            <button
+              type="button"
+              className="bh-sidebar-toggle"
+              aria-label={sidebar.mode === 'hidden' ? t('sidebar.expand') : t('sidebar.collapse')}
+              aria-expanded={sidebar.mode !== 'hidden'}
+              aria-controls="bh-channel-sidebar"
+              onClick={sidebar.toggle}
+            >
+              <IconPanelLeftOutlineRegular size={16} />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Feature | Needs a model | Scripted journey | File |
 | --- | --- | --- | --- |
 | Bot mode entry and the default DeepSeek Bot | no | none | [bot-mode.md](bot-mode.md) |
+| Bot mode dock (desktop layout) | no | none | [bot-mode-dock.md](bot-mode-dock.md) |
 | Bot DM reply | yes | none | [bot-dm-reply.md](bot-dm-reply.md) |
 | Conversation timeline: new-messages divider, kept place, folding, image preview, reactions, search | yes | none | [conversation-timeline.md](conversation-timeline.md) |
 | PersonaBot creation and restart persistence | no | `scripts/e2e-personabot-create.mjs` (CI) | [personabot-create.md](personabot-create.md) |
