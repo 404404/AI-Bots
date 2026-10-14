@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   composerActions,
   composerStacked,
+  voiceDrag,
+  voiceRelease,
   dictate,
   idleDictation,
   speechLang,
@@ -101,7 +103,21 @@ describe('composer layout', () => {
     expect(composerStacked(['send'], 0)).toBe(false);
     expect(composerStacked(['mic', 'send'], 1)).toBe(true);
     expect(composerStacked(['send'], 1)).toBe(true);
-    expect(composerStacked(['stop'], 0)).toBe(true);
+    expect(composerStacked(['stop'], 0)).toBe(false);
+  });
+});
+
+describe('mic gestures', () => {
+  it('cancels on a slide left and locks on a slide up', () => {
+    expect(voiceDrag(-20, -10)).toBeUndefined();
+    expect(voiceDrag(-80, 0)).toBe('cancel');
+    expect(voiceDrag(0, -60)).toBe('lock');
+    expect(voiceDrag(-100, -100)).toBe('cancel');
+  });
+
+  it('stops on release after a hold and keeps listening after a tap', () => {
+    expect(voiceRelease(120)).toBe('lock');
+    expect(voiceRelease(300)).toBe('stop');
   });
 });
 

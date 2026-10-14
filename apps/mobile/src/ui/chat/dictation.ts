@@ -72,7 +72,19 @@ export function composerActions(input: {
 }
 
 export function composerStacked(actions: ComposerAction[], files: number): boolean {
-  return files > 0 || actions.includes('stop') || actions.length > 1;
+  return files > 0 || actions.length > 1;
+}
+
+export const voiceGesture = { holdMs: 300, cancelDrag: 80, lockDrag: 60 } as const;
+
+export function voiceDrag(dx: number, dy: number): 'cancel' | 'lock' | undefined {
+  if (dx <= -voiceGesture.cancelDrag) return 'cancel';
+  if (dy <= -voiceGesture.lockDrag) return 'lock';
+  return undefined;
+}
+
+export function voiceRelease(heldMs: number): 'stop' | 'lock' {
+  return heldMs >= voiceGesture.holdMs ? 'stop' : 'lock';
 }
 
 export function speechLang(tag: string): string {

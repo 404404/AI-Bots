@@ -1,5 +1,13 @@
-import { useState, type ReactNode } from 'react';
-import { Image, Keyboard, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import {
+  Image,
+  Keyboard,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { PickSource, PickedFile } from '../../host/pick-files';
@@ -17,7 +25,14 @@ import {
   StopIcon,
 } from '../shell/icons';
 import { t } from '../strings';
-import { composerActions, composerStacked, dictating, type DictationStatus } from './dictation';
+import {
+  composerActions,
+  composerStacked,
+  dictating,
+  voiceDrag,
+  voiceRelease,
+  type DictationStatus,
+} from './dictation';
 
 const SOURCES: Array<{ source: PickSource; label: string; Icon: typeof PhotoIcon }> = [
   { source: 'photos', label: t.attachPhotos, Icon: PhotoIcon },
@@ -120,25 +135,103 @@ function AttachmentTile({ file, onRemove }: { file: PickedFile; onRemove(): void
   );
 }
 
-function DictationLine({ status }: { status: DictationStatus }) {
+function VoiceButton({
+  active,
+  onStart,
+  onStop,
+  onCancel,
+  onHeld,
+}: {
+  active: boolean;
+  onStart(): void;
+  onStop(): void;
+  onCancel(): void;
+  onHeld(held: boolean): void;
+}) {
   const theme = useDesignTheme();
-  const dot = space.x2;
+  const [held, setHeld] = useState(false);
+  const size = theme.touch - space.x4;
+  const latest = useRef({ active, onStart, onStop, onCancel, onHeld });
+  latest.current = { active, onStart, onStop, onCancel, onHeld };
+  const gesture = useRef({ at: 0, startedHere: false, done: false });
+  const hold = (next: boolean) => {
+    setHeld(next);
+    latest.current.onHeld(next);
+  };
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderGrant: () => {
+        const startedHere = !latest.current.active;
+        gesture.current = { at: Date.now(), startedHere, done: false };
+        if (!startedHere) return;
+        latest.current.onStart();
+        hold(true);
+      },
+      onPanResponderMove: (_event, { dx, dy }) => {
+        const current = gesture.current;
+        if (!current.startedHere || current.done) return;
+        const drag = voiceDrag(dx, dy);
+        if (drag === undefined) return;
+        current.done = true;
+        hold(false);
+        if (drag === 'cancel') latest.current.onCancel();
+      },
+      onPanResponderRelease: () => {
+        const current = gesture.current;
+        hold(false);
+        if (current.done) return;
+        if (!current.startedHere) latest.current.onStop();
+        else if (voiceRelease(Date.now() - current.at) === 'stop') latest.current.onStop();
+      },
+      onPanResponderTerminate: () => hold(false),
+    }),
+  ).current;
+  const filled = active || held;
   return (
     <View
-      accessibilityLiveRegion="polite"
-      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.x2 }}
+      {...responder.panHandlers}
+      accessible
+      accessibilityRole="button"
+      accessibilityLabel={active ? t.stopDictation : t.dictate}
+      accessibilityHint={active ? undefined : t.dictateHint}
+      onAccessibilityTap={() => (latest.current.active ? onStop() : onStart())}
+      hitSlop={space.x2}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: radius.round,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: filled ? theme.color.accent : undefined,
+      }}
     >
+      {active && !held ? (
+        <StopIcon color={theme.color.onAccent} size={theme.type.title.line} />
+      ) : (
+        <MicIcon
+          color={filled ? theme.color.onAccent : theme.color.muted}
+          size={theme.type.title.line}
+        />
+      )}
+    </View>
+  );
+}
+
+function HoldDot() {
+  const theme = useDesignTheme();
+  const size = theme.touch - space.x4;
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <View
         style={{
-          width: dot,
-          height: dot,
+          width: space.x3,
+          height: space.x3,
           borderRadius: radius.round,
-          backgroundColor: status === 'listening' ? theme.color.accent : theme.color.subtle,
+          backgroundColor: theme.color.danger,
         }}
       />
-      <Text variant="meta" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
-        {status === 'listening' ? t.dictationListening : t.dictationStarting}
-      </Text>
     </View>
   );
 }
@@ -224,6 +317,7 @@ export function Composer({
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
+  const [held, setHeld] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const lineHeight = theme.touch - space.x4;
   const inset = space.x3;
@@ -241,7 +335,9 @@ export function Composer({
   };
   const stacked = composerStacked(actions, files.length);
   const icon = theme.type.title.line;
-  const leading = listening ? (
+  const leading = held ? (
+    <HoldDot />
+  ) : listening ? (
     <RoundButton label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
       <CloseIcon color={theme.color.muted} size={icon} />
     </RoundButton>
@@ -259,7 +355,15 @@ export function Composer({
       value={value}
       onChangeText={onChange}
       onFocus={() => setMenu(false)}
-      placeholder={placeholder}
+      placeholder={
+        held
+          ? t.dictationHoldHint
+          : dictation === 'starting'
+            ? t.dictationStarting
+            : listening
+              ? t.dictationListening
+              : placeholder
+      }
       placeholderTextColor={theme.color.subtle}
       accessibilityLabel={placeholder}
       multiline
@@ -277,26 +381,22 @@ export function Composer({
     />
   );
   const trailing = actions.map((action) =>
-    action === 'mic' ? (
-      <RoundButton
-        key={action}
-        label={t.dictate}
-        filled={false}
-        onPress={() => {
-          setMenu(false);
-          onDictate();
-        }}
-      >
-        <MicIcon color={theme.color.muted} size={icon} />
-      </RoundButton>
-    ) : action === 'stop' ? (
-      <RoundButton key={action} label={t.stopDictation} filled onPress={onStopDictation}>
-        <StopIcon color={theme.color.onAccent} size={icon} />
-      </RoundButton>
-    ) : (
+    action === 'send' ? (
       <RoundButton key={action} label={t.send} filled onPress={onSend}>
         <ArrowUpIcon color={theme.color.onAccent} size={icon} />
       </RoundButton>
+    ) : (
+      <VoiceButton
+        key="voice"
+        active={listening}
+        onStart={() => {
+          setMenu(false);
+          onDictate();
+        }}
+        onStop={onStopDictation}
+        onCancel={onCancelDictation}
+        onHeld={setHeld}
+      />
     ),
   );
   return (
@@ -341,7 +441,7 @@ export function Composer({
               }}
             >
               {leading}
-              {listening ? <DictationLine status={dictation} /> : <View style={{ flex: 1 }} />}
+              <View style={{ flex: 1 }} />
               {trailing}
             </View>
           </View>

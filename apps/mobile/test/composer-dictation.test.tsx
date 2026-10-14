@@ -11,12 +11,30 @@ const speech = vi.hoisted(() => ({
   start: vi.fn(),
   stop: vi.fn(),
   abort: vi.fn(),
+  gesture: undefined as Record<string, (...args: unknown[]) => unknown> | undefined,
 }));
 
-vi.mock('react-native', async () => ({
-  ...(await import('./react-native-shim')),
-  Keyboard: { dismiss() {} },
-}));
+vi.mock('react-native', async () => {
+  const shim = await import('./react-native-shim');
+  const { createElement } = await import('react');
+  const View = (props: Record<string, unknown>) => {
+    if (props['__gesture'] !== undefined) speech.gesture = props['__gesture'] as never;
+    const tap = props['onAccessibilityTap'] as (() => void) | undefined;
+    return tap === undefined
+      ? shim.View(props)
+      : createElement(
+          'button',
+          { type: 'button', 'aria-label': props['accessibilityLabel'], onClick: tap },
+          props['children'] as never,
+        );
+  };
+  return {
+    ...shim,
+    View,
+    Keyboard: { dismiss() {} },
+    PanResponder: { create: (config: unknown) => ({ panHandlers: { __gesture: config } }) },
+  };
+});
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
@@ -118,13 +136,13 @@ describe('Composer dictation', () => {
     expect(speech.start).toHaveBeenCalledWith(
       expect.objectContaining({ interimResults: true, continuous: false }),
     );
-    expect(host.textContent).toContain(t.dictationStarting);
+    expect(field().placeholder).toBe(t.dictationStarting);
     expect(button(t.stopDictation)).not.toBeNull();
     expect(button(t.cancelDictation)).not.toBeNull();
     expect(button(t.attach)).toBeNull();
 
     await emit('start');
-    expect(host.textContent).toContain(t.dictationListening);
+    expect(field().placeholder).toBe(t.dictationListening);
     await emit('result', result('book a table', false));
     expect(field().value).toBe('book a table');
     expect(field().disabled).toBe(true);
@@ -191,5 +209,54 @@ describe('Composer dictation', () => {
     act(() => root!.unmount());
     root = undefined;
     expect(speech.abort).toHaveBeenCalledOnce();
+  });
+});
+
+describe('Holding the mic', () => {
+  const grab = async (heldMs: number, move?: { dx: number; dy: number }) => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    await act(async () => speech.gesture!['onPanResponderGrant']!());
+    if (move !== undefined) await act(async () => speech.gesture!['onPanResponderMove']!({}, move));
+    now.mockReturnValue(1_000 + heldMs);
+    await act(async () => speech.gesture!['onPanResponderRelease']!());
+    now.mockRestore();
+  };
+
+  it('listens while held and stops on release, keeping the text', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1_000);
+    await act(async () => speech.gesture!['onPanResponderGrant']!());
+    expect(speech.start).toHaveBeenCalled();
+    expect(field().placeholder).toBe(t.dictationHoldHint);
+    await emit('start');
+    await emit('result', result('see you at seven', false));
+    now.mockReturnValue(2_500);
+    await act(async () => speech.gesture!['onPanResponderRelease']!());
+    now.mockRestore();
+    expect(speech.stop).toHaveBeenCalled();
+    await emit('result', result('See you at seven.', true));
+    await emit('end');
+    expect(field().value).toBe('See you at seven.');
+  });
+
+  it('cancels when the held mic slides left', async () => {
+    await grab(1_500, { dx: -120, dy: 0 });
+    expect(speech.abort).toHaveBeenCalled();
+    expect(speech.stop).not.toHaveBeenCalled();
+    expect(status()).toBe('idle');
+  });
+
+  it('locks when the held mic slides up, so releasing keeps listening', async () => {
+    await grab(1_500, { dx: 0, dy: -90 });
+    expect(speech.stop).not.toHaveBeenCalled();
+    expect(status()).not.toBe('idle');
+    expect(button(t.stopDictation)).not.toBeNull();
+  });
+
+  it('keeps listening after a quick tap until Stop', async () => {
+    await grab(120);
+    expect(speech.stop).not.toHaveBeenCalled();
+    await emit('start');
+    await grab(80);
+    expect(speech.stop).toHaveBeenCalled();
   });
 });
