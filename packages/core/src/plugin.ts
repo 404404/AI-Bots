@@ -138,7 +138,7 @@ import {
   grantExecutionDenial,
   grantToolExecutionDenial,
   orchestratorPermission,
-  isSafeMemoryDirectoryListing,
+  isDshGovernedTool,
   requiresHumanToolApproval,
   sessionHasFullAccess,
 } from './workspaces/grant-execution.js';
@@ -1282,7 +1282,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       const agent = execution.agent;
       if (agent === undefined || core.ownership.resolve(agent.session.id) === undefined)
         return next();
-      if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
+      if (
+        !isDshGovernedTool(execution.name) &&
+        !requiresHumanToolApproval(execution.name, execution.arguments)
+      )
+        return next();
       const storeDenial = credentialStoreDenial(
         execution.name,
         execution.arguments,
@@ -1298,8 +1302,6 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         const serverDenial = secretMcpDenial(execution.arguments);
         if (serverDenial !== undefined) return { kind: 'deny', reason: serverDenial };
       }
-      if (isSafeMemoryDirectoryListing(core, agent.session, execution.name, execution.arguments))
-        return next();
 
       const computerTools = ctx.get('botharnessComputerTools') as
         | {
@@ -1416,16 +1418,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
       const denial = permissionDenial(agent.session);
       if (denial !== undefined) return { kind: 'deny', reason: denial };
-      if (
-        typeof execution.arguments === 'object' &&
-        execution.arguments !== null &&
-        'sandbox_permissions' in execution.arguments
-      ) {
-        return {
-          kind: 'deny',
-          reason: 'BotHarness Session cannot request sandbox permission escalation',
-        };
-      }
+      if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
       const eachUse = execution.name === 'secret_cli' || execution.name === 'secret_mcp_connect';
       const fullAccess = sessionHasFullAccess(core, agent.session.id);
       if (fullAccess) return next();
@@ -1457,9 +1450,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               reason:
                 execution.name === 'channel_attachment_open'
                   ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-                  : eachUse
-                    ? 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.'
-                    : 'This tool call may access files outside the authorized folder.',
+                  : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });
         if (outcome !== 'allowed-once') {
@@ -1530,6 +1521,25 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           return next();
         },
       );
+    },
+    { global: true },
+  );
+  ctx.on(
+    'tools/execute',
+    async (execution, next) => {
+      if (
+        execution.agent === undefined ||
+        core.ownership.resolve(execution.agent.session.id) === undefined ||
+        !isDshGovernedTool(execution.name) ||
+        requiresHumanToolApproval(execution.name, execution.arguments)
+      )
+        return next();
+      const untrack = toolApproval.track(execution);
+      try {
+        return await next();
+      } finally {
+        untrack?.();
+      }
     },
     { global: true },
   );
