@@ -226,6 +226,7 @@ export function Composer({
   const [menu, setMenu] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const lineHeight = theme.touch - space.x4;
+  const inset = space.x3;
   const listening = dictating(dictation);
   const actions = composerActions({
     text: value,
@@ -309,7 +310,7 @@ export function Composer({
     >
       <View
         style={{
-          borderRadius: radius.lg + space.x3,
+          borderRadius: (theme.touch - space.x4) / 2 + inset,
           borderWidth: edge.hairline,
           borderColor: theme.color.borderStrong,
           backgroundColor: theme.color.surface,
@@ -329,9 +330,7 @@ export function Composer({
           </ScrollView>
         ) : null}
         {stacked ? (
-          <View
-            style={{ paddingHorizontal: space.x2, paddingTop: space.x3, paddingBottom: space.x2 }}
-          >
+          <View style={{ padding: inset }}>
             {field}
             <View
               style={{
@@ -352,8 +351,7 @@ export function Composer({
               flexDirection: 'row',
               alignItems: 'flex-end',
               gap: space.x2,
-              paddingHorizontal: space.x2,
-              paddingVertical: space.x2,
+              padding: inset,
             }}
           >
             {leading}
