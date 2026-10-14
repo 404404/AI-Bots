@@ -4,6 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
+import { BOT_TOOL_COMMANDS, runBotToolCommand } from './cli-bot-tool.js';
 import {
   CHANNEL_COMMANDS,
   CHANNEL_OPTIONS,
@@ -114,6 +115,7 @@ const DEVICE_COMMANDS = [
   'browser-open',
   'browser-frame',
   'browser-takeover',
+  'browser-input',
   'browser-stop',
   'computer-start',
   'computer-status',
@@ -157,6 +159,7 @@ export const LIVE_COMMANDS = [
   ...INBOX_COMMANDS,
   ...BROWSER_COMPUTER_COMMANDS,
   ...PROFILE_COMMANDS,
+  ...BOT_TOOL_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -233,6 +236,11 @@ export const LIVE_COMMANDS = [
   {
     command: 'browser-takeover',
     description: "pause a Bot's Browser for Human input (--enabled) or hand it back (--disabled)",
+  },
+  {
+    command: 'browser-input',
+    description:
+      "click, scroll, type or press a key in a paused Bot's Browser (input JSON from stdin)",
   },
   { command: 'browser-stop', description: "stop a Bot's Browser" },
   {
@@ -622,6 +630,14 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (BOT_TOOL_COMMANDS.some((entry) => entry.command === command))
+    return runBotToolCommand(
+      command as (typeof BOT_TOOL_COMMANDS)[number]['command'],
+      rest,
+      values,
+      io,
+      () => connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);
@@ -1161,7 +1177,11 @@ async function runDeviceCommand(
           : `${command} needs exactly one bot id.`,
     );
   let toolArgs: Record<string, unknown> = {};
-  if (direct && values['args-stdin'] === true) {
+  if (command === 'browser-input' && values['args-stdin'] !== true)
+    usage(
+      'browser-input needs --args-stdin with a JSON input such as {"kind":"click","x":10,"y":20}.',
+    );
+  if ((direct || command === 'browser-input') && values['args-stdin'] === true) {
     try {
       const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
@@ -1244,6 +1264,7 @@ async function runDeviceCommand(
   if (command === 'browser-open') return json('/api/browser/open', { slug });
   if (command === 'browser-takeover')
     return json('/api/browser/takeover', { slug, active: values.enabled === true });
+  if (command === 'browser-input') return json('/api/browser/input', { ...toolArgs, slug });
   if (command === 'browser-stop') return json('/api/browser/stop', { slug });
   if (command === 'computer-start')
     return json('/api/computer/start', {
@@ -1252,17 +1273,16 @@ async function runDeviceCommand(
     });
   if (command === 'computer-status') return json('/api/computer/status');
   if (command === 'computer-stop') return json('/api/computer/stop', { authorize: true });
-  const { response, bytes } = await http(
-    `/botharness-browser/viewer/local/frame?slug=${encodeURIComponent(slug)}`,
-  );
+  const frame = record(await json(`/api/browser/frame?slug=${encodeURIComponent(slug)}`));
+  if (typeof frame['data'] !== 'string')
+    throw new CliLiveError('host-protocol-error', 'The Host returned no Browser frame.');
+  const bytes = Buffer.from(frame['data'], 'base64');
   writeFileSync(values.out!, bytes, { mode: 0o600 });
-  const width = Number(response.headers.get('x-viewport-width'));
-  const height = Number(response.headers.get('x-viewport-height'));
   return {
     path: values.out,
     bytes: bytes.byteLength,
-    mimeType: response.headers.get('content-type'),
-    ...(width > 0 && height > 0 ? { viewport: { width, height } } : {}),
+    mimeType: frame['mimeType'],
+    ...(frame['viewport'] === undefined ? {} : { viewport: frame['viewport'] }),
   };
 }
 

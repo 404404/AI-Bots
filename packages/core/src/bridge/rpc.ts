@@ -91,7 +91,7 @@ import type {
 } from './methods.js';
 import type { ChannelActivityToday } from '../channels/activity-today.js';
 import type { GroupProfileActivity } from '../channels/profile-activity.js';
-import type { ChannelMessage, ChannelRecord } from '../channels/channel.js';
+import type { ChannelMessage, ChannelReaction, ChannelRecord } from '../channels/channel.js';
 import type { ChannelSendStatus } from '../channels/store.js';
 import type { ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ChannelReadPosition } from '../channels/store.js';
@@ -102,6 +102,7 @@ import type {
   AssignmentDetail,
   AssignmentSummary,
   ChannelAssignmentSummary,
+  DirectBotToolSpec,
 } from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
@@ -1006,6 +1007,24 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(await this.methods.channelMarkRead({ channelId, messageId }));
   }
 
+  channelReact(
+    channelId: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): { reactions: ChannelReaction[] } {
+    return unwrap(this.methods.channelReact({ channelId, messageId, emoji, active }));
+  }
+
+  channelSearch(
+    channelId: string,
+    text: string,
+    cursor?: string,
+    limit?: number,
+  ): { messages: ChannelMessage[]; nextCursor?: string } {
+    return unwrap(this.methods.channelSearch({ channelId, text, cursor, limit }));
+  }
+
   channelAllBotPreview(channelId: string): AllBotPreview {
     return unwrap(this.methods.channelAllBotPreview({ channelId }));
   }
@@ -1098,9 +1117,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     limit?: number,
     cursor?: string,
     sort?: 'newest' | 'oldest',
+    snoozed?: boolean,
   ): HumanAttentionPage {
     return unwrap(
-      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort }),
+      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort, snoozed }),
     );
   }
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
@@ -1121,6 +1141,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   humanAttentionIgnore(sourceEventId: string): { accepted: boolean } {
     return unwrap(this.methods.humanAttentionIgnore({ sourceEventId }));
+  }
+  humanAttentionSnooze(
+    itemId: string,
+    sourceKey: string,
+    until: string | null,
+  ): { accepted: boolean } {
+    return unwrap(this.methods.humanAttentionSnooze({ itemId, sourceKey, until }));
   }
 
   assignments(slug: string): { assignments: AssignmentSummary[] } {
@@ -1245,6 +1272,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
         ...(sessionId === undefined ? {} : { sessionId }),
         ...(turns === undefined ? {} : { turns }),
       }),
+    );
+  }
+
+  botTools(): { sessionId: 'direct'; tools: DirectBotToolSpec[] } {
+    return unwrap(this.methods.botTools({}));
+  }
+
+  botToolRun(
+    slug: string,
+    tool: string,
+    args?: Record<string, unknown>,
+  ): Promise<{ slug: string; tool: string; sessionId: 'direct'; result: unknown }> {
+    return unwrapAsync(
+      this.methods.botToolRun({ slug, tool, ...(args === undefined ? {} : { args }) }),
     );
   }
 
@@ -1627,6 +1668,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelReadPosition',
   'channelMarkRead',
   'channelMarkAllRead',
+  'channelReact',
+  'channelSearch',
   'channelUnreadCounts',
   'channelAllBotPreview',
   'channelSend',
@@ -1642,6 +1685,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionStatus',
   'humanAttentionIgnore',
   'humanAttentionDismiss',
+  'humanAttentionSnooze',
   'assignments',
   'channelAssignments',
   'assignment',
@@ -1662,6 +1706,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'userQuestionAnswer',
   'sessions',
   'botToolTrace',
+  'botTools',
+  'botToolRun',
   'sessionArchiveSet',
   'sessionOwner',
   'botSessionIds',

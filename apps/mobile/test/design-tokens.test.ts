@@ -55,8 +55,8 @@ describe('mobile design tokens', () => {
 
 describe('resolveTheme', () => {
   it('follows the system scheme unless the Human picks one', () => {
-    expect(resolveTheme('dark').color).toEqual(palette.dark);
-    expect(resolveTheme('dark', { scheme: 'light' }).color).toEqual(palette.light);
+    expect(resolveTheme('dark').color).toMatchObject(palette.dark);
+    expect(resolveTheme('dark', { scheme: 'light' }).color).toMatchObject(palette.light);
     expect(resolveTheme('light', { scheme: 'system' }).scheme).toBe('light');
   });
 
@@ -70,6 +70,13 @@ describe('resolveTheme', () => {
       onAccent: '#ffffff',
     });
     expect(resolveTheme('light', { accent: 'red' }).color.accent).toBe(palette.light.accent);
+  });
+
+  it('tints the soft accent from the accent over the base', () => {
+    expect(resolveTheme('light').color.accentSoft).toBe('#e8effc');
+    expect(resolveTheme('light', { accent: '#5b2ecc' }).color.accentSoft).not.toBe(
+      resolveTheme('light').color.accentSoft,
+    );
   });
 
   it('uses each platform type and touch scale', () => {
@@ -97,7 +104,15 @@ function contrastOf(a: string, b: string): number {
 }
 
 describe('Bot colour on the Human bubble', () => {
-  const bot = { slug: 'ada', displayName: 'Ada', state: 'idle' as const, paused: false };
+  const bot = {
+    slug: 'ada',
+    displayName: 'Ada',
+    roles: [],
+    computerAccess: false,
+    browserAccess: false,
+    state: 'idle' as const,
+    paused: false,
+  };
 
   it('uses the Bot primary colour, custom first', () => {
     expect(botColor({ ...bot, primaryColor: { mode: 'custom', color: '#2f9e8f' } })).toBe(

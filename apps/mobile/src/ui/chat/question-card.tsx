@@ -18,6 +18,7 @@ import { useMounted } from '../mounted';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { errorText } from '../request-parts';
+import { haptic } from '../haptics';
 import { t } from '../strings';
 import { ActionCard, CardButtons, CardLine, type CardLineTone } from './action-card';
 
@@ -93,10 +94,13 @@ function Option({
         gap: space.x4,
         paddingHorizontal: space.x4,
         paddingVertical: space.x3,
-        borderRadius: radius.md,
-        borderWidth: chosen ? edge.focus : edge.hairline,
-        borderColor: chosen ? theme.color.accent : theme.color.border,
-        backgroundColor: pressed ? theme.color.hover : theme.color.base,
+        borderTopWidth: index === 0 ? 0 : edge.hairline,
+        borderTopColor: theme.color.divider,
+        backgroundColor: chosen
+          ? theme.color.accentSoft
+          : pressed
+            ? theme.color.hover
+            : theme.color.base,
       })}
     >
       <View
@@ -162,21 +166,34 @@ function QuestionFields({
           {t.multiSelectHint}
         </Text>
       ) : null}
-      {(question.options ?? []).map((option, index) => (
-        <Option
-          key={option.label}
-          index={index}
-          label={option.label}
-          {...(option.description === undefined ? {} : { description: option.description })}
-          chosen={draft.selected.includes(option.label)}
-          multiple={multiple}
-          disabled={disabled}
-          onPress={() => onChange(toggleOption(question, draft, option.label))}
-        />
-      ))}
+      {question.options?.length ? (
+        <View
+          accessibilityLabel={question.question}
+          style={{
+            overflow: 'hidden',
+            borderWidth: edge.hairline,
+            borderColor: theme.color.border,
+            borderRadius: radius.md,
+            backgroundColor: theme.color.base,
+          }}
+        >
+          {question.options.map((option, index) => (
+            <Option
+              key={option.label}
+              index={index}
+              label={option.label}
+              {...(option.description === undefined ? {} : { description: option.description })}
+              chosen={draft.selected.includes(option.label)}
+              multiple={multiple}
+              disabled={disabled}
+              onPress={() => onChange(toggleOption(question, draft, option.label))}
+            />
+          ))}
+        </View>
+      ) : null}
       <TextInput
         accessibilityLabel={`${t.otherAnswer}: ${question.question}`}
-        placeholder={t.otherAnswer}
+        placeholder={question.options?.length ? t.otherAnswer : t.typeAnswer}
         placeholderTextColor={theme.color.subtle}
         editable={!disabled}
         multiline
@@ -204,12 +221,16 @@ export function QuestionCard({
   subject,
   resolution,
   focused = false,
+  wide = false,
+  onSettled,
 }: {
   port: QuestionCardPort;
   botName: string;
   subject?: string;
   resolution?: Extract<CardResolution, { kind: 'user-question' }>;
   focused?: boolean;
+  wide?: boolean;
+  onSettled?(result: DecisionResult): void;
 }) {
   const known = useRef(resolution !== undefined);
   const [phase, setPhase] = useState<Phase>(
@@ -253,6 +274,7 @@ export function QuestionCard({
           eyebrow={eyebrow}
           title={first === '' ? t.asks(botName) : first}
           focused={focused}
+          wide={wide}
           busy={phase.kind === 'loading'}
           {...(phase.kind === 'failed' ? { error: t.cardLoadFailed } : {})}
         >
@@ -268,6 +290,7 @@ export function QuestionCard({
   const answer = buildAnswer(request.questions, drafts);
   const submit = async () => {
     if (answer === undefined) return;
+    haptic('submit');
     setPhase({ kind: 'pending', request, busy: true });
     try {
       const result = await port.answer(answer);
@@ -276,6 +299,7 @@ export function QuestionCard({
         status: result === 'expired' ? 'expired' : 'decided',
         mine: result === 'accepted',
       });
+      onSettled?.(result);
     } catch (error) {
       setPhase({ kind: 'pending', request, error: `${t.decideFailed} ${errorText(error)}` });
     }
@@ -287,6 +311,7 @@ export function QuestionCard({
         title={single?.question ?? t.asks(botName)}
         {...(single?.detail === undefined ? {} : { explanation: single.detail })}
         focused={focused}
+        wide={wide}
         {...(phase.error === undefined ? {} : { error: phase.error })}
         preview={
           <View style={{ gap: space.x5 }}>
