@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
@@ -107,6 +108,7 @@ export const LIVE_OPTIONS = {
   'expected-current': { type: 'string' },
   'restore-id': { type: 'string' },
   'repair-id': { type: 'string' },
+  'default-location': { type: 'boolean' },
   tag: { type: 'string' },
   target: { type: 'string' },
 } as const;
@@ -271,6 +273,10 @@ export const LIVE_COMMANDS = [
   { command: 'memory-version-unname', description: 'remove a memory version name' },
   { command: 'memory-repair', description: 'repair a memory repository against its expected head' },
   {
+    command: 'memory-move',
+    description: "move a Bot's Memory repository to another folder, or back to the default",
+  },
+  {
     command: 'bot-trace',
     description: 'show which tools a Bot called in its recent turns, with outcomes',
   },
@@ -328,6 +334,8 @@ interface LiveValues
   'expected-current'?: string;
   'restore-id'?: string;
   'repair-id'?: string;
+  'memory-location'?: string;
+  'default-location'?: boolean;
   tag?: string;
   path?: string;
   sha?: string;
@@ -1304,6 +1312,7 @@ const MEMORY_COMMANDS = new Set([
   'memory-version-name',
   'memory-version-unname',
   'memory-repair',
+  'memory-move',
 ]);
 
 const SHA = /^[0-9a-f]{40}$/u;
@@ -1413,6 +1422,20 @@ async function runMemoryCommand(
         { channelId, tag: required('tag', 'tag <version>') },
       ];
       break;
+    case 'memory-move': {
+      const location = values['memory-location']?.trim();
+      if ((location === undefined || location === '') === (values['default-location'] !== true))
+        usage(
+          'memory-move needs --memory-location <absolute-dir> or --default-location, not both.',
+        );
+      if (location !== undefined && location !== '' && !isAbsolute(location))
+        usage('--memory-location must be an absolute folder path.');
+      [method, args] = [
+        'memoryMove',
+        { slug, location: location === undefined || location === '' ? null : location },
+      ];
+      break;
+    }
     case 'memory-repair':
       [method, args] = [
         'memoryRepair',

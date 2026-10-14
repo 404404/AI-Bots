@@ -173,6 +173,7 @@ import {
   type TimelinePageRequest,
   loadSessions,
   setSessionArchived,
+  moveMemoryLocation,
   loadBots,
   loadMemorySnapshot,
   loadMemoryFile,
@@ -458,6 +459,7 @@ export interface BridgeActions {
     path: string,
   ): Promise<WorkspaceGrantView | undefined>;
   memoryDirectory(slug: string): Promise<string | undefined>;
+  moveMemoryLocation(slug: string, location: string | null): Promise<string>;
   load(signal?: AbortSignal): Promise<void>;
   deletionPreview(slug: string): Promise<PersonaBotDeletionPreview>;
   deletionConfirm(slug: string, token: string, eraseMemory: boolean): Promise<PersonaBotDeletion>;
@@ -1572,6 +1574,7 @@ export function createActions(
       const bot = (result.value as { bot?: { memoryDir?: unknown } }).bot;
       return typeof bot?.memoryDir === 'string' ? bot.memoryDir : undefined;
     },
+    moveMemoryLocation: (slug, location) => moveMemoryLocation(call, slug, location),
     listWorkspaceOptions: () => loadWorkspaceOptions(call),
     listWorkspaceGrants: (slug) => loadWorkspaceGrants(call, slug),
     createWorkspaceGrant: (slug, workspaceId) => createWorkspaceGrant(call, slug, workspaceId),

@@ -183,6 +183,16 @@ export type AssignmentArchiveOutcome =
       message: string;
     };
 
+export type OrchestratorReplacement<T> =
+  | { outcome: 'replaced'; value: T }
+  | { outcome: 'refused'; code: 'bot-busy'; message: string };
+
+const BOT_BUSY = {
+  outcome: 'refused',
+  code: 'bot-busy',
+  message: 'This Bot is working right now; wait for it to finish, then try again.',
+} as const;
+
 export interface NativeSessionArchive {
   archiveSession(sessionId: string): Promise<void>;
   unarchiveSession(sessionId: string): Promise<void>;
@@ -645,6 +655,7 @@ export interface BotRuntime {
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
   currentOrchestratorSessionId?(botSlug: string): string | undefined;
+  replaceOrchestrator?<T>(botSlug: string, body: () => T): Promise<OrchestratorReplacement<T>>;
   directBotTools?(): DirectBotToolSpec[];
   directBotToolCalls?(botSlug: string): readonly DirectBotToolCall[];
   runDirectBotTool?(
@@ -3619,6 +3630,51 @@ class BotRuntimeImplementation implements BotRuntime {
     return archived
       ? this.#archiveAssignment(bot, sessionId, () => {})
       : this.#unarchiveAssignment(bot, sessionId, () => {});
+  }
+
+  async replaceOrchestrator<T>(
+    botSlug: string,
+    body: () => T,
+  ): Promise<OrchestratorReplacement<T>> {
+    if (this.#tails.has(botSlug)) return BOT_BUSY;
+    let result: OrchestratorReplacement<T> | undefined;
+    await this.#enqueue(botSlug, async () => {
+      result = await this.#replaceOrchestrator(botSlug, body);
+    });
+    if (result === undefined) throw new Error(`Unknown PersonaBot: ${botSlug}`);
+    return result;
+  }
+
+  async #replaceOrchestrator<T>(
+    botSlug: string,
+    body: () => T,
+  ): Promise<OrchestratorReplacement<T>> {
+    const current = this.currentOrchestratorSessionId(botSlug);
+    if (current === undefined) return { outcome: 'replaced', value: body() };
+    const archive = this.#sessionArchive?.();
+    if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+    try {
+      await archive.archiveSession(current);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'WorkspaceActiveSessionError') return BOT_BUSY;
+      throw error;
+    }
+    await this.#agents.releaseSession?.(current).catch(() =>
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'orchestrator-release-failed',
+          botSlug,
+          sessionId: current,
+        }),
+      ),
+    );
+    try {
+      return { outcome: 'replaced', value: body() };
+    } catch (error) {
+      await archive.unarchiveSession(current);
+      throw error;
+    }
   }
 
   triageOpenCount(botSlug: string): number | undefined {

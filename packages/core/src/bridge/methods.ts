@@ -152,6 +152,11 @@ import type {
 } from '../bots/deletion.js';
 import { isValidSlug } from '../bots/slug.js';
 import {
+  memoryMoveTarget,
+  moveMemoryDirectory,
+  type MemoryMoveResult,
+} from '../bots/memory-move.js';
+import {
   MAX_ROSTER_BATCH_SIZE,
   RosterStore,
   RosterUnavailableError,
@@ -601,6 +606,9 @@ export interface BridgeMethods {
     payload: unknown,
   ): Promise<BridgeResult<{ slug: string; tool: string; sessionId: 'direct'; result: unknown }>>;
   sessionArchiveSet(payload: unknown): Promise<BridgeResult<{ archived: boolean }>>;
+  memoryMove(
+    payload: unknown,
+  ): Promise<BridgeResult<{ memoryDir: string; moved: boolean; leftover?: string }>>;
   sessionOwner(payload: unknown): BridgeResult<{ owner: OwnedSessionBot | null }>;
   botSessionIds(payload: unknown): BridgeResult<{ sessionIds: string[] }>;
   messageAttachmentTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
@@ -4773,6 +4781,65 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const outcome = await deps.runtime.setAssignmentArchived(slug, sessionId, archived);
       if (outcome.outcome === 'refused') return invalidInput(outcome.message);
       return { ok: true, value: { archived: outcome.outcome === 'archived' } };
+    },
+    async memoryMove(payload) {
+      const input = asObject(payload);
+      const slug = asSlug(payload);
+      const location = input?.['location'];
+      if (slug === undefined || (location !== null && typeof location !== 'string'))
+        return invalidInput('slug and location (a folder, or null for the default) are required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.replaceOrchestrator === undefined)
+        return invalidInput('Moving Memory is unavailable on this Host');
+      const target = memoryMoveTarget(
+        deps.registry,
+        slug,
+        typeof location === 'string' && location.trim() !== '' ? location.trim() : null,
+      );
+      if (!target.ok) return { ok: false, error: { code: target.code, message: target.message } };
+      if (target.to === target.from)
+        return { ok: true, value: { memoryDir: target.from, moved: false } };
+      try {
+        if (deps.memory?.snapshot(slug).provisional === true)
+          return {
+            ok: false,
+            error: {
+              code: 'memory-conflict',
+              message: 'Finish the Memory repair before moving Memory.',
+            },
+          };
+      } catch {}
+      let outcome;
+      try {
+        outcome = await deps.runtime.replaceOrchestrator(slug, (): MemoryMoveResult => {
+          const moved = moveMemoryDirectory(target.from, target.to);
+          try {
+            deps.registry.setMemoryDir(slug, target.custom ? target.to : undefined);
+          } catch (error) {
+            moveMemoryDirectory(target.to, target.from);
+            throw error;
+          }
+          return moved;
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: 'memory-unavailable',
+            message: `Memory was not moved: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        };
+      }
+      if (outcome.outcome === 'refused')
+        return { ok: false, error: { code: outcome.code, message: outcome.message } };
+      return {
+        ok: true,
+        value: {
+          memoryDir: target.to,
+          moved: true,
+          ...(outcome.value.leftover === undefined ? {} : { leftover: outcome.value.leftover }),
+        },
+      };
     },
     sessionOwner(payload) {
       const sessionId = asNonBlank(asObject(payload), 'sessionId');

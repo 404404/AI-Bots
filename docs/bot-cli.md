@@ -530,3 +530,12 @@ deepseekbot memory-repair <bot-id> --expected-head <commit>
 ```
 
 Writes and restores always name the head or checkpoint they expect, so a concurrent change fails with `memory-conflict` instead of being overwritten; `--restore-id` and `--repair-id` default to fresh UUIDs and make a retry idempotent. A restore records a checkpoint first, which `memory-checkpoints` lists.
+
+To move a Bot's Memory repository to another folder, or back to the default one:
+
+```bash
+deepseekbot memory-move <bot-id> --memory-location <absolute-dir>
+deepseekbot memory-move <bot-id> --default-location
+```
+
+The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist and must not already hold that Bot. The Bot's main session is archived first, so its next turn starts a new main session in the new folder; history, Memory commits and assignments stay. The move is refused with `bot-busy` while the Bot is working, `invalid-memory-dir` for a missing or occupied folder, and `memory-conflict` while a Memory repair is unfinished. Across drives the files are copied, checked against the original HEAD, then the old folder is removed; a `leftover` path in the result names an old folder that could not be removed.

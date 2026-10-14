@@ -500,6 +500,7 @@ describe('plugin entry', () => {
       'botTools',
       'botToolRun',
       'sessionArchiveSet',
+      'memoryMove',
       'sessionOwner',
       'botSessionIds',
       'memoryFileTarget',
