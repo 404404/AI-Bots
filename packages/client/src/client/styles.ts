@@ -175,7 +175,7 @@ html[data-botharness-motion='reduce'] .bh-onboarding-enter-dot { animation: none
 .bh-onboarding-welcome { display: grid; gap: 12px; width: 380px; max-width: 100%; white-space: normal; line-height: 20px; border: 1px solid var(--bh-onboarding-border); border-radius: 16px; background: var(--dsw-alias-bg-module-platform); overflow: hidden; }
 .bh-onboarding-welcome > :not(.bh-welcome-banner) { margin-inline: 14px; }
 .bh-onboarding-welcome > :last-child { margin-bottom: 14px; }
-.bh-welcome-banner { aspect-ratio: 4 / 1; background: var(--dsw-alias-bg-base); }
+.bh-welcome-banner { aspect-ratio: 3 / 1; background: var(--dsw-alias-bg-base); }
 .bh-welcome-banner .bh-banner-art { display: block; width: 100%; height: 100%; }
 /* The avatar rides over the banner; the name starts just below the banner edge (42px overlap - 12px grid gap + 4px). */
 .bh-welcome-identity { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 10px; margin-top: -42px; }
