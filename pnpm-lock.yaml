@@ -764,6 +764,9 @@ importers:
       '@deepseek-ai/dsh-tool-fs':
         specifier: 0.2.0-rc.2
         version: 0.2.0-rc.2(patch_hash=52087652e5d20ecfd3f7c17532d2b4568dd48189b07491f970fd6d67a10202c2)(bf0da04cc963a4827c7c5eca38b096b0)
+      '@deepseek-ai/dsh-tool-pwsh':
+        specifier: 0.2.0-rc.2
+        version: 0.2.0-rc.2(a632ae4dffe8177db68afb0fa35acac0)
       '@deepseek-ai/dsh-tools':
         specifier: 0.2.0-rc.2
         version: 0.2.0-rc.2(52b5a8ab481be2b3d891c22a71641755)

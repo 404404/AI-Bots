@@ -6,7 +6,11 @@ import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy';
 import type { ApprovalService } from '@deepseek-ai/dsh-user-approval';
 
 import type { BotHarnessCore } from '../plugin.js';
-import { NATIVE_FILE_TOOL_NAMES, nativeFileToolDenial } from './grant-native-tools.js';
+import {
+  NATIVE_FILE_TOOL_NAMES,
+  NATIVE_SHELL_TOOL_NAMES,
+  nativeFileToolDenial,
+} from './grant-native-tools.js';
 
 type AccessCore = { assignmentAccess?: Pick<BotHarnessCore['assignmentAccess'], 'get'> };
 
@@ -215,7 +219,7 @@ export function isSafeMemoryDirectoryListing(
   name: string,
   args: unknown,
 ): boolean {
-  if (name !== 'bash' || typeof args !== 'object' || args === null) return false;
+  if (!NATIVE_SHELL_TOOL_NAMES.has(name) || typeof args !== 'object' || args === null) return false;
   const owner = core.ownership.resolve(session.id);
   if (owner?.rootRole !== 'orchestrator') return false;
   const memory = core.registry.memoryDirFor(owner.botSlug);

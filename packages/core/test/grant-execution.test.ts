@@ -333,6 +333,10 @@ describe('Workspace Grant execution boundary', () => {
     const allowed = { command: 'ls -la', description: 'List memory repository contents' };
     try {
       expect(isSafeMemoryDirectoryListing(state.core, orchestrator, 'bash', allowed)).toBe(true);
+      expect(isSafeMemoryDirectoryListing(state.core, orchestrator, 'pwsh', allowed)).toBe(true);
+      expect(isSafeMemoryDirectoryListing(state.core, orchestrator, 'ops_bash', allowed)).toBe(
+        false,
+      );
       expect(
         grantToolExecutionDenial(
           state.core,
