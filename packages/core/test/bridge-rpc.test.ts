@@ -208,6 +208,7 @@ describe('bridge typert service', () => {
       'botTools',
       'botToolRun',
       'sessionArchiveSet',
+      'memoryMove',
       'sessionOwner',
       'botSessionIds',
       'memoryFileTarget',
@@ -307,6 +308,7 @@ describe('bridge typert service', () => {
     ]);
     expect(parameterNames(service.followCompanion)).toEqual(['resume', 'lastEventId', 'signal']);
     expect(parameterNames(service.botToolRun)).toEqual(['slug', 'tool', 'args']);
+    expect(parameterNames(service.memoryMove)).toEqual(['slug', 'location']);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {

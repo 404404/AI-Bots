@@ -229,6 +229,7 @@ Usage:
   deepseekbot memory-version-name <id> --sha <commit> --name <version>
   deepseekbot memory-version-unname <id> --tag <version>
   deepseekbot memory-repair <id> --expected-head <commit>
+  deepseekbot memory-move <id> (--memory-location <absolute-dir> | --default-location)
   deepseekbot model-catalog
   deepseekbot model-plan-set <id> --plan-stdin [--expected-revision <n>]
   deepseekbot model-plan-customize <id> --orchestrator-provider <p> --orchestrator-model <m> [--orchestrator-effort <e>]

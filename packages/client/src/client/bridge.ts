@@ -3309,6 +3309,17 @@ export async function setSessionArchived(
   return value?.['archived'] === true;
 }
 
+export async function moveMemoryLocation(
+  call: BridgeCall,
+  slug: string,
+  location: string | null,
+): Promise<string> {
+  const value = asRecord(await unwrap(call, 'memoryMove', { slug, location }));
+  const memoryDir = value?.['memoryDir'];
+  if (typeof memoryDir !== 'string') throw new Error('Memory location is invalid');
+  return memoryDir;
+}
+
 export async function loadRoster(call: BridgeCall, signal?: AbortSignal): Promise<RosterSnapshot> {
   return parseRosterSnapshot(await unwrap(call, 'rosterGet', {}, signal));
 }
