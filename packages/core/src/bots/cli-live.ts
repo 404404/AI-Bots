@@ -47,6 +47,8 @@ const DEVICE_COMMANDS = [
   'computer-stop',
   'browser-tools',
   'browser-tool',
+  'computer-tools',
+  'computer-tool',
 ] as const;
 
 const IM_CONTROL_COMMANDS = [
@@ -167,6 +169,15 @@ export const LIVE_COMMANDS = [
     command: 'browser-tool',
     description:
       'run one Browser tool directly for a Bot, without the model (args JSON from stdin)',
+  },
+  {
+    command: 'computer-tools',
+    description: 'list the Computer tools a Bot can call, with input schemas',
+  },
+  {
+    command: 'computer-tool',
+    description:
+      'run one Computer tool directly for a Bot, without the model (args JSON from stdin)',
   },
 ] as const;
 
@@ -956,18 +967,19 @@ async function runDeviceCommand(
   values: LiveValues,
   io: BotCreateCliIo,
 ): Promise<unknown> {
-  const computer = command.startsWith('computer-') || command === 'browser-tools';
-  const positionals = command === 'browser-tool' ? 2 : computer ? 0 : 1;
+  const direct = command === 'browser-tool' || command === 'computer-tool';
+  const computer = (command.startsWith('computer-') && !direct) || command === 'browser-tools';
+  const positionals = direct ? 2 : computer ? 0 : 1;
   if (rest.length !== positionals || rest.some((value) => !value.trim()))
     usage(
-      command === 'browser-tool'
-        ? 'browser-tool needs a bot id and a tool name.'
+      direct
+        ? `${command} needs a bot id and a tool name.`
         : computer
           ? `${command} takes no positional arguments.`
           : `${command} needs exactly one bot id.`,
     );
   let toolArgs: Record<string, unknown> = {};
-  if (command === 'browser-tool' && values['args-stdin'] === true) {
+  if (direct && values['args-stdin'] === true) {
     try {
       const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
@@ -978,7 +990,7 @@ async function runDeviceCommand(
     }
   }
   if (
-    command === 'browser-tool' &&
+    direct &&
     values.out !== undefined &&
     !values.out.startsWith('/') &&
     !/^[A-Za-z]:[\\/]/u.test(values.out)
@@ -1009,13 +1021,9 @@ async function runDeviceCommand(
       throw new CliLiveError('host-protocol-error', `The Host returned no JSON for ${path}.`);
     }
   };
-  if (command === 'browser-tools') return json('/api/browser/tools');
-  if (command === 'browser-tool') {
-    const result = record(
-      await json('/api/browser/tool', { slug, tool: rest[1]!.trim(), args: toolArgs }),
-    );
-    let saved = false;
-    const content = (Array.isArray(result['content']) ? result['content'] : []).map((value) => {
+  let saved = false;
+  const savedImages = (items: unknown[]) =>
+    items.map((value) => {
       const item = record(value);
       if (item['type'] !== 'image' || typeof item['data'] !== 'string') return item;
       const bytes = Buffer.from(item['data'], 'base64');
@@ -1031,7 +1039,25 @@ async function runDeviceCommand(
       }
       return { type: 'image', mimeType: item['mimeType'], bytes: bytes.byteLength };
     });
-    return { ...result, content };
+  if (command === 'browser-tools') return json('/api/browser/tools');
+  if (command === 'computer-tools') return json('/api/computer/tools');
+  if (command === 'computer-tool') {
+    const result = record(
+      await json('/api/computer/tool', { slug, tool: rest[1]!.trim(), args: toolArgs }),
+    );
+    const inner = record(result['result']);
+    return Array.isArray(inner['content'])
+      ? { ...result, result: { ...inner, content: savedImages(inner['content']) } }
+      : result;
+  }
+  if (command === 'browser-tool') {
+    const result = record(
+      await json('/api/browser/tool', { slug, tool: rest[1]!.trim(), args: toolArgs }),
+    );
+    return {
+      ...result,
+      content: savedImages(Array.isArray(result['content']) ? result['content'] : []),
+    };
   }
   if (command === 'browser-open') return json('/api/browser/open', { slug });
   if (command === 'browser-takeover')

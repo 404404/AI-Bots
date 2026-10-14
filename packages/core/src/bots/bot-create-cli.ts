@@ -199,6 +199,8 @@ Usage:
   deepseekbot computer-stop
   deepseekbot browser-tools
   deepseekbot browser-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
+  deepseekbot computer-tools
+  deepseekbot computer-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
   deepseekbot bot-sessions <id> [--limit <1-100>]
   deepseekbot bot-activity <id> [--limit <1-100>]

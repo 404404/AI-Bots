@@ -252,6 +252,42 @@ describe('Agent Browser and Computer commands', () => {
     expect(live.calls).toHaveLength(3);
   });
 
+  it('lists Computer tools and runs one directly for a Bot', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bh-ctool-'));
+    dirs.push(dir);
+    const live = await host((call) => ({
+      json:
+        call.path === '/api/computer/tools'
+          ? { ok: true, tools: [{ name: 'computer_click', description: 'Click', inputSchema: {} }] }
+          : {
+              ok: true,
+              result: {
+                content: [
+                  {
+                    type: 'image',
+                    mimeType: 'image/png',
+                    data: Buffer.from('desk').toString('base64'),
+                  },
+                ],
+              },
+            },
+    }));
+    expect((await invoke(['computer-tools'], live.url)).json.tools[0].name).toBe('computer_click');
+    const file = join(dir, 'desk.png');
+    const shot = await invokeWithStdin(
+      ['computer-tool', 'ada', 'computer_screenshot', '--out', file],
+      live.url,
+      '',
+    );
+    expect(shot.json.result.content).toEqual([
+      { type: 'image', mimeType: 'image/png', path: file, bytes: 4 },
+    ]);
+    expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
+      ['GET', '/api/computer/tools', undefined],
+      ['POST', '/api/computer/tool', { slug: 'ada', tool: 'computer_screenshot', args: {} }],
+    ]);
+  });
+
   it('lists workspace grants from a live Host', async () => {
     const live = await host(() => ({ json: { ok: true, value: { grants: [{ id: 'g1' }] } } }));
     expect((await invoke(['grants', 'ada'], live.url)).json).toEqual({ grants: [{ id: 'g1' }] });
