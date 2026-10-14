@@ -263,6 +263,7 @@ function stubActions(): BridgeActions {
     openAround: vi.fn(async () => undefined),
     markAllRead: vi.fn(async () => undefined),
     markRead: vi.fn(async () => undefined),
+    markChannelRead: vi.fn(async () => undefined),
     refreshChannelMessages: vi.fn(async () => undefined),
     applyChannelTail: vi.fn(),
     dismissFailedMessage: vi.fn(() => false),
@@ -577,7 +578,7 @@ beforeEach(() => {
 
 afterEach(() => {
   captured.menus.length = 0;
-  store.setHumanInbox({ unreadCount: 0, hasAction: false });
+  store.setHumanInbox({ unreadCount: 0, hasAction: false, channelUnread: {} });
   store.setMode('dsh');
   store.setQuery('');
   store.select(undefined);
@@ -810,6 +811,30 @@ describe('bot sidebar rows', () => {
     expect(markup).toContain('Atlas');
     expect(markup).toContain('你：请继续');
     expect(markup).not.toContain('文件研究助手');
+  });
+
+  it('shows each conversation unread count on its row, pinned card and rail icon', () => {
+    store.setRoster(
+      [BOT],
+      [
+        {
+          ...DM_CHANNEL,
+          latestMessage: {
+            id: 'dm-latest',
+            at: AT,
+            author: { kind: 'bot', slug: BOT.slug },
+            body: '好了',
+          },
+        },
+      ],
+    );
+    expect(renderSidebar()).not.toContain('bh-unread-count');
+    store.setHumanInbox({ channelUnread: { [DM_CHANNEL.id]: 3 } });
+    const wide = renderSidebar();
+    expect(wide).toContain('bh-has-unread');
+    expect(wide).toMatch(/<span class="bh-unread-count" aria-label="3 条未读">3<\/span>/u);
+    store.setHumanInbox({ channelUnread: { [DM_CHANNEL.id]: 120 } });
+    expect(renderSidebar(false)).toContain('>99+</span>');
   });
 
   it('shows recent activity for a bodyless latest DM message', () => {
@@ -1194,6 +1219,7 @@ describe('bot sidebar rows', () => {
       'updated',
       'manual',
       'roster-separator',
+      'mark-all-read',
       'hidden',
       'channel-history',
     ]);
@@ -1201,7 +1227,13 @@ describe('bot sidebar rows', () => {
     expect(menu.items.slice(1).every((item) => item['danger'] === undefined)).toBe(true);
     expect(
       menu.items.filter((item) => item['label'] !== undefined).map((item) => item['label']),
-    ).toEqual(['最近更新', '手动排序', '隐藏的频道与 Bot 私聊', '已结束会话的历史']);
+    ).toEqual([
+      '最近更新',
+      '手动排序',
+      '全部标为已读',
+      '隐藏的频道与 Bot 私聊',
+      '已结束会话的历史',
+    ]);
     expect(menu.selectedId).toBe('manual');
   });
 
@@ -1624,6 +1656,29 @@ describe('bot sidebar rows', () => {
     expect(onSetPinned).toHaveBeenLastCalledWith(DM_CHANNEL.id, false);
     menu.onSelect?.('hide');
     expect(onHide).toHaveBeenLastCalledWith(DM_CHANNEL.id);
+  });
+
+  it('puts Mark as read first on the Channel menu when the Channel has unread messages', () => {
+    const read = vi.fn();
+    renderToStaticMarkup(
+      createElement(ChannelMoveMenu, {
+        menu: { channelId: DM_CHANNEL.id, x: 40, y: 80 },
+        sections: [],
+        currentSectionId: undefined,
+        readAction: { label: '标为已读', run: read },
+        t: zhTranslate as never,
+        onPick: vi.fn(),
+        onClose: vi.fn(),
+      }),
+    );
+    const menu = captured.menus.at(-1);
+    if (menu === undefined) throw new Error('Channel menu not rendered');
+    expect(menu.items.slice(0, 2).map((item) => item['id'])).toEqual([
+      'mark-read',
+      'read-separator',
+    ]);
+    menu.onSelect?.('mark-read');
+    expect(read).toHaveBeenCalledOnce();
   });
 
   it('gives every Channel menu row an icon and offers Delete Bot last as a danger row', () => {

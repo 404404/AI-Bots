@@ -308,6 +308,7 @@ export interface HumanAttentionPage {
 export interface HumanInboxState {
   status: ClientStatus;
   unreadCount: number;
+  channelUnread: Readonly<Record<string, number>>;
   hasAction: boolean;
   category: HumanInboxCategory;
   botSlug: string | undefined;
@@ -537,6 +538,7 @@ function initialHumanInbox(): HumanInboxState {
   return {
     status: 'idle',
     unreadCount: 0,
+    channelUnread: {},
     hasAction: false,
     category: 'action',
     botSlug: undefined,

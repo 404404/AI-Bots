@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  steppedConversationId,
   webBotModeShortcut,
   webChannelShortcutIndex,
   webChannelShortcutLabel,
+  webConversationStepLabel,
+  webConversationStepShortcut,
+  webModalOpen,
   webShortcutBlocked,
 } from '../src/client/channel-shortcuts.js';
 
@@ -55,5 +59,61 @@ describe('web channel number shortcuts', () => {
     expect(selector).toContain('dialog[open]');
     expect(selector).toContain('[role="alertdialog"][aria-modal="true"]');
     expect(webShortcutBlocked(null, { querySelector: () => null })).toBe(false);
+  });
+});
+
+describe('web conversation step shortcuts', () => {
+  it('maps Alt+↑/↓ to the previous or next conversation and adds Shift for unread only', () => {
+    expect(webConversationStepShortcut('ArrowUp', alt)).toEqual({
+      direction: -1,
+      unreadOnly: false,
+    });
+    expect(webConversationStepShortcut('ArrowDown', alt)).toEqual({
+      direction: 1,
+      unreadOnly: false,
+    });
+    expect(webConversationStepShortcut('ArrowDown', { ...alt, shift: true })).toEqual({
+      direction: 1,
+      unreadOnly: true,
+    });
+    expect(webConversationStepLabel({ direction: 1, unreadOnly: true })).toBe('Alt+Shift+↓');
+    expect(webConversationStepLabel({ direction: -1, unreadOnly: false })).toBe('Alt+↑');
+  });
+
+  it('leaves plain arrows, other modifiers, IME and handled events alone', () => {
+    expect(webConversationStepShortcut('ArrowUp', { ...alt, alt: false })).toBeUndefined();
+    expect(webConversationStepShortcut('ArrowUp', { ...alt, ctrl: true })).toBeUndefined();
+    expect(webConversationStepShortcut('ArrowUp', { ...alt, meta: true })).toBeUndefined();
+    expect(webConversationStepShortcut('ArrowUp', { ...alt, altGraph: true })).toBeUndefined();
+    expect(webConversationStepShortcut('ArrowUp', { ...alt, composing: true })).toBeUndefined();
+    expect(webConversationStepShortcut('ArrowUp', { ...alt, prevented: true })).toBeUndefined();
+    expect(webConversationStepShortcut('ArrowLeft', alt)).toBeUndefined();
+  });
+
+  it('steps through sidebar order and wraps at either end', () => {
+    const order = ['a', 'b', 'c'];
+    expect(steppedConversationId(order, 'b', 1)).toBe('c');
+    expect(steppedConversationId(order, 'c', 1)).toBe('a');
+    expect(steppedConversationId(order, 'a', -1)).toBe('c');
+    expect(steppedConversationId(order, undefined, 1)).toBe('a');
+    expect(steppedConversationId(order, undefined, -1)).toBe('c');
+    expect(steppedConversationId(order, 'gone', 1)).toBe('a');
+    expect(steppedConversationId([], 'a', 1)).toBeUndefined();
+    expect(steppedConversationId(['a'], 'a', 1)).toBeUndefined();
+  });
+
+  it('skips to the next eligible conversation for the unread jump', () => {
+    const order = ['a', 'b', 'c', 'd'];
+    const unread = new Set(['a', 'c']);
+    const eligible = (id: string) => unread.has(id);
+    expect(steppedConversationId(order, 'a', 1, eligible)).toBe('c');
+    expect(steppedConversationId(order, 'c', 1, eligible)).toBe('a');
+    expect(steppedConversationId(order, 'b', -1, eligible)).toBe('a');
+    expect(steppedConversationId(order, 'a', 1, () => false)).toBeUndefined();
+  });
+
+  it('is blocked only by an open modal, not by a focused text field', () => {
+    expect(webModalOpen({ querySelector: () => null })).toBe(false);
+    expect(webModalOpen({ querySelector: () => ({}) })).toBe(true);
   });
 });

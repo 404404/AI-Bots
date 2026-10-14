@@ -52,6 +52,7 @@ export const CHANNEL_COMMANDS = [
   },
   { command: 'channel-mark-read', description: 'mark a Channel read through one message' },
   { command: 'channel-mark-all-read', description: 'mark every Channel read' },
+  { command: 'channel-unread', description: 'list unread message counts per Channel' },
   { command: 'channel-retry', description: 'retry a failed Bot reply to a Human DM message' },
   {
     command: 'channel-purge-preview',
@@ -165,7 +166,10 @@ export async function runChannelCommand(
   connect: typeof connectLiveHost,
 ): Promise<unknown> {
   const values = input as ChannelValues;
-  const noTarget = command === 'channel-history' || command === 'channel-mark-all-read';
+  const noTarget =
+    command === 'channel-history' ||
+    command === 'channel-mark-all-read' ||
+    command === 'channel-unread';
   if (rest.length !== (noTarget ? 0 : 1))
     usage(
       `${command} ${noTarget ? 'takes no positional arguments' : 'needs exactly one Channel ID'}.`,
@@ -280,6 +284,10 @@ export async function runChannelCommand(
       break;
     case 'channel-mark-all-read':
       method = 'channelMarkAllRead';
+      args = {};
+      break;
+    case 'channel-unread':
+      method = 'channelUnreadCounts';
       args = {};
       break;
     case 'channel-retry':

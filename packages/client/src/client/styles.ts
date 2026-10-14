@@ -1196,6 +1196,51 @@ html[data-botharness-motion='reduce'] .bh-avatar-botui i {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.bh-contact .bh-bottom,
+.bh-channel-row .bh-bottom {
+  display: flex;
+  align-items: center;
+  gap: ${space.x2};
+  min-width: 0;
+}
+.bh-bottom .bh-msg {
+  min-width: 0;
+  flex: 1;
+}
+.bh-has-unread .bh-msg {
+  color: var(--dsw-alias-label-secondary);
+}
+.bh-unread-count {
+  display: inline-flex;
+  flex: none;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 ${space.x2};
+  border-radius: ${radius.round};
+  background: var(--bh-accent);
+  color: var(--dsw-alias-label-primary-foreground);
+  font: ${text.strong} ${text.metaSize}/1 var(--dsw-font-family);
+  font-variant-numeric: tabular-nums;
+}
+.bh-pinned .bh-unread-count,
+.bh-rail-channel .bh-unread-count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  pointer-events: none;
+}
+.bh-rail-channel .bh-unread-count {
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 ${space.x1};
+}
+.bh-shortcut-active .bh-unread-count {
+  visibility: hidden;
+}
 .bh-unread {
   width: 8px;
   height: 8px;

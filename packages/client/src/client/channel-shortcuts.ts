@@ -77,3 +77,56 @@ export function webBotModeShortcut(
     !keys.prevented
   );
 }
+
+export interface ConversationStep {
+  direction: -1 | 1;
+  unreadOnly: boolean;
+}
+
+export function webConversationStepShortcut(
+  key: string,
+  keys: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+    altGraph?: boolean;
+    composing?: boolean;
+    prevented?: boolean;
+  },
+): ConversationStep | undefined {
+  if (!keys.alt || keys.ctrl || keys.meta || keys.altGraph || keys.composing || keys.prevented)
+    return undefined;
+  if (key !== 'ArrowUp' && key !== 'ArrowDown') return undefined;
+  return { direction: key === 'ArrowUp' ? -1 : 1, unreadOnly: keys.shift };
+}
+
+export function webConversationStepLabel(step: ConversationStep): string {
+  return `Alt+${step.unreadOnly ? 'Shift+' : ''}${step.direction < 0 ? '↑' : '↓'}`;
+}
+
+export function webModalOpen(root: { querySelector(selector: string): unknown }): boolean {
+  return root.querySelector(openModalSelector) !== null;
+}
+
+export function steppedConversationId(
+  order: readonly string[],
+  currentId: string | undefined,
+  direction: -1 | 1,
+  eligible: (id: string) => boolean = () => true,
+): string | undefined {
+  if (order.length === 0) return undefined;
+  const start = currentId === undefined ? -1 : order.indexOf(currentId);
+  for (let step = 1; step <= order.length; step += 1) {
+    const index =
+      start < 0
+        ? direction > 0
+          ? step - 1
+          : order.length - step
+        : (start + direction * step + order.length * step) % order.length;
+    const id = order[index]!;
+    if (id === currentId) continue;
+    if (eligible(id)) return id;
+  }
+  return undefined;
+}

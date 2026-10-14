@@ -14,6 +14,7 @@ import { createPortal } from 'react-dom';
 import {
   Button,
   IconAgentPresetOutlineRegular,
+  IconCheckOutlineRegular,
   IconChevronDownOutlineRegular,
   IconCloseFillRegular,
   IconEditOutlineRegular,
@@ -56,8 +57,11 @@ import { GroupChannelIcon } from './group-avatar-stack.js';
 import { InboxIcon } from './inbox-icon.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import {
+  steppedConversationId,
   webChannelShortcutIndex,
   webChannelShortcutLabel,
+  webConversationStepShortcut,
+  webModalOpen,
   webShortcutBlocked,
 } from './channel-shortcuts.js';
 import {
@@ -410,6 +414,19 @@ function ChannelMessageTime({ channel }: { channel: ChannelSummary }): ReactElem
   );
 }
 
+export function unreadCountLabel(count: number): string {
+  return count > 99 ? '99+' : String(count);
+}
+
+function UnreadCount({ count, t }: { count: number; t: BotHarnessTranslate }): ReactElement | null {
+  if (count <= 0) return null;
+  return (
+    <span className="bh-unread-count" aria-label={t('roster.unreadCount', { count })}>
+      {unreadCountLabel(count)}
+    </span>
+  );
+}
+
 function channelPreview(
   channel: ChannelSummary,
   bots: ReadonlyMap<string, BotSummary>,
@@ -445,6 +462,7 @@ function BotRow({
   bot,
   channel,
   preview,
+  unread,
   activity,
   selected,
   multiSelected,
@@ -460,6 +478,7 @@ function BotRow({
   bot: BotSummary;
   channel: ChannelSummary;
   preview: string;
+  unread: number;
   activity: PersonaBotActivityState;
   selected: boolean;
   multiSelected: boolean;
@@ -485,7 +504,7 @@ function BotRow({
       <button
         type="button"
         data-channel-id={channel.id}
-        className={`bh-contact${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
+        className={`bh-contact${unread > 0 ? ' bh-has-unread' : ''}${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
         aria-pressed={multiSelected}
         aria-keyshortcuts={shortcut}
         title={shortcut === undefined ? undefined : t('shortcut.web.open', { key: shortcut })}
@@ -548,7 +567,10 @@ function BotRow({
             <PersonaBotStatusBadges state={activity} attention={bot?.attention} />
             <ChannelMessageTime channel={channel} />
           </span>
-          <span className="bh-msg">{preview}</span>
+          <span className="bh-bottom">
+            <span className="bh-msg">{preview}</span>
+            <UnreadCount count={unread} t={t} />
+          </span>
         </span>
         {showShortcutHints && shortcut !== undefined ? (
           <kbd className="bh-shortcut-badge" aria-hidden="true">
@@ -563,6 +585,7 @@ function ChannelRow({
   channel,
   bots,
   preview,
+  unread,
   selected,
   multiSelected,
   onActivate,
@@ -577,6 +600,7 @@ function ChannelRow({
   channel: ChannelSummary;
   bots: ReadonlyMap<string, BotSummary>;
   preview: string;
+  unread: number;
   selected: boolean;
   multiSelected: boolean;
   onActivate: (event: ReactMouseEvent<HTMLButtonElement>) => void;
@@ -596,7 +620,7 @@ function ChannelRow({
     <button
       type="button"
       data-channel-id={channel.id}
-      className={`bh-channel-row${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
+      className={`bh-channel-row${unread > 0 ? ' bh-has-unread' : ''}${selected ? ' bh-selected' : ''}${multiSelected ? ' bh-multi-selected' : ''}${showShortcutHints && shortcut !== undefined ? ' bh-shortcut-active' : ''}${markerClass}${sourceClass}`}
       aria-pressed={multiSelected}
       aria-keyshortcuts={shortcut}
       title={shortcut === undefined ? undefined : t('shortcut.web.open', { key: shortcut })}
@@ -666,7 +690,10 @@ function ChannelRow({
           <span className="bh-name">{channel.name}</span>
           <ChannelMessageTime channel={channel} />
         </span>
-        <span className="bh-msg">{preview}</span>
+        <span className="bh-bottom">
+          <span className="bh-msg">{preview}</span>
+          <UnreadCount count={unread} t={t} />
+        </span>
       </span>
       {showShortcutHints && shortcut !== undefined ? (
         <kbd className="bh-shortcut-badge" aria-hidden="true">
@@ -682,6 +709,7 @@ function RailChannel({
   bots,
   bot,
   activity,
+  unread,
   selected,
   shortcut,
   showShortcutHints,
@@ -693,6 +721,7 @@ function RailChannel({
   bots: ReadonlyMap<string, BotSummary>;
   bot: BotSummary | undefined;
   activity: PersonaBotActivityState | undefined;
+  unread: number;
   selected: boolean;
   shortcut?: string | undefined;
   showShortcutHints: boolean;
@@ -748,6 +777,7 @@ function RailChannel({
               size={32}
             />
           )}
+          <UnreadCount count={unread} t={t} />
           {showShortcutHints && shortcut !== undefined ? (
             <kbd className="bh-shortcut-badge" aria-hidden="true">
               {shortcut.slice(4)}
@@ -834,6 +864,7 @@ export function BotSidebar({
   t,
 }: SidebarProps): ReactElement {
   const state = useClientState();
+  const channelUnread = state.humanInbox.channelUnread;
   const prefs = useBotModePrefs((value) => value);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -1045,6 +1076,8 @@ export function BotSidebar({
     : [...railPinnedChannels, ...railChannels].map((channel) => channel.id);
   const shortcutIdsRef = useRef<readonly string[]>(shortcutIds);
   shortcutIdsRef.current = shortcutIds;
+  const navigationIdsRef = useRef<readonly string[]>([]);
+  navigationIdsRef.current = [...railPinnedChannels, ...railChannels].map((channel) => channel.id);
   const dragActiveRef = useRef(false);
   const rosterMount = useMountedResource<HTMLDivElement>(() => {
     const acceptDrag = (event: DragEvent): void => {
@@ -1095,12 +1128,54 @@ export function BotSidebar({
         ? actions.openChannel(id)
         : actions.openBot(channel.botSlug));
     };
+    const onConversationStep = (event: KeyboardEvent): void => {
+      const step = webConversationStepShortcut(event.key, {
+        alt: event.altKey,
+        ctrl: event.ctrlKey,
+        meta: event.metaKey,
+        shift: event.shiftKey,
+        altGraph: event.getModifierState('AltGraph'),
+        composing: event.isComposing,
+        prevented: event.defaultPrevented,
+      });
+      if (step === undefined || webModalOpen(document)) return;
+      if (document.querySelector('[role="menu"]') !== null) return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest('[aria-expanded="true"]') !== null
+      )
+        return;
+      const snapshot = store.getSnapshot();
+      const selection = snapshot.selection;
+      const currentId =
+        selection?.kind === 'channel'
+          ? selection.channelId
+          : selection?.kind === 'bot'
+            ? snapshot.channels.find(
+                (channel) => channel.type === 'dm' && channel.botSlug === selection.slug,
+              )?.id
+            : undefined;
+      const unread = snapshot.humanInbox.channelUnread;
+      const id = steppedConversationId(
+        navigationIdsRef.current,
+        currentId,
+        step.direction,
+        step.unreadOnly ? (candidate) => (unread[candidate] ?? 0) > 0 : undefined,
+      );
+      const channel = snapshot.channels.find((candidate) => candidate.id === id);
+      if (channel === undefined) return;
+      event.preventDefault();
+      void (channel.botSlug === undefined
+        ? actions.openChannel(channel.id)
+        : actions.openBot(channel.botSlug));
+    };
     document.addEventListener('keydown', onHintDown);
     document.addEventListener('keyup', onHintUp);
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('blur', clearHints);
     document.addEventListener('keydown', onSelectionEscape);
     document.addEventListener('keydown', onChannelShortcut);
+    document.addEventListener('keydown', onConversationStep);
     document.addEventListener('dragover', acceptDrag);
     document.addEventListener('drop', acceptDrop);
     return () => {
@@ -1110,6 +1185,7 @@ export function BotSidebar({
       window.removeEventListener('blur', clearHints);
       document.removeEventListener('keydown', onSelectionEscape);
       document.removeEventListener('keydown', onChannelShortcut);
+      document.removeEventListener('keydown', onConversationStep);
       document.removeEventListener('dragover', acceptDrag);
       document.removeEventListener('drop', acceptDrop);
       if (pinZoneArmTimer.current !== undefined) window.clearTimeout(pinZoneArmTimer.current);
@@ -1160,6 +1236,12 @@ export function BotSidebar({
     }
     if (id === 'hidden') {
       setHiddenManagerOpen(true);
+      return;
+    }
+    if (id === 'mark-all-read') {
+      void actions.markAllRead().catch((error: unknown) => {
+        console.warn('botharness: mark all read failed', error);
+      });
       return;
     }
     if (isBotModeSortMode(id)) setSortMode(id);
@@ -1524,6 +1606,7 @@ export function BotSidebar({
           bot={bot}
           channel={channel}
           preview={preview}
+          unread={channelUnread[channel.id] ?? 0}
           activity={personaBotActivity(state, bot)}
           selected={selectedBot === bot.slug || selectedChannel === channel.id}
           multiSelected={selectedChannelSet.has(channel.id)}
@@ -1544,6 +1627,7 @@ export function BotSidebar({
         channel={channel}
         bots={botBySlug}
         preview={preview}
+        unread={channelUnread[channel.id] ?? 0}
         selected={selectedChannel === channel.id}
         multiSelected={selectedChannelSet.has(channel.id)}
         onActivate={(event) => activateChannel(channel, event)}
@@ -1567,6 +1651,7 @@ export function BotSidebar({
           bots={botBySlug}
           bot={bot}
           activity={bot === undefined ? undefined : personaBotActivity(state, bot)}
+          unread={channelUnread[channel.id] ?? 0}
           selected={
             selectedChannel === channel.id || (bot !== undefined && selectedBot === bot.slug)
           }
@@ -1759,7 +1844,9 @@ export function BotSidebar({
                 </button>
               </Tooltip>
             }
-            items={globalSortMenuItems(t)}
+            items={globalSortMenuItems(t, {
+              hasUnread: Object.keys(channelUnread).length > 0,
+            })}
             selectedId={prefs.sortMode}
             onSelect={selectSortMenu}
             onClose={() => {
@@ -2026,6 +2113,7 @@ export function BotSidebar({
                         )}
                       </span>
                       {bot === undefined ? null : <RoleBadges roles={bot.roles} />}
+                      <UnreadCount count={channelUnread[channel.id] ?? 0} t={t} />
                       {showShortcutHints && shortcutFor(channel.id) !== undefined ? (
                         <kbd className="bh-shortcut-badge" aria-hidden="true">
                           {shortcutFor(channel.id)?.slice(4)}
@@ -2508,6 +2596,19 @@ export function BotSidebar({
           currentSectionId={sectionOfChannel(channelMenu.channelId)}
           pinned={channelMenu.pinnedView === true}
           t={t}
+          readAction={
+            (channelUnread[channelMenu.channelId] ?? 0) > 0
+              ? {
+                  label: t('roster.markRead'),
+                  run: () => {
+                    void actions.markChannelRead(channelMenu.channelId).catch((error: unknown) => {
+                      console.warn('botharness: mark read failed', error);
+                    });
+                    setChannelMenu(undefined);
+                  },
+                }
+              : undefined
+          }
           shareAction={(() => {
             const botId = state.channels.find(
               (channel) => channel.id === channelMenu.channelId && channel.type === 'dm',
@@ -2728,6 +2829,7 @@ export function BulkChannelMenu({
 }
 
 export function ChannelMoveMenu({
+  readAction,
   companionAction,
   shareAction,
   deleteAction,
@@ -2743,6 +2845,7 @@ export function ChannelMoveMenu({
   onPick,
   onClose,
 }: {
+  readAction?: { label: string; run(): void } | undefined;
   companionAction?: { label: string; run(): void } | undefined;
   shareAction?: { label: string; run(): void } | undefined;
   deleteAction?: { label: string; run(): void } | undefined;
@@ -2772,6 +2875,12 @@ export function ChannelMoveMenu({
     };
   }, []);
   const items: readonly MenuEntry[] = [
+    ...(readAction === undefined
+      ? []
+      : [
+          { id: 'mark-read', label: readAction.label, icon: <IconCheckOutlineRegular size={16} /> },
+          { type: 'separator' as const, id: 'read-separator' },
+        ]),
     ...(companionAction === undefined
       ? []
       : [
@@ -2823,6 +2932,10 @@ export function ChannelMoveMenu({
         getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
         items={items}
         onSelect={(id) => {
+          if (id === 'mark-read') {
+            readAction?.run();
+            return;
+          }
           if (id === 'companion') {
             companionAction?.run();
             return;

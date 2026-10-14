@@ -169,6 +169,7 @@ describe('bridge typert service', () => {
       'channelReadPosition',
       'channelMarkRead',
       'channelMarkAllRead',
+      'channelUnreadCounts',
       'channelAllBotPreview',
       'channelSend',
       'channelSendStatus',

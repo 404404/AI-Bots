@@ -541,6 +541,9 @@ export interface BridgeMethods {
   humanAttention(payload: unknown): BridgeResult<HumanAttentionPage>;
   humanAssignmentContext(payload: unknown): BridgeResult<{ context: HumanAssignmentContext }>;
   humanAttentionStatus(payload: unknown): BridgeResult<{ unreadCount: number; hasAction: boolean }>;
+  channelUnreadCounts(
+    payload: unknown,
+  ): BridgeResult<{ channels: Array<{ channelId: string; unreadCount: number }> }>;
   humanAttentionDismiss(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionIgnore(payload: unknown): BridgeResult<{ accepted: boolean }>;
   assignments(payload: unknown): BridgeResult<{ assignments: AssignmentSummary[] }>;
@@ -3976,6 +3979,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           ok: true,
           value: deps.humanAttention?.status() ?? { unreadCount: 0, hasAction: false },
         };
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+    },
+    channelUnreadCounts() {
+      try {
+        return { ok: true, value: { channels: deps.humanAttention?.unreadByChannel() ?? [] } };
       } catch (error) {
         return invalidInput(String(error));
       }

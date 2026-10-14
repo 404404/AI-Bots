@@ -1098,6 +1098,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
     return unwrap(this.methods.humanAttentionStatus({}));
   }
+  channelUnreadCounts(): { channels: Array<{ channelId: string; unreadCount: number }> } {
+    return unwrap(this.methods.channelUnreadCounts({}));
+  }
   humanAssignmentContext(
     slug: string,
     sessionId: string,
@@ -1612,6 +1615,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelReadPosition',
   'channelMarkRead',
   'channelMarkAllRead',
+  'channelUnreadCounts',
   'channelAllBotPreview',
   'channelSend',
   'channelSendStatus',
