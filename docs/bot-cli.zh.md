@@ -108,6 +108,39 @@ deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 
 `access-set` 设置 `danger-full-access` 时必须带 `--acknowledge-risk`：完全访问下 Bot 可以执行任意命令，并且使用浏览器和 Computer 都不弹审批卡。`--scope chat` 同时作用于 Bot 自己的对话；`assignments` 只作用于新的 Assignment。`settings` 返回一个命名空间的 `{ns, revision, value}`；`settings-set` 从标准输入读取一个字段 JSON 对象，并基于该版本号应用，所以并发修改会失败而不是被覆盖。只有 Host 标记为可在线修改的字段才能这样改。`workspace-create` 接受绝对路径并返回 Host 工作区，其 id 供 `grant-create` 使用。
 
+### 频道与群组
+
+这些命令通过与 Web 界面相同的 Host 接口和检查来管理频道和群组。频道 ID 取自 `channels`：
+
+```bash
+deepseekbot channel-rename <channel> --name "Skill Lab"
+deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png
+deepseekbot group-avatar-set <channel> --clear
+deepseekbot group-invite <channel> --bot <bot-id>
+deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
+deepseekbot group-join-decide <channel> --request <request-id> --accept
+deepseekbot group-join-decide <channel> --request <request-id> --decline
+deepseekbot group-member-remove <channel> --bot <bot-id>
+deepseekbot group-wake-policies <channel>
+deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30
+deepseekbot group-wake-set <channel> --bot <bot-id> --inherit
+deepseekbot group-delete <channel> --confirm
+deepseekbot channel-timeline <channel> [--direction older|newer|around] [--cursor <cursor>] [--around <message-id>] [--limit <n>] [--older-limit <n>] [--newer-limit <n>]
+deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
+deepseekbot channel-mark-read <channel> --message-id <message-id>
+deepseekbot channel-mark-all-read
+deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
+deepseekbot channel-history
+deepseekbot channel-history-sources <channel> [--before <cursor>]
+deepseekbot channel-purge-preview <channel> --source-event <id> [--source-event <id> …]
+deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
+  | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
+```
+
+与 Web 界面一样，重命名 Bot 私聊会同时重命名该 Bot。`group-avatar-set` 读取不超过 96 KiB 的 PNG、JPEG 或 WebP 文件。邀请 ID 和入群申请 ID 位于群组的 `invitations` 和 `joinRequests` 中，`channels` 和每个群组命令都会返回。`group-wake-set` 设置成员 Bot 对普通群消息何时唤醒：`all`、`mentions`、`digest`（累计 `--count` 条消息或经过 `--interval` 秒后唤醒，默认 5 和 30）或 `silent`；`--inherit` 让该成员恢复其 Bot 的默认设置。`channel-timeline` 和 `channel-journal` 按聊天视图的方式分页读取消息；`channel-journal` 的 `--through` 取 `channel-timeline` 返回的 `revision`。`channel-retry` 在 Bot 回复失败后让它重新回答一条 Human 私聊消息。
+
+`group-delete` 和 `channel-purge-confirm` 无法撤销，必须带 `--confirm`。`channel-history` 列出已删除、内容仍可清除的群组。清除与历史页面一样分两步：`channel-purge-preview` 列出所选 Source Event 将删除的消息、Bot 受理记录、文件和后续效果，并返回短时有效的 `token`；`channel-purge-confirm` 从标准输入读取 `{"token": …}`，针对同一组 Source Event 执行，范围变化时以错误码拒绝。Source Event 从 `channel-history-sources` 中选取，它用返回的 `before` 游标分页。
+
 ### 用命令行管理 IM 应用
 
 ```bash

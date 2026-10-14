@@ -5,6 +5,12 @@ import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import {
+  CHANNEL_COMMANDS,
+  CHANNEL_OPTIONS,
+  isChannelCommand,
+  runChannelCommand,
+} from './cli-channels.js';
+import {
   IM_COMMANDS,
   IM_OPTIONS,
   prepareImAuthorization,
@@ -32,6 +38,7 @@ export const LIVE_OPTIONS = {
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
+  ...CHANNEL_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -105,6 +112,7 @@ export const LIVE_COMMANDS = [
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
+  ...CHANNEL_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -542,6 +550,8 @@ export async function runLiveCli(
       ...(turns === undefined ? {} : { turns }),
     });
   }
+  if (isChannelCommand(command))
+    return runChannelCommand(command, rest, values, io, connectLiveHost);
   if (DEVICE_COMMANDS.some((entry) => entry === command))
     return runDeviceCommand(command as (typeof DEVICE_COMMANDS)[number], rest, values, io);
   if (command === 'grants') {
