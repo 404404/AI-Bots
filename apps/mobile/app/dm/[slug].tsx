@@ -1,9 +1,16 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
-import type { ConversationDraft } from '../../src/host/conversation';
+import type { HostClient } from '../../src/host/client';
+import type {
+  CardResolution,
+  ConversationDraft,
+  ConversationMessage,
+  MessageCard,
+} from '../../src/host/conversation';
+import type { Inbox } from '../../src/host/inbox';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../src/host/pick-files';
 import {
   useConversation,
@@ -11,12 +18,21 @@ import {
   useHostSession,
   useHostSnapshot,
 } from '../../src/host/host-session';
+import {
+  answerQuestion,
+  decideApproval,
+  loadApproval,
+  loadQuestion,
+  type RequestRef,
+} from '../../src/host/requests';
 import { botColor } from '../../src/ui/bot-color';
+import { ApprovalCard } from '../../src/ui/chat/approval-card';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
 import { chatRows, type ChatRow } from '../../src/ui/chat/message-groups';
+import { QuestionCard } from '../../src/ui/chat/question-card';
 import { StatusStrip } from '../../src/ui/chat/status-strip';
 import { TimeSeparator } from '../../src/ui/chat/time-separator';
 import { AccentProvider, useDesignTheme } from '../../src/ui/design/theme';
@@ -28,20 +44,97 @@ import { t } from '../../src/ui/strings';
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraft };
 
 export default function DmScreen() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const { slug, focus } = useLocalSearchParams<{ slug: string; focus?: string }>();
   const { client } = useHostSession();
   const bot = useHostSnapshot(client).roster?.bots.find((entry) => entry.slug === slug);
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
-      <DmConversation slug={slug} />
+      <DmConversation slug={slug} focus={focus} />
     </AccentProvider>
   );
 }
 
-function DmConversation({ slug }: { slug: string | undefined }) {
+function hiddenResolution(message: ConversationMessage): boolean {
+  const resolution = message.resolves?.resolution;
+  return (
+    resolution?.kind === 'tool-approval' ||
+    (resolution?.kind === 'user-question' && resolution.state === 'cancelled')
+  );
+}
+
+function RequestCard({
+  client,
+  inbox,
+  message,
+  card,
+  botSlug,
+  botName,
+  resolution,
+  focused,
+}: {
+  client: HostClient;
+  inbox: Inbox | undefined;
+  message: ConversationMessage;
+  card: MessageCard;
+  botSlug: string;
+  botName: string;
+  resolution: CardResolution | undefined;
+  focused: boolean;
+}) {
+  const router = useRouter();
+  const ref = useMemo<RequestRef>(
+    () => ({ channelId: card.channelId, messageId: message.id, botSlug }),
+    [card.channelId, message.id, botSlug],
+  );
+  const approval = useMemo(
+    () => ({
+      load: () => loadApproval(client, ref),
+      decide: async (outcome: Parameters<typeof decideApproval>[2]) => {
+        const result = await decideApproval(client, ref, outcome);
+        void inbox?.refresh();
+        return result;
+      },
+    }),
+    [client, inbox, ref],
+  );
+  const question = useMemo(
+    () => ({
+      load: () => loadQuestion(client, ref),
+      answer: async (answer: Parameters<typeof answerQuestion>[2]) => {
+        const result = await answerQuestion(client, ref, answer);
+        void inbox?.refresh();
+        return result;
+      },
+    }),
+    [client, inbox, ref],
+  );
+  const subject = card.subject === undefined ? {} : { subject: card.subject };
+  if (card.kind === 'tool-approval')
+    return (
+      <ApprovalCard
+        port={approval}
+        botName={botName}
+        {...subject}
+        {...(resolution?.kind === 'tool-approval' ? { resolution } : {})}
+        focused={focused}
+        onDetails={() => router.push({ pathname: '/approval', params: { ...ref } })}
+      />
+    );
+  return (
+    <QuestionCard
+      port={question}
+      botName={botName}
+      {...subject}
+      {...(resolution?.kind === 'user-question' ? { resolution } : {})}
+      focused={focused}
+    />
+  );
+}
+
+function DmConversation({ slug, focus }: { slug: string | undefined; focus: string | undefined }) {
   const theme = useDesignTheme();
   const headerHeight = useHeaderHeight();
-  const { client } = useHostSession();
+  const { client, inbox } = useHostSession();
   const host = useHostSnapshot(client);
   const bot = host.roster?.bots.find((entry) => entry.slug === slug);
   const target = useMemo(
@@ -61,6 +154,20 @@ function DmConversation({ slug }: { slug: string | undefined }) {
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const now = new Date();
+  const list = useRef<FlatList<Row>>(null);
+  const jumped = useRef<string | undefined>(undefined);
+
+  const resolutions = useMemo(
+    () =>
+      new Map(
+        snapshot.messages.flatMap((message) =>
+          message.resolves === undefined
+            ? []
+            : [[message.resolves.requestId, message.resolves.resolution] as const],
+        ),
+      ),
+    [snapshot.messages],
+  );
 
   const rows = useMemo<Row[]>(
     () => [
@@ -69,10 +176,20 @@ function DmConversation({ slug }: { slug: string | undefined }) {
         key: `draft:${entry.draftId}`,
         draft: entry,
       })),
-      ...chatRows(snapshot.messages).reverse(),
+      ...chatRows(snapshot.messages.filter((message) => !hiddenResolution(message))).reverse(),
     ],
     [snapshot.drafts, snapshot.messages],
   );
+
+  const jump = () => {
+    if (focus === undefined || jumped.current === focus) return;
+    const index = rows.findIndex((row) => row.kind === 'message' && row.message.id === focus);
+    if (index >= 0) {
+      jumped.current = focus;
+      list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
+    } else if (snapshot.status === 'live' && snapshot.hasOlder && !snapshot.loadingOlder)
+      void conversation?.loadOlder();
+  };
 
   const send = () => {
     const body = draft.trim();
@@ -135,6 +252,7 @@ function DmConversation({ slug }: { slug: string | undefined }) {
           </Text>
         )}
         <FlatList
+          ref={list}
           inverted
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingVertical: space.x3 }}
@@ -145,6 +263,20 @@ function DmConversation({ slug }: { slug: string | undefined }) {
               <DraftBubble draft={item.draft} />
             ) : item.kind === 'separator' ? (
               <TimeSeparator at={item.at} now={now} />
+            ) : client !== undefined &&
+              slug !== undefined &&
+              (item.message.card?.kind === 'tool-approval' ||
+                item.message.card?.kind === 'user-question') ? (
+              <RequestCard
+                client={client}
+                inbox={inbox}
+                message={item.message}
+                card={item.message.card}
+                botSlug={slug}
+                botName={bot?.displayName ?? slug}
+                resolution={resolutions.get(item.message.id)}
+                focused={item.message.id === focus}
+              />
             ) : (
               <MessageBubble
                 message={item.message}
@@ -154,6 +286,22 @@ function DmConversation({ slug }: { slug: string | undefined }) {
               />
             )
           }
+          onContentSizeChange={jump}
+          onScrollToIndexFailed={(info) => {
+            list.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: false,
+            });
+            setTimeout(
+              () =>
+                list.current?.scrollToIndex({
+                  index: info.index,
+                  viewPosition: 0.5,
+                  animated: true,
+                }),
+              100,
+            );
+          }}
           onEndReached={() => void conversation?.loadOlder()}
           onEndReachedThreshold={0.5}
           maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 40 }}

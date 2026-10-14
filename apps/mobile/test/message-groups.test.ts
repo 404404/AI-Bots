@@ -13,7 +13,6 @@ const message = (
   author,
   body: id,
   attachments: 0,
-  card: false,
   delivery: 'committed',
 });
 
