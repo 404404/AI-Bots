@@ -33,7 +33,7 @@ import { createCuaDriver } from './tool/driver.js';
 import { createLocalCuaDriver } from './tool/local-driver.js';
 import { createLocalComputerProvider } from './providers/local.js';
 import { computerTarget, createComputerTargetRuntime, type ComputerTarget } from './target.js';
-import { COMPUTER_GUIDANCE, LOCAL_COMPUTER_GUIDANCE } from './tool/catalog.js';
+import { COMPUTER_GUIDANCE, localComputerGuidance } from './tool/catalog.js';
 import type {} from '@deepseek-ai/cordis-plugin-loader';
 import {
   computerToolNames,
@@ -195,10 +195,12 @@ export function createProcessRunner(): ComputerRuntimeRunner {
   const spawnOnce = (
     argv: readonly string[],
     onChunk?: (chunk: string) => void,
+    extraEnv?: Readonly<Record<string, string>>,
   ): Promise<ComputerRuntimeResult> =>
     new Promise((resolve) => {
       const child = spawn(argv[0] ?? '', argv.slice(1), {
         stdio: ['ignore', 'pipe', 'pipe'],
+        ...(extraEnv === undefined ? {} : { env: { ...process.env, ...extraEnv } }),
       });
       let stdout = '';
       let stderr = '';
@@ -221,7 +223,7 @@ export function createProcessRunner(): ComputerRuntimeRunner {
     });
 
   return {
-    run: (argv) => spawnOnce(argv),
+    run: (argv, options) => spawnOnce(argv, undefined, options?.env),
     runStreaming: (argv, onChunk) => spawnOnce(argv, onChunk),
   };
 }
@@ -350,7 +352,7 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     driver,
     isComputerRunning: () => runtime.isRunning(),
     authorizationScope,
-    guidance: () => (target() === 'local' ? LOCAL_COMPUTER_GUIDANCE : COMPUTER_GUIDANCE),
+    guidance: () => (target() === 'local' ? localComputerGuidance() : COMPUTER_GUIDANCE),
     isAutoAllowed: () => effective().autoAllowActions,
     audit: (event) => diagnostics.record('computer-action', formatAudit(event)),
     note: (detail) => diagnostics.record('lifecycle', detail),

@@ -1,11 +1,17 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Config, DEFAULT_CONFIG } from '../src/index.js';
 import { createComputerTargetRuntime, type ComputerTarget } from '../src/target.js';
 import { createLocalComputerProvider } from '../src/providers/local.js';
-import { createLocalCuaDriver, installLocalDriver } from '../src/tool/local-driver.js';
+import {
+  LOCAL_DRIVER_BUILDS,
+  checksum,
+  createLocalCuaDriver,
+  installLocalDriver,
+  localDriverBuild,
+} from '../src/tool/local-driver.js';
 import type { CuaDriver } from '../src/tool/driver.js';
 import type { ComputerProvider, ComputerRuntimeRunner } from '../src/provider.js';
 
@@ -88,11 +94,18 @@ describe('macOS Local Computer', () => {
     expect(await provider.status()).toMatchObject({ state: 'running' });
   });
 
-  it('refuses another OS before installation or a Docker probe', async () => {
+  it('refuses a Host with no upstream build before installation or a Docker probe', async () => {
     const processRunner = runner();
-    const driver = createLocalCuaDriver({ runner: processRunner, platform: 'linux' });
-    await expect(driver.ensure()).rejects.toThrow('macOS');
+    const driver = createLocalCuaDriver({ runner: processRunner, platform: 'freebsd' });
+    await expect(driver.ensure()).rejects.toThrow('Container Computer');
     expect(processRunner.run).not.toHaveBeenCalled();
+    const provider = createLocalComputerProvider({
+      driver: fakeDriver(),
+      runner: processRunner,
+      platform: 'linux',
+      arch: 'ia32',
+    });
+    expect(await provider.probe()).toMatchObject({ available: false });
   });
 
   it('refuses an incorrect download checksum before extraction or executable launch', async () => {
@@ -125,6 +138,133 @@ describe('macOS Local Computer', () => {
     await expect(preparing).rejects.toThrow('cancelled');
     await stopping;
     expect(await provider.status()).toEqual({ state: 'stopped' });
+  });
+});
+
+describe('Local Computer on Linux and Windows', () => {
+  it('pins one checksummed build per supported Host', () => {
+    expect(localDriverBuild('darwin', 'arm64')?.id).toBe('darwin-universal');
+    expect(localDriverBuild('darwin', 'x64')?.id).toBe('darwin-universal');
+    expect(localDriverBuild('linux', 'x64')?.asset).toBe(
+      'cua-driver-rs-0.31.0-linux-x86_64-binary.tar.gz',
+    );
+    expect(localDriverBuild('linux', 'arm64')?.id).toBe('linux-arm64');
+    expect(localDriverBuild('win32', 'x64')?.executable).toBe('cua-driver.exe');
+    expect(localDriverBuild('win32', 'arm64')?.asset).toBe(
+      'cua-driver-rs-0.31.0-windows-arm64-binary.zip',
+    );
+    expect(localDriverBuild('linux', 'ia32')).toBeUndefined();
+    for (const build of Object.values(LOCAL_DRIVER_BUILDS)) {
+      expect(build.sha256).toMatch(/^[0-9a-f]{64}$/);
+      expect(Object.keys(build.files)).toContain(build.executable);
+    }
+  });
+
+  it('becomes ready on Linux once a display is reachable, without the macOS prompt argument', async () => {
+    const driver = fakeDriver();
+    vi.mocked(driver.call).mockResolvedValue({
+      structuredContent: { x11: true, wayland: false, atspi: false },
+    });
+    const processRunner = runner();
+    const provider = createLocalComputerProvider({
+      driver,
+      runner: processRunner,
+      platform: 'linux',
+      arch: 'x64',
+    });
+    expect(await provider.probe()).toEqual({ available: true });
+    await provider.start();
+    expect(await provider.status()).toMatchObject({ state: 'running' });
+    expect(driver.call).toHaveBeenCalledWith('check_permissions', {}, expect.any(AbortSignal));
+    const [argv, options] = vi.mocked(processRunner.run).mock.calls[0] ?? [];
+    expect(argv?.[0]).toMatch(/linux-x86_64[\\/]cua-driver$/);
+    expect(argv?.slice(1)).toEqual(['doctor', '--json']);
+    expect(options?.env).toMatchObject({ CUA_DRIVER_RS_TELEMETRY_ENABLED: 'false' });
+  });
+
+  it('refuses on Linux when the driver reaches no display', async () => {
+    const driver = fakeDriver();
+    vi.mocked(driver.call).mockResolvedValue({ structuredContent: { x11: false, wayland: false } });
+    const provider = createLocalComputerProvider({
+      driver,
+      runner: runner(),
+      platform: 'linux',
+      arch: 'arm64',
+    });
+    await expect(provider.start()).rejects.toThrow('DISPLAY');
+    expect(driver.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('needs no grant on Windows and runs the .exe doctor', async () => {
+    const driver = fakeDriver();
+    vi.mocked(driver.call).mockResolvedValue({
+      structuredContent: { elevated: false, integrity_level: 'Medium', uia: true },
+    });
+    const processRunner = runner();
+    const provider = createLocalComputerProvider({
+      driver,
+      runner: processRunner,
+      platform: 'win32',
+      arch: 'x64',
+    });
+    await provider.start();
+    expect(await provider.status()).toMatchObject({ state: 'running' });
+    expect(driver.call).toHaveBeenCalledWith('check_permissions', {}, expect.any(AbortSignal));
+    expect(vi.mocked(processRunner.run).mock.calls[0]?.[0][0]).toMatch(/cua-driver\.exe$/);
+  });
+
+  it('opens a display on Linux once the driver verifies, reuses it, and stops it on close', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'bh1632-linux-'));
+    dirs.push(dir);
+    const bytes = new Uint8Array([1, 6, 3, 2]);
+    await writeFile(join(dir, 'cua-driver'), bytes);
+    const stop = vi.fn(async () => undefined);
+    const display = vi.fn(async () => ({
+      display: ':42',
+      env: {},
+      managed: true,
+      alive: () => true,
+      stop,
+    }));
+    const processRunner = runner();
+    const driver = createLocalCuaDriver({
+      runner: processRunner,
+      platform: 'linux',
+      arch: 'x64',
+      dir,
+      build: {
+        ...LOCAL_DRIVER_BUILDS['linux-x86_64'],
+        files: { 'cua-driver': checksum(bytes) },
+      },
+      display,
+    });
+    await expect(driver.ensure()).resolves.toEqual({ status: 'present', arch: 'linux-x86_64' });
+    await driver.ensure();
+    expect(display).toHaveBeenCalledTimes(1);
+    expect(processRunner.run).not.toHaveBeenCalled();
+    await driver.close();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('extracts the Windows zip build with tar -xf', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'bh1632-win-'));
+    dirs.push(dir);
+    const build = localDriverBuild('win32', 'x64');
+    if (build === undefined) throw new Error('missing build');
+    const bytes = new Uint8Array([7, 7, 7]);
+    const processRunner = runner();
+    await expect(
+      installLocalDriver({
+        dir,
+        runner: processRunner,
+        build: { ...build, sha256: checksum(bytes) },
+        download: async () => bytes,
+      }),
+    ).rejects.toThrow('did not verify');
+    const argv = vi.mocked(processRunner.run).mock.calls[0]?.[0];
+    expect(argv?.slice(0, 2)).toEqual(['tar', '-xf']);
+    expect(argv?.[2]).toMatch(/driver\.zip$/);
+    expect(argv?.slice(-2)).toEqual(['cua-driver.exe', 'cua-driver-uia.exe']);
   });
 });
 

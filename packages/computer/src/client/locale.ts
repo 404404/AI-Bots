@@ -10,7 +10,7 @@ export const zh = {
   'local.title': '本机 Computer',
   'local.granted': '桌面权限已授予',
   'local.description':
-    '直接操作运行 DSH 的 Mac。首次检查会安装桌面操作组件；请在这台电脑上完成登录。',
+    '直接操作运行 DSH 的这台电脑（macOS、Windows 或 Linux）。首次检查会安装桌面操作组件；没有显示器的 Linux 服务器会启动一个虚拟桌面。登录请在这台电脑上完成。',
   'local.check': '检查权限',
   'local.checking': '正在检查…',
   'local.chip.granted': '已授权',
@@ -123,7 +123,7 @@ export const en: Record<keyof typeof zh, string> = {
   'local.title': 'Local Computer',
   'local.granted': 'Desktop permissions granted',
   'local.description':
-    'Uses the Mac running DSH. The first check installs the required desktop helper. Complete logins on this computer.',
+    'Uses the computer running DSH (macOS, Windows or Linux). The first check installs the required desktop helper; a Linux server without a display gets a virtual one. Complete logins on this computer.',
   'local.check': 'Check permissions',
   'local.checking': 'Checking…',
   'local.chip.granted': 'Granted',

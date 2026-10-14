@@ -4,8 +4,12 @@ export interface ComputerRuntimeResult {
   readonly stderr: string;
 }
 
+export interface ComputerRuntimeRunOptions {
+  readonly env?: Readonly<Record<string, string>> | undefined;
+}
+
 export interface ComputerRuntimeRunner {
-  run(argv: readonly string[]): Promise<ComputerRuntimeResult>;
+  run(argv: readonly string[], options?: ComputerRuntimeRunOptions): Promise<ComputerRuntimeResult>;
   runStreaming?(
     argv: readonly string[],
     onChunk: (chunk: string) => void,
