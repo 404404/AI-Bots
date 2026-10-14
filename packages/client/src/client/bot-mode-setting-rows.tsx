@@ -6,9 +6,11 @@ import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
 
 import {
   isBotModeMotionPreference,
+  isBotModeSendKey,
   isBotModeSortMode,
   type BotModeIcon,
   type BotModeMotionPreference,
+  type BotModeSendKey,
   type BotModeSortMode,
 } from '../bot-mode-settings.js';
 import { AssignmentConcurrencySetting } from './assignment-concurrency-setting.js';
@@ -37,6 +39,11 @@ const MOTION_OPTIONS: readonly { id: BotModeMotionPreference; label: BotHarnessK
   { id: 'system', label: 'motion.system' },
   { id: 'reduce', label: 'motion.reduce' },
   { id: 'full', label: 'motion.full' },
+];
+
+const SEND_KEY_OPTIONS: readonly { id: BotModeSendKey; label: BotHarnessKey }[] = [
+  { id: 'enter', label: 'sendKey.enter' },
+  { id: 'mod-enter', label: 'sendKey.modEnter' },
 ];
 
 const styles = stylex.create({
@@ -190,6 +197,31 @@ export function SortSetting({
           options={SORT_OPTIONS.map((option) => ({ value: option.id, label: t(option.label) }))}
           onChange={(id) => {
             if (isBotModeSortMode(id)) setSortMode(id);
+          }}
+        />
+      }
+    />
+  );
+}
+
+export function SendKeySetting({
+  t,
+  useBotModePrefs,
+  setSendKey,
+}: BotModeSettingRowProps): ReactElement {
+  const sendKey = useBotModePrefs((value) => value.sendKey);
+  return (
+    <SettingsRow
+      title={t('sendKey.row.title')}
+      description={t('sendKey.row.description')}
+      data={{ 'data-setting': 'send-key' }}
+      control={
+        <Select
+          label={t('sendKey.row.title')}
+          value={sendKey}
+          options={SEND_KEY_OPTIONS.map((option) => ({ value: option.id, label: t(option.label) }))}
+          onChange={(id) => {
+            if (isBotModeSendKey(id)) setSendKey(id);
           }}
         />
       }

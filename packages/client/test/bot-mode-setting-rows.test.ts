@@ -42,6 +42,7 @@ function snapshot(patch?: Partial<BotModePrefsSnapshot>): BotModePrefsSnapshot {
   return {
     motionPreference: 'system',
     botIcon: 'mascot' as const,
+    sendKey: 'enter' as const,
     autoAcceptGroupInvites: true,
     assignmentConcurrencyLimit: 3,
     developerMode: false,

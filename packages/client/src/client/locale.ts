@@ -723,6 +723,10 @@ export const zh = {
   'botSessions.row.title': '在会话列表显示 Bot 会话',
   'botSessions.row.description':
     'Bot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。',
+  'sendKey.row.title': '发送消息',
+  'sendKey.row.description': '选择发送消息的按键，另一种组合用于换行',
+  'sendKey.enter': 'Enter 发送，Shift+Enter 换行',
+  'sendKey.modEnter': 'Ctrl/⌘+Enter 发送，Enter 换行',
   'developer.row.title': '开发者模式',
   'developer.row.description': '显示 Session 来源、工作区授权历史和高级选项',
   'roster.menu.label': '更多',
@@ -3098,6 +3102,12 @@ export const zh = {
   'groupGrant.retry': '读回并重试',
   'composerContext.grantScope':
     '已解析目录：{path}。仅建立此 Bot 的 Workspace Grant；不启用 Orchestrator 项目写入，不更改 Assignment 权限或审批规则。',
+  'composerCommand.memory': '查看记忆',
+  'composerCommand.sessions': '查看 Sessions',
+  'composerCommand.profile': '打开资料页',
+  'composerCommand.settings': '打开会话设置',
+  'composer.dropFiles': '松开以添加附件',
+  'composer.dropLimit': '一次最多 10 个附件',
   'composer.addAttachment': '添加附件',
   'composer.referenceAttachment': '在正文中引用 {name}',
   'composer.locateAttachment': '定位附件 {name}',
@@ -4012,6 +4022,10 @@ export const en = {
   'botSessions.row.title': 'Show Bot sessions in the session list',
   'botSessions.row.description':
     "Bot Orchestrator and Assignment sessions stay out of DeepSeek Harness's session list by default. Turn this on to show them.",
+  'sendKey.row.title': 'Send messages',
+  'sendKey.row.description': 'Choose the key that sends a message; the other inserts a new line',
+  'sendKey.enter': 'Enter to send, Shift+Enter for a new line',
+  'sendKey.modEnter': 'Ctrl/⌘+Enter to send, Enter for a new line',
   'developer.row.title': 'Developer mode',
   'developer.row.description':
     'Show Session provenance, workspace access history and advanced options',
@@ -6521,6 +6535,12 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'groupGrant.retry': 'Read back and retry',
   'composerContext.grantScope':
     'Resolved directory: {path}. Creates only this Bot’s Workspace Grant; does not enable Orchestrator project writes or change Assignment access or approval rules.',
+  'composerCommand.memory': 'View memory',
+  'composerCommand.sessions': 'View Sessions',
+  'composerCommand.profile': 'Open profile',
+  'composerCommand.settings': 'Open conversation settings',
+  'composer.dropFiles': 'Drop to attach',
+  'composer.dropLimit': 'Up to 10 attachments at a time',
   'composer.addAttachment': 'Add attachment',
   'composer.referenceAttachment': 'Reference {name} in message',
   'composer.locateAttachment': 'Locate attachment {name}',
