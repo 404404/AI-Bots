@@ -27,7 +27,7 @@ function fixture() {
     rootDir: join(home, 'channels'),
     now,
   });
-  const query = createHumanAttentionQuery(port, undefined, undefined, undefined, now);
+  const query = createHumanAttentionQuery(port, undefined, undefined, undefined, undefined, now);
   const decisions = createHumanAttentionDecisions(port, now);
   const registry = createTestRegistry({ rootDir: join(home, 'bots'), now });
   registry.create({ slug: 'ada', displayName: 'Ada' });

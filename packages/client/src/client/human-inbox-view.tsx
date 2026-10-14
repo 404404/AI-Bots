@@ -8,12 +8,17 @@ import {
 import { canSnoozeHumanInboxItem } from './human-inbox-snooze.js';
 
 import type { BridgeActions } from './actions.js';
-import { channelSidebarPrefs, channelSidebarScopeKey } from './channel-sidebar-prefs.js';
+import {
+  openHumanAttentionSource,
+  openRepairBotInbox as openRepairBotInboxFor,
+} from './human-attention-source.js';
 import { useClientState } from './bot-sidebar.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { store } from './store.js';
 import type { HumanAttentionItem, HumanInboxCategory, HumanInboxFilters } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
+import { Kbd } from './ds/kbd.js';
+import { webModalOpen } from './channel-shortcuts.js';
 import { HumanInboxReply } from './human-inbox-reply.js';
 import { Modal } from './modal.js';
 import { HumanInboxDismiss } from './human-inbox-detail-controls.js';
@@ -120,44 +125,10 @@ export function HumanInboxView({
     )
     .sort((left, right) => left.name.localeCompare(right.name));
 
-  const openRepairBotInbox = async (item: HumanAttentionItem): Promise<void> => {
-    const scopeKey = channelSidebarScopeKey('personabot', '', item.botSlug);
-    channelSidebarPrefs.setSidebarCollapsed(scopeKey, false);
-    channelSidebarPrefs.setEntryExpanded(scopeKey, 'bot-inbox', true);
-    await actions.openBot(item.botSlug);
-  };
-
-  const openSource = async (item: HumanAttentionItem): Promise<void> => {
-    if (
-      item.kind === 'channel-unread' ||
-      item.kind === 'channel-reply' ||
-      item.kind === 'channel-mention'
-    ) {
-      await actions.openChannelAtMessage(item.channelId!, item.messageId!);
-    } else if (item.kind === 'bot-message-needs-repair') {
-      if (item.channelName && item.channelId && item.messageId) {
-        try {
-          await actions.openChannelAtMessage(item.channelId, item.messageId);
-        } catch {
-          await openRepairBotInbox(item);
-        }
-      } else await openRepairBotInbox(item);
-    } else if (
-      item.kind === 'assignment-waiting-human' ||
-      item.kind === 'assignment-blocked' ||
-      item.kind === 'assignment-report'
-    ) {
-      if (item.assignmentSessionId === undefined) return;
-      await actions.openBot(item.botSlug);
-      await actions.openSession(item.assignmentSessionId);
-    } else if (item.kind === 'group-join-request') {
-      if (item.channelId !== undefined) await actions.openChannel(item.channelId);
-    } else {
-      await actions.openBot(item.botSlug);
-      if (item.channelId !== undefined && item.messageId !== undefined)
-        await actions.openAround(item.channelId, item.messageId);
-    }
-  };
+  const openRepairBotInbox = (item: HumanAttentionItem): Promise<void> =>
+    openRepairBotInboxFor(actions, item);
+  const openSource = (item: HumanAttentionItem): Promise<void> =>
+    openHumanAttentionSource(actions, item);
 
   const decide = async (item: HumanAttentionItem, accept: boolean): Promise<void> => {
     if (item.requestId === undefined || item.channelId === undefined) return;
@@ -287,7 +258,7 @@ export function HumanInboxView({
 
   keyHandler.current = (event) => {
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
-    if (event.isComposing) return;
+    if (event.isComposing || webModalOpen(document)) return;
     const container = root.current;
     if (container === null || actionSource !== undefined) return;
     const target = event.target instanceof Element ? event.target : null;
@@ -656,10 +627,10 @@ export function HumanInboxView({
               </>
             )}
             <span className="bh-human-inbox-keys" aria-hidden="true">
-              <kbd>J</kbd>/<kbd>K</kbd> {t('humanInbox.keys.move')} · <kbd>Enter</kbd>{' '}
-              {t('humanInbox.keys.open')} · <kbd>E</kbd> {t('humanInbox.keys.handle')} ·{' '}
-              <kbd>X</kbd> {t('humanInbox.keys.select')} · <kbd>S</kbd>{' '}
-              {t('humanInbox.keys.snooze')}
+              <Kbd shortcutKey="J" />/<Kbd shortcutKey="K" /> {t('humanInbox.keys.move')} ·{' '}
+              <Kbd shortcutKey="Enter" /> {t('humanInbox.keys.open')} · <Kbd shortcutKey="E" />{' '}
+              {t('humanInbox.keys.handle')} · <Kbd shortcutKey="X" /> {t('humanInbox.keys.select')}{' '}
+              · <Kbd shortcutKey="S" /> {t('humanInbox.keys.snooze')}
             </span>
           </div>
         ) : null}

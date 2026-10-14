@@ -122,6 +122,25 @@ describe('Human Inbox keyboard', () => {
     expect(rows(view.host)[0]!.hasAttribute('data-cursor')).toBe(false);
     await view.unmount();
   });
+
+  it('stays still behind the shortcut list and lets ? through', async () => {
+    const view = await mount([approval('ada')]);
+    const question = new KeyboardEvent('keydown', { key: '?', bubbles: true, cancelable: true });
+    await act(async () => {
+      document.body.dispatchEvent(question);
+    });
+    expect(question.defaultPrevented).toBe(false);
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    document.body.append(dialog);
+    await view.press('j', document.body);
+    expect(rows(view.host)[0]!.hasAttribute('data-cursor')).toBe(false);
+    dialog.remove();
+    await view.press('j', document.body);
+    expect(rows(view.host)[0]!.hasAttribute('data-cursor')).toBe(true);
+    await view.unmount();
+  });
 });
 
 describe('Human Inbox bulk actions', () => {

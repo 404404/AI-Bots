@@ -10,6 +10,7 @@ import type { CompanionRequestTarget } from './companion-requests.js';
 import { channelSettings } from './channel-settings-state.js';
 import { approvalCountdown } from './approval-countdown.js';
 import { ApprovalInput } from './approval-input.js';
+import { Kbd } from './ds/kbd.js';
 
 export function ToolApprovalCard({
   message,
@@ -435,15 +436,16 @@ export function ToolApprovalCard({
         <div className="bh-note bh-tool-approval-keys" aria-hidden="true">
           {confirmAll ? (
             <>
-              <kbd>Esc</kbd> {t('approval.cancel')}
+              <Kbd shortcutKey="Esc" /> {t('approval.cancel')}
             </>
           ) : (
             <>
-              <kbd>Y</kbd> {t('approval.keyAllow')} · <kbd>N</kbd> {t('approval.keyReject')}
+              <Kbd shortcutKey="Y" /> {t('approval.keyAllow')} · <Kbd shortcutKey="N" />{' '}
+              {t('approval.keyReject')}
               {eachUse ? null : (
                 <>
                   {' · '}
-                  <kbd>A</kbd> {t('approval.keyAll')}
+                  <Kbd shortcutKey="A" /> {t('approval.keyAll')}
                 </>
               )}
             </>

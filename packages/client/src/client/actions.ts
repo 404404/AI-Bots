@@ -57,7 +57,7 @@ import type {
   MessagingIdentityInput,
 } from '../../../core/src/messaging/identity.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
-import type { HumanAttentionPage } from './store.js';
+import type { HumanAttentionPage, HumanInboxState } from './store.js';
 import {
   readActivityCenterTab,
   writeActivityCenterTab,
@@ -160,6 +160,7 @@ import {
   loadChannelActivityToday,
   loadHumanAttention,
   loadHumanAttentionStatus,
+  loadChannelUnreadCounts,
   loadHumanAssignmentContext,
   type HumanAssignmentContext,
   ignoreHumanAssignmentReport,
@@ -245,6 +246,7 @@ import {
   reorderTopOrder,
   sendChannelMessage,
   setRosterHidden,
+  setChannelMute,
   setRosterPins,
   type BridgeCall,
   type MemoryAcceptedCommit,
@@ -519,6 +521,7 @@ export interface BridgeActions {
   openAround(channelId: string, messageId: string): Promise<void>;
   markAllRead(): Promise<void>;
   markRead(channelId: string, messageId: string): Promise<void>;
+  markChannelRead(channelId: string): Promise<void>;
   refreshChannelMessages(channelId: string): Promise<void>;
   applyChannelTail(
     channelId: string,
@@ -807,6 +810,7 @@ export interface BridgeActions {
   setChannelPinned(channelId: string, pinned: boolean): Promise<boolean>;
   reorderPinnedChannels(order: readonly string[], beforePublish: () => void): Promise<boolean>;
   setChannelHidden(channelId: string, hidden: boolean): Promise<boolean>;
+  setChannelMuted(channelId: string, muted: boolean): Promise<boolean>;
   batchRoster(input: RosterBatchInput): Promise<boolean>;
   movePinnedChannel(
     channelId: string,
@@ -1069,6 +1073,7 @@ export function createActions(
       clientStore.setRosterState({
         pins: snapshot.pins,
         hidden: snapshot.hidden,
+        muted: snapshot.muted,
         sections: snapshot.sections,
         topOrder: snapshot.topOrder,
         readOnly: false,
@@ -1198,10 +1203,23 @@ export function createActions(
   let humanInboxPagesPending = 0;
   let humanInboxScopeVersion = 0;
   let humanInboxStatusSeq = 0;
+  const loadInboxStatus = async (): Promise<
+    Partial<Pick<HumanInboxState, 'unreadCount' | 'hasAction' | 'channelUnread'>>
+  > => {
+    const [status, channelUnread] = await Promise.allSettled([
+      loadHumanAttentionStatus(call),
+      loadChannelUnreadCounts(call),
+    ]);
+    if (status.status === 'rejected') throw status.reason;
+    return {
+      ...status.value,
+      ...(channelUnread.status === 'fulfilled' ? { channelUnread: channelUnread.value } : {}),
+    };
+  };
   const refreshHumanInboxStatus = async (): Promise<void> => {
     const requestSeq = ++humanInboxStatusSeq;
     try {
-      const status = await loadHumanAttentionStatus(call);
+      const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
     } catch {
       return;
@@ -2004,7 +2022,7 @@ export function createActions(
         throw error;
       }
       const requestSeq = ++humanInboxStatusSeq;
-      const status = await loadHumanAttentionStatus(call);
+      const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
       if (currentSelection()?.kind === 'inbox') await actions.refreshHumanInbox();
     },
@@ -2012,6 +2030,25 @@ export function createActions(
       await markReadPosition(call, channelId, messageId);
       await refreshHumanInboxStatus();
       if (currentSelection()?.kind === 'inbox') await actions.refreshHumanInbox();
+    },
+    async markChannelRead(channelId) {
+      const messageId = clientStore
+        .getSnapshot()
+        .channels.find((channel) => channel.id === channelId)?.latestMessage?.id;
+      if (messageId === undefined) return;
+      clientStore.setHumanInbox({
+        channelUnread: Object.fromEntries(
+          Object.entries(clientStore.getSnapshot().humanInbox.channelUnread).filter(
+            ([id]) => id !== channelId,
+          ),
+        ),
+      });
+      try {
+        await actions.markRead(channelId, messageId);
+      } catch (error) {
+        await refreshHumanInboxStatus();
+        throw error;
+      }
     },
     humanAssignmentContext(slug, sessionId, sourceEventId, signal) {
       return loadHumanAssignmentContext(call, slug, sessionId, sourceEventId, signal);
@@ -3124,12 +3161,19 @@ export function createActions(
         await setRosterHidden(call, next);
       });
     },
+    async setChannelMuted(channelId, muted) {
+      if (clientStore.getSnapshot().roster.muted.includes(channelId) === muted) return true;
+      return rosterMutate(async () => {
+        await setChannelMute(call, channelId, muted);
+      });
+    },
     async batchRoster(input) {
       try {
         const snapshot = await applyRosterBatch(call, input);
         clientStore.setRosterState({
           pins: snapshot.pins,
           hidden: snapshot.hidden,
+          muted: snapshot.muted,
           sections: snapshot.sections,
           topOrder: snapshot.topOrder,
           readOnly: false,
