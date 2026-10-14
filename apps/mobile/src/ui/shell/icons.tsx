@@ -61,3 +61,35 @@ export function ChevronDownIcon(props: IconProps) {
 export function ArrowUpIcon(props: IconProps) {
   return <Glyph {...props} d="M12 19V5m-6 6 6-6 6 6" />;
 }
+
+export function PlusIcon(props: IconProps) {
+  return <Glyph {...props} d="M12 5v14M5 12h14" />;
+}
+
+export function CloseIcon(props: IconProps) {
+  return <Glyph {...props} d="m7 7 10 10M17 7 7 17" />;
+}
+
+export function PhotoIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M5 5h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm-1 11 4.5-4.5 4 4 2.5-2.5 5 5M15.5 9.5h.01"
+    />
+  );
+}
+
+export function CameraIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M4 8a1 1 0 0 1 1-1h3l1.5-2h5L16 7h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Zm8 8.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+    />
+  );
+}
+
+export function FileIcon(props: IconProps) {
+  return (
+    <Glyph {...props} d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5" />
+  );
+}

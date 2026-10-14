@@ -20,9 +20,17 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "DeepSeekBot uses the camera to scan the pairing code shown on your computer.",
+          "cameraPermission": "DeepSeekBot uses the camera to scan the pairing code shown on your computer and to take photos you send to a PersonaBot.",
           "microphonePermission": false,
           "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DeepSeekBot opens your photos so you can send them to a PersonaBot.",
+          "cameraPermission": "DeepSeekBot uses the camera to scan the pairing code shown on your computer and to take photos you send to a PersonaBot.",
+          "microphonePermission": false
         }
       ]
     ],

@@ -61,6 +61,9 @@ References:
   - A decided card collapses to one line. A card decided on another device says so.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
+  - **+** opens Photos, Camera and File below the pill. Picked files show as removable tiles inside the pill, up to 10 per message. Send appears once there is text or a file.
+  - Sending uploads each file to the Host first. A retry keeps the uploads that already finished.
+  - The mic and the status strip's **Stop** wait on Host support; until then, dictation comes from the keyboard.
 
 **Bot profile** (a form sheet)
 

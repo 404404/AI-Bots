@@ -126,6 +126,7 @@ describe('DM conversation', () => {
       },
       host: {
         call: (method, args) => client!.call(method, args),
+        upload: (name, data) => client!.upload(name, data),
         follow: (endpoint, args, handlers) => {
           let cancel: (() => void) | undefined;
           void gate.then(() => {
@@ -212,6 +213,39 @@ describe('DM conversation', () => {
     });
     expect(host.channel(DM).messages.filter((message) => message.id === id)).toHaveLength(1);
     expect(ids(target.getSnapshot()).filter((value) => value === id)).toHaveLength(1);
+  });
+
+  it('uploads attachments before sending and keeps finished uploads across a retry', async () => {
+    const host = new FakeHost();
+    host.channel(DM);
+    const target = open(host);
+    await until(target, (s) => s.status === 'live');
+    let reads = 0;
+    const file = (name: string, text: string) => ({
+      name,
+      read: async () => {
+        reads += 1;
+        return new Blob([text]);
+      },
+    });
+    host.failing.add('channelSend');
+    const id = target.send('two files', [file('a.txt', 'alpha'), file('b.txt', 'beta')]);
+    expect(target.getSnapshot().messages.at(-1)).toMatchObject({ attachments: 2 });
+    await until(target, (s) => s.messages.at(-1)?.delivery === 'failed');
+    expect(host.uploads).toEqual([
+      { name: 'a.txt', type: 'application/octet-stream', text: 'alpha' },
+      { name: 'b.txt', type: 'application/octet-stream', text: 'beta' },
+    ]);
+    host.failing.delete('channelSend');
+    target.retry(id);
+    await until(target, (s) => s.messages.at(-1)?.delivery === 'committed');
+    expect(reads).toBe(2);
+    expect(host.uploads).toHaveLength(2);
+    const sent = host.calls.filter((call) => call.method === 'channelSend').at(-1)?.args;
+    expect(sent?.['attachments']).toEqual([
+      expect.objectContaining({ name: 'a.txt', size: 5 }),
+      expect.objectContaining({ name: 'b.txt', size: 4 }),
+    ]);
   });
 
   it('streams a Bot draft live and replaces it with the committed reply', async () => {
