@@ -22,6 +22,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -83,7 +84,12 @@ import {
   type NativeChatFailureText,
 } from './channel-message-body.js';
 import { BridgeSourceAuthor } from './bridge-source-author.js';
-import { botNameColor, botNameSource, useConversationSurface } from './bot-primary-color.js';
+import {
+  botNameColor,
+  botNameSource,
+  humanBubbleColors,
+  useConversationSurface,
+} from './bot-primary-color.js';
 import { ChannelDeliveryReceipt } from './channel-delivery-receipt.js';
 import { MessageCopyAction } from './message-copy-action.js';
 import { MessageAuthorHoverCard, messageAuthorCardModel } from './message-author-card.js';
@@ -462,6 +468,19 @@ export function MessageBubbleWrap({
   );
 }
 
+function humanBubbleStyle(source: string | undefined): CSSProperties | undefined {
+  if (source === undefined) return undefined;
+  const light = humanBubbleColors(source, 'light');
+  const dark = humanBubbleColors(source, 'dark');
+  if (light === undefined || dark === undefined) return undefined;
+  return {
+    '--bh-bubble-me-fill-light': light.fill,
+    '--bh-bubble-me-ink-light': light.ink,
+    '--bh-bubble-me-fill-dark': dark.fill,
+    '--bh-bubble-me-ink-dark': dark.ink,
+  } as CSSProperties;
+}
+
 function MessageGroupView({
   humanMembers = [],
   group,
@@ -569,6 +588,11 @@ function MessageGroupView({
         t={t}
       />
     );
+  const dmBot =
+    human && currentDmBotSlug !== undefined
+      ? bots.find((candidate) => candidate.slug === currentDmBotSlug)
+      : undefined;
+  const bubbleStyle = humanBubbleStyle(botNameSource(dmBot));
   const lastMessage = group.messages[group.messages.length - 1];
   const lastReactions = (lastMessage?.reactions ?? [])
     .map((reaction) => `${reaction.emoji}${String(reaction.actors.length)}`)
@@ -607,6 +631,7 @@ function MessageGroupView({
       ref={groupMount}
       className={`bh-message-group${human ? ' bh-message-group-me' : ''}`}
       data-group-size={group.messages.length}
+      style={bubbleStyle}
     >
       {avatar === undefined ? null : (
         <span className="bh-message-group-avatar">
