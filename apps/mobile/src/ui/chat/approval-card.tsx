@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import type { CardResolution } from '../../host/conversation';
 import {
   offersAlwaysAllow,
+  previewInput,
   readableInput,
   type ApprovalChoice,
   type ApprovalRequest,
@@ -174,7 +175,7 @@ export function ApprovalCard({
     }
   };
   const rows = readableInput(request.input);
-  const first = rows[0];
+  const first = previewInput(request.input);
   return (
     <View ref={mount}>
       <ActionCard

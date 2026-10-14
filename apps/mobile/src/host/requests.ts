@@ -231,6 +231,17 @@ export function buildAnswer(
   return { answers };
 }
 
+const PREVIEW_FIELDS = ['command', 'cmd', 'script', 'code', 'url', 'path', 'file_path'];
+
+export function previewInput(input: string): { label: string; value: string } | undefined {
+  const rows = readableInput(input);
+  return (
+    PREVIEW_FIELDS.map((field) => rows.find((row) => row.label === field)).find(
+      (row) => row !== undefined,
+    ) ?? rows[0]
+  );
+}
+
 export function readableInput(input: string): { label: string; value: string }[] {
   let parsed: unknown;
   try {
