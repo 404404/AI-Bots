@@ -2,6 +2,7 @@ import { driver } from 'driver.js';
 
 export interface InternalTourSpec {
   selector: string;
+  fallback?: string;
   title: string;
   description: string;
 }
@@ -14,10 +15,12 @@ export interface InternalTourStep {
 
 export interface InternalTourOptions {
   closeLabel: string;
-  skipLabel: string;
+  skipLabel?: string;
   previousLabel: string;
   nextLabel: string;
   doneLabel: string;
+  doneIcon?: 'done' | 'next';
+  progress?: { offset: number; total?: number };
   onClosed(): void;
   onFinished(): void;
   onSkip(): void;
@@ -72,7 +75,9 @@ export function resolveTourSteps(
 ): InternalTourStep[] {
   const steps: InternalTourStep[] = [];
   for (const spec of specs) {
-    const element = doc.querySelector(spec.selector);
+    const element =
+      doc.querySelector(spec.selector) ??
+      (spec.fallback === undefined ? null : doc.querySelector(spec.fallback));
     if (element !== null) steps.push({ element, title: spec.title, description: spec.description });
   }
   return steps;
@@ -101,7 +106,13 @@ export function startInternalTour(
     if (started) return;
     if (!allowPartial && doc.querySelector(first.selector) === null) return;
     const steps = resolveTourSteps(doc, specs);
-    if (steps.length === 0) return;
+    if (steps.length === 0) {
+      if (allowPartial) {
+        stopWaiting();
+        options.onClosed();
+      }
+      return;
+    }
     started = true;
     stopWaiting();
     const escape = (event: KeyboardEvent): void => {
@@ -153,6 +164,10 @@ export function startInternalTour(
         popover.wrapper.setAttribute('role', 'dialog');
         popover.wrapper.setAttribute('aria-label', tour?.getActiveStep()?.popover?.title ?? '');
         popover.closeButton.setAttribute('aria-label', options.closeLabel);
+        const progress = options.progress;
+        const index = tour?.getActiveIndex();
+        if (progress !== undefined && index !== undefined)
+          popover.progress.textContent = `${index + 1 + progress.offset} / ${progress.total ?? progress.offset + steps.length}`;
         setNavigationIcon(
           doc,
           popover.previousButton,
@@ -164,13 +179,17 @@ export function startInternalTour(
           doc,
           popover.nextButton,
           lastStep ? options.doneLabel : options.nextLabel,
-          lastStep ? TOUR_ICON_PATHS.done : TOUR_ICON_PATHS.next,
+          lastStep && options.doneIcon !== 'next' ? TOUR_ICON_PATHS.done : TOUR_ICON_PATHS.next,
         );
-        if (popover.footerButtons.querySelector('.bh-internal-tour-skip') === null) {
+        const skipLabel = options.skipLabel;
+        if (
+          skipLabel !== undefined &&
+          popover.footerButtons.querySelector('.bh-internal-tour-skip') === null
+        ) {
           const skip = doc.createElement('button');
           skip.type = 'button';
           skip.className = 'bh-internal-tour-skip';
-          skip.textContent = options.skipLabel;
+          skip.textContent = skipLabel;
           skip.addEventListener('click', () => {
             options.onSkip();
             tour?.destroy();

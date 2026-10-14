@@ -38,6 +38,67 @@ const en = {
     unreachable: 'Cannot reach your computer. Check that this phone is on your tailnet.',
   } satisfies Record<PairingRefusal, string>,
   unpair: 'Unpair',
+  inbox: 'Inbox',
+  inboxSections: {
+    action: 'Needs my action',
+    replies: 'Mentions & replies',
+    handled: 'Handled',
+  },
+  inboxEmpty: 'Nothing needs you right now.',
+  inboxLoading: 'Reading your Inbox…',
+  inboxStale: 'Showing the last Inbox read. It could not be refreshed:',
+  inboxFailed: 'Could not read your Inbox.',
+  kind: {
+    'tool-approval': 'Tool approval',
+    'user-question': 'Question',
+    'private-input': 'Private input',
+    'group-join-request': 'Join request',
+    'workspace-grant-request': 'Folder access',
+    'channel-mention': 'Mention',
+    'channel-reply': 'Reply',
+  } as Record<string, string>,
+  otherKind: 'Update',
+  inChannel: (name: string) => `in #${name}`,
+  wantsToRun: (bot: string, tool: string) => `${bot} wants to run ${tool}`,
+  asks: (bot: string) => `${bot} asks`,
+  workingFolder: 'Working folder',
+  arguments: 'Arguments',
+  allowOnce: 'Allow once',
+  reject: 'Reject',
+  submit: 'Send answer',
+  otherAnswer: 'Other answer',
+  multiSelectHint: 'Choose any that apply',
+  sending: 'Sending…',
+  approved: 'Allowed. The PersonaBot continues.',
+  rejected: 'Rejected. The PersonaBot was told.',
+  answered: 'Answer sent. The PersonaBot continues.',
+  alreadyDecided: 'Already decided on another device. Your tap had no effect.',
+  alreadyDecidedAs: (outcome: string) =>
+    `Already decided on another device (${outcome}). Your tap had no effect.`,
+  alreadyAnswered: 'Already answered on another device. Your answer was not sent.',
+  expired: 'This request expired before a decision, so nothing was sent.',
+  outcome: {
+    'allowed-once': 'allowed once',
+    'allowed-always-exact': 'always allowed for this command',
+    'allowed-always-all': 'always allowed for this tool',
+    rejected: 'rejected',
+  },
+  decideFailed: 'The decision was not accepted:',
+  loadFailed: 'Could not read this request:',
+  tryAgain: 'Try again',
+  privateInputHint:
+    'Enter private input in the full client. The secret goes straight to your computer and is never kept by this app.',
+  openFullClient: 'Open the full client',
+  readOnlyHint: 'Open the conversation in the full client to reply.',
+  done: 'Done',
+  ago: (minutes: number) =>
+    minutes < 1
+      ? 'just now'
+      : minutes < 60
+        ? `${minutes} min ago`
+        : minutes < 1440
+          ? `${Math.floor(minutes / 60)} h ago`
+          : `${Math.floor(minutes / 1440)} d ago`,
 };
 
 const zh: typeof en = {
@@ -75,6 +136,65 @@ const zh: typeof en = {
     unreachable: '连不上你的电脑，请确认手机已加入你的 tailnet。',
   },
   unpair: '取消配对',
+  inbox: '收件箱',
+  inboxSections: {
+    action: '需要我处理',
+    replies: '提及与回复',
+    handled: '已处理',
+  },
+  inboxEmpty: '现在没有需要你处理的事。',
+  inboxLoading: '正在读取收件箱…',
+  inboxStale: '显示的是上次读取的收件箱，刷新失败：',
+  inboxFailed: '无法读取收件箱。',
+  kind: {
+    'tool-approval': '工具审批',
+    'user-question': '提问',
+    'private-input': '私密输入',
+    'group-join-request': '入群申请',
+    'workspace-grant-request': '文件夹授权',
+    'channel-mention': '提及',
+    'channel-reply': '回复',
+  },
+  otherKind: '动态',
+  inChannel: (name: string) => `在 #${name}`,
+  wantsToRun: (bot: string, tool: string) => `${bot} 想要运行 ${tool}`,
+  asks: (bot: string) => `${bot} 问你`,
+  workingFolder: '工作目录',
+  arguments: '参数',
+  allowOnce: '允许一次',
+  reject: '拒绝',
+  submit: '发送回答',
+  otherAnswer: '其他回答',
+  multiSelectHint: '可多选',
+  sending: '正在发送…',
+  approved: '已允许，PersonaBot 继续工作。',
+  rejected: '已拒绝，PersonaBot 已收到。',
+  answered: '回答已发送，PersonaBot 继续工作。',
+  alreadyDecided: '已在其他设备上处理，这次点击没有生效。',
+  alreadyDecidedAs: (outcome: string) => `已在其他设备上处理（${outcome}），这次点击没有生效。`,
+  alreadyAnswered: '已在其他设备上回答，这次回答没有发送。',
+  expired: '这个请求在处理前已过期，没有发送任何决定。',
+  outcome: {
+    'allowed-once': '允许一次',
+    'allowed-always-exact': '始终允许这条命令',
+    'allowed-always-all': '始终允许这个工具',
+    rejected: '已拒绝',
+  },
+  decideFailed: '决定没有被接受：',
+  loadFailed: '无法读取这个请求：',
+  tryAgain: '重试',
+  privateInputHint: '请在完整客户端里填写私密输入。密钥直接交给你的电脑，这个应用不会保存。',
+  openFullClient: '打开完整客户端',
+  readOnlyHint: '在完整客户端里打开这段对话来回复。',
+  done: '完成',
+  ago: (minutes: number) =>
+    minutes < 1
+      ? '刚刚'
+      : minutes < 60
+        ? `${minutes} 分钟前`
+        : minutes < 1440
+          ? `${Math.floor(minutes / 60)} 小时前`
+          : `${Math.floor(minutes / 1440)} 天前`,
 };
 
 const locale = Intl.DateTimeFormat().resolvedOptions().locale;
