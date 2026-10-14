@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
@@ -40,6 +40,7 @@ export default function DmScreen() {
 
 function DmConversation({ slug }: { slug: string | undefined }) {
   const theme = useDesignTheme();
+  const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { client } = useHostSession();
   const host = useHostSnapshot(client);
@@ -110,7 +111,13 @@ function DmConversation({ slug }: { slug: string | undefined }) {
           headerTitleAlign: 'center',
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.color.base },
-          headerTitle: () => <ChatTitle bot={bot} fallback={slug ?? ''} />,
+          headerTitle: () => (
+            <ChatTitle
+              bot={bot}
+              fallback={slug ?? ''}
+              onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
+            />
+          ),
           headerRight: () =>
             slug === undefined ? null : <OpenFullClientButton target={{ kind: 'dm', slug }} />,
         }}

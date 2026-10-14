@@ -93,3 +93,21 @@ export function FileIcon(props: IconProps) {
     <Glyph {...props} d="M7 3h7l5 5v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm7 0v5h5" />
   );
 }
+
+export function MessageIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-7l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+    />
+  );
+}
+
+export function ComputerIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm5 15h6m-3-3v3"
+    />
+  );
+}

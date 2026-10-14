@@ -56,10 +56,11 @@ export const SectionList = (props: {
   renderSectionHeader?(info: { section: Section }): ReactNode;
   renderSectionFooter?(info: { section: Section }): ReactNode;
   ListHeaderComponent?: ReactNode;
+  ref?: unknown;
 }) =>
   createElement(
     'div',
-    null,
+    { ref: props.ref },
     props.ListHeaderComponent ?? null,
     ...props.sections.map((section, index) =>
       createElement(
