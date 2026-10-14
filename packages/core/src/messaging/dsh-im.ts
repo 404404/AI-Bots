@@ -335,6 +335,7 @@ function providerFailure(error: unknown): MessagingProviderError {
     'private-context-rejected',
     'send-permission-denied',
     'send-preflight-unavailable',
+    'send-rate-limited',
     'target-rejected',
     'reaction-permission-denied',
     'reaction-provider-rejected',
@@ -454,12 +455,17 @@ export function createDshImProvider(
         typeof target.route.channelId === 'string') ||
       (platform === 'discord' &&
         target.kind === 'channel' &&
-        typeof target.route.channelId === 'string')
+        typeof target.route.channelId === 'string') ||
+      (platform === 'qq' && target.kind === 'group' && typeof target.route.groupOpenId === 'string')
         ? {
             receiveScope: {
               kind: 'group' as const,
               conversationId: String(
-                platform === 'feishu' ? target.route.chatId : target.route.channelId,
+                platform === 'feishu'
+                  ? target.route.chatId
+                  : platform === 'qq'
+                    ? target.route.groupOpenId
+                    : target.route.channelId,
               ),
             },
           }
@@ -1394,7 +1400,7 @@ export function createDshImProvider(
       : {}),
     ...((platform === 'feishu' ||
       platform === 'slack' ||
-      (platform === 'weixin' && host.postFenceVersion === 1)) &&
+      ((platform === 'weixin' || platform === 'qq') && host.postFenceVersion === 1)) &&
     host.receiptVersion === 1
       ? {
           async post(input: Parameters<NonNullable<MessagingProvider['post']>>[0]) {
@@ -1404,7 +1410,10 @@ export function createDshImProvider(
               throw new MessagingProviderError('account-changed', 'not-started');
             if (!info.capabilities.includes('proactive-receipt-checked'))
               throw new MessagingProviderError('capability-unavailable', 'not-started');
-            if (platform === 'weixin' && !info.capabilities.includes('proactive-fence-checked'))
+            if (
+              (platform === 'weixin' || platform === 'qq') &&
+              !info.capabilities.includes('proactive-fence-checked')
+            )
               throw new MessagingProviderError('capability-unavailable', 'not-started');
             try {
               const result = await host.sendChecked(input.accountRef, input.targetRef, input.text, {

@@ -74,6 +74,14 @@ Native file output uploads with `file_type=4` without sending, then rechecks cur
 
 ## Understand the text path
 
+### Delayed results and explicit proactive posts
+
+The #1154 source candidate enables checked proactive text for an explicitly authorized saved QQ group target. The current Provider does not offer QQ group discovery, so use the existing saved-target authorization rather than treating a received mention as a proactive grant. Current app identity, target, conversation block, final authorization and the shared hourly post limit remain checked at send time.
+
+If a task finishes after QQ's five-minute reply window, `bridge_reply` records the failed `reply-window-expired` and retains the result in Outbox. To deliver that task's result, the Bot can inspect `bridge_targets`, choose a `canPost` target belonging to its own app and the exact original group, then explicitly call `bridge_post` with a distinct stable request ID. Without that target or platform permission, keep the result locally. Neither an unknown reply nor an unknown proactive outcome permits a new send; inspecting the same request after restart does not resend it.
+
+The saved-target Web send action uses the same checked post and native receipt. Provider acceptance is separate from seeing the result in QQ. Real delayed-task, refusal and current-artifact qualification remain tracked in [#1154](https://github.com/BotHarness/DeepSeekBot/issues/1154); ordinary group observation and intentional participation remain [#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155).
+
 | Behavior        | Current contract                                                |
 | --------------- | --------------------------------------------------------------- |
 | Input           | Text from a trusted `GROUP_AT_MESSAGE_CREATE` event             |
