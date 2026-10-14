@@ -3,7 +3,7 @@ import {
   aptInstallCommand,
   systemInstallAccess,
   type SystemInstallAccess,
-} from '../system-packages.js';
+} from '../../../core/src/system/system-packages.js';
 import type { CuaDriver } from '../tool/driver.js';
 import { LocalDesktopMissingError } from '../tool/local-display.js';
 import {

@@ -31,7 +31,7 @@ import type { ComputerRuntimeResult, ComputerRuntimeRunner, ComputerStatus } fro
 import { createComputerService, type ComputerService } from './service.js';
 import { createCuaDriver } from './tool/driver.js';
 import { createLocalCuaDriver } from './tool/local-driver.js';
-import { installSystemPackages } from './system-packages.js';
+import { installSystemPackages } from '../../core/src/system/system-packages.js';
 import { missingDesktopPackages } from './tool/local-display.js';
 import { createLocalComputerProvider } from './providers/local.js';
 import { computerTarget, createComputerTargetRuntime, type ComputerTarget } from './target.js';

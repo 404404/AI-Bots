@@ -2,7 +2,12 @@ import { useCallback, useState, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Note } from '../../../client/src/client/ds/note.js';
-import { color, radius, space, text } from '../../../client/src/client/ds/tokens.stylex.js';
+import { space } from '../../../client/src/client/ds/tokens.stylex.js';
+import {
+  MissingPackages,
+  ProgressLine,
+  formatProgressMiB,
+} from '../../../client/src/client/missing-packages.js';
 import { SidebarCardList, SidebarCardRow } from '../../../client/src/client/sidebar-card.js';
 import type { ComputerTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
@@ -12,39 +17,6 @@ const styles = stylex.create({
     display: 'grid',
     gap: space.x3,
     justifyItems: 'start',
-  },
-  progress: {
-    display: 'grid',
-    gap: space.x1,
-    width: '100%',
-    color: color.muted,
-    fontSize: text.metaSize,
-    lineHeight: text.metaLine,
-  },
-  bar: {
-    width: '100%',
-    height: '6px',
-    accentColor: color.accent,
-  },
-  command: {
-    margin: 0,
-    width: '100%',
-    boxSizing: 'border-box',
-    paddingBlock: space.x2,
-    paddingInline: space.x2,
-    borderRadius: radius.control,
-    backgroundColor: color.hover,
-    color: color.fg,
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-    fontSize: text.metaSize,
-    lineHeight: text.metaLine,
-    whiteSpace: 'pre-wrap',
-    overflowWrap: 'anywhere',
-  },
-  actions: {
-    display: 'flex',
-    gap: space.x2,
-    flexWrap: 'wrap',
   },
 });
 
@@ -65,26 +37,6 @@ interface LocalStatus {
     missing?: LocalMissing;
   };
   install?: { state?: string; packages?: string[]; percent?: number; text?: string };
-}
-
-function formatMiB(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function ProgressLine({
-  percent,
-  label,
-}: {
-  readonly percent: number;
-  readonly label: string;
-}): ReactElement {
-  const value = Math.max(0, Math.min(100, percent));
-  return (
-    <div role="status" {...stylex.props(styles.progress)}>
-      <progress {...stylex.props(styles.bar)} max={100} value={value} />
-      <span>{label}</span>
-    </div>
-  );
 }
 
 export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactElement {
@@ -150,42 +102,59 @@ export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactEleme
   };
   const check = (): void => post('/api/computer/start', { authorize: true, target: 'local' });
   const install = (): void => post('/api/computer/install-packages', { authorize: true });
-  const [copied, setCopied] = useState(false);
-  const copy = (command: string): void => {
-    void navigator.clipboard?.writeText(command).then(() => setCopied(true));
-  };
   const granted = payload?.status?.state === 'running';
   const download = payload?.status?.progress;
-  const progress = installing ? (
-    <ProgressLine
-      percent={payload?.install?.percent ?? 0}
-      label={t('local.installing', {
-        packages: (payload?.install?.packages ?? []).join(', '),
-        percent: String(payload?.install?.percent ?? 0),
-      })}
-    />
-  ) : payload?.status?.phase === 'starting' && (download?.totalBytes ?? 0) > 0 ? (
-    <ProgressLine
-      percent={download?.percent ?? 0}
-      label={t('local.downloading', {
-        percent: String(download?.percent ?? 0),
-        downloaded: formatMiB(download?.downloadedBytes ?? 0),
-        total: formatMiB(download?.totalBytes ?? 0),
-      })}
-    />
-  ) : null;
-  const missingCard =
-    missing === undefined || installing || (missing.packages ?? []).length === 0 ? null : (
+  const installLabel = installing
+    ? {
+        percent: payload?.install?.percent ?? 0,
+        label: t('local.installing', {
+          packages: (payload?.install?.packages ?? []).join(', '),
+          percent: String(payload?.install?.percent ?? 0),
+        }),
+      }
+    : undefined;
+  const checkButton = (
+    <Button
+      size="sm"
+      variant="outline"
+      disabled={preparing || payload?.probe?.available === false}
+      onClick={check}
+    >
+      {t(preparing ? 'local.checking' : 'local.check')}
+    </Button>
+  );
+  const packages = installing ? (payload?.install?.packages ?? []) : (missing?.packages ?? []);
+  const body =
+    packages.length > 0 && (missing !== undefined || installing) ? (
+      <MissingPackages
+        command={missing?.command ?? ''}
+        access={missing?.install ?? 'root'}
+        installing={installLabel}
+        busy={busy}
+        onInstall={install}
+        labels={{
+          missing: t('local.missing', { packages: packages.join(', ') }),
+          manual: t('local.missing.manual'),
+          install: t('local.install'),
+          copy: t('local.copy'),
+          copied: t('local.copied'),
+        }}
+      >
+        {checkButton}
+      </MissingPackages>
+    ) : (
       <>
-        <Note tone="warning">
-          {t('local.missing', { packages: (missing.packages ?? []).join(', ') })}
-        </Note>
-        {missing.install === 'none' ? (
-          <>
-            <Note>{t('local.missing.manual')}</Note>
-            <pre {...stylex.props(styles.command)}>{missing.command}</pre>
-          </>
+        {payload?.status?.phase === 'starting' && (download?.totalBytes ?? 0) > 0 ? (
+          <ProgressLine
+            percent={download?.percent ?? 0}
+            label={t('local.downloading', {
+              percent: String(download?.percent ?? 0),
+              downloaded: formatProgressMiB(download?.downloadedBytes ?? 0),
+              total: formatProgressMiB(download?.totalBytes ?? 0),
+            })}
+          />
         ) : null}
+        {checkButton}
       </>
     );
   return (
@@ -211,28 +180,7 @@ export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactEleme
           detail={
             <div {...stylex.props(styles.detail)}>
               {failure === undefined ? null : <Note tone="danger">{failure}</Note>}
-              {progress}
-              {missingCard}
-              <div {...stylex.props(styles.actions)}>
-                {missing !== undefined && missing.install !== 'none' && !installing ? (
-                  <Button size="sm" variant="primary" disabled={busy} onClick={install}>
-                    {t('local.install')}
-                  </Button>
-                ) : null}
-                {missing?.install === 'none' && missing.command !== undefined ? (
-                  <Button size="sm" variant="outline" onClick={() => copy(missing.command ?? '')}>
-                    {t(copied ? 'local.copied' : 'local.copy')}
-                  </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={preparing || payload?.probe?.available === false}
-                  onClick={check}
-                >
-                  {t(preparing ? 'local.checking' : 'local.check')}
-                </Button>
-              </div>
+              {body}
             </div>
           }
         />

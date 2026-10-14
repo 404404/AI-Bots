@@ -1,4 +1,42 @@
-import type { ComputerRuntimeRunner } from './provider.js';
+import { spawn } from 'node:child_process';
+
+export interface SystemCommandResult {
+  readonly code: number;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+export interface SystemCommandRunner {
+  run(argv: readonly string[]): Promise<SystemCommandResult>;
+  runStreaming?(
+    argv: readonly string[],
+    onChunk: (chunk: string) => void,
+  ): Promise<SystemCommandResult>;
+}
+
+export function createSpawnRunner(): SystemCommandRunner {
+  const once = (
+    argv: readonly string[],
+    onChunk?: (chunk: string) => void,
+  ): Promise<SystemCommandResult> =>
+    new Promise((resolve) => {
+      const child = spawn(argv[0] ?? '', argv.slice(1), { stdio: ['ignore', 'pipe', 'pipe'] });
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (chunk: Buffer) => {
+        stdout += chunk.toString();
+        onChunk?.(chunk.toString());
+      });
+      child.stderr.on('data', (chunk: Buffer) => {
+        if (stderr.length < 20_000) stderr += chunk.toString();
+      });
+      child.on('error', (error) =>
+        resolve({ code: -1, stdout, stderr: `${stderr}${String(error)}` }),
+      );
+      child.on('close', (code) => resolve({ code: code ?? -1, stdout, stderr }));
+    });
+  return { run: (argv) => once(argv), runStreaming: (argv, onChunk) => once(argv, onChunk) };
+}
 
 export type SystemInstallAccess = 'root' | 'sudo' | 'none';
 
@@ -12,7 +50,7 @@ export function aptInstallCommand(packages: readonly string[]): string {
 }
 
 export async function systemInstallAccess(
-  runner: ComputerRuntimeRunner,
+  runner: SystemCommandRunner,
   host: { platform?: string; uid?: number | undefined } = {},
 ): Promise<SystemInstallAccess> {
   if ((host.platform ?? process.platform) !== 'linux') return 'none';
@@ -45,7 +83,7 @@ export function parseAptStatus(
 export async function installSystemPackages(options: {
   packages: readonly string[];
   access: SystemInstallAccess;
-  runner: ComputerRuntimeRunner;
+  runner: SystemCommandRunner;
   onProgress?: ((progress: SystemInstallProgress) => void) | undefined;
 }): Promise<void> {
   if (options.access === 'none')

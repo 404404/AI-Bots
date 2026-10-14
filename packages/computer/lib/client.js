@@ -1856,8 +1856,8 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region packages/computer/src/client/local-computer.tsx
-		function formatMiB(bytes) {
+		//#region packages/client/src/client/missing-packages.tsx
+		function formatProgressMiB(bytes) {
 			return `${(bytes / 1048576).toFixed(1)} MB`;
 		}
 		function ProgressLine({ percent, label }) {
@@ -1871,6 +1871,49 @@ window.__ModuleLoader__.load({
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: label })]
 			});
 		}
+		function MissingPackages({ command, access, installing, busy = false, onInstall, labels, children }) {
+			const [copied, setCopied] = (0, react.useState)(false);
+			const copy = () => {
+				navigator.clipboard?.writeText(command).then(() => setCopied(true));
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "bhxrvj5dj bhx2zm2ee bhx619ttb bhxh8yej3",
+				children: [
+					installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+						tone: "warning",
+						children: labels.missing
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
+						percent: installing.percent,
+						label: installing.label
+					}),
+					access === "none" && installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: labels.manual }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+						className: "bhx1ghz6dp bhxh8yej3 bhx9f619 bhx89kiln bhx1w8vjyx bhxamr80a bhx1xojs80 bhx24dycr bhxmz2490 bhxgowt09 bhx12cu2lo bhx126k92a bhxj0a0fe",
+						children: command
+					})] }) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "bhx78zum5 bhx12e6dxb bhx1a02dak",
+						children: [
+							access !== "none" && installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								size: "sm",
+								variant: "primary",
+								disabled: busy,
+								onClick: onInstall,
+								children: labels.install
+							}) : null,
+							access === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								size: "sm",
+								variant: "outline",
+								onClick: copy,
+								children: copied ? labels.copied : labels.copy
+							}) : null,
+							children
+						]
+					})
+				]
+			});
+		}
+		//#endregion
+		//#region packages/computer/src/client/local-computer.tsx
 		function LocalComputerStatus({ t }) {
 			const [payload, setPayload] = (0, react.useState)();
 			const [busy, setBusy] = (0, react.useState)(false);
@@ -1930,33 +1973,45 @@ window.__ModuleLoader__.load({
 				target: "local"
 			});
 			const install = () => post("/api/computer/install-packages", { authorize: true });
-			const [copied, setCopied] = (0, react.useState)(false);
-			const copy = (command) => {
-				navigator.clipboard?.writeText(command).then(() => setCopied(true));
-			};
 			const granted = payload?.status?.state === "running";
 			const download = payload?.status?.progress;
-			const progress = installing ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
+			const installLabel = installing ? {
 				percent: payload?.install?.percent ?? 0,
 				label: t("local.installing", {
 					packages: (payload?.install?.packages ?? []).join(", "),
 					percent: String(payload?.install?.percent ?? 0)
 				})
-			}) : payload?.status?.phase === "starting" && (download?.totalBytes ?? 0) > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
+			} : void 0;
+			const checkButton = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				size: "sm",
+				variant: "outline",
+				disabled: preparing || payload?.probe?.available === false,
+				onClick: check,
+				children: t(preparing ? "local.checking" : "local.check")
+			});
+			const packages = installing ? payload?.install?.packages ?? [] : missing?.packages ?? [];
+			const body = packages.length > 0 && (missing !== void 0 || installing) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MissingPackages, {
+				command: missing?.command ?? "",
+				access: missing?.install ?? "root",
+				installing: installLabel,
+				busy,
+				onInstall: install,
+				labels: {
+					missing: t("local.missing", { packages: packages.join(", ") }),
+					manual: t("local.missing.manual"),
+					install: t("local.install"),
+					copy: t("local.copy"),
+					copied: t("local.copied")
+				},
+				children: checkButton
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [payload?.status?.phase === "starting" && (download?.totalBytes ?? 0) > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
 				percent: download?.percent ?? 0,
 				label: t("local.downloading", {
 					percent: String(download?.percent ?? 0),
-					downloaded: formatMiB(download?.downloadedBytes ?? 0),
-					total: formatMiB(download?.totalBytes ?? 0)
+					downloaded: formatProgressMiB(download?.downloadedBytes ?? 0),
+					total: formatProgressMiB(download?.totalBytes ?? 0)
 				})
-			}) : null;
-			const missingCard = missing === void 0 || installing || (missing.packages ?? []).length === 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
-				tone: "warning",
-				children: t("local.missing", { packages: (missing.packages ?? []).join(", ") })
-			}), missing.install === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: t("local.missing.manual") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
-				className: "bhx1ghz6dp bhxh8yej3 bhx9f619 bhx89kiln bhx1w8vjyx bhxamr80a bhx1xojs80 bhx24dycr bhxmz2490 bhxgowt09 bhx12cu2lo bhx126k92a bhxj0a0fe",
-				children: missing.command
-			})] }) : null] });
+			}) : null, checkButton] });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				ref: resource,
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SidebarCardList, {
@@ -1983,39 +2038,10 @@ window.__ModuleLoader__.load({
 						meta: t(granted ? "local.granted" : "local.description"),
 						detail: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: "bhxrvj5dj bhx2zm2ee bhx619ttb",
-							children: [
-								failure === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
-									tone: "danger",
-									children: failure
-								}),
-								progress,
-								missingCard,
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: "bhx78zum5 bhx12e6dxb bhx1a02dak",
-									children: [
-										missing !== void 0 && missing.install !== "none" && !installing ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-											size: "sm",
-											variant: "primary",
-											disabled: busy,
-											onClick: install,
-											children: t("local.install")
-										}) : null,
-										missing?.install === "none" && missing.command !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-											size: "sm",
-											variant: "outline",
-											onClick: () => copy(missing.command ?? ""),
-											children: t(copied ? "local.copied" : "local.copy")
-										}) : null,
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-											size: "sm",
-											variant: "outline",
-											disabled: preparing || payload?.probe?.available === false,
-											onClick: check,
-											children: t(preparing ? "local.checking" : "local.check")
-										})
-									]
-								})
-							]
+							children: [failure === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+								tone: "danger",
+								children: failure
+							}), body]
 						})
 					})
 				})

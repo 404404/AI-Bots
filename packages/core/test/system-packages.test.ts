@@ -4,8 +4,8 @@ import {
   installSystemPackages,
   parseAptStatus,
   systemInstallAccess,
-} from '../src/system-packages.js';
-import type { ComputerRuntimeRunner } from '../src/provider.js';
+  type SystemCommandRunner,
+} from '../src/system/system-packages.js';
 
 const result = (code: number, stderr = '') => ({ code, stdout: '', stderr });
 
@@ -39,7 +39,7 @@ describe('system package install', () => {
 
   it('runs apt-get update then install through sudo -n and streams progress', async () => {
     const calls: string[][] = [];
-    const runner: ComputerRuntimeRunner = {
+    const runner: SystemCommandRunner = {
       run: vi.fn(async () => result(0)),
       runStreaming: vi.fn(async (argv: readonly string[], onChunk: (chunk: string) => void) => {
         calls.push([...argv]);
@@ -60,7 +60,7 @@ describe('system package install', () => {
   });
 
   it('stops at a failed step and never installs without administrator access', async () => {
-    const runner: ComputerRuntimeRunner = {
+    const runner: SystemCommandRunner = {
       run: vi.fn(async () => result(0)),
       runStreaming: vi.fn(async () => result(100, 'E: Could not get lock')),
     };
