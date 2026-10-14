@@ -504,6 +504,7 @@ export interface BotAgentAdapter {
   runOrchestrator(run: OrchestratorAgentRun): Promise<void>;
 
   steerOrchestrator?(botSlug: string, text: string): boolean;
+  stopOrchestratorTurn?(botSlug: string): string | undefined;
   runAssignment(run: AssignmentAgentRun): Promise<void>;
   requestAssignment(run: AssignmentAgentRun): AssignmentRequestDelivery;
   stopAssignment?(sessionId: string): Promise<void>;
@@ -598,6 +599,7 @@ export interface BotRuntime {
   resumePendingDigests?(botSlug: string): void;
 
   stopBot?(botSlug: string): Promise<void>;
+  stopTurn?(botSlug: string): Promise<{ sessionId: string } | undefined>;
   whenIdle(): Promise<void>;
   close(): Promise<void>;
 }
@@ -1136,6 +1138,8 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #triageContinuation: boolean;
   readonly #tails = new Map<string, Promise<unknown>>();
   readonly #activeTurns = new Map<string, Promise<void>>();
+  readonly #stoppedTurns = new Set<string>();
+  readonly #stopNotices = new Map<string, string>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
   readonly #turnSources = new Map<
@@ -3589,6 +3593,21 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#pendingHarvests.delete(botSlug);
   }
 
+  async stopTurn(botSlug: string): Promise<{ sessionId: string } | undefined> {
+    const turn = this.#turnSources.get(botSlug);
+    const active = this.#activeTurns.get(botSlug);
+    if (this.#closed || turn === undefined || active === undefined) return undefined;
+    const sessionId = this.#agents.stopOrchestratorTurn?.(botSlug);
+    if (sessionId === undefined) return undefined;
+    this.#stoppedTurns.add(botSlug);
+    this.#stopNotices.set(
+      botSlug,
+      `[Host: the Human stopped your previous turn at ${this.#now().toISOString()} before it finished. Do not resume that work unless they ask again.]\n\n`,
+    );
+    await active.catch(() => undefined);
+    return { sessionId };
+  }
+
   async whenIdle(): Promise<void> {
     for (;;) {
       const pending = [
@@ -3864,7 +3883,10 @@ class BotRuntimeImplementation implements BotRuntime {
         message: (() => {
           const human =
             channelId === undefined ? undefined : this.#channels.listHumanMembers(channelId)[0];
+          const stopped = this.#stopNotices.get(bot.slug) ?? '';
+          this.#stopNotices.delete(bot.slug);
           return (
+            stopped +
             this.#interruptedDmNotice(bot.slug, channelId) +
             (human === undefined || human.displayName === 'Human'
               ? body
@@ -4214,7 +4236,7 @@ class BotRuntimeImplementation implements BotRuntime {
       this.#settleHarvestHandled(bot.slug, [...readAdmissions]);
       this.#notifyReadAdmissions(readAdmissions);
       if (!this.#triageRunning.has(bot.slug)) this.#triageBaseline.delete(bot.slug);
-      this.#queueTriage(bot.slug);
+      if (!this.#stoppedTurns.has(bot.slug)) this.#queueTriage(bot.slug);
     } catch (error) {
       this.#setObserved(memoryEventIds, null);
       this.#settleHarvestFailure(bot.slug, [...readAdmissions], String(error));
@@ -4229,8 +4251,10 @@ class BotRuntimeImplementation implements BotRuntime {
     } finally {
       await processing?.stop();
       if (this.#typingTurns.get(bot.slug) === processing) this.#typingTurns.delete(bot.slug);
-      if (this.#turnSources.get(bot.slug)?.eventIds === turnSources)
+      if (this.#turnSources.get(bot.slug)?.eventIds === turnSources) {
         this.#turnSources.delete(bot.slug);
+        this.#stoppedTurns.delete(bot.slug);
+      }
       if (observeMemory) this.#activeMemoryEvents.delete(bot.slug);
       this.#originalAttachments.clear(orchestrator.sessionId);
     }

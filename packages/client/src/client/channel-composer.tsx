@@ -24,6 +24,7 @@ import {
   IconChevronDownOutlineRegular,
   IconPaperclipOutlineRegular,
   IconSendOutlineRegular,
+  IconStopFillRegular,
   ImageLightbox,
   Tooltip,
   fileSizeText,
@@ -67,6 +68,7 @@ import {
 } from './channel-refs.js';
 import type { ChannelAttachmentRef } from './store.js';
 import { deleteAttachmentReference, insertAttachmentReferences } from './attachment-refs.js';
+import type { ComposerSendKey } from './composer-send-key.js';
 
 function sessionLatestSummary(session: PersonaBotSessionActivity, t: BotHarnessTranslate): string {
   if (session.activity === undefined) return personaBotActivitySummary(session.state, undefined, t);
@@ -84,6 +86,13 @@ import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 import { SessionRoleIcon } from './session-role-icon.js';
 
+export interface ChannelComposerStop {
+  label?: string | undefined;
+  stopping: boolean;
+  notice?: string | undefined;
+  onStop(): void;
+}
+
 export interface ChannelComposerUpload {
   id: string;
   file: File;
@@ -95,6 +104,7 @@ export interface ChannelComposerUpload {
 
 export interface ChannelComposerProps {
   context?: ComposerContext | undefined;
+  sendKey?: ComposerSendKey | undefined;
   value: string;
   placeholder: string;
   sending: boolean;
@@ -107,6 +117,7 @@ export interface ChannelComposerProps {
   activity?: ChannelComposerActivity | undefined;
   activityConcealed?: boolean | undefined;
   allBotNotice?: string | undefined;
+  stop?: ChannelComposerStop | undefined;
   allBotPreview?: AllBotPreview | undefined;
   mentionCandidates?: readonly BotSummary[] | undefined;
   mentions?: readonly SelectedMention[] | undefined;
@@ -313,11 +324,14 @@ function ComposerFileAttachment({
 }
 
 export function shouldSubmitComposerKey(
-  event: Pick<KeyboardEvent<HTMLElement>, 'key' | 'shiftKey' | 'nativeEvent'>,
+  event: Pick<KeyboardEvent<HTMLElement>, 'key' | 'shiftKey' | 'nativeEvent'> &
+    Partial<Pick<KeyboardEvent<HTMLElement>, 'ctrlKey' | 'metaKey'>>,
+  sendKey: ComposerSendKey = 'enter',
 ): boolean {
   return (
     event.key === 'Enter' &&
     !event.shiftKey &&
+    (sendKey === 'enter' || event.ctrlKey === true || event.metaKey === true) &&
     !event.nativeEvent.isComposing &&
     event.nativeEvent.keyCode !== 229
   );
@@ -530,6 +544,7 @@ function PersonaBotActivityStatus({
 
 export function ChannelComposer({
   context,
+  sendKey = 'enter',
   value,
   placeholder,
   sending,
@@ -542,6 +557,7 @@ export function ChannelComposer({
   activity,
   activityConcealed = false,
   allBotNotice,
+  stop,
   allBotPreview,
   mentionCandidates = [],
   mentions = [],
@@ -849,6 +865,10 @@ export function ChannelComposer({
     (body) => {
       const element = body.querySelector<HTMLElement>('.bh-composer-input');
       if (replyId !== undefined || focusSignal > 0) element?.focus();
+      if (focusSignal > 0 && element !== null && element === richRef.current)
+        setRichSelection(element, readRichMentionDraft(element).value.length);
+      else if (focusSignal > 0 && element instanceof HTMLTextAreaElement)
+        element.setSelectionRange(element.value.length, element.value.length);
       if (element === null || typeof ResizeObserver === 'undefined') return;
 
       let width = element.clientWidth;
@@ -1022,8 +1042,9 @@ export function ChannelComposer({
     if (
       input instanceof HTMLDivElement &&
       event.key === 'Enter' &&
-      event.shiftKey &&
-      !event.nativeEvent.isComposing
+      !event.nativeEvent.isComposing &&
+      event.nativeEvent.keyCode !== 229 &&
+      !shouldSubmitComposerKey(event, sendKey)
     ) {
       event.preventDefault();
       insertRichPlainText(input, '\n');
@@ -1042,7 +1063,7 @@ export function ChannelComposer({
       event.preventDefault();
       return;
     }
-    if (!shouldSubmitComposerKey(event)) return;
+    if (!shouldSubmitComposerKey(event, sendKey)) return;
     if (mentions.some((item) => item.kind === 'all-bots' && item.preview.recipients.length === 0)) {
       event.preventDefault();
       return;
@@ -1056,6 +1077,11 @@ export function ChannelComposer({
       {allBotNotice === undefined ? null : (
         <div className="bh-muted" role="status">
           {allBotNotice}
+        </div>
+      )}
+      {stop?.notice === undefined ? null : (
+        <div className="bh-muted" role="status">
+          {stop.notice}
         </div>
       )}
       {channelQuery !== undefined && channelOptions.length > 0 ? (
@@ -1349,27 +1375,45 @@ export function ChannelComposer({
           <IconPaperclipOutlineRegular size={16} />
         </button>
         <div className="bh-composer-footer">
-          <Button
-            className="bh-send-btn"
-            variant="primary"
-            size="sm"
-            icon={<IconSendOutlineRegular size={16} />}
-            aria-label={sending ? t('message.sending') : t('composer.send')}
-            disabled={
-              (value.trim().length === 0 && attachments.length === 0) ||
-              sending ||
-              mentions.some(
-                (item) => item.kind === 'all-bots' && item.preview.recipients.length === 0,
-              ) ||
-              attachments.some((item) => item.status !== 'ready')
-            }
-            onClick={() => {
-              if (shortcutOptions.length > 0) {
-                const shortcut = shortcutOptions[shortcutIndex % shortcutOptions.length];
-                if (shortcut !== undefined) chooseShortcut(shortcut);
-              } else void onSubmit();
-            }}
-          />
+          {stop?.label !== undefined &&
+          value.trim().length === 0 &&
+          attachments.length === 0 &&
+          shortcutOptions.length === 0 ? (
+            <Tooltip label={stop.label} side="top" portal delayMs={350}>
+              <Button
+                className="bh-send-btn bh-stop-btn"
+                variant="primary"
+                size="sm"
+                icon={<IconStopFillRegular size={14} />}
+                aria-label={stop.stopping ? t('composer.stopping') : stop.label}
+                aria-busy={stop.stopping || undefined}
+                disabled={stop.stopping}
+                onClick={stop.onStop}
+              />
+            </Tooltip>
+          ) : (
+            <Button
+              className="bh-send-btn"
+              variant="primary"
+              size="sm"
+              icon={<IconSendOutlineRegular size={16} />}
+              aria-label={sending ? t('message.sending') : t('composer.send')}
+              disabled={
+                (value.trim().length === 0 && attachments.length === 0) ||
+                sending ||
+                mentions.some(
+                  (item) => item.kind === 'all-bots' && item.preview.recipients.length === 0,
+                ) ||
+                attachments.some((item) => item.status !== 'ready')
+              }
+              onClick={() => {
+                if (shortcutOptions.length > 0) {
+                  const shortcut = shortcutOptions[shortcutIndex % shortcutOptions.length];
+                  if (shortcut !== undefined) chooseShortcut(shortcut);
+                } else void onSubmit();
+              }}
+            />
+          )}
         </div>
       </div>
       {context?.content}
