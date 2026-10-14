@@ -30,7 +30,6 @@ export function Button({
       disabled={disabled || busy}
       onPress={onPress}
       style={({ pressed }) => ({
-        flexGrow: 1,
         minHeight: theme.touch,
         alignItems: 'center',
         justifyContent: 'center',

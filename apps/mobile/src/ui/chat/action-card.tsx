@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import type { ColorRole } from '../design/theme';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
+import { ChevronRightIcon } from '../shell/icons';
 
 export type CardLineTone = 'success' | 'danger' | 'subtle';
 
@@ -119,5 +120,30 @@ export function CardLine({
 }
 
 export function CardButtons({ children }: { children: ReactNode }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 }}>{children}</View>;
+  return <View style={{ gap: space.x3 }}>{children}</View>;
+}
+
+export function CardLink({ label, onPress }: { label: string; onPress(): void }) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={space.x3}
+      style={({ pressed }) => ({
+        alignSelf: 'flex-start',
+        minHeight: theme.touch,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.x2,
+        opacity: pressed ? 0.6 : 1,
+      })}
+    >
+      <Text variant="meta" strong>
+        {label}
+      </Text>
+      <ChevronRightIcon color={theme.color.muted} size={theme.type.meta.size} />
+    </Pressable>
+  );
 }
