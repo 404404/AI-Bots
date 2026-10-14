@@ -404,6 +404,17 @@ export function createDshImProvider(
       name: info.account.name ?? ref,
       fingerprint: info.account.fingerprint,
       connected: info.connected,
+      ...(platform === 'qq'
+        ? {
+            postSupported:
+              host.receiptVersion === 1 &&
+              [
+                'proactive-text-checked',
+                'proactive-receipt-checked',
+                'proactive-fence-checked',
+              ].every((capability) => info.capabilities.includes(capability)),
+          }
+        : {}),
       ...(['feishu', 'slack'].includes(platform)
         ? {
             reactionSupported:
@@ -1400,7 +1411,8 @@ export function createDshImProvider(
       : {}),
     ...((platform === 'feishu' ||
       platform === 'slack' ||
-      ((platform === 'weixin' || platform === 'qq') && host.postFenceVersion === 1)) &&
+      platform === 'qq' ||
+      (platform === 'weixin' && host.postFenceVersion === 1)) &&
     host.receiptVersion === 1
       ? {
           async post(input: Parameters<NonNullable<MessagingProvider['post']>>[0]) {
@@ -1409,6 +1421,8 @@ export function createDshImProvider(
             if (info.account.fingerprint !== input.fingerprint)
               throw new MessagingProviderError('account-changed', 'not-started');
             if (!info.capabilities.includes('proactive-receipt-checked'))
+              throw new MessagingProviderError('capability-unavailable', 'not-started');
+            if (platform === 'qq' && !info.capabilities.includes('proactive-text-checked'))
               throw new MessagingProviderError('capability-unavailable', 'not-started');
             if (
               (platform === 'weixin' || platform === 'qq') &&

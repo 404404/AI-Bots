@@ -25,7 +25,6 @@ async function fixture() {
   const transport: DshImOutboundService = {
     contractVersion: 1,
     receiptVersion: 1,
-    postFenceVersion: 1,
     replyContextVersion: 1,
     replyReceiptVersion: 1,
     replyFenceVersion: 1,
@@ -266,10 +265,24 @@ it('QQ proactive receipt must match the original app-scoped saved group', async 
   await expect(
     fx.core.externalMessaging.post('bea', fx.grant.id, 'borrowed_result_1154', 'Result'),
   ).rejects.toThrow('grant-unavailable');
-  expect(
-    createDshImProvider({ ...fx.transport, postFenceVersion: undefined }, 'qq')!.post,
-  ).toBeUndefined();
 });
+
+it.each(['proactive-text-checked', 'proactive-receipt-checked', 'proactive-fence-checked'])(
+  'a QQ account without %s is unavailable for posting and causes no native send',
+  async (missing) => {
+    const fx = await fixture();
+    const describe = fx.transport.describeBot;
+    fx.transport.describeBot = async (ref) => {
+      const info = await describe(ref);
+      return { ...info, capabilities: info.capabilities.filter((cap) => cap !== missing) };
+    };
+    expect((await fx.core.externalMessaging.snapshot('ada')).grants[0]?.canPost).toBe(false);
+    expect(
+      await fx.core.externalMessaging.post('ada', fx.grant.id, 'unqualified_1154', 'Result'),
+    ).toMatchObject({ state: 'failed', reason: 'capability-unavailable' });
+    expect(fx.transport.sendChecked).not.toHaveBeenCalled();
+  },
+);
 
 it('a final QQ revocation refuses an unstarted proactive effect', async () => {
   const fx = await fixture();

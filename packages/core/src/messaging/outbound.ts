@@ -1981,6 +1981,7 @@ export function createOutboundMessaging(options: {
             try {
               const checked = await check(value);
               canPost =
+                checked.inspected.account.postSupported !== false &&
                 (value.origin === 'implicit'
                   ? checked.provider.postConversation !== undefined
                   : checked.provider.post !== undefined ||
