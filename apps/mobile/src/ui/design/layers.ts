@@ -8,6 +8,7 @@ export type Layer = {
   pressed: string;
   selected: string;
   chosen: string;
+  danger: string;
   inset: string;
   edge: string;
   divider: string;
@@ -22,6 +23,7 @@ export const LAYER_PARENT: Record<LayerName, LayerName | undefined> = {
 };
 
 const CHOSEN: Record<ColorScheme, number> = { light: 0.13, dark: 0.3 };
+const DANGER: Record<ColorScheme, number> = { light: 2, dark: 1 };
 
 type Rgba = { r: number; g: number; b: number; a: number };
 
@@ -92,6 +94,7 @@ export function layers(
     hover: string;
     selected: string;
     accent: string;
+    dangerSoft: string;
     border: string;
     borderField: string;
     divider: string;
@@ -125,6 +128,10 @@ export function layers(
       chosen: separate(
         (strength) => tint(fill, color.accent, CHOSEN[scheme] * strength),
         [selected],
+      ),
+      danger: separate(
+        (strength) => over(color.dangerSoft, fill, DANGER[scheme] * strength),
+        [pressed, selected],
       ),
       edge: over(name === 'field' ? color.borderField : color.border, fill),
       divider: over(color.divider, fill),
