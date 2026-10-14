@@ -1500,50 +1500,41 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   ctx.on(
     'tools/execute',
     async (execution, next) => {
-      if (
-        execution.agent === undefined ||
-        core.ownership.resolve(execution.agent.session.id)?.rootRole !== 'assignment' ||
-        core.runtime.runAssignmentTool === undefined
-      )
-        return next();
-      return core.runtime.runAssignmentTool(
-        execution.agent.session.id,
-        execution.callId,
-        execution.token,
-        execution.signal,
-        () => {
-          const approvalGuard = approvedCalls.get(execution.token);
-          if (approvalGuard && !approvalGuard(execution.name, execution.arguments))
-            throw new Error('Approval authority or operation changed before execution');
-          const denial = grantToolExecutionDenial(
-            core,
-            execution.agent!.session,
-            ctx.get('sandboxPolicy'),
-            ctx.get('approval'),
-            execution.name,
-            execution.arguments,
-            approvalGuard !== undefined,
-          );
-          if (denial !== undefined) throw new Error(denial);
-          return next();
-        },
-      );
-    },
-    { global: true },
-  );
-  ctx.on(
-    'tools/execute',
-    async (execution, next) => {
-      if (
-        execution.agent === undefined ||
-        core.ownership.resolve(execution.agent.session.id) === undefined ||
-        !isDshGovernedTool(execution.name) ||
-        requiresHumanToolApproval(execution.name, execution.arguments)
-      )
-        return next();
-      const untrack = toolApproval.track(execution);
+      const owner =
+        execution.agent === undefined
+          ? undefined
+          : core.ownership.resolve(execution.agent.session.id);
+      if (owner === undefined) return next();
+      const untrack =
+        isDshGovernedTool(execution.name) &&
+        !requiresHumanToolApproval(execution.name, execution.arguments)
+          ? toolApproval.track(execution)
+          : undefined;
       try {
-        return await next();
+        if (owner.rootRole !== 'assignment' || core.runtime.runAssignmentTool === undefined)
+          return await next();
+        return await core.runtime.runAssignmentTool(
+          execution.agent!.session.id,
+          execution.callId,
+          execution.token,
+          execution.signal,
+          () => {
+            const approvalGuard = approvedCalls.get(execution.token);
+            if (approvalGuard && !approvalGuard(execution.name, execution.arguments))
+              throw new Error('Approval authority or operation changed before execution');
+            const denial = grantToolExecutionDenial(
+              core,
+              execution.agent!.session,
+              ctx.get('sandboxPolicy'),
+              ctx.get('approval'),
+              execution.name,
+              execution.arguments,
+              approvalGuard !== undefined,
+            );
+            if (denial !== undefined) throw new Error(denial);
+            return next();
+          },
+        );
       } finally {
         untrack?.();
       }
