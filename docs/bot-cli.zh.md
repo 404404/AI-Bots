@@ -212,6 +212,29 @@ deepseekbot grants <bot-id>
 
 `browser-open` 启动 Bot 的浏览器（需要已开启浏览器权限），返回标签页和查看地址。`browser-frame` 把当前画面保存到一个绝对路径，并报告大小和视口，Agent 可以借此看到 Bot 看到的内容。`browser-takeover --enabled` 暂停 Bot 的浏览器以便人工操作，`--disabled` 交还。`computer-start` 带上面板按钮发送的同一个显式授权；用 `computer-status` 读取结果，被拒时 `status.detail` 会说明原因，例如缺少系统权限或显示器。`grants` 从在线 Host 列出 Bot 的工作区授权。路由拒绝时保留 Host 的错误码，或返回 `host-refused` 加上它的说明。
 
+### Human Inbox、委派、会话与审批规则
+
+```bash
+deepseekbot inbox --category action --limit 20
+deepseekbot inbox-status
+deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
+deepseekbot inbox-ignore <report-source-event-id>
+deepseekbot assignment-context <bot-id> --session <session-id> --source <source-event-id>
+deepseekbot channel-assignments <group-channel>
+deepseekbot channel-assign <channel> --section <section-id> --index 0
+deepseekbot session-ids
+deepseekbot session-owner <session-id>
+deepseekbot session-archive-set <bot-id> --session <session-id> --archived
+deepseekbot tool-approval-rules <bot-id>
+deepseekbot tool-approval-rule-revoke <bot-id> --rule <rule-id> --confirm
+deepseekbot grant-revoke <bot-id> --grant <grant-id> --confirm
+deepseekbot grant-write-set <bot-id> --grant <grant-id> --disabled
+deepseekbot private-mcp-set <bot-id> --server <name> --enabled
+deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
+```
+
+`inbox` 返回 Human Inbox 的一页（`items` 和 `nextCursor`），可以像 Inbox 的标签页一样按 `--category`（`action`、`info`、`unread`、`replies`、`handled`）、`--bot` 或 `--channel` 筛选。`inbox-dismiss` 接收条目的 `id`，条目带有 `sourceEventId` 时把它作为 `--source-key` 传入；`inbox-ignore` 把一条仅供知悉的委派汇报标为已读。`assignment-context` 读取 `assignment-report` 条目背后的汇报。`channel-assignments` 列出群组 Channel 的委派工作；`channel-assign` 把 Channel 移到侧栏的某个分组（`--unsectioned` 移出分组）。`session-ids` 列出 Bot 拥有的根会话，`session-owner` 说明某个会话属于哪个 Bot、以什么角色运行。`tool-approval-rules` 列出 Bot 的"始终允许"规则。撤销规则、工作区授权或私有 MCP 服务器都需要 `--confirm`，与 Web UI 的确认一致。指定了 Host 时，`grant-revoke` 和 `grant-write-set` 经由 Host 执行；使用 `--home` 时仍是离线维护命令。私有 MCP 服务器由 `ask-secret-accounts` 列出；Host 不认识的名称会以 `private-mcp-server-unavailable` 失败。
+
 ### 分层排查：经过模型与绕过模型
 
 同一个任务跑两遍，就能定位出问题的那一层：

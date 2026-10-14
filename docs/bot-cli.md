@@ -217,6 +217,29 @@ deepseekbot grants <bot-id>
 
 `browser-open` starts the Bot's Browser (Browser Access must be on) and returns its tab and viewer URL. `browser-frame` saves the current picture to an absolute path and reports its size and viewport, so an agent can look at what the Bot sees. `browser-takeover --enabled` pauses the Bot's Browser for Human input and `--disabled` hands it back. `computer-start` carries the explicit authorization the panel button sends; read the result with `computer-status`, whose `status.detail` explains a refusal such as a missing OS permission or display. `grants` lists a Bot's Workspace Grants from a live Host. Route refusals keep the Host's code, or `host-refused` with its message.
 
+### Human Inbox, assignments, Sessions and approval rules
+
+```bash
+deepseekbot inbox --category action --limit 20
+deepseekbot inbox-status
+deepseekbot inbox-dismiss <item-id> --source-key <source-event-id>
+deepseekbot inbox-ignore <report-source-event-id>
+deepseekbot assignment-context <bot-id> --session <session-id> --source <source-event-id>
+deepseekbot channel-assignments <group-channel>
+deepseekbot channel-assign <channel> --section <section-id> --index 0
+deepseekbot session-ids
+deepseekbot session-owner <session-id>
+deepseekbot session-archive-set <bot-id> --session <session-id> --archived
+deepseekbot tool-approval-rules <bot-id>
+deepseekbot tool-approval-rule-revoke <bot-id> --rule <rule-id> --confirm
+deepseekbot grant-revoke <bot-id> --grant <grant-id> --confirm
+deepseekbot grant-write-set <bot-id> --grant <grant-id> --disabled
+deepseekbot private-mcp-set <bot-id> --server <name> --enabled
+deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
+```
+
+`inbox` returns one page of the Human Inbox (`items` and `nextCursor`), filtered like the Inbox tabs by `--category` (`action`, `info`, `unread`, `replies`, `handled`), `--bot` or `--channel`. `inbox-dismiss` takes an item's `id` and, when the item has one, its `sourceEventId` as `--source-key`; `inbox-ignore` marks an informational assignment report as read. `assignment-context` reads the report behind an `assignment-report` item. `channel-assignments` lists a group Channel's assignment work; `channel-assign` moves a Channel into a sidebar section (`--unsectioned` takes it out). `session-ids` lists the root Sessions Bots own and `session-owner` names a Session's Bot and role. `tool-approval-rules` lists a Bot's "always allow" rules. Revoking a rule, a Workspace Grant or a private MCP server needs `--confirm`, as the Web UI asks for confirmation. With a Host targeted, `grant-revoke` and `grant-write-set` go through it; with `--home` they stay offline maintenance commands. Private MCP servers are listed by `ask-secret-accounts`; a name the Host does not know fails with `private-mcp-server-unavailable`.
+
 ### Debug by layer: with and without the model
 
 Run the same task twice to find the layer that fails:
