@@ -13,9 +13,9 @@ import {
   ShortcutHelp,
   ShortcutHelpList,
   ShortcutHelpView,
-  shortcutKeyLabel,
 } from '../src/client/shortcut-help.js';
 import { ShortcutBindings } from '../src/client/shortcut-bindings.js';
+import { shortcutKeyLabel } from '../src/client/ds/kbd.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -39,13 +39,21 @@ describe('shortcut list', () => {
     expect(row('recall')?.textContent).toContain('When the composer is empty');
     expect(row('quick-switcher')?.textContent).toBe('Quick switcherCtrlK');
     expect(row('unread-next')?.textContent).toBe(
-      'Next unread conversationSkips muted conversationsAltShift↓',
+      'Next unread conversationSkips muted conversationsAlt⇧↓',
     );
+    expect(row('send')?.textContent).toBe('Send↵');
+    expect(row('newline')?.textContent).toBe('New line⇧↵');
+    expect(row('newline')?.querySelector('kbd')?.getAttribute('title')).toBe('Shift');
     expect(host.querySelectorAll('h3')).toHaveLength(2);
     expect(host.querySelector('button')).toBeNull();
     act(() => root.render(createElement(ShortcutHelpList, { t, apple: true })));
     expect(row('help')?.textContent).toBe('Show keyboard shortcuts?or⌘/');
     expect(row('unread-prev')?.textContent).toContain('⌥⇧↑');
+    act(() =>
+      root.render(createElement(ShortcutHelpList, { t, apple: true, sendKey: 'mod-enter' })),
+    );
+    expect(row('send')?.textContent).toBe('Send⌘↵');
+    expect(row('newline')?.textContent).toBe('New line↵');
     act(() => root.unmount());
   });
 
@@ -53,9 +61,8 @@ describe('shortcut list', () => {
     expect(shortcutKeyLabel('Mod', true)).toBe('⌘');
     expect(shortcutKeyLabel('Mod', false)).toBe('Ctrl');
     expect(shortcutKeyLabel('Alt', true)).toBe('⌥');
-    expect(shortcutKeyLabel('Shift', true)).toBe('⇧');
-    expect(shortcutKeyLabel('Shift', false)).toBe('Shift');
-    expect(shortcutKeyLabel('Enter', true)).toBe('Enter');
+    expect(shortcutKeyLabel('Enter', true)).toBe('↵');
+    expect(shortcutKeyLabel('Shift', false)).toBe('⇧');
   });
 
   it('records, refuses and resets a changed shortcut', () => {
@@ -95,7 +102,7 @@ describe('shortcut list', () => {
     press({ key: 'b', code: 'KeyB', ctrlKey: true, shiftKey: true });
     expect(recorder()).toBeNull();
     expect(row().querySelector('[role="status"]')?.textContent).toBe('Saved');
-    expect(row().textContent).toContain('CtrlShiftB');
+    expect(row().textContent).toContain('Ctrl⇧B');
     expect(bindings.isCustom('bot-mode')).toBe(true);
     expect(leaked).toBe(0);
 

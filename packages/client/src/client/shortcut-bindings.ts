@@ -1,3 +1,4 @@
+import { isApplePlatform, shortcutKeyLabel, shortcutKeyName } from './ds/kbd.js';
 import type { ConfigStorage } from './roster-config.js';
 
 export const SHORTCUT_BINDINGS_KEY = 'botharness.shortcuts';
@@ -58,19 +59,6 @@ export interface ShortcutKeyboardEvent {
   readonly isComposing?: boolean;
   readonly defaultPrevented?: boolean;
   getModifierState?(key: string): boolean;
-}
-
-export function isMacPlatform(navigatorLike?: {
-  platform?: string;
-  userAgentData?: { platform?: string } | undefined;
-}): boolean {
-  const source =
-    navigatorLike ??
-    (typeof navigator === 'undefined'
-      ? undefined
-      : (navigator as Navigator & { userAgentData?: { platform?: string } }));
-  const platform = source?.userAgentData?.platform ?? source?.platform ?? '';
-  return /mac|iphone|ipad|ipod/iu.test(platform);
 }
 
 const MODIFIER_CODE = /^(?:Shift|Control|Alt|Meta|OS|CapsLock|Fn)/u;
@@ -150,16 +138,11 @@ export function bindingKeys(binding: ShortcutBinding): string[] {
   ];
 }
 
-export function modifierLabel(key: string, mac: boolean): string {
-  if (key === 'Mod') return mac ? '⌘' : 'Ctrl';
-  if (key === 'Alt') return mac ? '⌥' : 'Alt';
-  if (key === 'Shift') return mac ? '⇧' : 'Shift';
-  return key;
-}
-
 export function bindingText(binding: ShortcutBinding, mac: boolean): string {
-  const keys = bindingKeys(binding).map((key) => modifierLabel(key, mac));
-  return keys.join(mac ? '' : '+');
+  const keys = bindingKeys(binding);
+  return mac
+    ? keys.map((key) => shortcutKeyLabel(key, true)).join('')
+    : keys.map((key) => shortcutKeyName(key, false)).join('+');
 }
 
 const RESERVED_MOD_CODES = new Set([
@@ -234,7 +217,7 @@ export class ShortcutBindings {
   readonly #storage: ConfigStorage | undefined;
   readonly mac: () => boolean;
 
-  constructor(storage: ConfigStorage | undefined, mac: () => boolean = () => isMacPlatform()) {
+  constructor(storage: ConfigStorage | undefined, mac: () => boolean = () => isApplePlatform()) {
     this.#storage = storage;
     this.mac = mac;
     let raw: string | null = null;

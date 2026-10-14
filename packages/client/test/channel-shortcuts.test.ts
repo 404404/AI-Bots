@@ -9,6 +9,7 @@ import {
   webShortcutBlocked,
   webShortcutHelpQuestion,
 } from '../src/client/channel-shortcuts.js';
+import { isApplePlatform } from '../src/client/ds/kbd.js';
 
 const alt = { alt: true, ctrl: false, meta: false, shift: false };
 
@@ -46,6 +47,16 @@ describe('web channel number shortcuts', () => {
     expect(selector).toContain('dialog[open]');
     expect(selector).toContain('[role="alertdialog"][aria-modal="true"]');
     expect(webShortcutBlocked(null, { querySelector: () => null })).toBe(false);
+  });
+
+  it('detects macOS from the browser platform', () => {
+    expect(isApplePlatform({ platform: 'MacIntel' })).toBe(true);
+    expect(isApplePlatform({ userAgentData: { platform: 'macOS' } })).toBe(true);
+    expect(isApplePlatform({ platform: 'iPad' })).toBe(true);
+    expect(isApplePlatform({ platform: 'Win32' })).toBe(false);
+    expect(isApplePlatform({ userAgentData: { platform: 'Linux' }, platform: 'MacIntel' })).toBe(
+      false,
+    );
   });
 
   it('keeps the quick switcher available in text fields but not over a modal', () => {

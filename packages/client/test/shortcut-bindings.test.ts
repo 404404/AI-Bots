@@ -7,7 +7,6 @@ import {
   bindingFromEvent,
   bindingMatches,
   bindingText,
-  isMacPlatform,
   parseShortcutBindings,
   shortcutBindingProblem,
   type ShortcutKeyboardEvent,
@@ -127,16 +126,6 @@ describe('default shortcut bindings', () => {
       false,
     );
     expect(defaults.matches('help', key('/', 'Slash'))).toBe(false);
-  });
-
-  it('detects macOS from the browser platform', () => {
-    expect(isMacPlatform({ platform: 'MacIntel' })).toBe(true);
-    expect(isMacPlatform({ userAgentData: { platform: 'macOS' } })).toBe(true);
-    expect(isMacPlatform({ platform: 'iPad' })).toBe(true);
-    expect(isMacPlatform({ platform: 'Win32' })).toBe(false);
-    expect(isMacPlatform({ userAgentData: { platform: 'Linux' }, platform: 'MacIntel' })).toBe(
-      false,
-    );
   });
 });
 

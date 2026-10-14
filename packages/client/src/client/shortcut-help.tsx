@@ -8,22 +8,21 @@ import {
 import * as stylex from '@stylexjs/stylex';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 
+import type { BotModeSendKey } from '../bot-mode-settings.js';
+import type { BotModePrefsSnapshot } from './bot-mode-prefs.js';
+import { isApplePlatform, KeyCombo, shortcutKeyLabel, type ShortcutKey } from './ds/kbd.js';
 import { PanelDialog } from './ds/panel-dialog.js';
-import { border, color, radius, space, text } from './ds/tokens.stylex.js';
+import { border, color, space, text } from './ds/tokens.stylex.js';
 import type { BotHarnessKey, BotHarnessTranslate } from './locale.js';
 import {
   bindingFromEvent,
   bindingKeys,
   DEFAULT_SHORTCUT_BINDINGS,
-  isMacPlatform,
   isModifierOnly,
-  modifierLabel,
   type ShortcutActionId,
   type ShortcutBindingProblem,
   type ShortcutBindings,
 } from './shortcut-bindings.js';
-
-export type ShortcutKey = string;
 
 export interface ShortcutHelpEntry {
   readonly id: string;
@@ -94,8 +93,24 @@ export const SHORTCUT_HELP_GROUPS: readonly ShortcutHelpGroup[] = [
   },
 ];
 
-export function shortcutKeyLabel(key: ShortcutKey, apple: boolean): string {
-  return modifierLabel(key, apple);
+const SEND_KEY_COMBOS: Readonly<
+  Record<BotModeSendKey, { send: readonly ShortcutKey[]; newline: readonly ShortcutKey[] }>
+> = {
+  enter: { send: ['Enter'], newline: ['Shift', 'Enter'] },
+  'mod-enter': { send: ['Mod', 'Enter'], newline: ['Enter'] },
+};
+
+export function shortcutEntryKeys(
+  entry: ShortcutHelpEntry,
+  sendKey: BotModeSendKey,
+  bindings?: ShortcutBindings,
+): readonly (readonly ShortcutKey[])[] {
+  if (entry.id === 'send') return [SEND_KEY_COMBOS[sendKey].send];
+  if (entry.id === 'newline') return [SEND_KEY_COMBOS[sendKey].newline];
+  const fixed = entry.keys ?? [];
+  if (entry.action === undefined) return fixed;
+  const binding = bindings?.binding(entry.action) ?? DEFAULT_SHORTCUT_BINDINGS[entry.action];
+  return [...fixed, bindingKeys(binding)];
 }
 
 export class ShortcutHelp {
@@ -166,44 +181,7 @@ const styles = stylex.create({
     color: color.subtle,
     fontSize: text.metaSize,
   },
-  combo: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
-  kbd: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: '22px',
-    height: '22px',
-    paddingInline: space.x2,
-    borderWidth: border.hairline,
-    borderStyle: 'solid',
-    borderColor: color.border,
-    borderRadius: radius.xs,
-    backgroundColor: color.elevated,
-    color: color.fg,
-    fontFamily: 'inherit',
-    fontSize: text.metaSize,
-    lineHeight: 1,
-    whiteSpace: 'nowrap',
-  },
 });
-
-export function KeyCombo({
-  keys,
-  apple = isMacPlatform(),
-}: {
-  keys: readonly ShortcutKey[];
-  apple?: boolean;
-}): ReactElement {
-  return (
-    <span {...stylex.props(styles.combo)}>
-      {keys.map((key) => (
-        <kbd key={key} {...stylex.props(styles.kbd)}>
-          {shortcutKeyLabel(key, apple)}
-        </kbd>
-      ))}
-    </span>
-  );
-}
 
 function problemText(
   problem: ShortcutBindingProblem,
@@ -218,8 +196,8 @@ function problemText(
   }
   if (problem.kind === 'reserved') return t('shortcuts.problem.reserved');
   return t('shortcuts.problem.needs-modifier', {
-    mod: modifierLabel('Mod', apple),
-    alt: modifierLabel('Alt', apple),
+    mod: shortcutKeyLabel('Mod', apple),
+    alt: shortcutKeyLabel('Alt', apple),
   });
 }
 
@@ -231,26 +209,19 @@ const staticBindings = { subscribe: () => () => {}, getSnapshot: () => undefined
 
 export function ShortcutHelpList({
   t,
-  apple = isMacPlatform(),
+  apple = isApplePlatform(),
+  sendKey = 'enter',
   shortcutBindings,
 }: {
   t: BotHarnessTranslate;
   apple?: boolean;
+  sendKey?: BotModeSendKey;
   shortcutBindings?: ShortcutBindings | undefined;
 }): ReactElement {
   const source = shortcutBindings ?? staticBindings;
   useSyncExternalStore(source.subscribe, source.getSnapshot, source.getSnapshot);
   const [recording, setRecording] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<RowStatus | undefined>(undefined);
-  const combos = (entry: ShortcutHelpEntry): readonly (readonly ShortcutKey[])[] => {
-    const fixed = entry.keys ?? [];
-    if (entry.action === undefined) return fixed;
-    const binding =
-      shortcutBindings === undefined
-        ? DEFAULT_SHORTCUT_BINDINGS[entry.action]
-        : shortcutBindings.binding(entry.action);
-    return [...fixed, bindingKeys(binding)];
-  };
   const record = (
     event: KeyboardEvent<HTMLButtonElement>,
     entry: ShortcutHelpEntry,
@@ -327,7 +298,7 @@ export function ShortcutHelpList({
                   <dd {...stylex.props(styles.keys)}>
                     {recording === entry.id
                       ? null
-                      : combos(entry).map((combo, index) => (
+                      : shortcutEntryKeys(entry, sendKey, shortcutBindings).map((combo, index) => (
                           <Fragment key={combo.join('+')}>
                             {index > 0 ? <span>{t('shortcuts.or')}</span> : null}
                             <KeyCombo keys={combo} apple={apple} />
@@ -382,12 +353,15 @@ export function ShortcutHelpView({
   shortcutHelp,
   shortcutBindings,
   t,
+  useBotModePrefs,
 }: {
   shortcutHelp: ShortcutHelp;
   shortcutBindings?: ShortcutBindings | undefined;
   t: BotHarnessTranslate;
+  useBotModePrefs?: <T>(selector: (value: BotModePrefsSnapshot) => T) => T;
 }): ReactElement | null {
   const open = useSyncExternalStore(shortcutHelp.subscribe, shortcutHelp.getSnapshot, () => false);
+  const sendKey = useBotModePrefs?.((value) => value.sendKey) ?? 'enter';
   if (!open) return null;
   return (
     <PanelDialog
@@ -398,7 +372,7 @@ export function ShortcutHelpView({
       onClose={shortcutHelp.close}
       data={{ 'data-bh-shortcut-help': '' }}
     >
-      <ShortcutHelpList t={t} shortcutBindings={shortcutBindings} />
+      <ShortcutHelpList t={t} sendKey={sendKey} shortcutBindings={shortcutBindings} />
     </PanelDialog>
   );
 }
