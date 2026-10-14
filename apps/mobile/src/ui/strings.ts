@@ -52,6 +52,8 @@ const en = {
     handled: 'Handled',
   },
   inboxEmpty: 'Nothing needs you right now.',
+  openPost: (kind: string, name: string, summary: string) =>
+    `${kind}, ${name}, ${summary}. Open in chat`,
   inboxLoading: 'Reading your Inbox…',
   inboxStale: 'Showing the last Inbox read. It could not be refreshed:',
   inboxFailed: 'Could not read your Inbox.',
@@ -74,6 +76,7 @@ const en = {
   reject: 'Reject',
   submit: 'Send answer',
   otherAnswer: 'Other answer',
+  typeAnswer: 'Type your answer',
   multiSelectHint: 'Choose any that apply',
   sending: 'Sending…',
   approved: 'Allowed. The PersonaBot continues.',
@@ -251,6 +254,8 @@ const zh: typeof en = {
     handled: '已处理',
   },
   inboxEmpty: '现在没有需要你处理的事。',
+  openPost: (kind: string, name: string, summary: string) =>
+    `${kind}，${name}，${summary}。在聊天中打开`,
   inboxLoading: '正在读取收件箱…',
   inboxStale: '显示的是上次读取的收件箱，刷新失败：',
   inboxFailed: '无法读取收件箱。',
@@ -273,6 +278,7 @@ const zh: typeof en = {
   reject: '拒绝',
   submit: '发送回答',
   otherAnswer: '其他回答',
+  typeAnswer: '输入你的回答',
   multiSelectHint: '可多选',
   sending: '正在发送…',
   approved: '已允许，PersonaBot 继续工作。',
