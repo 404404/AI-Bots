@@ -171,6 +171,7 @@ const en = {
   home: 'Home',
   activity: 'Activity',
   me: 'Me',
+  back: 'Back',
   workingPreview: 'Working…',
   effect: {
     searching: 'Searching',
@@ -398,6 +399,7 @@ const zh: typeof en = {
   home: '首页',
   activity: '动态',
   me: '我',
+  back: '返回',
   workingPreview: '工作中…',
   effect: {
     searching: '正在搜索',

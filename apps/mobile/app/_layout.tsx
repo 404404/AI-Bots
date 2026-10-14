@@ -19,6 +19,8 @@ export default function RootLayout() {
             headerStyle: { backgroundColor: theme.background },
             headerTintColor: theme.ink,
             headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
+            headerBackTitle: t.back,
             contentStyle: { backgroundColor: theme.background },
           }}
         >

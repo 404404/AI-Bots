@@ -313,4 +313,30 @@ describe('push registration with a real Host gateway', () => {
     expect(phone.state.badge).toBe(1);
     expect(phone.state.dismissed).toEqual(['n1']);
   });
+
+  it('reflects an unchanged Inbox again after the app returns to the foreground', async () => {
+    const phone = fakeNotifications('granted');
+    const session = createPushSession({
+      notifications: phone.port,
+      hostPush: createHostPush(nodeCarrier()),
+      platform: 'ios',
+      locale: 'en',
+    });
+    session.reflect('h', new Set(), 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // While the app was suspended a push set the badge and left a banner for an item
+    // that was then resolved on the computer; the Inbox reads the same as before.
+    phone.state.badge = 1;
+    phone.state.presented = [
+      { id: 'n1', data: { v: 1, hostId: 'h', itemId: 'approval:1', kind: 'tool-approval' } },
+    ];
+    session.reflect('h', new Set(), 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(phone.state.badge).toBe(1);
+    session.reflectAgain();
+    session.reflect('h', new Set(), 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(phone.state.badge).toBe(0);
+    expect(phone.state.dismissed).toEqual(['n1']);
+  });
 });
