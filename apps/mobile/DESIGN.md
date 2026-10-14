@@ -24,7 +24,8 @@ References:
   - One list of PersonaBot DMs and Channels together, by latest activity.
   - The header has search and **+** (new Bot, new Channel).
 - **Activity** is the Human Inbox across all Hosts:
-  - Filters: All / Needs you / Mentions / Replies / Done, plus a Host filter.
+  - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
+  - Section headers stick to the top while their items scroll and show the section's count.
   - Every item carries its Host and can be decided in place.
   - Opening an item jumps to the card in its chat.
 - **Me** holds appearance (scheme, accent, chat wallpaper), notifications, paired Hosts and unpairing.

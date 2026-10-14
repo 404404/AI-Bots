@@ -15,7 +15,12 @@ vi.mock('../src/ui/bot-avatar', () => ({
 import { createHostClient, type HostClient } from '../src/host/client';
 import type { InboxSnapshot } from '../src/host/inbox';
 import type { HumanAttentionItem } from '../src/host/wire';
-import { ActivityFeed, feedRows } from '../src/ui/shell/activity-feed';
+import {
+  ActivityFeed,
+  activityBots,
+  activityCounts,
+  feedRows,
+} from '../src/ui/shell/activity-feed';
 import { t } from '../src/ui/strings';
 import { FakeHost } from './fake-host';
 import inboxWire from './fixtures/inbox-wire.json';
@@ -127,6 +132,36 @@ describe('Activity feed rows', () => {
     expect(kept.some((row) => row.kind === 'empty')).toBe(false);
   });
 
+  it('filters to one section and keeps its header when it is empty', () => {
+    const snapshot = ready([question, approval]);
+    expect(
+      feedRows(snapshot, new Set(), [], { section: 'replies', bot: undefined }).map(
+        (row) => row.key,
+      ),
+    ).toEqual(['header-replies', 'reply-1']);
+    expect(
+      feedRows(snapshot, new Set(), [], { section: 'handled', bot: undefined }).map(
+        (row) => row.key,
+      ),
+    ).toEqual(['header-handled', 'empty-handled']);
+  });
+
+  it('filters by Bot and counts what each section would show', () => {
+    const other: HumanAttentionItem = { ...approval, id: 'other-1', botSlug: 'other-bot' };
+    const snapshot = ready([question, other]);
+    expect(activityBots(snapshot)).toEqual([
+      ...new Set([question.botSlug, 'other-bot', reply.botSlug]),
+    ]);
+    const rows = feedRows(snapshot, new Set(), [], { section: 'all', bot: 'other-bot' });
+    expect(rows.map((row) => row.key)).toEqual(['header-action', 'other-1']);
+    expect(activityCounts(snapshot, new Set([question.id]), [], undefined)).toEqual({
+      all: 2,
+      action: 1,
+      replies: 1,
+      handled: 0,
+    });
+  });
+
   it('says nothing needs you when the action section is empty', () => {
     expect(feedRows(ready([]), new Set(), []).map((row) => row.kind)).toContain('empty');
   });
@@ -148,6 +183,16 @@ describe('Activity feed', () => {
     expect(sent).toHaveLength(1);
     expect(post(view, question)).toBeNull();
     expect(view.textContent).toContain(t.inboxEmpty);
+  });
+
+  it('filters the feed from the chips above it', async () => {
+    const view = await feed(host(), ready([question]));
+    expect(post(view, question)).not.toBeNull();
+    await press(button(view, t.filterChip(t.inboxSections.replies, 1)));
+    expect(post(view, question)).toBeNull();
+    expect(view.textContent).toContain(t.sectionCount(t.inboxSections.replies, 1));
+    await press(button(view, t.filterChip(t.filterAll, 2)));
+    expect(post(view, question)).not.toBeNull();
   });
 
   it('keeps a post that lost to another device and says so', async () => {
