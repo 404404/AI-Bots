@@ -302,7 +302,12 @@ describe('bridge typert service', () => {
     ]);
     expect(parameterNames(service.followRoster)).toEqual(['signal']);
     expect(parameterNames(service.followActivity)).toEqual(['signal']);
-    expect(parameterNames(service.followChannel)).toEqual(['channelId', 'limit', 'signal']);
+    expect(parameterNames(service.followChannel)).toEqual([
+      'channelId',
+      'limit',
+      'drafts',
+      'signal',
+    ]);
     expect(parameterNames(service.channelJournalPage)).toEqual([
       'channelId',
       'through',

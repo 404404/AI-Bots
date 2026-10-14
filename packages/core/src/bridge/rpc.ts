@@ -14,6 +14,7 @@ import {
   LiveUnavailable,
   type ActivityLiveFrame,
   type ChannelLiveFrame,
+  type DraftDelivery,
   type RosterLiveFrame,
 } from '../channels/live.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
@@ -187,6 +188,7 @@ export interface BridgeLive {
     channelId: string,
     limit: number,
     signal: AbortSignal,
+    drafts?: DraftDelivery,
   ): AsyncIterable<ChannelLiveFrame>;
   journalPage(channelId: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
   followCompanion(
@@ -278,12 +280,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   async *followChannel(
     channelId: string,
     limit: number,
+    drafts: DraftDelivery | undefined,
     signal: AbortSignal,
   ): AsyncGenerator<ChannelLiveFrame> {
     if (this.live === undefined)
       throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
     try {
-      yield* this.live.followChannel(channelId, limit, signal);
+      yield* this.live.followChannel(channelId, limit, signal, drafts ?? 'full');
     } catch (error) {
       if (error instanceof ChannelLiveRefused)
         throw toRemoteError({ code: error.code, message: error.message });
