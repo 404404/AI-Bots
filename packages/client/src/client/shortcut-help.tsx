@@ -353,7 +353,6 @@ export function ShortcutHelpList({
                         <Tooltip label={t('shortcuts.change')} side="top" align="end" portal>
                           <IconButton
                             size="inline"
-                            tone="subtle"
                             aria-label={t('shortcuts.change.label', { action: t(entry.label) })}
                             onClick={() => {
                               setStatus(undefined);
