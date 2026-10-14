@@ -184,12 +184,17 @@ export const SCENARIOS = [
     async run(ctx) {
       const group = await ctx.mentionsOnlyGroup(['nexus', 'atlas']);
       await ctx.humanSend(group, `请安排叙事 Atlas 写一句游戏口号。${REPORT_RULE}`, ['nexus']);
-      await ctx.waitFor('Atlas, woken only by Nexus, reports back with @ and wakes Nexus', () => {
-        const messages = ctx.messages(group);
-        const answer = messages.find((message) => ctx.mentionedAndWoken(message, 'atlas', 'nexus'));
-        if (!answer) return undefined;
-        const ask = messages.find((message) => ctx.mentionedAndWoken(message, 'nexus', 'atlas'));
-        return ask ? [ask, answer] : [answer];
+      await ctx.waitFor('Atlas, woken only by Nexus, reports back with @ and Nexus wakes', () => {
+        const report = ctx
+          .messages(group)
+          .find(
+            (message) =>
+              ctx.isBot(message, 'atlas') &&
+              (message.mentions ?? []).some((mention) => mention.botSlug === ctx.slug('nexus')),
+          );
+        const ask = ctx.woke('nexus', 'atlas');
+        const answer = ctx.woke('atlas', 'nexus');
+        return report && ask && answer ? [ask, answer, report] : undefined;
       });
     },
   },
@@ -667,6 +672,17 @@ function createContext(instance, scenario, timeoutSeconds, log, presetId) {
       if (!log.channels.includes(channelId)) log.channels.push(channelId);
     },
     messages: (channelId) => messageCache.get(channelId) ?? [],
+    woke(fromKey, toKey) {
+      return [...messageCache.values()]
+        .flat()
+        .find(
+          (message) =>
+            ctx.isBot(message, fromKey) &&
+            (message.deliveries ?? []).some(
+              (delivery) => delivery.botSlug === slugs[toKey] && delivery.state === 'handled',
+            ),
+        );
+    },
     mentionedAndWoken(message, fromKey, toKey) {
       return (
         ctx.isBot(message, fromKey) &&
@@ -678,7 +694,17 @@ function createContext(instance, scenario, timeoutSeconds, log, presetId) {
     },
     async refresh() {
       messageCache = new Map();
-      for (const channelId of log.channels) {
+      const bots = Object.values(slugs);
+      const { channels } = await call('channels', {});
+      for (const channel of channels)
+        if (
+          channel.id.startsWith('dm-bots-') &&
+          (channel.members ?? []).length === 2 &&
+          channel.members.every((slug) => bots.includes(slug)) &&
+          !log.botDms.includes(channel.id)
+        )
+          log.botDms.push(channel.id);
+      for (const channelId of [...log.channels, ...log.botDms]) {
         const page = await call('channelMessages', { channelId, limit: 100 });
         messageCache.set(channelId, page.messages);
       }
@@ -740,7 +766,13 @@ async function runScenario(instance, scenario, options, route, presetId) {
   const model = modelLabel(route);
   const total = options.runs ?? options.attempts;
   for (let attempt = 1; attempt <= total; attempt += 1) {
-    const log = { attempt, channels: [], approvals: [], startedAt: new Date().toISOString() };
+    const log = {
+      attempt,
+      channels: [],
+      botDms: [],
+      approvals: [],
+      startedAt: new Date().toISOString(),
+    };
     const ctx = createContext(instance, scenario, options.timeoutSeconds, log, presetId);
     const startDay = localDay();
     try {
@@ -763,7 +795,10 @@ async function runScenario(instance, scenario, options, route, presetId) {
     )
       log.routeMismatch = log.usage.routes;
     log.transcript = Object.fromEntries(
-      log.channels.map((channelId) => [channelId, ctx.messages(channelId).map(summarize)]),
+      [...log.channels, ...log.botDms].map((channelId) => [
+        channelId,
+        ctx.messages(channelId).map(summarize),
+      ]),
     );
     if (log.proof !== undefined)
       log.proof.found = [log.proof.found].flat().map((message) => summarize(message));

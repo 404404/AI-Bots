@@ -5141,6 +5141,7 @@ class BotRuntimeImplementation implements BotRuntime {
           recipientBotSlug: target.slug,
           channel: dm,
           sourceEventId,
+          readSourceEventIds: readAdmissions,
           sessionId,
           beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
           ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -5464,6 +5465,7 @@ class BotRuntimeImplementation implements BotRuntime {
             recipientBotSlug,
             channel,
             sourceEventId,
+            readSourceEventIds: readAdmissions,
             sessionId,
             beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
             ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -5479,6 +5481,7 @@ class BotRuntimeImplementation implements BotRuntime {
             botSlug,
             channel,
             sourceEventId,
+            readSourceEventIds: readAdmissions,
             sessionId,
             beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
             ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -5520,6 +5523,7 @@ class BotRuntimeImplementation implements BotRuntime {
     botSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
+    readSourceEventIds?: ReadonlySet<string>;
     sessionId: string;
     beforeSend: () => void;
     afterSend?: () => void;
@@ -5604,7 +5608,7 @@ class BotRuntimeImplementation implements BotRuntime {
       author: { kind: 'bot', slug: botSlug },
       body,
       botCausation: this.#botCausation(
-        this.#turnSourceIn(botSlug, channel.id) ?? input.sourceEventId,
+        this.#turnSourceIn(botSlug, channel.id, input.readSourceEventIds) ?? input.sourceEventId,
       ),
       ...(mentions.length === 0 ? {} : { mentions }),
       ...(humanMentions.length === 0 ? {} : { humanMentions }),
@@ -5642,8 +5646,12 @@ class BotRuntimeImplementation implements BotRuntime {
     }
   }
 
-  #turnSourceIn(botSlug: string, channelId: string): string | undefined {
-    const sources = [...(this.#turnSources.get(botSlug)?.eventIds ?? [])];
+  #turnSourceIn(
+    botSlug: string,
+    channelId: string,
+    read: Iterable<string> = [],
+  ): string | undefined {
+    const sources = [...new Set([...(this.#turnSources.get(botSlug)?.eventIds ?? []), ...read])];
     if (sources.length === 0) return undefined;
     const row = this.#database.read(
       (database) =>
@@ -5715,6 +5723,7 @@ class BotRuntimeImplementation implements BotRuntime {
     recipientBotSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
+    readSourceEventIds?: ReadonlySet<string>;
     sessionId: string;
     beforeSend: () => void;
     afterSend?: () => void;
@@ -5745,7 +5754,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (this.#channels.getOrCreateDm(botSlug, sender.displayName) === undefined)
       throw new Error('Sender Human DM is unavailable');
     const botCausation = this.#botCausation(
-      this.#turnSourceIn(botSlug, channel.id) ?? input.sourceEventId,
+      this.#turnSourceIn(botSlug, channel.id, input.readSourceEventIds) ?? input.sourceEventId,
     );
     const messageId = this.#deliveryMessageId(input.sessionId, input.deliveryKey);
     const message: ChannelMessage = {
