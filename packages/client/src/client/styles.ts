@@ -5200,10 +5200,15 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 }
 .bh-tool-approval-card:focus { outline: none; }
 .bh-tool-approval-card:focus-visible { outline: ${border.focus} solid ${color.accent}; outline-offset: ${space.x2}; border-radius: ${radius.sm}; }
-.bh-tool-approval-keys { color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; }
-.bh-tool-approval-card:not(:focus-within) .bh-tool-approval-keys { display: none; }
-.bh-tool-approval-countdown { color: var(--dsw-alias-label-secondary); }
-.bh-tool-approval-countdown[data-urgent] { color: ${color.warning}; font-weight: ${text.strong}; }
+.bh-tool-approval-head { display: flex; align-items: center; justify-content: space-between; gap: ${space.x3}; min-width: 0; }
+.bh-tool-approval-countdown { flex-shrink: 0; padding: 0 ${space.x2}; border-radius: 999px; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: nowrap; }
+.bh-tool-approval-countdown[data-urgent] { background: color-mix(in srgb, ${color.warning} 16%, transparent); color: ${color.warning}; }
+.bh-tool-approval-summary { color: var(--dsw-alias-label-primary); font-size: ${text.bodySize}; line-height: ${text.bodyLine}; overflow-wrap: anywhere; }
+.bh-tool-approval-summary code { font-size: ${text.metaSize}; }
+.bh-tool-approval-details > summary, .bh-tool-approval-more > summary { width: fit-content; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; cursor: pointer; }
+.bh-tool-approval-details > summary:hover, .bh-tool-approval-more > summary:hover { color: var(--dsw-alias-label-primary); }
+.bh-tool-approval-details-body { display: grid; gap: ${space.x2}; min-width: 0; margin-top: ${space.x2}; }
+.bh-tool-approval-more > .bh-tool-approval-actions { margin-top: ${space.x2}; }
 .bh-tool-approval-input-block { display: grid; gap: ${space.x2}; min-width: 0; margin: 0; }
 .bh-tool-approval-input[data-folded] { max-height: none; overflow: hidden; }
 .bh-tool-approval-fold { justify-self: start; padding: 0; border: 0; background: transparent; color: ${color.accent}; font: inherit; font-size: ${text.metaSize}; cursor: pointer; }
@@ -6093,9 +6098,7 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wi
   border-bottom: ${border.hairline} solid ${color.divider};
 }
 .bh-human-inbox-batch-all { display: inline-flex; align-items: center; color: var(--dsw-alias-label-secondary); cursor: pointer; }
-.bh-human-inbox-keys { margin-left: auto; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; }
-.bh-human-inbox:not(:focus-within) .bh-human-inbox-keys { visibility: hidden; }
-.bh-human-inbox-snoozed-toggle[aria-pressed='true'] { background: ${color.selected}; border-color: ${color.borderStrong}; }
+.bh-human-inbox:not(:focus-within) .bh-human-inbox-snoozed-toggle[aria-pressed='true'] { background: ${color.selected}; border-color: ${color.borderStrong}; }
 .bh-human-inbox-more {
   padding: ${space.x2} ${space.x3};
   border: ${border.hairline} solid ${color.borderStrong};

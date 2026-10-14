@@ -10,7 +10,7 @@ import type { CompanionRequestTarget } from './companion-requests.js';
 import { channelSettings } from './channel-settings-state.js';
 import { approvalCountdown } from './approval-countdown.js';
 import { ApprovalInput } from './approval-input.js';
-import { Kbd } from './ds/kbd.js';
+import { approvalSummary } from './approval-diff.js';
 
 export function ToolApprovalCard({
   message,
@@ -237,27 +237,58 @@ export function ToolApprovalCard({
   };
   const compact = companionTarget !== undefined;
   const size = compact ? 'sm' : 'md';
+  const summary = approvalSummary(request.toolName, request.input);
+  const keyPhrase =
+    summary.kind === 'text' ? (
+      summary.text
+    ) : summary.kind === 'command' ? (
+      <code>{summary.command}</code>
+    ) : summary.kind === 'file' ? (
+      <>
+        {t('approval.summaryFile')} <code>{summary.path}</code>{' '}
+        <span className="bh-tool-approval-diff-stat" data-kind="add">
+          +{summary.added}
+        </span>{' '}
+        <span className="bh-tool-approval-diff-stat" data-kind="remove">
+          −{summary.removed}
+        </span>
+      </>
+    ) : (
+      t('approval.summaryTool', { tool: summary.toolName })
+    );
   const details = (
-    <>
-      <div className="bh-note">
-        {request.role === 'assignment' ? t('approval.assignment') : t('approval.orchestrator')}
-        {' · '}
-        {request.toolName}
+    <details
+      className={
+        compact ? 'bh-tool-approval-details bh-companion-details' : 'bh-tool-approval-details'
+      }
+    >
+      <summary>{t('companion.details')}</summary>
+      <div className="bh-tool-approval-details-body">
+        <div className="bh-note">
+          {request.role === 'assignment' ? t('approval.assignment') : t('approval.orchestrator')}
+          {' · '}
+          {request.toolName}
+        </div>
+        <div className="bh-note">{t('approval.cwd', { path: request.cwd })}</div>
+        <ApprovalInput
+          toolName={request.toolName}
+          input={request.input}
+          t={t}
+          caption={summary.kind !== 'text'}
+        />
+        <div className="bh-note">
+          {t(
+            request.toolName === 'channel_attachment_open'
+              ? 'approval.originalRisk'
+              : request.toolName === 'secret_cli'
+                ? 'approval.secretCliRisk'
+                : request.toolName === 'secret_mcp_connect'
+                  ? 'approval.secretMcpRisk'
+                  : 'approval.risk',
+          )}
+        </div>
       </div>
-      <div className="bh-note">{t('approval.cwd', { path: request.cwd })}</div>
-      <ApprovalInput toolName={request.toolName} input={request.input} t={t} />
-      <div className="bh-note">
-        {t(
-          request.toolName === 'channel_attachment_open'
-            ? 'approval.originalRisk'
-            : request.toolName === 'secret_cli'
-              ? 'approval.secretCliRisk'
-              : request.toolName === 'secret_mcp_connect'
-                ? 'approval.secretMcpRisk'
-                : 'approval.risk',
-        )}
-      </div>
-    </>
+    </details>
   );
   return (
     <div
@@ -271,33 +302,22 @@ export function ToolApprovalCard({
       }
       onKeyDown={onKeyDown}
     >
-      {compact ? (
-        <>
-          <div className="bh-grant-request-title">
-            {t('approval.requestTitle')} · <code>{request.toolName}</code>
-          </div>
-          <details className="bh-companion-details">
-            <summary>{t('companion.details')}</summary>
-            {details}
-          </details>
-        </>
-      ) : (
-        <>
-          <div className="bh-grant-request-title">{t('approval.requestTitle')}</div>
-          {details}
-        </>
-      )}
-      {countdown === undefined ? null : (
-        <div
-          ref={countdownMount}
-          className="bh-note bh-tool-approval-countdown"
-          data-urgent={countdown.urgent || undefined}
-        >
-          <time dateTime={expiresAt} title={new Date(expiresAt!).toLocaleString()}>
-            {t(countdown.key, { count: String(countdown.count) })}
-          </time>
-        </div>
-      )}
+      <div className="bh-tool-approval-head">
+        <div className="bh-grant-request-title">{t('approval.requestTitle')}</div>
+        {countdown === undefined ? null : (
+          <span
+            ref={countdownMount}
+            className="bh-tool-approval-countdown"
+            data-urgent={countdown.urgent || undefined}
+          >
+            <time dateTime={expiresAt} title={new Date(expiresAt!).toLocaleString()}>
+              {t(countdown.key, { count: String(countdown.count) })}
+            </time>
+          </span>
+        )}
+      </div>
+      <div className="bh-tool-approval-summary">{keyPhrase}</div>
+      {details}
       {executionState === 'waiting-human' ||
       executionState === 'waiting-capacity' ||
       executionState === 'needs-repair' ? (
@@ -333,30 +353,6 @@ export function ToolApprovalCard({
           >
             {t('approval.allowOnce')}
           </Button>
-          {eachUse && request.toolName !== 'secret_mcp_connect' ? null : (
-            <Button
-              variant="outline"
-              size={size}
-              disabled={disabled}
-              onClick={() => decide('allowed-always-exact')}
-            >
-              {t(
-                request.toolName === 'secret_mcp_connect'
-                  ? 'approval.allowAndRemember'
-                  : 'approval.allowExact',
-              )}
-            </Button>
-          )}
-          {eachUse ? null : (
-            <Button
-              variant="outline"
-              size={size}
-              disabled={disabled}
-              onClick={() => setConfirmAll(true)}
-            >
-              {t('approval.allowAll')}
-            </Button>
-          )}
           <Button
             variant="outline"
             size={size}
@@ -378,19 +374,48 @@ export function ToolApprovalCard({
       {status === 'pending' &&
       effectiveDecision === undefined &&
       !confirmAll &&
-      !eachUse &&
-      companionTarget === undefined &&
-      request.role === 'orchestrator' &&
-      cardChannelId === 'dm-' + botSlug ? (
-        <div className="bh-message-card-actions">
-          <Button
-            variant="ghost"
-            size={size}
-            onClick={() => channelSettings.open('workspace-grants')}
-          >
-            {t('approval.fullAccessEntry')}
-          </Button>
-        </div>
+      (!eachUse || request.toolName === 'secret_mcp_connect') ? (
+        <details className="bh-tool-approval-more">
+          <summary>{t('approval.moreOptions')}</summary>
+          <div className="bh-tool-approval-actions bh-message-card-actions">
+            {eachUse && request.toolName !== 'secret_mcp_connect' ? null : (
+              <Button
+                variant="outline"
+                size={size}
+                disabled={disabled}
+                onClick={() => decide('allowed-always-exact')}
+              >
+                {t(
+                  request.toolName === 'secret_mcp_connect'
+                    ? 'approval.allowAndRemember'
+                    : 'approval.allowExact',
+                )}
+              </Button>
+            )}
+            {eachUse ? null : (
+              <Button
+                variant="outline"
+                size={size}
+                disabled={disabled}
+                onClick={() => setConfirmAll(true)}
+              >
+                {t('approval.allowAll')}
+              </Button>
+            )}
+            {!eachUse &&
+            companionTarget === undefined &&
+            request.role === 'orchestrator' &&
+            cardChannelId === 'dm-' + botSlug ? (
+              <Button
+                variant="ghost"
+                size={size}
+                onClick={() => channelSettings.open('workspace-grants')}
+              >
+                {t('approval.fullAccessEntry')}
+              </Button>
+            ) : null}
+          </div>
+        </details>
       ) : null}
       {companionTarget && status === 'unavailable' ? (
         <div className="bh-message-card-actions">
@@ -430,26 +455,6 @@ export function ToolApprovalCard({
               </Button>
             </div>
           </div>
-        </div>
-      ) : null}
-      {actionable && !compact ? (
-        <div className="bh-note bh-tool-approval-keys" aria-hidden="true">
-          {confirmAll ? (
-            <>
-              <Kbd shortcutKey="Esc" /> {t('approval.cancel')}
-            </>
-          ) : (
-            <>
-              <Kbd shortcutKey="Y" /> {t('approval.keyAllow')} · <Kbd shortcutKey="N" />{' '}
-              {t('approval.keyReject')}
-              {eachUse ? null : (
-                <>
-                  {' · '}
-                  <Kbd shortcutKey="A" /> {t('approval.keyAll')}
-                </>
-              )}
-            </>
-          )}
         </div>
       ) : null}
       {error === undefined ? null : (

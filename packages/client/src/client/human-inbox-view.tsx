@@ -17,7 +17,6 @@ import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { store } from './store.js';
 import type { HumanAttentionItem, HumanInboxCategory, HumanInboxFilters } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
-import { Kbd } from './ds/kbd.js';
 import { webModalOpen } from './channel-shortcuts.js';
 import { HumanInboxReply } from './human-inbox-reply.js';
 import { Modal } from './modal.js';
@@ -626,12 +625,6 @@ export function HumanInboxView({
                 </Button>
               </>
             )}
-            <span className="bh-human-inbox-keys" aria-hidden="true">
-              <Kbd shortcutKey="J" />/<Kbd shortcutKey="K" /> {t('humanInbox.keys.move')} ·{' '}
-              <Kbd shortcutKey="Enter" /> {t('humanInbox.keys.open')} · <Kbd shortcutKey="E" />{' '}
-              {t('humanInbox.keys.handle')} · <Kbd shortcutKey="X" /> {t('humanInbox.keys.select')}{' '}
-              · <Kbd shortcutKey="S" /> {t('humanInbox.keys.snooze')}
-            </span>
           </div>
         ) : null}
         <div className="bh-human-inbox-workspace">

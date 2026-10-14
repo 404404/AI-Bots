@@ -16,10 +16,12 @@ export function ApprovalInput({
   toolName,
   input,
   t,
+  caption = true,
 }: {
   toolName: string;
   input: string;
   t: BotHarnessTranslate;
+  caption?: boolean;
 }): ReactElement {
   const [expanded, setExpanded] = useState(false);
   const fileChange = approvalFileChange(toolName, input);
@@ -43,7 +45,9 @@ export function ApprovalInput({
   if (shell !== undefined)
     return (
       <figure className="bh-tool-approval-input-block bh-tool-approval-shell">
-        {shell.description === undefined ? null : <figcaption>{shell.description}</figcaption>}
+        {shell.description === undefined || !caption ? null : (
+          <figcaption>{shell.description}</figcaption>
+        )}
         <pre
           className="bh-tool-approval-input"
           data-folded={folded || undefined}

@@ -143,3 +143,23 @@ export function approvalFileChange(
   }
   return undefined;
 }
+
+export type ApprovalSummary =
+  | { kind: 'text'; text: string }
+  | { kind: 'command'; command: string }
+  | { kind: 'file'; path: string; added: number; removed: number }
+  | { kind: 'tool'; toolName: string };
+
+export function approvalSummary(toolName: string, input: string): ApprovalSummary {
+  const shell = approvalShellCommand(toolName, input);
+  if (shell?.description !== undefined) return { kind: 'text', text: shell.description };
+  if (shell !== undefined) {
+    const line = shell.command.trim().split('\n')[0] ?? '';
+    return { kind: 'command', command: line.length > 120 ? line.slice(0, 120) + '…' : line };
+  }
+  const file = approvalFileChange(toolName, input);
+  if (file !== undefined)
+    return { kind: 'file', path: file.path, added: file.added, removed: file.removed };
+  const description = text(parseArgs(input)?.['description'])?.trim();
+  return description ? { kind: 'text', text: description } : { kind: 'tool', toolName };
+}

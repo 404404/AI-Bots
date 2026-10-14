@@ -83,6 +83,28 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe('Tool approval card layout', () => {
+  it('leads with the key phrase and keeps details, extra choices and key hints out of the way', async () => {
+    const card = await render(
+      message(
+        'edit',
+        JSON.stringify({ file_path: '/qa/notes.md', old_string: 'a', new_string: 'b' }),
+      ),
+    );
+    expect(card.querySelector('.bh-tool-approval-summary')?.textContent).toBe(
+      '修改文件 /qa/notes.md +1 −1',
+    );
+    expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
+    expect(card.querySelector('.bh-tool-approval-more')?.hasAttribute('open')).toBe(false);
+    expect(
+      [...card.querySelectorAll('.bh-tool-approval-card > .bh-tool-approval-actions button')].map(
+        (button) => button.textContent,
+      ),
+    ).toEqual(['仅批准这一次', '拒绝']);
+    expect(card.querySelector('kbd')).toBeNull();
+  });
+});
+
 describe('Tool approval card keyboard', () => {
   it('focuses a new pending card and allows it once with Y or Enter', async () => {
     const card = await render();
@@ -167,9 +189,9 @@ describe('Tool approval shell command', () => {
     const card = await render(
       message('bash', JSON.stringify({ command, description: 'Write notes' })),
     );
-    expect(card.querySelector('.bh-tool-approval-shell figcaption')?.textContent).toBe(
-      'Write notes',
-    );
+    expect(card.querySelector('.bh-tool-approval-summary')?.textContent).toBe('Write notes');
+    expect(card.querySelector('.bh-tool-approval-shell figcaption')).toBeNull();
+    expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
     const pre = card.querySelector('.bh-tool-approval-shell pre')!;
     expect(pre.textContent).toContain("printf '%s\\n'");
     expect(pre.textContent).not.toContain('"command"');
