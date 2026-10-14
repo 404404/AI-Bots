@@ -30,7 +30,7 @@ export function markdownStyle(theme: DesignTheme, ink: string): MarkdownStyle {
       ...body,
       bulletColor: ink,
       markerColor: ink,
-      gapWidth: space.x3,
+      gapWidth: space.x2,
       marginLeft: space.x5,
       itemSpacing: space.x2,
     },
