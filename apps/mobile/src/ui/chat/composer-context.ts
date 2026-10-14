@@ -2,31 +2,13 @@ import { useCallback, useRef, useState } from 'react';
 import type { View } from 'react-native';
 
 import {
-  currentModel,
   errorText,
   type ApprovalTemplates,
   type AssignmentAccess,
-  type BotModel,
   type BotSettings,
   type Loadable,
-  type WorkspaceGrant,
 } from '../../host/bot-settings';
 import { useMounted } from '../mounted';
-import { t } from '../strings';
-
-export function modelLabel(model: Loadable<BotModel>): string {
-  if (model.status === 'loading') return t.contextLoading;
-  if (model.status === 'failed') return t.contextUnavailable;
-  const { name } = currentModel(model.value);
-  if (name !== undefined) return name;
-  return model.value.repair === undefined ? t.noModel : t.contextUnavailable;
-}
-
-export function workspaceLabel(grants: Loadable<WorkspaceGrant[]>): string {
-  if (grants.status === 'loading') return t.contextLoading;
-  if (grants.status === 'failed') return t.contextUnavailable;
-  return t.folderCount(grants.value.length);
-}
 
 function useLoadable<T>(load: (() => Promise<T>) | undefined) {
   const [state, setState] = useState<Loadable<T>>({ status: 'loading' });

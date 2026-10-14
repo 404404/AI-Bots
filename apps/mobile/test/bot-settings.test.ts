@@ -18,7 +18,7 @@ import {
   setAssignmentAccess,
 } from '../src/host/bot-settings';
 import { createHostClient } from '../src/host/client';
-import { modelLabel, workspaceLabel } from '../src/ui/chat/composer-context';
+import { modelLabel, workspaceLabel } from '../src/ui/chat/composer-labels';
 import { t } from '../src/ui/strings';
 import { FakeHost } from './fake-host';
 
