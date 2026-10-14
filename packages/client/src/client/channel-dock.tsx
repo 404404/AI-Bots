@@ -480,6 +480,9 @@ export function ChannelDock({
 
 const RESET_ID = 'bh:dock-reset';
 
+const groupRank = (panel: DockPanelRegistration): number =>
+  panel.entry?.scope === 'channel' ? 1 : 0;
+
 function ChannelDockPanelsMenu({
   panels,
   openIds,
@@ -497,11 +500,14 @@ function ChannelDockPanelsMenu({
   const label = t('dock.panels');
   const items: MenuEntry[] = [
     { type: 'label', id: 'bh:dock-panels', text: label },
-    ...panels.map((panel) => ({
-      id: panel.id,
-      label: panel.title,
-      icon: <ChannelSidebarIcon name={panel.icon} />,
-    })),
+    // Group-only Channel sidebar entries stay after the rest, as in the old + Views menu.
+    ...[...panels]
+      .sort((left, right) => groupRank(left) - groupRank(right))
+      .map((panel) => ({
+        id: panel.id,
+        label: panel.title,
+        icon: <ChannelSidebarIcon name={panel.icon} />,
+      })),
     { type: 'separator', id: 'bh:dock-separator' },
     { id: RESET_ID, label: t('dock.reset') },
   ];
