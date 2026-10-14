@@ -5,6 +5,7 @@ import type { ColorRole } from '../design/theme';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
+import { ChevronRightIcon } from '../shell/icons';
 
 export type CardLineTone = 'success' | 'danger' | 'subtle';
 
@@ -128,23 +129,23 @@ export function CardLink({ label, onPress }: { label: string; onPress(): void })
   const theme = useDesignTheme();
   return (
     <Pressable
-      accessibilityRole="link"
+      accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
+      hitSlop={space.x3}
       style={({ pressed }) => ({
+        alignSelf: 'flex-start',
         minHeight: theme.touch,
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'flex-start',
         gap: space.x2,
-        borderRadius: radius.sm,
-        backgroundColor: pressed ? theme.layer.raised.pressed : undefined,
+        opacity: pressed ? 0.6 : 1,
       })}
     >
-      <Text tone="accent" strong>
+      <Text variant="meta" strong>
         {label}
       </Text>
-      <Text tone="accent">›</Text>
+      <ChevronRightIcon color={theme.color.muted} size={theme.type.meta.size} />
     </Pressable>
   );
 }

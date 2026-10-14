@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => import('./react-native-shim'));
+vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 
 import { createHostClient, type HostClient } from '../src/host/client';
 import {
@@ -144,7 +145,7 @@ describe('Tool approval card in the DM', () => {
     expect(view.textContent).toContain(t.wantsToRun('Inbox QA', 'bash'));
     expect(view.textContent).toContain('/home/qa/.dsh/botharness/bots/');
     expect(view.textContent).toContain('ls /tmp/mobile-fixture');
-    for (const label of [t.allowOnce, t.alwaysAllow, t.deny, t.viewDetails])
+    for (const label of [t.allowOnce, t.alwaysAllow, t.deny, t.details])
       expect(button(view, label).disabled).toBe(false);
   });
 

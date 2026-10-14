@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => import('./react-native-shim'));
+vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('expo-router', () => ({ useRouter: () => ({ push: () => undefined }) }));
 vi.mock('../src/ui/bot-avatar', () => ({
