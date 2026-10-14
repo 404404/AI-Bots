@@ -28,7 +28,6 @@ export const palette = {
     elevated: '#fff',
     base: '#fff',
     well: '#fff',
-    accentTint: '#e4edfd',
   },
   dark: {
     fg: '#f9fafb',
@@ -57,6 +56,5 @@ export const palette = {
     elevated: '#43454a',
     base: '#151517',
     well: '#151517',
-    accentTint: '#34415b',
   },
 } as const;
