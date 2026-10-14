@@ -88,9 +88,9 @@ node scripts/e2e-llm-scenarios.mjs --launch --scenario two-workers-report --atte
 node scripts/e2e-llm-scenarios.mjs --launch --changed-from origin/main  # only what your branch touches
 ```
 
-A scenario passes when any of its `--attempts` (default 2) passes; the JSON report under `.humanlayer/llm-e2e/` keeps every attempt and its transcript, so a flaky flow stays visible. The Host needs a model credential (see [AX shared default model](ax-model.md)); in a cloud container whose proxy injects `opencode.ai`, run `OPENCODE_GO_API_KEY=proxy-injected node scripts/dev-model.mjs setup --from-env` once.
+A scenario passes when any of its `--attempts` (default 2) passes; the JSON report under `.humanlayer/llm-e2e/` keeps every attempt and its transcript, so a flaky flow stays visible. The Host needs a model credential (see [AX shared default model](ax-model.md)); in a cloud container whose proxy injects `opencode.ai`, run `node scripts/dev-model.mjs setup --from-env --model deepseek-v4.1-flash` once (`OPENCODE_GO_API_KEY` is set in the environment).
 
-The `llm e2e` workflow runs them nightly, after a push to `main` that touches a scenario's paths (only those scenarios), on manual dispatch, and on a pull request labeled `ci:llm-e2e`. It uses the OpenCode Go subscription through the `OPENCODE_GO_API_KEY` repository secret (selected with `scripts/dev-model.mjs setup --from-env`) and skips with a notice without it. It is never part of the required `verify` check. When a feature adds a model-driven flow, add a scenario with the paths it depends on.
+The `llm e2e` workflow runs them nightly, after a push to `main` that touches a scenario's paths (only those scenarios), on manual dispatch, and on a pull request labeled `ci:llm-e2e`. It uses the OpenCode Go subscription through the `OPENCODE_GO_API_KEY` repository secret on `deepseek-v4.1-flash` (selected with `scripts/dev-model.mjs setup --from-env --model deepseek-v4.1-flash`) and skips with a notice without it. It is never part of the required `verify` check. When a feature adds a model-driven flow, add a scenario with the paths it depends on.
 
 ## Generated assets and pages
 

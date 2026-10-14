@@ -27,7 +27,7 @@ Options:
   --list                Print the scenarios and their areas, then exit.
 
 The Host needs a model credential: the AX opencode-go selection from docs/agents/ax-model.md
-(CI runs dev-model.mjs setup --from-env with OPENCODE_GO_API_KEY), or DEEPSEEK_API_KEY. Exit status is 1 when any selected scenario fails.`;
+(CI runs dev-model.mjs setup --from-env --model deepseek-v4.1-flash with OPENCODE_GO_API_KEY), or DEEPSEEK_API_KEY. Exit status is 1 when any selected scenario fails.`;
 
 const RUNTIME_AREAS = [
   'packages/core/src/runtime/',
