@@ -359,10 +359,12 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
   ctx.effect(() => () => runtime.dispose(), 'botharness-computer: target runtime');
   const activity = { touch: (): void => undefined };
   const driver = runtime.driver;
+  const desktopView = createDesktopView({ driver, isRunning: () => runtime.isRunning() });
   const toolProvider = createComputerToolProvider({
     ctx,
     driver,
     isComputerRunning: () => runtime.isRunning(),
+    isPaused: () => desktopView.isPaused(),
     authorizationScope,
     guidance: () => (target() === 'local' ? localComputerGuidance() : COMPUTER_GUIDANCE),
     isAutoAllowed: () => effective().autoAllowActions,
@@ -379,7 +381,6 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
       };
     },
   });
-  const desktopView = createDesktopView({ driver, isRunning: () => runtime.isRunning() });
   ctx.provide('botharnessComputerTools', {
     reconcileBot: (slug: string) => toolProvider.reconcileBot(slug),
     ownsTool: (name: string) => ownsComputerTool(name),
@@ -717,7 +718,7 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
       if (error instanceof DesktopViewError)
         return json(
           { ok: false, code: error.code, error: error.message },
-          error.code === 'not-running' ? 409 : 502,
+          error.code === 'not-running' || error.code === 'not-paused' ? 409 : 502,
         );
       return json({ ok: false, code: 'capture-failed', error: String(error) }, 502);
     };
@@ -735,7 +736,7 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
           const frame = await desktopView.next(after, request.signal);
           if (frame === undefined) return new Response(null, { status: 204 });
           activity.touch();
-          return json({ ok: true, target: target(), ...frame });
+          return json({ ok: true, target: target(), paused: desktopView.isPaused(), ...frame });
         } catch (error) {
           return desktopRefusal(error);
         }
@@ -744,6 +745,30 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     connectionCtx.effect(
       () => connection.fetch.register(frameRoute),
       'botharness-computer: desktop frame route',
+    );
+
+    const takeoverRoute = {
+      path: '/api/computer/takeover',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const body = await parseBody(request);
+        if (typeof body['active'] !== 'boolean')
+          return json({ ok: false, code: 'invalid-input', error: 'active must be a boolean' }, 400);
+        if (body['active'] && !runtime.isRunning())
+          return json(
+            { ok: false, code: 'not-running', error: 'The Computer is not running.' },
+            409,
+          );
+        const paused = desktopView.setPaused(body['active']);
+        activity.touch();
+        diagnostics.record('computer-action', `viewer takeover ${paused ? 'on' : 'off'}`);
+        return json({ ok: true, paused });
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(takeoverRoute),
+      'botharness-computer: desktop takeover route',
     );
 
     const inputRoute = {

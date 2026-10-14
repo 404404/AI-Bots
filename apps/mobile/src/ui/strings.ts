@@ -328,9 +328,11 @@ const en = {
   computerNotRunning: 'The Computer is not running. Start it on your computer to see it here.',
   computerUnreachable: 'Cannot reach the Computer on your computer.',
   computerWatching: 'Watching the Computer. Take control to click and type.',
-  computerYouDriving: 'You have control. The Bot can still act, so hand it back when done.',
-  computerTakeControl: 'Take control',
+  computerYouDriving:
+    'The Bot is paused and cannot see the screen. Use the lock key for passwords, then hand it back.',
+  computerTakeControl: 'Pause Bot and take control',
   computerHandBack: 'Hand back',
+  computerPasswordKeyboard: 'Password keyboard',
 };
 
 const zh: typeof en = {
@@ -643,9 +645,10 @@ const zh: typeof en = {
   computerNotRunning: 'Computer 没有运行。在电脑上启动后会显示在这里。',
   computerUnreachable: '无法连接电脑上的 Computer。',
   computerWatching: '正在查看 Computer。接管后可以点击和输入。',
-  computerYouDriving: '你正在控制。Bot 仍可能操作，用完请交还。',
-  computerTakeControl: '接管',
+  computerYouDriving: 'Bot 已暂停，看不到屏幕。输密码请用锁形键盘，用完请交还。',
+  computerTakeControl: '暂停 Bot 并接管',
   computerHandBack: '交还',
+  computerPasswordKeyboard: '密码键盘',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()

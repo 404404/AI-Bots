@@ -116,6 +116,7 @@ describe('desktop view frames', () => {
   it('remembers the last click for a scroll without a position', async () => {
     const driver = fakeDriver(['a']);
     const view = createDesktopView({ driver, isRunning: () => true });
+    view.setPaused(true);
     await view.input({ kind: 'click', x: 7, y: 8, button: 'left', count: 1 });
     await view.input({ kind: 'scroll', direction: 'down', amount: 2 });
     expect(driver.calls.at(-1)).toEqual({
@@ -141,6 +142,7 @@ describe('desktop view frames', () => {
       },
       isRunning: () => true,
     });
+    refusing.setPaused(true);
     const error = await refusing.next(undefined).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(DesktopViewError);
     expect(error).toMatchObject({
@@ -150,5 +152,29 @@ describe('desktop view frames', () => {
     await expect(refusing.input({ kind: 'type', text: 'hi' })).rejects.toMatchObject({
       code: 'input-failed',
     });
+  });
+
+  it('takes Human input only while paused, and the pause lapses without the viewer', async () => {
+    let clock = 1000;
+    const driver = fakeDriver(['a']);
+    const view = createDesktopView({
+      driver,
+      isRunning: () => true,
+      pauseLeaseMs: 100,
+      now: () => clock,
+    });
+    await expect(view.input({ kind: 'type', text: 'secret' })).rejects.toMatchObject({
+      code: 'not-paused',
+    });
+    expect(view.setPaused(true)).toBe(true);
+    clock += 80;
+    await view.input({ kind: 'type', text: 'secret' });
+    clock += 80;
+    expect(view.isPaused()).toBe(true);
+    clock += 101;
+    expect(view.isPaused()).toBe(false);
+    expect(view.setPaused(true)).toBe(true);
+    expect(view.setPaused(false)).toBe(false);
+    expect(driver.calls.filter((call) => call.tool === 'type_text')).toHaveLength(1);
   });
 });

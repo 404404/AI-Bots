@@ -14,7 +14,7 @@ A Bot that uses the local Computer Target drives the Human's own Mac, Windows or
 
 The Host serves the local desktop to the phone itself, in two steps.
 
-1. **Screenshot stream (#1832, this change).** `GET /api/computer/frame?after=<seq>` long-polls the existing driver's `get_desktop_state`: captures are single-flight and paced (150 ms), a frame identical to the last is not republished, and the route answers 204 after 10 s without a change. `POST /api/computer/input` sends click, scroll, type and key input through the driver's desktop-scope tools. The mobile app's **Computer** button opens a native screen that reuses the Browser viewer's stage; **Take control** enables input. Both routes have `deepseekbot computer-frame` and `computer-input` commands.
+1. **Screenshot stream (#1832, this change).** `GET /api/computer/frame?after=<seq>` long-polls the existing driver's `get_desktop_state`: captures are single-flight and paced (150 ms), a frame identical to the last is not republished, and the route answers 204 after 10 s without a change. `POST /api/computer/input` sends click, scroll, type and key input through the driver's desktop-scope tools. The mobile app's **Computer** button opens a native screen that reuses the Browser viewer's stage; **Pause Bot and take control** enables input. The routes have `deepseekbot computer-frame`, `computer-takeover` and `computer-input` commands.
 2. **WebRTC helper (#1833, later).** A hardware-encoded video track for moving content, once the screenshot stream's limits matter in practice.
 
 No new native dependency, port or permission: the stream goes over the phone's existing Host connection, and the capture reuses the driver's Screen Recording and Accessibility grants.
@@ -28,7 +28,8 @@ The A/B test in [the research note](../research/2026-10-14-local-computer-frame-
 
 ## Consequences
 
-- The Bot is not paused while the Human has control. Both can act on the desktop at once; the Human sees the Bot's moves in the stream.
+- **Take control pauses the Bot.** `POST /api/computer/takeover` sets a pause that refuses every Bot Computer tool call, screenshots included, so the Bot cannot move focus or read the screen while the Human types a password. Human input is refused unless the pause is on. The pause is a lease: frame polls and input renew it, and it lapses 30 s after the phone stops, so a closed app cannot leave the Bot stuck. The Computer is shared by the profile, so the pause applies to every Bot.
+- The phone has a password keyboard. It is a secure text field: no echo, no predictive text, and the system can offer saved passwords. Characters go straight to the driver's `type_text`.
 - Every input is recorded in diagnostics as a `computer-action` with its kind and character count, never the typed text.
 - Frames are not stored. The Host keeps only the latest one in memory while a viewer polls.
 - The stream sends whole PNGs. A busy screen on a slow uplink will lag further than the measured numbers, which exclude network transfer.

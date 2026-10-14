@@ -15,7 +15,7 @@ export interface ComputerViewer {
   subscribe(listener: () => void): () => void;
   start(): void;
   stop(): void;
-  setControl(active: boolean): void;
+  setControl(active: boolean): Promise<void>;
   send(input: BrowserInput): Promise<void>;
 }
 
@@ -75,6 +75,17 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
       });
   };
 
+  const takeover = async (active: boolean): Promise<void> => {
+    try {
+      const answer = await request('/api/computer/takeover', { body: { active } });
+      const paused = answer.status === 200 && record(answer.body)['paused'] === true;
+      update({ control: paused, notice: answer.status === 200 ? undefined : errorOf(answer) });
+    } catch (error) {
+      update({ control: false });
+      fail(error);
+    }
+  };
+
   const loop = async (signal: AbortSignal): Promise<void> => {
     let seq: number | undefined;
     while (!signal.aborted) {
@@ -106,6 +117,7 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
         continue;
       }
       seq = typeof body['seq'] === 'number' ? body['seq'] : undefined;
+      if (state.control && body['paused'] === false) update({ control: false });
       const width = typeof body['width'] === 'number' ? body['width'] : 0;
       const height = typeof body['height'] === 'number' ? body['height'] : 0;
       update({
@@ -135,9 +147,11 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
     stop() {
       run?.abort();
       run = undefined;
+      if (state.control) void takeover(false);
     },
-    setControl(active) {
-      update({ control: active && state.status === 'live', notice: undefined });
+    async setControl(active) {
+      if (active && state.status !== 'live') return;
+      await takeover(active);
     },
     async send(input) {
       if (!state.control) return;
@@ -146,7 +160,8 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
           body: { ...input },
         });
         if (answer.status === 200) return;
-        if (record(answer.body)['code'] === 'not-running') update({ control: false });
+        const code = record(answer.body)['code'];
+        if (code === 'not-running' || code === 'not-paused') update({ control: false });
         update({ notice: errorOf(answer) });
       } catch (error) {
         fail(error);

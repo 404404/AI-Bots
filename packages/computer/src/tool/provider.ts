@@ -71,6 +71,7 @@ export interface ComputerToolProviderOptions {
   readonly ctx: Context;
   readonly driver: CuaDriver;
   readonly isComputerRunning: () => boolean;
+  readonly isPaused?: () => boolean;
   readonly isAutoAllowed: () => boolean;
   readonly guidance?: (() => string) | undefined;
   readonly authorizationScope?: (() => string) | undefined;
@@ -141,6 +142,12 @@ export function createComputerToolProvider(
   options: ComputerToolProviderOptions,
 ): ComputerToolProvider {
   const { ctx, driver, isComputerRunning, isAutoAllowed, audit, core } = options;
+  const assertNotPaused = (): void => {
+    if (options.isPaused?.() === true)
+      throw new Error(
+        'Computer Pause is active: the Human is using the desktop from the phone. Wait for them to hand it back, then take a fresh screenshot before acting',
+      );
+  };
   const note = options.note ?? ((): void => undefined);
   const onActivity = options.onActivity ?? ((): void => undefined);
 
@@ -223,6 +230,7 @@ export function createComputerToolProvider(
                 'The Computer is not running; ask the Human to start it from the Computer panel',
               );
             }
+            assertNotPaused();
             const started = Date.now();
             try {
               const result = await driver.call(raw, args, execution.signal);
@@ -372,6 +380,7 @@ export function createComputerToolProvider(
         throw new Error('Computer Access is off for this PersonaBot');
       if (!isComputerRunning())
         throw new Error('The Computer is not running; start it with computer-start first');
+      assertNotPaused();
       const result = await driver.call(raw, args, signal);
       const failed =
         typeof result === 'object' &&

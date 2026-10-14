@@ -193,6 +193,9 @@ describe('Agent Browser and Computer commands', () => {
       target: 'local',
     });
     expect(readFileSync(file, 'utf8')).toBe('png-bytes');
+    expect((await invoke(['computer-takeover', '--enabled'], live.url)).json).toEqual({
+      ok: true,
+    });
     expect(
       (
         await invokeWithStdin(
@@ -204,6 +207,7 @@ describe('Agent Browser and Computer commands', () => {
     ).toEqual({ ok: true });
     expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
       ['GET', '/api/computer/frame', undefined],
+      ['POST', '/api/computer/takeover', { active: true }],
       ['POST', '/api/computer/input', { kind: 'key', key: 'Return' }],
     ]);
   });
@@ -388,6 +392,7 @@ describe('Agent Browser and Computer commands', () => {
       ['computer-frame', '--out', 'relative.png'],
       ['computer-frame', 'ada', '--out', '/tmp/x.png'],
       ['computer-input'],
+      ['computer-takeover'],
       ['browser-takeover', 'ada'],
       ['browser-input', 'ada'],
       ['computer-start', '--target', 'cloud'],

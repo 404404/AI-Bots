@@ -11,7 +11,7 @@ import { edge, radius, space } from '../../src/ui/design/tokens';
 import { useDesignTheme } from '../../src/ui/design/theme';
 import { Button } from '../../src/ui/primitives/button';
 import { Text } from '../../src/ui/primitives/text';
-import { CloseIcon, KeyboardIcon } from '../../src/ui/shell/icons';
+import { CloseIcon, KeyboardIcon, LockIcon } from '../../src/ui/shell/icons';
 import { useMounted } from '../../src/ui/mounted';
 import { t } from '../../src/ui/strings';
 
@@ -35,6 +35,12 @@ export default function ComputerScreen() {
   );
   const [mode, setMode] = useState<BrowserTouchMode>('direct');
   const keyboard = useRef<TextInput>(null);
+  const [secret, setSecret] = useState(false);
+  const openKeyboard = (password: boolean) => {
+    setSecret(password);
+    keyboard.current?.blur();
+    setTimeout(() => keyboard.current?.focus(), 50);
+  };
 
   const mount = useMounted<View>(() => {
     viewer?.start();
@@ -193,27 +199,35 @@ export default function ComputerScreen() {
                   </Pressable>
                 ))}
               </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={t.browserKeyboard}
-                onPress={() => keyboard.current?.focus()}
-                style={{
-                  width: theme.touch,
-                  height: theme.touch,
-                  borderRadius: radius.md,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: theme.color.surface,
-                }}
-              >
-                <KeyboardIcon color={theme.color.fg} size={theme.touch / 2} />
-              </Pressable>
+              {(
+                [
+                  [false, t.browserKeyboard, KeyboardIcon],
+                  [true, t.computerPasswordKeyboard, LockIcon],
+                ] as const
+              ).map(([password, label, Icon]) => (
+                <Pressable
+                  key={label}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                  onPress={() => openKeyboard(password)}
+                  style={{
+                    width: theme.touch,
+                    height: theme.touch,
+                    borderRadius: radius.md,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: theme.color.surface,
+                  }}
+                >
+                  <Icon color={theme.color.fg} size={theme.touch / 2} />
+                </Pressable>
+              ))}
             </View>
           )}
           <Button
             label={driving ? t.computerHandBack : t.computerTakeControl}
             tone={driving ? 'secondary' : 'primary'}
-            onPress={() => viewer?.setControl(!driving)}
+            onPress={() => void viewer?.setControl(!driving)}
           />
           <TextInput
             ref={keyboard}
@@ -221,6 +235,9 @@ export default function ComputerScreen() {
             value=""
             autoCapitalize="none"
             autoCorrect={false}
+            secureTextEntry={secret}
+            textContentType={secret ? 'password' : 'none'}
+            autoComplete={secret ? 'current-password' : 'off'}
             submitBehavior="submit"
             onChangeText={(text) => {
               if (text !== '') void viewer?.send({ kind: 'type', text });

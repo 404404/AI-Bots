@@ -31,7 +31,7 @@ export type DesktopInput =
       modifiers: readonly ('alt' | 'ctrl' | 'meta' | 'shift')[];
     };
 
-export type DesktopViewRefusal = 'not-running' | 'capture-failed' | 'input-failed';
+export type DesktopViewRefusal = 'not-running' | 'not-paused' | 'capture-failed' | 'input-failed';
 
 export class DesktopViewError extends Error {
   constructor(
@@ -45,6 +45,8 @@ export class DesktopViewError extends Error {
 export interface DesktopView {
   next(after: number | undefined, signal?: AbortSignal): Promise<DesktopFrame | undefined>;
   input(input: DesktopInput, signal?: AbortSignal): Promise<void>;
+  setPaused(active: boolean): boolean;
+  isPaused(): boolean;
   stats(): DesktopViewStats;
 }
 
@@ -209,11 +211,18 @@ export function createDesktopView(options: {
   isRunning: () => boolean;
   intervalMs?: number;
   waitMs?: number;
+  pauseLeaseMs?: number;
   now?: () => number;
 }): DesktopView {
   const intervalMs = options.intervalMs ?? 150;
   const waitMs = options.waitMs ?? 10_000;
   const now = options.now ?? Date.now;
+  const pauseLeaseMs = options.pauseLeaseMs ?? 30_000;
+  let pausedUntil = 0;
+  const isPaused = (): boolean => pausedUntil > now();
+  const renewPause = (): void => {
+    if (isPaused()) pausedUntil = now() + pauseLeaseMs;
+  };
   let latest: DesktopFrame | undefined;
   let capturing: Promise<DesktopFrame | undefined> | undefined;
   let lastStarted = 0;
@@ -260,6 +269,7 @@ export function createDesktopView(options: {
   return {
     async next(after, signal) {
       requireRunning();
+      renewPause();
       if (latest !== undefined && after !== undefined && latest.seq > after) return latest;
       const deadline = now() + waitMs;
       while (signal?.aborted !== true) {
@@ -272,6 +282,9 @@ export function createDesktopView(options: {
     },
     async input(input, signal) {
       requireRunning();
+      if (!isPaused())
+        throw new DesktopViewError('not-paused', 'Pause the Bot before using the desktop.');
+      renewPause();
       if (input.kind === 'click') pointer = { x: input.x, y: input.y };
       const call = desktopInputCall(input, pointer);
       const result = await options.driver.call(call.tool, call.args, signal);
@@ -279,6 +292,11 @@ export function createDesktopView(options: {
       if (refused !== undefined) throw new DesktopViewError('input-failed', refused);
       lastStarted = 0;
     },
+    setPaused(active) {
+      pausedUntil = active ? now() + pauseLeaseMs : 0;
+      return isPaused();
+    },
+    isPaused,
     stats: () => ({ captures, unchanged, published, lastCaptureMs }),
   };
 }

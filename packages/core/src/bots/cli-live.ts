@@ -135,6 +135,7 @@ const DEVICE_COMMANDS = [
   'computer-tools',
   'computer-tool',
   'computer-frame',
+  'computer-takeover',
   'computer-input',
 ] as const;
 
@@ -266,9 +267,14 @@ export const LIVE_COMMANDS = [
     description: 'save the current picture of the profile Computer desktop to a file',
   },
   {
+    command: 'computer-takeover',
+    description:
+      'pause Bot use of the profile Computer for Human input (--enabled) or hand it back (--disabled)',
+  },
+  {
     command: 'computer-input',
     description:
-      'click, scroll, type or press a key on the profile Computer desktop (input JSON from stdin)',
+      'click, scroll, type or press a key on a paused profile Computer desktop (input JSON from stdin)',
   },
   { command: 'computer-stop', description: 'stop the profile Computer' },
   {
@@ -1238,8 +1244,11 @@ async function runDeviceCommand(
     if (!out.startsWith('/') && !/^[A-Za-z]:[\\/]/u.test(out))
       usage(`${command} requires --out <absolute-file>.`);
   }
-  if (command === 'browser-takeover' && values.enabled === values.disabled)
-    usage('browser-takeover needs exactly one of --enabled or --disabled.');
+  if (
+    (command === 'browser-takeover' || command === 'computer-takeover') &&
+    values.enabled === values.disabled
+  )
+    usage(`${command} needs exactly one of --enabled or --disabled.`);
   if (
     command === 'computer-start' &&
     values.target !== undefined &&
@@ -1307,6 +1316,8 @@ async function runDeviceCommand(
     });
   if (command === 'computer-status') return json('/api/computer/status');
   if (command === 'computer-stop') return json('/api/computer/stop', { authorize: true });
+  if (command === 'computer-takeover')
+    return json('/api/computer/takeover', { active: values.enabled === true });
   if (command === 'computer-input') return json('/api/computer/input', toolArgs);
   if (command === 'computer-frame') {
     const desktop = record(await json('/api/computer/frame'));
