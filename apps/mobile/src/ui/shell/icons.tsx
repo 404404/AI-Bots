@@ -68,6 +68,10 @@ export function ChevronDownIcon(props: IconProps) {
   return <Glyph {...props} d="m6 9 6 6 6-6" />;
 }
 
+export function ChevronRightIcon(props: IconProps) {
+  return <Glyph {...props} d="m9 6 6 6-6 6" />;
+}
+
 export function ChevronUpIcon(props: IconProps) {
   return <Glyph {...props} d="m6 15 6-6 6 6" />;
 }
