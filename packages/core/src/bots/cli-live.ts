@@ -24,7 +24,23 @@ export const LIVE_OPTIONS = {
   'values-stdin': { type: 'boolean' },
   since: { type: 'string' },
   workspace: { type: 'string' },
+  mode: { type: 'string' },
+  scope: { type: 'string' },
+  'acknowledge-risk': { type: 'boolean' },
+  'patch-stdin': { type: 'boolean' },
+  member: { type: 'string', multiple: true },
 } as const;
+
+const CONTROL_COMMANDS = [
+  'browser-access-set',
+  'computer-access-set',
+  'access',
+  'access-set',
+  'settings',
+  'settings-set',
+  'workspace-create',
+  'group-create',
+] as const;
 
 export const LIVE_COMMANDS = [
   ...IM_COMMANDS,
@@ -62,6 +78,26 @@ export const LIVE_COMMANDS = [
   { command: 'release-info', description: 'read the running Host release lifecycle' },
   { command: 'workspace-options', description: 'list live Host workspaces for grants' },
   { command: 'grant-create', description: 'authorize a Bot workspace through the live Host' },
+  {
+    command: 'browser-access-set',
+    description: "turn a Bot's Browser Access on or off through the live Host",
+  },
+  {
+    command: 'computer-access-set',
+    description: "turn a Bot's Computer Access on or off through the live Host",
+  },
+  { command: 'access', description: "read a Bot's access preset (workspace write or full access)" },
+  {
+    command: 'access-set',
+    description: "set a Bot's access preset; full access needs --acknowledge-risk",
+  },
+  { command: 'settings', description: 'read one live Host settings namespace' },
+  {
+    command: 'settings-set',
+    description: 'patch one live Host settings namespace with JSON from stdin',
+  },
+  { command: 'workspace-create', description: 'register an absolute folder as a Host workspace' },
+  { command: 'group-create', description: 'create a group Channel with one or more Bots' },
 ] as const;
 
 interface LiveValues extends ImValues {
@@ -78,6 +114,13 @@ interface LiveValues extends ImValues {
   workspace?: string;
   limit?: string;
   before?: string;
+  enabled?: boolean;
+  disabled?: boolean;
+  mode?: string;
+  scope?: string;
+  'acknowledge-risk'?: boolean;
+  'patch-stdin'?: boolean;
+  member?: string[];
 }
 
 function usage(message: string): never {
@@ -194,7 +237,7 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
   const scrub = (value: string) =>
     value.replaceAll(secret, '[redacted]').replaceAll(encodeURIComponent(secret), '[redacted]');
   const rpc = async <T>(method: string, args: Record<string, unknown>): Promise<T> => {
-    const name = method === 'dsh-im/app-setup' ? method : `botharness/${method}`;
+    const name = method.includes('/') ? method : `botharness/${method}`;
     const response = await request(new URL(`/api/${name}`, base), {
       method: 'POST',
       headers: { 'content-type': 'application/json', cookie },
@@ -202,7 +245,7 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
         type: 'client-request',
         rpcId: randomUUID(),
         method: name,
-        payload: method === 'dsh-im/app-setup' ? args : { args },
+        payload: method.startsWith('dsh-im/') ? args : { args },
       }),
     });
     const payload = await readResponse(response);
@@ -287,6 +330,8 @@ export async function runLiveCli(
       throw error;
     }
   }
+  if (CONTROL_COMMANDS.some((entry) => entry === command))
+    return runControlCommand(command as (typeof CONTROL_COMMANDS)[number], rest, values, io);
   const noTarget = command === 'release-info' || command === 'workspace-options';
   if (rest.length !== (noTarget ? 0 : 1))
     usage(
@@ -570,4 +615,73 @@ export async function runLiveCli(
   if (command === 'grant-create')
     return rpc('grantCreate', { slug: target, workspaceId: values.workspace });
   return rpc('releaseInfo', values.since === undefined ? {} : { since: values.since });
+}
+
+async function runControlCommand(
+  command: (typeof CONTROL_COMMANDS)[number],
+  rest: string[],
+  values: LiveValues,
+  io: BotCreateCliIo,
+): Promise<unknown> {
+  if (rest.length !== 1 || !rest[0]?.trim()) usage(`${command} needs exactly one target.`);
+  const target = rest[0].trim();
+  let patch: Record<string, unknown> | undefined;
+  if (command === 'browser-access-set' || command === 'computer-access-set') {
+    if (values.enabled === values.disabled)
+      usage(`${command} needs exactly one of --enabled or --disabled.`);
+  }
+  if (command === 'access-set') {
+    if (values.mode !== 'workspace-write' && values.mode !== 'danger-full-access')
+      usage('--mode must be workspace-write or danger-full-access.');
+    if (values.scope !== undefined && values.scope !== 'chat' && values.scope !== 'assignments')
+      usage('--scope must be chat or assignments.');
+    if (values.mode === 'danger-full-access' && values['acknowledge-risk'] !== true)
+      usage(
+        'Full access lets the Bot run any command and use the Browser and Computer without asking. Pass --acknowledge-risk to confirm.',
+      );
+  }
+  if (command === 'settings-set') {
+    if (values['patch-stdin'] !== true) usage('settings-set requires --patch-stdin.');
+    try {
+      const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+        throw new Error('not an object');
+      patch = parsed as Record<string, unknown>;
+    } catch {
+      usage('--patch-stdin must be a JSON object of settings fields.');
+    }
+  }
+  if (command === 'workspace-create' && !target.startsWith('/') && !/^[A-Za-z]:[\\/]/u.test(target))
+    usage('workspace-create needs an absolute folder path.');
+  const members = (values.member ?? []).map((member) => member.trim()).filter(Boolean);
+  if (command === 'group-create' && members.length === 0)
+    usage('group-create needs at least one --member <bot-id>.');
+  const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+  const { rpc } = await connectLiveHost(values, io, signal);
+  if (command === 'browser-access-set' || command === 'computer-access-set')
+    return rpc(command === 'browser-access-set' ? 'browserAccessSet' : 'computerAccessSet', {
+      slug: target,
+      enabled: values.enabled === true,
+    });
+  if (command === 'access') return rpc('assignmentAccessGet', { slug: target });
+  if (command === 'access-set')
+    return rpc('assignmentAccessSet', {
+      slug: target,
+      mode: values.mode,
+      ...(values.scope === undefined ? {} : { scope: values.scope }),
+      ...(values.mode === 'danger-full-access' ? { acknowledgeRisk: true } : {}),
+    });
+  if (command === 'workspace-create') return rpc('workspace/create', { request: { path: target } });
+  if (command === 'group-create') return rpc('channelCreate', { name: target, members });
+  const described = record(await rpc('settings/describe', {}));
+  const namespaces = Array.isArray(described['namespaces']) ? described['namespaces'] : [];
+  const found = namespaces.map(record).find((entry) => entry['ns'] === target);
+  if (found === undefined)
+    throw new CliLiveError('unknown-settings', `The Host has no settings namespace ${target}.`);
+  if (command === 'settings')
+    return { ns: target, revision: found['revision'], value: found['value'] };
+  const updated = record(
+    await rpc('settings/update', { ns: target, patch, expectedRevision: found['revision'] }),
+  );
+  return { ns: target, revision: updated['revision'], value: updated['value'] };
 }
