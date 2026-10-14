@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 
 import type { CardResolution } from '../../host/conversation';
 import {
@@ -18,8 +18,6 @@ import { Text } from '../primitives/text';
 import { errorText } from '../request-parts';
 import { t } from '../strings';
 import { ActionCard, CardButtons, CardLine, CardLink, type CardLineTone } from './action-card';
-
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 export interface ApprovalCardPort {
   load(): Promise<ApprovalRequest>;
@@ -181,7 +179,12 @@ export function ApprovalCard({
                   paddingVertical: space.x3,
                 }}
               >
-                <Text selectable variant="meta" numberOfLines={4} style={{ fontFamily: MONO }}>
+                <Text
+                  selectable
+                  variant="meta"
+                  numberOfLines={4}
+                  style={{ fontFamily: theme.mono }}
+                >
                   {first.value}
                 </Text>
               </View>

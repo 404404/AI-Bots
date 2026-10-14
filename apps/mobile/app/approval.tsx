@@ -1,6 +1,6 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Platform, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
 import { useHostSession } from '../src/host/host-session';
 import { loadApproval, readableInput, type ApprovalRequest } from '../src/host/requests';
@@ -11,9 +11,41 @@ import { Button } from '../src/ui/primitives/button';
 import { Text } from '../src/ui/primitives/text';
 import { t } from '../src/ui/strings';
 
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
-
 type Params = { channelId: string; messageId: string; botSlug: string };
+
+function SheetHeader({ title, onDone }: { title: string; onDone(): void }) {
+  const theme = useDesignTheme();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: space.x4,
+        paddingLeft: space.x5,
+        paddingTop: space.x5,
+      }}
+    >
+      <Text variant="title" numberOfLines={1} style={{ flexShrink: 1 }}>
+        {title}
+      </Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t.done}
+        onPress={onDone}
+        style={{
+          minHeight: theme.touch,
+          minWidth: theme.touch,
+          paddingHorizontal: space.x5,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text strong>{t.done}</Text>
+      </Pressable>
+    </View>
+  );
+}
 
 function Field({ label, value }: { label: string; value: string }) {
   const theme = useDesignTheme();
@@ -33,7 +65,7 @@ function Field({ label, value }: { label: string; value: string }) {
           padding: space.x4,
         }}
       >
-        <Text selectable variant="meta" style={{ fontFamily: MONO }}>
+        <Text selectable variant="meta" style={{ fontFamily: theme.mono }}>
           {value}
         </Text>
       </View>
@@ -45,6 +77,7 @@ export default function ApprovalDetailsScreen() {
   const theme = useDesignTheme();
   const { channelId, messageId, botSlug } = useLocalSearchParams<Params>();
   const { client } = useHostSession();
+  const router = useRouter();
   const [state, setState] = useState<
     { kind: 'loading' } | { kind: 'failed' } | { kind: 'ready'; request: ApprovalRequest }
   >({ kind: 'loading' });
@@ -64,7 +97,7 @@ export default function ApprovalDetailsScreen() {
 
   return (
     <View ref={mount} style={{ flex: 1, backgroundColor: theme.color.base }}>
-      <Stack.Screen options={{ title: t.kind['tool-approval']! }} />
+      <SheetHeader title={t.kind['tool-approval']!} onDone={() => router.back()} />
       {state.kind === 'loading' ? (
         <View style={{ padding: space.x6, alignItems: 'center' }}>
           <ActivityIndicator />
