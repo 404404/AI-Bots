@@ -180,6 +180,14 @@ _Avoid_: Service Grant, Workspace, one-time approval, cwd inference
 A revocable instruction, explicitly saved by the Web Human or a currently authorized external reviewer, to answer future DSH approval requests automatically for one PersonaBot role and Workspace Grant scope. An exact rule matches the native tool name and complete input; an all-opaque rule covers every opaque native tool in that scope. An external reviewer's rule depends on that original pairing and current approval/rule-saving authority; loss disables it rather than transferring it to a later pairing. Each matching call still receives its own DSH approval decision and audit event.
 _Avoid_: Workspace Grant, provider Service Grant, sandbox preset, inferred command similarity
 
+**Approval Template**:
+A Profile-wide, Human-written Markdown policy that says which tool approvals may be allowed, refused or sent to the Human. A PersonaBot selects one or none; selecting, clearing or editing a template in use always needs a Human approval card (ADR-0207).
+_Avoid_: approval mode, auto mode, Tool Approval Rule
+
+**Approval Reviewer**:
+A fresh, tool-less DSH Session that applies a PersonaBot's Approval Template to one pending approval request, without tool results in its context, and answers allow, reject with a reason, or ask Human. Its failure always falls back to the Human card.
+_Avoid_: classifier, guardian, auto-approver
+
 **Assignment Access Preset**:
 A Human-controlled per-PersonaBot choice applied when a new Assignment is created. The default is DSH workspace-write with ask; dangerous full access is an explicit opt-in to DSH danger-full-access with never. The chosen mode is frozen in each Assignment's permission snapshot, while its selected Workspace Grant remains required.
 _Avoid_: Workspace Grant, in-place Session mode switch, Orchestrator permission

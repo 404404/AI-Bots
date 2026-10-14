@@ -180,6 +180,14 @@ _避免使用_：Service Grant、Workspace、one-time approval、cwd inference
 Web Human 或当前获授权的外部审核人显式保存且可撤销的规则，针对一个 PersonaBot 角色与 Workspace Grant 范围，自动回答后续 DSH 审批请求。精确规则匹配原生工具名称与完整输入；全部不透明工具规则覆盖该范围内所有无法按路径核对的原生工具。外部审核人保存的规则依赖原配对及其当前批准／保存规则能力；失去授权会停用规则，不转移到后来的配对。每次命中仍产生独立的 DSH 审批决定与审计事件。
 _避免使用_：Workspace Grant、Provider Service Grant、sandbox preset、推断的命令相似性
 
+**Approval Template**：
+Profile 级、由 Human 用 Markdown 写成的审批规范，说明哪些工具审批可以允许、拒绝或交给 Human。每个 PersonaBot 选用一份或不选；选用、取消或修改正在使用的模板，必须由 Human 通过审批卡确认（ADR-0207）。
+_避免使用_：approval mode、auto mode、Tool Approval Rule
+
+**Approval Reviewer**：
+一个全新的、没有工具的 DSH Session，按 PersonaBot 的 Approval Template 判断一条待审批请求；上下文不含工具结果；结论是允许、拒绝并附理由，或交给 Human。它出错时一律退回 Human 审批卡。
+_避免使用_：classifier、guardian、auto-approver
+
 **Assignment Access Preset**：
 Human 为单个 PersonaBot 选择、在新建 Assignment 时应用的权限预设。默认是 DSH workspace-write 与 ask；危险完全访问需要明确开启 DSH danger-full-access 与 never。所选模式固化在每个 Assignment 的权限快照中，仍须选择有效 Workspace Grant。
 _避免使用_：Workspace Grant、就地切换 Session 模式、Orchestrator 权限
