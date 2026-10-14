@@ -21,6 +21,7 @@ export function ActionCard({
   focused = false,
   error,
   busy = false,
+  wide = false,
   children,
 }: {
   eyebrow: string;
@@ -30,6 +31,7 @@ export function ActionCard({
   focused?: boolean;
   error?: string;
   busy?: boolean;
+  wide?: boolean;
   children?: ReactNode;
 }) {
   const theme = useDesignTheme();
@@ -38,8 +40,8 @@ export function ActionCard({
       <View
         testID="action-card"
         style={{
-          maxWidth: '92%',
-          alignSelf: 'flex-start',
+          maxWidth: wide ? '100%' : '92%',
+          alignSelf: wide ? 'stretch' : 'flex-start',
           backgroundColor: theme.color.surface,
           borderRadius: radius.lg,
           borderWidth: focused ? edge.focus : edge.hairline,

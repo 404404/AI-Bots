@@ -55,8 +55,8 @@ describe('mobile design tokens', () => {
 
 describe('resolveTheme', () => {
   it('follows the system scheme unless the Human picks one', () => {
-    expect(resolveTheme('dark').color).toEqual(palette.dark);
-    expect(resolveTheme('dark', { scheme: 'light' }).color).toEqual(palette.light);
+    expect(resolveTheme('dark').color).toMatchObject(palette.dark);
+    expect(resolveTheme('dark', { scheme: 'light' }).color).toMatchObject(palette.light);
     expect(resolveTheme('light', { scheme: 'system' }).scheme).toBe('light');
   });
 
@@ -70,6 +70,13 @@ describe('resolveTheme', () => {
       onAccent: '#ffffff',
     });
     expect(resolveTheme('light', { accent: 'red' }).color.accent).toBe(palette.light.accent);
+  });
+
+  it('tints the soft accent from the accent over the base', () => {
+    expect(resolveTheme('light').color.accentSoft).toBe('#e8effc');
+    expect(resolveTheme('light', { accent: '#5b2ecc' }).color.accentSoft).not.toBe(
+      resolveTheme('light').color.accentSoft,
+    );
   });
 
   it('uses each platform type and touch scale', () => {
