@@ -190,6 +190,13 @@ Usage:
   deepseekbot im-status <id>
   deepseekbot channel-connect <channel> --bot <id> --conversation <external-id> [--app <app-id>]
   deepseekbot channel-ingests <channel>
+  deepseekbot browser-open <id>
+  deepseekbot browser-frame <id> --out <absolute-file>
+  deepseekbot browser-takeover <id> (--enabled | --disabled)
+  deepseekbot browser-stop <id>
+  deepseekbot computer-start [--target local|container]
+  deepseekbot computer-status
+  deepseekbot computer-stop
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
   deepseekbot bot-sessions <id> [--limit <1-100>]
   deepseekbot bot-activity <id> [--limit <1-100>]
@@ -2478,7 +2485,7 @@ export async function runBotCreateCli(
     }
     if (
       LIVE_COMMANDS.some((entry) => entry.command === command) ||
-      (command === 'channel-messages' &&
+      ((command === 'channel-messages' || command === 'grants') &&
         (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined))
     ) {
       if (values.home !== undefined)
