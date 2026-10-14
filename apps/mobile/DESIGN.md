@@ -15,11 +15,12 @@ References:
 
 - **Hosts are workspaces.** Each paired computer is a Host.
   - The app stays connected to every paired Host at once.
-  - Home and chats show one Host at a time. The Host switcher is at the top left of Home: the Host name with ▾, tap or swipe right to open it. It lists each Host with its status and pending count, plus "Pair a new computer".
+  - Home and chats show one Host at a time. Home has a Slack-style header band in the accent colour (a muted accent in dark mode) with the Host's initial tile, the Host name and ▾; tap it to open the Host switcher. The list sits on a panel with rounded top corners below it. The switcher lists each Host with its status and pending count, plus "Pair a new computer".
 - **Tabs** are native (`NativeTabs`): **Home**, **Activity** and **Me**.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
+  - Like Slack, the selected tab is the foreground colour with a pill behind its icon (the Android Material indicator; drawn the same way on web), and the others are muted.
 - **Home** shows the current Host:
-  - A row of shortcut cards: **Needs you**, **Working** and **Unread**.
+  - A row of shortcut cards: **Needs you** and **Working**, each an icon, a name and a count that filters the list when tapped. **Unread** joins them once the Host reports unread counts.
   - One list of PersonaBot DMs and Channels together, by latest activity.
   - The header has search and **+** (new Bot, new Channel).
 - **Activity** is the Human Inbox across all Hosts:
@@ -32,10 +33,10 @@ References:
 
 **Conversation row**
 
-- A 48pt avatar on a rounded square.
+- A 48pt avatar: the Bot's round avatar with its state ring, or a rounded square with `#` for a Channel.
 - First line: title, IM channel badges and time.
 - Second line: a one-line preview.
-- "Needs you" (a warning `!`) takes priority over unread (an accent count).
+- "Needs you" (a warning `!`, with the count when more than one) takes priority over unread (an accent count).
 - A working Bot's preview reads "Working…".
 - Swipe for pin and mute; long-press opens a native menu.
 

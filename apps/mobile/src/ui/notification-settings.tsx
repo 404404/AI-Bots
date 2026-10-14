@@ -12,7 +12,7 @@ import type { PushStatus } from '../host/push-session';
 import { space } from './design/tokens';
 import { useDesignTheme } from './design/theme';
 import { useMounted } from './mounted';
-import { SettingsGroup, SettingsRow } from './primitives/settings-row';
+import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
 import { ActionButton, Loading, Notice, errorText } from './request-parts';
 import { t } from './strings';
@@ -117,11 +117,11 @@ export function NotificationSettings({
           <Text accessibilityRole="header" variant="meta" tone="muted" strong>
             {t.notifyAbout}
           </Text>
-          <SettingsGroup>
+          <SettingsSection>
             {PUSH_KINDS.map((kind) => (
               <SettingsRow
                 key={kind}
-                label={t.pushKind[kind]}
+                title={t.pushKind[kind]}
                 trailing={
                   <Switch
                     accessibilityLabel={t.pushKind[kind]}
@@ -133,7 +133,7 @@ export function NotificationSettings({
                 }
               />
             ))}
-          </SettingsGroup>
+          </SettingsSection>
           <View style={{ flexDirection: 'row', paddingTop: space.x3 }}>
             <ActionButton
               label={t.sendTest}

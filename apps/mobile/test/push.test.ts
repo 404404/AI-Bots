@@ -89,7 +89,7 @@ describe('notification taps', () => {
     });
   });
 
-  it('opens a DM reply in the DM, a group mention as its Inbox item, and a badge or test as the Inbox', () => {
+  it('opens a DM reply in the DM, a group mention as its Inbox item, and a badge or test as Activity', () => {
     const reply = parsePushData({ ...approval, kind: 'channel-reply' })!;
     expect(pushHref(reply, () => 'dm-ada')).toEqual({
       pathname: '/dm/[slug]',
@@ -99,7 +99,7 @@ describe('notification taps', () => {
       pathname: '/inbox/[id]',
     });
     expect(pushHref(parsePushData({ v: 1, hostId: 'h2', test: true })!, () => undefined)).toEqual({
-      pathname: '/inbox',
+      pathname: '/activity',
     });
   });
 });

@@ -5,7 +5,7 @@ import { hostSession, useHostSession } from '../src/host/host-session';
 import type { SavedHost } from '../src/host/hosts';
 import { space } from '../src/ui/design/tokens';
 import { useDesignTheme } from '../src/ui/design/theme';
-import { SettingsGroup, SettingsRow } from '../src/ui/primitives/settings-row';
+import { SettingsRow, SettingsSection } from '../src/ui/primitives/settings-row';
 import { Text } from '../src/ui/primitives/text';
 import { t } from '../src/ui/strings';
 
@@ -33,9 +33,9 @@ export default function HostsScreen() {
       renderItem={({ item }) => {
         const current = item.hostId === saved?.hostId;
         return (
-          <SettingsGroup>
+          <SettingsSection>
             <SettingsRow
-              label={item.hostName}
+              title={item.hostName}
               strong={current}
               selected={current}
               onPress={() => show(item)}
@@ -47,14 +47,14 @@ export default function HostsScreen() {
                 ) : null
               }
             />
-          </SettingsGroup>
+          </SettingsSection>
         );
       }}
       ListFooterComponent={
         <View style={{ paddingTop: space.x3 }}>
-          <SettingsGroup>
+          <SettingsSection>
             <SettingsRow
-              label={t.pairAnother}
+              title={t.pairAnother}
               onPress={() => router.push('/pair')}
               trailing={
                 <Text tone="accent" strong>
@@ -62,7 +62,7 @@ export default function HostsScreen() {
                 </Text>
               }
             />
-          </SettingsGroup>
+          </SettingsSection>
         </View>
       }
     />

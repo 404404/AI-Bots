@@ -56,7 +56,7 @@ export function parsePushData(input: unknown): PushTarget | undefined {
 export type PushHref =
   | { pathname: '/inbox/[id]'; params: Record<string, string> }
   | { pathname: '/dm/[slug]'; params: { slug: string } }
-  | { pathname: '/inbox' };
+  | { pathname: '/activity' };
 
 const REPLIES = new Set(['channel-reply', 'channel-mention']);
 
@@ -65,7 +65,7 @@ export function pushHref(
   dmChannelOf: (slug: string) => string | undefined,
 ): PushHref {
   if (target.itemId === undefined || target.kind === undefined || target.botSlug === undefined)
-    return { pathname: '/inbox' };
+    return { pathname: '/activity' };
   if (
     REPLIES.has(target.kind) &&
     target.channelId !== undefined &&
