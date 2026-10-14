@@ -1,4 +1,4 @@
-import { border, color, radius, space, text } from './ds/tokens.stylex.js';
+import { border, color, radius, size, space, text } from './ds/tokens.stylex.js';
 import { INTERNAL_TOUR_CSS } from './internal-tour-styles.js';
 import { COMPOSER_CONTEXT_CSS } from './composer-context-styles.js';
 import { WINDOW_COMPANION_CSS } from './window-companion-styles.js';
@@ -3561,19 +3561,55 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   color: var(--dsw-alias-label-secondary);
   font-size: ${text.metaSize};
 }
+/* Hover actions float over the bubble's top-right edge so showing them never
+   shifts the layout. The lane spans the bubble and right-aligns the pill; a
+   Bot bubble narrower than the pill keeps it from spilling over the avatar. */
+.bh-bubble-toolbar {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  right: ${space.x3};
+  display: flex;
+  justify-content: safe flex-end;
+  transform: translateY(calc(-100% + ${space.x3}));
+  opacity: 0;
+  pointer-events: none;
+}
+.bh-message-group-me .bh-bubble-toolbar {
+  justify-content: flex-end;
+}
+.bh-bubble-wrap:hover .bh-bubble-toolbar,
+.bh-bubble-wrap:focus-within .bh-bubble-toolbar,
+.bh-bubble-toolbar:has([aria-expanded='true']) {
+  opacity: 1;
+}
 .bh-bubble-actions {
   display: flex;
   align-items: center;
   gap: ${space.x1};
+  padding: ${space.x1};
+  border: ${border.hairline} solid ${color.border};
+  border-radius: ${radius.sm};
+  background: ${color.base};
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
+}
+.bh-bubble-wrap:hover .bh-bubble-actions,
+.bh-bubble-wrap:focus-within .bh-bubble-actions,
+.bh-bubble-toolbar:has([aria-expanded='true']) .bh-bubble-actions {
+  pointer-events: auto;
+}
+.bh-bubble-wrap.bh-bubble-selecting .bh-bubble-toolbar {
+  display: none;
 }
 .bh-bubble-action {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: ${size.inlineIcon};
+  height: ${size.inlineIcon};
   padding: 0;
   border: 0;
-  border-radius: ${radius.sm};
+  border-radius: ${radius.xs};
   color: var(--dsw-alias-label-secondary);
   background: transparent;
   cursor: pointer;
@@ -3595,7 +3631,8 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
 /* Narrow screens: inline copy/reply actions crowd the bubble, so they move
    into the long-press message menu and the bubble keeps the full width. */
 @media (max-width: 640px) {
-  .bh-bubble-meta {
+  .bh-bubble-meta,
+  .bh-bubble-toolbar {
     display: none;
   }
 }

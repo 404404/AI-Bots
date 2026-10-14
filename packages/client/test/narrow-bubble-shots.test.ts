@@ -82,7 +82,8 @@ import { CSS } from '../src/client/styles.js';
 const NARROW_BLOCK = `/* Narrow screens: inline copy/reply actions crowd the bubble, so they move
    into the long-press message menu and the bubble keeps the full width. */
 @media (max-width: 640px) {
-  .bh-bubble-meta {
+  .bh-bubble-meta,
+  .bh-bubble-toolbar {
     display: none;
   }
 }`;
