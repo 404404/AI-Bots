@@ -7,7 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createComputerViewer, type ComputerViewerState } from '../../src/host/computer-viewer';
 import { useHostSession, useHostSnapshot } from '../../src/host/host-session';
 import { BrowserStage, type BrowserTouchMode } from '../../src/ui/chat/browser-stage';
-import { edge, radius, space } from '../../src/ui/design/tokens';
+import { buttonColors } from '../../src/ui/design/controls';
+import { radius, space } from '../../src/ui/design/tokens';
 import { useDesignTheme } from '../../src/ui/design/theme';
 import { Button } from '../../src/ui/primitives/button';
 import { Text } from '../../src/ui/primitives/text';
@@ -58,9 +59,10 @@ export default function ComputerScreen() {
         : undefined;
   const live = !revoked && state.frame !== undefined && message === undefined;
   const driving = live && state.control;
+  const control = buttonColors(theme, 'secondary', 'canvas');
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.color.base }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.layer.canvas.fill }}>
       <View
         style={{
           paddingTop: insets.top + space.x3,
@@ -69,8 +71,6 @@ export default function ComputerScreen() {
           flexDirection: 'row',
           alignItems: 'center',
           gap: space.x4,
-          borderBottomWidth: edge.hairline,
-          borderBottomColor: theme.color.divider,
         }}
       >
         <Pressable
@@ -78,16 +78,16 @@ export default function ComputerScreen() {
           accessibilityLabel={t.computerClose}
           onPress={close}
           hitSlop={space.x3}
-          style={{
+          style={({ pressed }) => ({
             width: theme.touch,
             height: theme.touch,
             borderRadius: radius.round,
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: theme.color.surface,
-          }}
+            backgroundColor: pressed ? control.pressed : control.fill,
+          })}
         >
-          <CloseIcon color={theme.color.fg} size={theme.touch / 2} />
+          <CloseIcon color={control.label} size={theme.touch / 2} />
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text variant="title" numberOfLines={1}>
@@ -155,8 +155,6 @@ export default function ComputerScreen() {
             paddingTop: space.x4,
             paddingBottom: insets.bottom + space.x4,
             gap: space.x4,
-            borderTopWidth: edge.hairline,
-            borderTopColor: theme.color.divider,
           }}
         >
           {!driving ? null : (
@@ -173,8 +171,8 @@ export default function ComputerScreen() {
                   flex: 1,
                   flexDirection: 'row',
                   padding: space.x2,
-                  borderRadius: radius.md,
-                  backgroundColor: theme.color.surface,
+                  borderRadius: radius.round,
+                  backgroundColor: theme.layer.raised.fill,
                 }}
               >
                 {(['direct', 'trackpad'] as const).map((option) => (
@@ -189,8 +187,8 @@ export default function ComputerScreen() {
                       minHeight: theme.touch - space.x3,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      borderRadius: radius.sm,
-                      backgroundColor: mode === option ? theme.color.elevated : undefined,
+                      borderRadius: radius.round,
+                      backgroundColor: mode === option ? theme.layer.raised.selected : undefined,
                     }}
                   >
                     <Text variant="meta" strong={mode === option}>
@@ -210,16 +208,16 @@ export default function ComputerScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={label}
                   onPress={() => openKeyboard(password)}
-                  style={{
+                  style={({ pressed }) => ({
                     width: theme.touch,
                     height: theme.touch,
-                    borderRadius: radius.md,
+                    borderRadius: radius.round,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: theme.color.surface,
-                  }}
+                    backgroundColor: pressed ? control.pressed : control.fill,
+                  })}
                 >
-                  <Icon color={theme.color.fg} size={theme.touch / 2} />
+                  <Icon color={control.label} size={theme.touch / 2} />
                 </Pressable>
               ))}
             </View>
@@ -227,6 +225,7 @@ export default function ComputerScreen() {
           <Button
             label={driving ? t.computerHandBack : t.computerTakeControl}
             tone={driving ? 'secondary' : 'primary'}
+            on="canvas"
             onPress={() => void viewer?.setControl(!driving)}
           />
           <TextInput
