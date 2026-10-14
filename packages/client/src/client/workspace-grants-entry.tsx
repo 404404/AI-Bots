@@ -36,6 +36,7 @@ import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import { useMountedResource } from './mounted-resource.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
+import { ApprovalTemplateEntry } from './approval-template-entry.js';
 import {
   publishWorkspaceGrantChange,
   subscribeWorkspaceGrantChanges,
@@ -995,6 +996,12 @@ export function WorkspaceGrantsEntry({
               </div>
             </div>
           ) : null}
+          <ApprovalTemplateEntry
+            botSlug={botSlug}
+            actions={actions}
+            disabled={loading || busy !== undefined}
+            t={t}
+          />
           {rules.length === 0 ? null : (
             <details className="bh-workspace-folder-secondary">
               <FolderSectionSummary>{t('approval.rulesTitle')}</FolderSectionSummary>

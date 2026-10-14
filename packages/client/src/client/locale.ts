@@ -3102,6 +3102,14 @@ export const zh = {
   'approval.externalCreator':
     'Lark 创建人：{actor}；每次调用前检查当前配对及 approve／save-rules 权限，失效后不自动恢复。',
   'approval.ruleDetails': '查看适用范围',
+  'autoApproval.title': '自动审批模板',
+  'autoApproval.off': '关闭（每次由你批准）',
+  'autoApproval.hintOff':
+    '选一个模板后，审批员会先按模板替你回答此 Bot 的工具审批，拿不准的才发卡片给你。',
+  'autoApproval.hintOn': '{description} 审批员按这个模板替你回答，拿不准的仍发卡片给你。',
+  'autoApproval.allowed': '已按模板 {template} 自动批准：{reason}',
+  'autoApproval.rejected': '已按模板 {template} 自动拒绝：{reason}',
+  'autoApproval.tool': '工具：{tool}',
   'access.title': '完全访问（所有文件，不再询问）',
   'access.description': '默认只能写入工作区，执行命令前逐次询问。',
   'access.hint':
@@ -6720,6 +6728,15 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.externalCreator':
     'Lark creator: {actor}; current pairing and approve/save-rules authority are checked before each call. Disabled rules do not reactivate automatically.',
   'approval.ruleDetails': 'View scope',
+  'autoApproval.title': 'Auto approval template',
+  'autoApproval.off': 'Off (you approve each card)',
+  'autoApproval.hintOff':
+    "Pick a template and an Approval Reviewer answers this Bot's tool approvals by it first. Only calls it can't decide come to you as cards.",
+  'autoApproval.hintOn':
+    '{description} The Approval Reviewer answers by this template; calls it is unsure about still come to you as cards.',
+  'autoApproval.allowed': 'Auto-approved by {template}: {reason}',
+  'autoApproval.rejected': 'Auto-rejected by {template}: {reason}',
+  'autoApproval.tool': 'Tool: {tool}',
   'access.title': 'Full access (all files, no asking)',
   'access.description':
     'By default it writes only within its workspace and asks before each command.',
