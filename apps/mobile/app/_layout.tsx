@@ -20,7 +20,7 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="dm/[slug]" options={{ title: '' }} />
-        <Stack.Screen name="connect" options={{ title: t.connectTitle, presentation: 'modal' }} />
+        <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
         <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
       </Stack>
     </SafeAreaProvider>

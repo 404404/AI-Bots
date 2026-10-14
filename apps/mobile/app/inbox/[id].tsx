@@ -93,7 +93,7 @@ export default function InboxItemScreen() {
           <View style={{ flexDirection: 'row' }}>
             <ActionButton
               label={t.openFullClient}
-              onPress={() => void Linking.openURL(`${saved.route}/`)}
+              onPress={() => void Linking.openURL(`${saved.routes[0] ?? ''}/`)}
             />
           </View>
         ) : null}

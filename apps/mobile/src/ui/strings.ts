@@ -1,3 +1,4 @@
+import type { PairingRefusal } from '../host/pairing';
 import type { AggregatedState } from '../host/wire';
 
 const en = {
@@ -21,12 +22,21 @@ const en = {
     waiting: 'Waiting for you',
     blocked: 'Blocked',
   } satisfies Record<AggregatedState, string>,
-  connectTitle: 'Connect to your computer',
-  connectHint:
-    'Development build: paste the Host address on your tailnet and the launch token printed by dsh web.',
-  hostAddress: 'Host address',
-  launchToken: 'Launch token',
-  connect: 'Connect',
+  pairTitle: 'Pair with your computer',
+  pairHint:
+    'On your computer, open DeepSeekBot settings → Devices → Pair a phone, then scan the code.',
+  allowCamera: 'Allow the camera to scan',
+  pasteLink: 'Or paste the pairing link',
+  pair: 'Pair',
+  pairRefused: {
+    'link-invalid': 'This is not a DeepSeekBot pairing code.',
+    'link-expired': 'This code has expired. Show a new code on your computer.',
+    'no-route':
+      'Your computer offered no address this phone can use. Set up Tailscale on it first.',
+    'offer-invalid': 'This code was already used. Show a new code on your computer.',
+    'offer-expired': 'This code has expired. Show a new code on your computer.',
+    unreachable: 'Cannot reach your computer. Check that this phone is on your tailnet.',
+  } satisfies Record<PairingRefusal, string>,
   unpair: 'Unpair',
   inbox: 'Inbox',
   inboxSections: {
@@ -127,11 +137,19 @@ const zh: typeof en = {
     waiting: '等你处理',
     blocked: '受阻',
   },
-  connectTitle: '连接你的电脑',
-  connectHint: '开发版：填入电脑在 tailnet 上的地址，以及 dsh web 打印的启动令牌。',
-  hostAddress: '电脑地址',
-  launchToken: '启动令牌',
-  connect: '连接',
+  pairTitle: '与电脑配对',
+  pairHint: '在电脑上打开 DeepSeekBot 设置 → 设备 → 配对手机，然后扫描二维码。',
+  allowCamera: '允许使用相机扫码',
+  pasteLink: '或粘贴配对链接',
+  pair: '配对',
+  pairRefused: {
+    'link-invalid': '这不是 DeepSeekBot 的配对二维码。',
+    'link-expired': '二维码已失效，请在电脑上换一个。',
+    'no-route': '电脑没有提供手机能用的地址，请先在电脑上设置 Tailscale。',
+    'offer-invalid': '这个二维码已经用过了，请在电脑上换一个。',
+    'offer-expired': '二维码已失效，请在电脑上换一个。',
+    unreachable: '连不上你的电脑，请确认手机已加入你的 tailnet。',
+  },
   unpair: '取消配对',
   inbox: '收件箱',
   inboxSections: {
