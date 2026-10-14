@@ -171,6 +171,7 @@ const en = {
   reactionSeparator: ', ',
   reactFailed: 'That reaction did not reach your computer.',
   closeViewer: 'Close',
+  close: 'Close',
   viewerHint: 'Pinch or double-tap to zoom. Swipe down to close.',
   imageUnavailable: 'Image unavailable. Tap to retry.',
   attachmentElsewhere: 'Open the full client to view',
@@ -361,30 +362,31 @@ const en = {
   authorizeHere: 'Authorize this folder',
   authorize: 'Authorize',
   confirmGrant: (name: string) => `Confirm authorization for ${name}`,
-  grantScope: (path: string) =>
-    `Resolved folder: ${path}. This only shares the folder with this PersonaBot; it does not turn on project writes or change Assignment access or approval rules.`,
+  grantScope:
+    'This only shares the folder with this PersonaBot. It does not turn on project writes or change Assignment access or approval rules.',
   workspaceWorking: 'Updating workspace access…',
-  fullAccess: 'Full access (all files, no asking)',
-  fullAccessDetail: 'By default it writes only within its workspace and asks before each command.',
-  fullAccessHint:
-    "Danger: when on, this Bot's chat Session and its new Assignments can read and write any file on this computer and run commands without asking. Content other people send in a Group or IM could steer it into acting.",
+  workspaceAccess: 'Access',
+  fullAccess: 'Full access',
+  fullAccessSummary: 'All files, no asking',
+  fullAccessDetail: 'When off, it writes only within its workspace and asks before each command.',
   fullAccessConfirmTitle: 'Enable dangerous file access?',
   fullAccessConfirmRisk:
     "This Bot's chat Session and its new Assignments may access any file outside their workspace and will not ask for each command. Content other people send in a Group or IM could steer it into acting. Running a command-line tool with a secret still asks every time. Turning this off confines the chat Session again but does not downgrade existing dangerous Assignments.",
   fullAccessConfirm: 'I understand, enable',
   fullAccessScope: 'Scope of full access',
-  fullAccessScopeChat: 'Chat Session and new Assignments (default)',
-  fullAccessScopeAssignments: 'New Assignments only: the chat Session stays confined and asks',
+  fullAccessScopeChat: 'Chat and new Assignments',
+  fullAccessScopeChatDetail: 'Default',
+  fullAccessScopeAssignments: 'New Assignments only',
+  fullAccessScopeAssignmentsDetail: 'The chat Session stays confined and asks',
   fullAccessOn:
     "Full access is on: this Bot's chat Session and its new Assignments may access any file without asking.",
   fullAccessOnAssignments:
     'Full access is on for new Assignments only: they may access any file without asking; the chat Session stays confined.',
   autoApproval: 'Auto approval template',
-  autoApprovalOff: 'Off (you approve each card)',
-  autoApprovalHintOff:
-    "Pick a template and an Approval Reviewer answers this Bot's tool approvals by it first. Only calls it can't decide come to you as cards.",
-  autoApprovalHintOn: (description: string) =>
-    `${description} The Approval Reviewer answers by this template; calls it is unsure about still come to you as cards.`,
+  autoApprovalOff: 'Off',
+  autoApprovalOffHint: 'You approve each card',
+  autoApprovalFooter:
+    "An Approval Reviewer answers this Bot's tool approvals by the template first. Calls it is unsure about still come to you as cards.",
   autoApprovalCautious: 'Cautious',
   autoApprovalCautiousHint:
     'Allows reading and planning; sends anything that leaves the computer to you.',
@@ -549,6 +551,7 @@ const zh: typeof en = {
   reactionSeparator: '、',
   reactFailed: '这个表情回应没有送到你的电脑。',
   closeViewer: '关闭',
+  close: '关闭',
   viewerHint: '双指或双击缩放，下滑关闭。',
   imageUnavailable: '图片无法显示，点按重试。',
   attachmentElsewhere: '请在完整客户端中查看',
@@ -737,29 +740,28 @@ const zh: typeof en = {
   authorizeHere: '授权此文件夹',
   authorize: '授权',
   confirmGrant: (name: string) => `确认授权给 ${name}`,
-  grantScope: (path: string) =>
-    `已解析目录：${path}。仅把这个文件夹授权给此 PersonaBot；不开启项目写入，不更改事项权限或审批规则。`,
+  grantScope: '仅把这个文件夹授权给此 PersonaBot；不开启项目写入，不更改事项权限或审批规则。',
   workspaceWorking: '正在处理工作区操作…',
-  fullAccess: '完全访问（所有文件，不再询问）',
-  fullAccessDetail: '默认只能写入工作区，执行命令前逐次询问。',
-  fullAccessHint:
-    '危险：开启后，此 Bot 的聊天会话和之后新建的事项可以读写这台电脑上的任何文件，执行命令不再逐次询问。群聊或 IM 里别人发来的内容也可能诱导它执行操作。',
+  workspaceAccess: '权限',
+  fullAccess: '完全访问',
+  fullAccessSummary: '所有文件，不再询问',
+  fullAccessDetail: '关闭时只能写入工作区，执行命令前逐次询问。',
   fullAccessConfirmTitle: '开启危险文件权限？',
   fullAccessConfirmRisk:
     '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。带密钥运行命令行工具仍然每次询问。开启后可以把范围改成“仅新事项”。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
   fullAccessConfirm: '我了解风险，开启',
   fullAccessScope: '完全访问的范围',
-  fullAccessScopeChat: '聊天会话和新事项（默认）',
-  fullAccessScopeAssignments: '仅新事项：聊天会话保持受限并逐次询问',
+  fullAccessScopeChat: '聊天会话和新事项',
+  fullAccessScopeChatDetail: '默认',
+  fullAccessScopeAssignments: '仅新事项',
+  fullAccessScopeAssignmentsDetail: '聊天会话保持受限并逐次询问',
   fullAccessOn: '完全访问已开启：此 Bot 的聊天会话和之后新建的事项可访问任何文件，且不再逐次提问。',
   fullAccessOnAssignments:
     '完全访问已开启（仅新事项）：之后新建的事项可访问任何文件且不再逐次提问；聊天会话仍然受限。',
   autoApproval: '自动审批模板',
-  autoApprovalOff: '关闭（每次由你批准）',
-  autoApprovalHintOff:
-    '选一个模板后，审批员会先按模板替你回答此 Bot 的工具审批，拿不准的才发卡片给你。',
-  autoApprovalHintOn: (description: string) =>
-    `${description} 审批员按这个模板替你回答，拿不准的仍发卡片给你。`,
+  autoApprovalOff: '关闭',
+  autoApprovalOffHint: '每张卡片由你批准',
+  autoApprovalFooter: '审批员会先按模板替你回答此 Bot 的工具审批，拿不准的仍发卡片给你。',
   autoApprovalCautious: '谨慎',
   autoApprovalCautiousHint: '允许读取和规划；凡是会离开这台电脑的操作都交给你。',
   autoApprovalGetWorkDone: '把活干完',

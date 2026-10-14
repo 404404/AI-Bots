@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, SectionList, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, SectionList, View } from 'react-native';
 
 import {
   errorText,
@@ -18,28 +18,56 @@ import {
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { Button } from '../primitives/button';
-import { SettingsRow } from '../primitives/settings-row';
+import { SettingsGroupItem, SettingsRow } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
-import { CheckIcon, CloseIcon } from '../shell/icons';
+import { Toggle } from '../primitives/toggle';
+import { CheckIcon, ChevronRightIcon, CloseIcon, FolderIcon, PlusIcon } from '../shell/icons';
 import { t } from '../strings';
-import { Sheet, SheetFailed, SheetHeading, SheetLoading, SheetNote } from './sheet';
+import {
+  Sheet,
+  SheetActions,
+  SheetCallout,
+  SheetFailed,
+  SheetFooter,
+  SheetHeading,
+  SheetLoading,
+  SheetNote,
+  SHEET_GROUP,
+} from './sheet';
 
 type Mode = 'main' | 'browse' | 'confirm';
 type Pending = { path: string; workspaceId?: string };
 
 type MainRow =
   | { kind: 'grant'; key: string; grant: WorkspaceGrant }
-  | { kind: 'note'; key: string; text: string; tone?: 'muted' | 'warning' | 'danger' }
+  | { kind: 'empty'; key: string; text: string }
+  | { kind: 'failed'; key: string; text: string; retry?: () => void }
   | { kind: 'loading'; key: string }
   | { kind: 'add'; key: string }
   | { kind: 'access'; key: string; access: AssignmentAccess }
   | { kind: 'danger'; key: string }
   | { kind: 'scope'; key: string; scope: AccessScope; selected: boolean }
-  | { kind: 'template'; key: string; name: string | null; title: string; selected: boolean };
+  | {
+      kind: 'template';
+      key: string;
+      name: string | null;
+      title: string;
+      detail: string;
+      selected: boolean;
+    };
+
+type MainSection = {
+  key: string;
+  title?: string;
+  footer?: { text: string; tone?: 'warning' };
+  data: MainRow[];
+};
 
 type BrowseRow =
   | { kind: 'registered'; key: string; option: WorkspaceOption }
-  | { kind: 'folder'; key: string; folder: HostFolder };
+  | { kind: 'folder'; key: string; folder: HostFolder }
+  | { kind: 'loading'; key: string }
+  | { kind: 'empty'; key: string; text: string; tone?: 'warning' };
 
 const OFF = 'off';
 
@@ -53,6 +81,32 @@ export function templateDescription(template: ApprovalTemplate): string {
   if (template.name === 'cautious') return t.autoApprovalCautiousHint;
   if (template.name === 'get-work-done') return t.autoApprovalGetWorkDoneHint;
   return template.description;
+}
+
+function Grouped({
+  index,
+  count,
+  children,
+}: {
+  index: number;
+  count: number;
+  children: ReactNode;
+}) {
+  return (
+    <SettingsGroupItem first={index === 0} last={index === count - 1} on={SHEET_GROUP}>
+      {children}
+    </SettingsGroupItem>
+  );
+}
+
+function RowIcon({ kind }: { kind: 'folder' | 'add' }) {
+  const theme = useDesignTheme();
+  const size = theme.type.title.line;
+  return kind === 'folder' ? (
+    <FolderIcon color={theme.color.muted} size={size} />
+  ) : (
+    <PlusIcon color={theme.color.fg} size={size} />
+  );
 }
 
 function RemoveButton({
@@ -75,14 +129,15 @@ function RemoveButton({
       style={({ pressed }) => ({
         width: theme.touch,
         height: theme.touch,
+        marginRight: -space.x4,
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: radius.round,
-        backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        backgroundColor: pressed ? theme.layer[SHEET_GROUP].pressed : theme.layer[SHEET_GROUP].fill,
         opacity: disabled ? 0.45 : 1,
       })}
     >
-      <CloseIcon color={theme.color.muted} size={theme.type.title.line} />
+      <CloseIcon color={theme.color.muted} size={theme.type.meta.line} />
     </Pressable>
   );
 }
@@ -98,14 +153,14 @@ function Crumbs({
 }) {
   const theme = useDesignTheme();
   return (
-    <View
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
       accessibilityRole="toolbar"
-      style={{
-        flexDirection: 'row',
-        flexWrap: 'wrap',
+      contentContainerStyle={{
         gap: space.x2,
         paddingHorizontal: space.x5,
-        paddingVertical: space.x2,
+        paddingBottom: space.x3,
       }}
     >
       {crumbs.map((crumb, index) => {
@@ -116,34 +171,27 @@ function Crumbs({
             accessibilityRole="button"
             accessibilityLabel={crumb.name}
             accessibilityState={{ selected: current, disabled }}
-            disabled={disabled}
+            disabled={disabled || current}
             onPress={() => onOpen(crumb.path)}
+            hitSlop={space.x2}
             style={({ pressed }) => ({
               paddingHorizontal: space.x4,
               paddingVertical: space.x3,
               borderRadius: radius.round,
               backgroundColor: pressed
-                ? theme.layer.sheet.pressed
+                ? theme.layer.canvas.pressed
                 : current
-                  ? theme.layer.sheet.selected
-                  : theme.layer.sheet.fill,
+                  ? theme.layer.canvas.selected
+                  : theme.layer[SHEET_GROUP].fill,
             })}
           >
-            <Text variant="meta" tone={current ? 'fg' : 'muted'} numberOfLines={1}>
+            <Text variant="meta" tone={current ? 'fg' : 'muted'} strong={current} numberOfLines={1}>
               {crumb.name}
             </Text>
           </Pressable>
         );
       })}
-    </View>
-  );
-}
-
-function SheetActions({ children }: { children: ReactNode }) {
-  return (
-    <View style={{ gap: space.x3, paddingHorizontal: space.x5, paddingTop: space.x3 }}>
-      {children}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -174,7 +222,9 @@ export function WorkspaceSheet({
 }) {
   const theme = useDesignTheme();
   const [mode, setMode] = useState<Mode>('main');
-  const [listing, setListing] = useState<Loadable<HostFolderListing>>({ status: 'loading' });
+  const [listing, setListing] = useState<Loadable<HostFolderListing>>({
+    status: 'loading',
+  });
   const [options, setOptions] = useState<WorkspaceOption[]>([]);
   const [pending, setPending] = useState<Pending>();
   const [confirmDanger, setConfirmDanger] = useState(false);
@@ -290,17 +340,22 @@ export function WorkspaceSheet({
     busy === key ? (
       <ActivityIndicator />
     ) : selected ? (
-      <CheckIcon color={theme.color.accent} size={theme.type.title.line} />
+      <CheckIcon color={theme.color.fg} size={theme.type.title.line} />
     ) : undefined;
 
   const notice = (
     <>
       {busy === undefined ? null : <SheetNote>{t.workspaceWorking}</SheetNote>}
-      {error === undefined ? null : <SheetNote tone="danger">{error}</SheetNote>}
+      {error === undefined ? null : <SheetCallout tone="danger">{error}</SheetCallout>}
     </>
   );
 
-  if (mode === 'confirm' && pending !== undefined)
+  if (mode === 'confirm' && pending !== undefined) {
+    const name =
+      pending.path
+        .split(/[\\/]/)
+        .filter((part) => part !== '')
+        .pop() ?? pending.path;
     return (
       <Sheet
         visible={visible}
@@ -308,41 +363,69 @@ export function WorkspaceSheet({
         title={t.confirmGrant(botName)}
         onClose={close}
       >
-        <Text style={{ paddingHorizontal: space.x5 }}>{t.grantScope(pending.path)}</Text>
         {notice}
+        <SettingsGroupItem first last on={SHEET_GROUP}>
+          <SettingsRow
+            title={name}
+            detail={pending.path}
+            leading={<RowIcon kind="folder" />}
+            on={SHEET_GROUP}
+          />
+        </SettingsGroupItem>
+        <SheetFooter>{t.grantScope}</SheetFooter>
         <SheetActions>
           <Button
-            label={t.authorize}
-            tone="primary"
-            on="sheet"
-            busy={busy === 'confirm'}
-            disabled={busy !== undefined}
-            onPress={confirmGrant}
-          />
-          <Button
             label={t.cancel}
-            on="sheet"
+            on="canvas"
             disabled={busy !== undefined}
             onPress={() => {
               setPending(undefined);
               setMode('browse');
             }}
           />
+          <Button
+            label={t.authorize}
+            tone="primary"
+            on="canvas"
+            busy={busy === 'confirm'}
+            disabled={busy !== undefined}
+            onPress={confirmGrant}
+          />
         </SheetActions>
       </Sheet>
     );
+  }
 
   if (mode === 'browse') {
     const grantedIds = new Set(granted.map((grant) => grant.workspaceId));
     const registered = options.filter((option) => !grantedIds.has(option.id));
     const folders =
       listing.status === 'ready' ? listing.value.entries.filter((entry) => !entry.hidden) : [];
+    const folderRows: BrowseRow[] =
+      listing.status === 'loading'
+        ? [{ kind: 'loading', key: 'loading' }]
+        : listing.status === 'failed'
+          ? [
+              {
+                kind: 'empty',
+                key: 'failed',
+                text: listing.error,
+                tone: 'warning',
+              },
+            ]
+          : folders.length === 0
+            ? [{ kind: 'empty', key: 'empty', text: t.browseEmpty }]
+            : folders.map((folder) => ({
+                kind: 'folder',
+                key: `folder:${folder.path}`,
+                folder,
+              }));
     const sections = [
       ...(registered.length === 0
         ? []
         : [
             {
-              kind: 'registered' as const,
+              key: 'registered',
               title: t.registeredFolders,
               data: registered.map((option): BrowseRow => ({
                 kind: 'registered',
@@ -352,85 +435,90 @@ export function WorkspaceSheet({
             },
           ]),
       {
-        kind: 'folders' as const,
+        key: 'folders',
         title: t.browseTitle,
-        data: folders.map((folder): BrowseRow => ({
-          kind: 'folder',
-          key: `folder:${folder.path}`,
-          folder,
-        })),
+        footer:
+          listing.status === 'ready' && listing.value.truncated ? t.browseTruncated : undefined,
+        data: folderRows,
       },
     ];
     return (
-      <Sheet visible={visible} label={t.browseTitle} title={t.addFolder} onClose={close}>
-        <SectionList<BrowseRow, { kind: 'registered' | 'folders'; title: string }>
+      <Sheet
+        visible={visible}
+        label={t.browseTitle}
+        title={t.addFolder}
+        subtitle={t.browseHint}
+        onClose={close}
+      >
+        {listing.status === 'ready' ? (
+          <Crumbs
+            crumbs={listing.value.crumbs}
+            disabled={busy !== undefined}
+            onOpen={(path) => browse(path)}
+          />
+        ) : null}
+        <SectionList<BrowseRow, { key: string; title: string; footer?: string | undefined }>
           style={{ flexShrink: 1 }}
           sections={sections}
           keyExtractor={(row) => row.key}
           stickySectionHeadersEnabled={false}
-          ListHeaderComponent={
-            <>
-              <SheetNote>{t.browseHint}</SheetNote>
-              {notice}
-            </>
-          }
-          renderSectionHeader={({ section }) =>
-            section.kind === 'registered' ? (
-              <SheetHeading>{section.title}</SheetHeading>
-            ) : listing.status === 'ready' ? (
-              <Crumbs
-                crumbs={listing.value.crumbs}
-                disabled={busy !== undefined}
-                onOpen={(path) => browse(path)}
-              />
-            ) : null
-          }
+          ListHeaderComponent={notice}
+          renderSectionHeader={({ section }) => <SheetHeading>{section.title}</SheetHeading>}
           renderSectionFooter={({ section }) =>
-            section.kind === 'registered' ? null : listing.status === 'loading' ? (
-              <SheetLoading />
-            ) : listing.status === 'failed' ? (
-              <SheetNote tone="warning">{listing.error}</SheetNote>
-            ) : folders.length === 0 ? (
-              <SheetNote>{t.browseEmpty}</SheetNote>
-            ) : listing.value.truncated ? (
-              <SheetNote>{t.browseTruncated}</SheetNote>
-            ) : null
+            section.footer === undefined ? null : <SheetFooter>{section.footer}</SheetFooter>
           }
-          renderItem={({ item }) =>
-            item.kind === 'registered' ? (
-              <SettingsRow
-                title={item.option.title}
-                detail={item.option.path}
-                onPress={
-                  busy === undefined ? () => choose(item.option.path, item.option.id) : undefined
-                }
-              />
-            ) : (
-              <SettingsRow
-                title={item.folder.name}
-                onPress={busy === undefined ? () => browse(item.folder.path) : undefined}
-              />
-            )
-          }
+          renderItem={({ item, index, section }) => (
+            <Grouped index={index} count={section.data.length}>
+              {item.kind === 'loading' ? (
+                <SheetLoading />
+              ) : item.kind === 'empty' ? (
+                <SettingsRow
+                  title={item.text}
+                  tone={item.tone === 'warning' ? 'warning' : 'muted'}
+                  on={SHEET_GROUP}
+                />
+              ) : item.kind === 'registered' ? (
+                <SettingsRow
+                  title={item.option.title}
+                  detail={item.option.path}
+                  leading={<RowIcon kind="folder" />}
+                  on={SHEET_GROUP}
+                  onPress={
+                    busy === undefined ? () => choose(item.option.path, item.option.id) : undefined
+                  }
+                />
+              ) : (
+                <SettingsRow
+                  title={item.folder.name}
+                  leading={<RowIcon kind="folder" />}
+                  trailing={
+                    <ChevronRightIcon color={theme.color.subtle} size={theme.type.meta.line} />
+                  }
+                  on={SHEET_GROUP}
+                  onPress={busy === undefined ? () => browse(item.folder.path) : undefined}
+                />
+              )}
+            </Grouped>
+          )}
         />
         <SheetActions>
           <Button
-            label={t.authorizeHere}
-            tone="primary"
-            on="sheet"
-            busy={busy === 'resolve'}
-            disabled={busy !== undefined || listing.status !== 'ready'}
-            onPress={() => {
-              if (listing.status === 'ready') choose(listing.value.path);
-            }}
-          />
-          <Button
             label={t.back}
-            on="sheet"
+            on="canvas"
             disabled={busy !== undefined}
             onPress={() => {
               setError(undefined);
               setMode('main');
+            }}
+          />
+          <Button
+            label={t.authorizeHere}
+            tone="primary"
+            on="canvas"
+            busy={busy === 'resolve'}
+            disabled={busy !== undefined || listing.status !== 'ready'}
+            onPress={() => {
+              if (listing.status === 'ready') choose(listing.value.path);
             }}
           />
         </SheetActions>
@@ -442,59 +530,54 @@ export function WorkspaceSheet({
     grants.status === 'loading'
       ? [{ kind: 'loading', key: 'grants-loading' }]
       : grants.status === 'failed'
-        ? [{ kind: 'note', key: 'grants-failed', text: t.workspaceFailed, tone: 'danger' }]
-        : grants.value.length === 0
-          ? [{ kind: 'note', key: 'grants-empty', text: t.workspaceNoFolders }]
-          : grants.value.map((grant): MainRow => ({
-              kind: 'grant',
-              key: `grant:${grant.id}`,
-              grant,
-            }));
+        ? [
+            {
+              kind: 'failed',
+              key: 'grants-failed',
+              text: t.workspaceFailed,
+              retry: onRetryGrants,
+            },
+          ]
+        : [
+            ...(grants.value.length === 0
+              ? [
+                  {
+                    kind: 'empty',
+                    key: 'grants-empty',
+                    text: t.workspaceNoFolders,
+                  } as const,
+                ]
+              : grants.value.map((grant): MainRow => ({
+                  kind: 'grant',
+                  key: `grant:${grant.id}`,
+                  grant,
+                }))),
+            { kind: 'add', key: 'add' },
+          ];
 
+  const fullAccessOn = access.status === 'ready' && access.value.mode === 'danger-full-access';
   const accessRows: MainRow[] =
     access.status === 'loading'
       ? [{ kind: 'loading', key: 'access-loading' }]
       : access.status === 'failed'
-        ? [{ kind: 'note', key: 'access-failed', text: access.error, tone: 'danger' }]
+        ? [{ kind: 'failed', key: 'access-failed', text: access.error }]
         : [
             { kind: 'access', key: 'access', access: access.value },
             ...(confirmDanger ? [{ kind: 'danger', key: 'danger' } as const] : []),
-            ...(access.value.mode === 'danger-full-access'
-              ? [
-                  {
-                    kind: 'note',
-                    key: 'access-on',
-                    text:
-                      access.value.scope === 'assignments'
-                        ? t.fullAccessOnAssignments
-                        : t.fullAccessOn,
-                    tone: 'warning',
-                  } as const,
-                  ...(['chat', 'assignments'] as const).map((scope): MainRow => ({
-                    kind: 'scope',
-                    key: `scope:${scope}`,
-                    scope,
-                    selected: access.value.scope === scope,
-                  })),
-                ]
-              : [{ kind: 'note', key: 'access-hint', text: t.fullAccessHint } as const]),
           ];
 
-  const chosen =
-    templates.status === 'ready'
-      ? templates.value.templates.find((template) => template.name === templates.value.selected)
-      : undefined;
   const templateRows: MainRow[] =
     templates.status === 'loading'
       ? [{ kind: 'loading', key: 'templates-loading' }]
       : templates.status === 'failed'
-        ? [{ kind: 'note', key: 'templates-failed', text: templates.error, tone: 'danger' }]
+        ? [{ kind: 'failed', key: 'templates-failed', text: templates.error }]
         : [
             {
               kind: 'template',
               key: `template:${OFF}`,
               name: null,
               title: t.autoApprovalOff,
+              detail: t.autoApprovalOffHint,
               selected: templates.value.selected === null,
             },
             ...templates.value.templates.map((template): MainRow => ({
@@ -502,30 +585,202 @@ export function WorkspaceSheet({
               key: `template:${template.name}`,
               name: template.name,
               title: templateTitle(template),
+              detail: templateDescription(template),
               selected: templates.value.selected === template.name,
             })),
-            {
-              kind: 'note',
-              key: 'template-hint',
-              text:
-                chosen === undefined
-                  ? t.autoApprovalHintOff
-                  : t.autoApprovalHintOn(templateDescription(chosen)),
-            },
           ];
 
-  const sections = [
+  const sections: MainSection[] = [
+    { key: 'folders', title: t.workspaceFolders, data: folderRows },
     {
-      kind: 'folders' as const,
-      title: t.workspaceFolders,
-      data: [
-        ...folderRows,
-        ...(grants.status === 'ready' ? [{ kind: 'add', key: 'add' } as const] : []),
-      ],
+      key: 'access',
+      title: t.workspaceAccess,
+      ...(access.status !== 'ready'
+        ? {}
+        : fullAccessOn
+          ? {
+              footer: {
+                text:
+                  access.value.scope === 'assignments' ? t.fullAccessOnAssignments : t.fullAccessOn,
+                tone: 'warning',
+              },
+            }
+          : { footer: { text: t.fullAccessDetail } }),
+      data: accessRows,
     },
-    { kind: 'access' as const, title: '', data: accessRows },
-    { kind: 'templates' as const, title: t.autoApproval, data: templateRows },
+    ...(fullAccessOn && access.status === 'ready'
+      ? [
+          {
+            key: 'scope',
+            title: t.fullAccessScope,
+            data: (['chat', 'assignments'] as const).map((scope): MainRow => ({
+              kind: 'scope',
+              key: `scope:${scope}`,
+              scope,
+              selected: access.value.scope === scope,
+            })),
+          },
+        ]
+      : []),
+    {
+      key: 'templates',
+      title: t.autoApproval,
+      ...(templates.status === 'ready' ? { footer: { text: t.autoApprovalFooter } } : {}),
+      data: templateRows,
+    },
   ];
+
+  const row = (item: MainRow) => {
+    switch (item.kind) {
+      case 'loading':
+        return <SheetLoading />;
+      case 'empty':
+        return <SettingsRow title={item.text} tone="muted" on={SHEET_GROUP} />;
+      case 'failed':
+        return item.retry === undefined ? (
+          <SettingsRow title={item.text} tone="danger" on={SHEET_GROUP} />
+        ) : (
+          <SheetFailed message={item.text} onRetry={item.retry} on={SHEET_GROUP} />
+        );
+      case 'grant':
+        return (
+          <SettingsRow
+            title={item.grant.workspaceTitle}
+            detail={`${item.grant.orchestratorWrite ? t.folderCanEdit : t.folderReadOnly} · ${item.grant.workspacePath}`}
+            leading={<RowIcon kind="folder" />}
+            on={SHEET_GROUP}
+            trailing={
+              busy === item.key ? (
+                <ActivityIndicator />
+              ) : (
+                <RemoveButton
+                  label={t.removeFolder(item.grant.workspaceTitle)}
+                  disabled={busy !== undefined}
+                  onPress={() => remove(item.grant)}
+                />
+              )
+            }
+          />
+        );
+      case 'add':
+        return (
+          <SettingsRow
+            title={t.addFolder}
+            leading={<RowIcon kind="add" />}
+            on={SHEET_GROUP}
+            {...(busy === undefined ? { onPress: startBrowse } : {})}
+          />
+        );
+      case 'access':
+        return (
+          <SettingsRow
+            title={t.fullAccess}
+            detail={t.fullAccessSummary}
+            on={SHEET_GROUP}
+            trailing={
+              busy === 'safe-access' ? (
+                <ActivityIndicator />
+              ) : (
+                <Toggle
+                  label={t.fullAccess}
+                  value={item.access.mode === 'danger-full-access' || confirmDanger}
+                  disabled={busy !== undefined}
+                  on={SHEET_GROUP}
+                  onChange={(on) => {
+                    if (on) setConfirmDanger(true);
+                    else if (confirmDanger) setConfirmDanger(false);
+                    else
+                      changeAccess('safe-access', () =>
+                        settings.setAccess('workspace-write', false),
+                      );
+                  }}
+                />
+              )
+            }
+          />
+        );
+      case 'danger':
+        return (
+          <View
+            accessibilityRole="alert"
+            style={{
+              gap: space.x3,
+              paddingHorizontal: space.x5,
+              paddingVertical: space.x4,
+            }}
+          >
+            <Text strong tone="danger">
+              {t.fullAccessConfirmTitle}
+            </Text>
+            <Text variant="meta" tone="muted">
+              {t.fullAccessConfirmRisk}
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'flex-end',
+                gap: space.x3,
+                paddingTop: space.x2,
+              }}
+            >
+              <Button
+                label={t.cancel}
+                on={SHEET_GROUP}
+                disabled={busy !== undefined}
+                onPress={() => setConfirmDanger(false)}
+              />
+              <Button
+                label={t.fullAccessConfirm}
+                tone="danger"
+                on={SHEET_GROUP}
+                busy={busy === 'danger-access'}
+                disabled={busy !== undefined}
+                onPress={() =>
+                  changeAccess('danger-access', () =>
+                    settings.setAccess('danger-full-access', true),
+                  )
+                }
+              />
+            </View>
+          </View>
+        );
+      case 'scope':
+        return (
+          <SettingsRow
+            title={item.scope === 'chat' ? t.fullAccessScopeChat : t.fullAccessScopeAssignments}
+            detail={
+              item.scope === 'chat'
+                ? t.fullAccessScopeChatDetail
+                : t.fullAccessScopeAssignmentsDetail
+            }
+            selected={item.selected}
+            on={SHEET_GROUP}
+            trailing={trailingCheck(item.key, item.selected)}
+            {...(busy === undefined && !item.selected
+              ? {
+                  onPress: () =>
+                    changeAccess(item.key, () =>
+                      settings.setAccess('danger-full-access', true, item.scope),
+                    ),
+                }
+              : {})}
+          />
+        );
+      case 'template':
+        return (
+          <SettingsRow
+            title={item.title}
+            detail={item.detail}
+            selected={item.selected}
+            on={SHEET_GROUP}
+            trailing={trailingCheck(item.key, item.selected)}
+            {...(busy === undefined && !item.selected
+              ? { onPress: () => chooseTemplate(item.name) }
+              : {})}
+          />
+        );
+    }
+  };
 
   return (
     <Sheet
@@ -534,146 +789,29 @@ export function WorkspaceSheet({
       title={t.workspaceTitle(botName)}
       onClose={close}
     >
-      <SectionList<MainRow, { kind: 'folders' | 'access' | 'templates'; title: string }>
+      <SectionList<MainRow, MainSection>
         style={{ flexShrink: 1 }}
         sections={sections}
-        keyExtractor={(row) => row.key}
+        keyExtractor={(item) => item.key}
         stickySectionHeadersEnabled={false}
         ListHeaderComponent={notice}
         renderSectionHeader={({ section }) =>
-          section.kind === 'access' ? (
-            <View style={{ height: space.x4 }} />
+          section.title === undefined ? null : <SheetHeading>{section.title}</SheetHeading>
+        }
+        renderSectionFooter={({ section }) =>
+          section.footer === undefined ? null : section.footer.tone === 'warning' ? (
+            <View style={{ paddingTop: space.x3 }}>
+              <SheetCallout tone="warning">{section.footer.text}</SheetCallout>
+            </View>
           ) : (
-            <SheetHeading>{section.title}</SheetHeading>
+            <SheetFooter>{section.footer.text}</SheetFooter>
           )
         }
-        renderItem={({ item }) => {
-          switch (item.kind) {
-            case 'loading':
-              return <SheetLoading />;
-            case 'note':
-              return item.key === 'grants-failed' ? (
-                <SheetFailed message={item.text} onRetry={onRetryGrants} />
-              ) : (
-                <SheetNote {...(item.tone === undefined ? {} : { tone: item.tone })}>
-                  {item.text}
-                </SheetNote>
-              );
-            case 'grant':
-              return (
-                <SettingsRow
-                  title={item.grant.workspaceTitle}
-                  detail={`${item.grant.orchestratorWrite ? t.folderCanEdit : t.folderReadOnly} · ${item.grant.workspacePath}`}
-                  trailing={
-                    busy === item.key ? (
-                      <ActivityIndicator />
-                    ) : (
-                      <RemoveButton
-                        label={t.removeFolder(item.grant.workspaceTitle)}
-                        disabled={busy !== undefined}
-                        onPress={() => remove(item.grant)}
-                      />
-                    )
-                  }
-                />
-              );
-            case 'add':
-              return (
-                <SettingsRow
-                  title={t.addFolder}
-                  tone="accent"
-                  {...(busy === undefined ? { onPress: startBrowse } : {})}
-                />
-              );
-            case 'access':
-              return (
-                <SettingsRow
-                  title={t.fullAccess}
-                  detail={t.fullAccessDetail}
-                  trailing={
-                    <Switch
-                      accessibilityLabel={t.fullAccess}
-                      value={item.access.mode === 'danger-full-access' || confirmDanger}
-                      disabled={busy !== undefined}
-                      trackColor={{ true: theme.color.danger }}
-                      onValueChange={(on) => {
-                        if (on) setConfirmDanger(true);
-                        else if (confirmDanger) setConfirmDanger(false);
-                        else
-                          changeAccess('safe-access', () =>
-                            settings.setAccess('workspace-write', false),
-                          );
-                      }}
-                    />
-                  }
-                />
-              );
-            case 'danger':
-              return (
-                <View
-                  accessibilityRole="alert"
-                  style={{
-                    gap: space.x3,
-                    marginHorizontal: space.x5,
-                    marginVertical: space.x2,
-                    padding: space.x4,
-                    borderRadius: radius.md,
-                    backgroundColor: theme.layer.sheet.inset,
-                  }}
-                >
-                  <Text strong>{t.fullAccessConfirmTitle}</Text>
-                  <Text variant="meta">{t.fullAccessConfirmRisk}</Text>
-                  <Button
-                    label={t.fullAccessConfirm}
-                    tone="danger"
-                    on="sheet"
-                    busy={busy === 'danger-access'}
-                    disabled={busy !== undefined}
-                    onPress={() =>
-                      changeAccess('danger-access', () =>
-                        settings.setAccess('danger-full-access', true),
-                      )
-                    }
-                  />
-                  <Button
-                    label={t.cancel}
-                    on="sheet"
-                    disabled={busy !== undefined}
-                    onPress={() => setConfirmDanger(false)}
-                  />
-                </View>
-              );
-            case 'scope':
-              return (
-                <SettingsRow
-                  title={
-                    item.scope === 'chat' ? t.fullAccessScopeChat : t.fullAccessScopeAssignments
-                  }
-                  selected={item.selected}
-                  trailing={trailingCheck(item.key, item.selected)}
-                  {...(busy === undefined && !item.selected
-                    ? {
-                        onPress: () =>
-                          changeAccess(item.key, () =>
-                            settings.setAccess('danger-full-access', true, item.scope),
-                          ),
-                      }
-                    : {})}
-                />
-              );
-            case 'template':
-              return (
-                <SettingsRow
-                  title={item.title}
-                  selected={item.selected}
-                  trailing={trailingCheck(item.key, item.selected)}
-                  {...(busy === undefined && !item.selected
-                    ? { onPress: () => chooseTemplate(item.name) }
-                    : {})}
-                />
-              );
-          }
-        }}
+        renderItem={({ item, index, section }) => (
+          <Grouped index={index} count={section.data.length}>
+            {row(item)}
+          </Grouped>
+        )}
       />
     </Sheet>
   );

@@ -8,10 +8,10 @@ import {
 } from '../../host/conversation';
 import { radius, space } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
-import { SettingsRow } from '../primitives/settings-row';
+import { SettingsGroupItem, SettingsRow } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
-import { Sheet } from './sheet';
+import { Sheet, SHEET_GROUP } from './sheet';
 
 export function MessageActions({
   message,
@@ -60,10 +60,10 @@ export function MessageActions({
                       justifyContent: 'center',
                       borderRadius: radius.round,
                       backgroundColor: picked
-                        ? theme.layer.sheet.chosen
+                        ? theme.layer.canvas.chosen
                         : pressed
-                          ? theme.layer.sheet.pressed
-                          : theme.layer.sheet.fill,
+                          ? theme.layer.canvas.pressed
+                          : theme.layer.canvas.fill,
                     })}
                   >
                     <Text variant="title">{emoji}</Text>
@@ -73,15 +73,21 @@ export function MessageActions({
             </View>
           ) : null}
           {message.body.trim() === '' ? null : (
-            <SettingsRow
-              title={t.copy}
-              onPress={() => {
-                onCopy(message.body);
-                onClose();
-              }}
-            />
+            <SettingsGroupItem first last on={SHEET_GROUP}>
+              <SettingsRow
+                title={t.copy}
+                on={SHEET_GROUP}
+                onPress={() => {
+                  onCopy(message.body);
+                  onClose();
+                }}
+              />
+            </SettingsGroupItem>
           )}
-          <SettingsRow title={t.cancel} tone="muted" onPress={onClose} />
+          <View style={{ height: space.x3 }} />
+          <SettingsGroupItem first last on={SHEET_GROUP}>
+            <SettingsRow title={t.cancel} tone="muted" on={SHEET_GROUP} onPress={onClose} />
+          </SettingsGroupItem>
         </>
       )}
     </Sheet>

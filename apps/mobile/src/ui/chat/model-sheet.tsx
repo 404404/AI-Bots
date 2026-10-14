@@ -11,10 +11,18 @@ import {
   type ModelPreset,
 } from '../../host/bot-settings';
 import { useDesignTheme } from '../design/theme';
-import { SettingsRow } from '../primitives/settings-row';
+import { SettingsGroupItem, SettingsRow } from '../primitives/settings-row';
 import { CheckIcon } from '../shell/icons';
 import { t } from '../strings';
-import { Sheet, SheetFailed, SheetHeading, SheetLoading, SheetNote } from './sheet';
+import {
+  Sheet,
+  SheetCallout,
+  SheetFailed,
+  SheetHeading,
+  SheetLoading,
+  SheetNote,
+  SHEET_GROUP,
+} from './sheet';
 
 type Row =
   | { kind: 'preset'; key: string; preset: ModelPreset }
@@ -70,7 +78,7 @@ export function ModelSheet({
     busy === key ? (
       <ActivityIndicator />
     ) : selected ? (
-      <CheckIcon color={theme.color.accent} size={theme.type.title.line} />
+      <CheckIcon color={theme.color.fg} size={theme.type.title.line} />
     ) : undefined;
 
   let body;
@@ -104,6 +112,41 @@ export function ModelSheet({
           })),
       },
     ];
+    const renderRow = (item: Row) => {
+      if (item.kind === 'preset') {
+        const selected = value.plan?.sourcePresetId === item.preset.id;
+        const detail =
+          value.models.find((entry) => sameModel(entry, item.preset.orchestrator))?.modelName ??
+          item.preset.orchestrator.model;
+        return (
+          <SettingsRow
+            title={item.preset.name}
+            detail={detail}
+            selected={selected}
+            on={SHEET_GROUP}
+            trailing={trailing(item.key, selected)}
+            onPress={() => run(item.key, () => onPreset(item.preset.id))}
+          />
+        );
+      }
+      const selected = sameModel(item.entry, current);
+      const usable = item.entry.credential === undefined;
+      return (
+        <SettingsRow
+          title={item.entry.modelName}
+          detail={credentialHint(item.entry)}
+          tone={usable ? 'fg' : 'muted'}
+          selected={selected}
+          on={SHEET_GROUP}
+          trailing={trailing(item.key, selected)}
+          {...(usable
+            ? {
+                onPress: () => run(item.key, () => onChoose(value, item.entry)),
+              }
+            : {})}
+        />
+      );
+    };
     body = (
       <SectionList<Row, { title: string }>
         style={{ flexShrink: 1 }}
@@ -113,48 +156,24 @@ export function ModelSheet({
         ListHeaderComponent={
           <>
             {value.repair !== undefined ? (
-              <SheetNote tone="warning">{t.modelRepair}</SheetNote>
-            ) : value.plan === undefined ? (
-              <SheetNote>{t.modelInherited}</SheetNote>
+              <SheetCallout tone="warning">{t.modelRepair}</SheetCallout>
             ) : null}
-            {error === undefined ? null : <SheetNote tone="danger">{error}</SheetNote>}
+            {error === undefined ? null : <SheetCallout tone="danger">{error}</SheetCallout>}
           </>
         }
         ListEmptyComponent={<SheetNote>{t.modelNoneAvailable}</SheetNote>}
         renderSectionHeader={({ section }) =>
           section.data.length === 0 ? null : <SheetHeading>{section.title}</SheetHeading>
         }
-        renderItem={({ item }) => {
-          if (item.kind === 'preset') {
-            const selected = value.plan?.sourcePresetId === item.preset.id;
-            const detail =
-              value.models.find((entry) => sameModel(entry, item.preset.orchestrator))?.modelName ??
-              item.preset.orchestrator.model;
-            return (
-              <SettingsRow
-                title={item.preset.name}
-                detail={detail}
-                selected={selected}
-                trailing={trailing(item.key, selected)}
-                onPress={() => run(item.key, () => onPreset(item.preset.id))}
-              />
-            );
-          }
-          const selected = sameModel(item.entry, current);
-          const usable = item.entry.credential === undefined;
-          return (
-            <SettingsRow
-              title={item.entry.modelName}
-              detail={credentialHint(item.entry)}
-              tone={usable ? 'fg' : 'muted'}
-              selected={selected}
-              trailing={trailing(item.key, selected)}
-              {...(usable
-                ? { onPress: () => run(item.key, () => onChoose(value, item.entry)) }
-                : {})}
-            />
-          );
-        }}
+        renderItem={({ item, index, section }) => (
+          <SettingsGroupItem
+            first={index === 0}
+            last={index === section.data.length - 1}
+            on={SHEET_GROUP}
+          >
+            {renderRow(item)}
+          </SettingsGroupItem>
+        )}
       />
     );
   }
@@ -164,6 +183,9 @@ export function ModelSheet({
       visible={visible}
       label={t.modelTitle(botName)}
       title={t.modelTitle(botName)}
+      {...(model.status === 'ready' && model.value.plan === undefined
+        ? { subtitle: t.modelInherited }
+        : {})}
       onClose={close}
     >
       {body}
