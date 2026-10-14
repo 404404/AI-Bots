@@ -79,6 +79,17 @@ async function host(
   return { url: `http://127.0.0.1:${address.port}`, calls };
 }
 
+async function invokeWithStdin(argv: string[], url: string, stdin: string) {
+  const stdout: string[] = [];
+  const code = await runBotCreateCli(argv, {
+    env: { DEEPSEEKBOT_HOST: url, DEEPSEEKBOT_HOST_TOKEN: 'private-test-token' },
+    stdout: (text) => stdout.push(text),
+    stderr: () => undefined,
+    readStdin: async () => stdin,
+  });
+  return { code, json: JSON.parse(stdout.join('')) };
+}
+
 async function invoke(argv: string[], url: string) {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -172,6 +183,73 @@ describe('Agent Browser and Computer commands', () => {
       ['GET', '/api/computer/status', undefined],
       ['POST', '/api/computer/stop', { authorize: true }],
     ]);
+  });
+
+  it('lists Browser tools and runs one directly, saving an image result to a file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bh-tool-'));
+    dirs.push(dir);
+    const live = await host((call) => ({
+      json:
+        call.path === '/api/browser/tools'
+          ? { ok: true, tools: [{ name: 'browser_open', description: 'Open', inputSchema: {} }] }
+          : (call.body as { tool: string }).tool === 'browser_screenshot'
+            ? {
+                ok: true,
+                content: [
+                  { type: 'text', text: 'Saved screenshot' },
+                  {
+                    type: 'image',
+                    mimeType: 'image/png',
+                    data: Buffer.from('png-bytes').toString('base64'),
+                  },
+                ],
+              }
+            : { ok: true, content: [{ type: 'text', text: 'Opened https://example.com' }] },
+    }));
+    expect((await invoke(['browser-tools'], live.url)).json.tools[0].name).toBe('browser_open');
+    const stdin = '{"url":"https://example.com"}';
+    const opened = await invokeWithStdin(
+      ['browser-tool', 'ada', 'browser_open', '--args-stdin'],
+      live.url,
+      stdin,
+    );
+    expect(opened.json).toEqual({
+      ok: true,
+      content: [{ type: 'text', text: 'Opened https://example.com' }],
+    });
+    const file = join(dir, 'shot.png');
+    const shot = await invokeWithStdin(
+      ['browser-tool', 'ada', 'browser_screenshot', '--out', file],
+      live.url,
+      '',
+    );
+    expect(shot.json.content).toEqual([
+      { type: 'text', text: 'Saved screenshot' },
+      { type: 'image', mimeType: 'image/png', path: file, bytes: 9 },
+    ]);
+    expect(readFileSync(file, 'utf8')).toBe('png-bytes');
+    expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
+      ['GET', '/api/browser/tools', undefined],
+      [
+        'POST',
+        '/api/browser/tool',
+        { slug: 'ada', tool: 'browser_open', args: { url: 'https://example.com' } },
+      ],
+      ['POST', '/api/browser/tool', { slug: 'ada', tool: 'browser_screenshot', args: {} }],
+    ]);
+    expect(
+      (
+        await invokeWithStdin(
+          ['browser-tool', 'ada', 'browser_open', '--args-stdin'],
+          live.url,
+          '[1]',
+        )
+      ).json.error.code,
+    ).toBe('usage');
+    expect((await invokeWithStdin(['browser-tool', 'ada'], live.url, '')).json.error.code).toBe(
+      'usage',
+    );
+    expect(live.calls).toHaveLength(3);
   });
 
   it('lists workspace grants from a live Host', async () => {
