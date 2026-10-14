@@ -326,6 +326,7 @@ describe('bridge typert service', () => {
       'preset',
       'workspaces',
       'avatar',
+      'memoryLocation',
     ]);
     expect(parameterNames(service.update)).toEqual(['slug', 'patch']);
     expect(parameterNames(service.pause)).toEqual(['slug']);
