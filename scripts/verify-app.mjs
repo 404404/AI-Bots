@@ -24,6 +24,7 @@ Shot options:
   --bot-mode                Enter Bot mode before acting.
   --click <name>            Click the element with this accessible name (repeatable, in order).
   --click-text <text>       Click the last visible button, link or tab in page order whose text contains this.
+  --right-click <name>      Right-click the element with this accessible name to open its context menu.
   --fill <name>=<text>      Type into the field with this accessible name (repeatable, in order).
   --press <key>             Press a key in the focused element, for example Enter (repeatable, in order).
   --wait <name>             Wait until an element with this accessible name exists before the capture.
@@ -86,6 +87,9 @@ export function parseVerifyArgs(argv) {
         break;
       case '--click-text':
         options.actions.push({ kind: 'click-text', name: value() });
+        break;
+      case '--right-click':
+        options.actions.push({ kind: 'right-click', name: value() });
         break;
       case '--press':
         options.actions.push({ kind: 'press', name: value() });
@@ -367,6 +371,7 @@ async function shot(options, paths) {
       } else {
         const locator = page.locator(aria(action.name)).setTimeout(15_000);
         if (action.kind === 'click') await locator.click();
+        else if (action.kind === 'right-click') await locator.click({ button: 'right' });
         else await locator.fill(action.text);
       }
       steps.push(`${action.kind} ${JSON.stringify(action.name)}`);
