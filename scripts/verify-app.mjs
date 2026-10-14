@@ -26,7 +26,8 @@ Shot options:
   --click-text <text>       Click the last visible button, link or tab in page order whose text contains this.
   --fill <name>=<text>      Type into the field with this accessible name (repeatable, in order).
   --hover <name>            Rest the pointer on the element with this accessible name (repeatable, in order).
-  --press <key>             Press a key in the focused element, for example Enter (repeatable, in order).
+  --press <key>             Press a key or chord in the focused element, for example Enter or Control+K
+                            (repeatable, in order).
   --wait <name>             Wait until an element with this accessible name exists before the capture.
   --wait-text <text>        Wait until the page shows this text (for example a Bot reply), up to 180s.
   --theme light|dark        Color scheme (default light).
@@ -353,7 +354,11 @@ async function shot(options, paths) {
     for (const action of options.actions) {
       if (!options.keepOverlays) await dismissOverlays(page);
       if (action.kind === 'press') {
-        await page.keyboard.press(action.name);
+        const keys = action.name.length > 1 ? action.name.split('+') : [action.name];
+        const key = keys.pop();
+        for (const modifier of keys) await page.keyboard.down(modifier);
+        await page.keyboard.press(key);
+        for (const modifier of keys.reverse()) await page.keyboard.up(modifier);
       } else if (action.kind === 'click-text') {
         const handle = await page.waitForFunction(
           (text) =>

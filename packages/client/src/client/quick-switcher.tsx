@@ -25,7 +25,7 @@ const styles = stylex.create({
     paddingBlock: space.x4,
   },
   search: {
-    display: 'block',
+    display: 'flex',
     marginInline: space.x4,
     marginBottom: space.x3,
   },
