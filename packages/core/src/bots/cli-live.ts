@@ -46,6 +46,13 @@ import {
   runInboxCommand,
   type InboxValues,
 } from './cli-inbox.js';
+import {
+  SCHEDULE_OPTIONS,
+  isScheduleCommand,
+  prepareScheduleCommand,
+  runScheduleCommand,
+  type ScheduleValues,
+} from './cli-schedules.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
@@ -55,6 +62,7 @@ export const LIVE_OPTIONS = {
   ...CHANNEL_OPTIONS,
   ...HOST_ADMIN_OPTIONS,
   ...INBOX_OPTIONS,
+  ...SCHEDULE_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -252,7 +260,13 @@ export const LIVE_COMMANDS = [
 ] as const;
 
 interface LiveValues
-  extends ImValues, MessagingValues, ModelsUsageValues, HostAdminValues, InboxValues {
+  extends
+    ImValues,
+    MessagingValues,
+    ModelsUsageValues,
+    HostAdminValues,
+    InboxValues,
+    ScheduleValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -561,6 +575,11 @@ export async function runLiveCli(
     return runInboxCommand(command, rest, values, () =>
       connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
     );
+  if (isScheduleCommand(command)) {
+    const prepared = prepareScheduleCommand(command, rest, values);
+    const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+    return runScheduleCommand(prepared, (await connectLiveHost(values, io, signal)).rpc);
+  }
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);

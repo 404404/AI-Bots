@@ -77,6 +77,11 @@ import { ZipArchiveError, writeZip, type ZipEntry } from './zip-archive.js';
 import { INBOX_HOST_COMMANDS } from './cli-inbox.js';
 import { CliLiveError, LIVE_COMMANDS, LIVE_OPTIONS, runLiveCli } from './cli-live.js';
 import {
+  isScheduleCommand,
+  scheduleToggleFromFlags,
+  scheduleTriggerFromFlags,
+} from './cli-schedules.js';
+import {
   DIAGNOSTIC_COMMANDS,
   LIFECYCLE_COMMANDS,
   ONLINE_MANAGEMENT_COMMANDS,
@@ -150,7 +155,7 @@ Usage:
                                   --weekly <HH:MM> --weekdays <0-6,..> | --once-date <d> --once-time <t> |
                                   --cron <expr>) [--timezone <tz>] [--enabled|--disabled] [--locked] [--home <dsh-home>]
   deepseekbot schedule-update <id> --sid <schedule> [--title ...] [--prompt ...] [trigger ...] [--home <dsh-home>]
-  deepseekbot schedule-delete <id> --sid <schedule> [--home <dsh-home>]
+  deepseekbot schedule-delete <id> --sid <schedule> [--confirm] [--home <dsh-home>]
   deepseekbot schedule-history <id> --sid <schedule> [--home <dsh-home>]
   deepseekbot schedule-run-now <id> --sid <schedule> [--home <dsh-home>]
   deepseekbot schedule-preview (--every <s> | --daily ... | ...) [--home <dsh-home>]
@@ -298,8 +303,8 @@ Live Host:
   Login is fresh per call; cookies stay in memory. --timeout defaults to 120 seconds (max 600).
   send returns its receipt and exact committed replies. Inspect send-status on timeout
   before retrying; send never automatically resubmits. channel-messages also accepts --host.
-  create (blank, Git, Zip and directory), list/show, model-presets/create/apply/plan
-  and channels use the Host when --host or DEEPSEEKBOT_HOST is set. Do not combine
+  create (blank, Git, Zip and directory), list/show, model-presets/create/apply/plan,
+  channels and the schedule* commands use the Host when --host or DEEPSEEKBOT_HOST is set. Do not combine
   --home with an online target; failures never fall back to local database access.
   Zip/directory uploads contain local bytes; Git cloning uses the Host environment.
   Creation errors retain known bot/steps; outcome unknown means inspect before retrying.
@@ -1774,53 +1779,7 @@ function runGrantWriteSet(
 }
 
 function parseTrigger(values: CreateValues): BotScheduleTrigger | undefined {
-  const every = trimmed(values.every);
-  const daily = trimmed(values.daily);
-  const weekly = trimmed(values.weekly);
-  const onceDate = trimmed(values['once-date']);
-  const onceTime = trimmed(values['once-time']);
-  const cron = trimmed(values.cron);
-  const selected = [
-    every === undefined ? 0 : 1,
-    daily === undefined ? 0 : 1,
-    weekly === undefined ? 0 : 1,
-    onceDate === undefined ? 0 : 1,
-    cron === undefined ? 0 : 1,
-  ].reduce((total, count) => total + count, 0);
-  if (selected === 0) return undefined;
-  if (selected > 1) {
-    throw usageError(
-      'Pass exactly one schedule trigger: --every, --daily, --weekly, --once-date, or --cron.',
-    );
-  }
-  const timeZone = trimmed(values.timezone);
-  if (every !== undefined) {
-    if (!/^[0-9]+$/u.test(every) || Number(every) < 1) {
-      throw usageError('--every must be a positive whole number of seconds.');
-    }
-    return { kind: 'every', everySeconds: Number(every) };
-  }
-  if (timeZone === undefined) {
-    throw usageError('--timezone is required for calendar triggers.');
-  }
-  if (daily !== undefined) return { kind: 'daily', time: daily, timeZone };
-  if (weekly !== undefined) {
-    const weekdays = trimmed(values.weekdays);
-    if (weekdays === undefined) throw usageError('--weekdays is required for --weekly.');
-    const days = weekdays.split(',').map((day) => day.trim());
-    if (
-      days.length === 0 ||
-      days.some((day) => !/^[0-9]+$/u.test(day) || Number(day) < 0 || Number(day) > 6)
-    ) {
-      throw usageError('--weekdays must be comma-separated days 0-6.');
-    }
-    return { kind: 'weekly', time: weekly, timeZone, weekdays: days.map(Number) };
-  }
-  if (onceDate !== undefined) {
-    if (onceTime === undefined) throw usageError('--once-time is required for --once-date.');
-    return { kind: 'once', date: onceDate, time: onceTime, timeZone };
-  }
-  return { kind: 'cron', expression: cron!, timeZone };
+  return scheduleTriggerFromFlags(values, usageError);
 }
 
 function enabledFlag(
@@ -1828,12 +1787,7 @@ function enabledFlag(
   on: 'enabled' | 'locked',
   off: 'disabled' | 'unlocked',
 ): boolean | undefined {
-  const isOn = values[on] === true;
-  const isOff = values[off] === true;
-  if (isOn && isOff) throw usageError(`Pass --${on} or --${off}, not both.`);
-  if (isOn) return true;
-  if (isOff) return false;
-  return undefined;
+  return scheduleToggleFromFlags(values, on, off, usageError);
 }
 
 function runSchedules(
@@ -2546,7 +2500,7 @@ export async function runBotCreateCli(
     }
     if (
       LIVE_COMMANDS.some((entry) => entry.command === command) ||
-      ([
+      (([
         'channel-messages',
         'grants',
         'memory-snapshot',
@@ -2554,7 +2508,8 @@ export async function runBotCreateCli(
         'memory-history',
         'memory-diff',
         'memory-save',
-      ].includes(command) &&
+      ].includes(command) ||
+        isScheduleCommand(command)) &&
         (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined)) ||
       (online && INBOX_HOST_COMMANDS.some((entry) => entry === command))
     ) {
@@ -2566,10 +2521,7 @@ export async function runBotCreateCli(
     if (
       values.host !== undefined ||
       values['token-file'] !== undefined ||
-      (online &&
-        !['search', 'schedule-preview', 'secret-put', 'secret-list', 'secret-unset'].includes(
-          command,
-        ))
+      (online && !['search', 'secret-put', 'secret-list', 'secret-unset'].includes(command))
     )
       throw usageError(
         'This command has no online adapter yet; use its explicit offline maintenance mode.',
