@@ -608,6 +608,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
   channelRetry(channelId: string, messageId: string): Promise<{ accepted: true }> {
     return unwrapAsync(this.methods.channelRetry({ channelId, messageId }));
   }
+  channelBotStop(
+    channelId: string,
+    botSlug: string,
+  ): Promise<{ stopped: { botSlug: string; sessionId: string; messageId: string } }> {
+    return unwrapAsync(this.methods.channelBotStop({ channelId, botSlug }));
+  }
   modelCatalog(): Promise<{
     models: ModelCatalogEntry[];
     default?: ModelRoute;
@@ -715,6 +721,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     preset?: string,
     workspaces?: string[],
     avatar?: string,
+    memoryLocation?: string,
   ): { bot: PersonaBotDetail } {
     return unwrap(
       this.methods.create({
@@ -726,6 +733,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
         preset,
         workspaces,
         avatar,
+        memoryLocation,
       }),
     );
   }
@@ -1098,6 +1106,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
     return unwrap(this.methods.humanAttentionStatus({}));
   }
+  channelUnreadCounts(): { channels: Array<{ channelId: string; unreadCount: number }> } {
+    return unwrap(this.methods.channelUnreadCounts({}));
+  }
   humanAssignmentContext(
     slug: string,
     sessionId: string,
@@ -1416,6 +1427,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   hiddenSet(hidden: string[]): Promise<{ hidden: string[] }> {
     return unwrapAsync(this.methods.hiddenSet({ hidden }));
   }
+  channelMuteSet(channelId: string, muted: boolean): Promise<{ muted: string[] }> {
+    return unwrapAsync(this.methods.channelMuteSet({ channelId, muted }));
+  }
 
   rosterBatch(
     action: 'pin' | 'unpin' | 'hide' | 'move',
@@ -1565,6 +1579,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'onboardingModel',
   'modelPlanInherit',
   'channelRetry',
+  'channelBotStop',
   'modelCatalog',
   'modelPresets',
   'modelPresetCreate',
@@ -1612,6 +1627,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelReadPosition',
   'channelMarkRead',
   'channelMarkAllRead',
+  'channelUnreadCounts',
   'channelAllBotPreview',
   'channelSend',
   'channelSendStatus',
@@ -1681,6 +1697,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'topReorder',
   'pinsSet',
   'hiddenSet',
+  'channelMuteSet',
   'rosterBatch',
   'developerModeSet',
   'computerAccessSet',
