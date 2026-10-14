@@ -36,7 +36,9 @@ import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
 import { ImageViewer } from '../../src/ui/chat/image-viewer';
+import { MessageActions } from '../../src/ui/chat/message-actions';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
+import { copyMessage } from '../../src/ui/chat/message-menu';
 import { chatRows, type ChatRow } from '../../src/ui/chat/message-groups';
 import { QuestionCard } from '../../src/ui/chat/question-card';
 import { StatusStrip } from '../../src/ui/chat/status-strip';
@@ -168,6 +170,8 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const [stop, setStop] = useState<StopOutcome | { status: 'stopping' } | undefined>();
   const [shareError, setShareError] = useState(false);
   const [viewing, setViewing] = useState<MessageAttachment>();
+  const [actionsFor, setActionsFor] = useState<ConversationMessage>();
+  const [reactError, setReactError] = useState(false);
   const now = new Date();
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
@@ -264,6 +268,14 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     return shareAttachment(attachment).catch(() => setShareError(true));
   };
 
+  const react = (messageId: string, emoji: string, active: boolean): void => {
+    setReactError(false);
+    void conversation?.react(messageId, emoji, active).catch(() => setReactError(true));
+  };
+
+  const botName = (id: string): string =>
+    host.roster?.bots.find((entry) => entry.slug === id)?.displayName ?? id;
+
   const notice =
     snapshot.status === 'refused'
       ? t.dmRefused
@@ -277,17 +289,19 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
               ? t.attachFailed
               : shareError
                 ? t.shareFailed
-                : stop?.status === 'not-working' && bot !== undefined
-                  ? t.stopNotWorking(bot.displayName)
-                  : stop?.status === 'failed'
-                    ? `${t.stopFailed} ${stop.reason}`
-                    : dictation.state.status === 'denied'
-                      ? t.dictationDenied
-                      : dictation.state.status === 'unavailable'
-                        ? t.dictationUnavailable
-                        : dictation.state.status === 'failed'
-                          ? t.dictationFailed
-                          : undefined;
+                : reactError
+                  ? t.reactFailed
+                  : stop?.status === 'not-working' && bot !== undefined
+                    ? t.stopNotWorking(bot.displayName)
+                    : stop?.status === 'failed'
+                      ? `${t.stopFailed} ${stop.reason}`
+                      : dictation.state.status === 'denied'
+                        ? t.dictationDenied
+                        : dictation.state.status === 'unavailable'
+                          ? t.dictationUnavailable
+                          : dictation.state.status === 'failed'
+                            ? t.dictationFailed
+                            : undefined;
 
   return (
     <>
@@ -363,6 +377,9 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
                 onRetry={(id) => conversation?.retry(id)}
                 onOpenImage={setViewing}
                 onShare={share}
+                onLongPress={setActionsFor}
+                onReact={react}
+                botName={botName}
               />
             )
           }
@@ -442,6 +459,12 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
         />
       </KeyboardAvoidingView>
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
+      <MessageActions
+        message={actionsFor}
+        onClose={() => setActionsFor(undefined)}
+        onReact={(message, emoji, active) => react(message.id, emoji, active)}
+        onCopy={copyMessage}
+      />
     </>
   );
 }
