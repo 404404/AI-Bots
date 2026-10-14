@@ -8,6 +8,7 @@ Issue / Discussion: link here; use Closes only for completed work / 关联链接
 
 - Merge risk: reversibility, blast radius and review focus / 回退方式、影响范围与评审重点。
 - Verification: list exact checks and results; distinguish automated tests, runtime, visual evidence and Human QA. State what was not run / 列真实验证及缺口。
+- CI test plan: the mode the `plan tests` job chose (affected / full / none). If this PR adds a config file, a test directory or a test that reads repo files, name the `scripts/ci-plan.mjs` rule it updated / 写明 CI 选测模式；新增配置、测试目录或读仓库文件的测试时，写明改了哪条规则。
 
 ## Change outline
 

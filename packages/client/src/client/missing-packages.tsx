@@ -30,7 +30,7 @@ const styles = stylex.create({
     boxSizing: 'border-box',
     paddingBlock: space.x2,
     paddingInline: space.x2,
-    borderRadius: radius.control,
+    borderRadius: radius.sm,
     backgroundColor: color.hover,
     color: color.fg,
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',

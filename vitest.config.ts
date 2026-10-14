@@ -18,8 +18,9 @@ export default defineConfig({
     testTimeout: 15_000,
     env: { DO_NOT_TRACK: '1' },
     include: [
-      'packages/*/test/**/*.test.ts',
+      'packages/*/test/**/*.test.{ts,tsx}',
       'apps/docs/test/**/*.test.ts',
+      'apps/mobile/test/**/*.test.ts',
       'scripts/test/**/*.test.mjs',
     ],
   },
