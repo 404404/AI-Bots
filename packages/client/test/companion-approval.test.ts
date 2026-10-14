@@ -370,7 +370,6 @@ it('a secret_cli card offers always allow this kind with its one-line warning an
       role: 'orchestrator',
       cwd: '/qa',
       input: '{"program":"gh","account":"github-work","args":[],"env":[]}',
-      externalDecision: 'operation',
     },
   };
   const old = store.getSnapshot();
