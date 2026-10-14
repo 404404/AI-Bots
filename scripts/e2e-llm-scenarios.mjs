@@ -26,8 +26,8 @@ Options:
   --report <path>       Write the JSON report here (default .humanlayer/llm-e2e/<time>.json).
   --list                Print the scenarios and their areas, then exit.
 
-The Host needs a model credential: DEEPSEEK_API_KEY in the environment, or the AX opencode-go
-selection from docs/agents/ax-model.md. Exit status is 1 when any selected scenario fails.`;
+The Host needs a model credential: the AX opencode-go selection from docs/agents/ax-model.md
+(CI runs dev-model.mjs setup --from-env with OPENCODE_GO_API_KEY), or DEEPSEEK_API_KEY. Exit status is 1 when any selected scenario fails.`;
 
 const RUNTIME_AREAS = [
   'packages/core/src/runtime/',
