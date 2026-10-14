@@ -153,10 +153,37 @@ import {
   type MessageSelection,
 } from './message-selection-state.js';
 import { useMountedResource } from './mounted-resource.js';
+import * as stylex from '@stylexjs/stylex';
+import { color, text } from './ds/tokens.stylex.js';
 import type { ReleaseNotesController } from './release-notes.js';
 import { ReleaseNotesAnnouncement } from './release-notes-view.js';
 import type { TelemetryNoticeController } from './telemetry-notice.js';
 import { TelemetryNotice } from './telemetry-notice-view.js';
+import {
+  rememberTimelineScroll,
+  rememberedTimelineScroll,
+  restoreTimelineScroll,
+  timelineScrollAnchor,
+} from './timeline-position.js';
+import { TimelineUnreadDivider } from './timeline-unread-divider.js';
+import { foldableMessage, MessageFold } from './message-fold.js';
+import {
+  MessageReactionChips,
+  MessageReactionPicker,
+  MessageReactionSurface,
+  ReactionIcon,
+} from './message-reactions.js';
+import { ConversationSearch } from './conversation-search.js';
+import { reactableMessage } from './message-reactions-model.js';
+import {
+  galleryImageKey,
+  ImageGalleryScope,
+  useMessageImageGallery,
+  type Gallery,
+  type GalleryImage,
+} from './message-image-gallery.js';
+import { inlineImageAttachment } from './message-attachment.js';
+import { channelAttachmentUrl } from './bridge.js';
 
 export function committedMessageIds(messages: readonly ChannelMessage[]): Set<string> {
   return new Set(
@@ -216,6 +243,23 @@ function clockTime(at: string): string {
   if (Number.isNaN(date.getTime())) return '';
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+function fullTime(at: string, t: BotHarnessTranslate): string {
+  const date = new Date(at);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(t('main.date.locale'), { dateStyle: 'full', timeStyle: 'short' });
+}
+
+const messageStyles = stylex.create({
+  metaTime: {
+    color: color.subtle,
+    fontSize: text.metaSize,
+    lineHeight: text.metaLine,
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap',
+    display: { default: 'inline', '@media (hover: none)': 'none' },
+  },
+});
 
 function Welcome({ state, t }: { state: ClientState; t: BotHarnessTranslate }): ReactElement {
   return (
@@ -294,6 +338,7 @@ function ReplyIcon(): ReactElement {
   );
 }
 
+const SEARCH_PANEL_GAP_PX = 8;
 const BUBBLE_LONG_PRESS_MS = 500;
 const BUBBLE_LONG_PRESS_TOLERANCE_PX = 10;
 
@@ -427,16 +472,19 @@ function MessageGroupView({
   onContextMenu,
   onAvatarMenu,
   onReply,
+  onReact,
   onJumpReply,
   onRestoreFailed,
   actions,
   resolvedGrantRequests,
   toolApprovalDecisions,
   userQuestionResolutions,
+  gallery,
   nativeChatT,
   t,
 }: {
   humanMembers?: readonly ChannelHumanMember[];
+  gallery?: Gallery | undefined;
   group: MessageGroup;
   channelId?: string | undefined;
   focusMessageId?: string | undefined;
@@ -445,6 +493,7 @@ function MessageGroupView({
   onContextMenu(message: ChannelMessage, x: number, y: number): void;
   onAvatarMenu?: ((botSlug: string, x: number, y: number) => void) | undefined;
   onReply?: ((message: ChannelMessage) => void) | undefined;
+  onReact?: ((message: ChannelMessage, emoji: string, active: boolean) => void) | undefined;
   onRestoreFailed(message: ChannelMessage): void;
   onJumpReply(messageId: string): void;
   actions: BridgeActions;
@@ -468,6 +517,12 @@ function MessageGroupView({
       ? undefined
       : bots.find((candidate) => candidate.slug === currentDmBotSlug);
   const displayBot = authorBot ?? welcomeBot;
+  const reactorName = (actor: { kind: 'human' | 'bot'; id: string }): string =>
+    actor.kind === 'human'
+      ? actor.id === 'local-human'
+        ? t('message.reaction.you')
+        : (humanMembers.find((member) => member.humanId === actor.id)?.displayName ?? actor.id)
+      : (bots.find((candidate) => candidate.slug === actor.id)?.displayName ?? actor.id);
   const surface = useConversationSurface();
   const nameSource = first.bridgeOrigin ? undefined : botNameSource(displayBot);
   const nameColor =
@@ -514,8 +569,42 @@ function MessageGroupView({
         t={t}
       />
     );
+  const lastMessage = group.messages[group.messages.length - 1];
+  const lastReactions = (lastMessage?.reactions ?? [])
+    .map((reaction) => `${reaction.emoji}${String(reaction.actors.length)}`)
+    .join(' ');
+  const groupMount = useMountedResource<HTMLDivElement>(
+    (node) => {
+      if (avatar === undefined || lastMessage === undefined || lastReactions === '') return;
+      const chips = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          `.bh-bubble-wrap[data-message-id] > .bh-bubble-surface > [data-message-reactions]`,
+        ),
+      ).find(
+        (element) =>
+          element.closest<HTMLElement>('.bh-bubble-wrap')?.dataset.messageId === lastMessage.id,
+      );
+      if (chips === undefined) return;
+      const lift = (): void => {
+        const margin = Number.parseFloat(getComputedStyle(chips).marginTop) || 0;
+        node.style.setProperty(
+          '--bh-avatar-lift',
+          `${String(chips.getBoundingClientRect().height + margin)}px`,
+        );
+      };
+      lift();
+      const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(lift);
+      observer?.observe(chips);
+      return () => {
+        observer?.disconnect();
+        node.style.removeProperty('--bh-avatar-lift');
+      };
+    },
+    [avatar === undefined, lastMessage?.id, lastReactions],
+  );
   return (
     <div
+      ref={groupMount}
       className={`bh-message-group${human ? ' bh-message-group-me' : ''}`}
       data-group-size={group.messages.length}
     >
@@ -577,7 +666,7 @@ function MessageGroupView({
               </span>,
             )
           )}
-          <time className="bh-bubble-time" dateTime={first.at}>
+          <time className="bh-bubble-time" dateTime={first.at} title={fullTime(first.at, t)}>
             {clockTime(first.at)}
           </time>
         </div>
@@ -626,24 +715,39 @@ function MessageGroupView({
                     onJump={onJumpReply}
                     t={t}
                   />
-                  <ChannelMessageBody
-                    message={message}
-                    channelId={channelId}
-                    t={t}
-                    nativeChatT={nativeChatT}
-                    actions={actions}
-                    bots={bots}
-                    humanMembers={humanMembers}
-                    grantRequestResolved={resolvedGrantRequests.has(message.id)}
-                    toolApprovalDecision={toolApprovalDecisions.get(message.id)}
-                    userQuestionResolution={userQuestionResolutions.get(message.id)}
-                  />
+                  <ImageGalleryScope value={gallery}>
+                    <MessageFold messageId={message.id} enabled={foldableMessage(message)} t={t}>
+                      <ChannelMessageBody
+                        message={message}
+                        channelId={channelId}
+                        t={t}
+                        nativeChatT={nativeChatT}
+                        actions={actions}
+                        bots={bots}
+                        humanMembers={humanMembers}
+                        grantRequestResolved={resolvedGrantRequests.has(message.id)}
+                        toolApprovalDecision={toolApprovalDecisions.get(message.id)}
+                        userQuestionResolution={userQuestionResolutions.get(message.id)}
+                      />
+                    </MessageFold>
+                  </ImageGalleryScope>
                   {message.pending === true || message.streaming === true ? (
                     <span className="bh-bubble-status" role="status">
                       {t(message.streaming === true ? 'message.generating' : 'message.sending')}
                     </span>
                   ) : null}
                 </div>
+                <MessageReactionChips
+                  reactions={message.reactions ?? []}
+                  mine={human}
+                  names={reactorName}
+                  onReact={
+                    onReact === undefined || !reactableMessage(message)
+                      ? undefined
+                      : (emoji, active) => onReact(message, emoji, active)
+                  }
+                  t={t}
+                />
               </div>
               <div className="bh-bubble-side">
                 <ChannelDeliveryReceipt
@@ -653,6 +757,15 @@ function MessageGroupView({
                   t={t}
                 />
                 <div className="bh-bubble-meta">
+                  {index === 0 || clockTime(message.at) === '' ? null : (
+                    <time
+                      dateTime={message.at}
+                      title={fullTime(message.at, t)}
+                      {...stylex.props(messageStyles.metaTime)}
+                    >
+                      {clockTime(message.at)}
+                    </time>
+                  )}
                   <div className="bh-bubble-actions">
                     {onReply !== undefined &&
                     message.pending !== true &&
@@ -668,6 +781,13 @@ function MessageGroupView({
                           <ReplyIcon />
                         </button>
                       </Tooltip>
+                    ) : null}
+                    {onReact !== undefined && reactableMessage(message) ? (
+                      <MessageReactionPicker
+                        message={message}
+                        onReact={(emoji, active) => onReact(message, emoji, active)}
+                        t={t}
+                      />
                     ) : null}
                     <MessageCopyAction body={message.body} t={t} />
                   </div>
@@ -685,6 +805,7 @@ function MessageActionMenu({
   onLocate,
   onReply,
   onSelect,
+  onReact,
   request,
   onClose,
   t,
@@ -692,6 +813,7 @@ function MessageActionMenu({
   onLocate(messageId: string): void;
   onReply(message: ChannelMessage): void;
   onSelect?(message: ChannelMessage): void;
+  onReact?(request: MessageMenuRequest): void;
   request: MessageMenuRequest;
   onClose(): void;
   t: BotHarnessTranslate;
@@ -722,6 +844,9 @@ function MessageActionMenu({
           ...(request.message.pending === true || request.message.streaming === true
             ? []
             : [{ id: 'reply', label: t('message.reply'), icon: <ReplyIcon /> }]),
+          ...(onReact === undefined
+            ? []
+            : [{ id: 'react', label: t('message.react'), icon: <ReactionIcon /> }]),
           { id: 'locate', label: t('message.locate'), icon: <IconGoalOutlineRegular /> },
           { id: 'copy', label: t('message.copy'), icon: <IconCopyOutlineRegular /> },
           ...(onSelect === undefined || !selectableMessage(request.message)
@@ -736,6 +861,7 @@ function MessageActionMenu({
         ]}
         onSelect={(id) => {
           if (id === 'reply') onReply(request.message);
+          else if (id === 'react') onReact?.(request);
           else if (id === 'locate') onLocate(request.message.id);
           else if (id === 'copy') {
             void navigator.clipboard?.writeText(request.message.body);
@@ -1020,10 +1146,14 @@ function ConversationView({
     height: number;
   } | null>(null);
   const lastRevision = useRef<number | undefined>(undefined);
+  const positioned = useRef(false);
+  const restoredScroll = useRef(false);
+  const placedUnreadDivider = useRef<string | undefined>(undefined);
   const readMarkTimer = useRef<number | undefined>(undefined);
   const [unseen, setUnseen] = useState(0);
   const [atLatest, setAtLatest] = useState(true);
   const [messageMenu, setMessageMenu] = useState<MessageMenuRequest | undefined>();
+  const [reactionMenu, setReactionMenu] = useState<MessageMenuRequest | undefined>();
   const [avatarMenu, setAvatarMenu] = useState<AvatarMenuRequest | undefined>();
   const [diagnosticsTarget, setDiagnosticsTarget] = useState<
     | { channelId: string; fromMessageId: string; toMessageId?: string; messageIds: string[] }
@@ -1165,6 +1295,15 @@ function ConversationView({
     timelineWorkingRowsCover(composerActivity, workingRows, streamingBotSlugs);
   const workingRowsKey = `${workingRows.items.map((item) => item.personaBotId).join(',')}+${workingRows.more}`;
   const channelId = channel?.id;
+  const reactToMessage =
+    readOnlyDm || channelId === undefined || actions.reactToMessage === undefined
+      ? undefined
+      : (message: ChannelMessage, emoji: string, active: boolean) =>
+          void actions
+            .reactToMessage?.(channelId, message.id, emoji, active)
+            .catch((error: unknown) => {
+              console.warn('botharness: reaction failed', error);
+            });
   const stopTargets =
     channelId !== undefined &&
     !readOnlyDm &&
@@ -1390,6 +1529,40 @@ function ConversationView({
       cancelled = true;
     };
   }, [channelId, previewRoster]);
+  const [searchTop, setSearchTop] = useState<number | undefined>(undefined);
+  const searchAvailable = useRef(false);
+  const searchReturnFocus = useRef<HTMLElement | null>(null);
+  searchAvailable.current =
+    channelId !== undefined &&
+    actions.searchChannel !== undefined &&
+    activeMemoryView === undefined &&
+    !profileViewOpen;
+  const searchShortcutMount = useMountedResource<HTMLSpanElement>((node) => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.altKey ||
+        event.shiftKey ||
+        event.key.toLowerCase() !== 'f' ||
+        !searchAvailable.current ||
+        document.querySelector('[aria-modal="true"]') !== null
+      )
+        return;
+      const pane = node.parentElement?.querySelector<HTMLElement>('.bh-chat-pane');
+      const bar = pane?.querySelector<HTMLElement>('.bh-topbar');
+      if (pane == null) return;
+      event.preventDefault();
+      const field = pane.querySelector<HTMLInputElement>('[data-conversation-search] input');
+      if (field === null && document.activeElement instanceof HTMLElement)
+        searchReturnFocus.current = document.activeElement;
+      const offset =
+        bar == null ? 0 : bar.getBoundingClientRect().bottom - pane.getBoundingClientRect().top;
+      setSearchTop(Math.max(0, offset) + SEARCH_PANEL_GAP_PX);
+      field?.select();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
   const conversationMount = useMountedResource<HTMLDivElement>(() => {
     setAllBotNotice(undefined);
     return () => {
@@ -1593,6 +1766,39 @@ function ConversationView({
     void actions.loadNewer(channelId);
   };
 
+  const unreadAfter = conversation.unreadAfterMessageId;
+  const messageGroups = groupChannelMessages(displayMessages, unreadAfter);
+  const galleryImages: GalleryImage[] =
+    channelId === undefined
+      ? []
+      : displayMessages.flatMap((message) =>
+          message.contentPurged === true
+            ? []
+            : (message.attachments ?? []).flatMap((ref) =>
+                inlineImageAttachment(ref.mime)
+                  ? [
+                      {
+                        key: galleryImageKey(message.id, ref),
+                        src: channelAttachmentUrl(ref, { channelId, messageId: message.id }),
+                        alt: ref.name,
+                      },
+                    ]
+                  : [],
+              ),
+        );
+  const imageGallery = useMessageImageGallery(galleryImages, t);
+  const placeUnreadDivider = (element: HTMLDivElement): boolean => {
+    const divider = element.querySelector<HTMLElement>('[data-unread-divider]');
+    if (divider === null) return false;
+    const viewport = element.getBoundingClientRect();
+    element.scrollTop += divider.getBoundingClientRect().top - viewport.top - viewport.height / 4;
+    followingLatest.current =
+      !conversation.timeline.hasNewer &&
+      element.scrollHeight - element.scrollTop - element.clientHeight <= 80;
+    setAtLatest(followingLatest.current);
+    return true;
+  };
+
   const timelineMount = useMountedResource<HTMLDivElement>(
     (element) => {
       scrollRef.current = element;
@@ -1613,6 +1819,27 @@ function ConversationView({
             element.scrollTop = anchor.top + element.scrollHeight - anchor.height;
           }
           prependAnchor.current = null;
+        } else if (
+          unreadAfter !== undefined &&
+          placedUnreadDivider.current !== unreadAfter &&
+          !restoredScroll.current &&
+          conversation.focusMessageId === undefined &&
+          placeUnreadDivider(element)
+        ) {
+          placedUnreadDivider.current = unreadAfter;
+          positioned.current = true;
+        } else if (
+          !positioned.current &&
+          conversation.focusMessageId === undefined &&
+          messages.length > 0
+        ) {
+          positioned.current = true;
+          const saved = channelId === undefined ? undefined : rememberedTimelineScroll(channelId);
+          if (saved !== undefined && !saved.atLatest && restoreTimelineScroll(element, saved)) {
+            restoredScroll.current = true;
+            followingLatest.current = false;
+            setAtLatest(false);
+          } else if (followingLatest.current) element.scrollTop = element.scrollHeight;
         } else if (followingLatest.current) {
           element.scrollTop = element.scrollHeight;
         }
@@ -1629,6 +1856,7 @@ function ConversationView({
       const id = conversation.focusMessageId;
       let focusTimer: number | undefined;
       if (id !== undefined) {
+        positioned.current = true;
         const target = Array.from(element.querySelectorAll<HTMLElement>('[data-message-id]')).find(
           (candidate) => candidate.dataset['messageId'] === id,
         );
@@ -1660,6 +1888,7 @@ function ConversationView({
       conversation.drafts,
       conversation.revision,
       conversation.focusMessageId,
+      unreadAfter,
       conversation.timeline.hasOlder,
       conversation.timeline.hasNewer,
       conversation.timeline.loadingOlder,
@@ -1678,6 +1907,10 @@ function ConversationView({
     followingLatest.current = atBottom && !conversation.timeline.hasNewer;
     setAtLatest(followingLatest.current);
     if (followingLatest.current) setUnseen(0);
+    if (channelId !== undefined && conversation.status === 'ready' && positioned.current) {
+      const position = timelineScrollAnchor(element, followingLatest.current);
+      if (position !== undefined) rememberTimelineScroll(channelId, position);
+    }
     scheduleReadMark();
     if (element.scrollTop <= 48) loadOlderAtTop();
     if (atBottom) loadNewerAtBottom();
@@ -1933,6 +2166,7 @@ function ConversationView({
   return (
     <div ref={conversationMount} className="bh-root bh-main">
       <span ref={allBotPreviewMount} hidden />
+      <span ref={searchShortcutMount} hidden />
       <div className="bh-chat-layout" data-sidebar={sidebar.mode}>
         <section
           className="bh-chat-pane"
@@ -2204,6 +2438,24 @@ function ConversationView({
                   onClose={closeMemoryView}
                 />
               )}
+              {searchTop === undefined ||
+              channelId === undefined ||
+              activeMemoryView !== undefined ||
+              actions.searchChannel === undefined ? null : (
+                <ConversationSearch
+                  top={searchTop}
+                  search={(query, cursor) => actions.searchChannel!(channelId, query, cursor)}
+                  onJump={(messageId) => void actions.openAround(channelId, messageId)}
+                  onClose={() => {
+                    setSearchTop(undefined);
+                    searchReturnFocus.current?.focus();
+                    searchReturnFocus.current = null;
+                  }}
+                  label={selectionAuthor}
+                  time={(at) => fullTime(at, t)}
+                  t={t}
+                />
+              )}
               <div
                 className="bh-chat-body"
                 ref={timelineMount}
@@ -2252,7 +2504,7 @@ function ConversationView({
                   <EmptyConversation channel={channel} bot={bot} t={t} />
                 ) : null}
                 <MessageSelectionContext.Provider value={messageSelection}>
-                  {groupChannelMessages(displayMessages).map((group, index, groups) => {
+                  {messageGroups.map((group, index, groups) => {
                     const first = group.messages[0]!;
                     const previous = groups[index - 1]?.messages.at(-1);
                     const firstDay = Number.isFinite(Date.parse(first.at))
@@ -2264,6 +2516,9 @@ function ConversationView({
                         : undefined;
                     return (
                       <div key={group.key} className="bh-message-block">
+                        {unreadAfter !== undefined && previous?.id === unreadAfter ? (
+                          <TimelineUnreadDivider label={t('messages.newDivider')} />
+                        ) : null}
                         {firstDay !== undefined && firstDay !== previousDay ? (
                           <div className="bh-message-day">
                             {new Date(first.at).toLocaleDateString(t('main.date.locale'), {
@@ -2340,7 +2595,10 @@ function ConversationView({
                                   candidate.type === 'dm' && candidate.botSlug === commit.botSlug,
                               );
                               if (dm !== undefined)
-                                store.setMemoryCommitIntent({ channelId: dm.id, sha: commit.sha });
+                                store.setMemoryCommitIntent({
+                                  channelId: dm.id,
+                                  sha: commit.sha,
+                                });
                               void actions.openBot(commit.botSlug);
                             }}
                           />
@@ -2357,6 +2615,7 @@ function ConversationView({
                               group={group}
                               channelId={channelId}
                               actions={actions}
+                              gallery={imageGallery.gallery}
                               nativeChatT={nativeChatT}
                               resolvedGrantRequests={resolvedGrantRequestIds(displayMessages)}
                               toolApprovalDecisions={
@@ -2399,6 +2658,7 @@ function ConversationView({
                               onReply={
                                 readOnlyDm ? undefined : (message) => setReplyTarget(message)
                               }
+                              onReact={reactToMessage}
                               onJumpReply={(messageId) => {
                                 if (channelId !== undefined)
                                   void actions.openAround(channelId, messageId);
@@ -2497,6 +2757,7 @@ function ConversationView({
                     );
                   })}
                 </MessageSelectionContext.Provider>
+                {imageGallery.lightbox}
                 <TimelineWorkingRowsView rows={workingRows} t={t} />
                 {conversation.timeline.hasNewer ? (
                   <div className="bh-timeline-newer-sentinel">
@@ -2707,6 +2968,9 @@ function ConversationView({
                 <MessageActionMenu
                   request={messageMenu}
                   t={t}
+                  {...(reactToMessage === undefined || !reactableMessage(messageMenu.message)
+                    ? {}
+                    : { onReact: setReactionMenu })}
                   onLocate={(messageId) => {
                     if (channelId !== undefined) void actions.openAround(channelId, messageId);
                   }}
@@ -2715,6 +2979,23 @@ function ConversationView({
                   onClose={() => {
                     setMessageMenu(undefined);
                   }}
+                />
+              )}
+              {reactionMenu === undefined || reactToMessage === undefined ? null : (
+                <MessageReactionSurface
+                  message={
+                    messages.find((message) => message.id === reactionMenu.message.id) ??
+                    reactionMenu.message
+                  }
+                  anchor={() => ({
+                    left: reactionMenu.x,
+                    top: reactionMenu.y,
+                    width: 0,
+                    bottom: reactionMenu.y,
+                  })}
+                  onReact={(emoji, active) => reactToMessage(reactionMenu.message, emoji, active)}
+                  onClose={() => setReactionMenu(undefined)}
+                  t={t}
                 />
               )}
               {activeMemoryView !== undefined ||
