@@ -1399,7 +1399,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
         defineTool({
           name: 'bridge_targets',
           description:
-            'List your currently authorized external report targets, including qualified WeChat paired-owner DMs, own identity and grant_id. Does not grant any new authorization.',
+            'List your currently authorized external report targets, including qualified WeChat paired-owner DMs and QQ saved groups. Each target includes your own bindingId/accountRef, exact native conversationId, canPost and grantId. Compare that conversationId with the trusted original source; use grantId as bridge_post grant_id. Does not grant any new authorization.',
           parameters: {},
           output: {
             schema: { type: 'string' },

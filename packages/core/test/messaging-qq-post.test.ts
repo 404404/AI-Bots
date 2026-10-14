@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { createBridgeMethods } from '../src/bridge/methods.js';
 import { createDshImProvider, type DshImOutboundService } from '../src/messaging/dsh-im.js';
 import { createCore, type BotHarnessCore } from '../src/plugin.js';
+import type { OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { createTempRoot } from './helpers.js';
 
 const cores = new Set<BotHarnessCore>();
@@ -17,7 +18,7 @@ afterEach(async () => {
   for (const core of cores) await stop(core);
 });
 
-async function fixture() {
+async function fixture(onRun?: (run: OrchestratorAgentRun) => Promise<void>) {
   const fingerprint = 'a'.repeat(64);
   const home = createTempRoot('qq-delayed-post-');
   type Consumer = Parameters<NonNullable<DshImOutboundService['consumeInbound']>>[1];
@@ -86,7 +87,21 @@ async function fixture() {
   };
   const provider = createDshImProvider(transport, 'qq')!;
   const boot = () => {
-    const value = createCore({ dshHome: home });
+    const value = createCore({
+      dshHome: home,
+      ...(onRun
+        ? {
+            agents: {
+              runOrchestrator: onRun,
+              async runAssignment() {},
+              requestAssignment() {
+                throw new Error('Assignments are outside this QQ target test');
+              },
+              async close() {},
+            },
+          }
+        : {}),
+    });
     cores.add(value);
     value.externalMessaging.register(provider);
     return value;
@@ -198,6 +213,33 @@ it('an in-window QQ reply stays a source reply and creates no proactive send', a
     sourceEventId: source,
     receipt: { messageId: 'native-reply' },
   });
+  expect(fx.transport.sendChecked).not.toHaveBeenCalled();
+});
+
+it('the Orchestrator can identify its exact original QQ group before selecting a saved post grant', async () => {
+  const targets: unknown[] = [];
+  const fx = await fixture(async (run) => {
+    if (!run.externalMessaging?.targets) throw new Error('No report targets');
+    targets.push(...(await run.externalMessaging.targets()));
+  });
+  const dm = fx.core.channels.getOrCreateDm('ada', 'Ada')!;
+  const admission = fx.core.runtime.admitDmMessage({
+    channelId: dm.id,
+    messageId: 'inspect-qq-targets',
+    body: 'Inspect my QQ report destinations',
+  });
+  if (!admission.admitted) throw new Error(admission.reason);
+  await admission.settled;
+  expect(targets).toEqual([
+    expect.objectContaining({
+      grantId: fx.grant.id,
+      bindingId: fx.grant.bindingId,
+      accountRef: 'own-app',
+      platform: 'qq',
+      conversationId: 'own-group',
+      canPost: true,
+    }),
+  ]);
   expect(fx.transport.sendChecked).not.toHaveBeenCalled();
 });
 
