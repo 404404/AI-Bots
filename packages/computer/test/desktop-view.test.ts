@@ -1,9 +1,11 @@
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
 import {
   DesktopViewError,
   createDesktopView,
   desktopInputCall,
+  jpegEncoder,
   parseDesktopInput,
 } from '../src/desktop-view.js';
 
@@ -85,6 +87,7 @@ describe('desktop view frames', () => {
       isRunning: () => true,
       intervalMs: 0,
       waitMs: 1000,
+      encode: async () => undefined,
     });
     const first = await view.next(undefined);
     expect(first).toMatchObject({
@@ -104,6 +107,36 @@ describe('desktop view frames', () => {
       unchanged: 2,
       published: 2,
     });
+  });
+
+  it('sends a changed screen as JPEG and keeps PNG when encoding fails', async () => {
+    const png = await sharp({
+      create: { width: 64, height: 40, channels: 3, background: '#3366cc' },
+    })
+      .png()
+      .toBuffer();
+    const encoded = await jpegEncoder(png);
+    expect(encoded?.mimeType).toBe('image/jpeg');
+    expect(encoded?.bytes.subarray(0, 3)).toEqual(Buffer.from([0xff, 0xd8, 0xff]));
+    expect(await jpegEncoder(Buffer.from('not an image'))).toBeUndefined();
+
+    const view = createDesktopView({
+      driver: fakeDriver([png.toString('base64')]),
+      isRunning: () => true,
+      intervalMs: 0,
+    });
+    expect(await view.next(undefined)).toMatchObject({
+      seq: 1,
+      mimeType: 'image/jpeg',
+      data: encoded?.bytes.toString('base64'),
+    });
+
+    const fallback = createDesktopView({
+      driver: fakeDriver(['a']),
+      isRunning: () => true,
+      encode: async () => undefined,
+    });
+    expect(await fallback.next(undefined)).toMatchObject({ data: 'a', mimeType: 'image/png' });
   });
 
   it('answers with no frame when the screen stays the same until the wait ends', async () => {

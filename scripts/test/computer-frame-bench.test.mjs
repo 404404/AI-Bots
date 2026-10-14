@@ -1,8 +1,16 @@
+import { createRequire } from 'node:module';
 import { deflateSync } from 'node:zlib';
 
 import { describe, expect, it } from 'vitest';
 
-import { CLOCK_BITS, clockAge, decodePng, readClock, summarize } from '../computer-frame-bench.mjs';
+import {
+  CLOCK_BITS,
+  clockAge,
+  decodeFrame,
+  decodePng,
+  readClock,
+  summarize,
+} from '../computer-frame-bench.mjs';
 
 function chunk(type, data) {
   const head = Buffer.alloc(8);
@@ -13,15 +21,18 @@ function chunk(type, data) {
 
 function clockPng(value, cell, width = 1200, height = 120) {
   const pixels = Buffer.alloc(width * height * 3, 0xf4);
-  const paint = (x0, y0, size, rgb) => {
-    for (let y = y0; y < y0 + size; y += 1)
-      for (let x = x0; x < x0 + size && x < width; x += 1) pixels.set(rgb, (y * width + x) * 3);
+  const paint = (index, rgb) => {
+    const x0 = Math.round(10 + cell * index);
+    const x1 = Math.round(10 + cell * (index + 1));
+    for (let y = 10; y < 10 + Math.round(cell); y += 1)
+      for (let x = x0; x < x1 && x < width; x += 1) pixels.set(rgb, (y * width + x) * 3);
   };
-  paint(10, 10, cell, [255, 0, 0]);
+  paint(0, [255, 0, 0]);
   for (let i = 0; i < CLOCK_BITS; i += 1) {
     const bit = Math.floor(value / 2 ** (CLOCK_BITS - 1 - i)) % 2;
-    paint(10 + cell * (i + 1), 10, cell, bit ? [0, 0, 0] : [255, 255, 255]);
+    paint(i + 1, bit ? [0, 0, 0] : [255, 255, 255]);
   }
+  paint(CLOCK_BITS + 1, [255, 0, 0]);
   const rows = [];
   for (let y = 0; y < height; y += 1)
     rows.push(
@@ -51,6 +62,16 @@ describe('Computer frame benchmark', () => {
   it('reads the clock strip from a frame at standard and Retina scale', () => {
     expect(readClock(decodePng(clockPng(12_345_678, 32)))).toBe(12_345_678);
     expect(readClock(decodePng(clockPng(9_876, 64, 1800)))).toBe(9_876);
+    expect(readClock(decodePng(clockPng(8_376_856, 17.41)))).toBe(8_376_856);
+  });
+
+  it('reads the clock strip from a JPEG frame', async () => {
+    const require = createRequire(new URL('../../packages/computer/package.json', import.meta.url));
+    const { default: sharp } = await import(require.resolve('sharp'));
+    const jpeg = await sharp(clockPng(4_242_424, 18), { failOn: 'none' })
+      .jpeg({ quality: 70 })
+      .toBuffer();
+    expect(readClock(await decodeFrame(jpeg, 'image/jpeg'))).toBe(4_242_424);
   });
 
   it('measures age across the clock wrap and summarizes a run', () => {

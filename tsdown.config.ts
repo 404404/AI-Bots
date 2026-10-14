@@ -101,6 +101,7 @@ export default defineConfig([
     platform: 'node',
     dts: true,
     clean: true,
+    external: ['sharp'],
   },
   {
     entry: {

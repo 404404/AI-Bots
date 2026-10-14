@@ -60,6 +60,7 @@ export interface DesktopViewStats {
 const MODIFIERS = new Set(['alt', 'ctrl', 'meta', 'shift']);
 export const VIEWER_SESSION = 'phone-viewer';
 export const VIEWER_MAX_DIMENSION = 1600;
+export const VIEWER_JPEG_QUALITY = 70;
 const MAX_TEXT = 2000;
 
 function finite(value: unknown): number | undefined {
@@ -196,6 +197,20 @@ export function desktopCapture(result: unknown): Capture | undefined {
   };
 }
 
+export type FrameEncoder = (
+  png: Buffer,
+) => Promise<{ readonly bytes: Buffer; readonly mimeType: string } | undefined>;
+
+export const jpegEncoder: FrameEncoder = async (png) => {
+  try {
+    const { default: sharp } = await import('sharp');
+    const bytes = await sharp(png).jpeg({ quality: VIEWER_JPEG_QUALITY }).toBuffer();
+    return { bytes, mimeType: 'image/jpeg' };
+  } catch {
+    return undefined;
+  }
+};
+
 const wait = (ms: number, signal?: AbortSignal): Promise<void> =>
   new Promise((resolve) => {
     if (signal?.aborted === true) return resolve();
@@ -214,8 +229,10 @@ export function createDesktopView(options: {
   intervalMs?: number;
   waitMs?: number;
   pauseLeaseMs?: number;
+  encode?: FrameEncoder;
   now?: () => number;
 }): DesktopView {
+  const encode = options.encode ?? jpegEncoder;
   const intervalMs = options.intervalMs ?? 150;
   const waitMs = options.waitMs ?? 10_000;
   const now = options.now ?? Date.now;
@@ -226,6 +243,7 @@ export function createDesktopView(options: {
     if (isPaused()) pausedUntil = now() + pauseLeaseMs;
   };
   let latest: DesktopFrame | undefined;
+  let latestCapture: string | undefined;
   let capturing: Promise<DesktopFrame | undefined> | undefined;
   let lastStarted = 0;
   let pointer: { x: number; y: number } | undefined;
@@ -253,13 +271,23 @@ export function createDesktopView(options: {
           'capture-failed',
           refusalText(result) ?? 'The desktop driver returned no screenshot.',
         );
-      if (latest !== undefined && latest.data === shot.data) {
+      if (latestCapture === shot.data) {
         unchanged += 1;
         return undefined;
       }
+      latestCapture = shot.data;
+      const encoded =
+        shot.mimeType === 'image/png' ? await encode(Buffer.from(shot.data, 'base64')) : undefined;
       seq += 1;
       published += 1;
-      latest = { seq, ...shot, capturedAt: lastStarted };
+      latest = {
+        seq,
+        ...shot,
+        ...(encoded === undefined
+          ? {}
+          : { data: encoded.bytes.toString('base64'), mimeType: encoded.mimeType }),
+        capturedAt: lastStarted,
+      };
       return latest;
     })().finally(() => {
       capturing = undefined;

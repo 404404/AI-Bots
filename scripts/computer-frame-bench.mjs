@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -26,6 +27,7 @@ html,body{margin:0;height:100%;background:#f4f4f2;overflow:hidden}
 const BITS=${CLOCK_BITS};const strip=document.getElementById('strip');const cells=[];
 const marker=document.createElement('i');marker.style.background='#ff0000';strip.appendChild(marker);
 for(let i=0;i<BITS;i++){const c=document.createElement('i');strip.appendChild(c);cells.push(c)}
+const end=document.createElement('i');end.style.background='#ff0000';strip.appendChild(end);
 const busy=new URLSearchParams(location.search).get('scene')==='busy';
 const cv=document.getElementById('busy');const g=cv.getContext('2d');
 function size(){cv.width=innerWidth;cv.height=innerHeight-60}size();addEventListener('resize',size);
@@ -118,6 +120,22 @@ export function decodePng(bytes, maxRows = 800) {
   };
 }
 
+export async function decodeFrame(bytes, mimeType) {
+  if (mimeType !== 'image/jpeg') return decodePng(bytes);
+  const require = createRequire(new URL('../packages/computer/package.json', import.meta.url));
+  const { default: sharp } = await import(require.resolve('sharp'));
+  const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+  return {
+    width: info.width,
+    height: info.height,
+    rows: info.height,
+    pixel(x, y) {
+      const i = (y * info.width + x) * info.channels;
+      return [data[i], data[i + 1], data[i + 2]];
+    },
+  };
+}
+
 export function readClock(image, bits = CLOCK_BITS) {
   const red = (x, y) => {
     const [r, g, b] = image.pixel(x, y);
@@ -132,13 +150,17 @@ export function readClock(image, bits = CLOCK_BITS) {
       while (y0 > 0 && red(x0, y0 - 1)) y0 -= 1;
       let x1 = x0;
       while (x1 + 1 < image.width && red(x1 + 1, y0 + 2)) x1 += 1;
-      const cell = x1 - x0 + 1;
-      if (cell < 12 || y0 + cell >= image.rows) continue;
+      const measured = x1 - x0 + 1;
+      if (measured < 12 || y0 + measured >= image.rows) continue;
+      const middle = Math.round(y0 + measured / 2);
+      let end = x1 + 1;
+      while (end < image.width && !red(end, middle)) end += 1;
+      const cell = end < image.width ? (end - x0) / (bits + 1) : measured;
       let value = 0;
       for (let i = 0; i < bits; i += 1) {
         const cx = Math.round(x0 + cell * (i + 1) + cell / 2);
         if (cx >= image.width) return undefined;
-        const [r, g, b] = image.pixel(cx, Math.round(y0 + cell / 2));
+        const [r, g, b] = image.pixel(cx, middle);
         value = value * 2 + ((r + g + b) / 3 < 128 ? 1 : 0);
       }
       return value;
@@ -218,7 +240,7 @@ async function main() {
     bytes += text.length;
     size = `${body.width}x${body.height}`;
     target = body.target;
-    const clock = readClock(decodePng(Buffer.from(body.data, 'base64')));
+    const clock = readClock(await decodeFrame(Buffer.from(body.data, 'base64'), body.mimeType));
     if (clock === undefined) continue;
     const age = clockAge(receivedAt, clock);
     if (age < 60_000) samples.push(age);
