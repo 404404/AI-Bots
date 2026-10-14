@@ -12,12 +12,17 @@ const KEY_NAMES: Readonly<Record<string, string>> = {
   Alt: 'Alt',
 };
 
-export function isApplePlatform(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const platform =
-    (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
-    navigator.platform;
-  return /mac|iphone|ipad|ipod/iu.test(platform ?? '');
+export interface PlatformSource {
+  platform?: string;
+  userAgentData?: { platform?: string } | undefined;
+}
+
+export function isApplePlatform(source?: PlatformSource): boolean {
+  const resolved =
+    source ??
+    (typeof navigator === 'undefined' ? undefined : (navigator as Navigator & PlatformSource));
+  const platform = resolved?.userAgentData?.platform ?? resolved?.platform ?? '';
+  return /mac|iphone|ipad|ipod/iu.test(platform);
 }
 
 export function shortcutKeyLabel(key: ShortcutKey, apple: boolean): string {
