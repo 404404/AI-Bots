@@ -53,3 +53,17 @@ ADR-0155 replaced the persistent onboarding strip with a floating interface walk
 - ADR-0155's "first entry auto-starts the walkthrough" is amended: first entry auto-opens the checklist, and the walkthrough starts from it.
 - Evidence reads run on entry, when the checklist opens, and every 20 seconds in Bot mode until the checklist is settled.
 - The collapsed sidebar rail has no ring in this slice. Its entry is Bot Settings.
+
+## Amendment: seeing the Bot's work in DSH
+
+People who finished the first message still did not know that every Bot reply runs as an ordinary DSH session, or that the Sessions tab and DSH's own session list show those sessions. The checklist therefore gains a seventh item, "See how it works in DSH", in the recommended tier. Like the other recommended items it stays locked until the first reply exists, because before that there is no session to show.
+
+Its action is a walkthrough that crosses the mode switch, so it is two driver.js tours joined by a browser-session flag:
+
+- **In Bot mode** the checklist un-collapses the channel sidebar and selects its Sessions tab, then highlights that tab and the first openable session row. The last step's forward button ("Take me there") clicks that row, which opens the session in DSH and leaves Bot mode.
+- **In DSH** the session header's "Back to the Bot DM" action continues the tour when the flag is fresh. It highlights the session's row in DSH's session list (expanding the ungrouped folder if needed, otherwise falling back to the whole list) and then the "Back to the Bot DM" action itself. Finishing returns to the Bot and reopens the checklist.
+- **Narrow layouts** have no docked sidebar, so the action opens the Bot's current Orchestrator session in DSH directly and only the DSH part runs. Step numbers count only the steps that were actually shown.
+
+The item counts as done once this browser has shown a Bot-owned session in DSH, by the walkthrough or by any other route. Like the "Try it" chip, this is a browser-local presentation fact, not Profile state, and it is not added to the onboarding receipt.
+
+The main walkthrough's Channel sidebar step now also says that clicking a session opens it in DSH.

@@ -30,12 +30,14 @@ import { zhTranslate } from '../src/client/locale.js';
 import { onboardingFor } from '../src/client/onboarding.js';
 import { OnboardingOverlay } from '../src/client/onboarding-view.js';
 import { store } from '../src/client/store.js';
+import { channelSidebarPrefs } from '../src/client/channel-sidebar-prefs.js';
 
 let container: HTMLDivElement;
 let root: Root;
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   sessionStorage.clear();
+  localStorage.clear();
   tour.mockClear();
   container = document.createElement('div');
   document.body.append(container);
@@ -145,9 +147,10 @@ it('opens the getting-started checklist on the first Bot-mode entry instead of a
     [...checklist()!.querySelectorAll<HTMLElement>('[data-item]')].map(
       (node) => node.dataset['item'],
     ),
-  ).toEqual(['model', 'conversation', 'memory', 'im', 'schedule', 'companion']);
+  ).toEqual(['model', 'conversation', 'sessions', 'memory', 'im', 'schedule', 'companion']);
   expect(itemState('model')).toBe('done');
   expect(itemState('conversation')).toBe('todo');
+  expect(itemState('sessions')).toBe('locked');
   expect(itemState('memory')).toBe('locked');
   expect(itemState('im')).toBe('locked');
   expect(itemState('schedule')).toBe('locked');
@@ -264,6 +267,93 @@ it('shows one task per page in the mobile sheet and starts on the next open task
     `[aria-label="${zhTranslate('onboarding.checklist.next')}"]`,
   )!;
   await act(async () => next.click());
-  expect(itemState('memory')).toBe('locked');
+  expect(itemState('sessions')).toBe('locked');
   expect(checklist()!.querySelectorAll('[data-item]')).toHaveLength(1);
+});
+it('walks from the Bot sessions list into DSH and remembers the jump for the DSH side', async () => {
+  const { render, controller } = harness('paused', true);
+  await render();
+  await flush();
+  await act(async () => controller.openChecklist());
+  await flush();
+  expect(itemState('sessions')).toBe('todo');
+  const show = [...checklist()!.querySelectorAll('button')].find(
+    (button) => button.textContent === zhTranslate('onboarding.checklist.sessions.action'),
+  );
+  await act(async () => show!.click());
+  await flush();
+  expect(controller.getSnapshot()).toMatchObject({ sessionsTourOpen: true, checklistOpen: false });
+  const prefs = channelSidebarPrefs.getSnapshot();
+  expect(prefs.collapsedSidebars).not.toContain('personabot:ada');
+  expect(prefs.selectedTabs['personabot:ada']).toBe('conversation');
+  expect(tour).toHaveBeenCalledOnce();
+  const specs = tour.mock.calls[0]![0] as { selector: string }[];
+  expect(specs.map((spec) => spec.selector)).toEqual([
+    '[data-bh-tour="channel-sidebar"] [role="tab"][data-tab-id="conversation"]',
+    '[data-bh-tour="channel-sidebar"] [data-sessions] button.bh-session-row:not(:disabled)',
+  ]);
+  expect(sessionStorage.getItem('botharness/onboarding/sessions-tour')).not.toBeNull();
+  const sidebar = document.createElement('div');
+  sidebar.dataset['bhTour'] = 'channel-sidebar';
+  sidebar.innerHTML = '<div data-sessions=""><button class="bh-session-row">Task</button></div>';
+  document.body.append(sidebar);
+  const open = vi.fn();
+  sidebar.querySelector('button')!.addEventListener('click', open);
+  const options = tour.mock.calls[0]![1] as {
+    doneLabel: string;
+    doneIcon?: string;
+    onFinished(): void;
+    onClosed(): void;
+  };
+  expect(options).toMatchObject({
+    doneLabel: zhTranslate('onboarding.tour.sessions.open'),
+    doneIcon: 'next',
+    progress: { offset: 0, total: 4 },
+  });
+  options.onFinished();
+  expect(open).toHaveBeenCalledOnce();
+  sidebar.remove();
+  await act(async () => options.onClosed());
+  expect(sessionStorage.getItem('botharness/onboarding/sessions-tour')).toBeNull();
+  expect(controller.getSnapshot()).toMatchObject({ sessionsTourOpen: false, checklistOpen: true });
+});
+it('marks the sessions task done and reopens the checklist after returning from DSH', async () => {
+  localStorage.setItem('botharness/onboarding/sessions-seen', '1');
+  sessionStorage.setItem('botharness/onboarding/sessions-return', '1');
+  const { render, controller } = harness('active', true);
+  await render();
+  await flush();
+  await flush();
+  expect(controller.getSnapshot().checklistOpen).toBe(true);
+  expect(sessionStorage.getItem('botharness/onboarding/sessions-return')).toBeNull();
+  expect(itemState('sessions')).toBe('done');
+});
+it('jumps straight to the current Bot session in DSH when the sidebar has no room', async () => {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({ matches: true, addEventListener() {}, removeEventListener() {} })),
+  );
+  const { actions, bridge, render, controller } = harness('paused', true);
+  const openSession = vi.fn();
+  Object.assign(actions, {
+    openSession,
+    refreshSessions: vi.fn(async () => {
+      store.setSessions({
+        status: 'ready',
+        error: undefined,
+        items: [
+          { sessionId: 'old', role: 'orchestrator', createdAt: '1' },
+          { sessionId: 'live', role: 'orchestrator', createdAt: '2', currentOrchestrator: true },
+        ],
+      });
+    }),
+  });
+  await render();
+  await flush();
+  await act(async () => onboardingFor(bridge).startSessionsTour());
+  expect(openSession).toHaveBeenCalledWith('live');
+  expect(sessionStorage.getItem('botharness/onboarding/sessions-tour')).toMatch(/:0$/);
+  expect(controller.getSnapshot().sessionsTourOpen).toBe(false);
+  expect(tour).not.toHaveBeenCalled();
+  vi.unstubAllGlobals();
 });

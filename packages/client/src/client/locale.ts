@@ -221,12 +221,26 @@ export const zh = {
   'onboarding.tour.composer.hint': '在这里输入消息；左侧添加附件，右侧按钮发送。',
   'onboarding.tour.sidebar.title': 'Channel sidebar',
   'onboarding.tour.sidebar.hint':
-    '跟随当前聊天：「会话」查看 Bot 的会话和收件箱，「记忆」查看记忆文件和演化；+ 添加更多视图，不需要时可以收起。',
+    '跟随当前聊天：「会话」查看 Bot 的会话和收件箱，点一条会话就能跳到 DSH 看完整过程；「记忆」查看记忆文件和演化；+ 添加更多视图，不需要时可以收起。',
   'onboarding.tour.companion.title': '窗口伙伴',
   'onboarding.tour.companion.hint': 'Bot 的悬浮形象；可以拖动、点击打开私聊，或随时移除。',
   'onboarding.tour.exit.title': 'Bot 模式入口',
   'onboarding.tour.exit.hint':
     '再点一次这里就回到 DSH；鼠标悬停时，旁边的进度环可以随时打开上手清单。',
+  'onboarding.tour.sessions.list.title': '「会话」标签',
+  'onboarding.tour.sessions.list.hint':
+    'Bot 每次干活都会开一个 DSH 会话；侧栏的「会话」标签把它们都列出来，运行中的会标出状态。',
+  'onboarding.tour.sessions.row.title': '点一条会话',
+  'onboarding.tour.sessions.row.hint':
+    '点它（或下方的 ›）就会切到 DSH，看到这次回复背后的完整过程：读了什么、调了哪些工具。',
+  'onboarding.tour.sessions.open': '带我去',
+  'onboarding.tour.sessions.tree.title': '在 DSH 里也能找到',
+  'onboarding.tour.sessions.tree.hint':
+    '离开 Bot 模式后，Bot 创建的会话也会出现在 DSH 左侧的会话列表里，带着 Bot 的头像。',
+  'onboarding.tour.sessions.back.title': '回到 Bot',
+  'onboarding.tour.sessions.back.hint':
+    '看完点这里回到和 Bot 的私聊；也可以再点侧栏的「Bot 模式」。',
+  'onboarding.tour.sessions.back.done': '回到 Bot',
   'onboarding.launcher.label': '上手清单',
   'onboarding.launcher.progress': '上手清单 · 已完成 {done}/{total}',
   'onboarding.checklist.title': '上手 DeepSeekBot',
@@ -243,6 +257,9 @@ export const zh = {
   'onboarding.checklist.conversation.title': '发出第一条消息',
   'onboarding.checklist.conversation.hint': '回复欢迎信里的问题，或者直接打字。',
   'onboarding.checklist.conversation.action': '去回复',
+  'onboarding.checklist.sessions.title': '看看它在 DSH 里怎么干活',
+  'onboarding.checklist.sessions.hint': '每次回复背后都有一个 DSH 会话，点进去能看到完整过程。',
+  'onboarding.checklist.sessions.action': '带我看看',
   'onboarding.checklist.memory.title': '让它记住你',
   'onboarding.checklist.memory.hint': '告诉它一个偏好，看它写进自己的记忆文件。',
   'onboarding.checklist.memory.action': '试一试',
@@ -3440,13 +3457,27 @@ export const en = {
     'Type here to send; add attachments on the left and send from the right.',
   'onboarding.tour.sidebar.title': 'Channel sidebar',
   'onboarding.tour.sidebar.hint':
-    "Follows the open chat: Sessions shows this Bot's sessions and inbox, Memory its files and history; + adds more views, and you can collapse it anytime.",
+    "Follows the open chat: Sessions shows this Bot's sessions and inbox, and clicking one opens it in DSH; Memory shows its files and history; + adds more views, and you can collapse it anytime.",
   'onboarding.tour.companion.title': 'Window companion',
   'onboarding.tour.companion.hint':
     "The Bot's floating face; drag it, click to open the DM, or remove it anytime.",
   'onboarding.tour.exit.title': 'Bot mode',
   'onboarding.tour.exit.hint':
     'Click here again to go back to DSH; hover it to find the progress ring that reopens the getting-started list.',
+  'onboarding.tour.sessions.list.title': 'The Sessions tab',
+  'onboarding.tour.sessions.list.hint':
+    'Every piece of work your Bot does runs as a DSH session; the Sessions tab in the sidebar lists them all, with status for running ones.',
+  'onboarding.tour.sessions.row.title': 'Open a session',
+  'onboarding.tour.sessions.row.hint':
+    'Click it (or › below) to switch to DSH and see everything behind that reply: what it read and which tools it ran.',
+  'onboarding.tour.sessions.open': 'Take me there',
+  'onboarding.tour.sessions.tree.title': 'Also in DSH',
+  'onboarding.tour.sessions.tree.hint':
+    "Outside Bot mode, sessions your Bot created also appear in DSH's session list, marked with its avatar.",
+  'onboarding.tour.sessions.back.title': 'Back to your Bot',
+  'onboarding.tour.sessions.back.hint':
+    'Click here to return to the Bot DM, or click "Bot mode" in the sidebar again.',
+  'onboarding.tour.sessions.back.done': 'Back to Bot',
   'onboarding.launcher.label': 'Getting started',
   'onboarding.launcher.progress': 'Getting started · {done}/{total} done',
   'onboarding.checklist.title': 'Get started with DeepSeekBot',
@@ -3463,6 +3494,10 @@ export const en = {
   'onboarding.checklist.conversation.title': 'Send your first message',
   'onboarding.checklist.conversation.hint': 'Answer the welcome letter or type your own question.',
   'onboarding.checklist.conversation.action': 'Reply',
+  'onboarding.checklist.sessions.title': 'See how it works in DSH',
+  'onboarding.checklist.sessions.hint':
+    'Every reply runs as a DSH session; open one to see the whole process.',
+  'onboarding.checklist.sessions.action': 'Show me',
   'onboarding.checklist.memory.title': 'Let it remember you',
   'onboarding.checklist.memory.hint':
     'Tell it a preference and watch it write that into its memory.',

@@ -119,6 +119,8 @@ function itemAction(
       };
     case 'conversation':
       return () => void controller.focusConversation();
+    case 'sessions':
+      return () => void controller.startSessionsTour();
     case 'memory':
       return () => void controller.openExperience('memory');
     case 'im':
