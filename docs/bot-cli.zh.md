@@ -249,3 +249,22 @@ Bot 名字只是标签，身份是 id。每次创建都会生成新的 Bot，重
 ## Memory
 
 `memory-snapshot`、`memory-file --path`、`memory-history [--limit]`、`memory-diff --sha` 读取 Bot 记忆库；`memory-save --path (--body | --body-stdin)` 写一个文件并提交。`--expected-head` 默认取当前 HEAD（要做 compare-and-swap 请显式传）；`--edit-id` 默认生成新的 UUID，重复提交幂等。HEAD 过期或无变化的写入报 `memory-conflict`，不存在的文件读回 `null`，非法 sha 报 `invalid-input`。
+
+选定在线 Host 时，上述命令改为通过 Host 的 Memory 模块执行，而不是读写本地存储，此时 `memory-save` 必须带 `--expected-head`。在线 Host 还提供 Memory 面板的其余功能：
+
+```bash
+deepseekbot memory-graph <bot-id> [--offset <n>]
+deepseekbot memory-commit-diff <bot-id> --sha <commit>
+deepseekbot memory-changes <bot-id>
+deepseekbot memory-working-diff <bot-id> --path <file> --kind staged|unstaged|untracked|current
+deepseekbot memory-file-target <bot-id> --path <file>
+deepseekbot memory-versions <bot-id>
+deepseekbot memory-version-name <bot-id> --sha <commit> --name <version>
+deepseekbot memory-version-unname <bot-id> --tag <version>
+deepseekbot memory-checkpoints <bot-id>
+deepseekbot memory-restore <bot-id> --checkpoint <id> --expected-current <id>
+deepseekbot memory-restore-commit <bot-id> --sha <commit> --expected-head <commit> [--name <version>]
+deepseekbot memory-repair <bot-id> --expected-head <commit>
+```
+
+写入和恢复都必须指明预期的 head 或检查点，所以并发修改会以 `memory-conflict` 失败，而不会被覆盖；`--restore-id` 和 `--repair-id` 默认是新的 UUID，使重试保持幂等。恢复前会先记录一个检查点，可以用 `memory-checkpoints` 查看。

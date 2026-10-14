@@ -256,3 +256,22 @@ The model verbs manage the same records afterwards: `model-presets` lists the pr
 ## Memory
 
 `memory-snapshot`, `memory-file --path`, `memory-history [--limit]`, and `memory-diff --sha` read the Bot memory store; `memory-save --path (--body | --body-stdin)` writes one file and commits it. `--expected-head` defaults to the current HEAD (pass it explicitly for compare-and-swap); `--edit-id` defaults to a fresh UUID and makes repeat submissions idempotent. A stale head or a no-change write fails with `memory-conflict`, a missing file reads back `null`, and malformed shas fail `invalid-input`.
+
+With a live Host selected, the same commands go through the Host's Memory owner instead of the local store, and `memory-save` then requires `--expected-head`. The live Host also offers the rest of the Memory panel:
+
+```bash
+deepseekbot memory-graph <bot-id> [--offset <n>]
+deepseekbot memory-commit-diff <bot-id> --sha <commit>
+deepseekbot memory-changes <bot-id>
+deepseekbot memory-working-diff <bot-id> --path <file> --kind staged|unstaged|untracked|current
+deepseekbot memory-file-target <bot-id> --path <file>
+deepseekbot memory-versions <bot-id>
+deepseekbot memory-version-name <bot-id> --sha <commit> --name <version>
+deepseekbot memory-version-unname <bot-id> --tag <version>
+deepseekbot memory-checkpoints <bot-id>
+deepseekbot memory-restore <bot-id> --checkpoint <id> --expected-current <id>
+deepseekbot memory-restore-commit <bot-id> --sha <commit> --expected-head <commit> [--name <version>]
+deepseekbot memory-repair <bot-id> --expected-head <commit>
+```
+
+Writes and restores always name the head or checkpoint they expect, so a concurrent change fails with `memory-conflict` instead of being overwritten; `--restore-id` and `--repair-id` default to fresh UUIDs and make a retry idempotent. A restore records a checkpoint first, which `memory-checkpoints` lists.

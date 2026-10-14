@@ -36,6 +36,13 @@ export const LIVE_OPTIONS = {
   'args-stdin': { type: 'boolean' },
   session: { type: 'string' },
   turns: { type: 'string' },
+  offset: { type: 'string' },
+  kind: { type: 'string' },
+  checkpoint: { type: 'string' },
+  'expected-current': { type: 'string' },
+  'restore-id': { type: 'string' },
+  'repair-id': { type: 'string' },
+  tag: { type: 'string' },
   target: { type: 'string' },
 } as const;
 
@@ -172,6 +179,18 @@ export const LIVE_COMMANDS = [
     description:
       'run one Browser tool directly for a Bot, without the model (args JSON from stdin)',
   },
+  { command: 'memory-file-target', description: 'resolve a memory file path for a Bot' },
+  { command: 'memory-graph', description: "read a Bot's memory commit graph" },
+  { command: 'memory-commit-diff', description: 'read the full diff of one memory commit' },
+  { command: 'memory-changes', description: 'list uncommitted memory changes' },
+  { command: 'memory-working-diff', description: 'read the diff of one uncommitted memory file' },
+  { command: 'memory-checkpoints', description: 'list memory recovery checkpoints' },
+  { command: 'memory-restore', description: 'restore memory to a recovery checkpoint' },
+  { command: 'memory-restore-commit', description: 'restore memory to an earlier commit' },
+  { command: 'memory-versions', description: 'list named memory versions' },
+  { command: 'memory-version-name', description: 'name a memory commit as a version' },
+  { command: 'memory-version-unname', description: 'remove a memory version name' },
+  { command: 'memory-repair', description: 'repair a memory repository against its expected head' },
   {
     command: 'bot-trace',
     description: 'show which tools a Bot called in its recent turns, with outcomes',
@@ -215,6 +234,18 @@ interface LiveValues extends ImValues {
   'args-stdin'?: boolean;
   session?: string;
   turns?: string;
+  offset?: string;
+  kind?: string;
+  checkpoint?: string;
+  'expected-current'?: string;
+  'restore-id'?: string;
+  'repair-id'?: string;
+  tag?: string;
+  path?: string;
+  sha?: string;
+  name?: string;
+  'expected-head'?: string;
+  'edit-id'?: string;
   target?: string;
 }
 
@@ -469,6 +500,7 @@ export async function runLiveCli(
       throw error;
     }
   }
+  if (MEMORY_COMMANDS.has(command)) return runMemoryCommand(command, rest, values, io);
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);
@@ -1102,4 +1134,163 @@ async function runDeviceCommand(
     mimeType: response.headers.get('content-type'),
     ...(width > 0 && height > 0 ? { viewport: { width, height } } : {}),
   };
+}
+
+const MEMORY_COMMANDS = new Set([
+  'memory-snapshot',
+  'memory-file',
+  'memory-history',
+  'memory-diff',
+  'memory-save',
+  'memory-file-target',
+  'memory-graph',
+  'memory-commit-diff',
+  'memory-changes',
+  'memory-working-diff',
+  'memory-checkpoints',
+  'memory-restore',
+  'memory-restore-commit',
+  'memory-versions',
+  'memory-version-name',
+  'memory-version-unname',
+  'memory-repair',
+]);
+
+const SHA = /^[0-9a-f]{40}$/u;
+
+async function runMemoryCommand(
+  command: string,
+  rest: string[],
+  values: LiveValues,
+  io: BotCreateCliIo,
+): Promise<unknown> {
+  if (rest.length !== 1 || !rest[0]?.trim()) usage(`${command} needs exactly one bot id.`);
+  const slug = rest[0].trim();
+  const channelId = dmChannelId(slug);
+  const required = (name: keyof LiveValues, flag: string): string => {
+    const value = values[name];
+    if (typeof value !== 'string' || !value.trim()) usage(`${command} requires --${flag}.`);
+    return value.trim();
+  };
+  const sha = (): string => {
+    const value = required('sha', 'sha <commit>');
+    if (!SHA.test(value)) usage('--sha must be a 40-character lowercase commit sha.');
+    return value;
+  };
+  const expectedHead = (): string => {
+    const value = required('expected-head', 'expected-head <commit>');
+    if (!SHA.test(value)) usage('--expected-head must be a 40-character lowercase commit sha.');
+    return value;
+  };
+  let method: string;
+  let args: Record<string, unknown>;
+  switch (command) {
+    case 'memory-snapshot':
+      [method, args] = ['memorySnapshot', { channelId }];
+      break;
+    case 'memory-file':
+      [method, args] = ['memoryFile', { channelId, path: required('path', 'path <file>') }];
+      break;
+    case 'memory-history':
+      [method, args] = ['memoryHistory', { channelId }];
+      break;
+    case 'memory-diff':
+      [method, args] = ['memoryDiff', { channelId, sha: sha() }];
+      break;
+    case 'memory-file-target':
+      [method, args] = ['memoryFileTarget', { slug, path: required('path', 'path <file>') }];
+      break;
+    case 'memory-graph': {
+      const offset = values.offset === undefined ? 0 : Number(values.offset);
+      if (!Number.isInteger(offset) || offset < 0 || offset > 10_000)
+        usage('--offset must be an integer from 0 to 10000.');
+      [method, args] = ['memoryGitGraph', { channelId, offset }];
+      break;
+    }
+    case 'memory-commit-diff':
+      [method, args] = ['memoryGitCommitDiff', { channelId, sha: sha() }];
+      break;
+    case 'memory-changes':
+      [method, args] = ['memoryWorkingChanges', { channelId }];
+      break;
+    case 'memory-working-diff': {
+      const kind = required('kind', 'kind staged|unstaged|untracked|current');
+      if (!['staged', 'unstaged', 'untracked', 'current'].includes(kind))
+        usage('--kind must be staged, unstaged, untracked or current.');
+      [method, args] = [
+        'memoryWorkingDiff',
+        { channelId, path: required('path', 'path <file>'), kind },
+      ];
+      break;
+    }
+    case 'memory-checkpoints':
+      [method, args] = ['memoryRecoveryHistory', { channelId }];
+      break;
+    case 'memory-restore':
+      [method, args] = [
+        'memoryRestore',
+        {
+          channelId,
+          checkpointId: required('checkpoint', 'checkpoint <id>'),
+          expectedCurrentId: required('expected-current', 'expected-current <id>'),
+        },
+      ];
+      break;
+    case 'memory-restore-commit':
+      [method, args] = [
+        'memoryRestoreCommit',
+        {
+          channelId,
+          sha: sha(),
+          expectedHead: expectedHead(),
+          restoreId: values['restore-id']?.trim() || randomUUID(),
+          ...(values.name === undefined ? {} : { name: values.name }),
+        },
+      ];
+      break;
+    case 'memory-versions':
+      [method, args] = ['memoryVersions', { channelId }];
+      break;
+    case 'memory-version-name':
+      [method, args] = [
+        'memoryNameVersion',
+        { channelId, sha: sha(), name: required('name', 'name <version>') },
+      ];
+      break;
+    case 'memory-version-unname':
+      [method, args] = [
+        'memoryRemoveVersionName',
+        { channelId, tag: required('tag', 'tag <version>') },
+      ];
+      break;
+    case 'memory-repair':
+      [method, args] = [
+        'memoryRepair',
+        {
+          channelId,
+          expectedHead: expectedHead(),
+          repairId: values['repair-id']?.trim() || randomUUID(),
+        },
+      ];
+      break;
+    default: {
+      const path = required('path', 'path <file>');
+      const head = expectedHead();
+      let body = values.body;
+      if (values['body-stdin'] === true) body = await (io.readStdin?.() ?? Promise.resolve(''));
+      if (body === undefined) usage('memory-save needs --body or --body-stdin.');
+      [method, args] = [
+        'memorySave',
+        {
+          channelId,
+          path,
+          body,
+          expectedHead: head,
+          editId: values['edit-id']?.trim() || randomUUID(),
+        },
+      ];
+    }
+  }
+  const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+  return (await connectLiveHost(values, io, signal)).rpc(method, args);
 }
