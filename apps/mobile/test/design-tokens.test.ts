@@ -145,6 +145,15 @@ describe('Layers and their states', () => {
 });
 
 describe('Button tones', () => {
+  it('keep the primary neutral whatever the Bot accent is', () => {
+    for (const scheme of ['light', 'dark'] as const) {
+      const plain = buttonColors(resolveTheme(scheme), 'primary', 'raised');
+      for (const accent of ['#d9475a', '#c79a2b', '#000000'])
+        expect(buttonColors(resolveTheme(scheme, { accent }), 'primary', 'raised')).toEqual(plain);
+      expect(plain.fill).toBe(resolveTheme(scheme).color.fg);
+    }
+  });
+
   it('stand apart from the layer they sit on and from each other, with readable labels', () => {
     for (const scheme of ['light', 'dark'] as const)
       for (const accent of [undefined, '#d9475a', '#c79a2b', '#000000']) {
