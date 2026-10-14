@@ -11,7 +11,7 @@ export type Appearance = {
 
 export type DesignTheme = {
   scheme: ColorScheme;
-  color: Record<ColorRole, string>;
+  color: Record<ColorRole | 'accentSoft', string>;
   type: (typeof typeScale)[PlatformOS];
   weight: (typeof weight)[PlatformOS];
   touch: number;
@@ -47,6 +47,7 @@ const INK_DARK = '#0f1115';
 const SEPARATION = 1.3;
 const BODY_CONTRAST = 4.5;
 const LIGHT_SURFACE = 3;
+const SOFT_ACCENT = 0.12;
 
 function mix(from: string, to: string, amount: number): string {
   const a = rgb(from);
@@ -125,7 +126,7 @@ export function resolveTheme(
   const color = withAccent({ ...palette[scheme] }, appearance.accent);
   return {
     scheme,
-    color,
+    color: { ...color, accentSoft: mix(color.base, color.accent, SOFT_ACCENT) },
     type: typeScale[os],
     weight: weight[os],
     touch: touch[os],

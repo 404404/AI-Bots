@@ -170,6 +170,8 @@ describe('bridge typert service', () => {
       'channelReadPosition',
       'channelMarkRead',
       'channelMarkAllRead',
+      'channelReact',
+      'channelSearch',
       'channelUnreadCounts',
       'channelAllBotPreview',
       'channelSend',
@@ -349,6 +351,13 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.marketplaceReport)).toEqual(['id', 'altcha', 'reason']);
     expect(parameterNames(service.releaseInfo)).toEqual(['since']);
     expect(parameterNames(service.releaseUpdate)).toEqual([]);
+    expect(parameterNames(service.channelReact)).toEqual([
+      'channelId',
+      'messageId',
+      'emoji',
+      'active',
+    ]);
+    expect(parameterNames(service.channelSearch)).toEqual(['channelId', 'text', 'cursor', 'limit']);
     expect(parameterNames(service.releaseInstall)).toEqual(['version']);
     expect(parameterNames(service.releaseRestart)).toEqual([]);
     expect(parameterNames(service.telemetryStatus)).toEqual([]);

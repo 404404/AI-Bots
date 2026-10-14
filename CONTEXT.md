@@ -795,7 +795,7 @@ One icon tab of the desktop Channel sidebar, grouping one or more Channel sideba
 _Avoid_: view, page, rail item
 
 **Bot mode layout**:
-The desktop Bot mode `main` area (960 px and wider), beside the App Sidebar: one dockable layout in which the Human drags, docks, floats, resizes, closes and reopens Dock panels. Each panel stands alone: panels are never tabbed together, and there is exactly one Channel body, saved per browser with a Reset (proposed, ADR-0203). Narrow layouts and phones keep the responsive layout.
+The desktop Bot mode `main` area (960 px and wider), beside the App Sidebar: one dockable layout in which the Human drags, docks, resizes, closes and reopens Dock panels. Each panel stands alone: panels are never tabbed together, and there is exactly one Channel body, saved per browser with a Reset (proposed, ADR-0203). Narrow layouts and phones keep the responsive layout.
 _Avoid_: workbench, panel layout, dock
 
 **Dock panel**:

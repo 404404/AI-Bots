@@ -74,14 +74,18 @@ export function ApprovalCard({
   subject,
   resolution,
   focused = false,
+  wide = false,
   onDetails,
+  onSettled,
 }: {
   port: ApprovalCardPort;
   botName: string;
   subject?: string;
   resolution?: Extract<CardResolution, { kind: 'tool-approval' }>;
   focused?: boolean;
+  wide?: boolean;
   onDetails(): void;
+  onSettled?(result: DecisionResult): void;
 }) {
   const theme = useDesignTheme();
   const known = useRef(resolution !== undefined);
@@ -130,6 +134,7 @@ export function ApprovalCard({
           eyebrow={eyebrow}
           title={title}
           focused={focused}
+          wide={wide}
           busy={phase.kind === 'loading'}
           {...(phase.kind === 'failed' ? { error: t.cardLoadFailed } : {})}
         >
@@ -148,6 +153,7 @@ export function ApprovalCard({
       const result = await port.decide(outcome);
       if (result === 'accepted') {
         setPhase({ kind: 'settled', status: 'decided', outcome, mine: true });
+        onSettled?.(result);
         return;
       }
       const now = await port.load().catch(() => undefined);
@@ -157,6 +163,7 @@ export function ApprovalCard({
         mine: false,
         ...(now?.outcome === undefined ? {} : { outcome: now.outcome }),
       });
+      onSettled?.(result);
     } catch (error) {
       setPhase({ kind: 'pending', request, error: `${t.decideFailed} ${errorText(error)}` });
     }
@@ -169,6 +176,7 @@ export function ApprovalCard({
         title={title}
         explanation={t.inFolder(request.cwd)}
         focused={focused}
+        wide={wide}
         {...(phase.error === undefined ? {} : { error: phase.error })}
         preview={
           <View style={{ gap: space.x1 }}>
