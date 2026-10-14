@@ -1,19 +1,15 @@
 import { execFile } from 'node:child_process';
 
-/** A route a phone can use to reach this Host. Only HTTPS tailnet routes leave the computer. */
 export interface PhoneRoute {
   url: string;
   kind: 'tailscale' | 'loopback';
-  /** Whether a phone can reach the Host through it right now. */
   ready: boolean;
-  /** Why a tailnet route is not ready, with the fix the Web Client shows. */
   issue?: 'serve-missing' | 'serve-other-target';
 }
 
 export interface RouteStatus {
   routes: PhoneRoute[];
   tailscale: 'running' | 'stopped' | 'missing';
-  /** The command that publishes this Host on the tailnet. */
   serveCommand: string;
 }
 
@@ -32,7 +28,6 @@ function record(value: unknown): Record<string, unknown> {
   return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
 }
 
-/** Accepts only what the app accepts: HTTPS on a tailnet name or address, or loopback. */
 export function phoneRoute(input: string): PhoneRoute | undefined {
   let url: URL;
   try {
@@ -67,10 +62,6 @@ function servesPort(serve: unknown, dnsName: string, port: number): boolean | un
   }
 }
 
-/**
- * Finds the routes a phone can use: this machine's Tailscale HTTPS name when `tailscale serve`
- * publishes this Host's port, then the loopback route for simulators and development.
- */
 export async function detectPhoneRoutes(options: {
   port: number;
   run?: RunCommand;

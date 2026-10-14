@@ -57,6 +57,7 @@ export const RULES = [
     'packages/*/{README.md,THIRD_PARTY_NOTICES.md,LICENSE,.gitignore}',
     'Package prose and ignores',
   ),
+  related('apps/mobile/**', 'Mobile app and its Host client tests'),
   related('apps/docs/test/**', 'Docs tests and fixtures', true),
   related('apps/docs/**', 'Docs site', true),
   none('apps/presentations/**', 'Slides embedded in the docs site', true),

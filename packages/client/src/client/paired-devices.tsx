@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
@@ -110,9 +110,7 @@ export function PairedDevicesSettings({ t }: PropsLocale<'botharness'>): ReactEl
     };
   }, []);
 
-  // While the QR code is up, watch for the phone that redeems it and count down its expiry.
-  useEffect(() => {
-    if (!pairing) return;
+  const watch = useMountedResource<HTMLDivElement>(() => {
     const timer = setInterval(() => {
       setNow(Date.now());
       load()
@@ -128,7 +126,7 @@ export function PairedDevicesSettings({ t }: PropsLocale<'botharness'>): ReactEl
         .catch(() => undefined);
     }, LIST_POLL_MS);
     return () => clearInterval(timer);
-  }, [pairing]);
+  }, []);
 
   const createOffer = async (): Promise<void> => {
     setBusy('offer');
@@ -282,7 +280,7 @@ export function PairedDevicesSettings({ t }: PropsLocale<'botharness'>): ReactEl
           onClose={close}
           data={{ 'data-pair-dialog': '' }}
         >
-          <div {...stylex.props(styles.pairing)}>
+          <div ref={watch} {...stylex.props(styles.pairing)}>
             {paired !== undefined ? (
               <Note tone="success">{t('devices.pair.done', { name: paired.name })}</Note>
             ) : offer === undefined ? (
@@ -296,7 +294,6 @@ export function PairedDevicesSettings({ t }: PropsLocale<'botharness'>): ReactEl
               </>
             ) : (
               <>
-                {/* A QR code needs dark modules on a light field in either theme to scan. */}
                 <svg
                   viewBox={`0 0 ${String(offer.qr.size)} ${String(offer.qr.size)}`}
                   shapeRendering="crispEdges"

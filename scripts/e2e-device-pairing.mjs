@@ -1,13 +1,3 @@
-// Live isolated-Host proof for Device Pairing (ADR-0199, #1652):
-// pair → restart the Host → the same device credential calls a bridge method and opens the
-// Remote stream → revoke closes that stream → the next call and upgrade are refused.
-//
-//   pnpm build
-//   node scripts/e2e-device-pairing.mjs --home <isolated-DSH_HOME> --port <n>
-//
-// Prints only statuses and refusal codes: never the launch token, a cookie, the offer or the
-// device credential. Afterwards it checks that the credential is absent from the Host log and
-// from the developer log database.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -120,6 +110,29 @@ function deviceStream(credential) {
   });
 }
 
+async function tailnetCall(credential) {
+  const { request } = await import('node:http');
+  return new Promise((resolveCall, reject) => {
+    const req = request({
+      host: '127.0.0.1',
+      port,
+      method: 'POST',
+      path: '/botharness-device/api/botharness/list',
+      headers: {
+        host: 'studio.example-tailnet.ts.net',
+        authorization: `Device ${credential}`,
+        'content-type': 'application/json',
+      },
+    });
+    req.on('response', (res) => {
+      res.resume();
+      resolveCall({ status: res.statusCode });
+    });
+    req.on('error', reject);
+    req.end(envelope('botharness/list'));
+  });
+}
+
 async function refusedUpgrade(credential) {
   const { request } = await import('node:http');
   return new Promise((resolveUpgrade, reject) => {
@@ -191,6 +204,7 @@ try {
   step('Host restarted', { tokenRotated: true });
   step('device call after restart', await deviceCall(credential));
 
+  step('device call under a tailnet Host name', await tailnetCall(credential));
   const live = await deviceStream(credential);
   step('device stream after restart', { firstItem: await live.ready });
 
@@ -237,6 +251,7 @@ const expect = Object.fromEntries(proof.map((entry) => [entry.step, entry]));
 assert.equal(expect['offer redeemed'].status, 200);
 assert.equal(expect['same offer again'].code, 'offer-invalid');
 assert.equal(expect['device call after restart'].ok, true);
+assert.equal(expect['device call under a tailnet Host name'].status, 200);
 assert.equal(expect['device stream after restart'].firstItem, true);
 assert.equal(expect['revoke'].closedStreams, 1);
 assert.equal(expect['device call after revoke'].code, 'device-revoked');

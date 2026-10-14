@@ -23,7 +23,6 @@ afterEach(async () => {
   );
 });
 
-/** A stand-in `dsh web`: launch-token login, cookie-admitted `/api`, and an echoing mux. */
 async function fakeDsh() {
   const state = { secret: 1, token: 'launch-token', seen: [] as Record<string, unknown>[] };
   const cookie = () => `dsh=${String(state.secret)}`;
@@ -168,7 +167,7 @@ describe('device gateway', () => {
     const host = await fakeDsh();
     const paired = await pair(host.base, host.pairing.createOffer().offer);
     const authorization = `Device ${paired.body.credential}`;
-    // Native WebSocket stacks stamp the socket's own origin; that is not a browser.
+
     const open = await stream(host.port, {
       authorization,
       origin: host.base,

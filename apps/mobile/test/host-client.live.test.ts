@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { createHostClient, type HostClient, type HostSnapshot } from '../src/host/client';
+import { parsePairingLink, redeemPairing } from '../src/host/pairing';
 import { nodeCarrier } from './node-carrier';
 
 const live = process.env['MOBILE_LIVE_HOST_URL'];
@@ -15,21 +16,38 @@ async function until(client: HostClient, accept: (s: HostSnapshot) => boolean, m
 }
 
 describe.skipIf(live === undefined)('Host client against a live isolated Host', () => {
-  it('connects, reads the Roster and follows a real state change', async () => {
+  it('pairs, reads the Roster through the device gateway and follows a real state change', async () => {
     const [route, token] = live!.split('/?token=') as [string, string];
-    const client = createHostClient({ route, token, carrier: nodeCarrier() });
+    const operator = nodeCarrier();
+    await operator.request(`${route}/?token=${token}`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000),
+    });
+    const offer = await operator.request(`${route}/api/botharness/devices/offer`, {
+      method: 'POST',
+      body: JSON.stringify({ origin: route }),
+      signal: AbortSignal.timeout(5000),
+    });
+    const parsed = parsePairingLink((JSON.parse(await offer.text()) as { link: string }).link);
+    if (!parsed.ok) throw new Error(parsed.code);
+    const paired = await redeemPairing({
+      payload: parsed.payload,
+      deviceName: 'mobile live test',
+      carrier: nodeCarrier(),
+    });
+    if (!paired.ok) throw new Error(paired.code);
+    const client = createHostClient({
+      routes: paired.host.routes,
+      credential: paired.host.credential,
+      carrier: nodeCarrier(),
+    });
     client.start();
     try {
       const connected = await until(client, (s) => s.connection.status === 'connected');
       const bot = connected.roster?.bots[0];
       expect(bot).toBeDefined();
 
-      const actor = nodeCarrier();
-      await actor.request(`${route}/?token=${token}`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000),
-      });
-      const send = await actor.request(`${route}/api/botharness/channelSend`, {
+      const send = await operator.request(`${route}/api/botharness/channelSend`, {
         method: 'POST',
         signal: AbortSignal.timeout(5000),
         body: JSON.stringify({

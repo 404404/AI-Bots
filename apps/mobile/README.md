@@ -1,14 +1,15 @@
 # DeepSeekBot mobile app
 
-Native Expo client for the Human's own Host (hub [#1643](https://github.com/BotHarness/DeepSeekBot/issues/1643), spec [#1645](https://github.com/BotHarness/DeepSeekBot/issues/1645)). This first tracer ([#1650](https://github.com/BotHarness/DeepSeekBot/issues/1650)) logs in to an isolated Host over Tailscale HTTPS with the Host's launch token and shows the Roster of PersonaBots and group Channels with live state.
+Native Expo client for the Human's own Host (hub [#1643](https://github.com/BotHarness/DeepSeekBot/issues/1643), spec [#1645](https://github.com/BotHarness/DeepSeekBot/issues/1645)). The app pairs with a Host by scanning the QR code from the Web Client ([#1652](https://github.com/BotHarness/DeepSeekBot/issues/1652)) and shows the Roster of PersonaBots and group Channels with live state.
 
-The launch-token login is **development-only**. It is replaced by the paired-device credential of ADR-0199 (#1649): the carrier sends `Authorization: Device …` to the BotHarness device gateway, with the same unary envelope and mux frames, so only `src/host/native-carrier.ts` and the login step change.
+Pairing gives the phone a per-device credential, kept only in Keychain/Keystore. The app sends it as `Authorization: Device …` to the BotHarness device gateway (`/botharness-device/…`), which forwards the same unary envelope and mux frames to the Host ([ADR-0199](../../docs/adr/0199-paired-devices-reach-the-host-through-a-same-listener-device-gateway.md)). The phone never holds a DSH token or cookie, keeps working across Host restarts, and is cut off at once when the Human revokes it.
 
 ## Layout
 
-- `src/host/` — the Host client module. One deep module owns the route, the login, unary calls, the Remote stream socket, reconnection and connection state. Screens read it through `useHostSnapshot()` and never talk HTTP. It is plain TypeScript with an injected carrier (`carrier.ts`), so it is tested in Node.
+- `src/host/` — the Host client module. One deep module owns the routes, the device credential, unary calls, the Remote stream socket, reconnection and connection state. Screens read it through `useHostSnapshot()` and never talk HTTP. It is plain TypeScript with an injected carrier (`carrier.ts`), so it is tested in Node.
 - `src/host/wire.ts` — the slice of the Host's wire shapes the app reads; `test/wire-contract.ts` checks the Host's own types against it in the root typecheck.
-- `app/` — Expo Router screens: the Roster (`index.tsx`) and the development login (`connect.tsx`).
+- `src/host/pairing.ts` — reads the pairing link (QR code or `deepseekbot://pair?p=…`) and redeems its one-time offer through the first route that answers.
+- `app/` — Expo Router screens: the Roster (`index.tsx`) and pairing (`pair.tsx`, camera scan or pasted link).
 - `src/ui/` — native views. Pixel avatars are drawn from the Host's own avatar code (`packages/core/src/bots/avatar-appearance.ts`), so they match the Web Client.
 
 Carrier decision and evidence: [ADR-0200](../../docs/adr/0200-the-mobile-app-reads-live-state-over-the-dsh-remote-stream-socket.md).
@@ -22,27 +23,25 @@ pnpm install
 pnpm --filter @botharness/mobile typecheck
 pnpm vitest run apps/mobile                     # Host client against the recorded fake Host
 MOBILE_LIVE_HOST_URL='http://127.0.0.1:<port>/?token=<token>' pnpm vitest run apps/mobile
-                                                # also drives it against a live isolated Host with a PersonaBot
+                                                # also pairs with a live isolated Host and drives it there
 pnpm --filter @botharness/mobile export          # Metro bundles for iOS and Android
 ```
 
-## Run the tracer on a phone
+## Run it on a phone
 
-1. **Host.** Start an isolated Host and note its token URL. Put it on the tailnet with HTTPS and trust that name:
+1. **Host.** Start an isolated Host and publish its port on your tailnet with HTTPS:
 
    ```bash
    node scripts/dev-instance.mjs --home <isolated-DSH_HOME> --port 3080
    tailscale serve --bg 3080                     # https://<machine>.<tailnet>.ts.net → 127.0.0.1:3080
-   # restart the same Host with the tailnet name trusted (stop its exact PID first):
-   node scripts/dev-instance.mjs --home <isolated-DSH_HOME> --port 3080 --trusted-host <machine>.<tailnet>.ts.net
    ```
 
-   Without `--trusted-host` the Host answers `403` to every `/api` call from the tailnet name.
+   The phone talks only to the device gateway, which forwards over loopback, so it needs no `--trusted-host`. Add `--trusted-host <machine>.<tailnet>.ts.net` only if you also open the Web Client through the tailnet name.
 
-2. **Development build.** Once per machine, `npx eas-cli login` and `npx eas-cli init` in `apps/mobile` (writes the EAS project id into `app.json`). Then `pnpm --filter @botharness/mobile eas:dev -- --platform ios` (or `android`) and install the build from the link EAS prints. A local build also works: `pnpm --filter @botharness/mobile ios` / `android` with Xcode or Android Studio.
+2. **Development build.** Once per machine, `npx eas-cli login` and `npx eas-cli init` in `apps/mobile` (writes the EAS project id into `app.json`). Then `pnpm --filter @botharness/mobile eas:dev -- --platform ios` (or `android`) and install the build from the link EAS prints. A local build also works: `pnpm --filter @botharness/mobile ios` / `android` with Xcode or Android Studio. The camera scanner is native code, so a build made before pairing landed must be rebuilt.
 
-3. **Connect.** Start Metro with `pnpm --filter @botharness/mobile start`, open the development build, enter `https://<machine>.<tailnet>.ts.net` and the token from the token URL. The phone must be on the same tailnet.
+3. **Pair.** Start Metro with `pnpm --filter @botharness/mobile start` and open the app. On the computer, open DeepSeekBot settings → Devices → Pair a phone. Scan the QR code with the app (or copy the pairing link and paste it). The settings show a warning with the `tailscale serve` command when the Host has no route a phone can reach.
 
-4. **Check.** The Roster lists every PersonaBot with its avatar. Send the Bot a DM from the computer: its state turns to Thinking and back on the phone without a refresh. Stop the Host: the banner shows "Cannot reach your computer" with the route; start it again on the same home and the app reconnects by itself. Starting a fresh home (a new signing secret) with the old token shows "Pair again".
+4. **Check.** The Roster lists every PersonaBot with its avatar. Send the Bot a DM from the computer: its state turns to Thinking and back on the phone without a refresh. Restart the Host: the app reconnects by itself without pairing again. Settings → Devices lists the phone with its last-seen time; Revoke it and the app shows "Pair again" at once.
 
-The token is stored only in the platform's secure storage and is never logged. The Host's session cookie lives in the app's own cookie store; unpairing forgets the token.
+The device credential is stored only in the platform's secure storage and never logged; the Host keeps only its hash. "Unpair" forgets it on the phone; revoking it in the Web Client cuts the phone off on the Host.

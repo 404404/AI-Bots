@@ -3,7 +3,6 @@ import type { Duplex } from 'node:stream';
 
 import type { DevicePairing, DeviceRefusal, OfferRefusal } from './pairing.js';
 
-/** The device-facing prefix on the `dsh web` listener (ADR-0199). */
 export const DEVICE_GATEWAY_PREFIX = '/botharness-device';
 export const DEVICE_PAIR_PATH = `${DEVICE_GATEWAY_PREFIX}/pair`;
 export const DEVICE_MUX_PATH = `${DEVICE_GATEWAY_PREFIX}/api/remote.mux`;
@@ -39,9 +38,7 @@ export type GatewayRefusal =
 
 export interface DeviceGatewayOptions {
   pairing: DevicePairing;
-  /** The `dsh web` port; the gateway forwards to it over loopback. */
   port: () => number;
-  /** `connection.authenticatedUrl`: the launch-token login URL for a loopback authority. */
   authenticatedUrl: (baseUrl: string) => string;
   now?: () => number;
   log?: (message: string) => void;
@@ -57,10 +54,6 @@ function header(request: IncomingMessage, name: string): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/**
- * Native devices send no Origin, except WebSocket stacks (iOS SocketRocket, Android OkHttp) that
- * stamp the socket's own origin. Anything else is a browser page on another origin.
- */
 function crossOrigin(request: IncomingMessage): boolean {
   const origin = header(request, 'origin');
   if (origin === undefined) return false;
@@ -106,7 +99,6 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
   let cookie: { value: string; mintedAt: number } | undefined;
   let minting: Promise<string> | undefined;
 
-  // The DSH cookie is minted for the loopback authority and never leaves this process.
   const mint = (): Promise<string> => {
     minting ??= (async () => {
       try {
@@ -148,9 +140,7 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
     let input: { offer?: unknown; name?: unknown } = {};
     try {
       input = JSON.parse(text ?? '') as typeof input;
-    } catch {
-      // An unreadable body is an invalid offer.
-    }
+    } catch {}
     if (typeof input.offer !== 'string') return refuse(response, 401, 'offer-invalid');
     const result = pairing.redeem({
       offer: input.offer,
@@ -188,7 +178,6 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
         },
         (answer) => {
           if (answer.statusCode === 401) {
-            // The loopback cookie went stale (global sign-out); the next request mints anew.
             cookie = undefined;
             answer.resume();
             refuse(response, 503, 'host-session-unavailable');

@@ -34,7 +34,6 @@ export type Redemption =
 
 export type Admission = { ok: true; device: PairedDevice } | { ok: false; code: DeviceRefusal };
 
-/** Bounded developer diagnostics. Never carries an offer, a credential or a route. */
 export type DevicePairingEvent =
   | { phase: 'offer-created' | 'offer-expired' | 'offer-refused' }
   | { phase: 'offer-redeemed' | 'device-admitted'; deviceId: string }
@@ -45,11 +44,9 @@ export interface DevicePairing {
   host(): HostIdentity;
   createOffer(): PairingOffer;
   redeem(input: { offer: string; name?: string }): Redemption;
-  /** Verifies an `Authorization: Device <id>.<secret>` header against the current record. */
   admit(authorization: string | undefined): Admission;
   list(): PairedDevice[];
   revoke(deviceId: string): { revoked: boolean; closedStreams: number };
-  /** Registers an open stream of an admitted device; revocation calls `close`. */
   attachStream(deviceId: string, close: () => void): () => void;
 }
 
@@ -97,7 +94,7 @@ export function createDevicePairing(options: DevicePairingOptions): DevicePairin
   const now = options.now ?? Date.now;
   const record = options.record ?? (() => {});
   const iso = (ms: number): string => new Date(ms).toISOString();
-  // Offers live only in memory: a Host restart voids every unredeemed offer.
+
   const offers = new Map<string, number>();
   const streams = new Map<string, Set<() => void>>();
 

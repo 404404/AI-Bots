@@ -19,7 +19,7 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ title: t.roster, headerLargeTitle: true }} />
-        <Stack.Screen name="connect" options={{ title: t.connectTitle, presentation: 'modal' }} />
+        <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
       </Stack>
     </SafeAreaProvider>
   );

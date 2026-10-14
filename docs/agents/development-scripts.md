@@ -47,6 +47,7 @@ Run `node scripts/ci-plan.mjs --base origin/main` to print the plan and the exac
 | `packages/*/*.yml`                                                                                        | Related tests       |           | Product patches                                              |
 | `packages/*/wrangler.jsonc`                                                                               | Related tests       |           | Worker configs                                               |
 | `packages/*/{README.md,THIRD_PARTY_NOTICES.md,LICENSE,.gitignore}`                                        | No tests of its own |           | Package prose and ignores                                    |
+| `apps/mobile/**`                                                                                          | Related tests       |           | Mobile app and its Host client tests                         |
 | `apps/docs/test/**`                                                                                       | Related tests       | Yes       | Docs tests and fixtures                                      |
 | `apps/docs/**`                                                                                            | Related tests       | Yes       | Docs site                                                    |
 | `apps/presentations/**`                                                                                   | No tests of its own | Yes       | Slides embedded in the docs site                             |

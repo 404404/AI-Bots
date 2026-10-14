@@ -182,7 +182,7 @@ describe('paired devices management', () => {
     expect(offeredRoutes(status, undefined).map((route) => route.url)).toEqual([
       'http://127.0.0.1:4100',
     ]);
-    // A Web Client opened over the tailnet is itself a route the phone can use.
+
     expect(offeredRoutes(status, 'https://studio.tail1.ts.net').map((route) => route.url)).toEqual([
       'https://studio.tail1.ts.net',
       'http://127.0.0.1:4100',

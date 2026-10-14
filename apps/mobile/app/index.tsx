@@ -31,7 +31,7 @@ export default function RosterScreen() {
         <ActivityIndicator />
       </View>
     );
-  if (saved === null) return <Redirect href="/connect" />;
+  if (saved === null) return <Redirect href="/pair" />;
 
   const roster = snapshot.roster;
   const sections = [
@@ -80,7 +80,7 @@ export default function RosterScreen() {
           <ConnectionBanner
             connection={snapshot.connection}
             onRetry={() => client?.retryNow()}
-            onPairAgain={() => router.push('/connect')}
+            onPairAgain={() => router.push('/pair')}
           />
         }
         ListEmptyComponent={null}

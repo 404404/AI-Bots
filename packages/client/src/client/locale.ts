@@ -3188,8 +3188,7 @@ export const zh = {
   'devices.pair.description': '用 DeepSeekBot App 扫码。二维码只能用一次，5 分钟后失效。',
   'devices.pair.open': '配对手机',
   'devices.pair.dialogTitle': '用手机扫码配对',
-  'devices.pair.dialogDescription':
-    '在手机上打开 DeepSeekBot App，点「扫码配对」，对准这个二维码。',
+  'devices.pair.dialogDescription': '在手机上打开 DeepSeekBot App，用它的相机对准这个二维码。',
   'devices.pair.qrLabel': '配对二维码',
   'devices.pair.expires': '{seconds} 秒后失效',
   'devices.pair.expired': '这个二维码已失效。',
@@ -6606,7 +6605,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'devices.pair.open': 'Pair a phone',
   'devices.pair.dialogTitle': 'Scan to pair your phone',
   'devices.pair.dialogDescription':
-    'Open the DeepSeekBot app on your phone, tap “Scan to pair” and point it at this code.',
+    'Open the DeepSeekBot app on your phone and point its camera at this code.',
   'devices.pair.qrLabel': 'Pairing QR code',
   'devices.pair.expires': 'Expires in {seconds}s',
   'devices.pair.expired': 'This code has expired.',

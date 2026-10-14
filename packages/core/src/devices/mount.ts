@@ -44,10 +44,6 @@ function detail(event: DevicePairingEvent): string {
   return parts.join(' ');
 }
 
-/**
- * Device Pairing (ADR-0199): the Human pairs a phone from the Web Client, and the phone reaches
- * the Host through the device gateway on the same `dsh web` listener.
- */
 export function mountDevicePairing(
   ctx: Context,
   options: { database: OperationalDatabaseOwner; dshHome: string },
@@ -73,9 +69,7 @@ export function mountDevicePairing(
           kind: event.phase,
           detail: message,
         });
-      } catch {
-        // Diagnostics never block admission.
-      }
+      } catch {}
     },
   });
 

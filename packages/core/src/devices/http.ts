@@ -27,11 +27,9 @@ export interface PairingOfferView {
   qr: { size: number; path: string };
   expiresAt: string;
   routes: string[];
-  /** Whether a route other than loopback is offered, so a physical phone can reach the Host. */
   reachable: boolean;
 }
 
-/** The QR code and deep link: `deepseekbot://pair?p=<base64url JSON>`. */
 export function pairingLink(payload: PairingPayload): string {
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return `${PAIRING_LINK_SCHEME}://pair?p=${encoded}`;
@@ -56,7 +54,6 @@ function qrPath(text: string): { size: number; path: string } {
   return { size, path };
 }
 
-/** Ready tailnet routes first, then the Web Client's own tailnet origin, then loopback. */
 export function offeredRoutes(status: RouteStatus, clientOrigin: string | undefined): PhoneRoute[] {
   const routes = status.routes.filter((route) => route.ready && route.kind === 'tailscale');
   const own = clientOrigin === undefined ? undefined : phoneRoute(clientOrigin);
@@ -80,7 +77,6 @@ async function body(request: Request): Promise<Record<string, unknown>> {
   }
 }
 
-/** Operator-only management, registered on the authenticated `/api` carrier. */
 export function createDevicesHttp(options: {
   pairing: DevicePairing;
   routes: () => Promise<RouteStatus>;
