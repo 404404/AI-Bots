@@ -16,8 +16,9 @@ export type WireAuthor =
 
 export interface ChannelWireMessage extends WireMessage {
   author: WireAuthor;
-  attachments?: readonly unknown[];
-  bridgeMedia?: { items: readonly unknown[] };
+  attachments?: readonly AttachmentRef[];
+  bridgeMedia?: { items: readonly BridgeMediaItem[] };
+  bridgeOrigin?: { sourceEventId: string };
   toolApprovalRequest?: unknown;
   userQuestionRequest?: unknown;
   privateInputRequest?: unknown;
@@ -25,6 +26,13 @@ export interface ChannelWireMessage extends WireMessage {
   grantRequest?: true;
   toolApprovalDecision?: unknown;
   userQuestionResolution?: unknown;
+}
+
+export interface BridgeMediaItem {
+  id: string;
+  kind: 'image' | 'file' | 'audio';
+  name: string;
+  sizeBytes?: number;
 }
 
 export interface AttachmentRef {
