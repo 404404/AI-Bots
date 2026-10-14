@@ -32,6 +32,13 @@ import {
   runModelsUsage,
   type ModelsUsageValues,
 } from './cli-models-usage.js';
+import {
+  HOST_ADMIN_COMMANDS,
+  HOST_ADMIN_OPTIONS,
+  isHostAdminCommand,
+  runHostAdminCommand,
+  type HostAdminValues,
+} from './cli-host-admin.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
@@ -39,6 +46,7 @@ export const LIVE_OPTIONS = {
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
   ...CHANNEL_OPTIONS,
+  ...HOST_ADMIN_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -113,6 +121,7 @@ export const LIVE_COMMANDS = [
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
+  ...HOST_ADMIN_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -233,7 +242,7 @@ export const LIVE_COMMANDS = [
   },
 ] as const;
 
-interface LiveValues extends ImValues, MessagingValues, ModelsUsageValues {
+interface LiveValues extends ImValues, MessagingValues, ModelsUsageValues, HostAdminValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -552,6 +561,13 @@ export async function runLiveCli(
   }
   if (isChannelCommand(command))
     return runChannelCommand(command, rest, values, io, connectLiveHost);
+  if (isHostAdminCommand(command)) {
+    const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+    return runHostAdminCommand(command, rest, values, io, {
+      connect: async () => (await connectLiveHost(values, io, signal)).rpc,
+      signal,
+    });
+  }
   if (DEVICE_COMMANDS.some((entry) => entry === command))
     return runDeviceCommand(command as (typeof DEVICE_COMMANDS)[number], rest, values, io);
   if (command === 'grants') {
