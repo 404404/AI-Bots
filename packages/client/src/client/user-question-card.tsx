@@ -309,6 +309,7 @@ export function UserQuestionCard({
               <Button
                 variant="primary"
                 size={compact ? 'sm' : 'md'}
+                className="bh-request-primary"
                 disabled={disabled}
                 onClick={() => submit()}
               >
