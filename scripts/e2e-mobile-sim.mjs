@@ -265,7 +265,12 @@ async function main() {
     for (const [key, value] of Object.entries(env)) args.push('-e', `${key}=${value}`);
     args.push(join(flows, file));
     const child = spawn(maestro, args, {
-      env: { ...process.env, JAVA_HOME: javaHome, MAESTRO_CLI_NO_ANALYTICS: '1' },
+      env: {
+        ...process.env,
+        JAVA_HOME: javaHome,
+        MAESTRO_CLI_NO_ANALYTICS: '1',
+        MAESTRO_DRIVER_STARTUP_TIMEOUT: process.env['MAESTRO_DRIVER_STARTUP_TIMEOUT'] ?? '300000',
+      },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let output = '';
@@ -300,6 +305,7 @@ async function main() {
       spawnSync('xcrun', ['simctl', 'delete', udid]);
     });
     run('xcrun', ['simctl', 'boot', udid]);
+    run('xcrun', ['simctl', 'bootstatus', udid, '-b'], { timeout: 600_000 });
     steps.push(`created and booted ${options.device} on ${sim.runtimeName} (${udid})`);
 
     const metroPort = await freePort();
