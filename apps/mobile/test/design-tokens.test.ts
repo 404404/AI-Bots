@@ -9,7 +9,7 @@ import { headerBand, resolveTheme, withAccent } from '../src/ui/design/resolve-t
 import { botColor } from '../src/ui/bot-color';
 import { edge, radius, space } from '../src/ui/design/tokens';
 
-const DSH_LAYER_ROLES = ['accentTint', 'borderField', 'field', 'sheet'];
+const DSH_LAYER_ROLES = ['borderField', 'field', 'sheet'];
 
 const webTokens = readFileSync(
   new URL('../../../packages/client/src/client/ds/tokens.stylex.ts', import.meta.url),

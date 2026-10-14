@@ -32,7 +32,6 @@ export const ROLES = {
   elevated: 'alias-button-elevated-fill',
   base: 'alias-bg-base',
   well: 'alias-bg-base',
-  accentTint: 'alias-state-business-tertiary',
 };
 
 function themeSource() {

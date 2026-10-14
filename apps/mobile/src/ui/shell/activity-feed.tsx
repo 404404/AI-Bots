@@ -23,46 +23,89 @@ import { BotAvatar } from '../bot-avatar';
 import { ApprovalCard } from '../chat/approval-card';
 import { QuestionCard } from '../chat/question-card';
 import { useDesignTheme } from '../design/theme';
-import { edge, space } from '../design/tokens';
-import { InboxRow } from '../inbox-list';
+import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { Loading, Notice } from '../request-parts';
 import { t } from '../strings';
+import {
+  ALL_ACTIVITY,
+  ActivityFilters,
+  type ActivityFilter,
+  type ActivitySection,
+} from './activity-filters';
 
 const AVATAR = 32;
 
 type FeedRow =
-  | { kind: 'header'; key: string; section: InboxSection }
+  | { kind: 'header'; key: string; section: InboxSection; count: number }
   | { kind: 'empty'; key: string }
   | { kind: 'post'; key: string; item: HumanAttentionItem; ref: RequestRef }
-  | { kind: 'row'; key: string; item: HumanAttentionItem };
+  | { kind: 'row'; key: string; item: HumanAttentionItem; settled: boolean };
 
 function decidable(item: HumanAttentionItem): RequestRef | undefined {
   if (item.kind !== 'user-question' && item.kind !== 'tool-approval') return undefined;
   return requestRef(item);
 }
 
+function sectionItems(
+  snapshot: Extract<InboxSnapshot, { status: 'ready' }>,
+  section: InboxSection,
+  gone: ReadonlySet<string>,
+  held: readonly HumanAttentionItem[],
+  bot: string | undefined,
+): HumanAttentionItem[] {
+  const listed = snapshot.sections[section].filter((item) => !gone.has(item.id));
+  const items =
+    section === 'action'
+      ? [...listed, ...held.filter((kept) => !listed.some((item) => item.id === kept.id))]
+      : listed;
+  return bot === undefined ? items : items.filter((item) => item.botSlug === bot);
+}
+
+export function activityCounts(
+  snapshot: InboxSnapshot,
+  gone: ReadonlySet<string>,
+  held: readonly HumanAttentionItem[],
+  bot: string | undefined,
+): Record<ActivitySection, number> {
+  const counts: Record<ActivitySection, number> = { all: 0, action: 0, replies: 0, handled: 0 };
+  if (snapshot.status !== 'ready') return counts;
+  for (const section of INBOX_SECTIONS) {
+    counts[section] = sectionItems(snapshot, section, gone, held, bot).length;
+    counts.all += counts[section];
+  }
+  return counts;
+}
+
+export function activityBots(snapshot: InboxSnapshot): string[] {
+  if (snapshot.status !== 'ready') return [];
+  return [
+    ...new Set(
+      INBOX_SECTIONS.flatMap((section) => snapshot.sections[section].map((item) => item.botSlug)),
+    ),
+  ];
+}
+
 export function feedRows(
   snapshot: InboxSnapshot,
   gone: ReadonlySet<string>,
   held: readonly HumanAttentionItem[],
+  filter: ActivityFilter = ALL_ACTIVITY,
 ): FeedRow[] {
   if (snapshot.status !== 'ready') return [];
   const rows: FeedRow[] = [];
   for (const section of INBOX_SECTIONS) {
-    const listed = snapshot.sections[section].filter((item) => !gone.has(item.id));
-    const items =
-      section === 'action'
-        ? [...listed, ...held.filter((kept) => !listed.some((item) => item.id === kept.id))]
-        : listed;
-    if (items.length === 0 && section !== 'action') continue;
-    rows.push({ kind: 'header', key: `header-${section}`, section });
-    if (items.length === 0) rows.push({ kind: 'empty', key: 'empty' });
+    if (filter.section !== 'all' && filter.section !== section) continue;
+    const items = sectionItems(snapshot, section, gone, held, filter.bot);
+    const chosen = filter.section === section;
+    if (items.length === 0 && section !== 'action' && !chosen) continue;
+    rows.push({ kind: 'header', key: `header-${section}`, section, count: items.length });
+    if (items.length === 0) rows.push({ kind: 'empty', key: `empty-${section}` });
     for (const item of items) {
       const ref = section === 'action' ? decidable(item) : undefined;
       rows.push(
         ref === undefined
-          ? { kind: 'row', key: item.id, item }
+          ? { kind: 'row', key: item.id, item, settled: section === 'handled' }
           : { kind: 'post', key: item.id, item, ref },
       );
     }
@@ -72,6 +115,73 @@ export function feedRows(
 
 function minutesSince(at: string, now: number): number {
   return Math.max(0, Math.floor((now - Date.parse(at)) / 60_000));
+}
+
+function Row({
+  item,
+  settled,
+  bot,
+  now,
+  onOpen,
+}: {
+  item: HumanAttentionItem;
+  settled: boolean;
+  bot: RosterBot | undefined;
+  now: number;
+  onOpen(item: HumanAttentionItem): void;
+}) {
+  const theme = useDesignTheme();
+  const kind = t.kind[item.kind] ?? t.otherKind;
+  const name = bot?.displayName ?? item.botSlug;
+  const size = settled ? theme.type.body.line : AVATAR;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.openPost(kind, name, item.summary)}
+      testID={`inbox-row-${item.id}`}
+      onPress={() => onOpen(item)}
+      style={({ pressed }) => ({
+        minHeight: theme.touch,
+        flexDirection: 'row',
+        alignItems: settled ? 'center' : 'flex-start',
+        gap: space.x3,
+        paddingHorizontal: space.x5,
+        paddingVertical: space.x3,
+        backgroundColor: pressed ? theme.layer.canvas.pressed : theme.layer.canvas.fill,
+      })}
+    >
+      {bot === undefined ? (
+        <View
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: theme.layer.canvas.inset,
+          }}
+        />
+      ) : (
+        <BotAvatar bot={bot} size={size} />
+      )}
+      <View style={{ flex: 1, gap: space.x1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
+          <Text numberOfLines={1} strong={!settled} style={{ flexShrink: 1 }}>
+            {t.rowTitle(kind, name)}
+            {settled && item.summary.length > 0 ? (
+              <Text tone="muted">{` · ${item.summary}`}</Text>
+            ) : null}
+          </Text>
+          <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
+            {t.ago(minutesSince(item.createdAt, now))}
+          </Text>
+        </View>
+        {!settled && item.summary.length > 0 ? (
+          <Text tone="muted" numberOfLines={2}>
+            {item.summary}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
 }
 
 function Post({
@@ -122,10 +232,8 @@ function Post({
     <View
       testID={`inbox-post-${item.id}`}
       style={{
-        paddingVertical: space.x4,
+        paddingVertical: space.x3,
         gap: space.x1,
-        borderBottomWidth: edge.hairline,
-        borderBottomColor: theme.color.divider,
       }}
     >
       <Pressable
@@ -191,7 +299,11 @@ export function ActivityFeed({
   const [refreshing, setRefreshing] = useState(false);
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
-  const rows = feedRows(snapshot, gone, held);
+  const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
+  const rows = feedRows(snapshot, gone, held, filter);
+  const sticky = rows.flatMap((row, index) => (row.kind === 'header' ? [index] : []));
+  const slugs = activityBots(snapshot);
+  const shownBot = filter.bot !== undefined && slugs.includes(filter.bot) ? filter.bot : undefined;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
@@ -209,6 +321,7 @@ export function ActivityFeed({
       keyboardDismissMode="interactive"
       style={{ backgroundColor: theme.color.base }}
       data={rows}
+      stickyHeaderIndices={sticky}
       keyExtractor={(row) => row.key}
       itemLayoutAnimation={LinearTransition}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
@@ -226,6 +339,14 @@ export function ActivityFeed({
             </View>
           ) : null}
           {snapshot.status === 'loading' ? <Loading /> : null}
+          {snapshot.status === 'ready' ? (
+            <ActivityFilters
+              counts={activityCounts(snapshot, gone, held, shownBot)}
+              bots={slugs.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
+              filter={{ ...filter, bot: shownBot }}
+              onFilter={setFilter}
+            />
+          ) : null}
         </View>
       }
       renderItem={({ item: row }) => {
@@ -241,19 +362,30 @@ export function ActivityFeed({
                 paddingTop: space.x6,
                 paddingBottom: space.x2,
                 textTransform: 'uppercase',
+                backgroundColor: theme.layer.canvas.fill,
               }}
             >
-              {t.inboxSections[row.section]}
+              {t.sectionCount(t.inboxSections[row.section], row.count)}
             </Text>
           );
         if (row.kind === 'empty')
           return (
             <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
-              {t.inboxEmpty}
+              {row.key === 'empty-action' && filter.bot === undefined
+                ? t.inboxEmpty
+                : t.filterEmpty}
             </Text>
           );
         if (row.kind === 'row')
-          return <InboxRow item={row.item} bot={bot(row.item.botSlug)} onOpen={onOpen} now={now} />;
+          return (
+            <Row
+              item={row.item}
+              settled={row.settled}
+              bot={bot(row.item.botSlug)}
+              onOpen={onOpen}
+              now={now}
+            />
+          );
         return (
           <Animated.View exiting={FadeOut.duration(220)}>
             {client === undefined ? null : (
