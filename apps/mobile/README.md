@@ -9,8 +9,10 @@ Pairing gives the phone a per-device credential, kept only in Keychain/Keystore.
 - `src/host/` — the Host client module. One deep module owns the routes, the device credential, unary calls, the Remote stream socket, reconnection and connection state. Screens read it through `useHostSnapshot()` and never talk HTTP. It is plain TypeScript with an injected carrier (`carrier.ts`), so it is tested in Node.
 - `src/host/wire.ts` — the slice of the Host's wire shapes the app reads; `test/wire-contract.ts` checks the Host's own types against it in the root typecheck.
 - `src/host/pairing.ts` — reads the pairing link (QR code or `deepseekbot://pair?p=…`) and redeems its one-time offer through the first route that answers.
-- `app/` — Expo Router screens: two tabs, the Roster (`(tabs)/index.tsx`) and the Human Inbox (`(tabs)/inbox.tsx`); an Inbox item (`inbox/[id].tsx`); and pairing (`pair.tsx`, camera scan or pasted link).
+- `app/` — Expo Router screens: two tabs, the Roster (`(tabs)/index.tsx`) and the Human Inbox (`(tabs)/inbox.tsx`); a Bot DM (`dm/[slug].tsx`); an Inbox item (`inbox/[id].tsx`); and pairing (`pair.tsx`, camera scan or pasted link).
 - `src/host/inbox.ts`, `src/host/requests.ts` — the Human Inbox ([#1653](https://github.com/BotHarness/DeepSeekBot/issues/1653)). The list is the Host's `humanAttention` (actions, then mentions and replies, then handled), re-read whenever the live Roster or Activity stream changes; the app keeps no Inbox store. Tool approvals and Human questions are read with `channelTimeline` plus `toolApprovalStatus` / `userQuestionStatus` and decided with `toolApprovalDecide` / `userQuestionAnswer`, the methods the Web Client and the live CLI verbs call. The first accepted decision wins; a late one comes back as "already decided" or "expired". Private input opens in the full client.
+- `src/host/conversation.ts` — one Human–PersonaBot DM ([#1651](https://github.com/BotHarness/DeepSeekBot/issues/1651)): it follows `botharness/followChannel` on the shared socket, keeps one contiguous window of Channel revisions, repairs a gap and pages older history with `channelJournalPage` (ADR-0179), and sends with `channelSend` and a `human-<uuid>` id made on the phone, so a retry is idempotent (ADR-0159). Bot drafts arrive as notifications and are replaced by the committed reply. `native-cache.ts` keeps the last page per Bot for the first paint; unpairing deletes it.
+- `src/ui/markdown.ts` — a small Markdown reader for replies, drawn with native selectable Text by `markdown-view.tsx`.
 - `src/ui/` — native views. Pixel avatars are drawn from the Host's own avatar code (`packages/core/src/bots/avatar-appearance.ts`), so they match the Web Client.
 
 Carrier decision and evidence: [ADR-0200](../../docs/adr/0200-the-mobile-app-reads-live-state-over-the-dsh-remote-stream-socket.md).
@@ -25,7 +27,8 @@ pnpm --filter @botharness/mobile typecheck
 pnpm vitest run apps/mobile                     # Host client, Inbox and screens against recorded Host frames
 MOBILE_LIVE_HOST_URL='http://127.0.0.1:<port>/?token=<token>' pnpm vitest run apps/mobile
                                                 # also pairs with a live isolated Host and drives it there: a real PersonaBot
-                                                # asks for a Tool approval and a Human question, and the app's modules decide them
+                                                # asks for a Tool approval and a Human question, and the app's modules decide them;
+                                                # a real DM reply plus resume (creates a PersonaBot if none)
 pnpm --filter @botharness/mobile export          # Metro bundles for iOS and Android
 ```
 
@@ -57,8 +60,10 @@ The web render is layout evidence, not native evidence: it shows the app's own v
 
 3. **Pair.** Start Metro with `pnpm --filter @botharness/mobile start` and open the app. On the computer, open DeepSeekBot settings → Devices → Pair a phone. Scan the QR code with the app (or copy the pairing link and paste it). The settings show a warning with the `tailscale serve` command when the Host has no route a phone can reach.
 
-4. **Check.** The Roster lists every PersonaBot with its avatar. Send the Bot a DM from the computer: its state turns to Thinking and back on the phone without a refresh. Restart the Host: the app reconnects by itself without pairing again. Settings → Devices lists the phone with its last-seen time; Revoke it and the app shows "Pair again" at once.
+4. **Check the Roster.** The Roster lists every PersonaBot with its avatar. Send the Bot a DM from the computer: its state turns to Thinking and back on the phone without a refresh. Restart the Host: the app reconnects by itself without pairing again. Settings → Devices lists the phone with its last-seen time; Revoke it and the app shows "Pair again" at once.
 
 5. **Inbox.** Ask the Bot in its DM to run a shell command. The Inbox tab shows a badge and the Tool approval under "Needs my action"; open it, check the tool and arguments, tap **Allow once**, and the Bot continues in the DM. Ask it to use `ask_user_question` and answer on the phone the same way. Decide another approval on the computer first: it leaves the phone's list, and opening it shows "Already decided on another device".
+
+6. **Check a DM.** Tap a PersonaBot. Send a uniquely marked message: it shows "Sending…", then "Sent", then settles into the conversation; the reply streams in under "Replying…". Scroll up to page older history. Put the app in the background, send the Bot a message from the computer, return: the message is there once. Turn off Wi-Fi and send: the message shows "Not sent · Tap to retry"; tapping it after reconnecting delivers it once.
 
 The device credential is stored only in the platform's secure storage and never logged; the Host keeps only its hash. "Unpair" forgets it on the phone; revoking it in the Web Client cuts the phone off on the Host.
