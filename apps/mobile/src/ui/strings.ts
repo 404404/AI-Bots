@@ -38,6 +38,11 @@ const en = {
     unreachable: 'Cannot reach your computer. Check that this phone is on your tailnet.',
   } satisfies Record<PairingRefusal, string>,
   unpair: 'Unpair',
+  fullClient: 'Full client',
+  exitWebMode: 'Exit web mode',
+  exitWebModeHint: 'Hold to see what it does. Drag to move it out of the way.',
+  fullClientRevoked: "Your computer revoked this phone's access, so the full client closed too.",
+  fullClientUnreachable: 'The full client could not load from your computer.',
   inbox: 'Inbox',
   inboxSections: {
     action: 'Needs my action',
@@ -151,6 +156,11 @@ const zh: typeof en = {
     unreachable: '连不上你的电脑，请确认手机已加入你的 tailnet。',
   },
   unpair: '取消配对',
+  fullClient: '完整客户端',
+  exitWebMode: '退出网页模式',
+  exitWebModeHint: '按住查看说明，拖动可移到不挡内容的位置。',
+  fullClientRevoked: '电脑已撤销这台手机的访问权限，完整客户端也随之关闭。',
+  fullClientUnreachable: '完整客户端没能从你的电脑加载出来。',
   inbox: '收件箱',
   inboxSections: {
     action: '需要我处理',

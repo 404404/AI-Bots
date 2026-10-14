@@ -45,6 +45,7 @@ export interface DevicePairing {
   createOffer(): PairingOffer;
   redeem(input: { offer: string; name?: string }): Redemption;
   admit(authorization: string | undefined): Admission;
+  check(deviceId: string): Admission;
   list(): PairedDevice[];
   revoke(deviceId: string): { revoked: boolean; closedStreams: number };
   attachStream(deviceId: string, close: () => void): () => void;
@@ -113,6 +114,29 @@ export function createDevicePairing(options: DevicePairingOptions): DevicePairin
           | Row
           | undefined,
     );
+
+  const active = (current: Row): Admission => {
+    if (current.revoked_at !== null) {
+      record({ phase: 'device-refused', code: 'device-revoked', deviceId: current.device_id });
+      return { ok: false, code: 'device-revoked' };
+    }
+    const seen = now();
+    const last = current.last_seen_at === null ? 0 : Date.parse(current.last_seen_at);
+    if (seen - last >= LAST_SEEN_RESOLUTION_MS) {
+      current.last_seen_at = iso(seen);
+      database.transaction(
+        (connection) =>
+          connection
+            .prepare(
+              'UPDATE paired_devices SET last_seen_at = ? WHERE device_id = ? AND revoked_at IS NULL',
+            )
+            .run(current.last_seen_at, current.device_id),
+        ['paired-devices'],
+      );
+      record({ phase: 'device-admitted', deviceId: current.device_id });
+    }
+    return { ok: true, device: device(current) };
+  };
 
   const host = (): HostIdentity => {
     const existing = database.read(
@@ -204,26 +228,16 @@ export function createDevicePairing(options: DevicePairingOptions): DevicePairin
         record({ phase: 'device-refused', code: 'device-unknown' });
         return { ok: false, code: 'device-unknown' };
       }
-      if (current.revoked_at !== null) {
-        record({ phase: 'device-refused', code: 'device-revoked', deviceId });
-        return { ok: false, code: 'device-revoked' };
+      return active(current);
+    },
+
+    check(deviceId) {
+      const current = row(deviceId);
+      if (current === undefined) {
+        record({ phase: 'device-refused', code: 'device-unknown', deviceId });
+        return { ok: false, code: 'device-unknown' };
       }
-      const seen = now();
-      const last = current.last_seen_at === null ? 0 : Date.parse(current.last_seen_at);
-      if (seen - last >= LAST_SEEN_RESOLUTION_MS) {
-        current.last_seen_at = iso(seen);
-        database.transaction(
-          (connection) =>
-            connection
-              .prepare(
-                'UPDATE paired_devices SET last_seen_at = ? WHERE device_id = ? AND revoked_at IS NULL',
-              )
-              .run(current.last_seen_at, deviceId),
-          ['paired-devices'],
-        );
-        record({ phase: 'device-admitted', deviceId });
-      }
-      return { ok: true, device: device(current) };
+      return active(current);
     },
 
     list() {

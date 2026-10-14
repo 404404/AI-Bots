@@ -1,11 +1,18 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { request as httpRequest, type IncomingMessage, type ServerResponse } from 'node:http';
+import type { TLSSocket } from 'node:tls';
 import type { Duplex } from 'node:stream';
 
-import type { DevicePairing, DeviceRefusal, OfferRefusal } from './pairing.js';
+import type { Admission, DevicePairing, DeviceRefusal, OfferRefusal } from './pairing.js';
 
 export const DEVICE_GATEWAY_PREFIX = '/botharness-device';
 export const DEVICE_PAIR_PATH = `${DEVICE_GATEWAY_PREFIX}/pair`;
 export const DEVICE_MUX_PATH = `${DEVICE_GATEWAY_PREFIX}/api/remote.mux`;
+export const DEVICE_WEB_PREFIX = `${DEVICE_GATEWAY_PREFIX}/web`;
+export const DEVICE_WEB_MUX_PATH = `${DEVICE_WEB_PREFIX}/api/remote.mux`;
+export const DEVICE_WEB_COOKIE = 'botharness-device-web';
+const WEB_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const MAX_WEB_SESSIONS = 256;
 
 const PAIR_BODY_LIMIT = 4096;
 const COOKIE_LIFETIME_MS = 6 * 60 * 60 * 1000;
@@ -80,6 +87,21 @@ function refuseUpgrade(socket: Duplex, status: number, code: GatewayRefusal): vo
   );
 }
 
+function cookieValue(request: IncomingMessage, name: string): string | undefined {
+  for (const part of (header(request, 'cookie') ?? '').split(';')) {
+    const at = part.indexOf('=');
+    if (at !== -1 && part.slice(0, at).trim() === name) return part.slice(at + 1).trim();
+  }
+  return undefined;
+}
+
+function secureRequest(request: IncomingMessage): boolean {
+  return (
+    (request.socket as TLSSocket).encrypted === true ||
+    header(request, 'x-forwarded-proto')?.split(',')[0]?.trim() === 'https'
+  );
+}
+
 async function readSmall(request: IncomingMessage, limit: number): Promise<string | undefined> {
   let size = 0;
   const chunks: Buffer[] = [];
@@ -123,6 +145,48 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
       ? cookie.value
       : await mint();
 
+  const webSessions = new Map<string, { deviceId: string; expiresAt: number }>();
+  const sessionKey = (value: string): string => createHash('sha256').update(value).digest('hex');
+
+  const mintWebSession = (deviceId: string, secure: boolean): string => {
+    for (const [key, session] of webSessions)
+      if (session.expiresAt <= now()) webSessions.delete(key);
+    while (webSessions.size >= MAX_WEB_SESSIONS)
+      webSessions.delete(webSessions.keys().next().value!);
+    const value = randomBytes(32).toString('base64url');
+    webSessions.set(sessionKey(value), { deviceId, expiresAt: now() + WEB_SESSION_TTL_MS });
+    log('device-gateway phase=web-session-minted');
+    return [
+      `${DEVICE_WEB_COOKIE}=${value}`,
+      `Path=${DEVICE_WEB_PREFIX}/`,
+      `Max-Age=${String(WEB_SESSION_TTL_MS / 1000)}`,
+      'HttpOnly',
+      'SameSite=Strict',
+      ...(secure ? ['Secure'] : []),
+    ].join('; ');
+  };
+
+  const webAdmission = (
+    request: IncomingMessage,
+    mint: boolean,
+  ): Admission & { setCookie?: string } => {
+    const authorization = header(request, 'authorization');
+    if (authorization !== undefined) {
+      const admission = pairing.admit(authorization);
+      return admission.ok && mint
+        ? { ...admission, setCookie: mintWebSession(admission.device.id, secureRequest(request)) }
+        : admission;
+    }
+    const value = cookieValue(request, DEVICE_WEB_COOKIE);
+    const key = value === undefined ? undefined : sessionKey(value);
+    const session = key === undefined ? undefined : webSessions.get(key);
+    if (key === undefined || session === undefined || session.expiresAt <= now()) {
+      if (key !== undefined) webSessions.delete(key);
+      return { ok: false, code: 'device-credential-missing' };
+    }
+    return pairing.check(session.deviceId);
+  };
+
   const forwardHeaders = (request: IncomingMessage, session: string): Record<string, string> => {
     const headers: Record<string, string> = {};
     for (const [name, value] of Object.entries(request.headers)) {
@@ -157,8 +221,12 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
     );
   };
 
-  const unary = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
-    const admission = pairing.admit(header(request, 'authorization'));
+  const forward = async (
+    request: IncomingMessage,
+    response: ServerResponse,
+    admission: Admission & { setCookie?: string },
+    prefix: string,
+  ): Promise<void> => {
     if (!admission.ok) return refuse(response, 401, admission.code);
     let session: string;
     try {
@@ -166,7 +234,7 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
     } catch {
       return refuse(response, 503, 'host-session-unavailable');
     }
-    const path = (request.url ?? '/').slice(DEVICE_GATEWAY_PREFIX.length);
+    const path = (request.url ?? '/').slice(prefix.length);
     await new Promise<void>((resolve) => {
       const upstream = httpRequest(
         {
@@ -187,6 +255,10 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
           for (const [name, value] of Object.entries(answer.headers))
             if (value !== undefined && !HOP_BY_HOP.has(name) && name !== 'set-cookie')
               headers[name] = value;
+          if (admission.setCookie !== undefined) {
+            headers['set-cookie'] = admission.setCookie;
+            headers['cache-control'] = 'no-store';
+          }
           response.writeHead(answer.statusCode ?? 502, headers);
           answer.pipe(response);
           answer.on('end', resolve);
@@ -247,13 +319,35 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
       const path = new URL(request.url ?? '/', 'http://device').pathname;
       if (crossOrigin(request)) return refuse(response, 403, 'origin-refused');
       if (path === DEVICE_PAIR_PATH) return pair(request, response);
-      if (path.startsWith(`${DEVICE_GATEWAY_PREFIX}/api/`)) return unary(request, response);
+      if (path.startsWith(`${DEVICE_GATEWAY_PREFIX}/api/`))
+        return forward(
+          request,
+          response,
+          pairing.admit(header(request, 'authorization')),
+          DEVICE_GATEWAY_PREFIX,
+        );
+      if (path === DEVICE_WEB_PREFIX && (request.method === 'GET' || request.method === 'HEAD')) {
+        const admission = webAdmission(request, true);
+        if (!admission.ok) return refuse(response, 401, admission.code);
+        const search = new URL(request.url ?? '/', 'http://device').search;
+        response.writeHead(308, {
+          location: `${DEVICE_WEB_PREFIX}/${search}`,
+          'cache-control': 'no-store',
+          ...(admission.setCookie === undefined ? {} : { 'set-cookie': admission.setCookie }),
+        });
+        return void response.end();
+      }
+      if (path.startsWith(`${DEVICE_WEB_PREFIX}/`))
+        return forward(request, response, webAdmission(request, true), DEVICE_WEB_PREFIX);
       return refuse(response, 404, 'not-found');
     },
 
     async upgrade(request, socket, head) {
       if (crossOrigin(request)) return refuseUpgrade(socket, 403, 'origin-refused');
-      const admission = pairing.admit(header(request, 'authorization'));
+      const web = new URL(request.url ?? '/', 'http://device').pathname === DEVICE_WEB_MUX_PATH;
+      const admission = web
+        ? webAdmission(request, false)
+        : pairing.admit(header(request, 'authorization'));
       if (!admission.ok) return refuseUpgrade(socket, 401, admission.code);
       let opened: Awaited<ReturnType<typeof openStream>> | undefined;
       try {

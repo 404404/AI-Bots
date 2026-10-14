@@ -11,7 +11,7 @@ import { radius, space, text } from './ds/tokens.stylex.js';
 import { formatRelativeTime } from './labels.js';
 import { useMountedResource } from './mounted-resource.js';
 
-const PATH = '/api/botharness/devices';
+const PATH = './api/botharness/devices';
 const LIST_POLL_MS = 2000;
 
 interface PairedDevice {
