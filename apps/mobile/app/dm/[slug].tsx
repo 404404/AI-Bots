@@ -3,8 +3,10 @@ import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
-import type { ConversationDraft } from '../../src/host/conversation';
+import type { ConversationDraft, MessageAttachment } from '../../src/host/conversation';
+import { shareAttachment } from '../../src/host/share-attachment';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../src/host/pick-files';
+import { stopBot, type StopOutcome } from '../../src/host/stop';
 import {
   useConversation,
   useConversationSnapshot,
@@ -16,6 +18,7 @@ import { botColor } from '../../src/ui/bot-color';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
+import { ImageViewer } from '../../src/ui/chat/image-viewer';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
 import { chatRows, type ChatRow } from '../../src/ui/chat/message-groups';
 import { StatusStrip } from '../../src/ui/chat/status-strip';
@@ -62,6 +65,9 @@ function DmConversation({ slug }: { slug: string | undefined }) {
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
+  const [stop, setStop] = useState<StopOutcome | { status: 'stopping' } | undefined>();
+  const [shareError, setShareError] = useState(false);
+  const [viewing, setViewing] = useState<MessageAttachment>();
   const now = new Date();
 
   const rows = useMemo<Row[]>(
@@ -92,6 +98,20 @@ function DmConversation({ slug }: { slug: string | undefined }) {
       .catch(() => setAttachError(true));
   };
 
+  const stopRun = () => {
+    if (client === undefined || bot?.dmChannelId === undefined || stop?.status === 'stopping')
+      return;
+    setStop({ status: 'stopping' });
+    void stopBot(client, bot.dmChannelId, bot.slug).then((outcome) =>
+      setStop(outcome.status === 'stopped' ? undefined : outcome),
+    );
+  };
+
+  const share = (attachment: MessageAttachment): Promise<void> => {
+    setShareError(false);
+    return shareAttachment(attachment).catch(() => setShareError(true));
+  };
+
   const notice =
     snapshot.status === 'refused'
       ? t.dmRefused
@@ -103,13 +123,19 @@ function DmConversation({ slug }: { slug: string | undefined }) {
             ? t.liveInterrupted
             : attachError
               ? t.attachFailed
-              : dictation.state.status === 'denied'
-                ? t.dictationDenied
-                : dictation.state.status === 'unavailable'
-                  ? t.dictationUnavailable
-                  : dictation.state.status === 'failed'
-                    ? t.dictationFailed
-                    : undefined;
+              : shareError
+                ? t.shareFailed
+                : stop?.status === 'not-working' && bot !== undefined
+                  ? t.stopNotWorking(bot.displayName)
+                  : stop?.status === 'failed'
+                    ? `${t.stopFailed} ${stop.reason}`
+                    : dictation.state.status === 'denied'
+                      ? t.dictationDenied
+                      : dictation.state.status === 'unavailable'
+                        ? t.dictationUnavailable
+                        : dictation.state.status === 'failed'
+                          ? t.dictationFailed
+                          : undefined;
 
   return (
     <>
@@ -161,17 +187,28 @@ function DmConversation({ slug }: { slug: string | undefined }) {
                 first={item.first}
                 last={item.last}
                 onRetry={(id) => conversation?.retry(id)}
+                onOpenImage={setViewing}
+                onShare={share}
               />
             )
           }
           onEndReached={() => void conversation?.loadOlder()}
           onEndReachedThreshold={0.5}
-          maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 40 }}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 40,
+          }}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             snapshot.loadingOlder ? (
-              <View style={{ padding: space.x4, alignItems: 'center', gap: space.x2 }}>
+              <View
+                style={{
+                  padding: space.x4,
+                  alignItems: 'center',
+                  gap: space.x2,
+                }}
+              >
                 <ActivityIndicator />
                 <Text variant="meta" tone="muted">
                   {t.olderLoading}
@@ -191,7 +228,9 @@ function DmConversation({ slug }: { slug: string | undefined }) {
             ) : null
           }
         />
-        {bot !== undefined && botBusy(bot) ? <StatusStrip bot={bot} /> : null}
+        {bot !== undefined && botBusy(bot) ? (
+          <StatusStrip bot={bot} stopping={stop?.status === 'stopping'} onStop={stopRun} />
+        ) : null}
         <Composer
           value={draft}
           placeholder={bot === undefined ? t.messagePlaceholder : t.messageBot(bot.displayName)}
@@ -212,6 +251,7 @@ function DmConversation({ slug }: { slug: string | undefined }) {
           onCancelDictation={dictation.cancel}
         />
       </KeyboardAvoidingView>
+      <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
     </>
   );
 }

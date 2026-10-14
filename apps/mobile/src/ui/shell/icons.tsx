@@ -54,6 +54,16 @@ export function WorkingIcon(props: IconProps) {
   );
 }
 
+export function StopIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      focused
+      d="M8 7h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
+    />
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return <Glyph {...props} d="m6 9 6 6 6-6" />;
 }
@@ -116,7 +126,7 @@ export function MicIcon(props: IconProps) {
   );
 }
 
-export function StopIcon({ color, size }: IconProps) {
+export function RecordingStopIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path
@@ -125,4 +135,8 @@ export function StopIcon({ color, size }: IconProps) {
       />
     </Svg>
   );
+}
+
+export function ShareIcon(props: IconProps) {
+  return <Glyph {...props} d="M12 15V4M8 8l4-4 4 4M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />;
 }

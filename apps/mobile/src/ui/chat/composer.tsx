@@ -25,7 +25,7 @@ import {
   MicIcon,
   PhotoIcon,
   PlusIcon,
-  StopIcon,
+  RecordingStopIcon,
 } from '../shell/icons';
 import { t } from '../strings';
 import {
@@ -211,7 +211,7 @@ function VoiceButton({
       }}
     >
       {active && !held ? (
-        <StopIcon color={theme.color.onAccent} size={theme.type.title.line} />
+        <RecordingStopIcon color={theme.color.onAccent} size={theme.type.title.line} />
       ) : (
         <MicIcon
           color={filled ? theme.color.onAccent : theme.color.muted}
