@@ -40,12 +40,12 @@ export function Button({
         borderRadius: radius.md,
         backgroundColor: filled
           ? theme.color.accent
-          : pressed
-            ? theme.layer[on].pressed
-            : undefined,
+          : tone === 'danger'
+            ? theme.layer[on].danger
+            : theme.layer[on].selected,
         borderWidth: filled ? 0 : edge.hairline,
-        borderColor: theme.color.borderStrong,
-        opacity: disabled ? 0.45 : filled && pressed ? 0.7 : 1,
+        borderColor: tone === 'danger' ? theme.color.dangerEdge : theme.layer[on].edge,
+        opacity: disabled ? 0.45 : pressed ? 0.7 : 1,
       })}
     >
       {busy ? (

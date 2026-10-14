@@ -107,10 +107,10 @@ describe('Layers and their states', () => {
       for (const accent of accents) {
         const { layer } = resolveTheme(scheme, accent === undefined ? {} : { accent });
         for (const name of LAYERS) {
-          const { fill, pressed, selected, chosen } = layer[name];
+          const { fill, pressed, selected, chosen, danger } = layer[name];
           const parent = LAYER_PARENT[name];
           const floor = [fill, ...(parent === undefined ? [] : [layer[parent].fill])];
-          for (const [state, value] of Object.entries({ pressed, selected, chosen }))
+          for (const [state, value] of Object.entries({ pressed, selected, chosen, danger }))
             for (const other of floor)
               expect(
                 distance(value, other),
@@ -119,6 +119,7 @@ describe('Layers and their states', () => {
           for (const [a, b] of [
             [pressed, selected],
             [selected, chosen],
+            [selected, danger],
           ] as const)
             expect(
               distance(a, b),

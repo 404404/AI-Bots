@@ -85,10 +85,11 @@ Every fill comes from a layer, like the Web Client's DSH layers. `theme.layer.<n
 | `field`  | `bg-layer-1`         | text inputs in a card, edged with `border-l4`             |
 | `sheet`  | `bg-layer-2`         | settings rows, sheets and menus                           |
 
-Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab), `chosen` (the Human's pick, an accent tint), `inset` (code, badges, tiles), `edge` and `divider`.
+Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab), `chosen` (the Human's pick, an accent tint), `danger` (a destructive button, a red tint), `inset` (code, badges, tiles), `edge` and `divider`.
 
 - `chosen` is the accent over the fill, 13% in light and 30% in dark. On `well` it equals DSH `state-business-tertiary`, and it follows a Bot's accent.
 - A state is pushed further from its fill until it stands apart from the fill, the layer under it and the other states (`SEPARATION` in `layers.ts`; `test/design-tokens.test.ts` checks every scheme and accent). DSH's dark `interactive-bg-active` over `bg-base` equals `bg-module-platform`, so without this a selected row in a card looks like the card.
+- Buttons always have a fill that stands apart from the layer they sit `on`: primary is `accent` with `onAccent` text, secondary is the layer's `selected` with its `edge`, and danger is the layer's `danger` with `dangerEdge` and red text. In a card, decisions stack in one column, primary first and danger last; a details link sits apart from them, under the preview.
 - Translucent roles (`hover`, `selected`, `divider`, `border*`, `dangerSoft`) are never a `backgroundColor`; `test/style-guard.test.ts` enforces this. Translucent edges stay allowed.
 
 ## Components
