@@ -11,6 +11,7 @@
     "export": "expo export --platform ios --platform android --output-dir dist",
     "export:web": "expo export --platform web --output-dir dist-web",
     "eas:dev": "eas build --profile development",
+    "expo:doctor": "expo-doctor",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@deepseek-ai/dsh-api-gateway": "0.2.0-rc.2",
     "@types/react": "~19.2.0",
-    "@types/react-dom": "~19.3.0"
+    "@types/react-dom": "~19.3.0",
+    "expo-doctor": "1.20.4"
   }
 }
