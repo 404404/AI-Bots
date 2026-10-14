@@ -760,7 +760,10 @@ export function HumanInboxView({
                     <div className="bh-human-inbox-unread-meta">
                       <time dateTime={item.snoozedUntil}>
                         {t('humanInbox.snooze.until', {
-                          time: new Date(item.snoozedUntil).toLocaleString(),
+                          time: new Date(item.snoozedUntil).toLocaleString(undefined, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          }),
                         })}
                       </time>
                     </div>

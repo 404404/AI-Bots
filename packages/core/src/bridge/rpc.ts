@@ -1090,9 +1090,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     limit?: number,
     cursor?: string,
     sort?: 'newest' | 'oldest',
+    snoozed?: boolean,
   ): HumanAttentionPage {
     return unwrap(
-      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort }),
+      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort, snoozed }),
     );
   }
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
