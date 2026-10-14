@@ -23,7 +23,7 @@ export const LAYER_PARENT: Record<LayerName, LayerName | undefined> = {
 };
 
 const CHOSEN: Record<ColorScheme, number> = { light: 0.13, dark: 0.3 };
-const DANGER: Record<ColorScheme, number> = { light: 2, dark: 1.6 };
+const DANGER: Record<ColorScheme, number> = { light: 2, dark: 1 };
 
 type Rgba = { r: number; g: number; b: number; a: number };
 
