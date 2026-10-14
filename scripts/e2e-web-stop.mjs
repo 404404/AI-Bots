@@ -75,12 +75,21 @@ async function capture(page, name) {
   steps.push(`captured ${name}`);
 }
 
-const bots = await call('botharness/list', {});
-const bot = (bots.bots ?? bots).find?.((item) => item.displayName === 'DeepSeek Bot');
-if (bot === undefined) throw new Error('DeepSeek Bot is missing');
-const dm = await call('botharness/channelDm', { slug: bot.slug, displayName: bot.displayName });
-const channelId = dm.id ?? dm.channel?.id;
-const stopName = `Stop ${bot.displayName}`;
+let bot;
+let channelId;
+let stopName;
+
+async function resolveBot() {
+  for (let poll = 0; poll < 30 && bot === undefined; poll += 1) {
+    const bots = await call('botharness/list', {});
+    bot = (bots.bots ?? bots).find?.((item) => item.displayName === 'DeepSeek Bot');
+    if (bot === undefined) await sleep(1000);
+  }
+  if (bot === undefined) throw new Error('DeepSeek Bot is missing');
+  const dm = await call('botharness/channelDm', { slug: bot.slug, displayName: bot.displayName });
+  channelId = dm.id ?? dm.channel?.id;
+  stopName = `Stop ${bot.displayName}`;
+}
 
 const puppeteer = loadPuppeteer();
 const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--lang=en-US'] });
@@ -94,8 +103,15 @@ try {
     page.on('console', (message) => {
       if (message.type() === 'error') consoleLines.push(`error: ${message.text()}`);
     });
+    await page.goto(instance.url, { waitUntil: 'domcontentloaded' });
     await page.goto(instance.url, { waitUntil: 'networkidle2' });
-    await page.waitForSelector(aria('Settings'), { timeout: 30_000 });
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll('button')].some(
+          (node) => node.textContent?.trim() === 'Settings',
+        ),
+      { timeout: 30_000 },
+    );
     await dismissOverlays(page);
     if ((await page.$('.bh-root.bh-main')) === null) await page.locator(aria('Bot mode')).click();
     await page.waitForSelector('.bh-root.bh-main', { timeout: 30_000 });
@@ -103,6 +119,7 @@ try {
       await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''));
     await sleep(1500);
     await dismissOverlays(page);
+    if (bot === undefined) await resolveBot();
 
     const composer = await page.waitForSelector(aria(`Message ${bot.displayName}`));
     await composer.click();
@@ -161,14 +178,14 @@ try {
     await capture(page, `after-stopped-${theme}`);
 
     const timeline = await call('botharness/channelTimeline', { channelId });
-    const entries = timeline.messages ?? timeline.entries ?? timeline;
+    const entries = timeline.page.entries;
     const stopIndex = entries.findLastIndex((item) => item.turnStop !== undefined);
     checks[`${theme}TurnStopRecorded`] = stopIndex >= 0;
-    const countAtStop = entries.length;
+    const lastAtStop = entries.at(-1)?.id;
     await sleep(15_000);
     const later = await call('botharness/channelTimeline', { channelId });
-    const laterEntries = later.messages ?? later.entries ?? later;
-    checks[`${theme}NoMessagesAfterStop`] = laterEntries.length === countAtStop;
+    const laterEntries = later.page.entries;
+    checks[`${theme}NoMessagesAfterStop`] = laterEntries.at(-1)?.id === lastAtStop;
     const roster = await call('botharness/list', {});
     checks[`${theme}BotIdle`] =
       (roster.bots ?? roster).find((item) => item.slug === bot.slug)?.aggregateState === 'idle';
