@@ -128,6 +128,46 @@ deepseekbot im-app-remove discord --app <app-id>
 
 `im-app-add` covers token-based platforms (Discord, Slack, QQ, DingTalk, WeCom, Matrix); Feishu and WeChat keep `im-authorize`. Credentials arrive only on stdin and are never printed; output lists each app's id, name, connection state and error code. `im-bind` binds a connected app (the `id` from `im-app-status`, also the `ref` in `im-status`) to a Bot, and `im-status` shows each binding's `reception`. `channel-connect` attaches an external group conversation to a Channel as context through that Bot's binding; the conversation must already be known to the binding, so mention the app there once and pick the id from the `candidates` in `channel-ingests`. Otherwise the Host refuses with `conversation-unavailable`.
 
+### IM messaging, approvals and failure alerts from the CLI
+
+```bash
+deepseekbot messaging-defaults discord
+printf '{"expectedRevision":1,"collection":"mentions","wake":"digest","count":5,"intervalSeconds":30,"identityEnabled":true}' \
+  | deepseekbot messaging-defaults-set discord --input-stdin
+deepseekbot messaging-grants <bot-id>
+deepseekbot messaging-targets <app-ref>
+deepseekbot messaging-authorize <bot-id> --app <app-ref> --target <target-ref>
+deepseekbot messaging-receive <bot-id> --grant <grant-id> --enabled
+deepseekbot messaging-channel-target <bot-id> --grant <grant-id> --channel <channel-id|none>
+printf '{"collection":"all","wake":"digest","count":5,"intervalSeconds":30}' \
+  | deepseekbot messaging-group-policy <bot-id> --grant <grant-id> --input-stdin
+printf '{"mode":"follow","expectedRevision":0,"wake":null}' \
+  | deepseekbot messaging-thread-policy <bot-id> --source <source-event-id> --input-stdin
+deepseekbot messaging-source <bot-id> --source <source-event-id>
+printf '{"kind":"mute","grantId":"<grant-id>","expectedRevision":2,"muted":true}' \
+  | deepseekbot messaging-conversation <bot-id> --input-stdin
+deepseekbot messaging-send <bot-id> --grant <grant-id> --body-stdin [--request-id <id>]
+deepseekbot messaging-reachable <bot-id> --binding <binding-id> [--cursor <cursor>]
+deepseekbot messaging-post <bot-id> --binding <binding-id> --conversation <group-id> --body-stdin [--request-id <id>]
+deepseekbot messaging-post-status <bot-id> --binding <binding-id> --conversation <group-id> --body-stdin --request-id <id>
+deepseekbot messaging-post-limit <bot-id> --binding <binding-id> --limit <1-10000|none>
+deepseekbot messaging-revoke <bot-id> --grant <grant-id> --confirm
+printf '{"kind":"policy","restricted":true,"expectedRevision":0}' | deepseekbot sender-access <bot-id> --input-stdin
+deepseekbot channel-bridges <channel-id>
+printf '{"kind":"add","grantId":"<grant-id>","expectedGrantRevision":2,"name":"QA","enabled":true,"collection":"mentions"}' \
+  | deepseekbot channel-bridge <channel-id> --input-stdin
+deepseekbot approval-routes <bot-id>
+deepseekbot approval-route <bot-id> --pairing <pairing-id|none>
+deepseekbot approval-test <bot-id>
+deepseekbot approval-retry <bot-id> --delivery <delivery-id>
+deepseekbot failure-alerts <bot-id>
+deepseekbot failure-alerts-set <bot-id> --enabled
+deepseekbot failure-alerts-test <bot-id>
+deepseekbot failure-alerts-retry <bot-id> --delivery <delivery-id>
+```
+
+These call the same Host bridge methods as the Bot's IM settings, the Channel bridge list and the approval and failure-alert cards, so the Host applies the same checks and refuses with the same codes. `messaging-grants` lists the Bot's authorized conversations (grant ids, revisions, reception, group and thread policies) and bindings with their post limits, without target digests or app fingerprints. Structured changes read one JSON object from `--input-stdin` in the shape the Web UI sends, including its `expectedRevision`, so a concurrent change fails instead of being overwritten; `approval-route`, `failure-alerts-set` and `messaging-post-limit` read the current revision themselves. `messaging-send` and `messaging-post` print the `requestId` they used: retrying with the same `--request-id` returns the existing post instead of sending twice, and `messaging-post-status` reads it back without posting. Like the confirmation dialogs in the Web UI, `messaging-revoke`, blocking a conversation, deleting a bridge and `delete-*` sender-access changes need `--confirm`. Send only to IM conversations you are authorized to test in.
+
 ### Browser and Computer from the CLI
 
 ```bash

@@ -123,6 +123,46 @@ deepseekbot im-app-remove discord --app <app-id>
 
 `im-app-add` 适用于基于 token 的平台（Discord、Slack、QQ、钉钉、企业微信、Matrix）；飞书和微信仍用 `im-authorize`。凭证只从标准输入读取，绝不打印；输出列出每个应用的 id、名称、连接状态和错误码。`im-bind` 把已连接的应用（`im-app-status` 里的 `id`，即 `im-status` 里的 `ref`）绑定到 Bot，`im-status` 显示每个绑定的 `reception`。`channel-connect` 通过该 Bot 的绑定，把外部群聊作为上下文接入 Channel；这个会话必须已被该绑定知晓，所以先在那里 @ 一次应用，再从 `channel-ingests` 的 `candidates` 里选 id。否则 Host 会以 `conversation-unavailable` 拒绝。
 
+### 用命令行管理 IM 消息、审批和失败提醒
+
+```bash
+deepseekbot messaging-defaults discord
+printf '{"expectedRevision":1,"collection":"mentions","wake":"digest","count":5,"intervalSeconds":30,"identityEnabled":true}' \
+  | deepseekbot messaging-defaults-set discord --input-stdin
+deepseekbot messaging-grants <bot-id>
+deepseekbot messaging-targets <app-ref>
+deepseekbot messaging-authorize <bot-id> --app <app-ref> --target <target-ref>
+deepseekbot messaging-receive <bot-id> --grant <grant-id> --enabled
+deepseekbot messaging-channel-target <bot-id> --grant <grant-id> --channel <channel-id|none>
+printf '{"collection":"all","wake":"digest","count":5,"intervalSeconds":30}' \
+  | deepseekbot messaging-group-policy <bot-id> --grant <grant-id> --input-stdin
+printf '{"mode":"follow","expectedRevision":0,"wake":null}' \
+  | deepseekbot messaging-thread-policy <bot-id> --source <source-event-id> --input-stdin
+deepseekbot messaging-source <bot-id> --source <source-event-id>
+printf '{"kind":"mute","grantId":"<grant-id>","expectedRevision":2,"muted":true}' \
+  | deepseekbot messaging-conversation <bot-id> --input-stdin
+deepseekbot messaging-send <bot-id> --grant <grant-id> --body-stdin [--request-id <id>]
+deepseekbot messaging-reachable <bot-id> --binding <binding-id> [--cursor <cursor>]
+deepseekbot messaging-post <bot-id> --binding <binding-id> --conversation <group-id> --body-stdin [--request-id <id>]
+deepseekbot messaging-post-status <bot-id> --binding <binding-id> --conversation <group-id> --body-stdin --request-id <id>
+deepseekbot messaging-post-limit <bot-id> --binding <binding-id> --limit <1-10000|none>
+deepseekbot messaging-revoke <bot-id> --grant <grant-id> --confirm
+printf '{"kind":"policy","restricted":true,"expectedRevision":0}' | deepseekbot sender-access <bot-id> --input-stdin
+deepseekbot channel-bridges <channel-id>
+printf '{"kind":"add","grantId":"<grant-id>","expectedGrantRevision":2,"name":"QA","enabled":true,"collection":"mentions"}' \
+  | deepseekbot channel-bridge <channel-id> --input-stdin
+deepseekbot approval-routes <bot-id>
+deepseekbot approval-route <bot-id> --pairing <pairing-id|none>
+deepseekbot approval-test <bot-id>
+deepseekbot approval-retry <bot-id> --delivery <delivery-id>
+deepseekbot failure-alerts <bot-id>
+deepseekbot failure-alerts-set <bot-id> --enabled
+deepseekbot failure-alerts-test <bot-id>
+deepseekbot failure-alerts-retry <bot-id> --delivery <delivery-id>
+```
+
+这些命令调用的 Host bridge 方法，与 Bot 的 IM 设置、Channel 桥接列表以及审批和失败提醒卡片相同，所以 Host 会做同样的检查，并以同样的错误码拒绝。`messaging-grants` 列出 Bot 已授权的会话（授权 id、版本、接收状态、群聊和话题策略）以及各绑定的发帖上限，不输出目标摘要和应用指纹。结构化修改从 `--input-stdin` 读取一个 JSON 对象，格式与 Web UI 发送的一致，包括其中的 `expectedRevision`，因此并发修改会失败而不会被覆盖；`approval-route`、`failure-alerts-set` 和 `messaging-post-limit` 会自己读取当前版本。`messaging-send` 和 `messaging-post` 会打印所用的 `requestId`：用同一个 `--request-id` 重试会返回已有的帖子而不会重复发送，`messaging-post-status` 只读回结果、不会再发。与 Web UI 的确认对话框一致，`messaging-revoke`、屏蔽会话、删除桥接以及 `delete-*` 类发送者权限修改都需要 `--confirm`。只向你有权测试的 IM 会话发送消息。
+
 ### 用命令行操作浏览器和 Computer
 
 ```bash

@@ -11,10 +11,19 @@ import {
   runImAuthorization,
   type ImValues,
 } from './cli-im-authorization.js';
+import {
+  MESSAGING_COMMANDS,
+  MESSAGING_OPTIONS,
+  prepareMessaging,
+  runMessaging,
+  type MessagingCommand,
+  type MessagingValues,
+} from './cli-messaging.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
   ...IM_OPTIONS,
+  ...MESSAGING_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -86,6 +95,7 @@ const CONTROL_COMMANDS = [
 
 export const LIVE_COMMANDS = [
   ...IM_COMMANDS,
+  ...MESSAGING_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -206,7 +216,7 @@ export const LIVE_COMMANDS = [
   },
 ] as const;
 
-interface LiveValues extends ImValues {
+interface LiveValues extends ImValues, MessagingValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -501,6 +511,11 @@ export async function runLiveCli(
     }
   }
   if (MEMORY_COMMANDS.has(command)) return runMemoryCommand(command, rest, values, io);
+  if (MESSAGING_COMMANDS.some((entry) => entry.command === command)) {
+    const operation = await prepareMessaging(command as MessagingCommand, rest, values, io);
+    const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+    return runMessaging(operation, (await connectLiveHost(values, io, signal)).rpc);
+  }
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);
