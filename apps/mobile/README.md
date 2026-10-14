@@ -37,9 +37,50 @@ pnpm --filter @botharness/mobile export          # Metro bundles for iOS and And
 
 Every native screen can offer "Open full client" (`src/ui/open-full-client.tsx`), which opens `app/full-client.tsx` as a full-screen modal with no header bar; a draggable floating exit button (`src/ui/floating-exit.tsx`) that snaps to either side edge leaves it, and holding it shows an "Exit web mode" tooltip. It loads `<route>/botharness-device/web/` in a WebView on the route the native screens are using and sends the device credential as a header only on that first load; the Host answers with a session cookie scoped to that directory ([ADR-0199](../../docs/adr/0199-paired-devices-reach-the-host-through-a-same-listener-device-gateway.md#full-web-client-in-the-app-1654)). The target (`home`, a PersonaBot DM, or a private input request) becomes a hash the Web Client reads to land there. Links that leave the Host's web directory open in the system browser. When the Host refuses the device, the modal shows "Pair again" instead of the page. `react-native-webview` is native code, so a development build made before this change must be rebuilt.
 
+## Drive it on the iOS Simulator (Mac)
+
+Agents verify native UI on a Mac with Xcode: they drive a development build on the iOS Simulator with Callstack's [agent-device](https://github.com/callstack/agent-device) (Node ≥ 22.12, run with `npx`), and keep regression flows for [Maestro](https://maestro.mobile.dev) in `.maestro/`. Cloud sessions reach the Mac through Remote Control.
+
+1. **Build and serve.** Boot a simulator, build the development build onto it, and start Metro:
+
+   ```bash
+   xcrun simctl boot <udid>                          # xcrun simctl list devices available
+   LANG=en_US.UTF-8 pnpm --filter @botharness/mobile ios -- --device <udid> --no-bundler
+   pnpm --filter @botharness/mobile start
+   ```
+
+   CocoaPods needs a UTF-8 locale; without one `pod install` crashes in its error report and Xcode then fails with "The sandbox is not in sync with the Podfile.lock". When Xcode ships without `Simulator.app`, `expo run:ios` installs the app and then fails to bring the Simulator window forward; the build is still usable.
+
+2. **Drive it with agent-device.** Open the app on Metro, read the accessibility snapshot, act by ref, and check the result:
+
+   ```bash
+   npx agent-device open ai.botharness.deepseekbot.dev --platform ios --relaunch \
+     --launch-url "exp+deepseekbot://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+   npx agent-device snapshot -i                      # @e8 [text-field] "deepseekbot://pair?p=…" …
+   npx agent-device fill @e8 "not-a-link" --settle   # the link field's ref from the snapshot
+   npx agent-device press 200 140 --settle           # tap the hint text: the keyboard covers Pair
+   npx agent-device press 'label="Pair"' --settle
+   npx agent-device wait text "This is not a DeepSeekBot pairing code."
+   npx agent-device screenshot /tmp/pair.png
+   npx agent-device close
+   ```
+
+   iOS asks "Open in DeepSeekBot Dev?" before the launch link. agent-device accepts it only when the Simulator is in English; otherwise `snapshot -i` shows the alert and you press its Open button by ref. The first launch after a reset shows the dev menu onboarding: press **Continue**, then **Close**. On the pair screen the keyboard covers the Pair button; tap the hint text to end editing first.
+
+3. **Regression flows.** `.maestro/pair-screen.yaml` launches a clean app with no permissions, connects it to Metro, checks the unpaired pair screen and the refusal of a bad pasted link. Maestro needs Java 17 or later (`brew install openjdk@21`, then point `JAVA_HOME` at it):
+
+   ```bash
+   curl -fsSL "https://get.maestro.mobile.dev" | bash   # once
+   pnpm --filter @botharness/mobile e2e:ios             # maestro test --platform ios .maestro
+   ```
+
+   Maestro grants every permission on `launchApp` unless the flow says otherwise; the flow sets `permissions: { all: unset }` so the camera prompt shows as on a first launch. Run output and screenshots go to `~/.maestro/tests/<timestamp>/`.
+
+4. **MCP.** Agents that prefer tools over a shell can use `npx agent-device mcp` (stdio; tools mirror the CLI commands) or `maestro mcp` (stdio; runs flows and inspects the view hierarchy). [XcodeBuildMCP](https://github.com/getsentry/XcodeBuildMCP) is an alternative for building and driving the Simulator from Xcode's side.
+
 ## Screenshots without a phone
 
-Cloud sessions have no simulator: the container has no KVM for the Android emulator, no macOS for the iOS simulator, and the egress policy blocks `expo.dev`, so EAS cannot be driven from there. For PR evidence they render the same screens through React Native Web and screenshot them at a 390 × 844 phone viewport:
+Native checks happen on a Mac (above). Cloud sessions have no simulator: the container has no KVM for the Android emulator, no macOS for the iOS simulator, and the egress policy blocks `expo.dev`, so EAS cannot be driven from there; they reach a Mac through Remote Control for native checks. For PR evidence they render the same screens through React Native Web and screenshot them at a 390 × 844 phone viewport:
 
 ```bash
 EXPO_OFFLINE=1 pnpm --filter @botharness/mobile export:web

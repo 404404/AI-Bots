@@ -12,6 +12,7 @@
     "export:web": "expo export --platform web --output-dir dist-web",
     "eas:dev": "eas build --profile development",
     "expo:doctor": "expo-doctor",
+    "e2e:ios": "maestro test --platform ios .maestro",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "generate:palette": "node scripts/generate-palette.mjs"
   },
@@ -33,6 +34,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-reanimated": "4.5.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
