@@ -178,19 +178,18 @@ export const SCENARIOS = [
   {
     id: 'delegate-and-report-back',
     summary:
-      'The coordinator delegates with @ and the worker reports back with @, a full round trip.',
+      'The coordinator hands a task to a colleague in any way it chooses and the colleague reports back with @, a full round trip.',
     areas: RUNTIME_AREAS,
     bots: ['nexus', 'atlas'],
     async run(ctx) {
       const group = await ctx.mentionsOnlyGroup(['nexus', 'atlas']);
-      await ctx.humanSend(group, `请在群里 @叙事 Atlas，让他写一句游戏口号。${REPORT_RULE}`, [
-        'nexus',
-      ]);
-      await ctx.waitFor('Nexus wakes Atlas and Atlas wakes Nexus back', () => {
+      await ctx.humanSend(group, `请安排叙事 Atlas 写一句游戏口号。${REPORT_RULE}`, ['nexus']);
+      await ctx.waitFor('Atlas, woken only by Nexus, reports back with @ and wakes Nexus', () => {
         const messages = ctx.messages(group);
-        const ask = messages.find((message) => ctx.mentionedAndWoken(message, 'nexus', 'atlas'));
         const answer = messages.find((message) => ctx.mentionedAndWoken(message, 'atlas', 'nexus'));
-        return ask && answer ? [ask, answer] : undefined;
+        if (!answer) return undefined;
+        const ask = messages.find((message) => ctx.mentionedAndWoken(message, 'nexus', 'atlas'));
+        return ask ? [ask, answer] : [answer];
       });
     },
   },
@@ -558,6 +557,7 @@ function createContext(instance, scenario, timeoutSeconds, log, presetId) {
   const slugs = {};
   const call = (method, args) => rpc(instance, `botharness/${method}`, args);
   let messageCache = new Map();
+  const approved = new Set();
   const ctx = {
     async setup() {
       for (const key of scenario.bots) {
@@ -676,22 +676,42 @@ function createContext(instance, scenario, timeoutSeconds, log, presetId) {
         )
       );
     },
-    async settle(seconds) {
-      await delay(seconds * 1000);
+    async refresh() {
       messageCache = new Map();
       for (const channelId of log.channels) {
         const page = await call('channelMessages', { channelId, limit: 100 });
         messageCache.set(channelId, page.messages);
       }
+      const dms = Object.values(slugs).map((slug) => `dm-${slug}`);
+      for (const channelId of [...log.channels, ...dms]) {
+        const messages =
+          messageCache.get(channelId) ??
+          (await call('channelMessages', { channelId, limit: 50 }).catch(() => ({ messages: [] })))
+            .messages;
+        for (const message of messages) {
+          if (message.toolApprovalRequest === undefined || approved.has(message.id)) continue;
+          approved.add(message.id);
+          const decided = await call('toolApprovalDecide', {
+            channelId,
+            messageId: message.id,
+            outcome: 'allowed-once',
+          }).catch((error) => ({ accepted: false, error: String(error?.message ?? error) }));
+          log.approvals.push({
+            botSlug: message.author.slug,
+            toolName: message.toolApprovalRequest.toolName,
+            accepted: decided.accepted === true,
+          });
+        }
+      }
+    },
+    async settle(seconds) {
+      await delay(seconds * 1000);
+      await ctx.refresh();
     },
     async waitFor(label, predicate) {
       const deadline = Date.now() + timeoutSeconds * 1000;
       while (Date.now() < deadline) {
-        messageCache = new Map();
-        for (const channelId of log.channels) {
-          const page = await call('channelMessages', { channelId, limit: 100 });
-          messageCache.set(channelId, page.messages);
-        }
+        await ctx.refresh();
         const found = predicate();
         if (found) {
           log.proof = { label, found };
@@ -720,7 +740,7 @@ async function runScenario(instance, scenario, options, route, presetId) {
   const model = modelLabel(route);
   const total = options.runs ?? options.attempts;
   for (let attempt = 1; attempt <= total; attempt += 1) {
-    const log = { attempt, channels: [], startedAt: new Date().toISOString() };
+    const log = { attempt, channels: [], approvals: [], startedAt: new Date().toISOString() };
     const ctx = createContext(instance, scenario, options.timeoutSeconds, log, presetId);
     const startDay = localDay();
     try {
@@ -752,8 +772,11 @@ async function runScenario(instance, scenario, options, route, presetId) {
     const tokens = log.usage
       ? ` ${log.usage.totalTokens} tokens (in ${log.usage.inputTokens}, out ${log.usage.outputTokens}, cache read ${log.usage.cacheReadTokens}, cache write ${log.usage.cacheWriteTokens})`
       : '';
+    const approvals = log.approvals.length
+      ? ` approved ${log.approvals.map((entry) => entry.toolName).join(', ')}`
+      : '';
     console.error(
-      `${scenario.id} [${model}] ${options.runs ? 'run' : 'attempt'} ${attempt}: ${log.result}${log.error ? ` (${log.error})` : ''}${tokens}`,
+      `${scenario.id} [${model}] ${options.runs ? 'run' : 'attempt'} ${attempt}: ${log.result}${log.error ? ` (${log.error})` : ''}${tokens}${approvals}`,
     );
     if (log.result === 'pass' && options.runs === undefined) break;
   }

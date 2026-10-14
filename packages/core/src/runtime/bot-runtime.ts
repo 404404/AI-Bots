@@ -5603,7 +5603,9 @@ class BotRuntimeImplementation implements BotRuntime {
       at: this.#now().toISOString(),
       author: { kind: 'bot', slug: botSlug },
       body,
-      botCausation: this.#botCausation(input.sourceEventId),
+      botCausation: this.#botCausation(
+        this.#turnSourceIn(botSlug, channel.id) ?? input.sourceEventId,
+      ),
       ...(mentions.length === 0 ? {} : { mentions }),
       ...(humanMentions.length === 0 ? {} : { humanMentions }),
       ...(input.replyTo === undefined ? {} : { replyTo: input.replyTo }),
