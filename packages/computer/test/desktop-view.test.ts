@@ -95,6 +95,10 @@ describe('desktop view frames', () => {
     });
     const second = await view.next(first!.seq);
     expect(second).toMatchObject({ seq: 2, data: 'b' });
+    expect(driver.calls[0]).toEqual({
+      tool: 'get_desktop_state',
+      args: { max_image_dimension: 1600, session: 'phone-viewer' },
+    });
     expect(view.stats()).toMatchObject({
       captures: 4,
       unchanged: 2,
@@ -121,7 +125,7 @@ describe('desktop view frames', () => {
     await view.input({ kind: 'scroll', direction: 'down', amount: 2 });
     expect(driver.calls.at(-1)).toEqual({
       tool: 'scroll',
-      args: { scope: 'desktop', direction: 'down', amount: 2, x: 7, y: 8 },
+      args: { scope: 'desktop', direction: 'down', amount: 2, x: 7, y: 8, session: 'phone-viewer' },
     });
   });
 

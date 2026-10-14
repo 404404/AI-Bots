@@ -58,6 +58,8 @@ export interface DesktopViewStats {
 }
 
 const MODIFIERS = new Set(['alt', 'ctrl', 'meta', 'shift']);
+export const VIEWER_SESSION = 'phone-viewer';
+export const VIEWER_MAX_DIMENSION = 1600;
 const MAX_TEXT = 2000;
 
 function finite(value: unknown): number | undefined {
@@ -239,7 +241,11 @@ export function createDesktopView(options: {
       if (gap > 0) await wait(gap, signal);
       lastStarted = now();
       captures += 1;
-      const result = await options.driver.call('get_desktop_state', {}, signal);
+      const result = await options.driver.call(
+        'get_desktop_state',
+        { max_image_dimension: VIEWER_MAX_DIMENSION, session: VIEWER_SESSION },
+        signal,
+      );
       lastCaptureMs = now() - lastStarted;
       const shot = desktopCapture(result);
       if (shot === undefined)
@@ -287,7 +293,11 @@ export function createDesktopView(options: {
       renewPause();
       if (input.kind === 'click') pointer = { x: input.x, y: input.y };
       const call = desktopInputCall(input, pointer);
-      const result = await options.driver.call(call.tool, call.args, signal);
+      const result = await options.driver.call(
+        call.tool,
+        { ...call.args, session: VIEWER_SESSION },
+        signal,
+      );
       const refused = refusalText(result);
       if (refused !== undefined) throw new DesktopViewError('input-failed', refused);
       lastStarted = 0;
