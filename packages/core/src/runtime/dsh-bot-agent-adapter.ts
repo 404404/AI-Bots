@@ -174,7 +174,7 @@ const ORCHESTRATOR_PROMPT = `You are the Orchestrator for one PersonaBot, and yo
 Your Bot Inbox collects events from different people, other Bots, external IM, Bot Schedules, Host notices and your own Assignments. You can orchestrate and coordinate a lot of work: answer yourself, ask or hand off to a person or Bot colleague, fold an item into an Assignment already serving the same goal, or open a new Assignment. Not everything needs an Assignment; a question, a memory update or a reply stays with you. Items belong together when they serve the same goal or deliverable, such as the same PR or the same feature, whoever sent them. Each turn, triage what is new and decide what each item needs.
 Finishing a turn resolves nothing. An item you have seen stays open until you call inbox_resolve, and the [Open Inbox] block shows the unresolved conversations at the start of each turn; inbox_list reviews all of them. Resolve with outcome done once an item is answered, finished, or needs nothing more from you, including an FYI you took as context. Use outcome ignored only for spam, misdelivery or truly irrelevant content. Resolve in bulk when it fits: pass several ids, or pass a filter, read the returned count and sample, and repeat the same call with its confirm token. Keep an item open while you still owe a next step, for example when the Assignment Concurrency Limit refused a create or you are waiting for someone; when it only matters again later, snooze it with inbox_snooze and a note, and it comes back on its own. While open items remain after a turn you are woken again with a [Triage] message until each has a destination; a round that leaves the open count unchanged ends the triage. inbox_history remains the diary of everything past.
 ## Reply delivery contract
-Your assistant text is private Session output, NOT a reply in the Channel. Whenever you intend to answer a Human, call channel_send with the actual answer in body; omit channel_id to reply in the current inbound Channel. A greeting, acknowledgment, short answer, clarification question, or image description needs this delivery Tool too. Reading content or images does not send an answer.
+Your assistant text is private Session output, NOT a reply in the Channel. Whenever you intend to answer a Human, call channel_send with the actual answer in body; omit channel_id to reply in the current inbound Channel. A greeting, acknowledgment, short answer, clarification question, or image description needs this delivery Tool too. Reading content or images does not send an answer. When a Human message only needs acknowledgment, such as thanks, an OK or an update that asks nothing, a reaction alone is the natural answer: channel_send with react_to set to that message, a fitting emoji in reaction and an empty body. In a Human DM, prefer that reaction to finishing silently, and never send a bare emoji as body text. Write a reply when there is something to say.
 If the Human asks for "just reply", "only say X", or "no tools", avoid unnecessary work Tools, but still use channel_send to deliver the requested reply. Never imitate an earlier assistant-only answer: it did not reach the Channel. If the Human explicitly asks for no reply, or a Group/FYI message needs no answer, finish silently instead. External IM uses bridge_reply or bridge_reply_file to its trusted source, not channel_send to the Human DM.
 Only a successful send result proves delivery. Do not claim success after a send error or retry an uncertain send blindly. After a successful send, do not send the same answer again or repeat it as final text. Keep all existing destination, membership, approval and attachment checks.
 
@@ -3339,13 +3339,13 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'channel_send',
         description:
-          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: use this Tool even for a short acknowledgment, greeting, clarification or image answer. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention_bot_ids identifies joined Bot recipients; the Host prepends their @ badges and independently wakes them. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions.',
+          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: use this Tool even for a short acknowledgment, greeting, clarification or image answer. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention_bot_ids identifies joined Bot recipients; the Host prepends their @ badges and independently wakes them. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
         parameters: {
           body: {
             type: 'string',
             required: true,
             description:
-              'The actual Human-facing answer to deliver, not a plan to send later. May be empty when attachments are present.',
+              'The actual Human-facing answer to deliver, not a plan to send later. May be empty when attachments are present or when only reacting.',
           },
           attachments: {
             type: 'array',
@@ -3379,6 +3379,19 @@ class DshBotAgentAdapter implements BotAgentAdapter {
               'At most 20 stable IDs of other active PersonaBots currently joined to the target Group. Do not repeat their names in body.',
             items: { type: 'string' },
           },
+          react_to: {
+            type: 'string',
+            description: 'Message ID to react to, from this turn or channel_read.',
+          },
+          reaction: {
+            type: 'string',
+            description:
+              'One emoji for react_to, such as 👍, ✅ or 👀, also when removing. Text and shortcodes are refused.',
+          },
+          remove_reaction: {
+            type: 'boolean',
+            description: 'true takes your reaction on react_to back instead of adding it.',
+          },
           mention_human_ids: {
             type: 'array',
             description:
@@ -3402,6 +3415,21 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             throw new Error('channel_send: requires at most 10 trusted attachment references');
           if (args.mention_bot_ids !== undefined && args.mention_bot_ids.length > 20)
             throw new Error('channel_send: requires at most 20 mention Bot IDs');
+          if (args.react_to !== undefined && args.reaction === undefined)
+            throw new Error('channel_send: react_to needs reaction, the emoji to add or take back');
+          const reacted =
+            args.react_to === undefined || args.reaction === undefined
+              ? undefined
+              : active.run.channels.react?.({
+                  messageId: args.react_to,
+                  emoji: args.reaction,
+                  active: args.remove_reaction !== true,
+                  ...(args.channel_id === undefined ? {} : { channelId: args.channel_id }),
+                });
+          if (args.react_to !== undefined && reacted === undefined)
+            throw new Error('channel_send: reactions are unavailable');
+          if (reacted !== undefined && args.body === '' && args.attachments === undefined)
+            return JSON.stringify(reacted);
           const message = await active.run.channels.send({
             body: args.body,
             ...(exec.callId === undefined ? {} : { deliveryKey: String(exec.callId) }),
@@ -3419,6 +3447,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           return JSON.stringify({
             channelId: args.channel_id ?? active.run.inboundChannelId,
             messageId: message.id,
+            ...(reacted === undefined ? {} : { reactions: reacted.reactions }),
           });
         },
       }),

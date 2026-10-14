@@ -67,6 +67,7 @@ export interface WireDraft {
 export type ChannelNotification =
   | { kind: 'admission'; channelId: string; messageId: string }
   | { kind: 'human-read'; channelId: string; humanId: string; revision: number }
+  | { kind: 'reaction'; channelId: string; messageId: string }
   | { kind: 'draft-baseline'; channelId: string; revision: number; drafts: WireDraft[] }
   | { kind: 'draft'; draft: WireDraft }
   | {
@@ -95,6 +96,7 @@ export interface PersonaBotSummary {
   roles?: string[];
   description?: string;
   computerAccess?: boolean;
+  browserAccess?: boolean;
   paused?: boolean;
   deleted?: boolean;
   aggregateState: AggregatedState;

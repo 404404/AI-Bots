@@ -16,6 +16,7 @@ import { useMounted } from '../mounted';
 import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { errorText } from '../request-parts';
+import { haptic } from '../haptics';
 import { t } from '../strings';
 import { ActionCard, CardButtons, CardLine, DetailRow, type CardLineTone } from './action-card';
 
@@ -147,6 +148,7 @@ export function ApprovalCard({
 
   const { request } = phase;
   const decide = async (outcome: ApprovalChoice) => {
+    haptic(outcome === 'rejected' ? 'deny' : 'approve');
     setPhase({ kind: 'pending', request, busy: outcome });
     try {
       const result = await port.decide(outcome);
