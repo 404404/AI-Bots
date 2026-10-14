@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
+import { BOT_TOOL_COMMANDS, runBotToolCommand } from './cli-bot-tool.js';
 import {
   CHANNEL_COMMANDS,
   CHANNEL_OPTIONS,
@@ -67,6 +69,13 @@ import {
   runProfileCommand,
   type ProfileValues,
 } from './cli-profile.js';
+import {
+  TODO_COMMANDS,
+  TODO_OPTIONS,
+  isTodoCommand,
+  runTodoCommand,
+  type TodoValues,
+} from './cli-todos.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
@@ -79,6 +88,7 @@ export const LIVE_OPTIONS = {
   ...SCHEDULE_OPTIONS,
   ...BROWSER_COMPUTER_OPTIONS,
   ...PROFILE_OPTIONS,
+  ...TODO_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -106,6 +116,7 @@ export const LIVE_OPTIONS = {
   'expected-current': { type: 'string' },
   'restore-id': { type: 'string' },
   'repair-id': { type: 'string' },
+  'default-location': { type: 'boolean' },
   tag: { type: 'string' },
   target: { type: 'string' },
 } as const;
@@ -114,6 +125,7 @@ const DEVICE_COMMANDS = [
   'browser-open',
   'browser-frame',
   'browser-takeover',
+  'browser-input',
   'browser-stop',
   'computer-start',
   'computer-status',
@@ -157,6 +169,8 @@ export const LIVE_COMMANDS = [
   ...INBOX_COMMANDS,
   ...BROWSER_COMPUTER_COMMANDS,
   ...PROFILE_COMMANDS,
+  ...BOT_TOOL_COMMANDS,
+  ...TODO_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -234,6 +248,11 @@ export const LIVE_COMMANDS = [
     command: 'browser-takeover',
     description: "pause a Bot's Browser for Human input (--enabled) or hand it back (--disabled)",
   },
+  {
+    command: 'browser-input',
+    description:
+      "click, scroll, type or press a key in a paused Bot's Browser (input JSON from stdin)",
+  },
   { command: 'browser-stop', description: "stop a Bot's Browser" },
   {
     command: 'computer-start',
@@ -263,6 +282,10 @@ export const LIVE_COMMANDS = [
   { command: 'memory-version-unname', description: 'remove a memory version name' },
   { command: 'memory-repair', description: 'repair a memory repository against its expected head' },
   {
+    command: 'memory-move',
+    description: "move a Bot's Memory repository to another folder, or back to the default",
+  },
+  {
     command: 'bot-trace',
     description: 'show which tools a Bot called in its recent turns, with outcomes',
   },
@@ -286,7 +309,8 @@ interface LiveValues
     InboxValues,
     ScheduleValues,
     BrowserComputerValues,
-    ProfileValues {
+    ProfileValues,
+    TodoValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -320,6 +344,8 @@ interface LiveValues
   'expected-current'?: string;
   'restore-id'?: string;
   'repair-id'?: string;
+  'memory-location'?: string;
+  'default-location'?: boolean;
   tag?: string;
   path?: string;
   sha?: string;
@@ -622,6 +648,18 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (isTodoCommand(command))
+    return runTodoCommand(command, rest, values, io, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
+  if (BOT_TOOL_COMMANDS.some((entry) => entry.command === command))
+    return runBotToolCommand(
+      command as (typeof BOT_TOOL_COMMANDS)[number]['command'],
+      rest,
+      values,
+      io,
+      () => connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);
@@ -1161,7 +1199,11 @@ async function runDeviceCommand(
           : `${command} needs exactly one bot id.`,
     );
   let toolArgs: Record<string, unknown> = {};
-  if (direct && values['args-stdin'] === true) {
+  if (command === 'browser-input' && values['args-stdin'] !== true)
+    usage(
+      'browser-input needs --args-stdin with a JSON input such as {"kind":"click","x":10,"y":20}.',
+    );
+  if ((direct || command === 'browser-input') && values['args-stdin'] === true) {
     try {
       const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
@@ -1244,6 +1286,7 @@ async function runDeviceCommand(
   if (command === 'browser-open') return json('/api/browser/open', { slug });
   if (command === 'browser-takeover')
     return json('/api/browser/takeover', { slug, active: values.enabled === true });
+  if (command === 'browser-input') return json('/api/browser/input', { ...toolArgs, slug });
   if (command === 'browser-stop') return json('/api/browser/stop', { slug });
   if (command === 'computer-start')
     return json('/api/computer/start', {
@@ -1252,17 +1295,16 @@ async function runDeviceCommand(
     });
   if (command === 'computer-status') return json('/api/computer/status');
   if (command === 'computer-stop') return json('/api/computer/stop', { authorize: true });
-  const { response, bytes } = await http(
-    `/botharness-browser/viewer/local/frame?slug=${encodeURIComponent(slug)}`,
-  );
+  const frame = record(await json(`/api/browser/frame?slug=${encodeURIComponent(slug)}`));
+  if (typeof frame['data'] !== 'string')
+    throw new CliLiveError('host-protocol-error', 'The Host returned no Browser frame.');
+  const bytes = Buffer.from(frame['data'], 'base64');
   writeFileSync(values.out!, bytes, { mode: 0o600 });
-  const width = Number(response.headers.get('x-viewport-width'));
-  const height = Number(response.headers.get('x-viewport-height'));
   return {
     path: values.out,
     bytes: bytes.byteLength,
-    mimeType: response.headers.get('content-type'),
-    ...(width > 0 && height > 0 ? { viewport: { width, height } } : {}),
+    mimeType: frame['mimeType'],
+    ...(frame['viewport'] === undefined ? {} : { viewport: frame['viewport'] }),
   };
 }
 
@@ -1284,6 +1326,7 @@ const MEMORY_COMMANDS = new Set([
   'memory-version-name',
   'memory-version-unname',
   'memory-repair',
+  'memory-move',
 ]);
 
 const SHA = /^[0-9a-f]{40}$/u;
@@ -1393,6 +1436,20 @@ async function runMemoryCommand(
         { channelId, tag: required('tag', 'tag <version>') },
       ];
       break;
+    case 'memory-move': {
+      const location = values['memory-location']?.trim();
+      if ((location === undefined || location === '') === (values['default-location'] !== true))
+        usage(
+          'memory-move needs --memory-location <absolute-dir> or --default-location, not both.',
+        );
+      if (location !== undefined && location !== '' && !isAbsolute(location))
+        usage('--memory-location must be an absolute folder path.');
+      [method, args] = [
+        'memoryMove',
+        { slug, location: location === undefined || location === '' ? null : location },
+      ];
+      break;
+    }
     case 'memory-repair':
       [method, args] = [
         'memoryRepair',

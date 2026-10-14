@@ -22,6 +22,7 @@ import {
   useHostSnapshot,
 } from '../../src/host/host-session';
 import {
+  answerInChat,
   answerQuestion,
   decideApproval,
   loadApproval,
@@ -49,7 +50,10 @@ import { t } from '../../src/ui/strings';
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraft };
 
 export default function DmScreen() {
-  const { slug, focus } = useLocalSearchParams<{ slug: string; focus?: string }>();
+  const { slug, focus } = useLocalSearchParams<{
+    slug: string;
+    focus?: string;
+  }>();
   const { client } = useHostSession();
   const bot = useHostSnapshot(client).roster?.bots.find((entry) => entry.slug === slug);
   return (
@@ -76,6 +80,7 @@ function RequestCard({
   botName,
   resolution,
   focused,
+  answeredHere,
 }: {
   client: HostClient;
   inbox: Inbox | undefined;
@@ -85,8 +90,8 @@ function RequestCard({
   botName: string;
   resolution: CardResolution | undefined;
   focused: boolean;
+  answeredHere: boolean;
 }) {
-  const router = useRouter();
   const ref = useMemo<RequestRef>(
     () => ({ channelId: card.channelId, messageId: message.id, botSlug }),
     [card.channelId, message.id, botSlug],
@@ -118,11 +123,9 @@ function RequestCard({
     return (
       <ApprovalCard
         port={approval}
-        botName={botName}
         {...subject}
         {...(resolution?.kind === 'tool-approval' ? { resolution } : {})}
         focused={focused}
-        onDetails={() => router.push({ pathname: '/approval', params: { ...ref } })}
       />
     );
   return (
@@ -132,12 +135,15 @@ function RequestCard({
       {...subject}
       {...(resolution?.kind === 'user-question' ? { resolution } : {})}
       focused={focused}
+      replyInChat
+      answeredHere={answeredHere}
     />
   );
 }
 
 function DmConversation({ slug, focus }: { slug: string | undefined; focus: string | undefined }) {
   const theme = useDesignTheme();
+  const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { client, inbox } = useHostSession();
   const host = useHostSnapshot(client);
@@ -165,6 +171,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const now = new Date();
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
+  const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
 
   const resolutions = useMemo(
     () =>
@@ -176,6 +183,10 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
         ),
       ),
     [snapshot.messages],
+  );
+
+  const asking = snapshot.messages.findLast(
+    (message) => message.card?.kind === 'user-question' && !resolutions.has(message.id),
   );
 
   const rows = useMemo<Row[]>(
@@ -203,10 +214,33 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const send = () => {
     const body = draft.trim();
     if ((body === '' && files.length === 0) || conversation === undefined) return;
-    conversation.send(body, files);
     if (dictation.state.status !== 'idle') dictation.cancel();
     setDraft('');
     setFiles([]);
+    if (
+      asking?.card === undefined ||
+      client === undefined ||
+      slug === undefined ||
+      files.length > 0
+    ) {
+      conversation.send(body, files);
+      return;
+    }
+    const ref = {
+      channelId: asking.card.channelId,
+      messageId: asking.id,
+      botSlug: slug,
+    };
+    void answerInChat(client, ref, body)
+      .catch(() => false)
+      .then((done) => {
+        if (!done) {
+          conversation.send(body, files);
+          return;
+        }
+        setAnswered((current) => new Set([...current, asking.id]));
+        void inbox?.refresh();
+      });
   };
 
   const pick = (source: PickSource) => {
@@ -263,7 +297,13 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           headerTitleAlign: 'center',
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.color.base },
-          headerTitle: () => <ChatTitle bot={bot} fallback={slug ?? ''} />,
+          headerTitle: () => (
+            <ChatTitle
+              bot={bot}
+              fallback={slug ?? ''}
+              onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
+            />
+          ),
           headerRight: () =>
             slug === undefined ? null : <OpenFullClientButton target={{ kind: 'dm', slug }} />,
         }}
@@ -313,6 +353,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
                 botName={bot?.displayName ?? slug}
                 resolution={resolutions.get(item.message.id)}
                 focused={item.message.id === focus}
+                answeredHere={answered.has(item.message.id)}
               />
             ) : (
               <MessageBubble

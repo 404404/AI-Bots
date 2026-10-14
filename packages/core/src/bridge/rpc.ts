@@ -14,6 +14,7 @@ import {
   LiveUnavailable,
   type ActivityLiveFrame,
   type ChannelLiveFrame,
+  type DraftDelivery,
   type RosterLiveFrame,
 } from '../channels/live.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
@@ -91,7 +92,7 @@ import type {
 } from './methods.js';
 import type { ChannelActivityToday } from '../channels/activity-today.js';
 import type { GroupProfileActivity } from '../channels/profile-activity.js';
-import type { ChannelMessage, ChannelRecord } from '../channels/channel.js';
+import type { ChannelMessage, ChannelReaction, ChannelRecord } from '../channels/channel.js';
 import type { ChannelSendStatus } from '../channels/store.js';
 import type { ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ChannelReadPosition } from '../channels/store.js';
@@ -102,6 +103,7 @@ import type {
   AssignmentDetail,
   AssignmentSummary,
   ChannelAssignmentSummary,
+  DirectBotToolSpec,
 } from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
@@ -186,6 +188,7 @@ export interface BridgeLive {
     channelId: string,
     limit: number,
     signal: AbortSignal,
+    drafts?: DraftDelivery,
   ): AsyncIterable<ChannelLiveFrame>;
   journalPage(channelId: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
   followCompanion(
@@ -277,12 +280,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   async *followChannel(
     channelId: string,
     limit: number,
+    drafts: DraftDelivery | undefined,
     signal: AbortSignal,
   ): AsyncGenerator<ChannelLiveFrame> {
     if (this.live === undefined)
       throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
     try {
-      yield* this.live.followChannel(channelId, limit, signal);
+      yield* this.live.followChannel(channelId, limit, signal, drafts ?? 'full');
     } catch (error) {
       if (error instanceof ChannelLiveRefused)
         throw toRemoteError({ code: error.code, message: error.message });
@@ -1006,6 +1010,24 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(await this.methods.channelMarkRead({ channelId, messageId }));
   }
 
+  channelReact(
+    channelId: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): { reactions: ChannelReaction[] } {
+    return unwrap(this.methods.channelReact({ channelId, messageId, emoji, active }));
+  }
+
+  channelSearch(
+    channelId: string,
+    text: string,
+    cursor?: string,
+    limit?: number,
+  ): { messages: ChannelMessage[]; nextCursor?: string } {
+    return unwrap(this.methods.channelSearch({ channelId, text, cursor, limit }));
+  }
+
   channelAllBotPreview(channelId: string): AllBotPreview {
     return unwrap(this.methods.channelAllBotPreview({ channelId }));
   }
@@ -1098,9 +1120,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     limit?: number,
     cursor?: string,
     sort?: 'newest' | 'oldest',
+    snoozed?: boolean,
   ): HumanAttentionPage {
     return unwrap(
-      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort }),
+      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort, snoozed }),
     );
   }
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
@@ -1121,6 +1144,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   humanAttentionIgnore(sourceEventId: string): { accepted: boolean } {
     return unwrap(this.methods.humanAttentionIgnore({ sourceEventId }));
+  }
+  humanAttentionSnooze(
+    itemId: string,
+    sourceKey: string,
+    until: string | null,
+  ): { accepted: boolean } {
+    return unwrap(this.methods.humanAttentionSnooze({ itemId, sourceKey, until }));
   }
 
   assignments(slug: string): { assignments: AssignmentSummary[] } {
@@ -1248,12 +1278,33 @@ export class BotharnessBridgeService extends TypertRemoteService {
     );
   }
 
+  botTools(): { sessionId: 'direct'; tools: DirectBotToolSpec[] } {
+    return unwrap(this.methods.botTools({}));
+  }
+
+  botToolRun(
+    slug: string,
+    tool: string,
+    args?: Record<string, unknown>,
+  ): Promise<{ slug: string; tool: string; sessionId: 'direct'; result: unknown }> {
+    return unwrapAsync(
+      this.methods.botToolRun({ slug, tool, ...(args === undefined ? {} : { args }) }),
+    );
+  }
+
   sessionArchiveSet(
     slug: string,
     sessionId: string,
     archived: boolean,
   ): Promise<{ archived: boolean }> {
     return unwrapAsync(this.methods.sessionArchiveSet({ slug, sessionId, archived }));
+  }
+
+  memoryMove(
+    slug: string,
+    location: string | null,
+  ): Promise<{ memoryDir: string; moved: boolean; leftover?: string }> {
+    return unwrapAsync(this.methods.memoryMove({ slug, location }));
   }
 
   sessionOwner(sessionId: string): { owner: OwnedSessionBot | null } {
@@ -1627,6 +1678,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelReadPosition',
   'channelMarkRead',
   'channelMarkAllRead',
+  'channelReact',
+  'channelSearch',
   'channelUnreadCounts',
   'channelAllBotPreview',
   'channelSend',
@@ -1642,6 +1695,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionStatus',
   'humanAttentionIgnore',
   'humanAttentionDismiss',
+  'humanAttentionSnooze',
   'assignments',
   'channelAssignments',
   'assignment',
@@ -1662,7 +1716,10 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'userQuestionAnswer',
   'sessions',
   'botToolTrace',
+  'botTools',
+  'botToolRun',
   'sessionArchiveSet',
+  'memoryMove',
   'sessionOwner',
   'botSessionIds',
   'memoryFileTarget',
