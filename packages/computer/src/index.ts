@@ -27,10 +27,12 @@ import {
   type ComputerSettings,
 } from './settings.js';
 import { DEFAULT_DOCKER_CONFIG, createDockerComputerProvider } from './providers/docker.js';
-import type { ComputerRuntimeResult, ComputerRuntimeRunner } from './provider.js';
+import type { ComputerRuntimeResult, ComputerRuntimeRunner, ComputerStatus } from './provider.js';
 import { createComputerService, type ComputerService } from './service.js';
 import { createCuaDriver } from './tool/driver.js';
 import { createLocalCuaDriver } from './tool/local-driver.js';
+import { installSystemPackages } from './system-packages.js';
+import { missingDesktopPackages } from './tool/local-display.js';
 import { createLocalComputerProvider } from './providers/local.js';
 import { computerTarget, createComputerTargetRuntime, type ComputerTarget } from './target.js';
 import { COMPUTER_GUIDANCE, localComputerGuidance } from './tool/catalog.js';
@@ -276,6 +278,15 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
   const service: ComputerService = createComputerService();
   let requestedLanguage = '';
   const runner = createProcessRunner();
+  let packageInstall:
+    | {
+        state: 'installing' | 'installed' | 'failed';
+        packages: readonly string[];
+        percent: number;
+        text: string;
+      }
+    | undefined;
+  let recheckingDesktop = false;
   let authorizationRevision = 0;
   const authorizationScope = (): string => `${target()}:${String(authorizationRevision)}`;
   const target = (): ComputerTarget => computerTarget(readLive(config.target));
@@ -455,15 +466,34 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
         const probe = await service
           .probe()
           .catch((error: unknown) => ({ available: false, detail: String(error) }));
-        const status = await service
+        const status: ComputerStatus = await service
           .status()
           .catch((error: unknown) => ({ state: 'failed' as const, detail: String(error) }));
+        if (
+          status.missing !== undefined &&
+          packageInstall?.state !== 'installing' &&
+          !recheckingDesktop
+        ) {
+          const still = await missingDesktopPackages();
+          if (!still.includes('xvfb') && !still.includes('openbox')) {
+            recheckingDesktop = true;
+            log('desktop packages present; checking Local Computer again');
+            void service
+              .start()
+              .then(() => toolProvider.reconcileAll())
+              .catch(() => undefined)
+              .finally(() => {
+                recheckingDesktop = false;
+              });
+          }
+        }
         return json({
           target: target(),
           provider: service.providerName ?? null,
           probe,
           status,
           exportDir: target() === 'container' ? resolveExportDir() : '',
+          ...(packageInstall === undefined ? {} : { install: packageInstall }),
           ...(target() === 'container' ? { resolution: config.resolution } : {}),
         });
       },
@@ -521,6 +551,82 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     connectionCtx.effect(
       () => connection.fetch.register(startRoute),
       'botharness-computer: start route',
+    );
+
+    const installRoute = {
+      path: '/api/computer/install-packages',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const body = await request
+          .json()
+          .then((value) => value as { authorize?: unknown })
+          .catch(() => ({}) as { authorize?: unknown });
+        if (body.authorize !== true)
+          return json(
+            { ok: false, code: 'authorize-required', error: 'explicit authorization required' },
+            400,
+          );
+        if (packageInstall?.state === 'installing')
+          return json({ ok: false, code: 'install-running', error: 'an install is running' }, 409);
+        const missing = target() === 'local' ? (await service.status()).missing : undefined;
+        if (missing === undefined || missing.packages.length === 0)
+          return json({ ok: false, code: 'nothing-missing', error: 'nothing to install' }, 409);
+        if (missing.install === 'none')
+          return json(
+            {
+              ok: false,
+              code: 'needs-administrator',
+              error: `Run this on the Host: ${missing.command}`,
+            },
+            403,
+          );
+        const started = Date.now();
+        packageInstall = { state: 'installing', packages: missing.packages, percent: 0, text: '' };
+        log(
+          `install-packages start packages=${missing.packages.join(',')} access=${missing.install}`,
+        );
+        void installSystemPackages({
+          packages: missing.packages,
+          access: missing.install,
+          runner,
+          onProgress: (progress) => {
+            packageInstall = {
+              state: 'installing',
+              packages: missing.packages,
+              percent: progress.percent,
+              text: progress.text,
+            };
+          },
+        })
+          .then(async () => {
+            packageInstall = {
+              state: 'installed',
+              packages: missing.packages,
+              percent: 100,
+              text: '',
+            };
+            log(`install-packages done durationMs=${String(Date.now() - started)}`);
+            await service.start();
+            await toolProvider.reconcileAll();
+          })
+          .catch((error: unknown) => {
+            const detail = error instanceof Error ? error.message : String(error);
+            if (packageInstall?.state === 'installing')
+              packageInstall = {
+                state: 'failed',
+                packages: missing.packages,
+                percent: packageInstall.percent,
+                text: detail,
+              };
+            log(`install-packages refused detail=${detail}`);
+          });
+        return json({ ok: true, started: true });
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(installRoute),
+      'botharness-computer: install-packages route',
     );
 
     const stopRoute = {

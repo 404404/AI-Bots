@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { NO_DISPLAY_MESSAGE, ensureLocalDisplay } from '../src/tool/local-display.js';
+import { LocalDesktopMissingError, ensureLocalDisplay } from '../src/tool/local-display.js';
 
 const hasXvfb = (() => {
   try {
@@ -22,8 +22,12 @@ describe('Linux Local Computer display', () => {
   });
 
   it('refuses with install guidance when there is no display and no Xvfb', async () => {
-    await expect(ensureLocalDisplay({ source: { PATH: '/nonexistent' } })).rejects.toThrow(
-      NO_DISPLAY_MESSAGE,
+    const refused = await ensureLocalDisplay({ source: { PATH: '/nonexistent' } }).catch(
+      (error: unknown) => error,
+    );
+    expect(refused).toBeInstanceOf(LocalDesktopMissingError);
+    expect((refused as LocalDesktopMissingError).packages).toEqual(
+      expect.arrayContaining(['xvfb', 'openbox', 'dbus']),
     );
   });
 

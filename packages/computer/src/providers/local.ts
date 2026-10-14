@@ -1,5 +1,11 @@
 import type { ComputerProvider, ComputerRuntimeRunner, ComputerStatus } from '../provider.js';
+import {
+  aptInstallCommand,
+  systemInstallAccess,
+  type SystemInstallAccess,
+} from '../system-packages.js';
 import type { CuaDriver } from '../tool/driver.js';
+import { LocalDesktopMissingError } from '../tool/local-display.js';
 import {
   LOCAL_DRIVER_QUIET_ENV,
   localDriverBuild,
@@ -65,6 +71,7 @@ export function createLocalComputerProvider(options: {
   dir?: string | undefined;
   platform?: string | undefined;
   arch?: string | undefined;
+  installAccess?: (() => Promise<SystemInstallAccess>) | undefined;
   onEvent?: ((detail: string) => void) | undefined;
 }): ComputerProvider {
   const platform = options.platform ?? process.platform;
@@ -92,7 +99,9 @@ export function createLocalComputerProvider(options: {
         const signal = controller.signal;
         state = { state: 'stopped', phase: 'starting' };
         try {
-          await options.driver.ensure(signal);
+          await options.driver.ensure(signal, (progress) => {
+            if (!signal.aborted) state = { state: 'stopped', phase: 'starting', progress };
+          });
           if (signal.aborted) throw new Error('Local Computer setup cancelled');
           const path = localDriverExecutable(options.dir ?? localDriverDirectory(build), build);
           const doctor = await options.runner.run([path, 'doctor', '--json'], {
@@ -113,10 +122,19 @@ export function createLocalComputerProvider(options: {
           if (signal.aborted) throw new Error('Local Computer setup cancelled');
           state = { state: 'running', phase: 'running' };
         } catch (error) {
+          const missing =
+            error instanceof LocalDesktopMissingError
+              ? {
+                  packages: error.packages,
+                  command: aptInstallCommand(error.packages),
+                  install: await (options.installAccess?.() ?? systemInstallAccess(options.runner)),
+                }
+              : undefined;
           state = {
             state: 'failed',
             phase: 'failed',
             detail: error instanceof Error ? error.message : String(error),
+            ...(missing === undefined ? {} : { missing }),
           };
           options.onEvent?.(`phase=refused detail=${state.detail ?? 'failed'}`);
           await options.driver.close();

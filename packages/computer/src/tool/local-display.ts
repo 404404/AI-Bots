@@ -20,11 +20,33 @@ export const LOCAL_WINDOW_MANAGERS = [
   'matchbox-window-manager',
 ] as const;
 
-export const LOCAL_DESKTOP_PACKAGES = 'sudo apt install xvfb openbox at-spi2-core';
+export const LOCAL_AT_SPI_LAUNCHERS = [
+  '/usr/libexec/at-spi-bus-launcher',
+  '/usr/lib/at-spi2-core/at-spi-bus-launcher',
+] as const;
 
-export const NO_DISPLAY_MESSAGE = `This Linux Host has no desktop display and Xvfb is not installed. Install a virtual desktop (for example \`${LOCAL_DESKTOP_PACKAGES}\`) so BotHarness can start one, or run DSH inside a desktop session, then check again.`;
+export class LocalDesktopMissingError extends Error {
+  readonly packages: readonly string[];
 
-export const NO_WINDOW_MANAGER_MESSAGE = `This Linux Host has no window manager for its virtual display, so apps cannot take input focus. Install one (for example \`${LOCAL_DESKTOP_PACKAGES}\`), then check again.`;
+  constructor(packages: readonly string[], hasDisplayServer: boolean) {
+    super(
+      hasDisplayServer
+        ? `This Linux Host has no window manager for its virtual display, so apps cannot take input focus. Install the missing desktop packages (${packages.join(', ')}), then check again.`
+        : `This Linux Host has no desktop display. Install the missing desktop packages (${packages.join(', ')}) so BotHarness can start a virtual one, or run DSH inside a desktop session, then check again.`,
+    );
+    this.name = 'LocalDesktopMissingError';
+    this.packages = packages;
+  }
+}
+
+async function executable(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function findOnPath(name: string, path: string | undefined): Promise<string | undefined> {
   for (const dir of (path ?? '').split(delimiter)) {
@@ -103,6 +125,28 @@ function firstLine(
   });
 }
 
+async function findWindowManager(path: string | undefined): Promise<string | undefined> {
+  for (const name of LOCAL_WINDOW_MANAGERS) {
+    const found = await findOnPath(name, path);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+export async function missingDesktopPackages(
+  source: NodeJS.ProcessEnv = process.env,
+): Promise<string[]> {
+  const path = source['PATH'];
+  let atSpi = false;
+  for (const launcher of LOCAL_AT_SPI_LAUNCHERS) atSpi ||= await executable(launcher);
+  return [
+    ...((await findOnPath('Xvfb', path)) === undefined ? ['xvfb'] : []),
+    ...((await findWindowManager(path)) === undefined ? ['openbox'] : []),
+    ...((await findOnPath('dbus-daemon', path)) === undefined ? ['dbus'] : []),
+    ...(atSpi ? [] : ['at-spi2-core']),
+  ];
+}
+
 export async function ensureLocalDisplay(options: {
   source?: NodeJS.ProcessEnv | undefined;
   onEvent?: ((detail: string) => void) | undefined;
@@ -123,12 +167,10 @@ export async function ensureLocalDisplay(options: {
   }
   const path = source['PATH'];
   const xvfb = await findOnPath('Xvfb', path);
-  if (xvfb === undefined) throw new Error(NO_DISPLAY_MESSAGE);
-  let wm: string | undefined;
-  for (const name of LOCAL_WINDOW_MANAGERS)
-    if ((wm ??= await findOnPath(name, path)) !== undefined) break;
-  if (wm === undefined) throw new Error(NO_WINDOW_MANAGER_MESSAGE);
+  const wm = await findWindowManager(path);
   const dbus = await findOnPath('dbus-daemon', path);
+  if (xvfb === undefined || wm === undefined)
+    throw new LocalDesktopMissingError(await missingDesktopPackages(source), xvfb !== undefined);
 
   const timeoutMs = options.timeoutMs ?? 10_000;
   const started = Date.now();

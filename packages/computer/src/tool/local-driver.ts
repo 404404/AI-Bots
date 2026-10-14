@@ -3,7 +3,7 @@ import { chmod, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-import type { ComputerRuntimeRunner } from '../provider.js';
+import type { ComputerProgress, ComputerRuntimeRunner } from '../provider.js';
 import { createMcpCuaDriver, type CuaDriver } from './driver.js';
 import { ensureLocalDisplay, type LocalDisplay } from './local-display.js';
 
@@ -163,12 +163,41 @@ export async function verifyLocalDriver(
   }
 }
 
+export async function readWithProgress(
+  response: Response,
+  onProgress?: (progress: ComputerProgress) => void,
+): Promise<Uint8Array> {
+  const totalBytes = Number(response.headers.get('content-length') ?? 0);
+  if (response.body === null || onProgress === undefined)
+    return new Uint8Array(await response.arrayBuffer());
+  const chunks: Uint8Array[] = [];
+  let downloadedBytes = 0;
+  let reported = -1;
+  for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+    chunks.push(chunk);
+    downloadedBytes += chunk.byteLength;
+    const percent = totalBytes > 0 ? Math.floor((downloadedBytes / totalBytes) * 100) : 0;
+    if (percent !== reported) {
+      reported = percent;
+      onProgress({ percent, downloadedBytes, totalBytes, text: 'download' });
+    }
+  }
+  const bytes = new Uint8Array(downloadedBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 export async function installLocalDriver(options: {
   dir: string;
   runner: ComputerRuntimeRunner;
   build?: LocalDriverBuild | undefined;
   signal?: AbortSignal | undefined;
   download?: (() => Promise<Uint8Array>) | undefined;
+  onProgress?: ((progress: ComputerProgress) => void) | undefined;
 }): Promise<void> {
   const build = options.build ?? localDriverBuild();
   if (build === undefined) throw new Error(unsupportedLocalHost(process.platform, process.arch));
@@ -185,7 +214,7 @@ export async function installLocalDriver(options: {
       );
       if (!response.ok)
         throw new Error(`Local Computer driver download failed: HTTP ${String(response.status)}`);
-      return new Uint8Array(await response.arrayBuffer());
+      return readWithProgress(response, options.onProgress);
     })());
   if (options.signal?.aborted) throw new Error('Local Computer setup cancelled');
   if (checksum(bytes) !== build.sha256) throw new Error('Local Computer driver checksum mismatch');
@@ -247,7 +276,7 @@ export function createLocalCuaDriver(options: {
       args: ['mcp', '--direct', '--embedded'],
       env,
     },
-    ensure: async (signal) => {
+    ensure: async (signal, onProgress) => {
       if (build === undefined) throw new Error(unsupportedLocalHost(platform, arch));
       ensuring ??= (async () => {
         let status: 'present' | 'installed' = 'present';
@@ -255,7 +284,7 @@ export function createLocalCuaDriver(options: {
           options.onEvent?.(
             `phase=install version=${LOCAL_DRIVER_VERSION} target=local build=${build.id}`,
           );
-          await installLocalDriver({ dir, runner: options.runner, build, signal });
+          await installLocalDriver({ dir, runner: options.runner, build, signal, onProgress });
           status = 'installed';
         }
         if (platform === 'linux' && display?.alive() !== true) {

@@ -11,7 +11,9 @@ import {
   createLocalCuaDriver,
   installLocalDriver,
   localDriverBuild,
+  readWithProgress,
 } from '../src/tool/local-driver.js';
+import { LocalDesktopMissingError } from '../src/tool/local-display.js';
 import type { CuaDriver } from '../src/tool/driver.js';
 import type { ComputerProvider, ComputerRuntimeRunner } from '../src/provider.js';
 
@@ -265,6 +267,70 @@ describe('Local Computer on Linux and Windows', () => {
     expect(argv?.slice(0, 2)).toEqual(['tar', '-xf']);
     expect(argv?.[2]).toMatch(/driver\.zip$/);
     expect(argv?.slice(-2)).toEqual(['cua-driver.exe', 'cua-driver-uia.exe']);
+  });
+});
+
+describe('Local Computer missing parts', () => {
+  it('reports missing desktop packages with the install route a Human can take', async () => {
+    const driver = fakeDriver();
+    vi.mocked(driver.ensure).mockRejectedValue(
+      new LocalDesktopMissingError(['xvfb', 'openbox'], false),
+    );
+    const provider = createLocalComputerProvider({
+      driver,
+      runner: runner(),
+      platform: 'linux',
+      arch: 'x64',
+      installAccess: async () => 'sudo',
+    });
+    await expect(provider.start()).rejects.toThrow('desktop packages');
+    expect(await provider.status()).toMatchObject({
+      state: 'failed',
+      missing: {
+        packages: ['xvfb', 'openbox'],
+        command: 'sudo apt install -y xvfb openbox',
+        install: 'sudo',
+      },
+    });
+  });
+
+  it('shows driver download progress while the check runs', async () => {
+    const driver = fakeDriver();
+    let release: (() => void) | undefined;
+    vi.mocked(driver.ensure).mockImplementation(async (_signal, onProgress) => {
+      onProgress?.({ percent: 40, downloadedBytes: 40, totalBytes: 100 });
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return { status: 'installed' as const, arch: 'linux-x86_64' };
+    });
+    vi.mocked(driver.call).mockResolvedValue({ structuredContent: { x11: true } });
+    const provider = createLocalComputerProvider({
+      driver,
+      runner: runner(),
+      platform: 'linux',
+      arch: 'x64',
+    });
+    const starting = provider.start();
+    await vi.waitFor(() => expect(release).toBeDefined());
+    expect(await provider.status()).toMatchObject({
+      phase: 'starting',
+      progress: { percent: 40, totalBytes: 100 },
+    });
+    release?.();
+    await starting;
+    expect(await provider.status()).toEqual({ state: 'running', phase: 'running' });
+  });
+
+  it('reads a download in chunks and reports byte progress', async () => {
+    const onProgress = vi.fn();
+    const body = new Response(new Uint8Array([1, 2, 3, 4]), {
+      headers: { 'content-length': '4' },
+    });
+    expect(await readWithProgress(body, onProgress)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(onProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({ percent: 100, downloadedBytes: 4, totalBytes: 4 }),
+    );
   });
 });
 

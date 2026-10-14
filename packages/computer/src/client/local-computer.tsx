@@ -2,7 +2,7 @@ import { useCallback, useState, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Note } from '../../../client/src/client/ds/note.js';
-import { space } from '../../../client/src/client/ds/tokens.stylex.js';
+import { color, radius, space, text } from '../../../client/src/client/ds/tokens.stylex.js';
 import { SidebarCardList, SidebarCardRow } from '../../../client/src/client/sidebar-card.js';
 import type { ComputerTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
@@ -13,12 +13,78 @@ const styles = stylex.create({
     gap: space.x3,
     justifyItems: 'start',
   },
+  progress: {
+    display: 'grid',
+    gap: space.x1,
+    width: '100%',
+    color: color.muted,
+    fontSize: text.metaSize,
+    lineHeight: text.metaLine,
+  },
+  bar: {
+    width: '100%',
+    height: '6px',
+    accentColor: color.accent,
+  },
+  command: {
+    margin: 0,
+    width: '100%',
+    boxSizing: 'border-box',
+    paddingBlock: space.x2,
+    paddingInline: space.x2,
+    borderRadius: radius.control,
+    backgroundColor: color.hover,
+    color: color.fg,
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    fontSize: text.metaSize,
+    lineHeight: text.metaLine,
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
+  },
+  actions: {
+    display: 'flex',
+    gap: space.x2,
+    flexWrap: 'wrap',
+  },
 });
+
+interface LocalMissing {
+  packages?: string[];
+  command?: string;
+  install?: 'root' | 'sudo' | 'none';
+}
 
 interface LocalStatus {
   target?: string;
   probe?: { available?: boolean; detail?: string };
-  status?: { state?: string; phase?: string; detail?: string };
+  status?: {
+    state?: string;
+    phase?: string;
+    detail?: string;
+    progress?: { percent?: number; downloadedBytes?: number; totalBytes?: number };
+    missing?: LocalMissing;
+  };
+  install?: { state?: string; packages?: string[]; percent?: number; text?: string };
+}
+
+function formatMiB(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ProgressLine({
+  percent,
+  label,
+}: {
+  readonly percent: number;
+  readonly label: string;
+}): ReactElement {
+  const value = Math.max(0, Math.min(100, percent));
+  return (
+    <div role="status" {...stylex.props(styles.progress)}>
+      <progress {...stylex.props(styles.bar)} max={100} value={value} />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactElement {
@@ -58,16 +124,22 @@ export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactEleme
       clearInterval(timer);
     };
   }, [refresh]);
-  const preparing = busy || payload?.status?.phase === 'starting';
-  const failure = error ?? payload?.status?.detail ?? payload?.probe?.detail;
-  const check = (): void => {
+  const installing = payload?.install?.state === 'installing';
+  const preparing = busy || installing || payload?.status?.phase === 'starting';
+  const missing = payload?.status?.missing;
+  const failure =
+    error ??
+    (payload?.install?.state === 'failed' ? payload.install.text : undefined) ??
+    (missing === undefined ? payload?.status?.detail : undefined) ??
+    payload?.probe?.detail;
+  const post = (path: string, body: Record<string, unknown>): void => {
     setBusy(true);
     setError(undefined);
-    void fetch('/api/computer/start', {
+    void fetch(path, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ authorize: true, target: 'local' }),
+      body: JSON.stringify(body),
     })
       .then(async (response) => {
         if (!response.ok) throw new Error(await response.text());
@@ -76,7 +148,46 @@ export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactEleme
       .catch((error: unknown) => setError(String(error)))
       .finally(() => setBusy(false));
   };
+  const check = (): void => post('/api/computer/start', { authorize: true, target: 'local' });
+  const install = (): void => post('/api/computer/install-packages', { authorize: true });
+  const [copied, setCopied] = useState(false);
+  const copy = (command: string): void => {
+    void navigator.clipboard?.writeText(command).then(() => setCopied(true));
+  };
   const granted = payload?.status?.state === 'running';
+  const download = payload?.status?.progress;
+  const progress = installing ? (
+    <ProgressLine
+      percent={payload?.install?.percent ?? 0}
+      label={t('local.installing', {
+        packages: (payload?.install?.packages ?? []).join(', '),
+        percent: String(payload?.install?.percent ?? 0),
+      })}
+    />
+  ) : payload?.status?.phase === 'starting' && (download?.totalBytes ?? 0) > 0 ? (
+    <ProgressLine
+      percent={download?.percent ?? 0}
+      label={t('local.downloading', {
+        percent: String(download?.percent ?? 0),
+        downloaded: formatMiB(download?.downloadedBytes ?? 0),
+        total: formatMiB(download?.totalBytes ?? 0),
+      })}
+    />
+  ) : null;
+  const missingCard =
+    missing === undefined || installing || (missing.packages ?? []).length === 0 ? null : (
+      <>
+        <Note tone="warning">
+          {t('local.missing', { packages: (missing.packages ?? []).join(', ') })}
+        </Note>
+        {missing.install === 'none' ? (
+          <>
+            <Note>{t('local.missing.manual')}</Note>
+            <pre {...stylex.props(styles.command)}>{missing.command}</pre>
+          </>
+        ) : null}
+      </>
+    );
   return (
     <div ref={resource}>
       <SidebarCardList className="bh-computer-cards">
@@ -88,6 +199,8 @@ export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactEleme
               <Tag tone="success">{t('local.chip.granted')}</Tag>
             ) : preparing ? (
               <Tag tone="info">{t('local.chip.checking')}</Tag>
+            ) : missing !== undefined ? (
+              <Tag tone="warning">{t('local.chip.missing')}</Tag>
             ) : failure === undefined ? (
               <Tag tone="neutral">{t('local.chip.unchecked')}</Tag>
             ) : (
@@ -98,14 +211,28 @@ export function LocalComputerStatus({ t }: { t: ComputerTranslate }): ReactEleme
           detail={
             <div {...stylex.props(styles.detail)}>
               {failure === undefined ? null : <Note tone="danger">{failure}</Note>}
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={preparing || payload?.probe?.available === false}
-                onClick={check}
-              >
-                {t(preparing ? 'local.checking' : 'local.check')}
-              </Button>
+              {progress}
+              {missingCard}
+              <div {...stylex.props(styles.actions)}>
+                {missing !== undefined && missing.install !== 'none' && !installing ? (
+                  <Button size="sm" variant="primary" disabled={busy} onClick={install}>
+                    {t('local.install')}
+                  </Button>
+                ) : null}
+                {missing?.install === 'none' && missing.command !== undefined ? (
+                  <Button size="sm" variant="outline" onClick={() => copy(missing.command ?? '')}>
+                    {t(copied ? 'local.copied' : 'local.copy')}
+                  </Button>
+                ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={preparing || payload?.probe?.available === false}
+                  onClick={check}
+                >
+                  {t(preparing ? 'local.checking' : 'local.check')}
+                </Button>
+              </div>
             </div>
           }
         />

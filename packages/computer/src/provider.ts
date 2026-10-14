@@ -37,6 +37,14 @@ export interface ComputerProgress {
   readonly percent?: number;
   readonly text?: string;
   readonly updatedAt?: number;
+  readonly downloadedBytes?: number;
+  readonly totalBytes?: number;
+}
+
+export interface ComputerMissingPackages {
+  readonly packages: readonly string[];
+  readonly command: string;
+  readonly install: 'root' | 'sudo' | 'none';
 }
 
 export interface ComputerStatus {
@@ -45,6 +53,7 @@ export interface ComputerStatus {
   readonly detail?: string;
   readonly progress?: ComputerProgress;
   readonly storage?: ComputerStorage;
+  readonly missing?: ComputerMissingPackages;
 }
 
 export interface ComputerStorage {
