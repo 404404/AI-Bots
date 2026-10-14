@@ -9,9 +9,9 @@ export function nodeCarrier(): HostCarrier {
         signal: init.signal,
         redirect: 'manual',
         headers: {
+          ...(typeof init.body === 'string' ? { 'content-type': 'application/json' } : {}),
           ...init.headers,
           ...(cookie ? { cookie } : {}),
-          ...(init.body === undefined ? {} : { 'content-type': 'application/json' }),
         },
         ...(init.body === undefined ? {} : { body: init.body }),
       });

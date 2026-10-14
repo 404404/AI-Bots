@@ -16,13 +16,31 @@ export type WireAuthor =
 
 export interface ChannelWireMessage extends WireMessage {
   author: WireAuthor;
-  attachments?: readonly unknown[];
-  bridgeMedia?: { items: readonly unknown[] };
+  attachments?: readonly AttachmentRef[];
+  bridgeMedia?: { items: readonly BridgeMediaItem[] };
+  bridgeOrigin?: { sourceEventId: string };
   toolApprovalRequest?: unknown;
   userQuestionRequest?: unknown;
   privateInputRequest?: unknown;
   sessionFailure?: unknown;
   grantRequest?: true;
+  toolApprovalDecision?: unknown;
+  userQuestionResolution?: unknown;
+}
+
+export interface BridgeMediaItem {
+  id: string;
+  kind: 'image' | 'file' | 'audio';
+  name: string;
+  sizeBytes?: number;
+}
+
+export interface AttachmentRef {
+  name: string;
+  mime: string;
+  size: number;
+  fileId?: string;
+  hash?: string;
 }
 
 export interface JournalEntry {
@@ -74,9 +92,56 @@ export interface PersonaBotSummary {
   appearance?: unknown;
   avatarSeed?: 2;
   primaryColor?: BotPrimaryColor;
+  roles?: string[];
+  description?: string;
+  computerAccess?: boolean;
   paused?: boolean;
   deleted?: boolean;
   aggregateState: AggregatedState;
+}
+
+export interface MemoryStanding {
+  path: string;
+  role: 'soul' | 'coreMemory';
+  chars: number;
+  limit: number;
+}
+
+export interface MemorySnapshot {
+  head: string | null;
+  files: string[];
+  provisional: boolean;
+  standing: MemoryStanding[];
+}
+
+export interface MemoryFile {
+  path: string;
+  body: string;
+  head: string;
+  binary?: boolean;
+}
+
+export type ScheduleTrigger =
+  | { kind: 'every'; everySeconds: number }
+  | { kind: 'daily'; time: string; timeZone: string }
+  | { kind: 'weekly'; time: string; timeZone: string; weekdays: number[] }
+  | { kind: 'once'; date: string; time: string; timeZone: string }
+  | { kind: 'cron'; expression: string; timeZone: string };
+
+export interface BotScheduleSummary {
+  id: string;
+  title: string;
+  trigger: ScheduleTrigger;
+  enabled: boolean;
+  nextRunAt?: string;
+}
+
+export interface WorkspaceGrantSummary {
+  id: string;
+  workspacePath: string;
+  workspaceTitle: string;
+  revokedAt?: string;
+  orchestratorWrite?: boolean;
 }
 
 export interface ChannelListItem {
@@ -95,10 +160,32 @@ export type RosterLiveFrame =
   | { type: 'latest'; channelId: string; message: WireMessage }
   | { type: 'purged'; placements: unknown[] };
 
+export interface WireToolActivity {
+  effect: 'thinking-dots' | 'searching' | 'coding' | 'executing' | 'generic-working';
+  toolName?: string;
+  publicDetail?: string;
+  activeToolCount: number;
+}
+
+export interface WireSessionActivity {
+  id: string;
+  role: 'orchestrator' | 'assignment' | 'subagent';
+  name?: string;
+  state: Exclude<AggregatedState, 'idle'>;
+  activity?: WireToolActivity;
+}
+
+export interface WireBotActivity {
+  slug: string;
+  state: AggregatedState;
+  activity?: WireToolActivity;
+  sessions?: readonly WireSessionActivity[];
+}
+
 export interface ActivitySnapshot {
   generation: string;
   revision: number;
-  bots: readonly { slug: string; state: AggregatedState }[];
+  bots: readonly WireBotActivity[];
 }
 
 export type ActivityLiveFrame =

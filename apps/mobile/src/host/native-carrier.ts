@@ -14,8 +14,8 @@ export function nativeCarrier(): HostCarrier {
         signal: init.signal,
         credentials: 'omit',
         headers: {
+          ...(typeof init.body === 'string' ? { 'content-type': 'application/json' } : {}),
           ...init.headers,
-          ...(init.body === undefined ? {} : { 'content-type': 'application/json' }),
         },
         ...(init.body === undefined ? {} : { body: init.body }),
       });

@@ -4,12 +4,20 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
+import { BOT_TOOL_COMMANDS, runBotToolCommand } from './cli-bot-tool.js';
 import {
   CHANNEL_COMMANDS,
   CHANNEL_OPTIONS,
   isChannelCommand,
   runChannelCommand,
 } from './cli-channels.js';
+import {
+  BROWSER_COMPUTER_COMMANDS,
+  BROWSER_COMPUTER_OPTIONS,
+  isBrowserComputerCommand,
+  runBrowserComputerCommand,
+  type BrowserComputerValues,
+} from './cli-browser-computer.js';
 import {
   IM_COMMANDS,
   IM_OPTIONS,
@@ -39,6 +47,27 @@ import {
   runHostAdminCommand,
   type HostAdminValues,
 } from './cli-host-admin.js';
+import {
+  INBOX_COMMANDS,
+  INBOX_OPTIONS,
+  isInboxCommand,
+  runInboxCommand,
+  type InboxValues,
+} from './cli-inbox.js';
+import {
+  SCHEDULE_OPTIONS,
+  isScheduleCommand,
+  prepareScheduleCommand,
+  runScheduleCommand,
+  type ScheduleValues,
+} from './cli-schedules.js';
+import {
+  PROFILE_COMMANDS,
+  PROFILE_OPTIONS,
+  isProfileCommand,
+  runProfileCommand,
+  type ProfileValues,
+} from './cli-profile.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
@@ -47,6 +76,10 @@ export const LIVE_OPTIONS = {
   ...MODELS_USAGE_OPTIONS,
   ...CHANNEL_OPTIONS,
   ...HOST_ADMIN_OPTIONS,
+  ...INBOX_OPTIONS,
+  ...SCHEDULE_OPTIONS,
+  ...BROWSER_COMPUTER_OPTIONS,
+  ...PROFILE_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -122,6 +155,10 @@ export const LIVE_COMMANDS = [
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...HOST_ADMIN_COMMANDS,
+  ...INBOX_COMMANDS,
+  ...BROWSER_COMPUTER_COMMANDS,
+  ...PROFILE_COMMANDS,
+  ...BOT_TOOL_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -242,7 +279,16 @@ export const LIVE_COMMANDS = [
   },
 ] as const;
 
-interface LiveValues extends ImValues, MessagingValues, ModelsUsageValues, HostAdminValues {
+interface LiveValues
+  extends
+    ImValues,
+    MessagingValues,
+    ModelsUsageValues,
+    HostAdminValues,
+    InboxValues,
+    ScheduleValues,
+    BrowserComputerValues,
+    ProfileValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -461,6 +507,31 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
     }
     return payload as T;
   };
+  const refuse = (path: string, status: number, bytes: Uint8Array): never => {
+    let detail: Record<string, unknown> = {};
+    try {
+      detail = record(JSON.parse(new TextDecoder().decode(bytes)));
+    } catch {
+      detail = { error: new TextDecoder().decode(bytes).slice(0, 200) };
+    }
+    if ((status === 401 || status === 403) && typeof detail['code'] !== 'string')
+      throw new CliLiveError(
+        'host-unauthorized',
+        'Host login was refused; refresh its launch token.',
+      );
+    const packages = Array.isArray(detail['packages'])
+      ? detail['packages'].filter((name): name is string => typeof name === 'string')
+      : [];
+    throw new CliLiveError(
+      typeof detail['code'] === 'string' ? scrub(detail['code']) : 'host-refused',
+      scrub(
+        (typeof detail['error'] === 'string' && detail['error'] !== ''
+          ? detail['error']
+          : `The Host refused ${path} with HTTP ${String(status)}.`) +
+          (packages.length === 0 ? '' : ` Packages: ${packages.join(' ')}.`),
+      ),
+    );
+  };
   const http = async (
     path: string,
     body?: Record<string, unknown>,
@@ -482,30 +553,18 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
         'The Host response was interrupted before the command deadline.',
       );
     }
-    if (response.status === 401 || response.status === 403)
-      throw new CliLiveError(
-        'host-unauthorized',
-        'Host login was refused; refresh its launch token.',
-      );
-    if (!response.ok) {
-      let detail: Record<string, unknown> = {};
-      try {
-        detail = record(JSON.parse(new TextDecoder().decode(bytes)));
-      } catch {
-        detail = { error: new TextDecoder().decode(bytes).slice(0, 200) };
-      }
-      throw new CliLiveError(
-        typeof detail['code'] === 'string' ? scrub(detail['code']) : 'host-refused',
-        scrub(
-          typeof detail['error'] === 'string' && detail['error'] !== ''
-            ? detail['error']
-            : `The Host refused ${path} with HTTP ${String(response.status)}.`,
-        ),
-      );
-    }
+    if (!response.ok) refuse(path, response.status, bytes);
     return { response, bytes };
   };
-  return { rpc, importBotZip, http };
+  const stream = async (path: string, init: RequestInit = {}): Promise<Response> => {
+    const response = await request(new URL(path, base), {
+      ...init,
+      headers: { ...(init.headers as Record<string, string> | undefined), cookie },
+    });
+    if (!response.ok) refuse(path, response.status, new Uint8Array(await response.arrayBuffer()));
+    return response;
+  };
+  return { rpc, importBotZip, http, stream };
 }
 
 export async function runLiveCli(
@@ -547,6 +606,32 @@ export async function runLiveCli(
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
     return runMessaging(operation, (await connectLiveHost(values, io, signal)).rpc);
   }
+  if (isInboxCommand(command))
+    return runInboxCommand(command, rest, values, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
+  if (isScheduleCommand(command)) {
+    const prepared = prepareScheduleCommand(command, rest, values);
+    const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+    return runScheduleCommand(prepared, (await connectLiveHost(values, io, signal)).rpc);
+  }
+  if (isBrowserComputerCommand(command))
+    return runBrowserComputerCommand(command, rest, values, io, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
+  if (isProfileCommand(command))
+    return runProfileCommand(command, rest, values, io, async () => {
+      const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+      return (await connectLiveHost(values, io, signal)).rpc;
+    });
+  if (BOT_TOOL_COMMANDS.some((entry) => entry.command === command))
+    return runBotToolCommand(
+      command as (typeof BOT_TOOL_COMMANDS)[number]['command'],
+      rest,
+      values,
+      io,
+      () => connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);

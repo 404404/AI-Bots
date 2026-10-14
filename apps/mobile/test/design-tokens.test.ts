@@ -75,10 +75,12 @@ describe('resolveTheme', () => {
   it('uses each platform type and touch scale', () => {
     expect(resolveTheme('light', {}, 'ios')).toMatchObject({
       touch: 44,
+      mono: 'Menlo',
       type: { body: { size: 17 } },
     });
     expect(resolveTheme('light', {}, 'android')).toMatchObject({
       touch: 48,
+      mono: 'monospace',
       type: { body: { size: 14 } },
     });
   });
@@ -95,7 +97,14 @@ function contrastOf(a: string, b: string): number {
 }
 
 describe('Bot colour on the Human bubble', () => {
-  const bot = { slug: 'ada', displayName: 'Ada', state: 'idle' as const, paused: false };
+  const bot = {
+    slug: 'ada',
+    displayName: 'Ada',
+    roles: [],
+    computerAccess: false,
+    state: 'idle' as const,
+    paused: false,
+  };
 
   it('uses the Bot primary colour, custom first', () => {
     expect(botColor({ ...bot, primaryColor: { mode: 'custom', color: '#2f9e8f' } })).toBe(
