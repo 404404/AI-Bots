@@ -79,13 +79,13 @@ export function ApprovalTemplateEntry({
           </option>
         ))}
       </select>
-      <div className="bh-access-hint">
+      <div className="bh-note">
         {chosen === undefined
           ? t('autoApproval.hintOff')
           : t('autoApproval.hintOn', { description: chosen.description })}
       </div>
       {error === undefined ? null : (
-        <div className="bh-note" role="alert">
+        <div className="bh-access-hint" role="alert">
           {error}
         </div>
       )}

@@ -96,6 +96,7 @@ import { BOT_BANNER_PATH, createBotBannerHttp } from './bots/banner-http.js';
 import { createChannelLiveHub, CHANNEL_STREAM_PATH, type ChannelLiveHub } from './channels/live.js';
 import type { ChannelDraftEvent } from './channels/draft.js';
 import { DeveloperModeSkillGate } from './logs/skill.js';
+import { openLogDatabase, type LogDatabase } from './logs/log-db.js';
 import type { ChannelStore } from './channels/store.js';
 import {
   personaBotOutputCommitted,
@@ -1221,6 +1222,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     { global: true },
   );
+  let reviewLogs: LogDatabase | undefined;
+  try {
+    reviewLogs = openLogDatabase({ dir: join(dshHome, 'botharness') });
+  } catch {
+    reviewLogs = undefined;
+  }
+  ctx.effect(() => () => reviewLogs?.close(), 'botharness: approval review logs');
   const autoApproval: ToolAutoApproval = {
     template: (slug) => {
       const name = core.registry.get(slug)?.approvalTemplate;
@@ -1239,11 +1247,21 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
       return runApprovalReview(ctx.get('llm'), route, request, randomUUID());
     },
-    log: (entry) =>
-      ctx.logger.info(
+    log: (entry) => {
+      const detail =
         `approval-review bot=${entry.botSlug} template=${entry.template} tool=${entry.toolName} outcome=${entry.outcome} latencyMs=${entry.latencyMs}` +
-          (entry.fallback === undefined ? '' : ` fallback=${entry.fallback}`),
-      ),
+        (entry.fallback === undefined ? '' : ` fallback=${entry.fallback}`);
+      ctx.logger.info(detail);
+      try {
+        reviewLogs?.write({
+          plugin: 'approval-reviewer',
+          owner: `bot:${entry.botSlug}`,
+          kind: entry.fallback === undefined ? entry.outcome : 'fallback',
+          detail,
+          bot: entry.botSlug,
+        });
+      } catch {}
+    },
   };
   toolApproval = new ChannelToolApproval(
     core.channels,
