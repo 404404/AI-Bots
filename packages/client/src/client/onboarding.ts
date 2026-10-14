@@ -9,6 +9,11 @@ import {
   type ChecklistEvidence,
   type ChecklistTarget,
 } from './onboarding-checklist.js';
+import {
+  revealSessions,
+  sessionsSidebarNarrow,
+  setSessionsTourPending,
+} from './onboarding-sessions-tour.js';
 
 export interface PendingWelcomeRequest {
   channelId: string;
@@ -22,6 +27,7 @@ export interface OnboardingViewState {
   modelTarget?: { channelId: string; slug: string } | undefined;
   sendOpen: boolean;
   guideOpen: boolean;
+  sessionsTourOpen: boolean;
   checklistOpen: boolean;
   evidence?: ChecklistEvidence | undefined;
   experience?: 'memory' | 'im' | undefined;
@@ -33,6 +39,7 @@ export class OnboardingController {
     modelOpen: false,
     sendOpen: false,
     guideOpen: false,
+    sessionsTourOpen: false,
     checklistOpen: false,
     busy: false,
   };
@@ -147,7 +154,7 @@ export class OnboardingController {
     this.update({ checklistOpen: false });
   }
   skipTutorial(): void {
-    this.update({ checklistOpen: false, guideOpen: false });
+    this.update({ checklistOpen: false, guideOpen: false, sessionsTourOpen: false });
     void this.refresh(undefined, 'skip');
   }
   async startTour(): Promise<void> {
@@ -156,7 +163,37 @@ export class OnboardingController {
     if (target && store.getSnapshot().conversation.channel?.id !== target.channelId)
       await this.actions.openChannel(target.channelId);
     if (this.state.receipt?.tutorial !== 'active') await this.refresh(undefined, 'continue');
-    this.update({ guideOpen: true, checklistOpen: false });
+    this.update({ guideOpen: true, sessionsTourOpen: false, checklistOpen: false });
+  }
+  async startSessionsTour(): Promise<void> {
+    const target = this.target();
+    if (!target) return;
+    this.closeChecklistForAction();
+    if (sessionsSidebarNarrow()) {
+      try {
+        await this.actions.refreshSessions(target.slug);
+      } catch {}
+      const orchestrators = store
+        .getSnapshot()
+        .sessions.items.filter((item) => item.role === 'orchestrator');
+      const session = orchestrators.find((item) => item.currentOrchestrator) ?? orchestrators[0];
+      if (session !== undefined) {
+        setSessionsTourPending(0);
+        this.actions.openSession(session.sessionId);
+        return;
+      }
+    }
+    revealSessions(target.slug);
+    if (store.getSnapshot().conversation.channel?.id !== target.channelId)
+      await this.actions.openChannel(target.channelId);
+    this.update({ sessionsTourOpen: true, guideOpen: false });
+  }
+  closeSessionsTour(reopenChecklist: boolean): void {
+    if (!this.state.sessionsTourOpen) return;
+    this.update({
+      sessionsTourOpen: false,
+      checklistOpen: reopenChecklist && this.state.receipt?.tutorial === 'active',
+    });
   }
   async openExperience(kind: 'memory' | 'im'): Promise<void> {
     const target = this.target();

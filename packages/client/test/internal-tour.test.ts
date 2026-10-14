@@ -249,3 +249,52 @@ it('pauses when a real dialog appears instead of covering it', async () => {
   expect(dialog.isConnected).toBe(true);
   expect(document.querySelector('.driver-popover')).toBeNull();
 });
+
+it('falls back to a wider anchor and can end on a forward action without a skip', async () => {
+  const tree = document.createElement('div');
+  tree.setAttribute('role', 'tree');
+  document.body.append(tree);
+  const tourOptions = options({ doneLabel: 'Take me there', doneIcon: 'next' });
+  delete tourOptions.skipLabel;
+  stop = startInternalTour(
+    [
+      {
+        selector: '[role="tree"] [data-row-key="session:s1"]',
+        fallback: '[role="tree"]',
+        title: 'Also in DSH',
+        description: 'Tree',
+      },
+    ],
+    tourOptions,
+  );
+  await vi.advanceTimersByTimeAsync(4100);
+  expect(document.querySelector('.driver-popover-title')?.textContent).toBe('Also in DSH');
+  expect(document.querySelector('.driver-active-element')).toBe(tree);
+  const done = document.querySelector<HTMLButtonElement>('.driver-popover-next-btn')!;
+  expect(done.getAttribute('aria-label')).toBe('Take me there');
+  expect(done.classList.contains('bh-internal-tour-done')).toBe(false);
+  expect(document.querySelector('.bh-internal-tour-skip')).toBeNull();
+});
+
+it('closes instead of waiting forever when no anchor appears', async () => {
+  const tourOptions = options();
+  stop = startInternalTour(
+    [{ selector: '[data-sessions]', title: 'Sessions', description: 'List' }],
+    tourOptions,
+  );
+  await vi.advanceTimersByTimeAsync(4100);
+  expect(document.querySelector('.driver-popover')).toBeNull();
+  expect(tourOptions.onClosed).toHaveBeenCalledOnce();
+});
+
+it('continues step numbering when one walkthrough spans two tours', async () => {
+  const row = document.createElement('div');
+  row.setAttribute('data-bh-tour', 'roster');
+  document.body.append(row);
+  stop = startInternalTour(
+    [{ selector: '[data-bh-tour="roster"]', title: 'Back', description: 'b' }],
+    options({ progress: { offset: 2, total: 4 } }),
+  );
+  await vi.advanceTimersByTimeAsync(50);
+  expect(document.querySelector('.driver-popover-progress-text')?.textContent).toBe('3 / 4');
+});

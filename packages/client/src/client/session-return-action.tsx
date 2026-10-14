@@ -8,6 +8,11 @@ import { BotIcon } from './bot-icon.js';
 import type { SessionBotOwner } from './bridge.js';
 import { LOCALE_NS } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
+import {
+  markSessionsTourSeen,
+  startDshSessionsTour,
+  takeSessionsTourPending,
+} from './onboarding-sessions-tour.js';
 
 export interface SessionReturnInjected {
   resolveOwner: (sessionId: string, signal: AbortSignal) => Promise<SessionBotOwner | undefined>;
@@ -93,9 +98,16 @@ export function SessionReturnAction({
       if (generation.current === requestGeneration) setBusy(false);
     }
   };
+  const tourMount = useMountedResource<HTMLSpanElement>(() => {
+    markSessionsTourSeen();
+    const shownSteps = takeSessionsTourPending();
+    if (shownSteps === undefined) return;
+    return startDshSessionsTour(t, sessionId, shownSteps, () => void open());
+  }, [sessionId, owner?.botSlug]);
   return (
     <>
       <span ref={mount} hidden aria-hidden="true" />
+      {owner === undefined ? null : <span ref={tourMount} hidden aria-hidden="true" />}
       {owner === undefined ? null : (
         <Button
           variant="ghost"
