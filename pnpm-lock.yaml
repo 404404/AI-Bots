@@ -427,9 +427,6 @@ importers:
       '@puppeteer/browsers':
         specifier: 3.2.2
         version: 3.2.2
-      agent-browser:
-        specifier: 0.38.2
-        version: 0.38.2
       playwright-core:
         specifier: 1.64.0-alpha-1790635538000
         version: 1.64.0-alpha-1790635538000
@@ -470,6 +467,9 @@ importers:
       '@types/react-dom':
         specifier: ~18.3.0
         version: 18.3.7(@types/react@18.3.31)
+      agent-browser:
+        specifier: 0.38.2
+        version: 0.38.2
       react:
         specifier: ^18.2.0
         version: 18.3.1
@@ -788,6 +788,9 @@ importers:
       '@botharness/ui':
         specifier: link:../client
         version: link:../client
+      '@deepseek-ai/dsh':
+        specifier: 0.2.0-rc.2
+        version: 0.2.0-rc.2(427dd8f69a44319b8daa2e6c2073707c)
 
   packages/ingest:
     dependencies:

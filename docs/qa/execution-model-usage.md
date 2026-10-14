@@ -25,9 +25,9 @@ The same rows survived a browser refresh and a cold restart of the latest Host b
 ## Reproduce and review
 
 1. Build and launch an isolated instance with `scripts/dev-instance.mjs`, using a machine-local provider credential.
-2. Set `BH_E2E_ORIGIN` to its origin, `BH_E2E_HOME` to its isolated home, and `BH_E2E_SCREENSHOT` to the desired PNG path; run `node scripts/e2e-execution-usage.mjs`. This creates the real three-role scenario and captures both themes.
+2. Create a real three-role scenario (Orchestrator, Assignment and DSH Subagent) through the [verify-deepseekbot](../../.agents/skills/verify-deepseekbot/SKILL.md) skill. The scripted journey for this page was removed because it targeted the earlier Profile usage UI.
 3. Open Bot mode, select the newly created **Execution usage QA** PersonaBot, open its Profile, and choose the full detail view. The token usage card must show separate Orchestrator, Assignment and DSH Subagent rows, with the day total equal to their sum. Flash appears separately for Orchestrator and Subagent.
-4. Refresh and check the same values. To verify a Host restart without issuing more model calls, rerun the script with `BH_E2E_BOT_SLUG` set to that existing Bot's slug.
+4. Refresh and check the same values, then restart the Host and check them again.
 
 ## Focused automated coverage
 
