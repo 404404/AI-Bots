@@ -77,6 +77,7 @@ import { BridgeSourceAuthor } from './bridge-source-author.js';
 import { botNameColor, botNameSource, useConversationSurface } from './bot-primary-color.js';
 import { ChannelDeliveryReceipt } from './channel-delivery-receipt.js';
 import { MessageCopyAction } from './message-copy-action.js';
+import { MessageAuthorHoverCard, messageAuthorCardModel } from './message-author-card.js';
 import { isBotDmChannel, isHumanReadOnlyDmChannel } from './channel-kind.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { toolApprovalReplyPreview } from './approval-text.js';
@@ -471,6 +472,35 @@ function MessageGroupView({
         avatarSeed={displayBot.avatarSeed}
         size={28}
         indicator={false}
+        nativeTitle={false}
+      />
+    );
+  const authorName = welcomeBot?.displayName ?? authorLabel(first, bots, t, humanName);
+  const authorCard =
+    first.bridgeOrigin !== undefined
+      ? undefined
+      : displayBot !== undefined
+        ? messageAuthorCardModel({ kind: 'bot', bot: displayBot }, currentDmBotSlug, t)
+        : human
+          ? messageAuthorCardModel({ kind: 'human', name: authorName }, currentDmBotSlug, t)
+          : undefined;
+  const withAuthorCard = (anchor: ReactElement): ReactElement =>
+    authorCard === undefined ? (
+      anchor
+    ) : (
+      <MessageAuthorHoverCard
+        anchor={anchor}
+        model={authorCard}
+        bot={displayBot}
+        onMessage={
+          displayBot === undefined ? undefined : () => void actions.openBot(displayBot.slug)
+        }
+        onProfile={
+          displayBot === undefined
+            ? undefined
+            : () => void actions.openBot(displayBot.slug, 'profile')
+        }
+        t={t}
       />
     );
   return (
@@ -478,31 +508,48 @@ function MessageGroupView({
       className={`bh-message-group${human ? ' bh-message-group-me' : ''}`}
       data-group-size={group.messages.length}
     >
-      {avatar === undefined ? null : author.kind === 'bot' && currentDmBotSlug !== author.slug ? (
-        <button
-          type="button"
-          className="bh-message-group-avatar bh-message-group-avatar-link"
-          aria-label={t('message.mention.openDm', { bot: displayBot?.displayName ?? '' })}
-          onClick={() => void actions.openBot(author.slug)}
-        >
-          {avatar}
-        </button>
-      ) : (
-        <span className="bh-message-group-avatar">{avatar}</span>
+      {avatar === undefined ? null : (
+        <span className="bh-message-group-avatar">
+          {withAuthorCard(
+            author.kind === 'bot' && currentDmBotSlug !== author.slug ? (
+              <button
+                type="button"
+                className="bh-message-group-avatar-link"
+                aria-label={t('message.mention.openDm', { bot: displayBot?.displayName ?? '' })}
+                onClick={() => void actions.openBot(author.slug)}
+              >
+                {avatar}
+              </button>
+            ) : (
+              <span
+                className="bh-message-group-avatar-focus"
+                role="group"
+                tabIndex={0}
+                aria-label={t('message.authorCard.label', {
+                  name: displayBot?.displayName ?? '',
+                })}
+              >
+                {avatar}
+              </span>
+            ),
+          )}
+        </span>
       )}
       <div className="bh-message-stack">
         <div className="bh-message-identity">
           {first.bridgeOrigin ? (
             <BridgeSourceAuthor origin={first.bridgeOrigin} t={t} />
           ) : (
-            <div
-              className="bh-bubble-author"
-              ref={nameColor === undefined ? undefined : surface.probe}
-              data-bot-name-color={nameColor}
-              style={nameColor === undefined ? undefined : { color: nameColor }}
-            >
-              {welcomeBot?.displayName ?? authorLabel(first, bots, t, humanName)}
-            </div>
+            withAuthorCard(
+              <span
+                className="bh-bubble-author"
+                ref={nameColor === undefined ? undefined : surface.probe}
+                data-bot-name-color={nameColor}
+                style={nameColor === undefined ? undefined : { color: nameColor }}
+              >
+                {authorName}
+              </span>,
+            )
           )}
           <time className="bh-bubble-time" dateTime={first.at}>
             {clockTime(first.at)}
