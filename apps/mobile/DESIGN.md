@@ -74,6 +74,10 @@ References:
 ## Components
 
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
+  - Colour roles come in two kinds, as on the Web Client.
+    - Layers are opaque: `base` is the screen, `surface` a card or Bot bubble on it, `elevated` a control raised above a surface.
+    - States are translucent overlays from the Web Client: `hover` and `selected`. React Native paints them instead of the element's own colour, not over it, so they only fill neutral chips and badges. Over `base` in dark mode `selected` comes out the same as `surface`.
+    - A chosen item (a question option, an active shortcut card) uses `accentSoft`, the accent at 12% over `base`, matching the Web Client's chosen card row. It follows a custom or Bot accent. An accent border or accent letter can go with it; a side bar does not.
 - `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Badge`, `Card`, `SettingsRow` and `EmptyState`.
 - `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, status strip and scroll-to-bottom.
 - `src/ui/shell/` will hold the Host switcher, shortcut cards and activity item.
