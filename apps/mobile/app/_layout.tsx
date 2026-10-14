@@ -19,13 +19,34 @@ export default function RootLayout() {
             headerStyle: { backgroundColor: theme.background },
             headerTintColor: theme.ink,
             headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
+            headerBackTitle: t.back,
             contentStyle: { backgroundColor: theme.background },
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="dm/[slug]" options={{ title: '' }} />
+          <Stack.Screen
+            name="bot/[slug]"
+            options={{
+              title: t.profile,
+              headerShown: false,
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.75, 1],
+              sheetGrabberVisible: true,
+            }}
+          />
           <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
           <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
+          <Stack.Screen
+            name="approval"
+            options={{
+              presentation: 'formSheet',
+              headerShown: false,
+              sheetAllowedDetents: [0.6, 1],
+              sheetGrabberVisible: true,
+            }}
+          />
           <Stack.Screen name="notifications" options={{ title: t.notifications }} />
           <Stack.Screen name="hosts" options={{ title: t.computers, presentation: 'modal' }} />
           <Stack.Screen

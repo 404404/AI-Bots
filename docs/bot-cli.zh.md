@@ -7,7 +7,8 @@
 ```bash
 deepseekbot create --name <name> [--persona <text> | --persona-stdin]
                    [--description <text>] [--role <tag> ...]
-                   [--preset <model-preset-id>] [--home <dsh-home>]
+                   [--preset <model-preset-id>] [--memory-location <absolute-dir>]
+                   [--home <dsh-home>]
 deepseekbot create --name <name> --from-git <url | owner/repo> [...]
 deepseekbot create [--name <name>] --from-zip <file> [...]
 deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -43,6 +44,8 @@ deepseekbot search <words>
 ```
 
 每次创建只能指定一种来源。空白创建和 GitHub 导入必须传 `--name`；包导入时 `--name` 会覆盖 `.botharness/bot.json`（或文件名）中的名字。`--from-git` 接受完整 Git 地址（`https://`、`ssh://`、`git@host:path`）或 `owner/repo` 简写（即 `https://github.com/owner/repo.git`），Bot 市场条目可用其克隆地址走同一路径。`--from-dir` 会跳过 `.git` 下的文件，但存在时将其打包为历史记录。
+
+`--memory-location <绝对路径>` 让空白 Bot 的记忆存放在 DSH 数据目录之外（例如另一块磁盘）：记忆仓库会建在新的 `<目录>/<bot-id>` 文件夹中，`dataDir` 返回该路径。路径必须是已存在文件夹的绝对路径，且这个 Bot 的文件夹不能已存在（`invalid-memory-dir`）；导入的 Bot 仍使用默认位置。创建对话框的 **进阶设置 → 记忆文件位置** 提供同样的选择。
 
 `--home` 指向目标 `DSH_HOME`；全新目录零点击可用。不传时使用环境中的 `DSH_HOME`。离线数据库命令须先停 Host，否则独占写租约返回 `lease-unavailable`。凭据文件命令可在线执行；以下在线命令走已认证的 Host RPC。
 
@@ -129,7 +132,10 @@ deepseekbot channel-timeline <channel> [--direction older|newer|around] [--curso
 deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
 deepseekbot channel-mark-read <channel> --message-id <message-id>
 deepseekbot channel-mark-all-read
+deepseekbot channel-unread
+deepseekbot channel-mute <channel> [--off]
 deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
+deepseekbot channel-bot-stop <channel> --bot <id>
 deepseekbot channel-history
 deepseekbot channel-history-sources <channel> [--before <cursor>]
 deepseekbot channel-purge-preview <channel> --source-event <id> [--source-event <id> …]
@@ -137,9 +143,50 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-与 Web 界面一样，重命名 Bot 私聊会同时重命名该 Bot。`group-avatar-set` 读取不超过 96 KiB 的 PNG、JPEG 或 WebP 文件。邀请 ID 和入群申请 ID 位于群组的 `invitations` 和 `joinRequests` 中，`channels` 和每个群组命令都会返回。`group-wake-set` 设置成员 Bot 对普通群消息何时唤醒：`all`、`mentions`、`digest`（累计 `--count` 条消息或经过 `--interval` 秒后唤醒，默认 5 和 30）或 `silent`；`--inherit` 让该成员恢复其 Bot 的默认设置。`channel-timeline` 和 `channel-journal` 按聊天视图的方式分页读取消息；`channel-journal` 的 `--through` 取 `channel-timeline` 返回的 `revision`。`channel-retry` 在 Bot 回复失败后让它重新回答一条 Human 私聊消息。
+与 Web 界面一样，重命名 Bot 私聊会同时重命名该 Bot。`group-avatar-set` 读取不超过 96 KiB 的 PNG、JPEG 或 WebP 文件。邀请 ID 和入群申请 ID 位于群组的 `invitations` 和 `joinRequests` 中，`channels` 和每个群组命令都会返回。`group-wake-set` 设置成员 Bot 对普通群消息何时唤醒：`all`、`mentions`、`digest`（累计 `--count` 条消息或经过 `--interval` 秒后唤醒，默认 5 和 30）或 `silent`；`--inherit` 让该成员恢复其 Bot 的默认设置。`channel-timeline` 和 `channel-journal` 按聊天视图的方式分页读取消息；`channel-journal` 的 `--through` 取 `channel-timeline` 返回的 `revision`。`channel-retry` 在 Bot 回复失败后让它重新回答一条 Human 私聊消息。`channel-unread` 列出每个有未读的频道的 Bot 未读消息数，即侧边栏每行显示的数字。`channel-mute` 与侧边栏菜单一样把频道设为免打扰：该行变灰，未读消息不计入活动中心的未读总数；`--off` 取消免打扰。`channel-bot-stop` 停止 Bot 当前这一轮工作，与工作状态条上的“停止”按钮相同：Bot 回到空闲，Channel 里记录 Human 停止了它；Bot 没在工作时以 `not-working` 拒绝。Bot 已委派的 Assignment 继续运行。
 
 `group-delete` 和 `channel-purge-confirm` 无法撤销，必须带 `--confirm`。`channel-history` 列出已删除、内容仍可清除的群组。清除与历史页面一样分两步：`channel-purge-preview` 列出所选 Source Event 将删除的消息、Bot 受理记录、文件和后续效果，并返回短时有效的 `token`；`channel-purge-confirm` 从标准输入读取 `{"token": …}`，针对同一组 Source Event 执行，范围变化时以错误码拒绝。Source Event 从 `channel-history-sources` 中选取，它用返回的 `before` 游标分页。
+
+### Bot 资料、侧边栏与部件库
+
+这些命令设置 Bot 的外观和唤醒规则、整理侧边栏、管理自定义部件，走的是 Web 界面所用的同一组 Host 调用（[#1702](https://github.com/BotHarness/DeepSeekBot/issues/1702)）：
+
+```bash
+deepseekbot bot-avatar-set <bot-id> --file ./avatar.png
+deepseekbot bot-banner-set <bot-id> --file ./banner.png
+printf '{"scene":"…","seed":7}' | deepseekbot bot-banner-set <bot-id> --recipe-stdin
+deepseekbot bot-banner-set <bot-id> --clear
+deepseekbot bot-appearance-set <bot-id> --recipe-stdin < recipe.json
+deepseekbot bot-primary-color-set <bot-id> --color '#3366ff'
+deepseekbot bot-primary-color-set <bot-id> --automatic
+deepseekbot bot-source-policies <bot-id>
+deepseekbot bot-source-policy-set <bot-id> --source-class group-ordinary --wake digest --digest-count 5 --digest-interval 600
+deepseekbot bot-source-policy-set <bot-id> --source-class human-dm --delivery turn
+deepseekbot bot-source-policy-reset <bot-id> --source-class group-ordinary
+deepseekbot bot-standing-limits-set <bot-id> --soul 4000 --core-memory 8000
+deepseekbot developer-mode-set --enabled
+deepseekbot roster
+deepseekbot roster-section-create "Work bots"
+deepseekbot roster-batch move <channel-id> <channel-id> --section <section-id>
+deepseekbot roster-batch pin <channel-id>
+deepseekbot roster-pins-set <channel-id> <channel-id>
+deepseekbot roster-hidden-set
+deepseekbot roster-section-rename <section-id> --name "Play"
+deepseekbot roster-section-reorder <section-id> <section-id>
+deepseekbot roster-top-reorder section:<section-id> channel:<channel-id>
+deepseekbot roster-section-remove <section-id> --confirm
+deepseekbot human-identity
+deepseekbot human-name-set --name "Vain"
+deepseekbot channel-human-name-set <channel-id> --nickname "Boss"
+deepseekbot part-library
+deepseekbot part-library-import --file ./parts.zip
+deepseekbot part-library-import-image --file ./hat.png --slot <slot> --colors 4 --name Hat
+deepseekbot part-library-add --part-stdin --name Bob < part.json
+deepseekbot part-library-export --out /tmp/part-library.zip
+deepseekbot part-library-export --part-id <part-id> --out /tmp/part.png
+```
+
+图片从文件路径读取：头像可以是 PNG、JPEG 或 WebP；横幅是 3:1 的 PNG；`--clear` 把头像恢复默认、把横幅恢复为按名字生成的场景。`bot-appearance-set` 接受与头像编辑器相同的像素配方，并据此重绘头像。`--source-class` 取 `assignment-report`（`--wake conditional|immediate`）、`group-ordinary`（`--wake immediate|digest|mentions|silent`，配合 `--digest-count` 和以秒计的 `--digest-interval`），或 `human-dm`、`bot-dm`、`group-mention`（`--delivery steer|turn`）。侧边栏命令使用 Channel id（私聊为 `dm-<bot-id>`）；`roster-pins-set` 和 `roster-hidden-set` 整体替换列表，不传 id 即清空；`roster-batch move` 不带 `--section` 时移到顶层。`roster-section-remove` 必须带 `--confirm`，分组里的 Channel 会移到顶层。设置了 `--host` 或 `DEEPSEEKBOT_HOST` 时，`human-name-set` 和 `channel-human-name-set` 走 Host；带 `--home` 时仍走离线路径。`part-library-export` 把部件 PNG 或整个部件库的 zip 写入 `--out`，并输出文件名和大小；`--part-stdin` 导出以 JSON 给出的已穿戴部件。
 
 ### 用命令行管理 IM 应用
 
@@ -249,6 +296,33 @@ deepseekbot schedule-delete <bot-id> --sid <schedule-id> --confirm
 
 选定 Host 后，定时任务命令调用与「定时任务」面板相同的 Host 方法，由 Host 检查 Bot、触发器、时区和锁定状态；被拒时保留 Host 的错误码（`invalid-input`、`not-found`、`locked`、`inactive`）。`schedule-preview` 返回触发器和 Host 算出的接下来几次时刻。`schedule-run-now` 排入一次触发，由运行中的 Host 执行。`schedule-delete` 会连同该任务的历史一起删除，所以和面板上的确认一样，需要 `--confirm`。
 
+### 浏览器和 Computer：观察、系统包、传输与日志
+
+```bash
+deepseekbot browser-observation <bot-id> [--tab <tab-id>] [--out /tmp/frame.png]
+deepseekbot browser-takeover-audit <bot-id>
+printf '%s' "<takeover-token>" | deepseekbot browser-takeover-recording --token-stdin
+deepseekbot browser-profile-set <bot-id> --profile work
+deepseekbot browser-packages
+deepseekbot browser-install-packages --package libnss3 --package libgbm1 --confirm --wait
+deepseekbot computer-install-packages --confirm --wait
+deepseekbot computer-diagnostics
+deepseekbot computer-logs [--bot <bot-id>] [--plugin <name>] [--entity <id>] [--since <ms>] [--limit 100]
+deepseekbot computer-exports
+deepseekbot computer-export [--dir /abs/exports] [--out /tmp/computer.tar]
+deepseekbot computer-upload /abs/path/backup.tar [--name restore.tar]
+deepseekbot computer-import restore.tar --confirm
+deepseekbot computer-open-dir [--dir /abs/exports]
+```
+
+`browser-observation` 返回浏览器面板轮询的同一份状态：浏览器是否在运行、标签页和当前标签页、接管状态、已保存的 profile 和目标。当前画面不会以 base64 打印，只汇总为 `{mimeType, bytes}`，给出 `--out` 时保存到该文件。`browser-takeover-audit` 按时间顺序列出 Bot 的接管事件。`browser-takeover-recording` 读取一次接管及其录下的输入；token 是接管链接里 `takeover=` 的值，从 stdin 传入。`browser-profile-set` 为 Bot 选择浏览器 profile（`default` 恢复默认），命名规则与面板相同。
+
+机器缺少 Chrome 所需的系统库时，`browser-open` 以 `provision-missing-libs` 拒绝，并在说明里列出需要的包。`browser-packages` 报告 Host 能否安装这些包（`access`）以及上次安装的进度；`browser-install-packages` 安装指定的包，`computer-install-packages` 安装本机 Computer 报告缺少的包。两者都和面板上的安装按钮一样需要 `--confirm`，`--wait` 会轮询到安装结束。Host 没有管理员权限时以 `needs-administrator` 拒绝。
+
+`computer-diagnostics` 返回 Computer 最近的诊断事件，`computer-logs` 返回 Host 的运行日志，可按插件、Bot（`--bot`）、实体、时间（`--since`，毫秒时间戳）和条数过滤。归档命令只适用于容器 Computer，否则返回 `container-only`。`computer-export` 把归档写入导出文件夹（或 `--dir`），带 `--out` 时立即下载；一次性下载 token 不会被打印。`computer-upload` 把本地 `.tar` 流式上传到导出文件夹，`computer-exports` 列出其中的归档，`computer-import <archive> --confirm` 会停止容器并用该归档恢复数据。`computer-open-dir` 在 Host 的文件管理器中打开导出文件夹。
+
+Web 端的实时画面通道（`/api/remote.mux`）和查看器事件上报（`/api/computer/diagnostics/viewer`）保持仅限 UI；`browser-frame`、`browser-observation` 和 `computer-diagnostics` 为 Agent 提供同样的信息。
+
 ### 分层排查：经过模型与绕过模型
 
 同一个任务跑两遍，就能定位出问题的那一层：
@@ -284,6 +358,21 @@ deepseekbot bot-trace <bot-id> --turns 1
 ```
 
 每一轮列出模型调用的工具及截断后的参数、结果（`ok`、`error`、审批被拒时为 `denied`、`cancelled` 或 `pending`）、如有审批则附上审批决定，以及结果的开头部分。`secret_cli`、`secret_mcp_connect` 和 `ask_secret` 的参数与结果永远不会返回。`denied` 指向 Harness（权限或审批）；该调的工具没调或参数错，指向模型；同一个工具在路径 B 也失败而这里报 `error`，指向浏览器或 Computer 本身。`--session` 可读取该 Bot 的其他会话，例如某个 Assignment。
+
+### 绕过模型调用 Harness Bot 工具
+
+Bot 用来发言、读取 Inbox、管理 Channel 和计划的 Harness 工具，也可以用同样的方式以该 Bot 的身份直接调用，不经过模型：
+
+```bash
+deepseekbot bot-tools
+deepseekbot bot-tool <bot-id> channel_list
+printf '{"channel_id":"dm-<bot-id>","body":"direct hello"}' | deepseekbot bot-tool <bot-id> channel_send --args-stdin
+deepseekbot bot-trace <bot-id> --session direct --turns 5
+```
+
+`bot-tools` 列出可直接调用的工具及其输入 schema。`bot-tool` 从标准输入读取参数 JSON 对象，执行与 Bot 回合中完全相同的工具代码，保留工具自身的参数校验、成员资格和权限检查，返回 `{slug, tool, sessionId: "direct", result}`。直接调用没有入站 Channel，回合中默认使用入站 Channel 的地方要显式传 `channel_id`。直接读取不会把 Inbox 条目标为已读；Bot 之间的发送会被拒绝，因为没有 Source Event 承载 Bot 因果链。失败时以非零退出并给出错误码：只能在 Bot 回合内运行的工具（创建或等待 Assignment、Subagent、提问与密钥卡片、切换 Memory 分支、申请工作区授权、交给模型的图片）返回 `tool-not-direct`，此外还有 `invalid-args`、`unknown-bot`、`bot-paused`，以及带工具原始消息的 `tool-failed`。每次调用都记入 Host 的近期直接调用记录，`bot-trace --session direct` 可读取，Host 重启后清空。
+
+结合 `send` 与 `bot-trace` 即可定位问题：直接调用成功而同一请求经 `send` 失败，去 `bot-trace` 看模型的调用；直接调用也失败，问题在 Harness 或运行时。
 
 `send` 由 Host 建立已注册 Bot 的 DM，返回 `receipt`、已提交的人类 `message`、`sourceEventId`、处理 `state` 和 `replies`。回复必须关联这一条请求及归该 Bot 所有的 Session；其他请求、审批／提问卡片、通知和失败不算回复。真实回复同时验证当前模型和 key。默认期限 120 秒，最多 600 秒；发送不会自动重试。开始发送后的错误包含回执，请先用 `send-status` 查结果。指定同一 `human-<UUID>` ID 与正文可由 Host 去重，改变正文则返回错误码。已处理但无回复返回 `reply-not-produced`，需要修复返回 `send-needs-repair`。
 

@@ -67,7 +67,7 @@ describe('notification taps', () => {
     messageId: 'm1',
   };
 
-  it('reads only the ids the Host sent and opens the exact item', () => {
+  it('reads only the ids the Host sent and opens its card in the DM, or the item outside a DM', () => {
     expect(parsePushData({ ...approval, body: 'secret' })).toEqual({
       hostId: 'h2',
       itemId: 'approval:e1',
@@ -78,6 +78,10 @@ describe('notification taps', () => {
     });
     expect(parsePushData({ hostId: 'h2' })).toBeUndefined();
     expect(pushHref(parsePushData(approval)!, () => 'dm-ada')).toEqual({
+      pathname: '/dm/[slug]',
+      params: { slug: 'ada', focus: 'm1' },
+    });
+    expect(pushHref(parsePushData(approval)!, () => 'dm-other')).toEqual({
       pathname: '/inbox/[id]',
       params: {
         id: 'approval:e1',
@@ -307,6 +311,30 @@ describe('push registration with a real Host gateway', () => {
     session.reflect('h', new Set(['approval:2']), 1);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(phone.state.badge).toBe(1);
+    expect(phone.state.dismissed).toEqual(['n1']);
+  });
+
+  it('reflects an unchanged Inbox again after the app returns to the foreground', async () => {
+    const phone = fakeNotifications('granted');
+    const session = createPushSession({
+      notifications: phone.port,
+      hostPush: createHostPush(nodeCarrier()),
+      platform: 'ios',
+      locale: 'en',
+    });
+    session.reflect('h', new Set(), 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    phone.state.badge = 1;
+    phone.state.presented = [
+      { id: 'n1', data: { v: 1, hostId: 'h', itemId: 'approval:1', kind: 'tool-approval' } },
+    ];
+    session.reflect('h', new Set(), 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(phone.state.badge).toBe(1);
+    session.reflectAgain();
+    session.reflect('h', new Set(), 0);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(phone.state.badge).toBe(0);
     expect(phone.state.dismissed).toEqual(['n1']);
   });
 });

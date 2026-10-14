@@ -7,7 +7,8 @@
 ```bash
 deepseekbot create --name <name> [--persona <text> | --persona-stdin]
                    [--description <text>] [--role <tag> ...]
-                   [--preset <model-preset-id>] [--home <dsh-home>]
+                   [--preset <model-preset-id>] [--memory-location <absolute-dir>]
+                   [--home <dsh-home>]
 deepseekbot create --name <name> --from-git <url | owner/repo> [...]
 deepseekbot create [--name <name>] --from-zip <file> [...]
 deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -43,6 +44,8 @@ deepseekbot search <words>
 ```
 
 Exactly one source per create. `--name` is required for blank and GitHub bots; for bundle imports it overrides the name from `.botharness/bot.json` (or the file name). A `--from-git` value accepts a full Git URL (`https://`, `ssh://`, `git@host:path`) or an `owner/repo` shorthand for `https://github.com/owner/repo.git`, which also covers Bot Marketplace entries through their clone URL. A `--from-dir` bundle skips `.git` as files but packs it as history when present.
+
+`--memory-location <absolute-dir>` keeps a blank bot's Memory outside the DSH data folder (for example on another drive): the Bot's Memory repository is created in a new `<dir>/<bot-id>` folder, and `dataDir` reports that path. The path must be an existing absolute folder and the per-Bot folder must not exist yet (`invalid-memory-dir`); imports keep the default location. The create dialog offers the same choice under **Advanced settings → Memory location**.
 
 `--home` points at the target `DSH_HOME`; a fresh directory works with zero clicks. Without it, `DSH_HOME` from the environment is used. Stop the Host before offline database commands: the profile writer lease is exclusive (`lease-unavailable`). Secret file commands can run online; live commands below use authenticated Host RPC.
 
@@ -134,7 +137,10 @@ deepseekbot channel-timeline <channel> [--direction older|newer|around] [--curso
 deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
 deepseekbot channel-mark-read <channel> --message-id <message-id>
 deepseekbot channel-mark-all-read
+deepseekbot channel-unread
+deepseekbot channel-mute <channel> [--off]
 deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
+deepseekbot channel-bot-stop <channel> --bot <id>
 deepseekbot channel-history
 deepseekbot channel-history-sources <channel> [--before <cursor>]
 deepseekbot channel-purge-preview <channel> --source-event <id> [--source-event <id> …]
@@ -142,9 +148,50 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
 
-Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply.
+Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply. `channel-unread` lists the unread Bot message count of each Channel that has any; these are the numbers the sidebar shows on each row. `channel-mute` mutes a Channel the way the sidebar menu does: it keeps its row greyed and its unread messages out of the Activity total; `--off` unmutes it. `channel-bot-stop` stops the Bot's current turn, as the Stop button on the working status does: the Bot goes idle, the Channel records that the Human stopped it, and a Bot that is not working is refused with `not-working`. Assignments the Bot delegated keep running.
 
 `group-delete` and `channel-purge-confirm` cannot be undone and need `--confirm`. `channel-history` lists deleted groups whose content can still be purged. Purging works in two steps like the history page: `channel-purge-preview` lists the messages, Bot admissions, files and effects the chosen Source Events would remove and returns a short-lived `token`; `channel-purge-confirm` reads `{"token": …}` from stdin for the same Source Events and fails coded when the scope changed. Pick Source Events from `channel-history-sources`, which pages with the `before` cursor it returns.
+
+### Bot profile, roster and Part Library
+
+These commands set a Bot's look and wake rules, arrange the sidebar and manage Custom Parts through the same Host calls as the Web UI ([#1702](https://github.com/BotHarness/DeepSeekBot/issues/1702)):
+
+```bash
+deepseekbot bot-avatar-set <bot-id> --file ./avatar.png
+deepseekbot bot-banner-set <bot-id> --file ./banner.png
+printf '{"scene":"…","seed":7}' | deepseekbot bot-banner-set <bot-id> --recipe-stdin
+deepseekbot bot-banner-set <bot-id> --clear
+deepseekbot bot-appearance-set <bot-id> --recipe-stdin < recipe.json
+deepseekbot bot-primary-color-set <bot-id> --color '#3366ff'
+deepseekbot bot-primary-color-set <bot-id> --automatic
+deepseekbot bot-source-policies <bot-id>
+deepseekbot bot-source-policy-set <bot-id> --source-class group-ordinary --wake digest --digest-count 5 --digest-interval 600
+deepseekbot bot-source-policy-set <bot-id> --source-class human-dm --delivery turn
+deepseekbot bot-source-policy-reset <bot-id> --source-class group-ordinary
+deepseekbot bot-standing-limits-set <bot-id> --soul 4000 --core-memory 8000
+deepseekbot developer-mode-set --enabled
+deepseekbot roster
+deepseekbot roster-section-create "Work bots"
+deepseekbot roster-batch move <channel-id> <channel-id> --section <section-id>
+deepseekbot roster-batch pin <channel-id>
+deepseekbot roster-pins-set <channel-id> <channel-id>
+deepseekbot roster-hidden-set
+deepseekbot roster-section-rename <section-id> --name "Play"
+deepseekbot roster-section-reorder <section-id> <section-id>
+deepseekbot roster-top-reorder section:<section-id> channel:<channel-id>
+deepseekbot roster-section-remove <section-id> --confirm
+deepseekbot human-identity
+deepseekbot human-name-set --name "Vain"
+deepseekbot channel-human-name-set <channel-id> --nickname "Boss"
+deepseekbot part-library
+deepseekbot part-library-import --file ./parts.zip
+deepseekbot part-library-import-image --file ./hat.png --slot <slot> --colors 4 --name Hat
+deepseekbot part-library-add --part-stdin --name Bob < part.json
+deepseekbot part-library-export --out /tmp/part-library.zip
+deepseekbot part-library-export --part-id <part-id> --out /tmp/part.png
+```
+
+Images are read from a file path: an avatar is a PNG, JPEG or WebP; a banner is a 3:1 PNG; `--clear` returns the avatar to its default and the banner to the seeded scene. `bot-appearance-set` takes the same pixel recipe as the avatar editor and redraws the avatar from it. `--source-class` is `assignment-report` (`--wake conditional|immediate`), `group-ordinary` (`--wake immediate|digest|mentions|silent` with `--digest-count` and `--digest-interval` seconds), or `human-dm`, `bot-dm` and `group-mention` (`--delivery steer|turn`). Roster commands take Channel ids (`dm-<bot-id>` for a DM); `roster-pins-set` and `roster-hidden-set` replace the whole list, so pass no ids to clear it, and `roster-batch move` without `--section` moves to the top level. `roster-section-remove` needs `--confirm` and moves the section's Channels to the top level. With `--host` or `DEEPSEEKBOT_HOST`, `human-name-set` and `channel-human-name-set` use the Host; with `--home` they keep their offline path. `part-library-export` writes the part PNG, or a zip of the whole library, to `--out` and prints its file name and size; `--part-stdin` exports a worn part given as JSON.
 
 ### IM apps from the CLI
 
@@ -254,6 +301,33 @@ deepseekbot schedule-delete <bot-id> --sid <schedule-id> --confirm
 
 With a Host selected, the schedule commands call the same Host methods as the Schedules panel, so the Host checks the Bot, the trigger, the time zone and the lock, and a refusal keeps its code (`invalid-input`, `not-found`, `locked`, `inactive`). `schedule-preview` returns the trigger and the Host's next occurrences. `schedule-run-now` queues a firing that the running Host executes. `schedule-delete` also removes the schedule's history, so it needs `--confirm`, like the panel's confirmation.
 
+### Browser and Computer: observation, packages, transfer and logs
+
+```bash
+deepseekbot browser-observation <bot-id> [--tab <tab-id>] [--out /tmp/frame.png]
+deepseekbot browser-takeover-audit <bot-id>
+printf '%s' "<takeover-token>" | deepseekbot browser-takeover-recording --token-stdin
+deepseekbot browser-profile-set <bot-id> --profile work
+deepseekbot browser-packages
+deepseekbot browser-install-packages --package libnss3 --package libgbm1 --confirm --wait
+deepseekbot computer-install-packages --confirm --wait
+deepseekbot computer-diagnostics
+deepseekbot computer-logs [--bot <bot-id>] [--plugin <name>] [--entity <id>] [--since <ms>] [--limit 100]
+deepseekbot computer-exports
+deepseekbot computer-export [--dir /abs/exports] [--out /tmp/computer.tar]
+deepseekbot computer-upload /abs/path/backup.tar [--name restore.tar]
+deepseekbot computer-import restore.tar --confirm
+deepseekbot computer-open-dir [--dir /abs/exports]
+```
+
+`browser-observation` returns the same state the Browser panel polls: whether the Browser runs, its tabs and focused tab, takeover state, stored profiles and target. The current picture is never printed as base64; it is summarized as `{mimeType, bytes}` and saved to `--out` when given. `browser-takeover-audit` lists a Bot's takeover events in time order. `browser-takeover-recording` reads one takeover and its recorded input; the token is the `takeover=` value from the takeover link and arrives on stdin. `browser-profile-set` picks the Bot's Browser profile (`default` resets it) with the same name rules as the panel.
+
+`browser-open` refuses a machine without Chrome's system libraries with `provision-missing-libs` and lists the packages in its message. `browser-packages` reports whether the Host can install them (`access`) and the last install's progress; `browser-install-packages` installs the named packages and `computer-install-packages` installs what Local Computer reports missing. Both need `--confirm`, like the panel's install button, and `--wait` polls until the install settles. A Host without administrator rights refuses with `needs-administrator`.
+
+`computer-diagnostics` returns the Computer's recent diagnostic events and `computer-logs` the Host's operational log entries, filtered by plugin, Bot (`--bot`), entity, time (`--since`, epoch milliseconds) and count. The archive commands work with Container Computer only (`container-only` otherwise). `computer-export` writes an archive to the export folder (or `--dir`) and, with `--out`, downloads it right away; the one-time download token is never printed. `computer-upload` streams a local `.tar` into the export folder, `computer-exports` lists the archives there, and `computer-import <archive> --confirm` stops the container and restores its data from that archive. `computer-open-dir` opens the export folder in the Host's file manager.
+
+The Web Client's live stream socket (`/api/remote.mux`) and its viewer event report (`/api/computer/diagnostics/viewer`) stay UI-only; `browser-frame`, `browser-observation` and `computer-diagnostics` give an agent the same information.
+
 ### Debug by layer: with and without the model
 
 Run the same task twice to find the layer that fails:
@@ -289,6 +363,21 @@ deepseekbot bot-trace <bot-id> --turns 1
 ```
 
 Each turn lists the tools the model called with bounded arguments, the outcome (`ok`, `error`, `denied` when an approval was rejected, `cancelled`, or `pending`), the approval decision when there was one, and the first part of the result. Arguments and results of `secret_cli`, `secret_mcp_connect` and `ask_secret` are never returned. A `denied` call points at the Harness (access or approval); a missing or wrongly argued call points at the model; an `error` from the same tool that also fails in path B points at the Browser or Computer. `--session` reads another of the Bot's Sessions, such as an Assignment.
+
+### Harness Bot tools without the model
+
+The Harness tools a Bot uses to talk, read its Inbox and run its Channels and schedules can be called the same way, as that Bot, with no model involved:
+
+```bash
+deepseekbot bot-tools
+deepseekbot bot-tool <bot-id> channel_list
+printf '{"channel_id":"dm-<bot-id>","body":"direct hello"}' | deepseekbot bot-tool <bot-id> channel_send --args-stdin
+deepseekbot bot-trace <bot-id> --session direct --turns 5
+```
+
+`bot-tools` lists the tools the runner can call with their input schemas. `bot-tool` reads the arguments as a JSON object on stdin and runs the same tool code a Bot turn runs, with the tool's own argument validation, membership and permission checks; it returns `{slug, tool, sessionId: "direct", result}`. There is no inbound Channel, so pass `channel_id` where a turn would default to it. A direct read does not mark Inbox items as seen, and a Bot-to-Bot send is refused because it has no Source Event to carry Bot causation. Failures exit non-zero with a code: `tool-not-direct` for a tool that only works inside a Bot turn (starting or waiting on an Assignment, Subagents, question and secret cards, Memory branch switches, workspace grant requests, images for the model), `invalid-args`, `unknown-bot`, `bot-paused`, or `tool-failed` with the tool's own message. Each call is kept in the Host's recent direct-call log, which `bot-trace --session direct` returns; it lasts until the Host restarts.
+
+Together with `send` and `bot-trace`, this places a failure: if the direct call works and the same request through `send` does not, look at the model's call in `bot-trace`; if the direct call also fails, the problem is in the Harness or the runtime.
 
 `send` establishes the registered Bot's DM and returns `receipt`, the committed Human `message`, `sourceEventId`, processing `state`, and `replies` associated with that exact request and Bot-owned Session. Other requests, approval/question cards, notices and failures do not count as replies. A real reply verifies the selected model and key together. The deadline defaults to 120 seconds and accepts up to 600. No send is automatically retried. Failures after starting the send include its receipt: inspect `send-status` before resubmitting. A supplied `human-<UUID>` ID with the same body lets the Host deduplicate; a changed body fails coded. Handled-without-reply returns `reply-not-produced`; repair-needed processing returns `send-needs-repair`.
 

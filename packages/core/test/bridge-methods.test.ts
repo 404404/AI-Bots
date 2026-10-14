@@ -1,7 +1,7 @@
 import { seededBannerRecipe } from '@botharness/pixel-banner';
 import { createTestRosterStore } from './roster-fixture.js';
 import { createTestRegistry } from './registry-fixture.js';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -22,7 +22,7 @@ import {
 import { createModelPresetStore } from '../src/models/presets.js';
 import type { ModelCatalog } from '../src/models/catalog.js';
 import { createModelRouteReadiness } from '../src/models/readiness.js';
-import type { BotRuntime } from '../src/runtime/bot-runtime.js';
+import { DirectBotToolError, type BotRuntime } from '../src/runtime/bot-runtime.js';
 import type { WorkspaceGrantStore } from '../src/workspaces/grants.js';
 import { createBotStateTracker } from '../src/state/bot-state.js';
 import { createTestOwnership } from './helpers.js';
@@ -319,6 +319,62 @@ describe('bridge methods', () => {
     ).toBe(false);
     expect((await methods.botToolTrace({ slug: 'nobody' })).ok).toBe(false);
     expect(read).toHaveBeenCalledTimes(1);
+  });
+  it('lists and runs direct Bot tools through the runtime and traces them as session direct', async () => {
+    const run = vi.fn(async (_slug: string, tool: string) => {
+      if (tool === 'create_assignment')
+        throw new DirectBotToolError('tool-not-direct', 'create_assignment cannot run');
+      if (tool === 'channel_send') throw new Error('channel_send: no Channel');
+      return { tool, sessionId: 'direct' as const, result: { channels: [] } };
+    });
+    const runtime = {
+      directBotTools: () => [{ name: 'channel_list', description: 'List', inputSchema: {} }],
+      directBotToolCalls: () => [
+        {
+          callId: 'direct-1',
+          tool: 'channel_list',
+          args: {},
+          at: '2026-10-14T00:00:00.000Z',
+          durationMs: 3,
+          outcome: 'ok' as const,
+          result: '{"channels":[]}',
+        },
+      ],
+      runDirectBotTool: run,
+    } as unknown as BotRuntime;
+    const { registry, methods } = setup([], ['ada'], () => runtime);
+    registry.create({ slug: 'ada', displayName: 'Ada' });
+    expect(methods.botTools({})).toEqual({
+      ok: true,
+      value: {
+        sessionId: 'direct',
+        tools: [{ name: 'channel_list', description: 'List', inputSchema: {} }],
+      },
+    });
+    expect(
+      await methods.botToolRun({ slug: 'ada', tool: 'channel_list', args: { limit: 1 } }),
+    ).toEqual({
+      ok: true,
+      value: { slug: 'ada', tool: 'channel_list', sessionId: 'direct', result: { channels: [] } },
+    });
+    expect(run).toHaveBeenCalledWith('ada', 'channel_list', { limit: 1 }, expect.any(AbortSignal));
+    expect(await methods.botToolRun({ slug: 'ada', tool: 'create_assignment' })).toEqual({
+      ok: false,
+      error: { code: 'tool-not-direct', message: 'create_assignment cannot run' },
+    });
+    expect(await methods.botToolRun({ slug: 'ada', tool: 'channel_send' })).toEqual({
+      ok: false,
+      error: { code: 'tool-failed', message: 'channel_send: no Channel' },
+    });
+    expect((await methods.botToolRun({ slug: 'ada', tool: 'x', args: [] })).ok).toBe(false);
+    expect((await methods.botToolRun({ slug: 'nobody', tool: 'channel_list' })).ok).toBe(false);
+    expect(await methods.botToolTrace({ slug: 'ada', sessionId: 'direct' })).toMatchObject({
+      ok: true,
+      value: {
+        sessionId: 'direct',
+        turns: [{ endReason: 'direct', calls: [{ name: 'channel_list', outcome: 'ok' }] }],
+      },
+    });
   });
   it('reports the Orchestrator Session the runtime resumes, not an archived newer one', async () => {
     const ownership = createTestOwnership({
@@ -1634,6 +1690,27 @@ describe('bridge methods', () => {
     expect(methods.create({ displayName: 'Plain' }).ok).toBe(true);
     expect(existsSync(join(root, 'plain', 'memory'))).toBe(true);
     expect(existsSync(join(root, 'plain', 'memory', 'SOUL.md'))).toBe(false);
+  });
+
+  it('creates Memory under a Human-chosen location and refuses a relative one', () => {
+    const { root, methods } = setup([], ['bot-located', 'bot-relative']);
+    const location = join(root, 'chosen');
+    mkdirSync(location, { recursive: true });
+
+    const created = methods.create({ displayName: 'Located', memoryLocation: location });
+    expect(created.ok && created.value.bot.memoryDir).toBe(join(location, 'bot-located'));
+    expect(existsSync(join(location, 'bot-located'))).toBe(true);
+    expect(methods.create({ displayName: 'Relative', memoryLocation: 'chosen' })).toMatchObject({
+      ok: false,
+      error: { code: 'invalid-memory-dir' },
+    });
+    expect(
+      methods.create({ displayName: 'Missing', memoryLocation: join(root, 'missing') }),
+    ).toMatchObject({ ok: false, error: { code: 'invalid-memory-dir' } });
+    expect(methods.create({ displayName: 'Bad', memoryLocation: 7 })).toEqual({
+      ok: false,
+      error: { code: 'invalid-input', message: 'invalid create payload' },
+    });
   });
 
   it('owns ID generation and reports malformed Human-facing fields', () => {

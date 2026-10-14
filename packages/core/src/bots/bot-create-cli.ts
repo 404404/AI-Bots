@@ -9,7 +9,7 @@ import {
   writeFileSync,
   unlinkSync,
 } from 'node:fs';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { isMap, isScalar, parseDocument } from 'yaml';
 import { parseCredentialsDocument } from '@deepseek-ai/dsh-credentials-local';
@@ -76,6 +76,7 @@ import { createPersonaBotRegistry, type PersonaBotRegistry } from './registry.js
 import { ZipArchiveError, writeZip, type ZipEntry } from './zip-archive.js';
 import { INBOX_HOST_COMMANDS } from './cli-inbox.js';
 import { CliLiveError, LIVE_COMMANDS, LIVE_OPTIONS, runLiveCli } from './cli-live.js';
+import { PROFILE_ONLINE_COMMANDS } from './cli-profile.js';
 import {
   isScheduleCommand,
   scheduleToggleFromFlags,
@@ -122,7 +123,8 @@ export const BOT_CREATE_HELP = `deepseekbot: create PersonaBots without clicking
 Usage:
   deepseekbot create --name <name> [--persona <text> | --persona-stdin]
                     [--description <text>] [--role <tag> ...]
-                    [--preset <model-preset-id>] [--home <dsh-home>]
+                    [--preset <model-preset-id>] [--memory-location <absolute-dir>]
+                    [--home <dsh-home>]
   deepseekbot create --name <name> --from-git <url | owner/repo> [...]
   deepseekbot create [--name <name>] --from-zip <file> [...]
   deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -219,7 +221,6 @@ Usage:
   deepseekbot computer-stop
   deepseekbot browser-tools
   deepseekbot browser-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
-  deepseekbot bot-trace <id> [--turns <1-20>] [--session <session-id>]
   deepseekbot memory-file-target|memory-graph|memory-commit-diff|memory-changes <id> [...]
   deepseekbot memory-working-diff <id> --path <file> --kind staged|unstaged|untracked|current
   deepseekbot memory-checkpoints|memory-versions <id>
@@ -244,6 +245,9 @@ Usage:
   deepseekbot bot-session-usage <id>
   deepseekbot bot-activity-history <id> [--before <YYYY-MM-DD>] [--weeks <1-104>]
   deepseekbot group-activity <channel>
+  deepseekbot bot-trace <id> [--turns <1-20>] [--session <session-id>|direct]
+  deepseekbot bot-tools
+  deepseekbot bot-tool <id> <tool> [--args-stdin]
   deepseekbot computer-tools
   deepseekbot computer-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
@@ -267,6 +271,27 @@ Usage:
   deepseekbot bot-delete-preview <id>
   deepseekbot bot-delete-confirm <id> --confirmation-stdin
   deepseekbot bot-delete-retry <id>
+  deepseekbot bot-avatar-set|bot-banner-set <id> (--file <image> | --clear)
+  deepseekbot bot-banner-set|bot-appearance-set <id> --recipe-stdin
+  deepseekbot bot-primary-color-set <id> (--color <#rrggbb> | --automatic)
+  deepseekbot bot-source-policies <id>
+  deepseekbot bot-source-policy-set <id> --source-class <class> [--wake <w>] [--delivery steer|turn]
+                                    [--digest-count <n> --digest-interval <seconds>]
+  deepseekbot bot-source-policy-reset <id> --source-class <class>
+  deepseekbot bot-standing-limits-set <id> --soul <n> --core-memory <n>
+  deepseekbot developer-mode-set (--enabled | --disabled)
+  deepseekbot roster | human-identity | part-library
+  deepseekbot roster-batch pin|unpin|hide|move <channel>... [--section <section-id>]
+  deepseekbot roster-pins-set|roster-hidden-set [<channel>...]
+  deepseekbot roster-section-create <name>
+  deepseekbot roster-section-rename <section-id> --name <text>
+  deepseekbot roster-section-remove <section-id> --confirm
+  deepseekbot roster-section-reorder <section-id>...
+  deepseekbot roster-top-reorder section:<id>|channel:<id>...
+  deepseekbot part-library-add --part-stdin [--name <text>] [--parent <part-id>]
+  deepseekbot part-library-import --file <png|zip>
+  deepseekbot part-library-import-image --file <png> --slot <slot> --colors <n> [--name <text>]
+  deepseekbot part-library-export --out <absolute-file> [--part-id <id> | --part-stdin]
   deepseekbot im-apps
   deepseekbot im-authorize <feishu|weixin>
   deepseekbot im-credentials <attempt-id> --credentials-stdin
@@ -435,6 +460,7 @@ const CREATE_OPTIONS = {
   'from-zip': { type: 'string' },
   'from-dir': { type: 'string' },
   'from-git': { type: 'string' },
+  'memory-location': { type: 'string' },
   home: { type: 'string' },
   'orchestrator-provider': { type: 'string' },
   'orchestrator-model': { type: 'string' },
@@ -702,6 +728,12 @@ function failureOf(reason: string, detail?: string): CliFailure {
           : `The Bot memory could not be initialized: ${detail}`,
         1,
       );
+    case 'invalid-memory-dir':
+      return new CliFailure(
+        'invalid-memory-dir',
+        'The Memory location must be an existing absolute folder that does not already hold this Bot.',
+        1,
+      );
     case 'duplicate':
       return new CliFailure('invalid-input', 'The minted bot id collided. Retry the command.', 1);
     default:
@@ -719,6 +751,7 @@ export interface ValidatedCreate {
   roles: string[] | undefined;
   description: string | undefined;
   presetId: string | undefined;
+  memoryLocation?: string;
   source:
     | { kind: 'blank' }
     | { kind: 'git'; gitUrl: string }
@@ -750,6 +783,15 @@ async function validatedCreate(
       ? undefined
       : values.role.map((role) => role.trim()).filter((role) => role.length > 0);
   const presetId = trimmed(values.preset);
+  const memoryLocation = trimmed(values['memory-location']);
+  if (memoryLocation !== undefined) {
+    if (zip !== undefined || dir !== undefined || git !== undefined) {
+      throw usageError('--memory-location applies to blank bots only.');
+    }
+    if (!isAbsolute(memoryLocation)) {
+      throw new CliFailure('invalid-input', '--memory-location must be an absolute path.', 1);
+    }
+  }
   if (git !== undefined) {
     if (persona !== undefined || personaStdin) {
       throw usageError('The persona comes from the Git repository, not --persona.');
@@ -806,6 +848,7 @@ async function validatedCreate(
     roles,
     description,
     presetId,
+    ...(memoryLocation === undefined ? {} : { memoryLocation }),
     source: { kind: 'blank' },
   };
 }
@@ -867,6 +910,9 @@ async function runCreate(
           slug: candidate,
           displayName: validated.displayName!,
           ...(validated.persona === undefined ? {} : { persona: validated.persona }),
+          ...(validated.memoryLocation === undefined
+            ? {}
+            : { memoryLocation: validated.memoryLocation }),
           ...base,
         });
       let created = attempt(slug);
@@ -2508,6 +2554,7 @@ export async function runBotCreateCli(
         'memory-history',
         'memory-diff',
         'memory-save',
+        ...PROFILE_ONLINE_COMMANDS,
       ].includes(command) ||
         isScheduleCommand(command)) &&
         (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined)) ||
