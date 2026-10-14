@@ -294,6 +294,36 @@ describe('Bot-to-Bot mention wakes within one Human kickoff', () => {
     expect(mentionWakes(result.wakes, 'nexus', 'aura')).toHaveLength(1);
   });
 
+  it('still wakes a colleague its earlier unmentioned message in the same exchange reached', async () => {
+    const result = await groupScenario({
+      bots: [NEXUS, ATLAS, AURA],
+      kickoff: ['aura'],
+      scripts: {
+        aura: async (run, groupId) => {
+          if (!run.message.includes('from Human')) return;
+          await run.channels.send({ channelId: groupId, body: '@叙事 Atlas 配色先给你' });
+          await run.channels.send({
+            channelId: groupId,
+            body: '@叙事 Atlas @总控 Nexus 配色已完成',
+          });
+        },
+      },
+    });
+    expect(result.errors).toEqual([]);
+    const [, report] = result.byAuthor('aura');
+    expect(report?.mentions?.map((mention) => mention.botSlug)).toEqual(['atlas', 'nexus']);
+    expect(result.admissions).toContainEqual({
+      message_id: report!.id,
+      bot_slug: 'nexus',
+      reason: 'group-mention',
+    });
+    expect(
+      result.admissions.filter(
+        (admission) => admission.bot_slug === 'atlas' && admission.reason === 'group-mention',
+      ),
+    ).toHaveLength(1);
+  });
+
   it('still stops two Bots that keep mentioning each other', async () => {
     const pingPong =
       (other: string): Script =>

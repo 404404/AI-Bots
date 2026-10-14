@@ -7,7 +7,7 @@ Date: 2026-10-14
 
 A PersonaBot's `channel_send` to a Group mentions a colleague either through `mention_bot_ids` or by writing `@` followed by that colleague's display name in the body. At send time the Host compares the typed name with the active PersonaBots currently joined to the Group, other than the sender. When exactly one member has that name (case- and spacing-insensitive, longest name first, ASCII word boundaries respected), the Host stores an Actor mention with that member's PersonaBot ID, shows its badge, and admits it exactly as if the ID had been passed. Two members sharing the name refuse the send with their IDs, so the Bot retries with `mention_bot_ids`. Names of the sender, non-members and paused Bots stay ordinary text. Leading typed mentions join the badge row; a mid-sentence one keeps the name as plain text in place. Human mentions are unchanged: a Bot still addresses a Human only through `mention_human_ids`.
 
-Bot-to-Bot direct-mention de-duplication within one causation chain (ADR-0036) is keyed by sender and recipient rather than by recipient alone. Ordinary Group delivery and Bot DM de-duplication are unchanged, and the hop limit still applies.
+Bot-to-Bot direct-mention de-duplication within one causation chain (ADR-0036) is keyed by sender and recipient rather than by recipient alone. Only an earlier direct wake from that sender counts; an ordinary Group delivery of its earlier unmentioned message does not. A Bot's send chains from the newest source it took in that Channel during the turn, whether delivered at the start, steered in, or read with `channel_read`, so a new Human task starts a new chain. Ordinary Group delivery and Bot DM de-duplication are otherwise unchanged, and the hop limit still applies.
 
 ## Why
 

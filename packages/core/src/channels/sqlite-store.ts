@@ -771,7 +771,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
               JOIN source_events e ON e.source_event_id = a.source_event_id
               WHERE a.bot_slug = ? AND e.source_kind = 'bot-message'
                 AND json_extract(e.payload_json, '$.botCausation.rootSourceEventId') = ?
-                AND (? IS NULL OR e.bot_slug = ?)
+                AND (? IS NULL OR (e.bot_slug = ? AND a.reason != 'group-ordinary'))
               LIMIT 1
             `)
               .get(targetSlug, rootId, fromBotSlug ?? null, fromBotSlug ?? null) !== undefined;
