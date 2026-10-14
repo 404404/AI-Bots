@@ -91,8 +91,8 @@ describe('Tool approval card layout', () => {
         JSON.stringify({ file_path: '/qa/notes.md', old_string: 'a', new_string: 'b' }),
       ),
     );
-    expect(card.querySelector('.bh-tool-approval-category')?.textContent).toBe('文件');
-    expect(card.querySelector('.bh-tool-approval-pill')?.textContent).toBe('需要你确认');
+    expect(card.querySelector('.bh-request-category')?.textContent).toBe('文件');
+    expect(card.querySelector('.bh-request-pill')?.textContent).toBe('需要你确认');
     expect(card.querySelector('.bh-tool-approval-sentence')?.textContent).toBe('修改文件');
     expect(card.querySelector('.bh-tool-approval-line')?.textContent).toBe('/qa/notes.md +1 −1');
     expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
@@ -188,7 +188,7 @@ describe('Tool approval countdown', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    const label = card.querySelector('.bh-tool-approval-pill');
+    const label = card.querySelector('.bh-request-pill');
     expect(label?.textContent).toBe('12 分钟后过期');
     expect(label?.hasAttribute('data-urgent')).toBe(true);
   });

@@ -5187,6 +5187,10 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-question-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: ${space.x2}; min-width: 0; }
 .bh-question-prompt { font-weight: ${text.strong}; white-space: pre-wrap; }
 .bh-question-custom { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, ${text.bodySize}); }
+.bh-question-line { overflow: hidden; color: var(--dsw-alias-label-secondary); white-space: nowrap; text-overflow: ellipsis; }
+.bh-question-other > :not(summary) { width: 100%; }
+.bh-question-other[open] > summary { margin-bottom: ${space.x2}; }
+.bh-question-card[data-settled] { gap: ${space.x1}; }
 .bh-tool-approval-input {
   margin: 0;
   padding: ${space.x3};
@@ -5200,18 +5204,18 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 }
 .bh-tool-approval-card:focus { outline: none; }
 .bh-tool-approval-card:focus-visible { outline: ${border.focus} solid ${color.accent}; outline-offset: ${space.x2}; border-radius: ${radius.sm}; }
-.bh-tool-approval-head { display: flex; align-items: center; justify-content: space-between; gap: ${space.x3}; min-width: 0; }
-.bh-tool-approval-category { min-width: 0; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; font-weight: ${text.strong}; }
-.bh-tool-approval-pill { flex-shrink: 0; padding: 0 ${space.x2}; border-radius: 999px; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: nowrap; }
-.bh-tool-approval-pill[data-state='pending'] { background: color-mix(in srgb, ${color.warning} 16%, transparent); color: ${color.warning}; }
-.bh-tool-approval-pill[data-state='pending'][data-urgent] { background: color-mix(in srgb, ${color.danger} 16%, transparent); color: ${color.danger}; }
-.bh-tool-approval-pill[data-state='allowed'], .bh-tool-approval-pill[data-state='remembered'] { color: ${color.success}; }
-.bh-tool-approval-pill[data-state='denied'] { color: ${color.danger}; }
+.bh-request-head { display: flex; align-items: center; justify-content: space-between; gap: ${space.x3}; min-width: 0; }
+.bh-request-category { min-width: 0; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; font-weight: ${text.strong}; }
+.bh-request-pill { flex-shrink: 0; padding: 0 ${space.x2}; border-radius: 999px; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: nowrap; }
+.bh-request-pill[data-state='pending'] { background: color-mix(in srgb, ${color.warning} 16%, transparent); color: ${color.warning}; }
+.bh-request-pill[data-state='pending'][data-urgent] { background: color-mix(in srgb, ${color.danger} 16%, transparent); color: ${color.danger}; }
+.bh-request-pill[data-state='allowed'], .bh-request-pill[data-state='remembered'], .bh-request-pill[data-state='answered'] { color: ${color.success}; }
+.bh-request-pill[data-state='denied'] { color: ${color.danger}; }
 .bh-tool-approval-sentence { min-width: 0; color: var(--dsw-alias-label-primary); font-size: ${text.bodySize}; line-height: ${text.bodyLine}; overflow-wrap: anywhere; }
 .bh-tool-approval-line { display: block; min-width: 0; overflow: hidden; padding: ${space.x2} ${space.x3}; border-radius: ${radius.sm}; background: ${color.surface}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; text-overflow: ellipsis; white-space: nowrap; }
 .bh-tool-approval-actions .bh-tool-approval-reject { color: ${color.danger}; }
-.bh-tool-approval-details > summary, .bh-tool-approval-more > summary { width: fit-content; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; cursor: pointer; }
-.bh-tool-approval-details > summary:hover, .bh-tool-approval-more > summary:hover { color: var(--dsw-alias-label-primary); }
+.bh-tool-approval-details > summary, .bh-tool-approval-more > summary, .bh-question-other > summary { width: fit-content; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; cursor: pointer; }
+.bh-tool-approval-details > summary:hover, .bh-tool-approval-more > summary:hover, .bh-question-other > summary:hover { color: var(--dsw-alias-label-primary); }
 .bh-tool-approval-details-body { display: grid; gap: ${space.x2}; min-width: 0; margin-top: ${space.x2}; }
 .bh-tool-approval-more > .bh-tool-approval-actions { margin-top: ${space.x2}; }
 .bh-tool-approval-input-block { display: grid; gap: ${space.x2}; min-width: 0; margin: 0; }

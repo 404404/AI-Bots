@@ -325,12 +325,12 @@ export function ToolApprovalCard({
       }
       onKeyDown={onKeyDown}
     >
-      <div className="bh-tool-approval-head">
-        <span className="bh-tool-approval-category">{category}</span>
+      <div className="bh-request-head">
+        <span className="bh-request-category">{category}</span>
         {settled !== undefined ? (
           <span
             role="status"
-            className="bh-tool-approval-pill"
+            className="bh-request-pill"
             data-state={settled}
             title={t(
               settled === 'denied'
@@ -349,7 +349,7 @@ export function ToolApprovalCard({
         ) : status === 'pending' ? (
           <span
             ref={countdownMount}
-            className="bh-tool-approval-pill"
+            className="bh-request-pill"
             data-state="pending"
             data-urgent={countdown?.urgent || undefined}
           >
