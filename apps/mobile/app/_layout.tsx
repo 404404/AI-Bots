@@ -25,7 +25,8 @@ export default function RootLayout() {
           name="full-client"
           options={{
             title: t.fullClient,
-            presentation: 'modal',
+            presentation: 'fullScreenModal',
+            headerShown: false,
             gestureEnabled: false,
           }}
         />

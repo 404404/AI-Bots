@@ -1,15 +1,18 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 
 import { fullClientSource, fullClientTarget, type FullClientParams } from '../src/host/full-client';
 import { useHostSession, useHostSnapshot } from '../src/host/host-session';
+import { FloatingClose } from '../src/ui/floating-close';
 import { FullClientView } from '../src/ui/full-client-view';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
 
 export default function FullClientScreen() {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<FullClientParams>();
   const { saved, client } = useHostSession();
@@ -28,17 +31,7 @@ export default function FullClientScreen() {
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: t.fullClient,
-          headerRight: () => (
-            <Pressable onPress={close} accessibilityRole="button" hitSlop={8}>
-              <Text style={{ color: theme.accent, fontSize: 16, fontWeight: '600' }}>{t.done}</Text>
-            </Pressable>
-          ),
-        }}
-      />
+    <View style={{ flex: 1, paddingTop: insets.top, backgroundColor: theme.background }}>
       {revoked || state === 'unreachable' ? (
         <View style={{ flex: 1, padding: 24, gap: 16, justifyContent: 'center' }}>
           <Text
@@ -97,6 +90,7 @@ export default function FullClientScreen() {
           ) : null}
         </View>
       )}
-    </>
+      <FloatingClose onClose={close} />
+    </View>
   );
 }
