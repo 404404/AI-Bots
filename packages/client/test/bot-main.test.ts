@@ -34,6 +34,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPinOutlineRegular: stub,
     IconTrashOutlineRegular: stub,
     FileTypeIcon: stub,
+    HoverCard: ({ anchor }: PropsWithChildren<{ anchor: unknown }>) =>
+      createElement('span', { 'data-hover-card': 'author' }, anchor as never),
     fileSizeText: (size: number) => `${size} B`,
     ImageLightbox: stub,
     Input: stub,
@@ -798,6 +800,11 @@ describe('Bot main Sessions pane', () => {
     expect(markup).toContain('data-group-position="last"');
     expect(markup.match(/class="bh-message-group-avatar"/g)).toHaveLength(1);
     expect(markup).not.toContain('bh-message-group-avatar-link');
+    expect(markup.match(/data-hover-card="author"/g)).toHaveLength(2);
+    expect(markup).toContain('class="bh-message-group-avatar-focus" role="group" tabindex="0"');
+    const group = markup.slice(markup.indexOf('class="bh-message-group"'));
+    expect(group).toContain('class="bh-persona-avatar"');
+    expect(group).not.toMatch(/class="bh-persona-avatar"[^>]*title=/);
     expect(markup.match(/class="bh-bubble-time"/g)).toHaveLength(1);
     expect(markup).toContain('dateTime="2026-09-21T00:01:00.000Z"');
     expect(markup.match(/class="bh-bubble-meta"/g)).toHaveLength(2);

@@ -25,6 +25,7 @@ Shot options:
   --click <name>            Click the element with this accessible name (repeatable, in order).
   --click-text <text>       Click the last visible button, link or tab in page order whose text contains this.
   --fill <name>=<text>      Type into the field with this accessible name (repeatable, in order).
+  --hover <name>            Rest the pointer on the element with this accessible name (repeatable, in order).
   --press <key>             Press a key in the focused element, for example Enter (repeatable, in order).
   --wait <name>             Wait until an element with this accessible name exists before the capture.
   --wait-text <text>        Wait until the page shows this text (for example a Bot reply), up to 180s.
@@ -89,6 +90,9 @@ export function parseVerifyArgs(argv) {
         break;
       case '--press':
         options.actions.push({ kind: 'press', name: value() });
+        break;
+      case '--hover':
+        options.actions.push({ kind: 'hover', name: value() });
         break;
       case '--fill': {
         const pair = value();
@@ -367,6 +371,7 @@ async function shot(options, paths) {
       } else {
         const locator = page.locator(aria(action.name)).setTimeout(15_000);
         if (action.kind === 'click') await locator.click();
+        else if (action.kind === 'hover') await locator.hover();
         else await locator.fill(action.text);
       }
       steps.push(`${action.kind} ${JSON.stringify(action.name)}`);
