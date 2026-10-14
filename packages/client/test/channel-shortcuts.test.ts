@@ -13,6 +13,7 @@ import {
   webConversationStepShortcut,
   webModalOpen,
   webShortcutBlocked,
+  webShortcutHelpShortcut,
 } from '../src/client/channel-shortcuts.js';
 
 const alt = { alt: true, ctrl: false, meta: false, shift: false };
@@ -167,5 +168,43 @@ describe('web conversation step shortcuts', () => {
   it('is blocked only by an open modal, not by a focused text field', () => {
     expect(webModalOpen({ querySelector: () => null })).toBe(false);
     expect(webModalOpen({ querySelector: () => ({}) })).toBe(true);
+  });
+});
+
+describe('web shortcut list shortcut', () => {
+  const none = { alt: false, ctrl: false, meta: false, shift: false };
+
+  it('opens on ? and on Ctrl+/ or ⌘+/', () => {
+    expect(webShortcutHelpShortcut({ key: '?', code: 'Slash' }, { ...none, shift: true })).toBe(
+      'question',
+    );
+    expect(webShortcutHelpShortcut({ key: '/', code: 'Slash' }, { ...none, ctrl: true })).toBe(
+      'slash',
+    );
+    expect(webShortcutHelpShortcut({ key: '/', code: 'Slash' }, { ...none, meta: true })).toBe(
+      'slash',
+    );
+  });
+
+  it('leaves plain /, Alt, IME, repeats and handled keys alone', () => {
+    expect(webShortcutHelpShortcut({ key: '/', code: 'Slash' }, none)).toBeUndefined();
+    expect(
+      webShortcutHelpShortcut({ key: '?', code: 'Slash' }, { ...none, shift: true, alt: true }),
+    ).toBeUndefined();
+    expect(
+      webShortcutHelpShortcut({ key: '?', code: 'Slash' }, { ...none, composing: true }),
+    ).toBeUndefined();
+    expect(
+      webShortcutHelpShortcut({ key: '/', code: 'Slash' }, { ...none, ctrl: true, repeat: true }),
+    ).toBeUndefined();
+    expect(
+      webShortcutHelpShortcut(
+        { key: '/', code: 'Slash' },
+        { ...none, ctrl: true, prevented: true },
+      ),
+    ).toBeUndefined();
+    expect(
+      webShortcutHelpShortcut({ key: '?', code: 'Slash' }, { ...none, shift: true, ctrl: true }),
+    ).toBeUndefined();
   });
 });

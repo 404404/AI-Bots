@@ -195,3 +195,25 @@ export function isMacPlatform(navigatorLike?: {
   const platform = source?.userAgentData?.platform ?? source?.platform ?? '';
   return /mac|iphone|ipad|ipod/iu.test(platform);
 }
+
+export type ShortcutHelpTrigger = 'question' | 'slash';
+
+export function webShortcutHelpShortcut(
+  event: { key: string; code: string },
+  keys: {
+    alt: boolean;
+    ctrl: boolean;
+    meta: boolean;
+    shift: boolean;
+    altGraph?: boolean;
+    composing?: boolean;
+    repeat?: boolean;
+    prevented?: boolean;
+  },
+): ShortcutHelpTrigger | undefined {
+  if (keys.alt || keys.altGraph || keys.composing || keys.repeat || keys.prevented)
+    return undefined;
+  if (event.code === 'Slash' && (keys.ctrl || keys.meta) && !keys.shift) return 'slash';
+  if (event.key === '?' && !keys.ctrl && !keys.meta) return 'question';
+  return undefined;
+}
