@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
 import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
@@ -143,6 +143,7 @@ function RequestCard({
 
 function DmConversation({ slug, focus }: { slug: string | undefined; focus: string | undefined }) {
   const theme = useDesignTheme();
+  const router = useRouter();
   const headerHeight = useHeaderHeight();
   const { client, inbox } = useHostSession();
   const host = useHostSnapshot(client);
@@ -296,7 +297,13 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           headerTitleAlign: 'center',
           headerShadowVisible: false,
           headerStyle: { backgroundColor: theme.color.base },
-          headerTitle: () => <ChatTitle bot={bot} fallback={slug ?? ''} />,
+          headerTitle: () => (
+            <ChatTitle
+              bot={bot}
+              fallback={slug ?? ''}
+              onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
+            />
+          ),
           headerRight: () =>
             slug === undefined ? null : <OpenFullClientButton target={{ kind: 'dm', slug }} />,
         }}

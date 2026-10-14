@@ -266,6 +266,8 @@ describe('Inbox list', () => {
   const bot: RosterBot = {
     slug: approvalItem.botSlug,
     displayName: 'Inbox QA',
+    roles: [],
+    computerAccess: false,
     state: 'waiting',
     paused: false,
   };
