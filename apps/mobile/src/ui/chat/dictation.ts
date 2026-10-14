@@ -71,6 +71,10 @@ export function composerActions(input: {
   ];
 }
 
+export function composerStacked(actions: ComposerAction[], files: number): boolean {
+  return files > 0 || actions.includes('stop') || actions.length > 1;
+}
+
 export function speechLang(tag: string): string {
   const parts = tag.split(/[-_]/u).filter((part) => part !== '');
   const language = parts[0]?.toLowerCase() ?? 'en';

@@ -17,7 +17,7 @@ import {
   StopIcon,
 } from '../shell/icons';
 import { t } from '../strings';
-import { composerActions, dictating, type DictationStatus } from './dictation';
+import { composerActions, composerStacked, dictating, type DictationStatus } from './dictation';
 
 const SOURCES: Array<{ source: PickSource; label: string; Icon: typeof PhotoIcon }> = [
   { source: 'photos', label: t.attachPhotos, Icon: PhotoIcon },
@@ -126,13 +126,7 @@ function DictationLine({ status }: { status: DictationStatus }) {
   return (
     <View
       accessibilityLiveRegion="polite"
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: space.x2,
-        paddingHorizontal: space.x5,
-        paddingTop: space.x3,
-      }}
+      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.x2 }}
     >
       <View
         style={{
@@ -142,7 +136,7 @@ function DictationLine({ status }: { status: DictationStatus }) {
           backgroundColor: status === 'listening' ? theme.color.accent : theme.color.subtle,
         }}
       />
-      <Text variant="meta" tone="muted">
+      <Text variant="meta" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
         {status === 'listening' ? t.dictationListening : t.dictationStarting}
       </Text>
     </View>
@@ -230,6 +224,8 @@ export function Composer({
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const [menu, setMenu] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const lineHeight = theme.touch - space.x4;
   const listening = dictating(dictation);
   const actions = composerActions({
     text: value,
@@ -242,6 +238,66 @@ export function Composer({
     if (!menu) Keyboard.dismiss();
     setMenu(!menu);
   };
+  const stacked = composerStacked(actions, files.length);
+  const icon = theme.type.title.line;
+  const leading = listening ? (
+    <RoundButton label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
+      <CloseIcon color={theme.color.muted} size={icon} />
+    </RoundButton>
+  ) : canAttach ? (
+    <RoundButton label={menu ? t.closeAttach : t.attach} filled={false} onPress={toggleMenu}>
+      {menu ? (
+        <CloseIcon color={theme.color.muted} size={icon} />
+      ) : (
+        <PlusIcon color={theme.color.muted} size={icon} />
+      )}
+    </RoundButton>
+  ) : null;
+  const field = (
+    <TextInput
+      value={value}
+      onChangeText={onChange}
+      onFocus={() => setMenu(false)}
+      placeholder={placeholder}
+      placeholderTextColor={theme.color.subtle}
+      accessibilityLabel={placeholder}
+      multiline
+      editable={!listening}
+      onContentSizeChange={(event) => setContentHeight(event.nativeEvent.contentSize.height)}
+      style={{
+        flex: stacked ? undefined : 1,
+        height: Math.min(Math.max(contentHeight, lineHeight), theme.touch * 3),
+        paddingVertical: (lineHeight - theme.type.body.line) / 2,
+        paddingHorizontal: stacked || leading === null ? space.x3 : 0,
+        color: theme.color.fg,
+        fontSize: theme.type.body.size,
+        lineHeight: theme.type.body.line,
+      }}
+    />
+  );
+  const trailing = actions.map((action) =>
+    action === 'mic' ? (
+      <RoundButton
+        key={action}
+        label={t.dictate}
+        filled={false}
+        onPress={() => {
+          setMenu(false);
+          onDictate();
+        }}
+      >
+        <MicIcon color={theme.color.muted} size={icon} />
+      </RoundButton>
+    ) : action === 'stop' ? (
+      <RoundButton key={action} label={t.stopDictation} filled onPress={onStopDictation}>
+        <StopIcon color={theme.color.onAccent} size={icon} />
+      </RoundButton>
+    ) : (
+      <RoundButton key={action} label={t.send} filled onPress={onSend}>
+        <ArrowUpIcon color={theme.color.onAccent} size={icon} />
+      </RoundButton>
+    ),
+  );
   return (
     <View
       style={{
@@ -272,77 +328,39 @@ export function Composer({
             ))}
           </ScrollView>
         ) : null}
-        {listening ? <DictationLine status={dictation} /> : null}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'flex-end',
-            gap: space.x2,
-            paddingHorizontal: space.x2,
-            paddingVertical: space.x3,
-          }}
-        >
-          {listening ? (
-            <RoundButton label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
-              <CloseIcon color={theme.color.muted} size={theme.type.title.line} />
-            </RoundButton>
-          ) : canAttach ? (
-            <RoundButton
-              label={menu ? t.closeAttach : t.attach}
-              filled={false}
-              onPress={toggleMenu}
+        {stacked ? (
+          <View
+            style={{ paddingHorizontal: space.x2, paddingTop: space.x3, paddingBottom: space.x2 }}
+          >
+            {field}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space.x2,
+                paddingTop: space.x2,
+              }}
             >
-              {menu ? (
-                <CloseIcon color={theme.color.muted} size={theme.type.title.line} />
-              ) : (
-                <PlusIcon color={theme.color.muted} size={theme.type.title.line} />
-              )}
-            </RoundButton>
-          ) : null}
-          <TextInput
-            value={value}
-            onChangeText={onChange}
-            onFocus={() => setMenu(false)}
-            placeholder={placeholder}
-            placeholderTextColor={theme.color.subtle}
-            accessibilityLabel={placeholder}
-            multiline
-            editable={!listening}
+              {leading}
+              {listening ? <DictationLine status={dictation} /> : <View style={{ flex: 1 }} />}
+              {trailing}
+            </View>
+          </View>
+        ) : (
+          <View
             style={{
-              flex: 1,
-              maxHeight: theme.touch * 3,
-              minHeight: theme.touch - space.x4,
-              paddingVertical: (theme.touch - space.x4 - theme.type.body.line) / 2,
-              paddingLeft: canAttach || listening ? 0 : space.x3,
-              color: theme.color.fg,
-              fontSize: theme.type.body.size,
-              lineHeight: theme.type.body.line,
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              gap: space.x2,
+              paddingHorizontal: space.x2,
+              paddingVertical: space.x2,
             }}
-          />
-          {actions.map((action) =>
-            action === 'mic' ? (
-              <RoundButton
-                key={action}
-                label={t.dictate}
-                filled={false}
-                onPress={() => {
-                  setMenu(false);
-                  onDictate();
-                }}
-              >
-                <MicIcon color={theme.color.muted} size={theme.type.title.line} />
-              </RoundButton>
-            ) : action === 'stop' ? (
-              <RoundButton key={action} label={t.stopDictation} filled onPress={onStopDictation}>
-                <StopIcon color={theme.color.onAccent} size={theme.type.title.line} />
-              </RoundButton>
-            ) : (
-              <RoundButton key={action} label={t.send} filled onPress={onSend}>
-                <ArrowUpIcon color={theme.color.onAccent} size={theme.type.title.line} />
-              </RoundButton>
-            ),
-          )}
-        </View>
+          >
+            {leading}
+            {field}
+            {trailing}
+          </View>
+        )}
       </View>
       {menu && canAttach && !listening ? (
         <AttachMenu

@@ -120,7 +120,7 @@ const en = {
   stopDictation: 'Stop dictating',
   cancelDictation: 'Cancel dictation',
   dictationStarting: 'Starting the microphone…',
-  dictationListening: 'Listening… Tap stop when you are done.',
+  dictationListening: 'Listening…',
   dictationDenied:
     'DeepSeekBot cannot use the microphone or speech recognition. Allow both in the phone settings to dictate.',
   dictationUnavailable: 'Speech recognition is not available on this phone right now.',
@@ -306,7 +306,7 @@ const zh: typeof en = {
   stopDictation: '停止语音输入',
   cancelDictation: '取消语音输入',
   dictationStarting: '正在打开麦克风…',
-  dictationListening: '正在听… 说完后点停止。',
+  dictationListening: '正在听…',
   dictationDenied: 'DeepSeekBot 无法使用麦克风或语音识别。请在手机设置里允许这两项后再语音输入。',
   dictationUnavailable: '这台手机现在无法使用语音识别。',
   dictationFailed: '语音输入中途停止了。点麦克风重试。',

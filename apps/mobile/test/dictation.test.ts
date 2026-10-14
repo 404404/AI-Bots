@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   composerActions,
+  composerStacked,
   dictate,
   idleDictation,
   speechLang,
@@ -91,6 +92,16 @@ describe('composer actions', () => {
   it('hides the mic and Send while the conversation cannot send', () => {
     expect(composerActions({ ...base, disabled: true, text: 'hello' })).toEqual([]);
     expect(composerActions({ ...base, canDictate: false })).toEqual([]);
+  });
+});
+
+describe('composer layout', () => {
+  it('keeps one row for a single trailing button and stacks two rows otherwise', () => {
+    expect(composerStacked(['mic'], 0)).toBe(false);
+    expect(composerStacked(['send'], 0)).toBe(false);
+    expect(composerStacked(['mic', 'send'], 1)).toBe(true);
+    expect(composerStacked(['send'], 1)).toBe(true);
+    expect(composerStacked(['stop'], 0)).toBe(true);
   });
 });
 
