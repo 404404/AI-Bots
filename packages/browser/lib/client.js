@@ -1748,7 +1748,9 @@ window.__ModuleLoader__.load({
 			success: "var(--dsw-alias-state-success-primary)",
 			surface: "var(--dsw-alias-bg-module-platform)",
 			elevated: "var(--dsw-alias-button-elevated-fill)",
-			base: "var(--dsw-alias-bg-base)"
+			base: "var(--dsw-alias-bg-base)",
+			well: "var(--dsw-alias-bg-base)",
+			accentTint: "var(--dsw-alias-state-business-tertiary)"
 		};
 		//#endregion
 		//#region packages/client/src/client/ds/note.tsx
