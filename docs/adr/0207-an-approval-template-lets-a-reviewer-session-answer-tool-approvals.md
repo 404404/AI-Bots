@@ -60,6 +60,7 @@ Writing a new template, or editing one that no Bot uses, needs no card. A Bot ca
 ### CLI
 
 Following CLI parity:
+
 - `deepseekbot approval-template list|show|create|edit|delete`;
 - `deepseekbot bot approval-template set <bot> <template|off>`;
 - `deepseekbot approval-reviewer model set <model|bot>`.
