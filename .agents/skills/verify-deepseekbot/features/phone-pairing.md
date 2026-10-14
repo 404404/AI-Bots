@@ -28,6 +28,6 @@ Both journeys own their Host: they launch a fresh instance on a free port, resta
 
 - Neither journey needs a model credential.
 - The Devices row title and its button are both "Pair a phone", so `--click "Pair a phone"` lands on the title text; `--click-text` only matches buttons.
-- A browser cannot set headers on a WebSocket. The web build (`native-carrier.web.ts`) puts the device credential in a `bh_device` cookie scoped to `/botharness-device`, and the journey's phone origin turns it into `Authorization: Device …` on the stream upgrade, the header the native app sends itself. Unary calls carry the header from the app unchanged.
+- A browser cannot set headers on a WebSocket, and the web export runs the native carrier unchanged (`apps/mobile/AGENTS.md` keeps web-only code paths out of the app). The journey's phone origin therefore adds the `Authorization: Device …` header it last saw on the app's own unary calls to the stream upgrade, standing in for the native WebSocket header. After a revoke it forwards the same revoked header, so the refusal is real.
 - The journey rewrites the pairing link's routes to its phone origin, so it does not prove route choice; `apps/mobile/test/host-client.test.ts` covers that.
 - The camera scanner, Keychain/Keystore storage and the native WebSocket only run in a development build on a phone; see `apps/mobile/README.md`.

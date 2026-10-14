@@ -119,6 +119,8 @@ async function devices(hostOrigin) {
 
 function phoneOrigin(state) {
   const forward = (req, res) => {
+    if (req.headers.authorization?.startsWith('Device '))
+      state.authorization = req.headers.authorization;
     const upstream = request(
       {
         host: '127.0.0.1',
@@ -158,10 +160,10 @@ function phoneOrigin(state) {
       const lines = [`${req.method} ${req.url} HTTP/${req.httpVersion}`];
       for (let i = 0; i < req.rawHeaders.length; i += 2) {
         const name = req.rawHeaders[i];
-        if (name.toLowerCase() !== 'cookie') lines.push(`${name}: ${req.rawHeaders[i + 1]}`);
+        lines.push(`${name}: ${req.rawHeaders[i + 1]}`);
       }
-      const device = /(?:^|;\s*)bh_device=([^;]+)/u.exec(req.headers.cookie ?? '')?.[1];
-      if (device !== undefined) lines.push(`authorization: Device ${device}`);
+      if (req.headers.authorization === undefined && state.authorization !== undefined)
+        lines.push(`authorization: ${state.authorization}`);
       upstream.write(`${lines.join('\r\n')}\r\n\r\n`);
       if (head.length > 0) upstream.write(head);
       upstream.pipe(socket);
