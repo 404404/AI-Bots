@@ -87,12 +87,13 @@ async function pair(base: string, offer: string) {
 function stream(
   port: number,
   headers: Record<string, string>,
+  path = '/botharness-device/api/remote.mux',
 ): Promise<{ status: number; body: string; socket?: Socket }> {
   return new Promise((resolve, reject) => {
     const req = request({
       host: '127.0.0.1',
       port,
-      path: '/botharness-device/api/remote.mux',
+      path,
       headers: {
         connection: 'Upgrade',
         upgrade: 'websocket',
@@ -205,5 +206,90 @@ describe('device gateway', () => {
     expect(open.status).toBe(101);
     open.socket!.destroy();
     expect((await call()).status).toBe(200);
+  });
+
+  describe('full Web Client for the in-app WebView', () => {
+    const web = (host: { base: string }, path: string, headers: Record<string, string> = {}) =>
+      fetch(`${host.base}/botharness-device/web${path}`, { headers, redirect: 'manual' });
+    const sessionCookie = (response: Response) =>
+      response.headers.get('set-cookie')?.split(';')[0] ?? '';
+
+    it('trades the credential on the first load for a scoped session cookie', async () => {
+      const host = await fakeDsh();
+      const paired = await pair(host.base, host.pairing.createOffer().offer);
+      expect((await web(host, '/')).status).toBe(401);
+
+      const first = await web(host, '/', { authorization: `Device ${paired.body.credential}` });
+      expect(first.status).toBe(200);
+      expect(await first.json()).toMatchObject({ path: '/' });
+      const issued = first.headers.get('set-cookie')!;
+      expect(issued).toMatch(/^botharness-device-web=[\w-]+; Path=\/botharness-device\/web\/;/u);
+      expect(issued).toContain('HttpOnly');
+      expect(issued).toContain('SameSite=Strict');
+      expect(issued).not.toContain('Secure');
+      expect(issued).not.toContain(paired.body.credential!.split('.')[1]);
+
+      const cookie = sessionCookie(first);
+      const api = await fetch(`${host.base}/botharness-device/web/api/botharness/list`, {
+        method: 'POST',
+        headers: { cookie, origin: host.base, 'content-type': 'application/json' },
+        body: '{"type":"client-request"}',
+      });
+      expect(api.status).toBe(200);
+      expect(await api.json()).toEqual({
+        path: '/api/botharness/list',
+        body: '{"type":"client-request"}',
+      });
+      expect(api.headers.get('set-cookie')).toBeNull();
+      const seen = host.state.seen.at(-1)!;
+      expect(seen.cookie).toBe('dsh=1');
+      expect(seen.origin).toBeUndefined();
+
+      const asset = await web(host, '/assets/index.js?v=1', { cookie });
+      expect(await asset.json()).toMatchObject({ path: '/assets/index.js' });
+      expect((await web(host, '/', { cookie: 'botharness-device-web=forged' })).status).toBe(401);
+    });
+
+    it('marks the cookie Secure behind an HTTPS route and redirects the bare directory', async () => {
+      const host = await fakeDsh();
+      const paired = await pair(host.base, host.pairing.createOffer().offer);
+      const bare = await web(host, '?x=1', {
+        authorization: `Device ${paired.body.credential}`,
+        'x-forwarded-proto': 'https',
+      });
+      expect(bare.status).toBe(308);
+      expect(bare.headers.get('location')).toBe('/botharness-device/web/?x=1');
+      expect(bare.headers.get('set-cookie')).toContain('Secure');
+    });
+
+    it('ends the WebView session, its stream and its next request on revoke', async () => {
+      const host = await fakeDsh();
+      const paired = await pair(host.base, host.pairing.createOffer().offer);
+      const cookie = sessionCookie(
+        await web(host, '/', { authorization: `Device ${paired.body.credential}` }),
+      );
+      const mux = '/botharness-device/web/api/remote.mux';
+      expect((await stream(host.port, {}, mux)).status).toBe(401);
+      const open = await stream(host.port, { cookie, origin: host.base }, mux);
+      expect(open.status).toBe(101);
+      expect(await echo(open.socket!, 'frame-1')).toBe('frame-1');
+      expect(
+        (await stream(host.port, { cookie, origin: 'https://evil.example' }, mux)).status,
+      ).toBe(403);
+
+      const closed = new Promise((resolve) => open.socket!.on('close', resolve));
+      expect(host.pairing.revoke(paired.body.deviceId!)).toEqual({
+        revoked: true,
+        closedStreams: 1,
+      });
+      await closed;
+
+      const after = await web(host, '/', { cookie });
+      expect([after.status, await after.json()]).toEqual([401, { code: 'device-revoked' }]);
+      expect(await stream(host.port, { cookie }, mux)).toEqual({
+        status: 401,
+        body: '{"code":"device-credential-missing"}',
+      });
+    });
   });
 });

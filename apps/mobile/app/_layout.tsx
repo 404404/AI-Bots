@@ -20,6 +20,10 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ title: t.roster, headerLargeTitle: true }} />
         <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
+        <Stack.Screen
+          name="full-client"
+          options={{ title: t.fullClient, presentation: 'modal', gestureEnabled: false }}
+        />
       </Stack>
     </SafeAreaProvider>
   );

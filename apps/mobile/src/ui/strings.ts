@@ -38,6 +38,11 @@ const en = {
     unreachable: 'Cannot reach your computer. Check that this phone is on your tailnet.',
   } satisfies Record<PairingRefusal, string>,
   unpair: 'Unpair',
+  openFullClient: 'Open full client',
+  fullClient: 'Full client',
+  done: 'Done',
+  fullClientRevoked: "Your computer revoked this phone's access, so the full client closed too.",
+  fullClientUnreachable: 'The full client could not load from your computer.',
 };
 
 const zh: typeof en = {
@@ -75,6 +80,11 @@ const zh: typeof en = {
     unreachable: '连不上你的电脑，请确认手机已加入你的 tailnet。',
   },
   unpair: '取消配对',
+  openFullClient: '打开完整网页端',
+  fullClient: '完整网页端',
+  done: '完成',
+  fullClientRevoked: '电脑已撤销这台手机的访问权限，完整网页端也随之关闭。',
+  fullClientUnreachable: '完整网页端没能从你的电脑加载出来。',
 };
 
 const locale = Intl.DateTimeFormat().resolvedOptions().locale;

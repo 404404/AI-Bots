@@ -13,6 +13,7 @@ import type { RosterBot, RosterChannel } from '../src/host/client';
 import { hostSession, useHostSession, useHostSnapshot } from '../src/host/host-session';
 import { BotAvatar } from '../src/ui/bot-avatar';
 import { ConnectionBanner } from '../src/ui/connection-banner';
+import { OpenFullClientButton } from '../src/ui/open-full-client';
 import { t } from '../src/ui/strings';
 import { stateColor, useTheme } from '../src/ui/theme';
 
@@ -60,13 +61,16 @@ export default function RosterScreen() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable
-              onPress={() => void hostSession.unpair()}
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <Text style={{ color: theme.accent, fontSize: 16 }}>{t.unpair}</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <OpenFullClientButton target={{ kind: 'home' }} />
+              <Pressable
+                onPress={() => void hostSession.unpair()}
+                accessibilityRole="button"
+                hitSlop={8}
+              >
+                <Text style={{ color: theme.accent, fontSize: 16 }}>{t.unpair}</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />

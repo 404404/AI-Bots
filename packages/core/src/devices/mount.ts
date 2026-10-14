@@ -6,7 +6,12 @@ import type { Duplex } from 'node:stream';
 
 import { attachOperationalModule, type OperationalDatabaseOwner } from '../database/owner.js';
 import { openLogDatabase, type LogDatabase } from '../logs/log-db.js';
-import { createDeviceGateway, DEVICE_GATEWAY_PREFIX, DEVICE_MUX_PATH } from './gateway.js';
+import {
+  createDeviceGateway,
+  DEVICE_GATEWAY_PREFIX,
+  DEVICE_MUX_PATH,
+  DEVICE_WEB_MUX_PATH,
+} from './gateway.js';
 import { createDevicesHttp, DEVICES_PATH } from './http.js';
 import { createDevicePairing, type DevicePairingEvent } from './pairing.js';
 import { detectPhoneRoutes } from './routes.js';
@@ -103,13 +108,14 @@ export function mountDevicePairing(
         }),
       'botharness: device gateway',
     );
-    webCtx.effect(
-      () =>
-        webServer.registerUpgrade({
-          path: DEVICE_MUX_PATH,
-          handler: (request, socket, head) => void gateway.upgrade(request, socket, head),
-        }),
-      'botharness: device gateway stream',
-    );
+    for (const path of [DEVICE_MUX_PATH, DEVICE_WEB_MUX_PATH])
+      webCtx.effect(
+        () =>
+          webServer.registerUpgrade({
+            path,
+            handler: (request, socket, head) => void gateway.upgrade(request, socket, head),
+          }),
+        `botharness: device gateway stream ${path}`,
+      );
   });
 }
