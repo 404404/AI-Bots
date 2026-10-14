@@ -760,16 +760,21 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
               origin.sessionId,
               durable.author.slug,
             );
-          const botAlreadyAdmitted = (targetSlug: string, rootId: string): boolean =>
+          const botAlreadyAdmitted = (
+            targetSlug: string,
+            rootId: string,
+            fromBotSlug?: string,
+          ): boolean =>
             db
               .prepare(`
               SELECT 1 FROM inbox_admissions a
               JOIN source_events e ON e.source_event_id = a.source_event_id
               WHERE a.bot_slug = ? AND e.source_kind = 'bot-message'
                 AND json_extract(e.payload_json, '$.botCausation.rootSourceEventId') = ?
+                AND (? IS NULL OR e.bot_slug = ?)
               LIMIT 1
             `)
-              .get(targetSlug, rootId) !== undefined;
+              .get(targetSlug, rootId, fromBotSlug ?? null, fromBotSlug ?? null) !== undefined;
           const candidateRecipients =
             durable.privateInputResolution !== undefined
               ? []
@@ -795,7 +800,11 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
                       .filter(
                         (targetSlug) =>
                           targetSlug !== senderSlug &&
-                          !botAlreadyAdmitted(targetSlug, durable.botCausation!.rootSourceEventId),
+                          !botAlreadyAdmitted(
+                            targetSlug,
+                            durable.botCausation!.rootSourceEventId,
+                            senderSlug,
+                          ),
                       )
                       .map((botSlug) => ({ botSlug, reason: 'group-mention' }))
                   : botDm &&

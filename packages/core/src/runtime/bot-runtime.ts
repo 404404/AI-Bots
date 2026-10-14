@@ -97,6 +97,7 @@ import {
 } from '../database/owner.js';
 import { createSessionOwnership, type SessionOwnership } from '../sessions/ownership.js';
 import { sessionMentionText } from './session-mentions.js';
+import { botMentionLabel, resolveBotMentionText } from '../channels/bot-mention-text.js';
 import {
   createBotSourcePolicyStore,
   type BotSourcePolicy,
@@ -5535,12 +5536,22 @@ class BotRuntimeImplementation implements BotRuntime {
     const sender = this.#registry.get(botSlug);
     if (sender === undefined || sender.paused === true)
       throw new Error('Bot Group sender is no longer active');
-    const ids = input.mentionBotIds ?? [];
-    if (ids.length > 20 || ids.some((id) => !isValidSlug(id)))
+    const explicitIds = input.mentionBotIds ?? [];
+    if (explicitIds.length > 20 || explicitIds.some((id) => !isValidSlug(id)))
       throw new Error('Bot Group mentions require at most 20 valid Bot IDs');
+    const typed = resolveBotMentionText(
+      input.body,
+      this.#registry.list().map((bot) => ({
+        botSlug: bot.slug,
+        displayName: bot.displayName,
+        eligible: bot.slug !== botSlug && bot.paused !== true && channel.members.includes(bot.slug),
+      })),
+    );
+    const ids = [...new Set([...explicitIds, ...typed.botSlugs])];
+    if (ids.length > 20) throw new Error('Bot Group mentions require at most 20 valid Bot IDs');
     const mentions: ChannelMention[] = [];
     let prefix = '';
-    for (const id of new Set(ids)) {
+    for (const id of ids) {
       const target = this.#registry.get(id);
       if (
         id === botSlug ||
@@ -5549,7 +5560,7 @@ class BotRuntimeImplementation implements BotRuntime {
         !channel.members.includes(id)
       )
         throw new Error('Mentioned PersonaBot must be another active Group member');
-      const label = target.displayName.replace(/\s+/gu, ' ').trim().slice(0, 80);
+      const label = botMentionLabel(target.displayName);
       const token = '@' + label;
       mentions.push({
         botSlug: id,
@@ -5581,7 +5592,7 @@ class BotRuntimeImplementation implements BotRuntime {
       });
       prefix += token + ' ';
     }
-    const body = prefix + input.body;
+    const body = prefix + typed.body;
     if (!body.trim() && !input.attachments?.length)
       throw new Error('Group message requires a body or attachment');
     this.#channels.assertAttachmentRefs(input.attachments ?? []);
