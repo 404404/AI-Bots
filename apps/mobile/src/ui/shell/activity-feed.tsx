@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useMemo, useState, type ReactElement } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
@@ -205,7 +204,6 @@ function Post({
   onSettled(item: HumanAttentionItem, result: DecisionResult): void;
 }) {
   const theme = useDesignTheme();
-  const router = useRouter();
   const name = bot?.displayName ?? item.botSlug;
   const where =
     item.channelName !== undefined && !item.channelId?.startsWith('dm-')
@@ -272,13 +270,7 @@ function Post({
         </Text>
       </Pressable>
       {item.kind === 'tool-approval' ? (
-        <ApprovalCard
-          port={ports.approval}
-          botName={name}
-          wide
-          onDetails={() => router.push({ pathname: '/approval', params: { ...ref } })}
-          onSettled={settled}
-        />
+        <ApprovalCard port={ports.approval} wide onSettled={settled} />
       ) : (
         <QuestionCard port={ports.question} botName={name} wide onSettled={settled} />
       )}

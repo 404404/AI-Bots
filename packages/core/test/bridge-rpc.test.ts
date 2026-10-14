@@ -205,6 +205,8 @@ describe('bridge typert service', () => {
       'userQuestionAnswer',
       'sessions',
       'botToolTrace',
+      'botTools',
+      'botToolRun',
       'sessionArchiveSet',
       'sessionOwner',
       'botSessionIds',
@@ -304,6 +306,7 @@ describe('bridge typert service', () => {
       'limit',
     ]);
     expect(parameterNames(service.followCompanion)).toEqual(['resume', 'lastEventId', 'signal']);
+    expect(parameterNames(service.botToolRun)).toEqual(['slug', 'tool', 'args']);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {
