@@ -1,4 +1,4 @@
-import { border, color, radius, size, space, text } from './ds/tokens.stylex.js';
+import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import { INTERNAL_TOUR_CSS } from './internal-tour-styles.js';
 import { COMPOSER_CONTEXT_CSS } from './composer-context-styles.js';
 import { WINDOW_COMPANION_CSS } from './window-companion-styles.js';
@@ -3590,7 +3590,7 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   gap: ${space.x1};
   padding: ${space.x1};
   border: ${border.hairline} solid ${color.border};
-  border-radius: ${radius.sm};
+  border-radius: ${radius.md};
   background: ${color.base};
   box-shadow: 0 2px 8px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
 }
@@ -3601,25 +3601,6 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
 }
 .bh-bubble-wrap.bh-bubble-selecting .bh-bubble-toolbar {
   display: none;
-}
-.bh-bubble-action {
-  display: grid;
-  place-items: center;
-  width: ${size.inlineIcon};
-  height: ${size.inlineIcon};
-  padding: 0;
-  border: 0;
-  border-radius: ${radius.xs};
-  color: var(--dsw-alias-label-secondary);
-  background: transparent;
-  cursor: pointer;
-}
-.bh-bubble-action:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.bh-bubble-action:focus-visible {
-  outline: ${border.focus} solid var(--dsw-alias-label-primary);
-  outline-offset: -2px;
 }
 @media (hover: none) {
   .bh-bubble-meta,

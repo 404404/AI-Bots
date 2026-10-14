@@ -168,6 +168,7 @@ import {
 } from './message-selection-state.js';
 import { useMountedResource } from './mounted-resource.js';
 import * as stylex from '@stylexjs/stylex';
+import { IconButton } from './ds/icon-button.js';
 import { color, text } from './ds/tokens.stylex.js';
 import type { ReleaseNotesController } from './release-notes.js';
 import { ReleaseNotesAnnouncement } from './release-notes-view.js';
@@ -795,14 +796,14 @@ function MessageGroupView({
                     message.streaming !== true &&
                     message.failed === undefined ? (
                       <Tooltip label={t('message.reply')} side="top" portal delayMs={400}>
-                        <button
-                          type="button"
-                          className="bh-bubble-action"
+                        <IconButton
+                          size="inline"
+                          data-bubble-action=""
                           aria-label={t('message.reply')}
                           onClick={() => onReply(message)}
                         >
                           <ReplyIcon />
-                        </button>
+                        </IconButton>
                       </Tooltip>
                     ) : null}
                     <MessageCopyAction body={message.body} t={t} />
