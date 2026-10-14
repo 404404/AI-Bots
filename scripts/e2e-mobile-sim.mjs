@@ -492,7 +492,7 @@ async function main() {
         body: `From ${b.name}`,
         data: { hostId: b.id, test: true },
       }),
-      '(?i)needs my action|需要我处理',
+      '(?i)needs my action.*|需要我处理.*',
     );
     await flow('6b-showing-mac-b', 'assert-host.yaml', { HOST: b.name });
     await open(
@@ -504,7 +504,7 @@ async function main() {
         badge: 1,
         data: { hostId: a.id },
       }),
-      '(?i)needs my action|需要我处理',
+      '(?i)needs my action.*|需要我处理.*',
     );
     await flow('6d-showing-mac-a', 'assert-host.yaml', { HOST: a.name });
     steps.push('test and badge-only notifications switched computers and opened Activity');
