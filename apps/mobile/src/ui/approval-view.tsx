@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 
 import { readableInput, type ApprovalRequest, type DecisionResult } from '../host/requests';
 import {
@@ -13,6 +13,8 @@ import {
 import { useMounted } from './mounted';
 import { t } from './strings';
 import { useTheme } from './theme';
+
+const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 export interface ApprovalPort {
   load(): Promise<ApprovalRequest>;
@@ -127,7 +129,7 @@ export function ApprovalView({
           <Text style={{ color: theme.inkSoft, fontSize: 13, fontWeight: '600' }}>
             {t.workingFolder}
           </Text>
-          <Text selectable style={{ color: theme.ink, fontFamily: 'Menlo', fontSize: 13 }}>
+          <Text selectable style={{ color: theme.ink, fontFamily: MONO, fontSize: 13 }}>
             {request.cwd}
           </Text>
         </View>
@@ -150,7 +152,7 @@ export function ApprovalView({
               {row.label === '' ? null : (
                 <Text style={{ color: theme.inkSoft, fontSize: 13 }}>{row.label}</Text>
               )}
-              <Text selectable style={{ color: theme.ink, fontFamily: 'Menlo', fontSize: 14 }}>
+              <Text selectable style={{ color: theme.ink, fontFamily: MONO, fontSize: 14 }}>
                 {row.value}
               </Text>
             </View>

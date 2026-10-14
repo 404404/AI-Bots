@@ -65,6 +65,7 @@ export default function RosterScreen() {
               onPress={() => void hostSession.unpair()}
               accessibilityRole="button"
               hitSlop={8}
+              style={{ paddingHorizontal: 16 }}
             >
               <Text style={{ color: theme.accent, fontSize: 16 }}>{t.unpair}</Text>
             </Pressable>

@@ -77,3 +77,7 @@ export const SectionList = (props: {
 export const useColorScheme = () => 'light';
 export const Linking = { openURL: async () => undefined };
 export const AppState = { addEventListener: () => ({ remove() {} }) };
+export const Platform = {
+  OS: 'web',
+  select: <T>(options: { default?: T; web?: T }) => options.web ?? options.default,
+};

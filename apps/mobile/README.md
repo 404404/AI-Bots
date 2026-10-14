@@ -39,7 +39,7 @@ node apps/mobile/scripts/web-screenshot.mjs http://127.0.0.1:8099/ connect-light
 node apps/mobile/scripts/web-screenshot.mjs http://127.0.0.1:8099/ connect-dark.png dark
 ```
 
-The web render is layout evidence, not native evidence: it shows the app's own views, copy, spacing and theme, but not native headers, large titles, keyboard behavior or fonts. `expo-secure-store` has no web backend, so the web build always opens on the login screen. Native behavior is still checked on a development build (below) and reported in the PR's Human QA.
+The web render is layout evidence, not native evidence: it shows the app's own views, copy, spacing and theme, but not native headers, large titles, keyboard behavior or fonts. `expo-secure-store` has no web backend, so the web build keeps the paired Host in the tab's `sessionStorage` instead (`src/host/saved-host.web.ts`). To render screens with live data, serve `dist-web` and the Host's `/api` from one origin (a small reverse proxy that forwards `/api/*`, its WebSocket upgrade and `/?token=` to the Host), then seed `sessionStorage['deepseekbot.host.v1']` with `{ route, token }` before the page loads. Native behavior is still checked on a development build (below) and reported in the PR's Human QA.
 
 ## Run the tracer on a phone
 
