@@ -109,6 +109,7 @@ describe('Bot colour on the Human bubble', () => {
     displayName: 'Ada',
     roles: [],
     computerAccess: false,
+    browserAccess: false,
     state: 'idle' as const,
     paused: false,
   };
