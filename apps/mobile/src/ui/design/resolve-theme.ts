@@ -89,6 +89,19 @@ export function withAccent(
   return { ...color, accent, onAccent };
 }
 
+export function accentInk(color: Record<ColorRole, string>): string {
+  const steps = Array.from({ length: 41 }, (_, step) => step / 40);
+  return mix(
+    color.accent,
+    color.fg,
+    steps.find((step) =>
+      [color.surface, color.elevated].every(
+        (behind) => contrast(mix(color.accent, color.fg, step), behind) >= BODY_CONTRAST,
+      ),
+    ) ?? 1,
+  );
+}
+
 export type HeaderBand = { top: string; bottom: string; ink: ColorRole; lightInk: boolean };
 
 export function headerBand(scheme: ColorScheme, color: Record<ColorRole, string>): HeaderBand {

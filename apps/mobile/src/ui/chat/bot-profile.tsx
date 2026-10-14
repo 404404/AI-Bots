@@ -10,7 +10,7 @@ import {
 import type { RosterBot, RosterChannel } from '../../host/client';
 import type { ScheduleTrigger } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
-import { useDesignTheme } from '../design/theme';
+import { accentInk, useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
@@ -166,8 +166,8 @@ function ProfileAction({
         backgroundColor: pressed ? theme.color.hover : theme.color.elevated,
       })}
     >
-      {icon(theme.color.accent)}
-      <Text variant="meta" tone="accent" strong numberOfLines={1}>
+      {icon(accentInk(theme.color))}
+      <Text variant="meta" strong numberOfLines={1} style={{ color: accentInk(theme.color) }}>
         {label}
       </Text>
     </Pressable>
@@ -265,7 +265,7 @@ function ProfileRow({
           onPress={onRetry}
           style={{ minHeight: theme.touch, justifyContent: 'center', alignSelf: 'flex-start' }}
         >
-          <Text tone="accent" strong>
+          <Text strong style={{ color: accentInk(theme.color) }}>
             {t.tryAgain}
           </Text>
         </Pressable>
@@ -306,7 +306,7 @@ function ProfileRow({
           onPress={onToggle}
           style={{ minHeight: theme.touch, justifyContent: 'center', alignSelf: 'flex-start' }}
         >
-          <Text tone="accent" strong>
+          <Text strong style={{ color: accentInk(theme.color) }}>
             {expanded ? t.showLess : t.showMore}
           </Text>
         </Pressable>

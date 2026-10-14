@@ -3,7 +3,7 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, View } from 'react-
 
 import { memoryEntries, type MemoryEntry } from '../../host/bot-profile';
 import type { MemoryFile } from '../../host/wire';
-import { useDesignTheme } from '../design/theme';
+import { accentInk, useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
@@ -69,7 +69,7 @@ export function MemoryEntryRow({
       })}
     >
       {entry.kind === 'folder' ? (
-        <FolderIcon color={theme.color.accent} size={ICON} />
+        <FolderIcon color={accentInk(theme.color)} size={ICON} />
       ) : (
         <FileIcon color={theme.color.muted} size={ICON} />
       )}
@@ -109,7 +109,7 @@ function Status({
         onPress={onRetry}
         style={{ minHeight: theme.touch, justifyContent: 'center', alignSelf: 'flex-start' }}
       >
-        <Text tone="accent" strong>
+        <Text strong style={{ color: accentInk(theme.color) }}>
           {t.tryAgain}
         </Text>
       </Pressable>
