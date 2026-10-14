@@ -99,11 +99,12 @@ describe('composer actions', () => {
 
 describe('composer layout', () => {
   it('keeps one row for a single trailing button and stacks two rows otherwise', () => {
-    expect(composerStacked(['mic'], 0)).toBe(false);
-    expect(composerStacked(['send'], 0)).toBe(false);
-    expect(composerStacked(['mic', 'send'], 1)).toBe(true);
-    expect(composerStacked(['send'], 1)).toBe(true);
-    expect(composerStacked(['stop'], 0)).toBe(false);
+    expect(composerStacked(['mic'], 0, false)).toBe(false);
+    expect(composerStacked(['send'], 0, false)).toBe(false);
+    expect(composerStacked(['mic', 'send'], 1, false)).toBe(true);
+    expect(composerStacked(['send'], 1, false)).toBe(true);
+    expect(composerStacked(['stop'], 0, false)).toBe(false);
+    expect(composerStacked(['send'], 0, true)).toBe(true);
   });
 });
 

@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   View,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,8 +18,10 @@ import { Text } from '../primitives/text';
 import {
   ArrowUpIcon,
   CameraIcon,
+  ChevronUpIcon,
   CloseIcon,
   FileIcon,
+  LockIcon,
   MicIcon,
   PhotoIcon,
   PlusIcon,
@@ -236,6 +239,31 @@ function HoldDot() {
   );
 }
 
+function LockHint({ style }: { style: ViewStyle }) {
+  const theme = useDesignTheme();
+  const size = theme.touch - space.x4;
+  return (
+    <View
+      style={[
+        style,
+        {
+          width: size,
+          paddingVertical: space.x3,
+          gap: space.x2,
+          alignItems: 'center',
+          borderRadius: radius.round,
+          borderWidth: edge.hairline,
+          borderColor: theme.color.borderStrong,
+          backgroundColor: theme.color.surface,
+        },
+      ]}
+    >
+      <LockIcon color={theme.color.muted} size={theme.type.title.line} />
+      <ChevronUpIcon color={theme.color.subtle} size={theme.type.body.size} />
+    </View>
+  );
+}
+
 function AttachMenu({ onPick }: { onPick(source: PickSource): void }) {
   const theme = useDesignTheme();
   return (
@@ -319,6 +347,8 @@ export function Composer({
   const [menu, setMenu] = useState(false);
   const [held, setHeld] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
+  const [pill, setPill] = useState({ width: 0, height: 0 });
+  const [wraps, setWraps] = useState(false);
   const lineHeight = theme.touch - space.x4;
   const inset = space.x3;
   const listening = dictating(dictation);
@@ -333,16 +363,25 @@ export function Composer({
     if (!menu) Keyboard.dismiss();
     setMenu(!menu);
   };
-  const stacked = composerStacked(actions, files.length);
+  const [lastStacked, setLastStacked] = useState(false);
+  const stacked = held ? lastStacked : composerStacked(actions, files.length, wraps);
+  if (stacked !== lastStacked) setLastStacked(stacked);
   const icon = theme.type.title.line;
+  const button = theme.touch - space.x4;
+  const compactWidth = pill.width - 2 * (inset + edge.hairline + button + space.x2);
   const leading = held ? (
-    <HoldDot />
+    <HoldDot key="lead" />
   ) : listening ? (
-    <RoundButton label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
+    <RoundButton key="lead" label={t.cancelDictation} filled={false} onPress={onCancelDictation}>
       <CloseIcon color={theme.color.muted} size={icon} />
     </RoundButton>
   ) : canAttach ? (
-    <RoundButton label={menu ? t.closeAttach : t.attach} filled={false} onPress={toggleMenu}>
+    <RoundButton
+      key="lead"
+      label={menu ? t.closeAttach : t.attach}
+      filled={false}
+      onPress={toggleMenu}
+    >
       {menu ? (
         <CloseIcon color={theme.color.muted} size={icon} />
       ) : (
@@ -352,6 +391,7 @@ export function Composer({
   ) : null;
   const field = (
     <TextInput
+      key="field"
       value={value}
       onChangeText={onChange}
       onFocus={() => setMenu(false)}
@@ -370,7 +410,7 @@ export function Composer({
       editable={!listening}
       onContentSizeChange={(event) => setContentHeight(event.nativeEvent.contentSize.height)}
       style={{
-        flex: stacked ? undefined : 1,
+        flex: 1,
         height: Math.min(Math.max(contentHeight, lineHeight), theme.touch * 3),
         paddingVertical: (lineHeight - theme.type.body.line) / 2,
         paddingHorizontal: stacked || leading === null ? space.x3 : 0,
@@ -416,6 +456,12 @@ export function Composer({
           backgroundColor: theme.color.surface,
           overflow: 'hidden',
         }}
+        onLayout={(event) =>
+          setPill({
+            width: event.nativeEvent.layout.width,
+            height: event.nativeEvent.layout.height,
+          })
+        }
       >
         {files.length > 0 ? (
           <ScrollView
@@ -429,9 +475,13 @@ export function Composer({
             ))}
           </ScrollView>
         ) : null}
-        {stacked ? (
-          <View style={{ padding: inset }}>
+        <View style={{ padding: inset }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.x2 }}>
+            {stacked ? null : leading}
             {field}
+            {stacked ? null : trailing}
+          </View>
+          {stacked ? (
             <View
               style={{
                 flexDirection: 'row',
@@ -444,22 +494,31 @@ export function Composer({
               <View style={{ flex: 1 }} />
               {trailing}
             </View>
-          </View>
-        ) : (
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-end',
-              gap: space.x2,
-              padding: inset,
-            }}
+          ) : null}
+        </View>
+        {compactWidth > 0 ? (
+          <Text
+            variant="body"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+            onLayout={(event) =>
+              setWraps(event.nativeEvent.layout.height > theme.type.body.line * 1.5)
+            }
+            style={{ position: 'absolute', opacity: 0, width: compactWidth, left: 0, top: 0 }}
           >
-            {leading}
-            {field}
-            {trailing}
-          </View>
-        )}
+            {value === '' ? ' ' : value}
+          </Text>
+        ) : null}
       </View>
+      {held ? (
+        <LockHint
+          style={{
+            position: 'absolute',
+            right: space.x4 + edge.hairline + inset,
+            bottom: Math.max(insets.bottom, space.x3) + pill.height + space.x3,
+          }}
+        />
+      ) : null}
       {menu && canAttach && !listening ? (
         <AttachMenu
           onPick={(source) => {

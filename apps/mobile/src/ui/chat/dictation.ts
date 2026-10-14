@@ -71,8 +71,8 @@ export function composerActions(input: {
   ];
 }
 
-export function composerStacked(actions: ComposerAction[], files: number): boolean {
-  return files > 0 || actions.length > 1;
+export function composerStacked(actions: ComposerAction[], files: number, wraps: boolean): boolean {
+  return wraps || files > 0 || actions.length > 1;
 }
 
 export const voiceGesture = { holdMs: 300, cancelDrag: 80, lockDrag: 60 } as const;
