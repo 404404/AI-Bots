@@ -363,9 +363,7 @@ export function Composer({
     if (!menu) Keyboard.dismiss();
     setMenu(!menu);
   };
-  const [lastStacked, setLastStacked] = useState(false);
-  const stacked = held ? lastStacked : composerStacked(actions, files.length, wraps);
-  if (stacked !== lastStacked) setLastStacked(stacked);
+  const stacked = composerStacked(actions, files.length, wraps);
   const icon = theme.type.title.line;
   const button = theme.touch - space.x4;
   const compactWidth = pill.width - 2 * (inset + edge.hairline + button + space.x2);
@@ -411,7 +409,7 @@ export function Composer({
       onContentSizeChange={(event) => setContentHeight(event.nativeEvent.contentSize.height)}
       style={{
         flex: 1,
-        height: Math.min(Math.max(contentHeight, lineHeight), theme.touch * 3),
+        height: wraps ? Math.min(Math.max(contentHeight, lineHeight), theme.touch * 3) : lineHeight,
         paddingVertical: (lineHeight - theme.type.body.line) / 2,
         paddingHorizontal: stacked || leading === null ? space.x3 : 0,
         color: theme.color.fg,
@@ -476,25 +474,30 @@ export function Composer({
           </ScrollView>
         ) : null}
         <View style={{ padding: inset }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.x2 }}>
-            {stacked ? null : leading}
+          <View
+            style={{
+              flexDirection: 'row',
+              paddingLeft: stacked || leading === null ? 0 : button + space.x2,
+              paddingRight: stacked || trailing.length === 0 ? 0 : button + space.x2,
+            }}
+          >
             {field}
-            {stacked ? null : trailing}
           </View>
-          {stacked ? (
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: space.x2,
-                paddingTop: space.x2,
-              }}
-            >
-              {leading}
-              <View style={{ flex: 1 }} />
-              {trailing}
-            </View>
-          ) : null}
+          <View
+            pointerEvents="box-none"
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: space.x2,
+              ...(stacked
+                ? { paddingTop: space.x2 }
+                : { position: 'absolute', left: inset, right: inset, bottom: inset }),
+            }}
+          >
+            {leading}
+            <View pointerEvents="none" style={{ flex: 1 }} />
+            {trailing}
+          </View>
         </View>
         {compactWidth > 0 ? (
           <Text
