@@ -2361,16 +2361,19 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-profile-banner:hover .bh-profile-banner-edit,
 .bh-profile-banner-edit:focus-visible { opacity: 1; }
 @media (hover: none) { .bh-profile-banner-edit { opacity: 1; } }
-/* A fixed height, not aspect-ratio + max-height: WebKit transfers that max-height into a
-   288px max-width, leaving a strip of popover beside the banner. */
+/* No max-height: with aspect-ratio, WebKit turns it into a max-width and the banner stops
+   short of the popover's right edge. Uploads are cropped to 3:1, so the ratio alone fits.
+   The art is absolutely placed so its intrinsic width doesn't widen the popover. */
 .bh-profile-popover-banner {
+  position: relative;
   flex: none;
   margin: -12px -12px 0;
-  height: 96px;
+  aspect-ratio: 3 / 1;
   overflow: hidden;
   border-radius: 11px 11px 0 0;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
+.bh-profile-popover-banner > .bh-banner-art { position: absolute; inset: 0; }
 .bh-profile-header-body {
   display: flex;
   flex-direction: column;
