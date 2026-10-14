@@ -54,8 +54,31 @@ export function WorkingIcon(props: IconProps) {
   );
 }
 
+export function StopIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      focused
+      d="M8 7h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
+    />
+  );
+}
+
 export function ChevronDownIcon(props: IconProps) {
   return <Glyph {...props} d="m6 9 6 6 6-6" />;
+}
+
+export function ChevronUpIcon(props: IconProps) {
+  return <Glyph {...props} d="m6 15 6-6 6 6" />;
+}
+
+export function LockIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M7 11h10a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Zm2 0V8a3 3 0 0 1 6 0v3"
+    />
+  );
 }
 
 export function ArrowUpIcon(props: IconProps) {
@@ -103,6 +126,15 @@ export function MessageIcon(props: IconProps) {
   );
 }
 
+export function MicIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3Zm-6 9a6 6 0 0 0 12 0m-6 6v3"
+    />
+  );
+}
+
 export function ComputerIcon(props: IconProps) {
   return (
     <Glyph
@@ -110,4 +142,32 @@ export function ComputerIcon(props: IconProps) {
       d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm5 15h6m-3-3v3"
     />
   );
+}
+
+export function RecordingStopIcon({ color, size }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M8 7h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+export function ShareIcon(props: IconProps) {
+  return <Glyph {...props} d="M12 15V4M8 8l4-4 4 4M6 12v7a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-7" />;
+}
+
+export function FolderIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M4 6a1 1 0 0 1 1-1h4.5l2 2H19a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"
+    />
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return <Glyph {...props} d="m9 6 6 6-6 6" />;
 }
