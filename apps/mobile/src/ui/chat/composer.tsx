@@ -40,7 +40,11 @@ function RoundButton({
         borderRadius: radius.round,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: filled ? theme.color.accent : pressed ? theme.color.hover : undefined,
+        backgroundColor: filled
+          ? theme.color.accent
+          : pressed
+            ? theme.layer.raised.pressed
+            : undefined,
         opacity: filled && pressed ? 0.7 : 1,
       })}
     >
@@ -63,7 +67,7 @@ function AttachmentTile({ file, onRemove }: { file: PickedFile; onRemove(): void
             width: tile,
             height: tile,
             borderRadius: radius.md,
-            backgroundColor: theme.color.selected,
+            backgroundColor: theme.layer.raised.inset,
           }}
         />
       ) : (
@@ -76,7 +80,7 @@ function AttachmentTile({ file, onRemove }: { file: PickedFile; onRemove(): void
             gap: space.x2,
             paddingHorizontal: space.x3,
             borderRadius: radius.md,
-            backgroundColor: theme.color.selected,
+            backgroundColor: theme.layer.raised.inset,
           }}
         >
           <FileIcon color={theme.color.muted} size={theme.type.title.line} />

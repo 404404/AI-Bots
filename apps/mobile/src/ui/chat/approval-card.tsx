@@ -182,7 +182,7 @@ export function ApprovalCard({
           first === undefined || first.value === '' ? undefined : (
             <View
               style={{
-                backgroundColor: theme.color.base,
+                backgroundColor: theme.layer.well.fill,
                 borderRadius: radius.sm,
                 paddingHorizontal: space.x4,
                 paddingVertical: space.x3,

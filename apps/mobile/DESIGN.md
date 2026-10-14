@@ -71,6 +71,24 @@ References:
 - Actions: Message, Computer, Notifications.
 - Sections: Identity (persona and standing rules, editable), Memory, Routines, Channels, Files.
 
+## Layers and states
+
+Every fill comes from a layer, like the Web Client's DSH layers. `theme.layer.<name>` holds opaque colours:
+
+| Layer    | Fill (DSH)           | Used for                                                  |
+| -------- | -------------------- | --------------------------------------------------------- |
+| `canvas` | `bg-base`            | screens, lists, the composer bar                          |
+| `raised` | `bg-module-platform` | cards, Bot bubbles, shortcut cards, the composer pill     |
+| `well`   | `bg-base`            | a recessed area in a raised card: option groups, previews |
+| `field`  | `bg-layer-1`         | text inputs in a card, edged with `border-l4`             |
+| `sheet`  | `bg-layer-2`         | settings rows, sheets and menus                           |
+
+Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab), `chosen` (the Human's pick, an accent tint), `inset` (code, badges, tiles), `edge` and `divider`.
+
+- `chosen` is the accent over the fill, 13% in light and 30% in dark. On `well` it equals DSH `state-business-tertiary`, and it follows a Bot's accent.
+- A state is pushed further from its fill until it stands apart from the fill, the layer under it and the other states (`SEPARATION` in `layers.ts`; `test/design-tokens.test.ts` checks every scheme and accent). DSH's dark `interactive-bg-active` over `bg-base` equals `bg-module-platform`, so without this a selected row in a card looks like the card.
+- Translucent roles (`hover`, `selected`, `divider`, `border*`, `dangerSoft`) are never a `backgroundColor`; `test/style-guard.test.ts` enforces this. Translucent edges stay allowed.
+
 ## Components
 
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
@@ -81,7 +99,7 @@ References:
 
 ## Code rules
 
-1. **No literal style values.**
+1. **No literal style values.** Fills come from `theme.layer` (above).
    - Colours, font sizes and weights, spacing, radii and edge widths come from `useDesignTheme()` and `src/ui/design/tokens.ts`.
    - `test/style-guard.test.ts` enforces this for `app/` and `src/ui/`.
    - Files written before the rule are listed in it and leave the list once migrated; the test fails if a migrated file stays listed.

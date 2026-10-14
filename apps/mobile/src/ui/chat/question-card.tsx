@@ -94,12 +94,12 @@ function Option({
         paddingHorizontal: space.x4,
         paddingVertical: space.x3,
         borderTopWidth: index === 0 ? 0 : edge.hairline,
-        borderTopColor: theme.color.divider,
+        borderTopColor: theme.layer.well.divider,
         backgroundColor: chosen
-          ? theme.color.accentSoft
+          ? theme.layer.well.chosen
           : pressed
-            ? theme.color.hover
-            : theme.color.base,
+            ? theme.layer.well.pressed
+            : theme.layer.well.fill,
       })}
     >
       <View
@@ -109,7 +109,7 @@ function Option({
           borderRadius: multiple ? radius.sm : radius.round,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: chosen ? theme.color.accent : theme.color.selected,
+          backgroundColor: chosen ? theme.color.accent : theme.layer.well.inset,
         }}
       >
         <Text variant="meta" strong tone={chosen ? 'onAccent' : 'muted'}>
@@ -171,9 +171,9 @@ function QuestionFields({
           style={{
             overflow: 'hidden',
             borderWidth: edge.hairline,
-            borderColor: theme.color.border,
+            borderColor: theme.layer.raised.edge,
             borderRadius: radius.md,
-            backgroundColor: theme.color.base,
+            backgroundColor: theme.layer.well.fill,
           }}
         >
           {question.options.map((option, index) => (
@@ -202,12 +202,12 @@ function QuestionFields({
           minHeight: theme.touch,
           color: theme.color.fg,
           fontSize: theme.type.body.size,
-          borderColor: theme.color.border,
+          borderColor: theme.layer.field.edge,
           borderWidth: edge.hairline,
           borderRadius: radius.md,
           paddingHorizontal: space.x4,
           paddingVertical: space.x3,
-          backgroundColor: theme.color.base,
+          backgroundColor: theme.layer.field.fill,
         }}
       />
     </View>

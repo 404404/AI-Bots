@@ -73,7 +73,7 @@ export default function ApprovalDetailsScreen() {
         <View style={{ padding: space.x5, gap: space.x4 }}>
           <Text tone="danger">{t.cardLoadFailed}</Text>
           <View style={{ flexDirection: 'row' }}>
-            <Button label={t.tryAgain} onPress={() => void load()} />
+            <Button label={t.tryAgain} on="canvas" onPress={() => void load()} />
           </View>
         </View>
       ) : (

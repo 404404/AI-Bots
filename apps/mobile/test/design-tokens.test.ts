@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { palette as dshPalette, render } from '../scripts/generate-palette.mjs';
 import { palette } from '../src/ui/design/palette.generated';
+import { distance, LAYER_PARENT, LAYERS, SEPARATION } from '../src/ui/design/layers';
 import { headerBand, resolveTheme, withAccent } from '../src/ui/design/resolve-theme';
 import { botColor } from '../src/ui/bot-color';
 import { edge, radius, space } from '../src/ui/design/tokens';
+
+const DSH_LAYER_ROLES = ['accentTint', 'borderField', 'field', 'sheet'];
 
 const webTokens = readFileSync(
   new URL('../../../packages/client/src/client/ds/tokens.stylex.ts', import.meta.url),
@@ -37,7 +40,10 @@ describe('mobile design tokens', () => {
 
   it('keep every Web colour role', () => {
     expect(Object.keys(palette.light).sort()).toEqual(
-      [...Object.keys(webConsts('color')).filter((role) => role !== 'navSelected')].sort(),
+      [
+        ...Object.keys(webConsts('color')).filter((role) => role !== 'navSelected'),
+        ...DSH_LAYER_ROLES,
+      ].sort(),
     );
     expect(Object.keys(palette.dark)).toEqual(Object.keys(palette.light));
   });
@@ -72,13 +78,6 @@ describe('resolveTheme', () => {
     expect(resolveTheme('light', { accent: 'red' }).color.accent).toBe(palette.light.accent);
   });
 
-  it('tints the soft accent from the accent over the base', () => {
-    expect(resolveTheme('light').color.accentSoft).toBe('#e8effc');
-    expect(resolveTheme('light', { accent: '#5b2ecc' }).color.accentSoft).not.toBe(
-      resolveTheme('light').color.accentSoft,
-    );
-  });
-
   it('uses each platform type and touch scale', () => {
     expect(resolveTheme('light', {}, 'ios')).toMatchObject({
       touch: 44,
@@ -88,6 +87,56 @@ describe('resolveTheme', () => {
       touch: 48,
       type: { body: { size: 14 } },
     });
+  });
+});
+
+describe('Layers and their states', () => {
+  const accents = [undefined, '#d9475a', '#3f8fd0', '#5f9e45', '#c79a2b', '#ffd60a', '#000000'];
+
+  it('tints a chosen row like the DSH accent tint on the base', () => {
+    for (const scheme of ['light', 'dark'] as const)
+      expect(
+        distance(resolveTheme(scheme).layer.well.chosen, palette[scheme].accentTint),
+      ).toBeLessThan(0.01);
+  });
+
+  it('keeps every state apart from its layer, the layer under it and the other states', () => {
+    for (const scheme of ['light', 'dark'] as const)
+      for (const accent of accents) {
+        const { layer } = resolveTheme(scheme, accent === undefined ? {} : { accent });
+        for (const name of LAYERS) {
+          const { fill, pressed, selected, chosen } = layer[name];
+          const parent = LAYER_PARENT[name];
+          const floor = [fill, ...(parent === undefined ? [] : [layer[parent].fill])];
+          for (const [state, value] of Object.entries({ pressed, selected, chosen }))
+            for (const other of floor)
+              expect(
+                distance(value, other),
+                `${scheme} ${accent ?? 'default'} ${name}.${state} ${value} vs ${other}`,
+              ).toBeGreaterThanOrEqual(SEPARATION);
+          for (const [a, b] of [
+            [pressed, selected],
+            [selected, chosen],
+          ] as const)
+            expect(
+              distance(a, b),
+              `${scheme} ${accent ?? 'default'} ${name}`,
+            ).toBeGreaterThanOrEqual(SEPARATION);
+        }
+      }
+  });
+
+  it('never lets a selected row inside a card match the card', () => {
+    const dark = resolveTheme('dark').layer;
+    expect(distance(dark.well.selected, dark.raised.fill)).toBeGreaterThanOrEqual(SEPARATION);
+    expect(distance(dark.well.chosen, dark.raised.fill)).toBeGreaterThanOrEqual(SEPARATION);
+  });
+
+  it('paints only opaque colours', () => {
+    for (const scheme of ['light', 'dark'] as const)
+      for (const name of LAYERS)
+        for (const value of Object.values(resolveTheme(scheme).layer[name]))
+          expect(value).toMatch(/^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/);
   });
 });
 

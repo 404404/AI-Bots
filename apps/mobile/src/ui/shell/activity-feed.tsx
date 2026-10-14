@@ -149,7 +149,7 @@ function Post({
               width: AVATAR,
               height: AVATAR,
               borderRadius: AVATAR / 2,
-              backgroundColor: theme.color.border,
+              backgroundColor: theme.layer.canvas.inset,
             }}
           />
         ) : (

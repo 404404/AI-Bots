@@ -52,7 +52,7 @@ function BlockView({ block, base, theme }: { block: Block; base: TextStyle; them
       return (
         <ScrollView
           horizontal
-          style={{ backgroundColor: theme.color.hover, borderRadius: radius.sm }}
+          style={{ backgroundColor: theme.layer.raised.inset, borderRadius: radius.sm }}
           contentContainerStyle={{ padding: space.x3 }}
         >
           <Text
@@ -110,7 +110,7 @@ function BlockView({ block, base, theme }: { block: Block; base: TextStyle; them
         <View
           style={{
             height: edge.hairline,
-            backgroundColor: theme.color.divider,
+            backgroundColor: theme.layer.raised.divider,
             marginVertical: space.x2,
           }}
         />
@@ -136,7 +136,9 @@ function InlineView({ node, theme }: { node: Inline; theme: DesignTheme }) {
       return <Fragment>{'\n'}</Fragment>;
     case 'code':
       return (
-        <Text style={{ fontFamily: mono, backgroundColor: theme.color.hover }}>{node.text}</Text>
+        <Text style={{ fontFamily: mono, backgroundColor: theme.layer.raised.inset }}>
+          {node.text}
+        </Text>
       );
     case 'strong':
       return (

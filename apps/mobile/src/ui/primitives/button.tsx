@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable } from 'react-native';
 
+import type { LayerName } from '../design/layers';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { Text } from './text';
@@ -12,12 +13,14 @@ export function Button({
   tone = 'secondary',
   disabled = false,
   busy = false,
+  on = 'raised',
 }: {
   label: string;
   onPress(): void;
   tone?: ButtonTone;
   disabled?: boolean;
   busy?: boolean;
+  on?: LayerName;
 }) {
   const theme = useDesignTheme();
   const filled = tone === 'primary';
@@ -36,7 +39,11 @@ export function Button({
         justifyContent: 'center',
         paddingHorizontal: space.x5,
         borderRadius: radius.md,
-        backgroundColor: filled ? theme.color.accent : pressed ? theme.color.hover : undefined,
+        backgroundColor: filled
+          ? theme.color.accent
+          : pressed
+            ? theme.layer[on].pressed
+            : undefined,
         borderWidth: filled ? 0 : edge.hairline,
         borderColor: theme.color.borderStrong,
         opacity: disabled ? 0.45 : filled && pressed ? 0.7 : 1,
