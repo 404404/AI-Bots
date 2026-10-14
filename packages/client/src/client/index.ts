@@ -73,6 +73,7 @@ import { openHumanAttentionSource } from './human-attention-source.js';
 import { ShortcutHelp, ShortcutHelpView } from './shortcut-help.js';
 import { mountTabTitle } from './tab-title.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
+import { createDockPanelRegistry } from './dock-panels.js';
 import { createProfileCardBuiltins } from './profile-cards-builtins.js';
 import { createGroupProfileCards } from './group-profile.js';
 import { createProfileCardRegistry } from './profile-cards.js';
@@ -339,7 +340,9 @@ export function apply(ctx: ClientContext): void {
       visibility.dispose();
     };
   }, 'botharness: Bot Session visibility');
-  const channelSidebar = createChannelSidebarRegistry();
+  const dockPanels = createDockPanelRegistry();
+  ctx.provide('dockPanels', dockPanels);
+  const channelSidebar = createChannelSidebarRegistry(dockPanels);
   ctx.provide('channelSidebar', channelSidebar);
   const profileCards = createProfileCardRegistry();
   ctx.provide('profileCards', profileCards);
@@ -814,6 +817,7 @@ export function apply(ctx: ClientContext): void {
           actions,
           companion,
           channelSidebar,
+          dockPanels,
           profileCards,
           nativeChatT,
           nativeSessions,
@@ -928,6 +932,7 @@ export function apply(ctx: ClientContext): void {
             actions,
             companion,
             channelSidebar,
+            dockPanels,
             profileCards,
             nativeChatT,
             nativeSessions,
