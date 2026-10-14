@@ -113,6 +113,39 @@ deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 
 `access-set` refuses `danger-full-access` unless `--acknowledge-risk` is given: full access lets the Bot run any command and use the Browser and Computer without an approval card. `--scope chat` also applies it to the Bot's own chat; `assignments` keeps it to new Assignments. `settings` returns `{ns, revision, value}` for one namespace; `settings-set` reads a JSON object of fields from stdin and applies it against that revision, so a concurrent change fails instead of being overwritten. Only fields the Host marks as live can be changed this way. `workspace-create` takes an absolute path and returns the Host workspace, whose id `grant-create` uses.
 
+### Channels and groups
+
+These commands manage Channels and groups through the same Host owners and checks as the Web UI. Each takes a Channel ID from `channels`:
+
+```bash
+deepseekbot channel-rename <channel> --name "Skill Lab"
+deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png
+deepseekbot group-avatar-set <channel> --clear
+deepseekbot group-invite <channel> --bot <bot-id>
+deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
+deepseekbot group-join-decide <channel> --request <request-id> --accept
+deepseekbot group-join-decide <channel> --request <request-id> --decline
+deepseekbot group-member-remove <channel> --bot <bot-id>
+deepseekbot group-wake-policies <channel>
+deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30
+deepseekbot group-wake-set <channel> --bot <bot-id> --inherit
+deepseekbot group-delete <channel> --confirm
+deepseekbot channel-timeline <channel> [--direction older|newer|around] [--cursor <cursor>] [--around <message-id>] [--limit <n>] [--older-limit <n>] [--newer-limit <n>]
+deepseekbot channel-journal <channel> --through <revision> [--before <position>] [--limit <n>]
+deepseekbot channel-mark-read <channel> --message-id <message-id>
+deepseekbot channel-mark-all-read
+deepseekbot channel-retry <dm-channel> --message-id <human-message-id>
+deepseekbot channel-history
+deepseekbot channel-history-sources <channel> [--before <cursor>]
+deepseekbot channel-purge-preview <channel> --source-event <id> [--source-event <id> …]
+deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
+  | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
+```
+
+Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply.
+
+`group-delete` and `channel-purge-confirm` cannot be undone and need `--confirm`. `channel-history` lists deleted groups whose content can still be purged. Purging works in two steps like the history page: `channel-purge-preview` lists the messages, Bot admissions, files and effects the chosen Source Events would remove and returns a short-lived `token`; `channel-purge-confirm` reads `{"token": …}` from stdin for the same Source Events and fails coded when the scope changed. Pick Source Events from `channel-history-sources`, which pages with the `before` cursor it returns.
+
 ### IM apps from the CLI
 
 ```bash
