@@ -43,7 +43,9 @@ node apps/mobile/scripts/web-screenshot.mjs http://127.0.0.1:8099/ connect-light
 node apps/mobile/scripts/web-screenshot.mjs http://127.0.0.1:8099/ connect-dark.png dark
 ```
 
-The web render is layout evidence, not native evidence: it shows the app's own views, copy, spacing and theme, but not native headers, large titles, keyboard behavior or fonts. `expo-secure-store` has no web backend, so the web build keeps the paired Host in the tab's `sessionStorage` instead (`src/host/saved-host.web.ts`), and the camera scanner only runs on a native build; paste the pairing link instead. To render screens with live data, serve `dist-web` from the Host's own origin (a small reverse proxy that forwards `/botharness-device/*` and its WebSocket upgrade to the Host) and pair with a link from Settings → Devices. Native behavior is still checked on a development build (below) and reported in the PR's Human QA.
+The web render is layout evidence, not native evidence: it shows the app's own views, copy, spacing and theme, but not native headers, large titles, keyboard behavior or fonts. `expo-secure-store` has no web backend, so the web build keeps the paired Host in the tab's `sessionStorage` instead (`src/host/saved-host.web.ts`), and the camera scanner only runs on a native build; paste the pairing link instead. To render screens with live data, serve `dist-web` from the Host's own origin (a small reverse proxy that forwards `/botharness-device/*` and its WebSocket upgrade to the Host; a browser cannot set headers on a WebSocket, so the web carrier puts the device credential in a `bh_device` cookie and the proxy sends it on as `Authorization: Device …`) and pair with a link from Settings → Devices. Native behavior is still checked on a development build (below) and reported in the PR's Human QA.
+
+`node scripts/e2e-mobile-pairing-web.mjs` does this end to end against a fresh isolated Host: it pairs by pasting the link, restarts the Host, revokes the phone and checks each screen ([feature map](../../.agents/skills/verify-deepseekbot/features/phone-pairing.md)).
 
 ## Run it on a phone
 
