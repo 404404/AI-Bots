@@ -5,8 +5,8 @@ Bot mode swaps the native DSH session view for the BotHarness conversation view.
 ## Sub-features
 
 - `enter` switches from the native view to Bot mode.
-- `sidebar` is the desktop Bot mode sidebar: Activity Center, the Messages Roster, Bot settings and Exit Bot mode, in the column DSH sizes and collapses.
-- `exit` leaves Bot mode with **Exit Bot mode** and brings back the native left column.
+- `sidebar` is the desktop Bot mode sidebar: a `DeepSeekBot` header, Activity Center, the Messages Roster and Bot settings, in the column DSH sizes and collapses.
+- `exit` leaves Bot mode with the header logo, which morphs into **Exit Bot mode** on hover or keyboard focus, and brings back the native left column.
 - `default-bot` creates DeepSeek Bot and its DM on first entry.
 - `welcome-letter` shows the welcome letter with suggested replies, a model chooser and Create Bot.
 - `getting-started` opens the tutorial checklist.
@@ -14,7 +14,7 @@ Bot mode swaps the native DSH session view for the BotHarness conversation view.
 ## How to get to it (user POV)
 
 - Choose `Bot mode` in the global sidebar.
-- On desktop, choose `Exit Bot mode` at the bottom of the Bot mode sidebar to return to the native view. Between 760 and 960 px wide, the native sidebar stays and `Bot mode` is chosen again instead.
+- On desktop, choose the logo at the top left of the Bot mode sidebar (its accessible name is `Exit Bot mode`) to return to the native view. Between 760 and 960 px wide, the native sidebar stays and `Bot mode` is chosen again instead.
 
 ## Driving it with verify-app
 

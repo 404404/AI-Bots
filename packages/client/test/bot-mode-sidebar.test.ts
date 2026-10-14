@@ -91,8 +91,17 @@ describe('Bot mode sidebar', () => {
 
     expect(calls.refreshHumanInboxStatus).toHaveBeenCalledTimes(1);
     expect(node.querySelector('[data-roster]')?.getAttribute('data-roster')).toBe('wide');
-    expect(button('Exit Bot mode').textContent).toBe('Exit Bot mode');
-    expect(button('Exit Bot mode').getAttribute('data-bh-tour')).toBe('bot-mode');
+    expect(node.textContent).toContain('DeepSeekBot');
+    expect(node.textContent).not.toContain('Bot mode');
+    expect(node.querySelectorAll('button[aria-label="Exit Bot mode"]')).toHaveLength(1);
+    const logo = button('Exit Bot mode');
+    expect(logo.classList.contains('bh-mode-sidebar-logo')).toBe(true);
+    expect(logo.getAttribute('data-bh-tour')).toBe('bot-mode');
+    expect(logo.hasAttribute('data-exit')).toBe(false);
+    act(() => logo.dispatchEvent(new MouseEvent('pointerover', { bubbles: true })));
+    expect(logo.getAttribute('data-exit')).toBe('true');
+    act(() => logo.dispatchEvent(new MouseEvent('pointerout', { bubbles: true })));
+    expect(logo.hasAttribute('data-exit')).toBe(false);
 
     act(() => button('Exit Bot mode').click());
     act(() => button('Collapse sidebar').click());
@@ -111,6 +120,7 @@ describe('Bot mode sidebar', () => {
     expect(node.querySelector('.bh-mode-sidebar')?.getAttribute('data-collapsed')).toBe('true');
     expect(node.querySelector('[data-roster]')?.getAttribute('data-roster')).toBe('rail');
     expect(button('Open sidebar')).toBeTruthy();
-    expect(button('Exit Bot mode').textContent).toBe('');
+    expect(button('Exit Bot mode').classList.contains('bh-mode-sidebar-logo')).toBe(true);
+    expect(node.textContent).not.toContain('DeepSeekBot');
   });
 });

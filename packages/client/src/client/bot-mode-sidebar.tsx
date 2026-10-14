@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store';
 import {
@@ -56,6 +56,10 @@ export function BotModeSidebar(props: BotModeSidebarProps): ReactElement {
   const inboxCurrent = state.selection?.kind === 'inbox';
   const toggleLabel = t(collapsed ? 'panel.sidebar.open' : 'panel.sidebar.collapse');
   const darwin = isDarwinDesktop();
+  const exitLabel = t('panel.exit');
+  const [logoHover, setLogoHover] = useState(false);
+  const [logoFocus, setLogoFocus] = useState(false);
+  const morph = logoHover || logoFocus;
   const rootMount = useMountedResource<HTMLDivElement>(() => {
     void actions.refreshHumanInboxStatus();
     const timer = window.setInterval(
@@ -110,12 +114,31 @@ export function BotModeSidebar(props: BotModeSidebarProps): ReactElement {
     >
       {darwin && wide ? <div {...stylex.props(styles.darwinStrip)} data-window-drag /> : null}
       <div {...stylex.props(styles.logoRow, collapsed && styles.logoRowCollapsed)} data-window-drag>
-        {wide ? (
-          <span {...stylex.props(styles.brand)} data-bh-tour="bot-mode-brand">
-            <BotIcon icon={icon} size={24} />
-            <span {...stylex.props(styles.brandName)}>{t('panel.label')}</span>
-          </span>
-        ) : null}
+        <Tooltip label={exitLabel} side={wide ? 'bottom' : 'right'} delayMs={300}>
+          <button
+            type="button"
+            {...hooked('bh-mode-sidebar-logo', styles.logo, collapsed && styles.logoCollapsed)}
+            data-bh-tour="bot-mode"
+            data-exit={morph ? 'true' : undefined}
+            aria-label={exitLabel}
+            onClick={props.exitBotMode}
+            onPointerEnter={() => setLogoHover(true)}
+            onPointerLeave={() => setLogoHover(false)}
+            onFocus={(event) => setLogoFocus(event.currentTarget.matches(':focus-visible'))}
+            onBlur={() => setLogoFocus(false)}
+          >
+            <span {...stylex.props(styles.morph, morph && styles.morphHidden)}>
+              <BotIcon icon={icon} size={24} />
+            </span>
+            <span
+              {...stylex.props(styles.morph, styles.morphExit, !morph && styles.morphHidden)}
+              aria-hidden
+            >
+              <ExitIcon size={18} />
+            </span>
+          </button>
+        </Tooltip>
+        {wide ? <span {...stylex.props(styles.brandName)}>{t('panel.brand')}</span> : null}
         <Tooltip label={toggleLabel} side="right" delayMs={500}>
           <button
             type="button"
@@ -127,11 +150,7 @@ export function BotModeSidebar(props: BotModeSidebarProps): ReactElement {
             aria-label={toggleLabel}
             onClick={props.toggleSidebar}
           >
-            {collapsed ? (
-              <BotIcon icon={icon} size={24} />
-            ) : (
-              <IconPanelLeftOutlineRegular size={16} />
-            )}
+            <IconPanelLeftOutlineRegular size={wide ? 16 : 18} />
           </button>
         </Tooltip>
       </div>
@@ -176,9 +195,6 @@ export function BotModeSidebar(props: BotModeSidebarProps): ReactElement {
           },
           { tour: 'bot-settings' },
         )}
-        {row(t('panel.exit'), <ExitIcon size={wide ? 16 : 18} />, props.exitBotMode, {
-          tour: 'bot-mode',
-        })}
       </div>
     </div>
   );
@@ -211,30 +227,75 @@ const styles = stylex.create({
     display: 'flex',
     flexShrink: 0,
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: space.x3,
+    gap: space.x2,
     height: '60px',
     marginBottom: space.x2,
     paddingBlock: space.x3,
-    paddingInlineStart: space.x2,
+    paddingInlineStart: space.x1,
     overflow: 'hidden',
   },
   logoRowCollapsed: {
+    flexDirection: 'column',
     justifyContent: 'center',
-    height: '36px',
+    gap: space.x4,
+    height: 'auto',
     marginBottom: space.x4,
     padding: 0,
     overflow: 'visible',
   },
-  brand: {
+  logo: {
+    position: 'relative',
     display: 'inline-flex',
-    flexGrow: 1,
+    flexShrink: 0,
     alignItems: 'center',
-    gap: space.x3,
-    minWidth: 0,
-    overflow: 'hidden',
+    justifyContent: 'center',
+    width: '32px',
+    height: '32px',
+    padding: 0,
+    borderWidth: 0,
+    borderStyle: 'none',
+    outline: {
+      default: 'none',
+      ':focus-visible': `${border.focus} solid ${color.accent}`,
+    },
+    outlineOffset: '-2px',
+    borderRadius: radius.md,
+    color: color.fg,
+    backgroundColor: {
+      default: 'transparent',
+      ':hover': color.hover,
+    },
+    cursor: 'pointer',
+  },
+  logoCollapsed: {
+    width: '36px',
+    height: '36px',
+  },
+  morph: {
+    position: 'absolute',
+    inset: 0,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 1,
+    transform: 'scale(1) rotate(0deg)',
+    transitionDuration: '160ms',
+    transitionProperty: 'opacity, transform',
+    transitionTimingFunction: 'ease-out',
+    '@media (prefers-reduced-motion: reduce)': {
+      transitionDuration: '0s',
+    },
+  },
+  morphExit: {
+    color: color.danger,
+  },
+  morphHidden: {
+    opacity: 0,
+    transform: 'scale(0.6) rotate(-90deg)',
   },
   brandName: {
+    flexGrow: 1,
+    minWidth: 0,
     overflow: 'hidden',
     fontSize: text.titleSize,
     fontWeight: text.strong,
@@ -252,7 +313,10 @@ const styles = stylex.create({
     padding: 0,
     borderWidth: 0,
     borderStyle: 'none',
-    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
+    outline: {
+      default: 'none',
+      ':focus-visible': `${border.focus} solid ${color.accent}`,
+    },
     outlineOffset: '-2px',
     borderRadius: radius.sm,
     color: color.muted,
@@ -295,7 +359,10 @@ const styles = stylex.create({
     paddingInline: space.x3,
     borderWidth: 0,
     borderStyle: 'none',
-    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
+    outline: {
+      default: 'none',
+      ':focus-visible': `${border.focus} solid ${color.accent}`,
+    },
     outlineOffset: '-2px',
     borderRadius: radius.md,
     color: color.fg,
