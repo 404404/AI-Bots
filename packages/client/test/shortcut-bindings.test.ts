@@ -161,6 +161,9 @@ describe('recording a binding', () => {
       shortcutBindingProblem(defaults, 'bot-mode', { ...plain, code: 'KeyC', mod: true }),
     ).toEqual({ kind: 'reserved' });
     expect(
+      shortcutBindingProblem(defaults, 'quick-switcher', { ...plain, code: 'KeyF', mod: true }),
+    ).toEqual({ kind: 'reserved' });
+    expect(
       shortcutBindingProblem(defaults, 'bot-mode', { ...plain, code: 'Enter', mod: true }),
     ).toEqual({ kind: 'reserved' });
     expect(

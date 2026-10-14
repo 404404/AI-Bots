@@ -148,6 +148,7 @@ export function bindingText(binding: ShortcutBinding, mac: boolean): string {
 const RESERVED_MOD_CODES = new Set([
   'KeyA',
   'KeyC',
+  'KeyF',
   'KeyV',
   'KeyX',
   'KeyY',
