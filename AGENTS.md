@@ -47,6 +47,16 @@ Agent-facing debugging is a first-class concern. A plugin that owns long-running
 
 WSL egress fallback: if a task-local DSH Host cannot reach a provider while Windows can, follow [the AX restricted-relay runbook](docs/agents/ax-wsl-network.md) for standing authorization, isolation, live-model proof, and lifecycle.
 
+### CLI parity (AX)
+
+Every feature must be operable and testable by an agent through the `deepseekbot` CLI, without the Web UI and without the model. A change that adds or changes a Host bridge method, a Host `/api/...` route, or a Harness Bot tool ships the matching CLI command in the same PR:
+
+- Online against a live Host, one JSON document on stdout, secrets only from stdin or files and never printed, the same Host owner and checks as the UI, coded refusals instead of fallbacks. Dangerous changes keep their explicit confirmation flag.
+- Bot tools also need a direct path that runs the same tool code without the model (as `browser-tool` / `computer-tool` do), so a failure can be placed in the model, the Harness or the runtime; `bot-trace` shows what the Bot itself called.
+- Tests for the command, an entry in `docs/bot-cli.md` and `docs/bot-cli.zh.md`, and a real run against a live Host.
+
+`pnpm lint` runs `scripts/check-cli-parity.mjs`: a new bridge method, route or Bot tool without a CLI command fails unless `scripts/cli-parity-baseline.json` records an issue or an exemption reason for it. The baseline only shrinks — covering an entry means deleting it, and the check fails while a covered entry remains. Remaining gaps are tracked in [#1690](https://github.com/BotHarness/DeepSeekBot/issues/1690).
+
 ### IM browser QA (AX)
 
 For Discord and Lark message/reaction tests, prefer their signed-in web clients in the **Codex in-app browser**. Discover the current tabs and verify the account and designated test conversation each run; login state is session-local. Reuse the existing login in place, with the Human completing login when it expires.
