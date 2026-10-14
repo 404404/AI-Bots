@@ -229,6 +229,70 @@ describe('DM conversation', () => {
     });
   });
 
+  it('shows reactions from the journal and follows reaction changes live', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    seed(channel, 2);
+    channel.messages[0]!.reactions = [{ emoji: '👍', actors: [{ kind: 'bot', id: SLUG }] }];
+    const target = open(host);
+    const live = await until(target, (s) => s.status === 'live');
+    expect(live.messages[0]?.reactions).toEqual([
+      { emoji: '👍', actors: [{ kind: 'bot', id: SLUG }] },
+    ]);
+    expect(live.messages[1]).not.toHaveProperty('reactions');
+    channel.react('bot-2', [{ emoji: '👀', actors: [{ kind: 'bot', id: SLUG }] }]);
+    const seen = await until(target, (s) => s.messages[1]?.reactions !== undefined);
+    expect(seen.messages[1]?.reactions?.[0]?.emoji).toBe('👀');
+    channel.react('human-1', []);
+    const cleared = await until(target, (s) => s.messages[0]?.reactions === undefined);
+    expect(cleared.messages[1]?.reactions).toHaveLength(1);
+  });
+
+  it('reacts at once, then settles on what the Host stored', async () => {
+    const host = new FakeHost();
+    const channel = host.channel(DM);
+    seed(channel, 2);
+    channel.messages[1]!.reactions = [{ emoji: '👍', actors: [{ kind: 'bot', id: SLUG }] }];
+    const target = open(host);
+    await until(target, (s) => s.status === 'live');
+    const done = target.react('bot-2', '👍', true);
+    expect(target.getSnapshot().messages[1]?.reactions).toEqual([
+      {
+        emoji: '👍',
+        actors: [
+          { kind: 'bot', id: SLUG },
+          { kind: 'human', id: 'local-human' },
+        ],
+      },
+    ]);
+    await done;
+    expect(host.calls.find((call) => call.method === 'channelReact')?.args).toEqual({
+      channelId: DM,
+      messageId: 'bot-2',
+      emoji: '👍',
+      active: true,
+    });
+    await target.react('bot-2', '👍', false);
+    expect(target.getSnapshot().messages[1]?.reactions).toEqual([
+      { emoji: '👍', actors: [{ kind: 'bot', id: SLUG }] },
+    ]);
+    expect(channel.messages[1]?.reactions).toEqual([
+      { emoji: '👍', actors: [{ kind: 'bot', id: SLUG }] },
+    ]);
+  });
+
+  it('puts a reaction back when the Host refuses it', async () => {
+    const host = new FakeHost();
+    seed(host.channel(DM), 2);
+    const target = open(host);
+    await until(target, (s) => s.status === 'live');
+    host.failing.add('channelReact');
+    const done = target.react('bot-2', '🎉', true);
+    expect(target.getSnapshot().messages[1]?.reactions?.[0]?.emoji).toBe('🎉');
+    await expect(done).rejects.toThrow();
+    expect(target.getSnapshot().messages[1]).not.toHaveProperty('reactions');
+  });
+
   it('marks a send failed and retries with the same id, so the Host commits it once', async () => {
     const host = new FakeHost();
     host.channel(DM);

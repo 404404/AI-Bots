@@ -9,6 +9,7 @@ import type {
   ToolApprovalOutcome,
   WireDraft,
   WireDraftAppend,
+  WireReaction,
 } from './wire';
 
 export type DeliveryState = 'pending' | 'committed' | 'failed';
@@ -35,6 +36,49 @@ export interface MessageAttachment {
   local: boolean;
 }
 
+export const LOCAL_HUMAN = 'local-human';
+
+export const QUICK_REACTIONS = ['👍', '❤️', '😂', '🎉', '👀', '✅'] as const;
+
+export type ConversationReaction = WireReaction;
+
+export function reactedByMe(reaction: ConversationReaction): boolean {
+  return reaction.actors.some((actor) => actor.kind === 'human' && actor.id === LOCAL_HUMAN);
+}
+
+export function toggledReactions(
+  reactions: readonly ConversationReaction[] | undefined,
+  emoji: string,
+  active: boolean,
+): ConversationReaction[] {
+  const me = { kind: 'human' as const, id: LOCAL_HUMAN };
+  const current = [...(reactions ?? [])];
+  const index = current.findIndex((reaction) => reaction.emoji === emoji);
+  if (!active) {
+    if (index === -1) return current;
+    const actors = current[index]!.actors.filter(
+      (actor) => actor.kind !== 'human' || actor.id !== LOCAL_HUMAN,
+    );
+    return actors.length === 0
+      ? current.filter((_, position) => position !== index)
+      : current.map((reaction, position) => (position === index ? { emoji, actors } : reaction));
+  }
+  if (index === -1) return [...current, { emoji, actors: [me] }];
+  if (reactedByMe(current[index]!)) return current;
+  return current.map((reaction, position) =>
+    position === index ? { emoji, actors: [...reaction.actors, me] } : reaction,
+  );
+}
+
+export function reactable(message: ConversationMessage): boolean {
+  return (
+    message.author !== 'system' &&
+    message.revision !== undefined &&
+    message.delivery === 'committed' &&
+    message.card === undefined
+  );
+}
+
 export interface ConversationMessage {
   id: string;
   revision?: number;
@@ -44,6 +88,7 @@ export interface ConversationMessage {
   attachments: MessageAttachment[];
   card?: MessageCard;
   resolves?: { requestId: string; resolution: CardResolution };
+  reactions?: ConversationReaction[];
   delivery: DeliveryState;
   error?: string;
 }
@@ -84,6 +129,7 @@ export interface Conversation {
   loadOlder(): Promise<void>;
   send(body: string, files?: OutgoingFile[]): string;
   retry(messageId: string): void;
+  react(messageId: string, emoji: string, active: boolean): Promise<void>;
 }
 
 export interface ConversationOptions {
@@ -250,6 +296,9 @@ function present(
     attachments: attachmentsOf(entry, resolve, picked),
     ...(card === undefined ? {} : { card }),
     ...(resolves === undefined ? {} : { resolves }),
+    ...(message.reactions === undefined || message.reactions.length === 0
+      ? {}
+      : { reactions: message.reactions }),
     delivery: 'committed',
   };
 }
@@ -392,8 +441,24 @@ export function createConversation(options: ConversationOptions): Conversation {
     draftRevisions.delete(draftId);
   };
 
+  const setReactions = (messageId: string, reactions: readonly WireReaction[]): boolean => {
+    if (!window.some((entry) => entry.message.id === messageId)) return false;
+    window = window.map((entry) => {
+      if (entry.message.id !== messageId) return entry;
+      const { reactions: _previous, ...message } = entry.message;
+      return {
+        ...entry,
+        message: reactions.length === 0 ? message : { ...message, reactions: [...reactions] },
+      };
+    });
+    return true;
+  };
+
   const applyNotification = (notification: ChannelNotification, current: number): void => {
-    if (notification.kind === 'draft-baseline') {
+    if (notification.kind === 'reaction') {
+      if (notification.channelId === channelId)
+        setReactions(notification.messageId, notification.reactions);
+    } else if (notification.kind === 'draft-baseline') {
       clearDrafts();
       for (const draft of notification.drafts) upsertDraft(draft);
     } else if (notification.kind === 'draft') upsertDraft(notification.draft);
@@ -624,6 +689,26 @@ export function createConversation(options: ConversationOptions): Conversation {
       publish();
       void deliver(item);
       return item.id;
+    },
+    async react(messageId, emoji, active) {
+      const id = channelId;
+      const before = window.find((entry) => entry.message.id === messageId)?.message.reactions;
+      if (id === undefined || !setReactions(messageId, toggledReactions(before, emoji, active)))
+        return;
+      publish();
+      try {
+        const result = await options.host.call<{ reactions: WireReaction[] }>('channelReact', {
+          channelId: id,
+          messageId,
+          emoji,
+          active,
+        });
+        if (id === channelId && setReactions(messageId, result.reactions)) publish();
+        persist();
+      } catch (error) {
+        if (id === channelId && setReactions(messageId, before ?? [])) publish();
+        throw error;
+      }
     },
     retry(messageId) {
       const item = outgoing.get(messageId);
