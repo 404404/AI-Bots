@@ -1,5 +1,6 @@
 import type { HostClient } from './client';
 import type {
+  AttachmentRef,
   ChannelLiveFrame,
   ChannelNotification,
   ChannelWireMessage,
@@ -56,12 +57,12 @@ export interface Conversation {
   start(): void;
   stop(): void;
   loadOlder(): Promise<void>;
-  send(body: string): string;
+  send(body: string, files?: OutgoingFile[]): string;
   retry(messageId: string): void;
 }
 
 export interface ConversationOptions {
-  host: Pick<HostClient, 'call' | 'follow'>;
+  host: Pick<HostClient, 'call' | 'follow' | 'upload'>;
   botSlug: string;
   displayName?: string;
   channelId?: string;
@@ -74,10 +75,17 @@ export interface ConversationOptions {
 
 const MAX_PAGE = 200;
 
+export interface OutgoingFile {
+  name: string;
+  read(): Promise<Blob>;
+}
+
 interface Outgoing {
   id: string;
   at: string;
   body: string;
+  files: OutgoingFile[];
+  refs: Array<AttachmentRef | undefined>;
   delivery: DeliveryState;
   error?: string;
 }
@@ -145,7 +153,7 @@ export function createConversation(options: ConversationOptions): Conversation {
         at: item.at,
         author: 'human',
         body: item.body,
-        attachments: 0,
+        attachments: item.files.length,
         card: false,
         delivery: item.delivery,
         ...(item.error === undefined ? {} : { error: item.error }),
@@ -339,10 +347,14 @@ export function createConversation(options: ConversationOptions): Conversation {
   const deliver = async (item: Outgoing): Promise<void> => {
     try {
       const id = await ensureChannel();
+      for (const [index, file] of item.files.entries())
+        item.refs[index] ??= await options.host.upload(file.name, await file.read());
+      const attachments = item.refs.filter((ref) => ref !== undefined);
       await options.host.call('channelSend', {
         channelId: id,
         body: item.body,
         messageId: item.id,
+        ...(attachments.length === 0 ? {} : { attachments }),
       });
       if (outgoing.get(item.id) !== item) return;
       item.delivery = 'committed';
@@ -411,11 +423,13 @@ export function createConversation(options: ConversationOptions): Conversation {
         publish();
       }
     },
-    send(body) {
+    send(body, files = []) {
       const item: Outgoing = {
         id: newMessageId(),
         at: new Date().toISOString(),
         body,
+        files,
+        refs: files.map(() => undefined),
         delivery: 'pending',
       };
       outgoing.set(item.id, item);

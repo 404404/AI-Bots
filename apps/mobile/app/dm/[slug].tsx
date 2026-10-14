@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import type { ConversationDraft } from '../../src/host/conversation';
+import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../src/host/pick-files';
 import {
   useConversation,
   useConversationSnapshot,
@@ -57,6 +58,8 @@ function DmConversation({ slug }: { slug: string | undefined }) {
   const conversation = useConversation(client, target);
   const snapshot = useConversationSnapshot(conversation);
   const [draft, setDraft] = useState('');
+  const [files, setFiles] = useState<PickedFile[]>([]);
+  const [attachError, setAttachError] = useState(false);
   const now = new Date();
 
   const rows = useMemo<Row[]>(
@@ -73,9 +76,17 @@ function DmConversation({ slug }: { slug: string | undefined }) {
 
   const send = () => {
     const body = draft.trim();
-    if (body === '' || conversation === undefined) return;
-    conversation.send(body);
+    if ((body === '' && files.length === 0) || conversation === undefined) return;
+    conversation.send(body, files);
     setDraft('');
+    setFiles([]);
+  };
+
+  const pick = (source: PickSource) => {
+    setAttachError(false);
+    pickFiles(source, MAX_PICKED - files.length)
+      .then((more) => setFiles((current) => [...current, ...more].slice(0, MAX_PICKED)))
+      .catch(() => setAttachError(true));
   };
 
   const notice =
@@ -87,7 +98,9 @@ function DmConversation({ slug }: { slug: string | undefined }) {
           ? t.offline
           : snapshot.status === 'interrupted'
             ? t.liveInterrupted
-            : undefined;
+            : attachError
+              ? t.attachFailed
+              : undefined;
 
   return (
     <>
@@ -173,8 +186,12 @@ function DmConversation({ slug }: { slug: string | undefined }) {
           value={draft}
           placeholder={bot === undefined ? t.messagePlaceholder : t.messageBot(bot.displayName)}
           disabled={conversation === undefined}
+          files={files}
+          canAttach={files.length < MAX_PICKED}
           onChange={setDraft}
           onSend={send}
+          onPick={pick}
+          onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
         />
       </KeyboardAvoidingView>
     </>

@@ -25,6 +25,14 @@ export interface ChannelWireMessage extends WireMessage {
   grantRequest?: true;
 }
 
+export interface AttachmentRef {
+  name: string;
+  mime: string;
+  size: number;
+  fileId?: string;
+  hash?: string;
+}
+
 export interface JournalEntry {
   channelId: string;
   message: ChannelWireMessage;
