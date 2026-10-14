@@ -53,7 +53,7 @@ import { ReleaseNotesController } from './release-notes.js';
 import { TelemetryNoticeController } from './telemetry-notice.js';
 import './bot-settings-slot.js';
 import { BotMain } from './bot-main.js';
-import { MobileBotPanel } from './mobile-bot-panel.js';
+import { expectMobileConversation, MobileBotPanel } from './mobile-bot-panel.js';
 import { mobileBotViewport, subscribeMobileBotViewport } from './mobile-viewport.js';
 import { clearConversationDrafts } from './conversation-draft.js';
 import { BotSidebar, createBotPanelEntry } from './bot-sidebar.js';
@@ -872,6 +872,7 @@ export function apply(ctx: ClientContext): void {
     ctx.effect(
       () =>
         watchPrivateInputNavigation(store, privateLocator, (channelId, messageId) => {
+          expectMobileConversation();
           ctx.layout.selectPanel(PANEL_ID);
           void actions.openChannelAtMessage(channelId, messageId).catch(() => {
             ctx.logger.warn('botharness: private input card locator unavailable');
@@ -888,6 +889,7 @@ export function apply(ctx: ClientContext): void {
     ctx.effect(
       () =>
         watchFullClientLanding(store, landing, (slug) => {
+          if (slug !== undefined) expectMobileConversation();
           ctx.layout.selectPanel(PANEL_ID);
           if (slug === undefined) return;
           void actions.openBot(slug).catch(() => {

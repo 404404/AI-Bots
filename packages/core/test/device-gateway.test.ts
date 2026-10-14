@@ -288,7 +288,7 @@ describe('device gateway', () => {
       expect([after.status, await after.json()]).toEqual([401, { code: 'device-revoked' }]);
       expect(await stream(host.port, { cookie }, mux)).toEqual({
         status: 401,
-        body: '{"code":"device-credential-missing"}',
+        body: '{"code":"device-revoked"}',
       });
     });
   });

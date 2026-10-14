@@ -14,7 +14,6 @@ export function FullClientView({ route, source, onLoaded, onFailed }: FullClient
   return (
     <WebView
       source={source}
-      incognito
       sharedCookiesEnabled={false}
       originWhitelist={['https://*', 'http://*']}
       allowsBackForwardNavigationGestures

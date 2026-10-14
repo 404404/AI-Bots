@@ -184,9 +184,7 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
       if (key !== undefined) webSessions.delete(key);
       return { ok: false, code: 'device-credential-missing' };
     }
-    const admission = pairing.check(session.deviceId);
-    if (!admission.ok) webSessions.delete(key);
-    return admission;
+    return pairing.check(session.deviceId);
   };
 
   const forwardHeaders = (request: IncomingMessage, session: string): Record<string, string> => {
