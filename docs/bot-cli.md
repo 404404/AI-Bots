@@ -263,10 +263,14 @@ deepseekbot browser-stop <bot-id>
 deepseekbot computer-status
 deepseekbot computer-start --target local
 deepseekbot computer-stop
+deepseekbot computer-frame --out /tmp/desktop.png
+echo '{"kind":"click","x":10,"y":20}' | deepseekbot computer-input --args-stdin
 deepseekbot grants <bot-id>
 ```
 
 `browser-open` starts the Bot's Browser (Browser Access must be on) and returns its tab and viewer URL. `browser-frame` saves the current picture to an absolute path and reports its size and viewport, so an agent can look at what the Bot sees. `browser-takeover --enabled` pauses the Bot's Browser for Human input and `--disabled` hands it back. `computer-start` carries the explicit authorization the panel button sends; read the result with `computer-status`, whose `status.detail` explains a refusal such as a missing OS permission or display. `grants` lists a Bot's Workspace Grants from a live Host. Route refusals keep the Host's code, or `host-refused` with its message.
+
+`computer-frame` saves the current picture of the Computer desktop (Local or Container) to an absolute path and reports its size, `seq` and target. It is the same frame a paired phone polls from `GET /api/computer/frame?after=<seq>`, which waits for the screen to change and answers 204 when it stays the same. `computer-input --args-stdin` sends one Human action to that desktop: `{"kind":"click","x":10,"y":20}` (optional `"button":"right"`, `"count":2`), `{"kind":"scroll","direction":"down","amount":3}`, `{"kind":"type","text":"hi"}` or `{"kind":"key","key":"Return","modifiers":["meta"]}`. Coordinates are pixels of the last frame. Both refuse with `not-running` while the Computer is stopped.
 
 ### Human Inbox, assignments, Sessions and approval rules
 

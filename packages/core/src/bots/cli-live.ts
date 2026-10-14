@@ -134,6 +134,8 @@ const DEVICE_COMMANDS = [
   'browser-tool',
   'computer-tools',
   'computer-tool',
+  'computer-frame',
+  'computer-input',
 ] as const;
 
 const IM_CONTROL_COMMANDS = [
@@ -259,6 +261,15 @@ export const LIVE_COMMANDS = [
     description: 'start the profile Computer with explicit authorization',
   },
   { command: 'computer-status', description: 'read the profile Computer target and state' },
+  {
+    command: 'computer-frame',
+    description: 'save the current picture of the profile Computer desktop to a file',
+  },
+  {
+    command: 'computer-input',
+    description:
+      'click, scroll, type or press a key on the profile Computer desktop (input JSON from stdin)',
+  },
   { command: 'computer-stop', description: 'stop the profile Computer' },
   {
     command: 'browser-tools',
@@ -1199,11 +1210,12 @@ async function runDeviceCommand(
           : `${command} needs exactly one bot id.`,
     );
   let toolArgs: Record<string, unknown> = {};
-  if (command === 'browser-input' && values['args-stdin'] !== true)
+  const input = command === 'browser-input' || command === 'computer-input';
+  if (input && values['args-stdin'] !== true)
     usage(
-      'browser-input needs --args-stdin with a JSON input such as {"kind":"click","x":10,"y":20}.',
+      `${command} needs --args-stdin with a JSON input such as {"kind":"click","x":10,"y":20}.`,
     );
-  if ((direct || command === 'browser-input') && values['args-stdin'] === true) {
+  if ((direct || input) && values['args-stdin'] === true) {
     try {
       const parsed: unknown = JSON.parse(await (io.readStdin?.() ?? Promise.resolve('')));
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
@@ -1221,10 +1233,10 @@ async function runDeviceCommand(
   )
     usage('--out must be an absolute file path.');
   const slug = rest[0]?.trim() ?? '';
-  if (command === 'browser-frame') {
+  if (command === 'browser-frame' || command === 'computer-frame') {
     const out = values.out ?? '';
     if (!out.startsWith('/') && !/^[A-Za-z]:[\\/]/u.test(out))
-      usage('browser-frame requires --out <absolute-file>.');
+      usage(`${command} requires --out <absolute-file>.`);
   }
   if (command === 'browser-takeover' && values.enabled === values.disabled)
     usage('browser-takeover needs exactly one of --enabled or --disabled.');
@@ -1295,6 +1307,23 @@ async function runDeviceCommand(
     });
   if (command === 'computer-status') return json('/api/computer/status');
   if (command === 'computer-stop') return json('/api/computer/stop', { authorize: true });
+  if (command === 'computer-input') return json('/api/computer/input', toolArgs);
+  if (command === 'computer-frame') {
+    const desktop = record(await json('/api/computer/frame'));
+    if (typeof desktop['data'] !== 'string')
+      throw new CliLiveError('host-protocol-error', 'The Host returned no Computer frame.');
+    const bytes = Buffer.from(desktop['data'], 'base64');
+    writeFileSync(values.out!, bytes, { mode: 0o600 });
+    return {
+      path: values.out,
+      bytes: bytes.byteLength,
+      mimeType: desktop['mimeType'],
+      width: desktop['width'],
+      height: desktop['height'],
+      seq: desktop['seq'],
+      target: desktop['target'],
+    };
+  }
   const frame = record(await json(`/api/browser/frame?slug=${encodeURIComponent(slug)}`));
   if (typeof frame['data'] !== 'string')
     throw new CliLiveError('host-protocol-error', 'The Host returned no Browser frame.');

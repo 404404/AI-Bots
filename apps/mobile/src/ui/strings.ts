@@ -322,6 +322,15 @@ const en = {
   browserKeyboard: 'Keyboard',
   browserTypeHere: 'Type to send keys',
   browserView: 'Live view of the Bot Browser',
+  computerTitle: (name: string) => `${name}'s Computer`,
+  computerClose: 'Close the Computer',
+  computerLoading: 'Loading the Computer screen…',
+  computerNotRunning: 'The Computer is not running. Start it on your computer to see it here.',
+  computerUnreachable: 'Cannot reach the Computer on your computer.',
+  computerWatching: 'Watching the Computer. Take control to click and type.',
+  computerYouDriving: 'You have control. The Bot can still act, so hand it back when done.',
+  computerTakeControl: 'Take control',
+  computerHandBack: 'Hand back',
 };
 
 const zh: typeof en = {
@@ -628,6 +637,15 @@ const zh: typeof en = {
   browserKeyboard: '键盘',
   browserTypeHere: '输入文字发送按键',
   browserView: 'Bot 浏览器的实时画面',
+  computerTitle: (name: string) => `${name} 的 Computer`,
+  computerClose: '关闭 Computer',
+  computerLoading: '正在加载 Computer 画面…',
+  computerNotRunning: 'Computer 没有运行。在电脑上启动后会显示在这里。',
+  computerUnreachable: '无法连接电脑上的 Computer。',
+  computerWatching: '正在查看 Computer。接管后可以点击和输入。',
+  computerYouDriving: '你正在控制。Bot 仍可能操作，用完请交还。',
+  computerTakeControl: '接管',
+  computerHandBack: '交还',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()

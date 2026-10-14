@@ -163,6 +163,51 @@ describe('Agent Browser and Computer commands', () => {
     ]);
   });
 
+  it('saves the Computer desktop picture and sends Human input to it', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bh-desktop-'));
+    dirs.push(dir);
+    const live = await host((call) =>
+      call.path === '/api/computer/frame'
+        ? {
+            json: {
+              ok: true,
+              target: 'local',
+              seq: 4,
+              mimeType: 'image/png',
+              data: Buffer.from('png-bytes').toString('base64'),
+              width: 1440,
+              height: 900,
+              capturedAt: 1,
+            },
+          }
+        : { json: { ok: true } },
+    );
+    const file = join(dir, 'desktop.png');
+    expect((await invoke(['computer-frame', '--out', file], live.url)).json).toEqual({
+      path: file,
+      bytes: 9,
+      mimeType: 'image/png',
+      width: 1440,
+      height: 900,
+      seq: 4,
+      target: 'local',
+    });
+    expect(readFileSync(file, 'utf8')).toBe('png-bytes');
+    expect(
+      (
+        await invokeWithStdin(
+          ['computer-input', '--args-stdin'],
+          live.url,
+          '{"kind":"key","key":"Return"}',
+        )
+      ).json,
+    ).toEqual({ ok: true });
+    expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
+      ['GET', '/api/computer/frame', undefined],
+      ['POST', '/api/computer/input', { kind: 'key', key: 'Return' }],
+    ]);
+  });
+
   it('reports a Host refusal from a browser or Computer route as a coded error', async () => {
     const live = await host(() => ({
       status: 409,
@@ -340,6 +385,9 @@ describe('Agent Browser and Computer commands', () => {
     for (const argv of [
       ['browser-frame', 'ada'],
       ['browser-frame', 'ada', '--out', 'relative.jpg'],
+      ['computer-frame', '--out', 'relative.png'],
+      ['computer-frame', 'ada', '--out', '/tmp/x.png'],
+      ['computer-input'],
       ['browser-takeover', 'ada'],
       ['browser-input', 'ada'],
       ['computer-start', '--target', 'cloud'],
