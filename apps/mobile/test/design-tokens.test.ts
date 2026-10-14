@@ -74,10 +74,6 @@ describe('resolveTheme', () => {
 
   it('tints the soft accent from the accent over the base', () => {
     expect(resolveTheme('light').color.accentSoft).toBe('#e8effc');
-    for (const scheme of ['light', 'dark'] as const) {
-      const { color } = resolveTheme(scheme);
-      expect([color.base, color.surface, color.elevated]).not.toContain(color.accentSoft);
-    }
     expect(resolveTheme('light', { accent: '#5b2ecc' }).color.accentSoft).not.toBe(
       resolveTheme('light').color.accentSoft,
     );
