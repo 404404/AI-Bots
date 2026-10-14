@@ -34,6 +34,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPlusOutlineRegular: icon('IconPlusOutlineRegular'),
     IconSearchOutlineRegular: icon('IconSearchOutlineRegular'),
     IconSettingsOutlineRegular: icon('IconSettingsOutlineRegular'),
+    IconUserOutlineRegular: icon('IconUserOutlineRegular'),
     IconShareOutlineRegular: icon('IconShareOutlineRegular'),
     IconTrashOutlineRegular: icon('IconTrashOutlineRegular'),
     IconTriangleRightFill14: icon('IconTriangleRightFill14'),
@@ -152,8 +153,16 @@ function stubActions(): BridgeActions {
     }),
     groupWakePolicies: vi.fn(async () => []),
     channelAssignments: vi.fn(async () => []),
-    channelBridges: vi.fn(async (channelId) => ({ channelId, bridges: [], sources: [] })),
-    channelIngests: vi.fn(async (channelId) => ({ channelId, ingests: [], candidates: [] })),
+    channelBridges: vi.fn(async (channelId) => ({
+      channelId,
+      bridges: [],
+      sources: [],
+    })),
+    channelIngests: vi.fn(async (channelId) => ({
+      channelId,
+      ingests: [],
+      candidates: [],
+    })),
     channelIngest: vi.fn(async () => undefined),
     channelBridge: vi.fn(async () => undefined),
     messagingChannelTarget: async () => undefined,
@@ -173,7 +182,11 @@ function stubActions(): BridgeActions {
     senderAccess: vi.fn(),
     messagingIdentity: vi.fn(),
     messagingConversation: vi.fn(),
-    messagingSnapshot: vi.fn(async () => ({ accounts: [], grants: [], intents: [] })),
+    messagingSnapshot: vi.fn(async () => ({
+      accounts: [],
+      grants: [],
+      intents: [],
+    })),
     messagingTargets: vi.fn(async () => []),
     resolveWorkspaceGrantRequest: vi.fn(async () => undefined),
     pickWorkspaceFolder: vi.fn(async () => null),
@@ -276,7 +289,10 @@ function stubActions(): BridgeActions {
       relativePath: 'attachment',
       kind: 'file' as const,
     })),
-    messageAttachmentApplications: vi.fn(async () => ({ available: false, applications: [] })),
+    messageAttachmentApplications: vi.fn(async () => ({
+      available: false,
+      applications: [],
+    })),
     messageAttachmentOpen: vi.fn(async () => undefined),
     messageAttachmentDownload: vi.fn(async () => undefined),
     workspaceFileTarget: async () => ({
@@ -284,7 +300,10 @@ function stubActions(): BridgeActions {
       relativePath: '',
       kind: 'directory' as const,
     }),
-    workspaceFileApplications: async () => ({ available: false, applications: [] }),
+    workspaceFileApplications: async () => ({
+      available: false,
+      applications: [],
+    }),
     workspaceFileOpen: async () => {},
     memoryFileTarget: vi.fn(),
     memoryFileApplications: vi.fn(),
@@ -344,7 +363,12 @@ function stubActions(): BridgeActions {
       events: [],
       memoryCommits: [],
       tokens: [],
-      tokenTotals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      tokenTotals: {
+        inputTokens: 0,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+      },
     })),
     channelActivityToday: vi.fn(),
     groupProfileActivity: vi.fn(async (channelId) => ({
@@ -559,7 +583,12 @@ beforeEach(() => {
   store.select(undefined);
   store.setConfig(config());
   store.setRoster([], []);
-  store.setGit({ available: true, version: '2.47.1', source: 'system', ...NO_INSTALL });
+  store.setGit({
+    available: true,
+    version: '2.47.1',
+    source: 'system',
+    ...NO_INSTALL,
+  });
   setRoster();
   prefs = {
     motionPreference: 'system',
@@ -609,7 +638,10 @@ describe('bot sidebar rows', () => {
       const time = titleRow.querySelector('time')!;
       expect(time.getAttribute('datetime')).toBe(latestAt);
       expect(time.textContent).toBe(
-        new Date(latestAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        new Date(latestAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
       );
       expect(titleRow.lastElementChild).toBe(time);
       expect(time.getAttribute('title')).toBe(new Date(latestAt).toLocaleString());
@@ -623,7 +655,12 @@ describe('bot sidebar rows', () => {
       [
         {
           ...DM_CHANNEL,
-          latestMessage: { id: 'invalid', at: 'invalid', author: { kind: 'human' }, body: '消息' },
+          latestMessage: {
+            id: 'invalid',
+            at: 'invalid',
+            author: { kind: 'human' },
+            body: '消息',
+          },
         },
       ],
     );
@@ -802,7 +839,12 @@ describe('bot sidebar rows', () => {
       [
         {
           ...DM_CHANNEL,
-          latestMessage: { id: 'dm-latest', at: AT, author: { kind: 'human' }, body: '请继续' },
+          latestMessage: {
+            id: 'dm-latest',
+            at: AT,
+            author: { kind: 'human' },
+            body: '请继续',
+          },
         },
       ],
     );
@@ -974,7 +1016,12 @@ describe('bot sidebar rows', () => {
         },
         {
           ...SECTION_CHANNEL,
-          latestMessage: { id: 'm2', at: AT, author: { kind: 'human' }, body: '继续处理' },
+          latestMessage: {
+            id: 'm2',
+            at: AT,
+            author: { kind: 'human' },
+            body: '继续处理',
+          },
         },
         FLAT_CHANNEL,
       ],
@@ -1097,7 +1144,12 @@ describe('bot sidebar rows', () => {
   });
 
   it('blocks Bot creation and explains why while Host Git is unusable', () => {
-    store.setGit({ available: false, reason: 'too-old', version: '2.20.1', ...NO_INSTALL });
+    store.setGit({
+      available: false,
+      reason: 'too-old',
+      version: '2.20.1',
+      ...NO_INSTALL,
+    });
     const markup = renderSidebar();
     const submenu = menuWithItem('bot').items[0]?.['submenu'] as Array<Record<string, unknown>>;
 
@@ -1137,7 +1189,11 @@ describe('bot sidebar rows', () => {
       available: false,
       reason: 'missing',
       installable: true,
-      install: { phase: 'downloading', received: 12 * 1024 * 1024, total: 62 * 1024 * 1024 },
+      install: {
+        phase: 'downloading',
+        received: 12 * 1024 * 1024,
+        total: 62 * 1024 * 1024,
+      },
     });
     markup = renderSidebar();
     expect(markup).toContain('正在下载 Git… 12.0 / 62.0 MB');
@@ -1301,7 +1357,11 @@ describe('bot sidebar rows', () => {
     expect(menu.items[5]).toMatchObject({ id: 'move-up', disabled: true });
     expect(menu.items[6]).toMatchObject({ id: 'move-down', disabled: true });
     expect(menu.items[8]).toMatchObject({ id: 'rename', label: '重命名' });
-    expect(menu.items[9]).toMatchObject({ id: 'delete', label: '删除', danger: true });
+    expect(menu.items[9]).toMatchObject({
+      id: 'delete',
+      label: '删除',
+      danger: true,
+    });
     expect(menu.items.at(-1)?.['danger']).toBe(true);
     expect(menu.selectedId).toBe('manual');
   });
@@ -1490,7 +1550,10 @@ describe('bot sidebar rows', () => {
 
     const menu = captured.menus.at(-1);
     if (menu === undefined) throw new Error('move menu not rendered');
-    const items = menu.items as readonly { id: string; submenu?: readonly { id: string }[] }[];
+    const items = menu.items as readonly {
+      id: string;
+      submenu?: readonly { id: string }[];
+    }[];
     expect(items.map((item) => item.id)).toEqual([
       'pin',
       'pin-separator',
@@ -1670,7 +1733,7 @@ describe('bot sidebar rows', () => {
     expect(onHide).toHaveBeenLastCalledWith(DM_CHANNEL.id);
   });
 
-  it('puts Mark as read first on the Channel menu when the Channel has unread messages', () => {
+  it('puts Mark as read right after Pin on the Channel menu when the Channel has unread messages', () => {
     const read = vi.fn();
     renderToStaticMarkup(
       createElement(ChannelMoveMenu, {
@@ -1685,15 +1748,17 @@ describe('bot sidebar rows', () => {
     );
     const menu = captured.menus.at(-1);
     if (menu === undefined) throw new Error('Channel menu not rendered');
-    expect(menu.items.slice(0, 2).map((item) => item['id'])).toEqual([
+    const ids = menu.items.map((item) => item['id']);
+    expect(ids.slice(ids.indexOf('pin'), ids.indexOf('pin') + 3)).toEqual([
+      'pin',
       'mark-read',
-      'read-separator',
+      'pin-separator',
     ]);
     menu.onSelect?.('mark-read');
     expect(read).toHaveBeenCalledOnce();
   });
 
-  it('offers Mute or Unmute beside Mark as read on the Channel menu', () => {
+  it('offers Mute or Unmute right after Pin on the Channel menu', () => {
     const mute = vi.fn();
     for (const muted of [false, true]) {
       renderToStaticMarkup(
@@ -1701,7 +1766,11 @@ describe('bot sidebar rows', () => {
           menu: { channelId: DM_CHANNEL.id, x: 40, y: 80 },
           sections: [],
           currentSectionId: undefined,
-          muteAction: { label: muted ? '取消免打扰' : '免打扰', muted, run: mute },
+          muteAction: {
+            label: muted ? '取消免打扰' : '免打扰',
+            muted,
+            run: mute,
+          },
           t: zhTranslate as never,
           onPick: vi.fn(),
           onClose: vi.fn(),
@@ -1710,7 +1779,12 @@ describe('bot sidebar rows', () => {
       const menu = captured.menus.at(-1);
       if (menu === undefined) throw new Error('Channel menu not rendered');
       const id = muted ? 'unmute' : 'mute';
-      expect(menu.items.slice(0, 2).map((item) => item['id'])).toEqual([id, 'read-separator']);
+      const ids = menu.items.map((item) => item['id']);
+      expect(ids.slice(ids.indexOf('pin'), ids.indexOf('pin') + 3)).toEqual([
+        'pin',
+        id,
+        'pin-separator',
+      ]);
       menu.onSelect?.(id);
     }
     expect(mute).toHaveBeenCalledTimes(2);
@@ -1752,6 +1826,51 @@ describe('bot sidebar rows', () => {
     expect(remove).toHaveBeenCalledOnce();
   });
 
+  it('offers Channel settings first, then nickname and DM action toggles beside Rename', () => {
+    const openSettings = vi.fn();
+    const editNickname = vi.fn();
+    const toggle = vi.fn();
+    renderToStaticMarkup(
+      createElement(ChannelMoveMenu, {
+        menu: { channelId: DM_CHANNEL.id, x: 40, y: 80 },
+        sections: [section('s1', '工作流', [])],
+        currentSectionId: 's1',
+        t: zhTranslate as never,
+        settingsAction: { attention: true, run: openSettings },
+        nicknameAction: editNickname,
+        dmActions: { hidden: ['memory'], toggle },
+        onPick: vi.fn(),
+        onClose: vi.fn(),
+      }),
+    );
+
+    const menu = captured.menus.at(-1);
+    if (menu === undefined) throw new Error('PersonaBot menu not rendered');
+    expect(menu.items.map((item) => item['id'])).toEqual([
+      'settings',
+      'settings-separator',
+      'pin',
+      'pin-separator',
+      'move',
+      'channel-action-separator',
+      'rename',
+      'nickname',
+      'dm-actions',
+      'hide-separator',
+      'hide',
+    ]);
+    const dmRow = menu.items.find((item) => item['id'] === 'dm-actions') as
+      | { submenu?: readonly { id: string }[] }
+      | undefined;
+    expect(dmRow?.submenu?.map((item) => item.id)).toEqual(['dm:posts', 'dm:memory']);
+    menu.onSelect?.('settings');
+    expect(openSettings).toHaveBeenCalledOnce();
+    menu.onSelect?.('nickname');
+    expect(editNickname).toHaveBeenCalledOnce();
+    menu.onSelect?.('dm:memory');
+    expect(toggle).toHaveBeenCalledWith('memory');
+  });
+
   it('renders a deleted section channel as a loose channel with no bucket', () => {
     setRoster({ sections: [section('s1', '工作流', ['c-section'])] });
     store.setRoster([], [SECTION_CHANNEL]);
@@ -1780,7 +1899,11 @@ it('announces pending approvals in the Rail button while preserving working exec
     expect(markup).toContain('data-state="working"');
     expect(markup).toContain('data-approval-count="2"');
   } finally {
-    store.applyActivity({ generation: 'approval-rail-host', revision: 2, bots: [] });
+    store.applyActivity({
+      generation: 'approval-rail-host',
+      revision: 2,
+      bots: [],
+    });
   }
 });
 
@@ -1802,6 +1925,10 @@ it('shows the contact row status beside the name instead of on the avatar', () =
     expect(top).toContain('data-approval-count="3"');
     expect(top).toContain('bh-avatar-botui');
   } finally {
-    store.applyActivity({ generation: 'row-status-host', revision: 2, bots: [] });
+    store.applyActivity({
+      generation: 'row-status-host',
+      revision: 2,
+      bots: [],
+    });
   }
 });

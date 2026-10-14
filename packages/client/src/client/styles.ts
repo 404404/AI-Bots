@@ -4990,24 +4990,6 @@ button.bh-bot-nav > svg {
   display: flex;
   flex-direction: column;
 }
-.bh-channel-settings-attention-dot {
-  flex: none;
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: ${radius.round};
-  background: var(--dsw-alias-state-error-primary);
-}
-.bh-channel-settings-attention-label {
-  display: inline-flex;
-  align-items: center;
-  gap: ${space.x3};
-}
-.bh-channel-options-dot {
-  position: absolute;
-  top: 5px;
-  right: 5px;
-}
 .bh-channel-settings-caption {
   display: flex;
   align-items: center;
@@ -6073,9 +6055,6 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wi
 .bh-human-inbox-more:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
-.bh-channel-options{position:absolute;right:12px;top:11px;pointer-events:auto}
-.bh-chat-layout[data-sidebar='hidden'] .bh-channel-options{right:44px}
-.bh-chat-layout[data-sidebar='hidden'] .bh-topbar{padding-right:84px}
 .bh-activity-center { display:flex;flex-direction:column;overflow:hidden; }
 .bh-activity-center-header {padding:20px ${space.x6} 0; flex-shrink:0;}
 .bh-activity-center-header h1 {margin:0 0 ${space.x5};font-size:${text.titleSize};line-height:${text.titleLine};font-weight:${text.strong};}

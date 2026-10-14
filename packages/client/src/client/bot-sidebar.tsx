@@ -97,6 +97,19 @@ import { CreatePersonaBotModal } from './persona-bot-create.js';
 import { BotZipShareDialog, ImportBotZipModal } from './bot-zip.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { PersonaBotDeletionView } from './personabot-deletion.js';
+import { NicknameDialog } from './human-channel-name.js';
+import {
+  CHANNEL_NICKNAME_ITEM,
+  CHANNEL_SETTINGS_ITEM,
+  channelNicknameItem,
+  channelSettingsItem,
+  dmActionKindOf,
+  dmActionsItem,
+  useHiddenDmActions,
+} from './channel-options.js';
+import { channelSettings, isChannelSettingsSection } from './channel-settings-state.js';
+import type { ChannelSidebarRegistry } from './channel-sidebar.js';
+import { toggleHiddenDmAction, type DmActionKind } from './dm-actions.js';
 import { GitUnavailableNotice, gitReady } from './git-unavailable-notice.js';
 import { MarketplaceModal } from './marketplace.js';
 import {
@@ -176,7 +189,11 @@ export function BotPanelIcon({
   const entryLabel = [
     t('activityCenter.title'),
     ...(state.humanInbox.unreadCount > 0
-      ? [t('humanInbox.unreadCount', { count: String(state.humanInbox.unreadCount) })]
+      ? [
+          t('humanInbox.unreadCount', {
+            count: String(state.humanInbox.unreadCount),
+          }),
+        ]
       : []),
     ...(state.humanInbox.hasAction ? [t('humanInbox.action')] : []),
   ].join(' · ');
@@ -368,7 +385,17 @@ interface SidebarProps {
   useBotModePrefs: SnapshotSelectorHook<BotModePrefsSnapshot>;
   setSortMode: (mode: BotModeSortMode) => void;
   setSectionSortMode: (sectionId: string, mode: BotModeSortMode | undefined) => void;
+  channelSidebar?: ChannelSidebarRegistry | undefined;
   t: BotHarnessTranslate;
+}
+
+function hasChannelSettings(
+  registry: ChannelSidebarRegistry | undefined,
+  channel: ChannelSummary,
+): boolean {
+  if (registry === undefined) return false;
+  const scope = channel.type === 'dm' && channel.botSlug !== undefined ? 'personabot' : 'channel';
+  return registry.entries(scope).some(isChannelSettingsSection);
 }
 
 interface ChannelMenuRequest {
@@ -894,6 +921,7 @@ export function BotSidebar({
   useBotModePrefs,
   setSortMode,
   setSectionSortMode,
+  channelSidebar,
   t,
 }: SidebarProps): ReactElement {
   const state = useClientState();
@@ -937,6 +965,21 @@ export function BotSidebar({
     for (const id of ids) await actions.setChannelHidden(id, false);
   };
   const [deleting, setDeleting] = useState<BotSummary | undefined>(undefined);
+  const [nicknameTarget, setNicknameTarget] = useState<ChannelSummary | undefined>(undefined);
+  const menuHiddenDmActions = useHiddenDmActions(
+    channelMenu === undefined
+      ? undefined
+      : state.channels.find(
+          (candidate) => candidate.id === channelMenu.channelId && candidate.type === 'dm',
+        )?.botSlug,
+  );
+  const openChannelSettings = async (channel: ChannelSummary): Promise<void> => {
+    if (store.getSnapshot().conversation.channel?.id !== channel.id)
+      await (channel.botSlug === undefined
+        ? actions.openChannel(channel.id)
+        : actions.openBot(channel.botSlug));
+    channelSettings.open(channelSettings.attentionOf(channel.id)[0]);
+  };
   const [channelSelection, setChannelSelection] = useState<ChannelSelection>({
     ids: [],
     anchorId: undefined,
@@ -1450,7 +1493,10 @@ export function BotSidebar({
     drag: { scopeId: ScopeId; channelId: string },
     scopeId: ScopeId,
   ): void => {
-    runChannelMove(drag.channelId, drag.scopeId, scopeId, { kind: 'scope', position: 'first' });
+    runChannelMove(drag.channelId, drag.scopeId, scopeId, {
+      kind: 'scope',
+      position: 'first',
+    });
   };
 
   const runFlatInsert = (channelId: string, sourceScopeId: ScopeId, anchor: FlatAnchor): void => {
@@ -1503,14 +1549,18 @@ export function BotSidebar({
     if (!pinned) {
       const sourceSectionId = sectionOfChannel(channelId);
       if (sourceSectionId === targetSectionId) return;
-      runChannelMove(channelId, sourceSectionId, targetSectionId, { kind: 'scope' });
+      runChannelMove(channelId, sourceSectionId, targetSectionId, {
+        kind: 'scope',
+      });
       offerUndo(
         t('undo.moved', {
           name: conversationName(channelId),
           section: sectionName(targetSectionId),
         }),
         async () => {
-          runChannelMove(channelId, targetSectionId, sourceSectionId, { kind: 'scope' });
+          runChannelMove(channelId, targetSectionId, sourceSectionId, {
+            kind: 'scope',
+          });
         },
       );
       return;
@@ -1605,7 +1655,10 @@ export function BotSidebar({
   };
 
   const commitBulkPin = (ids: readonly string[], targetPinned: boolean): Promise<void> =>
-    commitBulkChange({ action: targetPinned ? 'pin' : 'unpin', channelIds: ids });
+    commitBulkChange({
+      action: targetPinned ? 'pin' : 'unpin',
+      channelIds: ids,
+    });
 
   const commitBulkHide = (ids: readonly string[]): Promise<void> =>
     commitBulkChange({ action: 'hide', channelIds: ids });
@@ -2144,7 +2197,9 @@ export function BotSidebar({
                       title={
                         shortcutFor(channel.id) === undefined
                           ? undefined
-                          : t('shortcut.web.open', { key: shortcutFor(channel.id) ?? '' })
+                          : t('shortcut.web.open', {
+                              key: shortcutFor(channel.id) ?? '',
+                            })
                       }
                       onClick={(event) => activateChannel(channel, event)}
                       draggable
@@ -2380,7 +2435,11 @@ export function BotSidebar({
           const resolveBlockTarget = (element: HTMLElement, clientY: number) => {
             const rows = [...element.querySelectorAll('[data-channel-id]')].map((row, index) => {
               const rect = row.getBoundingClientRect();
-              return { id: sectionChannels[index]?.id ?? '', top: rect.top, height: rect.height };
+              return {
+                id: sectionChannels[index]?.id ?? '',
+                top: rect.top,
+                height: rect.height,
+              };
             });
             const headBottom =
               element.querySelector('.bh-section-head')?.getBoundingClientRect().bottom ?? clientY;
@@ -2495,7 +2554,9 @@ export function BotSidebar({
                         <button
                           type="button"
                           className="bh-row-action"
-                          aria-label={t('roster.section.sort', { name: section.name })}
+                          aria-label={t('roster.section.sort', {
+                            name: section.name,
+                          })}
                           onClick={(event) => {
                             event.stopPropagation();
                             setSectionMenuId((value) =>
@@ -2527,7 +2588,9 @@ export function BotSidebar({
                         <button
                           type="button"
                           className="bh-row-action"
-                          aria-label={t('roster.section.create', { name: section.name })}
+                          aria-label={t('roster.section.create', {
+                            name: section.name,
+                          })}
                           onClick={(event) => {
                             event.stopPropagation();
                             setSectionMenuId(undefined);
@@ -2544,10 +2607,17 @@ export function BotSidebar({
                         setSectionCreateMenuId(undefined);
                         const source = botCreateSource(id);
                         if (source !== undefined) {
-                          setCreateRequest({ kind: 'bot', source, sectionId: section.id });
+                          setCreateRequest({
+                            kind: 'bot',
+                            source,
+                            sectionId: section.id,
+                          });
                         }
                         if (id === 'channel') {
-                          setCreateRequest({ kind: 'channel', sectionId: section.id });
+                          setCreateRequest({
+                            kind: 'channel',
+                            sectionId: section.id,
+                          });
                         }
                       }}
                       onClose={() => {
@@ -2734,7 +2804,10 @@ export function BotSidebar({
           allPinned={(channelMenu.channelIds ?? []).every((id) => allPinnedChannelSet.has(id))}
           t={t}
           onCreateSection={() => {
-            setCreateRequest({ kind: 'section', moveChannelIds: channelMenu.channelIds ?? [] });
+            setCreateRequest({
+              kind: 'section',
+              moveChannelIds: channelMenu.channelIds ?? [],
+            });
             setChannelMenu(undefined);
           }}
           onPin={(pinned) => void commitBulkPin(channelMenu.channelIds ?? [], pinned)}
@@ -2771,6 +2844,40 @@ export function BotSidebar({
                 void actions.setChannelMuted(channelMenu.channelId, !muted);
                 setChannelMenu(undefined);
               },
+            };
+          })()}
+          settingsAction={(() => {
+            const channel = state.channels.find(
+              (candidate) => candidate.id === channelMenu.channelId,
+            );
+            if (channel === undefined || !hasChannelSettings(channelSidebar, channel))
+              return undefined;
+            return {
+              attention: channelSettings.attentionOf(channel.id).length > 0,
+              run: () => {
+                setChannelMenu(undefined);
+                void openChannelSettings(channel);
+              },
+            };
+          })()}
+          nicknameAction={(() => {
+            const channel = state.channels.find(
+              (candidate) => candidate.id === channelMenu.channelId,
+            );
+            if (channel?.humanNickname === undefined) return undefined;
+            return () => {
+              setNicknameTarget(channel);
+              setChannelMenu(undefined);
+            };
+          })()}
+          dmActions={(() => {
+            const botSlug = state.channels.find(
+              (candidate) => candidate.id === channelMenu.channelId && candidate.type === 'dm',
+            )?.botSlug;
+            if (botSlug === undefined) return undefined;
+            return {
+              hidden: menuHiddenDmActions,
+              toggle: (kind: DmActionKind) => toggleHiddenDmAction(botSlug, kind),
             };
           })()}
           shareAction={(() => {
@@ -2856,6 +2963,15 @@ export function BotSidebar({
           }}
         />
       ) : null}
+      {nicknameTarget === undefined ? null : (
+        <NicknameDialog
+          key={nicknameTarget.id}
+          channel={nicknameTarget}
+          actions={actions}
+          t={t}
+          onClose={() => setNicknameTarget(undefined)}
+        />
+      )}
       {sharing === undefined ? null : (
         <BotZipShareDialog
           key={sharing.slug}
@@ -3023,6 +3139,9 @@ export function ChannelMoveMenu({
   companionAction,
   shareAction,
   deleteAction,
+  settingsAction,
+  nicknameAction,
+  dmActions,
   menu,
   sections,
   currentSectionId,
@@ -3040,6 +3159,9 @@ export function ChannelMoveMenu({
   companionAction?: { label: string; run(): void } | undefined;
   shareAction?: { label: string; run(): void } | undefined;
   deleteAction?: { label: string; run(): void } | undefined;
+  settingsAction?: { attention: boolean; run(): void } | undefined;
+  nicknameAction?: (() => void) | undefined;
+  dmActions?: { hidden: readonly DmActionKind[]; toggle(kind: DmActionKind): void } | undefined;
   menu: ChannelMenuRequest;
   sections: readonly RosterSection[];
   currentSectionId: string | undefined;
@@ -3066,23 +3188,12 @@ export function ChannelMoveMenu({
     };
   }, []);
   const items: readonly MenuEntry[] = [
-    ...(readAction === undefined
+    ...(settingsAction === undefined
       ? []
       : [
-          { id: 'mark-read', label: readAction.label, icon: <IconCheckOutlineRegular size={16} /> },
+          channelSettingsItem(t, settingsAction.attention),
+          { type: 'separator' as const, id: 'settings-separator' },
         ]),
-    ...(muteAction === undefined
-      ? []
-      : [
-          {
-            id: muteAction.muted ? 'unmute' : 'mute',
-            label: muteAction.label,
-            icon: <ChannelSidebarIcon name={muteAction.muted ? 'bell' : 'bell-off'} size={16} />,
-          },
-        ]),
-    ...(readAction === undefined && muteAction === undefined
-      ? []
-      : [{ type: 'separator' as const, id: 'read-separator' }]),
     ...(companionAction === undefined
       ? []
       : [
@@ -3094,18 +3205,48 @@ export function ChannelMoveMenu({
         ]),
     ...(shareAction === undefined
       ? []
-      : [{ id: 'share', label: shareAction.label, icon: <IconShareOutlineRegular size={16} /> }]),
+      : [
+          {
+            id: 'share',
+            label: shareAction.label,
+            icon: <IconShareOutlineRegular size={16} />,
+          },
+        ]),
     {
       id: pinned ? 'unpin' : 'pin',
       label: t(pinned ? 'pin.remove' : 'pin.add'),
       icon: pinned ? <IconPinFillRegular size={16} /> : <IconPinOutlineRegular size={16} />,
     },
+    ...(readAction === undefined
+      ? []
+      : [
+          {
+            id: 'mark-read',
+            label: readAction.label,
+            icon: <IconCheckOutlineRegular size={16} />,
+          },
+        ]),
+    ...(muteAction === undefined
+      ? []
+      : [
+          {
+            id: muteAction.muted ? 'unmute' : 'mute',
+            label: muteAction.label,
+            icon: <ChannelSidebarIcon name={muteAction.muted ? 'bell' : 'bell-off'} size={16} />,
+          },
+        ]),
     { type: 'separator', id: 'pin-separator' },
     ...channelMoveMenuItems(t, sections, currentSectionId).map((entry) =>
       'type' in entry ? entry : { ...entry, icon: <IconFolderOpenOutlineRegular size={16} /> },
     ),
     { type: 'separator', id: 'channel-action-separator' },
-    { id: 'rename', label: t('channel.rename'), icon: <IconEditOutlineRegular size={16} /> },
+    {
+      id: 'rename',
+      label: t('channel.rename'),
+      icon: <IconEditOutlineRegular size={16} />,
+    },
+    ...(nicknameAction === undefined ? [] : [channelNicknameItem(t)]),
+    ...(dmActions === undefined ? [] : [dmActionsItem(t, dmActions.hidden)]),
     { type: 'separator', id: 'hide-separator' },
     {
       id: 'hide',
@@ -3140,6 +3281,19 @@ export function ChannelMoveMenu({
           }
           if (id === 'mute' || id === 'unmute') {
             muteAction?.run();
+            return;
+          }
+          const dmKind = dmActionKindOf(id);
+          if (dmKind !== undefined) {
+            dmActions?.toggle(dmKind);
+            return;
+          }
+          if (id === CHANNEL_SETTINGS_ITEM) {
+            settingsAction?.run();
+            return;
+          }
+          if (id === CHANNEL_NICKNAME_ITEM) {
+            nicknameAction?.();
             return;
           }
           if (id === 'companion') {
