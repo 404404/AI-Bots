@@ -1,5 +1,5 @@
 import { palette } from './palette.generated';
-import { touch, typeScale, weight, type PlatformOS } from './tokens';
+import { mono, touch, typeScale, weight, type PlatformOS } from './tokens';
 
 export type ColorRole = keyof typeof palette.light;
 export type ColorScheme = 'light' | 'dark';
@@ -15,6 +15,7 @@ export type DesignTheme = {
   type: (typeof typeScale)[PlatformOS];
   weight: (typeof weight)[PlatformOS];
   touch: number;
+  mono: string;
 };
 
 const HEX = /^#([0-9a-f]{6})$/i;
@@ -129,5 +130,6 @@ export function resolveTheme(
     type: typeScale[os],
     weight: weight[os],
     touch: touch[os],
+    mono: mono[os],
   };
 }

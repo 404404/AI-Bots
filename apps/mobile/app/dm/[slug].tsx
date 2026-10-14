@@ -8,9 +8,11 @@ import type {
   CardResolution,
   ConversationDraft,
   ConversationMessage,
+  MessageAttachment,
   MessageCard,
 } from '../../src/host/conversation';
 import type { Inbox } from '../../src/host/inbox';
+import { shareAttachment } from '../../src/host/share-attachment';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../src/host/pick-files';
 import {
   useConversation,
@@ -30,6 +32,7 @@ import { ApprovalCard } from '../../src/ui/chat/approval-card';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
+import { ImageViewer } from '../../src/ui/chat/image-viewer';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
 import { chatRows, type ChatRow } from '../../src/ui/chat/message-groups';
 import { QuestionCard } from '../../src/ui/chat/question-card';
@@ -153,6 +156,8 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const [draft, setDraft] = useState('');
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
+  const [shareError, setShareError] = useState(false);
+  const [viewing, setViewing] = useState<MessageAttachment>();
   const now = new Date();
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
@@ -206,6 +211,11 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
       .catch(() => setAttachError(true));
   };
 
+  const share = (attachment: MessageAttachment): Promise<void> => {
+    setShareError(false);
+    return shareAttachment(attachment).catch(() => setShareError(true));
+  };
+
   const notice =
     snapshot.status === 'refused'
       ? t.dmRefused
@@ -217,7 +227,9 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
             ? t.liveInterrupted
             : attachError
               ? t.attachFailed
-              : undefined;
+              : shareError
+                ? t.shareFailed
+                : undefined;
 
   return (
     <>
@@ -283,6 +295,8 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
                 first={item.first}
                 last={item.last}
                 onRetry={(id) => conversation?.retry(id)}
+                onOpenImage={setViewing}
+                onShare={share}
               />
             )
           }
@@ -342,6 +356,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
         />
       </KeyboardAvoidingView>
+      <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
     </>
   );
 }

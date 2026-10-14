@@ -7,7 +7,6 @@
     "botSourcePolicies": "#1690",
     "botSourcePolicyReset": "#1690",
     "botSourcePolicySet": "#1690",
-    "browserProfileSet": "#1690",
     "channelAllBotPreview": "UI-only: Web composer preview of who an @all mention would wake",
     "channelHumanNameSet": "#1690",
     "channelReadPosition": "UI-only: Web unread divider position for one viewer",
@@ -38,22 +37,8 @@
     "workspaceFileTarget": "UI-only: resolves a Workspace folder path so the Web UI can open it in the OS; grants lists the paths"
   },
   "routes": {
-    "/api/browser/install-packages": "#1690",
-    "/api/browser/observation": "#1690",
-    "/api/browser/takeover/audit": "#1690",
-    "/api/browser/takeover/recording": "#1690",
-    "/api/computer/diagnostics": "#1690",
-    "/api/computer/diagnostics/viewer": "#1690",
-    "/api/computer/download": "#1690",
-    "/api/computer/export": "#1690",
-    "/api/computer/exports": "#1690",
-    "/api/computer/import": "#1690",
-    "/api/computer/install-packages": "#1690",
-    "/api/computer/logs": "#1690",
-    "/api/computer/open-dir": "#1690",
-    "/api/computer/upload": "#1690",
-    "/api/computer/upload-content": "#1690",
-    "/api/remote.mux": "#1690"
+    "/api/computer/diagnostics/viewer": "UI-only: the Web Client's Computer viewer reports its own connection events here; an agent reads them with computer-diagnostics",
+    "/api/remote.mux": "UI-only: the Web Client's multiplexed WebSocket for live Browser and Computer streams; agents use browser-frame, browser-observation and computer-tool"
   },
   "tools": {
     "archive_assignment": "#1690",

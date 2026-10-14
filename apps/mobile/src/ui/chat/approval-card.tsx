@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 
 import type { CardResolution } from '../../host/conversation';
 import {
@@ -17,9 +17,7 @@ import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { errorText } from '../request-parts';
 import { t } from '../strings';
-import { ActionCard, CardButtons, CardLine, type CardLineTone } from './action-card';
-
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
+import { ActionCard, CardButtons, CardLine, CardLink, type CardLineTone } from './action-card';
 
 export interface ApprovalCardPort {
   load(): Promise<ApprovalRequest>;
@@ -179,20 +177,28 @@ export function ApprovalCard({
         wide={wide}
         {...(phase.error === undefined ? {} : { error: phase.error })}
         preview={
-          first === undefined || first.value === '' ? undefined : (
-            <View
-              style={{
-                backgroundColor: theme.color.base,
-                borderRadius: radius.sm,
-                paddingHorizontal: space.x4,
-                paddingVertical: space.x3,
-              }}
-            >
-              <Text selectable variant="meta" numberOfLines={4} style={{ fontFamily: MONO }}>
-                {first.value}
-              </Text>
-            </View>
-          )
+          <View style={{ gap: space.x1 }}>
+            {first === undefined || first.value === '' ? null : (
+              <View
+                style={{
+                  backgroundColor: theme.color.base,
+                  borderRadius: radius.sm,
+                  paddingHorizontal: space.x4,
+                  paddingVertical: space.x3,
+                }}
+              >
+                <Text
+                  selectable
+                  variant="meta"
+                  numberOfLines={4}
+                  style={{ fontFamily: theme.mono }}
+                >
+                  {first.value}
+                </Text>
+              </View>
+            )}
+            <CardLink label={t.details} onPress={onDetails} />
+          </View>
         }
       >
         <CardButtons>
@@ -218,7 +224,6 @@ export function ApprovalCard({
             busy={phase.busy === 'rejected'}
             onPress={() => void decide('rejected')}
           />
-          <Button label={t.details} onPress={onDetails} />
         </CardButtons>
       </ActionCard>
     </View>
