@@ -5,7 +5,6 @@ import { resolveTheme, type Appearance, type ColorScheme, type DesignTheme } fro
 import type { PlatformOS } from './tokens';
 
 export {
-  accentInk,
   headerBand,
   resolveTheme,
   withAccent,

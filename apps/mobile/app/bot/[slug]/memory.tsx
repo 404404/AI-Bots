@@ -3,9 +3,7 @@ import { useMemo } from 'react';
 
 import { loadMemoryFile, loadMemoryFiles } from '../../../src/host/bot-profile';
 import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
-import { botColor } from '../../../src/ui/bot-color';
 import { MemoryFileView, MemoryFolderView } from '../../../src/ui/chat/memory-browser';
-import { AccentProvider } from '../../../src/ui/design/theme';
 import { t } from '../../../src/ui/strings';
 
 export default function MemoryScreen() {
@@ -36,7 +34,7 @@ export default function MemoryScreen() {
   const title = path === '' ? t.profileSection.memory : (path.split('/').at(-1) ?? path);
 
   return (
-    <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
+    <>
       <Stack.Screen options={{ title }} />
       {kind === 'file' ? (
         loadFile === undefined ? null : (
@@ -54,6 +52,6 @@ export default function MemoryScreen() {
           }
         />
       )}
-    </AccentProvider>
+    </>
   );
 }

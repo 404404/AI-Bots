@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { palette as dshPalette, render } from '../scripts/generate-palette.mjs';
 import { palette } from '../src/ui/design/palette.generated';
-import { accentInk, headerBand, resolveTheme, withAccent } from '../src/ui/design/resolve-theme';
+import { headerBand, resolveTheme, withAccent } from '../src/ui/design/resolve-theme';
 import { botColor } from '../src/ui/bot-color';
 import { edge, radius, space } from '../src/ui/design/tokens';
 
@@ -87,11 +87,9 @@ describe('resolveTheme', () => {
 });
 
 function contrastOf(a: string, b: string): number {
-  const full = (hex: string) =>
-    hex.length === 4 ? [...hex.slice(1)].map((digit) => digit + digit).join('') : hex.slice(1);
   const lum = (hex: string) =>
     [16, 8, 0]
-      .map((shift) => ((Number.parseInt(full(hex), 16) >> shift) & 0xff) / 255)
+      .map((shift) => ((Number.parseInt(hex.slice(1), 16) >> shift) & 0xff) / 255)
       .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
       .reduce((sum, c, index) => sum + c * [0.2126, 0.7152, 0.0722][index]!, 0);
   const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x) as [number, number];
@@ -144,18 +142,6 @@ describe('Bot colour on the Human bubble', () => {
         const band = headerBand(scheme, color);
         for (const behind of [band.top, band.bottom])
           expect(contrastOf(behind, color[band.ink]), `${scheme} ${source}`).toBeGreaterThanOrEqual(
-            4.5,
-          );
-      }
-  });
-
-  it('keeps accent text and icons readable on cards in both schemes', () => {
-    for (const scheme of ['light', 'dark'] as const)
-      for (const source of ['#6b3f1f', '#d9475a', '#3f8fd0', '#5f9e45', '#888888', '#c79a2b']) {
-        const { color } = resolveTheme(scheme, { accent: source });
-        const ink = accentInk(color);
-        for (const behind of [color.surface, color.elevated])
-          expect(contrastOf(ink, behind), `${scheme} ${source} → ${ink}`).toBeGreaterThanOrEqual(
             4.5,
           );
       }
