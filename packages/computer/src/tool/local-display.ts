@@ -12,6 +12,8 @@ export interface LocalDisplay {
 
 export const LOCAL_DISPLAY_SCREEN = '1440x900x24';
 
+export const LOCAL_WINDOW_MANAGER_SETTLE_MS = 1000;
+
 export const LOCAL_WINDOW_MANAGERS = [
   'openbox',
   'xfwm4',
@@ -133,14 +135,93 @@ async function findWindowManager(path: string | undefined): Promise<string | und
   return undefined;
 }
 
+function desktopSession(source: NodeJS.ProcessEnv): boolean {
+  return (source['XDG_CURRENT_DESKTOP'] ?? '') !== '' || (source['DESKTOP_SESSION'] ?? '') !== '';
+}
+
+function exitsWithin(owned: Owned, ms: number): Promise<boolean> {
+  if (owned.exited) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      owned.child.off('exit', onExit);
+      resolve(false);
+    }, ms);
+    const onExit = (): void => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    owned.child.once('exit', onExit);
+  });
+}
+
+async function attachToDisplay(options: {
+  source: NodeJS.ProcessEnv;
+  display: string;
+  wm: string | undefined;
+  dbus: string | undefined;
+  onEvent?: ((detail: string) => void) | undefined;
+  signal?: AbortSignal | undefined;
+  timeoutMs?: number | undefined;
+}): Promise<LocalDisplay> {
+  const { source, display, wm, dbus } = options;
+  if (wm === undefined) {
+    const packages = (await missingDesktopPackages(source)).filter((name) => name !== 'xvfb');
+    throw new LocalDesktopMissingError(packages.length > 0 ? packages : ['openbox'], true);
+  }
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  const children: Owned[] = [];
+  let stopped = false;
+  const stop = async (): Promise<void> => {
+    stopped = true;
+    const running = children.splice(0).reverse();
+    for (const owned of running) await terminate(owned);
+    if (running.length > 0) options.onEvent?.('phase=display-stopped');
+  };
+  try {
+    const env: Record<string, string> = {};
+    if ((source['DBUS_SESSION_BUS_ADDRESS'] ?? '') === '' && dbus !== undefined) {
+      const bus = own(
+        spawn(dbus, ['--session', '--nofork', '--nopidfile', '--print-address=1'], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { PATH: source['PATH'] ?? '', HOME: source['HOME'] ?? '', DISPLAY: display },
+        }),
+      );
+      children.push(bus);
+      env['DBUS_SESSION_BUS_ADDRESS'] = await firstLine(bus, bus.child.stdout, 'D-Bus', {
+        signal: options.signal,
+        timeoutMs,
+      });
+    }
+    const manager = own(
+      spawn(wm, [], { stdio: 'ignore', env: { ...source, DISPLAY: display, ...env } }),
+    );
+    const running = !(await exitsWithin(manager, LOCAL_WINDOW_MANAGER_SETTLE_MS));
+    if (running) children.push(manager);
+    options.onEvent?.(
+      `phase=display source=session display=${display} wm=${running ? (wm.split('/').pop() ?? wm) : 'existing'} dbus=${String(env['DBUS_SESSION_BUS_ADDRESS'] !== undefined)}`,
+    );
+    return {
+      display,
+      env,
+      managed: false,
+      alive: () => !stopped && children.every((owned) => !owned.exited),
+      stop,
+    };
+  } catch (error) {
+    await stop();
+    throw error;
+  }
+}
+
 export async function missingDesktopPackages(
   source: NodeJS.ProcessEnv = process.env,
 ): Promise<string[]> {
   const path = source['PATH'];
   let atSpi = false;
   for (const launcher of LOCAL_AT_SPI_LAUNCHERS) atSpi ||= await executable(launcher);
+  const needsServer = (source['DISPLAY'] ?? '') === '';
   return [
-    ...((await findOnPath('Xvfb', path)) === undefined ? ['xvfb'] : []),
+    ...(needsServer && (await findOnPath('Xvfb', path)) === undefined ? ['xvfb'] : []),
     ...((await findWindowManager(path)) === undefined ? ['openbox'] : []),
     ...((await findOnPath('dbus-daemon', path)) === undefined ? ['dbus'] : []),
     ...(atSpi ? [] : ['at-spi2-core']),
@@ -155,7 +236,8 @@ export async function ensureLocalDisplay(options: {
 }): Promise<LocalDisplay> {
   const source = options.source ?? process.env;
   const existing = source['DISPLAY'] ?? '';
-  if (existing !== '' || (source['WAYLAND_DISPLAY'] ?? '') !== '') {
+  const path = source['PATH'];
+  if ((source['WAYLAND_DISPLAY'] ?? '') !== '' || (existing !== '' && desktopSession(source))) {
     options.onEvent?.(`phase=display source=session display=${existing || 'wayland'}`);
     return {
       display: existing,
@@ -165,10 +247,10 @@ export async function ensureLocalDisplay(options: {
       stop: async () => undefined,
     };
   }
-  const path = source['PATH'];
-  const xvfb = await findOnPath('Xvfb', path);
   const wm = await findWindowManager(path);
   const dbus = await findOnPath('dbus-daemon', path);
+  if (existing !== '') return attachToDisplay({ ...options, source, display: existing, wm, dbus });
+  const xvfb = await findOnPath('Xvfb', path);
   if (xvfb === undefined || wm === undefined)
     throw new LocalDesktopMissingError(await missingDesktopPackages(source), xvfb !== undefined);
 
