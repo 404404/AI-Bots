@@ -1,10 +1,10 @@
 import type { ExternalSource } from '../../../core/src/messaging/inbound.js';
 import { useCallback, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
+import * as stylex from '@stylexjs/stylex';
 
 import {
   Button,
   IconEllipsisOutlineRegular,
-  IconChevronDownOutlineRegular,
   Menu,
   Tag,
   Tooltip,
@@ -70,6 +70,42 @@ import {
 } from './inbox-sections.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { BotAttentionItem } from './store.js';
+import { IconButton } from './ds/icon-button.js';
+import { GroupHeading } from './ds/group-heading.js';
+import { color, radius, space, text } from './ds/tokens.stylex.js';
+
+const styles = stylex.create({
+  inboxGroup: { paddingBlock: space.x1 },
+  inboxSpaced: { marginTop: space.x3 },
+  inboxList: { marginTop: 0, marginBottom: space.x2 },
+  viewTabs: {
+    display: 'inline-flex',
+    gap: space.x1,
+    padding: space.x1,
+    borderRadius: radius.row,
+    backgroundColor: color.surface,
+  },
+  viewTab: {
+    paddingBlock: space.x1,
+    paddingInline: space.x3,
+    borderWidth: 0,
+    borderStyle: 'none',
+    borderRadius: radius.control,
+    backgroundColor: 'transparent',
+    color: { default: color.muted, ':hover': color.fg },
+    fontFamily: 'inherit',
+    fontSize: text.bodySize,
+    lineHeight: text.bodyLine,
+    cursor: 'pointer',
+    outline: { default: 'none', ':focus-visible': `2px solid ${color.accent}` },
+    outlineOffset: '-2px',
+  },
+  viewTabSelected: {
+    backgroundColor: color.base,
+    color: { default: color.fg, ':hover': color.fg },
+    fontWeight: text.heavy,
+  },
+});
 
 const inactiveSubscribe = (): (() => void) => () => {};
 
@@ -127,15 +163,15 @@ function GroupManagementHeaderForChannel({
         align="end"
         anchor={
           <Tooltip label={t('group.more')} side="bottom" delayMs={500}>
-            <button
-              type="button"
-              className="bh-channel-sidebar-entry-action"
+            <IconButton
+              size="row"
+              tone="subtle"
               aria-label={t('group.more')}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((value) => !value)}
             >
               <IconEllipsisOutlineRegular size={16} />
-            </button>
+            </IconButton>
           </Tooltip>
         }
         items={items}
@@ -617,20 +653,22 @@ function BotInboxGroup({
     activeSignature !== expansion.signature && activeSignature !== '' ? true : expansion.expanded;
   return (
     <details
-      className="bh-inbox-group"
+      data-inbox-group=""
       open={expanded}
       onToggle={(event) =>
         setExpansion({ signature: activeSignature, expanded: event.currentTarget.open })
       }
+      {...stylex.props(styles.inboxGroup)}
     >
-      <summary className="bh-inbox-group-head">
-        <IconChevronDownOutlineRegular className="bh-inbox-group-chevron" size={14} />
-        <span className="bh-inbox-group-name" title={name}>
-          {name}
-        </span>
-        <Tag tone="neutral">{items.length}</Tag>
-      </summary>
-      <SidebarCardList label={name}>
+      <GroupHeading
+        summary
+        quiet
+        label={name}
+        title={name}
+        expanded={expanded}
+        count={<Tag tone="neutral">{items.length}</Tag>}
+      />
+      <SidebarCardList label={name} className={stylex.props(styles.inboxList).className}>
         {INBOX_SECTIONS.flatMap((section) => inboxSections(items)[section]).map((item) => (
           <BotInboxItemRow key={item.id} item={item} actions={actions} t={t} />
         ))}
@@ -643,10 +681,12 @@ function BotInboxSection({
   section,
   items,
   sourceLabel,
+  spaced,
   actions,
   t,
 }: {
   section: Exclude<InboxSection, 'active'>;
+  spaced: boolean;
   items: BotAttentionItem[];
   sourceLabel: (item: BotAttentionItem) => string;
   actions: ChannelSidebarEntryProps['actions'];
@@ -656,17 +696,20 @@ function BotInboxSection({
   const name = t(`inbox.section.${section}`);
   return (
     <details
-      className="bh-inbox-group bh-inbox-section"
+      data-inbox-group=""
       data-section={section}
       open={expanded}
       onToggle={(event) => setExpanded(event.currentTarget.open)}
+      {...stylex.props(styles.inboxGroup, spaced && styles.inboxSpaced)}
     >
-      <summary className="bh-inbox-group-head">
-        <IconChevronDownOutlineRegular className="bh-inbox-group-chevron" size={14} />
-        <span className="bh-inbox-group-name">{name}</span>
-        <Tag tone="neutral">{items.length}</Tag>
-      </summary>
-      <SidebarCardList label={name}>
+      <GroupHeading
+        summary
+        quiet
+        label={name}
+        expanded={expanded}
+        count={<Tag tone="neutral">{items.length}</Tag>}
+      />
+      <SidebarCardList label={name} className={stylex.props(styles.inboxList).className}>
         {items.map((item) => (
           <BotInboxItemRow
             key={item.id}
@@ -746,6 +789,9 @@ function BotInboxEntry({ actions, t, botSlug }: ChannelSidebarEntryProps): React
               <BotInboxSection
                 key={section}
                 section={section}
+                spaced={
+                  sections.active.length > 0 || (section === 'done' && sections.snoozed.length > 0)
+                }
                 items={sections[section]}
                 sourceLabel={sourceLabel}
                 actions={actions}
@@ -795,7 +841,12 @@ function BotInboxHeaderAction({ t }: ChannelSidebarEntryProps): ReactElement {
 function MemoryViewTabs({ t, setExpanded }: ChannelSidebarEntryProps): ReactElement {
   const view = useSyncExternalStore(subscribeMemoryView, memoryViewSnapshot, memoryViewSnapshot);
   return (
-    <span className="bh-memory-view-tabs" role="tablist" aria-label={t('memory.view.label')}>
+    <span
+      role="tablist"
+      aria-label={t('memory.view.label')}
+      data-memory-view-tabs=""
+      {...stylex.props(styles.viewTabs)}
+    >
       {(['graph', 'versions', 'branches'] as const).map((id) => (
         <Tooltip
           key={id}
@@ -809,6 +860,7 @@ function MemoryViewTabs({ t, setExpanded }: ChannelSidebarEntryProps): ReactElem
             type="button"
             role="tab"
             aria-selected={view === id}
+            {...stylex.props(styles.viewTab, view === id && styles.viewTabSelected)}
             onClick={() => {
               setMemoryView(id);
               setExpanded?.(true);

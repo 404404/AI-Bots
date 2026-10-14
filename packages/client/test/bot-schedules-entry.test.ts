@@ -244,11 +244,11 @@ describe('Bot Schedules sidebar entry', () => {
     expect(text).toContain('已处理');
     expect(host.querySelector('[aria-label="由你创建"]')).not.toBeNull();
     expect(host.querySelector('[aria-label="启用「每日早报」"]')).not.toBeNull();
-    const lock = host.querySelector<HTMLButtonElement>('button.bh-schedule-lock-toggle');
+    const lock = host.querySelector<HTMLButtonElement>('button[data-schedule-lock]');
     expect(lock?.getAttribute('aria-pressed')).toBe('false');
     await act(async () => lock?.click());
     expect(actions.updateBotSchedule).toHaveBeenCalledWith('ada', 'sch-1', { locked: true });
-    const runNow = host.querySelector<HTMLButtonElement>('button.bh-schedule-run-now');
+    const runNow = host.querySelector<HTMLButtonElement>('button[data-schedule-run-now]');
     expect(runNow?.getAttribute('aria-label')).toBe('立即运行「每日早报」');
     await act(async () => runNow?.click());
     expect(actions.runBotScheduleNow).toHaveBeenCalledWith('ada', 'sch-1');
