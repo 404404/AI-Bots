@@ -119,14 +119,10 @@ export const CSS =
 
 .bh-onboarding-notice { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 1000; display: flex; align-items: center; gap: 8px; max-width: min(560px, calc(100vw - 32px)); padding: 8px 12px; border: 1px solid var(--bh-onboarding-border); border-radius: 12px; background: var(--bh-onboarding-surface); box-shadow: 0 8px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
 .bh-onboarding-notice-text { min-width: 0; overflow-wrap: anywhere; }
-/* Onboarding launcher: a progress ring inside the Bot-mode row (no row of its own).
-   Like the Activity Center and gear it appears only on hover, while its checklist
-   is open, or while the walkthrough highlights the row, stepping left beside them. */
-.bh-onboarding-launcher { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; color: var(--dsw-alias-label-secondary); cursor: pointer; transition: right 120ms var(--ds-ease-in-out), opacity 120ms var(--ds-ease-in-out), background 120ms var(--ds-ease-in-out); }
-.bh-onboarding-launcher[data-bh-onboarding-launcher='row'] { position: absolute; top: 50%; right: 10px; z-index: 1; transform: translateY(-50%); }
-button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-onboarding-launcher[data-bh-onboarding-launcher='row'],
-nav:has(> .bh-panel-activity[data-unread='true']) .bh-onboarding-launcher[data-bh-onboarding-launcher='row'],
-nav:has(:is(.bh-panel-activity, .bh-panel-gear).driver-active-element) .bh-onboarding-launcher[data-bh-onboarding-launcher='row'] { right: 74px; }
+/* Onboarding launcher: a progress ring in the Bot-mode row's action group (no row
+   of its own). Like the Human Inbox and gear it appears only on hover, while its
+   checklist is open, or while the walkthrough highlights the row. */
+.bh-onboarding-launcher { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; color: var(--dsw-alias-label-secondary); cursor: pointer; transition: opacity 120ms var(--ds-ease-in-out), background 120ms var(--ds-ease-in-out); }
 .bh-onboarding-launcher[data-bh-onboarding-launcher='row']:not([data-open='true']) { opacity: 0; pointer-events: none; }
 button:has(.bh-panel-glyph):is(:hover, :focus-within, .driver-active-element) .bh-onboarding-launcher[data-bh-onboarding-launcher='row'] { opacity: 1; pointer-events: auto; }
 .bh-onboarding-launcher:hover, .bh-onboarding-launcher[data-open='true'] { background: var(--dsw-alias-interactive-bg-hover); }
@@ -136,7 +132,7 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within, .driver-active-element) .b
 .bh-onboarding-ring circle { fill: none; stroke-width: 2; }
 .bh-onboarding-ring-track { stroke: var(--dsw-alias-border-l2); }
 .bh-onboarding-ring-value { stroke: var(--dsw-alias-state-business-primary); stroke-linecap: round; transition: stroke-dashoffset 240ms var(--ds-ease-in-out); }
-.bh-onboarding-enter { position: absolute; top: 50%; right: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; transform: translateY(-50%); font-size: 12px; line-height: 16px; color: var(--dsw-alias-state-business-primary); pointer-events: none; }
+.bh-onboarding-enter { display: inline-flex; align-items: center; gap: 6px; margin-left: 4px; font-size: 12px; line-height: 16px; color: var(--dsw-alias-state-business-primary); pointer-events: none; }
 .bh-onboarding-enter-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: bh-onboarding-pulse 1.6s ease-in-out infinite; }
 @keyframes bh-onboarding-pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); } 50% { box-shadow: 0 0 0 4px transparent; } }
 html[data-botharness-motion='reduce'] .bh-onboarding-enter-dot { animation: none; }
@@ -533,7 +529,7 @@ button:has(.bh-panel-glyph[data-wide='true']) .bh-panel-glyph > .bh-bot-icon {
   height: 24px;
 }
 
-button:has(.bh-panel-glyph[data-wide='true']) > span:not(.bh-panel-glyph):not(.bh-panel-glyph-hit):not(.bh-panel-gear) {
+button:has(.bh-panel-glyph[data-wide='true']) > span:not(.bh-panel-glyph):not(.bh-panel-glyph-hit):not(.bh-panel-actions) {
   font-size: 16px;
   line-height: 24px;
 }
@@ -563,12 +559,22 @@ button:has(.bh-panel-glyph)::before {
 }
 
 
-/* Settings gear on the active Bot row: hidden until the row is hovered, then
-   it opens the Bot section of the Settings dialog. */
-.bh-panel-gear {
+/* Action group on the wide Bot row: tutorial progress, Human Inbox and the
+   settings gear sit side by side inside the row, sharing its layer and hover. */
+.bh-panel-actions {
   position: absolute;
   top: 50%;
   right: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  transform: translateY(-50%);
+}
+
+/* Settings gear on the active Bot row: hidden until the row is hovered, then
+   it opens the Bot section of the Settings dialog. */
+.bh-panel-gear {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -578,7 +584,6 @@ button:has(.bh-panel-glyph)::before {
   color: var(--dsw-alias-label-secondary);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-50%);
   transition:
     opacity 120ms var(--ds-ease-in-out),
     background 120ms var(--ds-ease-in-out);
@@ -5683,31 +5688,29 @@ nav:has(> .bh-panel-activity) {
   align-items: center;
 }
 nav:has(> .bh-panel-activity) > button { grid-column: 1; }
-nav:has(> .bh-panel-activity[data-wide='true']) > button:has(.bh-panel-glyph) { padding-right: 112px; }
+button:has(> .bh-panel-actions) { padding-right: 112px; }
 .bh-panel-activity {
   position: relative;
-  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  justify-self: end;
-  gap: 4px;
-  min-height: 26px;
-  margin-right: 38px;
-  padding: 3px 6px;
-  border: 1px solid var(--bh-overview-border);
-  border-radius: var(--bh-overview-radius-control);
-  color: var(--bh-overview-muted);
-  background: var(--bh-overview-bg);
+  gap: 2px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 3px;
+  border-radius: 6px;
+  color: var(--dsw-alias-label-secondary);
   cursor: pointer;
+  transition:
+    opacity 120ms var(--ds-ease-in-out),
+    background 120ms var(--ds-ease-in-out);
 }
 .bh-panel-activity[data-wide='true'][data-unread='false'] { opacity: 0; pointer-events: none; }
-button:has(.bh-panel-glyph):is(:hover, :focus-within) ~ .bh-panel-activity[data-wide='true'][data-unread='false'][data-active='true'],
-.bh-panel-activity[data-wide='true'][data-unread='false'][data-active='true']:is(:hover, :focus-visible) { opacity: 1; pointer-events: auto; }
-.bh-panel-activity[data-wide='true'][data-unread='false'].driver-active-element { opacity: 1; }
-.bh-panel-activity:hover { background: var(--bh-hover); color: var(--bh-overview-label); }
-.bh-panel-activity[aria-current='page'] { background: var(--bh-selected); color: var(--bh-overview-label); }
-.bh-panel-activity:focus-visible { outline: 2px solid var(--bh-overview-label); outline-offset: 2px; }
+button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wide='true'][data-active='true'],
+.bh-panel-activity[data-wide='true'][data-unread='false'].driver-active-element { opacity: 1; pointer-events: auto; }
+.bh-panel-activity:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.bh-panel-activity[aria-current='page'] { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); }
+.bh-panel-activity:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 1px; }
 .bh-human-inbox-count {
   flex: none;
   min-width: 14px;
@@ -5715,7 +5718,7 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) ~ .bh-panel-activity[data-
   font-size: 11px;
   line-height: 16px;
   font-variant-numeric: tabular-nums;
-  color: var(--bh-overview-label);
+  color: inherit;
 }
 .bh-human-inbox-notification-dot {
   position: absolute;
