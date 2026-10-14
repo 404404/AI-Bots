@@ -449,6 +449,10 @@ Orchestrator 的应用定义 channel_list 工具从当前 PersonaBot 的 Session
 
 应用定义的 CLI Consumer 通过既有 Messaging Service 的 `messagingApps` 发现已资格验证的 Provider setup descriptor，再经同一个已认证 DSH HTTP carrier 调用原生 Connection Fetch Registry 的 `dsh-im/app-setup` endpoint。该 Provider 拥有授权 attempt、过期和原生账号／凭据持久化；CLI 只保留一次调用的内存 cookie，不创建额外 store 或生命周期。飞书凭据和微信验证码仅从 stdin 进入目的明确的 `setup.credentials`／`setup.verify` payload；stdout 只投影经过校验的非敏感状态、二维码、账号引用与指纹。微信扫码由 Human 在手机确认，再用同一 attempt 查询；IM 应用授权不选择 PersonaBot 或建立 Messaging Grant。见 [ADR-0161](../adr/0161-cli-im-authorization-keeps-provider-attempt-authority.md) 与 [#1318](https://github.com/BotHarness/DeepSeekBot/issues/1318)。
 
+### 配对设备的远程访问
+
+[ADR-0199](../adr/0199-paired-devices-reach-the-host-through-a-same-listener-device-gateway.md) 记录的是目标设计，尚未实现：配对的手机不持有任何 DSH 凭据。应用定义的 Device Pairing 模块将经 DSH 公开的 `webServer.register`／`registerUpgrade` 在同一 `dsh web` 监听器上提供设备网关：设备在 BotHarness 前缀下以 `Authorization: Device <id>.<secret>` 调用与 Web Client 相同的 unary 信封和 Remote stream mux 帧；模块每次按运维数据库中的设备记录（只存哈希）校验并更新最近使用时间，再用 Host 内存中经 `connection.authenticatedUrl()` 自行换取的 loopback cookie 转发至原生 `/api` 与 `/api/remote.mux`。DSH 签名 cookie 的密钥本就跨 Host 重启保留，但 cookie 不标识设备，且 stream 升级不经过 `connection/request`，故不能把 cookie 交给设备。撤销立即拒绝后续请求（编码 401：`device-revoked`／`device-unknown`／`device-credential-missing`），并关闭该设备已打开的 stream socket。配对邀请、列表与撤销只在已认证的 `/api` carrier 上提供给 Human。见 [#1644](https://github.com/BotHarness/DeepSeekBot/issues/1644)。
+
 ## 5 · Orchestrator 与 Assignment control plane
 
 Human 不负责创建或选择执行 Conversation。Human–PersonaBot DM 是 Human 与该 Bot 直接对话的入口：消息先成为 Source Event，经 Bot Inbox 交给 Orchestrator；Orchestrator 再决定直接回复，或在授权与 capacity 内创建、复用和管理多个 Assignment Session。普通 Orchestrator assistant final 只留在 DSH SessionPersistence；只有显式 Channel messaging command 才产生 Human-facing Channel message。该 command 从可信 Session ownership 推导 PersonaBot Actor，并验证目标 Channel membership，不接受模型自报 bot id 或 author。右侧「会话」只投影明确归属该 PersonaBot 的独立 DSH 根 Session，包括 Orchestrator 与 Assignment，不展示 Subagent；归属与角色来自 Session Ownership，标题、工作区及实时运行状态来自 DSH 原生 Session 目录，不以 cwd 推断归属（ADR-0072）。
