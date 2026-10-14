@@ -95,14 +95,33 @@ describe('Tool approval card layout', () => {
     expect(card.querySelector('.bh-request-pill')?.textContent).toBe('需要你确认');
     expect(card.querySelector('.bh-tool-approval-sentence')?.textContent).toBe('修改文件');
     expect(card.querySelector('.bh-tool-approval-line')?.textContent).toBe('/qa/notes.md +1 −1');
-    expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
-    expect(card.querySelector('.bh-tool-approval-more')?.hasAttribute('open')).toBe(false);
+    expect(card.querySelector('.bh-request-summary')?.getAttribute('aria-expanded')).toBe('false');
+    expect(card.querySelector('.bh-tool-approval-details-body')).toBeNull();
+    expect(card.querySelector('details')).toBeNull();
     expect(
       [...card.querySelectorAll('.bh-tool-approval-card > .bh-tool-approval-actions button')].map(
         (button) => button.textContent,
       ),
-    ).toEqual(['仅批准这一次', '始终允许相同调用', '拒绝']);
+    ).toEqual(['仅批准这一次', '始终允许相同调用', '始终允许此范围全部不透明工具', '拒绝']);
     expect(card.querySelector('kbd')).toBeNull();
+  });
+  it('opens and closes the details from anywhere on the card except its buttons', async () => {
+    const card = await render();
+    await act(async () => card.querySelector<HTMLElement>('.bh-request-head')!.click());
+    expect(card.querySelector('.bh-tool-approval-details-body')?.textContent).toContain('/qa');
+    expect(card.querySelector('.bh-request-summary')?.getAttribute('aria-expanded')).toBe('true');
+    await act(async () =>
+      card.querySelector<HTMLElement>('.bh-tool-approval-details-body .bh-note')!.click(),
+    );
+    expect(card.querySelector('.bh-tool-approval-details-body')).not.toBeNull();
+    await act(async () => card.querySelector<HTMLButtonElement>('.bh-request-summary')!.click());
+    expect(card.querySelector('.bh-tool-approval-details-body')).toBeNull();
+    await act(async () =>
+      card
+        .querySelector<HTMLButtonElement>('.bh-tool-approval-actions .bh-request-secondary')!
+        .click(),
+    );
+    expect(card.querySelector('.bh-tool-approval-details-body')).toBeNull();
   });
   it('collapses to the category and outcome once decided', async () => {
     const card = await render();
@@ -111,7 +130,7 @@ describe('Tool approval card layout', () => {
       await Promise.resolve();
     });
     expect(card.querySelector('.bh-tool-approval-sentence')).toBeNull();
-    expect(card.querySelector('.bh-tool-approval-details')).toBeNull();
+    expect(card.querySelector('.bh-tool-approval-details-body')).toBeNull();
     expect(card.querySelector('button')).toBeNull();
     expect(card.textContent).toBe('终端 · 已拒绝');
   });
@@ -204,7 +223,8 @@ describe('Tool approval shell command', () => {
     expect(card.querySelector('.bh-tool-approval-sentence')?.textContent).toBe('Write notes');
     expect(card.querySelector('.bh-tool-approval-line')?.textContent).toBe(command);
     expect(card.querySelector('.bh-tool-approval-shell figcaption')).toBeNull();
-    expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
+    expect(card.querySelector('.bh-tool-approval-shell')).toBeNull();
+    await act(async () => card.querySelector<HTMLButtonElement>('.bh-request-summary')!.click());
     const pre = card.querySelector('.bh-tool-approval-shell pre')!;
     expect(pre.textContent).toContain("printf '%s\\n'");
     expect(pre.textContent).not.toContain('"command"');
@@ -255,6 +275,7 @@ describe('Tool approval file diff', () => {
     const card = await render(
       message('write', JSON.stringify({ file_path: '/qa/notes.md', content }, null, 2)),
     );
+    await act(async () => card.querySelector<HTMLButtonElement>('.bh-request-summary')!.click());
     expect(card.querySelector('figcaption')?.textContent).toBe('/qa/notes.md+30−0');
     expect(card.querySelectorAll('.bh-tool-approval-diff-line')).toHaveLength(12);
     const toggle = card.querySelector<HTMLButtonElement>('.bh-tool-approval-fold')!;

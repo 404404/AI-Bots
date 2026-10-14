@@ -289,10 +289,7 @@ export function UserQuestionCard({
                     />
                   ))}
                 </SidebarCardList>
-                <details className="bh-question-other">
-                  <summary>{t('question.custom')}</summary>
-                  {field}
-                </details>
+                {field}
               </>
             ) : (
               <>

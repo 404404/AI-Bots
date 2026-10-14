@@ -132,6 +132,10 @@ describe('Human Inbox tool approval', () => {
         await act(async () => button('处理审批')!.click());
         expect(container.querySelector('.bh-human-inbox-detail')).not.toBeNull();
         expect(container.querySelector('[role="dialog"]')).toBeNull();
+        expect(container.querySelector('.bh-tool-approval-input')).toBeNull();
+        await act(async () =>
+          container.querySelector<HTMLButtonElement>('.bh-request-summary')!.click(),
+        );
         expect(container.querySelector('.bh-tool-approval-input')?.textContent).toBe(
           '$ echo QA_RELEASE',
         );

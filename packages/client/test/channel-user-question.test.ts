@@ -457,9 +457,10 @@ describe('native question card interaction', () => {
     expect(container.querySelector('.bh-request-pill')?.textContent).toBe('需要你回答');
     expect(container.textContent).not.toContain('需要你的回答');
     expect(container.querySelector('.bh-question-lettered')).not.toBeNull();
-    const other = container.querySelector('details.bh-question-other');
-    expect(other?.hasAttribute('open')).toBe(false);
-    expect(other?.querySelector('summary')?.textContent).toBe('其他回答');
+    expect(container.querySelector('details')).toBeNull();
+    expect(
+      container.querySelector<HTMLInputElement>('input[aria-label="其他回答"]')?.placeholder,
+    ).toBe('其他回答（可选）');
     expect(button('回答并继续')).toBeUndefined();
     await act(async () => button('history-qa')?.click());
     expect(actions.answerUserQuestion).toHaveBeenCalledWith('dm-ada', 'question-1', [

@@ -1,4 +1,11 @@
-import { useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import {
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactElement,
+} from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import { errorMessage, type ToolApprovalExecutionState } from './bridge.js';
 import type { BridgeActions } from './actions.js';
@@ -44,6 +51,8 @@ export function ToolApprovalCard({
   >(decision === undefined ? 'loading' : 'decided');
   const [busy, setBusy] = useState(false);
   const [confirmAll, setConfirmAll] = useState(false);
+  const [open, setOpen] = useState(false);
+  const detailsId = useId();
   const [error, setError] = useState<string | undefined>();
   const [executionState, setExecutionState] = useState<ToolApprovalExecutionState | undefined>();
   const [retry, setRetry] = useState(0);
@@ -280,40 +289,52 @@ export function ToolApprovalCard({
       : status === 'expired' || (status === 'unavailable' && companionTarget === undefined)
         ? 'expired'
         : undefined;
-  const details = (
-    <details
+  const details = open ? (
+    <div
+      id={detailsId}
       className={
-        compact ? 'bh-tool-approval-details bh-companion-details' : 'bh-tool-approval-details'
+        compact
+          ? 'bh-tool-approval-details-body bh-companion-details'
+          : 'bh-tool-approval-details-body'
       }
     >
-      <summary>{t('companion.details')}</summary>
-      <div className="bh-tool-approval-details-body">
-        <div className="bh-note">
-          {request.role === 'assignment' ? t('approval.assignment') : t('approval.orchestrator')}
-          {' · '}
-          {request.toolName}
-        </div>
-        <div className="bh-note">{t('approval.cwd', { path: request.cwd })}</div>
-        <ApprovalInput
-          toolName={request.toolName}
-          input={request.input}
-          t={t}
-          caption={summary.description === undefined}
-        />
-        <div className="bh-note">
-          {t(
-            request.toolName === 'channel_attachment_open'
-              ? 'approval.originalRisk'
-              : request.toolName === 'secret_cli'
-                ? 'approval.secretCliRisk'
-                : request.toolName === 'secret_mcp_connect'
-                  ? 'approval.secretMcpRisk'
-                  : 'approval.risk',
-          )}
-        </div>
+      <div className="bh-note">
+        {request.role === 'assignment' ? t('approval.assignment') : t('approval.orchestrator')}
+        {' · '}
+        {request.toolName}
       </div>
-    </details>
-  );
+      <div className="bh-note">{t('approval.cwd', { path: request.cwd })}</div>
+      <ApprovalInput
+        toolName={request.toolName}
+        input={request.input}
+        t={t}
+        caption={summary.description === undefined}
+      />
+      <div className="bh-note">
+        {t(
+          request.toolName === 'channel_attachment_open'
+            ? 'approval.originalRisk'
+            : request.toolName === 'secret_cli'
+              ? 'approval.secretCliRisk'
+              : request.toolName === 'secret_mcp_connect'
+                ? 'approval.secretMcpRisk'
+                : 'approval.risk',
+        )}
+      </div>
+    </div>
+  ) : null;
+  const onCardClick = (event: MouseEvent<HTMLDivElement>): void => {
+    if (settled !== undefined) return;
+    const target = event.target as HTMLElement;
+    if (
+      target.closest(
+        'button, a, input, textarea, select, label, [role="group"], .bh-tool-approval-details-body',
+      ) !== null
+    )
+      return;
+    if ((window.getSelection()?.toString() ?? '') !== '') return;
+    setOpen((current) => !current);
+  };
   return (
     <div
       ref={approvalMount}
@@ -324,7 +345,9 @@ export function ToolApprovalCard({
       aria-keyshortcuts={
         actionable ? (eachUse ? 'Y Enter N Escape' : 'Y Enter N Escape A') : undefined
       }
+      data-open={(settled === undefined && open) || undefined}
       onKeyDown={onKeyDown}
+      onClick={onCardClick}
     >
       {settled !== undefined ? (
         <div
@@ -372,8 +395,17 @@ export function ToolApprovalCard({
       )}
       {settled !== undefined ? null : (
         <>
-          <div className="bh-tool-approval-sentence">{sentence}</div>
-          {preview}
+          <button
+            type="button"
+            className="bh-request-summary"
+            aria-expanded={open}
+            aria-controls={open ? detailsId : undefined}
+            title={t(open ? 'approval.hideDetails' : 'approval.showDetails')}
+            onClick={() => setOpen((current) => !current)}
+          >
+            <span className="bh-tool-approval-sentence">{sentence}</span>
+            {preview}
+          </button>
           {details}
         </>
       )}
@@ -419,6 +451,17 @@ export function ToolApprovalCard({
               )}
             </Button>
           ) : null}
+          {eachUse ? null : (
+            <Button
+              variant="outline"
+              size={size}
+              className="bh-request-secondary"
+              disabled={disabled}
+              onClick={() => setConfirmAll(true)}
+            >
+              {t('approval.allowAll')}
+            </Button>
+          )}
           <Button
             variant="outline"
             size={size}
@@ -434,33 +477,20 @@ export function ToolApprovalCard({
           {t(status === 'loading' ? 'approval.loading' : 'companion.requestUnavailable')}
         </div>
       ) : null}
-      {status === 'pending' && effectiveDecision === undefined && !confirmAll && !eachUse ? (
-        <details className="bh-tool-approval-more">
-          <summary>{t('approval.moreOptions')}</summary>
-          <div className="bh-tool-approval-actions bh-message-card-actions">
-            <Button
-              variant="outline"
-              size={size}
-              className="bh-request-secondary"
-              disabled={disabled}
-              onClick={() => setConfirmAll(true)}
-            >
-              {t('approval.allowAll')}
-            </Button>
-            {!eachUse &&
-            companionTarget === undefined &&
-            request.role === 'orchestrator' &&
-            cardChannelId === 'dm-' + botSlug ? (
-              <Button
-                variant="ghost"
-                size={size}
-                onClick={() => channelSettings.open('workspace-grants')}
-              >
-                {t('approval.fullAccessEntry')}
-              </Button>
-            ) : null}
-          </div>
-        </details>
+      {status === 'pending' &&
+      effectiveDecision === undefined &&
+      !confirmAll &&
+      !eachUse &&
+      companionTarget === undefined &&
+      request.role === 'orchestrator' &&
+      cardChannelId === 'dm-' + botSlug ? (
+        <button
+          type="button"
+          className="bh-request-link"
+          onClick={() => channelSettings.open('workspace-grants')}
+        >
+          {t('approval.fullAccessEntry')}
+        </button>
       ) : null}
       {companionTarget && status === 'unavailable' ? (
         <div className="bh-message-card-actions">

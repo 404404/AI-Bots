@@ -5189,8 +5189,6 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-question-custom { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, ${text.bodySize}); }
 .bh-question-lettered { counter-reset: bh-option; }
 .bh-question-lettered .bh-card-main::before { counter-increment: bh-option; content: counter(bh-option, upper-alpha); display: inline-grid; flex-shrink: 0; place-items: center; width: ${space.x6}; height: ${space.x6}; border-radius: 999px; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; font-weight: ${text.strong}; }
-.bh-question-other > :not(summary) { width: 100%; }
-.bh-question-other[open] > summary { margin-bottom: ${space.x2}; }
 .bh-tool-approval-input {
   margin: 0;
   padding: ${space.x3};
@@ -5221,10 +5219,14 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-request-done[data-state='allowed'], .bh-request-done[data-state='remembered'], .bh-request-done[data-state='answered'] { --bh-request-dot: ${color.success}; }
 .bh-request-done[data-state='denied'] { --bh-request-dot: ${color.danger}; }
 .bh-request-done[data-state='submitted'] { --bh-request-dot: ${color.warning}; }
-.bh-tool-approval-details > summary, .bh-tool-approval-more > summary, .bh-question-other > summary { width: fit-content; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; cursor: pointer; }
-.bh-tool-approval-details > summary:hover, .bh-tool-approval-more > summary:hover, .bh-question-other > summary:hover { color: var(--dsw-alias-label-primary); }
-.bh-tool-approval-details-body { display: grid; gap: ${space.x2}; min-width: 0; margin-top: ${space.x2}; }
-.bh-tool-approval-more > .bh-tool-approval-actions { margin-top: ${space.x2}; }
+.bh-tool-approval-details-body { display: grid; gap: ${space.x2}; min-width: 0; cursor: auto; }
+.bh-request-summary { display: grid; gap: var(--bh-message-card-gap); width: 100%; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: ${radius.sm}; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.bh-request-summary:focus-visible { outline: ${border.focus} solid var(--bh-accent); outline-offset: ${space.x1}; }
+.bh-request-summary:hover .bh-tool-approval-line, .bh-tool-approval-card[data-open] .bh-tool-approval-line { background: ${color.hover}; }
+.bh-tool-approval-card:has(> .bh-request-summary) { cursor: pointer; }
+.bh-request-link { width: fit-content; margin: 0; padding: 0; border: 0; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: ${text.metaSize}; line-height: ${text.metaLine}; text-align: start; cursor: pointer; }
+.bh-request-link:disabled { cursor: default; opacity: 0.5; }
+.bh-request-link:hover:not(:disabled) { color: var(--dsw-alias-label-primary); text-decoration: underline; }
 .bh-tool-approval-input-block { display: grid; gap: ${space.x2}; min-width: 0; margin: 0; }
 .bh-tool-approval-input[data-folded] { max-height: none; overflow: hidden; }
 .bh-tool-approval-fold { justify-self: start; padding: 0; border: 0; background: transparent; color: ${color.accent}; font: inherit; font-size: ${text.metaSize}; cursor: pointer; }
