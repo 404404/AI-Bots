@@ -24,8 +24,7 @@ import { BotAvatar } from '../bot-avatar';
 import { ApprovalCard } from '../chat/approval-card';
 import { QuestionCard } from '../chat/question-card';
 import { useDesignTheme } from '../design/theme';
-import { edge, space } from '../design/tokens';
-import { InboxRow } from '../inbox-list';
+import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { Loading, Notice } from '../request-parts';
 import { t } from '../strings';
@@ -42,7 +41,7 @@ type FeedRow =
   | { kind: 'header'; key: string; section: InboxSection; count: number }
   | { kind: 'empty'; key: string }
   | { kind: 'post'; key: string; item: HumanAttentionItem; ref: RequestRef }
-  | { kind: 'row'; key: string; item: HumanAttentionItem };
+  | { kind: 'row'; key: string; item: HumanAttentionItem; settled: boolean };
 
 function decidable(item: HumanAttentionItem): RequestRef | undefined {
   if (item.kind !== 'user-question' && item.kind !== 'tool-approval') return undefined;
@@ -107,7 +106,7 @@ export function feedRows(
       const ref = section === 'action' ? decidable(item) : undefined;
       rows.push(
         ref === undefined
-          ? { kind: 'row', key: item.id, item }
+          ? { kind: 'row', key: item.id, item, settled: section === 'handled' }
           : { kind: 'post', key: item.id, item, ref },
       );
     }
@@ -117,6 +116,73 @@ export function feedRows(
 
 function minutesSince(at: string, now: number): number {
   return Math.max(0, Math.floor((now - Date.parse(at)) / 60_000));
+}
+
+function Row({
+  item,
+  settled,
+  bot,
+  now,
+  onOpen,
+}: {
+  item: HumanAttentionItem;
+  settled: boolean;
+  bot: RosterBot | undefined;
+  now: number;
+  onOpen(item: HumanAttentionItem): void;
+}) {
+  const theme = useDesignTheme();
+  const kind = t.kind[item.kind] ?? t.otherKind;
+  const name = bot?.displayName ?? item.botSlug;
+  const size = settled ? theme.type.body.line : AVATAR;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={t.openPost(kind, name, item.summary)}
+      testID={`inbox-row-${item.id}`}
+      onPress={() => onOpen(item)}
+      style={({ pressed }) => ({
+        minHeight: theme.touch,
+        flexDirection: 'row',
+        alignItems: settled ? 'center' : 'flex-start',
+        gap: space.x3,
+        paddingHorizontal: space.x5,
+        paddingVertical: space.x3,
+        backgroundColor: pressed ? theme.layer.canvas.pressed : theme.layer.canvas.fill,
+      })}
+    >
+      {bot === undefined ? (
+        <View
+          style={{
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            backgroundColor: theme.layer.canvas.inset,
+          }}
+        />
+      ) : (
+        <BotAvatar bot={bot} size={size} />
+      )}
+      <View style={{ flex: 1, gap: space.x1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
+          <Text numberOfLines={1} strong={!settled} style={{ flexShrink: 1 }}>
+            {t.rowTitle(kind, name)}
+            {settled && item.summary.length > 0 ? (
+              <Text tone="muted">{` · ${item.summary}`}</Text>
+            ) : null}
+          </Text>
+          <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
+            {t.ago(minutesSince(item.createdAt, now))}
+          </Text>
+        </View>
+        {!settled && item.summary.length > 0 ? (
+          <Text tone="muted" numberOfLines={2}>
+            {item.summary}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
 }
 
 function Post({
@@ -168,10 +234,8 @@ function Post({
     <View
       testID={`inbox-post-${item.id}`}
       style={{
-        paddingVertical: space.x4,
+        paddingVertical: space.x3,
         gap: space.x1,
-        borderBottomWidth: edge.hairline,
-        borderBottomColor: theme.color.divider,
       }}
     >
       <Pressable
@@ -321,7 +385,15 @@ export function ActivityFeed({
             </Text>
           );
         if (row.kind === 'row')
-          return <InboxRow item={row.item} bot={bot(row.item.botSlug)} onOpen={onOpen} now={now} />;
+          return (
+            <Row
+              item={row.item}
+              settled={row.settled}
+              bot={bot(row.item.botSlug)}
+              onOpen={onOpen}
+              now={now}
+            />
+          );
         return (
           <Animated.View exiting={FadeOut.duration(220)}>
             {client === undefined ? null : (

@@ -26,7 +26,9 @@ References:
 - **Activity** is the Human Inbox across all Hosts:
   - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
   - Section headers stick to the top while their items scroll and show the section's count.
-  - Every item carries its Host and can be decided in place.
+  - Every item carries its Host and can be decided in place, on the same cards as the chat.
+  - Posts and rows are separated by space and layer fills, not divider lines.
+  - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
   - Opening an item jumps to the card in its chat.
 - **Me** holds appearance (scheme, accent, chat wallpaper), notifications, paired Hosts and unpairing.
 

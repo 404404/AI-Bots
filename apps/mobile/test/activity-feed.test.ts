@@ -195,6 +195,21 @@ describe('Activity feed', () => {
     expect(post(view, question)).not.toBeNull();
   });
 
+  it('collapses a handled item to one line and keeps a reply to two', async () => {
+    const done: HumanAttentionItem = { ...question, id: 'done-1', category: 'handled' };
+    const view = await feed(host(), {
+      status: 'ready',
+      sections: { action: [], replies: [reply], handled: [done] },
+    });
+    const handled = view.querySelector('[data-testid="inbox-row-done-1"]')!;
+    const replied = view.querySelector('[data-testid="inbox-row-reply-1"]')!;
+    expect(handled.textContent).toContain(
+      `${t.kind['user-question']} · ${done.botSlug} · ${done.summary}`,
+    );
+    expect(replied.textContent).toContain(`${t.kind.reply ?? t.otherKind} · ${reply.botSlug}`);
+    expect(replied.textContent?.split(reply.summary).length).toBe(2);
+  });
+
   it('keeps a post that lost to another device and says so', async () => {
     const fake = host();
     const view = await feed(fake, ready([question]));
