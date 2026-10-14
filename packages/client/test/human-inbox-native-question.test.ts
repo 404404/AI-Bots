@@ -159,7 +159,7 @@ describe('Human Inbox native question', () => {
         expect(container.textContent).toContain('The separate check is queued.');
         await act(async () => button('CanarySmall launch')!.click());
         if (outcome === 'custom') {
-          const input = container.querySelector<HTMLInputElement>('input')!;
+          const input = container.querySelector<HTMLInputElement>('input[aria-label="其他回答"]')!;
           await act(async () => {
             Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
               input,

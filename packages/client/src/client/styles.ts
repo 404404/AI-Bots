@@ -5071,6 +5071,26 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   background: ${color.surface};
   color: var(--dsw-alias-label-primary);
 }
+.bh-tool-approval-card:focus { outline: none; }
+.bh-tool-approval-card:focus-visible { outline: ${border.focus} solid ${color.accent}; outline-offset: ${space.x2}; border-radius: ${radius.sm}; }
+.bh-tool-approval-keys { color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; }
+.bh-tool-approval-card:not(:focus-within) .bh-tool-approval-keys { display: none; }
+.bh-tool-approval-keys kbd { font: inherit; padding: 0 ${space.x1}; border: ${border.hairline} solid ${color.border}; border-radius: ${radius.xs}; }
+.bh-tool-approval-countdown { color: var(--dsw-alias-label-secondary); }
+.bh-tool-approval-countdown[data-urgent] { color: ${color.warning}; font-weight: ${text.strong}; }
+.bh-tool-approval-input-block { display: grid; gap: ${space.x2}; min-width: 0; margin: 0; }
+.bh-tool-approval-input[data-folded] { max-height: none; overflow: hidden; }
+.bh-tool-approval-fold { justify-self: start; padding: 0; border: 0; background: transparent; color: ${color.accent}; font: inherit; font-size: ${text.metaSize}; cursor: pointer; }
+.bh-tool-approval-diff figcaption { display: flex; align-items: center; gap: ${space.x3}; min-width: 0; font-size: ${text.metaSize}; }
+.bh-tool-approval-diff figcaption code { min-width: 0; overflow-wrap: anywhere; }
+.bh-tool-approval-diff-stat[data-kind='add'] { color: ${color.success}; }
+.bh-tool-approval-diff-stat[data-kind='remove'] { color: ${color.danger}; }
+.bh-tool-approval-diff .bh-tool-approval-input { padding: ${space.x2} 0; }
+.bh-tool-approval-diff-line { display: block; padding: 0 ${space.x3}; }
+.bh-tool-approval-diff-line ins, .bh-tool-approval-diff-line del { text-decoration: none; }
+.bh-tool-approval-diff-line[data-kind='add'] { background: color-mix(in srgb, ${color.success} 14%, transparent); }
+.bh-tool-approval-diff-line[data-kind='remove'] { background: color-mix(in srgb, ${color.danger} 14%, transparent); }
+.bh-tool-approval-diff-mark { display: inline-block; width: 1.5ch; color: var(--dsw-alias-label-tertiary); user-select: none; }
 .bh-tool-approval-confirm, .bh-access-warning { display: grid; gap: ${space.x3}; padding: ${space.x3}; border: ${border.hairline} solid ${color.borderStrong}; border-radius: ${radius.sm}; }
 .bh-tool-approval-confirm { --bh-message-card-gap: var(--bh-chat-card-inset); width: 100%; gap: var(--bh-message-card-gap); padding: var(--bh-chat-card-inset); }
 .bh-assignment-access-row { display: flex; align-items: center; justify-content: space-between; gap: ${space.x4}; }
@@ -5926,6 +5946,30 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wi
   gap: ${space.x2};
   flex-wrap: wrap;
 }
+.bh-human-inbox-row-check {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  margin: 0 ${space.x3} 0 0;
+  vertical-align: middle;
+  accent-color: ${color.accent};
+  cursor: pointer;
+}
+.bh-human-inbox-row[data-checked] { background: ${color.selected}; }
+.bh-human-inbox-batch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: ${space.x3};
+  min-height: 36px;
+  padding: 0 ${space.x5} ${space.x3};
+  border-bottom: ${border.hairline} solid ${color.divider};
+}
+.bh-human-inbox-batch-all { display: inline-flex; align-items: center; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.bh-human-inbox-keys { margin-left: auto; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; }
+.bh-human-inbox:not(:focus-within) .bh-human-inbox-keys { visibility: hidden; }
+.bh-human-inbox-keys kbd { font: inherit; padding: 0 ${space.x1}; border: ${border.hairline} solid ${color.border}; border-radius: ${radius.xs}; }
+.bh-human-inbox-snoozed-toggle[aria-pressed='true'] { background: ${color.selected}; border-color: ${color.borderStrong}; }
 .bh-human-inbox-more {
   padding: ${space.x2} ${space.x3};
   border: ${border.hairline} solid ${color.borderStrong};

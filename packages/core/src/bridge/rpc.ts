@@ -1111,6 +1111,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   humanAttentionIgnore(sourceEventId: string): { accepted: boolean } {
     return unwrap(this.methods.humanAttentionIgnore({ sourceEventId }));
   }
+  humanAttentionSnooze(
+    itemId: string,
+    sourceKey: string,
+    until: string | null,
+  ): { accepted: boolean } {
+    return unwrap(this.methods.humanAttentionSnooze({ itemId, sourceKey, until }));
+  }
 
   assignments(slug: string): { assignments: AssignmentSummary[] } {
     return unwrap(this.methods.assignments({ slug }));
@@ -1626,6 +1633,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionStatus',
   'humanAttentionIgnore',
   'humanAttentionDismiss',
+  'humanAttentionSnooze',
   'assignments',
   'channelAssignments',
   'assignment',
