@@ -30,6 +30,7 @@ export default function RootLayout() {
             name="approval"
             options={{
               presentation: 'formSheet',
+              headerShown: false,
               sheetAllowedDetents: [0.6, 1],
               sheetGrabberVisible: true,
             }}
