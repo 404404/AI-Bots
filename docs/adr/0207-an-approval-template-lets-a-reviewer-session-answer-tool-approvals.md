@@ -43,7 +43,7 @@ Every approval that reaches step 3 is eligible: DSH asks such as Shell `sandbox_
 
 ### What the Human sees
 
-- An allowed call leaves a folded record in the Channel where the card would have gone ("Auto-approved by <template>: <reason>"). It sends no notification.
+- An allowed call leaves a folded record in the Channel where the card would have gone (`Auto-approved by <template>: <reason>`). It sends no notification.
 - A rejected call also becomes a Human Inbox item with the reason. From there the Human can **allow this once anyway**. The override covers that exact call only. The Bot is told and may retry it, and later calls are still judged by the template.
 - **Circuit breaker.** After 3 rejections in a row, or 20 in one Session, auto approval pauses for that Session and every request goes back to a card. The next approval the Human gives resumes it. The thresholds are fixed.
 
