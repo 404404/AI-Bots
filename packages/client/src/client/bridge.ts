@@ -2851,7 +2851,7 @@ export interface ToolApprovalRuleView {
   botSlug: string;
   role: 'orchestrator' | 'assignment';
   scopeKey: string;
-  kind: 'exact' | 'all-opaque';
+  kind: 'exact' | 'all-opaque' | 'secret-cli';
   toolName: string;
   input: string;
   createdAt: string;

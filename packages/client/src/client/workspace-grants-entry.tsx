@@ -123,6 +123,18 @@ export function withWorkspaceActionDeadline<T>(
   });
 }
 
+function secretCliRuleLabel(input: string): { program: string; account: string } {
+  try {
+    const kind = JSON.parse(input) as { program?: unknown; account?: unknown };
+    return {
+      program: typeof kind.program === 'string' ? kind.program : '?',
+      account: typeof kind.account === 'string' ? kind.account : '?',
+    };
+  } catch {
+    return { program: '?', account: '?' };
+  }
+}
+
 function approvalRulePath(rule: ToolApprovalRuleView): string {
   try {
     const scope = JSON.parse(rule.scopeKey) as unknown;
@@ -1008,7 +1020,9 @@ export function WorkspaceGrantsEntry({
                   <span className="bh-workspace-folder-toggle">
                     {rule.kind === 'exact'
                       ? t('approval.exactRule', { tool: rule.toolName })
-                      : t('approval.allRule')}
+                      : rule.kind === 'secret-cli'
+                        ? t('approval.secretCliRule', secretCliRuleLabel(rule.input))
+                        : t('approval.allRule')}
                     {' · '}
                     {rule.role === 'assignment'
                       ? t('approval.assignment')
@@ -1040,7 +1054,7 @@ export function WorkspaceGrantsEntry({
                       {t('approval.externalCreator', { actor: rule.externalCreator.actorId })}
                     </div>
                   ) : null}
-                  {rule.kind === 'exact' ? (
+                  {rule.kind !== 'all-opaque' ? (
                     <pre className="bh-tool-approval-input">{rule.input}</pre>
                   ) : null}
                 </details>
