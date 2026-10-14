@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable } from 'react-native';
 import { buttonColors, type ButtonTone } from '../design/controls';
 import type { LayerName } from '../design/layers';
 import { useDesignTheme } from '../design/theme';
-import { edge, radius, space } from '../design/tokens';
+import { radius, space } from '../design/tokens';
 import { Text } from './text';
 
 export type { ButtonTone } from '../design/controls';
@@ -38,10 +38,8 @@ export function Button({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.x5,
-        borderRadius: radius.md,
+        borderRadius: radius.round,
         backgroundColor: pressed ? colors.pressed : colors.fill,
-        borderWidth: edge.hairline,
-        borderColor: colors.edge,
         opacity: disabled ? 0.45 : 1,
       })}
     >

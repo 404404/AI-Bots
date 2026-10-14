@@ -60,7 +60,7 @@ References:
     - **Tool approval**: Allow once / Always allow / Deny. "Details ›" under the command opens a form sheet.
     - **Takeover**: a computer screenshot, then Take over / Done / Not now.
   - At most one primary button per card.
-  - Reading more (a "Details ›" link) sits apart from the decisions. Decisions stack in one full-width column: the primary first, the destructive one last.
+  - Reading more (a "Details ›" link) sits apart from the decisions. Decisions are pills sized to their label, in one row when they fit and wrapping when they don't: the primary first, the destructive one last. No shortcut hints.
   - A decided card collapses to one line. A card decided on another device says so.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
@@ -90,7 +90,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 
 - `chosen` is the accent over the fill, 13% in light and 30% in dark. On `well` it equals DSH `state-business-tertiary`, and it follows a Bot's accent.
 - A state is pushed further from its fill until it stands apart from the fill, the layer under it and the other states (`SEPARATION` in `layers.ts`; `test/design-tokens.test.ts` checks every scheme and accent). DSH's dark `interactive-bg-active` over `bg-base` equals `bg-module-platform`, so without this a selected row in a card looks like the card.
-- Buttons take their colours from `buttonColors(theme, tone, on)` (`controls.ts`) for the layer they sit `on`: primary is the accent (darkened until its label reaches 4.5:1), secondary is the layer's `selected` with its `edge` (or the next layer's fill when that is too close to the primary), and danger is the layer's `danger` with `dangerEdge` and a red label. Each fill stands apart from the layer and from the other tones, and each label reaches 4.5:1.
+- Buttons are solid pills (`radius.round`) with no border, and take their colours from `buttonColors(theme, tone, on)` (`controls.ts`) for the layer they sit `on`. Primary is the neutral `fg` fill with a `base` label, never the Bot accent. Secondary is the layer's `selected`, or the next layer's fill when `selected` is too close to the layer. Danger is the layer's `danger` tint with a red label. Each fill stands apart from the layer and from the other tones, and each label reaches 4.5:1.
 - Translucent roles (`hover`, `selected`, `divider`, `border*`, `dangerSoft`) are never a `backgroundColor`; `test/style-guard.test.ts` enforces this. Translucent edges stay allowed.
 
 ## Components
