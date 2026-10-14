@@ -15,10 +15,15 @@ import {
   ShortcutHelpView,
   shortcutKeyLabel,
 } from '../src/client/shortcut-help.js';
+import { ShortcutBindings } from '../src/client/shortcut-bindings.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const t = ((key: keyof typeof en) => en[key]) as unknown as BotHarnessTranslate;
+const t = ((key: keyof typeof en, values: Record<string, string> = {}) =>
+  en[key].replace(
+    /\{(\w+)\}/gu,
+    (_, name: string) => values[name] ?? '',
+  )) as unknown as BotHarnessTranslate;
 
 describe('shortcut list', () => {
   it('lists every shortcut once with its keys', () => {
@@ -33,13 +38,14 @@ describe('shortcut list', () => {
     expect(row('help')?.textContent).toBe('Show keyboard shortcuts?orCtrl/');
     expect(row('recall')?.textContent).toContain('When the composer is empty');
     expect(row('quick-switcher')?.textContent).toBe('Quick switcherCtrlK');
-    expect(row('unread-step')?.textContent).toBe(
-      'Previous or next unread conversationSkips muted conversationsAltShift↑orAltShift↓',
+    expect(row('unread-next')?.textContent).toBe(
+      'Next unread conversationSkips muted conversationsAltShift↓',
     );
     expect(host.querySelectorAll('h3')).toHaveLength(2);
+    expect(host.querySelector('button')).toBeNull();
     act(() => root.render(createElement(ShortcutHelpList, { t, apple: true })));
     expect(row('help')?.textContent).toBe('Show keyboard shortcuts?or⌘/');
-    expect(row('conversation-step')?.textContent).toBe('Previous or next conversation⌥↑or⌥↓');
+    expect(row('unread-prev')?.textContent).toContain('⌥⇧↑');
     act(() => root.unmount());
   });
 
@@ -47,7 +53,66 @@ describe('shortcut list', () => {
     expect(shortcutKeyLabel('Mod', true)).toBe('⌘');
     expect(shortcutKeyLabel('Mod', false)).toBe('Ctrl');
     expect(shortcutKeyLabel('Alt', true)).toBe('⌥');
+    expect(shortcutKeyLabel('Shift', true)).toBe('⇧');
+    expect(shortcutKeyLabel('Shift', false)).toBe('Shift');
     expect(shortcutKeyLabel('Enter', true)).toBe('Enter');
+  });
+
+  it('records, refuses and resets a changed shortcut', () => {
+    const bindings = new ShortcutBindings(undefined, () => false);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    act(() =>
+      root.render(createElement(ShortcutHelpList, { t, apple: false, shortcutBindings: bindings })),
+    );
+    const row = () => host.querySelector('[data-shortcut="bot-mode"]')!;
+    const change = () =>
+      host.querySelector<HTMLButtonElement>(
+        'button[aria-label="Change the shortcut for “Enter or leave Bot mode”"]',
+      )!;
+    const recorder = () => row().querySelector<HTMLButtonElement>('[data-shortcut-recorder]');
+    const press = (init: KeyboardEventInit) =>
+      act(() => {
+        recorder()!.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, ...init }));
+      });
+    let leaked = 0;
+    const onDocument = () => {
+      leaked += 1;
+    };
+    document.addEventListener('keydown', onDocument);
+
+    act(() => change().click());
+    expect(recorder()?.textContent).toBe('Press new keys, Esc to cancel');
+    press({ key: 'Control', code: 'ControlLeft', ctrlKey: true });
+    expect(recorder()).not.toBeNull();
+    press({ key: 'k', code: 'KeyK', ctrlKey: true });
+    expect(row().querySelector('[role="alert"]')?.textContent).toBe(
+      'Already used by “Quick switcher”',
+    );
+    press({ key: 'j', code: 'KeyJ' });
+    expect(row().querySelector('[role="alert"]')?.textContent).toBe('Include Ctrl or Alt');
+    press({ key: 'b', code: 'KeyB', ctrlKey: true, shiftKey: true });
+    expect(recorder()).toBeNull();
+    expect(row().querySelector('[role="status"]')?.textContent).toBe('Saved');
+    expect(row().textContent).toContain('CtrlShiftB');
+    expect(bindings.isCustom('bot-mode')).toBe(true);
+    expect(leaked).toBe(0);
+
+    act(() => change().click());
+    press({ key: 'Escape', code: 'Escape' });
+    expect(recorder()).toBeNull();
+    expect(bindings.binding('bot-mode').code).toBe('KeyB');
+
+    const reset = [...row().querySelectorAll('button')].find(
+      (button) => button.textContent === 'Reset',
+    )!;
+    act(() => reset.click());
+    expect(bindings.isCustom('bot-mode')).toBe(false);
+    expect(row().textContent).toContain('Alt`');
+    document.removeEventListener('keydown', onDocument);
+    act(() => root.unmount());
+    host.remove();
   });
 
   it('shows the dialog only while open', () => {

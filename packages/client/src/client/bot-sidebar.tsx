@@ -61,14 +61,12 @@ import {
   steppedConversationId,
   webChannelShortcutIndex,
   webChannelShortcutLabel,
-  webConversationStepShortcut,
   webModalOpen,
-  isMacPlatform,
   webQuickSwitcherBlocked,
-  webQuickSwitcherShortcut,
   webShortcutBlocked,
 } from './channel-shortcuts.js';
 import { QuickSwitcher } from './quick-switcher.js';
+import { ShortcutBindings } from './shortcut-bindings.js';
 import { quickSwitcherEntries, type QuickSwitcherEntry } from './quick-switcher-rank.js';
 import {
   reconcileChannelSelection,
@@ -386,8 +384,11 @@ interface SidebarProps {
   setSortMode: (mode: BotModeSortMode) => void;
   setSectionSortMode: (sectionId: string, mode: BotModeSortMode | undefined) => void;
   channelSidebar?: ChannelSidebarRegistry | undefined;
+  shortcutBindings?: ShortcutBindings | undefined;
   t: BotHarnessTranslate;
 }
+
+const fallbackShortcutBindings = new ShortcutBindings(undefined);
 
 function hasChannelSettings(
   registry: ChannelSidebarRegistry | undefined,
@@ -922,6 +923,7 @@ export function BotSidebar({
   setSortMode,
   setSectionSortMode,
   channelSidebar,
+  shortcutBindings = fallbackShortcutBindings,
   t,
 }: SidebarProps): ReactElement {
   const state = useClientState();
@@ -1232,15 +1234,16 @@ export function BotSidebar({
         : actions.openBot(channel.botSlug));
     };
     const onConversationStep = (event: KeyboardEvent): void => {
-      const step = webConversationStepShortcut(event.key, {
-        alt: event.altKey,
-        ctrl: event.ctrlKey,
-        meta: event.metaKey,
-        shift: event.shiftKey,
-        altGraph: event.getModifierState('AltGraph'),
-        composing: event.isComposing,
-        prevented: event.defaultPrevented,
-      });
+      const action = (
+        ['conversation-prev', 'conversation-next', 'unread-prev', 'unread-next'] as const
+      ).find((candidate) => shortcutBindings.matches(candidate, event));
+      const step =
+        action === undefined
+          ? undefined
+          : {
+              direction: action.endsWith('-prev') ? (-1 as const) : (1 as const),
+              unreadOnly: action.startsWith('unread-'),
+            };
       if (step === undefined || webModalOpen(document)) return;
       if (document.querySelector('[role="menu"]') !== null) return;
       if (
@@ -1281,19 +1284,7 @@ export function BotSidebar({
     window.addEventListener('blur', clearHints);
     document.addEventListener('keydown', onSelectionEscape);
     const onQuickSwitcher = (event: KeyboardEvent): void => {
-      if (
-        !webQuickSwitcherShortcut(event.key, event.code, {
-          alt: event.altKey,
-          ctrl: event.ctrlKey,
-          meta: event.metaKey,
-          shift: event.shiftKey,
-          mac: isMacPlatform(),
-          altGraph: event.getModifierState('AltGraph'),
-          composing: event.isComposing,
-          repeat: event.repeat,
-          prevented: event.defaultPrevented,
-        })
-      ) {
+      if (!shortcutBindings.matches('quick-switcher', event)) {
         return;
       }
       if (webQuickSwitcherBlocked(event.target, document)) return;
@@ -1319,7 +1310,7 @@ export function BotSidebar({
       document.removeEventListener('drop', acceptDrop);
       if (pinZoneArmTimer.current !== undefined) window.clearTimeout(pinZoneArmTimer.current);
     };
-  }, [actions]);
+  }, [actions, shortcutBindings]);
   const shortcutFor = (channelId: string): string | undefined =>
     webChannelShortcutLabel(shortcutIds.indexOf(channelId));
   const hiddenItems: HiddenChannelItem[] = hiddenChannelSequence(
@@ -2758,7 +2749,7 @@ export function BotSidebar({
           entries={quickSwitcherEntries(state.channels, state.bots, state.roster.hidden)}
           bots={botBySlug}
           activityOf={(bot) => personaBotActivity(state, bot)}
-          mac={isMacPlatform()}
+          shortcutBindings={shortcutBindings}
           t={t}
           onOpen={openQuickSwitcherEntry}
           onClose={() => setQuickSwitcherOpen(false)}

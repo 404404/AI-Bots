@@ -1,15 +1,34 @@
-import { Fragment, useSyncExternalStore, type ReactElement } from 'react';
+import {
+  Fragment,
+  useState,
+  useSyncExternalStore,
+  type KeyboardEvent,
+  type ReactElement,
+} from 'react';
 import * as stylex from '@stylexjs/stylex';
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { PanelDialog } from './ds/panel-dialog.js';
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import type { BotHarnessKey, BotHarnessTranslate } from './locale.js';
+import {
+  bindingFromEvent,
+  bindingKeys,
+  DEFAULT_SHORTCUT_BINDINGS,
+  isMacPlatform,
+  isModifierOnly,
+  modifierLabel,
+  type ShortcutActionId,
+  type ShortcutBindingProblem,
+  type ShortcutBindings,
+} from './shortcut-bindings.js';
 
 export type ShortcutKey = string;
 
 export interface ShortcutHelpEntry {
   readonly id: string;
-  readonly keys: readonly (readonly ShortcutKey[])[];
+  readonly keys?: readonly (readonly ShortcutKey[])[];
+  readonly action?: ShortcutActionId;
   readonly label: BotHarnessKey;
   readonly note?: BotHarnessKey;
 }
@@ -25,31 +44,28 @@ export const SHORTCUT_HELP_GROUPS: readonly ShortcutHelpGroup[] = [
     id: 'navigation',
     title: 'shortcuts.group.navigation',
     entries: [
-      { id: 'bot-mode', keys: [['Alt', '`']], label: 'shortcuts.botMode' },
+      { id: 'bot-mode', action: 'bot-mode', label: 'shortcuts.botMode' },
       {
         id: 'conversation-index',
         keys: [['Alt', '1 … 0']],
         label: 'shortcuts.conversationIndex',
       },
-      { id: 'quick-switcher', keys: [['Mod', 'K']], label: 'shortcuts.quickSwitcher' },
+      { id: 'quick-switcher', action: 'quick-switcher', label: 'shortcuts.quickSwitcher' },
+      { id: 'conversation-prev', action: 'conversation-prev', label: 'shortcuts.conversationPrev' },
+      { id: 'conversation-next', action: 'conversation-next', label: 'shortcuts.conversationNext' },
       {
-        id: 'conversation-step',
-        keys: [
-          ['Alt', '↑'],
-          ['Alt', '↓'],
-        ],
-        label: 'shortcuts.conversationStep',
-      },
-      {
-        id: 'unread-step',
-        keys: [
-          ['Alt', 'Shift', '↑'],
-          ['Alt', 'Shift', '↓'],
-        ],
-        label: 'shortcuts.unreadStep',
+        id: 'unread-prev',
+        action: 'unread-prev',
+        label: 'shortcuts.unreadPrev',
         note: 'shortcuts.unreadStep.note',
       },
-      { id: 'help', keys: [['?'], ['Mod', '/']], label: 'shortcuts.help' },
+      {
+        id: 'unread-next',
+        action: 'unread-next',
+        label: 'shortcuts.unreadNext',
+        note: 'shortcuts.unreadStep.note',
+      },
+      { id: 'help', keys: [['?']], action: 'help', label: 'shortcuts.help' },
     ],
   },
   {
@@ -78,18 +94,8 @@ export const SHORTCUT_HELP_GROUPS: readonly ShortcutHelpGroup[] = [
   },
 ];
 
-export function isApplePlatform(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  const platform =
-    (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
-    navigator.platform;
-  return /mac|iphone|ipad|ipod/iu.test(platform ?? '');
-}
-
 export function shortcutKeyLabel(key: ShortcutKey, apple: boolean): string {
-  if (key === 'Mod') return apple ? '⌘' : 'Ctrl';
-  if (key === 'Alt' && apple) return '⌥';
-  return key;
+  return modifierLabel(key, apple);
 }
 
 export class ShortcutHelp {
@@ -147,6 +153,8 @@ const styles = stylex.create({
   },
   label: { display: 'flex', flexDirection: 'column', minWidth: 0, margin: 0, color: color.fg },
   note: { color: color.muted, fontSize: text.metaSize, lineHeight: text.metaLine },
+  problem: { color: color.danger, fontSize: text.metaSize, lineHeight: text.metaLine },
+  saved: { color: color.success, fontSize: text.metaSize, lineHeight: text.metaLine },
   keys: {
     display: 'flex',
     flexWrap: 'wrap',
@@ -158,6 +166,7 @@ const styles = stylex.create({
     color: color.subtle,
     fontSize: text.metaSize,
   },
+  combo: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
   kbd: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -178,13 +187,111 @@ const styles = stylex.create({
   },
 });
 
+export function KeyCombo({
+  keys,
+  apple = isMacPlatform(),
+}: {
+  keys: readonly ShortcutKey[];
+  apple?: boolean;
+}): ReactElement {
+  return (
+    <span {...stylex.props(styles.combo)}>
+      {keys.map((key) => (
+        <kbd key={key} {...stylex.props(styles.kbd)}>
+          {shortcutKeyLabel(key, apple)}
+        </kbd>
+      ))}
+    </span>
+  );
+}
+
+function problemText(
+  problem: ShortcutBindingProblem,
+  t: BotHarnessTranslate,
+  apple: boolean,
+): string {
+  if (problem.kind === 'conflict') {
+    const owner = SHORTCUT_HELP_GROUPS.flatMap((group) => group.entries).find(
+      (entry) => entry.action === problem.action,
+    );
+    return t('shortcuts.problem.conflict', { action: owner === undefined ? '' : t(owner.label) });
+  }
+  if (problem.kind === 'reserved') return t('shortcuts.problem.reserved');
+  return t('shortcuts.problem.needs-modifier', {
+    mod: modifierLabel('Mod', apple),
+    alt: modifierLabel('Alt', apple),
+  });
+}
+
+type RowStatus =
+  | { readonly id: string; readonly kind: 'problem'; readonly text: string }
+  | { readonly id: string; readonly kind: 'saved' };
+
+const staticBindings = { subscribe: () => () => {}, getSnapshot: () => undefined };
+
 export function ShortcutHelpList({
   t,
-  apple = isApplePlatform(),
+  apple = isMacPlatform(),
+  shortcutBindings,
 }: {
   t: BotHarnessTranslate;
   apple?: boolean;
+  shortcutBindings?: ShortcutBindings | undefined;
 }): ReactElement {
+  const source = shortcutBindings ?? staticBindings;
+  useSyncExternalStore(source.subscribe, source.getSnapshot, source.getSnapshot);
+  const [recording, setRecording] = useState<string | undefined>(undefined);
+  const [status, setStatus] = useState<RowStatus | undefined>(undefined);
+  const combos = (entry: ShortcutHelpEntry): readonly (readonly ShortcutKey[])[] => {
+    const fixed = entry.keys ?? [];
+    if (entry.action === undefined) return fixed;
+    const binding =
+      shortcutBindings === undefined
+        ? DEFAULT_SHORTCUT_BINDINGS[entry.action]
+        : shortcutBindings.binding(entry.action);
+    return [...fixed, bindingKeys(binding)];
+  };
+  const record = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    entry: ShortcutHelpEntry,
+    action: ShortcutActionId,
+  ): void => {
+    if (shortcutBindings === undefined || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (isModifierOnly(event)) return;
+    if (
+      event.key === 'Escape' &&
+      !event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey
+    ) {
+      setRecording(undefined);
+      return;
+    }
+    const binding = bindingFromEvent(event, apple);
+    const problem =
+      binding === undefined
+        ? ({ kind: 'needs-modifier' } as const)
+        : shortcutBindings.set(action, binding);
+    setStatus(
+      problem === undefined
+        ? { id: entry.id, kind: 'saved' }
+        : { id: entry.id, kind: 'problem', text: problemText(problem, t, apple) },
+    );
+    if (problem === undefined) setRecording(undefined);
+  };
+  const reset = (entry: ShortcutHelpEntry, action: ShortcutActionId): void => {
+    if (shortcutBindings === undefined) return;
+    const problem = shortcutBindings.reset(action);
+    setRecording(undefined);
+    setStatus(
+      problem === undefined
+        ? { id: entry.id, kind: 'saved' }
+        : { id: entry.id, kind: 'problem', text: problemText(problem, t, apple) },
+    );
+  };
   return (
     <>
       {SHORTCUT_HELP_GROUPS.map((group) => (
@@ -197,28 +304,73 @@ export function ShortcutHelpList({
             {t(group.title)}
           </h3>
           <dl {...stylex.props(styles.list)}>
-            {group.entries.map((entry) => (
-              <div key={entry.id} data-shortcut={entry.id} {...stylex.props(styles.row)}>
-                <dt {...stylex.props(styles.label)}>
-                  <span>{t(entry.label)}</span>
-                  {entry.note === undefined ? null : (
-                    <span {...stylex.props(styles.note)}>{t(entry.note)}</span>
-                  )}
-                </dt>
-                <dd {...stylex.props(styles.keys)}>
-                  {entry.keys.map((combo, index) => (
-                    <Fragment key={combo.join('+')}>
-                      {index > 0 ? <span>{t('shortcuts.or')}</span> : null}
-                      {combo.map((key) => (
-                        <kbd key={key} {...stylex.props(styles.kbd)}>
-                          {shortcutKeyLabel(key, apple)}
-                        </kbd>
-                      ))}
-                    </Fragment>
-                  ))}
-                </dd>
-              </div>
-            ))}
+            {group.entries.map((entry) => {
+              const action = shortcutBindings === undefined ? undefined : entry.action;
+              const rowStatus = status?.id === entry.id ? status : undefined;
+              return (
+                <div key={entry.id} data-shortcut={entry.id} {...stylex.props(styles.row)}>
+                  <dt {...stylex.props(styles.label)}>
+                    <span>{t(entry.label)}</span>
+                    {entry.note === undefined ? null : (
+                      <span {...stylex.props(styles.note)}>{t(entry.note)}</span>
+                    )}
+                    {rowStatus === undefined ? null : rowStatus.kind === 'problem' ? (
+                      <span role="alert" {...stylex.props(styles.problem)}>
+                        {rowStatus.text}
+                      </span>
+                    ) : (
+                      <span role="status" {...stylex.props(styles.saved)}>
+                        {t('shortcuts.saved')}
+                      </span>
+                    )}
+                  </dt>
+                  <dd {...stylex.props(styles.keys)}>
+                    {recording === entry.id
+                      ? null
+                      : combos(entry).map((combo, index) => (
+                          <Fragment key={combo.join('+')}>
+                            {index > 0 ? <span>{t('shortcuts.or')}</span> : null}
+                            <KeyCombo keys={combo} apple={apple} />
+                          </Fragment>
+                        ))}
+                    {action === undefined || shortcutBindings === undefined ? null : (
+                      <>
+                        {recording === entry.id ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            autoFocus
+                            data-shortcut-recorder=""
+                            onKeyDown={(event) => record(event, entry, action)}
+                            onBlur={() => setRecording(undefined)}
+                            onClick={() => setRecording(undefined)}
+                          >
+                            {t('shortcuts.recording')}
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={t('shortcuts.change.label', { action: t(entry.label) })}
+                            onClick={() => {
+                              setStatus(undefined);
+                              setRecording(entry.id);
+                            }}
+                          >
+                            {t('shortcuts.change')}
+                          </Button>
+                        )}
+                        {recording !== entry.id && shortcutBindings.isCustom(action) ? (
+                          <Button size="sm" variant="ghost" onClick={() => reset(entry, action)}>
+                            {t('shortcuts.reset')}
+                          </Button>
+                        ) : null}
+                      </>
+                    )}
+                  </dd>
+                </div>
+              );
+            })}
           </dl>
         </section>
       ))}
@@ -228,9 +380,11 @@ export function ShortcutHelpList({
 
 export function ShortcutHelpView({
   shortcutHelp,
+  shortcutBindings,
   t,
 }: {
   shortcutHelp: ShortcutHelp;
+  shortcutBindings?: ShortcutBindings | undefined;
   t: BotHarnessTranslate;
 }): ReactElement | null {
   const open = useSyncExternalStore(shortcutHelp.subscribe, shortcutHelp.getSnapshot, () => false);
@@ -244,7 +398,7 @@ export function ShortcutHelpView({
       onClose={shortcutHelp.close}
       data={{ 'data-bh-shortcut-help': '' }}
     >
-      <ShortcutHelpList t={t} />
+      <ShortcutHelpList t={t} shortcutBindings={shortcutBindings} />
     </PanelDialog>
   );
 }
