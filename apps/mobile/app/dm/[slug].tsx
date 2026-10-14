@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useHeaderHeight } from 'expo-router/react-navigation';
-import { useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import type { HostClient } from '../../src/host/client';
@@ -73,7 +73,7 @@ function hiddenResolution(message: ConversationMessage): boolean {
   );
 }
 
-function RequestCard({
+const RequestCard = memo(function RequestCard({
   client,
   inbox,
   message,
@@ -141,7 +141,7 @@ function RequestCard({
       answeredHere={answeredHere}
     />
   );
-}
+});
 
 function DmConversation({ slug, focus }: { slug: string | undefined; focus: string | undefined }) {
   const theme = useDesignTheme();
@@ -172,7 +172,6 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
   const [reactError, setReactError] = useState(false);
-  const now = new Date();
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
@@ -189,6 +188,11 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     [snapshot.messages],
   );
 
+  const history = useMemo(
+    () => chatRows(snapshot.messages.filter((message) => !hiddenResolution(message))).reverse(),
+    [snapshot.messages],
+  );
+
   const asking = snapshot.messages.findLast(
     (message) => message.card?.kind === 'user-question' && !resolutions.has(message.id),
   );
@@ -200,9 +204,9 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
         key: `draft:${entry.draftId}`,
         draft: entry,
       })),
-      ...chatRows(snapshot.messages.filter((message) => !hiddenResolution(message))).reverse(),
+      ...history,
     ],
-    [snapshot.drafts, snapshot.messages],
+    [snapshot.drafts, history],
   );
 
   const jump = () => {
@@ -263,18 +267,65 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     );
   };
 
-  const share = (attachment: MessageAttachment): Promise<void> => {
+  const share = useCallback((attachment: MessageAttachment): Promise<void> => {
     setShareError(false);
     return shareAttachment(attachment).catch(() => setShareError(true));
-  };
+  }, []);
 
-  const react = (messageId: string, emoji: string, active: boolean): void => {
-    setReactError(false);
-    void conversation?.react(messageId, emoji, active).catch(() => setReactError(true));
-  };
+  const retry = useCallback((id: string) => conversation?.retry(id), [conversation]);
 
-  const botName = (id: string): string =>
-    host.roster?.bots.find((entry) => entry.slug === id)?.displayName ?? id;
+  const react = useCallback(
+    (messageId: string, emoji: string, active: boolean): void => {
+      setReactError(false);
+      void conversation?.react(messageId, emoji, active).catch(() => setReactError(true));
+    },
+    [conversation],
+  );
+
+  const roster = host.roster;
+  const botName = useCallback(
+    (id: string): string => roster?.bots.find((entry) => entry.slug === id)?.displayName ?? id,
+    [roster],
+  );
+
+  const title = bot?.displayName ?? slug;
+  const renderItem = useCallback(
+    ({ item }: { item: Row }) =>
+      item.kind === 'draft' ? (
+        <DraftBubble draft={item.draft} />
+      ) : item.kind === 'separator' ? (
+        <TimeSeparator at={item.at} />
+      ) : client !== undefined &&
+        slug !== undefined &&
+        title !== undefined &&
+        (item.message.card?.kind === 'tool-approval' ||
+          item.message.card?.kind === 'user-question') ? (
+        <RequestCard
+          client={client}
+          inbox={inbox}
+          message={item.message}
+          card={item.message.card}
+          botSlug={slug}
+          botName={title}
+          resolution={resolutions.get(item.message.id)}
+          focused={item.message.id === focus}
+          answeredHere={answered.has(item.message.id)}
+        />
+      ) : (
+        <MessageBubble
+          message={item.message}
+          first={item.first}
+          last={item.last}
+          onRetry={retry}
+          onOpenImage={setViewing}
+          onShare={share}
+          onLongPress={setActionsFor}
+          onReact={react}
+          botName={botName}
+        />
+      ),
+    [client, slug, title, inbox, resolutions, focus, answered, retry, share, react, botName],
+  );
 
   const notice =
     snapshot.status === 'refused'
@@ -349,40 +400,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           contentContainerStyle={{ paddingVertical: space.x3 }}
           data={rows}
           keyExtractor={(row) => row.key}
-          renderItem={({ item }) =>
-            item.kind === 'draft' ? (
-              <DraftBubble draft={item.draft} />
-            ) : item.kind === 'separator' ? (
-              <TimeSeparator at={item.at} now={now} />
-            ) : client !== undefined &&
-              slug !== undefined &&
-              (item.message.card?.kind === 'tool-approval' ||
-                item.message.card?.kind === 'user-question') ? (
-              <RequestCard
-                client={client}
-                inbox={inbox}
-                message={item.message}
-                card={item.message.card}
-                botSlug={slug}
-                botName={bot?.displayName ?? slug}
-                resolution={resolutions.get(item.message.id)}
-                focused={item.message.id === focus}
-                answeredHere={answered.has(item.message.id)}
-              />
-            ) : (
-              <MessageBubble
-                message={item.message}
-                first={item.first}
-                last={item.last}
-                onRetry={(id) => conversation?.retry(id)}
-                onOpenImage={setViewing}
-                onShare={share}
-                onLongPress={setActionsFor}
-                onReact={react}
-                botName={botName}
-              />
-            )
-          }
+          renderItem={renderItem}
           onContentSizeChange={jump}
           onScrollToIndexFailed={(info) => {
             list.current?.scrollToOffset({
