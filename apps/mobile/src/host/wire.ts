@@ -67,6 +67,7 @@ export interface WireDraft {
 export type ChannelNotification =
   | { kind: 'admission'; channelId: string; messageId: string }
   | { kind: 'human-read'; channelId: string; humanId: string; revision: number }
+  | { kind: 'reaction'; channelId: string; messageId: string }
   | { kind: 'draft-baseline'; channelId: string; revision: number; drafts: WireDraft[] }
   | { kind: 'draft'; draft: WireDraft }
   | {
@@ -92,9 +93,57 @@ export interface PersonaBotSummary {
   appearance?: unknown;
   avatarSeed?: 2;
   primaryColor?: BotPrimaryColor;
+  roles?: string[];
+  description?: string;
+  computerAccess?: boolean;
+  browserAccess?: boolean;
   paused?: boolean;
   deleted?: boolean;
   aggregateState: AggregatedState;
+}
+
+export interface MemoryStanding {
+  path: string;
+  role: 'soul' | 'coreMemory';
+  chars: number;
+  limit: number;
+}
+
+export interface MemorySnapshot {
+  head: string | null;
+  files: string[];
+  provisional: boolean;
+  standing: MemoryStanding[];
+}
+
+export interface MemoryFile {
+  path: string;
+  body: string;
+  head: string;
+  binary?: boolean;
+}
+
+export type ScheduleTrigger =
+  | { kind: 'every'; everySeconds: number }
+  | { kind: 'daily'; time: string; timeZone: string }
+  | { kind: 'weekly'; time: string; timeZone: string; weekdays: number[] }
+  | { kind: 'once'; date: string; time: string; timeZone: string }
+  | { kind: 'cron'; expression: string; timeZone: string };
+
+export interface BotScheduleSummary {
+  id: string;
+  title: string;
+  trigger: ScheduleTrigger;
+  enabled: boolean;
+  nextRunAt?: string;
+}
+
+export interface WorkspaceGrantSummary {
+  id: string;
+  workspacePath: string;
+  workspaceTitle: string;
+  revokedAt?: string;
+  orchestratorWrite?: boolean;
 }
 
 export interface ChannelListItem {

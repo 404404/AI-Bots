@@ -2223,6 +2223,43 @@ const PUSH_DELIVERY_MIGRATION: SchemaMigration = {
   },
 };
 
+const HUMAN_INBOX_SNOOZE_MIGRATION: SchemaMigration = {
+  generation: 93,
+  module: 'human-attention',
+  description: 'Let the Human snooze a Human Inbox item until a later time',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE human_inbox_snoozes (
+        human_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        source_key TEXT NOT NULL,
+        until TEXT NOT NULL,
+        snoozed_at TEXT NOT NULL,
+        PRIMARY KEY (human_id, item_id, source_key)
+      );
+    `);
+  },
+};
+
+const CHANNEL_REACTION_MIGRATION: SchemaMigration = {
+  generation: 94,
+  module: 'messaging',
+  description: 'Record emoji reactions on Channel messages',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE channel_reactions (
+        channel_id TEXT NOT NULL REFERENCES channel_records(channel_id) ON DELETE CASCADE,
+        message_id TEXT NOT NULL,
+        actor_kind TEXT NOT NULL CHECK (actor_kind IN ('human', 'bot')),
+        actor_id TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        reacted_at TEXT NOT NULL,
+        PRIMARY KEY (channel_id, message_id, actor_kind, actor_id, emoji)
+      );
+    `);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2315,4 +2352,6 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SECRET_MCP_ENABLEMENT_MIGRATION,
   DEVICE_PAIRING_MIGRATION,
   PUSH_DELIVERY_MIGRATION,
+  HUMAN_INBOX_SNOOZE_MIGRATION,
+  CHANNEL_REACTION_MIGRATION,
 ]);

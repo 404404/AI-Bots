@@ -20,6 +20,7 @@ import {
   type NoticeTone,
 } from './request-parts';
 import { useMounted } from './mounted';
+import { haptic } from './haptics';
 import { t } from './strings';
 import { useTheme } from './theme';
 
@@ -118,6 +119,7 @@ export function QuestionView({
 
   const submit = async () => {
     if (answer === undefined) return;
+    haptic('submit');
     own.current = true;
     setPhase({ kind: 'ready', request, busy: true });
     try {

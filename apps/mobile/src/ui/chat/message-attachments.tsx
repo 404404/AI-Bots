@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ActivityIndicator, Image, Pressable, View } from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import type { MessageAttachment } from '../../host/conversation';
 import { over } from '../design/layers';
@@ -62,7 +63,10 @@ function AttachmentImage({
       <Image
         key={attempt}
         source={source}
-        resizeMode="cover"
+        recyclingKey={attachment.key}
+        cachePolicy="memory-disk"
+        contentFit="cover"
+        transition={150}
         onError={() => setFailed(true)}
         style={box}
       />
