@@ -55,9 +55,11 @@ References:
 - **Action cards** sit in the chat stream and share one layout: title and explanation, an optional preview, then buttons.
   - Card kinds:
     - **Question**: lettered options, single or multiple choice, then Submit.
-    - **Tool approval**: Allow once / Always allow / Deny. Details open a form sheet.
+    - **Tool approval**: Allow once / Always allow / Deny. "View details ›" under the command opens a form sheet.
     - **Takeover**: a computer screenshot, then Take over / Done / Not now.
   - At most one primary button per card.
+  - Reading more (a "View details ›" link) sits apart from the decisions. Decisions stack in one full-width column: the primary first, the destructive one last.
+  - Buttons take their colours from `buttonColors(theme, tone, on)` in `src/ui/design/controls.ts`: `primary` is the accent fill, `secondary` is the next layer's fill with its edge, and `danger` is a red tint with a red edge and a red label. Each fill stands apart from the layer under it and from the other tones, and each label reaches 4.5:1 (`test/design-tokens.test.ts`).
   - A decided card collapses to one line. A card decided on another device says so.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.

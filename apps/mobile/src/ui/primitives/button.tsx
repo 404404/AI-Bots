@@ -1,11 +1,12 @@
 import { ActivityIndicator, Pressable } from 'react-native';
 
+import { buttonColors, type ButtonTone } from '../design/controls';
 import type { LayerName } from '../design/layers';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { Text } from './text';
 
-export type ButtonTone = 'primary' | 'secondary' | 'danger';
+export type { ButtonTone } from '../design/controls';
 
 export function Button({
   label,
@@ -23,8 +24,7 @@ export function Button({
   on?: LayerName;
 }) {
   const theme = useDesignTheme();
-  const filled = tone === 'primary';
-  const ink = filled ? 'onAccent' : tone === 'danger' ? 'danger' : 'fg';
+  const colors = buttonColors(theme, tone, on);
   return (
     <Pressable
       accessibilityRole="button"
@@ -33,26 +33,22 @@ export function Button({
       disabled={disabled || busy}
       onPress={onPress}
       style={({ pressed }) => ({
-        flexGrow: 1,
+        alignSelf: 'stretch',
         minHeight: theme.touch,
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.x5,
         borderRadius: radius.md,
-        backgroundColor: filled
-          ? theme.color.accent
-          : pressed
-            ? theme.layer[on].pressed
-            : undefined,
-        borderWidth: filled ? 0 : edge.hairline,
-        borderColor: theme.color.borderStrong,
-        opacity: disabled ? 0.45 : filled && pressed ? 0.7 : 1,
+        backgroundColor: pressed ? colors.pressed : colors.fill,
+        borderWidth: edge.hairline,
+        borderColor: colors.edge,
+        opacity: disabled ? 0.45 : 1,
       })}
     >
       {busy ? (
-        <ActivityIndicator color={theme.color[ink]} />
+        <ActivityIndicator color={colors.label} />
       ) : (
-        <Text strong tone={ink} numberOfLines={1}>
+        <Text strong numberOfLines={1} style={{ color: colors.label }}>
           {label}
         </Text>
       )}

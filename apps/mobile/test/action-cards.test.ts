@@ -144,7 +144,7 @@ describe('Tool approval card in the DM', () => {
     expect(view.textContent).toContain(t.wantsToRun('Inbox QA', 'bash'));
     expect(view.textContent).toContain('/home/qa/.dsh/botharness/bots/');
     expect(view.textContent).toContain('ls /tmp/mobile-fixture');
-    for (const label of [t.allowOnce, t.alwaysAllow, t.deny, t.details])
+    for (const label of [t.allowOnce, t.alwaysAllow, t.deny, t.viewDetails])
       expect(button(view, label).disabled).toBe(false);
   });
 

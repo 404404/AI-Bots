@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import type { ColorRole } from '../design/theme';
 import { useDesignTheme } from '../design/theme';
@@ -121,5 +121,30 @@ export function CardLine({
 }
 
 export function CardButtons({ children }: { children: ReactNode }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.x3 }}>{children}</View>;
+  return <View style={{ gap: space.x3 }}>{children}</View>;
+}
+
+export function CardLink({ label, onPress }: { label: string; onPress(): void }) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: theme.touch,
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        gap: space.x2,
+        borderRadius: radius.sm,
+        backgroundColor: pressed ? theme.layer.raised.pressed : undefined,
+      })}
+    >
+      <Text tone="accent" strong>
+        {label}
+      </Text>
+      <Text tone="accent">›</Text>
+    </Pressable>
+  );
 }
