@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import type { Context } from '@deepseek-ai/cordis';
 import Schema from '@deepseek-ai/schemastery';
+import type { DeviceViewerUpgrade } from '../../core/src/http/viewer-proxy.js';
 import { registerBrowserViewer, type BrowserViewerHost } from './viewer.js';
 import { LOCAL_VIEWER_PREFIX, localViewerUrl, registerLocalViewer } from './viewer-local.js';
 import { createTakeoverService } from './takeover.js';
@@ -175,6 +176,9 @@ export function apply(
         prefix,
         upstream,
         rejection: (headers) => services.connection.requestRejection({ headers }),
+        deviceUpgrade: () =>
+          (coreLookup() as { deviceWebUpgrade?: DeviceViewerUpgrade } | undefined)
+            ?.deviceWebUpgrade,
       });
     return () => {
       registerViewer = undefined;

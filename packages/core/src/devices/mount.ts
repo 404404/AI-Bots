@@ -9,6 +9,7 @@ import { openLogDatabase, type LogDatabase } from '../logs/log-db.js';
 import {
   createDeviceGateway,
   DEVICE_GATEWAY_PREFIX,
+  type DeviceGateway,
   DEVICE_MUX_PATH,
   DEVICE_WEB_MUX_PATH,
 } from './gateway.js';
@@ -73,11 +74,14 @@ function pushDetail(event: PushEvent): string {
     .join(' ');
 }
 
+export type DeviceWebUpgrade = (request: IncomingMessage, socket: Duplex, head: Buffer) => void;
+
 export function mountDevicePairing(
   ctx: Context,
   options: { database: OperationalDatabaseOwner; dshHome: string; push?: DevicePushOptions },
-): void {
-  if (options.database.mode !== 'ready') return;
+): DeviceWebUpgrade | undefined {
+  if (options.database.mode !== 'ready') return undefined;
+  let live: DeviceGateway | undefined;
   let logs: LogDatabase | undefined;
   try {
     logs = openLogDatabase({ dir: join(options.dshHome, 'botharness') });
@@ -167,6 +171,12 @@ export function mountDevicePairing(
         }),
       'botharness: device gateway',
     );
+    webCtx.effect(() => {
+      live = gateway;
+      return () => {
+        live = undefined;
+      };
+    }, 'botharness: device gateway viewer streams');
     for (const path of [DEVICE_MUX_PATH, DEVICE_WEB_MUX_PATH])
       webCtx.effect(
         () =>
@@ -177,4 +187,8 @@ export function mountDevicePairing(
         `botharness: device gateway stream ${path}`,
       );
   });
+  return (request, socket, head) => {
+    if (live === undefined) socket.destroy();
+    else void live.upgrade(request, socket, head);
+  };
 }
