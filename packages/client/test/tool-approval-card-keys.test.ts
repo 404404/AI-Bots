@@ -101,7 +101,7 @@ describe('Tool approval card layout', () => {
       [...card.querySelectorAll('.bh-tool-approval-card > .bh-tool-approval-actions button')].map(
         (button) => button.textContent,
       ),
-    ).toEqual(['仅批准这一次', '拒绝']);
+    ).toEqual(['仅批准这一次', '始终允许相同调用', '拒绝']);
     expect(card.querySelector('kbd')).toBeNull();
   });
   it('collapses to the category and outcome once decided', async () => {
@@ -113,7 +113,7 @@ describe('Tool approval card layout', () => {
     expect(card.querySelector('.bh-tool-approval-sentence')).toBeNull();
     expect(card.querySelector('.bh-tool-approval-details')).toBeNull();
     expect(card.querySelector('button')).toBeNull();
-    expect(card.textContent).toBe('终端已拒绝');
+    expect(card.textContent).toBe('终端 · 已拒绝');
   });
 });
 

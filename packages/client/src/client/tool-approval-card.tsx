@@ -34,6 +34,7 @@ export function ToolApprovalCard({
 }): ReactElement {
   const request = message.toolApprovalRequest!;
   const eachUse = request.toolName === 'secret_cli' || request.toolName === 'secret_mcp_connect';
+  const remember = !eachUse || request.toolName === 'secret_mcp_connect';
   const [acceptedDecision, setAcceptedDecision] = useState<typeof decision>();
   const effectiveDecision = decision ?? acceptedDecision;
   const botSlug = message.author.kind === 'bot' ? message.author.slug : undefined;
@@ -325,48 +326,50 @@ export function ToolApprovalCard({
       }
       onKeyDown={onKeyDown}
     >
-      <div className="bh-request-head">
-        <span className="bh-request-category">{category}</span>
-        {settled !== undefined ? (
-          <span
-            role="status"
-            className="bh-request-pill"
-            data-state={settled}
-            title={t(
-              settled === 'denied'
-                ? 'approval.rejected'
-                : settled === 'allowed'
-                  ? 'approval.approved'
-                  : settled === 'expired'
-                    ? 'approval.expired'
-                    : request.toolName === 'secret_mcp_connect'
-                      ? 'approval.serverRemembered'
-                      : 'approval.ruleSaved',
-            )}
-          >
-            {t(`approval.outcome.${settled}`)}
-          </span>
-        ) : status === 'pending' ? (
-          <span
-            ref={countdownMount}
-            className="bh-request-pill"
-            data-state="pending"
-            data-urgent={countdown?.urgent || undefined}
-          >
-            {countdown !== undefined && soon ? (
-              <time dateTime={expiresAt} title={new Date(expiresAt!).toLocaleString()}>
-                {t(countdown.key, { count: String(countdown.count) })}
-              </time>
-            ) : (
-              <span
-                title={expiresAt === undefined ? undefined : new Date(expiresAt).toLocaleString()}
-              >
-                {t('approval.outcome.pending')}
-              </span>
-            )}
-          </span>
-        ) : null}
-      </div>
+      {settled !== undefined ? (
+        <div
+          role="status"
+          className="bh-request-done"
+          data-state={settled}
+          title={t(
+            settled === 'denied'
+              ? 'approval.rejected'
+              : settled === 'allowed'
+                ? 'approval.approved'
+                : settled === 'expired'
+                  ? 'approval.expired'
+                  : request.toolName === 'secret_mcp_connect'
+                    ? 'approval.serverRemembered'
+                    : 'approval.ruleSaved',
+          )}
+        >
+          {category + ' · ' + t(`approval.outcome.${settled}`)}
+        </div>
+      ) : (
+        <div className="bh-request-head">
+          <span className="bh-request-category">{category}</span>
+          {status === 'pending' ? (
+            <span
+              ref={countdownMount}
+              className="bh-request-pill"
+              data-state="pending"
+              data-urgent={countdown?.urgent || undefined}
+            >
+              {countdown !== undefined && soon ? (
+                <time dateTime={expiresAt} title={new Date(expiresAt!).toLocaleString()}>
+                  {t(countdown.key, { count: String(countdown.count) })}
+                </time>
+              ) : (
+                <span
+                  title={expiresAt === undefined ? undefined : new Date(expiresAt).toLocaleString()}
+                >
+                  {t('approval.outcome.pending')}
+                </span>
+              )}
+            </span>
+          ) : null}
+        </div>
+      )}
       {settled !== undefined ? null : (
         <>
           <div className="bh-tool-approval-sentence">{sentence}</div>
@@ -388,7 +391,11 @@ export function ToolApprovalCard({
         </div>
       ) : null}
       {settled !== undefined ? null : status === 'pending' && !confirmAll ? (
-        <div ref={focusMount} className="bh-tool-approval-actions bh-message-card-actions">
+        <div
+          ref={focusMount}
+          className="bh-tool-approval-actions bh-message-card-actions"
+          data-stack={remember || undefined}
+        >
           <Button
             variant="primary"
             size={size}
@@ -397,10 +404,25 @@ export function ToolApprovalCard({
           >
             {t('approval.allowOnce')}
           </Button>
+          {remember ? (
+            <Button
+              variant="outline"
+              size={size}
+              className="bh-request-secondary"
+              disabled={disabled}
+              onClick={() => decide('allowed-always-exact')}
+            >
+              {t(
+                request.toolName === 'secret_mcp_connect'
+                  ? 'approval.allowAndRemember'
+                  : 'approval.allowExact',
+              )}
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             size={size}
-            className="bh-tool-approval-reject"
+            className="bh-request-danger"
             disabled={disabled}
             onClick={() => decide('rejected')}
           >
@@ -412,37 +434,19 @@ export function ToolApprovalCard({
           {t(status === 'loading' ? 'approval.loading' : 'companion.requestUnavailable')}
         </div>
       ) : null}
-      {status === 'pending' &&
-      effectiveDecision === undefined &&
-      !confirmAll &&
-      (!eachUse || request.toolName === 'secret_mcp_connect') ? (
+      {status === 'pending' && effectiveDecision === undefined && !confirmAll && !eachUse ? (
         <details className="bh-tool-approval-more">
           <summary>{t('approval.moreOptions')}</summary>
           <div className="bh-tool-approval-actions bh-message-card-actions">
-            {eachUse && request.toolName !== 'secret_mcp_connect' ? null : (
-              <Button
-                variant="outline"
-                size={size}
-                disabled={disabled}
-                onClick={() => decide('allowed-always-exact')}
-              >
-                {t(
-                  request.toolName === 'secret_mcp_connect'
-                    ? 'approval.allowAndRemember'
-                    : 'approval.allowExact',
-                )}
-              </Button>
-            )}
-            {eachUse ? null : (
-              <Button
-                variant="outline"
-                size={size}
-                disabled={disabled}
-                onClick={() => setConfirmAll(true)}
-              >
-                {t('approval.allowAll')}
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size={size}
+              className="bh-request-secondary"
+              disabled={disabled}
+              onClick={() => setConfirmAll(true)}
+            >
+              {t('approval.allowAll')}
+            </Button>
             {!eachUse &&
             companionTarget === undefined &&
             request.role === 'orchestrator' &&

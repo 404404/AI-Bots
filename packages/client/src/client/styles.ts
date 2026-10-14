@@ -5187,10 +5187,10 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-question-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: ${space.x2}; min-width: 0; }
 .bh-question-prompt { font-weight: ${text.strong}; white-space: pre-wrap; }
 .bh-question-custom { color: var(--dsw-alias-label-secondary); font-size: var(--dsh-content-font-size-secondary, ${text.bodySize}); }
-.bh-question-line { overflow: hidden; color: var(--dsw-alias-label-secondary); white-space: nowrap; text-overflow: ellipsis; }
+.bh-question-lettered { counter-reset: bh-option; }
+.bh-question-lettered .bh-card-main::before { counter-increment: bh-option; content: counter(bh-option, upper-alpha); display: inline-grid; flex-shrink: 0; place-items: center; width: ${space.x6}; height: ${space.x6}; border-radius: 999px; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; font-weight: ${text.strong}; }
 .bh-question-other > :not(summary) { width: 100%; }
 .bh-question-other[open] > summary { margin-bottom: ${space.x2}; }
-.bh-question-card[data-settled] { gap: ${space.x1}; }
 .bh-tool-approval-input {
   margin: 0;
   padding: ${space.x3};
@@ -5209,11 +5209,18 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-request-pill { flex-shrink: 0; padding: 0 ${space.x2}; border-radius: 999px; background: ${color.hover}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: nowrap; }
 .bh-request-pill[data-state='pending'] { background: color-mix(in srgb, ${color.warning} 16%, transparent); color: ${color.warning}; }
 .bh-request-pill[data-state='pending'][data-urgent] { background: color-mix(in srgb, ${color.danger} 16%, transparent); color: ${color.danger}; }
-.bh-request-pill[data-state='allowed'], .bh-request-pill[data-state='remembered'], .bh-request-pill[data-state='answered'] { color: ${color.success}; }
-.bh-request-pill[data-state='denied'] { color: ${color.danger}; }
 .bh-tool-approval-sentence { min-width: 0; color: var(--dsw-alias-label-primary); font-size: ${text.bodySize}; line-height: ${text.bodyLine}; overflow-wrap: anywhere; }
 .bh-tool-approval-line { display: block; min-width: 0; overflow: hidden; padding: ${space.x2} ${space.x3}; border-radius: ${radius.sm}; background: ${color.surface}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; text-overflow: ellipsis; white-space: nowrap; }
-.bh-tool-approval-actions .bh-tool-approval-reject { color: ${color.danger}; }
+.bh-tool-approval-card .bh-message-card-actions button, .bh-question-card .bh-message-card-actions button { border-radius: 999px; }
+.bh-message-card-actions[data-stack] { flex-direction: column; }
+.bh-message-card-actions[data-stack] > button { width: 100%; }
+.bh-message-card-actions .bh-request-secondary { border-color: transparent; background: ${color.hover}; }
+.bh-message-card-actions .bh-request-danger { border-color: transparent; color: ${color.danger}; background: color-mix(in srgb, ${color.danger} 12%, transparent); }
+.bh-request-done { overflow: hidden; color: var(--dsw-alias-label-secondary); white-space: nowrap; text-overflow: ellipsis; --bh-request-dot: var(--dsw-alias-label-tertiary, currentColor); }
+.bh-request-done::before { content: ''; display: inline-block; width: ${space.x2}; height: ${space.x2}; margin-right: ${space.x2}; border-radius: 999px; background: var(--bh-request-dot); vertical-align: middle; }
+.bh-request-done[data-state='allowed'], .bh-request-done[data-state='remembered'], .bh-request-done[data-state='answered'] { --bh-request-dot: ${color.success}; }
+.bh-request-done[data-state='denied'] { --bh-request-dot: ${color.danger}; }
+.bh-request-done[data-state='submitted'] { --bh-request-dot: ${color.warning}; }
 .bh-tool-approval-details > summary, .bh-tool-approval-more > summary, .bh-question-other > summary { width: fit-content; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; cursor: pointer; }
 .bh-tool-approval-details > summary:hover, .bh-tool-approval-more > summary:hover, .bh-question-other > summary:hover { color: var(--dsw-alias-label-primary); }
 .bh-tool-approval-details-body { display: grid; gap: ${space.x2}; min-width: 0; margin-top: ${space.x2}; }

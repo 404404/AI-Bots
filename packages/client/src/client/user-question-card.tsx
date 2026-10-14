@@ -97,7 +97,7 @@ export function UserQuestionCard({
     });
     if (!multiSelect) setCustom((current) => ({ ...current, [id]: '' }));
   };
-  const submit = (): void => {
+  const submit = (pick?: { id: string; label: string }): void => {
     if (botSlug === undefined || submitting.current || status !== 'pending') return;
     if (companionTarget && !qualified()) return;
     const channelId = cardChannelId;
@@ -110,6 +110,7 @@ export function UserQuestionCard({
       return;
     }
     const answers = request.questions.map((question) => {
+      if (pick?.id === question.id) return { id: question.id, selected: [pick.label] };
       const text = (custom[question.id] ?? '').trim();
       return {
         id: question.id,
@@ -160,6 +161,10 @@ export function UserQuestionCard({
   };
   const disabled = status !== 'pending' || busy || (companionTarget !== undefined && !qualified());
   const compact = companionTarget !== undefined;
+  const only = request.questions.length === 1 ? request.questions[0] : undefined;
+  const tapAnswer = only !== undefined && only.multiSelect !== true && !!only.options?.length;
+  const typed = Object.values(custom).some((value) => value.trim().length > 0);
+  const showSubmit = !tapAnswer || typed;
   const detailed =
     !compact ||
     expanded ||
@@ -167,6 +172,7 @@ export function UserQuestionCard({
       (question) =>
         question.detail !== undefined || question.options?.some((option) => option.description),
     );
+  const showToggle = compact && (!detailed || expanded);
 
   const settled =
     status === 'answered' ||
@@ -177,20 +183,9 @@ export function UserQuestionCard({
       : undefined;
   const head = (
     <div className="bh-request-head">
-      <span className="bh-request-category">{t('question.category')}</span>
-      <span
-        className="bh-request-pill"
-        role={settled === undefined ? undefined : 'status'}
-        data-state={settled ?? 'pending'}
-        title={
-          settled === 'expired'
-            ? t('question.expired')
-            : settled === 'submitted'
-              ? t('question.submitted')
-              : undefined
-        }
-      >
-        {t(settled === undefined ? 'question.outcome.pending' : `question.outcome.${settled}`)}
+      <span className="bh-request-category">{only?.header ?? t('question.category')}</span>
+      <span className="bh-request-pill" data-state="pending">
+        {t('question.outcome.pending')}
       </span>
     </div>
   );
@@ -203,9 +198,21 @@ export function UserQuestionCard({
         data-compact={compact || undefined}
         data-settled={settled}
       >
-        {head}
-        <div className="bh-question-line">
-          {request.questions.map((question) => question.question).join(' · ')}
+        <div
+          role="status"
+          className="bh-request-done"
+          data-state={settled}
+          title={
+            settled === 'expired'
+              ? t('question.expired')
+              : settled === 'submitted'
+                ? t('question.submitted')
+                : undefined
+          }
+        >
+          {request.questions.map((question) => question.question).join(' · ') +
+            ' · ' +
+            t(`question.outcome.${settled}`)}
         </div>
         {error === undefined ? null : (
           <div className="bh-error" role="alert">
@@ -245,7 +252,7 @@ export function UserQuestionCard({
         );
         return (
           <div className="bh-question-item" key={question.id}>
-            {developerMode && question.header !== undefined ? (
+            {only === undefined && question.header !== undefined ? (
               <div className="bh-note">{question.header}</div>
             ) : null}
             <div className="bh-question-prompt">{question.question}</div>
@@ -254,19 +261,30 @@ export function UserQuestionCard({
             )}
             {question.options?.length ? (
               <>
-                <SidebarCardList label={question.question} className="bh-message-card-list">
+                <SidebarCardList
+                  label={question.question}
+                  className={
+                    tapAnswer ? 'bh-message-card-list bh-question-lettered' : 'bh-message-card-list'
+                  }
+                >
                   {question.options.map((option) => (
                     <SidebarCardRow
                       key={option.label}
                       title={option.label}
                       meta={detailed ? option.description : undefined}
-                      selection={{
-                        checked: (selected[question.id] ?? []).includes(option.label),
-                        multiple: question.multiSelect === true,
-                      }}
+                      selection={
+                        tapAnswer
+                          ? undefined
+                          : {
+                              checked: (selected[question.id] ?? []).includes(option.label),
+                              multiple: question.multiSelect === true,
+                            }
+                      }
                       disabled={disabled}
                       onClick={() =>
-                        choose(question.id, option.label, question.multiSelect === true)
+                        tapAnswer
+                          ? submit({ id: question.id, label: option.label })
+                          : choose(question.id, option.label, question.multiSelect === true)
                       }
                     />
                   ))}
@@ -288,26 +306,30 @@ export function UserQuestionCard({
         );
       })}
       {status === 'pending' ? (
-        <div className="bh-message-card-actions">
-          <Button
-            variant="primary"
-            size={compact ? 'sm' : 'md'}
-            disabled={disabled}
-            onClick={submit}
-          >
-            {t('question.submit')}
-          </Button>
-          {compact && (!detailed || expanded) ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={expanded}
-              onClick={() => setExpanded((current) => !current)}
-            >
-              {t('companion.details')}
-            </Button>
-          ) : null}
-        </div>
+        showSubmit || showToggle ? (
+          <div className="bh-message-card-actions">
+            {showSubmit ? (
+              <Button
+                variant="primary"
+                size={compact ? 'sm' : 'md'}
+                disabled={disabled}
+                onClick={() => submit()}
+              >
+                {t('question.submit')}
+              </Button>
+            ) : null}
+            {showToggle ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((current) => !current)}
+              >
+                {t('companion.details')}
+              </Button>
+            ) : null}
+          </div>
+        ) : null
       ) : (
         <div className="bh-note" role="status">
           {statusError ? (
