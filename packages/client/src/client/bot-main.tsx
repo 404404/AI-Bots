@@ -113,6 +113,7 @@ import {
 } from './channel-settings-state.js';
 import { ChannelSidebar, useChannelSidebar } from './channel-sidebar-view.js';
 import { ChannelDock, useChannelDockActive } from './channel-dock.js';
+import { dockPanelsFromEntries, type DockPanelChannel, type DockPanelHost } from './dock-panels.js';
 import { MemoryCommitView } from './memory-commit-view.js';
 import { MemoryFileView, MemoryWorkingView } from './memory-current-view.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
@@ -1017,6 +1018,7 @@ function ConversationView({
   actions,
   companion,
   channelSidebar,
+  dockPanels,
   profileCards = EMPTY_PROFILE_CARDS,
   nativeChatT,
   t,
@@ -1026,6 +1028,7 @@ function ConversationView({
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
+  dockPanels?: DockPanelHost | undefined;
   nativeSessions?: NativeSessionCatalog;
   profileCards?: ProfileCardRegistry | undefined;
   nativeChatT?: NativeChatFailureText | undefined;
@@ -1043,12 +1046,35 @@ function ConversationView({
     () => channelSidebar.entries('channel'),
     () => channelSidebar.entries('channel'),
   );
-  const dockEntries = useMemo(
+  const registeredDockPanels = useSyncExternalStore(
+    dockPanels?.subscribe ?? subscribeWithoutPrefs,
+    () => dockPanels?.panels(),
+    () => dockPanels?.panels(),
+  );
+  const dockEntryPanels = useMemo(
     () =>
-      [...dockBotEntries, ...dockGroupEntries].filter((entry) => !isChannelSettingsSection(entry)),
+      dockPanelsFromEntries(
+        [...dockBotEntries, ...dockGroupEntries].filter(
+          (entry) => !isChannelSettingsSection(entry),
+        ),
+      ),
     [dockBotEntries, dockGroupEntries],
   );
-  const dockBotSlug = resolveChannelSidebarContext(state)?.botSlug;
+  const dockPanelList = registeredDockPanels ?? dockEntryPanels;
+  const dockChannelContext = resolveChannelSidebarContext(state);
+  const dockChannelSummary = dockChannelContext?.channel;
+  const dockChannel = useMemo<DockPanelChannel | undefined>(
+    () =>
+      dockChannelSummary === undefined
+        ? undefined
+        : {
+            id: dockChannelSummary.id,
+            type: dockChannelSummary.type,
+            botSlug: dockChannelSummary.botSlug,
+          },
+    [dockChannelSummary?.id, dockChannelSummary?.type, dockChannelSummary?.botSlug],
+  );
+  const dockBotSlug = dockChannelContext?.botSlug;
   const dockInboxMount = useMountedResource<HTMLSpanElement>(() => {
     if (!docked || dockBotSlug === undefined) return;
     const timer = window.setInterval(() => void actions.refreshBotInbox(dockBotSlug), 10_000);
@@ -3090,7 +3116,9 @@ function ConversationView({
         {docked ? (
           <ChannelDock
             body={chatPane}
-            entries={dockEntries}
+            panels={dockPanelList}
+            channel={dockChannel}
+            registry={dockPanels}
             entryProps={dockEntryProps}
             shows={(entry) => entry.scope === settingsScope && (entry.visible?.(state) ?? true)}
             t={t}
@@ -3142,6 +3170,7 @@ function BotMainContent({
   companion,
   nativeSessions,
   channelSidebar,
+  dockPanels,
   profileCards,
   nativeChatT,
   t = zhTranslate,
@@ -3150,6 +3179,7 @@ function BotMainContent({
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
+  dockPanels?: DockPanelHost | undefined;
   nativeSessions?: NativeSessionCatalog | undefined;
   profileCards?: ProfileCardRegistry | undefined;
   nativeChatT?: NativeChatFailureText | undefined;
@@ -3171,6 +3201,7 @@ function BotMainContent({
       actions={actions}
       companion={companion}
       channelSidebar={channelSidebar}
+      dockPanels={dockPanels}
       profileCards={profileCards}
       nativeChatT={nativeChatT}
       t={t}
@@ -3212,6 +3243,7 @@ export function BotPanel({
   companion,
   nativeSessions,
   channelSidebar,
+  dockPanels,
   profileCards,
   nativeChatT,
   releaseNotes,
@@ -3223,6 +3255,7 @@ export function BotPanel({
   actions: BridgeActions;
   companion?: WindowCompanions | undefined;
   channelSidebar: ChannelSidebarRegistry;
+  dockPanels?: DockPanelHost | undefined;
   nativeSessions?: NativeSessionCatalog | undefined;
   profileCards?: ProfileCardRegistry | undefined;
   nativeChatT?: NativeChatFailureText | undefined;
@@ -3253,6 +3286,7 @@ export function BotPanel({
         companion={companion}
         nativeSessions={nativeSessions}
         channelSidebar={channelSidebar}
+        dockPanels={dockPanels}
         profileCards={profileCards}
         nativeChatT={nativeChatT}
         t={t}

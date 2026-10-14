@@ -1,9 +1,10 @@
 import { Pressable, View } from 'react-native';
 
-import type {
-  ConversationDraft,
-  ConversationMessage,
-  MessageAttachment,
+import {
+  reactable,
+  type ConversationDraft,
+  type ConversationMessage,
+  type MessageAttachment,
 } from '../../host/conversation';
 import { radius, space } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
@@ -12,6 +13,7 @@ import { Text } from '../primitives/text';
 import { t } from '../strings';
 import { MessageAttachments } from './message-attachments';
 import { openMessageMenu } from './message-menu';
+import { ReactionChips } from './message-reactions';
 
 export function deliveryLabel(message: ConversationMessage): string | undefined {
   if (message.author !== 'human') return undefined;
@@ -27,7 +29,9 @@ export function MessageBubble({
   onRetry,
   onOpenImage = () => {},
   onShare = async () => {},
-  onLongPress = openMessageMenu,
+  onLongPress = (pressed) => openMessageMenu(pressed.body),
+  onReact,
+  botName = (id) => id,
 }: {
   message: ConversationMessage;
   first?: boolean;
@@ -35,7 +39,9 @@ export function MessageBubble({
   onRetry?: (messageId: string) => void;
   onOpenImage?: (attachment: MessageAttachment) => void;
   onShare?: (attachment: MessageAttachment) => Promise<void>;
-  onLongPress?: (text: string) => void;
+  onLongPress?: (message: ConversationMessage) => void;
+  onReact?: (messageId: string, emoji: string, active: boolean) => void;
+  botName?: (id: string) => string;
 }) {
   const theme = useDesignTheme();
   const human = message.author === 'human';
@@ -53,6 +59,8 @@ export function MessageBubble({
     );
   const ink = human ? 'onAccent' : 'fg';
   const copyable = message.body.trim() !== '';
+  const actionable = copyable || (onReact !== undefined && reactable(message));
+  const reactions = message.reactions ?? [];
   const bubble = (
     <View
       style={{
@@ -103,15 +111,17 @@ export function MessageBubble({
         gap: space.x1,
       }}
     >
-      {failed || copyable ? (
+      {failed || actionable ? (
         <Pressable
           {...(failed ? { accessibilityRole: 'button' as const, accessibilityLabel: label } : {})}
-          {...(copyable
+          {...(actionable
             ? {
-                accessibilityHint: t.messageActionsHint,
-                accessibilityActions: [{ name: 'copy', label: t.copy }],
-                onAccessibilityAction: () => onLongPress(message.body),
-                onLongPress: () => onLongPress(message.body),
+                accessibilityHint: onReact === undefined ? t.copyHint : t.messageActionsHint,
+                accessibilityActions: [
+                  { name: 'longpress', label: onReact === undefined ? t.copy : t.messageActions },
+                ],
+                onAccessibilityAction: () => onLongPress(message),
+                onLongPress: () => onLongPress(message),
               }
             : {})}
           {...(failed ? { onPress: () => onRetry?.(message.id) } : {})}
@@ -120,6 +130,16 @@ export function MessageBubble({
         </Pressable>
       ) : (
         bubble
+      )}
+      {reactions.length === 0 ? null : (
+        <ReactionChips
+          reactions={reactions}
+          human={human}
+          botName={botName}
+          {...(onReact === undefined
+            ? {}
+            : { onToggle: (emoji: string, active: boolean) => onReact(message.id, emoji, active) })}
+        />
       )}
       {label === undefined ? null : (
         <Text
