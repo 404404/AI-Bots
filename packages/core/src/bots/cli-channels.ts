@@ -37,7 +37,10 @@ export const CHANNEL_COMMANDS = [
   { command: 'group-wake-policies', description: "read each group member's wake policy" },
   { command: 'group-wake-set', description: "set or reset one group member's wake policy" },
   { command: 'group-delete', description: 'delete a group Channel; needs --confirm' },
-  { command: 'channel-history', description: 'list deleted groups whose history can still be purged' },
+  {
+    command: 'channel-history',
+    description: 'list deleted groups whose history can still be purged',
+  },
   { command: 'channel-history-sources', description: "page a Channel's purgeable Source Events" },
   {
     command: 'channel-journal',
