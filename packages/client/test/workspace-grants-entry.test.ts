@@ -253,7 +253,7 @@ describe('Workspace Grant sidebar', () => {
         ),
       );
       expect(container.querySelector('.bh-assignment-access-row [role="switch"]')).toBeNull();
-      expect(container.querySelector('.bh-assignment-access-card [role="switch"]')).not.toBeNull();
+      expect(container.querySelector('[data-assignment-access] [role="switch"]')).not.toBeNull();
       await act(async () =>
         Array.from(container.querySelectorAll<HTMLButtonElement>('.bh-workspace-folder-toggle'))
           .at(-1)!
