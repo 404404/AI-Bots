@@ -208,6 +208,22 @@ Usage:
   deepseekbot memory-version-name <id> --sha <commit> --name <version>
   deepseekbot memory-version-unname <id> --tag <version>
   deepseekbot memory-repair <id> --expected-head <commit>
+  deepseekbot model-catalog
+  deepseekbot model-plan-set <id> --plan-stdin [--expected-revision <n>]
+  deepseekbot model-plan-customize <id> --orchestrator-provider <p> --orchestrator-model <m> [--orchestrator-effort <e>]
+  deepseekbot model-plan-inherit <id> [--expected-revision <n>]
+  deepseekbot model-plan-assignments-set <id> --plan-stdin [--expected-revision <n>]
+  deepseekbot model-preset-update <preset-id> [--name <n>] [--orchestrator-provider/-model/-effort ...]
+                                  [--assignment-provider/-model/-effort ...] [--plan-stdin] [--expected-revision <n>]
+  deepseekbot overview-usage [--period today|week] [--after <bot-cursor>]
+  deepseekbot overview-memory [--after <bot-cursor>]
+  deepseekbot activity-overview
+  deepseekbot channel-activity-today
+  deepseekbot bot-usage <id> --start <YYYY-MM-DD> --end <YYYY-MM-DD> [--model <m>] [--provider <p>]
+                        [--purpose orchestrator|assignment|subagent]
+  deepseekbot bot-session-usage <id>
+  deepseekbot bot-activity-history <id> [--before <YYYY-MM-DD>] [--weeks <1-104>]
+  deepseekbot group-activity <channel>
   deepseekbot computer-tools
   deepseekbot computer-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
