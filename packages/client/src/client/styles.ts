@@ -175,11 +175,12 @@ html[data-botharness-motion='reduce'] .bh-onboarding-enter-dot { animation: none
 .bh-onboarding-welcome { display: grid; gap: 12px; width: 380px; max-width: 100%; white-space: normal; line-height: 20px; border: 1px solid var(--bh-onboarding-border); border-radius: 16px; background: var(--dsw-alias-bg-module-platform); overflow: hidden; }
 .bh-onboarding-welcome > :not(.bh-welcome-banner) { margin-inline: 14px; }
 .bh-onboarding-welcome > :last-child { margin-bottom: 14px; }
-.bh-welcome-banner { aspect-ratio: 4 / 1; background: var(--dsw-alias-bg-base); }
+.bh-welcome-banner { aspect-ratio: 3 / 1; background: var(--dsw-alias-bg-base); }
 .bh-welcome-banner .bh-banner-art { display: block; width: 100%; height: 100%; }
-.bh-welcome-identity { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 10px; margin-top: -42px; }
+/* The avatar rides over the banner; the name starts just below the banner edge (42px overlap - 12px grid gap + 4px). */
+.bh-welcome-identity { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 10px; margin-top: -42px; }
 .bh-welcome-avatar { padding: 3px; border-radius: 17px; background: var(--dsw-alias-bg-module-platform); line-height: 0; }
-.bh-welcome-identity-text { display: grid; gap: 4px; min-width: 0; padding-bottom: 2px; }
+.bh-welcome-identity-text { display: grid; gap: 4px; min-width: 0; padding-top: 34px; }
 .bh-welcome-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bh-welcome-roles { display: flex; flex-wrap: wrap; gap: 4px; }
 .bh-welcome-letter { display: grid; gap: 6px; }
@@ -2360,14 +2361,19 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-profile-banner:hover .bh-profile-banner-edit,
 .bh-profile-banner-edit:focus-visible { opacity: 1; }
 @media (hover: none) { .bh-profile-banner-edit { opacity: 1; } }
+/* No max-height: with aspect-ratio, WebKit turns it into a max-width and the banner stops
+   short of the popover's right edge. Uploads are cropped to 3:1, so the ratio alone fits.
+   The art is absolutely placed so its intrinsic width doesn't widen the popover. */
 .bh-profile-popover-banner {
+  position: relative;
+  flex: none;
   margin: -12px -12px 0;
   aspect-ratio: 3 / 1;
-  max-height: 96px;
   overflow: hidden;
   border-radius: 11px 11px 0 0;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
 }
+.bh-profile-popover-banner > .bh-banner-art { position: absolute; inset: 0; }
 .bh-profile-header-body {
   display: flex;
   flex-direction: column;
