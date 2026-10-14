@@ -32,8 +32,10 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPinFillRegular: stub,
     IconPinOutlineRegular: stub,
     IconTrashOutlineRegular: stub,
-    FileTypeIcon: stub,
+    HoverCard: ({ anchor }: PropsWithChildren<{ anchor: unknown }>) =>
+      createElement('span', { 'data-hover-card': 'author' }, anchor as never),
     fileSizeText: (size: number) => `${size} B`,
+    FileTypeIcon: stub,
     ImageLightbox: stub,
     Input: stub,
     Menu: ({
