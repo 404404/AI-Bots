@@ -3329,11 +3329,14 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
 .bh-bubble {
   width: fit-content;
   max-width: 100%;
-  border: ${border.hairline} solid transparent;
   border-radius: ${radius.lg};
-  background: var(--dsw-alias-interactive-bg-active);
-  color: var(--dsw-alias-label-primary);
+  background: ${color.surface};
+  color: ${color.fg};
   padding: var(--bh-chat-card-inset);
+}
+/* Text bubbles are flat and compact like the mobile bubble; cards keep the card inset. */
+.bh-bubble:has(> .bh-bubble-body) {
+  padding: ${space.x3} ${space.x4};
 }
 .bh-bubble[data-group-position='first'] {
   border-bottom-left-radius: ${radius.xs};
@@ -3359,18 +3362,27 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
   border-top-left-radius: ${radius.lg};
   border-top-right-radius: ${radius.xs};
 }
+.bh-message-group-me {
+  --bh-bubble-me-fill: var(--bh-bubble-me-fill-light, color-mix(in srgb, ${color.accent} 90%, ${color.fg}));
+  --bh-bubble-me-ink: var(--bh-bubble-me-ink-light, ${color.onAccent});
+}
+body[data-ds-dark-theme] .bh-message-group-me {
+  --bh-bubble-me-fill: var(--bh-bubble-me-fill-dark, ${color.accent});
+  --bh-bubble-me-ink: var(--bh-bubble-me-ink-dark, ${color.onAccent});
+}
 .bh-bubble-me {
-  background: var(--dsw-alias-label-primary);
-  color: var(--dsw-alias-label-primary-foreground);
+  background: var(--bh-bubble-me-fill);
+  color: var(--bh-bubble-me-ink);
 }
 .bh-bubble-pending {
-  opacity: 0.55;
+  opacity: 0.7;
 }
 .bh-bubble-failed {
   opacity: 0.8;
 }
 .bh-bubble-focused .bh-bubble {
-  box-shadow: 0 0 0 2px var(--dsw-alias-label-primary);
+  outline: ${border.focus} solid var(--bh-accent);
+  outline-offset: 2px;
 }
 .bh-bubble-reply {
   display: flex;
@@ -5194,8 +5206,8 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  border-radius: ${radius.sm};
-  background: ${color.surface};
+  border-radius: ${radius.md};
+  background: ${color.well};
   color: var(--dsw-alias-label-primary);
 }
 .bh-tool-approval-confirm, .bh-access-warning { display: grid; gap: ${space.x3}; padding: ${space.x3}; border: ${border.hairline} solid ${color.borderStrong}; border-radius: ${radius.sm}; }
@@ -6377,10 +6389,10 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wi
 .bh-schedule-error {margin:0;color:var(--dsw-alias-state-error-primary);font-size:${text.metaSize};}
 .bh-card-list {display:flex;flex-direction:column;margin:0;padding:0;list-style:none;overflow:hidden;border:${border.hairline} solid ${color.border};border-radius:${radius.md};}
 .bh-card-list + .bh-card-list {margin-top:${space.x3};}
-.bh-card-list.bh-message-card-list {background:var(--dsw-alias-bg-base);}
+.bh-card-list.bh-message-card-list {border:0;background:${color.well};}
 .bh-message-card-list .bh-card-title {white-space:normal;overflow-wrap:anywhere;}
 .bh-message-card-list .bh-card-main {min-height:40px;align-items:center;}
-.bh-message-card-list .bh-card-row[data-selected="true"] {background:color-mix(in srgb,var(--bh-accent) 12%,var(--dsw-alias-bg-base));box-shadow:inset 3px 0 var(--bh-accent);}
+.bh-message-card-list .bh-card-row[data-selected="true"] {background:${color.accentTint};}
 .bh-message-card-list .bh-card-row:has(.bh-card-main:disabled),
 .bh-message-card-list .bh-card-row:has(.bh-card-checkbox:disabled) {opacity:.6;}
 .bh-card-checkbox {flex:none;width:16px;height:16px;margin:0;accent-color:var(--bh-accent);cursor:pointer;}
