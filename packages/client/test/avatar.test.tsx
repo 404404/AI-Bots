@@ -110,7 +110,7 @@ describe('personaBotActivity', () => {
     ).toBe('waiting');
   });
 
-  it('marks large avatars with a manga attention symbol only while action is needed', () => {
+  it('never draws an attention mark on the avatar, even while action is needed', () => {
     const render = (size: number, attention?: { approvalCount: number }) =>
       renderToStaticMarkup(
         createElement(PersonaBotAvatar, {
@@ -121,9 +121,13 @@ describe('personaBotActivity', () => {
           ...(attention ? { attention } : {}),
         }),
       );
-    expect(render(160, { approvalCount: 1 })).toContain('data-attention-mark="true"');
-    expect(render(160, { approvalCount: 1 })).toContain('data-avatar-attention-mark');
-    expect(render(34, { approvalCount: 1 })).not.toContain('data-attention-mark="true"');
-    expect(render(160)).not.toContain('data-attention-mark="true"');
+    for (const markup of [
+      render(160, { approvalCount: 1 }),
+      render(34, { approvalCount: 1 }),
+      render(160),
+    ]) {
+      expect(markup).not.toContain('data-attention-mark');
+      expect(markup).not.toContain('data-avatar-attention-mark');
+    }
   });
 });
