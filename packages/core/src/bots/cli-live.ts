@@ -19,11 +19,19 @@ import {
   type MessagingCommand,
   type MessagingValues,
 } from './cli-messaging.js';
+import {
+  isModelsUsageCommand,
+  MODELS_USAGE_COMMANDS,
+  MODELS_USAGE_OPTIONS,
+  runModelsUsage,
+  type ModelsUsageValues,
+} from './cli-models-usage.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
+  ...MODELS_USAGE_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -96,6 +104,7 @@ const CONTROL_COMMANDS = [
 export const LIVE_COMMANDS = [
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
+  ...MODELS_USAGE_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -216,7 +225,7 @@ export const LIVE_COMMANDS = [
   },
 ] as const;
 
-interface LiveValues extends ImValues, MessagingValues {
+interface LiveValues extends ImValues, MessagingValues, ModelsUsageValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -511,6 +520,11 @@ export async function runLiveCli(
     }
   }
   if (MEMORY_COMMANDS.has(command)) return runMemoryCommand(command, rest, values, io);
+  if (isModelsUsageCommand(command))
+    return runModelsUsage(command, rest, values, io, async () => {
+      const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+      return (await connectLiveHost(values, io, signal)).rpc;
+    });
   if (MESSAGING_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareMessaging(command as MessagingCommand, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
