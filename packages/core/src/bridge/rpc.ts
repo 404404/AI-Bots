@@ -102,6 +102,7 @@ import type {
   AssignmentDetail,
   AssignmentSummary,
   ChannelAssignmentSummary,
+  DirectBotToolSpec,
 } from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
@@ -608,6 +609,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
   channelRetry(channelId: string, messageId: string): Promise<{ accepted: true }> {
     return unwrapAsync(this.methods.channelRetry({ channelId, messageId }));
   }
+  channelBotStop(
+    channelId: string,
+    botSlug: string,
+  ): Promise<{ stopped: { botSlug: string; sessionId: string; messageId: string } }> {
+    return unwrapAsync(this.methods.channelBotStop({ channelId, botSlug }));
+  }
   modelCatalog(): Promise<{
     models: ModelCatalogEntry[];
     default?: ModelRoute;
@@ -715,6 +722,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     preset?: string,
     workspaces?: string[],
     avatar?: string,
+    memoryLocation?: string,
   ): { bot: PersonaBotDetail } {
     return unwrap(
       this.methods.create({
@@ -726,6 +734,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
         preset,
         workspaces,
         avatar,
+        memoryLocation,
       }),
     );
   }
@@ -1098,6 +1107,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
     return unwrap(this.methods.humanAttentionStatus({}));
   }
+  channelUnreadCounts(): { channels: Array<{ channelId: string; unreadCount: number }> } {
+    return unwrap(this.methods.channelUnreadCounts({}));
+  }
   humanAssignmentContext(
     slug: string,
     sessionId: string,
@@ -1234,6 +1246,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
         ...(sessionId === undefined ? {} : { sessionId }),
         ...(turns === undefined ? {} : { turns }),
       }),
+    );
+  }
+
+  botTools(): { sessionId: 'direct'; tools: DirectBotToolSpec[] } {
+    return unwrap(this.methods.botTools({}));
+  }
+
+  botToolRun(
+    slug: string,
+    tool: string,
+    args?: Record<string, unknown>,
+  ): Promise<{ slug: string; tool: string; sessionId: 'direct'; result: unknown }> {
+    return unwrapAsync(
+      this.methods.botToolRun({ slug, tool, ...(args === undefined ? {} : { args }) }),
     );
   }
 
@@ -1416,6 +1442,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   hiddenSet(hidden: string[]): Promise<{ hidden: string[] }> {
     return unwrapAsync(this.methods.hiddenSet({ hidden }));
   }
+  channelMuteSet(channelId: string, muted: boolean): Promise<{ muted: string[] }> {
+    return unwrapAsync(this.methods.channelMuteSet({ channelId, muted }));
+  }
 
   rosterBatch(
     action: 'pin' | 'unpin' | 'hide' | 'move',
@@ -1565,6 +1594,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'onboardingModel',
   'modelPlanInherit',
   'channelRetry',
+  'channelBotStop',
   'modelCatalog',
   'modelPresets',
   'modelPresetCreate',
@@ -1612,6 +1642,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelReadPosition',
   'channelMarkRead',
   'channelMarkAllRead',
+  'channelUnreadCounts',
   'channelAllBotPreview',
   'channelSend',
   'channelSendStatus',
@@ -1646,6 +1677,8 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'userQuestionAnswer',
   'sessions',
   'botToolTrace',
+  'botTools',
+  'botToolRun',
   'sessionArchiveSet',
   'sessionOwner',
   'botSessionIds',
@@ -1681,6 +1714,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'topReorder',
   'pinsSet',
   'hiddenSet',
+  'channelMuteSet',
   'rosterBatch',
   'developerModeSet',
   'computerAccessSet',

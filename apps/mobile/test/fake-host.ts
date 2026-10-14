@@ -89,6 +89,7 @@ export class FakeHost {
   readonly channels = new Map<string, FakeChannel>();
   readonly methods = new Map<string, (args: Record<string, unknown>) => unknown>();
   readonly failing = new Set<string>();
+  readonly uploads: Array<{ name: string; type: string; text: string }> = [];
 
   channel(id: string): FakeChannel {
     let channel = this.channels.get(id);
@@ -107,7 +108,7 @@ export class FakeHost {
       if (!this.up || this.unreachable.has(parsed.origin))
         throw new TypeError('Network request failed');
       if (parsed.pathname === '/botharness-device/pair') {
-        const body = JSON.parse(init.body ?? '{}') as { offer?: string };
+        const body = JSON.parse(String(init.body ?? '{}')) as { offer?: string };
         if (body.offer !== this.offer) return response(401, '{"code":"offer-invalid"}');
         this.offer = 'used';
         return response(
@@ -121,8 +122,25 @@ export class FakeHost {
       }
       const refusal = this.refusal(init.headers?.['authorization']);
       if (refusal !== undefined) return response(401, JSON.stringify({ code: refusal }));
+      if (parsed.pathname === '/botharness-device/api/botharness/attachment/upload') {
+        if (this.failing.has('upload')) throw new TypeError('Network request failed');
+        const name = parsed.searchParams.get('name') ?? '';
+        const text = await (init.body as Blob).text();
+        this.uploads.push({ name, type: init.headers?.['content-type'] ?? '', text });
+        return response(
+          200,
+          JSON.stringify({
+            attachment: {
+              name,
+              mime: 'text/plain',
+              size: text.length,
+              hash: `sha256:${String(this.uploads.length).padStart(64, '0')}`,
+            },
+          }),
+        );
+      }
       const method = parsed.pathname.replace('/botharness-device/api/botharness/', '') as Rpc;
-      const body = JSON.parse(init.body ?? '{}') as {
+      const body = JSON.parse(String(init.body ?? '{}')) as {
         rpcId: string;
         payload: { args: Record<string, unknown> };
       };
@@ -247,7 +265,14 @@ export class FakeHost {
         const id = String(args['messageId']);
         const existing = channel.messages.find((message) => message.id === id);
         if (existing !== undefined) return { message: existing };
-        channel.append({ id, body: String(args['body']), author: { kind: 'human' } });
+        channel.append({
+          id,
+          body: String(args['body']),
+          author: { kind: 'human' },
+          ...(args['attachments'] === undefined
+            ? {}
+            : { attachments: args['attachments'] as NonNullable<ChannelMessage['attachments']> }),
+        });
         return { message: channel.messages.at(-1) };
       };
     return undefined;

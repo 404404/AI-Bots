@@ -5,7 +5,7 @@ export interface HostResponse {
 
 export interface HostRequest {
   method: 'GET' | 'POST';
-  body?: string;
+  body?: string | Blob;
   headers?: Record<string, string>;
   signal: AbortSignal;
 }

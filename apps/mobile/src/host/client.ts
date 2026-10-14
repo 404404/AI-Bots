@@ -5,6 +5,7 @@ import { socketOrigin } from './route';
 import {
   REMOTE_STREAM_MUX_PATH,
   type ActivityLiveFrame,
+  type AttachmentRef,
   type AggregatedState,
   type ChannelListItem,
   type ClientRequest,
@@ -12,6 +13,9 @@ import {
   type MuxServerFrame,
   type PersonaBotSummary,
   type RosterLiveFrame,
+  type WireBotActivity,
+  type WireSessionActivity,
+  type WireToolActivity,
 } from './wire';
 
 export type ConnectionState =
@@ -31,6 +35,8 @@ export interface RosterBot {
   avatarSeed?: 2;
   primaryColor?: BotPrimaryColor;
   state: AggregatedState;
+  activity?: WireToolActivity;
+  sessions?: readonly WireSessionActivity[];
   paused: boolean;
   dmChannelId?: string;
   preview?: string;
@@ -55,6 +61,11 @@ export interface HostSnapshot {
   roster?: RosterView;
 }
 
+export interface RemoteSource {
+  uri: string;
+  headers: Record<string, string>;
+}
+
 export interface StreamHandlers {
   item(value: unknown): void;
   interrupted(reason: string): void;
@@ -69,6 +80,8 @@ export interface HostClient {
   retryNow(): void;
   refresh(): Promise<void>;
   call<T>(method: string, args?: Record<string, unknown>): Promise<T>;
+  upload(name: string, data: Blob): Promise<AttachmentRef>;
+  resource(path: string): RemoteSource;
   onLive(listener: (source: 'roster' | 'activity') => void): () => void;
   follow(endpoint: string, args: Record<string, unknown>, handlers: StreamHandlers): () => void;
 }
@@ -105,6 +118,9 @@ function refusalOf(text: string): DeviceRefusal | undefined {
 }
 
 class Unreachable extends Error {}
+
+const UPLOAD_TOO_LARGE = 'The file is larger than the Host accepts.';
+const uploadTimeoutMs = 120_000;
 
 export class MethodRefused extends Error {
   constructor(
@@ -156,7 +172,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
   let snapshot: HostSnapshot = { connection: { status: 'stopped', route } };
   let bots: PersonaBotSummary[] | undefined;
   let channels = new Map<string, ChannelListItem>();
-  let states = new Map<string, AggregatedState>();
+  let states = new Map<string, WireBotActivity>();
   let running = false;
   let everConnected = false;
   let attempt = 0;
@@ -198,6 +214,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
         .filter((bot) => bot.deleted !== true)
         .map((bot) => {
           const dm = dms.get(bot.slug);
+          const live = states.get(bot.slug);
           return {
             slug: bot.slug,
             displayName: bot.displayName,
@@ -207,7 +224,9 @@ export function createHostClient(options: HostClientOptions): HostClient {
             ...(bot.appearance === undefined ? {} : { appearance: bot.appearance }),
             ...(bot.avatarSeed === undefined ? {} : { avatarSeed: bot.avatarSeed }),
             ...(bot.primaryColor === undefined ? {} : { primaryColor: bot.primaryColor }),
-            state: states.get(bot.slug) ?? bot.aggregateState,
+            state: live?.state ?? bot.aggregateState,
+            ...(live?.activity === undefined ? {} : { activity: live.activity }),
+            ...(live?.sessions === undefined ? {} : { sessions: live.sessions }),
             paused: bot.paused === true,
             ...(dm === undefined ? {} : { dmChannelId: dm.id }),
             ...previewOf(dm),
@@ -224,9 +243,12 @@ export function createHostClient(options: HostClientOptions): HostClient {
     reload().catch(() => {});
   };
 
-  const withDeadline = async <T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> => {
+  const withDeadline = async <T>(
+    work: (signal: AbortSignal) => Promise<T>,
+    ms: number = timeoutMs,
+  ): Promise<T> => {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = setTimeout(() => controller.abort(), ms);
     try {
       return await work(controller.signal);
     } catch (error) {
@@ -287,6 +309,35 @@ export function createHostClient(options: HostClientOptions): HostClient {
       return result['value'] as T;
     });
 
+  const upload = (name: string, data: Blob): Promise<AttachmentRef> =>
+    withDeadline(async (signal) => {
+      const response = await options.carrier.request(
+        `${route}${DEVICE_PREFIX}/api/botharness/attachment/upload?${new URLSearchParams({ name })}`,
+        {
+          method: 'POST',
+          body: data,
+          headers: { ...authorization, 'content-type': 'application/octet-stream' },
+          signal,
+        },
+      );
+      if (response.status === 401) {
+        const code = refusalOf(await response.text());
+        if (code !== undefined) throw new CredentialRefused(code);
+      }
+      if (response.status === 413) throw new MethodRefused('too-large', UPLOAD_TOO_LARGE);
+      if (response.status >= 400) throw new Unreachable(`The Host answered ${response.status}.`);
+      let attachment: unknown;
+      try {
+        attachment = record(JSON.parse(await response.text()))['attachment'];
+      } catch {
+        throw new Unreachable('The Host did not return a JSON response.');
+      }
+      const ref = record(attachment);
+      if (typeof ref['name'] !== 'string' || typeof ref['mime'] !== 'string')
+        throw new Unreachable('The Host did not accept the attachment.');
+      return attachment as AttachmentRef;
+    }, uploadTimeoutMs);
+
   const reloadOnce = async (): Promise<void> => {
     const [list, channelList] = await Promise.all([
       call<{ bots: PersonaBotSummary[] }>('list'),
@@ -320,7 +371,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
   };
 
   const applyActivity = (frame: ActivityLiveFrame): void => {
-    states = new Map(frame.snapshot.bots.map((bot) => [bot.slug, bot.state]));
+    states = new Map(frame.snapshot.bots.map((bot) => [bot.slug, bot]));
     const known = new Set(bots?.map((bot) => bot.slug));
     if (bots !== undefined && frame.snapshot.bots.some((bot) => !known.has(bot.slug)))
       reloadInBackground();
@@ -582,6 +633,8 @@ export function createHostClient(options: HostClientOptions): HostClient {
         throw error;
       }
     },
+    upload,
+    resource: (path) => ({ uri: absolute(path), headers: authorization }),
     onLive(listener) {
       liveListeners.add(listener);
       return () => liveListeners.delete(listener);
