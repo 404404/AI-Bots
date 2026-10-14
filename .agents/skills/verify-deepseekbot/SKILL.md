@@ -43,6 +43,10 @@ node scripts/verify-app.mjs shot <label> --name <n> --bot-mode \
 - Use `rpc <namespace/method> [json]` to read canonical state (Channel timelines, Bot lists) after a UI action, or to seed preconditions through the same public API the Client calls. It is evidence of state, never a substitute for the UI step it follows.
 - Scripted journeys under `scripts/e2e-*.mjs` read `BH_E2E_INSTANCE`; point it at `.humanlayer/verify/<n>/instance.json` to run them against this instance.
 
+## Native mobile
+
+The Web Client drives above do not cover the Expo app in `apps/mobile`. On a Mac, drive its development build on the iOS Simulator with `npx agent-device` and run the Maestro flows in `apps/mobile/.maestro/` (`pnpm --filter @botharness/mobile e2e:ios`); `apps/mobile/README.md` ("Drive it on the iOS Simulator") has the commands. Without a Mac, use the app's web screenshots and say the native check is still owed.
+
 ## Evidence
 
 `shot` writes `<label>.png`, `<label>.aria.txt` and `<label>.console.txt` to `.humanlayer/verify/<n>/evidence/`, and `<label>.failure.png` plus `<label>.failure.aria.txt` when a step fails. Its JSON output lists every step it performed.
