@@ -34,7 +34,7 @@ deepseekbot schedule-create <id> --title <t> --prompt <p> (--every <s> | --daily
                                 --weekly <HH:MM> --weekdays <0-6,..> | --once-date <d> --once-time <t> |
                                 --cron <expr>) [--timezone <tz>] [--enabled|--disabled] [--locked] [--home <dsh-home>]
 deepseekbot schedule-update <id> --sid <schedule> [--title ...] [--prompt ...] [trigger ...] [--home <dsh-home>]
-deepseekbot schedule-delete <id> --sid <schedule> [--home <dsh-home>]
+deepseekbot schedule-delete <id> --sid <schedule> [--confirm] [--home <dsh-home>]
 deepseekbot schedule-history <id> --sid <schedule> [--home <dsh-home>]
 deepseekbot schedule-run-now <id> --sid <schedule> [--home <dsh-home>]
 deepseekbot schedule-preview (--every <s> | --daily ... | ...) [--home <dsh-home>]
@@ -52,7 +52,7 @@ deepseekbot search <words>
 
 ### 在线创建与无浏览器调试
 
-选定 Host 后，`create`、`list`、`show`、`model-presets`、`model-preset-create`、`model-preset-apply`、`model-plan` 和 `channels` 调用已有 Host owner。空白、GitHub/Git、Zip、目录创建沿用上文来源与元数据参数。Zip／目录在调用者机器读取或打包，上传到既有 Bot Zip 导入入口；Git 拉取使用 Host 自己的 Git 环境和凭据。不要同时指定 `--home` 与在线目标。Host 调用失败不会回退写本地数据；尚无在线适配的数据库命令会拒绝已选 Host，而不是静默打开离线 owner。凭据文件操作、search 和纯 schedule-preview 保持独立。
+选定 Host 后，`create`、`list`、`show`、`model-presets`、`model-preset-create`、`model-preset-apply`、`model-plan` 和 `channels` 调用已有 Host owner。空白、GitHub/Git、Zip、目录创建沿用上文来源与元数据参数。Zip／目录在调用者机器读取或打包，上传到既有 Bot Zip 导入入口；Git 拉取使用 Host 自己的 Git 环境和凭据。不要同时指定 `--home` 与在线目标。Host 调用失败不会回退写本地数据；尚无在线适配的数据库命令会拒绝已选 Host，而不是静默打开离线 owner。凭据文件操作和 search 保持独立。`schedule*` 命令也走 Host，见[在线 Host 上的定时任务](#在线-host-上的定时任务)。
 
 ```bash
 deepseekbot create --name QA --preset <preset-id>
@@ -234,6 +234,20 @@ deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
 
 `inbox` 返回 Human Inbox 的一页（`items` 和 `nextCursor`），可以像 Inbox 的标签页一样按 `--category`（`action`、`info`、`unread`、`replies`、`handled`）、`--bot` 或 `--channel` 筛选。`inbox-dismiss` 接收条目的 `id`，条目带有 `sourceEventId` 时把它作为 `--source-key` 传入；`inbox-ignore` 把一条仅供知悉的委派汇报标为已读。`assignment-context` 读取 `assignment-report` 条目背后的汇报。`channel-assignments` 列出群组 Channel 的委派工作；`channel-assign` 把 Channel 移到侧栏的某个分组（`--unsectioned` 移出分组）。`session-ids` 列出 Bot 拥有的根会话，`session-owner` 说明某个会话属于哪个 Bot、以什么角色运行。`tool-approval-rules` 列出 Bot 的"始终允许"规则。撤销规则、工作区授权或私有 MCP 服务器都需要 `--confirm`，与 Web UI 的确认一致。指定了 Host 时，`grant-revoke` 和 `grant-write-set` 经由 Host 执行；使用 `--home` 时仍是离线维护命令。私有 MCP 服务器由 `ask-secret-accounts` 列出；Host 不认识的名称会以 `private-mcp-server-unavailable` 失败。
+
+### 在线 Host 上的定时任务
+
+```bash
+deepseekbot schedules <bot-id>
+deepseekbot schedule-create <bot-id> --title Standup --prompt "总结昨天" --daily 09:00 --timezone Asia/Tokyo
+deepseekbot schedule-preview --cron "0 9 * * 1-5" --timezone Asia/Tokyo
+deepseekbot schedule-update <bot-id> --sid <schedule-id> --every 3600 --disabled
+deepseekbot schedule-run-now <bot-id> --sid <schedule-id>
+deepseekbot schedule-history <bot-id> --sid <schedule-id>
+deepseekbot schedule-delete <bot-id> --sid <schedule-id> --confirm
+```
+
+选定 Host 后，定时任务命令调用与「定时任务」面板相同的 Host 方法，由 Host 检查 Bot、触发器、时区和锁定状态；被拒时保留 Host 的错误码（`invalid-input`、`not-found`、`locked`、`inactive`）。`schedule-preview` 返回触发器和 Host 算出的接下来几次时刻。`schedule-run-now` 排入一次触发，由运行中的 Host 执行。`schedule-delete` 会连同该任务的历史一起删除，所以和面板上的确认一样，需要 `--confirm`。
 
 ### 分层排查：经过模型与绕过模型
 

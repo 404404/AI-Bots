@@ -34,7 +34,7 @@ deepseekbot schedule-create <id> --title <t> --prompt <p> (--every <s> | --daily
                                 --weekly <HH:MM> --weekdays <0-6,..> | --once-date <d> --once-time <t> |
                                 --cron <expr>) [--timezone <tz>] [--enabled|--disabled] [--locked] [--home <dsh-home>]
 deepseekbot schedule-update <id> --sid <schedule> [--title ...] [--prompt ...] [trigger ...] [--home <dsh-home>]
-deepseekbot schedule-delete <id> --sid <schedule> [--home <dsh-home>]
+deepseekbot schedule-delete <id> --sid <schedule> [--confirm] [--home <dsh-home>]
 deepseekbot schedule-history <id> --sid <schedule> [--home <dsh-home>]
 deepseekbot schedule-run-now <id> --sid <schedule> [--home <dsh-home>]
 deepseekbot schedule-preview (--every <s> | --daily ... | ...) [--home <dsh-home>]
@@ -52,7 +52,7 @@ Set `DEEPSEEKBOT_HOST` to the running Host's loopback origin, or a tailnet HTTPS
 
 ### Online creation and headless debugging
 
-With that Host selection, `create`, `list`, `show`, `model-presets`, `model-preset-create`, `model-preset-apply`, `model-plan` and `channels` call the existing Host owners. Blank, GitHub/Git, Zip and directory creation use the same source/metadata flags above. Zip/directory inputs are packed/read on the caller and uploaded to the existing Bot Zip import endpoint; Git cloning uses the Host's Git environment and credentials. Do not combine explicit `--home` and an online target. Failed Host calls never fall back to local data; database commands without an online adapter refuse a selected Host instead of silently opening an offline owner. Secret file commands and pure search/schedule preview remain independent.
+With that Host selection, `create`, `list`, `show`, `model-presets`, `model-preset-create`, `model-preset-apply`, `model-plan` and `channels` call the existing Host owners. Blank, GitHub/Git, Zip and directory creation use the same source/metadata flags above. Zip/directory inputs are packed/read on the caller and uploaded to the existing Bot Zip import endpoint; Git cloning uses the Host's Git environment and credentials. Do not combine explicit `--home` and an online target. Failed Host calls never fall back to local data; database commands without an online adapter refuse a selected Host instead of silently opening an offline owner. Secret file commands and search remain independent. The `schedule*` commands use the Host too; see [Schedules on a live Host](#schedules-on-a-live-host).
 
 ```bash
 deepseekbot create --name QA --preset <preset-id>
@@ -239,6 +239,20 @@ deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 ```
 
 `inbox` returns one page of the Human Inbox (`items` and `nextCursor`), filtered like the Inbox tabs by `--category` (`action`, `info`, `unread`, `replies`, `handled`), `--bot` or `--channel`. `inbox-dismiss` takes an item's `id` and, when the item has one, its `sourceEventId` as `--source-key`; `inbox-ignore` marks an informational assignment report as read. `assignment-context` reads the report behind an `assignment-report` item. `channel-assignments` lists a group Channel's assignment work; `channel-assign` moves a Channel into a sidebar section (`--unsectioned` takes it out). `session-ids` lists the root Sessions Bots own and `session-owner` names a Session's Bot and role. `tool-approval-rules` lists a Bot's "always allow" rules. Revoking a rule, a Workspace Grant or a private MCP server needs `--confirm`, as the Web UI asks for confirmation. With a Host targeted, `grant-revoke` and `grant-write-set` go through it; with `--home` they stay offline maintenance commands. Private MCP servers are listed by `ask-secret-accounts`; a name the Host does not know fails with `private-mcp-server-unavailable`.
+
+### Schedules on a live Host
+
+```bash
+deepseekbot schedules <bot-id>
+deepseekbot schedule-create <bot-id> --title Standup --prompt "Summarize yesterday" --daily 09:00 --timezone Asia/Tokyo
+deepseekbot schedule-preview --cron "0 9 * * 1-5" --timezone Asia/Tokyo
+deepseekbot schedule-update <bot-id> --sid <schedule-id> --every 3600 --disabled
+deepseekbot schedule-run-now <bot-id> --sid <schedule-id>
+deepseekbot schedule-history <bot-id> --sid <schedule-id>
+deepseekbot schedule-delete <bot-id> --sid <schedule-id> --confirm
+```
+
+With a Host selected, the schedule commands call the same Host methods as the Schedules panel, so the Host checks the Bot, the trigger, the time zone and the lock, and a refusal keeps its code (`invalid-input`, `not-found`, `locked`, `inactive`). `schedule-preview` returns the trigger and the Host's next occurrences. `schedule-run-now` queues a firing that the running Host executes. `schedule-delete` also removes the schedule's history, so it needs `--confirm`, like the panel's confirmation.
 
 ### Debug by layer: with and without the model
 
