@@ -8,7 +8,6 @@ export type ButtonColors = {
   fill: string;
   pressed: string;
   label: string;
-  edge: string;
 };
 
 const LABEL_CONTRAST = 4.5;
@@ -31,27 +30,20 @@ function readable(paint: string, against: string, toward: string): string {
   return next;
 }
 
-function primaryFill(theme: DesignTheme): string {
-  const darker = contrast(theme.color.onAccent, '#ffffff') < 2 ? '#000000' : '#ffffff';
-  return readable(theme.color.accent, theme.color.onAccent, darker);
-}
-
 export function buttonColors(theme: DesignTheme, tone: ButtonTone, on: LayerName): ButtonColors {
   const behind = theme.layer[on];
   if (tone === 'primary') {
-    const fill = primaryFill(theme);
+    const fill = theme.color.fg;
     return {
       fill,
       pressed: tint(fill, behind.fill, 0.25),
-      label: theme.color.onAccent,
-      edge: fill,
+      label: readable(theme.color.base, fill, behind.fill),
     };
   }
   if (tone === 'secondary') {
-    const primary = primaryFill(theme);
     const next = theme.layer[NEXT[on]];
     const fill =
-      distance(behind.selected, primary) >= SEPARATION ||
+      distance(behind.selected, behind.fill) >= SEPARATION ||
       distance(next.fill, behind.fill) < SEPARATION
         ? behind.selected
         : next.fill;
@@ -59,13 +51,11 @@ export function buttonColors(theme: DesignTheme, tone: ButtonTone, on: LayerName
       fill,
       pressed: over(theme.color.hover, fill, 2),
       label: theme.color.fg,
-      edge: behind.edge,
     };
   }
   return {
     fill: behind.danger,
     pressed: over(theme.color.dangerSoft, behind.danger, 2),
     label: readable(theme.color.danger, behind.danger, theme.color.fg),
-    edge: theme.color.dangerEdge,
   };
 }
