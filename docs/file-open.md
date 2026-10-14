@@ -32,7 +32,7 @@ Owner-qualified legacy downloads and image reads resolve the migrated current de
 
 Reference-aware cleanup marks ready fileIds and all pending reserved fileIds; legacy objects remain reachable while any retained occurrence is unconverted. Only after all retained dependencies are converted can the existing explicit sweep release an obsolete shared CAS object. Migration does not enable automatic deletion or affect SoulSnapshots or other CAS stores. Future Profile Backup/Export/Purge must include the Operational Database's binding records and current file destinations/receipts. This one-time conversion and its obsolete compatibility storage provide no attachment-history API.
 
-Schema activation is a one-way upgrade: older hash-only releases cannot consume generation 39 or the managed file identities. Recover forward, retaining the database, bindings and current files. Before upgrading, any separately supported backup remains its owner's responsibility; this feature does not implement a new backup or restore product. Runtime proof uses `scripts/e2e-legacy-attachment-migration.mjs`: actual old-version composer sends, a private SQLite backup into a new isolated Profile, real native editor save, owner-qualified current reads, source/independent-file separation, unchanged durable attention, restart and missing-file refusal.
+Schema activation is a one-way upgrade: older hash-only releases cannot consume generation 39 or the managed file identities. Recover forward, retaining the database, bindings and current files. Before upgrading, any separately supported backup remains its owner's responsibility; this feature does not implement a new backup or restore product.
 
 ## Let a PersonaBot process a received file
 
