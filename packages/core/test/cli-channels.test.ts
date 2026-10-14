@@ -118,6 +118,7 @@ describe('Channel and group CLI commands', () => {
       [['channel-mute', 'grp-1']],
       [['channel-mute', 'grp-1', '--off']],
       [['channel-retry', 'dm-ada', '--message-id', 'm-2']],
+      [['channel-bot-stop', 'dm-ada', '--bot', 'ada']],
       [['channel-purge-preview', 'grp-1', '--source-event', 's-1', '--source-event', 's-1']],
       [
         [
@@ -194,6 +195,7 @@ describe('Channel and group CLI commands', () => {
       { method: 'channelMuteSet', args: { channelId: 'grp-1', muted: true } },
       { method: 'channelMuteSet', args: { channelId: 'grp-1', muted: false } },
       { method: 'channelRetry', args: { channelId: 'dm-ada', messageId: 'm-2' } },
+      { method: 'channelBotStop', args: { channelId: 'dm-ada', botSlug: 'ada' } },
       { method: 'channelPurgePreview', args: { channelId: 'grp-1', sourceEventIds: ['s-1'] } },
       {
         method: 'channelPurgeConfirm',
@@ -246,6 +248,7 @@ describe('Channel and group CLI commands', () => {
       [['channel-timeline', 'grp-1', '--direction', 'around']],
       [['channel-history-sources', 'grp-1', '--before', 'abc']],
       [['channel-retry', 'dm-ada']],
+      [['channel-bot-stop', 'dm-ada']],
     ];
     for (const [argv, stdin] of refused) {
       const result = await invoke(argv, live.url, stdin);
@@ -268,6 +271,19 @@ describe('Channel and group CLI commands', () => {
     expect(result.json.error).toEqual({
       code: 'invalid-input',
       message: 'Group join request is no longer pending',
+    });
+  });
+
+  it('reports a Bot that is not working as a coded refusal', async () => {
+    const live = await host(() => ({
+      ok: false,
+      error: { code: 'not-working', message: 'Ada is not working right now' },
+    }));
+    const result = await invoke(['channel-bot-stop', 'dm-ada', '--bot', 'ada'], live.url);
+    expect(result.code).not.toBe(0);
+    expect(result.json.error).toEqual({
+      code: 'not-working',
+      message: 'Ada is not working right now',
     });
   });
 });

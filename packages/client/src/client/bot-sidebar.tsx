@@ -487,6 +487,11 @@ function channelPreview(
   const message = channel.latestMessage;
   if (message?.contentPurged) return t('purge.purged');
   if (message === undefined) return t('rail.noMessages');
+  if (message.turnStop !== undefined)
+    return t('turn.stopped', {
+      human: message.turnStop.humanName,
+      name: message.turnStop.botName,
+    });
   if (message.memberDeparture !== undefined)
     return t(
       message.memberDeparture.departureType === 'removed' ? 'member.removed' : 'member.left',
