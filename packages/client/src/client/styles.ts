@@ -275,6 +275,72 @@ html[data-botharness-motion='reduce'] .bh-onboarding-enter-dot { animation: none
   margin-top: ${space.x2};
 }
 
+/* Message author hover card: HoverCard portals it to body like the rail
+   preview, so it reads DSH tokens directly instead of bh-root aliases. */
+.bh-author-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: ${space.x3};
+  padding: ${space.x2};
+  color: var(--dsw-alias-label-primary);
+}
+.bh-author-card-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: ${space.x4};
+}
+.bh-author-card-identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+.bh-author-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: ${text.titleSize};
+  font-weight: ${text.strong};
+  line-height: ${text.titleLine};
+}
+.bh-author-card-meta,
+.bh-author-card-description {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: ${text.metaSize};
+  line-height: ${text.metaLine};
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.bh-author-card-status {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: ${space.x1};
+}
+.bh-author-card-status-label {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: ${text.metaSize};
+  line-height: ${text.metaLine};
+}
+.bh-author-card-status-value {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: ${text.bodySize};
+  line-height: ${text.bodyLine};
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+.bh-author-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: ${space.x3};
+}
+
 /* 原生 工作区 sectionHeader 模式（ui-workspace WorkspaceBrowser.module.css）：
    36px 高、gap 4、左衬 4、上下 margin 2/4；原生 header 还向内容右缘外挂 4px
    （margin-right: -4px），但最右侧按钮仍停在内容右缘（实测 280px 侧栏里
@@ -1195,6 +1261,64 @@ html[data-botharness-motion='reduce'] .bh-avatar-botui i {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.bh-contact .bh-bottom,
+.bh-channel-row .bh-bottom {
+  display: flex;
+  align-items: center;
+  gap: ${space.x2};
+  min-width: 0;
+}
+.bh-bottom .bh-msg {
+  min-width: 0;
+  flex: 1;
+}
+.bh-has-unread .bh-msg {
+  color: var(--dsw-alias-label-secondary);
+}
+.bh-unread-count {
+  display: inline-flex;
+  flex: none;
+  min-width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 ${space.x2};
+  border-radius: ${radius.round};
+  background: var(--bh-accent);
+  color: var(--dsw-alias-label-primary-foreground);
+  font: ${text.strong} ${text.metaSize}/1 var(--dsw-font-family);
+  font-variant-numeric: tabular-nums;
+}
+.bh-pinned .bh-unread-count,
+.bh-rail-channel .bh-unread-count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  pointer-events: none;
+}
+.bh-rail-channel .bh-unread-count {
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 ${space.x1};
+}
+.bh-unread-count-muted {
+  background: var(--dsw-alias-button-elevated-fill);
+  color: var(--dsw-alias-label-secondary);
+}
+.bh-muted .bh-name,
+.bh-muted .bh-msg {
+  color: var(--dsw-alias-label-tertiary);
+}
+.bh-muted-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}
+.bh-shortcut-active .bh-unread-count {
+  visibility: hidden;
 }
 .bh-unread {
   width: 8px;
@@ -3033,6 +3157,17 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
   padding: 0;
   background: transparent;
 }
+.bh-message-group-avatar-link,
+.bh-message-group-avatar-focus {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: ${radius.round};
+  background: transparent;
+  outline: none;
+}
 .bh-message-group-avatar-link { cursor: pointer; }
 /* Client-only working rows under the latest message: the composer status
    stays the live region, so these rows are hidden from assistive tech. */
@@ -3073,7 +3208,8 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
   color: var(--dsw-alias-label-tertiary);
   font-size: ${text.metaSize};
 }
-.bh-message-group-avatar-link:focus-visible {
+.bh-message-group-avatar-link:focus-visible,
+.bh-message-group-avatar-focus:focus-visible {
   outline: ${border.focus} solid var(--dsw-alias-label-primary);
   outline-offset: 2px;
 }
@@ -3492,6 +3628,15 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   color: inherit;
   background: color-mix(in srgb, currentColor 14%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 14%, transparent);
+}
+.bh-bubble-me .bh-bubble-body-markdown > *,
+.bh-bubble-me .bh-bubble-body-markdown :is(p, li, h1, h2, h3, h4, h5, h6, blockquote, strong, em, del, a, th, td),
+.bh-bubble-me .bh-bubble-body-markdown li::marker {
+  color: inherit;
+}
+.bh-bubble-me .bh-bubble-body-markdown :not(pre) > code {
+  color: inherit;
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 .bh-bubble-me .bh-inline-mention-link:hover {
   background: color-mix(in srgb, currentColor 24%, transparent);
