@@ -142,6 +142,7 @@ export interface ConversationOptions {
   olderPageSize?: number;
   cachedEntries?: number;
   messageId?: () => string;
+  draftDelayMs?: number;
 }
 
 const MAX_PAGE = 200;
@@ -308,6 +309,7 @@ export function createConversation(options: ConversationOptions): Conversation {
   const olderPageSize = options.olderPageSize ?? 30;
   const cachedEntries = options.cachedEntries ?? 50;
   const newMessageId = options.messageId ?? (() => `human-${uuid()}`);
+  const draftDelayMs = options.draftDelayMs ?? 50;
   const listeners = new Set<() => void>();
   let channelId = options.channelId;
   let window: JournalEntry[] = [];
@@ -325,10 +327,34 @@ export function createConversation(options: ConversationOptions): Conversation {
   let session = 0;
   let unfollow: (() => void) | undefined;
   let frames: Promise<void> = Promise.resolve();
-  let snapshot: ConversationSnapshot = build();
+  const presented = new WeakMap<JournalEntry, ConversationMessage>();
+  let messages: ConversationMessage[] = [];
+  let snapshot: ConversationSnapshot = build(true);
   let cacheTimer: ReturnType<typeof setTimeout> | undefined;
+  let draftTimer: ReturnType<typeof setTimeout> | undefined;
 
-  function build(): ConversationSnapshot {
+  function build(withMessages: boolean): ConversationSnapshot {
+    return {
+      status,
+      ...(reason === undefined ? {} : { reason }),
+      messages: withMessages ? (messages = buildMessages()) : messages,
+      drafts: [...drafts.values()],
+      hasOlder,
+      loadingOlder,
+      fromCache,
+    };
+  }
+
+  function presentEntry(entry: JournalEntry): ConversationMessage {
+    let message = presented.get(entry);
+    if (message === undefined) {
+      message = present(entry, options.host.resource, sentFiles.get(entry.message.id) ?? []);
+      presented.set(entry, message);
+    }
+    return message;
+  }
+
+  function buildMessages(): ConversationMessage[] {
     const committed = new Set(window.map((entry) => entry.message.id));
     const pending: ConversationMessage[] = [];
     for (const item of outgoing.values()) {
@@ -350,25 +376,18 @@ export function createConversation(options: ConversationOptions): Conversation {
         ...(item.error === undefined ? {} : { error: item.error }),
       });
     }
-    return {
-      status,
-      ...(reason === undefined ? {} : { reason }),
-      messages: [
-        ...window.map((entry) =>
-          present(entry, options.host.resource, sentFiles.get(entry.message.id) ?? []),
-        ),
-        ...pending,
-      ],
-      drafts: [...drafts.values()],
-      hasOlder,
-      loadingOlder,
-      fromCache,
-    };
+    return [...window.map(presentEntry), ...pending];
   }
 
-  const publish = (): void => {
-    snapshot = build();
+  const publish = (withMessages = true): void => {
+    clearTimeout(draftTimer);
+    draftTimer = undefined;
+    snapshot = build(withMessages);
     for (const listener of listeners) listener();
+  };
+
+  const publishDrafts = (): void => {
+    draftTimer ??= setTimeout(() => publish(false), draftDelayMs);
   };
 
   const first = (): number => window[0]?.revision ?? 0;
@@ -509,7 +528,12 @@ export function createConversation(options: ConversationOptions): Conversation {
       if (entry.message.author.kind === 'bot')
         for (const [draftId, draft] of drafts)
           if (draft.botSlug === entry.message.author.slug) deleteDraft(draftId);
-    } else applyNotification(frame.notification, current);
+    } else {
+      applyNotification(frame.notification, current);
+      const kind = frame.notification.kind;
+      if (kind === 'draft' || kind === 'draft-append') return publishDrafts();
+      if (kind !== 'reaction') return publish(false);
+    }
     settleOutgoing();
     publish();
     persist();
@@ -652,6 +676,8 @@ export function createConversation(options: ConversationOptions): Conversation {
       unfollow?.();
       unfollow = undefined;
       clearTimeout(cacheTimer);
+      clearTimeout(draftTimer);
+      draftTimer = undefined;
     },
     async loadOlder() {
       if (loadingOlder || !hasOlder || window.length === 0 || fromCache) return;
