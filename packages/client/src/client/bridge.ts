@@ -320,6 +320,7 @@ export interface CreatePersonaBotInput {
   description?: string;
   gitUrl?: string;
   origin?: 'marketplace';
+  memoryLocation?: string;
 }
 
 export interface BotSourcePolicyView {
@@ -1045,6 +1046,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     };
   }
   let memberDeparture: ChannelMessage['memberDeparture'];
+  let turnStop: ChannelMessage['turnStop'];
   if (record['memberDeparture'] !== undefined) {
     const departure = asRecord(record['memberDeparture']);
     if (
@@ -1068,6 +1070,16 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     };
   } else if (record['memoryCommit'] !== undefined) {
     if (author.kind !== 'system') return undefined;
+  } else if (record['turnStop'] !== undefined) {
+    const stop = asRecord(record['turnStop']);
+    if (
+      stop === undefined ||
+      author.kind !== 'system' ||
+      typeof stop['botName'] !== 'string' ||
+      typeof stop['humanName'] !== 'string'
+    )
+      return undefined;
+    turnStop = { botName: stop['botName'], humanName: stop['humanName'] };
   } else if (author.kind === 'system' && asRecord(record['onboardingWelcome'])?.['version'] !== 1) {
     return undefined;
   }
@@ -1472,6 +1484,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       : {}),
     ...(memoryCommit === undefined ? {} : { memoryCommit }),
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
+    ...(turnStop === undefined ? {} : { turnStop }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
     ...(sessionFailure === undefined ? {} : { sessionFailure }),
     ...(toolApprovalDecision === undefined ? {} : { toolApprovalDecision }),
@@ -3224,6 +3237,26 @@ export async function loadHumanAttentionStatus(
     throw new Error('invalid Human attention status');
   return { unreadCount: row['unreadCount'] as number, hasAction: row['hasAction'] };
 }
+export async function loadChannelUnreadCounts(call: BridgeCall): Promise<Record<string, number>> {
+  const channels = asRecord(await unwrap(call, 'channelUnreadCounts', {}))?.['channels'];
+  if (!Array.isArray(channels)) throw new Error('invalid channelUnreadCounts response');
+  const counts: Record<string, number> = {};
+  for (const entry of channels) {
+    const row = asRecord(entry);
+    const channelId = row?.['channelId'];
+    const unreadCount = row?.['unreadCount'];
+    if (
+      typeof channelId !== 'string' ||
+      channelId.length === 0 ||
+      !Number.isSafeInteger(unreadCount) ||
+      (unreadCount as number) < 0
+    )
+      throw new Error('invalid channelUnreadCounts response');
+    if ((unreadCount as number) > 0) counts[channelId] = unreadCount as number;
+  }
+  return counts;
+}
+
 export async function dismissHumanInboxItem(
   call: BridgeCall,
   itemId: string,
@@ -3367,6 +3400,15 @@ export async function setRosterHidden(
   signal?: AbortSignal,
 ): Promise<void> {
   await unwrap(call, 'hiddenSet', { hidden }, signal);
+}
+
+export async function setChannelMute(
+  call: BridgeCall,
+  channelId: string,
+  muted: boolean,
+  signal?: AbortSignal,
+): Promise<void> {
+  await unwrap(call, 'channelMuteSet', { channelId, muted }, signal);
 }
 
 export interface MemoryAcceptedCommit {
