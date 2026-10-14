@@ -36,7 +36,7 @@
   "devDependencies": {
     "@deepseek-ai/dsh-api-gateway": "0.2.0-rc.2",
     "@types/react": "~19.2.0",
-    "@types/react-dom": "~19.3.0",
+    "@types/react-dom": "~19.2.3",
     "expo-doctor": "1.20.4"
   }
 }
