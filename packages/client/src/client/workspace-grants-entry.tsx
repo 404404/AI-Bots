@@ -909,153 +909,145 @@ export function WorkspaceGrantsEntry({
           </SidebarCardList>
         </details>
       )}
-      {composerOnly ? null : (
-        <>
-          <SidebarCardList className="bh-assignment-access-card">
-            <SidebarCardRow
-              icon="lock"
-              title={t('access.title')}
-              meta={t('access.description')}
-              state={access?.mode}
-              trailing={
-                <Switch
-                  checked={access?.mode === 'danger-full-access'}
-                  disabled={loading || busy !== undefined}
-                  onChange={(checked) => {
-                    if (checked) {
-                      setConfirmDanger(true);
-                    } else {
-                      setConfirmDanger(false);
-                      mutate('safe-access', () =>
-                        actions.setAssignmentAccess(botSlug, 'workspace-write', false),
-                      );
-                    }
-                  }}
-                  label={t('access.title')}
-                />
-              }
+      <SidebarCardList className="bh-assignment-access-card">
+        <SidebarCardRow
+          icon="lock"
+          title={t('access.title')}
+          meta={t('access.description')}
+          state={access?.mode}
+          trailing={
+            <Switch
+              checked={access?.mode === 'danger-full-access'}
+              disabled={loading || busy !== undefined}
+              onChange={(checked) => {
+                if (checked) {
+                  setConfirmDanger(true);
+                } else {
+                  setConfirmDanger(false);
+                  mutate('safe-access', () =>
+                    actions.setAssignmentAccess(botSlug, 'workspace-write', false),
+                  );
+                }
+              }}
+              label={t('access.title')}
             />
-          </SidebarCardList>
-          <div className="bh-access-hint">{t('access.hint')}</div>
-          {access?.mode === 'danger-full-access' ? (
-            <div className="bh-access-warning bh-access-warning-active" role="status">
-              {t(
-                access.scope === 'assignments'
-                  ? 'access.activeWarningAssignments'
-                  : 'access.activeWarning',
-              )}
-            </div>
-          ) : null}
-          {access?.mode === 'danger-full-access' ? (
-            <div className="bh-access-scope" role="radiogroup" aria-label={t('access.scopeTitle')}>
-              <div className="bh-note">{t('access.scopeTitle')}</div>
-              {(['chat', 'assignments'] as const).map((scope) => (
-                <label key={scope} className="bh-access-scope-option">
-                  <input
-                    type="radio"
-                    name={'bh-access-scope-' + botSlug}
-                    checked={(access.scope ?? 'chat') === scope}
-                    disabled={loading || busy !== undefined}
-                    onChange={() =>
-                      mutate('access-scope', () =>
-                        actions.setAssignmentAccess(botSlug, 'danger-full-access', true, scope),
-                      )
-                    }
-                  />
-                  <span>
-                    {t(scope === 'chat' ? 'access.scopeChat' : 'access.scopeAssignments')}
-                  </span>
-                </label>
-              ))}
-            </div>
-          ) : null}
-          {confirmDanger ? (
-            <div className="bh-access-warning" role="group" aria-label={t('access.confirmTitle')}>
-              <div className="bh-grant-request-title">{t('access.confirmTitle')}</div>
-              <div className="bh-note">{t('access.confirmRisk')}</div>
-              <div className="bh-tool-approval-actions">
-                <Button
-                  variant="primary"
-                  disabled={busy !== undefined}
-                  onClick={() =>
-                    mutate('danger-access', async () => {
-                      await actions.setAssignmentAccess(botSlug, 'danger-full-access', true);
-                      if (activeSlug.current === botSlug) setConfirmDanger(false);
-                    })
-                  }
-                >
-                  {t('access.confirmEnable')}
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={busy !== undefined}
-                  onClick={() => setConfirmDanger(false)}
-                >
-                  {t('approval.cancel')}
-                </Button>
-              </div>
-            </div>
-          ) : null}
-          <ApprovalTemplateEntry
-            botSlug={botSlug}
-            actions={actions}
-            disabled={loading || busy !== undefined}
-            t={t}
-          />
-          {rules.length === 0 ? null : (
-            <details className="bh-workspace-folder-secondary">
-              <FolderSectionSummary>{t('approval.rulesTitle')}</FolderSectionSummary>
-              <div className="bh-workspace-folder-table">
-                {rules.map((rule) => (
-                  <div key={rule.id} className="bh-workspace-folder-row">
-                    <div className="bh-workspace-folder-main">
-                      <span className="bh-workspace-folder-toggle">
-                        {rule.kind === 'exact'
-                          ? t('approval.exactRule', { tool: rule.toolName })
-                          : t('approval.allRule')}
-                        {' · '}
-                        {rule.role === 'assignment'
-                          ? t('approval.assignment')
-                          : t('approval.orchestrator')}
-                        {' · '}
-                        <Tag>
-                          {t(rule.revokedAt ? 'approval.ruleInactive' : 'approval.ruleActive')}
-                        </Tag>
-                      </span>
-                      <button
-                        type="button"
-                        className="bh-workspace-folder-remove"
-                        aria-label={t('approval.revokeRule')}
-                        disabled={busy !== undefined || rule.revokedAt !== undefined}
-                        onClick={() =>
-                          mutate(rule.id, () => actions.revokeToolApprovalRule(botSlug, rule.id))
-                        }
-                      >
-                        <IconCloseOutlineRegular />
-                      </button>
-                    </div>
-                    <details className="bh-workspace-folder-secondary">
-                      <FolderSectionSummary>{t('approval.ruleDetails')}</FolderSectionSummary>
-                      <div className="bh-note">
-                        {t('approval.cwd', { path: approvalRulePath(rule) })}
-                      </div>
-                      <div className="bh-note">{t('approval.ruleScope')}</div>
-                      <pre className="bh-tool-approval-input">{rule.scopeKey}</pre>
-                      {rule.externalCreator ? (
-                        <div className="bh-note">
-                          {t('approval.externalCreator', { actor: rule.externalCreator.actorId })}
-                        </div>
-                      ) : null}
-                      {rule.kind === 'exact' ? (
-                        <pre className="bh-tool-approval-input">{rule.input}</pre>
-                      ) : null}
-                    </details>
-                  </div>
-                ))}
-              </div>
-            </details>
+          }
+        />
+      </SidebarCardList>
+      <div className="bh-access-hint">{t('access.hint')}</div>
+      {access?.mode === 'danger-full-access' ? (
+        <div className="bh-access-warning bh-access-warning-active" role="status">
+          {t(
+            access.scope === 'assignments'
+              ? 'access.activeWarningAssignments'
+              : 'access.activeWarning',
           )}
-        </>
+        </div>
+      ) : null}
+      {access?.mode === 'danger-full-access' ? (
+        <div className="bh-access-scope" role="radiogroup" aria-label={t('access.scopeTitle')}>
+          <div className="bh-note">{t('access.scopeTitle')}</div>
+          {(['chat', 'assignments'] as const).map((scope) => (
+            <label key={scope} className="bh-access-scope-option">
+              <input
+                type="radio"
+                name={'bh-access-scope-' + botSlug}
+                checked={(access.scope ?? 'chat') === scope}
+                disabled={loading || busy !== undefined}
+                onChange={() =>
+                  mutate('access-scope', () =>
+                    actions.setAssignmentAccess(botSlug, 'danger-full-access', true, scope),
+                  )
+                }
+              />
+              <span>{t(scope === 'chat' ? 'access.scopeChat' : 'access.scopeAssignments')}</span>
+            </label>
+          ))}
+        </div>
+      ) : null}
+      {confirmDanger ? (
+        <div className="bh-access-warning" role="group" aria-label={t('access.confirmTitle')}>
+          <div className="bh-grant-request-title">{t('access.confirmTitle')}</div>
+          <div className="bh-note">{t('access.confirmRisk')}</div>
+          <div className="bh-tool-approval-actions">
+            <Button
+              variant="primary"
+              disabled={busy !== undefined}
+              onClick={() =>
+                mutate('danger-access', async () => {
+                  await actions.setAssignmentAccess(botSlug, 'danger-full-access', true);
+                  if (activeSlug.current === botSlug) setConfirmDanger(false);
+                })
+              }
+            >
+              {t('access.confirmEnable')}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy !== undefined}
+              onClick={() => setConfirmDanger(false)}
+            >
+              {t('approval.cancel')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      <ApprovalTemplateEntry
+        botSlug={botSlug}
+        actions={actions}
+        disabled={loading || busy !== undefined}
+        t={t}
+      />
+      {composerOnly || rules.length === 0 ? null : (
+        <details className="bh-workspace-folder-secondary">
+          <FolderSectionSummary>{t('approval.rulesTitle')}</FolderSectionSummary>
+          <div className="bh-workspace-folder-table">
+            {rules.map((rule) => (
+              <div key={rule.id} className="bh-workspace-folder-row">
+                <div className="bh-workspace-folder-main">
+                  <span className="bh-workspace-folder-toggle">
+                    {rule.kind === 'exact'
+                      ? t('approval.exactRule', { tool: rule.toolName })
+                      : t('approval.allRule')}
+                    {' · '}
+                    {rule.role === 'assignment'
+                      ? t('approval.assignment')
+                      : t('approval.orchestrator')}
+                    {' · '}
+                    <Tag>{t(rule.revokedAt ? 'approval.ruleInactive' : 'approval.ruleActive')}</Tag>
+                  </span>
+                  <button
+                    type="button"
+                    className="bh-workspace-folder-remove"
+                    aria-label={t('approval.revokeRule')}
+                    disabled={busy !== undefined || rule.revokedAt !== undefined}
+                    onClick={() =>
+                      mutate(rule.id, () => actions.revokeToolApprovalRule(botSlug, rule.id))
+                    }
+                  >
+                    <IconCloseOutlineRegular />
+                  </button>
+                </div>
+                <details className="bh-workspace-folder-secondary">
+                  <FolderSectionSummary>{t('approval.ruleDetails')}</FolderSectionSummary>
+                  <div className="bh-note">
+                    {t('approval.cwd', { path: approvalRulePath(rule) })}
+                  </div>
+                  <div className="bh-note">{t('approval.ruleScope')}</div>
+                  <pre className="bh-tool-approval-input">{rule.scopeKey}</pre>
+                  {rule.externalCreator ? (
+                    <div className="bh-note">
+                      {t('approval.externalCreator', { actor: rule.externalCreator.actorId })}
+                    </div>
+                  ) : null}
+                  {rule.kind === 'exact' ? (
+                    <pre className="bh-tool-approval-input">{rule.input}</pre>
+                  ) : null}
+                </details>
+              </div>
+            ))}
+          </div>
+        </details>
       )}
       {pendingGrant === undefined ? null : (
         <WorkspaceGrantConfirmation

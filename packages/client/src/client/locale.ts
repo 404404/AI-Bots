@@ -3107,9 +3107,13 @@ export const zh = {
   'autoApproval.hintOff':
     '选一个模板后，审批员会先按模板替你回答此 Bot 的工具审批，拿不准的才发卡片给你。',
   'autoApproval.hintOn': '{description} 审批员按这个模板替你回答，拿不准的仍发卡片给你。',
-  'autoApproval.allowed': '已按模板 {template} 自动批准：{reason}',
-  'autoApproval.rejected': '已按模板 {template} 自动拒绝：{reason}',
+  'autoApproval.allowed': '按「{template}」自动批准',
+  'autoApproval.rejected': '按「{template}」自动拒绝',
   'autoApproval.tool': '工具：{tool}',
+  'autoApproval.template.cautious': '谨慎',
+  'autoApproval.template.cautiousHint': '允许读取和规划；凡是会离开这台电脑的操作都交给你。',
+  'autoApproval.template.getWorkDone': '把活干完',
+  'autoApproval.template.getWorkDoneHint': '让工作继续；只拦下破坏性或不可撤回的操作。',
   'access.title': '完全访问（所有文件，不再询问）',
   'access.description': '默认只能写入工作区，执行命令前逐次询问。',
   'access.hint':
@@ -6734,9 +6738,15 @@ My relationship with you, established lore and topics to avoid: [fill in].
     "Pick a template and an Approval Reviewer answers this Bot's tool approvals by it first. Only calls it can't decide come to you as cards.",
   'autoApproval.hintOn':
     '{description} The Approval Reviewer answers by this template; calls it is unsure about still come to you as cards.',
-  'autoApproval.allowed': 'Auto-approved by {template}: {reason}',
-  'autoApproval.rejected': 'Auto-rejected by {template}: {reason}',
+  'autoApproval.allowed': 'auto-approved by {template}',
+  'autoApproval.rejected': 'auto-rejected by {template}',
   'autoApproval.tool': 'Tool: {tool}',
+  'autoApproval.template.cautious': 'Cautious',
+  'autoApproval.template.cautiousHint':
+    'Allows reading and planning; sends anything that leaves the computer to you.',
+  'autoApproval.template.getWorkDone': 'Get the work done',
+  'autoApproval.template.getWorkDoneHint':
+    'Lets the work continue; stops only destructive or irreversible calls.',
   'access.title': 'Full access (all files, no asking)',
   'access.description':
     'By default it writes only within its workspace and asks before each command.',

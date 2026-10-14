@@ -2614,6 +2614,7 @@ function ConversationView({
                       <AutoApprovalLine
                         messageId={first.id}
                         record={first.toolAutoApproval}
+                        bots={state.bots}
                         t={t}
                       />
                     ) : first.turnStop !== undefined ? (

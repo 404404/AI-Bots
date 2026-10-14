@@ -179,7 +179,7 @@ describe('Workspace Grant sidebar', () => {
         );
         expect(container.querySelector('[role="alert"]')!.textContent).toContain('Result unknown');
         expect(listWorkspaceGrants.mock.calls.length).toBeGreaterThan(1);
-        expect(container.querySelector('[role="switch"]')).toBeNull();
+        expect(container.querySelector('.bh-assignment-access-row [role="switch"]')).toBeNull();
       } finally {
         await act(async () => root.unmount());
         container.remove();
@@ -252,7 +252,8 @@ describe('Workspace Grant sidebar', () => {
           }),
         ),
       );
-      expect(container.querySelector('[role="switch"]')).toBeNull();
+      expect(container.querySelector('.bh-assignment-access-row [role="switch"]')).toBeNull();
+      expect(container.querySelector('.bh-assignment-access-card [role="switch"]')).not.toBeNull();
       await act(async () =>
         Array.from(container.querySelectorAll<HTMLButtonElement>('.bh-workspace-folder-toggle'))
           .at(-1)!
@@ -274,7 +275,7 @@ describe('Workspace Grant sidebar', () => {
       );
       expect(createWorkspaceGrant).toHaveBeenCalledExactlyOnceWith('grant-composer', 'project');
       expect(container.querySelector('.bh-workspace-grant-confirm')).toBeNull();
-      expect(container.querySelector('[role="switch"]')).toBeNull();
+      expect(container.querySelector('.bh-assignment-access-row [role="switch"]')).toBeNull();
       expect(
         Array.from(container.querySelectorAll('button')).filter(
           (button) => !button.disabled && button.textContent === zhTranslate('grant.authorize'),
