@@ -5,14 +5,27 @@ import { describe, expect, it } from 'vitest';
 
 const dsDir = fileURLToPath(new URL('../src/client/ds/', import.meta.url));
 const clientDir = fileURLToPath(new URL('../src/client/', import.meta.url));
+const bundleDirs = ['computer', 'browser'].map((name) =>
+  fileURLToPath(new URL(`../../${name}/src/client/`, import.meta.url)),
+);
 
 function stylexSources(): { name: string; source: string }[] {
   const files = [
-    ...readdirSync(dsDir).map((name) => `ds/${name}`),
-    ...readdirSync(clientDir).filter((name) => /\.tsx?$/.test(name)),
+    ...readdirSync(dsDir).map((name) => `${clientDir}ds/${name}`),
+    ...readdirSync(clientDir)
+      .filter((name) => /\.tsx?$/.test(name))
+      .map((name) => `${clientDir}${name}`),
+    ...bundleDirs.flatMap((dir) =>
+      readdirSync(dir)
+        .filter((name) => /\.tsx?$/.test(name))
+        .map((name) => `${dir}${name}`),
+    ),
   ];
   return files
-    .map((name) => ({ name, source: readFileSync(`${clientDir}${name}`, 'utf8') }))
+    .map((path) => ({
+      name: path.slice(path.indexOf('packages/')),
+      source: readFileSync(path, 'utf8'),
+    }))
     .filter(({ source }) => source.includes('@stylexjs/stylex'));
 }
 
@@ -43,9 +56,18 @@ describe('design-system tokens', () => {
       expect(value[1]).toMatch(/^var\(--dsw-[a-z0-9-]+\)$/);
   });
 
+  it('guards the Computer and Browser bundle StyleX sources too', () => {
+    expect(stylexSources().map(({ name }) => name)).toEqual(
+      expect.arrayContaining([
+        'packages/computer/src/client/settings-rows.tsx',
+        'packages/computer/src/client/local-computer.tsx',
+      ]),
+    );
+  });
+
   it('authors spacing, type and radius only through tokens', () => {
     const offenders = stylexSources()
-      .filter(({ name }) => name !== 'ds/tokens.stylex.ts')
+      .filter(({ name }) => !name.endsWith('/ds/tokens.stylex.ts'))
       .flatMap(({ name, source }) =>
         styleBlocks(source).flatMap(({ text, start }) =>
           text

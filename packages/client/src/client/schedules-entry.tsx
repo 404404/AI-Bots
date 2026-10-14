@@ -28,6 +28,7 @@ import { LoadingSkeleton } from './loading-skeleton.js';
 import { useMountedResource } from './mounted-resource.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
 import { subscribeMessagingDefaults } from './messaging-defaults-live.js';
+import { IconButton } from './ds/icon-button.js';
 
 export const SCHEDULE_COST_WARNING_SECONDS = 15 * 60;
 const REFRESH_MS = 30_000;
@@ -50,6 +51,8 @@ const TIME = /^\d{2}:\d{2}$/u;
 const DATE = /^\d{4}-\d{2}-\d{2}$/u;
 
 const styles = stylex.create({
+  locked: { color: color.fg },
+  unlocked: { opacity: { default: 0.55, ':disabled': 0.5 } },
   grow: { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 },
   wide: { flexGrow: 2, flexShrink: 1, flexBasis: 0, minWidth: 0 },
   row: {
@@ -371,15 +374,15 @@ export function BotSchedulesHeaderAction({ botSlug, t }: ChannelSidebarEntryProp
   if (botSlug === undefined) return <></>;
   return (
     <Tooltip label={t('schedule.add')} side="bottom" delayMs={500}>
-      <button
-        type="button"
-        className="bh-channel-sidebar-entry-action"
+      <IconButton
+        size="row"
+        tone="subtle"
         aria-label={t('schedule.add')}
         aria-haspopup="dialog"
         onClick={() => requestCreate(botSlug)}
       >
         <IconPlusOutlineRegular size={16} />
-      </button>
+      </IconButton>
     </Tooltip>
   );
 }
@@ -952,9 +955,9 @@ export function BotSchedulesEntry({ botSlug, actions, t }: ChannelSidebarEntryPr
                     portal
                     delayMs={TOOLTIP_DELAY_MS}
                   >
-                    <button
-                      type="button"
-                      className="bh-card-action bh-schedule-run-now"
+                    <IconButton
+                      size="inline"
+                      data-schedule-run-now=""
                       disabled={toggling !== undefined}
                       aria-label={t('schedule.runNow', {
                         title: schedule.title,
@@ -962,7 +965,7 @@ export function BotSchedulesEntry({ botSlug, actions, t }: ChannelSidebarEntryPr
                       onClick={() => runNow(schedule)}
                     >
                       <ChannelSidebarIcon name="play" size={14} />
-                    </button>
+                    </IconButton>
                   </Tooltip>
                   <Tooltip
                     label={schedule.locked ? t('schedule.locked') : t('schedule.lock.tooltip')}
@@ -970,10 +973,10 @@ export function BotSchedulesEntry({ botSlug, actions, t }: ChannelSidebarEntryPr
                     portal
                     delayMs={TOOLTIP_DELAY_MS}
                   >
-                    <button
-                      type="button"
-                      className="bh-card-action bh-schedule-lock-toggle"
-                      data-locked={schedule.locked ? 'true' : undefined}
+                    <IconButton
+                      size="inline"
+                      data-schedule-lock=""
+                      xstyle={schedule.locked ? styles.locked : styles.unlocked}
                       aria-pressed={schedule.locked}
                       disabled={toggling !== undefined}
                       aria-label={
@@ -984,7 +987,7 @@ export function BotSchedulesEntry({ botSlug, actions, t }: ChannelSidebarEntryPr
                       onClick={() => change(schedule, { locked: !schedule.locked })}
                     >
                       <ChannelSidebarIcon name={schedule.locked ? 'lock' : 'lock-open'} size={14} />
-                    </button>
+                    </IconButton>
                   </Tooltip>
                   <Tooltip
                     label={

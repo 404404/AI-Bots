@@ -99,13 +99,11 @@ describe('Standing memory', () => {
     ]);
     expect(rows[0]?.textContent).toContain('常驻');
     expect(rows[0]?.textContent).toContain('1,860/5,000');
-    expect(rows[0]?.querySelector('.bh-memory-standing-usage')?.getAttribute('title')).toBe(
+    expect(rows[0]?.querySelector('[data-standing-usage]')?.getAttribute('title')).toBe(
       '已用 37%：1,860/5,000 字符',
     );
-    expect(rows[1]?.querySelector('.bh-memory-standing-over')?.textContent).toContain(
-      '3,600/3,000',
-    );
-    expect(rows[2]?.querySelector('.bh-memory-standing')).toBeNull();
+    expect(rows[1]?.querySelector('[data-standing="over"]')?.textContent).toContain('3,600/3,000');
+    expect(rows[2]?.querySelector('[data-standing]')).toBeNull();
   });
 
   it('parses standing limits and usage from the bridge', async () => {

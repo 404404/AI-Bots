@@ -274,17 +274,15 @@ if (mode === 'row-actions') {
     await click('.bh-human-inbox-detail button', '查看 Bot 收件箱');
     await page.waitForFunction(() => !document.querySelector('.bh-human-inbox-detail'));
     await page.waitForFunction(() =>
-      [...document.querySelectorAll('.bh-channel-sidebar-entry')].some(
+      [...document.querySelectorAll('[data-sidebar-entry]')].some(
         (node) =>
-          node.querySelector('.bh-channel-sidebar-entry-label')?.textContent.includes('收件箱') &&
-          node.querySelector('.bh-channel-sidebar-entry-head')?.getAttribute('aria-expanded') ===
-            'true',
+          node.querySelector('[data-panel-label]')?.textContent.includes('收件箱') &&
+          node.querySelector('[data-panel-head]')?.getAttribute('aria-expanded') === 'true',
       ),
     );
     const inboxEntry = await page.evaluateHandle(() =>
-      [...document.querySelectorAll('.bh-channel-sidebar-entry')].find(
-        (node) =>
-          node.querySelector('.bh-channel-sidebar-entry-label')?.textContent === 'Bot 收件箱',
+      [...document.querySelectorAll('[data-sidebar-entry]')].find(
+        (node) => node.querySelector('[data-panel-label]')?.textContent === 'Bot 收件箱',
       ),
     );
     assert.ok(inboxEntry.asElement());

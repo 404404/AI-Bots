@@ -136,34 +136,32 @@ try {
     ) {
       await page.click(sidebarToggle);
     }
-    const entry = '.bh-channel-sidebar-entry-head';
+    const entry = '[data-panel-head]';
     await page.waitForSelector(entry, { timeout: 10000 });
     const before = await page.$eval(entry, (button) => button.getAttribute('aria-expanded'));
     await page.click(entry);
     await page.waitForFunction(
       (previous) =>
-        document.querySelector('.bh-channel-sidebar-entry-head')?.getAttribute('aria-expanded') !==
-        previous,
+        document.querySelector('[data-panel-head]')?.getAttribute('aria-expanded') !== previous,
       { timeout: 10000 },
       before,
     );
     await page.click(entry);
     await page.waitForFunction(
       (previous) =>
-        document.querySelector('.bh-channel-sidebar-entry-head')?.getAttribute('aria-expanded') ===
-        previous,
+        document.querySelector('[data-panel-head]')?.getAttribute('aria-expanded') === previous,
       { timeout: 10000 },
       before,
     );
 
     await select(first.id);
     await page.evaluate(() => {
-      const members = [...document.querySelectorAll('.bh-channel-sidebar-entry')].find((section) =>
+      const members = [...document.querySelectorAll('[data-sidebar-entry]')].find((section) =>
         ['Members', '成员'].includes(
-          section.querySelector('.bh-channel-sidebar-entry-label')?.textContent ?? '',
+          section.querySelector('[data-panel-label]')?.textContent ?? '',
         ),
       );
-      const head = members?.querySelector('.bh-channel-sidebar-entry-head');
+      const head = members?.querySelector('[data-panel-head]');
       if (head?.getAttribute('aria-expanded') === 'false') head.click();
     });
     await page.waitForSelector('.bh-member-menu-button');

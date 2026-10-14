@@ -20,6 +20,8 @@ import {
 import { subscribeWorkspaceGrantChanges } from './workspace-grant-events.js';
 import { authorizeGroupMembers, type GroupGrantResult } from './group-workspace-authorization.js';
 import { useMobileBotViewport } from './mobile-viewport.js';
+import { ComposerContextBar } from './composer-context-bar.js';
+import { ChipButton } from './ds/chip-button.js';
 
 interface PreviewMember {
   slug: string;
@@ -198,12 +200,15 @@ export function GroupComposerContextView({
   const retry = results.some((row) => row.status === 'unknown' || row.status === 'failed');
   return (
     <div ref={mount}>
-      <div className="bh-composer-context" hidden={mobile} aria-label={t('composerContext.label')}>
-        <button ref={factMount} type="button" onClick={onOpen}>
-          <ChannelSidebarIcon name="folder-key" size={14} />
-          <span>{chip}</span>
-        </button>
-      </div>
+      <ComposerContextBar label={t('composerContext.label')} hidden={mobile}>
+        <ChipButton
+          ref={factMount}
+          data-composer-chip="workspace"
+          icon={<ChannelSidebarIcon name="folder-key" size={14} />}
+          label={chip}
+          onClick={onOpen}
+        />
+      </ComposerContextBar>
       {open ? (
         <PanelDialog
           size="medium"

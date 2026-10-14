@@ -166,6 +166,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 - An MCP server you chose to remember now appears in every Bot's settings. Turn its switch on for another Bot and that Bot gets the server's tools without you entering the secret again; removing it in any Bot's settings removes it for all. ([#1613](https://github.com/BotHarness/DeepSeekBot/issues/1613), [ADR-0198](docs/adr/0198-a-remembered-secret-mcp-server-serves-every-personabot.md))
 - An approval card in a Bot's DM now links to that Bot's full access switch, so you can stop per-command approvals from where they interrupt you. Full access stays off until you turn it on, with its warning. ([#1624](https://github.com/BotHarness/DeepSeekBot/issues/1624))
 
+- The card for starting an MCP server now says that the server can add its own instructions to the Bot's system prompt and that its tool descriptions and results can influence the Bot, so connect only a server you trust. ([#1620](https://github.com/BotHarness/DeepSeekBot/issues/1620))
+
 - Asking a Bot in one sentence to set up an MCP server now works: it asks for the credential with a card straight away and connects the server, instead of asking you to paste the key into the chat or looking through configuration files. ([#1611](https://github.com/BotHarness/DeepSeekBot/issues/1611))
 
 - A Bot's question card no longer holds the Bot: after 45 seconds without an answer the Bot goes on with other messages, and the card can still be answered later. PersonaBots now run on a product preset that turns on DSH's timed questions. Tool approvals still wait for a decision ([#1038](https://github.com/BotHarness/DeepSeekBot/issues/1038), [ADR-0187](docs/adr/0187-personabots-use-a-product-preset-with-timed-questions.md)).
