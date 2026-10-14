@@ -1,3 +1,4 @@
+import { layers, type Layer, type LayerName } from './layers';
 import { palette } from './palette.generated';
 import { mono, touch, typeScale, weight, type PlatformOS } from './tokens';
 
@@ -11,7 +12,8 @@ export type Appearance = {
 
 export type DesignTheme = {
   scheme: ColorScheme;
-  color: Record<ColorRole | 'accentSoft', string>;
+  color: Record<ColorRole, string>;
+  layer: Record<LayerName, Layer>;
   type: (typeof typeScale)[PlatformOS];
   weight: (typeof weight)[PlatformOS];
   touch: number;
@@ -37,7 +39,7 @@ function luminance(hex: string): number {
   return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
 }
 
-function contrast(a: string, b: string): number {
+export function contrast(a: string, b: string): number {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -47,7 +49,6 @@ const INK_DARK = '#0f1115';
 const SEPARATION = 1.3;
 const BODY_CONTRAST = 4.5;
 const LIGHT_SURFACE = 3;
-const SOFT_ACCENT = 0.12;
 
 function mix(from: string, to: string, amount: number): string {
   const a = rgb(from);
@@ -126,7 +127,8 @@ export function resolveTheme(
   const color = withAccent({ ...palette[scheme] }, appearance.accent);
   return {
     scheme,
-    color: { ...color, accentSoft: mix(color.base, color.accent, SOFT_ACCENT) },
+    color,
+    layer: layers(scheme, color),
     type: typeScale[os],
     weight: weight[os],
     touch: touch[os],

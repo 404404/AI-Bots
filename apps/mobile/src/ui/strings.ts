@@ -2,6 +2,15 @@ import type { PairingRefusal } from '../host/pairing';
 import type { PushKind, PushRefusal } from '../host/push';
 import type { AggregatedState } from '../host/wire';
 
+type ToolGroup = 'shell' | 'browser' | 'files' | 'other';
+
+function toolGroup(tool: string): ToolGroup {
+  if (/^(bash|shell|exec|secret_cli)$/u.test(tool)) return 'shell';
+  if (tool.startsWith('browser')) return 'browser';
+  if (/^(read|write|edit|glob|grep|list)$/u.test(tool)) return 'files';
+  return 'other';
+}
+
 const en = {
   roster: 'DeepSeekBot',
   bots: 'PersonaBots',
@@ -160,6 +169,11 @@ const en = {
   tool: 'Tool',
   submitChoice: 'Submit',
   inFolder: (folder: string) => `In ${folder}`,
+  needsYou: 'Needs you',
+  toolCategory: (tool: string) =>
+    ({ shell: 'Terminal', browser: 'Browser', files: 'Files', other: 'Tool' })[toolGroup(tool)],
+  runTool: (tool: string) => (toolGroup(tool) === 'shell' ? 'Run this command' : `Use ${tool}`),
+  replyInChat: 'Or reply in the chat below.',
   option: (letter: string, label: string) => `${letter}. ${label}`,
   cardOutcome: {
     'allowed-once': 'Allowed once',
@@ -456,6 +470,11 @@ const zh: typeof en = {
   tool: '工具',
   submitChoice: '提交',
   inFolder: (folder: string) => `在 ${folder}`,
+  needsYou: '需要你确认',
+  toolCategory: (tool: string) =>
+    ({ shell: '终端', browser: '浏览器', files: '文件', other: '工具' })[toolGroup(tool)],
+  runTool: (tool: string) => (toolGroup(tool) === 'shell' ? '运行这条命令' : `使用 ${tool}`),
+  replyInChat: '或者在下方聊天中回复。',
   option: (letter: string, label: string) => `${letter}. ${label}`,
   cardOutcome: {
     'allowed-once': '已允许一次',
