@@ -309,6 +309,7 @@ export interface HumanAttentionPage {
 export interface HumanInboxState {
   status: ClientStatus;
   unreadCount: number;
+  channelUnread: Readonly<Record<string, number>>;
   hasAction: boolean;
   category: HumanInboxCategory;
   botSlug: string | undefined;
@@ -434,6 +435,7 @@ export interface SessionsState {
 export interface RosterState {
   pins: readonly string[];
   hidden: readonly string[];
+  muted: readonly string[];
   sections: readonly RosterSection[];
   topOrder: readonly TopOrderEntry[] | undefined;
   readOnly: boolean;
@@ -538,6 +540,7 @@ function initialHumanInbox(): HumanInboxState {
   return {
     status: 'idle',
     unreadCount: 0,
+    channelUnread: {},
     hasAction: false,
     category: 'action',
     botSlug: undefined,
@@ -553,6 +556,7 @@ function initialRoster(): RosterState {
   return {
     pins: [],
     hidden: [],
+    muted: [],
     sections: [],
     topOrder: undefined,
     readOnly: false,
