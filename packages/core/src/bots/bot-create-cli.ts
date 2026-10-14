@@ -200,6 +200,14 @@ Usage:
   deepseekbot browser-tools
   deepseekbot browser-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
   deepseekbot bot-trace <id> [--turns <1-20>] [--session <session-id>]
+  deepseekbot memory-file-target|memory-graph|memory-commit-diff|memory-changes <id> [...]
+  deepseekbot memory-working-diff <id> --path <file> --kind staged|unstaged|untracked|current
+  deepseekbot memory-checkpoints|memory-versions <id>
+  deepseekbot memory-restore <id> --checkpoint <id> --expected-current <id>
+  deepseekbot memory-restore-commit <id> --sha <commit> --expected-head <commit> [--name <version>]
+  deepseekbot memory-version-name <id> --sha <commit> --name <version>
+  deepseekbot memory-version-unname <id> --tag <version>
+  deepseekbot memory-repair <id> --expected-head <commit>
   deepseekbot computer-tools
   deepseekbot computer-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
@@ -2490,7 +2498,15 @@ export async function runBotCreateCli(
     }
     if (
       LIVE_COMMANDS.some((entry) => entry.command === command) ||
-      ((command === 'channel-messages' || command === 'grants') &&
+      ([
+        'channel-messages',
+        'grants',
+        'memory-snapshot',
+        'memory-file',
+        'memory-history',
+        'memory-diff',
+        'memory-save',
+      ].includes(command) &&
         (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined))
     ) {
       if (values.home !== undefined)
