@@ -53,6 +53,7 @@ export const CHANNEL_COMMANDS = [
   { command: 'channel-mark-read', description: 'mark a Channel read through one message' },
   { command: 'channel-mark-all-read', description: 'mark every Channel read' },
   { command: 'channel-retry', description: 'retry a failed Bot reply to a Human DM message' },
+  { command: 'channel-bot-stop', description: "stop a working Bot's current turn in a Channel" },
   {
     command: 'channel-purge-preview',
     description: 'preview what purging Source Events removes and get its confirmation token',
@@ -285,6 +286,10 @@ export async function runChannelCommand(
     case 'channel-retry':
       method = 'channelRetry';
       args.messageId = required(values['message-id'], '--message-id');
+      break;
+    case 'channel-bot-stop':
+      method = 'channelBotStop';
+      args.botSlug = required(values.bot, '--bot');
       break;
     case 'channel-purge-preview':
     case 'channel-purge-confirm': {

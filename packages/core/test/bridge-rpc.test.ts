@@ -122,6 +122,7 @@ describe('bridge typert service', () => {
       'onboardingModel',
       'modelPlanInherit',
       'channelRetry',
+      'channelBotStop',
       'modelCatalog',
       'modelPresets',
       'modelPresetCreate',

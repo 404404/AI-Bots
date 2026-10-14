@@ -5,6 +5,7 @@ import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } fro
 
 import type { ConversationDraft } from '../../src/host/conversation';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../src/host/pick-files';
+import { stopBot, type StopOutcome } from '../../src/host/stop';
 import {
   useConversation,
   useConversationSnapshot,
@@ -60,6 +61,7 @@ function DmConversation({ slug }: { slug: string | undefined }) {
   const [draft, setDraft] = useState('');
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
+  const [stop, setStop] = useState<StopOutcome | { status: 'stopping' } | undefined>();
   const now = new Date();
 
   const rows = useMemo<Row[]>(
@@ -89,6 +91,15 @@ function DmConversation({ slug }: { slug: string | undefined }) {
       .catch(() => setAttachError(true));
   };
 
+  const stopRun = () => {
+    if (client === undefined || bot?.dmChannelId === undefined || stop?.status === 'stopping')
+      return;
+    setStop({ status: 'stopping' });
+    void stopBot(client, bot.dmChannelId, bot.slug).then((outcome) =>
+      setStop(outcome.status === 'stopped' ? undefined : outcome),
+    );
+  };
+
   const notice =
     snapshot.status === 'refused'
       ? t.dmRefused
@@ -100,7 +111,11 @@ function DmConversation({ slug }: { slug: string | undefined }) {
             ? t.liveInterrupted
             : attachError
               ? t.attachFailed
-              : undefined;
+              : stop?.status === 'not-working' && bot !== undefined
+                ? t.stopNotWorking(bot.displayName)
+                : stop?.status === 'failed'
+                  ? `${t.stopFailed} ${stop.reason}`
+                  : undefined;
 
   return (
     <>
@@ -181,7 +196,9 @@ function DmConversation({ slug }: { slug: string | undefined }) {
             ) : null
           }
         />
-        {bot !== undefined && botBusy(bot) ? <StatusStrip bot={bot} /> : null}
+        {bot !== undefined && botBusy(bot) ? (
+          <StatusStrip bot={bot} stopping={stop?.status === 'stopping'} onStop={stopRun} />
+        ) : null}
         <Composer
           value={draft}
           placeholder={bot === undefined ? t.messagePlaceholder : t.messageBot(bot.displayName)}

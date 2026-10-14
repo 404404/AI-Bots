@@ -1006,7 +1006,8 @@ function ConversationView({
       item.botDmAction === undefined &&
       item.botChannelPost === undefined &&
       item.memoryCommit === undefined &&
-      item.memberDeparture === undefined,
+      item.memberDeparture === undefined &&
+      item.turnStop === undefined,
   );
   const workingRows = timelineWorkingRows(
     conversation.status === 'ready' && !conversation.timeline.hasNewer
@@ -1931,7 +1932,16 @@ function ConversationView({
                             })}
                           </div>
                         ) : null}
-                        {first.memberDeparture !== undefined ? (
+                        {first.turnStop !== undefined ? (
+                          <div className="bh-member-departure" data-message-id={first.id}>
+                            <span>
+                              {t('turn.stopped', {
+                                human: first.turnStop.humanName,
+                                name: first.turnStop.botName,
+                              })}
+                            </span>
+                          </div>
+                        ) : first.memberDeparture !== undefined ? (
                           <div className="bh-member-departure" data-message-id={first.id}>
                             <span>
                               {t(

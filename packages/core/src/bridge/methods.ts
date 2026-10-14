@@ -420,6 +420,9 @@ export interface BridgeMethods {
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
+  channelBotStop(
+    payload: unknown,
+  ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
   approvalRoute(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
   failureAlertsSet(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
   failureAlertsTest(
@@ -1764,6 +1767,44 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       } catch (error) {
         return invalidInput(error instanceof Error ? error.message : 'Retry unavailable');
       }
+    },
+    async channelBotStop(payload) {
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
+      const botSlug = asNonBlank(source, 'botSlug');
+      if (!channelId || !botSlug) return invalidInput('channelId and botSlug are required');
+      const channel = deps.channels.get(channelId);
+      if (channel === undefined || channel.deletedAt) return unknownChannel(channelId);
+      const bot = deps.registry.get(botSlug);
+      if (bot === undefined) return unknownBot(botSlug);
+      if (
+        channel.type === 'group' ? !channel.members.includes(botSlug) : channel.botSlug !== botSlug
+      )
+        return invalidInput(`${bot.displayName} is not in this Channel`);
+      const stopped = await deps.runtime?.stopTurn?.(botSlug);
+      if (stopped === undefined)
+        return {
+          ok: false,
+          error: { code: 'not-working', message: `${bot.displayName} is not working right now` },
+        };
+      const human = deps.channels.listHumanMembers(channelId)[0]?.displayName ?? 'Human';
+      const appended = await deps.channels.appendMessage(channelId, {
+        id: `turn-stopped-${randomUUID()}`,
+        at: new Date().toISOString(),
+        author: { kind: 'system' },
+        body: `${human} stopped ${bot.displayName}.`,
+        turnStop: {
+          botSlug,
+          botName: bot.displayName,
+          humanName: human,
+          sessionId: stopped.sessionId,
+        },
+      });
+      if (appended === undefined) return unknownChannel(channelId);
+      return {
+        ok: true,
+        value: { stopped: { botSlug, sessionId: stopped.sessionId, messageId: appended.id } },
+      };
     },
     async modelCatalog() {
       if (deps.modelCatalog === undefined) return unavailable();
