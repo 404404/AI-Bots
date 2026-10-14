@@ -276,8 +276,6 @@ const SANDBOX_PATTERNS = /sandbox|namespace|clone.*EPERM|zygote/i;
 
 const RUNNING_AS_ROOT = /running as root/i;
 
-// Chrome's sandbox cannot start in headless or headed mode alike, so the
-// advice never points at the headless setting (#1617).
 function sandboxFailure(options: {
   binary: string;
   code: number | null;
@@ -306,9 +304,6 @@ function sandboxFailure(options: {
   );
 }
 
-// Mirrors Chromium's docs/security/apparmor-userns-restrictions.md: allow
-// userns for this one binary instead of lifting the restriction globally or
-// dropping Chrome's sandbox.
 function appArmorUsernsGuide(binary: string): string {
   const path = binary === '' ? '/path/to/chrome' : binary;
   return [
