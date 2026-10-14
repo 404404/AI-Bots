@@ -2360,10 +2360,12 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 .bh-profile-banner:hover .bh-profile-banner-edit,
 .bh-profile-banner-edit:focus-visible { opacity: 1; }
 @media (hover: none) { .bh-profile-banner-edit { opacity: 1; } }
+/* A fixed height, not aspect-ratio + max-height: WebKit transfers that max-height into a
+   288px max-width, leaving a strip of popover beside the banner. */
 .bh-profile-popover-banner {
+  flex: none;
   margin: -12px -12px 0;
-  aspect-ratio: 3 / 1;
-  max-height: 96px;
+  height: 96px;
   overflow: hidden;
   border-radius: 11px 11px 0 0;
   border-bottom: 1px solid var(--dsw-alias-border-l2);
