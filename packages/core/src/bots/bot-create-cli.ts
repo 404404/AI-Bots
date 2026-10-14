@@ -172,6 +172,20 @@ Usage:
   deepseekbot ask-secret-revoke <channel> --message-id <configured-card-id>
   deepseekbot ask-secret-accounts <id>
   deepseekbot release-info [--since <version>]
+  deepseekbot release-check
+  deepseekbot release-install <version> --confirm
+  deepseekbot release-restart --confirm
+  deepseekbot marketplace-list [--query <words>] [--topic <topic>] [--sort updated|stars] [--cursor <c>]
+  deepseekbot marketplace-topics
+  deepseekbot marketplace-detail <owner/repo>
+  deepseekbot marketplace-submit <github-repo-url>
+  deepseekbot marketplace-report <owner/repo> [--reason <text>]
+  deepseekbot telemetry-status
+  deepseekbot telemetry-set (--enabled | --disabled)
+  deepseekbot git-status
+  deepseekbot git-install
+  deepseekbot pairing-list <id>
+  deepseekbot pairing-review <id> <pairing-id> --decision approve|reject|revoke [--role <role-id> | --capability <c> ...] [--confirm]
   deepseekbot workspace-options
   deepseekbot grant-create <id> --workspace <workspace-id>
   deepseekbot browser-access-set <id> (--enabled | --disabled)
