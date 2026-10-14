@@ -54,14 +54,21 @@ References:
     - The viewer follows the Photos app: pinch zooms around the fingers (up to 5×, springing back to fit below 1×), double-tap zooms to 2.5× at the tapped point and back, one finger pans a zoomed image, a vertical swipe at fit size closes it with the backdrop fading, and a single tap hides or shows the close and share buttons. The close button, Android back and the iOS escape gesture also close it.
   - Reactions are small chips on the bubble corner.
   - Delivery: pending shows at 70% opacity, failed offers "Not sent · Tap to retry", and sent shows nothing.
-- **Action cards** sit in the chat stream and share one layout: title and explanation, an optional preview, then buttons.
+- **Action cards** sit in the chat stream, and the same rules apply wherever they appear (DM, Activity, Human Inbox, web Inbox). Show only what the Human needs to decide; everything else waits behind Details.
+  - Layout, top to bottom:
+    1. A header row: the category on the left (Terminal, Browser, Files, Tool, or the question's header), and a status pill on the right ("Needs you", `warningSoft` with `warning` text) while the request is open. There is no eyebrow, and the Bot's name is not repeated.
+    2. One key sentence saying what is asked ("Run this command", or the question itself).
+    3. An optional preview on the `well` layer: the command in mono, at most two lines.
+    4. **Details**, collapsed by default and expanded in place. It holds the tool, working folder and every argument on the `well` layer. There is no separate sheet.
+    5. The buttons.
   - Card kinds:
-    - **Question**: lettered options, single or multiple choice, then Submit.
-    - **Tool approval**: Allow once / Always allow / Deny. "Details ›" under the command opens a form sheet.
+    - **Question**: lettered options in one `well` group, with dividers between rows. A single choice answers on tap, with no Submit. Multiple choice or several questions end with Submit. In a DM the Other answer field becomes "Or reply in the chat below.", and a message sent while one single-part question is open answers it.
+    - **Tool approval**: Allow once / Always allow / Deny.
     - **Takeover**: a computer screenshot, then Take over / Done / Not now.
-  - At most one primary button per card.
-  - Reading more (a "Details ›" link) sits apart from the decisions. Decisions are pills sized to their label, in one row when they fit and wrapping when they don't: the primary first, the destructive one last. No shortcut hints.
-  - A decided card collapses to one line. A card decided on another device says so.
+  - Buttons are pills with no outline. The primary is a neutral high-contrast fill (`fg` with a `base` label), the secondary a subtle solid fill one step off the layer, and Deny a red label on the layer's `danger` tint. A card has at most one primary. Three or more decisions stack full width (primary first, destructive last); two sit in a row, sized to their labels.
+  - No keyboard shortcut hints, no explanatory boilerplate, and no paths or ids outside Details.
+  - Regions are told apart by layer fills, not borders. The card is `raised` with no outline, and an outline appears only on the focused card (`edge.focus` in the accent).
+  - A decided card collapses to one line: a coloured dot, then "subject · outcome" (for example "bash · Allowed once"). A card decided on another device or expired says so.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
   - With one trailing button (the mic or Send) the pill is one row: **+**, the field and the button, bottom-aligned as the field grows. When the text no longer fits that one row, or with more (attached files, or the mic next to Send), it stacks like the web composer: the field on top at full width, and a row below with **+** (or **×**) on the left and the buttons on the right.
