@@ -754,6 +754,8 @@ export const zh = {
   'shortcuts.unreadStep.note': '跳过已静音的会话',
   'shortcuts.help': '显示快捷键',
   'shortcuts.change': '修改',
+  'shortcuts.locked': '不能修改',
+  'shortcuts.locked.sendKey': '不能在这里修改，请在 Bot 设置 › 通用 › 发送消息里切换',
   'shortcuts.change.label': '修改“{action}”的快捷键',
   'shortcuts.recording': '按下新组合键，Esc 取消',
   'shortcuts.reset': '恢复默认',
@@ -4131,6 +4133,9 @@ export const en = {
   'shortcuts.unreadStep.note': 'Skips muted conversations',
   'shortcuts.help': 'Show keyboard shortcuts',
   'shortcuts.change': 'Change',
+  'shortcuts.locked': "Can't be changed",
+  'shortcuts.locked.sendKey':
+    "Can't be changed here; switch it in Bot settings › General › Send messages",
   'shortcuts.change.label': 'Change the shortcut for “{action}”',
   'shortcuts.recording': 'Press new keys, Esc to cancel',
   'shortcuts.reset': 'Reset',

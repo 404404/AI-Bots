@@ -6,11 +6,12 @@ import {
   type ReactElement,
 } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, IconEditOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import type { BotModeSendKey } from '../bot-mode-settings.js';
 import type { BotModePrefsSnapshot } from './bot-mode-prefs.js';
 import { isApplePlatform, KeyCombo, shortcutKeyLabel, type ShortcutKey } from './ds/kbd.js';
+import { IconButton } from './ds/icon-button.js';
 import { PanelDialog } from './ds/panel-dialog.js';
 import { border, color, space, text } from './ds/tokens.stylex.js';
 import type { BotHarnessKey, BotHarnessTranslate } from './locale.js';
@@ -146,6 +147,12 @@ export class ShortcutHelp {
 }
 
 const styles = stylex.create({
+  locked: {
+    opacity: 0.4,
+    cursor: 'not-allowed',
+    backgroundColor: { default: 'transparent', ':hover': 'transparent' },
+    color: { default: color.subtle, ':hover': color.subtle },
+  },
   group: { display: 'flex', flexDirection: 'column', gap: space.x2, margin: 0 },
   heading: {
     margin: 0,
@@ -199,6 +206,12 @@ function problemText(
     mod: shortcutKeyLabel('Mod', apple),
     alt: shortcutKeyLabel('Alt', apple),
   });
+}
+
+function lockedReason(entry: ShortcutHelpEntry): BotHarnessKey {
+  return entry.id === 'send' || entry.id === 'newline'
+    ? 'shortcuts.locked.sendKey'
+    : 'shortcuts.locked';
 }
 
 type RowStatus =
@@ -304,38 +317,52 @@ export function ShortcutHelpList({
                             <KeyCombo keys={combo} apple={apple} />
                           </Fragment>
                         ))}
-                    {action === undefined || shortcutBindings === undefined ? null : (
+                    {shortcutBindings === undefined ? null : action === undefined ? (
+                      <Tooltip label={t(lockedReason(entry))} side="top" align="end" portal>
+                        <IconButton
+                          size="inline"
+                          tone="subtle"
+                          aria-label={t('shortcuts.change.label', { action: t(entry.label) })}
+                          aria-disabled
+                          data-shortcut-locked=""
+                          xstyle={styles.locked}
+                          onClick={(event) => event.preventDefault()}
+                        >
+                          <IconEditOutlineRegular size={14} />
+                        </IconButton>
+                      </Tooltip>
+                    ) : recording === entry.id ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        autoFocus
+                        data-shortcut-recorder=""
+                        onKeyDown={(event) => record(event, entry, action)}
+                        onBlur={() => setRecording(undefined)}
+                        onClick={() => setRecording(undefined)}
+                      >
+                        {t('shortcuts.recording')}
+                      </Button>
+                    ) : (
                       <>
-                        {recording === entry.id ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            autoFocus
-                            data-shortcut-recorder=""
-                            onKeyDown={(event) => record(event, entry, action)}
-                            onBlur={() => setRecording(undefined)}
-                            onClick={() => setRecording(undefined)}
-                          >
-                            {t('shortcuts.recording')}
+                        {shortcutBindings.isCustom(action) ? (
+                          <Button size="sm" variant="ghost" onClick={() => reset(entry, action)}>
+                            {t('shortcuts.reset')}
                           </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
+                        ) : null}
+                        <Tooltip label={t('shortcuts.change')} side="top" align="end" portal>
+                          <IconButton
+                            size="inline"
+                            tone="subtle"
                             aria-label={t('shortcuts.change.label', { action: t(entry.label) })}
                             onClick={() => {
                               setStatus(undefined);
                               setRecording(entry.id);
                             }}
                           >
-                            {t('shortcuts.change')}
-                          </Button>
-                        )}
-                        {recording !== entry.id && shortcutBindings.isCustom(action) ? (
-                          <Button size="sm" variant="ghost" onClick={() => reset(entry, action)}>
-                            {t('shortcuts.reset')}
-                          </Button>
-                        ) : null}
+                            <IconEditOutlineRegular size={14} />
+                          </IconButton>
+                        </Tooltip>
                       </>
                     )}
                   </dd>

@@ -1,11 +1,17 @@
 // @vitest-environment jsdom
-import { act, createElement } from 'react';
+import { act, createElement, type ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () =>
-  (await import('./primitive-mocks.js')).dialogPrimitives(),
-);
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () => {
+  const { cloneElement } = await import('react');
+  return {
+    ...(await import('./primitive-mocks.js')).dialogPrimitives(),
+    IconEditOutlineRegular: () => null,
+    Tooltip: ({ label, children }: { label: string; children: ReactElement }) =>
+      cloneElement(children, { 'data-tooltip': label } as never),
+  };
+});
 
 import { en, type BotHarnessTranslate } from '../src/client/locale.js';
 import {
@@ -88,6 +94,20 @@ describe('shortcut list', () => {
       leaked += 1;
     };
     document.addEventListener('keydown', onDocument);
+
+    const locked = host.querySelector<HTMLButtonElement>(
+      '[data-shortcut="recall"] [data-shortcut-locked]',
+    )!;
+    expect(locked.getAttribute('aria-disabled')).toBe('true');
+    expect(locked.dataset.tooltip).toBe("Can't be changed");
+    act(() => locked.click());
+    expect(host.querySelector('[data-shortcut-recorder]')).toBeNull();
+    expect(
+      host.querySelector<HTMLElement>('[data-shortcut="send"] [data-shortcut-locked]')?.dataset
+        .tooltip,
+    ).toBe("Can't be changed here; switch it in Bot settings › General › Send messages");
+    expect(change().dataset.tooltip).toBe('Change');
+    expect(change().textContent).toBe('');
 
     act(() => change().click());
     expect(recorder()?.textContent).toBe('Press new keys, Esc to cancel');
