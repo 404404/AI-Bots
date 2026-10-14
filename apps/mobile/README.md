@@ -2,7 +2,7 @@
 
 Native Expo client for the Human's own Host (hub [#1643](https://github.com/BotHarness/DeepSeekBot/issues/1643), spec [#1645](https://github.com/BotHarness/DeepSeekBot/issues/1645)). This first tracer ([#1650](https://github.com/BotHarness/DeepSeekBot/issues/1650)) logs in to an isolated Host over Tailscale HTTPS with the Host's launch token and shows the Roster of PersonaBots and group Channels with live state.
 
-The launch-token login is **development-only**. It is replaced by the paired-device credential from the device-pairing workstream.
+The launch-token login is **development-only**. It is replaced by the paired-device credential of ADR-0199 (#1649): the carrier sends `Authorization: Device …` to the BotHarness device gateway, with the same unary envelope and mux frames, so only `src/host/native-carrier.ts` and the login step change.
 
 ## Layout
 
@@ -11,7 +11,7 @@ The launch-token login is **development-only**. It is replaced by the paired-dev
 - `app/` — Expo Router screens: the Roster (`index.tsx`) and the development login (`connect.tsx`).
 - `src/ui/` — native views. Pixel avatars are drawn from the Host's own avatar code (`packages/core/src/bots/avatar-appearance.ts`), so they match the Web Client.
 
-Carrier decision and evidence: [ADR-0199](../../docs/adr/0199-the-mobile-app-reads-live-state-over-the-dsh-remote-stream-socket.md).
+Carrier decision and evidence: [ADR-0200](../../docs/adr/0200-the-mobile-app-reads-live-state-over-the-dsh-remote-stream-socket.md).
 
 ## Toolchain
 
