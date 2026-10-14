@@ -177,9 +177,10 @@ html[data-botharness-motion='reduce'] .bh-onboarding-enter-dot { animation: none
 .bh-onboarding-welcome > :last-child { margin-bottom: 14px; }
 .bh-welcome-banner { aspect-ratio: 4 / 1; background: var(--dsw-alias-bg-base); }
 .bh-welcome-banner .bh-banner-art { display: block; width: 100%; height: 100%; }
-.bh-welcome-identity { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 10px; margin-top: -42px; }
+/* The avatar rides over the banner; the name starts just below the banner edge (42px overlap - 12px grid gap + 4px). */
+.bh-welcome-identity { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 10px; margin-top: -42px; }
 .bh-welcome-avatar { padding: 3px; border-radius: 17px; background: var(--dsw-alias-bg-module-platform); line-height: 0; }
-.bh-welcome-identity-text { display: grid; gap: 4px; min-width: 0; padding-bottom: 2px; }
+.bh-welcome-identity-text { display: grid; gap: 4px; min-width: 0; padding-top: 34px; }
 .bh-welcome-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bh-welcome-roles { display: flex; flex-wrap: wrap; gap: 4px; }
 .bh-welcome-letter { display: grid; gap: 6px; }
