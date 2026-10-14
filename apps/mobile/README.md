@@ -8,7 +8,8 @@ The launch-token login is **development-only**. It is replaced by the paired-dev
 
 - `src/host/` — the Host client module. One deep module owns the route, the login, unary calls, the Remote stream socket, reconnection and connection state. Screens read it through `useHostSnapshot()` and never talk HTTP. It is plain TypeScript with an injected carrier (`carrier.ts`), so it is tested in Node.
 - `src/host/wire.ts` — the slice of the Host's wire shapes the app reads; `test/wire-contract.ts` checks the Host's own types against it in the root typecheck.
-- `app/` — Expo Router screens: the Roster (`index.tsx`) and the development login (`connect.tsx`).
+- `app/` — Expo Router screens: two tabs, the Roster (`(tabs)/index.tsx`) and the Human Inbox (`(tabs)/inbox.tsx`); an Inbox item (`inbox/[id].tsx`); and the development login (`connect.tsx`).
+- `src/host/inbox.ts`, `src/host/requests.ts` — the Human Inbox ([#1653](https://github.com/BotHarness/DeepSeekBot/issues/1653)). The list is the Host's `humanAttention` (actions, then mentions and replies, then handled), re-read whenever the live Roster or Activity stream changes; the app keeps no Inbox store. Tool approvals and Human questions are read with `channelTimeline` plus `toolApprovalStatus` / `userQuestionStatus` and decided with `toolApprovalDecide` / `userQuestionAnswer`, the methods the Web Client and the live CLI verbs call. The first accepted decision wins; a late one comes back as "already decided" or "expired". Private input opens in the full client.
 - `src/ui/` — native views. Pixel avatars are drawn from the Host's own avatar code (`packages/core/src/bots/avatar-appearance.ts`), so they match the Web Client.
 
 Carrier decision and evidence: [ADR-0200](../../docs/adr/0200-the-mobile-app-reads-live-state-over-the-dsh-remote-stream-socket.md).
@@ -20,9 +21,10 @@ Expo SDK 57 (React Native 0.86, React 19.2) inside the pnpm workspace with pnpm'
 ```bash
 pnpm install
 pnpm --filter @botharness/mobile typecheck
-pnpm vitest run apps/mobile                     # Host client against the recorded fake Host
+pnpm vitest run apps/mobile                     # Host client, Inbox and screens against recorded Host frames
 MOBILE_LIVE_HOST_URL='http://127.0.0.1:<port>/?token=<token>' pnpm vitest run apps/mobile
-                                                # also drives it against a live isolated Host with a PersonaBot
+                                                # also drives a live isolated Host: a real PersonaBot asks for a Tool
+                                                # approval and a Human question, and the app's modules decide them
 pnpm --filter @botharness/mobile export          # Metro bundles for iOS and Android
 ```
 
@@ -57,5 +59,7 @@ The web render is layout evidence, not native evidence: it shows the app's own v
 3. **Connect.** Start Metro with `pnpm --filter @botharness/mobile start`, open the development build, enter `https://<machine>.<tailnet>.ts.net` and the token from the token URL. The phone must be on the same tailnet.
 
 4. **Check.** The Roster lists every PersonaBot with its avatar. Send the Bot a DM from the computer: its state turns to Thinking and back on the phone without a refresh. Stop the Host: the banner shows "Cannot reach your computer" with the route; start it again on the same home and the app reconnects by itself. Starting a fresh home (a new signing secret) with the old token shows "Pair again".
+
+5. **Inbox.** Ask the Bot in its DM to run a shell command. The Inbox tab shows a badge and the Tool approval under "Needs my action"; open it, check the tool and arguments, tap **Allow once**, and the Bot continues in the DM. Ask it to use `ask_user_question` and answer on the phone the same way. Decide another approval on the computer first: it leaves the phone's list, and opening it shows "Already decided on another device".
 
 The token is stored only in the platform's secure storage and is never logged. The Host's session cookie lives in the app's own cookie store; unpairing forgets the token.

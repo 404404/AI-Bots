@@ -18,8 +18,9 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: theme.background },
         }}
       >
-        <Stack.Screen name="index" options={{ title: t.roster, headerLargeTitle: true }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="connect" options={{ title: t.connectTitle, presentation: 'modal' }} />
+        <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
       </Stack>
     </SafeAreaProvider>
   );

@@ -17,6 +17,7 @@ export class FakeHost {
   private cookieSecret = 0;
   private sockets = new Set<{ events: HostSocketEvents; streams: Map<string, string> }>();
   readonly requests: string[] = [];
+  readonly answers = new Map<string, (args: Record<string, unknown>) => unknown>();
 
   readonly carrier: HostCarrier = {
     request: async (url, init) => {
@@ -34,7 +35,20 @@ export class FakeHost {
       }
       if (!this.authenticated()) return response(401, 'unauthorized');
       const method = parsed.pathname.replace('/api/botharness/', '') as Rpc;
-      const body = JSON.parse(init.body ?? '{}') as { rpcId: string };
+      const body = JSON.parse(init.body ?? '{}') as {
+        rpcId: string;
+        payload: { args: Record<string, unknown> };
+      };
+      const answer = this.answers.get(method);
+      if (answer !== undefined)
+        return response(
+          200,
+          JSON.stringify({
+            type: 'server-response',
+            rpcId: body.rpcId,
+            result: answer(body.payload.args),
+          }),
+        );
       const recordedBody = recorded(method) as { rpcId: string };
       return response(200, JSON.stringify({ ...recordedBody, rpcId: body.rpcId }));
     },
