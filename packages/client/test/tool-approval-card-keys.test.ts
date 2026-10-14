@@ -91,9 +91,10 @@ describe('Tool approval card layout', () => {
         JSON.stringify({ file_path: '/qa/notes.md', old_string: 'a', new_string: 'b' }),
       ),
     );
-    expect(card.querySelector('.bh-tool-approval-summary')?.textContent).toBe(
-      '修改文件 /qa/notes.md +1 −1',
-    );
+    expect(card.querySelector('.bh-tool-approval-category')?.textContent).toBe('文件');
+    expect(card.querySelector('.bh-tool-approval-pill')?.textContent).toBe('需要你确认');
+    expect(card.querySelector('.bh-tool-approval-sentence')?.textContent).toBe('修改文件');
+    expect(card.querySelector('.bh-tool-approval-line')?.textContent).toBe('/qa/notes.md +1 −1');
     expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
     expect(card.querySelector('.bh-tool-approval-more')?.hasAttribute('open')).toBe(false);
     expect(
@@ -102,6 +103,17 @@ describe('Tool approval card layout', () => {
       ),
     ).toEqual(['仅批准这一次', '拒绝']);
     expect(card.querySelector('kbd')).toBeNull();
+  });
+  it('collapses to the category and outcome once decided', async () => {
+    const card = await render();
+    await press(card, 'n');
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(card.querySelector('.bh-tool-approval-sentence')).toBeNull();
+    expect(card.querySelector('.bh-tool-approval-details')).toBeNull();
+    expect(card.querySelector('button')).toBeNull();
+    expect(card.textContent).toBe('终端已拒绝');
   });
 });
 
@@ -176,7 +188,7 @@ describe('Tool approval countdown', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    const label = card.querySelector('.bh-tool-approval-countdown');
+    const label = card.querySelector('.bh-tool-approval-pill');
     expect(label?.textContent).toBe('12 分钟后过期');
     expect(label?.hasAttribute('data-urgent')).toBe(true);
   });
@@ -189,7 +201,8 @@ describe('Tool approval shell command', () => {
     const card = await render(
       message('bash', JSON.stringify({ command, description: 'Write notes' })),
     );
-    expect(card.querySelector('.bh-tool-approval-summary')?.textContent).toBe('Write notes');
+    expect(card.querySelector('.bh-tool-approval-sentence')?.textContent).toBe('Write notes');
+    expect(card.querySelector('.bh-tool-approval-line')?.textContent).toBe(command);
     expect(card.querySelector('.bh-tool-approval-shell figcaption')).toBeNull();
     expect(card.querySelector('.bh-tool-approval-details')?.hasAttribute('open')).toBe(false);
     const pre = card.querySelector('.bh-tool-approval-shell pre')!;

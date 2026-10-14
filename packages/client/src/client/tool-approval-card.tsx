@@ -131,7 +131,7 @@ export function ToolApprovalCard({
     status === 'pending' && effectiveDecision === undefined && expiresAt !== undefined
       ? approvalCountdown(expiresAt, now)
       : undefined;
-  const countdownMount = useMountedResource<HTMLDivElement>(() => {
+  const countdownMount = useMountedResource<HTMLElement>(() => {
     if (expiresAt === undefined) return;
     const next = approvalCountdown(expiresAt, Date.now());
     if (next === undefined) return;
@@ -238,24 +238,47 @@ export function ToolApprovalCard({
   const compact = companionTarget !== undefined;
   const size = compact ? 'sm' : 'md';
   const summary = approvalSummary(request.toolName, request.input);
-  const keyPhrase =
-    summary.kind === 'text' ? (
-      summary.text
-    ) : summary.kind === 'command' ? (
-      <code>{summary.command}</code>
-    ) : summary.kind === 'file' ? (
-      <>
-        {t('approval.summaryFile')} <code>{summary.path}</code>{' '}
+  const category = t(
+    request.toolName === 'bash'
+      ? 'approval.category.terminal'
+      : summary.file !== undefined
+        ? 'approval.category.file'
+        : request.toolName.startsWith('browser')
+          ? 'approval.category.browser'
+          : 'approval.category.tool',
+  );
+  const sentence =
+    summary.description ??
+    (summary.command !== undefined
+      ? t('approval.summaryCommand')
+      : summary.file !== undefined
+        ? t('approval.summaryFile')
+        : t('approval.summaryTool', { tool: request.toolName }));
+  const preview =
+    summary.command !== undefined ? (
+      <code className="bh-tool-approval-line">{summary.command}</code>
+    ) : summary.file !== undefined ? (
+      <span className="bh-tool-approval-line">
+        <code>{summary.file.path}</code>{' '}
         <span className="bh-tool-approval-diff-stat" data-kind="add">
-          +{summary.added}
+          +{summary.file.added}
         </span>{' '}
         <span className="bh-tool-approval-diff-stat" data-kind="remove">
-          −{summary.removed}
+          −{summary.file.removed}
         </span>
-      </>
-    ) : (
-      t('approval.summaryTool', { tool: summary.toolName })
-    );
+      </span>
+    ) : null;
+  const soon = countdown !== undefined && countdown.key !== 'approval.expiresInHours';
+  const settled =
+    effectiveDecision !== undefined
+      ? effectiveDecision === 'rejected'
+        ? 'denied'
+        : effectiveDecision === 'allowed-once'
+          ? 'allowed'
+          : 'remembered'
+      : status === 'expired' || (status === 'unavailable' && companionTarget === undefined)
+        ? 'expired'
+        : undefined;
   const details = (
     <details
       className={
@@ -274,7 +297,7 @@ export function ToolApprovalCard({
           toolName={request.toolName}
           input={request.input}
           t={t}
-          caption={summary.kind !== 'text'}
+          caption={summary.description === undefined}
         />
         <div className="bh-note">
           {t(
@@ -303,21 +326,54 @@ export function ToolApprovalCard({
       onKeyDown={onKeyDown}
     >
       <div className="bh-tool-approval-head">
-        <div className="bh-grant-request-title">{t('approval.requestTitle')}</div>
-        {countdown === undefined ? null : (
+        <span className="bh-tool-approval-category">{category}</span>
+        {settled !== undefined ? (
+          <span
+            role="status"
+            className="bh-tool-approval-pill"
+            data-state={settled}
+            title={t(
+              settled === 'denied'
+                ? 'approval.rejected'
+                : settled === 'allowed'
+                  ? 'approval.approved'
+                  : settled === 'expired'
+                    ? 'approval.expired'
+                    : request.toolName === 'secret_mcp_connect'
+                      ? 'approval.serverRemembered'
+                      : 'approval.ruleSaved',
+            )}
+          >
+            {t(`approval.outcome.${settled}`)}
+          </span>
+        ) : status === 'pending' ? (
           <span
             ref={countdownMount}
-            className="bh-tool-approval-countdown"
-            data-urgent={countdown.urgent || undefined}
+            className="bh-tool-approval-pill"
+            data-state="pending"
+            data-urgent={countdown?.urgent || undefined}
           >
-            <time dateTime={expiresAt} title={new Date(expiresAt!).toLocaleString()}>
-              {t(countdown.key, { count: String(countdown.count) })}
-            </time>
+            {countdown !== undefined && soon ? (
+              <time dateTime={expiresAt} title={new Date(expiresAt!).toLocaleString()}>
+                {t(countdown.key, { count: String(countdown.count) })}
+              </time>
+            ) : (
+              <span
+                title={expiresAt === undefined ? undefined : new Date(expiresAt).toLocaleString()}
+              >
+                {t('approval.outcome.pending')}
+              </span>
+            )}
           </span>
-        )}
+        ) : null}
       </div>
-      <div className="bh-tool-approval-summary">{keyPhrase}</div>
-      {details}
+      {settled !== undefined ? null : (
+        <>
+          <div className="bh-tool-approval-sentence">{sentence}</div>
+          {preview}
+          {details}
+        </>
+      )}
       {executionState === 'waiting-human' ||
       executionState === 'waiting-capacity' ||
       executionState === 'needs-repair' ? (
@@ -331,19 +387,7 @@ export function ToolApprovalCard({
           )}
         </div>
       ) : null}
-      {effectiveDecision !== undefined ? (
-        <div role="status" className="bh-note">
-          {effectiveDecision === 'rejected'
-            ? t('approval.rejected')
-            : effectiveDecision === 'allowed-once'
-              ? t('approval.approved')
-              : t(
-                  request.toolName === 'secret_mcp_connect'
-                    ? 'approval.serverRemembered'
-                    : 'approval.ruleSaved',
-                )}
-        </div>
-      ) : status === 'pending' && !confirmAll ? (
+      {settled !== undefined ? null : status === 'pending' && !confirmAll ? (
         <div ref={focusMount} className="bh-tool-approval-actions bh-message-card-actions">
           <Button
             variant="primary"
@@ -356,21 +400,18 @@ export function ToolApprovalCard({
           <Button
             variant="outline"
             size={size}
+            className="bh-tool-approval-reject"
             disabled={disabled}
             onClick={() => decide('rejected')}
           >
             {t('approval.reject')}
           </Button>
         </div>
-      ) : confirmAll && status === 'pending' ? null : (
+      ) : status === 'loading' || status === 'unavailable' ? (
         <div role="status" className="bh-note">
-          {status === 'loading'
-            ? t('approval.loading')
-            : status === 'unavailable'
-              ? t('companion.requestUnavailable')
-              : t('approval.expired')}
+          {t(status === 'loading' ? 'approval.loading' : 'companion.requestUnavailable')}
         </div>
-      )}
+      ) : null}
       {status === 'pending' &&
       effectiveDecision === undefined &&
       !confirmAll &&
