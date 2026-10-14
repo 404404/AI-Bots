@@ -32,6 +32,7 @@ import {
   HoverCard,
   Menu,
   Tag,
+  Toast,
   Tooltip,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -83,7 +84,7 @@ import {
   type ScopeId,
   type SectionDropTarget,
 } from './channel-drag.js';
-import { needsYou, toBotState } from './labels.js';
+import { needsYou, toBotState, ungroupedLabel } from './labels.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { toolApprovalText } from './approval-text.js';
 import { personaBotActivity } from './persona-activity.js';
@@ -904,6 +905,31 @@ export function BotSidebar({
   const [searchOpen, setSearchOpen] = useState(false);
   const [channelMenu, setChannelMenu] = useState<ChannelMenuRequest | undefined>(undefined);
   const [sharing, setSharing] = useState<BotSummary | undefined>(undefined);
+  const [undoToast, setUndoToast] = useState<
+    { seq: number; text: string; undo: () => Promise<unknown> } | undefined
+  >(undefined);
+  const undoSeq = useRef(0);
+  const offerUndo = (text: string, undo: () => Promise<unknown>): void => {
+    undoSeq.current += 1;
+    setUndoToast({ seq: undoSeq.current, text, undo });
+  };
+  const conversationName = (channelId: string): string => {
+    const snapshot = store.getSnapshot();
+    const channel = snapshot.channels.find((candidate) => candidate.id === channelId);
+    const bot =
+      channel?.botSlug === undefined
+        ? undefined
+        : snapshot.bots.find((candidate) => candidate.slug === channel.botSlug);
+    return bot?.displayName ?? channel?.name ?? channelId;
+  };
+  const sectionName = (sectionId: string | undefined): string =>
+    sectionId === undefined
+      ? ungroupedLabel(t)
+      : (store.getSnapshot().roster.sections.find((section) => section.id === sectionId)?.name ??
+        ungroupedLabel(t));
+  const unhideChannels = async (ids: readonly string[]): Promise<void> => {
+    for (const id of ids) await actions.setChannelHidden(id, false);
+  };
   const [deleting, setDeleting] = useState<BotSummary | undefined>(undefined);
   const [channelSelection, setChannelSelection] = useState<ChannelSelection>({
     ids: [],
@@ -1446,7 +1472,18 @@ export function BotSidebar({
     pinned: boolean,
   ): void => {
     if (!pinned) {
-      runChannelMove(channelId, sectionOfChannel(channelId), targetSectionId, { kind: 'scope' });
+      const sourceSectionId = sectionOfChannel(channelId);
+      if (sourceSectionId === targetSectionId) return;
+      runChannelMove(channelId, sourceSectionId, targetSectionId, { kind: 'scope' });
+      offerUndo(
+        t('undo.moved', {
+          name: conversationName(channelId),
+          section: sectionName(targetSectionId),
+        }),
+        async () => {
+          runChannelMove(channelId, targetSectionId, sourceSectionId, { kind: 'scope' });
+        },
+      );
       return;
     }
     if (targetSectionId !== undefined) {
@@ -1496,6 +1533,9 @@ export function BotSidebar({
     }
     setBatchBusy(true);
     setBatchError(undefined);
+    const priorSections = new Map(
+      input.channelIds.map((channelId) => [channelId, sectionOfChannel(channelId)] as const),
+    );
     const previousSortMode =
       input.action === 'move' && input.sectionId !== undefined
         ? prefs.sortModes[input.sectionId]
@@ -1513,6 +1553,26 @@ export function BotSidebar({
       return;
     }
     setChannelSelection({ ids: [], anchorId: undefined });
+    const count = input.channelIds.length;
+    if (input.action === 'hide') {
+      offerUndo(t('undo.hiddenMany', { count }), () => unhideChannels(input.channelIds));
+    } else if (input.action === 'move') {
+      offerUndo(t('undo.movedMany', { count, section: sectionName(input.sectionId) }), () =>
+        restoreSections(priorSections),
+      );
+    }
+  };
+
+  const restoreSections = async (prior: ReadonlyMap<string, string | undefined>): Promise<void> => {
+    const groups = new Map<string | undefined, string[]>();
+    for (const [channelId, sectionId] of prior)
+      groups.set(sectionId, [...(groups.get(sectionId) ?? []), channelId]);
+    for (const [sectionId, channelIds] of groups)
+      await actions.batchRoster({
+        action: 'move',
+        channelIds,
+        ...(sectionId === undefined ? {} : { sectionId }),
+      });
   };
 
   const commitBulkPin = (ids: readonly string[], targetPinned: boolean): Promise<void> =>
@@ -2720,7 +2780,12 @@ export function BotSidebar({
             setChannelMenu(undefined);
           }}
           onHide={(channelId) => {
-            void actions.setChannelHidden(channelId, true);
+            void actions.setChannelHidden(channelId, true).then((succeeded) => {
+              if (succeeded)
+                offerUndo(t('undo.hidden', { name: conversationName(channelId) }), () =>
+                  actions.setChannelHidden(channelId, false),
+                );
+            });
             setChannelMenu(undefined);
           }}
           onPick={(targetSectionId) => {
@@ -2752,6 +2817,26 @@ export function BotSidebar({
           actions={actions}
           t={t}
           onClose={() => setDeleting(undefined)}
+        />
+      )}
+      {undoToast === undefined ? null : (
+        <Toast
+          key={undoToast.seq}
+          text={undoToast.text}
+          holdMs={6000}
+          actions={[
+            {
+              label: t('undo.action'),
+              onClick: () => {
+                const { undo } = undoToast;
+                setUndoToast(undefined);
+                void undo();
+              },
+            },
+          ]}
+          onDone={() =>
+            setUndoToast((current) => (current?.seq === undoToast.seq ? undefined : current))
+          }
         />
       )}
     </div>
