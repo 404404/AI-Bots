@@ -221,7 +221,6 @@ Usage:
   deepseekbot computer-stop
   deepseekbot browser-tools
   deepseekbot browser-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
-  deepseekbot bot-trace <id> [--turns <1-20>] [--session <session-id>]
   deepseekbot memory-file-target|memory-graph|memory-commit-diff|memory-changes <id> [...]
   deepseekbot memory-working-diff <id> --path <file> --kind staged|unstaged|untracked|current
   deepseekbot memory-checkpoints|memory-versions <id>
@@ -246,6 +245,9 @@ Usage:
   deepseekbot bot-session-usage <id>
   deepseekbot bot-activity-history <id> [--before <YYYY-MM-DD>] [--weeks <1-104>]
   deepseekbot group-activity <channel>
+  deepseekbot bot-trace <id> [--turns <1-20>] [--session <session-id>|direct]
+  deepseekbot bot-tools
+  deepseekbot bot-tool <id> <tool> [--args-stdin]
   deepseekbot computer-tools
   deepseekbot computer-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]

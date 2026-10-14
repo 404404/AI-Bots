@@ -4,6 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { dmChannelId } from '../channels/channel.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
+import { BOT_TOOL_COMMANDS, runBotToolCommand } from './cli-bot-tool.js';
 import {
   CHANNEL_COMMANDS,
   CHANNEL_OPTIONS,
@@ -157,6 +158,7 @@ export const LIVE_COMMANDS = [
   ...INBOX_COMMANDS,
   ...BROWSER_COMPUTER_COMMANDS,
   ...PROFILE_COMMANDS,
+  ...BOT_TOOL_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -622,6 +624,14 @@ export async function runLiveCli(
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });
+  if (BOT_TOOL_COMMANDS.some((entry) => entry.command === command))
+    return runBotToolCommand(
+      command as (typeof BOT_TOOL_COMMANDS)[number]['command'],
+      rest,
+      values,
+      io,
+      () => connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);
