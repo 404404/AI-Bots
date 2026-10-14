@@ -20,7 +20,6 @@ export const radius = {
 export const edge = {
   hairline: 1,
   focus: 2,
-  mark: 3,
 } as const;
 
 export type TypeRole = { size: number; line: number };

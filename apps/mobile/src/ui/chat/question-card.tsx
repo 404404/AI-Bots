@@ -102,18 +102,6 @@ function Option({
             : theme.color.base,
       })}
     >
-      {chosen ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: edge.mark,
-            backgroundColor: theme.color.accent,
-          }}
-        />
-      ) : null}
       <View
         style={{
           width: badge,
