@@ -74,6 +74,7 @@ import {
 import type { PersonaBotRecord } from './persona-bot.js';
 import { createPersonaBotRegistry, type PersonaBotRegistry } from './registry.js';
 import { ZipArchiveError, writeZip, type ZipEntry } from './zip-archive.js';
+import { INBOX_HOST_COMMANDS } from './cli-inbox.js';
 import { CliLiveError, LIVE_COMMANDS, LIVE_OPTIONS, runLiveCli } from './cli-live.js';
 import {
   DIAGNOSTIC_COMMANDS,
@@ -142,7 +143,7 @@ Usage:
   deepseekbot channels [--home <dsh-home>]
   deepseekbot channel-messages <channel> [--limit <n>] [--before <id>] [--home <dsh-home>]
   deepseekbot grants <id> [--home <dsh-home>]
-  deepseekbot grant-revoke <id> --grant <grant> [--home <dsh-home>]
+  deepseekbot grant-revoke <id> --grant <grant> [--home <dsh-home>]   online: add --confirm
   deepseekbot grant-write-set <id> --grant <grant> (--enabled | --disabled) [--home <dsh-home>]
   deepseekbot schedules <id> [--home <dsh-home>]
   deepseekbot schedule-create <id> --title <t> --prompt <p> (--every <s> | --daily <HH:MM> |
@@ -243,6 +244,21 @@ Usage:
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
   deepseekbot bot-sessions <id> [--limit <1-100>]
   deepseekbot bot-activity <id> [--limit <1-100>]
+  deepseekbot inbox [--category action|info|unread|replies|handled] [--bot <id>] [--channel <id>]
+                    [--limit <1-100>] [--cursor <cursor>] [--sort newest|oldest]
+  deepseekbot inbox-status
+  deepseekbot inbox-dismiss <item-id> [--source-key <source-event-id>]
+  deepseekbot inbox-ignore <source-event-id>
+  deepseekbot assignment-context <id> --session <session-id> --source <source-event-id>
+  deepseekbot channel-assignments <group-channel>
+  deepseekbot channel-assign <channel> (--section <section-id> | --unsectioned) [--index <n>]
+  deepseekbot session-ids
+  deepseekbot session-owner <session-id>
+  deepseekbot session-archive-set <id> --session <session-id> (--archived | --unarchived)
+  deepseekbot tool-approval-rules <id>
+  deepseekbot tool-approval-rule-revoke <id> --rule <rule-id> --confirm
+  deepseekbot private-mcp-set <id> --server <name> (--enabled | --disabled)
+  deepseekbot private-mcp-remove <id> --server <name> --confirm
   deepseekbot bot-delete-preview <id>
   deepseekbot bot-delete-confirm <id> --confirmation-stdin
   deepseekbot bot-delete-retry <id>
@@ -288,6 +304,8 @@ Live Host:
   Zip/directory uploads contain local bytes; Git cloning uses the Host environment.
   Creation errors retain known bot/steps; outcome unknown means inspect before retrying.
   Bot diagnostics are bounded summaries, not full execution logs or live streams.
+  grant-revoke and grant-write-set use the Host when it is targeted; revokes and removals
+  (grant, tool approval rule, private MCP server) need --confirm, like the Web UI.
   Deletion requires preview then stdin {"token":"<preview.token>"}; Memory is retained.
   Question stdin: {"answers":[{"id":"question-id","selected":["option"],"custom":"optional"}]}
   Private input stdin: {"field_id":"confidential value",...}; only declared fields.
@@ -2537,7 +2555,8 @@ export async function runBotCreateCli(
         'memory-diff',
         'memory-save',
       ].includes(command) &&
-        (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined))
+        (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined)) ||
+      (online && INBOX_HOST_COMMANDS.some((entry) => entry === command))
     ) {
       if (values.home !== undefined)
         throw usageError('Do not combine --home and an online Host target.');

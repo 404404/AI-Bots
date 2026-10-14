@@ -39,6 +39,13 @@ import {
   runHostAdminCommand,
   type HostAdminValues,
 } from './cli-host-admin.js';
+import {
+  INBOX_COMMANDS,
+  INBOX_OPTIONS,
+  isInboxCommand,
+  runInboxCommand,
+  type InboxValues,
+} from './cli-inbox.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
@@ -47,6 +54,7 @@ export const LIVE_OPTIONS = {
   ...MODELS_USAGE_OPTIONS,
   ...CHANNEL_OPTIONS,
   ...HOST_ADMIN_OPTIONS,
+  ...INBOX_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -122,6 +130,7 @@ export const LIVE_COMMANDS = [
   ...MODELS_USAGE_COMMANDS,
   ...CHANNEL_COMMANDS,
   ...HOST_ADMIN_COMMANDS,
+  ...INBOX_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -242,7 +251,8 @@ export const LIVE_COMMANDS = [
   },
 ] as const;
 
-interface LiveValues extends ImValues, MessagingValues, ModelsUsageValues, HostAdminValues {
+interface LiveValues
+  extends ImValues, MessagingValues, ModelsUsageValues, HostAdminValues, InboxValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -547,6 +557,10 @@ export async function runLiveCli(
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
     return runMessaging(operation, (await connectLiveHost(values, io, signal)).rpc);
   }
+  if (isInboxCommand(command))
+    return runInboxCommand(command, rest, values, () =>
+      connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
+    );
   if (command === 'bot-trace') {
     if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
     const turns = values.turns === undefined ? undefined : Number(values.turns);
