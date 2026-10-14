@@ -96,7 +96,7 @@ function Option({
         borderTopWidth: index === 0 ? 0 : edge.hairline,
         borderTopColor: theme.color.divider,
         backgroundColor: chosen
-          ? theme.color.selected
+          ? theme.color.accentSoft
           : pressed
             ? theme.color.hover
             : theme.color.base,
