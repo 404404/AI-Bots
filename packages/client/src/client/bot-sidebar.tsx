@@ -64,8 +64,6 @@ import {
   webConversationStepShortcut,
   webModalOpen,
   isMacPlatform,
-  webChannelShortcutIndex,
-  webChannelShortcutLabel,
   webQuickSwitcherBlocked,
   webQuickSwitcherShortcut,
   webShortcutBlocked,
