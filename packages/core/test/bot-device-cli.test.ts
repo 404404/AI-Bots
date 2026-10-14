@@ -288,6 +288,29 @@ describe('Agent Browser and Computer commands', () => {
     ]);
   });
 
+  it("reads a Bot's recent tool-call trace from the live Host", async () => {
+    const live = await host(() => ({
+      json: { ok: true, value: { slug: 'ada', sessionId: 's1', turns: [] } },
+    }));
+    expect((await invoke(['bot-trace', 'ada'], live.url)).json).toEqual({
+      slug: 'ada',
+      sessionId: 's1',
+      turns: [],
+    });
+    await invoke(['bot-trace', 'ada', '--turns', '5', '--session', 's1'], live.url);
+    expect(live.calls.map((call) => [call.path, call.body])).toEqual([
+      ['botToolTrace', { slug: 'ada' }],
+      ['botToolTrace', { slug: 'ada', sessionId: 's1', turns: 5 }],
+    ]);
+    for (const argv of [
+      ['bot-trace'],
+      ['bot-trace', 'ada', '--turns', '0'],
+      ['bot-trace', 'ada', '--turns', 'x'],
+    ])
+      expect((await invoke(argv, live.url)).json.error.code).toBe('usage');
+    expect(live.calls).toHaveLength(2);
+  });
+
   it('lists workspace grants from a live Host', async () => {
     const live = await host(() => ({ json: { ok: true, value: { grants: [{ id: 'g1' }] } } }));
     expect((await invoke(['grants', 'ada'], live.url)).json).toEqual({ grants: [{ id: 'g1' }] });

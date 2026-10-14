@@ -34,6 +34,8 @@ export const LIVE_OPTIONS = {
   conversation: { type: 'string' },
   out: { type: 'string' },
   'args-stdin': { type: 'boolean' },
+  session: { type: 'string' },
+  turns: { type: 'string' },
   target: { type: 'string' },
 } as const;
 
@@ -171,6 +173,10 @@ export const LIVE_COMMANDS = [
       'run one Browser tool directly for a Bot, without the model (args JSON from stdin)',
   },
   {
+    command: 'bot-trace',
+    description: 'show which tools a Bot called in its recent turns, with outcomes',
+  },
+  {
     command: 'computer-tools',
     description: 'list the Computer tools a Bot can call, with input schemas',
   },
@@ -207,6 +213,8 @@ interface LiveValues extends ImValues {
   conversation?: string;
   out?: string;
   'args-stdin'?: boolean;
+  session?: string;
+  turns?: string;
   target?: string;
 }
 
@@ -460,6 +468,18 @@ export async function runLiveCli(
         });
       throw error;
     }
+  }
+  if (command === 'bot-trace') {
+    if (rest.length !== 1 || !rest[0]?.trim()) usage('bot-trace needs exactly one bot id.');
+    const turns = values.turns === undefined ? undefined : Number(values.turns);
+    if (turns !== undefined && (!Number.isInteger(turns) || turns < 1 || turns > 20))
+      usage('--turns must be an integer from 1 to 20.');
+    const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+    return (await connectLiveHost(values, io, signal)).rpc('botToolTrace', {
+      slug: rest[0].trim(),
+      ...(values.session === undefined ? {} : { sessionId: values.session }),
+      ...(turns === undefined ? {} : { turns }),
+    });
   }
   if (DEVICE_COMMANDS.some((entry) => entry === command))
     return runDeviceCommand(command as (typeof DEVICE_COMMANDS)[number], rest, values, io);
