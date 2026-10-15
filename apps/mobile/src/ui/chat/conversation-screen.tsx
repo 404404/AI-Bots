@@ -73,6 +73,7 @@ import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
 import { edgeFade, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
+import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
 
@@ -497,13 +498,15 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   );
 
   const hostRefused = host.connection.status === 'refused';
+  const missing = host.roster !== undefined && (dm ? bot === undefined : channel === undefined);
+  const leave = () => leaveScreen(router);
   const notice = hostRefused
     ? t.refused
     : snapshot.status === 'refused'
       ? dm
         ? t.dmRefused
         : t.channelRefused
-      : host.roster !== undefined && (dm ? bot === undefined : channel === undefined)
+      : missing
         ? dm
           ? t.noBot
           : t.noChannel
@@ -558,7 +561,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             >
               {notice}
             </Text>
-            {!hostRefused ? null : (
+            {hostRefused ? (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push('/pair')}
@@ -568,7 +571,13 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
                   {t.pairAgain}
                 </Text>
               </Pressable>
-            )}
+            ) : notice === t.noBot || notice === t.noChannel ? (
+              <Pressable accessibilityRole="button" onPress={leave} hitSlop={space.x3}>
+                <Text variant="meta" tone="accent" strong>
+                  {t.backToChats}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
         <Animated.View
@@ -704,7 +713,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       </KeyboardAvoidingView>
       <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
       <ChatHeader
-        left={<HeaderBackButton onPress={() => router.back()} />}
+        left={<HeaderBackButton onPress={leave} />}
         center={
           dm ? (
             <ChatTitle

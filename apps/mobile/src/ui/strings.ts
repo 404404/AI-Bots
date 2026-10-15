@@ -258,6 +258,7 @@ const en = {
   appVersion: 'Version',
   appVersionUnknown: 'Unknown',
   back: 'Back',
+  backToChats: 'Back to Chats',
   workingPreview: 'Working…',
   effect: {
     searching: 'Searching',
@@ -870,6 +871,7 @@ const zh: typeof en = {
   appVersion: '版本',
   appVersionUnknown: '未知',
   back: '返回',
+  backToChats: '返回聊天列表',
   workingPreview: '工作中…',
   effect: {
     searching: '正在搜索',
