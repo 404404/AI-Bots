@@ -379,7 +379,8 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           headerLargeTitle: false,
           headerTitleAlign: 'center',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: theme.color.base },
+          headerTransparent: true,
+          headerStyle: { backgroundColor: 'transparent' },
           headerTitle: () => (
             <ChatTitle
               bot={bot}
@@ -395,7 +396,6 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
         ref={dictation.mountRef}
         style={{ flex: 1, backgroundColor: theme.color.base }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={headerHeight}
       >
         {notice === undefined ? null : (
           <Text
@@ -403,6 +403,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
             variant="meta"
             tone="warning"
             style={{
+              marginTop: headerHeight,
               backgroundColor: theme.color.warningSoft,
               paddingHorizontal: space.x5,
               paddingVertical: space.x3,
@@ -416,7 +417,10 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
             ref={list}
             inverted
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingVertical: space.x3 }}
+            contentContainerStyle={{
+              paddingTop: space.x3,
+              paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
+            }}
             data={rows}
             keyExtractor={(row) => row.key}
             renderItem={renderItem}

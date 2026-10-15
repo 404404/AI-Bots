@@ -76,7 +76,9 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 
 **Chat**
 
-- Header: back, a centered avatar and name pill that opens the Bot profile, and the Bot's computer on the right.
+- Header: transparent, with no fill of its own, so the messages scroll under it. Back on the left, the Bot's computer on the right, and a centered chip that opens the Bot profile.
+  - The chip is a full-round pill on `raised` with a hairline `edge`, so it stays readable over the messages. In one row it holds the Bot's avatar (no state ring), its name, and a state dot: `success` when idle, `accent` while thinking or working, `warning` when it waits for the Human, `danger` when blocked, `muted` when paused. The state is read out in the chip's accessibility label.
+  - The list leaves the header's height free at its top, so the oldest message still clears the header.
 - Messages:
   - An inverted list. Messages from the same author within 5 minutes form a group, and a time separator appears after a 30-minute gap.
   - At the newest message the list follows a streaming reply. Once the Human drags or scrolls up into history, nothing moves the list under them: new text and messages land below while the part they are reading stays put. A round jump button (`raised`, with a ⌄) then floats centered above the composer, with an accent badge counting the Bot messages that arrived since they left (99+ at most), like the Web Client's "Return to latest messages". Tapping it, sending a message, or scrolling back down to the newest message follows again and hides the button.
