@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 
 import type { RosterBot } from '../host/client';
@@ -18,6 +18,7 @@ import { BotAvatar } from './bot-avatar';
 import { useDesignTheme } from './design/theme';
 import { chart } from './design/chart';
 import { space } from './design/tokens';
+import { useMounted } from './mounted';
 import { Button } from './primitives/button';
 import { Segmented } from './primitives/segmented';
 import { SettingsGroupItem, SettingsRow, SettingsSection } from './primitives/settings-row';
@@ -301,7 +302,7 @@ export function UsageView({
   const [period, setPeriod] = useState<UsagePeriod>('week');
   const [extendedSource, setExtendedSource] = useState<UsageSources>();
   const extended = extendedSource === sources;
-  useEffect(() => {
+  const capability = useMounted<SectionList<Framed>>(() => {
     let live = true;
     void sources.loadUsage('month').then(
       (value) => {
@@ -391,6 +392,7 @@ export function UsageView({
     <View ref={usage.mount} style={{ flex: 1, backgroundColor: theme.color.surface }}>
       <View ref={memory.mount} style={{ flex: 1 }}>
         <SectionList
+          ref={capability}
           sections={sections}
           keyExtractor={(row) => row.key}
           stickySectionHeadersEnabled={false}
