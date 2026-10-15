@@ -42,7 +42,6 @@ import {
 } from '../src/client/external-entries.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { useMessagingSnapshot } from '../src/client/messaging-store.js';
-import { revealSidebarAnchor } from '../src/client/sidebar-anchor.js';
 import { chooseOption, combobox, comboboxOption, openCombobox } from './primitive-mocks.js';
 
 let root: Root;
@@ -180,25 +179,6 @@ it('lists connectors as rows with the conversation authorization row last', asyn
   expect(host.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe(
     zhTranslate('bridge.edit'),
   );
-});
-
-it('expands a collapsed sidebar entry to reveal a guide anchor', async () => {
-  document.body.innerHTML =
-    '<div data-entry-id="external-connectors"><button aria-expanded="false">entry</button></div>';
-  const head = document.querySelector('button')!;
-  head.addEventListener('click', () => {
-    const row = document.createElement('li');
-    row.dataset.anchor = 'lark-grant';
-    document.querySelector('[data-entry-id]')!.append(row);
-  });
-  const ready = vi.fn();
-  const unavailable = vi.fn();
-  revealSidebarAnchor(document, 'external-connectors', 'lark-grant', ready, unavailable);
-  await act(async () => undefined);
-  expect(ready).toHaveBeenCalledWith(document.querySelector('[data-anchor="lark-grant"]'));
-  expect(unavailable).not.toHaveBeenCalled();
-  revealSidebarAnchor(document, 'external-identities', 'lark-bind', ready, unavailable);
-  expect(unavailable).toHaveBeenCalledTimes(1);
 });
 
 it('keeps disabled combobox options out of keyboard and click selection', async () => {

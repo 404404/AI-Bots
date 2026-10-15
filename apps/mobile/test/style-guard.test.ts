@@ -12,7 +12,6 @@ const LEGACY = new Set([
   'src/ui/approval-view.tsx',
   'src/ui/connection-banner.tsx',
   'src/ui/floating-exit.tsx',
-  'src/ui/inbox-list.tsx',
   'src/ui/question-view.tsx',
   'src/ui/request-parts.tsx',
 ]);
