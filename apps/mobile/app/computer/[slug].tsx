@@ -270,7 +270,7 @@ export default function ComputerScreen() {
                 }
                 onKey={chord}
                 onSecret={() => openKeyboard(!secret)}
-                onHide={() => Keyboard.dismiss()}
+                onHide={() => choose('mouse')}
               />
             ) : (
               <>

@@ -347,6 +347,13 @@ const en = {
   computerWheel: 'Scroll wheel. Drag up or down to scroll under the pointer.',
   computerHideKeyboard: 'Hide the keyboard',
   computerTouchMode: 'Touch',
+  computerKeyCommand: 'Command',
+  computerKeyControl: 'Control',
+  computerKeyOption: 'Option',
+  computerKeyShift: 'Shift',
+  computerKeyReturn: 'Return',
+  computerKeyTab: 'Tab',
+  computerKeyEscape: 'Escape',
 };
 
 const zh: typeof en = {
@@ -678,6 +685,13 @@ const zh: typeof en = {
   computerWheel: '滚轮。上下拖动，在指针处滚动。',
   computerHideKeyboard: '收起键盘',
   computerTouchMode: '触摸方式',
+  computerKeyCommand: 'Command',
+  computerKeyControl: 'Control',
+  computerKeyOption: 'Option',
+  computerKeyShift: 'Shift',
+  computerKeyReturn: '回车',
+  computerKeyTab: 'Tab',
+  computerKeyEscape: 'Esc',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()
