@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { HostApiAnswer, HostApiInit } from '../src/host/client';
 import {
+  addedText,
   createComputerViewer,
   typedInputs,
   wheelInput,
@@ -196,5 +197,12 @@ describe('Computer pointer and keys', () => {
     expect(typedInputs('C', ['meta', 'shift'])).toEqual([
       { kind: 'key', key: 'c', modifiers: ['meta', 'shift'] },
     ]);
+  });
+
+  it('reads each keystroke as the text added to the hidden field', () => {
+    expect(addedText('', 'H')).toBe('H');
+    expect(addedText('He', 'Hel')).toBe('l');
+    expect(addedText('Hel', 'He')).toBe('');
+    expect(addedText('abc', 'x')).toBe('');
   });
 });

@@ -71,6 +71,15 @@ export function typedInputs(text: string, modifiers: readonly ComputerModifier[]
   }));
 }
 
+/**
+ * The text a keystroke added to the hidden field, given what it held before. The field is left
+ * uncontrolled (resetting it to '' after every key races with iOS and doubles letters), so each
+ * change is read as a diff; deletions travel as Backspace key presses instead.
+ */
+export function addedText(previous: string, next: string): string {
+  return next.startsWith(previous) ? next.slice(previous.length) : '';
+}
+
 const RETRY_MS = 2000;
 const FRAME_TIMEOUT_MS = 20_000;
 

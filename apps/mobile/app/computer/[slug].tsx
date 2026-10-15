@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { BrowserInput } from '../../src/host/browser-viewer';
 import {
+  addedText,
   COMPUTER_KEYS,
   createComputerViewer,
   typedInputs,
@@ -60,6 +61,11 @@ export default function ComputerScreen() {
   const [mode, setMode] = useState<BrowserTouchMode>('trackpad');
   const [tool, setTool] = useState<ComputerTool>('mouse');
   const keyboard = useRef<TextInput>(null);
+  const typed = useRef('');
+  const resetField = () => {
+    keyboard.current?.clear();
+    typed.current = '';
+  };
   const [secret, setSecret] = useState(false);
   const [modifiers, setModifiers] = useState<readonly ComputerModifier[]>([]);
   const cursor = useSharedValue({ x: 0, y: 0 });
@@ -315,21 +321,28 @@ export default function ComputerScreen() {
             <TextInput
               ref={keyboard}
               accessibilityLabel={t.browserTypeHere}
-              value=""
               autoCapitalize="none"
               autoCorrect={false}
               secureTextEntry={secret}
               textContentType={secret ? 'password' : 'none'}
               autoComplete={secret ? 'current-password' : 'off'}
               submitBehavior="submit"
+              onFocus={resetField}
               onChangeText={(text) => {
-                for (const input of typedInputs(text, modifiers)) send(input);
+                const added = addedText(typed.current, text);
+                typed.current = text;
+                if (added === '') return;
+                for (const input of typedInputs(added, modifiers)) send(input);
                 if (modifiers.length > 0) setModifiers([]);
+                if (text.length > 200) resetField();
               }}
               onKeyPress={(event) => {
                 if (event.nativeEvent.key === 'Backspace') chord(COMPUTER_KEYS.backspace);
               }}
-              onSubmitEditing={() => chord(COMPUTER_KEYS.enter)}
+              onSubmitEditing={() => {
+                chord(COMPUTER_KEYS.enter);
+                resetField();
+              }}
               style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
             />
           </View>
