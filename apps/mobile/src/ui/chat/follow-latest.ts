@@ -3,17 +3,12 @@ import type { FlatList, NativeScrollEvent, NativeSyntheticEvent } from 'react-na
 
 import type { ConversationMessage } from '../../host/conversation';
 
-/** How far from the newest message (offset 0 of the inverted list) still counts as at the latest. */
 export const LATEST_SLOP = 40;
 
 export function atLatest(offset: number): boolean {
   return offset <= LATEST_SLOP;
 }
 
-/**
- * Messages that arrived after `anchor`, the newest message when the Human left the latest.
- * The Human's own messages are not news to them.
- */
 export function unseenSince(
   messages: readonly ConversationMessage[],
   anchor: string | undefined,
@@ -29,15 +24,6 @@ export function unseenSince(
 
 type ScrollEvent = NativeSyntheticEvent<NativeScrollEvent>;
 
-/**
- * Keeps an inverted chat list on the newest message only while the Human is there.
- *
- * At offset 0 an inverted list already shows a streaming reply as it grows, so following needs
- * no scrolling at all. Once the Human drags or reads history, `maintainVisibleContentPosition`
- * holds what they are looking at in place while new text lands below, and nothing pulls them
- * back down until they return or tap the jump button. Scroll events change state only when
- * the Human crosses the edge, so a stream never re-renders the screen from here.
- */
 export function useFollowLatest<Row>(
   list: RefObject<FlatList<Row> | null>,
   messages: readonly ConversationMessage[],

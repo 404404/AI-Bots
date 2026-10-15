@@ -6,7 +6,6 @@ import { Text } from '../primitives/text';
 import { ChevronDownIcon } from '../shell/icons';
 import { t } from '../strings';
 
-/** The round button that floats above the composer while the Human reads history, lifted like the Web Client's. */
 export function JumpToLatest({ unseen, onPress }: { unseen: number; onPress(): void }) {
   const theme = useDesignTheme();
   const layer = theme.layer.raised;
