@@ -23,6 +23,10 @@ qualify #1931 artifacts, or activate #1933 automation. No automatic prompt polic
 - Saving invalidates cached/in-flight checks, preserves staged updates, and refuses during an
   install/restart. Leaving changes future selection only. It never downgrades, deletes data,
   cancels a staged update or promises an immediately compatible stable replacement.
+- Web prerelease installation also requires confirmed Beta enrollment, including against an older
+  Host without the new RPC. Prerelease failures never suggest the legacy hardcoded `web` Profile
+  command. Reads started during a save cannot overwrite its confirmed result; a changed choice
+  read from another client invalidates the displayed candidate. Stable manual fallback is unchanged.
 
 ## Assigned-batch verification
 

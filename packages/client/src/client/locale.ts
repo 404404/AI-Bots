@@ -3439,6 +3439,9 @@ export const zh = {
   'releaseNotes.section.security': '安全',
   'release.row.title': 'DeepSeekBot 版本',
   'release.channel.title': '这台电脑的 Beta 更新',
+  'release.channel.summaryUnknown': '尚未确认更新选择',
+  'release.channel.summaryStable': '只检查正式版',
+  'release.channel.summaryBeta': '检查正式版和 Beta 候选',
   'release.channel.unknown':
     '尚未确认这台电脑的更新选择。请检查更新以重新读取；不会自动加入 Beta。',
   'release.channel.stable':
@@ -7189,6 +7192,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'releaseNotes.section.security': 'Security',
   'release.row.title': 'DeepSeekBot version',
   'release.channel.title': 'Beta updates for this computer',
+  'release.channel.summaryUnknown': 'Update choice not yet confirmed',
+  'release.channel.summaryStable': 'Check stable releases only',
+  'release.channel.summaryBeta': 'Check stable releases and Beta candidates',
   'release.channel.unknown':
     'This computer’s update choice is not confirmed. Check for updates to read it again; Beta is never enabled automatically.',
   'release.channel.stable':

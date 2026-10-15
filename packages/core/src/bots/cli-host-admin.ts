@@ -108,7 +108,7 @@ interface PairingReview {
   roleId?: string;
 }
 
-function releaseActivityGuidance(reason: unknown): string | undefined {
+function releaseRefusalGuidance(reason: unknown): string | undefined {
   if (reason === 'beta-not-enabled')
     return 'This Host has not joined Beta. Opt in explicitly with release-channel-set beta --confirm before retrying.';
   if (reason === 'busy') return 'The Host is busy. Wait for work to finish, then retry explicitly.';
@@ -278,7 +278,7 @@ export async function runHostAdminCommand(
           `release-${String(result['reason'])}`,
           [
             `Release ${target} was not installed (${String(result['reason'])}).`,
-            releaseActivityGuidance(result['reason']),
+            releaseRefusalGuidance(result['reason']),
             typeof result['diagnostic'] === 'string' ? result['diagnostic'] : '',
             typeof result['logPath'] === 'string' ? `Log: ${result['logPath']}` : '',
           ]
@@ -292,7 +292,7 @@ export async function runHostAdminCommand(
       if (result['status'] === 'failed')
         throw new CliLiveError(
           `release-${String(result['reason'])}`,
-          releaseActivityGuidance(result['reason']) ??
+          releaseRefusalGuidance(result['reason']) ??
             (result['reason'] === 'not-pending'
               ? 'No installed release is waiting for a restart.'
               : 'This Host cannot restart itself; restart it from its launcher.'),

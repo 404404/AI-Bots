@@ -48,7 +48,7 @@ export type ReleaseRestartState =
 export interface ReleaseNotesSnapshot {
   channel: ReleaseChannelStatus | undefined;
   channelSaving: boolean;
-  channelError: boolean;
+  channelError: 'read' | 'save' | undefined;
   version: string | undefined;
   announcement: ReleaseNote[] | undefined;
   firstRun: boolean;
@@ -185,7 +185,7 @@ export class ReleaseNotesController {
     this.source = createSnapshotStore<ReleaseNotesSnapshot>({
       channel: undefined,
       channelSaving: false,
-      channelError: false,
+      channelError: undefined,
       version: undefined,
       announcement: undefined,
       firstRun: false,
@@ -254,15 +254,24 @@ export class ReleaseNotesController {
         throw new Error('invalid channel');
       const channel = value['channel'];
       if (request !== this.channelRequest) return;
+      const changed =
+        channel !== this.source.getSnapshot().channel?.channel &&
+        this.source.getSnapshot().update.status !== 'idle';
+      if (changed) this.updateRequest += 1;
       this.source.update((draft) => {
         draft.channel = { channel, writable: value['writable'] === true };
-        draft.channelError = false;
+        if (draft.channelError === 'read') draft.channelError = undefined;
+        if (changed) {
+          draft.update = { status: 'idle' };
+          draft.viewing = undefined;
+        }
       });
+      if (changed) await this.checkUpdate(true);
     } catch {
       if (request !== this.channelRequest) return;
       this.source.update((draft) => {
         draft.channel = undefined;
-        draft.channelError = true;
+        draft.channelError ??= 'read';
       });
     }
   }
@@ -280,7 +289,7 @@ export class ReleaseNotesController {
     this.channelRequest += 1;
     this.source.update((draft) => {
       draft.channelSaving = true;
-      draft.channelError = false;
+      draft.channelError = undefined;
       draft.update = { status: 'idle' };
       draft.viewing = undefined;
     });
@@ -295,9 +304,10 @@ export class ReleaseNotesController {
     } catch {
       await this.loadChannel();
       this.source.update((draft) => {
-        draft.channelError = true;
+        draft.channelError = 'save';
       });
     } finally {
+      this.channelRequest += 1;
       this.source.update((draft) => {
         draft.channelSaving = false;
       });
@@ -306,6 +316,13 @@ export class ReleaseNotesController {
   }
 
   async install(version: string): Promise<void> {
+    if (version.includes('-') && this.source.getSnapshot().channel?.channel !== 'beta') {
+      this.source.update((draft) => {
+        draft.install = { status: 'failed', reason: 'beta-not-enabled' };
+      });
+      return;
+    }
+    if (this.source.getSnapshot().channelSaving) return;
     if (this.source.getSnapshot().install.status === 'installing') return;
     this.source.update((draft) => {
       draft.install = { status: 'installing', version };

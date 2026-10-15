@@ -12,6 +12,7 @@ import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
 import type { ReleaseNote } from '../../../core/src/release/notes.js';
 import type { BotHarnessKey, BotHarnessTranslate } from './locale.js';
 import { SettingsRow } from './ds/settings-row.js';
+import { Note } from './ds/note.js';
 import { Modal } from './modal.js';
 import { useMountedResource } from './mounted-resource.js';
 import type {
@@ -337,10 +338,10 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
         title={t('release.channel.title')}
         description={t(
           snapshot.channel === undefined
-            ? 'release.channel.unknown'
+            ? 'release.channel.summaryUnknown'
             : snapshot.channel.channel === 'beta'
-              ? 'release.channel.beta'
-              : 'release.channel.stable',
+              ? 'release.channel.summaryBeta'
+              : 'release.channel.summaryStable',
         )}
         control={
           <Button
@@ -368,11 +369,16 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
           </Button>
         }
       />
-      {snapshot.channelError ? (
-        <div role="alert" className="bh-release-install-error">
-          {t('release.channel.failed')}
-        </div>
-      ) : null}
+      <Note>
+        {t(
+          snapshot.channel === undefined
+            ? 'release.channel.unknown'
+            : snapshot.channel.channel === 'beta'
+              ? 'release.channel.beta'
+              : 'release.channel.stable',
+        )}
+      </Note>
+      {snapshot.channelError ? <Note tone="danger">{t('release.channel.failed')}</Note> : null}
       <SettingsRow
         title={t('release.row.title')}
         description={
@@ -432,7 +438,11 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
               <Button
                 size="sm"
                 variant="primary"
-                disabled={installing || snapshot.channelSaving}
+                disabled={
+                  installing ||
+                  snapshot.channelSaving ||
+                  (update.latest.includes('-') && snapshot.channel?.channel !== 'beta')
+                }
                 data-release-install
                 onClick={() => {
                   void releaseNotes.install(update.latest);
@@ -460,7 +470,8 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
               )}
             </div>
           ) : null}
-          {(!update.installable || install.status === 'failed') &&
+          {!update.latest.includes('-') &&
+          (!update.installable || install.status === 'failed') &&
           !(
             install.status === 'failed' &&
             (install.reason === 'busy' || install.reason === 'activity-unavailable')
