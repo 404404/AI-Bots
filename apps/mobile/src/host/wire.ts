@@ -396,7 +396,7 @@ export interface TimelinePage {
 export type ToolApprovalStatus = 'pending' | 'expired';
 export type UserQuestionStatus = 'pending' | 'submitted' | 'answered' | 'expired';
 
-export type UsagePeriod = 'today' | 'week';
+export type UsagePeriod = 'today' | 'week' | 'month' | 'quarter';
 
 export interface UsageBuckets {
   inputTokens: number | null;

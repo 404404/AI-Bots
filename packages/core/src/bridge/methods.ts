@@ -20,7 +20,12 @@ import {
   type AllBotMention,
 } from '../channels/all-bot-mention.js';
 import type { OverviewMemory } from '../memory/overview.js';
-import type { UsageOverviewBuckets, UsageOverviewResult } from '../usage/overview.js';
+import {
+  isUsageOverviewPeriod,
+  usageOverviewPeriods,
+  type UsageOverviewBuckets,
+  type UsageOverviewResult,
+} from '../usage/overview.js';
 import { markAllHumanMessagesRead } from '../channels/mark-all-read.js';
 import { channelBridgeInput, type ChannelBridgeSnapshot } from '../messaging/channel-bridge.js';
 import {
@@ -5361,11 +5366,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const period = source['period'];
       const after = source['after'];
       if (
-        (period !== 'today' && period !== 'week') ||
+        !isUsageOverviewPeriod(period) ||
         (after !== undefined &&
           (typeof after !== 'string' || after.length === 0 || after.length > 255))
       )
-        return invalidInput('Overview usage requires today or week and an optional Bot cursor');
+        return invalidInput(
+          `Overview usage requires a period of ${usageOverviewPeriods.join(', ')} and an optional Bot cursor`,
+        );
       if (deps.usage === undefined)
         return {
           ok: false,

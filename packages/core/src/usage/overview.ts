@@ -1,6 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite';
 
-export type UsageOverviewPeriod = 'today' | 'week';
+export const usageOverviewPeriodDays = { today: 1, week: 7, month: 28, quarter: 84 } as const;
+export type UsageOverviewPeriod = keyof typeof usageOverviewPeriodDays;
+export const usageOverviewPeriods = Object.keys(usageOverviewPeriodDays) as UsageOverviewPeriod[];
+export function isUsageOverviewPeriod(value: unknown): value is UsageOverviewPeriod {
+  return typeof value === 'string' && Object.hasOwn(usageOverviewPeriodDays, value);
+}
 export interface UsageOverviewBuckets {
   inputTokens: number | null;
   outputTokens: number | null;
@@ -65,7 +70,7 @@ export function queryOverviewUsage(
 ): UsageOverviewResult {
   const end = dayOf(now);
   const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  date.setDate(date.getDate() - (period === 'week' ? 6 : 0));
+  date.setDate(date.getDate() - (usageOverviewPeriodDays[period] - 1));
   const days: string[] = [];
   do {
     days.push(dayOf(date));

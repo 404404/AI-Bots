@@ -6,6 +6,10 @@ import {
   IconRightUpOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
+import {
+  usageOverviewPeriods,
+  type UsageOverviewPeriod,
+} from '../../../core/src/usage/overview.js';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
 import {
@@ -22,7 +26,7 @@ export function OverviewUsageView({
   actions: BridgeActions;
   t: BotHarnessTranslate;
 }): ReactElement {
-  const [period, setPeriod] = useState<'today' | 'week'>('today');
+  const [period, setPeriod] = useState<UsageOverviewPeriod>('today');
   const [value, setValue] = useState<OverviewUsage>();
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState(false);
@@ -130,7 +134,7 @@ export function OverviewUsageView({
         <h3 className="bh-profile-card-label">{t('overviewUsage.title')}</h3>
         <div className="bh-overview-usage-controls">
           <div className="bh-usage-grouping" role="group" aria-label={t('overviewUsage.range')}>
-            {(['today', 'week'] as const).map((range) => (
+            {usageOverviewPeriods.map((range) => (
               <button
                 key={range}
                 type="button"
@@ -138,7 +142,7 @@ export function OverviewUsageView({
                 data-usage-period={range}
                 onClick={() => setPeriod(range)}
               >
-                {t(`overviewUsage.${range}`)}
+                {t(`overviewUsage.period.${range}`)}
               </button>
             ))}
           </div>

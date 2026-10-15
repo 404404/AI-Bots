@@ -275,12 +275,14 @@ describe('Usage and activity commands', () => {
       method: 'overviewUsage',
     });
     await invoke(['overview-usage', '--period', 'week', '--after', 'ada'], live.url);
+    await invoke(['overview-usage', '--period', 'month'], live.url);
+    await invoke(['overview-usage', '--period', 'quarter'], live.url);
     await invoke(['overview-memory'], live.url);
     await invoke(['overview-memory', '--after', 'ada'], live.url);
     await invoke(['activity-overview'], live.url);
     await invoke(['channel-activity-today'], live.url);
     for (const argv of [
-      ['overview-usage', '--period', 'month'],
+      ['overview-usage', '--period', 'year'],
       ['overview-memory', '--after', ''],
       ['activity-overview', 'ada'],
     ])
@@ -288,6 +290,8 @@ describe('Usage and activity commands', () => {
     expect(live.calls).toEqual([
       { method: 'overviewUsage', args: { period: 'today' } },
       { method: 'overviewUsage', args: { period: 'week', after: 'ada' } },
+      { method: 'overviewUsage', args: { period: 'month' } },
+      { method: 'overviewUsage', args: { period: 'quarter' } },
       { method: 'overviewMemory', args: {} },
       { method: 'overviewMemory', args: { after: 'ada' } },
       { method: 'activityOverview', args: {} },

@@ -6287,10 +6287,12 @@ button:has(.bh-panel-glyph):is(:hover, :focus-within) .bh-panel-activity[data-wi
 .bh-overview-memory .bh-profile-pin:disabled {opacity:0.5;cursor:default;}
 .bh-overview-memory .bh-profile-pin:hover {background:var(--bh-hover);color:var(--bh-text);}
 @media (max-width:700px) {.bh-overview-memory-bots > li {flex-wrap:wrap;gap:${space.x2};}.bh-overview-memory-trend {width:84px;}.bh-overview-memory-name {flex-basis:calc(100% - 36px);}.bh-overview-memory-bots .bh-profile-pin {margin-left:auto;}}
-.bh-overview-usage {margin-top:${space.x4};min-width:0;}
+.bh-overview-usage {margin-top:${space.x4};min-width:0;container-type:inline-size;}
 .bh-overview-usage h3 {margin:0;font-weight:${text.regular};}
 .bh-overview-usage .bh-profile-card-head {flex-wrap:wrap;}
-.bh-overview-usage-controls {display:flex;align-items:center;gap:${space.x3};}
+.bh-overview-usage-controls {display:flex;flex-wrap:wrap;align-items:center;gap:${space.x3};min-width:0;}
+.bh-overview-usage .bh-usage-grouping button {white-space:nowrap;}
+@container (max-width: 320px) {.bh-overview-usage .bh-usage-grouping button {padding:${space.x2};}}
 .bh-overview-usage .bh-note {margin:0;}
 .bh-overview-usage-period {padding:0;}
 .bh-overview-usage .bh-usage-model-label {gap:${space.x2};}
