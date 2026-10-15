@@ -12,6 +12,7 @@ import {
   IconChevronDownOutlineRegular,
   IconCloseOutlineRegular,
   IconFolderOpenOutlineRegular,
+  IconTrashOutlineRegular,
   Input,
   Switch,
   Tag,
@@ -149,6 +150,8 @@ export function FolderRow({
   chips,
   remove,
   removeLabel,
+  removeUnavailable,
+  removeText,
   disabled,
   detail,
   pathAction,
@@ -161,6 +164,8 @@ export function FolderRow({
   chips?: ReactNode;
   remove?: () => void;
   removeLabel?: string;
+  removeUnavailable?: string;
+  removeText?: string;
   disabled?: boolean;
   detail?: ReactNode;
   pathAction?: ReactNode;
@@ -182,17 +187,19 @@ export function FolderRow({
       trailing={
         <>
           {control}
-          {remove === undefined ? null : (
-            <button
-              type="button"
-              className="bh-workspace-folder-remove"
-              aria-label={removeLabel}
-              title={removeLabel}
-              disabled={disabled}
+          {remove === undefined && removeUnavailable === undefined ? null : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bh-workspace-folder-delete"
+              aria-label={removeLabel ?? removeUnavailable}
+              title={removeUnavailable ?? removeLabel}
+              disabled={remove === undefined || disabled}
               onClick={remove}
             >
-              <IconCloseOutlineRegular size={16} />
-            </button>
+              <IconTrashOutlineRegular size={16} />
+              {removeText}
+            </Button>
           )}
           <IconChevronDownOutlineRegular
             size={14}
@@ -694,6 +701,8 @@ export function WorkspaceGrantsEntry({
         <FolderRow
           icon="git-branch"
           name={t('grant.memory')}
+          removeText={t('grant.delete')}
+          removeUnavailable={t('grant.memoryDeleteUnavailable')}
           path={memoryDir ?? ''}
           pathAction={
             memoryDir === undefined ? undefined : (
@@ -787,13 +796,6 @@ export function WorkspaceGrantsEntry({
             disabled={busy !== undefined}
             control={
               <>
-                <WorkspaceFileOpenButton
-                  actions={actions}
-                  slug={botSlug}
-                  grantId={grant.id}
-                  name={grant.workspacePath}
-                  t={t}
-                />
                 <label className="bh-workspace-folder-write" title={t('grant.orchestratorWrite')}>
                   <span>{t('grant.chip.write')}</span>
                   <Switch
@@ -815,8 +817,16 @@ export function WorkspaceGrantsEntry({
                     }
                   />
                 </label>
+                <WorkspaceFileOpenButton
+                  actions={actions}
+                  slug={botSlug}
+                  grantId={grant.id}
+                  name={grant.workspacePath}
+                  t={t}
+                />
               </>
             }
+            removeText={t('grant.delete')}
             removeLabel={t('grant.removeFolder') + ': ' + grant.workspaceTitle}
             remove={() =>
               mutate(grant.id, async () => {

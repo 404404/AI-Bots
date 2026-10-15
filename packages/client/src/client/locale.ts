@@ -3197,6 +3197,8 @@ export const zh = {
   'grant.pathLabel': '工作区文件夹路径',
   'grant.pathPlaceholder': '/home/user/project',
   'grant.removeFolder': '移除授权',
+  'grant.delete': '删除',
+  'grant.memoryDeleteUnavailable': '记忆仓库是 Bot 必需的读写位置，不能删除',
   'grant.registeredFolders': '已在 DSH 登记的文件夹',
   'grant.history': '已撤销的授权',
   'grant.loading': '正在加载工作区…',
@@ -6832,6 +6834,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'grant.pathLabel': 'Workspace folder path',
   'grant.pathPlaceholder': '/home/user/project',
   'grant.removeFolder': 'Remove access',
+  'grant.delete': 'Delete',
+  'grant.memoryDeleteUnavailable':
+    'The Memory Repository is the Bot’s required read-write location and cannot be removed',
   'grant.registeredFolders': 'Folders registered in DSH',
   'grant.history': 'Revoked access',
   'grant.loading': 'Loading workspaces…',

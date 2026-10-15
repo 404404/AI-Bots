@@ -38,6 +38,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     createElement('svg', { 'data-icon': 'sidebar-chevron', width: size, height: size }),
   IconCloseOutlineRegular: () => null,
   IconFolderOpenOutlineRegular: () => null,
+  IconTrashOutlineRegular: () => null,
 }));
 
 describe('Workspace Grant sidebar', () => {
@@ -350,6 +351,16 @@ describe('Workspace Grant sidebar', () => {
           `input[aria-label="${zhTranslate('grant.orchestratorWrite')}: .dsh"]`,
         );
       expect(header.contains(toggle())).toBe(true);
+      const deletes = Array.from(
+        container.querySelectorAll<HTMLButtonElement>('button.bh-workspace-folder-delete'),
+      );
+      expect(deletes.map((button) => [button.textContent, button.disabled])).toEqual([
+        [zhTranslate('grant.delete'), true],
+        [zhTranslate('grant.delete'), false],
+      ]);
+      expect(deletes[0]!.getAttribute('aria-label')).toBe(
+        zhTranslate('grant.memoryDeleteUnavailable'),
+      );
       expect(toggle()!.checked).toBe(false);
       await act(async () => toggle()!.click());
       expect(setWorkspaceGrantWrite).toHaveBeenCalledExactlyOnceWith(
@@ -587,7 +598,7 @@ describe('Workspace Grant sidebar', () => {
         ),
       );
       expect(
-        container.querySelector('button.bh-workspace-folder-remove[aria-label*="project"]'),
+        container.querySelector('button.bh-workspace-folder-delete[aria-label*="project"]'),
       ).toBeTruthy();
       expect(container.textContent).not.toContain('正在加载工作区');
     } finally {
@@ -639,7 +650,7 @@ describe('Workspace Grant sidebar', () => {
         ),
       );
       const remove = container.querySelector(
-        'button.bh-workspace-folder-remove[aria-label*="project"]',
+        'button.bh-workspace-folder-delete[aria-label*="project"]',
       ) as HTMLButtonElement;
       expect(remove).toBeTruthy();
       vi.useFakeTimers();
@@ -648,7 +659,7 @@ describe('Workspace Grant sidebar', () => {
         await Promise.resolve();
       });
       expect(
-        container.querySelector('button.bh-workspace-folder-remove[aria-label*="project"]'),
+        container.querySelector('button.bh-workspace-folder-delete[aria-label*="project"]'),
       ).toBeNull();
       await act(async () => {
         vi.advanceTimersByTime(15_001);
@@ -698,7 +709,7 @@ describe('Workspace Grant sidebar', () => {
         ),
       );
       const remove = container.querySelector(
-        'button.bh-workspace-folder-remove[aria-label*="project"]',
+        'button.bh-workspace-folder-delete[aria-label*="project"]',
       ) as HTMLButtonElement;
       expect(remove).toBeTruthy();
       vi.useFakeTimers();
