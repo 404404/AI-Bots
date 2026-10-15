@@ -8,6 +8,8 @@ import { usePushRouting } from '../src/host/push-routing';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
 
+export const unstable_settings = { initialRouteName: '(tabs)' };
+
 export default function RootLayout() {
   const theme = useTheme();
   const routing = usePushRouting();

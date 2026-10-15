@@ -76,6 +76,7 @@ import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
 import { edgeFade, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
+import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
 
@@ -530,13 +531,16 @@ function ChatConversation({
   );
 
   const hostRefused = host.connection.status === 'refused';
+  const missing =
+    host.roster !== undefined && (dm ? bot === undefined : channel === undefined && !botDm);
+  const leave = () => leaveScreen(router);
   const notice = hostRefused
     ? t.refused
     : snapshot.status === 'refused'
       ? dm
         ? t.dmRefused
         : t.channelRefused
-      : host.roster !== undefined && (dm ? bot === undefined : channel === undefined && !botDm)
+      : missing
         ? dm
           ? t.noBot
           : t.noChannel
@@ -591,7 +595,7 @@ function ChatConversation({
             >
               {notice}
             </Text>
-            {!hostRefused ? null : (
+            {hostRefused ? (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push('/pair')}
@@ -601,7 +605,13 @@ function ChatConversation({
                   {t.pairAgain}
                 </Text>
               </Pressable>
-            )}
+            ) : notice === t.noBot || notice === t.noChannel ? (
+              <Pressable accessibilityRole="button" onPress={leave} hitSlop={space.x3}>
+                <Text variant="meta" tone="accent" strong>
+                  {t.backToChats}
+                </Text>
+              </Pressable>
+            ) : null}
           </View>
         )}
         <Animated.View
@@ -745,7 +755,7 @@ function ChatConversation({
       </KeyboardAvoidingView>
       <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
       <ChatHeader
-        left={<HeaderBackButton onPress={() => router.back()} />}
+        left={<HeaderBackButton onPress={leave} />}
         center={
           dm ? (
             <ChatTitle
