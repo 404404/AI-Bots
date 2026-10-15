@@ -39,6 +39,7 @@ import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
 import { Composer } from './composer';
+import { HeaderBackButton, HeaderEdgeFade, systemGlassBar } from './header-chrome';
 import { useComposerContext } from './composer-context';
 import { modelLabel, workspaceLabel } from './composer-labels';
 import { ComposerFooter } from './composer-footer';
@@ -471,7 +472,12 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
           headerLargeTitle: false,
           headerTitleAlign: 'center',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: theme.color.base },
+          headerTransparent: true,
+          headerStyle: { backgroundColor: 'transparent' },
+          scrollEdgeEffects: { top: 'soft', bottom: 'soft', left: 'hidden', right: 'hidden' },
+          ...(systemGlassBar
+            ? {}
+            : { headerLeft: () => <HeaderBackButton onPress={() => router.back()} /> }),
           headerTitle: () =>
             dm ? (
               <ChatTitle
@@ -484,9 +490,12 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             ),
           headerRight: () =>
             slug !== undefined ? (
-              <OpenFullClientButton target={{ kind: 'dm', slug }} />
+              <OpenFullClientButton target={{ kind: 'dm', slug }} round={!systemGlassBar} />
             ) : channelId !== undefined ? (
-              <OpenFullClientButton target={{ kind: 'channel', channelId }} />
+              <OpenFullClientButton
+                target={{ kind: 'channel', channelId }}
+                round={!systemGlassBar}
+              />
             ) : null,
         }}
       />
@@ -494,7 +503,6 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
         ref={dictation.mountRef}
         style={{ flex: 1, backgroundColor: theme.color.base }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={headerHeight}
       >
         {notice === undefined ? null : (
           <Text
@@ -502,6 +510,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             variant="meta"
             tone="warning"
             style={{
+              marginTop: headerHeight,
               backgroundColor: theme.color.warningSoft,
               paddingHorizontal: space.x5,
               paddingVertical: space.x3,
@@ -515,7 +524,10 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             ref={list}
             inverted
             style={{ flex: 1 }}
-            contentContainerStyle={{ paddingVertical: space.x3 }}
+            contentContainerStyle={{
+              paddingTop: space.x3,
+              paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
+            }}
             data={rows}
             keyExtractor={(row) => row.key}
             renderItem={renderItem}
@@ -657,6 +669,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               })}
         />
       </KeyboardAvoidingView>
+      {systemGlassBar ? null : <HeaderEdgeFade height={headerHeight} />}
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
       <MessageActions
         message={actionsFor}
