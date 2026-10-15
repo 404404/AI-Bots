@@ -2,12 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RosterView } from '../src/host/client';
 import type { HumanAttentionItem } from '../src/host/wire';
-import {
-  conversations,
-  searchConversations,
-  shortcutCounts,
-  shortTime,
-} from '../src/ui/chat/conversations';
+import { conversations, searchConversations, shortTime } from '../src/ui/chat/conversations';
 
 const roster: RosterView = {
   bots: [
@@ -84,18 +79,6 @@ describe('Home conversations', () => {
     const rows = conversations(roster, action);
     expect(rows.find((row) => row.key === 'bot:ada')?.needsYou).toBe(2);
     expect(rows.find((row) => row.key === 'channel:team')?.needsYou).toBe(1);
-    expect(conversations(roster, action, 'needs-you').map((row) => row.key)).toEqual([
-      'channel:team',
-      'bot:ada',
-    ]);
-    expect(shortcutCounts(roster, action)).toEqual({ 'needs-you': 2, working: 2 });
-  });
-
-  it('filters to Bots that are working', () => {
-    expect(conversations(roster, [], 'working').map((row) => row.key)).toEqual([
-      'bot:cy',
-      'bot:bo',
-    ]);
   });
 
   it('shows a clock time today and a date otherwise', () => {

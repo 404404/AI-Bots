@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, type ReactNode } from 'react';
+import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -47,9 +47,6 @@ vi.mock('../src/ui/shell/home-header', () => ({
   HomeHeader: ({ children }: { children: ReactNode }) => children,
 }));
 vi.mock('../src/ui/connection-banner', () => ({ ConnectionBanner: () => null }));
-vi.mock('../src/ui/shell/shortcut-cards', () => ({
-  ShortcutCards: () => createElement('span', { 'data-testid': 'shortcuts' }),
-}));
 vi.mock('../src/ui/bot-avatar', () => ({ BotAvatar: () => null }));
 
 import HomeScreen from '../app/(tabs)/(home)/index';
@@ -92,11 +89,9 @@ describe('Search at the top of Chats', () => {
   it('filters the list in place and opens the chat the Human taps', async () => {
     const view = await home();
     expect(rows(view)).toHaveLength(3);
-    expect(view.querySelector('[data-testid="shortcuts"]')).not.toBeNull();
 
     await type(view, 'AD');
     expect(rows(view)).toEqual(['Ada, Done']);
-    expect(view.querySelector('[data-testid="shortcuts"]')).toBeNull();
     await act(async () => view.querySelector('button')!.click());
     expect(push).toHaveBeenLastCalledWith({ pathname: '/dm/[slug]', params: { slug: 'ada' } });
 

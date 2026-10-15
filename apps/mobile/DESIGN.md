@@ -23,9 +23,9 @@ References:
   - Android keeps the Material 3 bar on `base`: like Slack, the selected tab is the foreground colour with a pill behind its icon (the Material indicator), and the others are muted.
   - The web preview draws a floating translucent capsule standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it.
 - **Home** shows the current Host:
-  - A row of shortcut cards: **Needs you** and **Working**, each an icon, a name and a count that filters the list when tapped. **Unread** joins them once the Host reports unread counts.
-  - One list of PersonaBot DMs and Channels together, by latest activity.
-  - The header has search and **+** (new Bot, new Channel).
+  - A search field at the top of the list panel, inset so its corners are concentric with the panel's. Typing filters PersonaBots by name and Channels by title in place; it scrolls away with the list. There are no shortcut cards: Activity already gathers what needs the Human.
+  - One list of PersonaBot DMs and Channels together, by latest activity. A DM opens its chat; a Channel opens the full client at that Channel until it has a native chat.
+  - The header has **+** (new Bot, new Channel).
 - **Activity** is the Human Inbox across all Hosts:
   - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
   - Section headers stick to the top while their items scroll and show the section's count.

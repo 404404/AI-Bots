@@ -5,10 +5,6 @@ export type Conversation =
   | { kind: 'bot'; key: string; bot: RosterBot; at?: string; needsYou: number }
   | { kind: 'channel'; key: string; channel: RosterChannel; at?: string; needsYou: number };
 
-export type ConversationFilter = 'all' | 'needs-you' | 'working';
-
-const BUSY = new Set(['thinking', 'working']);
-
 function needsYouFor(bot: RosterBot, action: HumanAttentionItem[]): number {
   return action.filter(
     (item) =>
@@ -20,7 +16,6 @@ function needsYouFor(bot: RosterBot, action: HumanAttentionItem[]): number {
 export function conversations(
   roster: RosterView | undefined,
   action: HumanAttentionItem[],
-  filter: ConversationFilter = 'all',
 ): Conversation[] {
   if (roster === undefined) return [];
   const rows: Conversation[] = [
@@ -39,15 +34,9 @@ export function conversations(
       needsYou: action.filter((item) => item.channelId === channel.id).length,
     })),
   ];
-  return rows
-    .filter((row) =>
-      filter === 'needs-you'
-        ? row.needsYou > 0
-        : filter === 'working'
-          ? row.kind === 'bot' && BUSY.has(row.bot.state)
-          : true,
-    )
-    .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? '') || titleOf(a).localeCompare(titleOf(b)));
+  return rows.sort(
+    (a, b) => (b.at ?? '').localeCompare(a.at ?? '') || titleOf(a).localeCompare(titleOf(b)),
+  );
 }
 
 function searchKey(value: string): string {
@@ -71,16 +60,6 @@ export function searchConversations(
 
 export function titleOf(row: Conversation): string {
   return row.kind === 'bot' ? row.bot.displayName : row.channel.name;
-}
-
-export function shortcutCounts(
-  roster: RosterView | undefined,
-  action: HumanAttentionItem[],
-): Record<Exclude<ConversationFilter, 'all'>, number> {
-  return {
-    'needs-you': conversations(roster, action, 'needs-you').length,
-    working: (roster?.bots ?? []).filter((bot) => BUSY.has(bot.state)).length,
-  };
 }
 
 export function shortTime(iso: string | undefined, now: Date, locale?: string): string {

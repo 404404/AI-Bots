@@ -27,10 +27,11 @@ export function SearchField({
       returnKeyType="search"
       style={{
         minHeight: theme.touch,
-        marginHorizontal: space.x5,
-        marginVertical: space.x3,
-        paddingHorizontal: space.x5,
-        borderRadius: radius.round,
+        marginHorizontal: space.x3,
+        marginTop: space.x3,
+        marginBottom: space.x2,
+        paddingHorizontal: space.x3,
+        borderRadius: radius.lg - space.x3,
         backgroundColor: theme.layer.raised.fill,
         color: theme.color.fg,
         fontSize: theme.type.body.size,
