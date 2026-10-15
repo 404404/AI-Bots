@@ -143,10 +143,15 @@ const actions = new Proxy(
   { get: (target, key) => Reflect.get(target, key) ?? vi.fn(async () => undefined) },
 ) as unknown as BridgeActions;
 
-async function open(channel: ChannelSummary, bots: BotSummary[]): Promise<HTMLElement> {
+async function open(
+  channel: ChannelSummary,
+  bots: BotSummary[],
+  from: 'bot' | 'channel' = 'bot',
+): Promise<HTMLElement> {
   await act(async () => {
     store.setRoster(bots, [channel]);
-    if (channel.type === 'dm') store.select({ kind: 'bot', slug: channel.botSlug! });
+    if (channel.type === 'dm' && from === 'bot')
+      store.select({ kind: 'bot', slug: channel.botSlug! });
     else store.select({ kind: 'channel', channelId: channel.id });
     store.setConversation({
       status: 'ready',
@@ -214,6 +219,14 @@ describe('timeline working rows in the Channel body', () => {
     await setBots([bot('mira', 'Mira', 'idle')], dm);
     expect(chat.querySelector('.bh-timeline-working')).toBeNull();
     expect(container.querySelector('.bh-stop-btn')).toBeNull();
+  });
+
+  it('shows the card and its Stop when the DM is opened from the Channel list', async () => {
+    const chat = await open(dm, [bot('mira', 'Mira', 'working')], 'channel');
+    expect(rowNames()).toEqual(['mira']);
+    expect(chat.querySelector('.bh-timeline-working-stop')?.getAttribute('aria-label')).toBe(
+      '停止 Mira',
+    );
   });
 
   it('shows one row per active Bot in a Group and skips waiting Bots', async () => {
