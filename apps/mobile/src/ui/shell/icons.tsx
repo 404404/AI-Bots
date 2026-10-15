@@ -36,16 +36,6 @@ export function PersonIcon(props: IconProps) {
   return <Glyph {...props} d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7.5 8a7.5 7.5 0 0 1 15 0" />;
 }
 
-export function StopIcon(props: IconProps) {
-  return (
-    <Glyph
-      {...props}
-      focused
-      d="M8 7h8a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"
-    />
-  );
-}
-
 export function ChevronDownIcon(props: IconProps) {
   return <Glyph {...props} d="m6 9 6 6 6-6" />;
 }

@@ -3179,15 +3179,12 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
 /* Client-only working rows under the latest message: the composer status
    stays the live region, so these rows are hidden from assistive tech. */
 .bh-timeline-working {
-  display: flex;
-  flex-direction: column;
-  gap: ${space.x2};
   margin-top: ${space.x3};
 }
 .bh-timeline-working-row {
   display: flex;
   align-items: center;
-  gap: ${space.x3};
+  gap: ${space.x2};
   min-width: 0;
 }
 .bh-timeline-working-summary {
@@ -3198,7 +3195,6 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bh-timeline-working-name { color: var(--dsw-alias-label-secondary); }
 .bh-timeline-working-ellipsis i {
   font-style: normal;
   animation: bh-timeline-working-dot 1.2s ease-in-out infinite;
@@ -3209,11 +3205,6 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
 @keyframes bh-timeline-working-dot {
   0%, 60%, 100% { opacity: 0.25; }
   30% { opacity: 1; }
-}
-.bh-timeline-working-more {
-  padding-left: 36px;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: ${text.metaSize};
 }
 .bh-message-group-avatar-link:focus-visible,
 .bh-message-group-avatar-focus:focus-visible {

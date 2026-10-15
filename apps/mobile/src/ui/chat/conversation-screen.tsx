@@ -15,7 +15,6 @@ import type { Inbox } from '../../host/inbox';
 import type { WireAllBotPreview } from '../../host/wire';
 import { shareAttachment } from '../../host/share-attachment';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../host/pick-files';
-import { stopBot, type StopOutcome } from '../../host/stop';
 import {
   useChannelConversation,
   useConversation,
@@ -60,7 +59,7 @@ import { copyMessage } from './message-menu';
 import { chatRows, messageGroups, type ChatRow } from './message-groups';
 import { createSpeakerRegistry, SpeakerStageContext } from './speaker-row';
 import { QuestionCard } from './question-card';
-import { WorkingRow } from './working-row';
+import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
 import { edgeFade, space } from '../design/tokens';
@@ -209,7 +208,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     [channel, host.roster],
   );
   const working = dm ? (bot !== undefined && botBusy(bot) ? [bot] : []) : members.filter(botBusy);
-  const stopChannel = dm ? bot?.dmChannelId : channelId;
+  const activeChannel = dm ? bot?.dmChannelId : channelId;
   const snapshot = useConversationSnapshot(conversation);
   const [draft, setDraft] = useState('');
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
@@ -219,9 +218,6 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
-  const [stop, setStop] = useState<
-    ((StopOutcome | { status: 'stopping' }) & { bot: RosterBot }) | undefined
-  >();
   const [shareError, setShareError] = useState(false);
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
@@ -282,7 +278,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
   const latest = useFollowLatest(list, visible);
-  const readMount = useMarkRead(client, inbox, conversation, stopChannel, !latest.away);
+  const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
   const mountRef = dictation.mountRef;
   const screenRef = useCallback(
     (node: unknown) => {
@@ -391,14 +387,6 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     pickFiles(source, MAX_PICKED - files.length)
       .then((more) => setFiles((current) => [...current, ...more].slice(0, MAX_PICKED)))
       .catch(() => setAttachError(true));
-  };
-
-  const stopRun = (target: RosterBot) => {
-    if (client === undefined || stopChannel === undefined || stop?.status === 'stopping') return;
-    setStop({ status: 'stopping', bot: target });
-    void stopBot(client, stopChannel, target.slug).then((outcome) =>
-      setStop(outcome.status === 'stopped' ? undefined : { ...outcome, bot: target }),
-    );
   };
 
   const share = useCallback((attachment: MessageAttachment): Promise<void> => {
@@ -520,17 +508,13 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
                 ? t.shareFailed
                 : reactError
                   ? t.reactFailed
-                  : stop?.status === 'not-working'
-                    ? t.stopNotWorking(stop.bot.displayName)
-                    : stop?.status === 'failed'
-                      ? `${t.stopFailed} ${stop.reason}`
-                      : dictation.state.status === 'denied'
-                        ? t.dictationDenied
-                        : dictation.state.status === 'unavailable'
-                          ? t.dictationUnavailable
-                          : dictation.state.status === 'failed'
-                            ? t.dictationFailed
-                            : undefined;
+                  : dictation.state.status === 'denied'
+                    ? t.dictationDenied
+                    : dictation.state.status === 'unavailable'
+                      ? t.dictationUnavailable
+                      : dictation.state.status === 'failed'
+                        ? t.dictationFailed
+                        : undefined;
 
   return (
     <>
@@ -602,20 +586,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               scrollEventThrottle={32}
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"
-              ListHeaderComponent={
-                working.length === 0 ? null : (
-                  <View>
-                    {working.map((entry) => (
-                      <WorkingRow
-                        key={entry.slug}
-                        bot={entry}
-                        stopping={stop?.status === 'stopping' && stop.bot.slug === entry.slug}
-                        onStop={() => stopRun(entry)}
-                      />
-                    ))}
-                  </View>
-                )
-              }
+              ListHeaderComponent={<WorkingStatus bots={working} />}
               ListFooterComponent={
                 snapshot.loadingOlder ? (
                   <View

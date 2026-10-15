@@ -1326,22 +1326,25 @@ function ConversationView({
   const activeFacepile = channelFacepile.filter(
     (item) => item.state !== 'idle' || item.attention !== undefined,
   );
+  const dmBot = bot ?? (channel?.type === 'dm' && !botDm ? profileBot : undefined);
+  const dmBotActivity = dmBot === undefined ? undefined : personaBotActivity(state, dmBot);
   const composerFacepile: PersonaBotFacepileItem[] =
-    bot === undefined
+    dmBot === undefined
       ? activeFacepile
-      : botActivity === undefined || (botActivity === 'idle' && attentionCount(bot.attention) === 0)
+      : dmBotActivity === undefined ||
+          (dmBotActivity === 'idle' && attentionCount(dmBot.attention) === 0)
         ? []
         : [
             {
-              personaBotId: bot.slug,
-              name: bot.displayName,
-              src: bot.avatar,
-              appearance: bot.appearance,
-              avatarSeed: bot.avatarSeed,
-              state: botActivity,
-              activity: bot.activity,
-              attention: bot.attention,
-              sessions: bot.sessionActivity,
+              personaBotId: dmBot.slug,
+              name: dmBot.displayName,
+              src: dmBot.avatar,
+              appearance: dmBot.appearance,
+              avatarSeed: dmBot.avatarSeed,
+              state: dmBotActivity,
+              activity: dmBot.activity,
+              attention: dmBot.attention,
+              sessions: dmBot.sessionActivity,
             },
           ];
   const composerActivity: ChannelComposerActivity | undefined =
