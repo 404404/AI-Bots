@@ -152,7 +152,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 **Bot profile** (a form sheet)
 
 - Avatar, name, label and description.
-- Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the live desktop view, where **Pause Bot and take control** lets the Human click and type, with a password keyboard), Notifications.
+- Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the live desktop view, where touching the screen pauses the Bot so the Human can click and type, the Bot resumes 30 seconds after the last input or at once from the hand-back icon, and the password keyboard keeps it paused), Notifications.
 - Under the actions, a **Bot settings** group with the Model and Workspace rows (see Chat), each opening its sheet from the bottom over the profile.
 - Sections: Identity (the Soul: persona and standing rules), Memory (the Memory repository as a folder tree: folders first, each opens to its own list inside the sheet, and a file opens as read-only text), Routines (schedules), Channels (group Channels the Bot is in), Files (folders shared with the Bot).
 - Each section loads on its own: an empty section says so, and a failed one offers Try again without hiding the others.
