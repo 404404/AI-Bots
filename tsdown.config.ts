@@ -94,6 +94,17 @@ export const browserClientBundleOptions: UserConfig = clientBundle(
   'packages/browser/lib',
 );
 
+export const coreCliBundleOptions: UserConfig = {
+  entry: { index: 'packages/core/src/bots/bot-create-cli.ts' },
+  outDir: 'packages/core/cli',
+  format: ['esm'],
+  platform: 'node',
+  dts: false,
+  clean: true,
+  external: ['@resvg/resvg-js', 'silk-wasm'],
+  deps: { alwaysBundle: [/^@deepseek-ai\//] },
+};
+
 export default defineConfig([
   {
     entry: ['packages/core/src/index.ts'],
@@ -112,6 +123,7 @@ export default defineConfig([
       '@deepseek-ai/dsh-scope',
     ],
   },
+  coreCliBundleOptions,
   {
     entry: ['packages/client/src/index.ts'],
     outDir: 'packages/client/dist',
