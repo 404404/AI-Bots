@@ -136,7 +136,7 @@ function statusText(status: HostStatus): string {
 }
 
 function closeThen(action: () => void): void {
-  slide(false);
+  settle(false);
   action();
 }
 
