@@ -168,6 +168,7 @@ import {
 } from './message-selection-state.js';
 import { useMountedResource } from './mounted-resource.js';
 import * as stylex from '@stylexjs/stylex';
+import { IconButton } from './ds/icon-button.js';
 import { color, text } from './ds/tokens.stylex.js';
 import type { ReleaseNotesController } from './release-notes.js';
 import { ReleaseNotesAnnouncement } from './release-notes-view.js';
@@ -781,6 +782,33 @@ function MessageGroupView({
                   }
                   t={t}
                 />
+                <div className="bh-bubble-toolbar">
+                  <div className="bh-bubble-actions">
+                    {onReact !== undefined && reactableMessage(message) ? (
+                      <MessageReactionPicker
+                        message={message}
+                        onReact={(emoji, active) => onReact(message, emoji, active)}
+                        t={t}
+                      />
+                    ) : null}
+                    {onReply !== undefined &&
+                    message.pending !== true &&
+                    message.streaming !== true &&
+                    message.failed === undefined ? (
+                      <Tooltip label={t('message.reply')} side="top" portal delayMs={400}>
+                        <IconButton
+                          size="inline"
+                          data-bubble-action=""
+                          aria-label={t('message.reply')}
+                          onClick={() => onReply(message)}
+                        >
+                          <ReplyIcon />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+                    <MessageCopyAction body={message.body} t={t} />
+                  </div>
+                </div>
               </div>
               <div className="bh-bubble-side">
                 <ChannelDeliveryReceipt
@@ -799,31 +827,6 @@ function MessageGroupView({
                       {clockTime(message.at)}
                     </time>
                   )}
-                  <div className="bh-bubble-actions">
-                    {onReply !== undefined &&
-                    message.pending !== true &&
-                    message.streaming !== true &&
-                    message.failed === undefined ? (
-                      <Tooltip label={t('message.reply')} side="top" portal delayMs={400}>
-                        <button
-                          type="button"
-                          className="bh-bubble-action"
-                          aria-label={t('message.reply')}
-                          onClick={() => onReply(message)}
-                        >
-                          <ReplyIcon />
-                        </button>
-                      </Tooltip>
-                    ) : null}
-                    {onReact !== undefined && reactableMessage(message) ? (
-                      <MessageReactionPicker
-                        message={message}
-                        onReact={(emoji, active) => onReact(message, emoji, active)}
-                        t={t}
-                      />
-                    ) : null}
-                    <MessageCopyAction body={message.body} t={t} />
-                  </div>
                 </div>
               </div>
             </MessageBubbleWrap>

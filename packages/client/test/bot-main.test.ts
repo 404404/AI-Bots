@@ -825,6 +825,7 @@ describe('Bot main Sessions pane', () => {
     expect(markup.match(/class="bh-bubble-time"/g)).toHaveLength(1);
     expect(markup).toContain('dateTime="2026-09-21T00:01:00.000Z"');
     expect(markup.match(/class="bh-bubble-meta"/g)).toHaveLength(2);
+    expect(markup.match(/class="bh-bubble-toolbar"/g)).toHaveLength(2);
     expect(markup.match(/aria-label="回复"/g)).toHaveLength(2);
     expect(markup.match(/aria-label="复制消息"/g)).toHaveLength(2);
     expect(markup).toContain('bh-bubble-focused');

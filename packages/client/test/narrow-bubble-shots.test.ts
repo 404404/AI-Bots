@@ -82,7 +82,8 @@ import { CSS } from '../src/client/styles.js';
 const NARROW_BLOCK = `/* Narrow screens: inline copy/reply actions crowd the bubble, so they move
    into the long-press message menu and the bubble keeps the full width. */
 @media (max-width: 640px) {
-  .bh-bubble-meta {
+  .bh-bubble-meta,
+  .bh-bubble-toolbar {
     display: none;
   }
 }`;
@@ -210,7 +211,7 @@ describe.skipIf(!process.env.BH_NARROW_SHOTS)('narrow bubble evidence', () => {
       const chatBody = host.querySelector('.bh-chat-body');
       if (chatBody === null) throw new Error('chat body did not render');
       expect(chatBody.querySelectorAll('[data-message-id]').length).toBe(2);
-      expect(chatBody.querySelectorAll('.bh-bubble-action').length).toBeGreaterThan(0);
+      expect(chatBody.querySelectorAll('[data-bubble-action]').length).toBeGreaterThan(0);
       const markup = chatBody.outerHTML;
       mkdirSync('/tmp/bh-shots', { recursive: true });
       writeFileSync('/tmp/bh-shots/narrow-before.html', page(markup, beforeCss, 'before'));
