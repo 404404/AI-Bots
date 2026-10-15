@@ -79,6 +79,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 - Header: back, a centered avatar and name pill that opens the Bot profile, and the Bot's computer on the right.
 - Messages:
   - An inverted list. Messages from the same author within 5 minutes form a group, and a time separator appears after a 30-minute gap.
+  - At the newest message the list follows a streaming reply. Once the Human drags or scrolls up into history, nothing moves the list under them: new text and messages land below while the part they are reading stays put. A round jump button (`raised`, with a ⌄) then floats centered above the composer, with an accent badge counting the Bot messages that arrived since they left (99+ at most), like the Web Client's "Return to latest messages". Tapping it, sending a message, or scrolling back down to the newest message follows again and hides the button.
   - Bot bubbles are `surface`. Human bubbles are `accent` with `onAccent` text.
   - In a DM, `accent` is that Bot's primary colour (`AccentProvider` with `botColor`), so each Bot's chat has its own Human bubble colour.
     - A colour too close to the chat background or the Bot bubble (under 1.3:1 against `base` or `surface`, such as black hair in dark mode) is first mixed toward `fg` until it separates from both.

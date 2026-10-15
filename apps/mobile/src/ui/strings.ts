@@ -152,6 +152,9 @@ const en = {
   retrySend: 'Tap to retry',
   typing: 'Replying…',
   olderLoading: 'Loading earlier messages…',
+  jumpToLatest: 'Return to latest messages',
+  unseenLatest: (count: number) =>
+    `${count} new ${count === 1 ? 'message' : 'messages'} · Jump to latest`,
   beginning: 'This is the beginning of your DM.',
   offline: 'Offline. Showing saved messages.',
   liveInterrupted: 'Reconnecting to this DM…',
@@ -517,6 +520,8 @@ const zh: typeof en = {
   retrySend: '点按重试',
   typing: '正在回复…',
   olderLoading: '正在加载更早的消息…',
+  jumpToLatest: '返回最新消息',
+  unseenLatest: (count: number) => `${count} 条新消息 · 跳到最新`,
   beginning: '这是你们私信的开始。',
   offline: '离线中，显示的是已保存的消息。',
   liveInterrupted: '正在重新连接这个私信…',
