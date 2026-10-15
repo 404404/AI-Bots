@@ -35,13 +35,14 @@ Screens follow [DESIGN.md](./DESIGN.md): the Host-as-workspace structure, the sc
 - On a Mac, start with `node scripts/e2e-mobile-sim.mjs`: one command makes its own Simulator and Metro port, builds the app, pairs with two isolated Hosts and opens notifications sent with `xcrun simctl push`; read the screenshots it keeps.
 - On a Mac, verify native UI with Callstack's `agent-device` on the iOS Simulator: open the development build, read its accessibility snapshot, act by ref, and save a screenshot. The commands are in `README.md` ("Drive it on the iOS Simulator").
 - Regression flows live in `.maestro/` and run with `pnpm --filter @botharness/mobile e2e:ios`. Target elements by their visible text from the snapshot, not by coordinates.
+- The Mac, its Simulator, the physical iPhone and the QA Host are shared by every agent. Queue, branch, build, Host and reporting rules are in [shared device QA](../../docs/agents/device-qa.md).
 - Cloud sessions have no simulator. They use the web screenshots ("Screenshots without a phone") and reach a Mac through Remote Control for native checks.
 
 ## Profiling
 
 Performance work is measured, not guessed. Before you change code for speed (jank, re-renders, a slow list, a long stream), profile the scenario, then profile it again after the change. The PR records both sets of numbers. `scripts/rn-profile.mjs` lets an agent read the profile itself, the way the Chrome DevTools MCP does for the web: no one clicks in DevTools.
 
-- **Where it runs.** On a Mac, with the development build in the iOS Simulator and Metro. It talks to the app through Metro's inspector (CDP). Cloud sessions reach a Mac through Remote Control. When a project shares one Simulator, send the run to whoever owns the Simulator queue instead of booting your own.
+- **Where it runs.** On a Mac, with the development build in the iOS Simulator and Metro. It talks to the app through Metro's inspector (CDP). Cloud sessions reach a Mac through Remote Control. The project shares one Simulator: send the run to the Simulator queue ([shared device QA](../../docs/agents/device-qa.md)) instead of booting your own.
 - **Run it.** Run it from the repository root, so `ws` and `source-map` resolve from the workspace:
 
   ```bash
