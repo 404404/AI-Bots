@@ -158,12 +158,14 @@ function ActionIcon({
 
 export function MessageActions({
   target,
+  readOnly = false,
   onClose,
   onReact,
   onCopy,
   onShareText,
 }: {
   target: MessageMenuTarget | undefined;
+  readOnly?: boolean;
   onClose(): void;
   onReact(message: ConversationMessage, emoji: string, active: boolean): void;
   onCopy(text: string): void;
@@ -183,6 +185,7 @@ export function MessageActions({
         <MessageMenu
           key={target.message.id}
           target={target}
+          readOnly={readOnly}
           onClose={onClose}
           onReact={onReact}
           onCopy={onCopy}
@@ -195,12 +198,14 @@ export function MessageActions({
 
 function MessageMenu({
   target,
+  readOnly,
   onClose,
   onReact,
   onCopy,
   onShareText,
 }: {
   target: MessageMenuTarget;
+  readOnly: boolean;
   onClose(): void;
   onReact(message: ConversationMessage, emoji: string, active: boolean): void;
   onCopy(text: string): void;
@@ -213,7 +218,7 @@ function MessageMenu({
   const { message, anchor, group } = target;
   const human = message.author === 'human';
   const actions = messageMenuActions(message);
-  const reactions = reactable(message);
+  const reactions = !readOnly && reactable(message);
   const sizes = menuSizes(theme, actions.length, reactions);
   const place = placeMenu({
     anchor,

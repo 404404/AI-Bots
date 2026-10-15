@@ -11,6 +11,8 @@ import {
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
+import { visibleDmActivity } from '../../host/dm-activity';
+import { useHiddenDmActivity } from '../../host/native-dm-activity';
 import {
   shownInChat,
   type CardResolution,
@@ -41,6 +43,7 @@ import {
 import { useDictation } from '../../host/speech';
 import { botColor } from '../bot-color';
 import { ApprovalCard } from './approval-card';
+import { ActivityRow } from './activity-row';
 import type { BubbleGroup } from './bubble-shape';
 import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
@@ -85,9 +88,11 @@ export type ChatPlace =
 export function ConversationScreen({
   place,
   focus,
+  latestWindowOnly = false,
 }: {
   place: ChatPlace;
   focus: string | undefined;
+  latestWindowOnly?: boolean;
 }) {
   const { client } = useHostSession();
   const roster = useHostSnapshot(client).roster;
@@ -95,7 +100,7 @@ export function ConversationScreen({
     place.kind === 'dm' ? roster?.bots.find((entry) => entry.slug === place.slug) : undefined;
   return (
     <AccentProvider accent={bot === undefined ? undefined : botColor(bot)}>
-      <ChatConversation place={place} focus={focus} />
+      <ChatConversation place={place} focus={focus} latestWindowOnly={latestWindowOnly} />
     </AccentProvider>
   );
 }
@@ -176,17 +181,30 @@ const RequestCard = memo(function RequestCard({
   );
 });
 
-function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | undefined }) {
+function ChatConversation({
+  place,
+  focus,
+  latestWindowOnly,
+}: {
+  place: ChatPlace;
+  focus: string | undefined;
+  latestWindowOnly: boolean;
+}) {
   const theme = useDesignTheme();
   const router = useRouter();
   const headerHeight = useChatHeaderHeight();
-  const { client, inbox } = useHostSession();
+  const { client, inbox, saved } = useHostSession();
   const host = useHostSnapshot(client);
   const dm = place.kind === 'dm';
   const slug = dm ? place.slug : undefined;
+  const hiddenActivity = useHiddenDmActivity(saved?.hostId, slug);
   const channelId = dm ? undefined : place.channelId;
   const bot = dm ? host.roster?.bots.find((entry) => entry.slug === slug) : undefined;
   const channel = dm ? undefined : host.roster?.channels.find((entry) => entry.id === channelId);
+  const channelDetails = dm
+    ? undefined
+    : host.roster?.activityChannels?.find((entry) => entry.id === channelId);
+  const botDm = channelDetails?.type === 'dm' && channelDetails.botSlug === undefined;
   const target = useMemo(
     () =>
       slug === undefined
@@ -240,7 +258,10 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     [snapshot.messages],
   );
 
-  const visible = useMemo(() => snapshot.messages.filter(shownInChat), [snapshot.messages]);
+  const visible = useMemo(() => {
+    const shown = snapshot.messages.filter(shownInChat);
+    return dm ? visibleDmActivity(shown, hiddenActivity) : shown;
+  }, [snapshot.messages, dm, hiddenActivity]);
   const chronological = useMemo(
     () =>
       chatRows(
@@ -308,7 +329,8 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     if (index >= 0) {
       jumped.current = focus;
       list.current?.scrollToIndex({ index, viewPosition: 0.5, animated: true });
-    } else if (snapshot.status === 'live' && snapshot.hasOlder && !snapshot.loadingOlder)
+    } else if (latestWindowOnly && snapshot.status === 'live') jumped.current = focus;
+    else if (snapshot.status === 'live' && snapshot.hasOlder && !snapshot.loadingOlder)
       void conversation?.loadOlder();
   };
 
@@ -439,6 +461,15 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
           />
         );
       if (item.kind === 'separator') return <TimeSeparator at={item.at} />;
+      if (item.message.activity !== undefined)
+        return (
+          <ActivityRow
+            message={item.message}
+            activity={item.message.activity}
+            roster={roster}
+            count={item.activityCount ?? 1}
+          />
+        );
       const author = item.message.bot ?? slug;
       if (
         client !== undefined &&
@@ -470,7 +501,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
           onShare={share}
           onLongPress={openActions}
           lifted={item.message.id === actionsFor?.message.id}
-          onReact={react}
+          {...(botDm ? {} : { onReact: react })}
           botName={botName}
           speaker={
             !dm && item.message.bot !== undefined ? speakerOf(item.message.bot, item) : undefined
@@ -493,6 +524,8 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       react,
       botName,
       speakerOf,
+      roster,
+      botDm,
     ],
   );
 
@@ -503,7 +536,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       ? dm
         ? t.dmRefused
         : t.channelRefused
-      : host.roster !== undefined && (dm ? bot === undefined : channel === undefined)
+      : host.roster !== undefined && (dm ? bot === undefined : channel === undefined && !botDm)
         ? dm
           ? t.noBot
           : t.noChannel
@@ -666,39 +699,47 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             onLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
             style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
           >
-            <Composer
-              value={draft}
-              placeholder={
-                bot !== undefined
-                  ? t.messageBot(bot.displayName)
-                  : channel !== undefined
-                    ? t.messageBot(`#${channel.name}`)
-                    : t.messagePlaceholder
-              }
-              disabled={conversation === undefined}
-              files={files}
-              canAttach={files.length < MAX_PICKED}
-              dictation={dictation.state.status}
-              canDictate={conversation !== undefined}
-              onChange={edit}
-              selection={selection}
-              onSelection={(next) => {
-                setSelection(undefined);
-                setCaret(next);
-              }}
-              {...(candidates.length === 0
-                ? {}
-                : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-              onSend={send}
-              onPick={pick}
-              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-              onDictate={() => {
-                setAttachError(false);
-                dictation.start();
-              }}
-              onStopDictation={dictation.stop}
-              onCancelDictation={dictation.cancel}
-            />
+            {botDm ? (
+              <View style={{ padding: space.x5, alignItems: 'center' }}>
+                <Text variant="meta" tone="muted">
+                  {t.activityRow.botDm}
+                </Text>
+              </View>
+            ) : (
+              <Composer
+                value={draft}
+                placeholder={
+                  bot !== undefined
+                    ? t.messageBot(bot.displayName)
+                    : channel !== undefined
+                      ? t.messageBot(`#${channel.name}`)
+                      : t.messagePlaceholder
+                }
+                disabled={conversation === undefined}
+                files={files}
+                canAttach={files.length < MAX_PICKED}
+                dictation={dictation.state.status}
+                canDictate={conversation !== undefined}
+                onChange={edit}
+                selection={selection}
+                onSelection={(next) => {
+                  setSelection(undefined);
+                  setCaret(next);
+                }}
+                {...(candidates.length === 0
+                  ? {}
+                  : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
+                onSend={send}
+                onPick={pick}
+                onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+                onDictate={() => {
+                  setAttachError(false);
+                  dictation.start();
+                }}
+                onStopDictation={dictation.stop}
+                onCancelDictation={dictation.cancel}
+              />
+            )}
           </View>
         </Animated.View>
       </KeyboardAvoidingView>
@@ -712,6 +753,16 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               fallback={slug ?? ''}
               onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
             />
+          ) : botDm ? (
+            <Text strong numberOfLines={1} style={{ textAlign: 'center' }}>
+              {channelDetails.members
+                .map(
+                  (member) =>
+                    roster?.bots.find((entry) => entry.slug === member)?.displayName ??
+                    t.activityRow.unavailableBot,
+                )
+                .join('、')}
+            </Text>
           ) : (
             <ChannelTitle
               channel={channel}
@@ -733,6 +784,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
       <MessageActions
         target={actionsFor}
+        readOnly={botDm}
         onClose={() => setActionsFor(undefined)}
         onReact={(message, emoji, active) => react(message.id, emoji, active)}
         onCopy={copyMessage}

@@ -376,10 +376,11 @@ describe('the long-press menu', () => {
     delivery: 'committed',
     reactions: [{ emoji: '🔥', actors: [{ kind: 'human', id: 'local-human' }] }],
   };
-  const menu = (message: ConversationMessage) =>
+  const menu = (message: ConversationMessage, readOnly = false) =>
     renderToStaticMarkup(
       <MessageActions
         target={{ message, anchor, group }}
+        readOnly={readOnly}
         onClose={() => {}}
         onReact={() => {}}
         onCopy={() => {}}
@@ -405,6 +406,17 @@ describe('the long-press menu', () => {
     expect(island).toBeGreaterThan(-1);
     expect(bubble).toBeGreaterThan(island);
     expect(copy).toBeGreaterThan(bubble);
+    expect(html).toContain(`data-accessibilitylabel="${t.shareText}"`);
+  });
+
+  it('keeps copy and share but removes the reaction island in a read-only Bot DM', () => {
+    const html = menu(bot, true);
+    expect(html).not.toContain(`data-accessibilitylabel="${t.reactions}"`);
+    for (const emoji of MENU_REACTIONS) {
+      expect(html).not.toContain(`data-accessibilitylabel="${t.react(emoji)}"`);
+      expect(html).not.toContain(`data-accessibilitylabel="${t.unreact(emoji)}"`);
+    }
+    expect(html).toContain(`data-accessibilitylabel="${t.copy}"`);
     expect(html).toContain(`data-accessibilitylabel="${t.shareText}"`);
   });
 
