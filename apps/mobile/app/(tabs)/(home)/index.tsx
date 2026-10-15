@@ -2,6 +2,7 @@ import { Redirect, Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
+import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
 import { loadHumanName } from '../../../src/host/human';
 import { useHostLook } from '../../../src/host/native-host-look';
@@ -18,6 +19,7 @@ import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
 import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Text } from '../../../src/ui/primitives/text';
+import { CreateButton, type CreateTarget } from '../../../src/ui/shell/create-button';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { HumanAvatarButton } from '../../../src/ui/shell/human-avatar';
@@ -65,6 +67,9 @@ export default function HomeScreen() {
     );
   if (saved === null) return <Redirect href="/pair" />;
 
+  const create = (target: CreateTarget) =>
+    router.push({ pathname: '/full-client', params: fullClientParams(target) });
+
   const refresh = async () => {
     setRefreshing(true);
     await Promise.all([client?.refresh(), inbox?.refresh()]).catch(() => undefined);
@@ -79,7 +84,10 @@ export default function HomeScreen() {
           hostName={saved.hostName}
           look={look}
           actions={
-            <HumanAvatarButton loadName={loadName} onPress={() => router.push('/settings')} />
+            <>
+              <CreateButton onPick={create} />
+              <HumanAvatarButton loadName={loadName} onPress={() => router.push('/settings')} />
+            </>
           }
         >
           <FlatList
