@@ -44,11 +44,8 @@ export function BrowserStage({
   interactive: boolean;
   mode: BrowserTouchMode;
   onInput(input: BrowserInput): void;
-  /** The trackpad cursor in frame pixels, when controls outside the stage need it too. */
   cursor?: SharedValue<StagePoint>;
-  /** `arrow` draws a desktop pointer whose tip is the cursor; `dot` marks it with a small disc. */
   pointerShape?: 'dot' | 'arrow';
-  /** Replaces the default scroll input; `at` is the frame point the scroll happens over. */
   onWheel?(dragY: number, at: StagePoint | undefined): void;
 }) {
   const theme = useDesignTheme();
@@ -69,6 +66,8 @@ export function BrowserStage({
   const layout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
     setStage({ width, height });
+    if (cursor.value.x === 0 && cursor.value.y === 0)
+      cursor.value = { x: Math.round(frame.width / 2), y: Math.round(frame.height / 2) };
   };
 
   const zoom = () => {

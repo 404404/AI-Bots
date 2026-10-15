@@ -31,10 +31,6 @@ function useRound() {
   return { theme, colors };
 }
 
-/**
- * The left and right mouse buttons and a scroll wheel, for the trackpad cursor. The wheel is a
- * strip you drag like a finger on a mouse wheel; each notch scrolls under the pointer.
- */
 export function ComputerMousePad({
   onClick,
   onWheel,
@@ -147,10 +143,6 @@ const KEYS: readonly (readonly [string, string, string])[] = [
   [COMPUTER_KEYS.escape, '⎋', 'Escape'],
 ];
 
-/**
- * The row above the phone keyboard: latching modifiers that apply to the next key, the keys a
- * phone keyboard lacks, the password keyboard switch and a key that puts the keyboard away.
- */
 export function ComputerKeyBar({
   modifiers,
   secret,
@@ -237,7 +229,6 @@ export function ComputerKeyBar({
   );
 }
 
-/** The bottom bar while you drive: mouse, keyboard, or the control panel. */
 export function ComputerDock({
   tool,
   onTool,

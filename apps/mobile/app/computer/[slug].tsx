@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
@@ -77,7 +77,6 @@ export default function ComputerScreen() {
   const send = (input: BrowserInput | undefined) => {
     if (input !== undefined) void viewer?.send(input);
   };
-  // A latched modifier applies to the next key only, like a sticky key.
   const chord = (key: string) => {
     send({ kind: 'key', key, modifiers: [...modifiers] });
     setModifiers([]);
@@ -89,16 +88,15 @@ export default function ComputerScreen() {
     setTool(next);
   };
 
-  useEffect(() => {
+  const mount = useMounted<View>(() => {
+    viewer?.start();
     const hidden = Keyboard.addListener('keyboardDidHide', () =>
       setTool((current) => (current === 'keyboard' ? 'mouse' : current)),
     );
-    return () => hidden.remove();
-  }, []);
-
-  const mount = useMounted<View>(() => {
-    viewer?.start();
-    return () => viewer?.stop();
+    return () => {
+      hidden.remove();
+      viewer?.stop();
+    };
   }, [viewer]);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -113,14 +111,6 @@ export default function ComputerScreen() {
   const live = !revoked && state.frame !== undefined && message === undefined;
   const driving = live && state.control;
   const control = buttonColors(theme, 'secondary', 'canvas');
-  const frameWidth = state.frame?.width ?? 0;
-  const frameHeight = state.frame?.height ?? 0;
-
-  // The pointer starts in the middle of the screen once its size is known.
-  useEffect(() => {
-    if (frameWidth > 0 && cursor.value.x === 0 && cursor.value.y === 0)
-      cursor.value = { x: Math.round(frameWidth / 2), y: Math.round(frameHeight / 2) };
-  }, [cursor, frameWidth, frameHeight]);
 
   const onAccent = buttonColors(theme, 'primary', 'canvas');
 

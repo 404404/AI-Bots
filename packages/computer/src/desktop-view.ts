@@ -150,7 +150,6 @@ export function desktopInputCall(
         },
       };
     }
-    // Without a pid or window, the driver needs scope=desktop to aim at the frontmost app.
     case 'type':
       return { tool: 'type_text', args: { scope: 'desktop', text: input.text } };
     case 'key':

@@ -207,7 +207,6 @@ export function KeyboardHideIcon(props: IconProps) {
   );
 }
 
-/** One mouse button: `side` highlights the left or right half, like a mouse seen from above. */
 export function MouseButtonIcon({
   color,
   size,
@@ -231,7 +230,6 @@ export function MouseButtonIcon({
   );
 }
 
-/** The desktop arrow pointer drawn where the remote mouse is; its tip is the top-left corner. */
 export function PointerArrow({
   size,
   fill,

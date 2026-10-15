@@ -63,8 +63,6 @@ export const glass = {
   saturate: 180,
 } as const;
 
-// The remote mouse pointer drawn over a Computer screen: white with a dark rim, like a desktop
-// pointer, so it reads on any wallpaper in either theme.
 export const pointer = {
   fill: '#ffffff',
   rim: '#0f1115',

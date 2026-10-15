@@ -27,7 +27,6 @@ export interface ComputerViewerOptions {
 
 export type ComputerModifier = 'alt' | 'ctrl' | 'meta' | 'shift';
 
-/** Key names the desktop driver understands (`press_key`), for the keys a phone keyboard lacks. */
 export const COMPUTER_KEYS = {
   enter: 'return',
   backspace: 'delete',
@@ -35,14 +34,9 @@ export const COMPUTER_KEYS = {
   escape: 'escape',
 } as const;
 
-/** Phone points of wheel travel per notch, and the most notches one gesture sends. */
 export const WHEEL_STEP = 16;
 const MAX_NOTCHES = 15;
 
-/**
- * One scroll for a vertical drag over the screen or the wheel: dragging up scrolls the page
- * down, like a trackpad. `at` is the frame point to scroll over (the pointer).
- */
 export function wheelInput(
   dragY: number,
   at?: { x: number; y: number },
@@ -57,10 +51,6 @@ export function wheelInput(
   };
 }
 
-/**
- * What typing `text` sends. Without latched modifiers it is one `type`; with them every
- * character becomes a key chord (⌘ + c, ⌃ + a…), so a modifier bar works with the phone keyboard.
- */
 export function typedInputs(text: string, modifiers: readonly ComputerModifier[]): BrowserInput[] {
   if (text === '') return [];
   if (modifiers.length === 0) return [{ kind: 'type', text }];
@@ -71,11 +61,6 @@ export function typedInputs(text: string, modifiers: readonly ComputerModifier[]
   }));
 }
 
-/**
- * The text a keystroke added to the hidden field, given what it held before. The field is left
- * uncontrolled (resetting it to '' after every key races with iOS and doubles letters), so each
- * change is read as a diff; deletions travel as Backspace key presses instead.
- */
 export function addedText(previous: string, next: string): string {
   return next.startsWith(previous) ? next.slice(previous.length) : '';
 }
@@ -215,7 +200,6 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
       await takeover(active);
     },
     send(input) {
-      // One at a time and in order: typing, then a chord, must reach the desktop as typed.
       const next = queue.then(() => deliver(input));
       queue = next.catch(() => {});
       return next;
