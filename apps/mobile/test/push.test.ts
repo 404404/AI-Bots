@@ -23,7 +23,7 @@ import {
   type SavedHost,
 } from '../src/host/hosts';
 import { createHostPush, parsePushData, pushHref, PushRequestFailed } from '../src/host/push';
-import { decideFromPush } from '../src/host/push-actions';
+import { decideFromPush, registerApprovalCategories } from '../src/host/push-actions';
 import {
   createPushSession,
   type NotificationsPort,
@@ -277,6 +277,23 @@ describe('notification buttons', () => {
       return 'accepted';
     });
     expect(outcomes).toEqual(['allowed-always-exact']);
+  });
+
+  it('registers both button sets one after another so neither overwrites the other', async () => {
+    let stored = new Map<string, readonly string[]>();
+    const read = () =>
+      new Promise<Map<string, readonly string[]>>((done) =>
+        setTimeout(() => done(new Map(stored)), 0),
+      );
+    await registerApprovalCategories(async (identifier, buttons) => {
+      const current = await read();
+      current.set(identifier, buttons);
+      stored = current;
+    });
+    expect(Object.fromEntries(stored)).toEqual({
+      'tool-approval': ['always', 'approve', 'reject'],
+      'tool-approval-once': ['approve', 'reject'],
+    });
   });
 
   it('ignores other buttons and kinds, and fails for an unpaired or unreachable Host', async () => {

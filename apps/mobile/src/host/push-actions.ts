@@ -13,6 +13,15 @@ export const APPROVAL_ACTIONS: Readonly<Record<string, ApprovalChoice>> = {
 
 export type PushDecision = DecisionResult | 'failed';
 
+export type ApprovalButton = 'always' | 'approve' | 'reject';
+
+export async function registerApprovalCategories(
+  set: (identifier: string, buttons: readonly ApprovalButton[]) => Promise<unknown>,
+): Promise<void> {
+  await set(APPROVAL_CATEGORY, ['always', 'approve', 'reject']);
+  await set(APPROVAL_ONCE_CATEGORY, ['approve', 'reject']);
+}
+
 export async function decideFromPush(
   hosts: readonly SavedHost[],
   target: PushTarget,

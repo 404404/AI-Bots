@@ -122,6 +122,7 @@ describe('Docker computer provider', () => {
     expect(flattened).toContain('127.0.0.1:39001:3000');
     expect(flattened).toContain('HARDEN_DESKTOP=false');
     expect(flattened).toContain('PIXELFLUX_WAYLAND=false');
+    expect(flattened).toContain('DISABLE_IPV6=true');
     expect(flattened).toContain('botharness-computer-config:/config');
     expect(calls.some((argv) => argv[1] === 'volume' && argv[2] === 'create')).toBe(true);
   });
