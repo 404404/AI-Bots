@@ -1033,12 +1033,14 @@ export function WorkspaceGrantsEntry({
             ) : null}
           </div>
         </SettingsSection>
-        <ApprovalTemplateEntry
-          botSlug={botSlug}
-          actions={actions}
-          disabled={loading || busy !== undefined}
-          t={t}
-        />
+        {composerOnly ? (
+          <ApprovalTemplateEntry
+            botSlug={botSlug}
+            actions={actions}
+            disabled={loading || busy !== undefined}
+            t={t}
+          />
+        ) : null}
       </SettingsRows>
       {composerOnly || rules.length === 0 ? null : (
         <details className="bh-workspace-folder-secondary">
