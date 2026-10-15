@@ -664,6 +664,9 @@ importers:
       '@modelcontextprotocol/client':
         specifier: 2.0.0
         version: 2.0.0
+      sharp:
+        specifier: 0.35.4
+        version: 0.35.4(@types/node@22.20.3)
     devDependencies:
       '@deepseek-ai/cordis':
         specifier: 4.0.4

@@ -20,6 +20,7 @@ import {
 } from '../../core/src/logs/log-db.js';
 import { createTransferTokens } from './transfer-tokens.js';
 import { createIdleWatcher } from './idle.js';
+import { DesktopViewError, createDesktopView, parseDesktopInput } from './desktop-view.js';
 import {
   COMPUTER_EXPORT_DIR_FIELD,
   COMPUTER_IDLE_STOP_FIELD,
@@ -46,6 +47,8 @@ import {
 import { ViewerProxy, proxyUpgrade, viewerUpgradePaths } from './viewer.js';
 
 export const name = 'botharness-computer';
+
+const TAKEOVER_DRAIN_MS = 10_000;
 
 export interface ComputerConfig {
   target: ComputerTarget;
@@ -358,10 +361,12 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
   ctx.effect(() => () => runtime.dispose(), 'botharness-computer: target runtime');
   const activity = { touch: (): void => undefined };
   const driver = runtime.driver;
+  const desktopView = createDesktopView({ driver, isRunning: () => runtime.isRunning() });
   const toolProvider = createComputerToolProvider({
     ctx,
     driver,
     isComputerRunning: () => runtime.isRunning(),
+    isPaused: () => desktopView.isPaused(),
     authorizationScope,
     guidance: () => (target() === 'local' ? localComputerGuidance() : COMPUTER_GUIDANCE),
     isAutoAllowed: () => effective().autoAllowActions,
@@ -709,6 +714,97 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     connectionCtx.effect(
       () => connection.fetch.register(toolRoute),
       'botharness-computer: direct tool route',
+    );
+
+    const desktopRefusal = (error: unknown): Response => {
+      if (error instanceof DesktopViewError)
+        return json(
+          { ok: false, code: error.code, error: error.message },
+          error.code === 'not-running' || error.code === 'not-paused' ? 409 : 502,
+        );
+      return json({ ok: false, code: 'capture-failed', error: String(error) }, 502);
+    };
+
+    const frameRoute = {
+      path: '/api/computer/frame',
+      methods: ['GET'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const raw = new URL(request.url).searchParams.get('after');
+        const after = raw === null || raw === '' ? undefined : Number(raw);
+        if (after !== undefined && !Number.isSafeInteger(after))
+          return json({ ok: false, code: 'invalid-after', error: 'after must be an integer' }, 400);
+        try {
+          const frame = await desktopView.next(after, request.signal);
+          if (frame === undefined) return new Response(null, { status: 204 });
+          activity.touch();
+          return json({ ok: true, target: target(), paused: desktopView.isPaused(), ...frame });
+        } catch (error) {
+          return desktopRefusal(error);
+        }
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(frameRoute),
+      'botharness-computer: desktop frame route',
+    );
+
+    const takeoverRoute = {
+      path: '/api/computer/takeover',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const body = await parseBody(request);
+        if (typeof body['active'] !== 'boolean')
+          return json({ ok: false, code: 'invalid-input', error: 'active must be a boolean' }, 400);
+        if (body['active'] && !runtime.isRunning())
+          return json(
+            { ok: false, code: 'not-running', error: 'The Computer is not running.' },
+            409,
+          );
+        const paused = desktopView.setPaused(body['active']);
+        if (paused) await toolProvider.drain(TAKEOVER_DRAIN_MS);
+        activity.touch();
+        diagnostics.record('computer-action', `viewer takeover ${paused ? 'on' : 'off'}`);
+        return json({ ok: true, paused });
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(takeoverRoute),
+      'botharness-computer: desktop takeover route',
+    );
+
+    const inputRoute = {
+      path: '/api/computer/input',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const input = parseDesktopInput(await parseBody(request));
+        if (input === undefined)
+          return json(
+            {
+              ok: false,
+              code: 'invalid-input',
+              error: 'input must be a click, scroll, type or key action',
+            },
+            400,
+          );
+        diagnostics.record(
+          'computer-action',
+          `viewer input kind=${input.kind}${input.kind === 'type' ? ` chars=${String(input.text.length)}` : ''}`,
+        );
+        try {
+          await desktopView.input(input, request.signal);
+          activity.touch();
+          return json({ ok: true });
+        } catch (error) {
+          return desktopRefusal(error);
+        }
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(inputRoute),
+      'botharness-computer: desktop input route',
     );
 
     const parseBody = async (request: Request): Promise<Record<string, unknown>> => {

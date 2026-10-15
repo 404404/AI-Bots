@@ -86,7 +86,7 @@ References:
 **Bot profile** (a form sheet)
 
 - Avatar, name, label and description.
-- Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the DM in the full client), Notifications.
+- Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the live desktop view, where **Pause Bot and take control** lets the Human click and type, with a password keyboard), Notifications.
 - Sections: Identity (the Soul: persona and standing rules), Memory (the Memory repository as a folder tree: folders first, each opens to its own list inside the sheet, and a file opens as read-only text), Routines (schedules), Channels (group Channels the Bot is in), Files (folders shared with the Bot).
 - Each section loads on its own: an empty section says so, and a failed one offers Try again without hiding the others.
 - Read-only for now; editing Identity and Memory from the phone comes later.
