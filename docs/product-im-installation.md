@@ -25,8 +25,8 @@ prove Bot receipt. First-time guided setup is the separate #824 tracer. Personal
 
 ## Maintainer: build the distribution artifacts
 
-Use Node ≥22 and the repository's pnpm version. The artifacts declare the qualified DSH
-`0.2.0-rc.1` whatever the repository's development pin is. The Provider revision below is
+Use Node ≥22 and the repository's pnpm version. The product targets DSH
+`0.2.0-rc.2`; its Provider provenance records that qualified Host separately. The Provider revision below is
 the one whose manifest, lockfile and runtime digests match `productImProvider` in
 `scripts/product-artifacts.mjs`; when that record changes, update this revision with it.
 Keep the Provider input outside the product workspace. Its immutable input
@@ -35,14 +35,14 @@ fails before packing.
 
 ```bash
 git clone https://github.com/DoodleBears/dsh-im.git /tmp/bh-im-source
-git -C /tmp/bh-im-source checkout 99df05b7c2a14ebb6c122e4f22d655b6b9cbacc7
+git -C /tmp/bh-im-source checkout beaed4a6dabb583654d28fb09298716267039b4a
 npm ci --prefix /tmp/bh-im-source --ignore-scripts --no-audit --no-fund
 pnpm install --frozen-lockfile
 pnpm build
 node scripts/product-artifacts.mjs \
   --provider-source /tmp/bh-im-source \
   --output /tmp/bh-product-artifacts \
-  --version 0.0.0-test.878
+  --version 1.3.0-test.1155.1
 ```
 
 Choose a fresh output directory. `artifacts.json` records the six actual tarballs,
