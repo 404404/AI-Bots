@@ -49,7 +49,6 @@ function actions(overrides: Partial<SettingsActions> = {}): SettingsActions {
     onUsage: vi.fn(),
     onOpenFullClient: vi.fn(),
     onComputers: vi.fn(),
-    onHostLook: vi.fn(),
     onAppIcon: vi.fn(),
     onNotifications: vi.fn(),
     onUnpair: vi.fn(async () => undefined),
@@ -98,6 +97,24 @@ describe('Usage card in Settings', () => {
     );
     expect(button(view, t.usageCard('0'))).not.toBeNull();
     expect(view.textContent).not.toContain(t.usageFailed);
+  });
+
+  it('marks a week the Host could only partly count with +', async () => {
+    const week = structuredClone(usageWire.rpc.active.overviewUsage.week) as OverviewUsage;
+    week.totals.partial = true;
+    const view = await render(
+      <SettingsView
+        hostName="studio"
+        connection={{ status: 'connected', route: '' }}
+        loadUsage={async () => week}
+        actions={actions()}
+      />,
+    );
+    const amount = tokenAmount(week.totals.totalTokens, true);
+    expect(amount).toMatch(/\+$/u);
+    expect([...view.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toContain(
+      t.usageCard(amount),
+    );
   });
 
   it('offers Try again when the Host cannot answer, and reads again', async () => {
@@ -168,6 +185,23 @@ describe('Usage screen', () => {
     expect(source.loadUsage).toHaveBeenLastCalledWith('week');
     expect(source.loadUsage).toHaveBeenCalledTimes(3);
     expect(source.loadMemory).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Today when a Show more page for the week arrives late', async () => {
+    const first = week();
+    first.bots = first.bots.slice(0, 1);
+    first.nextCursor = first.bots[0]!.slug;
+    let late: (value: OverviewUsage) => void = () => undefined;
+    const source = sources({
+      loadUsage: vi.fn(async (period) => (period === 'week' ? first : today())),
+      loadMoreUsage: vi.fn(() => new Promise<OverviewUsage>((done) => (late = done))),
+    });
+    const view = await render(<UsageView sources={source} roster={[]} onOpenBot={vi.fn()} />);
+    await act(async () => button(view, t.usageMore)!.click());
+    await act(async () => button(view, t.usageToday)!.click());
+    await act(async () => late(week()));
+    expect(view.textContent).toContain(tokenAmount(active.overviewUsage.today.totals.totalTokens));
+    expect(view.textContent).not.toContain(t.usageLoading);
   });
 
   it('loads more Bots from the cursor', async () => {

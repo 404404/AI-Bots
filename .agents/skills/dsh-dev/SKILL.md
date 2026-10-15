@@ -206,3 +206,11 @@ A `RemoteError` thrown by a stream method before or between items reaches the Cl
 ## Additional verified pitfall — #1528
 
 The pinned client-modules loader claims every `<style>` without `data-plugin` for the module materializing at that moment (lazy chunks included) and removes those tags when that module is replaced, invalidated or pruned. A plugin that injects an untagged sheet from an effect can therefore lose it to another plugin's reload while it stays active: its UI renders unstyled and DSH's own UI, whose sheets are tagged, looks fine. Set `data-plugin` to the injecting module's id (and a `data-plugin-css` key) on every runtime `<style>` (#1528).
+
+## Additional verified pitfall — #1154
+
+Qualify an external Provider's exported Service contract, not only a test fixture or internal sender. In a DSH `0.2.0-rc.2` Host, dsh-im `.20` exported `receiptVersion: 1` and advertised QQ `proactive-fence-checked` per account, but did not export `postFenceVersion`. Requiring the absent global field incorrectly hid a checked QQ post. Consume the actual per-account text, receipt and fence capabilities; still pass the final fence, refuse missing capabilities before native effects, and verify the real saved target's `canPost` after rebuilding and restarting the task Host. This capability proof does not establish QQ permission or rendered delivery.
+
+## Additional verified pitfall — #1155
+
+Direct Controller and Runtime tests do not qualify the application-defined Provider's production factory. In a DSH `0.2.0-rc.2` Host, real QQ plain text reached the native SDK but ordinary delivery stayed unverified because the factory dropped the consumer's `ordinaryText` accessor. Cover the actual production factory through the exported Delivery Service and Runtime, then rebuild and install the immutable Provider artifact. Verify a fresh native event on the new receiver lease; replaying the failed event does not establish recovery. Ordinary delivery qualification and explicit collection opt-in remain separate checks.

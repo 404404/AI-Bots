@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { compactTokenCount, weekdayLabel } from '../../host/usage-days';
@@ -20,15 +20,17 @@ export type Loaded<T> =
 
 export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
   const [state, setState] = useState<Loaded<T>>({ status: 'loading' });
+  const latest = useRef(0);
   const read = useCallback(
     (next: (() => Promise<T>) | undefined = load) => {
       if (next === undefined) return () => undefined;
-      let live = true;
+      const id = ++latest.current;
+      const live = () => latest.current === id;
       setState((current) => ({ status: 'loading', value: current.value }));
       next().then(
-        (value) => live && setState({ status: 'ready', value }),
+        (value) => live() && setState({ status: 'ready', value }),
         (error: unknown) =>
-          live &&
+          live() &&
           setState((current) => ({
             status: 'failed',
             error: error instanceof Error ? error.message : String(error),
@@ -36,7 +38,7 @@ export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
           })),
       );
       return () => {
-        live = false;
+        if (live()) latest.current += 1;
       };
     },
     [load],
@@ -45,8 +47,9 @@ export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
   return { state, read, mount };
 }
 
-export function tokenAmount(tokens: number | null): string {
-  return tokens === null ? t.usageUnknown : compactTokenCount(tokens);
+export function tokenAmount(tokens: number | null, partial = false): string {
+  if (tokens === null) return t.usageUnknown;
+  return partial ? `${compactTokenCount(tokens)}+` : compactTokenCount(tokens);
 }
 
 type Day = { day: string; tokens: number | null };
@@ -101,7 +104,7 @@ export function UsageCard({
   const theme = useDesignTheme();
   const { state, read, mount } = useLoaded<OverviewUsage, View>(load);
   const week = state.value === undefined ? undefined : usageWeek(state.value);
-  const amount = week === undefined ? undefined : tokenAmount(week.total);
+  const amount = week === undefined ? undefined : tokenAmount(week.total, week.partial);
   return (
     <View ref={mount}>
       <Pressable

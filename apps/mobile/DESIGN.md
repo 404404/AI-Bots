@@ -19,13 +19,14 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - The app stays connected to every paired Host at once.
   - The Chats list and every chat show one Host at a time. The Chats header has a Slack-style band in the accent colour (a muted accent in dark mode); the list sits on a panel with rounded top corners below it.
   - The **Host chip** at the top left shows the Host's initial tile, its name and ▾. Tapping it opens the **Host drawer**.
-  - **Customize header** sets how each Host looks, kept on the phone per Host. It is a form sheet with a live preview of the band, opened from Settings → Interface.
+  - **Customize computer** sets how each Host looks, kept on the phone per Host. It is a form sheet with a live preview of the band, opened from that Host's ⋯ menu in the Host drawer (or a long press on its row), so each paired Host is customized where it is listed.
+    - Name: a local name shown in the Host chip and the drawer instead of the Host's own name; clearing it goes back to the Host's name.
     - Avatar: the initial tile (default), one of eight pixel portraits from the PersonaBot avatar generator, or a photo cropped square.
     - Banner: the accent band (default), a solid colour (ten swatches or a typed hex), a two-stop gradient (six presets or typed stops), or a picture under a dark scrim.
     - A custom colour goes through the accent band's steps, so dark mode mutes it the same way. The ink is white or near-black, whichever reads on every stop; a picture always takes white ink with a soft shadow.
 - **Host drawer** switches Hosts. It slides in from the left, covers about 85% of the width and dims the list behind it.
   - Like Slack's workspace drawer it has three parts on the `sheet` layer: a fixed "Computers" header, a scrolling list of Hosts, and a fixed footer with **Pair a new computer** (opens the pairing flow) and **Notifications** (opens notification settings), separated from the list by a divider.
-  - Each Host row has its Computer avatar tile (the same tile as the Host chip; the current Host's tile has an `fg` ring at radius `lg`, concentric with the tile, as Slack marks the current workspace), its name, an online/offline/checking dot and label, then one **count chip** on the right (see Count chip below). It shows **Needs you** when anything waits for the Human, because that matters most; otherwise it shows **Unread**, the count of unread conversations. A ⋯ button at the end opens the Host's menu: Show this computer and Unpair, which asks for confirmation.
+  - Each Host row has its Computer avatar tile (the same tile as the Host chip; the current Host's tile has an `fg` ring at radius `lg`, concentric with the tile, as Slack marks the current workspace), its name, an online/offline/checking dot and label, then one **count chip** on the right (see Count chip below). It shows **Needs you** when anything waits for the Human, because that matters most; otherwise it shows **Unread**, the count of unread conversations. A ⋯ button at the end, or a long press on the row, opens the Host's menu: Customize (name, avatar and banner), Show this computer, and Unpair, which asks for confirmation.
   - The Host chip opens it, and so does a swipe right from the left edge of a tab's root screen. The edge swipe is never attached inside a pushed chat, where it stays the system Back.
   - Tapping a Host switches to it and closes the drawer. Tapping the backdrop or swiping left closes it.
   - It takes screen-reader focus when it opens and returns focus to the Host chip when it closes. With Reduce Motion on it appears without sliding.
@@ -65,7 +66,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
     - **By kind**: Input, Output, Cache read and Cache write. **By PersonaBot**: avatar, name, share of the total and tokens; tapping a current Bot opens its profile, a deleted one reads "Removed". **Memory activity**: each Bot's Memory changes for the week with a small bar per day. Both lists page with Show more.
     - Everything comes from the Host's `overviewUsage` and `overviewMemory`, the same reads as the Web Client's activity view; the card's week total matches its week total.
   - **Connections**: the current Host and its connection status, Computers (paired Hosts, their status and unpairing, with the same confirmation and error notice as before), Notifications, and Open full client.
-  - **Interface**: Customize header, App icon (the shipped default icon or one of two DeepSeekBot portraits, the full one and the chibi one, each with dark and tinted variants on iOS), and Appearance (scheme, accent, chat wallpaper) once it exists.
+  - **Interface**: App icon (the shipped default icon or one of two DeepSeekBot portraits, the full one and the chibi one, each with dark and tinted variants on iOS), and Appearance (scheme, accent, chat wallpaper) once it exists. Each Host's name, avatar and banner are customized from its menu in the Host drawer, not here.
   - **Chats**: Channel sections and Hidden Channels, each pushing its own screen.
 
 ## Screens
@@ -105,7 +106,13 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Attachments sit inside the bubble: images as rounded thumbnails (one large, or a grid of squares), other files as a row with an icon, name and size. Tapping an image opens a full-screen viewer; tapping a file downloads it from the Host and opens the share sheet.
     - The viewer follows the Photos app: pinch zooms around the fingers (up to 5×, springing back to fit below 1×), double-tap zooms to 2.5× at the tapped point and back, one finger pans a zoomed image, a vertical swipe at fit size closes it with the backdrop fading, and a single tap hides or shows the close and share buttons. The close button, Android back and the iOS escape gesture also close it.
   - Reactions are small pills under the bubble, on its side: the emoji and its count, the Human's own in `chosen` with an accent edge. Tapping one adds or removes the Human's reaction. A Bot's reaction-only answer shows here with no reply bubble.
-  - Long-press a bubble to open its menu, a sheet from the bottom: a row of quick reactions (👍 ❤️ 😂 🎉 👀 ✅, the Web Client's set), then **Copy** for a message with text, and **Cancel**. A message that is still sending, failed, or is a card has no reactions, so its menu is Copy alone. Bubble text is not selectable, so the long-press always reaches this menu.
+  - A bubble that does something when pressed shows it while held: on Android a foreground ripple from the touch point, clipped to the bubble's corners, in the bubble's ink at 12% (`pressTint`); on iOS, which has no ripple, the bubble shrinks to 96% over the long-press delay (`motion.lift`) like the system context menu's lift, and springs back on release. Reduce Motion skips the shrink.
+  - Long-press a bubble to open its menu in place, like Telegram and ChatGPT, not a sheet from the bottom. A light haptic fires as it opens.
+    - The chat dims under `theme.scrim`, and the pressed bubble is drawn again above it at the same place. The **reaction island** sits just above the bubble and the **action menu** just below it, both on the bubble's side (left for a Bot, right for the Human). When they do not fit between the safe areas the group slides to fit, and a bubble taller than the room left is clipped (`menu-placement.ts`).
+    - The reaction island is a full-round pill on the `sheet` layer with a soft shadow. Its quick reactions scroll sideways: the Web Client's set first (👍 ❤️ 😂 🎉 👀 ✅), then more. The Human's own show in `chosen`; tapping one toggles it and closes the menu.
+    - The action menu is a card at radius `lg` on the `sheet` layer with a soft shadow: the message time in muted `meta` ("Today 14:41"), then a row per action, label on the left and icon on the right, with `divider` hairlines between: **Copy** and **Share** (the system share sheet) for a message with text.
+    - Both fade and scale in from the bubble. A tap outside, Android Back or the iOS escape gesture closes the menu, as does any action.
+    - A message that is still sending, failed, or is a card has no reactions, so its menu has no island. Bubble text is not selectable, so the long-press always reaches this menu; screen readers reach it through the bubble's "Message actions" action.
   - Delivery: pending shows at 70% opacity, failed offers "Not sent · Tap to retry", and sent shows nothing.
 - **Action cards** sit in the chat stream, and the same rules apply wherever they appear (DM, Activity, Human Inbox, web Inbox). Show only what the Human needs to decide; everything else waits behind Details.
   - Layout, top to bottom:
@@ -208,7 +215,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
 5. **Lists virtualize.** The chat is an inverted list.
 6. **Motion and haptics are limited.**
-   - Motion uses Reanimated, only for bubble entry, card collapse, the status dot, the Host drawer and the image viewer's gestures.
-   - Haptics fire only on send, approve or deny, and submitting a choice.
+   - Motion uses Reanimated, only for bubble entry, a held bubble's lift, the message menu, card collapse, the status dot, the Host drawer, the image viewer's gestures and the composer growing line by line (up to five lines, then it scrolls).
+   - Haptics fire only on send, approve or deny, submitting a choice, and opening a message's menu.
 7. **Copy lives in `src/ui/strings.ts`.** Internal ids and protocol names stay out of the UI.
 8. **UI PRs show the change.** They include light and dark screenshots from the web export, and a native check on a development build is recorded under Human QA.

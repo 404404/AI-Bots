@@ -10,6 +10,7 @@ export interface UsageDay {
 
 export interface UsageWeek {
   total: number | null;
+  partial: boolean;
   days: UsageDay[];
 }
 
@@ -66,12 +67,14 @@ function appendBySlug<T extends { slug: string }>(current: readonly T[], next: r
 export function usageWeek(usage: OverviewUsage): UsageWeek {
   return {
     total: usage.totals.totalTokens,
+    partial: usage.totals.partial === true,
     days: usage.days.map((row) => ({ day: row.day, tokens: row.totalTokens })),
   };
 }
 
 export function usageIsPartial(usage: OverviewUsage): boolean {
-  const unknown = (row: UsageBuckets) => Object.values(row).some((value) => value === null);
+  const unknown = (row: UsageBuckets) =>
+    row.partial === true || Object.values(row).some((value) => value === null);
   return unknown(usage.totals) || usage.days.some(unknown);
 }
 

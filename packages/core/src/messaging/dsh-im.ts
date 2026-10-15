@@ -335,6 +335,7 @@ function providerFailure(error: unknown): MessagingProviderError {
     'private-context-rejected',
     'send-permission-denied',
     'send-preflight-unavailable',
+    'send-rate-limited',
     'target-rejected',
     'reaction-permission-denied',
     'reaction-provider-rejected',
@@ -403,6 +404,17 @@ export function createDshImProvider(
       name: info.account.name ?? ref,
       fingerprint: info.account.fingerprint,
       connected: info.connected,
+      ...(platform === 'qq'
+        ? {
+            postSupported:
+              host.receiptVersion === 1 &&
+              [
+                'proactive-text-checked',
+                'proactive-receipt-checked',
+                'proactive-fence-checked',
+              ].every((capability) => info.capabilities.includes(capability)),
+          }
+        : {}),
       ...(['feishu', 'slack'].includes(platform)
         ? {
             reactionSupported:
@@ -454,12 +466,17 @@ export function createDshImProvider(
         typeof target.route.channelId === 'string') ||
       (platform === 'discord' &&
         target.kind === 'channel' &&
-        typeof target.route.channelId === 'string')
+        typeof target.route.channelId === 'string') ||
+      (platform === 'qq' && target.kind === 'group' && typeof target.route.groupOpenId === 'string')
         ? {
             receiveScope: {
               kind: 'group' as const,
               conversationId: String(
-                platform === 'feishu' ? target.route.chatId : target.route.channelId,
+                platform === 'feishu'
+                  ? target.route.chatId
+                  : platform === 'qq'
+                    ? target.route.groupOpenId
+                    : target.route.channelId,
               ),
             },
           }
@@ -1394,6 +1411,7 @@ export function createDshImProvider(
       : {}),
     ...((platform === 'feishu' ||
       platform === 'slack' ||
+      platform === 'qq' ||
       (platform === 'weixin' && host.postFenceVersion === 1)) &&
     host.receiptVersion === 1
       ? {
@@ -1404,7 +1422,12 @@ export function createDshImProvider(
               throw new MessagingProviderError('account-changed', 'not-started');
             if (!info.capabilities.includes('proactive-receipt-checked'))
               throw new MessagingProviderError('capability-unavailable', 'not-started');
-            if (platform === 'weixin' && !info.capabilities.includes('proactive-fence-checked'))
+            if (platform === 'qq' && !info.capabilities.includes('proactive-text-checked'))
+              throw new MessagingProviderError('capability-unavailable', 'not-started');
+            if (
+              (platform === 'weixin' || platform === 'qq') &&
+              !info.capabilities.includes('proactive-fence-checked')
+            )
               throw new MessagingProviderError('capability-unavailable', 'not-started');
             try {
               const result = await host.sendChecked(input.accountRef, input.targetRef, input.text, {

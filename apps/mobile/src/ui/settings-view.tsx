@@ -17,7 +17,6 @@ export interface SettingsActions {
   onUsage(): void;
   onOpenFullClient(): void;
   onComputers(): void;
-  onHostLook(): void;
   onAppIcon(): void;
   onNotifications(): void;
   onUnpair(): Promise<void>;
@@ -103,12 +102,6 @@ export function SettingsView({
         <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
       )}
       <SettingsSection title={t.interface} on={SHEET_GROUP}>
-        <SettingsRow
-          on={SHEET_GROUP}
-          title={t.hostLook}
-          detail={t.hostLookHint}
-          onPress={actions.onHostLook}
-        />
         <SettingsRow
           on={SHEET_GROUP}
           title={t.appIcon}

@@ -1512,7 +1512,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'bridge_targets',
         description:
-          'List your currently authorized external report targets, including qualified WeChat paired-owner DMs, own identity and grant_id. Does not grant any new authorization.',
+          'List your currently authorized external report targets, including qualified WeChat paired-owner DMs and QQ saved groups. Each target includes your own bindingId/accountRef, exact native conversationId, canPost and grantId. Compare that conversationId with the trusted original source; use grantId as bridge_post grant_id. Does not grant any new authorization.',
         parameters: {},
         output: {
           schema: { type: 'string' },
@@ -1985,7 +1985,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'bridge_reply',
         description:
-          'Explicitly reply to one external source through your own live authorized identity and the Host-stored original group/topic. One durable reply intent per responding Bot and source; never automatically retry an unknown outcome. Does not write a local Channel message.',
+          'Explicitly reply to one external source through your own live authorized identity and the Host-stored original group/topic. One durable reply intent per responding Bot and source. A failed QQ reply-window-expired retains its result in Outbox: use bridge_targets to find a canPost grant for your own app and the exact original group, then explicitly bridge_post with a distinct stable request_id if the task calls for result delivery. Otherwise retain the result locally. Never convert an unknown reply outcome into a proactive post or retry it. Does not write a local Channel message.',
         parameters: {
           source_event_id: {
             type: 'string',
