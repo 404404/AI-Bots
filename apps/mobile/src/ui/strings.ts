@@ -212,6 +212,7 @@ const en = {
   activity: 'Activity',
   settings: 'Settings',
   connections: 'Connections',
+  interface: 'Interface',
   back: 'Back',
   workingPreview: 'Working…',
   effect: {
@@ -644,6 +645,7 @@ const zh: typeof en = {
   activity: '动态',
   settings: '设置',
   connections: '连接',
+  interface: '界面',
   back: '返回',
   workingPreview: '工作中…',
   effect: {
