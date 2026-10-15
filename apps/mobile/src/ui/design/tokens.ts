@@ -63,6 +63,15 @@ export const glass = {
   saturate: 180,
 } as const;
 
+export const edgeFade = {
+  extend: 24,
+  stops: [
+    { offset: 0, opacity: 1 },
+    { offset: 0.6, opacity: 0.85 },
+    { offset: 1, opacity: 0 },
+  ],
+} as const;
+
 export const pointer = {
   fill: '#ffffff',
   rim: '#0f1115',
