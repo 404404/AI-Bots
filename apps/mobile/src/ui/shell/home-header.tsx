@@ -1,4 +1,4 @@
-import { useIsFocused, useRouter } from 'expo-router';
+import { useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
@@ -6,18 +6,24 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { headerBand, useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
+import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
+import { focusOn, hostDrawer, openHostDrawer, useHostDrawerOpen } from './host-drawer';
 import { ChevronDownIcon } from './icons';
 
 export function HomeHeader({ hostName, children }: { hostName: string; children: ReactNode }) {
   const theme = useDesignTheme();
-  const router = useRouter();
   const focused = useIsFocused();
+  const drawerOpen = useHostDrawerOpen();
   const insets = useSafeAreaInsets();
   const band = headerBand(theme.scheme, theme.color);
   const ink = theme.color[band.ink];
   const tile = theme.touch - space.x2;
+  const chip = useMounted<View>((node) => {
+    hostDrawer.setReturnFocus(() => focusOn(node));
+    return () => hostDrawer.setReturnFocus(undefined);
+  }, []);
   return (
     <View
       style={{
@@ -28,9 +34,11 @@ export function HomeHeader({ hostName, children }: { hostName: string; children:
     >
       {focused ? <StatusBar style={band.lightInk ? 'light' : 'dark'} /> : null}
       <Pressable
-        onPress={() => router.push('/hosts')}
+        ref={chip}
+        onPress={openHostDrawer}
         accessibilityRole="button"
         accessibilityLabel={t.switchComputer(hostName)}
+        accessibilityState={{ expanded: drawerOpen }}
         style={({ pressed }) => ({
           flexDirection: 'row',
           alignItems: 'center',

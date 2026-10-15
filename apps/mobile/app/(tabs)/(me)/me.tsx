@@ -7,6 +7,7 @@ import { hostSession, useHostSession, useHostSnapshot } from '../../../src/host/
 import { space } from '../../../src/ui/design/tokens';
 import { errorText, Notice } from '../../../src/ui/request-parts';
 import { SettingsRow, SettingsSection } from '../../../src/ui/primitives/settings-row';
+import { openHostDrawer } from '../../../src/ui/shell/host-drawer';
 import { t } from '../../../src/ui/strings';
 
 export default function MeScreen() {
@@ -45,11 +46,7 @@ export default function MeScreen() {
               router.push({ pathname: '/full-client', params: fullClientParams({ kind: 'home' }) })
             }
           />
-          <SettingsRow
-            title={t.computers}
-            detail={t.computersHint}
-            onPress={() => router.push('/hosts')}
-          />
+          <SettingsRow title={t.computers} detail={t.computersHint} onPress={openHostDrawer} />
           <SettingsRow title={t.notifications} onPress={() => router.push('/notifications')} />
           <SettingsRow
             title={t.unpair}

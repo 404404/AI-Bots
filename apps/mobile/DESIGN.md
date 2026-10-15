@@ -15,7 +15,8 @@ References:
 
 - **Hosts are workspaces.** Each paired computer is a Host.
   - The app stays connected to every paired Host at once.
-  - Home and chats show one Host at a time. Home has a Slack-style header band in the accent colour (a muted accent in dark mode) with the Host's initial tile, the Host name and ▾; tap it to open the Host switcher. The list sits on a panel with rounded top corners below it. The switcher lists each Host with its status and pending count, plus "Pair a new computer".
+  - Home and chats show one Host at a time. Home has a Slack-style header band in the accent colour (a muted accent in dark mode) with the Host's initial tile, the Host name and ▾; tap it to open the Host drawer. The list sits on a panel with rounded top corners below it.
+  - The Host drawer is the switcher: a panel about 85% wide on the `sheet` layer that slides over the tabs from the left with a dimmed backdrop. It opens from the Host chip or a swipe right from the left edge of a tab's root screen (never inside a chat, where that edge means Back). It lists each Host with its initial tile, online/offline status and pending count, marks the current one, and ends with "Pair a new computer". Tapping a Host switches to it and closes the drawer; tapping the backdrop, swiping left or Android Back closes it. VoiceOver/TalkBack focus moves to its heading and returns to the chip, and with Reduce Motion it appears without sliding.
 - **Tabs** are native (`NativeTabs`): **Home**, **Activity** and **Me**.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
   - iOS draws the system tab bar with no background colour of ours: Liquid Glass on iOS 26 (a floating capsule above the home indicator, with the system's glass pill behind the selected tab), the translucent system bar before it. The selected tint is the resolved `fg`, passed as a plain colour so the bar re-tints when the scheme changes while the app is open.
@@ -115,7 +116,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
 - `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Badge`, `Card`, `SettingsRow` and `EmptyState`.
 - `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, status strip and scroll-to-bottom.
-- `src/ui/shell/` will hold the Host switcher, shortcut cards and activity item.
+- `src/ui/shell/` holds the Host drawer, shortcut cards and activity item.
 - `app/` routes, reads the Host client, and composes these components.
 
 ## Code rules
@@ -130,7 +131,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
 5. **Lists virtualize.** The chat is an inverted list.
 6. **Motion and haptics are limited.**
-   - Motion uses Reanimated, only for bubble entry, card collapse, the status dot and the image viewer's gestures.
+   - Motion uses Reanimated, only for bubble entry, card collapse, the status dot, the Host drawer and the image viewer's gestures.
    - Haptics fire only on send, approve or deny, and submitting a choice.
 7. **Copy lives in `src/ui/strings.ts`.** Internal ids and protocol names stay out of the UI.
 8. **UI PRs show the change.** They include light and dark screenshots from the web export, and a native check on a development build is recorded under Human QA.
