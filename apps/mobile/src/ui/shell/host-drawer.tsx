@@ -44,7 +44,7 @@ import {
   settleOpen,
   type HostDrawerRow,
 } from './host-drawer-model';
-import { ActivityIcon, MessageIcon, MoreIcon, NeedsYouIcon, PlusIcon } from './icons';
+import { ActivityIcon, MoreIcon, PlusIcon } from './icons';
 
 export const hostDrawer = createHostDrawer({
   switchTo: (hostId) => hostSession.switchTo(hostId),
@@ -240,25 +240,19 @@ function CountChip({
   const ink = needsYou
     ? theme.color[theme.scheme === 'dark' ? 'base' : 'fg']
     : theme.color.onAccent;
-  const glyph = theme.type.meta.size + space.x1;
   return (
     <View
       accessibilityLabel={label}
       style={{
         height: theme.type.meta.line + space.x3,
-        flexDirection: 'row',
+        minWidth: theme.type.meta.line + space.x3,
         alignItems: 'center',
-        gap: space.x2,
+        justifyContent: 'center',
         paddingHorizontal: space.x3,
         borderRadius: radius.round,
         backgroundColor: needsYou ? theme.color.warning : theme.color.accent,
       }}
     >
-      {needsYou ? (
-        <NeedsYouIcon color={ink} size={glyph} />
-      ) : (
-        <MessageIcon color={ink} size={glyph} />
-      )}
       <Text variant="meta" strong style={{ color: ink }}>
         {String(count)}
       </Text>
