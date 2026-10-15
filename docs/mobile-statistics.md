@@ -2,7 +2,7 @@
 
 ## What the phone shares
 
-Phone statistics are **on by default for new installations**. The switch is at the bottom of Settings, with details collapsed until opened. Turning it off does not affect pairing, chat or notifications. A saved opt-out remains off across upgrades. This setting is separate from the computer's telemetry setting.
+Phone statistics are **on by default for new installations**. The first enabled launch shows the same informational notice pattern as the Web client: a short explanation, expandable details, Privacy / View source / Open Settings / Got it. Dismissal is remembered on the phone. This is an informational acknowledgment, not a pre-collection consent gate. The switch is at the bottom of Settings, with details collapsed until opened. Turning it off does not affect pairing, chat or notifications. A saved opt-out remains off across upgrades. This setting is separate from the computer's telemetry setting.
 
 With statistics enabled, DeepSeekBot sends PostHog a random phone statistics identifier, public app version/build, iOS/Android, supported language and coarse results for opening the app, pairing, connecting and the first accepted chat/observed Bot message. No names, messages, Memory, files, pairing links, credentials, push tokens, Host identity or other product identifiers are included. We do not connect this ID to website visits, accounts or computers, and do not create person profiles.
 
@@ -14,7 +14,7 @@ Source: [Mobile Telemetry](../apps/mobile/src/telemetry/) · [decision and quali
 
 ## 手机会分享哪些信息
 
-手机统计**新安装默认开启**。开关位于设置页最底部，详细说明默认折叠。关闭不影响配对、聊天和通知；已有关闭选择在升级后保留。这个开关独立于电脑端统计。
+手机统计**新安装默认开启**。首次启用时沿用 Web 客户端的说明方式：简短提示、可展开的详细说明，以及隐私说明、查看源码、打开设置和知道了。手机会记住已读状态。这是信息告知，不是采集前的同意门禁。开关位于设置页最底部，详细说明默认折叠。关闭不影响配对、聊天和通知；已有关闭选择在升级后保留。这个开关独立于电脑端统计。
 
 开启后，DeepSeekBot 向 PostHog 发送随机手机统计标识、公开应用版本和构建号、iOS/Android、支持的语言，以及打开应用、配对、连接、首次发送被接受和观察到 Bot 消息的粗略结果。不发送名称、聊天、Memory、文件、配对链接、凭证、推送令牌、电脑身份或其他产品标识。不将手机标识与网站访问、账号或电脑关联，也不建立个人档案。
 
@@ -30,7 +30,7 @@ The checked-in build remains unconfigured. Environment variables are public bund
 - `EXPO_PUBLIC_MOBILE_POSTHOG_TOKEN=<public project ingestion token>`
 - `EXPO_PUBLIC_MOBILE_TELEMETRY_QA_RUN=<fresh UUID v4>`
 
-Only iOS/Android send; web preview never sends. Added `expo-device` and `expo-application` native modules require a new development build through the shared QA queue; Metro reload alone is insufficient. Production requires `EXPO_PUBLIC_MOBILE_TELEMETRY=production`, the public token, a physical release build and `EXPO_PUBLIC_MOBILE_TELEMETRY_QUALIFIED=true`. Set that flag only after all release gates below, including unified-terms disclosure/acceptance and published privacy copy. The unified terms URL/content and first-use acceptance integration are unresolved in this draft; do not qualify a production build until that flow prevents collection before acceptance. Test/Simulator/unconfigured builds must not use production configuration. Do not use a personal API token in Expo public variables.
+Only iOS/Android send; web preview never sends. Added `expo-device` and `expo-application` native modules require a new development build through the shared QA queue; Metro reload alone is insufficient. Production requires `EXPO_PUBLIC_MOBILE_TELEMETRY=production`, the public token, a physical release build and `EXPO_PUBLIC_MOBILE_TELEMETRY_QUALIFIED=true`. Set that flag only after all release gates below, including the first-use notice and published mobile privacy copy. As in the Web client, collection does not wait for notice dismissal. This does not introduce or claim legal terms acceptance. Test/Simulator/unconfigured builds must not use production configuration. Do not use a personal API token in Expo public variables.
 
 ## Analysis definition
 
@@ -47,7 +47,7 @@ Do not add Host and mobile message totals together or estimate non-consenting us
 
 Submit the PR + exact SHA to the shared-device queue. Do not start a separate Simulator or reuse another session's Host. Use an isolated real Host and a new QA UUID; record platform, build, start/end time and project timezone without credentials or device identifiers.
 
-1. Clean app data only in the authorized QA lane. Verify the unified-terms acceptance path before any collection; this path is pending. After acceptance the preference defaults on. Explicitly turn it off at the bottom of Settings, then pair/chat/restart and verify zero analytics requests. Verify saved opt-outs survive upgrades.
+1. Clean app data only in the authorized QA lane. Verify the first-use informational notice, localized privacy/source links, Open Settings and Got it; dismiss and restart to prove it stays dismissed. Collection is default-on and does not wait for dismissal. Explicitly turn it off at the bottom of Settings, then pair/chat/restart and verify zero analytics requests. Verify saved opt-outs survive upgrades.
 2. Enable statistics from Settings while offline; return online, paste a malformed link, then scan a valid QR. Repeated scanner callbacks make one attempt. Test an expired/used code, unreachable route and explicit retry. Force the injectable persistence failure in automated tests; real storage failure needs a controlled device test, not corruption of user data.
 3. Expected successful path: `app_opened → pairing_started → pairing_result(success) → connection_result(pair,ready) → activation(host_ready) → activation(message_accepted) → activation(bot_message_observed)`. Connection can race pairing-result delivery after the saved-Host commit; compare semantic boundaries as well as timestamp order. Test both DM and group.
 4. Keep a cached conversation, restart and reconnect: history and drafts do not advance activation. Send with network failure, then retry/reconcile the same outgoing message. Cover the chat, background the app and replay stream frames: none creates a Bot observation. Switch Hosts: no new installation or duplicate activation.
@@ -63,4 +63,4 @@ The English and Chinese sections above are the proposed mobile addition to `/en/
 
 ## Human-directed UX revision (2026-10-16)
 
-The Human replaced the earlier explicit-opt-in design in #1929 with default-on statistics disclosed in unified app terms, collapsed explanatory text, and one switch at the bottom of Settings. No statistics control appears on the pairing screen. The default and Settings changes are implemented; the terms page/content and first-use acceptance integration are still pending. Checked-in builds remain unconfigured, and production qualification is blocked on this integration.
+The Human replaced the earlier explicit-opt-in design in #1929 with default-on statistics, collapsed explanatory text, and one switch at the bottom of Settings, then directed us to reference the Web client. Verified Web behavior is a one-time informational notice, not terms acceptance or a collection gate. Mobile now follows that pattern with phone-specific copy and the same localized privacy URLs. No statistics control appears on pairing. Checked-in builds remain unconfigured; physical device, PostHog readback, public mobile privacy copy and Human QA remain release gates.

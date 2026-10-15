@@ -328,3 +328,47 @@ it('records the first app open when foreground arrives before preference loading
   expect(send.mock.calls[0]![0]).toEqual([expect.objectContaining({ event: 'mobile_app_opened' })]);
   telemetry.dispose();
 });
+
+it('shows the first-use notice without gating default-on sends, and remembers dismissal across opt-out and restart', async () => {
+  const first = fixture();
+  await first.telemetry.ready;
+  expect(first.telemetry.getSnapshot().noticeOpen).toBe(true);
+  first.telemetry.foreground(true, 0);
+  await first.telemetry.flush();
+  expect(first.send).toHaveBeenCalledTimes(1);
+  const identity = first.send.mock.calls[0]![0][0]!.distinct_id;
+  await first.telemetry.dismissNotice();
+  expect(first.telemetry.getSnapshot().noticeOpen).toBe(false);
+  expect(first.stored()).toMatchObject({ noticeSeen: true, identity });
+  await first.telemetry.setEnabled(false);
+  expect(first.stored()).toEqual({ version: 1, enabled: false, noticeSeen: true });
+  const restored = fixture({ storage: { read: async () => first.stored(), write: vi.fn() } });
+  await restored.telemetry.setEnabled(true);
+  expect(restored.telemetry.getSnapshot().noticeOpen).toBe(false);
+  first.telemetry.dispose();
+  restored.telemetry.dispose();
+});
+
+it('shows the notice when an unseen saved opt-out is enabled, and fails closed if dismissal cannot be saved', async () => {
+  let fail = false;
+  const { telemetry } = fixture({
+    storage: {
+      read: async () => ({ version: 1, enabled: false }),
+      write: () => {
+        if (fail) throw new Error('storage');
+      },
+    },
+  });
+  await telemetry.ready;
+  expect(telemetry.getSnapshot().noticeOpen).toBe(false);
+  await telemetry.setEnabled(true);
+  expect(telemetry.getSnapshot().noticeOpen).toBe(true);
+  fail = true;
+  await telemetry.dismissNotice();
+  expect(telemetry.getSnapshot()).toMatchObject({
+    noticeOpen: false,
+    enabled: false,
+    storageError: true,
+  });
+  telemetry.dispose();
+});

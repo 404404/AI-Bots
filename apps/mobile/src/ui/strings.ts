@@ -64,6 +64,15 @@ const en = {
     blocked: 'Blocked',
   } satisfies Record<AggregatedState, string>,
   statisticsTitle: 'Anonymous phone statistics',
+  statisticsNoticeTitle: 'About anonymous statistics',
+  statisticsNoticeSummary:
+    'DeepSeekBot sends anonymous phone statistics by default to improve pairing, connections and first-chat reliability. You can turn them off at the bottom of Settings at any time.',
+  statisticsPrivacy: 'Privacy',
+  statisticsPrivacyUrl: 'https://deepseekbot.botharness.ai/en/privacy',
+  statisticsSource: 'View source',
+  statisticsOpenSettings: 'Open Settings',
+  statisticsGotIt: 'Got it',
+  statisticsLinkError: 'Could not open the link. Please try again.',
   statisticsDetails: 'About anonymous statistics',
   statisticsHideDetails: 'Hide statistics details',
   statisticsNotice:
@@ -694,6 +703,15 @@ const zh: typeof en = {
     blocked: '受阻',
   },
   statisticsTitle: '手机匿名使用统计',
+  statisticsNoticeTitle: '关于匿名使用统计',
+  statisticsNoticeSummary:
+    'DeepSeekBot 默认发送匿名手机统计，帮助改善配对、连接和首次聊天的可靠性。你可以随时在设置页最底部关闭。',
+  statisticsPrivacy: '隐私说明',
+  statisticsPrivacyUrl: 'https://deepseekbot.botharness.ai/privacy',
+  statisticsSource: '查看源码',
+  statisticsOpenSettings: '打开设置',
+  statisticsGotIt: '知道了',
+  statisticsLinkError: '无法打开链接，请重试。',
   statisticsDetails: '了解匿名统计',
   statisticsHideDetails: '收起统计说明',
   statisticsNotice:

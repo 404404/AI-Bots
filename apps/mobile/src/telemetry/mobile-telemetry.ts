@@ -32,6 +32,7 @@ const TTL = 24 * 60 * 60 * 1000;
 export function createMobileTelemetry(options: TelemetryOptions) {
   let enabled = false;
   let loaded = false;
+  let noticeSeen = false;
   let disposed = false;
   let identity: string | undefined;
   let session: string | undefined;
@@ -48,9 +49,9 @@ export function createMobileTelemetry(options: TelemetryOptions) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const listeners = new Set<() => void>();
   const backgroundListeners = new Set<() => void>();
-  let snapshot = { loaded, enabled, storageError: false };
+  let snapshot = { loaded, enabled, noticeOpen: false, storageError: false };
   const publish = (storageError = false) => {
-    snapshot = { loaded, enabled, storageError };
+    snapshot = { loaded, enabled, noticeOpen: loaded && enabled && !noticeSeen, storageError };
     for (const listener of listeners) listener();
   };
   const prune = () => {
@@ -65,8 +66,15 @@ export function createMobileTelemetry(options: TelemetryOptions) {
     try {
       options.storage.write(
         enabled
-          ? { version: 1, enabled, identity, queue, steps: [...steps] }
-          : { version: 1, enabled: false },
+          ? {
+              version: 1,
+              enabled,
+              identity,
+              queue,
+              steps: [...steps],
+              ...(noticeSeen ? { noticeSeen } : {}),
+            }
+          : { version: 1, enabled: false, ...(noticeSeen ? { noticeSeen } : {}) },
       );
       return true;
     } catch {
@@ -201,6 +209,7 @@ export function createMobileTelemetry(options: TelemetryOptions) {
     .then((value) => {
       if (disposed) return;
       const saved = record(value);
+      noticeSeen = saved['noticeSeen'] === true;
       if (readFailed) {
         enabled = false;
         loaded = true;
@@ -230,6 +239,12 @@ export function createMobileTelemetry(options: TelemetryOptions) {
     });
   return {
     ready,
+    async dismissNotice(): Promise<void> {
+      await ready;
+      if (disposed) return;
+      noticeSeen = true;
+      if (persist()) publish();
+    },
     getSnapshot: () => snapshot,
     subscribe(listener: () => void) {
       listeners.add(listener);
