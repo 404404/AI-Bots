@@ -2587,9 +2587,6 @@ export interface JournalPage {
   hasOlder: boolean;
 }
 
-// A committed message this client cannot fully read (a kind added by a newer Host, or a field
-// it rejects) still holds its place in the Channel. Show it as plain text instead of failing
-// the whole timeline page or breaking the journal's revision sequence.
 export function parseStoredChannelMessage(value: unknown): ChannelMessage | undefined {
   const parsed = parseChannelMessage(value);
   if (parsed !== undefined) return parsed;

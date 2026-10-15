@@ -8,7 +8,6 @@ const readable = {
   body: 'hello',
   channelRevision: 1,
 };
-// A system notice of a kind this client does not know, as a newer Host could write it.
 const unreadable = {
   id: 'm2',
   at: '2026-10-15T08:01:00.000Z',
