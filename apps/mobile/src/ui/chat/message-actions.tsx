@@ -1,5 +1,5 @@
 import { Fragment, useRef, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -56,6 +56,21 @@ export function menuSizes(theme: DesignTheme, rows: number, reactions: boolean) 
 function sideOffset(anchor: Rect, human: boolean, width: number, screen: number) {
   const left = human ? anchor.x + anchor.width - width : anchor.x;
   return Math.min(Math.max(left, space.x4), screen - space.x4 - width);
+}
+
+export function dismissQueue(os: string) {
+  let pending: (() => void) | undefined;
+  return {
+    after(run: () => void) {
+      if (os === 'ios') pending = run;
+      else run();
+    },
+    flush() {
+      const run = pending;
+      pending = undefined;
+      run?.();
+    },
+  };
 }
 
 const POP = new Keyframe({
@@ -154,6 +169,7 @@ export function MessageActions({
   onCopy(text: string): void;
   onShareText(text: string): void;
 }) {
+  const queue = useRef(dismissQueue(Platform.OS)).current;
   return (
     <Modal
       visible={target !== undefined}
@@ -161,6 +177,7 @@ export function MessageActions({
       animationType="fade"
       statusBarTranslucent
       onRequestClose={onClose}
+      onDismiss={queue.flush}
     >
       {target === undefined ? null : (
         <MessageMenu
@@ -169,7 +186,7 @@ export function MessageActions({
           onClose={onClose}
           onReact={onReact}
           onCopy={onCopy}
-          onShareText={onShareText}
+          onShareText={(text) => queue.after(() => onShareText(text))}
         />
       )}
     </Modal>
