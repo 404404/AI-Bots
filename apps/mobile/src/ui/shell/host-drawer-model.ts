@@ -25,9 +25,15 @@ export function hostDrawerRows(
       hostId: host.hostId,
       hostName: host.hostName,
       current,
-      glance: current ? live : (glances[host.hostId] ?? { status: 'checking' }),
+      glance: current
+        ? withUnread(live, glances[host.hostId]?.unread)
+        : (glances[host.hostId] ?? { status: 'checking' }),
     };
   });
+}
+
+function withUnread(glance: HostGlance, unread: number | undefined): HostGlance {
+  return unread === undefined || glance.status !== 'online' ? glance : { ...glance, unread };
 }
 
 export function drawerWidth(windowWidth: number): number {
@@ -49,6 +55,7 @@ export interface HostDrawerState {
 export interface HostDrawerPort {
   switchTo(hostId: string): Promise<boolean>;
   pair(): void;
+  notifications(): void;
 }
 
 export interface HostDrawer {
@@ -60,6 +67,7 @@ export interface HostDrawer {
   hidden(): void;
   select(hostId: string): Promise<boolean>;
   pairNew(): void;
+  openNotifications(): void;
   setReturnFocus(focus: (() => void) | undefined): void;
 }
 
@@ -97,6 +105,10 @@ export function createHostDrawer(port: HostDrawerPort): HostDrawer {
     pairNew() {
       close();
       port.pair();
+    },
+    openNotifications() {
+      close();
+      port.notifications();
     },
     setReturnFocus(focus) {
       returnFocus = focus;

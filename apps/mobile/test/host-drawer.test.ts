@@ -35,13 +35,21 @@ const ready = (action: number): InboxSnapshot => ({
 const connection = (status: ConnectionState['status']) =>
   ({ status, route: 'https://studio.example.ts.net' }) as ConnectionState;
 
-function answering(answer: (method: string) => Promise<unknown>): HostClient {
-  return { call: vi.fn((method: string) => answer(method)) } as unknown as HostClient;
+function answering(
+  answer: (method: string, args?: Record<string, unknown>) => Promise<unknown>,
+): HostClient {
+  return {
+    call: vi.fn((method: string, args?: Record<string, unknown>) => answer(method, args)),
+  } as unknown as HostClient;
 }
 
 describe('Host drawer', () => {
   it('opens from the chip and closes from the backdrop, returning focus to the chip', () => {
-    const drawer = createHostDrawer({ switchTo: vi.fn(async () => true), pair: vi.fn() });
+    const drawer = createHostDrawer({
+      switchTo: vi.fn(async () => true),
+      pair: vi.fn(),
+      notifications: vi.fn(),
+    });
     const focus = vi.fn();
     drawer.setReturnFocus(focus);
     expect(drawer.getSnapshot()).toEqual({ open: false, shown: false });
@@ -58,7 +66,11 @@ describe('Host drawer', () => {
   });
 
   it('shows the drawer while an edge swipe drags it in, and hides it again when the swipe is let go early', () => {
-    const drawer = createHostDrawer({ switchTo: vi.fn(async () => true), pair: vi.fn() });
+    const drawer = createHostDrawer({
+      switchTo: vi.fn(async () => true),
+      pair: vi.fn(),
+      notifications: vi.fn(),
+    });
     const focus = vi.fn();
     drawer.setReturnFocus(focus);
 
@@ -72,7 +84,11 @@ describe('Host drawer', () => {
   });
 
   it('keeps the drawer shown when it reopens before the closing slide ends', () => {
-    const drawer = createHostDrawer({ switchTo: vi.fn(async () => true), pair: vi.fn() });
+    const drawer = createHostDrawer({
+      switchTo: vi.fn(async () => true),
+      pair: vi.fn(),
+      notifications: vi.fn(),
+    });
     drawer.open();
     drawer.close();
     drawer.open();
@@ -82,7 +98,7 @@ describe('Host drawer', () => {
 
   it('switches to the chosen Host and closes', async () => {
     const switchTo = vi.fn(async () => true);
-    const drawer = createHostDrawer({ switchTo, pair: vi.fn() });
+    const drawer = createHostDrawer({ switchTo, pair: vi.fn(), notifications: vi.fn() });
     drawer.open();
 
     await expect(drawer.select('laptop')).resolves.toBe(true);
@@ -92,11 +108,29 @@ describe('Host drawer', () => {
 
   it('opens the pairing flow from "Pair a new computer" and closes', () => {
     const pair = vi.fn();
-    const drawer = createHostDrawer({ switchTo: vi.fn(async () => true), pair });
+    const drawer = createHostDrawer({
+      switchTo: vi.fn(async () => true),
+      pair,
+      notifications: vi.fn(),
+    });
     drawer.open();
 
     drawer.pairNew();
     expect(pair).toHaveBeenCalledTimes(1);
+    expect(drawer.getSnapshot().open).toBe(false);
+  });
+
+  it('opens notification settings from the footer and closes', () => {
+    const notifications = vi.fn();
+    const drawer = createHostDrawer({
+      switchTo: vi.fn(async () => true),
+      pair: vi.fn(),
+      notifications,
+    });
+    drawer.open();
+
+    drawer.openNotifications();
+    expect(notifications).toHaveBeenCalledTimes(1);
     expect(drawer.getSnapshot().open).toBe(false);
   });
 
@@ -113,11 +147,15 @@ describe('Host drawer', () => {
 });
 
 describe('Host rows', () => {
-  it('lists every Host in pairing order, marks the current one and gives it the live status', () => {
+  it('lists every Host in pairing order, marks the current one and keeps its live pending count with the glanced unread count', () => {
     const rows = hostDrawerRows(
       [studio, laptop, tower],
       'studio',
-      { laptop: { status: 'offline' }, tower: { status: 'online', pending: 2 } },
+      {
+        studio: { status: 'online', pending: 9, unread: 4 },
+        laptop: { status: 'offline' },
+        tower: { status: 'online', pending: 2, unread: 1 },
+      },
       liveGlance(connection('connected'), ready(3)),
     );
     expect(rows).toEqual([
@@ -125,14 +163,14 @@ describe('Host rows', () => {
         hostId: 'studio',
         hostName: 'Studio Mac',
         current: true,
-        glance: { status: 'online', pending: 3 },
+        glance: { status: 'online', pending: 3, unread: 4 },
       },
       { hostId: 'laptop', hostName: 'Laptop', current: false, glance: { status: 'offline' } },
       {
         hostId: 'tower',
         hostName: 'Tower',
         current: false,
-        glance: { status: 'online', pending: 2 },
+        glance: { status: 'online', pending: 2, unread: 1 },
       },
     ]);
   });
@@ -155,10 +193,13 @@ describe('Host rows', () => {
 });
 
 describe('Host glances', () => {
-  it('counts what needs the Human on another Host', async () => {
-    const client = answering(async () => ({ items: items(2) }));
-    await expect(glanceHost(client)).resolves.toEqual({ status: 'online', pending: 2 });
+  it('counts what needs the Human and what is unread on a Host', async () => {
+    const client = answering(async (_method, args) => ({
+      items: items(args?.['category'] === 'action' ? 2 : 3),
+    }));
+    await expect(glanceHost(client)).resolves.toEqual({ status: 'online', pending: 2, unread: 3 });
     expect(client.call).toHaveBeenCalledWith('humanAttention', { category: 'action', limit: 100 });
+    expect(client.call).toHaveBeenCalledWith('humanAttention', { category: 'unread', limit: 100 });
   });
 
   it('marks a Host offline when it cannot be reached', async () => {
@@ -184,7 +225,7 @@ describe('Host glances', () => {
       tower: { status: 'checking' },
     });
     await vi.waitFor(() =>
-      expect(glances.getSnapshot()['laptop']).toEqual({ status: 'online', pending: 1 }),
+      expect(glances.getSnapshot()['laptop']).toEqual({ status: 'online', pending: 1, unread: 1 }),
     );
 
     stop();

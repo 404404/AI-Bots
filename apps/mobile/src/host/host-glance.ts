@@ -8,9 +8,10 @@ export type HostStatus = 'online' | 'offline' | 'checking';
 export interface HostGlance {
   status: HostStatus;
   pending?: number;
+  unread?: number;
 }
 
-const ACTION_LIMIT = 100;
+const LIMIT = 100;
 
 export function liveGlance(connection: ConnectionState, inbox: InboxSnapshot): HostGlance {
   switch (connection.status) {
@@ -28,11 +29,12 @@ export function liveGlance(connection: ConnectionState, inbox: InboxSnapshot): H
 
 export async function glanceHost(client: HostClient): Promise<HostGlance> {
   try {
-    const page = await client.call<HumanAttentionPage>('humanAttention', {
-      category: 'action',
-      limit: ACTION_LIMIT,
-    });
-    return { status: 'online', pending: page.items.length };
+    const [action, unread] = await Promise.all(
+      (['action', 'unread'] as const).map((category) =>
+        client.call<HumanAttentionPage>('humanAttention', { category, limit: LIMIT }),
+      ),
+    );
+    return { status: 'online', pending: action!.items.length, unread: unread!.items.length };
   } catch {
     return { status: 'offline' };
   }

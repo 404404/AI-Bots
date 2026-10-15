@@ -3,8 +3,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
+  ActionSheetIOS,
+  Alert,
   BackHandler,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -28,7 +31,7 @@ import { nativeCarrier } from '../../host/native-carrier';
 import { NeedsYouBadge } from '../chat/conversation-row';
 import { glassShadow, useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
-import { motion, radius, scrim, space } from '../design/tokens';
+import { edge, motion, radius, scrim, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
 import {
@@ -39,11 +42,12 @@ import {
   settleOpen,
   type HostDrawerRow,
 } from './host-drawer-model';
-import { PlusIcon } from './icons';
+import { ActivityIcon, MoreIcon, PlusIcon } from './icons';
 
 export const hostDrawer = createHostDrawer({
   switchTo: (hostId) => hostSession.switchTo(hostId),
   pair: () => router.push('/pair'),
+  notifications: () => router.push('/notifications'),
 });
 
 const glances = createHostGlances((host) =>
@@ -127,29 +131,104 @@ function statusText(status: HostStatus): string {
   return status === 'online' ? t.hostOnline : status === 'offline' ? t.hostOffline : t.hostChecking;
 }
 
+function closeThen(action: () => void): void {
+  slide(false);
+  action();
+}
+
+function confirmUnpair(row: HostDrawerRow): void {
+  Alert.alert(t.unpairHost(row.hostName), t.unpairHostDetail, [
+    { text: t.cancel, style: 'cancel' },
+    {
+      text: t.unpair,
+      style: 'destructive',
+      onPress: () => void hostSession.unpair(row.hostId).catch(() => undefined),
+    },
+  ]);
+}
+
+function openHostMenu(row: HostDrawerRow): void {
+  const actions = [
+    ...(row.current
+      ? []
+      : [{ label: t.showHost, run: () => closeThen(() => void hostDrawer.select(row.hostId)) }]),
+    { label: t.unpair, run: () => confirmUnpair(row), destructive: true },
+  ];
+  if (Platform.OS === 'ios') {
+    ActionSheetIOS.showActionSheetWithOptions(
+      {
+        title: row.hostName,
+        options: [...actions.map((action) => action.label), t.cancel],
+        destructiveButtonIndex: actions.findIndex((action) => action.destructive === true),
+        cancelButtonIndex: actions.length,
+      },
+      (index) => actions[index]?.run(),
+    );
+    return;
+  }
+  Alert.alert(row.hostName, undefined, [
+    { text: t.cancel, style: 'cancel' },
+    ...actions.map((action) => ({
+      text: action.label,
+      style: action.destructive === true ? ('destructive' as const) : ('default' as const),
+      onPress: action.run,
+    })),
+  ]);
+}
+
 function HostTile({ name, current }: { name: string; current: boolean }) {
+  const theme = useDesignTheme();
+  const tile = theme.touch;
+  return (
+    <View
+      style={{
+        padding: space.x1,
+        borderRadius: radius.md + space.x2,
+        borderWidth: edge.focus,
+        borderColor: current ? theme.color.fg : theme.layer.sheet.fill,
+      }}
+    >
+      <View
+        style={{
+          width: tile,
+          height: tile,
+          borderRadius: radius.md,
+          backgroundColor: theme.layer.sheet.inset,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text variant="title">{Array.from(name.trim())[0]?.toUpperCase() ?? '?'}</Text>
+      </View>
+    </View>
+  );
+}
+
+function UnreadBadge({ count }: { count: number }) {
   const theme = useDesignTheme();
   return (
     <View
       style={{
-        width: theme.touch,
-        height: theme.touch,
-        borderRadius: radius.md,
-        backgroundColor: current ? theme.color.accent : theme.layer.sheet.inset,
+        minWidth: theme.type.meta.line + space.x2,
+        height: theme.type.meta.line + space.x2,
+        borderRadius: radius.round,
+        paddingHorizontal: space.x2,
+        backgroundColor: theme.color.accent,
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Text variant="title" tone={current ? 'onAccent' : 'fg'}>
-        {Array.from(name.trim())[0]?.toUpperCase() ?? '?'}
+      <Text variant="meta" strong tone="onAccent">
+        {String(count)}
       </Text>
     </View>
   );
 }
 
-function HostRow({ row, onPress }: { row: HostDrawerRow; onPress(): void }) {
+function HostRow({ row }: { row: HostDrawerRow }) {
   const theme = useDesignTheme();
   const pending = row.glance.pending ?? 0;
+  const unread = row.glance.unread ?? 0;
   const status = statusText(row.glance.status);
   const dot =
     row.glance.status === 'online'
@@ -158,92 +237,92 @@ function HostRow({ row, onPress }: { row: HostDrawerRow; onPress(): void }) {
         ? theme.color.warning
         : theme.color.subtle;
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={[
-        row.hostName,
-        row.current ? t.showing : undefined,
-        status,
-        pending > 0 ? t.hostPending(pending) : undefined,
-      ]
-        .filter((part) => part !== undefined)
-        .join(', ')}
-      accessibilityState={{ selected: row.current }}
-      style={({ pressed }) => ({
-        minHeight: theme.touch + space.x4,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: space.x4,
-        marginHorizontal: space.x3,
-        paddingHorizontal: space.x3,
-        paddingVertical: space.x3,
-        borderRadius: radius.md,
-        backgroundColor: pressed
-          ? theme.layer.sheet.pressed
-          : row.current
-            ? theme.layer.sheet.selected
-            : theme.layer.sheet.fill,
-      })}
-    >
-      <HostTile name={row.hostName} current={row.current} />
-      <View style={{ flex: 1, gap: space.x1 }}>
-        <Text strong numberOfLines={1}>
-          {row.hostName}
-        </Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
-          <View
-            style={{
-              width: space.x3,
-              height: space.x3,
-              borderRadius: radius.round,
-              backgroundColor: dot,
-            }}
-          />
-          <Text variant="meta" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
-            {status}
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: space.x2 }}>
+      <Pressable
+        onPress={() => closeThen(() => void hostDrawer.select(row.hostId))}
+        accessibilityRole="button"
+        accessibilityLabel={[
+          row.hostName,
+          row.current ? t.showing : undefined,
+          status,
+          pending > 0 ? t.hostPending(pending) : undefined,
+          unread > 0 ? t.hostUnread(unread) : undefined,
+        ]
+          .filter((part) => part !== undefined)
+          .join(', ')}
+        accessibilityState={{ selected: row.current }}
+        style={({ pressed }) => ({
+          flex: 1,
+          minHeight: theme.touch + space.x6,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: space.x4,
+          paddingLeft: space.x4,
+          paddingVertical: space.x3,
+          backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        })}
+      >
+        <HostTile name={row.hostName} current={row.current} />
+        <View style={{ flex: 1, gap: space.x1 }}>
+          <Text strong numberOfLines={1}>
+            {row.hostName}
           </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
+            <View
+              style={{
+                width: space.x3,
+                height: space.x3,
+                borderRadius: radius.round,
+                backgroundColor: dot,
+              }}
+            />
+            <Text variant="meta" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
+              {status}
+            </Text>
+          </View>
         </View>
-      </View>
-      {pending > 0 ? <NeedsYouBadge count={pending} /> : null}
-    </Pressable>
+        {pending > 0 ? <NeedsYouBadge count={pending} /> : null}
+        {unread > 0 ? <UnreadBadge count={unread} /> : null}
+      </Pressable>
+      <Pressable
+        onPress={() => openHostMenu(row)}
+        accessibilityRole="button"
+        accessibilityLabel={t.hostMore(row.hostName)}
+        hitSlop={space.x2}
+        style={({ pressed }) => ({
+          width: theme.touch,
+          height: theme.touch,
+          borderRadius: radius.round,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+        })}
+      >
+        <MoreIcon color={theme.color.muted} size={theme.type.title.size + space.x2} />
+      </Pressable>
+    </View>
   );
 }
 
-function PairRow({ onPress }: { onPress(): void }) {
+function FooterRow({ label, icon, onPress }: { label: string; icon: ReactNode; onPress(): void }) {
   const theme = useDesignTheme();
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={t.pairAnother}
+      accessibilityLabel={label}
       style={({ pressed }) => ({
-        minHeight: theme.touch + space.x4,
+        minHeight: theme.touch,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: space.x4,
-        marginHorizontal: space.x3,
-        paddingHorizontal: space.x3,
+        gap: space.x5,
+        paddingHorizontal: space.x5,
         paddingVertical: space.x3,
-        borderRadius: radius.md,
         backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
       })}
     >
-      <View
-        style={{
-          width: theme.touch,
-          height: theme.touch,
-          borderRadius: radius.md,
-          backgroundColor: theme.layer.sheet.inset,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <PlusIcon color={theme.color.fg} size={theme.type.title.size + space.x2} />
-      </View>
-      <Text strong tone="accent" style={{ flex: 1 }}>
-        {t.pairAnother}
-      </Text>
+      {icon}
+      <Text style={{ flex: 1 }}>{label}</Text>
     </Pressable>
   );
 }
@@ -259,6 +338,7 @@ export function HostDrawer() {
   const list = useInbox(inbox);
   const glanceMap = useSyncExternalStore(glances.subscribe, glances.getSnapshot);
   const currentId = saved?.hostId;
+  const icon = theme.type.title.size + space.x2;
 
   const rows = useMemo(
     () => hostDrawerRows(hosts, currentId, glanceMap, liveGlance(connection, list)),
@@ -268,7 +348,7 @@ export function HostDrawer() {
   const heading = useMounted<View>(
     (node) => {
       if (!state.open) return;
-      const stopWatching = glances.watch(hosts.filter((host) => host.hostId !== currentId));
+      const stopWatching = glances.watch(hosts);
       const focus = setTimeout(() => focusOn(node), motion.drawer);
       const back = BackHandler.addEventListener('hardwareBackPress', () => {
         settle(false);
@@ -280,7 +360,7 @@ export function HostDrawer() {
         back.remove();
       };
     },
-    [state.open, hosts, currentId],
+    [state.open, hosts],
   );
 
   const fade = theme.scheme === 'dark' ? scrim.dark : scrim.light;
@@ -335,7 +415,7 @@ export function HostDrawer() {
               borderTopRightRadius: radius.lg,
               borderBottomRightRadius: radius.lg,
               boxShadow: glassShadow(theme.scheme),
-              paddingTop: insets.top + space.x4,
+              overflow: 'hidden',
             },
             panelStyle,
           ]}
@@ -345,41 +425,40 @@ export function HostDrawer() {
             accessible
             accessibilityRole="header"
             accessibilityLabel={t.computers}
-            style={{ paddingHorizontal: space.x5, paddingBottom: space.x4 }}
+            style={{
+              paddingTop: insets.top + space.x5,
+              paddingHorizontal: space.x5,
+              paddingBottom: space.x4,
+            }}
           >
             <Text variant="display">{t.computers}</Text>
           </View>
           <FlatList
+            style={{ flex: 1 }}
             data={rows}
             keyExtractor={(row) => row.hostId}
-            contentContainerStyle={{ gap: space.x2, paddingBottom: insets.bottom + space.x5 }}
-            renderItem={({ item }) => (
-              <HostRow
-                row={item}
-                onPress={() => {
-                  slide(false);
-                  void hostDrawer.select(item.hostId);
-                }}
-              />
-            )}
-            ListFooterComponent={
-              <View style={{ paddingTop: space.x3, gap: space.x3 }}>
-                <PairRow
-                  onPress={() => {
-                    slide(false);
-                    hostDrawer.pairNew();
-                  }}
-                />
-                <Text
-                  variant="meta"
-                  tone="muted"
-                  style={{ paddingHorizontal: space.x5, paddingTop: space.x3 }}
-                >
-                  {t.computersHint}
-                </Text>
-              </View>
-            }
+            contentContainerStyle={{ paddingBottom: space.x4 }}
+            renderItem={({ item }) => <HostRow row={item} />}
           />
+          <View
+            style={{
+              borderTopWidth: edge.hairline,
+              borderTopColor: theme.layer.sheet.divider,
+              paddingTop: space.x3,
+              paddingBottom: insets.bottom + space.x3,
+            }}
+          >
+            <FooterRow
+              label={t.pairAnother}
+              icon={<PlusIcon color={theme.color.fg} size={icon} />}
+              onPress={() => closeThen(() => hostDrawer.pairNew())}
+            />
+            <FooterRow
+              label={t.notifications}
+              icon={<ActivityIcon color={theme.color.fg} size={icon} />}
+              onPress={() => closeThen(() => hostDrawer.openNotifications())}
+            />
+          </View>
         </Animated.View>
       </View>
     </GestureDetector>

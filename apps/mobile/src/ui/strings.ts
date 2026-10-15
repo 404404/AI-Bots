@@ -229,6 +229,11 @@ const en = {
     working: (count: number) => (count === 1 ? '1 PersonaBot' : `${count} PersonaBots`),
   },
   noConversations: 'No conversations here.',
+  pinnedSection: 'Pinned',
+  sectionLabel: (name: string, count: number, needsYou: number) =>
+    [name, count === 1 ? '1 conversation' : `${count} conversations`]
+      .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
+      .join(', '),
   showAll: 'Show all',
   computer: 'This computer',
   connected: 'Connected',
@@ -274,6 +279,12 @@ const en = {
   hostOffline: 'Offline',
   hostChecking: 'Checking…',
   hostPending: (count: number) => (count === 1 ? '1 needs you' : `${count} need you`),
+  hostUnread: (count: number) => (count === 1 ? '1 unread' : `${count} unread`),
+  hostMore: (host: string) => `More for ${host}`,
+  showHost: 'Show this computer',
+  unpairHost: (host: string) => `Unpair ${host}?`,
+  unpairHostDetail:
+    'This phone stops showing its chats and notifications. You can pair it again from the computer.',
   openProfile: 'Opens the profile',
   profile: 'Profile',
   profileMessage: 'Message',
@@ -561,6 +572,11 @@ const zh: typeof en = {
     working: (count: number) => `${count} 个 PersonaBot`,
   },
   noConversations: '这里还没有对话。',
+  pinnedSection: '已置顶',
+  sectionLabel: (name: string, count: number, needsYou: number) =>
+    [name, `${count} 个对话`]
+      .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
+      .join('，'),
   showAll: '显示全部',
   computer: '这台电脑',
   connected: '已连接',
@@ -605,6 +621,11 @@ const zh: typeof en = {
   hostOffline: '离线',
   hostChecking: '正在检查…',
   hostPending: (count: number) => `${count} 项等你处理`,
+  hostUnread: (count: number) => `${count} 条未读`,
+  hostMore: (host: string) => `${host} 的更多操作`,
+  showHost: '显示这台电脑',
+  unpairHost: (host: string) => `取消配对 ${host}？`,
+  unpairHostDetail: '这台手机将不再显示它的聊天和通知，之后可以在电脑上重新配对。',
   openProfile: '打开资料页',
   profile: '资料',
   profileMessage: '发消息',
