@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "botharness-market",
   "account_id": "332e72d480d7cb3e60ee671d3ca0cad0",
-  "main": "src/worker.ts",
+  "main": "src/entry.ts",
   "compatibility_date": "2026-09-17",
   "routes": [{ "pattern": "market.botharness.ai", "custom_domain": true }],
   "triggers": { "crons": ["0 3 * * *", "17 * * * *"] },
