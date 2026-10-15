@@ -174,6 +174,7 @@ import {
   type HumanAssignmentContext,
   ignoreHumanAssignmentReport,
   dismissHumanInboxItem,
+  overrideAutoRejection,
   snoozeHumanInboxItem,
   type TimelinePage,
   type TimelinePageRequest,
@@ -486,6 +487,7 @@ export interface BridgeActions {
   setHumanInboxFilters(filters: HumanInboxFilters): Promise<void>;
   loadMoreHumanInbox(): Promise<void>;
   dismissHumanInbox(item: HumanAttentionItem): Promise<void>;
+  allowAutoRejectionOnce(item: HumanAttentionItem): Promise<void>;
   snoozeHumanInbox(item: HumanAttentionItem, until: string | null): Promise<void>;
   humanInboxContextPage(
     channelId: string,
@@ -1942,6 +1944,21 @@ export function createActions(
       return loadHumanInboxFor(state.category, selection, state.nextCursor).finally(() => {
         humanInboxPagesPending -= 1;
       });
+    },
+    async allowAutoRejectionOnce(item) {
+      await overrideAutoRejection(call, item.id);
+      humanInboxScopeVersion += 1;
+      humanInboxHeadSeq += 1;
+      humanInboxPageSeq += 1;
+      const state = clientStore.getSnapshot().humanInbox;
+      clientStore.setHumanInbox({
+        items: state.items.filter(
+          (entry) => entry.id !== item.id || entry.sourceEventId !== item.sourceEventId,
+        ),
+      });
+      void Promise.all([actions.refreshHumanInbox(), actions.refreshHumanInboxStatus()]).catch(
+        () => undefined,
+      );
     },
     async dismissHumanInbox(item) {
       await dismissHumanInboxItem(call, item.id, item.sourceEventId ?? '');

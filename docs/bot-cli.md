@@ -436,6 +436,17 @@ deepseekbot approval-template-set <bot-id> off
 
 `approval-templates` returns `{templates}` with each template's `name`, `title`, `description` and `builtIn`; with `--bot` it also returns that Bot's `selected` template, or `null`. `approval-template-show` returns `{template}` with its full Markdown `text`. `approval-template-set` returns `{bot}` with the new `approvalTemplate`. When a Bot runs `approval-template-set` from its own Shell, the call always becomes a Human approval card; neither a saved rule nor the Approval Reviewer can answer it. Refusals carry a code: `invalid-input` (an unknown template), `unknown-template` and `unknown-bot`.
 
+Each call the reviewer rejects becomes an `auto-rejection` item in the Human Inbox. Its `autoRejection` holds the Session, tool, input, template and reason. `inbox-allow-once` is the Inbox's "Allow this once anyway": it covers that exact call only. The Bot is told it may retry, and the next call in that Session with the same tool and identical input runs without review. Later calls are still reviewed.
+
+```bash
+deepseekbot inbox --category action --kind auto-rejection
+deepseekbot inbox-allow-once autoreject:<source-event-id>
+```
+
+`inbox-allow-once` returns `{accepted, channelId, messageId}`, where `messageId` is the Human's override message in the Channel. An item that was already allowed, or whose Bot left the Channel, is refused with `auto-rejection-unavailable`.
+
+**Circuit breaker.** After 3 rejections in a row, or 20 in one Session, auto approval pauses for that Session: every request posts a card, and the Channel shows a notice. The next approval the Human gives in that Session, on a card or from the Inbox, resumes it with fresh counts. The thresholds are fixed. The breaker and unused "allow once" overrides live in Host memory, so a Host restart resumes auto approval with fresh counts and drops an override the Bot has not used yet; the Inbox item stays handled.
+
 ### Approval Reviewer model
 
 By default each Bot's Approval Reviewer runs on that Bot's own model. One Profile-wide setting can name a single reviewer model for every Bot instead, for example a cheap, fast one.

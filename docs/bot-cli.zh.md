@@ -429,6 +429,17 @@ deepseekbot approval-template-set <bot-id> off
 
 `approval-templates` 返回 `{templates}`，每个模板含 `name`、`title`、`description` 和 `builtIn`；加 `--bot` 时还返回该 Bot 当前选中的 `selected`，未选为 `null`。`approval-template-show` 返回 `{template}`，含完整 Markdown `text`。`approval-template-set` 返回 `{bot}`，其中是新的 `approvalTemplate`。Bot 在自己的 Shell 里运行 `approval-template-set` 时，这次调用一定会变成发给人类的审批卡片，已保存的规则和审批员都不能替你回答。拒绝时带错误码：`invalid-input`（未知模板）、`unknown-template` 和 `unknown-bot`。
 
+审批员拒绝的每次调用都会成为 Human Inbox 里的一条 `auto-rejection`。它的 `autoRejection` 含会话、工具、参数、模板和理由。`inbox-allow-once` 就是收件箱里的“仍然允许这一次”：只放行那一次完全相同的调用。Bot 会收到通知并可以重试，同一会话里同一工具、参数完全相同的下一次调用不经审核直接运行。之后的调用仍按模板审核。
+
+```bash
+deepseekbot inbox --category action --kind auto-rejection
+deepseekbot inbox-allow-once autoreject:<source-event-id>
+```
+
+`inbox-allow-once` 返回 `{accepted, channelId, messageId}`，其中 `messageId` 是 Human 在 Channel 里的放行消息。已经放行过的条目，或 Bot 已不在该 Channel 时，返回错误码 `auto-rejection-unavailable`。
+
+**熔断。** 同一会话连续 3 次被拒绝，或累计 20 次被拒绝后，此会话的自动审批暂停：之后每个请求都发卡片，Channel 里会出现一条提示。Human 在此会话里给出的下一次批准（卡片上或收件箱里）会恢复自动审批并重新计数。阈值固定。熔断状态和尚未使用的“允许这一次”只保存在 Host 内存里，所以 Host 重启后自动审批会重新计数并恢复，Bot 还没用掉的放行会失效，收件箱条目仍算已处理。
+
 ### 审批员模型
 
 默认情况下，每个 Bot 的审批员用这个 Bot 自己的模型。一个 Profile 级设置可以改成所有 Bot 共用一个审批员模型，比如一个便宜又快的模型。
