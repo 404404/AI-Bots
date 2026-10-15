@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -23,10 +23,29 @@ const browser = await puppeteer.launch({
     ? {}
     : { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }),
 });
+let page;
+const pageErrors = [];
 try {
-  const page = await browser.newPage();
-  const pageErrors = [];
+  page = await browser.newPage();
+  const observations = [];
+  const observeShell = async (step) => {
+    await page.waitForFunction(
+      () => window.__BOTHARNESS_CLIENT_DIAGNOSTICS__?.snapshot().state === 'shell-ready',
+      { timeout: 15_000 },
+    );
+    const snapshot = await page.evaluate(() => window.__BOTHARNESS_CLIENT_DIAGNOSTICS__.snapshot());
+    observations.push({ step, ...snapshot });
+    writeFileSync(
+      resolve(shots, 'client-observations.json'),
+      JSON.stringify(observations, null, 2),
+    );
+  };
   page.on('pageerror', (error) => pageErrors.push(error.message));
+  const session = await page.createCDPSession();
+  await session.send('Emulation.setUserAgentOverride', {
+    userAgent: await browser.userAgent(),
+    acceptLanguage: 'en-US,en',
+  });
   await page.setExtraHTTPHeaders({ 'accept-language': 'en-US' });
   await page.setViewport({ width: 1440, height: 900 });
   await page.goto(instance.url, { waitUntil: 'networkidle2' });
@@ -42,10 +61,15 @@ try {
     await sleep(300);
   }
 
+  await observeShell('before-bot-mode');
   if ((await page.$('.bh-mode-sidebar')) === null)
     await page.click('button[aria-label="Bot mode"]');
   await page.waitForSelector('.bh-mode-sidebar', { timeout: 30_000 });
   await page.keyboard.press('Escape');
+  await page.waitForSelector('.bh-root.bh-main [data-message-id]', {
+    visible: true,
+    timeout: 30_000,
+  });
   const column = await page.evaluate(() => ({
     width: document.querySelector('.bh-mode-sidebar')?.getBoundingClientRect().width ?? 0,
     nativeRows: document.querySelectorAll('button[aria-label="Bot mode"]').length,
@@ -53,7 +77,8 @@ try {
   }));
   if (column.width < 263 || column.nativeRows !== 0 || !column.exit)
     throw new Error(`Bot mode sidebar did not take over the column: ${JSON.stringify(column)}`);
-  await page.screenshot({ path: resolve(shots, '01-bot-mode-sidebar.png') });
+  await observeShell('bot-mode');
+  await page.screenshot({ waitForFonts: false, path: resolve(shots, '01-bot-mode-sidebar.png') });
 
   await page.waitForSelector('.bh-mode-sidebar [data-channel-id]', { timeout: 30_000 });
   const channelId = await page.$eval('.bh-mode-sidebar [data-channel-id]', (row) =>
@@ -87,7 +112,11 @@ try {
     { timeout: 20_000 },
     card,
   );
-  await page.screenshot({ path: resolve(shots, '02-activity-center-panel.png') });
+  await observeShell('activity-center');
+  await page.screenshot({
+    waitForFonts: false,
+    path: resolve(shots, '02-activity-center-panel.png'),
+  });
   await page.click(card);
   await page.waitForFunction(
     (selector) =>
@@ -99,7 +128,8 @@ try {
 
   await page.click('button[aria-label="Collapse sidebar"]');
   await page.waitForSelector('.bh-mode-sidebar[data-collapsed="true"]', { timeout: 10_000 });
-  await page.screenshot({ path: resolve(shots, '03-bot-mode-rail.png') });
+  await observeShell('collapsed-sidebar');
+  await page.screenshot({ waitForFonts: false, path: resolve(shots, '03-bot-mode-rail.png') });
   await page.click('button[aria-label="Open sidebar"]');
   await page.waitForFunction(
     () => document.querySelector('.bh-mode-sidebar:not([data-collapsed])') !== null,
@@ -120,9 +150,19 @@ try {
   for (const label of ['New Session', 'Plugins', 'Settings'])
     if (!native.some((text) => text.includes(label)))
       throw new Error(`Native App Sidebar is missing ${label} after exit`);
-  await page.screenshot({ path: resolve(shots, '04-native-after-exit.png') });
+  await observeShell('after-exit');
+  await sleep(300);
+  await page.screenshot({ waitForFonts: false, path: resolve(shots, '04-native-after-exit.png') });
   if (pageErrors.length > 0) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
   console.log('BOT MODE SIDEBAR PASS');
+} catch (error) {
+  await page
+    ?.screenshot({ waitForFonts: false, path: resolve(shots, 'failure.png') })
+    .catch(() => undefined);
+  const tree = await page?.accessibility.snapshot().catch(() => null);
+  writeFileSync(resolve(shots, 'failure-aria.json'), JSON.stringify(tree ?? null, null, 2));
+  writeFileSync(resolve(shots, 'page-errors.json'), JSON.stringify(pageErrors, null, 2));
+  throw error;
 } finally {
   await browser.close();
 }

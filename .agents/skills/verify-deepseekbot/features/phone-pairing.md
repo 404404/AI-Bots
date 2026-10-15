@@ -18,6 +18,8 @@ A Human pairs the phone app with their Host by a one-time QR code, and the phone
 
 ## Driving it with verify-app
 
+Native steps belong to the designated [shared device QA runner](../../../../docs/agents/device-qa.md). Submit them to the queue before starting a Simulator, Metro, native build or Host. The commands below describe the runner’s tools.
+
 Both journeys own their Host: they launch a fresh instance on a free port, restart it and stop it.
 
 - **Phone UI.** `pnpm build`, then `node scripts/e2e-mobile-pairing-web.mjs`. It exports the app for web, serves it from a phone origin at a 390 × 844 viewport, pastes the pairing link, taps Pair, restarts the Host, revokes the phone and checks every step on screen. It prints JSON with `"result":"pass"` and `offerSingleUse`, `reconnectedWithoutPairing`, `listedWithLastSeen`, `revokeClosedStream`, `credentialNotInConsole`, `noPageErrors` and `credentialNotInHostLog` all `true`. Screenshots, ARIA trees and the console go to `.humanlayer/verify/mobile-pairing-web/evidence/`. `--skip-export` reuses an existing `apps/mobile/dist-web`; `--keep` leaves the Host running.
