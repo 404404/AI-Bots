@@ -885,6 +885,71 @@ describe('release notes views', () => {
     }
   });
 
+  it('projects successful Beta claim authority before rendering controls from a stale stable cache', async () => {
+    const fallback = bridge('1.0.1', () => [], {
+      status: 'available',
+      current: '1.0.1',
+      latest: '1.2.0-beta.1',
+      releases: [],
+      installable: true,
+    });
+    const call: BridgeCall = async (method, payload) =>
+      method === 'releasePrompt'
+        ? { ok: true, value: { status: 'claimed' } }
+        : fallback(method, payload);
+    const controller = new ReleaseNotesController(call, memoryStorage());
+    const view = await render(
+      createElement(ReleaseSettings, { releaseNotes: controller, t } as never),
+    );
+    try {
+      expect(buttonNamed(view.host, '稍后再看')).toBeDefined();
+      expect(buttonNamed(view.host, '立即更新')?.disabled).toBe(false);
+      expect(view.host.textContent).toContain('不代表手机与电脑组合已通过验证');
+      expect(controller.source.getSnapshot().channel?.channel).toBe('beta');
+    } finally {
+      view.unmount();
+    }
+  });
+
+  it('resumes the new Settings visit after an older visit finishes saving its channel', async () => {
+    let finish!: (value: Awaited<ReturnType<BridgeCall>>) => void;
+    const save = new Promise<Awaited<ReturnType<BridgeCall>>>((resolve) => {
+      finish = resolve;
+    });
+    const call = vi.fn<BridgeCall>(async (method, payload) => {
+      if (method === 'releaseChannelSet') return save;
+      if (method === 'releasePrompt') return { ok: true, value: { status: 'claimed' } };
+      return bridge('1.0.1', () => [], {
+        status: 'available',
+        current: '1.0.1',
+        latest: '1.2.0-beta.1',
+        releases: [],
+        installable: true,
+      })(method, payload);
+    });
+    const controller = new ReleaseNotesController(call, memoryStorage());
+    let view = await render(
+      createElement(ReleaseSettings, { releaseNotes: controller, t } as never),
+    );
+    let pendingSave!: Promise<void>;
+    await act(async () => {
+      pendingSave = controller.setChannel('beta');
+    });
+    view.unmount();
+    view = await render(createElement(ReleaseSettings, { releaseNotes: controller, t } as never));
+    try {
+      await act(async () => {
+        finish({ ok: true, value: { status: 'saved', channel: 'beta' } });
+        await pendingSave;
+      });
+      expect(controller.source.getSnapshot().update.status).toBe('available');
+      expect(view.host.querySelector('[data-release-update]')).not.toBeNull();
+      expect(call.mock.calls.filter(([method]) => method === 'releasePrompt')).toHaveLength(2);
+    } finally {
+      view.unmount();
+    }
+  });
+
   it('checks a newer candidate when Settings reopens with the same controller', async () => {
     let latest = '1.2.0-beta.1';
     const fallback = bridge('1.0.1', () => []);

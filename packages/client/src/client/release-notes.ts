@@ -175,6 +175,7 @@ export class ReleaseNotesController {
   private updateRequest = 0;
   private channelRequest = 0;
   private settingsRevision = 0;
+  private settingsOpen = false;
 
   constructor(
     call: BridgeCall,
@@ -229,6 +230,7 @@ export class ReleaseNotesController {
 
   openSettings(): () => void {
     const visit = ++this.settingsRevision;
+    this.settingsOpen = true;
     this.updateRequest += 1;
     this.source.update((draft) => {
       const mutating =
@@ -245,6 +247,7 @@ export class ReleaseNotesController {
     return () => {
       if (visit !== this.settingsRevision) return;
       this.settingsRevision += 1;
+      this.settingsOpen = false;
       this.dismissUpdate();
     };
   }
@@ -267,14 +270,16 @@ export class ReleaseNotesController {
     });
     let update: ReleaseUpdate | undefined;
     let visible = manual;
+    let claimedBeta = false;
     try {
       const result = await this.call('releaseUpdate', {});
       update = result.ok ? parseReleaseUpdate(result.value) : undefined;
       if (request === this.updateRequest && !manual && update?.status === 'available') {
         const claim = await this.call('releasePrompt', { version: update.latest });
         const value = claim.ok ? record(claim.value) : undefined;
+        claimedBeta = value?.['status'] === 'claimed';
         visible =
-          value?.['status'] === 'claimed' ||
+          claimedBeta ||
           (value?.['status'] === 'suppressed' &&
             value['reason'] === 'not-beta' &&
             !update.latest.includes('-'));
@@ -282,11 +287,17 @@ export class ReleaseNotesController {
     } catch {
       visible = false;
     }
-    if (request === this.updateRequest)
+    if (request === this.updateRequest) {
+      if (claimedBeta) this.channelRequest += 1;
       this.source.update((draft) => {
+        if (claimedBeta) {
+          draft.channel = { channel: 'beta', writable: true };
+          if (draft.channelError === 'read') draft.channelError = undefined;
+        }
         draft.update = update ?? { status: 'unavailable', current: draft.version ?? '' };
         draft.updateVisible = visible;
       });
+    }
   }
 
   dismissUpdate(): void {
@@ -369,6 +380,7 @@ export class ReleaseNotesController {
       });
     }
     if (visit === this.settingsRevision) await this.checkUpdate('manual');
+    else if (this.settingsOpen) await this.checkUpdate();
   }
 
   async install(version: string): Promise<void> {
