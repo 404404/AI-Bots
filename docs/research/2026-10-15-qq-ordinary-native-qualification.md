@@ -54,4 +54,20 @@ Fresh marker `QQ_1155_RESTORE_API_20261016_B` then arrived separately at **15:09
 
 The maintained Provider passed **219 QQ regressions**, build and package verification. The separately ported upstream layer passed **205 QQ regressions**, build and package verification; its unmerged prerequisites and different upstream runtime remain independently unqualified by this QA2 run. Core's immutable Provider-pin regressions passed **6/6**, and both release ledgers passed. Implementation head `4a5b9c2aa977236bde2d365e026d0a0b0a13beea` passed full [CI](https://github.com/BotHarness/DeepSeekBot/actions/runs/38754769123) and [preview preparation](https://github.com/BotHarness/DeepSeekBot/actions/runs/38754769109). An earlier evidence-document table formatting failure was fixed before those runs.
 
-Reviewer-accessible UI captures remain to be recorded. The collaborative browser became unavailable during final visual review; regenerated local explainers are not reviewer-accessible evidence. Packed-product qualification and Provider release integration remain open. The PR remains a draft and does not close #1155. Ordinary media, remote QQ group history and own-echo qualification are outside this text slice.
+Ordinary media, remote QQ group history and own-echo qualification are outside this text slice. The native QQ conversation remains desktop-only for this agent, so matched QQ before/after images are unavailable; Human rendering confirmations and the canonical correlations above remain the chat evidence. Local explainers are not reviewer-accessible evidence.
+
+## Package integration and merge preparation — 2026-10-16 JST
+
+The Human authorized merging the accepted slices and deploying them. Main's shared Orchestrator service/tool extraction was retained when resolving the #1154 conflicts; its QQ target metadata and Tool guidance were reapplied in those shared functions. Updated #1155 also retains current main's exact product DSH `0.2.0-rc.2` contract.
+
+Product commit `baebe45afd5a125d9532cd18d02c5af2e5a4e809` selects immutable Provider `beaed4a6` as new independently versioned `4.32.0-botharness.21`. Existing published `.20` bytes and its historical release plan were not replaced. Six local tarballs, product version `1.3.0-test.1155.2`, were packed from this commit and installed through the real product-artifact launcher in a separate official CLI. Installed runtime verification checked **422 Provider files**, SHA-256 `302dfdcca0d36f93fe02098d13764ba4eccd11ce324ffb0c415c3f971a7d0275`, provenance, package versions and the six-component composition. This empty qualification Profile had no configured QQ accounts and did not take either live receiver.
+
+In the real packaged Client, marker `QQ_PACKED_MODEL_20261016_A` asked for 5+12 through `channel_send`. The actual official DeepSeek model reply rendered **17**, and its canonical Human-DM Source and admission were handled at **15:40:38.579 UTC** with no error. The browser console had no current errors. This verifies packaged boot, model execution and rendered Client delivery; the real QQ delayed and ordinary group behaviors remain correlated with their earlier native runs above.
+
+![Actual packaged Client delivers the real model reply](../assets/qq-ordinary-1155/packaged-model-reply.png)
+
+_Actual 1280×800 packaged Web Client capture. Only isolated QA content is visible; no QQ group, credential or login token is included._
+
+After current-main integration, typecheck, lint, formatting, build and **89 focused QQ/pin/package/release regressions** passed. Refreshed #1154 CI passed; #1155 verification, docs build and isolated-Host smoke passed while its artifact preparation continued. The maintained Provider's final **219/219** QQ tests and package check passed. Its full Windows suite was not green: HTTP connection errors disappeared in an isolated baseline run, while file-mode and update-service failures reproduced on unchanged `f1a70eb0`. No universal Windows-suite success is claimed. The modern upstream dependency draft remains independently unqualified and is not included in the authorized maintained-fork merge.
+
+The original dual-App deployment and its post-deployment QQ checks are the next step. No registry publication or global npm dist-tag change was performed by this local package qualification.
