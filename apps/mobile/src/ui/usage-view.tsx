@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 
 import type { RosterBot } from '../host/client';
+import { MethodRefused } from '../host/client';
 import {
   USAGE_SPLIT,
   usageIsPartial,
   usageShare,
   usageWeek,
+  usageChartDays,
   type OverviewMemory,
   type OverviewUsage,
   type UsagePeriod,
@@ -86,15 +88,18 @@ function UsageSummary({
   state,
   period,
   onPeriod,
+  extended,
 }: {
   state: Loaded<OverviewUsage>;
   period: UsagePeriod;
   onPeriod(period: UsagePeriod): void;
+  extended: boolean;
 }) {
   const usage = forPeriod(state, period).value;
   const week = usage === undefined ? undefined : usageWeek(usage);
   const [picked, setPicked] = useState<number>();
-  const day = period === 'week' && picked !== undefined ? week?.days[picked] : undefined;
+  const days = usage === undefined ? undefined : usageChartDays(usage);
+  const day = period !== 'today' && picked !== undefined ? days?.[picked] : undefined;
   const notes =
     usage === undefined
       ? []
@@ -107,11 +112,18 @@ function UsageSummary({
     <View style={{ gap: space.x6, paddingBottom: space.x3 }}>
       <View style={{ paddingHorizontal: space.x5 }}>
         <Segmented
+          compact
           label={t.usagePeriod}
           value={period}
           options={[
             { value: 'today', label: t.usageToday },
-            { value: 'week', label: t.usageWeek },
+            { value: 'week', label: t.usagePeriodWeek },
+            ...(extended
+              ? [
+                  { value: 'month' as const, label: t.usageMonth },
+                  { value: 'quarter' as const, label: t.usageQuarter },
+                ]
+              : []),
           ]}
           onChange={(next) => {
             setPicked(undefined);
@@ -125,7 +137,9 @@ function UsageSummary({
             {usage === undefined
               ? t.usageLoading
               : day !== undefined
-                ? dayLabel(day.day)
+                ? day.end === undefined
+                  ? dayLabel(day.day)
+                  : `${dayLabel(day.day)} – ${dayLabel(day.end)}`
                 : usage.start === usage.end
                   ? usage.end
                   : `${usage.start} – ${usage.end}`}
@@ -139,8 +153,8 @@ function UsageSummary({
             <Text tone="muted">{t.usageUnit}</Text>
           </Text>
         </View>
-        {period === 'week' && week !== undefined ? (
-          <UsageBars days={week.days} height={chart.plot} selected={picked} onSelect={setPicked} />
+        {period !== 'today' && days !== undefined ? (
+          <UsageBars days={days} height={chart.plot} selected={picked} onSelect={setPicked} />
         ) : null}
         {notes.map((note) => (
           <Text key={note} variant="meta" tone="muted">
@@ -285,11 +299,44 @@ export function UsageView({
 }) {
   const theme = useDesignTheme();
   const [period, setPeriod] = useState<UsagePeriod>('week');
-  const loadUsage = useMemo(() => () => sources.loadUsage(period), [sources, period]);
+  const [extendedSource, setExtendedSource] = useState<UsageSources>();
+  const extended = extendedSource === sources;
+  useEffect(() => {
+    let live = true;
+    void sources.loadUsage('month').then(
+      (value) => {
+        if (live && value.period === 'month') setExtendedSource(sources);
+      },
+      () => undefined,
+    );
+    return () => {
+      live = false;
+    };
+  }, [sources]);
+  const selectedPeriod = extended || period === 'today' ? period : 'week';
+  const loadUsage = useMemo(
+    () => async () => {
+      try {
+        return await sources.loadUsage(selectedPeriod);
+      } catch (error) {
+        if (
+          (selectedPeriod === 'month' || selectedPeriod === 'quarter') &&
+          error instanceof MethodRefused &&
+          error.code === 'invalid-input'
+        ) {
+          setExtendedSource(undefined);
+          setPeriod('week');
+          return sources.loadUsage('week');
+        }
+        throw error;
+      }
+    },
+    [sources, selectedPeriod],
+  );
   const loadMemory = useMemo(() => () => sources.loadMemory(), [sources]);
   const usage = useLoaded<OverviewUsage, View>(loadUsage);
   const memory = useLoaded<OverviewMemory, View>(loadMemory);
-  const current = forPeriod(usage.state, period);
+  const current = forPeriod(usage.state, selectedPeriod);
 
   const sections = [
     {
@@ -350,7 +397,13 @@ export function UsageView({
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={{ paddingVertical: space.x5 }}
           ListHeaderComponent={
-            <UsageSummary state={usage.state} period={period} onPeriod={setPeriod} />
+            <UsageSummary
+              key={selectedPeriod}
+              state={usage.state}
+              period={selectedPeriod}
+              onPeriod={setPeriod}
+              extended={extended}
+            />
           }
           renderSectionHeader={({ section }) => (
             <Text
