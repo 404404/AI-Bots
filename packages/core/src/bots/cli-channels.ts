@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import type { connectLiveHost } from './cli-live.js';
@@ -22,9 +23,18 @@ export const CHANNEL_OPTIONS = {
   emoji: { type: 'string' },
   remove: { type: 'boolean' },
   off: { type: 'boolean' },
+  attachment: { type: 'string' },
 } as const;
 
 export const CHANNEL_COMMANDS = [
+  {
+    command: 'channel-media-target',
+    description: 'acquire authorized source media and resolve its Host file target',
+  },
+  {
+    command: 'channel-media-download',
+    description: 'download authorized source media to a new local --out file',
+  },
   { command: 'channel-rename', description: 'rename a Channel; renaming a Bot DM renames the Bot' },
   {
     command: 'group-avatar-set',
@@ -109,6 +119,8 @@ interface ChannelValues {
   remove?: boolean;
   query?: string;
   off?: boolean;
+  attachment?: string;
+  out?: string;
 }
 
 const WAKE_MODES = new Set(['all', 'mentions', 'digest', 'silent']);
@@ -200,6 +212,15 @@ export async function runChannelCommand(
   let args: Record<string, unknown> = { channelId };
   let method: string;
   switch (command) {
+    case 'channel-media-target':
+    case 'channel-media-download':
+      method = 'channelMediaTarget';
+      if (values['source-event']?.length !== 1)
+        usage('--source-event must identify exactly one Source Event.');
+      args.sourceEventId = required(values['source-event'][0], '--source-event');
+      args.attachmentId = required(values.attachment, '--attachment');
+      if (command === 'channel-media-download') required(values.out, '--out');
+      break;
     case 'channel-rename':
       method = 'channelRename';
       args.name = required(values.name, '--name');
@@ -352,6 +373,37 @@ export async function runChannelCommand(
       break;
     }
   }
-  const { rpc } = await connect(values, io, AbortSignal.timeout(Math.ceil(seconds * 1000)));
-  return rpc(method, args);
+  const host = await connect(values, io, AbortSignal.timeout(Math.ceil(seconds * 1000)));
+  if (command === 'channel-media-download') {
+    const { bytes, response } = await host.http(
+      '/api/botharness/attachment?' +
+        new URLSearchParams({
+          channelId,
+          sourceEventId: String(args.sourceEventId),
+          attachmentId: String(args.attachmentId),
+        }),
+    );
+    if (bytes.byteLength > 25 * 1024 * 1024)
+      throw new CliLiveError('too-large', 'Attachment exceeds the 25 MiB limit.');
+    try {
+      writeFileSync(values.out!, bytes, { flag: 'wx', mode: 0o600 });
+    } catch (error) {
+      const exists = error instanceof Error && 'code' in error && error.code === 'EEXIST';
+      throw new CliLiveError(
+        exists ? 'output-exists' : 'output-unavailable',
+        exists
+          ? 'The output already exists; choose a new --out path.'
+          : 'Could not write the output file.',
+      );
+    }
+    return {
+      download: {
+        path: values.out,
+        bytes: bytes.byteLength,
+        sha256: createHash('sha256').update(bytes).digest('hex'),
+        mime: response.headers.get('content-type'),
+      },
+    };
+  }
+  return host.rpc(method, args);
 }

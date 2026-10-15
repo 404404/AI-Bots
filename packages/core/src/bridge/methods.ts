@@ -631,6 +631,7 @@ export interface BridgeMethods {
   sessionOwner(payload: unknown): BridgeResult<{ owner: OwnedSessionBot | null }>;
   botSessionIds(payload: unknown): BridgeResult<{ sessionIds: string[] }>;
   messageAttachmentTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
+  channelMediaTarget(payload: unknown): Promise<BridgeResult<{ target: MemoryFileTarget }>>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
   memoryFile(
@@ -4500,6 +4501,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         }
         throw error;
       }
+    },
+    channelMediaTarget(payload) {
+      const input = z
+        .object({
+          channelId: z.string().min(1),
+          sourceEventId: z.string().min(1),
+          attachmentId: z.string().min(1),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success || deps.attachments === undefined)
+        return Promise.resolve(invalidInput('Channel media and attachment storage are required'));
+      return messagingCall(async (service) => {
+        try {
+          const media = await service.readChannelMedia({
+            ...input.data,
+            signal: AbortSignal.timeout(30_000),
+          });
+          await media.body.cancel();
+          if (!media.ref.fileId) throw new MessagingError('source-unavailable');
+          return { target: deps.attachments!.fileTarget(media.ref.fileId) };
+        } catch (error) {
+          if (error instanceof ChannelAttachmentError) throw new MessagingError(error.code);
+          throw error;
+        }
+      });
     },
     messageAttachmentTarget(payload) {
       const source = asObject(payload);

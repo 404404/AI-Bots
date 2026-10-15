@@ -482,6 +482,7 @@ describe('plugin entry', () => {
       'assignment',
       'workspaceOptions',
       'messageAttachmentTarget',
+      'channelMediaTarget',
       'workspaceFileTarget',
       'grants',
       'grantCreate',
