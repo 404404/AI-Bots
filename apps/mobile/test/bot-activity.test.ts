@@ -12,7 +12,6 @@ import {
 } from '../src/host/bot-activity';
 import { compactTokenCount, trailingDays } from '../src/host/usage-days';
 import type { ProfileActivity, ProfileModelUsageRow } from '../src/host/wire';
-import { heatLevel, heatWeeks } from '../src/ui/primitives/day-heat';
 
 const row = (day: string, total: number | null, model = 'deepseek-v4'): ProfileModelUsageRow => ({
   day,
@@ -153,11 +152,6 @@ describe('Bot activity', () => {
     ]);
     expect(detail.events).toBe(6);
     expect(detail.commits).toBe(3);
-    expect(heatWeeks(detail.first, detail.last).map((week) => [week[0], week[6]])).toEqual([
-      ['2026-10-05', '2026-10-11'],
-      ['2026-10-12', '2026-10-18'],
-    ]);
-    expect([0, 1, 2, 3, 6, 11, 40].map(heatLevel)).toEqual([0, 1, 1, 2, 3, 4, 4]);
   });
 
   it('groups a long window by week and pages back and forth by whole windows', () => {

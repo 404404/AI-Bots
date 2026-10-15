@@ -13,6 +13,7 @@ import type { RosterBot } from '../src/host/client';
 import { shiftDay } from '../src/host/usage-days';
 import type { ProfileActivity } from '../src/host/wire';
 import { ActivityDetailView, type ActivityQuery } from '../src/ui/chat/activity-detail';
+import { heatLevel, heatWeeks } from '../src/ui/primitives/day-heat';
 import { t } from '../src/ui/strings';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -78,6 +79,14 @@ const button = (view: HTMLElement, label: string) =>
   view.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
 
 describe('Bot Activity screen', () => {
+  it('lays Memory commits out in Monday weeks and shades them by count', () => {
+    expect(heatWeeks('2026-10-09', '2026-10-15').map((week) => [week[0], week[6]])).toEqual([
+      ['2026-10-05', '2026-10-11'],
+      ['2026-10-12', '2026-10-18'],
+    ]);
+    expect([0, 1, 2, 3, 6, 11, 40].map(heatLevel)).toEqual([0, 1, 1, 2, 3, 4, 4]);
+  });
+
   it('opens on the last 7 days with the token split, models, reasons and Memory commits', async () => {
     const load = vi.fn(async (query: ActivityQuery) => answer(query));
     const view = await render(<ActivityDetailView bot={bot} load={load} />);
