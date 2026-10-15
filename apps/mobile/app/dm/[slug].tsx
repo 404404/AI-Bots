@@ -212,7 +212,14 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     () => snapshot.messages.filter((message) => !hiddenResolution(message)),
     [snapshot.messages],
   );
-  const history = useMemo(() => chatRows(visible).reverse(), [visible]);
+  const history = useMemo(
+    () =>
+      chatRows(
+        visible,
+        (message) => message.card !== undefined && !resolutions.has(message.id),
+      ).reverse(),
+    [visible, resolutions],
+  );
   const latest = useFollowLatest(list, visible);
 
   const asking = snapshot.messages.findLast(
