@@ -36,14 +36,14 @@ export function MentionSuggestions({
         const name = candidate.kind === 'bot' ? candidate.bot.displayName : candidate.label;
         const detail =
           candidate.kind === 'bot'
-            ? candidate.bot.slug
+            ? undefined
             : t.mentionAllHint(candidate.preview.recipients.length);
         return (
           <Pressable
             key={candidate.kind === 'bot' ? candidate.bot.slug : 'all'}
             accessibilityRole="button"
             accessibilityLabel={`@${name}`}
-            accessibilityHint={detail}
+            {...(detail === undefined ? {} : { accessibilityHint: detail })}
             onPress={() => onChoose(candidate)}
             style={({ pressed }) => ({
               minHeight: theme.touch,
@@ -75,9 +75,11 @@ export function MentionSuggestions({
             <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
               {name}
             </Text>
-            <Text variant="meta" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
-              {detail}
-            </Text>
+            {detail === undefined ? null : (
+              <Text variant="meta" tone="muted" numberOfLines={1} style={{ flex: 1 }}>
+                {detail}
+              </Text>
+            )}
           </Pressable>
         );
       })}
