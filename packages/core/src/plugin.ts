@@ -24,6 +24,7 @@ import {
 import { mountContentPurge } from './purge/owner.js';
 import type { ContentPurge } from './purge/contracts.js';
 import { createDshImProvider } from './messaging/dsh-im.js';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createCompanionFeed, COMPANION_PATH, type CompanionFeed } from './companions/feed.js';
@@ -145,7 +146,12 @@ import {
 } from './workspaces/grant-execution.js';
 import { ChannelToolApproval, type ToolAutoApproval } from './workspaces/tool-approval.js';
 import { approvalTemplate, changesApprovalPolicy } from './workspaces/approval-templates.js';
-import { runApprovalReview } from './workspaces/approval-reviewer.js';
+import {
+  APPROVAL_REVIEW_SESSION_PREFIX,
+  createApprovalReviewRunner,
+  isApprovalReviewSession,
+} from './workspaces/approval-reviewer.js';
+import { createApprovalReviewerSettings } from './workspaces/approval-reviewer-settings.js';
 import { ChannelUserQuestions } from './channels/user-questions.js';
 import { mountPrivateInputs } from './credentials/mount.js';
 import type { PrivateInputs } from './credentials/private-inputs.js';
@@ -1209,9 +1215,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         })
         .catch(() => undefined);
   };
+  const reviewing = new Set<string>();
   ctx.on(
     'agent/pre-step',
     async ({ agent, signal }, next) => {
+      if (isApprovalReviewSession(agent.session.id))
+        return reviewing.has(agent.session.id) ? next() : { kind: 'reject' };
       try {
         await core.runtime.ensureAssignmentCapacity?.(agent.session.id, signal);
       } catch {
@@ -1222,6 +1231,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     { global: true },
   );
+  const approvalReviewer = createApprovalReviewerSettings(join(dshHome, 'botharness'));
   let reviewLogs: LogDatabase | undefined;
   try {
     reviewLogs = openLogDatabase({ dir: join(dshHome, 'botharness') });
@@ -1235,22 +1245,46 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       const template = name === undefined ? undefined : approvalTemplate(name);
       return template === undefined ? undefined : { name: template.name, text: template.text };
     },
-    review: (request) => {
-      let route: { provider: string; model: string; reasoningEffort?: string } | undefined =
-        core.registry.get(request.botSlug)?.modelPlan?.orchestrator;
-      if (route === undefined) {
+    review: createApprovalReviewRunner({
+      setting: () => approvalReviewer.model(),
+      botRoute: (slug) => {
+        const own = core.registry.get(slug)?.modelPlan?.orchestrator;
+        if (own !== undefined) return own;
         try {
-          route = defaultModel.currentSelection();
+          return defaultModel.currentSelection();
         } catch {
-          route = undefined;
+          return undefined;
         }
-      }
-      return runApprovalReview(ctx.get('llm'), route, request, randomUUID());
-    },
+      },
+      validate: (route) => modelCatalog.validate(route),
+      agents: () => ctx.agents,
+      session: (request) => {
+        const sessionId = APPROVAL_REVIEW_SESSION_PREFIX + randomUUID();
+        const cwd = join(dshHome, 'botharness', 'approval-reviews');
+        mkdirSync(cwd, { recursive: true });
+        const titles = ctx.get('sessionTitle') as
+          | { rename?: (session: unknown, title: string) => void }
+          | undefined;
+        reviewing.add(sessionId);
+        return {
+          sessionId,
+          cwd,
+          botName: core.registry.get(request.botSlug)?.displayName ?? request.botSlug,
+          ...(typeof titles?.rename === 'function'
+            ? { rename: (session, title) => titles.rename!(session, title) }
+            : {}),
+        };
+      },
+      settle: (sessionId) => reviewing.delete(sessionId),
+    }),
     log: (entry) => {
       const detail =
-        `approval-review bot=${entry.botSlug} template=${entry.template} tool=${entry.toolName} outcome=${entry.outcome} latencyMs=${entry.latencyMs}` +
-        (entry.fallback === undefined ? '' : ` fallback=${entry.fallback}`);
+        `approval-review bot=${entry.botSlug} template=${entry.template} tool=${entry.toolName}` +
+        (entry.model === undefined ? '' : ` model=${entry.model}`) +
+        (entry.reviewSession === undefined ? '' : ` reviewSession=${entry.reviewSession}`) +
+        ` outcome=${entry.outcome} latencyMs=${entry.latencyMs}` +
+        (entry.fallback === undefined ? '' : ` fallback=${entry.fallback}`) +
+        (entry.detail === undefined ? '' : ` detail=${JSON.stringify(entry.detail)}`);
       ctx.logger.info(detail);
       try {
         reviewLogs?.write({
@@ -1387,7 +1421,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           };
         const authorizationScope = computerTools.authorizationScope?.();
         const computerApproval = ctx.get('approval') as ApprovalService | undefined;
-        const untrackComputer = toolApproval.track(execution, 'web-only');
+        const untrackComputer = toolApproval.track(execution, 'web-only', false, 'computer');
         if (computerApproval === undefined || untrackComputer === undefined) {
           return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
         }
@@ -1400,7 +1434,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
             signal: execution.signal,
           });
           if (outcome !== 'allowed-once') {
-            return { kind: 'deny', reason: 'Human approval was ' + outcome };
+            const reviewed = toolApproval.takeReviewRejection(agent.session.id, execution.callId);
+            return {
+              kind: 'deny',
+              reason:
+                reviewed === undefined
+                  ? 'Human approval was ' + outcome
+                  : reviewerRejectionText(reviewed),
+            };
           }
           if (computerTools.markAuthorized?.(agent.session.id, authorizationScope) === false)
             return {
@@ -1446,7 +1487,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           };
         const browserAuthorizationScope = browserTools.authorizationScope?.(agent.session.id);
         const browserApproval = ctx.get('approval') as ApprovalService | undefined;
-        const untrackBrowser = toolApproval.track(execution, 'web-only');
+        const untrackBrowser = toolApproval.track(execution, 'web-only', false, 'browser');
         if (browserApproval === undefined || untrackBrowser === undefined) {
           return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
         }
@@ -1459,7 +1500,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
             signal: AbortSignal.any([execution.signal, browserSignal ?? execution.signal]),
           });
           if (outcome !== 'allowed-once') {
-            return { kind: 'deny', reason: 'Human approval was ' + outcome };
+            const reviewed = toolApproval.takeReviewRejection(agent.session.id, execution.callId);
+            return {
+              kind: 'deny',
+              reason:
+                reviewed === undefined
+                  ? 'Human approval was ' + outcome
+                  : reviewerRejectionText(reviewed),
+            };
           }
           if (browserTools.markAuthorized?.(agent.session.id, browserAuthorizationScope) === false)
             return {
@@ -1666,6 +1714,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     }, 'botharness: release restarter');
   });
   const bridgeMethods = createBridgeMethods({
+    approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(
         join(homedir(), '.config', 'botharness', 'composer-host-id'),

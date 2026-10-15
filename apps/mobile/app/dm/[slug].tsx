@@ -39,7 +39,9 @@ import { Composer } from '../../src/ui/chat/composer';
 import { useComposerContext } from '../../src/ui/chat/composer-context';
 import { modelLabel, workspaceLabel } from '../../src/ui/chat/composer-labels';
 import { ComposerFooter } from '../../src/ui/chat/composer-footer';
+import { useFollowLatest } from '../../src/ui/chat/follow-latest';
 import { ImageViewer } from '../../src/ui/chat/image-viewer';
+import { JumpToLatest } from '../../src/ui/chat/jump-to-latest';
 import { MessageActions } from '../../src/ui/chat/message-actions';
 import { ModelSheet } from '../../src/ui/chat/model-sheet';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
@@ -201,10 +203,12 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     [snapshot.messages],
   );
 
-  const history = useMemo(
-    () => chatRows(snapshot.messages.filter((message) => !hiddenResolution(message))).reverse(),
+  const visible = useMemo(
+    () => snapshot.messages.filter((message) => !hiddenResolution(message)),
     [snapshot.messages],
   );
+  const history = useMemo(() => chatRows(visible).reverse(), [visible]);
+  const latest = useFollowLatest(list, visible);
 
   const asking = snapshot.messages.findLast(
     (message) => message.card?.kind === 'user-question' && !resolutions.has(message.id),
@@ -238,6 +242,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     if (dictation.state.status !== 'idle') dictation.cancel();
     setDraft('');
     setFiles([]);
+    latest.jumpToLatest();
     if (
       asking?.card === undefined ||
       client === undefined ||
@@ -406,66 +411,84 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
             {notice}
           </Text>
         )}
-        <FlatList
-          ref={list}
-          inverted
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingVertical: space.x3 }}
-          data={rows}
-          keyExtractor={(row) => row.key}
-          renderItem={renderItem}
-          onContentSizeChange={jump}
-          onScrollToIndexFailed={(info) => {
-            list.current?.scrollToOffset({
-              offset: info.averageItemLength * info.index,
-              animated: false,
-            });
-            setTimeout(
-              () =>
-                list.current?.scrollToIndex({
-                  index: info.index,
-                  viewPosition: 0.5,
-                  animated: true,
-                }),
-              100,
-            );
-          }}
-          onEndReached={() => void conversation?.loadOlder()}
-          onEndReachedThreshold={0.5}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 40,
-          }}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          ListFooterComponent={
-            snapshot.loadingOlder ? (
-              <View
-                style={{
-                  padding: space.x4,
-                  alignItems: 'center',
-                  gap: space.x2,
-                }}
-              >
-                <ActivityIndicator />
-                <Text variant="meta" tone="muted">
-                  {t.olderLoading}
+        <View style={{ flex: 1 }}>
+          <FlatList
+            ref={list}
+            inverted
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingVertical: space.x3 }}
+            data={rows}
+            keyExtractor={(row) => row.key}
+            renderItem={renderItem}
+            onContentSizeChange={jump}
+            onScrollToIndexFailed={(info) => {
+              list.current?.scrollToOffset({
+                offset: info.averageItemLength * info.index,
+                animated: false,
+              });
+              setTimeout(
+                () =>
+                  list.current?.scrollToIndex({
+                    index: info.index,
+                    viewPosition: 0.5,
+                    animated: true,
+                  }),
+                100,
+              );
+            }}
+            onEndReached={() => void conversation?.loadOlder()}
+            onEndReachedThreshold={0.5}
+            {...latest.listProps}
+            scrollEventThrottle={32}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={
+              snapshot.loadingOlder ? (
+                <View
+                  style={{
+                    padding: space.x4,
+                    alignItems: 'center',
+                    gap: space.x2,
+                  }}
+                >
+                  <ActivityIndicator />
+                  <Text variant="meta" tone="muted">
+                    {t.olderLoading}
+                  </Text>
+                </View>
+              ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
+                <Text
+                  variant="meta"
+                  tone="muted"
+                  style={{ textAlign: 'center', padding: space.x5 }}
+                >
+                  {t.beginning}
                 </Text>
-              </View>
-            ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
-              <Text variant="meta" tone="muted" style={{ textAlign: 'center', padding: space.x5 }}>
-                {t.beginning}
-              </Text>
-            ) : null
-          }
-          ListEmptyComponent={
-            snapshot.status === 'opening' ? (
-              <View style={{ padding: space.x6, alignItems: 'center' }}>
-                <ActivityIndicator />
-              </View>
-            ) : null
-          }
-        />
+              ) : null
+            }
+            ListEmptyComponent={
+              snapshot.status === 'opening' ? (
+                <View style={{ padding: space.x6, alignItems: 'center' }}>
+                  <ActivityIndicator />
+                </View>
+              ) : null
+            }
+          />
+          {latest.away ? (
+            <View
+              pointerEvents="box-none"
+              style={{
+                position: 'absolute',
+                bottom: space.x4,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />
+            </View>
+          ) : null}
+        </View>
         {bot !== undefined && botBusy(bot) ? (
           <StatusStrip bot={bot} stopping={stop?.status === 'stopping'} onStop={stopRun} />
         ) : null}

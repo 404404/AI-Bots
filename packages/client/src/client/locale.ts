@@ -645,6 +645,7 @@ export const zh = {
   'botSettings.picker': 'Bot 设置分区：{section}',
   'botSettings.section.general': '通用',
   'botSettings.section.models': '模型与运行',
+  'botSettings.section.autoApproval': '自动审批',
   'botSettings.section.messaging': '消息',
   'botSettings.section.imApps': 'IM 应用',
   'imApps.description': '本 Profile 的所有应用，以及使用它们的 Bot。',
@@ -732,6 +733,9 @@ export const zh = {
   'botSessions.row.title': '在会话列表显示 Bot 会话',
   'botSessions.row.description':
     'Bot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。',
+  'approvalReviewSessions.row.title': '在会话列表显示审批复核会话',
+  'approvalReviewSessions.row.description':
+    '自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。',
   'sendKey.row.title': '发送消息',
   'sendKey.row.description': '选择发送消息的按键，另一种组合用于换行',
   'desktopNotify.row.title': '桌面通知',
@@ -3017,7 +3021,7 @@ export const zh = {
   'privateAccounts.removeConfirm':
     '删除密钥「{account}」？这会停止本地使用并立即清除保存的值，但不会在服务商那里撤销令牌；如果令牌可能泄露，请到服务商处轮换。',
   'grant.safeDefault':
-    'Bot 可读取有效授权文件夹。开启文件夹的写入权限后，也可直接处理其中的文件；命令执行仍需单独审批。',
+    '新添加的文件夹默认允许 Bot 写入，可逐个关闭以保持只读；命令执行仍需单独审批。',
   'grant.orchestratorWrite': '允许 Bot 写入此文件夹',
   'grant.chip.write': '可写',
   'grant.chip.read': '只读',
@@ -3106,6 +3110,13 @@ export const zh = {
   'approval.externalCreator':
     'Lark 创建人：{actor}；每次调用前检查当前配对及 approve／save-rules 权限，失效后不自动恢复。',
   'approval.ruleDetails': '查看适用范围',
+  'autoApproval.reviewerModel.title': '审批员模型',
+  'autoApproval.reviewerModel.description':
+    '审批员替你回答工具审批时用的模型。默认跟随每个 Bot 自己的模型；也可以让所有 Bot 共用一个便宜又快的模型。',
+  'autoApproval.reviewerModel.followBot': '跟随每个 Bot',
+  'autoApproval.reviewerModel.missing': '{model}（不可用）',
+  'autoApproval.reviewerModel.unavailable':
+    '这个模型现在不可用，所有审批都会改发卡片给你，不会换用别的模型。',
   'autoApproval.title': '自动审批模板',
   'autoApproval.off': '关闭',
   'autoApproval.section': '自动审批',
@@ -3215,6 +3226,8 @@ export const zh = {
   'grant.pathLabel': '工作区文件夹路径',
   'grant.pathPlaceholder': '/home/user/project',
   'grant.removeFolder': '移除授权',
+  'grant.delete': '删除',
+  'grant.memoryDeleteUnavailable': '记忆仓库是 Bot 必需的读写位置，不能删除',
   'grant.registeredFolders': '已在 DSH 登记的文件夹',
   'grant.history': '已撤销的授权',
   'grant.loading': '正在加载工作区…',
@@ -3322,7 +3335,7 @@ export const zh = {
     '逐成员提交，不承诺全部成功；不会发送消息或自动创建任务。失败或未知结果先读回，再重试。',
   'groupGrant.retry': '读回并重试',
   'composerContext.grantScope':
-    '已解析目录：{path}。仅建立此 Bot 的 Workspace Grant；不启用 Orchestrator 项目写入，不更改 Assignment 权限或审批规则。',
+    '已解析目录：{path}。为此 Bot 建立 Workspace Grant，默认允许写入（可在列表里关闭）；不更改 Assignment 权限或审批规则。',
   'composerCommand.memory': '查看记忆',
   'composerCommand.sessions': '查看 Sessions',
   'composerCommand.profile': '打开资料页',
@@ -4163,6 +4176,7 @@ export const en = {
   'botSettings.picker': 'Bot settings section: {section}',
   'botSettings.section.general': 'General',
   'botSettings.section.models': 'Models & execution',
+  'botSettings.section.autoApproval': 'Auto approval',
   'botSettings.section.messaging': 'Messaging',
   'botSettings.section.imApps': 'IM apps',
   'imApps.description': 'Every app in this profile and the Bot that uses it.',
@@ -4252,6 +4266,9 @@ export const en = {
   'botSessions.row.title': 'Show Bot sessions in the session list',
   'botSessions.row.description':
     "Bot Orchestrator and Assignment sessions stay out of DeepSeek Harness's session list by default. Turn this on to show them.",
+  'approvalReviewSessions.row.title': 'Show Approval Review Sessions in the session list',
+  'approvalReviewSessions.row.description':
+    'Auto approval opens a short session for each review. They stay hidden by default. Turn this on to see how each call was judged in DeepSeek Harness.',
   'sendKey.row.title': 'Send messages',
   'sendKey.row.description': 'Choose the key that sends a message; the other inserts a new line',
   'desktopNotify.row.title': 'Desktop notifications',
@@ -6656,7 +6673,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'privateAccounts.removeConfirm':
     'Remove secret “{account}”? This stops local use and erases the stored values now, but does not revoke the token at the provider. Rotate it there if it may have leaked.',
   'grant.safeDefault':
-    'The Bot can read authorized folders. Enable write access to let it process files there; commands still require separate approval.',
+    'New folders are writable by default; turn write access off per folder to keep one read-only. Commands still require separate approval.',
   'grant.orchestratorWrite': 'Allow Bot to write in this folder',
   'grant.chip.write': 'Writable',
   'grant.chip.read': 'Read-only',
@@ -6746,6 +6763,13 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.externalCreator':
     'Lark creator: {actor}; current pairing and approve/save-rules authority are checked before each call. Disabled rules do not reactivate automatically.',
   'approval.ruleDetails': 'View scope',
+  'autoApproval.reviewerModel.title': 'Reviewer model',
+  'autoApproval.reviewerModel.description':
+    "The model the Approval Reviewer uses to answer tool approvals for you. By default it follows each Bot's own model; you can make every Bot share one cheap, fast model instead.",
+  'autoApproval.reviewerModel.followBot': 'Follow each Bot',
+  'autoApproval.reviewerModel.missing': '{model} (unavailable)',
+  'autoApproval.reviewerModel.unavailable':
+    'This model is unavailable now, so every approval goes to you as a card. No other model is used instead.',
   'autoApproval.title': 'Auto approval template',
   'autoApproval.off': 'Off',
   'autoApproval.section': 'Auto approval',
@@ -6871,6 +6895,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'grant.pathLabel': 'Workspace folder path',
   'grant.pathPlaceholder': '/home/user/project',
   'grant.removeFolder': 'Remove access',
+  'grant.delete': 'Delete',
+  'grant.memoryDeleteUnavailable':
+    'The Memory Repository is the Bot’s required read-write location and cannot be removed',
   'grant.registeredFolders': 'Folders registered in DSH',
   'grant.history': 'Revoked access',
   'grant.loading': 'Loading workspaces…',
@@ -6982,7 +7009,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
     'Members commit independently, not atomically. No message or task is sent. Read back failed or unknown outcomes before retrying.',
   'groupGrant.retry': 'Read back and retry',
   'composerContext.grantScope':
-    'Resolved directory: {path}. Creates only this Bot’s Workspace Grant; does not enable Orchestrator project writes or change Assignment access or approval rules.',
+    'Resolved directory: {path}. Creates this Bot’s Workspace Grant with write access on by default (you can turn it off in the list); does not change Assignment access or approval rules.',
   'composerCommand.memory': 'View memory',
   'composerCommand.sessions': 'View Sessions',
   'composerCommand.profile': 'Open profile',

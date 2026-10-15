@@ -3,9 +3,11 @@ import type { ReactElement, ReactNode } from 'react';
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
 
 import type { BridgeActions } from './actions.js';
+import { ApprovalReviewerModelSetting } from './approval-reviewer-model-setting.js';
 import {
   AssignmentConcurrencyRow,
   BotIconSetting,
+  ApprovalReviewSessionsVisibilitySetting,
   BotSessionsVisibilitySetting,
   DeveloperModeSetting,
   GroupAutoAcceptSetting,
@@ -62,6 +64,7 @@ export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactEl
       <SortSetting {...props} />
       <SendKeySetting {...props} />
       <BotSessionsVisibilitySetting {...props} />
+      <ApprovalReviewSessionsVisibilitySetting {...props} />
       <DesktopNotificationSetting desktopNotifications={props.desktopNotifications} t={props.t} />
       <ShortcutHelpSetting shortcutHelp={props.shortcutHelp} t={props.t} />
       <OnboardingSetting
@@ -80,6 +83,16 @@ export function ModelsSection(
     <Rows>
       <DefaultModelSettings actions={props.actions} t={props.t} />
       <AssignmentConcurrencyRow {...props} />
+    </Rows>
+  );
+}
+
+export function AutoApprovalSection(props: SectionProps<{ actions: BridgeActions }>): ReactElement {
+  return (
+    <Rows>
+      <SettingsSection>
+        <ApprovalReviewerModelSetting actions={props.actions} t={props.t} />
+      </SettingsSection>
     </Rows>
   );
 }

@@ -12,8 +12,12 @@ import {
   approvalSessionExcerpt,
   parseApprovalReview,
   reviewerUserPrompt,
+  approvalReviewSessionTitle,
+  isApprovalReviewSession,
+  REVIEWER_SYSTEM_PROMPT,
   runApprovalReview,
   type ApprovalReview,
+  type ApprovalReviewAgents,
   type ApprovalReviewRequest,
 } from '../src/workspaces/approval-reviewer.js';
 import {
@@ -176,7 +180,7 @@ describe('Approval Reviewer input', () => {
     expect(parseApprovalReview('allow')).toBeUndefined();
   });
 
-  it('streams one fresh call with no tools and fails closed', async () => {
+  it('runs one tool-less Approval Review Session, disposes it and fails closed', async () => {
     const request = {
       botSlug,
       template: { name: 'cautious', text: 'x' },
@@ -184,57 +188,153 @@ describe('Approval Reviewer input', () => {
       excerpt: { humanMessages: [], toolCalls: [] },
       signal: new AbortController().signal,
     };
-    const seen: Record<string, unknown>[] = [];
-    const llm = (chunks: unknown[]) => ({
-      async *stream(options: Record<string, unknown>) {
-        seen.push(options);
-        yield* chunks;
+    type Ending =
+      | { kind: 'completed'; text: string }
+      | { kind: 'error'; code: string }
+      | { kind: 'hang' };
+    const created: Record<string, unknown>[] = [];
+    const sent: unknown[] = [];
+    const sections: Record<string, unknown>[] = [];
+    const disposed: string[] = [];
+    const renamed: string[] = [];
+    const agents = (ending: Ending): ApprovalReviewAgents => ({
+      async create(input) {
+        const options = input as unknown as Record<string, unknown>;
+        created.push(options);
+        const id = String(options['sessionId']);
+        const assembly = { tools: [{ name: 'bash' }] };
+        let assemble:
+          | ((a: unknown, c: unknown, next: () => Promise<unknown>) => unknown)
+          | undefined;
+        let guard: ((exec: { name: string }) => string | undefined) | undefined;
+        const agentCtx = {
+          systemPrompt: {
+            section: (section: Record<string, unknown>) => sections.push(section),
+            suppressRuntimeContext: () => undefined,
+          },
+          on: (_name: string, listener: typeof assemble) => {
+            assemble = listener;
+          },
+          tools: {
+            guard: (check: typeof guard) => {
+              guard = check;
+            },
+          },
+        };
+        await (options['setup'] as (ctx: unknown) => unknown)(agentCtx);
+        const assembled = (await assemble!(assembly, {}, async () => assembly)) as {
+          tools: unknown[];
+        };
+        expect(assembled.tools).toEqual([]);
+        expect(guard!({ name: 'bash' })).toMatch(/not available/);
+        const events: { type: string; seq: number; data: unknown }[] = [];
+        let wake: (() => void) | undefined;
+        const agent = {
+          session: { id, seq: 0, snapshotEvents: () => events },
+          followup: (message: unknown) => {
+            sent.push(message);
+            if (ending.kind === 'completed') {
+              events.push({
+                type: 'assistant/message',
+                seq: 1,
+                data: { message: { content: [{ type: 'text', text: ending.text }] } },
+              });
+              events.push({ type: 'turn/end', seq: 2, data: { reason: { kind: 'completed' } } });
+            } else if (ending.kind === 'error') {
+              events.push({
+                type: 'turn/end',
+                seq: 1,
+                data: { reason: { kind: 'error', error: { code: ending.code } } },
+              });
+            }
+          },
+          cancel: () => {
+            events.push({
+              type: 'turn/end',
+              seq: 1,
+              data: { reason: { kind: 'aborted', reason: { kind: 'user' } } },
+            });
+            wake?.();
+          },
+          whenIdle: () =>
+            ending.kind === 'hang'
+              ? new Promise<void>((resolve) => {
+                  wake = resolve;
+                })
+              : Promise.resolve(),
+        };
+        return {
+          agent,
+          dispose: async () => {
+            disposed.push(id);
+          },
+        } as never;
       },
     });
+    const session = (id: string, timeoutMs?: number) => ({
+      sessionId: id,
+      cwd: '/reviews',
+      botName: 'Ada',
+      rename: (_session: unknown, title: string) => renamed.push(title),
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    });
+
     await expect(
       runApprovalReview(
-        llm([
-          { type: 'text-delta', text: '{"outcome":"allow",' },
-          { type: 'text-delta', text: '"reason":"fine"}' },
-          { type: 'finish', reason: { kind: 'stop' } },
-        ]),
+        agents({ kind: 'completed', text: '{"outcome":"allow","reason":"fine"}' }),
         { provider: 'p', model: 'm' },
         request,
-        'review-1',
+        session('approval-review-1'),
       ),
     ).resolves.toEqual({ outcome: 'allow', reason: 'fine' });
-    expect(seen[0]).toMatchObject({ provider: 'p', model: 'm', sessionId: 'review-1' });
-    expect(seen[0]?.['tools']).toBeUndefined();
+    expect(created[0]).toMatchObject({
+      sessionId: 'approval-review-1',
+      meta: { cwd: '/reviews' },
+      agentOptions: { provider: 'p', model: 'm' },
+    });
+    expect(created[0]?.['meta']).not.toHaveProperty('agentPreset');
+    expect(sections).toEqual([
+      expect.objectContaining({ text: REVIEWER_SYSTEM_PROMPT, complete: true }),
+    ]);
+    expect(sent).toHaveLength(1);
+    expect(renamed).toEqual([approvalReviewSessionTitle('Ada', 't')]);
+    expect(disposed).toEqual(['approval-review-1']);
+    expect(isApprovalReviewSession('approval-review-1')).toBe(true);
+    expect(isApprovalReviewSession(sessionId)).toBe(false);
+
     await expect(
       runApprovalReview(
-        llm([{ type: 'finish', reason: { kind: 'error', failure: { code: 'AUTH' } } }]),
+        agents({ kind: 'error', code: 'AUTH' }),
         { provider: 'p', model: 'm' },
         request,
-        'review-2',
+        session('approval-review-2'),
       ),
     ).rejects.toMatchObject({ code: 'model-error' });
     await expect(
       runApprovalReview(
-        llm([{ type: 'text-delta', text: 'hmm' }]),
+        agents({ kind: 'completed', text: 'hmm' }),
         { provider: 'p', model: 'm' },
         request,
-        'r',
+        session('approval-review-3'),
       ),
     ).rejects.toMatchObject({ code: 'unparseable' });
-    await expect(runApprovalReview(llm([]), undefined, request, 'r')).rejects.toMatchObject({
-      code: 'no-model',
-    });
-    const hanging = {
-      async *stream(options: { signal: AbortSignal }) {
-        await new Promise((_resolve, reject) =>
-          options.signal.addEventListener('abort', () => reject(new Error('aborted'))),
-        );
-        yield { type: 'finish', reason: { kind: 'stop' } };
-      },
-    };
     await expect(
-      runApprovalReview(hanging, { provider: 'p', model: 'm' }, request, 'r', 10),
+      runApprovalReview(agents({ kind: 'hang' }), undefined, request, session('approval-review-4')),
+    ).rejects.toMatchObject({ code: 'no-model' });
+    await expect(
+      runApprovalReview(
+        agents({ kind: 'hang' }),
+        { provider: 'p', model: 'm' },
+        request,
+        session('approval-review-5', 10),
+      ),
     ).rejects.toMatchObject({ code: 'timeout' });
+    expect(disposed).toEqual([
+      'approval-review-1',
+      'approval-review-2',
+      'approval-review-3',
+      'approval-review-5',
+    ]);
   });
 });
 
@@ -319,13 +419,127 @@ describe('Approval Reviewer in the tool approval gate', () => {
     expect(await answer).toBe('rejected');
   });
 
-  it('does not review secret tools or device authorization in this slice', async () => {
+  const secretArgs = {
+    account: 'github',
+    references: ['private:00000000-0000-4000-8000-000000000000:token'],
+    program: 'gh',
+    args: ['pr', 'list'],
+    env: [
+      { name: 'GH_TOKEN', value: '{{token}}' },
+      { name: 'GH_ENTERPRISE_TOKEN', value: 'ghp_SECRETVALUE123 {{token}}' },
+      { name: 'GH_HOST', value: 'ghp_LITERALSECRET456' },
+    ],
+  };
+
+  it('reviews a secret_cli call and shows the program, arguments and placeholder names only', async () => {
     const state = fixture();
-    state.broker.track(state.execution({ program: 'gh' }, 'secret_cli'), 'each-use');
+    state.broker.track(state.execution(secretArgs, 'secret_cli'));
+    expect(await state.ask('secret_cli')).toBe('allowed-once');
+    expect(state.messages).toHaveLength(1);
+    expect(state.messages[0]!.toolApprovalRequest).toBeUndefined();
+    const call = state.review.mock.calls[0]![0].call;
+    expect(JSON.parse(call.input)).toEqual({
+      account: 'github',
+      program: 'gh',
+      args: ['pr', 'list'],
+      env: [
+        { name: 'GH_TOKEN', placeholders: ['token'] },
+        { name: 'GH_ENTERPRISE_TOKEN', placeholders: ['token'] },
+        { name: 'GH_HOST', placeholders: [] },
+      ],
+    });
+    const record = state.messages[0]!.toolAutoApproval!;
+    expect(record).toMatchObject({ outcome: 'allowed', toolName: 'secret_cli' });
+    expect(record.input).toBe(call.input);
+  });
+
+  it('never lets a secret value reach the reviewer input', async () => {
+    const secrets = ['ghp_SECRETVALUE123', 'ghp_LITERALSECRET456', 'private:00000000'];
+    const earlier = [
+      ...events,
+      {
+        type: 'assistant/message',
+        data: {
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool-call',
+                id: 'earlier-secret',
+                name: 'secret_mcp_connect',
+                arguments: JSON.stringify({ ...secretArgs, server_name: 'github' }),
+              },
+            ],
+          },
+        },
+      },
+    ];
+    for (const [name, args] of [
+      ['secret_cli', secretArgs],
+      ['secret_mcp_connect', { ...secretArgs, server_name: 'github', program: 'npx' }],
+    ] as const) {
+      const state = fixture({
+        review: async () => ({ outcome: 'reject', reason: 'Not this account.' }),
+      });
+      const agent = state.execution().agent as unknown as {
+        session: { snapshotEvents: () => unknown };
+      };
+      agent.session.snapshotEvents = () => earlier;
+      state.broker.track(
+        state.execution(args, name),
+        name === 'secret_cli' ? 'operation' : 'each-use',
+      );
+      expect(await state.ask(name)).toBe('rejected');
+      const request = state.review.mock.calls[0]![0];
+      const seen = JSON.stringify(request) + reviewerUserPrompt(request);
+      for (const secret of secrets) expect(seen).not.toContain(secret);
+      expect(seen).toContain('secret_mcp_connect');
+      expect(JSON.stringify(state.messages)).not.toContain('ghp_');
+      expect(state.messages[0]!.toolAutoApproval?.outcome).toBe('rejected');
+    }
+  });
+
+  it('sends a secret call to the card when the reviewer asks the Human', async () => {
+    const state = fixture({
+      template: 'cautious',
+      review: async () => ({ outcome: 'ask-human', reason: 'Secret tools go to the Human.' }),
+    });
+    state.broker.track(state.execution(secretArgs, 'secret_cli'));
     const answer = state.ask('secret_cli');
     await vi.waitFor(() => expect(state.messages).toHaveLength(1));
-    expect(state.review).not.toHaveBeenCalled();
+    expect(state.review.mock.calls[0]![0].template.name).toBe('cautious');
+    expect(state.messages[0]!.toolApprovalRequest?.toolName).toBe('secret_cli');
     await state.broker.decide(botSlug, state.messages[0]!.id, 'rejected');
     expect(await answer).toBe('rejected');
+  });
+
+  it('grants Browser Authorization without a card and tells the reviewer the device and Session', async () => {
+    const state = fixture();
+    state.broker.track(
+      state.execution({ action: 'open', url: 'https://example.com' }, 'browser_navigate'),
+      'web-only',
+      false,
+      'browser',
+    );
+    expect(await state.ask('browser_navigate')).toBe('allowed-once');
+    expect(state.messages[0]!.toolAutoApproval?.outcome).toBe('allowed');
+    const request = state.review.mock.calls[0]![0];
+    expect(request.call.authorization).toEqual({ device: 'browser', sessionId });
+    const prompt = reviewerUserPrompt(request);
+    expect(prompt).toContain('"device": "Browser"');
+    expect(prompt).toContain('"session": "' + sessionId + '"');
+    expect(state.broker.validAfterDecision(state.execution().agent!, 'call-1')).toBe(true);
+  });
+
+  it('states a default for secret tools and device Authorization in both built-in templates', () => {
+    const cautious = approvalTemplate('cautious')!.text;
+    const askCautious = cautious.slice(cautious.indexOf('## Ask the Human'));
+    expect(askCautious).toContain('secret_cli');
+    expect(askCautious).toContain('Browser');
+    const work = approvalTemplate('get-work-done')!.text;
+    const allowWork = work.slice(work.indexOf('## Allow'), work.indexOf('## Reject'));
+    expect(allowWork).toContain('secret_cli');
+    expect(allowWork).toContain('known program');
+    expect(allowWork).toContain('Browser Authorization');
   });
 });

@@ -1,5 +1,5 @@
 import type { ColorValue } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 type IconProps = { color: ColorValue; size: number; focused?: boolean };
 
@@ -34,24 +34,6 @@ export function ActivityIcon(props: IconProps) {
 
 export function MeIcon(props: IconProps) {
   return <Glyph {...props} d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7.5 8a7.5 7.5 0 0 1 15 0" />;
-}
-
-export function NeedsYouIcon(props: IconProps) {
-  return (
-    <Glyph
-      {...props}
-      d="M5 5h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-7l-4 3v-3H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm7 3v4m0 3h.01"
-    />
-  );
-}
-
-export function WorkingIcon(props: IconProps) {
-  return (
-    <Glyph
-      {...props}
-      d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1M5.6 18.4l2.1-2.1m8.6-8.6 2.1-2.1"
-    />
-  );
 }
 
 export function StopIcon(props: IconProps) {
@@ -187,6 +169,82 @@ export function FolderIcon(props: IconProps) {
       {...props}
       d="M4 6a1 1 0 0 1 1-1h4.5l2 2H19a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"
     />
+  );
+}
+
+export function MouseIcon(props: IconProps) {
+  return <Glyph {...props} d="M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6Zm0 3v4" />;
+}
+
+export function ControlsIcon(props: IconProps) {
+  return <Glyph {...props} d="M4 7h9m4 0h3M4 17h3m4 0h9M15 5v4M9 15v4" />;
+}
+
+export function KeyboardHideIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M4 4h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm3 4h.01M11 8h.01M15 8h.01M8 11h8m-6 6 2 2 2-2"
+    />
+  );
+}
+
+export function MouseButtonIcon({
+  color,
+  size,
+  side,
+  mark,
+}: IconProps & { side: 'left' | 'right'; mark: ColorValue }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d={side === 'left' ? 'M12 4a5 5 0 0 0-5 5v1h5V4Z' : 'M12 4a5 5 0 0 1 5 5v1h-5V4Z'}
+        fill={mark}
+      />
+      <Path
+        d="M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6Zm-6 7h12M12 3v7"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+export function PointerArrow({
+  size,
+  fill,
+  rim,
+}: {
+  size: number;
+  fill: ColorValue;
+  rim: ColorValue;
+}) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M3 2v18l5-4.6 3.3 7.2 3-1.4-3.2-7H18L3 2Z"
+        fill={fill}
+        stroke={rim}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function HandBackIcon(props: IconProps) {
+  return <Glyph {...props} d="M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10" />;
+}
+
+export function MoreIcon({ color, size }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx={12} cy={5.5} r={1.8} fill={color} />
+      <Circle cx={12} cy={12} r={1.8} fill={color} />
+      <Circle cx={12} cy={18.5} r={1.8} fill={color} />
+    </Svg>
   );
 }
 
