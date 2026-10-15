@@ -418,7 +418,7 @@ printf '{"title":"给植物浇水"}' | deepseekbot todo-tool <bot-id> todos_add 
 
 ### 自动审批（审批模板）
 
-PersonaBot 可以选择一个审批模板（[ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)）。选中后，审批员会先按模板回答此 Bot 的操作审批（越出沙箱的 Shell 命令、文件工具、打开附件），再决定是否发卡片。密钥工具、浏览器和电脑授权，以及任何修改审批策略的调用，仍然以卡片交给 Human。本版本内置两个只读模板：`cautious` 和 `get-work-done`。
+PersonaBot 可以选择一个审批模板（[ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)）。选中后，审批员会先按模板回答此 Bot 的审批，再决定是否发卡片：越出沙箱的 Shell 命令、文件工具、打开附件、`secret_cli` 和 `secret_mcp_connect` 调用，以及电脑和浏览器授权。对密钥工具，审批员只看到程序、参数、账号和占位符名称，看不到任何密钥值或环境变量值；对授权，它看到设备和 Session。`cautious` 把密钥工具和两种授权都交给 Human；`get-work-done` 允许已知程序配合它自己服务的账号，并在任务需要时允许浏览器授权。任何修改审批策略的调用仍然以卡片交给 Human。本版本内置两个只读模板：`cautious` 和 `get-work-done`。
 
 ```bash
 deepseekbot approval-templates [--bot <bot-id>]

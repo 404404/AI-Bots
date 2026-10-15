@@ -31,7 +31,10 @@ doubt, send the call to the Human.
 - Sending messages, posting, emailing or anything else that leaves this computer.
 - Installing software, changing system settings, or using the network beyond reading public
   documentation.
-- Spending money, using credentials, or touching accounts.
+- Spending money, using credentials, or touching accounts. This includes every secret tool call
+  (\`secret_cli\`, \`secret_mcp_connect\`), whatever the program or account.
+- Computer or Browser Authorization: letting this Session use the shared Computer or the Human's
+  Browser.
 - Any call this template does not clearly cover.
 `;
 
@@ -49,6 +52,10 @@ against what the Human said.
 - Building, testing, linting and formatting; installing project dependencies with the project's own
   package manager.
 - Local Git work: branches, commits, and pushing to a branch the Bot created.
+- A secret tool call (\`secret_cli\`, \`secret_mcp_connect\`) that runs a known program with the
+  account for its own service, for example \`gh\` with a GitHub account or \`npx\` starting a
+  service's documented MCP server with that service's account, when the arguments fit the task.
+- Browser Authorization when the Human's task needs a web page.
 
 ## Reject
 
@@ -60,6 +67,9 @@ against what the Human said.
 
 - Publishing, deploying, releasing, or messaging people outside this Profile.
 - Spending money, or changing credentials and account settings.
+- A secret tool call with a program you don't recognize, an account that belongs to another
+  service, or arguments that publish, delete or change the account.
+- Computer Authorization: controlling the shared Computer's screen, mouse and keyboard.
 - A call you cannot judge from what you were given.
 `;
 
