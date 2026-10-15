@@ -8,7 +8,7 @@ import { Text } from './text';
 export interface DayBar {
   key: string;
   segments: readonly number[];
-  label?: string;
+  label?: string | undefined;
 }
 
 export function barTotal(bar: DayBar): number {
