@@ -478,6 +478,7 @@ export interface BridgeActions {
   openBot(slug: string, view?: 'profile'): Promise<void>;
   refreshBotInbox(slug: string): Promise<void>;
   openActivityCenter(view?: ActivityCenterTab): Promise<void>;
+  attachActivityCenterPanel(): () => void;
   refreshOverview(): Promise<void>;
   humanActionPage(botSlug: string, cursor?: string): Promise<HumanAttentionPage>;
   openHumanInbox(): Promise<void>;
@@ -1211,19 +1212,29 @@ export function createActions(
     }
   };
 
+  let activityPanelScope: object | undefined;
+  const humanInboxScope = (): object | undefined => {
+    const selection = currentSelection();
+    return selection?.kind === 'inbox' ? selection : activityPanelScope;
+  };
+  const overviewScope = (): object | undefined => {
+    const selection = currentSelection();
+    if (selection?.kind !== 'inbox') return activityPanelScope;
+    return selection.view === 'overview' ? selection : undefined;
+  };
   let overviewSeq = 0;
   const refreshOverview = async (): Promise<void> => {
-    const selection = currentSelection();
-    if (selection?.kind !== 'inbox' || selection.view !== 'overview') return;
+    const scope = overviewScope();
+    if (scope === undefined) return;
     const seq = ++overviewSeq;
     if (clientStore.getSnapshot().overview.status === 'idle')
       clientStore.setOverview({ status: 'loading', error: undefined });
     try {
       const value = await loadActivityOverview(call);
-      if (seq !== overviewSeq || currentSelection() !== selection) return;
+      if (seq !== overviewSeq || overviewScope() !== scope) return;
       clientStore.setOverview({ status: 'ready', value, error: undefined });
     } catch (error) {
-      if (seq !== overviewSeq || currentSelection() !== selection) return;
+      if (seq !== overviewSeq || overviewScope() !== scope) return;
       clientStore.setOverview({ status: 'error', error: errorMessage(error) });
     }
   };
@@ -1256,7 +1267,7 @@ export function createActions(
   };
   const loadHumanInboxFor = async (
     category: HumanInboxCategory,
-    selection: ConversationSelection,
+    scope: object,
     cursor?: string,
     retainedCount = clientStore.getSnapshot().humanInbox.items.length,
     background = false,
@@ -1267,7 +1278,7 @@ export function createActions(
     const headVersion = humanInboxHeadSeq;
     const { botSlug, channelId, sort, snoozed } = clientStore.getSnapshot().humanInbox;
     const isCurrent = (): boolean =>
-      currentSelection() === selection &&
+      humanInboxScope() === scope &&
       scopeVersion === humanInboxScopeVersion &&
       requestSeq === (head ? humanInboxHeadSeq : humanInboxPageSeq);
     if (cursor === undefined && clientStore.getSnapshot().humanInbox.status === 'idle')
@@ -1285,7 +1296,7 @@ export function createActions(
       const prior = priorState.items;
       if (background && (humanInboxPagesPending > 0 || prior.length > 150)) return;
       if (!head && headVersion !== humanInboxHeadSeq) {
-        await loadHumanInboxFor(category, selection, undefined, prior.length + page.items.length);
+        await loadHumanInboxFor(category, scope, undefined, prior.length + page.items.length);
         return;
       }
       let canonicalItems = page.items;
@@ -1476,11 +1487,11 @@ export function createActions(
                 item.kind !== kind || item.channelId !== channelId || item.messageId !== messageId,
             ),
         });
-      const selection = currentSelection();
+      const scope = humanInboxScope();
       await Promise.allSettled([
         refreshHumanInboxStatus(),
-        ...(selection?.kind === 'inbox'
-          ? [loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, selection)]
+        ...(scope !== undefined
+          ? [loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, scope)]
           : []),
       ]);
     }
@@ -1873,6 +1884,16 @@ export function createActions(
       void refreshHumanInboxStatus();
       return refreshOverview();
     },
+    attachActivityCenterPanel() {
+      const scope = {};
+      activityPanelScope = scope;
+      humanInboxScopeVersion += 1;
+      return () => {
+        if (activityPanelScope !== scope) return;
+        activityPanelScope = undefined;
+        humanInboxScopeVersion += 1;
+      };
+    },
     refreshOverview,
     humanActionPage: (botSlug, cursor) =>
       loadHumanAttention(call, 'action', 50, cursor, {
@@ -1884,14 +1905,14 @@ export function createActions(
       rememberActivityTab('inbox');
       clientStore.select({ kind: 'inbox' });
       void refreshHumanInboxStatus();
-      const selection = currentSelection();
-      if (selection?.kind !== 'inbox') return Promise.resolve();
-      return loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, selection);
+      const scope = humanInboxScope();
+      if (scope === undefined) return Promise.resolve();
+      return loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, scope);
     },
     refreshHumanInboxStatus,
     refreshHumanInbox(category, background = false) {
-      const selection = currentSelection();
-      if (selection?.kind !== 'inbox') return Promise.resolve();
+      const scope = humanInboxScope();
+      if (scope === undefined) return Promise.resolve();
       const prior = clientStore.getSnapshot().humanInbox;
       if (background && (humanInboxPagesPending > 0 || prior.items.length > 150))
         return Promise.resolve();
@@ -1910,11 +1931,11 @@ export function createActions(
           error: undefined,
         });
       }
-      return loadHumanInboxFor(nextCategory, selection, undefined, prior.items.length, background);
+      return loadHumanInboxFor(nextCategory, scope, undefined, prior.items.length, background);
     },
     setHumanInboxFilters(filters) {
-      const selection = currentSelection();
-      if (selection?.kind !== 'inbox') return Promise.resolve();
+      const scope = humanInboxScope();
+      if (scope === undefined) return Promise.resolve();
       const prior = clientStore.getSnapshot().humanInbox;
       if (
         prior.botSlug === filters.botSlug &&
@@ -1932,14 +1953,14 @@ export function createActions(
         nextCursor: undefined,
         error: undefined,
       });
-      return loadHumanInboxFor(prior.category, selection);
+      return loadHumanInboxFor(prior.category, scope);
     },
     loadMoreHumanInbox() {
-      const selection = currentSelection();
+      const scope = humanInboxScope();
       const state = clientStore.getSnapshot().humanInbox;
-      if (selection?.kind !== 'inbox' || state.nextCursor === undefined) return Promise.resolve();
+      if (scope === undefined || state.nextCursor === undefined) return Promise.resolve();
       humanInboxPagesPending += 1;
-      return loadHumanInboxFor(state.category, selection, state.nextCursor).finally(() => {
+      return loadHumanInboxFor(state.category, scope, state.nextCursor).finally(() => {
         humanInboxPagesPending -= 1;
       });
     },
@@ -2102,12 +2123,12 @@ export function createActions(
       const requestSeq = ++humanInboxStatusSeq;
       const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
-      if (currentSelection()?.kind === 'inbox') await actions.refreshHumanInbox();
+      if (humanInboxScope() !== undefined) await actions.refreshHumanInbox();
     },
     async markRead(channelId, messageId) {
       await markReadPosition(call, channelId, messageId);
       await refreshHumanInboxStatus();
-      if (currentSelection()?.kind === 'inbox') await actions.refreshHumanInbox();
+      if (humanInboxScope() !== undefined) await actions.refreshHumanInbox();
     },
     async reactToMessage(channelId, messageId, emoji, active) {
       const apply = (reactions: (current: ChannelMessage) => ChannelMessage['reactions']) => {
@@ -2188,7 +2209,7 @@ export function createActions(
       } finally {
         await Promise.allSettled([
           refreshHumanInboxStatus(),
-          ...(currentSelection()?.kind === 'inbox' ? [actions.refreshHumanInbox()] : []),
+          ...(humanInboxScope() !== undefined ? [actions.refreshHumanInbox()] : []),
         ]);
       }
     },
