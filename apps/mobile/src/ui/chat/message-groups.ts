@@ -29,6 +29,7 @@ export function chatRows(
       !standalone(message) &&
       message.author !== 'system' &&
       previous.author === message.author &&
+      previous.bot === message.bot &&
       gap < GROUP_MS;
     const before = rows.at(-1);
     if (joins && before?.kind === 'message') before.last = false;

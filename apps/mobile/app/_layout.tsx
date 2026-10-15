@@ -28,6 +28,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="dm/[slug]" options={{ title: '' }} />
+            <Stack.Screen name="channel/[id]" options={{ title: '' }} />
             <Stack.Screen
               name="bot/[slug]"
               options={{

@@ -22,6 +22,18 @@ const shape = (rows: ReturnType<typeof chatRows>) =>
   );
 
 describe('chat message groups', () => {
+  it('starts a new group when another Bot speaks in a group Channel', () => {
+    const by = (id: string, at: string, bot: string): ConversationMessage => ({
+      ...message(id, at),
+      bot,
+    });
+    expect(
+      shape(
+        chatRows([by('a', '09:00', 'ada'), by('b', '09:01', 'ada'), by('c', '09:02', 'grace')]),
+      ),
+    ).toEqual(['|', 'a^', 'b$', 'c^$']);
+  });
+
   it('groups one author within 5 minutes and starts with a time separator', () => {
     expect(
       shape(
