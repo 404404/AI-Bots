@@ -24,6 +24,7 @@ import {
 import { mountContentPurge } from './purge/owner.js';
 import type { ContentPurge } from './purge/contracts.js';
 import { createDshImProvider } from './messaging/dsh-im.js';
+import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createCompanionFeed, COMPANION_PATH, type CompanionFeed } from './companions/feed.js';
@@ -145,7 +146,11 @@ import {
 } from './workspaces/grant-execution.js';
 import { ChannelToolApproval, type ToolAutoApproval } from './workspaces/tool-approval.js';
 import { approvalTemplate, changesApprovalPolicy } from './workspaces/approval-templates.js';
-import { createApprovalReviewRunner } from './workspaces/approval-reviewer.js';
+import {
+  APPROVAL_REVIEW_SESSION_PREFIX,
+  createApprovalReviewRunner,
+  isApprovalReviewSession,
+} from './workspaces/approval-reviewer.js';
 import { createApprovalReviewerSettings } from './workspaces/approval-reviewer-settings.js';
 import { ChannelUserQuestions } from './channels/user-questions.js';
 import { mountPrivateInputs } from './credentials/mount.js';
@@ -1210,9 +1215,12 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         })
         .catch(() => undefined);
   };
+  const reviewing = new Set<string>();
   ctx.on(
     'agent/pre-step',
     async ({ agent, signal }, next) => {
+      if (isApprovalReviewSession(agent.session.id))
+        return reviewing.has(agent.session.id) ? next() : { kind: 'reject' };
       try {
         await core.runtime.ensureAssignmentCapacity?.(agent.session.id, signal);
       } catch {
@@ -1249,8 +1257,25 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         }
       },
       validate: (route) => modelCatalog.validate(route),
-      llm: () => ctx.get('llm'),
-      sessionId: () => randomUUID(),
+      agents: () => ctx.agents,
+      session: (request) => {
+        const sessionId = APPROVAL_REVIEW_SESSION_PREFIX + randomUUID();
+        const cwd = join(dshHome, 'botharness', 'approval-reviews');
+        mkdirSync(cwd, { recursive: true });
+        const titles = ctx.get('sessionTitle') as
+          | { rename?: (session: unknown, title: string) => void }
+          | undefined;
+        reviewing.add(sessionId);
+        return {
+          sessionId,
+          cwd,
+          botName: core.registry.get(request.botSlug)?.displayName ?? request.botSlug,
+          ...(typeof titles?.rename === 'function'
+            ? { rename: (session, title) => titles.rename!(session, title) }
+            : {}),
+        };
+      },
+      settle: (sessionId) => reviewing.delete(sessionId),
     }),
     log: (entry) => {
       const detail =
