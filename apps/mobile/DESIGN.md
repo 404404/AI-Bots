@@ -106,10 +106,16 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Regions are told apart by layer fills, not borders. The card is `raised` with no outline, and an outline appears only on the focused card (`edge.focus` in the accent).
   - A decided card collapses to one line: a coloured dot, then "subject · outcome" (for example "bash · Allowed once"). A card decided on another device or expired says so.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
-- The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
+- The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text. In a DM a footer row with the Model and Workspace chips sits under it.
   - With one trailing button (the mic or Send) the pill is one row: **+**, the field and the button, bottom-aligned as the field grows. When the text no longer fits that one row, or with more (attached files, or the mic next to Send), it stacks like the web composer: the field on top at full width, and a row below with **+** (or **×**) on the left and the buttons on the right.
   - **+** opens Photos, Camera and File below the pill. Picked files show as removable tiles inside the pill, up to 10 per message. Send appears once there is text or a file.
   - Sending uploads each file to the Host first. A retry keeps the uploads that already finished.
+  - Under the pill, in a DM, a footer row holds two compact chips like the Web Client's composer footer: **Model** (a chip icon and the Bot's current model name, or "Loading…", "No model set" or "Unavailable") and **Workspace** (a folder icon and the folder count, "N folders"). Chips are `canvas.selected` pills with `meta` text, and their touch area reaches `theme.touch`.
+    - **Model** opens a sheet from the bottom titled "Model · {Bot}": Presets (when the Host has any) and the Models list, the current one checked. Picking a model changes only the Bot's main model; its Assignment models stay as they are. A model whose provider needs a key is shown muted and cannot be picked. The sheet closes once the Host accepts the change. Advanced settings (reasoning effort, Assignment models) stay on the computer.
+    - **Workspace** opens a sheet titled "Workspace · {Bot}" with three sections, the same actions as the Web composer's workspace panel:
+      1. **Folders**: each granted folder as a row (name, then "Can edit" or "Read only" and its path) with a × that removes access, then **Add folder**. Add folder turns the sheet into a folder browser of the computer: folders registered on the computer, the path as tappable crumbs, and the subfolders; **Authorize this folder** resolves the current folder and asks for a scoped confirmation ("Confirm authorization for {Bot}" with the resolved path) before granting it.
+      2. **Access**: a **Full access** switch. Turning it on first shows the danger confirmation in place, in an inset box with a red "I understand, enable" button and Cancel; once on, a warning callout and a **Scope of full access** group (Chat and new Assignments, or New Assignments only) follow.
+      3. **Auto approval template**: Off, Cautious and Get the work done (plus any other template on the Host), each with its one-line hint, the current one checked.
   - The mic dictates with the phone's speech recognizer, and the words fill the field so the Human edits them before sending. Like Telegram's voice button: hold the mic to talk and release to stop; while holding, a lock appears above the mic: slide left to cancel or up to lock. A tap works like a lock: it keeps listening until **■** stops it or the **×** that replaces **+** cancels it and clears the text. Dictation stays in the same row, and its status shows as the field's placeholder. A refused microphone or speech permission shows a notice and leaves the mic in place.
 
 **Bot profile** (a form sheet)
@@ -130,19 +136,20 @@ Every fill comes from a layer, like the Web Client's DSH layers. `theme.layer.<n
 | `raised` | `bg-module-platform` | cards, Bot bubbles, shortcut cards, the composer pill     |
 | `well`   | `bg-base`            | a recessed area in a raised card: option groups, previews |
 | `field`  | `bg-layer-1`         | text inputs in a card, edged with `border-l4`             |
-| `sheet`  | `bg-layer-2`         | settings rows, sheets and menus                           |
+| `sheet`  | `bg-layer-2`         | settings rows on a screen, and menus                      |
 
 Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab), `chosen` (the Human's pick, an accent tint), `danger` (a destructive button, a red tint), `inset` (code, badges, tiles), `edge` and `divider`.
 
 - `chosen` is the accent over the fill, 13% in light and 30% in dark. On `well` it equals DSH `state-business-tertiary`, and it follows a Bot's accent.
 - A state is pushed further from its fill until it stands apart from the fill, the layer under it and the other states (`SEPARATION` in `layers.ts`; `test/design-tokens.test.ts` checks every scheme and accent). DSH's dark `interactive-bg-active` over `bg-base` equals `bg-module-platform`, so without this a selected row in a card looks like the card.
 - Buttons are solid pills (`radius.round`) with no border, and take their colours from `buttonColors(theme, tone, on)` (`controls.ts`) for the layer they sit `on`. Primary is the neutral `fg` fill with a `base` label, never the Bot accent. Secondary is the layer's `selected`, or the next layer's fill when `selected` is too close to the layer. Danger is the layer's `danger` tint with a red label. Each fill stands apart from the layer and from the other tones, and each label reaches 4.5:1.
+- Bottom sheets (`chat/sheet.tsx`) sit on `theme.scrim`, have a grabber, a title with a round close button, and paint `canvas`. Their content is iOS-style inset groups on `raised` (`SettingsGroupItem`): rows separated by `divider` hairlines, a muted heading above each group and a muted footnote below it. A warning goes in a `warningSoft` callout, not orange text. A selected option shows a `fg` check, and switches use `Toggle` (`accent` track when on).
 - Translucent roles (`hover`, `selected`, `divider`, `border*`, `dangerSoft`) are never a `backgroundColor`; `test/style-guard.test.ts` enforces this. Translucent edges stay allowed.
 
 ## Components
 
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
-- `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Badge`, `Card`, `SettingsRow` and `EmptyState`.
+- `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, and later `Icon`, `IconButton`, `Button`, `Avatar`, `Badge`, `Card`, `SettingsRow` and `EmptyState`.
 - `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, status strip and scroll-to-bottom.
 - `src/ui/shell/` will hold the Host drawer, the Human avatar button, shortcut cards, Channel section headers and the activity item.
 - `app/` routes, reads the Host client, and composes these components.

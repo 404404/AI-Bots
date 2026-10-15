@@ -247,3 +247,16 @@ export function MoreIcon({ color, size }: IconProps) {
     </Svg>
   );
 }
+
+export function CpuIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M8 6h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm2 4h4v4h-4v-4ZM10 3v3m4-3v3m-4 12v3m4-3v3M3 10h3m-3 4h3m12-4h3m-3 4h3"
+    />
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return <Glyph {...props} d="m5 12.5 4.5 4.5L19 7.5" />;
+}
