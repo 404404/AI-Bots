@@ -606,7 +606,11 @@ function ChatConversation({
                 </Text>
               </Pressable>
             ) : notice === t.noBot || notice === t.noChannel ? (
-              <Pressable accessibilityRole="button" onPress={leave} hitSlop={space.x3}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.dismissTo('/')}
+                hitSlop={space.x3}
+              >
                 <Text variant="meta" tone="accent" strong>
                   {t.backToChats}
                 </Text>
