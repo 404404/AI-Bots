@@ -10,6 +10,7 @@ import {
   HEX_PLACEHOLDER,
   HOST_AVATAR_PRESETS,
   HOST_NAME_MAX,
+  hostLookName,
   shownHostName,
   withHostName,
   type HostAvatar,
@@ -228,6 +229,13 @@ export function HostLookEditor({
   const [kind, setKind] = useState<BannerKind>(look.banner.kind);
   const [pickError, setPickError] = useState(false);
   const [nameDraft, setNameDraft] = useState(look.name ?? '');
+  const [stored, setStored] = useState(look);
+  if (stored !== look) {
+    setStored(look);
+    if (look.banner.kind !== stored.banner.kind) setKind(look.banner.kind);
+    if (look.name !== stored.name && hostLookName(nameDraft) !== look.name)
+      setNameDraft(look.name ?? '');
+  }
   const shown = shownHostName(look, hostName);
   const setAvatar = (avatar: HostAvatar) => actions.onChange({ ...look, avatar });
   const setBanner = (banner: HostBanner) => actions.onChange({ ...look, banner });

@@ -189,6 +189,26 @@ describe('Customize computer sheet', () => {
     expect(handlers.onChange).toHaveBeenLastCalledWith(DEFAULT_HOST_LOOK);
   });
 
+  it('shows a saved look that arrives after the sheet opens', async () => {
+    const handlers = actions();
+    const view = await render(
+      <HostLookEditor hostName="vm" look={DEFAULT_HOST_LOOK} actions={handlers} />,
+    );
+    const saved = {
+      name: 'Studio',
+      avatar: DEFAULT_HOST_LOOK.avatar,
+      banner: { kind: 'color', color: BANNER_COLORS[2] },
+    } as const;
+    await act(async () =>
+      root!.render(<HostLookEditor hostName="vm" look={saved} actions={handlers} />),
+    );
+    const field = view.querySelector<HTMLTextAreaElement>(
+      `textarea[aria-label="${t.hostLookName}"]`,
+    )!;
+    expect(field.value).toBe('Studio');
+    expect(button(view, t.bannerSwatch(BANNER_COLORS[2].toUpperCase()))).not.toBeNull();
+  });
+
   it('applies a typed colour once it is a full hex value', async () => {
     const handlers = actions();
     const view = await render(
