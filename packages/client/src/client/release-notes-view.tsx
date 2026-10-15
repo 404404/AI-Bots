@@ -214,6 +214,7 @@ const INSTALL_FAILURE_KEYS: Record<
   Extract<ReleaseInstallState, { status: 'failed' }>['reason'],
   BotHarnessKey
 > = {
+  'beta-not-enabled': 'release.channel.required',
   busy: 'release.refused.busy',
   'activity-unavailable': 'release.refused.activityUnavailable',
   unavailable: 'release.install.failed.unavailable',
@@ -324,6 +325,7 @@ export type ReleaseSettingsProps = PropsLocale<'botharness'> &
 export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): ReactElement {
   const snapshot = useReleaseNotes(releaseNotes);
   const mount = useMountedResource<HTMLDivElement>(() => {
+    void releaseNotes.loadChannel();
     void releaseNotes.start().then(() => releaseNotes.checkUpdate());
   }, [releaseNotes]);
   const update = snapshot.update;
@@ -331,6 +333,46 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
   const installing = install.status === 'installing';
   return (
     <div className="bh-release-settings" ref={mount} data-release-settings>
+      <SettingsRow
+        title={t('release.channel.title')}
+        description={t(
+          snapshot.channel === undefined
+            ? 'release.channel.unknown'
+            : snapshot.channel.channel === 'beta'
+              ? 'release.channel.beta'
+              : 'release.channel.stable',
+        )}
+        control={
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={
+              !snapshot.channel?.writable ||
+              snapshot.channelSaving ||
+              installing ||
+              snapshot.restart.status === 'restarting'
+            }
+            onClick={() => {
+              void releaseNotes.setChannel(
+                snapshot.channel?.channel === 'beta' ? 'stable' : 'beta',
+              );
+            }}
+          >
+            {t(
+              snapshot.channelSaving
+                ? 'release.channel.saving'
+                : snapshot.channel?.channel === 'beta'
+                  ? 'release.channel.leave'
+                  : 'release.channel.join',
+            )}
+          </Button>
+        }
+      />
+      {snapshot.channelError ? (
+        <div role="alert" className="bh-release-install-error">
+          {t('release.channel.failed')}
+        </div>
+      ) : null}
       <SettingsRow
         title={t('release.row.title')}
         description={
@@ -354,11 +396,13 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
               variant="outline"
               disabled={
                 installing ||
+                snapshot.channelSaving ||
                 update.status === 'checking' ||
                 update.status === 'development' ||
                 update.status === 'restart-required'
               }
               onClick={() => {
+                void releaseNotes.loadChannel();
                 void releaseNotes.checkUpdate(true);
               }}
             >
@@ -388,7 +432,7 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
               <Button
                 size="sm"
                 variant="primary"
-                disabled={installing}
+                disabled={installing || snapshot.channelSaving}
                 data-release-install
                 onClick={() => {
                   void releaseNotes.install(update.latest);
@@ -420,7 +464,8 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
           !(
             install.status === 'failed' &&
             (install.reason === 'busy' || install.reason === 'activity-unavailable')
-          ) ? (
+          ) &&
+          !(install.status === 'failed' && install.reason === 'beta-not-enabled') ? (
             <ManualUpdate latest={update.latest} t={t} />
           ) : null}
         </div>
