@@ -21,6 +21,7 @@ import {
   bannerHex,
   DEFAULT_HOST_LOOK,
   hostBand,
+  shownHostName,
   type HostLook,
 } from '../src/ui/design/host-look';
 import { contrast, resolveTheme } from '../src/ui/design/resolve-theme';
@@ -54,6 +55,13 @@ describe('Host look model', () => {
       avatar: { kind: 'image', uri: 'file:///a.png' },
       banner: { kind: 'color', color: '#e8613c' },
     });
+  });
+
+  it('keeps a trimmed local name and drops a blank one', () => {
+    expect(parseHostLook({ name: '  Studio Mac  ' }).name).toBe('Studio Mac');
+    expect(parseHostLook({ name: '   ' })).toEqual(DEFAULT_HOST_LOOK);
+    expect(shownHostName(parseHostLook({ name: 'Home' }), 'vm')).toBe('Home');
+    expect(shownHostName(DEFAULT_HOST_LOOK, 'vm')).toBe('vm');
   });
 
   it('keeps one look per Host and saves every change', async () => {
@@ -155,6 +163,30 @@ describe('Customize header sheet', () => {
       avatar: { kind: 'initial' },
       banner: { kind: 'color', color: BANNER_COLORS[5] },
     });
+  });
+
+  it('renames the computer on the phone and falls back to its own name when cleared', async () => {
+    const handlers = actions();
+    const view = await render(
+      <HostLookEditor hostName="vm" look={DEFAULT_HOST_LOOK} actions={handlers} />,
+    );
+    const field = view.querySelector<HTMLTextAreaElement>(
+      `textarea[aria-label="${t.hostLookName}"]`,
+    )!;
+    expect(field.placeholder).toBe('vm');
+    const type = async (text: string) =>
+      act(async () => {
+        const setter = Object.getOwnPropertyDescriptor(
+          HTMLTextAreaElement.prototype,
+          'value',
+        )!.set!;
+        setter.call(field, text);
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    await type('Studio ');
+    expect(handlers.onChange).toHaveBeenLastCalledWith({ ...DEFAULT_HOST_LOOK, name: 'Studio' });
+    await type('');
+    expect(handlers.onChange).toHaveBeenLastCalledWith(DEFAULT_HOST_LOOK);
   });
 
   it('applies a typed colour once it is a full hex value', async () => {

@@ -2,6 +2,7 @@ import {
   bannerHex,
   DEFAULT_HOST_LOOK,
   HOST_AVATAR_PRESETS,
+  hostLookName,
   type HostAvatar,
   type HostBanner,
   type HostLook,
@@ -58,7 +59,9 @@ export function parseHostBanner(input: unknown): HostBanner {
 
 export function parseHostLook(input: unknown): HostLook {
   const value = record(input);
+  const name = hostLookName(value['name']);
   return {
+    ...(name === undefined ? {} : { name }),
     avatar: parseHostAvatar(value['avatar']),
     banner: parseHostBanner(value['banner']),
   };

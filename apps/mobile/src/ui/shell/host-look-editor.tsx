@@ -9,6 +9,9 @@ import {
   DEFAULT_HOST_LOOK,
   HEX_PLACEHOLDER,
   HOST_AVATAR_PRESETS,
+  HOST_NAME_MAX,
+  shownHostName,
+  withHostName,
   type HostAvatar,
   type HostBanner,
   type HostLook,
@@ -22,7 +25,7 @@ import { t } from '../strings';
 import { Chip } from './activity-filters';
 import { GradientFill } from './gradient-fill';
 import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
-import { HostTile, presetAvatarSvg } from './host-tile';
+import { hostInitial, HostTile, presetAvatarSvg } from './host-tile';
 
 export interface HostLookActions {
   onChange(look: HostLook): void;
@@ -224,6 +227,8 @@ export function HostLookEditor({
   const theme = useDesignTheme();
   const [kind, setKind] = useState<BannerKind>(look.banner.kind);
   const [pickError, setPickError] = useState(false);
+  const [nameDraft, setNameDraft] = useState(look.name ?? '');
+  const shown = shownHostName(look, hostName);
   const setAvatar = (avatar: HostAvatar) => actions.onChange({ ...look, avatar });
   const setBanner = (banner: HostBanner) => actions.onChange({ ...look, banner });
   const banner = look.banner;
@@ -287,7 +292,33 @@ export function HostLookEditor({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
       >
-        <Preview hostName={hostName} look={look} />
+        <Preview hostName={shown} look={look} />
+
+        <Section title={t.hostLookName}>
+          <TextInput
+            accessibilityLabel={t.hostLookName}
+            value={nameDraft}
+            placeholder={hostName}
+            placeholderTextColor={theme.color.subtle}
+            maxLength={HOST_NAME_MAX}
+            autoCorrect={false}
+            returnKeyType="done"
+            onChangeText={(text) => {
+              setNameDraft(text);
+              actions.onChange(withHostName(look, text));
+            }}
+            style={{
+              minHeight: theme.touch,
+              paddingHorizontal: space.x4,
+              borderRadius: radius.md,
+              borderWidth: edge.hairline,
+              borderColor: theme.layer.field.edge,
+              backgroundColor: theme.layer.field.fill,
+              color: theme.color.fg,
+              fontSize: theme.type.body.size,
+            }}
+          />
+        </Section>
 
         <Section title={t.hostAvatar}>
           <Grid>
@@ -296,7 +327,7 @@ export function HostLookEditor({
               selected={look.avatar.kind === 'initial'}
               onPress={() => setAvatar({ kind: 'initial' })}
             >
-              <Text variant="title">{Array.from(hostName.trim())[0]?.toUpperCase() ?? '?'}</Text>
+              <Text variant="title">{hostInitial(shown)}</Text>
             </Swatch>
             {HOST_AVATAR_PRESETS.map((id, index) => (
               <Swatch
@@ -315,7 +346,7 @@ export function HostLookEditor({
             >
               {look.avatar.kind === 'image' ? (
                 <HostTile
-                  hostName={hostName}
+                  hostName={shown}
                   avatar={look.avatar}
                   size={theme.touch + space.x2}
                   fill={theme.layer.raised.fill}
@@ -417,6 +448,7 @@ export function HostLookEditor({
           label={t.hostLookReset}
           onPress={() => {
             setKind('accent');
+            setNameDraft('');
             actions.onChange(DEFAULT_HOST_LOOK);
           }}
         />

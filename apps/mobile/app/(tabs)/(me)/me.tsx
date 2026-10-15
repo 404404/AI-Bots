@@ -47,11 +47,6 @@ export default function MeScreen() {
             }
           />
           <SettingsRow title={t.computers} detail={t.computersHint} onPress={openHostDrawer} />
-          <SettingsRow
-            title={t.hostLook}
-            detail={t.hostLookHint}
-            onPress={() => router.push('/host-look')}
-          />
           <SettingsRow title={t.notifications} onPress={() => router.push('/notifications')} />
           <SettingsRow
             title={t.unpair}

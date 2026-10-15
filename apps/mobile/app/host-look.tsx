@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useHostSession } from '../src/host/host-session';
 import { forgetImage, hostLooks, pickLookImage, useHostLook } from '../src/host/native-host-look';
@@ -6,12 +6,14 @@ import { HostLookEditor } from '../src/ui/shell/host-look-editor';
 
 export default function HostLookScreen() {
   const router = useRouter();
-  const { saved } = useHostSession();
-  const hostId = saved?.hostId ?? '';
+  const params = useLocalSearchParams<{ hostId?: string }>();
+  const { saved, hosts } = useHostSession();
+  const host = hosts.find((entry) => entry.hostId === params.hostId) ?? saved;
+  const hostId = host?.hostId ?? '';
   const look = useHostLook(hostId);
   return (
     <HostLookEditor
-      hostName={saved?.hostName ?? '—'}
+      hostName={host?.hostName ?? '—'}
       look={look}
       actions={{
         onChange(next) {
