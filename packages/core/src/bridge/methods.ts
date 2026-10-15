@@ -599,6 +599,9 @@ export interface BridgeMethods {
     execution?: 'waiting-human' | 'waiting-capacity' | 'running' | 'settled' | 'needs-repair';
   }>;
   toolApprovalDecide(payload: unknown): Promise<BridgeResult<{ accepted: boolean }>>;
+  toolAutoRejectionOverride(
+    payload: unknown,
+  ): Promise<BridgeResult<{ accepted: true; channelId: string; messageId: string }>>;
   userQuestionStatus(
     payload: unknown,
   ): BridgeResult<{ status: 'pending' | 'submitted' | 'answered' | 'expired' }>;
@@ -4110,8 +4113,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const limit = source['limit'];
       const cursor = source['cursor'];
       const snoozed = source['snoozed'];
+      const kind = source['kind'];
       if (snoozed !== undefined && typeof snoozed !== 'boolean')
         return invalidInput('snoozed must be a boolean');
+      if (kind !== undefined && kind !== 'auto-rejection')
+        return invalidInput('kind must be auto-rejection');
       if (
         category !== undefined &&
         category !== 'action' &&
@@ -4151,6 +4157,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
             ...(limit === undefined ? {} : { limit: limit as number }),
             ...(cursor === undefined ? {} : { cursor: cursor as string }),
             ...(snoozed === true ? { snoozed: true } : {}),
+            ...(kind === undefined ? {} : { kind }),
           }) ?? { items: [] },
         };
       } catch (error) {
@@ -4653,6 +4660,64 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       );
       if (accepted !== true) return invalidInput('Tool approval request is no longer pending');
       return { ok: true, value: { accepted: true } };
+    },
+    async toolAutoRejectionOverride(payload) {
+      const source = asObject(payload);
+      const itemId = asNonBlank(source, 'itemId');
+      if (itemId === undefined || itemId.length > 350 || !itemId.startsWith('autoreject:'))
+        return invalidInput('itemId must name an auto-rejected Inbox item');
+      let item;
+      try {
+        item = deps.humanAttention?.item(itemId);
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+      if (
+        item?.kind !== 'auto-rejection' ||
+        item.channelId === undefined ||
+        item.messageId === undefined
+      )
+        return {
+          ok: false,
+          error: {
+            code: 'auto-rejection-unavailable',
+            message: 'This auto-rejected call is no longer waiting for the Human',
+          },
+        };
+      const channel = deps.channels.get(item.channelId);
+      const bot = deps.registry.get(item.botSlug);
+      if (
+        channel === undefined ||
+        bot === undefined ||
+        bot.paused === true ||
+        (channel.type === 'dm'
+          ? channel.botSlug !== item.botSlug
+          : !channel.members.includes(item.botSlug))
+      )
+        return invalidInput('The PersonaBot is no longer active in this Channel');
+      const result = await deps.toolApproval?.overrideRejection(item.channelId, item.messageId);
+      if (result === undefined || !result.ok)
+        return {
+          ok: false,
+          error: {
+            code: 'auto-rejection-unavailable',
+            message: 'This auto-rejected call is no longer waiting for the Human',
+          },
+        };
+      try {
+        if (channel.type === 'group')
+          deps.runtime?.admitGroupMessage(item.channelId, result.message.id);
+        else
+          deps.runtime?.admitDmMessage({
+            channelId: item.channelId,
+            messageId: result.message.id,
+            body: result.message.body,
+          });
+      } catch {}
+      return {
+        ok: true,
+        value: { accepted: true, channelId: item.channelId, messageId: result.message.id },
+      };
     },
     userQuestionStatus(payload) {
       const source = asObject(payload);

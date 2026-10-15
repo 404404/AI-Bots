@@ -493,6 +493,7 @@ describe('plugin entry', () => {
       'toolApprovalRuleRevoke',
       'toolApprovalStatus',
       'toolApprovalDecide',
+      'toolAutoRejectionOverride',
       'userQuestionStatus',
       'userQuestionAnswer',
       'sessions',
