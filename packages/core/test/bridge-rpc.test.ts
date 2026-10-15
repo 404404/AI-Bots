@@ -193,6 +193,7 @@ describe('bridge typert service', () => {
       'assignment',
       'workspaceOptions',
       'messageAttachmentTarget',
+      'channelMediaTarget',
       'workspaceFileTarget',
       'grants',
       'grantCreate',
