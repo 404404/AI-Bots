@@ -63,6 +63,11 @@ export const glass = {
   saturate: 180,
 } as const;
 
+export const pointer = {
+  fill: '#ffffff',
+  rim: '#0f1115',
+};
+
 export const motion = {
   drawer: 250,
 } as const;

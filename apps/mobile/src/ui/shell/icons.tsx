@@ -172,6 +172,72 @@ export function FolderIcon(props: IconProps) {
   );
 }
 
+export function MouseIcon(props: IconProps) {
+  return <Glyph {...props} d="M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6Zm0 3v4" />;
+}
+
+export function ControlsIcon(props: IconProps) {
+  return <Glyph {...props} d="M4 7h9m4 0h3M4 17h3m4 0h9M15 5v4M9 15v4" />;
+}
+
+export function KeyboardHideIcon(props: IconProps) {
+  return (
+    <Glyph
+      {...props}
+      d="M4 4h16a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm3 4h.01M11 8h.01M15 8h.01M8 11h8m-6 6 2 2 2-2"
+    />
+  );
+}
+
+export function MouseButtonIcon({
+  color,
+  size,
+  side,
+  mark,
+}: IconProps & { side: 'left' | 'right'; mark: ColorValue }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d={side === 'left' ? 'M12 4a5 5 0 0 0-5 5v1h5V4Z' : 'M12 4a5 5 0 0 1 5 5v1h-5V4Z'}
+        fill={mark}
+      />
+      <Path
+        d="M12 3a6 6 0 0 1 6 6v6a6 6 0 0 1-12 0V9a6 6 0 0 1 6-6Zm-6 7h12M12 3v7"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+export function PointerArrow({
+  size,
+  fill,
+  rim,
+}: {
+  size: number;
+  fill: ColorValue;
+  rim: ColorValue;
+}) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M3 2v18l5-4.6 3.3 7.2 3-1.4-3.2-7H18L3 2Z"
+        fill={fill}
+        stroke={rim}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function HandBackIcon(props: IconProps) {
+  return <Glyph {...props} d="M14 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 8l-4 4 4 4M6 12h10" />;
+}
+
 export function MoreIcon({ color, size }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
