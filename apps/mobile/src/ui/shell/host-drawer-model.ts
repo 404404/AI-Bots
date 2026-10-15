@@ -44,6 +44,12 @@ export function hostRowBadge(glance: HostGlance): HostRowBadge {
   return undefined;
 }
 
+export const BADGE_MAX = 99;
+
+export function badgeCount(count: number): string {
+  return count > BADGE_MAX ? `${BADGE_MAX}+` : String(count);
+}
+
 export function drawerWidth(windowWidth: number): number {
   return Math.round(windowWidth * DRAWER_SHARE);
 }

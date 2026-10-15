@@ -6,6 +6,7 @@ import type { SavedHost } from '../src/host/hosts';
 import type { InboxSnapshot } from '../src/host/inbox';
 import type { HumanAttentionItem } from '../src/host/wire';
 import {
+  badgeCount,
   createHostDrawer,
   drawerWidth,
   hostDrawerRows,
@@ -187,6 +188,12 @@ describe('Host rows', () => {
     });
     expect(hostRowBadge({ status: 'online', pending: 0, unread: 0 })).toBeUndefined();
     expect(hostRowBadge({ status: 'offline' })).toBeUndefined();
+  });
+
+  it('caps a badge count at 99+', () => {
+    expect(badgeCount(7)).toBe('7');
+    expect(badgeCount(99)).toBe('99');
+    expect(badgeCount(100)).toBe('99+');
   });
 
   it('says a Host it has not heard from yet is being checked', () => {

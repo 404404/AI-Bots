@@ -40,6 +40,7 @@ import {
   drawerWidth,
   EDGE_WIDTH,
   hostDrawerRows,
+  badgeCount,
   hostRowBadge,
   settleOpen,
   type HostDrawerRow,
@@ -178,17 +179,7 @@ function openHostMenu(row: HostDrawerRow): void {
   ]);
 }
 
-function DrawerTile({
-  hostId,
-  name,
-  current,
-  unread,
-}: {
-  hostId: string;
-  name: string;
-  current: boolean;
-  unread: boolean;
-}) {
+function DrawerTile({ hostId, name, current }: { hostId: string; name: string; current: boolean }) {
   const theme = useDesignTheme();
   const look = useHostLook(hostId);
   return (
@@ -207,21 +198,6 @@ function DrawerTile({
         fill={theme.layer.sheet.inset}
         letter={theme.color.fg}
       />
-      {unread ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: -space.x1,
-            right: -space.x1,
-            width: space.x4,
-            height: space.x4,
-            borderRadius: radius.round,
-            borderWidth: edge.focus,
-            borderColor: theme.layer.sheet.fill,
-            backgroundColor: theme.color.danger,
-          }}
-        />
-      ) : null}
     </View>
   );
 }
@@ -249,12 +225,16 @@ function CountChip({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.x3,
-        borderRadius: radius.round,
+        borderRadius: radius.sm,
         backgroundColor: needsYou ? theme.color.warning : theme.color.accent,
       }}
     >
-      <Text variant="meta" strong style={{ color: ink }}>
-        {String(count)}
+      <Text
+        variant="meta"
+        strong
+        style={{ color: ink, textAlign: 'center', fontVariant: ['tabular-nums'] }}
+      >
+        {badgeCount(count)}
       </Text>
     </View>
   );
@@ -298,12 +278,7 @@ function HostRow({ row }: { row: HostDrawerRow }) {
           backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
         })}
       >
-        <DrawerTile
-          hostId={row.hostId}
-          name={row.hostName}
-          current={row.current}
-          unread={unread > 0}
-        />
+        <DrawerTile hostId={row.hostId} name={row.hostName} current={row.current} />
         <View style={{ flex: 1, gap: space.x1 }}>
           <Text strong numberOfLines={1}>
             {row.hostName}
