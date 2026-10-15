@@ -97,6 +97,8 @@ describe('reviewed npm prerelease', () => {
     const bytes = readFileSync(join(root, artifact.filename));
     const plan = {
       ...providerReleasePlan,
+      version: artifact.version,
+      providerSource: productImProvider.upstream.source,
       integrity: artifact.integrity,
       runtimeFiles: inventory.providerRuntime.runtimeFiles,
       runtimeSha256: inventory.providerRuntime.runtimeSha256,

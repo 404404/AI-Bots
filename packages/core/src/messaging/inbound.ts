@@ -665,6 +665,8 @@ export function createInboundMessaging(options: {
             return { accepted: true };
           if (!database.read((db) => senderContextAllowed(db, value.botSlug, event)))
             return { accepted: true };
+          if (latest.receiveAfter && Date.parse(event.at) < Date.parse(latest.receiveAfter))
+            return { accepted: true };
           if (event.conversation.kind === 'dm' && !latest.bridgeRoutes) {
             if (latest.receiveTargetChannelId || latest.channelBridge || latest.bridgeRoutes)
               throw new MessagingError('capability-unavailable');
@@ -686,7 +688,16 @@ export function createInboundMessaging(options: {
             return { accepted: true };
           }
           if (event.conversation.kind === 'group' && !event.mentionedAccount) {
-            lease.ordinaryVerified = true;
+            if (!lease.ordinaryVerified) {
+              lease.ordinaryVerified = true;
+              options.warn?.(
+                JSON.stringify({
+                  event: 'messaging-inbound',
+                  phase: 'ordinary-delivery-verified',
+                  grantId: value.id,
+                }),
+              );
+            }
             if (ordinaryThreadReply(event))
               lease.ordinaryThreads.set(event.reply.threadId!, event.reply.rootId!);
           }
@@ -882,16 +893,6 @@ export function createInboundMessaging(options: {
               Date.parse(event.at) < Date.parse(latest.channelBridge.intakeAfter))
           )
             return { accepted: true };
-          if (!event.mentionedAccount && !lease.ordinaryVerified) {
-            lease.ordinaryVerified = true;
-            options.warn?.(
-              JSON.stringify({
-                event: 'messaging-inbound',
-                phase: 'ordinary-delivery-verified',
-                grantId: value.id,
-              }),
-            );
-          }
           if (ordinaryThreadReply(event))
             lease.ordinaryThreads.set(event.reply.threadId!, event.reply.rootId!);
           let placement: ChannelMessageCommit | undefined;

@@ -100,6 +100,14 @@ The text slice excludes private QQ messages, ordinary group traffic, attachments
 
 QQ does not provide this consumer with a group-history API or a durable resume cursor. Disconnects can leave gaps. After a Host restart, previously retained sources remain inspectable, but their process-local reply proof is unavailable until a qualifying native event is delivered again. An old source must never become permission to send an unrelated new message.
 
+## Ordinary group text candidate
+
+The [#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155) development candidate adds checked ordinary text from the Provider's exclusive QQ consumer. Mentions-only remains the collection default. The software capability does not prove receive-all permission: a fresh non-mentioned native group event must reach the active receiver before the existing Client can enable **all messages** for that conversation. A probe in mentions-only mode supplies current delivery evidence without placing its ordinary content in canonical collection or waking the Bot.
+
+Saved collection preference and current receiver evidence stay separate. With explicit collection enabled, eligible ordinary text keeps its own member, group and message attribution in the existing local Inbox/Channel path. Observation and count/time harvest can wake a Bot independently of direct mentions, without requiring a reply to every event. Intentional speech uses the independently authorized own-app proactive path. Ordinary media and remote QQ group history are outside this text slice.
+
+Switching back to mentions-only stops future ordinary collection. Blocking, disabling or losing the receiver applies existing fences; reconnect keeps valid preferences but requires current delivery evidence again. Events from a blocked intake interval do not qualify the newly allowed conversation or reconstruct missing history. Real QQ event, Client opt-in, understanding and contribution acceptance remain pending for this candidate.
+
 ## If the app does not appear or cannot reply
 
 - Check the connection under **Settings → IM Bots → QQ**. An online receiver and a verified application identity are both required.
