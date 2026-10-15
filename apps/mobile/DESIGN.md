@@ -50,7 +50,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
     - A Host with no sections shows one flat list by latest activity.
 - **Search** finds a PersonaBot or Channel on the current Host:
   - Typing in the Chats search field filters the list in place, as chat apps do; there is no separate search tab.
-  - It matches PersonaBot display names and Channel titles on the device, ignoring case and full-width forms, with names that start with the query first. Hidden Channels stay out. A DM result opens its chat; a Channel opens the full client at that Channel until the app has a native Channel chat. When nothing matches it says so. Message full-text search is not part of it.
+  - It matches PersonaBot display names and Channel titles on the device, ignoring case and full-width forms, with names that start with the query first. Hidden Channels stay out. A DM result opens its chat, and a Channel result opens that Channel's chat. When nothing matches it says so. Message full-text search is not part of it.
 - **Activity** is the Human Inbox across all Hosts:
   - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
   - Section headers stick to the top while their items scroll and show the section's count.
@@ -117,6 +117,13 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
       2. **Access**: a **Full access** switch. Turning it on first shows the danger confirmation in place, in an inset box with a red "I understand, enable" button and Cancel; once on, a warning callout and a **Scope of full access** group (Chat and new Assignments, or New Assignments only) follow.
       3. **Auto approval template**: Off, Cautious and Get the work done (plus any other template on the Host), each with its one-line hint, the current one checked.
   - The mic dictates with the phone's speech recognizer, and the words fill the field so the Human edits them before sending. Like Telegram's voice button: hold the mic to talk and release to stop; while holding, a lock appears above the mic: slide left to cancel or up to lock. A tap works like a lock: it keeps listening until **■** stops it or the **×** that replaces **+** cancels it and clears the text. Dictation stays in the same row, and its status shows as the field's placeholder. A refused microphone or speech permission shows a notice and leaves the mic in place.
+- A group Channel opens the same chat screen, with these differences:
+  - The header shows a rounded `#` square, the Channel name and its member count, and the full client button on the right. There is no profile to open.
+  - The first bubble of each Bot's group, and each Bot's streaming draft, carry the Bot's name above it in `meta`. A different Bot starts a new group even within 5 minutes.
+  - `accent` stays the app's accent, since no one Bot owns the chat.
+  - The status strip shows the first member Bot that is working, and **Stop** stops that Bot in this Channel.
+  - The composer says "Message #{Channel}" and has no Model and Workspace footer, since those belong to one Bot. A question card keeps its own Other field instead of "Or reply in the chat below.", because a message in a group goes to every member.
+  - A notification or Activity item for a group Channel reply, mention or card opens this chat, at the card when there is one.
 
 **Bot profile** (a form sheet)
 
