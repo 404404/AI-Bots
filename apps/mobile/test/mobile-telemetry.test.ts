@@ -266,3 +266,18 @@ it('does not consume an activation marker when the public context is refused', a
   expect(JSON.stringify(send.mock.calls)).not.toContain('private-build-name');
   telemetry.dispose();
 });
+
+it('retains an in-flight send acceptance on background without observing a hidden reply', async () => {
+  const { telemetry, send } = fixture();
+  await telemetry.setEnabled(true);
+  telemetry.foreground(true, 1);
+  const observation = telemetry.send('dm');
+  telemetry.foreground(false, 1);
+  expect(observation.accepted()).toBe(true);
+  observation.observed();
+  await telemetry.flush();
+  expect(send.mock.calls[0]![0].filter((e) => e.event === 'mobile_activation_step')).toMatchObject([
+    { properties: { step: 'message_accepted' } },
+  ]);
+  telemetry.dispose();
+});

@@ -46,6 +46,13 @@ it('times out observation without stopping the Host and records later recovery o
   expect(
     events.filter((e) => e.event === 'mobile_connection_result').at(-1)?.properties,
   ).toMatchObject({ trigger: 'switch', outcome: 'cancelled' });
+  telemetry.foreground(true, 1);
+  connection.begin('manual_retry');
+  connection.update('refused', 0, 'device-revoked');
+  await telemetry.flush();
+  expect(
+    events.filter((e) => e.event === 'mobile_connection_result').at(-1)?.properties,
+  ).toMatchObject({ outcome: 'refused', reason: 'device-revoked' });
   connection.dispose();
   telemetry.dispose();
 });

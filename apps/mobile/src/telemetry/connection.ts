@@ -1,6 +1,6 @@
 import type { ConnectionState } from '../host/client';
 import type { MobileTelemetry } from './mobile-telemetry';
-import type { ConnectionOutcome, ConnectionTrigger } from './schema';
+import type { ConnectionOutcome, ConnectionReason, ConnectionTrigger } from './schema';
 
 export function createConnectionTelemetry(telemetry: MobileTelemetry, initial: ConnectionTrigger) {
   let observation: ReturnType<MobileTelemetry['connection']> | undefined;
@@ -8,9 +8,9 @@ export function createConnectionTelemetry(telemetry: MobileTelemetry, initial: C
   let retries = 0;
   let connected = false;
   let timedOut = false;
-  function finish(outcome: ConnectionOutcome) {
+  function finish(outcome: ConnectionOutcome, reason: ConnectionReason = 'none') {
     clearTimeout(timer);
-    observation?.finish(outcome, retries);
+    observation?.finish(outcome, retries, reason);
     observation = undefined;
   }
   function begin(trigger: ConnectionTrigger) {
@@ -33,7 +33,7 @@ export function createConnectionTelemetry(telemetry: MobileTelemetry, initial: C
   begin(initial);
   return {
     begin,
-    update(status: ConnectionState['status'], attempt = 0) {
+    update(status: ConnectionState['status'], attempt = 0, reason: ConnectionReason = 'none') {
       if (!telemetry.isActive()) return;
       retries = Math.max(retries, attempt);
       if (status === 'connected') {
@@ -43,7 +43,7 @@ export function createConnectionTelemetry(telemetry: MobileTelemetry, initial: C
         connected = true;
         timedOut = false;
       } else if (status === 'refused') {
-        finish('refused');
+        finish('refused', reason);
         connected = false;
       } else if (status === 'stopped') {
         finish('cancelled');

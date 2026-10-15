@@ -1,4 +1,5 @@
-import Constants from 'expo-constants';
+import { nativeApplicationVersion, nativeBuildVersion } from 'expo-application';
+import { isDevice } from 'expo-device';
 import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import { locale } from '../ui/strings';
@@ -14,7 +15,7 @@ const qa = mode === 'qa' && isUuid(qaRun);
 const production =
   mode === 'production' &&
   !__DEV__ &&
-  Constants.isDevice === true &&
+  isDevice &&
   process.env.EXPO_PUBLIC_MOBILE_TELEMETRY_QUALIFIED === 'true';
 const configured =
   native && typeof token === 'string' && token.startsWith('phc_') && (qa || production);
@@ -29,14 +30,12 @@ function uuid(): string {
     return (char === 'x' ? random : (random & 3) | 8).toString(16);
   });
 }
-const config = Constants.expoConfig;
-const build = Platform.OS === 'android' ? config?.android?.versionCode : config?.ios?.buildNumber;
 export const mobileTelemetry = createMobileTelemetry({
   collect: configured,
   context: {
     platform: Platform.OS === 'android' ? 'android' : 'ios',
-    app_version: Constants.nativeAppVersion ?? config?.version ?? '0.0.0',
-    app_build: String(Constants.nativeBuildVersion ?? build ?? 0),
+    app_version: nativeApplicationVersion ?? 'unknown',
+    app_build: nativeBuildVersion ?? 'unknown',
     environment: production ? 'production' : __DEV__ ? 'development' : 'preview',
     language: locale === 'zh' ? 'zh' : 'en',
     ...(qa ? { qa_run_id: qaRun } : {}),

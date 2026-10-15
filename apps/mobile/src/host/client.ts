@@ -278,6 +278,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       options.telemetry?.update(
         connection.status,
         'attempt' in connection ? connection.attempt : 0,
+        connection.status === 'refused' ? connection.code : 'none',
       );
     for (const listener of listeners) listener();
   };

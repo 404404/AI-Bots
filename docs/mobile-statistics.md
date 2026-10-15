@@ -30,14 +30,14 @@ The checked-in build remains unconfigured. Environment variables are public bund
 - `EXPO_PUBLIC_MOBILE_POSTHOG_TOKEN=<public project ingestion token>`
 - `EXPO_PUBLIC_MOBILE_TELEMETRY_QA_RUN=<fresh UUID v4>`
 
-Only iOS/Android send; web preview never sends. Production requires `EXPO_PUBLIC_MOBILE_TELEMETRY=production`, the public token, a physical release build and `EXPO_PUBLIC_MOBILE_TELEMETRY_QUALIFIED=true`. Set that flag only after all release gates below, including published privacy copy. Test/Simulator/unconfigured builds must not use production configuration. Do not use a personal API token in Expo public variables.
+Only iOS/Android send; web preview never sends. Added `expo-device` and `expo-application` native modules require a new development build through the shared QA queue; Metro reload alone is insufficient. Production requires `EXPO_PUBLIC_MOBILE_TELEMETRY=production`, the public token, a physical release build and `EXPO_PUBLIC_MOBILE_TELEMETRY_QUALIFIED=true`. Set that flag only after all release gates below, including published privacy copy. Test/Simulator/unconfigured builds must not use production configuration. Do not use a personal API token in Expo public variables.
 
 ## Analysis definition
 
 Project **648269**, timezone **Asia/Shanghai**. Base cohort: `properties.source = 'mobile'`, `schema_version = 1`, `environment = 'production'`, no `qa_run_id`. Segment by platform, public app version/build and language. Count distinct `distinct_id` as opted-in installations, never people; separate `mobile_app_opened.paired_host_count_bucket = '0'` from returning paired installations.
 
 - Pairing: starts vs results by `attempt_id`, method, outcome and bounded reason. Missing outcomes may mean process termination, TTL/overflow or transport loss; do not equate them with a product refusal.
-- Connection: `ready / all completed observation episodes`, segmented by trigger and retry bucket. Timeout ends only the observation, not Host reconnection. `recovery` is a new episode. Use duration buckets, not invented exact latency.
+- Connection: `ready / all completed observation episodes`, segmented by trigger, bounded credential-refusal reason and retry bucket. Timeout ends only the observation, not Host reconnection. `recovery` is a new episode. Use duration buckets, not invented exact latency.
 - Activation: ordered `host_ready → message_accepted → bot_message_observed` by distinct installation. The final step requires a successful mobile send in the foreground conversation. It is not proof of a causal reply, model success or completed task. Use a separately labelled returning-install view; enabling statistics on an existing install does not make it a new product installation.
 - Deduplication: compare unique event UUID and attempt ID counts. The owner emits once per activation and preserves retry UUID; server acceptance/readback must still be measured.
 

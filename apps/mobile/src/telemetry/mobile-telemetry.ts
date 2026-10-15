@@ -5,6 +5,7 @@ import {
   sanitizeEvent,
   type ConnectionTrigger,
   type ConnectionOutcome,
+  type ConnectionReason,
   type ActivationStep,
   type ChannelKind,
   type EventProperties,
@@ -91,6 +92,7 @@ export function createMobileTelemetry(options: TelemetryOptions) {
   const capture = <E extends keyof EventProperties>(
     event: E,
     properties: EventProperties[E],
+    foregroundSession = session,
   ): boolean => {
     if (
       options.collect === false ||
@@ -105,7 +107,7 @@ export function createMobileTelemetry(options: TelemetryOptions) {
       distinct_id: identity,
       timestamp: new Date(options.now()).toISOString(),
       event,
-      properties: { ...options.context, foreground_session_id: session, ...properties },
+      properties: { ...options.context, foreground_session_id: foregroundSession, ...properties },
     });
     if (safe === undefined) return false;
     queue.push(safe);
@@ -147,17 +149,22 @@ export function createMobileTelemetry(options: TelemetryOptions) {
       schedule(Math.min(60_000, 1000 * 2 ** retry));
     }
   }
-  function activation(step: ActivationStep, channel_kind: ChannelKind | 'none' = 'none'): void {
+  function activation(
+    step: ActivationStep,
+    channel_kind: ChannelKind | 'none' = 'none',
+    foregroundSession = session,
+  ): void {
     if (
       options.collect === false ||
       !enabled ||
-      !active ||
+      (!active && step !== 'message_accepted') ||
       session === undefined ||
       steps.has(step)
     )
       return;
     steps.add(step);
-    if (!capture('mobile_activation_step', { step, channel_kind })) steps.delete(step);
+    if (!capture('mobile_activation_step', { step, channel_kind }, foregroundSession))
+      steps.delete(step);
   }
   function foreground(next: boolean, count: number): void {
     hostCount = count;
@@ -273,12 +280,13 @@ export function createMobileTelemetry(options: TelemetryOptions) {
       const start = options.monotonic();
       let finished = false;
       return {
-        finish(outcome: ConnectionOutcome, retries = 0) {
+        finish(outcome: ConnectionOutcome, retries = 0, reason: ConnectionReason = 'none') {
           if (finished || !allowed || current !== generation) return;
           finished = true;
           capture('mobile_connection_result', {
             trigger,
             outcome,
+            reason,
             attempt_id,
             duration_bucket: durationBucket(options.monotonic() - start),
             retry_count_bucket:
@@ -294,17 +302,17 @@ export function createMobileTelemetry(options: TelemetryOptions) {
       const fromSession = session;
       const allowed = enabled && active;
       let accepted = false;
-      const valid = () =>
-        allowed && enabled && active && current === generation && fromSession === session;
+      const valid = () => allowed && enabled && !disposed && current === generation;
       return {
         accepted(): boolean {
           if (!valid()) return false;
           accepted = true;
-          activation('message_accepted', kind);
+          activation('message_accepted', kind, fromSession);
           return true;
         },
         observed() {
-          if (accepted && valid()) activation('bot_message_observed', kind);
+          if (accepted && valid() && active && fromSession === session)
+            activation('bot_message_observed', kind);
         },
       };
     },

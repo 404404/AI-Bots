@@ -15,10 +15,16 @@ export type ActivationStep = 'host_ready' | 'message_accepted' | 'bot_message_ob
 export type ChannelKind = 'dm' | 'group';
 export type ConnectionTrigger = 'pair' | 'open' | 'resume' | 'switch' | 'recovery' | 'manual_retry';
 export type ConnectionOutcome = 'ready' | 'refused' | 'timeout' | 'cancelled';
+export type ConnectionReason =
+  | 'none'
+  | 'device-revoked'
+  | 'device-unknown'
+  | 'device-credential-missing';
 export interface EventProperties {
   mobile_connection_result: {
     trigger: ConnectionTrigger;
     outcome: ConnectionOutcome;
+    reason: ConnectionReason;
     attempt_id: string;
     duration_bucket: DurationBucket;
     retry_count_bucket: '0' | '1' | '2-3' | '4plus';
@@ -70,6 +76,7 @@ const fields: Record<keyof EventProperties, Record<string, (value: unknown) => b
   mobile_connection_result: {
     trigger: member('pair', 'open', 'resume', 'switch', 'recovery', 'manual_retry'),
     outcome: member('ready', 'refused', 'timeout', 'cancelled'),
+    reason: member('none', 'device-revoked', 'device-unknown', 'device-credential-missing'),
     attempt_id: isUuid,
     duration_bucket: duration,
     retry_count_bucket: member('0', '1', '2-3', '4plus'),
@@ -125,9 +132,9 @@ export function sanitizeEvent(value: unknown): TelemetryEvent | undefined {
   const build = props['app_build'];
   if (
     typeof version !== 'string' ||
-    !/^\d{1,4}\.\d{1,4}\.\d{1,4}$/u.test(version) ||
+    !/^(?:\d{1,4}\.\d{1,4}\.\d{1,4}|unknown)$/u.test(version) ||
     typeof build !== 'string' ||
-    !/^\d{1,12}$/u.test(build)
+    !/^(?:\d{1,12}|unknown)$/u.test(build)
   )
     return undefined;
   const properties: TelemetryEvent['properties'] = {

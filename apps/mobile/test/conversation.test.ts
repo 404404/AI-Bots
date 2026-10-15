@@ -896,3 +896,21 @@ it('observes activation only after an accepted foreground send and a new committ
   await until(target, (s) => s.messages.at(-1)?.id === 'hidden-bot');
   expect(observed).toHaveBeenCalledTimes(1);
 });
+
+it('records Host acceptance after leaving the conversation without observing hidden Bot entries', async () => {
+  const host = new FakeHost();
+  const channel = host.channel(DM);
+  seed(channel, 2);
+  const accepted = vi.fn(() => true);
+  const observed = vi.fn();
+  const target = open(host, { telemetry: { send: () => ({ accepted, observed }) } });
+  target.setForeground?.(true);
+  await until(target, (s) => s.status === 'live');
+  const id = target.send('accepted after navigation');
+  target.setForeground?.(false);
+  await until(target, (s) => s.messages.some((m) => m.id === id && m.revision !== undefined));
+  expect(accepted).toHaveBeenCalledTimes(1);
+  channel.append({ id: 'hidden-after-acceptance', author: { kind: 'bot', slug: SLUG } });
+  await until(target, (s) => s.messages.at(-1)?.id === 'hidden-after-acceptance');
+  expect(observed).not.toHaveBeenCalled();
+});

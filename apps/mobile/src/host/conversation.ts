@@ -448,7 +448,7 @@ export function createConversation(options: ConversationOptions): Conversation {
   const accepted = (item: Outgoing): void => {
     if (item.acceptanceObserved) return;
     item.acceptanceObserved = true;
-    if (foreground && item.observation?.accepted()) acceptedSend = item.observation;
+    if (item.observation?.accepted() && foreground) acceptedSend = item.observation;
   };
   const settleOutgoing = (): void => {
     for (const entry of window) {
