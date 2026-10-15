@@ -30,6 +30,8 @@ import type {
   BotScheduleSummary,
   MemoryFile,
   MemorySnapshot,
+  OverviewMemory,
+  OverviewUsage,
   WorkspaceGrantSummary,
   ChannelListItem,
   HumanAttentionItem,
@@ -84,4 +86,6 @@ export type WireContract = [
   Assert<Accepts<MemoryFile | undefined, Value<'memoryFile'>['file']>>,
   Assert<Accepts<BotScheduleSummary, Value<'scheduleList'>['schedules'][number]>>,
   Assert<Accepts<WorkspaceGrantSummary, Value<'grants'>['grants'][number]>>,
+  Assert<Accepts<OverviewUsage, Value<'overviewUsage'>>>,
+  Assert<Accepts<OverviewMemory, Value<'overviewMemory'>>>,
 ];
