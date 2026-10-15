@@ -147,6 +147,24 @@ describe('Routine sheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('keeps Delete named for VoiceOver while another action runs', async () => {
+    const routines = fakeRoutines();
+    routines.runNow.mockReturnValueOnce(new Promise(() => undefined));
+    const view = await render(
+      <RoutineSheet
+        botName="Ada"
+        target={{ kind: 'open', routine: digest }}
+        routines={routines}
+        onChanged={vi.fn()}
+        onClose={vi.fn()}
+        onOpenFullClient={vi.fn()}
+      />,
+    );
+    await act(async () => button(view, t.routineRunNow)!.click());
+    await act(async () => button(view, t.routineDelete)!.click());
+    expect(view.textContent).not.toContain(t.routineDeleteConfirm('Morning digest'));
+  });
+
   it('shows the Host refusal in place', async () => {
     const routines = fakeRoutines();
     routines.runNow.mockRejectedValueOnce(new Error('Bot Schedule digest is inactive'));
