@@ -19,13 +19,17 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - The app stays connected to every paired Host at once.
   - The Chats list and every chat show one Host at a time. The Chats header has a Slack-style band in the accent colour (a muted accent in dark mode); the list sits on a panel with rounded top corners below it.
   - The **Host chip** at the top left shows the Host's initial tile, its name and ▾. Tapping it opens the **Host drawer**.
+  - **Customize header** sets how each Host looks, kept on the phone per Host. It is a form sheet with a live preview of the band, opened from Me (Settings → Interface once the Settings sheet replaces Me).
+    - Avatar: the initial tile (default), one of eight pixel portraits from the PersonaBot avatar generator, or a photo cropped square.
+    - Banner: the accent band (default), a solid colour (ten swatches or a typed hex), a two-stop gradient (six presets or typed stops), or a picture under a dark scrim.
+    - A custom colour goes through the accent band's steps, so dark mode mutes it the same way. The ink is white or near-black, whichever reads on every stop; a picture always takes white ink with a soft shadow.
 - **Host drawer** switches Hosts. It slides in from the left, covers about 85% of the width and dims the list behind it.
   - It lists each Host with its initial tile, online or offline status and pending count, the current one marked, plus "Pair a new computer", which opens the pairing flow.
   - The Host chip opens it, and so does a swipe right from the left edge of a tab's root screen. The edge swipe is never attached inside a pushed chat, where it stays the system Back.
   - Tapping a Host switches to it and closes the drawer. Tapping the backdrop or swiping left closes it.
   - It takes screen-reader focus when it opens and returns focus to the Host chip when it closes. With Reduce Motion on it appears without sliding.
   - Android uses the standard Material navigation drawer with the same contents.
-- **Tabs** are native (`NativeTabs`): **Chats** and **Activity**.
+- **Tabs** are native (`NativeTabs`): **Chats** and **Activity**. There is no search tab.
   - Activity carries a badge with the Human Inbox action count.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
   - iOS draws the system tab bar with no background colour of ours: Liquid Glass on iOS 26 (a floating capsule above the home indicator, with the system's glass pill behind the selected tab), the translucent system bar before it. The selected tint is the resolved `fg`, passed as a plain colour so the bar re-tints when the scheme changes while the app is open. Minimize on scroll stays off.
