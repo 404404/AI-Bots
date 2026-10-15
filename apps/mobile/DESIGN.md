@@ -60,7 +60,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Opening an item jumps to the card in its chat.
 - **Settings** is a form sheet with a large detent, opened from the avatar, and closed by swiping down or the close button. It reuses the settings row and section components, in groups:
   - **Connections**: the current Host and its connection status, Computers (paired Hosts, their status and unpairing, with the same confirmation and error notice as before), Notifications, and Open full client.
-  - **Interface**: Customize header, and Appearance (scheme, accent, chat wallpaper) once it exists.
+  - **Interface**: Customize header, App icon (the shipped default icon or one of two DeepSeekBot portraits, the full one and the chibi one, each with dark and tinted variants on iOS), and Appearance (scheme, accent, chat wallpaper) once it exists.
   - **Chats**: Channel sections and Hidden Channels, each pushing its own screen.
 
 ## Screens

@@ -15,6 +15,7 @@ export interface SettingsActions {
   onOpenFullClient(): void;
   onComputers(): void;
   onHostLook(): void;
+  onAppIcon(): void;
   onNotifications(): void;
   onUnpair(): Promise<void>;
 }
@@ -101,6 +102,12 @@ export function SettingsView({
           title={t.hostLook}
           detail={t.hostLookHint}
           onPress={actions.onHostLook}
+        />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.appIcon}
+          detail={t.appIconHint}
+          onPress={actions.onAppIcon}
         />
       </SettingsSection>
     </ScrollView>
