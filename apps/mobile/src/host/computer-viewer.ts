@@ -25,6 +25,52 @@ export interface ComputerViewerOptions {
   frameTimeoutMs?: number;
 }
 
+export type ComputerModifier = 'alt' | 'ctrl' | 'meta' | 'shift';
+
+/** Key names the desktop driver understands (`press_key`), for the keys a phone keyboard lacks. */
+export const COMPUTER_KEYS = {
+  enter: 'return',
+  backspace: 'delete',
+  tab: 'tab',
+  escape: 'escape',
+} as const;
+
+/** Phone points of wheel travel per notch, and the most notches one gesture sends. */
+export const WHEEL_STEP = 16;
+const MAX_NOTCHES = 15;
+
+/**
+ * One scroll for a vertical drag over the screen or the wheel: dragging up scrolls the page
+ * down, like a trackpad. `at` is the frame point to scroll over (the pointer).
+ */
+export function wheelInput(
+  dragY: number,
+  at?: { x: number; y: number },
+): Extract<BrowserInput, { kind: 'scroll' }> | undefined {
+  const notches = Math.min(MAX_NOTCHES, Math.floor(Math.abs(dragY) / WHEEL_STEP));
+  if (notches === 0) return undefined;
+  return {
+    kind: 'scroll',
+    direction: dragY < 0 ? 'down' : 'up',
+    amount: notches,
+    ...(at === undefined ? {} : { x: Math.round(at.x), y: Math.round(at.y) }),
+  };
+}
+
+/**
+ * What typing `text` sends. Without latched modifiers it is one `type`; with them every
+ * character becomes a key chord (⌘ + c, ⌃ + a…), so a modifier bar works with the phone keyboard.
+ */
+export function typedInputs(text: string, modifiers: readonly ComputerModifier[]): BrowserInput[] {
+  if (text === '') return [];
+  if (modifiers.length === 0) return [{ kind: 'type', text }];
+  return [...text].map((key) => ({
+    kind: 'key',
+    key: key.toLowerCase(),
+    modifiers: [...modifiers],
+  }));
+}
+
 const RETRY_MS = 2000;
 const FRAME_TIMEOUT_MS = 20_000;
 
@@ -57,6 +103,7 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
   const listeners = new Set<() => void>();
   let state: ComputerViewerState = { status: 'loading', control: false };
   let run: AbortController | undefined;
+  let queue: Promise<void> = Promise.resolve();
 
   const update = (next: Partial<ComputerViewerState>): void => {
     state = { ...state, ...next };
@@ -77,9 +124,14 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
 
   const takeover = async (active: boolean): Promise<void> => {
     try {
-      const answer = await request('/api/computer/takeover', { body: { active } });
+      const answer = await request('/api/computer/takeover', {
+        body: { active },
+      });
       const paused = answer.status === 200 && record(answer.body)['paused'] === true;
-      update({ control: paused, notice: answer.status === 200 ? undefined : errorOf(answer) });
+      update({
+        control: paused,
+        notice: answer.status === 200 ? undefined : errorOf(answer),
+      });
     } catch (error) {
       update({ control: false });
       fail(error);
@@ -153,19 +205,26 @@ export function createComputerViewer(options: ComputerViewerOptions): ComputerVi
       if (active && state.status !== 'live') return;
       await takeover(active);
     },
-    async send(input) {
-      if (!state.control) return;
-      try {
-        const answer = await request('/api/computer/input', {
-          body: { ...input },
-        });
-        if (answer.status === 200) return;
-        const code = record(answer.body)['code'];
-        if (code === 'not-running' || code === 'not-paused') update({ control: false });
-        update({ notice: errorOf(answer) });
-      } catch (error) {
-        fail(error);
-      }
+    send(input) {
+      // One at a time and in order: typing, then a chord, must reach the desktop as typed.
+      const next = queue.then(() => deliver(input));
+      queue = next.catch(() => {});
+      return next;
     },
   };
+
+  async function deliver(input: BrowserInput) {
+    if (!state.control) return;
+    try {
+      const answer = await request('/api/computer/input', {
+        body: { ...input },
+      });
+      if (answer.status === 200) return;
+      const code = record(answer.body)['code'];
+      if (code === 'not-running' || code === 'not-paused') update({ control: false });
+      update({ notice: errorOf(answer) });
+    } catch (error) {
+      fail(error);
+    }
+  }
 }

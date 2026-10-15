@@ -341,6 +341,13 @@ const en = {
   computerTakeControl: 'Pause Bot and take control',
   computerHandBack: 'Hand back',
   computerPasswordKeyboard: 'Password keyboard',
+  computerMouse: 'Mouse',
+  computerControls: 'Control',
+  computerLeftClick: 'Left click',
+  computerRightClick: 'Right click',
+  computerWheel: 'Scroll wheel. Drag up or down to scroll under the pointer.',
+  computerHideKeyboard: 'Hide the keyboard',
+  computerTouchMode: 'Touch',
 };
 
 const zh: typeof en = {
@@ -665,6 +672,13 @@ const zh: typeof en = {
   computerTakeControl: '暂停 Bot 并接管',
   computerHandBack: '交还',
   computerPasswordKeyboard: '密码键盘',
+  computerMouse: '鼠标',
+  computerControls: '控制',
+  computerLeftClick: '左键单击',
+  computerRightClick: '右键单击',
+  computerWheel: '滚轮。上下拖动，在指针处滚动。',
+  computerHideKeyboard: '收起键盘',
+  computerTouchMode: '触摸方式',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()

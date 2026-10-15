@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 import {
@@ -17,12 +18,14 @@ import {
   type BrowserFrame,
   type BrowserInput,
 } from '../../host/browser-viewer';
-import { radius, edge } from '../design/tokens';
+import { pointer, radius, edge } from '../design/tokens';
 import { useDesignTheme } from '../design/theme';
+import { PointerArrow } from '../shell/icons';
 import { t } from '../strings';
 import { settleZoom } from './zoom-math';
 
 export type BrowserTouchMode = 'direct' | 'trackpad';
+export type StagePoint = { x: number; y: number };
 
 const SPRING = { damping: 20, stiffness: 220 };
 const TAP_SLOP = 10;
@@ -33,11 +36,20 @@ export function BrowserStage({
   interactive,
   mode,
   onInput,
+  cursor: sharedCursor,
+  pointerShape = 'dot',
+  onWheel,
 }: {
   frame: BrowserFrame;
   interactive: boolean;
   mode: BrowserTouchMode;
   onInput(input: BrowserInput): void;
+  /** The trackpad cursor in frame pixels, when controls outside the stage need it too. */
+  cursor?: SharedValue<StagePoint>;
+  /** `arrow` draws a desktop pointer whose tip is the cursor; `dot` marks it with a small disc. */
+  pointerShape?: 'dot' | 'arrow';
+  /** Replaces the default scroll input; `at` is the frame point the scroll happens over. */
+  onWheel?(dragY: number, at: StagePoint | undefined): void;
 }) {
   const theme = useDesignTheme();
   const [stage, setStage] = useState({ width: 0, height: 0 });
@@ -47,7 +59,10 @@ export function BrowserStage({
   const x = useSharedValue(0);
   const y = useSharedValue(0);
   const start = useSharedValue({ scale: 1, x: 0, y: 0, focalX: 0, focalY: 0 });
-  const cursor = useSharedValue({ x: frame.width / 2, y: frame.height / 2 });
+  const ownCursor = useSharedValue({ x: frame.width / 2, y: frame.height / 2 });
+  const cursor = sharedCursor ?? ownCursor;
+  const arrow = pointerShape === 'arrow';
+  const pointerSize = theme.touch * 0.75;
   const lastPan = useSharedValue({ x: 0, y: 0 });
   const direct = mode === 'direct';
 
@@ -74,9 +89,10 @@ export function BrowserStage({
     if (point !== undefined) clickAt(point, button);
   };
 
-  const scroll = (dragY: number) => {
+  const scroll = (dragY: number, at?: StagePoint) => {
     'worklet';
     if (Math.abs(dragY) < TAP_SLOP * 2) return;
+    if (onWheel !== undefined) return runOnJS(onWheel)(dragY, at);
     const { direction, amount } = scrollFor(dragY);
     runOnJS(onInput)({ kind: 'scroll', direction, amount });
   };
@@ -135,7 +151,7 @@ export function BrowserStage({
     })
     .onEnd((event) => {
       if (scale.value > 1.01) return settleView();
-      if (interactive && !direct) scroll(event.translationY);
+      if (interactive && !direct) scroll(event.translationY, cursor.value);
     });
 
   const oneFinger = Gesture.Pan()
@@ -149,7 +165,10 @@ export function BrowserStage({
       if (interactive && !direct) {
         cursor.value = moveCursor(
           cursor.value,
-          { x: event.translationX - lastPan.value.x, y: event.translationY - lastPan.value.y },
+          {
+            x: event.translationX - lastPan.value.x,
+            y: event.translationY - lastPan.value.y,
+          },
           page,
           stage,
           zoom(),
@@ -160,7 +179,19 @@ export function BrowserStage({
       if (!interactive && scale.value > 1.01) panView(event.translationX, event.translationY);
     })
     .onEnd((event) => {
-      if (interactive && direct) return scroll(event.translationY);
+      if (interactive && direct)
+        return scroll(
+          event.translationY,
+          pagePoint(
+            {
+              x: event.x - event.translationX,
+              y: event.y - event.translationY,
+            },
+            page,
+            stage,
+            zoom(),
+          ),
+        );
       if (!interactive && scale.value > 1.01) settleView();
     });
 
@@ -185,12 +216,10 @@ export function BrowserStage({
 
   const cursorStyle = useAnimatedStyle(() => {
     const point = stagePoint(cursor.value, page, stage, zoom());
+    const offset = arrow ? pointerSize / 8 : theme.touch / 4;
     return {
       opacity: interactive && !direct ? 1 : 0,
-      transform: [
-        { translateX: point.x - theme.touch / 4 },
-        { translateY: point.y - theme.touch / 4 },
-      ],
+      transform: [{ translateX: point.x - offset }, { translateY: point.y - offset }],
     };
   });
 
@@ -200,7 +229,11 @@ export function BrowserStage({
         onLayout={layout}
         accessible
         accessibilityLabel={t.browserView}
-        style={{ flex: 1, overflow: 'hidden', backgroundColor: theme.color.surface }}
+        style={{
+          flex: 1,
+          overflow: 'hidden',
+          backgroundColor: theme.color.surface,
+        }}
       >
         <Animated.View style={[{ position: 'absolute', ...fit }, imageStyle]}>
           <Image
@@ -210,23 +243,32 @@ export function BrowserStage({
             style={{ width: fit.width, height: fit.height }}
           />
         </Animated.View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            {
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              width: theme.touch / 2,
-              height: theme.touch / 2,
-              borderRadius: radius.round,
-              borderWidth: edge.focus,
-              borderColor: theme.color.onAccent,
-              backgroundColor: theme.color.accent,
-            },
-            cursorStyle,
-          ]}
-        />
+        {arrow ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[{ position: 'absolute', left: 0, top: 0 }, cursorStyle]}
+          >
+            <PointerArrow size={pointerSize} fill={pointer.fill} rim={pointer.rim} />
+          </Animated.View>
+        ) : (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              {
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                width: theme.touch / 2,
+                height: theme.touch / 2,
+                borderRadius: radius.round,
+                borderWidth: edge.focus,
+                borderColor: theme.color.onAccent,
+                backgroundColor: theme.color.accent,
+              },
+              cursorStyle,
+            ]}
+          />
+        )}
       </View>
     </GestureDetector>
   );
