@@ -51,7 +51,10 @@ import { parseChallenge, type AltchaChallenge } from '../../../core/src/marketpl
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
 import type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
 export type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
-import type { UsageOverviewPeriod } from '../../../core/src/usage/overview.js';
+import {
+  usageOverviewPeriodDays,
+  type UsageOverviewPeriod,
+} from '../../../core/src/usage/overview.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
 import type { MessagingConversationInput } from '../../../core/src/messaging/conversations.js';
@@ -5310,10 +5313,10 @@ export async function loadOverviewUsage(
     !validDay(value['start']) ||
     !validDay(value['end']) ||
     Date.parse(value['end']) - Date.parse(value['start']) !==
-      (period === 'week' ? 6 : 0) * 86400000 ||
+      (usageOverviewPeriodDays[period] - 1) * 86400000 ||
     !buckets(value['totals']) ||
     !Array.isArray(value['days']) ||
-    value['days'].length !== (period === 'week' ? 7 : 1) ||
+    value['days'].length !== usageOverviewPeriodDays[period] ||
     !value['days'].every((row) => buckets(row) && typeof asRecord(row)?.['day'] === 'string') ||
     !Array.isArray(value['bots']) ||
     value['bots'].length > 20 ||

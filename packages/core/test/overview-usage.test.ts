@@ -255,6 +255,75 @@ it('keeps global totals independent of Bot pages and excludes days outside the H
   expect(query('today').totals.totalTokens).toBe(237);
 });
 
+it('covers the last 28 and 84 Host-local days for month and quarter', () => {
+  const { methods, usage, ownership, time } = setup();
+  const day = new Date(time);
+  const ago = (days: number) =>
+    new Date(day.getFullYear(), day.getMonth(), day.getDate() - days, 12).getTime();
+  const samples: Array<[string, number, number]> = [
+    ['actual-session', 0, 1],
+    ['actual-session', 27, 10],
+    ['actual-session', 28, 100],
+    ['bot-b', 83, 1000],
+    ['bot-c', 84, 10000],
+  ];
+  for (const slug of ['bot-b', 'bot-c'])
+    ownership.claim({
+      sessionId: slug,
+      botSlug: slug,
+      rootRole: 'orchestrator',
+      provenance: 'created',
+      at: new Date(time).toISOString(),
+    });
+  for (const [seq, [session, days, totalTokens]] of samples.entries())
+    usage.handleSessionEvent(session, {
+      type: 'assistant/message',
+      seq: seq + 1,
+      time: ago(days),
+      data: {
+        message: { source: { provider: 'actual', model: 'm' } },
+        usage: {
+          inputTokens: totalTokens,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          totalTokens,
+        },
+      },
+    });
+  const query = (period: string, after?: string) => {
+    const result = methods.overviewUsage({ period, ...(after ? { after } : {}) });
+    if (!result.ok) throw new Error(result.error.message);
+    return result.value;
+  };
+  const month = query('month');
+  expect(month.days).toHaveLength(28);
+  expect(month.days.map((row) => row.day)).toEqual([...month.days.map((row) => row.day)].sort());
+  expect(month.start).toBe(month.days[0]!.day);
+  expect(month.end).toBe(month.days.at(-1)!.day);
+  expect(month.totals.totalTokens).toBe(11);
+  expect(month.days[0]!.totalTokens).toBe(10);
+  expect(month.bots.map((row) => row.slug)).toEqual(['ada']);
+  const quarter = query('quarter');
+  expect(quarter.days).toHaveLength(84);
+  expect(quarter.end).toBe(month.end);
+  expect(quarter.totals.totalTokens).toBe(1111);
+  expect(quarter.days[0]!.totalTokens).toBe(1000);
+  expect(quarter.days.reduce((sum, row) => sum + (row.totalTokens ?? 0), 0)).toBe(1111);
+  expect(quarter.bots.map((row) => [row.slug, row.totalTokens])).toEqual([
+    ['ada', 111],
+    ['bot-b', 1000],
+  ]);
+  expect(query('quarter', 'ada').bots.map((row) => row.slug)).toEqual(['bot-b']);
+  expect(methods.overviewUsage({ period: 'year' })).toMatchObject({
+    ok: false,
+    error: {
+      code: 'invalid-input',
+      message: expect.stringContaining('today, week, month, quarter'),
+    },
+  });
+});
+
 it('distinguishes a ready empty interval from missing provider usage and an unavailable owner', () => {
   const { methods, usage, time, registry, channels, ownership } = setup();
   const missing = createBridgeMethods({

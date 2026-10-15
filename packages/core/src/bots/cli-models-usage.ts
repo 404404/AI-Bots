@@ -3,6 +3,7 @@ import type { ModelPreset, ModelRoute } from '../models/presets.js';
 import type { ModelPlanState } from '../models/readiness.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
+import { isUsageOverviewPeriod, usageOverviewPeriods } from '../usage/overview.js';
 
 type Rpc = <T>(method: string, args: Record<string, unknown>) => Promise<T>;
 
@@ -207,7 +208,8 @@ export async function runModelsUsage(
   }
   if (command === 'overview-usage') {
     const period = values.period ?? 'today';
-    if (period !== 'today' && period !== 'week') usage('--period must be today or week.');
+    if (!isUsageOverviewPeriod(period))
+      usage(`--period must be one of ${usageOverviewPeriods.join(', ')}.`);
     const after = cursor(values.after);
     return (await connect())('overviewUsage', {
       period,

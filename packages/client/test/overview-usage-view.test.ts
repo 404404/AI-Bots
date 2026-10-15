@@ -37,8 +37,12 @@ import { createStore } from '../src/client/store.js';
 import { loadOverviewUsage, type BridgeCall } from '../src/client/bridge.js';
 import { zhTranslate } from '../src/client/locale.js';
 import type { OverviewUsage } from '../../core/src/bridge/methods.js';
+import {
+  usageOverviewPeriodDays,
+  type UsageOverviewPeriod,
+} from '../../core/src/usage/overview.js';
 
-function result(period: 'today' | 'week', total = 155): OverviewUsage {
+function result(period: UsageOverviewPeriod, total = 155, length?: number): OverviewUsage {
   const buckets = {
     inputTokens: total - 40,
     outputTokens: 40,
@@ -46,28 +50,18 @@ function result(period: 'today' | 'week', total = 155): OverviewUsage {
     cacheWriteTokens: 0,
     totalTokens: total,
   };
+  const count = length ?? usageOverviewPeriodDays[period];
+  const days = Array.from({ length: count }, (_, i) =>
+    new Date(Date.UTC(2026, 9, 2 - (count - 1 - i))).toISOString().slice(0, 10),
+  );
   return {
     period,
-    start: period === 'week' ? '2026-09-26' : '2026-10-02',
+    start: days[0]!,
     end: '2026-10-02',
     timezone: 'Asia/Tokyo',
     nextRefreshAt: '2026-10-03T00:00:00Z',
     totals: buckets,
-    days: Array.from({ length: period === 'week' ? 7 : 1 }, (_, i) => ({
-      ...buckets,
-      day:
-        period === 'week'
-          ? [
-              '2026-09-26',
-              '2026-09-27',
-              '2026-09-28',
-              '2026-09-29',
-              '2026-09-30',
-              '2026-10-01',
-              '2026-10-02',
-            ][i]!
-          : '2026-10-02',
-    })),
+    days: days.map((day) => ({ ...buckets, day })),
     bots: [{ ...buckets, slug: 'ada', displayName: 'Ada', current: true, primaryColor: '#e2b04a' }],
     freshness: 'ready',
     readAt: '2026-10-02T12:00:00Z',
@@ -76,13 +70,13 @@ function result(period: 'today' | 'week', total = 155): OverviewUsage {
   };
 }
 afterEach(() => vi.useRealTimers());
-it('switches to seven days, opens Bot Profile and disposes read-only polling', async () => {
+it('switches to seven, 28 and 84 days, opens Bot Profile and disposes read-only polling', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-02T12:00:00Z'));
   const call = vi.fn<BridgeCall>(async (endpoint, args) => {
     if (endpoint === 'overviewUsage')
-      return { ok: true, value: result(args['period'] === 'week' ? 'week' : 'today') };
+      return { ok: true, value: result(args['period'] as UsageOverviewPeriod) };
     throw new Error(endpoint);
   });
   const actions = createActions(call, createStore());
@@ -114,6 +108,24 @@ it('switches to seven days, opens Bot Profile and disposes read-only polling', a
       container.querySelector<HTMLButtonElement>('[data-usage-period=week]')!.click(),
     );
     expect(container.querySelector('[data-trend]')?.getAttribute('data-trend')).toBe('7');
+    expect(
+      [...container.querySelectorAll('[data-usage-period]')].map((button) => button.textContent),
+    ).toEqual(['今日', '近 7 天', '近 4 周', '近 12 周']);
+    for (const [period, days] of [
+      ['month', '28'],
+      ['quarter', '84'],
+    ] as const) {
+      await act(async () =>
+        container.querySelector<HTMLButtonElement>(`[data-usage-period=${period}]`)!.click(),
+      );
+      expect(
+        container.querySelector(`[data-usage-period=${period}]`)?.getAttribute('aria-pressed'),
+      ).toBe('true');
+      expect(container.querySelector('[data-trend]')?.getAttribute('data-trend')).toBe(days);
+      expect(container.querySelector('.bh-overview-usage-period')?.textContent).toContain(
+        result(period).start,
+      );
+    }
     await act(async () =>
       container.querySelector<HTMLButtonElement>('[data-usage-bot=ada] button')!.click(),
     );
@@ -189,6 +201,16 @@ it('preserves unknown totals and rejects malformed usage instead of reporting ze
   expect((await loadOverviewUsage(call, 'today')).totals.totalTokens).toBeNull();
   value.totals.totalTokens = -1;
   await expect(loadOverviewUsage(call, 'today')).rejects.toThrow('invalid Overview usage');
+});
+it('accepts 28 and 84 day ranges only when the day list matches the period', async () => {
+  for (const period of ['month', 'quarter'] as const) {
+    const ok: BridgeCall = async () => ({ ok: true, value: result(period) });
+    expect((await loadOverviewUsage(ok, period)).days).toHaveLength(
+      usageOverviewPeriodDays[period],
+    );
+  }
+  const short: BridgeCall = async () => ({ ok: true, value: result('quarter', 155, 28) });
+  await expect(loadOverviewUsage(short, 'quarter')).rejects.toThrow('invalid Overview usage');
 });
 it('keeps all expanded Bot pages fresh during polling and manual refresh', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });

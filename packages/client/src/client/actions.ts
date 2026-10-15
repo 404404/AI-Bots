@@ -597,7 +597,7 @@ export interface BridgeActions {
     after?: string,
   ): Promise<import('../../../core/src/memory/overview.js').OverviewMemory>;
   overviewUsage(
-    period: 'today' | 'week',
+    period: import('../../../core/src/usage/overview.js').UsageOverviewPeriod,
     after?: string,
   ): Promise<import('../../../core/src/bridge/methods.js').OverviewUsage>;
   profileUsage(channelId: string, filter: UsageFilter): Promise<UsageQueryResult>;

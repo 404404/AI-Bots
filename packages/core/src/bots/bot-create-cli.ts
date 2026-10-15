@@ -239,7 +239,7 @@ Usage:
   deepseekbot model-plan-assignments-set <id> --plan-stdin [--expected-revision <n>]
   deepseekbot model-preset-update <preset-id> [--name <n>] [--orchestrator-provider/-model/-effort ...]
                                   [--assignment-provider/-model/-effort ...] [--plan-stdin] [--expected-revision <n>]
-  deepseekbot overview-usage [--period today|week] [--after <bot-cursor>]
+  deepseekbot overview-usage [--period today|week|month|quarter] [--after <bot-cursor>]
   deepseekbot overview-memory [--after <bot-cursor>]
   deepseekbot activity-overview
   deepseekbot channel-activity-today
