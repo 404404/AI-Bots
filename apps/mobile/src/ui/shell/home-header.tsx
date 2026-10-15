@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AVATAR_EDGE } from '../chat/conversation-row';
 import { DEFAULT_HOST_LOOK, type HostLook } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
@@ -60,8 +61,8 @@ export function HomeHeader({
         style={{
           flex: 1,
           backgroundColor: theme.color.base,
-          borderTopLeftRadius: radius.lg,
-          borderTopRightRadius: radius.lg,
+          borderTopLeftRadius: radius.md + AVATAR_EDGE,
+          borderTopRightRadius: radius.md + AVATAR_EDGE,
           overflow: 'hidden',
         }}
       >

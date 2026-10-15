@@ -5,7 +5,7 @@ import type { HumanAttentionItem } from '../src/host/wire';
 import {
   chatList,
   conversations,
-  shortcutCounts,
+  searchConversations,
   shortTime,
   type ChatListItem,
 } from '../src/ui/chat/conversations';
@@ -85,18 +85,6 @@ describe('Home conversations', () => {
     const rows = conversations(roster, action);
     expect(rows.find((row) => row.key === 'bot:ada')?.needsYou).toBe(2);
     expect(rows.find((row) => row.key === 'channel:team')?.needsYou).toBe(1);
-    expect(conversations(roster, action, 'needs-you').map((row) => row.key)).toEqual([
-      'channel:team',
-      'bot:ada',
-    ]);
-    expect(shortcutCounts(roster, action)).toEqual({ 'needs-you': 2, working: 2 });
-  });
-
-  it('filters to Bots that are working', () => {
-    expect(conversations(roster, [], 'working').map((row) => row.key)).toEqual([
-      'bot:cy',
-      'bot:bo',
-    ]);
   });
 
   it('shows a clock time today and a date otherwise', () => {
@@ -180,12 +168,11 @@ describe('Chats grouped by Channel section', () => {
     const keys = shape(chatList(arranged, [item({ id: '1', channelId: 'lounge' })]));
     expect(keys).not.toContain('channel:lounge');
     expect(conversations(arranged, []).map((row) => row.key)).not.toContain('channel:lounge');
-    expect(shortcutCounts(arranged, [item({ id: '1', channelId: 'lounge' })])['needs-you']).toBe(0);
   });
 
   it('folds a collapsed section into its count and what needs the Human inside', () => {
     const action = [item({ id: '1', channelId: 'team' }), item({ id: '2' })];
-    expect(shape(chatList(arranged, action, 'all', new Set(['work'])))).toEqual([
+    expect(shape(chatList(arranged, action, new Set(['work'])))).toEqual([
       'channel:ops',
       '[work 3 collapsed !2]',
       'bot:bo',
@@ -211,16 +198,53 @@ describe('Chats grouped by Channel section', () => {
       '[later 0]',
     ]);
   });
+});
 
-  it('filters across sections with the shortcut cards', () => {
-    const action = [item({ id: '1', channelId: 'design' }), item({ id: '2', botSlug: 'bo' })];
-    expect(shape(chatList(arranged, action, 'needs-you', new Set(['work'])))).toEqual([
-      'channel:design',
-      'bot:bo',
-    ]);
-    expect(shape(chatList(arranged, [], 'working', new Set(['work'])))).toEqual([
-      'bot:cy',
-      'bot:bo',
-    ]);
+describe('Search', () => {
+  const people: RosterView = {
+    ...roster,
+    bots: [
+      ...roster.bots,
+      {
+        ...roster.bots[0]!,
+        slug: 'xiaoming',
+        displayName: '小明 助手',
+        dmChannelId: 'dm-xiaoming',
+      },
+      { ...roster.bots[1]!, slug: 'adam', displayName: 'Madam Ada' },
+    ],
+    channels: [
+      ...roster.channels,
+      { id: 'design', name: 'Design Review', memberCount: 2, members: [] },
+    ],
+  };
+  const keys = (query: string) => searchConversations(people, [], query).map((row) => row.key);
+
+  it('matches PersonaBot names and Channel titles, ignoring case', () => {
+    expect(keys('ADA')).toEqual(['bot:ada', 'bot:adam']);
+    expect(keys('review')).toEqual(['channel:design']);
+    expect(keys('TEAM')).toEqual(['channel:team']);
+  });
+
+  it('matches Chinese names and full-width letters', () => {
+    expect(keys('小明')).toEqual(['bot:xiaoming']);
+    expect(keys('ＡＤＡ')).toEqual(['bot:ada', 'bot:adam']);
+  });
+
+  it('puts names that start with the query first', () => {
+    expect(keys('ad')).toEqual(['bot:ada', 'bot:adam']);
+    expect(keys('a')[0]).toBe('bot:ada');
+  });
+
+  it('finds nothing for an empty query or before the roster loads', () => {
+    expect(keys('')).toEqual([]);
+    expect(keys('   ')).toEqual([]);
+    expect(searchConversations(undefined, [], 'ada')).toEqual([]);
+    expect(keys('nobody')).toEqual([]);
+  });
+
+  it('leaves Hidden Channels out', () => {
+    expect(searchConversations(arranged, [], 'lounge')).toEqual([]);
+    expect(searchConversations(arranged, [], 'ops').map((row) => row.key)).toEqual(['channel:ops']);
   });
 });
