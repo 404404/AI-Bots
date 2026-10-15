@@ -493,7 +493,6 @@ export function Composer({
         paddingHorizontal: space.x4,
         paddingTop: space.x3,
         paddingBottom: Math.max(insets.bottom, space.x3),
-        backgroundColor: theme.color.base,
       }}
     >
       {above}

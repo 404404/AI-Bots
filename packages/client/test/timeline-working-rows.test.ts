@@ -31,6 +31,7 @@ const waiting: PersonaBotFacepileItem = {
   attention: { approvalCount: 1 },
 };
 const blocked: PersonaBotFacepileItem = { personaBotId: 'bea', name: 'Bea', state: 'blocked' };
+const zed: PersonaBotFacepileItem = { personaBotId: 'zed', name: 'Zed', state: 'working' };
 const none = new Set<string>();
 
 describe('timelineWorkingRows', () => {
@@ -40,11 +41,13 @@ describe('timelineWorkingRows', () => {
     expect(rows.more).toBe(0);
   });
 
-  it('keeps the Group composer order and caps rows like the composer summary', () => {
+  it('keeps the Group composer order and caps the stack at three avatars', () => {
     const activity = groupComposerActivity([waiting, nova, kai, mira, blocked], zhTranslate);
     const rows = timelineWorkingRows(activity, none);
-    expect(rows.items.map((item) => item.personaBotId)).toEqual(['kai', 'mira']);
-    expect(rows.more).toBe(1);
+    expect(rows.items.map((item) => item.personaBotId)).toEqual(['kai', 'mira', 'nova']);
+    expect(rows.more).toBe(0);
+    const crowded = groupComposerActivity([nova, kai, mira, zed], zhTranslate);
+    expect(timelineWorkingRows(crowded, none).more).toBe(1);
   });
 
   it('leaves waiting and blocked Bots to their cards', () => {
@@ -79,7 +82,7 @@ describe('timelineWorkingRows', () => {
         t: zhTranslate,
       }),
     );
-    expect(html).toContain('Mira</span> · 正在搜索 · web_search · deepseek.com<span');
+    expect(html).toContain('summary">正在搜索 · web_search · deepseek.com<span');
   });
 
   it('skips a thinking row for the Bot that wrote the latest message but keeps its tool row', () => {
@@ -118,8 +121,8 @@ describe('timelineWorkingRowsCover', () => {
   });
 
   it('keeps the composer status when Bots overflow the row cap', () => {
-    expect(cover([mira, nova, kai])).toBe(false);
-    expect(cover([mira, nova, kai], new Set(['kai']))).toBe(true);
+    expect(cover([mira, nova, kai, zed])).toBe(false);
+    expect(cover([mira, nova, kai, zed], new Set(['zed']))).toBe(true);
   });
 
   it('keeps the composer status for a thinking Bot whose own reply is the latest message', () => {
@@ -131,7 +134,7 @@ describe('timelineWorkingRowsCover', () => {
 });
 
 describe('TimelineWorkingRowsView', () => {
-  it('renders the morphing avatar at message size with the safe summary, hidden from assistive tech', () => {
+  it('renders the morphing avatar without a name, with the safe summary, hidden from assistive tech', () => {
     const html = renderToStaticMarkup(
       createElement(TimelineWorkingRowsView, {
         rows: { items: [mira], more: 0 },
@@ -142,13 +145,27 @@ describe('TimelineWorkingRowsView', () => {
     expect(html).toContain('data-state="working"');
     expect(html).toContain('data-effect="searching"');
     expect(html).toContain('width:28px;height:28px');
-    expect(html).toContain('Mira</span> · 正在搜索 · web_search');
+    expect(html).toContain('summary">正在搜索 · web_search<span');
+    expect(html).not.toContain('Mira</span>');
     expect(html).toContain('bh-timeline-working-ellipsis');
     expect(html).not.toContain('role="status"');
     expect(html).not.toContain('aria-live');
   });
 
-  it('renders nothing without active Bots and a more line past the cap', () => {
+  it('stacks several Bots in one row with a shared status and counts the rest', () => {
+    const html = renderToStaticMarkup(
+      createElement(TimelineWorkingRowsView, {
+        rows: { items: [mira, nova, kai], more: 0 },
+        t: zhTranslate,
+      }),
+    );
+    expect(html.match(/class="bh-timeline-working-row"/g)).toHaveLength(1);
+    expect(html.match(/class="bh-persona-avatar"/g)).toHaveLength(3);
+    expect(html).toContain('bh-avatar-facepile bh-timeline-working-avatars');
+    expect(html).toContain('summary">正在工作<span');
+  });
+
+  it('renders nothing without active Bots and counts Bots past the cap', () => {
     expect(
       renderToStaticMarkup(
         createElement(TimelineWorkingRowsView, { rows: { items: [], more: 0 }, t: zhTranslate }),

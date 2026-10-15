@@ -3179,15 +3179,12 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
 /* Client-only working rows under the latest message: the composer status
    stays the live region, so these rows are hidden from assistive tech. */
 .bh-timeline-working {
-  display: flex;
-  flex-direction: column;
-  gap: ${space.x2};
   margin-top: ${space.x3};
 }
 .bh-timeline-working-row {
   display: flex;
   align-items: center;
-  gap: ${space.x3};
+  gap: ${space.x2};
   min-width: 0;
 }
 .bh-timeline-working-summary {
@@ -3198,7 +3195,6 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bh-timeline-working-name { color: var(--dsw-alias-label-secondary); }
 .bh-timeline-working-ellipsis i {
   font-style: normal;
   animation: bh-timeline-working-dot 1.2s ease-in-out infinite;
@@ -3209,11 +3205,6 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
 @keyframes bh-timeline-working-dot {
   0%, 60%, 100% { opacity: 0.25; }
   30% { opacity: 1; }
-}
-.bh-timeline-working-more {
-  padding-left: 36px;
-  color: var(--dsw-alias-label-tertiary);
-  font-size: ${text.metaSize};
 }
 .bh-message-group-avatar-link:focus-visible,
 .bh-message-group-avatar-focus:focus-visible {
@@ -5294,6 +5285,17 @@ html[data-botharness-motion='full'] .bh-motion-preview-sample i:nth-child(3) {
 .bh-tool-approval-confirm { border: 0; border-radius: ${radius.md}; background: ${color.well}; }
 .bh-tool-approval-confirm .bh-request-secondary { background: var(--bh-well-inset); }
 .bh-tool-approval-confirm { --bh-message-card-gap: var(--bh-chat-card-inset); width: 100%; gap: var(--bh-message-card-gap); padding: var(--bh-chat-card-inset); }
+.bh-bot-create-preview { display: grid; gap: ${space.x3}; min-width: 0; padding: ${space.x3}; border-radius: ${radius.md}; background: ${color.well}; }
+.bh-bot-create-identity { display: flex; align-items: center; gap: ${space.x3}; min-width: 0; }
+.bh-bot-create-names { display: grid; min-width: 0; }
+.bh-bot-create-name { overflow: hidden; color: var(--dsw-alias-label-primary); font-size: ${text.bodySize}; line-height: ${text.bodyLine}; font-weight: ${text.strong}; text-overflow: ellipsis; white-space: nowrap; }
+.bh-bot-create-bio { color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; overflow-wrap: anywhere; }
+.bh-bot-create-file { display: grid; gap: ${space.x1}; min-width: 0; }
+.bh-bot-create-label { color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; font-weight: ${text.strong}; }
+.bh-bot-create-excerpt { margin: 0; max-height: 7.5em; overflow: hidden; color: var(--dsw-alias-label-primary); font: inherit; font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bh-bot-create-path { min-width: 0; color: var(--dsw-alias-label-primary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; overflow-wrap: anywhere; }
+.bh-bot-create-fallback { color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; }
+.bh-bot-create-warning { color: ${color.danger}; font-size: ${text.metaSize}; line-height: ${text.metaLine}; overflow-wrap: anywhere; }
 .bh-assignment-access-row { display: flex; align-items: center; justify-content: space-between; gap: ${space.x4}; }
 
 .bh-memory-history {

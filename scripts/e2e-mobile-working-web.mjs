@@ -24,8 +24,8 @@ const args = process.argv.slice(2);
 const skipExport = args.includes('--skip-export');
 const keep = args.includes('--keep');
 const dist = join(root, 'apps/mobile/dist-web');
-const paths = verifyPaths('mobile-stop-web');
-const home = mkdtempSync(join(tmpdir(), 'bh-e2e-mobile-stop-'));
+const paths = verifyPaths('mobile-working-web');
+const home = mkdtempSync(join(tmpdir(), 'bh-e2e-mobile-working-'));
 const steps = [];
 const checks = {};
 
@@ -100,7 +100,7 @@ async function operator(hostOrigin, path, body) {
 async function rpc(hostOrigin, method, rpcArgs = {}) {
   const envelope = await operator(hostOrigin, `/api/botharness/${method}`, {
     type: 'client-request',
-    rpcId: `mobile-stop-e2e-${Date.now()}`,
+    rpcId: `mobile-working-e2e-${Date.now()}`,
     method: `botharness/${method}`,
     payload: { args: rpcArgs },
   });
@@ -265,31 +265,31 @@ async function main() {
     await page.locator('::-p-aria(Send)').click();
     steps.push('opened the DM and sent a long task from the composer');
 
-    await page.waitForSelector(`[aria-label="Stop ${displayName}"]`, { timeout: 120_000 });
+    const status = `[data-testid="working-status"]`;
+    await page.waitForSelector(status, { timeout: 120_000 });
     await page
       .waitForFunction(() => /\b\d+\b/u.test(document.body.innerText), { timeout: 60_000 })
       .catch(() => undefined);
-    checks.stopShownWhileWorking = true;
-    await shot('1-working-strip');
-    steps.push('the status strip shows the current step and Stop');
-
-    await page.locator(`::-p-aria(${displayName}'s current steps)`).click();
-    await new Promise((done) => setTimeout(done, 300));
-    checks.stepsListed = await page.evaluate(() => document.body.innerText.includes('Main'));
-    await shot('2-steps-open');
-    steps.push('tapped the strip: it lists the working Sessions');
-
-    await page.locator(`::-p-aria(Stop ${displayName})`).click();
-    steps.push('tapped Stop');
-    await text(`Human stopped ${displayName}.`, 120_000);
-    await page.waitForFunction(
-      (name) => document.querySelector(`[aria-label="Stop ${name}"]`) === null,
-      { timeout: 60_000 },
+    const label = await page.$eval(status, (node) => node.getAttribute('aria-label') ?? '');
+    checks.statusNamesTheBot = label.startsWith(`${displayName}: `);
+    checks.noNameShown = !(await page.$eval(status, (node) => node.textContent ?? '')).includes(
       displayName,
     );
-    checks.stripGoneAfterStop = true;
-    await shot('3-after-stop');
-    steps.push('the strip disappeared and the DM says the Human stopped the Bot');
+    checks.noStopButton = (await page.$(`[aria-label="Stop ${displayName}"]`)) === null;
+    await shot('1-working-status');
+    steps.push(`the list ends with the avatar and "${label}", with no name and no Stop`);
+
+    await call(hostOrigin, 'channelBotStop', { channelId: channel.id, botSlug: bot.slug });
+    await page.waitForFunction(
+      (selector) => document.querySelector(selector) === null,
+      {
+        timeout: 60_000,
+      },
+      status,
+    );
+    checks.statusGoneWhenIdle = true;
+    await shot('2-after-idle');
+    steps.push('the Host stopped the Bot and the working status left the list');
 
     const activity = await call(hostOrigin, 'activitySnapshot', {});
     checks.botIdle = activity.bots.find((entry) => entry.slug === bot.slug)?.state === 'idle';
