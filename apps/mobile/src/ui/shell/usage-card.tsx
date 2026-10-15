@@ -75,10 +75,14 @@ export function UsageBars({
   days,
   height,
   on = 'sheet',
+  selected,
+  onSelect,
 }: {
   days: readonly Day[] | undefined;
   height: number;
   on?: LayerName;
+  selected?: number | undefined;
+  onSelect?: (index?: number) => void;
 }) {
   const theme = useDesignTheme();
   return (
@@ -88,6 +92,8 @@ export function UsageBars({
       height={height}
       empty={theme.layer[on].inset}
       accessibilityLabel={days === undefined ? t.usageLoading : daysLabel(days)}
+      selected={selected}
+      {...(onSelect === undefined ? {} : { onSelect })}
     />
   );
 }

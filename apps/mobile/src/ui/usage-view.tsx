@@ -21,6 +21,7 @@ import { Segmented } from './primitives/segmented';
 import { SettingsGroupItem, SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
 import { DayBars } from './primitives/day-bars';
+import { dayLabel } from '../host/usage-days';
 import { ChevronRightIcon } from './shell/icons';
 import { tokenAmount, UsageBars, useLoaded, type Loaded } from './shell/usage-card';
 import { t } from './strings';
@@ -92,6 +93,8 @@ function UsageSummary({
 }) {
   const usage = forPeriod(state, period).value;
   const week = usage === undefined ? undefined : usageWeek(usage);
+  const [picked, setPicked] = useState<number>();
+  const day = period === 'week' && picked !== undefined ? week?.days[picked] : undefined;
   const notes =
     usage === undefined
       ? []
@@ -110,7 +113,10 @@ function UsageSummary({
             { value: 'today', label: t.usageToday },
             { value: 'week', label: t.usageWeek },
           ]}
-          onChange={onPeriod}
+          onChange={(next) => {
+            setPicked(undefined);
+            onPeriod(next);
+          }}
         />
       </View>
       <View style={{ gap: space.x4, paddingHorizontal: space.x5 }}>
@@ -118,17 +124,23 @@ function UsageSummary({
           <Text variant="meta" tone="muted">
             {usage === undefined
               ? t.usageLoading
-              : usage.start === usage.end
-                ? usage.end
-                : `${usage.start} – ${usage.end}`}
+              : day !== undefined
+                ? dayLabel(day.day)
+                : usage.start === usage.end
+                  ? usage.end
+                  : `${usage.start} – ${usage.end}`}
           </Text>
           <Text variant="display" accessibilityRole="header" numberOfLines={1}>
-            {week === undefined ? '—' : tokenAmount(week.total, week.partial)}
+            {week === undefined
+              ? '—'
+              : day !== undefined
+                ? tokenAmount(day.tokens, day.partial === true)
+                : tokenAmount(week.total, week.partial)}
             <Text tone="muted">{t.usageUnit}</Text>
           </Text>
         </View>
         {period === 'week' && week !== undefined ? (
-          <UsageBars days={week.days} height={chart.plot} />
+          <UsageBars days={week.days} height={chart.plot} selected={picked} onSelect={setPicked} />
         ) : null}
         {notes.map((note) => (
           <Text key={note} variant="meta" tone="muted">
