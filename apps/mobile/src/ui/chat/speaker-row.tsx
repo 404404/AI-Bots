@@ -13,8 +13,9 @@ import Animated, {
 import type { RosterBot } from '../../host/client';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
-import { radius, space } from '../design/tokens';
+import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
+import { AVATAR_CORNER } from './bubble-shape';
 import { groupSpan, speakerLift, type SpeakerRowLayout } from './speaker-span';
 
 export type Speaker = {
@@ -187,13 +188,15 @@ function StickyAvatar({
 function SpeakerAvatar({ speaker }: { speaker: Speaker }) {
   const theme = useDesignTheme();
   if (speaker.bot !== undefined)
-    return <BotAvatar bot={speaker.bot} size={SPEAKER_AVATAR} ring={false} corner={radius.sm} />;
+    return (
+      <BotAvatar bot={speaker.bot} size={SPEAKER_AVATAR} ring={false} corner={AVATAR_CORNER} />
+    );
   return (
     <View
       style={{
         width: SPEAKER_AVATAR,
         height: SPEAKER_AVATAR,
-        borderRadius: radius.sm,
+        borderRadius: AVATAR_CORNER,
         backgroundColor: theme.color.surface,
         alignItems: 'center',
         justifyContent: 'center',

@@ -1,8 +1,10 @@
 import { radius, space } from '../design/tokens';
 
-export type BubbleGroup = { first: boolean; last: boolean };
+export type BubbleGroup = { first: boolean; last: boolean; avatar?: boolean };
 
-export function bubbleCorners(human: boolean, { first, last }: BubbleGroup) {
+export const AVATAR_CORNER = radius.sm;
+
+export function bubbleCorners(human: boolean, { first, last, avatar = false }: BubbleGroup) {
   return {
     borderRadius: radius.lg,
     ...(human
@@ -12,7 +14,7 @@ export function bubbleCorners(human: boolean, { first, last }: BubbleGroup) {
         }
       : {
           borderTopLeftRadius: first ? radius.lg : radius.xs,
-          borderBottomLeftRadius: last ? radius.lg : radius.xs,
+          borderBottomLeftRadius: last ? (avatar ? AVATAR_CORNER : radius.lg) : radius.xs,
         }),
   } as const;
 }
