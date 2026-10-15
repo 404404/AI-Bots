@@ -124,9 +124,7 @@ describe('Search', () => {
     channels: [
       ...roster.channels,
       { id: 'design', name: 'Design Review', memberCount: 2, members: [] },
-      { id: 'secret', name: 'Ada secret plans', memberCount: 1, members: [] },
     ],
-    hiddenChannelIds: ['secret'],
   };
   const keys = (query: string) => searchConversations(people, [], query).map((row) => row.key);
 
@@ -144,10 +142,6 @@ describe('Search', () => {
   it('puts names that start with the query first', () => {
     expect(keys('ad')).toEqual(['bot:ada', 'bot:adam']);
     expect(keys('a')[0]).toBe('bot:ada');
-  });
-
-  it('leaves Hidden Channels out', () => {
-    expect(keys('plans')).toEqual([]);
   });
 
   it('finds nothing for an empty query or before the roster loads', () => {

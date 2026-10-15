@@ -61,10 +61,8 @@ export function searchConversations(
 ): Conversation[] {
   const needle = searchKey(query);
   if (needle === '' || roster === undefined) return [];
-  const hidden = new Set(roster.hiddenChannelIds ?? []);
   const rank = (row: Conversation): number => (searchKey(titleOf(row)).startsWith(needle) ? 0 : 1);
   return conversations(roster, action)
-    .filter((row) => !(row.kind === 'channel' && hidden.has(row.channel.id)))
     .filter((row) => searchKey(titleOf(row)).includes(needle))
     .map((row, index) => ({ row, index }))
     .sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
