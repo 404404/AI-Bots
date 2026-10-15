@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 
 import { botChannels, loadBotProfile } from '../../../src/host/bot-profile';
-import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
 import { BotProfileSheet } from '../../../src/ui/chat/bot-profile';
 import { useDesignTheme } from '../../../src/ui/design/theme';
@@ -27,7 +26,13 @@ export default function BotProfileScreen() {
 
   if (bot === undefined || load === undefined)
     return (
-      <View style={{ flex: 1, padding: space.x6, backgroundColor: theme.color.surface }}>
+      <View
+        style={{
+          flex: 1,
+          padding: space.x6,
+          backgroundColor: theme.color.surface,
+        }}
+      >
         {roster === undefined ? null : <Text tone="muted">{t.noBot}</Text>}
       </View>
     );
@@ -42,15 +47,18 @@ export default function BotProfileScreen() {
         ...(bot.browserAccess
           ? {
               onBrowser: () =>
-                router.push({ pathname: '/browser/[slug]', params: { slug: bot.slug } }),
+                router.push({
+                  pathname: '/browser/[slug]',
+                  params: { slug: bot.slug },
+                }),
             }
           : {}),
         ...(bot.computerAccess
           ? {
               onComputer: () =>
                 router.push({
-                  pathname: '/full-client',
-                  params: fullClientParams({ kind: 'dm', slug: bot.slug }),
+                  pathname: '/computer/[slug]',
+                  params: { slug: bot.slug },
                 }),
             }
           : {}),

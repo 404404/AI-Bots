@@ -6,6 +6,7 @@ import {
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
+import { IconButton } from './ds/icon-button.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 
@@ -53,17 +54,17 @@ export function MessageCopyAction({
   const label = t(copied ? 'message.copied' : 'message.copy');
   return (
     <Tooltip label={label} side="top" portal delayMs={400}>
-      <button
+      <IconButton
         ref={buttonMount}
-        type="button"
-        className="bh-bubble-action"
+        size="inline"
+        data-bubble-action=""
         aria-label={label}
         onClick={() => {
           void copy();
         }}
       >
         {copied ? <IconCheckOutlineRegular size={16} /> : <IconCopyOutlineRegular size={16} />}
-      </button>
+      </IconButton>
     </Tooltip>
   );
 }

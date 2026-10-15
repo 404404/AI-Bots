@@ -18,7 +18,10 @@ References:
   - Home and chats show one Host at a time. Home has a Slack-style header band in the accent colour (a muted accent in dark mode) with the Host's initial tile, the Host name and ▾; tap it to open the Host switcher. The list sits on a panel with rounded top corners below it. The switcher lists each Host with its status and pending count, plus "Pair a new computer".
 - **Tabs** are native (`NativeTabs`): **Home**, **Activity** and **Me**.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
-  - Like Slack, the selected tab is the foreground colour with a pill behind its icon (the Android Material indicator; drawn the same way on web), and the others are muted.
+  - iOS draws the system tab bar with no background colour of ours: Liquid Glass on iOS 26 (a floating capsule above the home indicator, with the system's glass pill behind the selected tab), the translucent system bar before it. The selected tint is the resolved `fg`, passed as a plain colour so the bar re-tints when the scheme changes while the app is open.
+  - Content scrolls under the bar. Each tab's list sets `contentInsetAdjustmentBehavior="automatic"`, so its last row clears the bar and the home indicator.
+  - Android keeps the Material 3 bar on `base`: like Slack, the selected tab is the foreground colour with a pill behind its icon (the Material indicator), and the others are muted.
+  - The web preview draws a floating translucent capsule standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it.
 - **Home** shows the current Host:
   - A row of shortcut cards: **Needs you** and **Working**, each an icon, a name and a count that filters the list when tapped. **Unread** joins them once the Host reports unread counts.
   - One list of PersonaBot DMs and Channels together, by latest activity.
@@ -83,7 +86,7 @@ References:
 **Bot profile** (a form sheet)
 
 - Avatar, name, label and description.
-- Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the DM in the full client), Notifications.
+- Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the live desktop view, where **Pause Bot and take control** lets the Human click and type, with a password keyboard), Notifications.
 - Sections: Identity (the Soul: persona and standing rules), Memory (the Memory repository as a folder tree: folders first, each opens to its own list inside the sheet, and a file opens as read-only text), Routines (schedules), Channels (group Channels the Bot is in), Files (folders shared with the Bot).
 - Each section loads on its own: an empty section says so, and a failed one offers Try again without hiding the others.
 - Read-only for now; editing Identity and Memory from the phone comes later.
@@ -122,6 +125,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
    - `test/style-guard.test.ts` enforces this for `app/` and `src/ui/`.
    - Files written before the rule are listed in it and leave the list once migrated; the test fails if a migrated file stays listed.
 2. **Text goes through `primitives/text`.** Icons will go through `Icon` (`expo-symbols`).
+   - Markdown bodies are the exception: `MarkdownView` renders them as native text with `react-native-enriched-markdown`, styled from the same tokens in `src/ui/markdown-style.ts`.
 3. **A new visual element is added to `primitives/`, `chat/` or `shell/` first.** The PR says why the existing ones do not fit.
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
 5. **Lists virtualize.** The chat is an inverted list.

@@ -14,6 +14,7 @@ allowBuilds:
   node-pty: true
   protobufjs: false
   agent-browser: false
+  react-native-enriched-markdown: false
 
 overrides:
   dockview: 8.4.1

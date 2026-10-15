@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 
 import { MenuSurface, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 
+import { IconButton } from './ds/icon-button.js';
 import { border, color, radius, size, space, text } from './ds/tokens.stylex.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { QUICK_REACTIONS, reactedByMe } from './message-reactions-model.js';
@@ -224,10 +225,10 @@ export function MessageReactionPicker({
   return (
     <>
       <Tooltip label={label} side="top" portal delayMs={400}>
-        <button
+        <IconButton
           ref={anchor}
-          type="button"
-          className="bh-bubble-action"
+          size="inline"
+          data-bubble-action=""
           aria-label={label}
           aria-haspopup="menu"
           aria-expanded={open}
@@ -235,7 +236,7 @@ export function MessageReactionPicker({
           onClick={() => setOpen(!open)}
         >
           <ReactionIcon />
-        </button>
+        </IconButton>
       </Tooltip>
       {open ? (
         <MessageReactionSurface
