@@ -60,8 +60,8 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
   - Opening an item jumps to the card in its chat.
 - **Settings** is a form sheet with a large detent, opened from the avatar, and closed by swiping down or the close button. It reuses the settings row and section components, in groups:
-  - **Connections**: Computers (paired Hosts, their status and unpairing, with the same confirmation and error notice as before), Notifications, and Open full client.
-  - **Interface**: Appearance (scheme, accent, chat wallpaper).
+  - **Connections**: the current Host and its connection status, Computers (paired Hosts, their status and unpairing, with the same confirmation and error notice as before), Notifications, and Open full client.
+  - **Interface**: Appearance (scheme, accent, chat wallpaper) once it exists. Each Host's name, avatar and banner are customized from its menu in the Host drawer, not here.
   - **Chats**: Channel sections and Hidden Channels, each pushing its own screen.
 
 ## Screens

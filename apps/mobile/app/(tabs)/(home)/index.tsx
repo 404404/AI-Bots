@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import { loadHumanName } from '../../../src/host/human';
 import { useHostLook } from '../../../src/host/native-host-look';
 import { shownHostName } from '../../../src/ui/design/host-look';
 import { sectionCollapse, useCollapsedSections } from '../../../src/host/native-section-collapse';
@@ -20,6 +21,7 @@ import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Text } from '../../../src/ui/primitives/text';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
+import { HumanAvatarButton } from '../../../src/ui/shell/human-avatar';
 import { openConversation } from '../../../src/ui/shell/open-conversation';
 import { t } from '../../../src/ui/strings';
 import type { HumanAttentionItem } from '../../../src/host/wire';
@@ -32,6 +34,11 @@ export default function HomeScreen() {
   const look = useHostLook(saved?.hostId);
   const snapshot = useHostSnapshot(client);
   const list = useInbox(inbox);
+  const connected = snapshot.connection.status === 'connected';
+  const loadName = useMemo(
+    () => (client === undefined || !connected ? undefined : () => loadHumanName(client)),
+    [client, connected],
+  );
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
@@ -69,7 +76,13 @@ export default function HomeScreen() {
     <>
       <Stack.Screen options={{ title: shownHostName(look, saved.hostName), headerShown: false }} />
       <HostDrawerEdge>
-        <HomeHeader hostName={shownHostName(look, saved.hostName)} look={look}>
+        <HomeHeader
+          hostName={shownHostName(look, saved.hostName)}
+          look={look}
+          actions={
+            <HumanAvatarButton loadName={loadName} onPress={() => router.push('/settings')} />
+          }
+        >
           <FlatList
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
