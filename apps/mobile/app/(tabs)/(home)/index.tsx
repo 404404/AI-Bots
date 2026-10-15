@@ -3,8 +3,15 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import { sectionCollapse, useCollapsedSections } from '../../../src/host/native-section-collapse';
 import { ConversationRow } from '../../../src/ui/chat/conversation-row';
-import { conversations, searchConversations } from '../../../src/ui/chat/conversations';
+import {
+  chatList,
+  PINNED_SECTION,
+  searchConversations,
+  type ChatListItem,
+} from '../../../src/ui/chat/conversations';
+import { SectionHeader } from '../../../src/ui/chat/section-header';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
 import { SearchField } from '../../../src/ui/primitives/search-field';
@@ -24,13 +31,19 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
+  const hostId = saved?.hostId;
+  const collapsed = useCollapsedSections(hostId);
   const searching = query.trim() !== '';
   const rows = useMemo(
     () =>
       searching
-        ? searchConversations(snapshot.roster, action, query)
-        : conversations(snapshot.roster, action),
-    [snapshot.roster, action, query, searching],
+        ? searchConversations(snapshot.roster, action, query).map((row): ChatListItem => ({
+            kind: 'row',
+            key: row.key,
+            row,
+          }))
+        : chatList(snapshot.roster, action, collapsed),
+    [snapshot.roster, action, collapsed, query, searching],
   );
   const now = new Date();
 
@@ -74,21 +87,30 @@ export default function HomeScreen() {
             </>
           }
           ListEmptyComponent={
-            snapshot.roster === undefined ? null : searching ? (
+            snapshot.roster === undefined ? null : (
               <View style={{ padding: space.x6, alignItems: 'center' }}>
                 <Text tone="muted" style={{ textAlign: 'center' }}>
-                  {t.searchNoMatch(query.trim())}
+                  {searching ? t.searchNoMatch(query.trim()) : t.noBots}
                 </Text>
-              </View>
-            ) : (
-              <View style={{ padding: space.x6, alignItems: 'center' }}>
-                <Text tone="muted">{t.noBots}</Text>
               </View>
             )
           }
-          renderItem={({ item }) => (
-            <ConversationRow row={item} now={now} onPress={() => openConversation(router, item)} />
-          )}
+          renderItem={({ item }) => {
+            if (item.kind === 'section')
+              return (
+                <SectionHeader
+                  name={item.id === PINNED_SECTION ? t.pinnedSection : (item.name ?? '')}
+                  count={item.count}
+                  needsYou={item.needsYou}
+                  collapsed={item.collapsed}
+                  onToggle={() => sectionCollapse.toggle(saved.hostId, item.id)}
+                />
+              );
+            const row = item.row;
+            return (
+              <ConversationRow row={row} now={now} onPress={() => openConversation(router, row)} />
+            );
+          }}
         />
       </HomeHeader>
     </>

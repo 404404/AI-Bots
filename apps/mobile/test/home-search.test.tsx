@@ -39,10 +39,19 @@ vi.mock('expo-router', () => {
   return { Redirect: () => null, Stack, useRouter: () => ({ push }) };
 });
 vi.mock('../src/host/host-session', () => ({
-  useHostSession: () => ({ saved: { hostName: 'studio' }, client: undefined, inbox: undefined }),
+  useHostSession: () => ({
+    saved: { hostId: 'h1', hostName: 'studio' },
+    client: undefined,
+    inbox: undefined,
+  }),
   useHostSnapshot: () => ({ connection: { status: 'connected', route: '' }, roster }),
   useInbox: () => ({ status: 'loading' }),
 }));
+vi.mock('../src/host/native-section-collapse', () => ({
+  sectionCollapse: { toggle: () => {} },
+  useCollapsedSections: () => new Set(),
+}));
+vi.mock('../src/ui/chat/section-header', () => ({ SectionHeader: () => null }));
 vi.mock('../src/ui/shell/home-header', () => ({
   HomeHeader: ({ children }: { children: ReactNode }) => children,
 }));

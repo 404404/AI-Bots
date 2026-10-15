@@ -225,6 +225,11 @@ const en = {
   needsYouCount: (count: number) => (count === 1 ? 'needs you' : `${count} need you`),
   searchPlaceholder: 'Search PersonaBots and Channels',
   searchNoMatch: (query: string) => `No PersonaBot or Channel matches “${query}”.`,
+  pinnedSection: 'Pinned',
+  sectionLabel: (name: string, count: number, needsYou: number) =>
+    [name, count === 1 ? '1 conversation' : `${count} conversations`]
+      .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
+      .join(', '),
   computer: 'This computer',
   connected: 'Connected',
   notifications: 'Notifications',
@@ -547,6 +552,11 @@ const zh: typeof en = {
   needsYouCount: (count: number) => (count === 1 ? '等你处理' : `${count} 项等你处理`),
   searchPlaceholder: '搜索 PersonaBot 和频道',
   searchNoMatch: (query: string) => `没有名称包含“${query}”的 PersonaBot 或频道。`,
+  pinnedSection: '已置顶',
+  sectionLabel: (name: string, count: number, needsYou: number) =>
+    [name, `${count} 个对话`]
+      .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
+      .join('，'),
   computer: '这台电脑',
   connected: '已连接',
   notifications: '通知',
