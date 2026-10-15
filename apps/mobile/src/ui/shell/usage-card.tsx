@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { compactTokenCount, weekdayLabel } from '../../host/usage-days';
@@ -20,15 +20,17 @@ export type Loaded<T> =
 
 export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
   const [state, setState] = useState<Loaded<T>>({ status: 'loading' });
+  const latest = useRef(0);
   const read = useCallback(
     (next: (() => Promise<T>) | undefined = load) => {
       if (next === undefined) return () => undefined;
-      let live = true;
+      const id = ++latest.current;
+      const live = () => latest.current === id;
       setState((current) => ({ status: 'loading', value: current.value }));
       next().then(
-        (value) => live && setState({ status: 'ready', value }),
+        (value) => live() && setState({ status: 'ready', value }),
         (error: unknown) =>
-          live &&
+          live() &&
           setState((current) => ({
             status: 'failed',
             error: error instanceof Error ? error.message : String(error),
@@ -36,7 +38,7 @@ export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
           })),
       );
       return () => {
-        live = false;
+        if (live()) latest.current += 1;
       };
     },
     [load],
