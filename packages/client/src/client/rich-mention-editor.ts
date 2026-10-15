@@ -10,6 +10,8 @@ export interface MentionAvatarMount {
   botSlug: string;
   name: string;
   src?: string | undefined;
+  appearance?: BotSummary['appearance'];
+  avatarSeed?: BotSummary['avatarSeed'];
 }
 export interface RichMentionDraft {
   value: string;
@@ -165,6 +167,8 @@ export function renderRichMentionDraft(
       botSlug: mention.botSlug,
       name: bot?.displayName ?? mention.label,
       src: bot?.avatar,
+      appearance: bot?.appearance,
+      avatarSeed: bot?.avatarSeed,
     });
   }
   editor.replaceChildren(...nodes);

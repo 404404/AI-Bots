@@ -21,6 +21,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   ImageLightbox: () => null,
 }));
 
+import { seededAvatarRecipe } from '../../core/src/bots/avatar-appearance.js';
+import { PersonaBotAvatar } from '../src/client/avatar.js';
 import { botNameColor } from '../src/client/bot-primary-color.js';
 import { ChannelComposer } from '../src/client/channel-composer.js';
 import { attachmentReferenceText } from '../src/client/attachment-refs.js';
@@ -174,6 +176,65 @@ describe('rich mention editor', () => {
     } finally {
       await act(async () => root.unmount());
       container.remove();
+    }
+  });
+
+  it('draws a composed-appearance Bot the same in its composer badge and its sender avatar', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const appearance = {
+      recipe: { ...seededAvatarRecipe('Atlas'), accessory: 'catears' as const },
+      revision: '0'.repeat(64),
+    };
+    const atlas = {
+      slug: 'atlas',
+      displayName: 'Atlas',
+      appearance,
+      roles: [],
+      aggregateState: 'idle' as const,
+      workspaces: [],
+      createdAt: '2026-09-25T00:00:00.000Z',
+    };
+    const container = document.createElement('div');
+    const sender = document.createElement('div');
+    document.body.append(container, sender);
+    const root = createRoot(container);
+    const senderRoot = createRoot(sender);
+    try {
+      await act(async () => {
+        root.render(
+          createElement(ChannelComposer, {
+            value: '@Atlas hi',
+            mentions: [{ botSlug: 'atlas', label: 'Atlas', start: 0, end: 6 }],
+            mentionCandidates: [atlas],
+            placeholder: 'Message',
+            sending: false,
+            onChange: () => undefined,
+            onSubmit: () => undefined,
+          }),
+        );
+        senderRoot.render(
+          createElement(PersonaBotAvatar, {
+            personaBotId: atlas.slug,
+            name: atlas.displayName,
+            appearance,
+            size: 16,
+            indicator: false,
+          }),
+        );
+      });
+      const badgeAvatar = container.querySelector<HTMLElement>(
+        '.bh-composer-inline-mention .bh-persona-avatar',
+      );
+      const senderAvatar = sender.querySelector<HTMLElement>('.bh-persona-avatar');
+      expect(badgeAvatar?.dataset['media']).toBe('composed');
+      expect(badgeAvatar?.innerHTML).toBe(senderAvatar?.innerHTML);
+    } finally {
+      await act(async () => {
+        root.unmount();
+        senderRoot.unmount();
+      });
+      container.remove();
+      sender.remove();
     }
   });
 
