@@ -156,6 +156,7 @@ const en = {
   unseenLatest: (count: number) =>
     `${count} new ${count === 1 ? 'message' : 'messages'} · Jump to latest`,
   beginning: 'This is the beginning of your DM.',
+  beginningChannel: 'This is the beginning of this Channel.',
   offline: 'Offline. Showing saved messages.',
   liveInterrupted: 'Reconnecting to this DM…',
   dmRefused: 'This DM is not available on your computer.',
@@ -214,9 +215,11 @@ const en = {
   cardLoadFailed: 'Could not read this request.',
   noBot: 'This PersonaBot is not on your computer anymore.',
   noChannel: 'This Channel is not on your computer anymore.',
-  home: 'Home',
+  chats: 'Chats',
   activity: 'Activity',
-  me: 'Me',
+  settings: 'Settings',
+  connections: 'Connections',
+  interface: 'Interface',
   back: 'Back',
   workingPreview: 'Working…',
   effect: {
@@ -240,7 +243,6 @@ const en = {
     [name, count === 1 ? '1 conversation' : `${count} conversations`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
       .join(', '),
-  computer: 'This computer',
   connected: 'Connected',
   notifications: 'Notifications',
   notificationsChannel: 'Requests from PersonaBots',
@@ -593,6 +595,7 @@ const zh: typeof en = {
   jumpToLatest: '返回最新消息',
   unseenLatest: (count: number) => `${count} 条新消息 · 跳到最新`,
   beginning: '这是你们私信的开始。',
+  beginningChannel: '这是这个频道的开始。',
   offline: '离线中，显示的是已保存的消息。',
   liveInterrupted: '正在重新连接这个私信…',
   dmRefused: '你的电脑上已经没有这个私信。',
@@ -650,9 +653,11 @@ const zh: typeof en = {
   cardLoadFailed: '读取这个请求失败。',
   noBot: '你的电脑上已经没有这个 PersonaBot。',
   noChannel: '你的电脑上已经没有这个频道。',
-  home: '首页',
+  chats: '聊天',
   activity: '动态',
-  me: '我',
+  settings: '设置',
+  connections: '连接',
+  interface: '界面',
   back: '返回',
   workingPreview: '工作中…',
   effect: {
@@ -676,7 +681,6 @@ const zh: typeof en = {
     [name, `${count} 个对话`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
       .join('，'),
-  computer: '这台电脑',
   connected: '已连接',
   notifications: '通知',
   notificationsChannel: 'PersonaBot 的请求',

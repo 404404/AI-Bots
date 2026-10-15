@@ -575,7 +575,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
                   tone="muted"
                   style={{ textAlign: 'center', padding: space.x5 }}
                 >
-                  {t.beginning}
+                  {dm ? t.beginning : t.beginningChannel}
                 </Text>
               ) : null
             }

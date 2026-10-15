@@ -19,7 +19,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - The app stays connected to every paired Host at once.
   - The Chats list and every chat show one Host at a time. The Chats header has a Slack-style band in the accent colour (a muted accent in dark mode); the list sits on a panel with rounded top corners below it.
   - The **Host chip** at the top left shows the Host's initial tile, its name and ▾. Tapping it opens the **Host drawer**.
-  - **Customize header** sets how each Host looks, kept on the phone per Host. It is a form sheet with a live preview of the band, opened from Me (Settings → Interface once the Settings sheet replaces Me).
+  - **Customize header** sets how each Host looks, kept on the phone per Host. It is a form sheet with a live preview of the band, opened from Settings → Interface.
     - Avatar: the initial tile (default), one of eight pixel portraits from the PersonaBot avatar generator, or a photo cropped square.
     - Banner: the accent band (default), a solid colour (ten swatches or a typed hex), a two-stop gradient (six presets or typed stops), or a picture under a dark scrim.
     - A custom colour goes through the accent band's steps, so dark mode mutes it the same way. The ink is white or near-black, whichever reads on every stop; a picture always takes white ink with a soft shadow.
@@ -59,8 +59,8 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
   - Opening an item jumps to the card in its chat.
 - **Settings** is a form sheet with a large detent, opened from the avatar, and closed by swiping down or the close button. It reuses the settings row and section components, in groups:
-  - **Connections**: Computers (paired Hosts, their status and unpairing, with the same confirmation and error notice as before), Notifications, and Open full client.
-  - **Interface**: Appearance (scheme, accent, chat wallpaper).
+  - **Connections**: the current Host and its connection status, Computers (paired Hosts, their status and unpairing, with the same confirmation and error notice as before), Notifications, and Open full client.
+  - **Interface**: Customize header, and Appearance (scheme, accent, chat wallpaper) once it exists.
   - **Chats**: Channel sections and Hidden Channels, each pushing its own screen.
 
 ## Screens
@@ -123,7 +123,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - `accent` stays the app's accent, since no one Bot owns the chat.
   - Each working member Bot gets its own working row, and its **Stop** stops that Bot in this Channel.
   - The composer says "Message #{Channel}" and has no Model and Workspace footer, since those belong to one Bot. A question card keeps its own Other field instead of "Or reply in the chat below.", because a message in a group goes to every member.
-  - Typing `@` opens a suggestion list above the composer pill, on the `sheet` layer: **All Bots** (the Channel's active members, as the Web Client's "@All Bots") and the active member Bots with avatar, name and ID, filtered by what follows the `@`. Choosing one inserts `@Name ` as a mention token, sent with the message like the Web Client's, so the mentioned Bots are woken even under a mentions-only wake policy. Editing inside a token turns it back into plain text.
+  - Typing `@` opens a suggestion list above the composer pill, on the `sheet` layer: **All Bots** (the Channel's active members, as the Web Client's "@All Bots") and the active member Bots with avatar and name, filtered by what follows the `@`. Choosing one inserts `@Name ` as a mention token, sent with the message like the Web Client's, so the mentioned Bots are woken even under a mentions-only wake policy. Editing inside a token turns it back into plain text.
   - A notification or Activity item for a group Channel reply, mention or card opens this chat, at the card when there is one.
 
 **Bot profile** (a form sheet)
