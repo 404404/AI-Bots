@@ -122,6 +122,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
    - `test/style-guard.test.ts` enforces this for `app/` and `src/ui/`.
    - Files written before the rule are listed in it and leave the list once migrated; the test fails if a migrated file stays listed.
 2. **Text goes through `primitives/text`.** Icons will go through `Icon` (`expo-symbols`).
+   - Markdown bodies are the exception: `MarkdownView` renders them as native text with `react-native-enriched-markdown`, styled from the same tokens in `src/ui/markdown-style.ts`.
 3. **A new visual element is added to `primitives/`, `chat/` or `shell/` first.** The PR says why the existing ones do not fit.
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
 5. **Lists virtualize.** The chat is an inverted list.

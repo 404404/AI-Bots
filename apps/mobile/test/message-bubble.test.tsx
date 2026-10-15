@@ -71,6 +71,25 @@ vi.mock('expo-clipboard', () => ({
   },
 }));
 
+vi.mock('react-native-enriched-markdown', () => ({
+  EnrichedMarkdownText: (props: {
+    markdown: string;
+    selectable?: boolean;
+    flavor?: string;
+    md4cFlags?: { latexMath?: boolean };
+    onLinkPress?: unknown;
+  }) => (
+    <div
+      data-native="EnrichedMarkdownText"
+      data-selectable={String(props.selectable)}
+      data-flavor={props.flavor}
+      data-latex={String(props.md4cFlags?.latexMath)}
+      data-links={String(typeof props.onLinkPress === 'function')}
+      data-markdown={props.markdown}
+    />
+  ),
+}));
+
 vi.mock('react-native-svg', () => ({
   default: () => <svg />,
   Path: () => null,
@@ -140,8 +159,12 @@ describe('message states', () => {
     expect(html).toContain('data-selectable="false"');
     expect(html).not.toContain('data-selectable="true"');
     expect(html).toContain(`data-accessibilityhint="${t.copyHint}"`);
-    expect(html).toContain('pnpm test');
-    expect(html).toContain('data-accessibilityrole="link"');
+    expect(html).toContain(
+      'data-markdown="Use `pnpm test`:\n\n- one\n- [docs](https://botharness.ai)"',
+    );
+    expect(html).toContain('data-flavor="github"');
+    expect(html).toContain('data-latex="false"');
+    expect(html).toContain('data-links="true"');
     expect(deliveryLabel(human({ author: 'bot' }))).toBeUndefined();
   });
 
@@ -190,6 +213,13 @@ describe('message states', () => {
     );
     expect(draft).toContain('Hel');
     expect(draft).toContain(t.typing);
+  });
+
+  it('closes half-written Markdown in a streaming draft', () => {
+    const draft = renderToStaticMarkup(
+      <DraftBubble draft={{ draftId: 'd', botSlug: 'b', body: 'Use **pnpm te' }} />,
+    );
+    expect(draft).toContain('data-markdown="Use **pnpm te**"');
   });
 });
 
