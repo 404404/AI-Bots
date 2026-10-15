@@ -13,6 +13,7 @@ import type {
   MessageCard,
 } from '../../host/conversation';
 import type { Inbox } from '../../host/inbox';
+import type { WireAllBotPreview } from '../../host/wire';
 import { shareAttachment } from '../../host/share-attachment';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../host/pick-files';
 import { stopBot, type StopOutcome } from '../../host/stop';
@@ -45,6 +46,16 @@ import { useFollowLatest } from './follow-latest';
 import { ImageViewer } from './image-viewer';
 import { JumpToLatest } from './jump-to-latest';
 import { MessageActions } from './message-actions';
+import {
+  activeMentionQuery,
+  chooseMention,
+  mentionCandidates,
+  rebaseMentions,
+  submittedMessage,
+  type MentionCandidate,
+  type SelectedMention,
+} from './mention-draft';
+import { MentionSuggestions } from './mention-suggestions';
 import { ModelSheet } from './model-sheet';
 import { DraftBubble, MessageBubble } from './message-bubble';
 import { copyMessage } from './message-menu';
@@ -203,6 +214,10 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   const stopChannel = dm ? bot?.dmChannelId : channelId;
   const snapshot = useConversationSnapshot(conversation);
   const [draft, setDraft] = useState('');
+  const [mentions, setMentions] = useState<SelectedMention[]>([]);
+  const [caret, setCaret] = useState(0);
+  const [selection, setSelection] = useState<{ start: number; end: number }>();
+  const [allPreview, setAllPreview] = useState<{ key: string; preview: WireAllBotPreview }>();
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
@@ -267,11 +282,45 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       void conversation?.loadOlder();
   };
 
+  const membersKey = channel === undefined ? undefined : `${channel.id}:${channel.members.join()}`;
+  const mentionQuery = dm ? undefined : activeMentionQuery(draft, caret, mentions);
+  const candidates = mentionCandidates(members, mentionQuery, mentions, {
+    label: t.mentionAll,
+    preview: allPreview?.key === membersKey ? allPreview?.preview : undefined,
+  });
+
+  const loadAllPreview = () => {
+    const key = membersKey;
+    if (client === undefined || channelId === undefined || key === undefined) return;
+    if (allPreview?.key === key) return;
+    client
+      .call<WireAllBotPreview>('channelAllBotPreview', { channelId })
+      .then((preview) => setAllPreview({ key, preview }))
+      .catch(() => undefined);
+  };
+
+  const edit = (next: string) => {
+    setMentions((current) => rebaseMentions(draft, next, current));
+    setDraft(next);
+    if (!dm && next.includes('@')) loadAllPreview();
+  };
+
+  const mention = (candidate: MentionCandidate) => {
+    if (mentionQuery === undefined) return;
+    const chosen = chooseMention(draft, mentions, mentionQuery, candidate);
+    setDraft(chosen.value);
+    setMentions(chosen.mentions);
+    setCaret(chosen.caret);
+    setSelection({ start: chosen.caret, end: chosen.caret });
+  };
+
   const send = () => {
-    const body = draft.trim();
+    const { body, tags } = submittedMessage(draft, mentions);
     if ((body === '' && files.length === 0) || conversation === undefined) return;
+    if (tags.allBotMention?.preview.recipients.length === 0) return;
     if (dictation.state.status !== 'idle') dictation.cancel();
     setDraft('');
+    setMentions([]);
     setFiles([]);
     latest.jumpToLatest();
     if (
@@ -281,7 +330,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       slug === undefined ||
       files.length > 0
     ) {
-      conversation.send(body, files);
+      conversation.send(body, files, tags);
       return;
     }
     const ref = {
@@ -564,7 +613,15 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
           canAttach={files.length < MAX_PICKED}
           dictation={dictation.state.status}
           canDictate={conversation !== undefined}
-          onChange={setDraft}
+          onChange={edit}
+          selection={selection}
+          onSelection={(next) => {
+            setSelection(undefined);
+            setCaret(next);
+          }}
+          {...(candidates.length === 0
+            ? {}
+            : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
           onSend={send}
           onPick={pick}
           onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}

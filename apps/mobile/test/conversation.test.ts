@@ -802,3 +802,29 @@ describe('group Channel conversation', () => {
     expect(both.drafts.map((draft) => draft.botSlug)).toEqual(['ada', 'grace']);
   });
 });
+
+describe('group Channel mentions on send', () => {
+  it('passes selected mention tokens to channelSend', async () => {
+    const host = new FakeHost();
+    host.channel('launch-team');
+    client = createHostClient({
+      routes: [ROUTE],
+      credential: host.credential,
+      carrier: host.carrier,
+      backoff: () => 5,
+      timeoutMs: 200,
+    });
+    client.start();
+    conversation = createConversation({ host: client, channelId: 'launch-team' });
+    conversation.start();
+    await until(conversation, (s) => s.status === 'live');
+    const mentions = [{ botSlug: 'ada', label: 'Ada', start: 0, end: 4 }];
+    conversation.send('@Ada plan it', [], { mentions });
+    await until(conversation, (s) => s.messages.at(-1)?.delivery === 'committed');
+    expect(host.calls.find((call) => call.method === 'channelSend')?.args).toMatchObject({
+      channelId: 'launch-team',
+      body: '@Ada plan it',
+      mentions,
+    });
+  });
+});

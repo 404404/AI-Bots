@@ -1,6 +1,8 @@
 import type { HostClient, RemoteSource } from './client';
 import type {
   AttachmentRef,
+  WireAllBotMention,
+  WireMention,
   ChannelLiveFrame,
   ChannelNotification,
   ChannelWireMessage,
@@ -128,7 +130,7 @@ export interface Conversation {
   start(): void;
   stop(): void;
   loadOlder(): Promise<void>;
-  send(body: string, files?: OutgoingFile[]): string;
+  send(body: string, files?: OutgoingFile[], tags?: MessageTags): string;
   retry(messageId: string): void;
   react(messageId: string, emoji: string, active: boolean): Promise<void>;
 }
@@ -160,10 +162,16 @@ const PREVIEWABLE = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp
 
 export const ATTACHMENT_PATH = '/api/botharness/attachment';
 
+export interface MessageTags {
+  mentions?: WireMention[];
+  allBotMention?: WireAllBotMention;
+}
+
 interface Outgoing {
   id: string;
   at: string;
   body: string;
+  tags: MessageTags;
   files: OutgoingFile[];
   refs: Array<AttachmentRef | undefined>;
   delivery: DeliveryState;
@@ -636,6 +644,12 @@ export function createConversation(options: ConversationOptions): Conversation {
         body: item.body,
         messageId: item.id,
         ...(attachments.length === 0 ? {} : { attachments }),
+        ...(item.tags.mentions === undefined || item.tags.mentions.length === 0
+          ? {}
+          : { mentions: item.tags.mentions }),
+        ...(item.tags.allBotMention === undefined
+          ? {}
+          : { allBotMention: item.tags.allBotMention }),
       });
       if (outgoing.get(item.id) !== item) return;
       item.delivery = 'committed';
@@ -708,11 +722,12 @@ export function createConversation(options: ConversationOptions): Conversation {
         publish();
       }
     },
-    send(body, files = []) {
+    send(body, files = [], tags = {}) {
       const item: Outgoing = {
         id: newMessageId(),
         at: new Date().toISOString(),
         body,
+        tags,
         files,
         refs: files.map(() => undefined),
         delivery: 'pending',

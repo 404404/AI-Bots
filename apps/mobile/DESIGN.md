@@ -123,6 +123,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - `accent` stays the app's accent, since no one Bot owns the chat.
   - The status strip shows the first member Bot that is working, and **Stop** stops that Bot in this Channel.
   - The composer says "Message #{Channel}" and has no Model and Workspace footer, since those belong to one Bot. A question card keeps its own Other field instead of "Or reply in the chat below.", because a message in a group goes to every member.
+  - Typing `@` opens a suggestion list above the composer pill, on the `sheet` layer: **All Bots** (the Channel's active members, as the Web Client's "@All Bots") and the active member Bots with avatar, name and ID, filtered by what follows the `@`. Choosing one inserts `@Name ` as a mention token, sent with the message like the Web Client's, so the mentioned Bots are woken even under a mentions-only wake policy. Editing inside a token turns it back into plain text.
   - A notification or Activity item for a group Channel reply, mention or card opens this chat, at the card when there is one.
 
 **Bot profile** (a form sheet)
