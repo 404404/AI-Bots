@@ -9,6 +9,7 @@ import {
   createHostDrawer,
   drawerWidth,
   hostDrawerRows,
+  hostRowBadge,
   settleOpen,
 } from '../src/ui/shell/host-drawer-model';
 
@@ -173,6 +174,19 @@ describe('Host rows', () => {
         glance: { status: 'online', pending: 2, unread: 1 },
       },
     ]);
+  });
+
+  it('shows what needs the Human before unread conversations, in one chip', () => {
+    expect(hostRowBadge({ status: 'online', pending: 2, unread: 5 })).toEqual({
+      tone: 'needs-you',
+      count: 2,
+    });
+    expect(hostRowBadge({ status: 'online', pending: 0, unread: 5 })).toEqual({
+      tone: 'unread',
+      count: 5,
+    });
+    expect(hostRowBadge({ status: 'online', pending: 0, unread: 0 })).toBeUndefined();
+    expect(hostRowBadge({ status: 'offline' })).toBeUndefined();
   });
 
   it('says a Host it has not heard from yet is being checked', () => {

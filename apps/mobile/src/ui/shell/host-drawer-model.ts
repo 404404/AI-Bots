@@ -36,6 +36,14 @@ function withUnread(glance: HostGlance, unread: number | undefined): HostGlance 
   return unread === undefined || glance.status !== 'online' ? glance : { ...glance, unread };
 }
 
+export type HostRowBadge = { tone: 'needs-you' | 'unread'; count: number } | undefined;
+
+export function hostRowBadge(glance: HostGlance): HostRowBadge {
+  if ((glance.pending ?? 0) > 0) return { tone: 'needs-you', count: glance.pending! };
+  if ((glance.unread ?? 0) > 0) return { tone: 'unread', count: glance.unread! };
+  return undefined;
+}
+
 export function drawerWidth(windowWidth: number): number {
   return Math.round(windowWidth * DRAWER_SHARE);
 }

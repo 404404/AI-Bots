@@ -40,6 +40,7 @@ import {
   drawerWidth,
   EDGE_WIDTH,
   hostDrawerRows,
+  hostRowBadge,
   settleOpen,
   type HostDrawerRow,
 } from './host-drawer-model';
@@ -177,7 +178,17 @@ function openHostMenu(row: HostDrawerRow): void {
   ]);
 }
 
-function DrawerTile({ hostId, name, current }: { hostId: string; name: string; current: boolean }) {
+function DrawerTile({
+  hostId,
+  name,
+  current,
+  unread,
+}: {
+  hostId: string;
+  name: string;
+  current: boolean;
+  unread: boolean;
+}) {
   const theme = useDesignTheme();
   const look = useHostLook(hostId);
   return (
@@ -196,6 +207,21 @@ function DrawerTile({ hostId, name, current }: { hostId: string; name: string; c
         fill={theme.layer.sheet.inset}
         letter={theme.color.fg}
       />
+      {unread ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: -space.x1,
+            right: -space.x1,
+            width: space.x4,
+            height: space.x4,
+            borderRadius: radius.round,
+            borderWidth: edge.focus,
+            borderColor: theme.layer.sheet.fill,
+            backgroundColor: theme.color.danger,
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -244,6 +270,7 @@ function HostRow({ row }: { row: HostDrawerRow }) {
   const theme = useDesignTheme();
   const pending = row.glance.pending ?? 0;
   const unread = row.glance.unread ?? 0;
+  const badge = hostRowBadge(row.glance);
   const status = statusText(row.glance.status);
   const dot =
     row.glance.status === 'online'
@@ -277,7 +304,12 @@ function HostRow({ row }: { row: HostDrawerRow }) {
           backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
         })}
       >
-        <DrawerTile hostId={row.hostId} name={row.hostName} current={row.current} />
+        <DrawerTile
+          hostId={row.hostId}
+          name={row.hostName}
+          current={row.current}
+          unread={unread > 0}
+        />
         <View style={{ flex: 1, gap: space.x1 }}>
           <Text strong numberOfLines={1}>
             {row.hostName}
@@ -296,16 +328,15 @@ function HostRow({ row }: { row: HostDrawerRow }) {
             </Text>
           </View>
         </View>
-        {pending > 0 || unread > 0 ? (
-          <View style={{ gap: space.x2, alignItems: 'flex-end' }}>
-            {pending > 0 ? (
-              <CountChip count={pending} tone="needs-you" label={t.hostPending(pending)} />
-            ) : null}
-            {unread > 0 ? (
-              <CountChip count={unread} tone="unread" label={t.hostUnread(unread)} />
-            ) : null}
-          </View>
-        ) : null}
+        {badge === undefined ? null : (
+          <CountChip
+            count={badge.count}
+            tone={badge.tone}
+            label={
+              badge.tone === 'needs-you' ? t.hostPending(badge.count) : t.hostUnread(badge.count)
+            }
+          />
+        )}
       </Pressable>
       <Pressable
         onPress={() => openHostMenu(row)}
