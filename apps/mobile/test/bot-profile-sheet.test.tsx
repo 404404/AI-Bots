@@ -16,6 +16,7 @@ vi.mock('../src/ui/shell/icons', () => ({
   BrowserIcon: () => null,
   ComputerIcon: () => null,
   MessageIcon: () => null,
+  PlusIcon: () => null,
 }));
 
 import type { BotProfile } from '../src/host/bot-profile';
@@ -80,14 +81,20 @@ const week: ProfileActivity = {
 };
 
 const full: BotProfile = {
-  identity: { status: 'ready', value: profileWire.rpc.memoryFile['SOUL.md'].file.body },
+  identity: {
+    status: 'ready',
+    value: profileWire.rpc.memoryFile['SOUL.md'].file.body,
+  },
   memory: {
     status: 'ready',
     value: {
       files: profileWire.rpc.memorySnapshot.snapshot.files,
     },
   },
-  routines: { status: 'ready', value: profileWire.rpc.scheduleList.schedules as never },
+  routines: {
+    status: 'ready',
+    value: profileWire.rpc.scheduleList.schedules as never,
+  },
   files: {
     status: 'ready',
     value: profileWire.rpc.grants.grants.filter((grant) => !('revokedAt' in grant)),
@@ -102,7 +109,13 @@ const empty: BotProfile = {
   files: { status: 'ready', value: [] },
   activity: {
     status: 'ready',
-    value: { ...week, events: [], memoryCommits: [], tokens: [], modelUsageRows: [] },
+    value: {
+      ...week,
+      events: [],
+      memoryCommits: [],
+      tokens: [],
+      modelUsageRows: [],
+    },
   },
 };
 
@@ -122,7 +135,14 @@ describe('Bot profile sheet', () => {
     const view = await render(
       <BotProfileSheet
         bot={bot}
-        channels={[{ id: 'group-paper-club', name: 'paper-club', memberCount: 1, members: [] }]}
+        channels={[
+          {
+            id: 'group-paper-club',
+            name: 'paper-club',
+            memberCount: 1,
+            members: [],
+          },
+        ]}
         load={async () => full}
         actions={actions()}
       />,
@@ -195,7 +215,13 @@ describe('Bot profile sheet', () => {
         channels={[]}
         load={async () =>
           (attempt += 1) === 1
-            ? { ...full, routines: { status: 'failed', error: 'The Host did not answer in time.' } }
+            ? {
+                ...full,
+                routines: {
+                  status: 'failed',
+                  error: 'The Host did not answer in time.',
+                },
+              }
             : full
         }
         actions={handlers}
@@ -235,6 +261,56 @@ describe('Bot profile sheet', () => {
     ]);
   });
 
+  it('opens a routine or a new one in its sheet, and refreshes the list after a change', async () => {
+    const sheet = vi.fn(
+      (host: { target: { kind: string; routine?: { title: string } }; onChanged(): void }) => {
+        latest = host;
+        return createElement(
+          'span',
+          { 'data-testid': 'routine-sheet' },
+          host.target.routine?.title ?? 'new',
+        );
+      },
+    );
+    let latest: { onChanged(): void } | undefined;
+    const renamed = {
+      ...profileWire.rpc.scheduleList.schedules[0]!,
+      title: 'Evening digest',
+    };
+    const view = await render(
+      <BotProfileSheet
+        bot={bot}
+        channels={[]}
+        load={async () => full}
+        actions={actions()}
+        routines={{
+          load: async () => [renamed] as never,
+          sheet: sheet as never,
+        }}
+      />,
+    );
+    const open = [...view.querySelectorAll('button')].find((node) =>
+      node.getAttribute('aria-label')?.startsWith(t.routineOpen('Morning digest')),
+    )!;
+    await act(async () => open.click());
+    expect(view.querySelector('[data-testid="routine-sheet"]')?.textContent).toBe('Morning digest');
+
+    await act(async () => latest!.onChanged());
+    await act(async () => undefined);
+    expect(view.textContent).toContain('Evening digest');
+
+    await act(async () => button(view, t.routineNew)!.click());
+    expect(view.querySelector('[data-testid="routine-sheet"]')?.textContent).toBe('new');
+  });
+
+  it('keeps routines read-only without a Host to change them', async () => {
+    const view = await render(
+      <BotProfileSheet bot={bot} channels={[]} load={async () => full} actions={actions()} />,
+    );
+    expect(button(view, t.routineNew)).toBeNull();
+    expect(view.textContent).toContain('Morning digest');
+  });
+
   it('shows the last 7 days and opens the Activity screen', async () => {
     const handlers = actions();
     const view = await render(
@@ -266,7 +342,10 @@ describe('Bot profile sheet', () => {
         channels={[]}
         load={async () =>
           (attempt += 1) === 1
-            ? { ...full, activity: { status: 'failed', error: 'Unknown PersonaBot' } }
+            ? {
+                ...full,
+                activity: { status: 'failed', error: 'Unknown PersonaBot' },
+              }
             : full
         }
         actions={actions()}

@@ -174,7 +174,13 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - **Events**: the total, bars per day or week, and counts by reason. **Memory commits**: the total and a heatmap of weeks × weekdays.
 - Sections: Last 7 days (above), Identity (the Soul: persona and standing rules), Memory (the Memory repository as a folder tree: folders first, each opens to its own list inside the sheet, and a file opens as read-only text), Routines (schedules), Channels (group Channels the Bot is in), Files (folders shared with the Bot).
 - Each section loads on its own: an empty section says so, and a failed one offers Try again without hiding the others.
-- Read-only for now; editing Identity and Memory from the phone comes later.
+- **Routines** are the one section the phone changes. Each routine row (title, then its trigger in plain words and the next run, or Off when paused) opens a **routine sheet** from the bottom, and a **New routine** row ends the section.
+  - The routine sheet is titled with the routine, its trigger and next run as the subtitle. **Run now** (primary) and **Pause** / **Resume** (secondary) sit side by side, then the instruction, **Recent runs** (the last five: run now or scheduled, and its state, with the time), and a group with **Edit** and **Delete** (red).
+  - Delete asks in place ("Delete “{routine}”?", Cancel and a danger Delete); nothing is removed before that.
+  - **New routine** and **Edit** turn the sheet into a form: Title, Instruction, then **When** as chips (Daily, Weekly, Every few hours), the time or the hours between runs, weekday chips for Weekly, and the time zone as a footnote. **Next runs** previews the Host's next occurrences (up to five) as the form changes. Save stays disabled while the form is incomplete, and a footnote names what is missing.
+  - A routine whose trigger the phone cannot express (minutes, once, cron) shows that note, and Edit opens the full client.
+  - A refusal from the Host shows in a `danger` callout in the sheet.
+- Identity and Memory stay read-only for now; editing them from the phone comes later.
 
 ## Layers and states
 

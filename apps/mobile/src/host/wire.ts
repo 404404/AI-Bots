@@ -164,12 +164,25 @@ export type ScheduleTrigger =
   | { kind: 'once'; date: string; time: string; timeZone: string }
   | { kind: 'cron'; expression: string; timeZone: string };
 
+export type ScheduleFiringState = 'pending' | 'observed' | 'handled' | 'coalesced' | 'skipped';
+
+export interface BotScheduleFiring {
+  id: string;
+  scheduleId: string;
+  trigger: 'planned' | 'manual';
+  occurrenceAt: string;
+  firedAt: string;
+  state: ScheduleFiringState;
+}
+
 export interface BotScheduleSummary {
   id: string;
   title: string;
+  prompt?: string;
   trigger: ScheduleTrigger;
   enabled: boolean;
   nextRunAt?: string;
+  lastFiring?: BotScheduleFiring;
 }
 
 export interface WorkspaceGrantSummary {

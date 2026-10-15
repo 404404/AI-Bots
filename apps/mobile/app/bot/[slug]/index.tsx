@@ -3,9 +3,12 @@ import { useMemo } from 'react';
 import { View } from 'react-native';
 
 import { botChannels, loadBotProfile } from '../../../src/host/bot-profile';
+import { fullClientParams } from '../../../src/host/full-client';
+import { botRoutines } from '../../../src/host/routines';
 import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
 import { BotProfileSheet } from '../../../src/ui/chat/bot-profile';
 import { BotSettingsPanel } from '../../../src/ui/chat/bot-settings-panel';
+import { RoutineSheet } from '../../../src/ui/chat/routine-sheet';
 import { useDesignTheme } from '../../../src/ui/design/theme';
 import { space } from '../../../src/ui/design/tokens';
 import { Text } from '../../../src/ui/primitives/text';
@@ -23,6 +26,10 @@ export default function BotProfileScreen() {
     () =>
       client === undefined || bot === undefined ? undefined : () => loadBotProfile(client, bot),
     [client, bot?.slug, bot?.dmChannelId],
+  );
+  const routines = useMemo(
+    () => (client === undefined || slug === undefined ? undefined : botRoutines(client, slug)),
+    [client, slug],
   );
 
   if (bot === undefined || load === undefined)
@@ -44,6 +51,30 @@ export default function BotProfileScreen() {
       channels={channels}
       load={load}
       settings={client === undefined ? undefined : <BotSettingsPanel client={client} bot={bot} />}
+      routines={
+        routines === undefined
+          ? undefined
+          : {
+              load: routines.list,
+              sheet: ({ target, onChanged, onClose }) => (
+                <RoutineSheet
+                  key={target.kind === 'open' ? target.routine.id : 'new'}
+                  botName={bot.displayName}
+                  target={target}
+                  routines={routines}
+                  onChanged={onChanged}
+                  onClose={onClose}
+                  onOpenFullClient={() => {
+                    onClose();
+                    router.push({
+                      pathname: '/full-client',
+                      params: fullClientParams({ kind: 'dm', slug: bot.slug }),
+                    });
+                  }}
+                />
+              ),
+            }
+      }
       actions={{
         onMessage: () => (router.canGoBack() ? router.back() : router.replace(`/dm/${bot.slug}`)),
         ...(bot.browserAccess
