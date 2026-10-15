@@ -1,5 +1,32 @@
 # Native activity evidence — #1919 / #1928
 
+## Current interaction and alignment follow-up
+
+The latest images are `aligned-dm-after-{light,dark}.png`,
+`aligned-group-{before,after}-{light,dark}.png` and `activity-menu-{light,dark}.png`.
+DM before images are the earlier `spacing-after-{light,dark}.png`: same
+conversation, records, latest-message anchor and dimensions, before this change.
+
+- Source: `ddab3cfe2f098fef61470bdb160e3028341f21d1`. Integrated native batch:
+  `479baef203f10c4e2a7e3892b942051d51edd905`.
+- Baseline group: `560205fc2fb00dc1e38a4bfa71c245ac992bbbb3`.
+- The collapsed rows are now left-aligned, single-line and ellipsized. Activity
+  rows use the same one-sided 8pt boundary gap as new bubble groups, not vertical
+  padding inside a centred minimum-height box. Group avatars use the speaker
+  gutter; DM recipient avatars appear after the icon, without the current Bot's
+  avatar. Reduced content height changes which earlier messages are visible.
+- Native accessibility details actions opened the full menu; explicit Open
+  memory reached the memory files, Open new Bot reached Cora QA, Open conversation
+  reached the read-only Ada/Bob DM, and Copy matched the complete formatted text.
+  Native accessibility activation does not navigate directly: it opens details.
+- Ordinary touch tap/no-op and long-press handlers are component-tested; a
+  coordinate-drive attempt failed with `noWindowsAvailable`, so actual touch
+  gesture timing is not claimed as native-verified. Long overflow scroll,
+  Android, physical phone and Human QA still need verification.
+- One existing Simulator/dev client, no native build or shared Host restart.
+  Same dedicated QA records, English locale, 1206 × 2622. Every new image was
+  visually inspected. Earlier images below retain their historical provenance.
+
 ## Spacing follow-up
 
 `spacing-{before,after}-{light,dark}.png` compares the Human-requested spacing
