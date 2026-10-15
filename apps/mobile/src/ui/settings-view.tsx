@@ -35,11 +35,14 @@ export function SettingsView({
   hostName,
   connection,
   loadUsage,
+  build = 'dev',
   actions,
 }: {
   hostName: string | undefined;
   connection: ConnectionState;
   loadUsage?: (() => Promise<OverviewUsage>) | undefined;
+  /** Build id shown under About, e.g. "d9bbfbdfe · 2026-10-15 18:30". */
+  build?: string;
   actions: SettingsActions;
 }) {
   const theme = useDesignTheme();
@@ -108,6 +111,9 @@ export function SettingsView({
           detail={t.appIconHint}
           onPress={actions.onAppIcon}
         />
+      </SettingsSection>
+      <SettingsSection title={t.about} on={SHEET_GROUP}>
+        <SettingsRow on={SHEET_GROUP} title={t.build} detail={build} />
       </SettingsSection>
     </ScrollView>
   );

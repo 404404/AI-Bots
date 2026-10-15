@@ -80,6 +80,28 @@ describe('Settings sheet', () => {
     expect(button(view, t.unpair)).not.toBeNull();
   });
 
+  it('shows the build id under About, or dev when none is given', async () => {
+    const stamped = await render(
+      <SettingsView
+        hostName="studio"
+        connection={{ status: 'connected', route: 'https://studio.tail.ts.net' }}
+        build="d9bbfbdfe · 2026-10-15 18:30"
+        actions={actions()}
+      />,
+    );
+    expect(stamped.textContent).toContain(t.about);
+    expect(stamped.textContent).toContain(t.build);
+    expect(stamped.textContent).toContain('d9bbfbdfe · 2026-10-15 18:30');
+    const unstamped = await render(
+      <SettingsView
+        hostName="studio"
+        connection={{ status: 'connected', route: 'https://studio.tail.ts.net' }}
+        actions={actions()}
+      />,
+    );
+    expect(unstamped.textContent).toContain('dev');
+  });
+
   it('reports an unpair failure and clears it on the next try', async () => {
     const onUnpair = vi
       .fn<() => Promise<void>>()

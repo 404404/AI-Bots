@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 
+import { buildLabel, readBuildStamp } from '../src/host/build-id';
 import { fullClientParams } from '../src/host/full-client';
 import { hostSession, useHostSession, useHostSnapshot } from '../src/host/host-session';
 import { loadUsage } from '../src/host/usage';
@@ -19,6 +20,7 @@ export default function SettingsScreen() {
     <SettingsView
       key={saved?.hostId}
       hostName={saved?.hostName}
+      build={buildLabel(readBuildStamp())}
       connection={connection}
       loadUsage={usage}
       actions={{

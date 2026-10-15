@@ -254,6 +254,8 @@ const en = {
   settings: 'Settings',
   connections: 'Connections',
   interface: 'Interface',
+  about: 'About',
+  build: 'Build',
   back: 'Back',
   workingPreview: 'Working…',
   effect: {
@@ -860,6 +862,8 @@ const zh: typeof en = {
   settings: '设置',
   connections: '连接',
   interface: '界面',
+  about: '关于',
+  build: '构建',
   back: '返回',
   workingPreview: '工作中…',
   effect: {
