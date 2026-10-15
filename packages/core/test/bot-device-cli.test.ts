@@ -109,13 +109,15 @@ describe('Agent Browser and Computer commands', () => {
     const dir = mkdtempSync(join(tmpdir(), 'bh-frame-'));
     dirs.push(dir);
     const live = await host((call) =>
-      call.path.startsWith('/botharness-browser/viewer/local/frame')
+      call.path.startsWith('/api/browser/frame')
         ? {
-            bytes: Buffer.from('jpeg-bytes'),
-            headers: {
-              'content-type': 'image/jpeg',
-              'x-viewport-width': '1440',
-              'x-viewport-height': '900',
+            json: {
+              ok: true,
+              seq: 3,
+              mode: 'stream',
+              mimeType: 'image/jpeg',
+              data: Buffer.from('jpeg-bytes').toString('base64'),
+              viewport: { width: 1440, height: 900 },
             },
           }
         : { json: { ok: true, tabId: 'tab-1', viewerUrl: '/viewer' } },
@@ -138,11 +140,83 @@ describe('Agent Browser and Computer commands', () => {
     await invoke(['browser-stop', 'ada'], live.url);
     expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
       ['POST', '/api/browser/open', { slug: 'ada' }],
-      ['GET', '/botharness-browser/viewer/local/frame?slug=ada', undefined],
+      ['GET', '/api/browser/frame?slug=ada', undefined],
       ['POST', '/api/browser/takeover', { slug: 'ada', active: true }],
       ['POST', '/api/browser/takeover', { slug: 'ada', active: false }],
       ['POST', '/api/browser/stop', { slug: 'ada' }],
     ]);
+  });
+
+  it('sends Human input to a paused Bot browser', async () => {
+    const live = await host(() => ({ json: { ok: true, url: 'https://a.test/', title: 'A' } }));
+    expect(
+      (
+        await invokeWithStdin(
+          ['browser-input', 'ada', '--args-stdin'],
+          live.url,
+          '{"kind":"click","x":12,"y":34}',
+        )
+      ).json,
+    ).toEqual({ ok: true, url: 'https://a.test/', title: 'A' });
+    expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
+      ['POST', '/api/browser/input', { kind: 'click', x: 12, y: 34, slug: 'ada' }],
+    ]);
+  });
+
+  it('saves the Computer desktop picture and sends Human input to it', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'bh-desktop-'));
+    dirs.push(dir);
+    const live = await host((call) =>
+      call.path === '/api/computer/frame'
+        ? {
+            json: {
+              ok: true,
+              target: 'local',
+              seq: 4,
+              mimeType: 'image/png',
+              data: Buffer.from('png-bytes').toString('base64'),
+              width: 1440,
+              height: 900,
+              capturedAt: 1,
+            },
+          }
+        : { json: { ok: true } },
+    );
+    const file = join(dir, 'desktop.png');
+    expect((await invoke(['computer-frame', '--out', file], live.url)).json).toEqual({
+      path: file,
+      bytes: 9,
+      mimeType: 'image/png',
+      width: 1440,
+      height: 900,
+      seq: 4,
+      target: 'local',
+    });
+    expect(readFileSync(file, 'utf8')).toBe('png-bytes');
+    expect((await invoke(['computer-takeover', '--enabled'], live.url)).json).toEqual({
+      ok: true,
+    });
+    expect(
+      (
+        await invokeWithStdin(
+          ['computer-input', '--args-stdin'],
+          live.url,
+          '{"kind":"key","key":"Return"}',
+        )
+      ).json,
+    ).toEqual({ ok: true });
+    expect(live.calls.map((call) => [call.method, call.path, call.body])).toEqual([
+      ['GET', '/api/computer/frame', undefined],
+      ['POST', '/api/computer/takeover', { active: true }],
+      ['POST', '/api/computer/input', { kind: 'key', key: 'Return' }],
+    ]);
+  });
+
+  it('reports no-frame when the Computer has not produced a frame yet', async () => {
+    const live = await host(() => ({ status: 204, bytes: Buffer.alloc(0) }));
+    const result = await invoke(['computer-frame', '--out', '/tmp/never.png'], live.url);
+    expect(result.code).not.toBe(0);
+    expect(result.json.error).toMatchObject({ code: 'no-frame' });
   });
 
   it('reports a Host refusal from a browser or Computer route as a coded error', async () => {
@@ -322,7 +396,12 @@ describe('Agent Browser and Computer commands', () => {
     for (const argv of [
       ['browser-frame', 'ada'],
       ['browser-frame', 'ada', '--out', 'relative.jpg'],
+      ['computer-frame', '--out', 'relative.png'],
+      ['computer-frame', 'ada', '--out', '/tmp/x.png'],
+      ['computer-input'],
+      ['computer-takeover'],
       ['browser-takeover', 'ada'],
+      ['browser-input', 'ada'],
       ['computer-start', '--target', 'cloud'],
     ])
       expect((await invoke(argv, live.url)).json.error.code).toBe('usage');

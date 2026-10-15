@@ -34,6 +34,10 @@ export interface RosterBot {
   appearance?: unknown;
   avatarSeed?: 2;
   primaryColor?: BotPrimaryColor;
+  roles: string[];
+  description?: string;
+  computerAccess: boolean;
+  browserAccess: boolean;
   state: AggregatedState;
   activity?: WireToolActivity;
   sessions?: readonly WireSessionActivity[];
@@ -47,13 +51,34 @@ export interface RosterChannel {
   id: string;
   name: string;
   memberCount: number;
+  members: string[];
   preview?: string;
   previewAt?: string;
+}
+
+export interface RosterSection {
+  id: string;
+  name: string;
+  channelIds: string[];
+}
+
+export interface TopOrderEntry {
+  kind: 'section' | 'channel';
+  id: string;
+}
+
+export interface RosterArrangement {
+  pins: string[];
+  hidden: string[];
+  sections: RosterSection[];
+  sectionOrder: string[];
+  topOrder?: TopOrderEntry[];
 }
 
 export interface RosterView {
   bots: RosterBot[];
   channels: RosterChannel[];
+  arrangement?: RosterArrangement;
 }
 
 export interface HostSnapshot {
@@ -81,9 +106,21 @@ export interface HostClient {
   refresh(): Promise<void>;
   call<T>(method: string, args?: Record<string, unknown>): Promise<T>;
   upload(name: string, data: Blob): Promise<AttachmentRef>;
+  api(path: string, init?: HostApiInit): Promise<HostApiAnswer>;
   resource(path: string): RemoteSource;
   onLive(listener: (source: 'roster' | 'activity') => void): () => void;
   follow(endpoint: string, args: Record<string, unknown>, handlers: StreamHandlers): () => void;
+}
+
+export interface HostApiInit {
+  body?: Record<string, unknown>;
+  timeoutMs?: number;
+  signal?: AbortSignal;
+}
+
+export interface HostApiAnswer {
+  status: number;
+  body: unknown;
 }
 
 export interface HostClientOptions {
@@ -106,6 +143,10 @@ class CredentialRefused extends Error {
   constructor(readonly code: DeviceRefusal) {
     super(REFUSALS[code]);
   }
+}
+
+export function deviceRefusal(error: unknown): DeviceRefusal | undefined {
+  return error instanceof CredentialRefused ? error.code : undefined;
 }
 
 function refusalOf(text: string): DeviceRefusal | undefined {
@@ -161,6 +202,39 @@ function previewOf(channel: ChannelListItem | undefined): { preview?: string; pr
   };
 }
 
+function strings(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+export function arrangementOf(value: unknown): RosterArrangement | undefined {
+  const snapshot = record(value);
+  if (!Array.isArray(snapshot['sections'])) return undefined;
+  const sections = snapshot['sections'].flatMap((entry): RosterSection[] => {
+    const section = record(entry);
+    return typeof section['id'] === 'string' && typeof section['name'] === 'string'
+      ? [{ id: section['id'], name: section['name'], channelIds: strings(section['channelIds']) }]
+      : [];
+  });
+  const topOrder = Array.isArray(snapshot['topOrder'])
+    ? snapshot['topOrder'].flatMap((entry): TopOrderEntry[] => {
+        const item = record(entry);
+        return (item['kind'] === 'section' || item['kind'] === 'channel') &&
+          typeof item['id'] === 'string'
+          ? [{ kind: item['kind'], id: item['id'] }]
+          : [];
+      })
+    : undefined;
+  return {
+    pins: strings(snapshot['pins']),
+    hidden: strings(snapshot['hidden']),
+    sections,
+    sectionOrder: strings(snapshot['sectionOrder']),
+    ...(topOrder === undefined ? {} : { topOrder }),
+  };
+}
+
 export function createHostClient(options: HostClientOptions): HostClient {
   const routes = options.routes;
   const authorization = { authorization: `Device ${options.credential}` };
@@ -173,6 +247,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
   let bots: PersonaBotSummary[] | undefined;
   let channels = new Map<string, ChannelListItem>();
   let states = new Map<string, WireBotActivity>();
+  let arrangement: RosterArrangement | undefined;
   let running = false;
   let everConnected = false;
   let attempt = 0;
@@ -205,6 +280,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
           id: channel.id,
           name: channel.name,
           memberCount: channel.members.length,
+          members: channel.members,
           ...previewOf(channel),
         });
     }
@@ -224,6 +300,10 @@ export function createHostClient(options: HostClientOptions): HostClient {
             ...(bot.appearance === undefined ? {} : { appearance: bot.appearance }),
             ...(bot.avatarSeed === undefined ? {} : { avatarSeed: bot.avatarSeed }),
             ...(bot.primaryColor === undefined ? {} : { primaryColor: bot.primaryColor }),
+            roles: bot.roles ?? [],
+            ...(bot.description === undefined ? {} : { description: bot.description }),
+            computerAccess: bot.computerAccess === true,
+            browserAccess: bot.browserAccess === true,
             state: live?.state ?? bot.aggregateState,
             ...(live?.activity === undefined ? {} : { activity: live.activity }),
             ...(live?.sessions === undefined ? {} : { sessions: live.sessions }),
@@ -233,6 +313,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
           };
         }),
       channels: groups,
+      ...(arrangement === undefined ? {} : { arrangement }),
     };
   };
 
@@ -338,13 +419,59 @@ export function createHostClient(options: HostClientOptions): HostClient {
       return attachment as AttachmentRef;
     }, uploadTimeoutMs);
 
+  const api = (path: string, init: HostApiInit = {}): Promise<HostApiAnswer> =>
+    withDeadline(async (signal) => {
+      const outer = init.signal;
+      if (outer?.aborted === true) throw new Unreachable('The request was cancelled.');
+      const controller = new AbortController();
+      const cancel = (): void => controller.abort();
+      signal.addEventListener('abort', cancel);
+      outer?.addEventListener('abort', cancel);
+      try {
+        const response = await options.carrier.request(`${route}${DEVICE_PREFIX}${path}`, {
+          method: init.body === undefined ? 'GET' : 'POST',
+          ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+          headers: authorization,
+          signal: controller.signal,
+        });
+        const text = await response.text();
+        if (response.status === 401) {
+          const code = refusalOf(text);
+          if (code !== undefined) throw new CredentialRefused(code);
+        }
+        if (text === '') return { status: response.status, body: null };
+        try {
+          return { status: response.status, body: JSON.parse(text) as unknown };
+        } catch {
+          return { status: response.status, body: text };
+        }
+      } finally {
+        signal.removeEventListener('abort', cancel);
+        outer?.removeEventListener('abort', cancel);
+      }
+    }, init.timeoutMs);
+
+  const refusedBy = (error: unknown): void => {
+    if (error instanceof CredentialRefused && running) {
+      running = false;
+      generation += 1;
+      socket?.close();
+      publish({ status: 'refused', route, code: error.code, reason: error.message });
+    }
+  };
+
   const reloadOnce = async (): Promise<void> => {
-    const [list, channelList] = await Promise.all([
+    const [list, channelList, rosterArrangement] = await Promise.all([
       call<{ bots: PersonaBotSummary[] }>('list'),
       call<{ channels: ChannelListItem[] }>('channels'),
+      call<unknown>('rosterGet').then(arrangementOf, (error: unknown) => {
+        if (error instanceof MethodRefused) return undefined;
+        throw error;
+      }),
     ]);
     bots = list.bots;
     channels = new Map(channelList.channels.map((channel) => [channel.id, channel]));
+    arrangement = rosterArrangement;
     publish();
   };
 
@@ -624,12 +751,15 @@ export function createHostClient(options: HostClientOptions): HostClient {
       try {
         return await call<T>(method, args);
       } catch (error) {
-        if (error instanceof CredentialRefused && running) {
-          running = false;
-          generation += 1;
-          socket?.close();
-          publish({ status: 'refused', route, code: error.code, reason: error.message });
-        }
+        refusedBy(error);
+        throw error;
+      }
+    },
+    async api(path, init) {
+      try {
+        return await api(path, init);
+      } catch (error) {
+        refusedBy(error);
         throw error;
       }
     },

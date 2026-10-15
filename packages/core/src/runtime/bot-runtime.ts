@@ -78,6 +78,7 @@ import {
   type BotMessageCausation,
   type ChannelMention,
   type ChannelMessage,
+  type ChannelReaction,
   type ChannelRecord,
 } from '../channels/channel.js';
 import { ChannelReplyTargetError, MAX_MESSAGE_PAGE } from '../channels/store.js';
@@ -97,6 +98,7 @@ import {
 } from '../database/owner.js';
 import { createSessionOwnership, type SessionOwnership } from '../sessions/ownership.js';
 import { sessionMentionText } from './session-mentions.js';
+import { botMentionLabel, resolveBotMentionText } from '../channels/bot-mention-text.js';
 import {
   createBotSourcePolicyStore,
   type BotSourcePolicy,
@@ -181,6 +183,16 @@ export type AssignmentArchiveOutcome =
       assignment: AssignmentSummary;
       message: string;
     };
+
+export type OrchestratorReplacement<T> =
+  | { outcome: 'replaced'; value: T }
+  | { outcome: 'refused'; code: 'bot-busy'; message: string };
+
+const BOT_BUSY = {
+  outcome: 'refused',
+  code: 'bot-busy',
+  message: 'This Bot is working right now; wait for it to finish, then try again.',
+} as const;
 
 export interface NativeSessionArchive {
   archiveSession(sessionId: string): Promise<void>;
@@ -482,6 +494,7 @@ export interface OrchestratorChannelAccess {
     intervalSeconds: number;
   }): GroupWakePolicyView;
   leaveGroup(input: { channelId: string }): { channelId: string; left: boolean };
+  react?(input: BotReactionInput & { channelId?: string }): BotReactionResult;
   sendToBot(input: {
     botSlug: string;
     body: string;
@@ -499,6 +512,58 @@ export interface OrchestratorChannelAccess {
   }): Promise<ChannelMessage>;
 }
 
+export interface BotReactionInput {
+  messageId: string;
+  emoji: string;
+  active: boolean;
+}
+
+export interface BotReactionResult {
+  channelId: string;
+  messageId: string;
+  reactions: ChannelReaction[];
+}
+
+export interface OrchestratorServiceTurn {
+  sessionId: string;
+  channelId: string | undefined;
+  sourceEventId: string;
+  markSideEffect: () => void;
+  readAdmissions: Set<string>;
+  importedFiles: Map<string, ChannelAttachmentRef>;
+  turnSources: ReadonlySet<string>;
+  observeMemory: boolean;
+  observeReads: boolean;
+}
+
+export interface DirectBotToolSpec {
+  name: string;
+  description: string;
+  inputSchema: unknown;
+}
+
+export interface DirectBotToolCall {
+  callId: string;
+  tool: string;
+  args: Record<string, unknown>;
+  at: string;
+  durationMs: number;
+  outcome: 'ok' | 'error';
+  result: string;
+}
+
+const DIRECT_TOOL_CALL_LIMIT = 50;
+
+export class DirectBotToolError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'DirectBotToolError';
+  }
+}
+
 export interface BotAgentAdapter {
   runOrchestrator(run: OrchestratorAgentRun): Promise<void>;
 
@@ -509,6 +574,13 @@ export interface BotAgentAdapter {
   stopAssignment?(sessionId: string): Promise<void>;
   stopBot?(botSlug: string, sessionIds: string[]): Promise<void>;
   releaseSession?(sessionId: string): Promise<void>;
+  directTools?(): DirectBotToolSpec[];
+  runDirectTool?(
+    run: OrchestratorAgentRun,
+    tool: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<unknown>;
   close(): Promise<void>;
 }
 
@@ -584,6 +656,15 @@ export interface BotRuntime {
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
   currentOrchestratorSessionId?(botSlug: string): string | undefined;
+  replaceOrchestrator?<T>(botSlug: string, body: () => T): Promise<OrchestratorReplacement<T>>;
+  directBotTools?(): DirectBotToolSpec[];
+  directBotToolCalls?(botSlug: string): readonly DirectBotToolCall[];
+  runDirectBotTool?(
+    botSlug: string,
+    tool: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<{ tool: string; sessionId: 'direct'; result: unknown }>;
   triageOpenCount?(botSlug: string): number | undefined;
   listChannelAssignments?(channelId: string): ChannelAssignmentSummary[];
   getAssignment(botSlug: string, sessionId: string): AssignmentDetail | undefined;
@@ -1176,6 +1257,7 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #waitLifetime = new AbortController();
   readonly #waitOptions: Pick<BotRuntimeOptions, 'database' | 'beginAssignmentWait'>;
   #closed = false;
+  readonly #directToolCalls = new Map<string, DirectBotToolCall[]>();
 
   constructor(options: BotRuntimeOptions) {
     this.#waitOptions = options;
@@ -1436,6 +1518,26 @@ class BotRuntimeImplementation implements BotRuntime {
         }),
       );
     }
+  }
+
+  #react(botSlug: string, channel: ChannelRecord, input: BotReactionInput): BotReactionResult {
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined || bot.paused === true)
+      throw new Error('channel_send: Bot is unavailable');
+    if (this.#channels.setBotReaction === undefined)
+      throw new Error('channel_send: reactions are unavailable');
+    const reactions = this.#channels.setBotReaction(
+      channel.id,
+      botSlug,
+      input.messageId,
+      input.emoji,
+      input.active,
+    );
+    if (reactions === undefined)
+      throw new Error(
+        `channel_send: message ${input.messageId} cannot take this reaction in Channel ${channel.id}`,
+      );
+    return { channelId: channel.id, messageId: input.messageId, reactions };
   }
 
   async retryDmMessage(channelId: string, messageId: string): Promise<void> {
@@ -3378,6 +3480,78 @@ class BotRuntimeImplementation implements BotRuntime {
     return run;
   }
 
+  directBotTools(): DirectBotToolSpec[] {
+    return this.#agents.directTools?.() ?? [];
+  }
+
+  directBotToolCalls(botSlug: string): readonly DirectBotToolCall[] {
+    return this.#directToolCalls.get(botSlug) ?? [];
+  }
+
+  async runDirectBotTool(
+    botSlug: string,
+    tool: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<{ tool: string; sessionId: 'direct'; result: unknown }> {
+    if (this.#closed) throw new DirectBotToolError('runtime-closed', 'BotRuntime is closed');
+    const bot = this.#registry.get(botSlug);
+    if (bot === undefined) throw new DirectBotToolError('unknown-bot', `Unknown bot: ${botSlug}`);
+    if (bot.paused === true)
+      throw new DirectBotToolError('bot-paused', `PersonaBot ${botSlug} is paused`);
+    const runDirect = this.#agents.runDirectTool?.bind(this.#agents);
+    if (runDirect === undefined)
+      throw new DirectBotToolError('unavailable', 'Direct Bot tools are unavailable on this Host');
+    if (!this.directBotTools().some((spec) => spec.name === tool))
+      throw new DirectBotToolError(
+        'tool-not-direct',
+        `${tool} is not a Bot tool the direct runner can call; list them with bot-tools`,
+      );
+    this.#requireExecution?.(bot.slug);
+    const sessionId = `direct-${randomUUID()}`;
+    const run: OrchestratorAgentRun = {
+      sessionId,
+      resume: false,
+      bot,
+      message: '',
+      inbox: '',
+      inboundChannelId: undefined,
+      ...this.#orchestratorServices(bot, {
+        sessionId,
+        channelId: undefined,
+        sourceEventId: `direct-${randomUUID()}`,
+        markSideEffect: () => undefined,
+        readAdmissions: new Set(),
+        importedFiles: new Map(),
+        turnSources: new Set(),
+        observeMemory: false,
+        observeReads: false,
+      }),
+    };
+    const started = this.#now();
+    const record = (outcome: 'ok' | 'error', result: string) => {
+      const calls = this.#directToolCalls.get(bot.slug) ?? [];
+      calls.push({
+        callId: sessionId,
+        tool,
+        args,
+        at: started.toISOString(),
+        durationMs: this.#now().getTime() - started.getTime(),
+        outcome,
+        result,
+      });
+      this.#directToolCalls.set(bot.slug, calls.slice(-DIRECT_TOOL_CALL_LIMIT));
+    };
+    try {
+      const result = await runDirect(run, tool, args, signal);
+      record('ok', typeof result === 'string' ? result : JSON.stringify(result));
+      return { tool, sessionId: 'direct', result };
+    } catch (error) {
+      record('error', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
   currentOrchestratorSessionId(botSlug: string): string | undefined {
     return this.#ownership
       .rootsFor(botSlug, 'orchestrator')
@@ -3457,6 +3631,51 @@ class BotRuntimeImplementation implements BotRuntime {
     return archived
       ? this.#archiveAssignment(bot, sessionId, () => {})
       : this.#unarchiveAssignment(bot, sessionId, () => {});
+  }
+
+  async replaceOrchestrator<T>(
+    botSlug: string,
+    body: () => T,
+  ): Promise<OrchestratorReplacement<T>> {
+    if (this.#tails.has(botSlug)) return BOT_BUSY;
+    let result: OrchestratorReplacement<T> | undefined;
+    await this.#enqueue(botSlug, async () => {
+      result = await this.#replaceOrchestrator(botSlug, body);
+    });
+    if (result === undefined) throw new Error(`Unknown PersonaBot: ${botSlug}`);
+    return result;
+  }
+
+  async #replaceOrchestrator<T>(
+    botSlug: string,
+    body: () => T,
+  ): Promise<OrchestratorReplacement<T>> {
+    const current = this.currentOrchestratorSessionId(botSlug);
+    if (current === undefined) return { outcome: 'replaced', value: body() };
+    const archive = this.#sessionArchive?.();
+    if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+    try {
+      await archive.archiveSession(current);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'WorkspaceActiveSessionError') return BOT_BUSY;
+      throw error;
+    }
+    await this.#agents.releaseSession?.(current).catch(() =>
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'orchestrator-release-failed',
+          botSlug,
+          sessionId: current,
+        }),
+      ),
+    );
+    try {
+      return { outcome: 'replaced', value: body() };
+    } catch (error) {
+      await archive.unarchiveSession(current);
+      throw error;
+    }
   }
 
   triageOpenCount(botSlug: string): number | undefined {
@@ -3897,330 +4116,17 @@ class BotRuntimeImplementation implements BotRuntime {
         })(),
         inbox,
         inboundChannelId: channelId,
-        ...(this.#externalMessaging === undefined
-          ? {}
-          : {
-              externalMessaging: {
-                connected: () => {
-                  const { identities, grants } = this.#externalMessaging!.deletionDependencies(
-                    bot.slug,
-                  );
-                  return identities.length > 0 || grants.length > 0;
-                },
-                senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
-                directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
-                reachable: async (bindingId, cursor) => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  const identities = (snapshot.identities ?? []).filter(
-                    (identity) =>
-                      !identity.revokedAt &&
-                      identity.enabled &&
-                      identity.availability === 'available' &&
-                      (bindingId === undefined || identity.id === bindingId),
-                  );
-                  if (bindingId && !identities.length) throw new Error('identity-unavailable');
-                  if (cursor && !bindingId) throw new Error('bad-request');
-                  return Promise.all(
-                    identities.map(async (identity) => {
-                      const app = {
-                        bindingId: identity.id,
-                        platform: identity.platform,
-                        accountName: identity.name,
-                      };
-                      try {
-                        return {
-                          ...app,
-                          page: await this.#externalMessaging!.reachable(
-                            bot.slug,
-                            identity.id,
-                            cursor,
-                          ),
-                        };
-                      } catch (error) {
-                        return {
-                          ...app,
-                          reason:
-                            error instanceof Error &&
-                            'code' in error &&
-                            typeof error.code === 'string'
-                              ? error.code
-                              : 'provider-unavailable',
-                        };
-                      }
-                    }),
-                  );
-                },
-                postConversation: (bindingId, conversationId, requestId, text) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.postConversation(
-                    bot.slug,
-                    bindingId,
-                    conversationId,
-                    requestId,
-                    text,
-                  );
-                },
-                targets: async () => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  return snapshot.grants
-                    .filter((g) => g.availability === 'available' && !g.revokedAt && g.canPost)
-                    .map((g) => ({
-                      grantId: g.id,
-                      platform: g.platform,
-                      accountName: g.accountName,
-                      targetName: g.targetName,
-                    }));
-                },
-                post: (grantId, requestId, text) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.post(bot.slug, grantId, requestId, text);
-                },
-                outbox: (intentId) => {
-                  if (intentId) return this.#externalMessaging!.inspectIntent(bot.slug, intentId);
-                  return this.#externalMessaging!
-                    .history(bot.slug)
-                    .filter((intent) => intent.report)
-                    .slice(0, 10)
-                    .map(({ text, ...intent }) => ({ ...intent, preview: text.slice(0, 160) }));
-                },
-                policies: async () => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  return snapshot.grants
-                    .filter((grant) => grant.receiveScope && grant.groupPolicy)
-                    .map((grant) => ({
-                      grantId: grant.id,
-                      group: grant.targetName,
-                      policy: grant.groupPolicy!,
-                      ...(grant.receiveTargetChannelId &&
-                      this.#channels.get(grant.receiveTargetChannelId)
-                        ? {
-                            memberWake: externalMemberWake(
-                              this.#channels.get(grant.receiveTargetChannelId)!,
-                              bot.slug,
-                              this.#sourcePolicy
-                                .list(bot.slug)
-                                .find((rule) => rule.sourceClass === 'group-ordinary'),
-                              this.#externalMessaging!.defaults(),
-                            ),
-                          }
-                        : {}),
-                      ordinaryDelivery: grant.ordinaryDelivery ?? 'unverified',
-                    }));
-                },
-                setPolicy: (grantId, input) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.inbound.setPolicy(bot.slug, grantId, input, {
-                    kind: 'bot',
-                    botSlug: bot.slug,
-                  });
-                },
-                threads: async () => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  return snapshot.grants.flatMap((grant) =>
-                    (grant.threadPolicies ?? []).map((thread) => ({
-                      ...thread,
-                      grantId: grant.id,
-                      group: grant.targetName,
-                    })),
-                  );
-                },
-                setThread: (sourceEventId, input) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.inbound.setThread(
-                    bot.slug,
-                    sourceEventId,
-                    input,
-                    { kind: 'bot', botSlug: bot.slug },
-                  );
-                },
-                read: (id: string) => {
-                  const source = this.#externalMessaging!.inbound.readShared(bot.slug, id);
-                  this.#observeExternalRead(bot.slug, [id], readAdmissions);
-                  return source;
-                },
-                share: (id, destinationChannelId) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.inbound.share(bot.slug, id, destinationChannelId);
-                },
-                context: async (id: string, query: ExternalContextQuery, signal?: AbortSignal) => {
-                  const result = await this.#externalMessaging!.inbound.context(
-                    bot.slug,
-                    id,
-                    orchestrator.sessionId,
-                    query,
-                    signal,
-                  );
-                  this.#observeExternalRead(
-                    bot.slug,
-                    result.messages.map((item) => item.sourceEventId),
-                    readAdmissions,
-                  );
-                  return result;
-                },
-                saveFile: async (input) => {
-                  if (this.#attachments === undefined || this.#grants === undefined)
-                    throw new Error('Bridge file operations are unavailable');
-                  const destinationGrant = this.#grants.requireActive(bot.slug, input.grantId);
-                  if (destinationGrant.orchestratorWrite !== true)
-                    throw new Error('Destination requires Orchestrator write authorization');
-                  const ref = await (
-                    input.representation === 'playback'
-                      ? this.#externalMessaging!.prepareAudio
-                      : this.#externalMessaging!.acquireFile
-                  )(bot.slug, input.sourceEventId, input.attachmentId);
-                  return saveAttachmentFile(input, {
-                    botSlug: bot.slug,
-                    grants: this.#grants,
-                    attachments: this.#attachments,
-                    source: () => {
-                      if (
-                        !this.#externalMessaging!.inbound.available(bot.slug, input.sourceEventId)
-                      )
-                        throw new Error('Bridge file source is unavailable');
-                      return this.#attachments!.current(ref);
-                    },
-                  });
-                },
-                replyFile: (id: string, fileId: string) => {
-                  const ref = importedFiles.get(fileId);
-                  if (ref === undefined || this.#attachments === undefined)
-                    throw new Error(
-                      'Select a result file with channel_attachment_import in this run before replying',
-                    );
-                  markSideEffect();
-                  return this.#externalMessaging!.replyFile(
-                    bot.slug,
-                    id,
-                    this.#attachments.current(ref),
-                  );
-                },
-                reply: (id: string, text: string) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.reply(bot.slug, id, text);
-                },
-              },
-            }),
-        inboxHistory: (input) => this.#inboxHistory.list(bot.slug, input),
-        triage: this.#inboxTriage.access({
-          botSlug: bot.slug,
+        ...this.#orchestratorServices(bot, {
           sessionId: orchestrator.sessionId,
-          current: () => [...turnSources, ...readAdmissions],
-          changed: (changedChannelId, messageId) =>
-            this.#channels.admissionChanged?.(changedChannelId, messageId),
-          snoozed: () => this.#armSnooze(bot.slug),
-        }),
-        channels: this.#channelAccess(
-          bot.slug,
           channelId,
           sourceEventId,
-          orchestrator.sessionId,
           markSideEffect,
           readAdmissions,
-          (ref) => importedFiles.set(attachmentIdentity(ref), ref),
-        ),
-        sourcePolicy: {
-          list: () => this.#sourcePolicy.list(bot.slug),
-          setAssignmentReport: (wake) => {
-            markSideEffect();
-            const changed = this.#sourcePolicy.setAssignmentReport(bot.slug, wake, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-            return changed;
-          },
-          resetAssignmentReport: () => {
-            markSideEffect();
-            const changed = this.#sourcePolicy.resetAssignmentReport(bot.slug, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-            return changed;
-          },
-          setGroupOrdinary: (wake, digestCount, digestIntervalSeconds) => {
-            markSideEffect();
-            return this.#sourcePolicy.setGroupOrdinary(
-              bot.slug,
-              wake,
-              digestCount,
-              digestIntervalSeconds,
-              { kind: 'bot', botSlug: bot.slug },
-            );
-          },
-          setImmediateDelivery: (sourceClass, delivery) => {
-            markSideEffect();
-            return this.#sourcePolicy.setImmediateDelivery(bot.slug, sourceClass, delivery, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-          },
-          resetImmediateDelivery: (sourceClass) => {
-            markSideEffect();
-            return this.#sourcePolicy.resetImmediateDelivery(bot.slug, sourceClass, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-          },
-          resetGroupOrdinary: () => {
-            markSideEffect();
-            return this.#sourcePolicy.resetGroupOrdinary(bot.slug, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-          },
-        },
-        ...(this.#schedules === undefined
-          ? {}
-          : {
-              schedules: ((store) => ({
-                list: () => store.list(bot.slug),
-                create: (input: BotScheduleInput) => {
-                  markSideEffect();
-                  return store.create(bot.slug, input, 'personabot');
-                },
-                update: (id: string, change: BotScheduleChange) => {
-                  markSideEffect();
-                  return store.update(bot.slug, id, change, 'personabot');
-                },
-                remove: (id: string) => {
-                  markSideEffect();
-                  return store.remove(bot.slug, id, 'personabot');
-                },
-              }))(this.#schedules),
-            }),
-        ...(observeMemory
-          ? {
-              memory: {
-                continueFromCommit: (sha, branch) => {
-                  if (this.#memory === undefined) throw new Error('Memory is unavailable');
-                  const result = this.#memory.continueFromCommit({
-                    botSlug: bot.slug,
-                    sessionId: orchestrator.sessionId,
-                    sha,
-                    branch,
-                  });
-                  markSideEffect();
-                  return result;
-                },
-                switchBranch: (branch) => {
-                  if (this.#memory === undefined) throw new Error('Memory is unavailable');
-                  const result = this.#memory.switchBranch({
-                    botSlug: bot.slug,
-                    sessionId: orchestrator.sessionId,
-                    branch,
-                  });
-                  markSideEffect();
-                  return result;
-                },
-              },
-            }
-          : {}),
-        assignments: this.#assignmentAccess(
-          bot,
-          sourceEventId,
-          markSideEffect,
-          orchestrator.sessionId,
-          readAdmissions,
-        ),
+          importedFiles,
+          turnSources,
+          observeMemory,
+          observeReads: true,
+        }),
       });
       if (observeMemory) {
         this.#memory?.reconcileTurn({
@@ -4257,6 +4163,340 @@ class BotRuntimeImplementation implements BotRuntime {
       if (observeMemory) this.#activeMemoryEvents.delete(bot.slug);
       this.#originalAttachments.clear(orchestrator.sessionId);
     }
+  }
+
+  #orchestratorServices(
+    bot: PersonaBotRecord,
+    turn: OrchestratorServiceTurn,
+  ): Omit<
+    OrchestratorAgentRun,
+    'sessionId' | 'resume' | 'bot' | 'message' | 'inbox' | 'inboundChannelId'
+  > {
+    return {
+      ...(this.#externalMessaging === undefined
+        ? {}
+        : {
+            externalMessaging: {
+              connected: () => {
+                const { identities, grants } = this.#externalMessaging!.deletionDependencies(
+                  bot.slug,
+                );
+                return identities.length > 0 || grants.length > 0;
+              },
+              senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
+              directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
+              reachable: async (bindingId, cursor) => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                const identities = (snapshot.identities ?? []).filter(
+                  (identity) =>
+                    !identity.revokedAt &&
+                    identity.enabled &&
+                    identity.availability === 'available' &&
+                    (bindingId === undefined || identity.id === bindingId),
+                );
+                if (bindingId && !identities.length) throw new Error('identity-unavailable');
+                if (cursor && !bindingId) throw new Error('bad-request');
+                return Promise.all(
+                  identities.map(async (identity) => {
+                    const app = {
+                      bindingId: identity.id,
+                      platform: identity.platform,
+                      accountName: identity.name,
+                    };
+                    try {
+                      return {
+                        ...app,
+                        page: await this.#externalMessaging!.reachable(
+                          bot.slug,
+                          identity.id,
+                          cursor,
+                        ),
+                      };
+                    } catch (error) {
+                      return {
+                        ...app,
+                        reason:
+                          error instanceof Error &&
+                          'code' in error &&
+                          typeof error.code === 'string'
+                            ? error.code
+                            : 'provider-unavailable',
+                      };
+                    }
+                  }),
+                );
+              },
+              postConversation: (bindingId, conversationId, requestId, text) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.postConversation(
+                  bot.slug,
+                  bindingId,
+                  conversationId,
+                  requestId,
+                  text,
+                );
+              },
+              targets: async () => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                return snapshot.grants
+                  .filter((g) => g.availability === 'available' && !g.revokedAt && g.canPost)
+                  .map((g) => ({
+                    grantId: g.id,
+                    platform: g.platform,
+                    accountName: g.accountName,
+                    targetName: g.targetName,
+                  }));
+              },
+              post: (grantId, requestId, text) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.post(bot.slug, grantId, requestId, text);
+              },
+              outbox: (intentId) => {
+                if (intentId) return this.#externalMessaging!.inspectIntent(bot.slug, intentId);
+                return this.#externalMessaging!
+                  .history(bot.slug)
+                  .filter((intent) => intent.report)
+                  .slice(0, 10)
+                  .map(({ text, ...intent }) => ({ ...intent, preview: text.slice(0, 160) }));
+              },
+              policies: async () => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                return snapshot.grants
+                  .filter((grant) => grant.receiveScope && grant.groupPolicy)
+                  .map((grant) => ({
+                    grantId: grant.id,
+                    group: grant.targetName,
+                    policy: grant.groupPolicy!,
+                    ...(grant.receiveTargetChannelId &&
+                    this.#channels.get(grant.receiveTargetChannelId)
+                      ? {
+                          memberWake: externalMemberWake(
+                            this.#channels.get(grant.receiveTargetChannelId)!,
+                            bot.slug,
+                            this.#sourcePolicy
+                              .list(bot.slug)
+                              .find((rule) => rule.sourceClass === 'group-ordinary'),
+                            this.#externalMessaging!.defaults(),
+                          ),
+                        }
+                      : {}),
+                    ordinaryDelivery: grant.ordinaryDelivery ?? 'unverified',
+                  }));
+              },
+              setPolicy: (grantId, input) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.inbound.setPolicy(bot.slug, grantId, input, {
+                  kind: 'bot',
+                  botSlug: bot.slug,
+                });
+              },
+              threads: async () => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                return snapshot.grants.flatMap((grant) =>
+                  (grant.threadPolicies ?? []).map((thread) => ({
+                    ...thread,
+                    grantId: grant.id,
+                    group: grant.targetName,
+                  })),
+                );
+              },
+              setThread: (sourceEventId, input) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.inbound.setThread(bot.slug, sourceEventId, input, {
+                  kind: 'bot',
+                  botSlug: bot.slug,
+                });
+              },
+              read: (id: string) => {
+                const source = this.#externalMessaging!.inbound.readShared(bot.slug, id);
+                if (turn.observeReads)
+                  this.#observeExternalRead(bot.slug, [id], turn.readAdmissions);
+                return source;
+              },
+              share: (id, destinationChannelId) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.inbound.share(bot.slug, id, destinationChannelId);
+              },
+              context: async (id: string, query: ExternalContextQuery, signal?: AbortSignal) => {
+                const result = await this.#externalMessaging!.inbound.context(
+                  bot.slug,
+                  id,
+                  turn.sessionId,
+                  query,
+                  signal,
+                );
+                if (turn.observeReads)
+                  this.#observeExternalRead(
+                    bot.slug,
+                    result.messages.map((item) => item.sourceEventId),
+                    turn.readAdmissions,
+                  );
+                return result;
+              },
+              saveFile: async (input) => {
+                if (this.#attachments === undefined || this.#grants === undefined)
+                  throw new Error('Bridge file operations are unavailable');
+                const destinationGrant = this.#grants.requireActive(bot.slug, input.grantId);
+                if (destinationGrant.orchestratorWrite !== true)
+                  throw new Error('Destination requires Orchestrator write authorization');
+                const ref = await (
+                  input.representation === 'playback'
+                    ? this.#externalMessaging!.prepareAudio
+                    : this.#externalMessaging!.acquireFile
+                )(bot.slug, input.sourceEventId, input.attachmentId);
+                return saveAttachmentFile(input, {
+                  botSlug: bot.slug,
+                  grants: this.#grants,
+                  attachments: this.#attachments,
+                  source: () => {
+                    if (!this.#externalMessaging!.inbound.available(bot.slug, input.sourceEventId))
+                      throw new Error('Bridge file source is unavailable');
+                    return this.#attachments!.current(ref);
+                  },
+                });
+              },
+              replyFile: (id: string, fileId: string) => {
+                const ref = turn.importedFiles.get(fileId);
+                if (ref === undefined || this.#attachments === undefined)
+                  throw new Error(
+                    'Select a result file with channel_attachment_import in this run before replying',
+                  );
+                turn.markSideEffect();
+                return this.#externalMessaging!.replyFile(
+                  bot.slug,
+                  id,
+                  this.#attachments.current(ref),
+                );
+              },
+              reply: (id: string, text: string) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.reply(bot.slug, id, text);
+              },
+            },
+          }),
+      inboxHistory: (input) => this.#inboxHistory.list(bot.slug, input),
+      triage: this.#inboxTriage.access({
+        botSlug: bot.slug,
+        sessionId: turn.sessionId,
+        current: () => [...turn.turnSources, ...turn.readAdmissions],
+        changed: (changedChannelId, messageId) =>
+          this.#channels.admissionChanged?.(changedChannelId, messageId),
+        snoozed: () => this.#armSnooze(bot.slug),
+      }),
+      channels: this.#channelAccess(
+        bot.slug,
+        turn.channelId,
+        turn.sourceEventId,
+        turn.sessionId,
+        turn.markSideEffect,
+        turn.readAdmissions,
+        (ref) => turn.importedFiles.set(attachmentIdentity(ref), ref),
+        turn.observeReads,
+      ),
+      sourcePolicy: {
+        list: () => this.#sourcePolicy.list(bot.slug),
+        setAssignmentReport: (wake) => {
+          turn.markSideEffect();
+          const changed = this.#sourcePolicy.setAssignmentReport(bot.slug, wake, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+          return changed;
+        },
+        resetAssignmentReport: () => {
+          turn.markSideEffect();
+          const changed = this.#sourcePolicy.resetAssignmentReport(bot.slug, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+          return changed;
+        },
+        setGroupOrdinary: (wake, digestCount, digestIntervalSeconds) => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.setGroupOrdinary(
+            bot.slug,
+            wake,
+            digestCount,
+            digestIntervalSeconds,
+            { kind: 'bot', botSlug: bot.slug },
+          );
+        },
+        setImmediateDelivery: (sourceClass, delivery) => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.setImmediateDelivery(bot.slug, sourceClass, delivery, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+        },
+        resetImmediateDelivery: (sourceClass) => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.resetImmediateDelivery(bot.slug, sourceClass, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+        },
+        resetGroupOrdinary: () => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.resetGroupOrdinary(bot.slug, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+        },
+      },
+      ...(this.#schedules === undefined
+        ? {}
+        : {
+            schedules: ((store) => ({
+              list: () => store.list(bot.slug),
+              create: (input: BotScheduleInput) => {
+                turn.markSideEffect();
+                return store.create(bot.slug, input, 'personabot');
+              },
+              update: (id: string, change: BotScheduleChange) => {
+                turn.markSideEffect();
+                return store.update(bot.slug, id, change, 'personabot');
+              },
+              remove: (id: string) => {
+                turn.markSideEffect();
+                return store.remove(bot.slug, id, 'personabot');
+              },
+            }))(this.#schedules),
+          }),
+      ...(turn.observeMemory
+        ? {
+            memory: {
+              continueFromCommit: (sha, branch) => {
+                if (this.#memory === undefined) throw new Error('Memory is unavailable');
+                const result = this.#memory.continueFromCommit({
+                  botSlug: bot.slug,
+                  sessionId: turn.sessionId,
+                  sha,
+                  branch,
+                });
+                turn.markSideEffect();
+                return result;
+              },
+              switchBranch: (branch) => {
+                if (this.#memory === undefined) throw new Error('Memory is unavailable');
+                const result = this.#memory.switchBranch({
+                  botSlug: bot.slug,
+                  sessionId: turn.sessionId,
+                  branch,
+                });
+                turn.markSideEffect();
+                return result;
+              },
+            },
+          }
+        : {}),
+      assignments: this.#assignmentAccess(
+        bot,
+        turn.sourceEventId,
+        turn.markSideEffect,
+        turn.sessionId,
+        turn.readAdmissions,
+      ),
+    };
   }
 
   async #publishSessionFailure(input: {
@@ -4669,6 +4909,7 @@ class BotRuntimeImplementation implements BotRuntime {
     beforeSend: () => void,
     readAdmissions: Set<string>,
     onImport?: (ref: ChannelAttachmentRef) => void,
+    observeReads = true,
   ): OrchestratorChannelAccess {
     const authorize = beforeSend;
     beforeSend = () => {
@@ -5132,6 +5373,7 @@ class BotRuntimeImplementation implements BotRuntime {
         );
         return this.#channels.getGroupWakePolicy(channel.id, botSlug);
       },
+      react: (input) => this.#react(botSlug, resolve(input.channelId), input),
       leaveGroup: (input) => {
         const channel = this.#channels.get(input.channelId);
         if (channel === undefined) throw new Error('group_leave: channel-unavailable');
@@ -5164,6 +5406,7 @@ class BotRuntimeImplementation implements BotRuntime {
           recipientBotSlug: target.slug,
           channel: dm,
           sourceEventId,
+          readSourceEventIds: readAdmissions,
           sessionId,
           beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
           ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -5253,12 +5496,12 @@ class BotRuntimeImplementation implements BotRuntime {
             ...(input.limit === undefined ? {} : { limit: input.limit }),
           })
           .map((message) => viewOf(channel, message, humans));
-        this.#observeReadMessages(botSlug, messages, readAdmissions);
+        if (observeReads) this.#observeReadMessages(botSlug, messages, readAdmissions);
         return messages;
       },
       query: (input = {}) => {
         const page = queryPage(input);
-        this.#observeReadMessages(botSlug, page.messages, readAdmissions);
+        if (observeReads) this.#observeReadMessages(botSlug, page.messages, readAdmissions);
         return page;
       },
       readModel: (input = {}) => {
@@ -5274,7 +5517,8 @@ class BotRuntimeImplementation implements BotRuntime {
           const previous = contentProgress.get(chunk.hash) ?? 0;
           const progress = chunk.start <= previous ? Math.max(previous, chunk.end) : previous;
           contentProgress.set(chunk.hash, progress);
-          if (progress === chunk.total) this.#observeReadMessages(botSlug, [view], readAdmissions);
+          if (observeReads && progress === chunk.total)
+            this.#observeReadMessages(botSlug, [view], readAdmissions);
           return chunk.output;
         }
         if (input.contentCursor !== undefined)
@@ -5284,7 +5528,7 @@ class BotRuntimeImplementation implements BotRuntime {
           page,
           (count) => queryPage({ ...input, limit: count }).nextCursor,
         );
-        this.#observeReadMessages(botSlug, bounded.included, readAdmissions);
+        if (observeReads) this.#observeReadMessages(botSlug, bounded.included, readAdmissions);
         return bounded.output;
       },
       openAttachment: (input) => {
@@ -5487,6 +5731,7 @@ class BotRuntimeImplementation implements BotRuntime {
             recipientBotSlug,
             channel,
             sourceEventId,
+            readSourceEventIds: readAdmissions,
             sessionId,
             beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
             ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -5502,6 +5747,7 @@ class BotRuntimeImplementation implements BotRuntime {
             botSlug,
             channel,
             sourceEventId,
+            readSourceEventIds: readAdmissions,
             sessionId,
             beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
             ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -5543,6 +5789,7 @@ class BotRuntimeImplementation implements BotRuntime {
     botSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
+    readSourceEventIds?: ReadonlySet<string>;
     sessionId: string;
     beforeSend: () => void;
     afterSend?: () => void;
@@ -5559,12 +5806,22 @@ class BotRuntimeImplementation implements BotRuntime {
     const sender = this.#registry.get(botSlug);
     if (sender === undefined || sender.paused === true)
       throw new Error('Bot Group sender is no longer active');
-    const ids = input.mentionBotIds ?? [];
-    if (ids.length > 20 || ids.some((id) => !isValidSlug(id)))
+    const explicitIds = input.mentionBotIds ?? [];
+    if (explicitIds.length > 20 || explicitIds.some((id) => !isValidSlug(id)))
       throw new Error('Bot Group mentions require at most 20 valid Bot IDs');
+    const typed = resolveBotMentionText(
+      input.body,
+      this.#registry.list().map((bot) => ({
+        botSlug: bot.slug,
+        displayName: bot.displayName,
+        eligible: bot.slug !== botSlug && bot.paused !== true && channel.members.includes(bot.slug),
+      })),
+    );
+    const ids = [...new Set([...explicitIds, ...typed.botSlugs])];
+    if (ids.length > 20) throw new Error('Bot Group mentions require at most 20 valid Bot IDs');
     const mentions: ChannelMention[] = [];
     let prefix = '';
-    for (const id of new Set(ids)) {
+    for (const id of ids) {
       const target = this.#registry.get(id);
       if (
         id === botSlug ||
@@ -5573,7 +5830,7 @@ class BotRuntimeImplementation implements BotRuntime {
         !channel.members.includes(id)
       )
         throw new Error('Mentioned PersonaBot must be another active Group member');
-      const label = target.displayName.replace(/\s+/gu, ' ').trim().slice(0, 80);
+      const label = botMentionLabel(target.displayName);
       const token = '@' + label;
       mentions.push({
         botSlug: id,
@@ -5605,7 +5862,7 @@ class BotRuntimeImplementation implements BotRuntime {
       });
       prefix += token + ' ';
     }
-    const body = prefix + input.body;
+    const body = prefix + typed.body;
     if (!body.trim() && !input.attachments?.length)
       throw new Error('Group message requires a body or attachment');
     this.#channels.assertAttachmentRefs(input.attachments ?? []);
@@ -5616,7 +5873,9 @@ class BotRuntimeImplementation implements BotRuntime {
       at: this.#now().toISOString(),
       author: { kind: 'bot', slug: botSlug },
       body,
-      botCausation: this.#botCausation(input.sourceEventId),
+      botCausation: this.#botCausation(
+        this.#turnSourceIn(botSlug, channel.id, input.readSourceEventIds) ?? input.sourceEventId,
+      ),
       ...(mentions.length === 0 ? {} : { mentions }),
       ...(humanMentions.length === 0 ? {} : { humanMentions }),
       ...(input.replyTo === undefined ? {} : { replyTo: input.replyTo }),
@@ -5653,8 +5912,12 @@ class BotRuntimeImplementation implements BotRuntime {
     }
   }
 
-  #turnSourceIn(botSlug: string, channelId: string): string | undefined {
-    const sources = [...(this.#turnSources.get(botSlug)?.eventIds ?? [])];
+  #turnSourceIn(
+    botSlug: string,
+    channelId: string,
+    read: Iterable<string> = [],
+  ): string | undefined {
+    const sources = [...new Set([...(this.#turnSources.get(botSlug)?.eventIds ?? []), ...read])];
     if (sources.length === 0) return undefined;
     const row = this.#database.read(
       (database) =>
@@ -5726,6 +5989,7 @@ class BotRuntimeImplementation implements BotRuntime {
     recipientBotSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
+    readSourceEventIds?: ReadonlySet<string>;
     sessionId: string;
     beforeSend: () => void;
     afterSend?: () => void;
@@ -5756,7 +6020,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (this.#channels.getOrCreateDm(botSlug, sender.displayName) === undefined)
       throw new Error('Sender Human DM is unavailable');
     const botCausation = this.#botCausation(
-      this.#turnSourceIn(botSlug, channel.id) ?? input.sourceEventId,
+      this.#turnSourceIn(botSlug, channel.id, input.readSourceEventIds) ?? input.sourceEventId,
     );
     const messageId = this.#deliveryMessageId(input.sessionId, input.deliveryKey);
     const message: ChannelMessage = {

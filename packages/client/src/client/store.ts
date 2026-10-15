@@ -165,6 +165,11 @@ export interface SessionFailureCard {
   context?: string;
 }
 
+export interface ChannelReaction {
+  emoji: string;
+  actors: { kind: 'human' | 'bot'; id: string }[];
+}
+
 export interface ChannelMessage {
   onboardingWelcome?: { version: 1 };
   contentPurged?: true;
@@ -184,6 +189,7 @@ export interface ChannelMessage {
     state: 'unread' | 'read';
   }[];
   channelRevision?: number;
+  reactions?: ChannelReaction[];
   deliveries?: {
     botSlug: string;
     state:
@@ -209,6 +215,7 @@ export interface ChannelMessage {
     moreFiles: number;
   };
   turnStop?: { botName: string; humanName: string };
+  toolAutoApproval?: import('../../../core/src/channels/channel.js').ChannelToolAutoApproval;
   memberDeparture?: {
     memberKind: 'bot' | 'human';
     memberId: string;
@@ -267,6 +274,7 @@ export interface HumanInboxFilters {
   botSlug: string | undefined;
   channelId: string | undefined;
   sort: HumanInboxSort;
+  snoozed?: boolean;
 }
 
 export interface HumanAttentionItem {
@@ -299,6 +307,7 @@ export interface HumanAttentionItem {
   isUnread?: boolean;
   responseMessageId?: string;
   responseSourceEventId?: string;
+  snoozedUntil?: string;
 }
 
 export interface HumanAttentionPage {
@@ -315,6 +324,7 @@ export interface HumanInboxState {
   botSlug: string | undefined;
   channelId: string | undefined;
   sort: HumanInboxSort;
+  snoozed: boolean;
   items: readonly HumanAttentionItem[];
   nextCursor: string | undefined;
   error: string | undefined;
@@ -357,6 +367,7 @@ export interface ConversationState {
   revision: number;
   timeline: ConversationTimeline;
   focusMessageId?: string | undefined;
+  unreadAfterMessageId?: string | undefined;
   error: string | undefined;
   sending: boolean;
 }
@@ -523,6 +534,7 @@ function initialConversation(): ConversationState {
     revision: 0,
     timeline: initialTimeline(),
     focusMessageId: undefined,
+    unreadAfterMessageId: undefined,
     error: undefined,
     sending: false,
   };
@@ -546,6 +558,7 @@ function initialHumanInbox(): HumanInboxState {
     botSlug: undefined,
     channelId: undefined,
     sort: 'oldest',
+    snoozed: false,
     items: [],
     nextCursor: undefined,
     error: undefined,
@@ -594,6 +607,7 @@ export function createStore(): ClientStore {
     if (channelId === undefined || conversation.status !== 'ready') return;
     rememberKeyed(conversations, channelId, {
       ...conversation,
+      unreadAfterMessageId: undefined,
       drafts: [],
       draftRevision: 0,
       draftNotice: undefined,

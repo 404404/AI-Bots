@@ -170,6 +170,8 @@ describe('bridge typert service', () => {
       'channelReadPosition',
       'channelMarkRead',
       'channelMarkAllRead',
+      'channelReact',
+      'channelSearch',
       'channelUnreadCounts',
       'channelAllBotPreview',
       'channelSend',
@@ -185,6 +187,7 @@ describe('bridge typert service', () => {
       'humanAttentionStatus',
       'humanAttentionIgnore',
       'humanAttentionDismiss',
+      'humanAttentionSnooze',
       'assignments',
       'channelAssignments',
       'assignment',
@@ -205,7 +208,10 @@ describe('bridge typert service', () => {
       'userQuestionAnswer',
       'sessions',
       'botToolTrace',
+      'botTools',
+      'botToolRun',
       'sessionArchiveSet',
+      'memoryMove',
       'sessionOwner',
       'botSessionIds',
       'memoryFileTarget',
@@ -246,6 +252,10 @@ describe('bridge typert service', () => {
       'computerAccessSet',
       'browserAccessSet',
       'browserProfileSet',
+      'approvalTemplates',
+      'botApprovalTemplateSet',
+      'approvalReviewerModel',
+      'approvalReviewerModelSet',
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
@@ -296,7 +306,12 @@ describe('bridge typert service', () => {
     ]);
     expect(parameterNames(service.followRoster)).toEqual(['signal']);
     expect(parameterNames(service.followActivity)).toEqual(['signal']);
-    expect(parameterNames(service.followChannel)).toEqual(['channelId', 'limit', 'signal']);
+    expect(parameterNames(service.followChannel)).toEqual([
+      'channelId',
+      'limit',
+      'drafts',
+      'signal',
+    ]);
     expect(parameterNames(service.channelJournalPage)).toEqual([
       'channelId',
       'through',
@@ -304,6 +319,8 @@ describe('bridge typert service', () => {
       'limit',
     ]);
     expect(parameterNames(service.followCompanion)).toEqual(['resume', 'lastEventId', 'signal']);
+    expect(parameterNames(service.botToolRun)).toEqual(['slug', 'tool', 'args']);
+    expect(parameterNames(service.memoryMove)).toEqual(['slug', 'location']);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {
@@ -345,6 +362,13 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.marketplaceReport)).toEqual(['id', 'altcha', 'reason']);
     expect(parameterNames(service.releaseInfo)).toEqual(['since']);
     expect(parameterNames(service.releaseUpdate)).toEqual([]);
+    expect(parameterNames(service.channelReact)).toEqual([
+      'channelId',
+      'messageId',
+      'emoji',
+      'active',
+    ]);
+    expect(parameterNames(service.channelSearch)).toEqual(['channelId', 'text', 'cursor', 'limit']);
     expect(parameterNames(service.releaseInstall)).toEqual(['version']);
     expect(parameterNames(service.releaseRestart)).toEqual([]);
     expect(parameterNames(service.telemetryStatus)).toEqual([]);

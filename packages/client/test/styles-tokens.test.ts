@@ -157,7 +157,19 @@ describe('client styles', () => {
   });
 
   it('moves bubble copy/reply actions into the long-press menu on narrow screens', () => {
-    expect(source).toMatch(/@media \(max-width: 640px\) \{\s*\.bh-bubble-meta \{\s*display: none/);
+    expect(source).toMatch(
+      /@media \(max-width: 640px\) \{\s*\.bh-bubble-meta,\s*\.bh-bubble-toolbar \{\s*display: none/,
+    );
+  });
+
+  it('floats bubble hover actions over the top-right edge without shifting layout', () => {
+    expect(source).toMatch(
+      /\.bh-bubble-toolbar \{\s*position: absolute;[^}]*top: 0;[^}]*justify-content: safe flex-end;[^}]*opacity: 0;/,
+    );
+    expect(source).toMatch(
+      /\.bh-message-group-me \.bh-bubble-toolbar \{\s*justify-content: flex-end;/,
+    );
+    expect(source).toMatch(/\.bh-bubble-toolbar:has\(\[aria-expanded='true'\]\) \{\s*opacity: 1;/);
   });
 
   it('fits ordered Channels into the native 36px collapsed rail and separates pins', () => {

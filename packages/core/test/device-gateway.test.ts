@@ -58,6 +58,7 @@ async function fakeDsh() {
       return;
     }
     state.upgrades.push(req.url ?? '');
+    state.seen.push({ upgrade: req.url });
     socket.write(
       'HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n',
     );
@@ -195,6 +196,32 @@ describe('device gateway', () => {
       headers: { authorization },
     });
     expect([unary.status, await unary.json()]).toEqual([401, { code: 'device-revoked' }]);
+  });
+
+  it('carries WebRTC signalling to the Host route and ends it on revoke', async () => {
+    const host = await fakeDsh();
+    const paired = await pair(host.base, host.pairing.createOffer().offer);
+    const authorization = `Device ${paired.body.credential}`;
+
+    const open = await stream(
+      host.port,
+      { authorization },
+      '/botharness-device/api/browser/webrtc/signaling?viewer=abc',
+    );
+    expect(open.status).toBe(101);
+    expect(host.state.seen).toContainEqual({ upgrade: '/api/browser/webrtc/signaling?viewer=abc' });
+    expect(await echo(open.socket!, 'HELLO')).toBe('HELLO');
+
+    const closed = new Promise((resolve) => open.socket!.on('close', resolve));
+    expect(host.pairing.revoke(paired.body.deviceId!)).toEqual({ revoked: true, closedStreams: 1 });
+    await closed;
+    expect(
+      await stream(
+        host.port,
+        { authorization },
+        '/botharness-device/api/computer/webrtc/signaling',
+      ),
+    ).toEqual({ status: 401, body: '{"code":"device-revoked"}' });
   });
 
   it('re-mints its loopback session after a global sign-out', async () => {

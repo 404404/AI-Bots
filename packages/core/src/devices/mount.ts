@@ -11,6 +11,7 @@ import {
   DEVICE_GATEWAY_PREFIX,
   type DeviceGateway,
   DEVICE_MUX_PATH,
+  DEVICE_SIGNALING_PATHS,
   DEVICE_WEB_MUX_PATH,
 } from './gateway.js';
 import { createDevicesHttp, DEVICES_PATH } from './http.js';
@@ -177,7 +178,7 @@ export function mountDevicePairing(
         live = undefined;
       };
     }, 'botharness: device gateway viewer streams');
-    for (const path of [DEVICE_MUX_PATH, DEVICE_WEB_MUX_PATH])
+    for (const path of [DEVICE_MUX_PATH, DEVICE_WEB_MUX_PATH, ...DEVICE_SIGNALING_PATHS])
       webCtx.effect(
         () =>
           webServer.registerUpgrade({

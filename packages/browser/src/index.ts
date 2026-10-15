@@ -6,9 +6,13 @@ import type { Context } from '@deepseek-ai/cordis';
 import Schema from '@deepseek-ai/schemastery';
 import type { DeviceViewerUpgrade } from '../../core/src/http/viewer-proxy.js';
 import { registerBrowserViewer, type BrowserViewerHost } from './viewer.js';
-import { LOCAL_VIEWER_PREFIX, localViewerUrl, registerLocalViewer } from './viewer-local.js';
+import {
+  LOCAL_VIEWER_PREFIX,
+  createLocalViewerActions,
+  localViewerUrl,
+  registerLocalViewer,
+} from './viewer-local.js';
 import { createTakeoverService } from './takeover.js';
-import type { ContainerBrowserOptions } from './runtime/container.js';
 import { createProfileControl } from './profile-control.js';
 import { registerProfileHttp } from './profile-http.js';
 import { createDailyControl } from './daily.js';
@@ -24,7 +28,17 @@ import {
   type SystemInstallAccess,
 } from '../../core/src/system/system-packages.js';
 import { openLogDatabase, type LogDatabase } from '../../core/src/logs/log-db.js';
-import { createBotBrowserRuntimes, listStoredProfileNames } from './runtimes.js';
+import { detectTailnetAddress } from '../../core/src/devices/routes.js';
+import {
+  createSelkiesWebRtc,
+  refuseWebRtcUpgrade,
+  type SelkiesWebRtc,
+} from '../../core/src/http/selkies-webrtc.js';
+import {
+  type BrowserViewerRegistration,
+  createBotBrowserRuntimes,
+  listStoredProfileNames,
+} from './runtimes.js';
 import {
   browserToolNames,
   createBrowserToolProvider,
@@ -164,14 +178,15 @@ export function apply(
     return `${target()}:${driver()}:${revision}:${borrow.revision}:${daily.revision}:${profile.revision}:${signal === undefined ? '' : registrationScopes.get(signal)}`;
   };
   let switching: Promise<void> = Promise.resolve();
-  let registerViewer: ContainerBrowserOptions['onViewer'];
+  let registerViewer: BrowserViewerRegistration | undefined;
+  const webrtcCalls = new Map<string, { calls: SelkiesWebRtc; touch: () => void }>();
   ctx.inject(['connection', 'webServer'], (viewerCtx) => {
     const services = viewerCtx as unknown as {
       webServer: BrowserViewerHost;
       connection: { requestRejection(request: { headers: Headers }): number | undefined };
     };
-    registerViewer = (prefix, upstream) =>
-      registerBrowserViewer({
+    registerViewer = (prefix, upstream, container, touch) => {
+      const release = registerBrowserViewer({
         host: services.webServer,
         prefix,
         upstream,
@@ -180,7 +195,46 @@ export function apply(
           (coreLookup() as { deviceWebUpgrade?: DeviceViewerUpgrade } | undefined)
             ?.deviceWebUpgrade,
       });
+      const viewer = prefix.slice(prefix.lastIndexOf('/') + 1);
+      const calls = createSelkiesWebRtc({
+        label: `browser viewer=${viewer}`,
+        upstream,
+        container: () => container,
+        tailnetAddress: () => detectTailnetAddress(),
+        log: (detail) => diagnostics.record('lifecycle', detail),
+      });
+      const entry = { calls, touch };
+      webrtcCalls.set(viewer, entry);
+      return () => {
+        if (webrtcCalls.get(viewer) === entry) webrtcCalls.delete(viewer);
+        void calls.close();
+        release();
+      };
+    };
+    const signaling = services.webServer.registerUpgrade({
+      path: '/api/browser/webrtc/signaling',
+      handler(request, socket, head) {
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(request.headers))
+          if (typeof value === 'string') headers.set(key, value);
+        if (services.connection.requestRejection({ headers }) !== undefined) {
+          socket.destroy();
+          return;
+        }
+        const viewer = new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.get('viewer');
+        const entry = viewer === null ? undefined : webrtcCalls.get(viewer);
+        if (entry === undefined) {
+          refuseWebRtcUpgrade(socket, 'not-running');
+          return;
+        }
+        entry.touch();
+        const timer = setInterval(entry.touch, 60_000);
+        socket.once('close', () => clearInterval(timer));
+        void entry.calls.signal(request, socket, head);
+      },
+    });
     return () => {
+      signaling();
       registerViewer = undefined;
     };
   });
@@ -189,11 +243,12 @@ export function apply(
     target: () => (target() === 'container' ? 'container' : 'local'),
     driver,
     onIdleStop: (profile) => provider.invalidateProfile(profile),
-    onViewer: (prefix, upstream) => {
+    onViewer: (prefix, upstream, container, touch) => {
       if (registerViewer === undefined)
         throw new Error('The Container Browser viewer requires the DSH Web Host');
-      return registerViewer(prefix, upstream);
+      return registerViewer(prefix, upstream, container, touch);
     },
+    tailnetAddress: () => detectTailnetAddress(),
     installDir: pinnedBrowserDirectory(),
     ...(config.browserPath.trim() === '' ? {} : { browserPath: config.browserPath.trim() }),
     ...(config.headless ? { headless: true } : {}),
@@ -344,28 +399,34 @@ export function apply(
       return true;
     },
   });
+  const viewerOptions = {
+    runtimes,
+    currentTab: (slug: string) => provider.currentTab(slug),
+    isTakeover: (slug: string) => provider.isTakeover(slug),
+    touch: (slug: string) => {
+      runtimes.touch(slug);
+      provider.touch(slug);
+    },
+    hasAccess: (slug: string) =>
+      (
+        coreLookup()?.registry as
+          | { get(slug: string): { browserAccess?: boolean } | undefined }
+          | undefined
+      )?.get(slug)?.browserAccess === true,
+    note: (detail: string) => diagnostics.record('lifecycle', detail),
+    takeover: takeovers,
+  };
+  const viewerActions = createLocalViewerActions(viewerOptions);
+  ctx.effect(() => () => void viewerActions.close(), 'botharness-browser: viewer frame feeds');
   ctx.inject(['connection', 'webServer'], (localViewerCtx) => {
     const services = localViewerCtx as unknown as {
       webServer: BrowserViewerHost;
       connection: { requestRejection(request: { headers: Headers }): number | undefined };
     };
     const release = registerLocalViewer({
+      ...viewerOptions,
       host: services.webServer,
-      runtimes,
-      currentTab: (slug) => provider.currentTab(slug),
-      isTakeover: (slug) => provider.isTakeover(slug),
-      touch: (slug) => {
-        runtimes.touch(slug);
-        provider.touch(slug);
-      },
-      hasAccess: (slug) =>
-        (
-          coreLookup()?.registry as
-            | { get(slug: string): { browserAccess?: boolean } | undefined }
-            | undefined
-        )?.get(slug)?.browserAccess === true,
-      note: (detail) => diagnostics.record('lifecycle', detail),
-      takeover: takeovers,
+      actions: viewerActions,
       rejection: (headers) => services.connection.requestRejection({ headers }),
     });
     diagnostics.record('lifecycle', `local viewer ready prefix=${LOCAL_VIEWER_PREFIX}`);
@@ -467,6 +528,27 @@ export function apply(
     const connection = (connectionCtx as unknown as { connection: HostConnectionLike }).connection;
     const json = (value: unknown, status = 200): Response =>
       Response.json(value as Record<string, unknown>, { status });
+
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: '/api/browser/webrtc',
+          methods: ['GET'],
+          requestBody: 'buffered',
+          fetch: async (request: Request): Promise<Response> => {
+            const viewer = new URL(request.url).searchParams.get('viewer') ?? '';
+            const entry = webrtcCalls.get(viewer);
+            return json({
+              viewer,
+              signaling: `/api/browser/webrtc/signaling?viewer=${encodeURIComponent(viewer)}`,
+              ...(entry === undefined
+                ? { available: false, code: 'not-running', fallback: 'websocket' }
+                : await entry.calls.status()),
+            });
+          },
+        }),
+      'botharness-browser: WebRTC status route',
+    );
 
     for (const action of ['pair', 'forget'] as const) {
       connectionCtx.effect(
@@ -844,6 +926,53 @@ export function apply(
     connectionCtx.effect(
       () => connection.fetch.register(takeoverRoute),
       'botharness-browser: takeover route',
+    );
+
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: '/api/browser/frame',
+          methods: ['GET'],
+          requestBody: 'buffered',
+          async fetch(request: Request): Promise<Response> {
+            const url = new URL(request.url);
+            const result = await viewerActions.frame(
+              url.searchParams.get('slug') ?? '',
+              url.searchParams.get('after'),
+            );
+            if (result.status === 204) return new Response(null, { status: 204 });
+            if (result.status !== 200)
+              return json({ ok: false, error: result.error }, result.status);
+            const { status: _status, ...frame } = result;
+            return json({ ok: true, ...frame });
+          },
+        }),
+      'botharness-browser: frame route',
+    );
+
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: '/api/browser/input',
+          methods: ['POST'],
+          requestBody: 'buffered',
+          async fetch(request: Request): Promise<Response> {
+            let body: Record<string, unknown> = {};
+            try {
+              const value = (await request.json()) as unknown;
+              if (typeof value === 'object' && value !== null)
+                body = value as Record<string, unknown>;
+            } catch {
+              return json({ ok: false, error: 'invalid input' }, 400);
+            }
+            const slug = typeof body['slug'] === 'string' ? body['slug'] : '';
+            const result = await viewerActions.input(slug, body);
+            if (result.status !== 200)
+              return json({ ok: false, error: result.error }, result.status);
+            return json({ ok: true, url: result.url, title: result.title });
+          },
+        }),
+      'botharness-browser: input route',
     );
 
     const stopRoute = {

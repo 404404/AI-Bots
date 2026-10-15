@@ -37,7 +37,7 @@ import {
   readSharedPrimaryColor,
 } from './shared-presentation.js';
 import { isValidSlug } from './slug.js';
-import { recordMemoryOwnership } from './deletion.js';
+import { recordMemoryOwnership, transferMemoryOwnership } from './deletion.js';
 import type { HttpsFallback, MemoryCloneResult } from '../memory/clone.js';
 import { restoreBotHistory, writeBotFiles } from './bot-zip.js';
 import type { ZipEntry } from './zip-archive.js';
@@ -100,6 +100,8 @@ export interface PersonaBotRegistry {
   findByWorkspace(workspace: string): PersonaBotRecord | undefined;
   remove(slug: string, options?: RemovePersonaBotOptions): boolean;
   memoryDirFor(slug: string): string | undefined;
+  defaultMemoryDirFor(slug: string): string;
+  setMemoryDir(slug: string, memoryDir: string | undefined): UpdatePersonaBotResult;
   update(slug: string, patch: PersonaBotPatch): UpdatePersonaBotResult;
   setAppearance(slug: string, recipe: unknown): UpdatePersonaBotResult;
   setBanner(slug: string, banner: unknown): UpdatePersonaBotResult;
@@ -109,6 +111,7 @@ export interface PersonaBotRegistry {
   setComputerAccess(slug: string, enabled: boolean): UpdatePersonaBotResult;
   setBrowserAccess(slug: string, enabled: boolean): UpdatePersonaBotResult;
   setBrowserProfile(slug: string, profile: string): UpdatePersonaBotResult;
+  setApprovalTemplate(slug: string, template: string | undefined): UpdatePersonaBotResult;
   setStandingLimits(slug: string, limits: StandingLimits): UpdatePersonaBotResult;
   inheritModel(slug: string, expectedRevision: number): UpdatePersonaBotResult;
   applyModelPreset(slug: string, preset: ModelPreset): UpdatePersonaBotResult;
@@ -201,6 +204,7 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       'computerAccess',
       'browserAccess',
       'browserProfile',
+      'approvalTemplate',
     ] as const) {
       if (record[key] !== undefined) Object.assign(result, { [key]: record[key] });
     }
@@ -605,6 +609,19 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       if (record === undefined) return undefined;
       return memoryDirOf(record);
     },
+    defaultMemoryDirFor(slug) {
+      return defaultMemoryDir(slug);
+    },
+    setMemoryDir(slug, memoryDir) {
+      const record = active(slug);
+      if (record === undefined) return { ok: false, reason: 'not-found' };
+      const updated = { ...record };
+      if (memoryDir === undefined || memoryDir === defaultMemoryDir(slug)) delete updated.memoryDir;
+      else updated.memoryDir = memoryDir;
+      write(updated);
+      transferMemoryOwnership(port, slug, memoryDirOf(updated));
+      return { ok: true, record: updated };
+    },
     update(slug, patch) {
       const record = active(slug);
       if (record === undefined) return { ok: false, reason: 'not-found' };
@@ -728,6 +745,14 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       const trimmed = profile.trim();
       if (trimmed === '') delete record.browserProfile;
       else record.browserProfile = trimmed;
+      write(record);
+      return { ok: true, record };
+    },
+    setApprovalTemplate(slug, template) {
+      const record = active(slug);
+      if (record === undefined) return { ok: false, reason: 'not-found' };
+      if (template === undefined) delete record.approvalTemplate;
+      else record.approvalTemplate = template;
       write(record);
       return { ok: true, record };
     },

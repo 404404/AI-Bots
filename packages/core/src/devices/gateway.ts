@@ -11,6 +11,10 @@ export const DEVICE_MUX_PATH = `${DEVICE_GATEWAY_PREFIX}/api/remote.mux`;
 export const DEVICE_WEB_PREFIX = `${DEVICE_GATEWAY_PREFIX}/web`;
 export const DEVICE_WEB_MUX_PATH = `${DEVICE_WEB_PREFIX}/api/remote.mux`;
 export const DEVICE_PUSH_PREFIX = `${DEVICE_GATEWAY_PREFIX}/push`;
+export const DEVICE_SIGNALING_PATHS = [
+  `${DEVICE_GATEWAY_PREFIX}/api/computer/webrtc/signaling`,
+  `${DEVICE_GATEWAY_PREFIX}/api/browser/webrtc/signaling`,
+] as const;
 export const DEVICE_WEB_COOKIE = 'botharness-device-web';
 const WEB_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const MAX_WEB_SESSIONS = 256;
@@ -385,14 +389,17 @@ export function createDeviceGateway(options: DeviceGatewayOptions): DeviceGatewa
 
     async upgrade(request, socket, head) {
       if (crossOrigin(request)) return refuseUpgrade(socket, 403, 'origin-refused');
-      const web = new URL(request.url ?? '/', 'http://device').pathname.startsWith(
-        `${DEVICE_WEB_PREFIX}/`,
-      );
+      const pathname = new URL(request.url ?? '/', 'http://device').pathname;
+      const web = pathname.startsWith(`${DEVICE_WEB_PREFIX}/`);
       const admission = web
         ? webAdmission(request, false)
         : pairing.admit(header(request, 'authorization'));
       if (!admission.ok) return refuseUpgrade(socket, 401, admission.code);
-      const target = web ? (request.url ?? '/').slice(DEVICE_WEB_PREFIX.length) : '/api/remote.mux';
+      const target = web
+        ? (request.url ?? '/').slice(DEVICE_WEB_PREFIX.length)
+        : (DEVICE_SIGNALING_PATHS as readonly string[]).includes(pathname)
+          ? (request.url ?? '/').slice(DEVICE_GATEWAY_PREFIX.length)
+          : '/api/remote.mux';
       let opened: Awaited<ReturnType<typeof openStream>> | undefined;
       try {
         opened = await openStream(request, await hostSession(), target);

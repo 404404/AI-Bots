@@ -163,6 +163,17 @@ export interface ChannelDelivery {
   state: 'pending' | 'observed' | 'running' | 'retryable' | 'needs-repair' | 'handled' | 'ignored';
 }
 
+export interface ChannelToolAutoApproval {
+  botSlug: string;
+  sessionId: string;
+  callId: string;
+  toolName: string;
+  input: string;
+  template: string;
+  outcome: 'allowed' | 'rejected';
+  reason: string;
+}
+
 export interface ChannelTurnStop {
   botSlug: string;
   botName: string;
@@ -233,6 +244,24 @@ function isMemoryCommit(value: unknown): value is ChannelMemoryCommit {
   );
 }
 
+export interface ChannelReaction {
+  emoji: string;
+  actors: { kind: 'human' | 'bot'; id: string }[];
+}
+
+export const MAX_REACTION_EMOJI_LENGTH = 16;
+export const MAX_ACTOR_REACTIONS_PER_MESSAGE = 20;
+
+export function isReactionEmoji(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_REACTION_EMOJI_LENGTH &&
+    /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value) &&
+    !/[\s\p{Cc}\p{L}\p{N}]/u.test(value)
+  );
+}
+
 export interface ChannelMessage {
   id: string;
   at: string;
@@ -252,6 +281,7 @@ export interface ChannelMessage {
   deliveries?: ChannelDelivery[];
 
   humanReceipts?: ChannelHumanReceipt[];
+  reactions?: ChannelReaction[];
   botDmAction?: BotDmAction;
   botChannelPost?: BotChannelPost;
   botChannelPostPreview?: string | null;
@@ -259,6 +289,7 @@ export interface ChannelMessage {
   noticeOrigin?: { channelId: string };
   memberDeparture?: ChannelMemberDeparture;
   turnStop?: ChannelTurnStop;
+  toolAutoApproval?: ChannelToolAutoApproval;
   botCausation?: BotMessageCausation;
 
   grantRequest?: true;
@@ -729,6 +760,19 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       ['botSlug', 'botName', 'humanName', 'sessionId'].some(
         (key) => typeof stop[key] !== 'string' || stop[key].length === 0,
       )
+    )
+      return false;
+  } else if (message['toolAutoApproval'] !== undefined) {
+    const record = message['toolAutoApproval'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof record !== 'object' ||
+      record === null ||
+      ['botSlug', 'sessionId', 'callId', 'toolName', 'template', 'reason'].some(
+        (key) => typeof record[key] !== 'string' || record[key].length === 0,
+      ) ||
+      typeof record['input'] !== 'string' ||
+      (record['outcome'] !== 'allowed' && record['outcome'] !== 'rejected')
     )
       return false;
   } else if (
