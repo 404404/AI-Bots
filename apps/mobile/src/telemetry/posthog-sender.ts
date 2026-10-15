@@ -1,4 +1,4 @@
-import PostHog from 'posthog-react-native';
+import PostHog, { PostHogPersistedProperty } from 'posthog-react-native';
 import { sanitizeEvent, type TelemetryEvent } from './schema';
 
 const HOST = 'https://t.botharness.ai';
@@ -28,6 +28,8 @@ export function createPostHogSender(options: PostHogSenderOptions) {
       const body = JSON.parse(String(init.body)) as { batch?: unknown[] };
       if (
         !Array.isArray(body.batch) ||
+        body.batch.length !== approved.size ||
+        new Set(body.batch.map((value) => (value as TelemetryEvent).uuid)).size !== approved.size ||
         body.batch.some((value) => {
           const safe = sanitizeEvent(value);
           return (
@@ -86,6 +88,7 @@ export function createPostHogSender(options: PostHogSenderOptions) {
     signal = undefined;
     approved.clear();
     if (client !== undefined) {
+      client.setPersistedProperty(PostHogPersistedProperty.Queue, null);
       client.reset();
       await client.optOut();
     }
