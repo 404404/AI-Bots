@@ -19,6 +19,7 @@ References:
 - **Tabs** are native (`NativeTabs`): **Home**, **Activity** and **Me**.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
   - iOS draws the system tab bar with no background colour of ours: Liquid Glass on iOS 26 (a floating capsule above the home indicator, with the system's glass pill behind the selected tab), the translucent system bar before it. The selected tint is the resolved `fg`, passed as a plain colour so the bar re-tints when the scheme changes while the app is open.
+  - On iOS 26 the bar shrinks to the selected tab when a list scrolls down and grows back when it scrolls up (`minimizeBehavior="onScrollDown"`), as in Apple's own apps.
   - Content scrolls under the bar. Each tab's list sets `contentInsetAdjustmentBehavior="automatic"`, so its last row clears the bar and the home indicator.
   - Android keeps the Material 3 bar on `base`: like Slack, the selected tab is the foreground colour with a pill behind its icon (the Material indicator), and the others are muted.
   - The web preview draws a floating translucent capsule standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it.

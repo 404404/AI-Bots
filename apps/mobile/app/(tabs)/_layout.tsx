@@ -41,7 +41,7 @@ export default function TabsLayout() {
 type Chrome = Omit<ComponentProps<typeof NativeTabs>, 'children'>;
 
 function chrome(theme: DesignTheme): Chrome {
-  if (Platform.OS === 'ios') return { tintColor: theme.color.fg };
+  if (Platform.OS === 'ios') return { tintColor: theme.color.fg, minimizeBehavior: 'onScrollDown' };
   return {
     tintColor: theme.color.fg,
     backgroundColor: theme.color.base,
