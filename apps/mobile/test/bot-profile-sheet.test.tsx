@@ -16,6 +16,7 @@ vi.mock('../src/ui/shell/icons', () => ({
   BrowserIcon: () => null,
   ComputerIcon: () => null,
   MessageIcon: () => null,
+  PlusIcon: () => null,
 }));
 
 import type { BotProfile } from '../src/host/bot-profile';
@@ -197,5 +198,49 @@ describe('Bot profile sheet', () => {
       [{ kind: 'folder', name: 'notes', path: 'notes', count: 1 }],
       [{ kind: 'file', name: 'MEMORY.md', path: 'MEMORY.md' }],
     ]);
+  });
+
+  it('opens a routine or a new one in its sheet, and refreshes the list after a change', async () => {
+    const sheet = vi.fn(
+      (host: { target: { kind: string; routine?: { title: string } }; onChanged(): void }) => {
+        latest = host;
+        return createElement(
+          'span',
+          { 'data-testid': 'routine-sheet' },
+          host.target.routine?.title ?? 'new',
+        );
+      },
+    );
+    let latest: { onChanged(): void } | undefined;
+    const renamed = { ...profileWire.rpc.scheduleList.schedules[0]!, title: 'Evening digest' };
+    const view = await render(
+      <BotProfileSheet
+        bot={bot}
+        channels={[]}
+        load={async () => full}
+        actions={actions()}
+        routines={{ load: async () => [renamed] as never, sheet: sheet as never }}
+      />,
+    );
+    const open = [...view.querySelectorAll('button')].find((node) =>
+      node.getAttribute('aria-label')?.startsWith(t.routineOpen('Morning digest')),
+    )!;
+    await act(async () => open.click());
+    expect(view.querySelector('[data-testid="routine-sheet"]')?.textContent).toBe('Morning digest');
+
+    await act(async () => latest!.onChanged());
+    await act(async () => undefined);
+    expect(view.textContent).toContain('Evening digest');
+
+    await act(async () => button(view, t.routineNew)!.click());
+    expect(view.querySelector('[data-testid="routine-sheet"]')?.textContent).toBe('new');
+  });
+
+  it('keeps routines read-only without a Host to change them', async () => {
+    const view = await render(
+      <BotProfileSheet bot={bot} channels={[]} load={async () => full} actions={actions()} />,
+    );
+    expect(button(view, t.routineNew)).toBeNull();
+    expect(view.textContent).toContain('Morning digest');
   });
 });

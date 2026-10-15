@@ -8,16 +8,24 @@ import {
   type ProfilePart,
 } from '../../host/bot-profile';
 import type { RosterBot, RosterChannel } from '../../host/client';
-import type { ScheduleTrigger } from '../../host/wire';
+import type { BotScheduleSummary } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
-import { ActivityIcon, BrowserIcon, ComputerIcon, MessageIcon } from '../shell/icons';
+import {
+  ActivityIcon,
+  BrowserIcon,
+  ChevronRightIcon,
+  ComputerIcon,
+  MessageIcon,
+  PlusIcon,
+} from '../shell/icons';
 import { t } from '../strings';
 import { botStateTone } from './bot-tone';
 import { MemoryEntryRow } from './memory-browser';
+import { routineDetail } from './routine-text';
 
 const AVATAR = 72;
 const ICON = 22;
@@ -31,6 +39,8 @@ type RowBody =
   | { kind: 'text'; label?: string; body: string }
   | { kind: 'item'; title: string; detail?: string }
   | { kind: 'entry'; entry: MemoryEntry }
+  | { kind: 'routine'; routine: BotScheduleSummary }
+  | { kind: 'new-routine' }
   | { kind: 'note'; text: string }
   | { kind: 'failed'; error: string }
   | { kind: 'loading' };
@@ -43,6 +53,8 @@ export interface BotProfileActions {
   onBrowser?(): void;
   onNotifications(): void;
   onOpenMemory(entry: MemoryEntry): void;
+  onOpenRoutine?(routine: BotScheduleSummary): void;
+  onNewRoutine?(): void;
 }
 
 function frame(section: ProfileSection, bodies: RowBody[]): Row[] {
@@ -52,23 +64,6 @@ function frame(section: ProfileSection, bodies: RowBody[]): Row[] {
     first: index === 0,
     last: index === bodies.length - 1,
   }));
-}
-
-function triggerText(trigger: ScheduleTrigger): string {
-  if (trigger.kind === 'every') return t.routineEvery(trigger.everySeconds);
-  if (trigger.kind === 'daily') return t.routineDaily(trigger.time);
-  if (trigger.kind === 'weekly') return t.routineWeekly(trigger.time, trigger.weekdays);
-  if (trigger.kind === 'once') return t.routineOnce(trigger.date, trigger.time);
-  return t.routineCron(trigger.expression);
-}
-
-function when(at: string): string {
-  return new Date(at).toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 function partRows<T>(
@@ -85,6 +80,7 @@ function partRows<T>(
 export function profileRows(
   profile: BotProfile | undefined,
   channels: RosterChannel[],
+  addRoutine = false,
 ): Record<ProfileSection, Row[]> {
   return {
     identity: frame(
@@ -102,20 +98,9 @@ export function profileRows(
     routines: frame(
       'routines',
       partRows(profile?.routines, 'routines', (routines) =>
-        routines.map((routine) => ({
-          kind: 'item',
-          title: routine.title,
-          detail: [
-            triggerText(routine.trigger),
-            !routine.enabled
-              ? t.routineOff
-              : routine.nextRunAt === undefined
-                ? undefined
-                : t.routineNext(when(routine.nextRunAt)),
-          ]
-            .filter((part) => part !== undefined)
-            .join(' · '),
-        })),
+        routines.map((routine) => ({ kind: 'routine', routine })),
+      ).concat(
+        addRoutine && profile?.routines?.status === 'ready' ? [{ kind: 'new-routine' }] : [],
       ),
     ),
     channels: frame(
@@ -240,18 +225,23 @@ function ProfileRow({
   expanded,
   onToggle,
   onRetry,
-  onOpenMemory,
+  actions,
 }: {
   row: Row;
   expanded: boolean;
   onToggle(): void;
   onRetry(): void;
-  onOpenMemory(entry: MemoryEntry): void;
+  actions: BotProfileActions;
 }) {
   const theme = useDesignTheme();
   if (row.kind === 'entry')
     return (
-      <MemoryEntryRow entry={row.entry} first={row.first} last={row.last} onOpen={onOpenMemory} />
+      <MemoryEntryRow
+        entry={row.entry}
+        first={row.first}
+        last={row.last}
+        onOpen={actions.onOpenMemory}
+      />
     );
   const shape = {
     backgroundColor: theme.layer.sheet.fill,
@@ -265,6 +255,64 @@ function ProfileRow({
     borderBottomColor: theme.color.divider,
     gap: space.x2,
   };
+  if (row.kind === 'routine') {
+    const { routine } = row;
+    const open = actions.onOpenRoutine;
+    const detail = routineDetail(routine);
+    return (
+      <Pressable
+        accessibilityRole={open === undefined ? undefined : 'button'}
+        accessibilityLabel={
+          open === undefined ? undefined : `${t.routineOpen(routine.title)}, ${detail}`
+        }
+        disabled={open === undefined}
+        onPress={() => open?.(routine)}
+        style={({ pressed }) => [
+          shape,
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.x3,
+            minHeight: theme.touch,
+            backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+          },
+        ]}
+      >
+        <View style={{ flex: 1, gap: space.x1 }}>
+          <Text numberOfLines={1} tone={routine.enabled ? 'fg' : 'muted'}>
+            {routine.title}
+          </Text>
+          <Text variant="meta" tone="muted" numberOfLines={2}>
+            {detail}
+          </Text>
+        </View>
+        {open === undefined ? null : (
+          <ChevronRightIcon color={theme.color.muted} size={theme.type.title.line} />
+        )}
+      </Pressable>
+    );
+  }
+  if (row.kind === 'new-routine')
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t.routineNew}
+        onPress={actions.onNewRoutine}
+        style={({ pressed }) => [
+          shape,
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: space.x3,
+            minHeight: theme.touch,
+            backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+          },
+        ]}
+      >
+        <PlusIcon color={theme.color.fg} size={theme.type.title.line} />
+        <Text>{t.routineNew}</Text>
+      </Pressable>
+    );
   if (row.kind === 'loading')
     return (
       <View style={[shape, { flexDirection: 'row', alignItems: 'center', gap: space.x3 }]}>
@@ -334,28 +382,54 @@ function ProfileRow({
   );
 }
 
+export type RoutineTarget = { kind: 'new' } | { kind: 'open'; routine: BotScheduleSummary };
+
+export interface ProfileRoutines {
+  load(): Promise<BotScheduleSummary[]>;
+  sheet(host: { target: RoutineTarget; onChanged(): void; onClose(): void }): ReactNode;
+}
+
 export function BotProfileSheet({
   bot,
   channels,
   load,
-  actions,
+  actions: given,
   settings,
+  routines,
 }: {
   bot: RosterBot;
   channels: RosterChannel[];
   load: () => Promise<BotProfile>;
   actions: BotProfileActions;
   settings?: ReactNode;
+  routines?: ProfileRoutines | undefined;
 }) {
   const theme = useDesignTheme();
   const [profile, setProfile] = useState<BotProfile | undefined>();
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const [target, setTarget] = useState<RoutineTarget>();
   const read = useCallback(() => {
     setProfile(undefined);
     void load().then(setProfile);
   }, [load]);
   const mount = useMounted<SectionList<Row, { section: ProfileSection }>>(() => read(), [read]);
-  const rows = profileRows(profile, channels);
+  const refreshRoutines = () => {
+    if (routines === undefined) return;
+    void routines.load().then(
+      (value) =>
+        setProfile((current) => current && { ...current, routines: { status: 'ready', value } }),
+      () => undefined,
+    );
+  };
+  const actions: BotProfileActions =
+    routines === undefined
+      ? given
+      : {
+          ...given,
+          onOpenRoutine: (routine) => setTarget({ kind: 'open', routine }),
+          onNewRoutine: () => setTarget({ kind: 'new' }),
+        };
+  const rows = profileRows(profile, channels, routines !== undefined);
   const sections = PROFILE_SECTIONS.map((section) => ({ section, data: rows[section] }));
 
   return (
@@ -383,7 +457,7 @@ export function BotProfileSheet({
           row={item}
           expanded={expanded.has(item.key)}
           onRetry={read}
-          onOpenMemory={actions.onOpenMemory}
+          actions={actions}
           onToggle={() =>
             setExpanded((current) => {
               const next = new Set(current);
@@ -393,6 +467,17 @@ export function BotProfileSheet({
           }
         />
       )}
+      ListFooterComponent={
+        routines === undefined || target === undefined ? null : (
+          <>
+            {routines.sheet({
+              target,
+              onChanged: refreshRoutines,
+              onClose: () => setTarget(undefined),
+            })}
+          </>
+        )
+      }
     />
   );
 }

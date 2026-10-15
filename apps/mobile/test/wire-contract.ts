@@ -27,6 +27,7 @@ import type { AggregatedState as HostState } from '../../../packages/core/src/st
 import type {
   ActivityLiveFrame,
   AggregatedState,
+  BotScheduleFiring,
   BotScheduleSummary,
   MemoryFile,
   MemorySnapshot,
@@ -83,5 +84,10 @@ export type WireContract = [
   Assert<Accepts<MemorySnapshot, Value<'memorySnapshot'>['snapshot']>>,
   Assert<Accepts<MemoryFile | undefined, Value<'memoryFile'>['file']>>,
   Assert<Accepts<BotScheduleSummary, Value<'scheduleList'>['schedules'][number]>>,
+  Assert<Accepts<BotScheduleSummary, Value<'scheduleCreate'>['schedule']>>,
+  Assert<Accepts<BotScheduleSummary, Value<'scheduleUpdate'>['schedule']>>,
+  Assert<Accepts<BotScheduleFiring, Value<'scheduleHistory'>['firings'][number]>>,
+  Assert<Accepts<BotScheduleFiring, Value<'scheduleRunNow'>['firing']>>,
+  Assert<Accepts<string[], Value<'schedulePreview'>['occurrences']>>,
   Assert<Accepts<WorkspaceGrantSummary, Value<'grants'>['grants'][number]>>,
 ];
