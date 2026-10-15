@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, ScrollView, TextInput, View } from 'react-native';
 
 import { errorText, type Loadable } from '../../host/bot-settings';
 import {
@@ -47,6 +47,7 @@ function Field({
   placeholder,
   multiline = false,
   keyboard = 'default',
+  onFocus,
   onChange,
 }: {
   label: string;
@@ -54,6 +55,7 @@ function Field({
   placeholder?: string;
   multiline?: boolean;
   keyboard?: 'default' | 'number-pad' | 'numbers-and-punctuation';
+  onFocus?: () => void;
   onChange(text: string): void;
 }) {
   const theme = useDesignTheme();
@@ -67,6 +69,7 @@ function Field({
       keyboardType={keyboard}
       autoCorrect={!multiline ? false : undefined}
       onChangeText={onChange}
+      onFocus={onFocus}
       style={{
         marginHorizontal: space.x5,
         minHeight: multiline ? theme.touch * 2 : theme.touch,
@@ -160,10 +163,12 @@ function useDebounced() {
 function RoutineEditor({
   form,
   preview,
+  onScheduleFocus,
   onChange,
 }: {
   form: RoutineForm;
   preview: Loadable<string[]> | undefined;
+  onScheduleFocus(): void;
   onChange(patch: Partial<RoutineForm>): void;
 }) {
   const problem = routineProblem(form);
@@ -202,6 +207,7 @@ function RoutineEditor({
             label={t.routineHours}
             value={form.hours}
             keyboard="number-pad"
+            onFocus={onScheduleFocus}
             onChange={(hours) => onChange({ hours })}
           />
         </>
@@ -213,6 +219,7 @@ function RoutineEditor({
             value={form.time}
             placeholder="09:00"
             keyboard="numbers-and-punctuation"
+            onFocus={onScheduleFocus}
             onChange={(time) => onChange({ time })}
           />
         </>
@@ -295,6 +302,7 @@ export function RoutineSheet({
   const [notice, setNotice] = useState<string>();
   const debounce = useDebounced();
   const latest = useRef(form);
+  const scroller = useRef<ScrollView>(undefined);
 
   const loadHistory = (id: string) =>
     void routines.history(id).then(
@@ -332,7 +340,17 @@ export function RoutineSheet({
     }, delay);
   };
 
-  const mount = useMounted<ScrollView>(() => {
+  const showPreview = () => {
+    scroller.current?.scrollToEnd();
+    if (Keyboard.isVisible()) return;
+    const shown = Keyboard.addListener('keyboardDidShow', () => {
+      shown.remove();
+      scroller.current?.scrollToEnd();
+    });
+  };
+
+  const mount = useMounted<ScrollView>((node) => {
+    scroller.current = node;
     if (target.kind === 'open') loadHistory(target.routine.id);
     else refreshPreview(form, 0);
   }, []);
@@ -386,11 +404,18 @@ export function RoutineSheet({
       <Sheet visible label={title} title={title} subtitle={botName} onClose={close}>
         <ScrollView
           ref={mount}
+          automaticallyAdjustKeyboardInsets
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           contentContainerStyle={{ paddingBottom: space.x3 }}
         >
           {status}
-          <RoutineEditor form={form} preview={preview} onChange={change} />
+          <RoutineEditor
+            form={form}
+            preview={preview}
+            onScheduleFocus={showPreview}
+            onChange={change}
+          />
           <SheetActions>
             <Button
               label={t.cancel}
@@ -550,14 +575,12 @@ export function RoutineSheet({
             title={t.routineDelete}
             tone="danger"
             on={SHEET_GROUP}
-            onPress={
-              busy !== undefined
-                ? undefined
-                : () => {
-                    setError(undefined);
-                    setMode('delete');
-                  }
-            }
+            accessibilityLabel={t.routineDelete}
+            onPress={() => {
+              if (busy !== undefined) return;
+              setError(undefined);
+              setMode('delete');
+            }}
           />
         </SettingsGroupItem>
         {editable ? null : <SheetFooter>{t.routineAdvanced}</SheetFooter>}
