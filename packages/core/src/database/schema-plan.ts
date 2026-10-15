@@ -1986,6 +1986,313 @@ const INBOX_HISTORY_MIGRATION: SchemaMigration = {
   },
 };
 
+const EXTERNAL_USER_ROLE_MIGRATION: SchemaMigration = {
+  generation: 78,
+  module: 'messaging',
+  description:
+    'Keep ordinary conversation roles separate from explicit management grants in Messaging',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE messaging_external_roles (id TEXT PRIMARY KEY, bot_slug TEXT NOT NULL, body TEXT NOT NULL CHECK (json_valid(body)));
+      CREATE INDEX messaging_external_roles_bot ON messaging_external_roles(bot_slug);
+      CREATE TABLE messaging_sender_policies (bot_slug TEXT PRIMARY KEY, restricted INTEGER NOT NULL CHECK (restricted IN (0, 1)), revision INTEGER NOT NULL);
+      ALTER TABLE messaging_pairings ADD COLUMN purpose TEXT NOT NULL DEFAULT 'management' CHECK (purpose IN ('management', 'conversation'));
+      DROP INDEX messaging_pairings_current;
+      CREATE UNIQUE INDEX messaging_pairings_current ON messaging_pairings(binding_id, actor_id, purpose) WHERE status IN ('pending', 'approved');
+    `);
+  },
+};
+
+const PERMISSION_GROUP_MIGRATION: SchemaMigration = {
+  generation: 79,
+  module: 'messaging',
+  description: 'Persist continuous scoped authorization groups without copying member grants',
+  migrate(database) {
+    database.exec(`CREATE TABLE messaging_permission_groups (id TEXT PRIMARY KEY, bot_slug TEXT NOT NULL, binding_id TEXT NOT NULL, body TEXT NOT NULL CHECK (json_valid(body)));
+      CREATE INDEX messaging_permission_groups_scope ON messaging_permission_groups(bot_slug, binding_id);`);
+  },
+};
+
+const PAIRING_CARD_MIGRATION: SchemaMigration = {
+  generation: 80,
+  module: 'messaging',
+  description: 'Persist scoped pairing-review card receipts and operator choices',
+  migrate(database) {
+    database.exec(`CREATE TABLE messaging_pairing_cards (
+      id TEXT PRIMARY KEY, request_id TEXT NOT NULL, bot_slug TEXT NOT NULL,
+      destination TEXT NOT NULL, body TEXT NOT NULL CHECK (json_valid(body)),
+      UNIQUE(request_id, destination));
+      CREATE INDEX messaging_pairing_cards_bot ON messaging_pairing_cards(bot_slug);`);
+  },
+};
+
+export const BEHAVIOR_PERMISSION_MIGRATION: SchemaMigration = {
+  generation: 81,
+  module: 'messaging',
+  description: 'Persist reusable Bot-scoped Group behavior permission items',
+  migrate(db) {
+    db.exec(`CREATE TABLE messaging_behavior_permissions (
+      id TEXT PRIMARY KEY,
+      bot_slug TEXT NOT NULL,
+      body TEXT NOT NULL CHECK (json_valid(body))
+    );
+    CREATE INDEX messaging_behavior_permissions_bot ON messaging_behavior_permissions(bot_slug);`);
+  },
+};
+
+export const EXTERNAL_TOOL_RULE_CREATOR_MIGRATION: SchemaMigration = {
+  generation: 82,
+  module: 'tool-approval-rules',
+  description: 'Retain external creator provenance for revocable native approval rules',
+  migrate(database) {
+    database.exec('ALTER TABLE tool_approval_rules ADD COLUMN external_creator TEXT');
+  },
+};
+
+const FAILURE_ALERT_MIGRATION: SchemaMigration = {
+  generation: 83,
+  module: 'messaging',
+  description:
+    'Persist opt-in failure alerts and bounded delivery metadata on the shared management route',
+  migrate(database) {
+    database.exec(`CREATE TABLE messaging_failure_alert_settings (
+      bot_slug TEXT PRIMARY KEY, enabled INTEGER NOT NULL CHECK(enabled IN (0, 1)), revision INTEGER NOT NULL
+    );
+    CREATE TABLE messaging_failure_alert_deliveries (
+      id TEXT PRIMARY KEY, bot_slug TEXT NOT NULL, event_key TEXT NOT NULL UNIQUE,
+      body TEXT NOT NULL CHECK(json_valid(body))
+    );
+    CREATE INDEX messaging_failure_alert_deliveries_bot ON messaging_failure_alert_deliveries(bot_slug);`);
+  },
+};
+
+const ASSIGNMENT_ARCHIVE_MIGRATION: SchemaMigration = {
+  generation: 84,
+  module: 'assignments',
+  description: 'Mirror the DSH Session archive on Orchestrator-archived Assignments (ADR-0188)',
+  migrate(database) {
+    database.exec('ALTER TABLE assignments ADD COLUMN archived_at TEXT');
+  },
+};
+
+const INBOX_RESOLUTION_MIGRATION: SchemaMigration = {
+  generation: 85,
+  module: 'bot-inbox',
+  description: 'Keep Inbox Admissions open until the Orchestrator resolves them (ADR-0188)',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE inbox_admissions ADD COLUMN opened_at TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN resolved_at TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN resolution TEXT
+        CHECK (resolution IS NULL OR resolution IN ('done', 'ignored'));
+      ALTER TABLE inbox_admissions ADD COLUMN resolution_note TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN resolved_by_session_id TEXT;
+      CREATE INDEX inbox_admissions_open
+        ON inbox_admissions (bot_slug, opened_at)
+        WHERE opened_at IS NOT NULL AND resolved_at IS NULL AND ignored_at IS NULL;
+    `);
+  },
+};
+
+const INBOX_SNOOZE_MIGRATION: SchemaMigration = {
+  generation: 86,
+  module: 'bot-inbox',
+  description: 'Let the Orchestrator snooze open Inbox Admissions until a time (ADR-0188)',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE inbox_admissions ADD COLUMN snoozed_until TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN snoozed_at TEXT;
+      ALTER TABLE inbox_admissions ADD COLUMN snooze_note TEXT;
+      CREATE INDEX inbox_admissions_snoozed
+        ON inbox_admissions (bot_slug, snoozed_until)
+        WHERE snoozed_until IS NOT NULL AND resolved_at IS NULL;
+    `);
+  },
+};
+
+const ASSIGNMENT_ACCESS_SCOPE_MIGRATION: SchemaMigration = {
+  generation: 87,
+  module: 'assignment-access',
+  description: 'Record whether full access also covers the Orchestrator (ADR-0193)',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE bot_assignment_access ADD COLUMN scope TEXT NOT NULL DEFAULT 'assignments'
+        CHECK (scope IN ('chat', 'assignments'));
+    `);
+  },
+};
+
+const SECRET_MCP_SERVER_MIGRATION: SchemaMigration = {
+  generation: 88,
+  module: 'secret-mcp',
+  description: 'Remember Human-approved secret MCP servers per PersonaBot (ADR-0196)',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE bot_secret_mcp_servers (
+        bot_slug TEXT NOT NULL,
+        server_name TEXT NOT NULL,
+        account TEXT NOT NULL,
+        program TEXT NOT NULL,
+        args TEXT NOT NULL,
+        env TEXT NOT NULL,
+        reference_set TEXT NOT NULL,
+        approved_at TEXT NOT NULL,
+        PRIMARY KEY (bot_slug, server_name)
+      );
+    `);
+  },
+};
+
+const PROACTIVE_POST_LIMIT_MIGRATION: SchemaMigration = {
+  generation: 89,
+  module: 'messaging',
+  description: 'Persist per-app proactive post limits and independent quota revisions',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE messaging_bindings ADD COLUMN post_limit INTEGER DEFAULT 60 CHECK (post_limit IS NULL OR post_limit >= 1);
+      ALTER TABLE messaging_bindings ADD COLUMN post_limit_revision INTEGER NOT NULL DEFAULT 1 CHECK (post_limit_revision >= 1);
+    `);
+  },
+};
+
+const SECRET_MCP_ENABLEMENT_MIGRATION: SchemaMigration = {
+  generation: 90,
+  module: 'secret-mcp',
+  description: 'Record which PersonaBots enabled a remembered secret MCP server (ADR-0198)',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE bot_secret_mcp_enabled (
+        bot_slug TEXT NOT NULL,
+        owner_slug TEXT NOT NULL,
+        server_name TEXT NOT NULL,
+        enabled_at TEXT NOT NULL,
+        PRIMARY KEY (bot_slug, owner_slug, server_name)
+      );
+    `);
+  },
+};
+
+const DEVICE_PAIRING_MIGRATION: SchemaMigration = {
+  generation: 91,
+  module: 'device-pairing',
+  description: 'Record the Host identity and paired devices for the device gateway (ADR-0199)',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE device_pairing_host (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        host_id TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE paired_devices (
+        device_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        secret_hash TEXT NOT NULL,
+        public_key TEXT,
+        paired_at TEXT NOT NULL,
+        last_seen_at TEXT,
+        revoked_at TEXT
+      );
+    `);
+  },
+};
+
+const PUSH_DELIVERY_MIGRATION: SchemaMigration = {
+  generation: 92,
+  module: 'push',
+  description:
+    'Record push tokens, notification kinds and sent Human Inbox items per paired device',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE push_devices (
+        device_id TEXT PRIMARY KEY,
+        token TEXT NOT NULL,
+        platform TEXT NOT NULL CHECK (platform IN ('ios', 'android')),
+        locale TEXT,
+        preferences_json TEXT NOT NULL,
+        registered_at TEXT NOT NULL,
+        badge INTEGER
+      );
+      CREATE INDEX push_devices_token ON push_devices (token);
+      CREATE TABLE push_sent (
+        device_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        sent_at TEXT NOT NULL,
+        PRIMARY KEY (device_id, item_id)
+      );
+    `);
+  },
+};
+
+const HUMAN_INBOX_SNOOZE_MIGRATION: SchemaMigration = {
+  generation: 93,
+  module: 'human-attention',
+  description: 'Let the Human snooze a Human Inbox item until a later time',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE human_inbox_snoozes (
+        human_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        source_key TEXT NOT NULL,
+        until TEXT NOT NULL,
+        snoozed_at TEXT NOT NULL,
+        PRIMARY KEY (human_id, item_id, source_key)
+      );
+    `);
+  },
+};
+
+const CHANNEL_REACTION_MIGRATION: SchemaMigration = {
+  generation: 94,
+  module: 'messaging',
+  description: 'Record emoji reactions on Channel messages',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE channel_reactions (
+        channel_id TEXT NOT NULL REFERENCES channel_records(channel_id) ON DELETE CASCADE,
+        message_id TEXT NOT NULL,
+        actor_kind TEXT NOT NULL CHECK (actor_kind IN ('human', 'bot')),
+        actor_id TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        reacted_at TEXT NOT NULL,
+        PRIMARY KEY (channel_id, message_id, actor_kind, actor_id, emoji)
+      );
+    `);
+  },
+};
+
+const SECRET_CLI_TOOL_RULE_MIGRATION: SchemaMigration = {
+  generation: 95,
+  module: 'tool-approval-rules',
+  description: 'Allow secret_cli always-allow rules per program, account and variable names',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE tool_approval_rules_next (
+        id TEXT PRIMARY KEY,
+        bot_slug TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('orchestrator', 'assignment')),
+        scope_key TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('exact', 'all-opaque', 'secret-cli')),
+        tool_name TEXT NOT NULL,
+        input TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        active INTEGER NOT NULL CHECK (active IN (0, 1)),
+        revoked_at TEXT,
+        external_creator TEXT
+      );
+      INSERT INTO tool_approval_rules_next
+        (id, bot_slug, role, scope_key, kind, tool_name, input, created_at, active, revoked_at,
+         external_creator)
+      SELECT id, bot_slug, role, scope_key, kind, tool_name, input, created_at, active, revoked_at,
+             external_creator
+        FROM tool_approval_rules;
+      DROP TABLE tool_approval_rules;
+      ALTER TABLE tool_approval_rules_next RENAME TO tool_approval_rules;
+      CREATE INDEX tool_approval_rules_lookup
+        ON tool_approval_rules (bot_slug, role, scope_key, active, revoked_at);
+    `);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2063,4 +2370,22 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   BOT_SELF_RECORD_MIGRATION,
   MEMORY_COMMIT_RECORD_MIGRATION,
   INBOX_HISTORY_MIGRATION,
+  EXTERNAL_USER_ROLE_MIGRATION,
+  PERMISSION_GROUP_MIGRATION,
+  PAIRING_CARD_MIGRATION,
+  BEHAVIOR_PERMISSION_MIGRATION,
+  EXTERNAL_TOOL_RULE_CREATOR_MIGRATION,
+  FAILURE_ALERT_MIGRATION,
+  ASSIGNMENT_ARCHIVE_MIGRATION,
+  INBOX_RESOLUTION_MIGRATION,
+  INBOX_SNOOZE_MIGRATION,
+  ASSIGNMENT_ACCESS_SCOPE_MIGRATION,
+  SECRET_MCP_SERVER_MIGRATION,
+  PROACTIVE_POST_LIMIT_MIGRATION,
+  SECRET_MCP_ENABLEMENT_MIGRATION,
+  DEVICE_PAIRING_MIGRATION,
+  PUSH_DELIVERY_MIGRATION,
+  HUMAN_INBOX_SNOOZE_MIGRATION,
+  CHANNEL_REACTION_MIGRATION,
+  SECRET_CLI_TOOL_RULE_MIGRATION,
 ]);

@@ -6,16 +6,19 @@
   "type": "module",
   "scripts": {
     "build": "tsdown",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint && node scripts/check-source-policy.mjs && pnpm changelog:check && node scripts/check-adr-numbers.mjs",
+    "typecheck": "tsc --noEmit && pnpm --filter @botharness/mobile typecheck",
+    "lint": "oxlint && node scripts/check-source-policy.mjs && pnpm changelog:check && node scripts/check-adr-numbers.mjs && node scripts/check-cli-parity.mjs && node scripts/sync-bot-preset.mjs --check && node scripts/ci-plan.mjs --check && pnpm install:check",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt --write .",
     "format:check": "oxfmt --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "changelog:check": "node scripts/check-release-ledger.mjs && node scripts/check-dsh-skill-release-ledger.mjs",
+    "changelog:fold": "node scripts/fold-change-fragments.mjs",
     "skill:changelog:check": "node scripts/check-dsh-skill-release-ledger.mjs",
     "release:draft": "node scripts/release-draft.mjs",
+    "install:sync": "node scripts/sync-install-guidance.mjs",
+    "install:check": "node scripts/sync-install-guidance.mjs --check",
     "diagrams": "node scripts/render-diagrams.mjs",
     "sync:skill": "node scripts/sync-skill.mjs",
     "og:font": "node scripts/subset-og-font.mjs",
@@ -23,6 +26,8 @@
     "sync:development-status": "node scripts/development-status.mjs",
     "dev": "pnpm --filter docs exec portless",
     "dev:instance": "node scripts/dev-instance.mjs",
+    "verify:app": "node scripts/verify-app.mjs",
+    "e2e:smoke": "node scripts/e2e-personabot-create.mjs --with-dm",
     "dev:client": "tsdown --config tsdown.client.config.ts --config-loader unrun --watch",
     "slides:dev": "pnpm --filter @botharness/presentations dev",
     "slides:build": "node scripts/sync-slides.mjs",
@@ -32,10 +37,14 @@
   },
   "devDependencies": {
     "@astrojs/compiler": "2.13.1",
+    "@babel/core": "7.29.7",
     "@babel/parser": "7.29.8",
+    "@babel/plugin-syntax-jsx": "7.29.7",
+    "@babel/plugin-syntax-typescript": "7.29.7",
     "@babel/traverse": "7.29.8",
-    "@deepseek-ai/dsh": "0.2.0-rc.1",
+    "@deepseek-ai/dsh": "0.2.0-rc.2",
     "@mermaid-js/mermaid-cli": "^11.17.0",
+    "@stylexjs/babel-plugin": "0.19.1",
     "@types/node": "^22.20.2",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
@@ -53,5 +62,9 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@12.4.2"
+  "packageManager": "pnpm@12.4.2",
+  "enriched-markdown": {
+    "enableCodeHighlight": false,
+    "enableMath": false
+  }
 }

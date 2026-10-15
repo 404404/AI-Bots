@@ -6,6 +6,7 @@ import type { ActivityOverview } from '../../../core/src/bridge/methods.js';
 import type { PersonaBotToolActivity } from '../../../core/src/state/tool-activity.js';
 import type { PersonaBotActivityState } from './avatar.js';
 import type { AvatarAppearance } from '../../../core/src/bots/avatar-appearance.js';
+import type { BotPrimaryColor } from '../../../core/src/bots/primary-color.js';
 import type { GitAvailability } from './bridge.js';
 import type { RosterConfig } from './roster-config.js';
 import type { RosterSection, TopOrderEntry } from './roster.js';
@@ -33,6 +34,7 @@ export interface BotSummary {
   appearance?: AvatarAppearance;
   appearanceUnsupported?: true;
   banner?: BotBannerView;
+  primaryColor?: BotPrimaryColor;
   avatarSeed?: 2;
   paused?: boolean;
   deleted?: boolean;
@@ -107,6 +109,13 @@ export type ChannelAttachmentRef = { name: string; mime: string; size: number } 
   | { hash: string; fileId?: never }
 );
 
+export interface BotCreatePreview {
+  memoryFolder: string;
+  defaultLocation: boolean;
+  avatar?: string;
+  avatarError?: string;
+}
+
 export interface ToolApprovalRequestCard {
   sessionId: string;
   callId: string;
@@ -114,6 +123,7 @@ export interface ToolApprovalRequestCard {
   role: 'orchestrator' | 'assignment';
   cwd: string;
   input: string;
+  botCreatePreview?: BotCreatePreview;
 }
 
 export interface ToolApprovalDecision {
@@ -163,6 +173,11 @@ export interface SessionFailureCard {
   context?: string;
 }
 
+export interface ChannelReaction {
+  emoji: string;
+  actors: { kind: 'human' | 'bot'; id: string }[];
+}
+
 export interface ChannelMessage {
   onboardingWelcome?: { version: 1 };
   contentPurged?: true;
@@ -182,6 +197,7 @@ export interface ChannelMessage {
     state: 'unread' | 'read';
   }[];
   channelRevision?: number;
+  reactions?: ChannelReaction[];
   deliveries?: {
     botSlug: string;
     state:
@@ -194,6 +210,10 @@ export interface ChannelMessage {
       | 'ignored';
   }[];
   botDmAction?: { channelId: string; messageId: string; recipientBotSlug: string };
+  botCreateAction?: { botSlug: string; displayName: string };
+  botChannelPost?: { channelId: string; messageId: string };
+  botChannelPostPreview?: string | null;
+  noticeOrigin?: { channelId: string };
   memoryCommit?: {
     botSlug: string;
     sha: string;
@@ -203,6 +223,9 @@ export interface ChannelMessage {
     files: Array<{ path: string; added: number | null; deleted: number | null }>;
     moreFiles: number;
   };
+  turnStop?: { botName: string; humanName: string };
+  toolAutoApproval?: import('../../../core/src/channels/channel.js').ChannelToolAutoApproval;
+  toolAutoApprovalPause?: import('../../../core/src/channels/channel.js').ChannelToolAutoApprovalPause;
   memberDeparture?: {
     memberKind: 'bot' | 'human';
     memberId: string;
@@ -218,12 +241,15 @@ export interface ChannelMessage {
   toolApprovalDecision?: ToolApprovalDecision;
   userQuestionRequest?: UserQuestionRequestCard;
   userQuestionResolution?: UserQuestionResolution;
+  privateInputRequest?: import('../../../core/src/credentials/contracts.js').PrivateInputCard;
+  privateInputResolution?: import('../../../core/src/credentials/contracts.js').PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   format?: 'markdown' | 'text';
   replyTo?: string;
   replyToPreview?: ChannelReplyPreview | null;
   pending?: boolean;
   failed?: string;
+  unconfirmed?: boolean;
   streaming?: boolean;
 }
 
@@ -243,6 +269,12 @@ export interface OwnedSessionSummary {
   cwdReference?: string;
   assignmentActivity?: 'working' | 'idle' | 'error' | 'stopping' | 'stopped';
   assignmentAccessMode?: 'workspace-write' | 'danger-full-access';
+  assignmentReportState?: 'progress' | 'completed' | 'blocked' | 'waiting-human' | 'failed';
+  assignmentExecutionWait?: 'waiting-human' | 'waiting-capacity';
+  assignmentArchived?: true;
+  assignmentPurpose?: string;
+  currentOrchestrator?: boolean;
+  triageOpenCount?: number;
 }
 
 export type HumanInboxCategory = 'action' | 'info' | 'unread' | 'replies' | 'handled';
@@ -252,6 +284,7 @@ export interface HumanInboxFilters {
   botSlug: string | undefined;
   channelId: string | undefined;
   sort: HumanInboxSort;
+  snoozed?: boolean;
 }
 
 export interface HumanAttentionItem {
@@ -260,7 +293,9 @@ export interface HumanAttentionItem {
   kind:
     | 'group-join-request'
     | 'user-question'
+    | 'private-input'
     | 'tool-approval'
+    | 'auto-rejection'
     | 'workspace-grant-request'
     | 'bot-dm-message'
     | 'assignment-waiting-human'
@@ -283,6 +318,14 @@ export interface HumanAttentionItem {
   isUnread?: boolean;
   responseMessageId?: string;
   responseSourceEventId?: string;
+  snoozedUntil?: string;
+  autoRejection?: {
+    sessionId: string;
+    toolName: string;
+    input: string;
+    template: string;
+    reason: string;
+  };
 }
 
 export interface HumanAttentionPage {
@@ -293,11 +336,13 @@ export interface HumanAttentionPage {
 export interface HumanInboxState {
   status: ClientStatus;
   unreadCount: number;
+  channelUnread: Readonly<Record<string, number>>;
   hasAction: boolean;
   category: HumanInboxCategory;
   botSlug: string | undefined;
   channelId: string | undefined;
   sort: HumanInboxSort;
+  snoozed: boolean;
   items: readonly HumanAttentionItem[];
   nextCursor: string | undefined;
   error: string | undefined;
@@ -340,6 +385,7 @@ export interface ConversationState {
   revision: number;
   timeline: ConversationTimeline;
   focusMessageId?: string | undefined;
+  unreadAfterMessageId?: string | undefined;
   error: string | undefined;
   sending: boolean;
 }
@@ -350,6 +396,8 @@ export type BotAttentionStatus =
   | 'observed'
   | 'deferred'
   | 'needs-repair'
+  | 'open'
+  | 'snoozed'
   | 'handled'
   | 'ignored';
 
@@ -362,6 +410,9 @@ export interface BotAttentionItem {
   observedAt?: string;
   handledAt?: string;
   ignoredAt?: string;
+  resolutionNote?: string;
+  snoozedUntil?: string;
+  snoozeNote?: string;
   sourceKind: string;
   sourceChannelId?: string;
   sourceChannelName?: string;
@@ -413,12 +464,16 @@ export interface SessionsState {
 export interface RosterState {
   pins: readonly string[];
   hidden: readonly string[];
+  muted: readonly string[];
   sections: readonly RosterSection[];
   topOrder: readonly TopOrderEntry[] | undefined;
   readOnly: boolean;
 }
 
 export interface ClientState {
+  composerIdentity?:
+    | import('../../../core/src/bridge/composer-recovery.js').ComposerRecoveryIdentity
+    | undefined;
   mode: ClientMode;
   bots: readonly BotSummary[];
   channels: readonly ChannelSummary[];
@@ -455,6 +510,7 @@ export interface PersonaBotActivitySnapshot {
 }
 
 export interface ClientStore {
+  setComposerIdentity(identity: ClientState['composerIdentity']): void;
   purgeContent(placements: readonly PurgedPlacement[]): void;
   getSnapshot(): ClientState;
   subscribe(listener: () => void): () => void;
@@ -496,6 +552,7 @@ function initialConversation(): ConversationState {
     revision: 0,
     timeline: initialTimeline(),
     focusMessageId: undefined,
+    unreadAfterMessageId: undefined,
     error: undefined,
     sending: false,
   };
@@ -513,11 +570,13 @@ function initialHumanInbox(): HumanInboxState {
   return {
     status: 'idle',
     unreadCount: 0,
+    channelUnread: {},
     hasAction: false,
     category: 'action',
     botSlug: undefined,
     channelId: undefined,
     sort: 'oldest',
+    snoozed: false,
     items: [],
     nextCursor: undefined,
     error: undefined,
@@ -528,6 +587,7 @@ function initialRoster(): RosterState {
   return {
     pins: [],
     hidden: [],
+    muted: [],
     sections: [],
     topOrder: undefined,
     readOnly: false,
@@ -565,6 +625,7 @@ export function createStore(): ClientStore {
     if (channelId === undefined || conversation.status !== 'ready') return;
     rememberKeyed(conversations, channelId, {
       ...conversation,
+      unreadAfterMessageId: undefined,
       drafts: [],
       draftRevision: 0,
       draftNotice: undefined,
@@ -675,6 +736,9 @@ export function createStore(): ClientStore {
     setMode(mode) {
       if (state.mode !== mode) update({ mode });
     },
+    setComposerIdentity(composerIdentity) {
+      update({ composerIdentity });
+    },
     setMemoryCommitIntent(memoryCommitIntent) {
       update({ memoryCommitIntent });
     },
@@ -712,9 +776,15 @@ export function createStore(): ClientStore {
       update({ roster: { ...state.roster, ...patch } });
     },
     upsertChannel(channel) {
-      const previous = state.channels.find((candidate) => candidate.id === channel.id);
-      const existing = state.channels.filter((candidate) => candidate.id !== channel.id);
-      update({ channels: [{ ...previous, ...channel }, ...existing] });
+      const index = state.channels.findIndex((candidate) => candidate.id === channel.id);
+      update({
+        channels:
+          index === -1
+            ? [channel, ...state.channels]
+            : state.channels.map((candidate, at) =>
+                at === index ? { ...candidate, ...channel } : candidate,
+              ),
+      });
     },
     select(selection, options) {
       if (sameSelection(state.selection, selection)) return;

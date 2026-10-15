@@ -332,8 +332,8 @@ describe('Group ordinary-message digest', () => {
       expect(switched).toHaveLength(2);
       expect(switched).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ sourceMessageId: 'after-switch', state: 'handled' }),
-          expect.objectContaining({ sourceMessageId: 'before-switch', state: 'handled' }),
+          expect.objectContaining({ sourceMessageId: 'after-switch', state: 'open' }),
+          expect.objectContaining({ sourceMessageId: 'before-switch', state: 'open' }),
         ]),
       );
     } finally {
@@ -482,7 +482,7 @@ describe('Group ordinary-message digest', () => {
       dshHome: home,
       agents: adapter(async (run) => {
         runs.push(run.message);
-        if (run.message === 'Hold') {
+        if (run.message.endsWith('Hold')) {
           started();
           await gate;
         }
@@ -507,7 +507,7 @@ describe('Group ordinary-message digest', () => {
       await began;
       await ordinary(core, group.id, 'one');
       await ordinary(core, group.id, 'two');
-      expect(runs).toEqual(['Hold']);
+      expect(runs).toEqual(['[Human DM]\nChannel: ' + dm.id + '\nMessage ID: hold\nHold']);
       release();
       await core.runtime.whenIdle();
       expect(runs).toHaveLength(2);
@@ -729,7 +729,7 @@ describe('Group ordinary-message digest', () => {
       expect(resumedAttention).toHaveLength(2);
       expect(resumedAttention).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ sourceMessageId: 'mention-after-silent', state: 'handled' }),
+          expect.objectContaining({ sourceMessageId: 'mention-after-silent', state: 'open' }),
           expect.objectContaining({ sourceMessageId: 'quiet', state: 'pending' }),
         ]),
       );

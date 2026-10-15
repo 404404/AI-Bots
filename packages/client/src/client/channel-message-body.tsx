@@ -1,4 +1,7 @@
+import { BridgeAudio } from './bridge-audio.js';
+import { BridgeFile } from './bridge-file.js';
 import { UserQuestionCard } from './user-question-card.js';
+import { PrivateInputCard } from './private-input-card.js';
 import { ToolApprovalCard } from './tool-approval-card.js';
 import { OnboardingWelcome } from './onboarding-view.js';
 import { BridgeImage } from './bridge-image.js';
@@ -8,20 +11,27 @@ import { useMemo, useRef, useState, type ReactElement } from 'react';
 
 import {
   Button,
+  FileTypeIcon,
+  fileSizeText,
   MarkdownText,
   StateDot,
+  Tag,
   type MarkdownLabels,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
 import { errorMessage } from './bridge.js';
 import { PersonaBotAvatar } from './avatar.js';
+import { botNameSource, paintBotName } from './bot-primary-color.js';
 import { openModelsSettings } from './bot-settings-open.js';
 import { currentMentionLabel } from './actor-names.js';
 import type { ChannelHumanMember } from './store.js';
 import { referenceRuns } from './channel-refs.js';
+import { preserveHumanLineBreaks, rendersHumanMarkdown } from './human-markdown.js';
+import { attachmentReferenceRuns, messageAttachmentReferences } from './attachment-refs.js';
 import type { BridgeActions, HostDirectoryListing } from './actions.js';
 import { FolderBrowser } from './workspace-grants-entry.js';
 import type { BotHarnessTranslate } from './locale.js';
+import { toolApprovalText } from './approval-text.js';
 import { store, type BotSummary, type ChannelMessage } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
 
@@ -95,28 +105,6 @@ function SessionFailureNotice({
           {t('failure.assignmentContext', { context: failure.context })}
         </div>
       )}
-      {needsModels ? (
-        <Button variant="outline" onClick={() => openModelsSettings()}>
-          {t('failure.openModels')}
-        </Button>
-      ) : null}
-      {failure.requestMessageId && actions && channelId ? (
-        <Button
-          variant="outline"
-          disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            setError(undefined);
-            void actions
-              .retryMessage(channelId, failure.requestMessageId!)
-              .catch((cause) => setError(errorMessage(cause)))
-              .finally(() => setBusy(false));
-          }}
-        >
-          {t('onboarding.retryMessage')}
-        </Button>
-      ) : null}
-      {error ? <p role="alert">{error}</p> : null}
       <details className="bh-session-failure-details">
         <summary>{t('failure.details')}</summary>
         <div>
@@ -129,6 +117,32 @@ function SessionFailureNotice({
         <div className="bh-session-failure-raw">{failure.detail}</div>
         <code>{failure.sessionId}</code>
       </details>
+      {needsModels || (failure.requestMessageId && actions && channelId) ? (
+        <div className="bh-message-card-actions">
+          {needsModels ? (
+            <Button variant="outline" onClick={() => openModelsSettings()}>
+              {t('failure.openModels')}
+            </Button>
+          ) : null}
+          {failure.requestMessageId && actions && channelId ? (
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => {
+                setBusy(true);
+                setError(undefined);
+                void actions
+                  .retryMessage(channelId, failure.requestMessageId!)
+                  .catch((cause) => setError(errorMessage(cause)))
+                  .finally(() => setBusy(false));
+              }}
+            >
+              {t('onboarding.retryMessage')}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+      {error ? <p role="alert">{error}</p> : null}
     </div>
   );
 }
@@ -142,10 +156,12 @@ export function GrantRequestCard({
   workspacePickerRequest,
   compact = false,
   beforeOpen,
+  channelId,
   t,
 }: {
   message: ChannelMessage;
   actions: BridgeActions;
+  channelId?: string | undefined;
   workspacePickerRequest?: number | undefined;
   resolved: boolean;
   compact?: boolean;
@@ -189,8 +205,12 @@ export function GrantRequestCard({
     setError(undefined);
     void (async () => {
       try {
-        await actions.resolveWorkspaceGrantRequest(botSlug, message.id, path, (name) =>
-          t('grant.requestApprovedMessage', { name }),
+        await actions.resolveWorkspaceGrantRequest(
+          botSlug,
+          message.id,
+          path,
+          (name) => t('grant.requestApprovedMessage', { name }),
+          channelId,
         );
         setCompleted(true);
         setListing(undefined);
@@ -213,6 +233,18 @@ export function GrantRequestCard({
       open(true);
     }
   }, [workspacePickerRequest]);
+  const chooseButton = (
+    <Button
+      variant="primary"
+      size={compact ? 'sm' : 'md'}
+      disabled={busy || opening}
+      onClick={() => open()}
+    >
+      {opening
+        ? t('grant.loading')
+        : t(compact ? 'humanInbox.grant.handle' : 'grant.requestChoose')}
+    </Button>
+  );
   return (
     <div
       className={compact ? 'bh-human-inbox-grant-action' : 'bh-grant-request-card'}
@@ -228,17 +260,10 @@ export function GrantRequestCard({
         <div className="bh-note" role="status">
           {t('grant.requestResolved')}
         </div>
+      ) : compact ? (
+        chooseButton
       ) : (
-        <Button
-          variant="primary"
-          size={compact ? 'sm' : 'md'}
-          disabled={busy || opening}
-          onClick={() => open()}
-        >
-          {opening
-            ? t('grant.loading')
-            : t(compact ? 'humanInbox.grant.handle' : 'grant.requestChoose')}
-        </Button>
+        <div className="bh-message-card-actions">{chooseButton}</div>
       )}
       {error === undefined ? null : (
         <div className="bh-error" role="alert">
@@ -268,7 +293,7 @@ function leadingBotMentions(message: ChannelMessage):
       text: string;
     }
   | undefined {
-  if (message.author.kind !== 'bot') return undefined;
+  if (message.author.kind !== 'bot' && message.author.kind !== 'human') return undefined;
   const mentions = [...(message.mentions ?? []), ...(message.humanMentions ?? [])].sort(
     (left, right) => left.start - right.start,
   );
@@ -288,7 +313,7 @@ function leadingBotMentions(message: ChannelMessage):
 }
 
 export function ChannelMessageBody({
-  message,
+  message: storedMessage,
   channelId,
   t,
   actions,
@@ -327,7 +352,12 @@ export function ChannelMessageBody({
     }),
     [t],
   );
-  const format = message.format ?? (message.author.kind === 'human' ? 'text' : 'markdown');
+  const approvalBody = toolApprovalText(storedMessage, t);
+  const message =
+    approvalBody === undefined ? storedMessage : { ...storedMessage, body: approvalBody };
+  const humanMarkdown = rendersHumanMarkdown(message);
+  const format =
+    message.format ?? (message.author.kind === 'human' && !humanMarkdown ? 'text' : 'markdown');
   if (message.contentPurged) return <div className="bh-bubble-body">{t('purge.purged')}</div>;
   if (message.onboardingWelcome !== undefined && actions !== undefined && channelId !== undefined)
     return <OnboardingWelcome actions={actions} channelId={channelId} t={t} />;
@@ -343,8 +373,17 @@ export function ChannelMessageBody({
     );
   if (message.toolApprovalRequest !== undefined && actions !== undefined) {
     return (
-      <ToolApprovalCard message={message} actions={actions} decision={toolApprovalDecision} t={t} />
+      <ToolApprovalCard
+        message={message}
+        actions={actions}
+        decision={toolApprovalDecision}
+        channelId={channelId}
+        t={t}
+      />
     );
+  }
+  if (message.privateInputRequest !== undefined && actions !== undefined) {
+    return <PrivateInputCard message={message} actions={actions} channelId={channelId} t={t} />;
   }
   if (message.userQuestionRequest !== undefined && actions !== undefined) {
     return (
@@ -352,6 +391,7 @@ export function ChannelMessageBody({
         message={message}
         actions={actions}
         resolution={userQuestionResolution}
+        channelId={channelId}
         t={t}
       />
     );
@@ -362,6 +402,7 @@ export function ChannelMessageBody({
         message={message}
         actions={actions}
         resolved={grantRequestResolved || message.grantRequestResolved === true}
+        channelId={channelId}
         workspacePickerRequest={workspacePickerRequest}
         t={t}
       />
@@ -369,9 +410,29 @@ export function ChannelMessageBody({
   }
   if (message.bridgeMedia && message.bridgeOrigin && channelId) {
     const media = message.bridgeMedia;
-    const renderImage = (id: string, index: number) => {
-      const item = media.items.find((image) => image.id === id);
-      return item ? (
+    const renderMedia = (id: string, index: number) => {
+      const item = media.items.find((item) => item.id === id);
+      return item?.kind === 'audio' ? (
+        <BridgeAudio
+          key={index}
+          channelId={channelId}
+          sourceEventId={message.bridgeOrigin!.sourceEventId}
+          attachmentId={id}
+          name={item.name}
+          sizeBytes={item.sizeBytes}
+          t={t}
+        />
+      ) : item?.kind === 'file' ? (
+        <BridgeFile
+          key={index}
+          channelId={channelId}
+          sourceEventId={message.bridgeOrigin!.sourceEventId}
+          attachmentId={id}
+          name={item.name}
+          sizeBytes={item.sizeBytes}
+          t={t}
+        />
+      ) : item ? (
         <BridgeImage
           key={index}
           channelId={channelId}
@@ -384,6 +445,17 @@ export function ChannelMessageBody({
     };
     return (
       <div className="bh-bubble-content bh-bridge-media-content">
+        {media.voice ? (
+          <div className="bh-external-message-head">
+            <Tag tone={media.voice.transcript === 'platform' ? 'info' : 'warning'}>
+              {t(
+                media.voice.transcript === 'platform'
+                  ? 'im.voiceTranscriptPlatform'
+                  : 'im.voiceTranscriptUnavailable',
+              )}
+            </Tag>
+          </div>
+        ) : null}
         {media.parts ? (
           media.parts.map((part, index) =>
             part.kind === 'text' ? (
@@ -395,7 +467,7 @@ export function ChannelMessageBody({
                 />
               </span>
             ) : (
-              renderImage(part.id, index)
+              renderMedia(part.id, index)
             ),
           )
         ) : (
@@ -409,7 +481,7 @@ export function ChannelMessageBody({
                 />
               </div>
             ) : null}
-            {media.items.map((image, index) => renderImage(image.id, index))}
+            {media.items.map((item, index) => renderMedia(item.id, index))}
           </>
         )}
       </div>
@@ -449,7 +521,7 @@ export function ChannelMessageBody({
             t={t}
           />
         </span>
-        <span>{label}</span>
+        <span ref={(element) => paintBotName(element, botNameSource(bot))}>{label}</span>
       </>
     );
     if (actions === undefined)
@@ -503,6 +575,35 @@ export function ChannelMessageBody({
       </button>
     );
   };
+  const attachedFiles = messageAttachmentReferences(message.attachments ?? []);
+  const renderAttachmentText = (text: string) =>
+    attachmentReferenceRuns(text, attachedFiles).map((part, index) => {
+      const item = part.attachment;
+      if (item === undefined) return <span key={index}>{part.text}</span>;
+      return (
+        <button
+          key={index}
+          type="button"
+          className="bh-inline-mention bh-composer-inline-attachment"
+          aria-label={t('composer.locateAttachment', { name: item.file.name })}
+          onClick={(event) => {
+            const attachmentIndex = attachedFiles.findIndex(
+              (candidate) => candidate.id === item.id,
+            );
+            const card = event.currentTarget
+              .closest('.bh-bubble-content')
+              ?.querySelector('.bh-message-attachments')?.children[attachmentIndex];
+            card?.scrollIntoView({ block: 'nearest' });
+            card?.querySelector<HTMLElement>('button, a')?.focus();
+          }}
+        >
+          <span className="bh-attachment-ordinal">{attachedFiles.indexOf(item) + 1}</span>
+          <FileTypeIcon path={item.file.name} size={16} />
+          <span className="bh-composer-inline-attachment-name">{item.file.name}</span>
+          <span className="bh-composer-inline-attachment-size">{fileSizeText(item.file.size)}</span>
+        </button>
+      );
+    });
   return (
     <div className="bh-bubble-content">
       {message.body.length === 0 ? null : format === 'text' ? (
@@ -528,7 +629,7 @@ export function ChannelMessageBody({
                     mentions={message.bridgeOrigin?.mentions ?? []}
                   />
                 ) : (
-                  run.text
+                  renderAttachmentText(run.text)
                 )}
               </span>
             ),
@@ -546,7 +647,11 @@ export function ChannelMessageBody({
           )}
           {leading === undefined || leading.text.length > 0 ? (
             <ChannelMarkdownText
-              text={leading?.text ?? message.body}
+              text={
+                humanMarkdown
+                  ? preserveHumanLineBreaks(leading?.text ?? message.body)
+                  : (leading?.text ?? message.body)
+              }
               streaming={message.streaming === true}
               labels={labels}
             />

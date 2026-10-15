@@ -28,15 +28,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     icon?: ReactNode;
   }) => createElement('button', { role: 'menuitem', onClick: onSelect, disabled }, icon, children),
 }));
-import {
-  ChannelSidebarSettings,
-  MemoryDisplaySettings,
-  SessionsDisplaySettings,
-} from '../src/client/channel-sidebar-settings.js';
-import {
-  readSessionViewPreference,
-  updateSessionViewPreference,
-} from '../src/client/session-view-prefs.js';
+import { ChannelSidebarSettings } from '../src/client/channel-sidebar-settings.js';
+import { TerminologySettings } from './support/terminology-settings.js';
 import {
   channelSidebarPrefs,
   createChannelSidebarPrefs,
@@ -51,7 +44,7 @@ const props = {
   actions: {},
   t: (key: string) => key,
 } as unknown as ChannelSidebarEntryProps;
-function mount(slug = 'settings-qa', settings = true) {
+function mount(slug: string | null = 'settings-qa', settings = true) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
@@ -59,22 +52,18 @@ function mount(slug = 'settings-qa', settings = true) {
   act(() =>
     root.render(
       createElement(ChannelSidebarSettings, {
-        entryProps: { ...props, botSlug: slug },
+        entryProps:
+          slug === null
+            ? { ...props, scope: 'channel', channelId: 'group-qa', botSlug: undefined }
+            : { ...props, botSlug: slug },
         entries: settings
           ? [
-              {
-                id: 'sessions',
-                label: 'Sessions',
-                scope: 'personabot',
-                component: () => null,
-                settings: SessionsDisplaySettings,
-              },
               {
                 id: 'memory',
                 label: 'Memory',
                 scope: 'personabot',
                 component: () => null,
-                settings: MemoryDisplaySettings,
+                settings: TerminologySettings,
               },
             ]
           : [],
@@ -100,37 +89,6 @@ afterEach(() => {
 });
 
 describe('registered Channel sidebar display settings', () => {
-  it('persists Sessions choices per Bot and preserves the other choice and collapsed workspaces', () => {
-    updateSessionViewPreference('settings-qa', () => ({
-      scope: 'current',
-      layout: 'flat',
-      collapsedWorkspaces: ['ws-one'],
-    }));
-    updateSessionViewPreference('settings-other', () => ({
-      scope: 'current',
-      layout: 'flat',
-      collapsedWorkspaces: [],
-    }));
-    const container = mount();
-    click(container, 'sidebar.settings');
-    click(container, 'entry.sessions · sessions.view');
-    click(container, 'sessions.all');
-    expect(container.querySelector('[role=menu]')).not.toBeNull();
-    expect(readSessionViewPreference('settings-qa')).toEqual({
-      scope: 'all',
-      layout: 'flat',
-      collapsedWorkspaces: ['ws-one'],
-    });
-    click(container, 'entry.sessions · sessions.layout');
-    click(container, 'sessions.layout.workspace');
-    expect(readSessionViewPreference('settings-qa')).toEqual({
-      scope: 'all',
-      layout: 'workspace',
-      collapsedWorkspaces: ['ws-one'],
-    });
-    expect(readSessionViewPreference('settings-other').scope).toBe('current');
-    expect(readSessionViewPreference('settings-other').layout).toBe('flat');
-  });
   it('keeps terminology shared across Bots and restores it from browser storage', () => {
     const first = mount('memory-qa-one');
     const second = mount('memory-qa-two');
@@ -147,7 +105,7 @@ describe('registered Channel sidebar display settings', () => {
     expect(selected?.querySelector('svg')).not.toBeNull();
   });
   it('offers a disabled empty state when current visible entries have no settings', () => {
-    const container = mount('group-qa', false);
+    const container = mount(null, false);
     click(container, 'sidebar.settings');
     const item = container.querySelector('[role=menuitem]');
     expect(item?.textContent).toBe('sidebar.settings.empty');

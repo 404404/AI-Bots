@@ -58,6 +58,10 @@ _Avoid_: profile picture, skin
 A category of Avatar forms with compatible appearance choices that a Human can combine. Each family expresses the same Bot state in its own visual language; an appearance choice is shared across families only when it is explicitly compatible.
 _Avoid_: Soul, Bot type, mode, skin
 
+**Bot Primary Color**:
+A PersonaBot's visual identity color, automatically following its Avatar's main hair color or a stable fallback, unless a Human chooses a custom color independently of the Avatar. Names and charts express the same identity through theme-appropriate variants; it is not a brand, activity or outcome color.
+_Avoid_: theme accent, status color, unique Bot color, fixed initial hair color
+
 **Avatar Appearance**:
 A PersonaBot's saved visual choices: its Avatar Family, Avatar Species, compatible parts including Custom Parts, colors and editable geometry. The same choices apply across Bindings and return after temporary motion or deformation; they are independent of Persona and current Bot state.
 _Avoid_: Soul, pose, mood, skin
@@ -129,8 +133,12 @@ The DSH Agent executing inside one Assignment Session. It reports only to its Pe
 _Avoid_: worker, PersonaBot, Orchestrator, Assignment Session
 
 **Assignment Directory**:
-The PersonaBot-scoped durable read model through which its current Orchestrator explicitly lists and addresses owned Assignment Sessions, including purpose, Continuity Key, Workspace, DSH-derived activity/last-run facts, dependencies, latest semantic report, and aggregate descendant activity. It keeps execution facts separate from reported outcomes, is rebuilt from Session Ownership and DSH facts, and is queried when needed rather than injected wholesale into every turn. Listings use filtered, ordered, opaque-cursor pagination and never flatten DSH Subagents into top-level Assignment rows.
+The PersonaBot-scoped durable read model through which its current Orchestrator explicitly lists and addresses owned Assignment Sessions, including purpose, Continuity Key, Workspace, DSH-derived activity/last-run facts, dependencies, latest semantic report, and aggregate descendant activity. It keeps execution facts separate from reported outcomes, is rebuilt from Session Ownership and DSH facts, and is queried when needed rather than injected wholesale into every turn. Listings use filtered, ordered, opaque-cursor pagination with text search, hide Archived Assignments by default, and never flatten DSH Subagents into top-level Assignment rows.
 _Avoid_: task list, AgentHandle map, cwd scan, Orchestrator memory
+
+**Archived Assignment**:
+An Assignment whose Orchestrator explicitly archived it through DSH's native Session archive after it settled. It leaves the default Assignment Directory listing and native Session lists, gives up its Continuity Key, refuses Assignment Requests, and keeps its history; unarchiving restores it. Nothing archives an Assignment automatically (ADR-0188).
+_Avoid_: deleted Assignment, stopped Assignment, auto-archive, hidden flag
 
 **Continuity Key**:
 A stable PersonaBot-local key explicitly assigned to one continuing line of work. It names at most one resumable Assignment Session and may select it only when ownership, Workspace mapping, model, and dependency requirements still match. An active holder must first become idle/completed or be explicitly stopped and superseded before the key moves.
@@ -157,7 +165,7 @@ A durable Host-origin Source Event emitted only for a meaningful execution bound
 _Avoid_: Assignment Report, fabricated agent message, per-turn directory snapshot
 
 **Assignment Concurrency Limit**:
-The profile-wide maximum number of independent Assignment Sessions allowed to execute concurrently. It is a single Human-configured BotHarness setting in v1; a create or wake attempt beyond the limit fails immediately with machine-readable fields and an LLM-readable explanation, without creating a queue, intent, or DSH Session.
+The profile-wide maximum number of independent Assignment Sessions allowed to execute concurrently. It is a single Human-configured BotHarness setting in v1, defaulting to 8; a create or wake attempt beyond the limit fails immediately with machine-readable fields and an LLM-readable explanation, without creating a queue, intent, or DSH Session.
 _Avoid_: dispatch queue, per-Bot quota, hidden model budget, total Session count
 
 **Workspace**:
@@ -169,8 +177,20 @@ A durable, revocable, application-defined authorization for one PersonaBot and o
 _Avoid_: Service Grant, Workspace, one-time approval, cwd inference
 
 **Tool Approval Rule**:
-A Human-saved, revocable instruction to answer future DSH approval requests automatically for one PersonaBot role and Workspace Grant scope. An exact rule matches the native tool name and complete input; an all-opaque rule covers every opaque native tool in that scope. Each matching call still receives its own DSH approval decision and audit event.
+A revocable instruction, explicitly saved by the Web Human or a currently authorized external reviewer, to answer future DSH approval requests automatically for one PersonaBot role and Workspace Grant scope. An exact rule matches the native tool name and complete input; an all-opaque rule covers every opaque native tool in that scope. An external reviewer's rule depends on that original pairing and current approval/rule-saving authority; loss disables it rather than transferring it to a later pairing. Each matching call still receives its own DSH approval decision and audit event.
 _Avoid_: Workspace Grant, provider Service Grant, sandbox preset, inferred command similarity
+
+**Approval Template**:
+A Profile-wide, Human-written Markdown policy that says which tool approvals may be allowed, refused or sent to the Human. A PersonaBot selects one or none; selecting, clearing or editing a template in use always needs a Human approval card (ADR-0207).
+_Avoid_: approval mode, auto mode, Tool Approval Rule
+
+**Approval Reviewer**:
+The model that applies a PersonaBot's Approval Template to one pending approval request inside an Approval Review Session, without tool results in its context, and answers allow, reject with a reason, or ask Human. Its failure always falls back to the Human card.
+_Avoid_: classifier, guardian, auto-approver
+
+**Approval Review Session**:
+The fresh, tool-less DSH Session the Approval Reviewer runs in, created for one decision and closed after it. It has no Agent Preset, no Memory and only the reviewer prompt, belongs to no PersonaBot, and its log stays readable in DeepSeek Harness. The session list hides it unless the Human shows Approval Review Sessions, which is separate from showing Bot Sessions.
+_Avoid_: reviewer Session, auto-approval Session, Orchestrator Session, Assignment Session
 
 **Assignment Access Preset**:
 A Human-controlled per-PersonaBot choice applied when a new Assignment is created. The default is DSH workspace-write with ask; dangerous full access is an explicit opt-in to DSH danger-full-access with never. The chosen mode is frozen in each Assignment's permission snapshot, while its selected Workspace Grant remains required.
@@ -223,11 +243,11 @@ The profile-scoped choice of where a Computer lives: the Local Computer (default
 _Avoid_: device, driver, provider, backend
 
 **Local Computer**:
-The Computer served by the machine running DSH itself — the Human's own desktop, or the host of a deployment with an interactive desktop. Every PersonaBot shares the Human's real desktop and logins; it offers no isolation beyond that machine.
+The Computer served by the machine running DSH itself — the Human's own macOS or Windows desktop, or a Linux server's display (a private virtual one when the server has none). Every PersonaBot shares the Human's real desktop and logins; it offers no isolation beyond that machine.
 _Avoid_: host machine, personal computer, native target
 
 **Container Computer**:
-The Computer served by the profile's Docker desktop, recommended when the host has no interactive desktop (a headless VPS). It is optional: a profile without Docker uses the Local Computer.
+The Computer served by the profile's Docker desktop, for when the Human wants a watchable, isolated desktop. It is optional: a profile without Docker uses the Local Computer.
 _Avoid_: sandbox, VM, docker computer
 
 **Computer Access**:
@@ -478,6 +498,38 @@ _Avoid_: IM account (in UI copy), connector, integration
 The messages an enabled external identity Binding admits without any per-conversation consent: direct messages to the App and group messages the qualified Provider reports as mentioning it. Where the App can be reached is decided on the platform; ordinary group text, followed threads and Channel syncs stay explicit.
 _Avoid_: all messages, authorized traffic, open intake
 
+**External User Role**:
+A PersonaBot's policy for a paired external IM person, containing natural-language behavior permissions and explicit Host-checked management capabilities, which may be empty. The behavior policy guides the model through an on-demand current-permission lookup, not automatic per-message role injection; ordinary chatting and management authority do not implicitly grant one another.
+_Avoid_: native DSH role, resource ACL, administrator (for every role)
+
+**Chat pairing**:
+A Human-reviewed association of one external person with a Role for one PersonaBot and its current authenticated App Binding. It is reusable across allowed conversations in that scope, with a fresh question required after approval; it does not transfer to another Bot, App, platform or replacement Binding.
+_Avoid_: conversation membership, account-wide administrator, saved pending instruction
+
+**Pairing Reviewer**:
+A currently paired external person with explicit authority to review ordinary Chat pairing requests in the same PersonaBot and App Binding. A visible group request is not public approval authority; reviewing a pairing does not grant permission to answer Questions or approve native execution.
+_Avoid_: every group member, native execution approver, automatic first administrator
+
+**Management Delegation Ceiling**:
+The current explicit set of management capabilities a Pairing Reviewer may grant through a Role, including that Role's onward delegation. It is resolved separately from capabilities the reviewer may use, from current Role, authorization groups and person exceptions; explicit delegation Deny takes precedence.
+_Avoid_: own permissions imply delegation, resource ACL, cross-App administrator
+
+**External Authorization Group**:
+A continuing source of explicit management Allow/Deny and reusable behavior permission items for currently paired external people in one PersonaBot and App Binding; a person can belong to several groups while retaining one primary behavior Role. Membership does not grant chat eligibility and does not survive revocation and a new pairing.
+_Avoid_: Channel Group, platform conversation group, copied Role, native DSH RBAC
+
+**Behavior permission item**:
+A named, reusable description of an external person's permitted or prohibited behavior, shared across a PersonaBot's authorization groups. Explicit Deny of the same item wins over Allow; the resulting policy guides the model within the primary Role's constraints and is not a resource ACL or management capability.
+_Avoid_: native permission, copied Role, enforced Shell policy, semantic conflict proof
+
+**Declared behavior exclusion**:
+A Human-authored mutual incompatibility between two Behavior permission items in one PersonaBot. Both items cannot be effectively allowed for the same paired person; an explicit Deny of either item resolves the incompatibility. It describes authored policy intent, not proof that arbitrary natural-language policies are consistent.
+_Avoid_: inferred text contradiction, resource isolation, group-order precedence
+
+**Person permission exception**:
+An explicit management Allow or Deny attached to one current Chat pairing, alongside its Role and group contributions; any applicable explicit Deny takes precedence. It never grants authenticated Web Human provenance.
+_Avoid_: Super Admin pairing, behavior Role override, permanent platform-user grant
+
 **Conversation entry**:
 The per-conversation anchor of one Binding's traffic, stored as a Messaging Grant. An _implicit_ entry is recorded on the first admitted default-traffic message or first proactive post; an _explicit_ entry comes from a saved send target. A _held_ entry waits for the Human (Ask me first, or a bound was reached) and keeps only metadata. A _blocked_ conversation has a durable block keyed by Bot, App fingerprint, kind and ID that refuses it until **Allow again**. Muting an entry keeps admission but never wakes the Bot.
 _Avoid_: authorization (for implicit entries), delivery target, subscription
@@ -487,7 +539,7 @@ A Binding's choice for a conversation that has no entry yet: `auto` (Admit autom
 _Avoid_: whitelist, approval mode, auto-reply
 
 **Bot Inbox**:
-The PersonaBot-level view of Source Events admitted for its attention, whether or not an event belongs to a Channel. It is not a second content store: reading is an explicit act, and ignoring is allowed.
+The PersonaBot-level view of Source Events admitted for its attention, whether or not an event belongs to a Channel. It is not a second content store: reading is an explicit act, and ignoring is allowed. An admitted item is unread until a turn observes it, then open until the Orchestrator resolves it as done or ignored; finishing a turn resolves nothing. A snoozed item is open but hidden until its time, or until a new event arrives in the same conversation, and then wakes the Orchestrator. While unsnoozed open items remain after a turn, the Host wakes the Orchestrator again to triage them, until a round makes no progress (ADR-0188).
 _Avoid_: queue, mailbox, backlog
 
 **Inbox Admission**:
@@ -511,7 +563,7 @@ A versioned Host rule or authorization whose exact revision must participate in 
 _Avoid_: all bot state, model instruction, settings (bare)
 
 **Attention Decision**:
-An auditable PersonaBot fact that an Inbox Admission was observed, deferred, ignored, or handled; pending state is derived from these facts rather than stored as a delivery lifecycle. Observation records what actually reached the Bot, while handling follows successful completion of the turn that included it. Observation is an internal audit/detail fact, not an additional primary Inbox status.
+An auditable PersonaBot fact that an Inbox Admission was observed, deferred, ignored, or handled; pending state is derived from these facts rather than stored as a delivery lifecycle. Observation records what actually reached the Bot, while handling follows successful completion of the turn that included it. Handling only opens an item: the Orchestrator's explicit resolve, with outcome done or ignored and a note, is the decision that closes them. Observation is an internal audit/detail fact, not an additional primary Inbox status.
 _Avoid_: mailbox status, Agent delivery state, consumed flag
 
 **Observation**:
@@ -735,11 +787,11 @@ The bot-mode sidebar list of PersonaBots and Channels, with their state.
 _Avoid_: dashboard, bot list
 
 **App Sidebar**:
-The DSH-native left column of the client, which in Bot mode renders the Roster. It is named to distinguish it from the Channel sidebar on the right.
+The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode (960 px and wider) BotHarness replaces it with its own Bot mode sidebar (a DeepSeekBot header whose logo turns into Exit Bot mode on hover, Activity Center, Roster, Bot settings) while DSH still sizes, resizes and collapses the column, and other plugins' left-column contributions are hidden until Bot mode ends (ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
 _Avoid_: left sidebar, main sidebar, navigation
 
 **Channel sidebar**:
-The right-side region of the Bot mode panel, scoped to the currently selected Channel: a group Channel shows its membership and Channel management entries, and a PersonaBot DM shows that PersonaBot's own entries such as Assignments, Memory, its Bot Inbox, and its operational configuration: Model Plan, Wake Policy, external identities, External connectors and approvals. It is not the DSH session-scoped native right column.
+The right-side region of the Bot mode panel, scoped to the currently selected Channel: a group Channel shows its membership entries, and a PersonaBot DM shows that PersonaBot's own entries such as Sessions, Memory and its Bot Inbox. On desktop it shows Channel sidebar tabs; on narrow layouts it is a stack of collapsible entries. Operational configuration is not shown here; it lives in Channel settings. It is not the DSH session-scoped native right column.
 _Avoid_: PersonaBot navigation, right panel, session panel, inspector, workbench
 
 **Channel body**:
@@ -747,15 +799,35 @@ The center region of the Bot mode panel: the selected Channel's header, primary 
 _Avoid_: main pane, conversation view, chat panel
 
 **Channel sidebar entry**:
-One registered, collapsible item of a Channel sidebar: a stable id, label, order, scope, and a renderer that may display information, offer controls, or both. An unavailable entry is absent rather than a placeholder.
+One registered item of a Channel sidebar: a stable id, label, order, scope, and a renderer that may display information, offer controls, or both. On desktop it renders inside a Channel sidebar tab; on narrow layouts it collapses on its own. An entry registered as a settings surface is a Channel settings section instead. An unavailable entry is absent rather than a placeholder.
 _Avoid_: widget, card, tab, destination, Channel section
 
+**Channel sidebar tab**:
+One icon tab of the desktop Channel sidebar, grouping one or more Channel sidebar entries (Sessions holds Sessions and Bot Inbox; Memory holds Memory files and Memory evolution). An entry that names no registered tab is its own tab. A tab with two visible entries splits into top and bottom panes. The Human orders and hides tabs from the + Views menu; those are browser-local presentation preferences.
+_Avoid_: view, page, rail item
+
+**Bot mode layout**:
+The desktop Bot mode `main` area (960 px and wider), beside the App Sidebar: one dockable layout in which the Human drags, docks, resizes, closes and reopens Dock panels. Each panel stands alone: panels are never tabbed together, and there is exactly one Channel body, saved per browser with a Reset (proposed, ADR-0203). Narrow layouts and phones keep the responsive layout.
+_Avoid_: workbench, panel layout, dock
+
+**Dock panel**:
+One registered unit of the Bot mode layout: a stable id, title, icon, scope (`channel` panels follow the active Channel, `global` panels do not), a default position and a renderer. The Channel body and every Channel sidebar entry are Dock panels; the App Sidebar is not one and stays outside the layout; other plugins register more through the `dockPanels` Service. A Dock panel is a UI Consumer only; a plugin's data lives in its own Service and Provider (proposed, ADR-0203).
+_Avoid_: widget, view, pane, DSH main panel
+
+**Channel settings**:
+The per-Channel modal for operational configuration of the current Channel: in a PersonaBot DM its Wake Policy, external identities and External connectors; in a group its Wake Policy, External connectors and Group management. It opens from the Channel sidebar gear menu and the Channel header's "···" menu, and is organised into Channel settings sections.
+_Avoid_: Bot Settings, Profile settings, sidebar settings
+
+**Channel settings section**:
+One section of Channel settings: a Channel sidebar entry registered with the settings surface, so it never renders in the Channel sidebar itself.
+_Avoid_: settings tab, settings entry
+
 **PersonaBot Profile**:
-The per-PersonaBot surface for its shareable identity and its read-only activity: the identity travels with the PersonaBot when it is shared (Display name, Avatar, Profile Banner, Bot Tags, Bot Bio), and the activity is token usage derived from its owned Sessions, event activity from its Bot Inbox Admissions, and Memory commit activity. Operational configuration such as its Model Plan, Wake Policy, external identities, Bridges and approvals is never part of it; that lives in the Channel sidebar. It appears compactly as a Profile popover from the PersonaBot's avatar in a DM header, and expands into a Profile view in the Channel body.
+The per-PersonaBot surface for its shareable identity and its read-only activity: the identity travels with the PersonaBot when it is shared (Display name, Avatar, Profile Banner, Bot Tags, Bot Bio), and the activity is token usage derived from its owned Sessions, event activity from its Bot Inbox Admissions, and Memory commit activity. Operational configuration such as its Model Plan, Wake Policy, external identities, Bridges and approvals is never part of it; that lives in the Channel sidebar and Channel settings. It appears compactly as a Profile popover from the PersonaBot's avatar in a DM header, and expands into a Profile view in the Channel body.
 _Avoid_: account, dashboard, bot page, profile (bare), settings page
 
 **Group Profile**:
-The per-Group Channel surface for the Group's name and avatar and its activity from committed Channel messages. It shows message counts by day and by author, distinguishing Human and PersonaBot authors; Group configuration such as member Wake Policy and Bridges lives in the Channel sidebar. The Group header opens its popover and expanded Channel-body view; DM Channels have only their PersonaBot Profile.
+The per-Group Channel surface for the Group's name and avatar and its activity from committed Channel messages. It shows message counts by day and by author, distinguishing Human and PersonaBot authors; Group configuration such as member Wake Policy and Bridges lives in Channel settings. The Group header opens its popover and expanded Channel-body view; DM Channels have only their PersonaBot Profile.
 _Avoid_: PersonaBot token usage, Group management sidebar, DM Channel Profile
 
 **Approver**:
@@ -783,7 +855,7 @@ The RPC surface through which the Web Client reads PersonaBots and invokes separ
 _Avoid_: remote, IPC, gateway
 
 **Bot Settings**:
-The BotHarness-owned modal (Bot 设置) for profile-wide BotHarness configuration, organised into Bot Settings sections in its own sidebar. Configuration of one PersonaBot or one Channel never lives here; that is a Channel sidebar entry. DSH's own settings modal is called DSH settings; its Bot 设置 item only points into Bot Settings, while App credentials remain in DSH settings.
+The BotHarness-owned modal (Bot 设置) for profile-wide BotHarness configuration, organised into Bot Settings sections in its own sidebar. Configuration of one PersonaBot or one Channel never lives here; that is Channel settings or a Channel sidebar entry. DSH's own settings modal is called DSH settings; its Bot 设置 item only points into Bot Settings, while App credentials remain in DSH settings.
 _Avoid_: Settings UI, settings page, preferences, admin panel, dashboard, web console
 
 **Bot Settings section**:
@@ -795,7 +867,7 @@ The per-PersonaBot list of users and chats allowed to reach it.
 _Avoid_: whitelist, permissions, ACL
 
 **Credential reference**:
-A pointer to a Feishu App Secret held by the DSH credentials service; the secret itself never reaches config, repo, or logs.
+An opaque pointer to confidential information held by the Host's DSH Credentials Service. The owning application defines its authorization scope: an IM application for existing app credentials, or a PersonaBot and account for private input. Agents receive references and configuration state; qualified consumers resolve original values inside the Host without returning them to Chat or the model (Spec #1378).
 _Avoid_: secret, API key, token
 
 ### Telemetry and campaigns

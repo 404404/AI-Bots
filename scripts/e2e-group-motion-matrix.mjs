@@ -273,7 +273,7 @@ async function open(g) {
   await page.click('[data-channel-id="' + g.id + '"]');
   await page.waitForSelector('.bh-group-channel-header');
   await page.waitForFunction(
-    (name) => document.querySelector('.bh-group-channel-name')?.textContent === name,
+    (name) => document.querySelector('[data-group-channel-name]')?.textContent === name,
     {},
     g.name,
   );
@@ -282,8 +282,8 @@ async function setPreference(preference) {
   await page.setViewport({ width: 1500, height: 1000 });
   await page.waitForSelector('.bh-panel-gear');
   await page.click('.bh-panel-gear');
-  await page.waitForSelector('.bh-motion-row .bh-settings-selector');
-  await page.click('.bh-motion-row .bh-settings-selector');
+  await page.waitForSelector('[data-setting="motion"] button[aria-haspopup="menu"]');
+  await page.click('[data-setting="motion"] button[aria-haspopup="menu"]');
   const labels = {
     system: ['Follow system', '跟随系统'],
     reduce: ['Reduce motion', '减少动效'],
@@ -305,7 +305,7 @@ async function setPreference(preference) {
     labels,
   );
   await page.keyboard.press('Escape');
-  await page.waitForFunction(() => !document.querySelector('.bh-motion-row'));
+  await page.waitForFunction(() => !document.querySelector('[data-setting="motion"]'));
 }
 async function measure(g, preference, systemReduced, theme, width) {
   const expected = preference === 'system' ? (systemReduced ? 'reduce' : 'full') : preference;
@@ -358,7 +358,7 @@ async function measure(g, preference, systemReduced, theme, width) {
     assert.equal(avatar.state, avatar.title.startsWith(scene.owner.name) ? 'working' : 'idle');
     assert.equal(avatar.infinite > 0, expected === 'full' && avatar.state === 'working');
   }
-  await page.click('.bh-group-channel-name');
+  await page.click('[data-group-channel-name]');
   await page.waitForSelector('.bh-group-live-activity-chips');
   await delay(400);
   const profile = await page.$eval('.bh-group-live-activity-chips', (node) => ({

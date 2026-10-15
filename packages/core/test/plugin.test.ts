@@ -23,7 +23,11 @@ interface Stubs {
   tools: { register: ReturnType<typeof vi.fn>; guard: ReturnType<typeof vi.fn> };
   systemPrompt: { section: ReturnType<typeof vi.fn> };
   sessions: { list: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
-  agents: { create: ReturnType<typeof vi.fn>; resume: ReturnType<typeof vi.fn> };
+  agents: {
+    create: ReturnType<typeof vi.fn>;
+    resume: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+  };
   skills: { register: ReturnType<typeof vi.fn> };
 }
 
@@ -48,7 +52,7 @@ function createStubContext(): { ctx: Context; stubs: Stubs } {
     tools: { register: vi.fn(() => () => undefined), guard: vi.fn(() => () => undefined) },
     systemPrompt: { section: vi.fn(() => () => undefined) },
     sessions: { list: vi.fn(() => []), get: vi.fn() },
-    agents: { create: vi.fn(), resume: vi.fn() },
+    agents: { create: vi.fn(), resume: vi.fn(), list: vi.fn(() => []) },
     skills: { register: vi.fn(() => () => undefined) },
   };
   ctx.provide('tools', stubs.tools);
@@ -214,13 +218,26 @@ describe('plugin entry', () => {
       cwdReference: '/srv/shared',
       at: '2026-09-21T00:00:00.000Z',
     });
+    createSessionOwnership(attachOperationalModule(seeded, 'session-ownership')).claim({
+      sessionId: 'stale-1',
+      botSlug: 'ada',
+      rootRole: 'assignment',
+      cwdReference: '/srv/shared',
+      at: '2026-09-21T00:00:00.000Z',
+    });
     seeded.close();
 
     const { ctx, stubs } = createStubContext();
     const log = (type: string) => [{ type, time: 1, data: {} }];
+    stubs.agents.list.mockReturnValue([{ session: { id: 'owned-1' }, status: 'running' }]);
     stubs.sessions.list.mockReturnValue([
       {
         id: 'owned-1',
+        header: { cwd: '/srv/shared', createdAt: 0 },
+        snapshotEvents: () => log('tool/call'),
+      },
+      {
+        id: 'stale-1',
         header: { cwd: '/srv/shared', createdAt: 0 },
         snapshotEvents: () => log('tool/call'),
       },
@@ -234,24 +251,39 @@ describe('plugin entry', () => {
     apply(ctx, { enabled: true });
     const core = ctx.get('botharness') as BotHarnessCore | undefined;
 
-    expect(core?.states.snapshot('ada').sessions).toEqual({ 'owned-1': 'working' });
+    expect(core?.states.snapshot('ada').sessions).toEqual({
+      'owned-1': 'working',
+      'stale-1': 'done',
+    });
+
+    ctx.emit('agent/status', {
+      agent: { session: { id: 'owned-1' } },
+      status: 'idle',
+    } as never);
+    expect(core?.states.snapshot('ada').sessions).toMatchObject({ 'owned-1': 'done' });
+    ctx.emit(
+      'session/event',
+      { id: 'owned-1' } as never,
+      { type: 'turn/start', time: 2, data: {} } as never,
+    );
+    expect(core?.states.snapshot('ada').sessions).toMatchObject({ 'owned-1': 'thinking' });
 
     ctx.emit(
       'session/event',
       { id: 'owned-1' } as never,
       { type: 'turn/end', time: 2, data: {} } as never,
     );
-    expect(core?.states.snapshot('ada').sessions).toEqual({ 'owned-1': 'done' });
+    expect(core?.states.snapshot('ada').sessions).toMatchObject({ 'owned-1': 'done' });
 
     ctx.emit(
       'session/event',
       { id: 'unowned-1' } as never,
       { type: 'tool/call', time: 3, data: {} } as never,
     );
-    expect(core?.states.snapshot('ada').sessions).toEqual({ 'owned-1': 'done' });
+    expect(core?.states.snapshot('ada').sessions).toMatchObject({ 'owned-1': 'done' });
 
     ctx.emit('agent/disposed', { agent: { session: { id: 'owned-1' } } } as never);
-    expect(core?.states.snapshot('ada').sessions).toEqual({});
+    expect(core?.states.snapshot('ada').sessions).toEqual({ 'stale-1': 'done' });
   });
 
   it('closes the operational database last with the plugin fiber', async () => {
@@ -335,6 +367,15 @@ describe('plugin entry', () => {
     expect(
       remoteMethods(bridge as object).map((marker) => marker.exportName ?? marker.method),
     ).toEqual([
+      'privateInputStatus',
+      'privateInputSubmit',
+      'privateInputCancel',
+      'privateAccountStatus',
+      'privateInputReplace',
+      'privateAccountRevoke',
+      'privateAccounts',
+      'privateMcpServerRemove',
+      'privateMcpServerEnable',
       'messagingDefaults',
       'messagingDefaultsSet',
       'channelBridges',
@@ -350,10 +391,18 @@ describe('plugin entry', () => {
       'approvalRoute',
       'approvalTest',
       'approvalRetry',
+      'failureAlertsSet',
+      'failureAlertsTest',
+      'failureAlertsRetry',
       'pairingReview',
+      'senderAccess',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
+      'messagingReachable',
+      'messagingPostConversation',
+      'messagingPostRequest',
+      'messagingPostLimit',
       'messagingAuthorize',
       'messagingRevoke',
       'messagingConversation',
@@ -362,6 +411,7 @@ describe('plugin entry', () => {
       'onboardingModel',
       'modelPlanInherit',
       'channelRetry',
+      'channelBotStop',
       'modelCatalog',
       'modelPresets',
       'modelPresetCreate',
@@ -385,6 +435,8 @@ describe('plugin entry', () => {
       'resume',
       'channels',
       'humanIdentity',
+      'composerIdentity',
+      'composerValidate',
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',
@@ -407,6 +459,9 @@ describe('plugin entry', () => {
       'channelReadPosition',
       'channelMarkRead',
       'channelMarkAllRead',
+      'channelReact',
+      'channelSearch',
+      'channelUnreadCounts',
       'channelAllBotPreview',
       'channelSend',
       'channelSendStatus',
@@ -421,7 +476,9 @@ describe('plugin entry', () => {
       'humanAttentionStatus',
       'humanAttentionIgnore',
       'humanAttentionDismiss',
+      'humanAttentionSnooze',
       'assignments',
+      'channelAssignments',
       'assignment',
       'workspaceOptions',
       'messageAttachmentTarget',
@@ -436,10 +493,17 @@ describe('plugin entry', () => {
       'toolApprovalRuleRevoke',
       'toolApprovalStatus',
       'toolApprovalDecide',
+      'toolAutoRejectionOverride',
       'userQuestionStatus',
       'userQuestionAnswer',
       'sessions',
+      'botToolTrace',
+      'botTools',
+      'botToolRun',
+      'sessionArchiveSet',
+      'memoryMove',
       'sessionOwner',
+      'botSessionIds',
       'memoryFileTarget',
       'memorySnapshot',
       'memoryFile',
@@ -452,8 +516,13 @@ describe('plugin entry', () => {
       'memoryRecoveryHistory',
       'memoryRestore',
       'memorySave',
+      'memoryRestoreCommit',
+      'memoryNameVersion',
+      'memoryRemoveVersionName',
+      'memoryVersions',
       'memoryRepair',
       'profileActivity',
+      'profileSessionUsage',
       'overviewMemory',
       'overviewUsage',
       'profileUsage',
@@ -467,14 +536,23 @@ describe('plugin entry', () => {
       'topReorder',
       'pinsSet',
       'hiddenSet',
+      'channelMuteSet',
       'rosterBatch',
       'developerModeSet',
       'computerAccessSet',
       'browserAccessSet',
       'browserProfileSet',
+      'approvalTemplates',
+      'approvalTemplateCreate',
+      'approvalTemplateUpdate',
+      'approvalTemplateDelete',
+      'botApprovalTemplateSet',
+      'approvalReviewerModel',
+      'approvalReviewerModelSet',
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
+      'botPrimaryColorSet',
       'partLibraryList',
       'partLibraryAdd',
       'partLibraryExport',
@@ -502,6 +580,11 @@ describe('plugin entry', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
+      'followRoster',
+      'followActivity',
+      'followChannel',
+      'followCompanion',
     ]);
   });
 
@@ -520,6 +603,7 @@ describe('plugin entry', () => {
     expect(bridge?.rosterGet()).toEqual({
       pins: [],
       hidden: [],
+      muted: [],
       sectionOrder: [],
       sections: [],
       topOrder: undefined,

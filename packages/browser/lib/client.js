@@ -826,6 +826,30 @@ window.__ModuleLoader__.load({
 		* PERFORMANCE OF THIS SOFTWARE.
 		*/
 		const glyphs = {
+			archive: [
+				["rect", {
+					width: "20",
+					height: "5",
+					x: "2",
+					y: "3",
+					rx: "1"
+				}],
+				["path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }],
+				["path", { d: "M10 12h4" }]
+			],
+			"archive-restore": [
+				["rect", {
+					width: "20",
+					height: "5",
+					x: "2",
+					y: "3",
+					rx: "1"
+				}],
+				["path", { d: "M4 8v11a2 2 0 0 0 2 2h2" }],
+				["path", { d: "M20 8v11a2 2 0 0 1-2 2h-2" }],
+				["path", { d: "m9 15 3-3 3 3" }],
+				["path", { d: "M12 12v9" }]
+			],
 			"alarm-clock": [
 				["circle", {
 					cx: "12",
@@ -843,6 +867,13 @@ window.__ModuleLoader__.load({
 				["path", { d: "M22 8c0-2.3-.8-4.3-2-6" }],
 				["path", { d: "M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" }],
 				["path", { d: "M4 2C2.8 3.7 2 5.7 2 8" }]
+			],
+			bell: [["path", { d: "M10.268 21a2 2 0 0 0 3.464 0" }], ["path", { d: "M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" }]],
+			"bell-off": [
+				["path", { d: "M10.268 21a2 2 0 0 0 3.464 0" }],
+				["path", { d: "M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" }],
+				["path", { d: "m2 2 20 20" }],
+				["path", { d: "M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" }]
 			],
 			cpu: [
 				["path", { d: "M12 20v2" }],
@@ -1141,6 +1172,7 @@ window.__ModuleLoader__.load({
 					r: "1"
 				}]
 			],
+			x: [["path", { d: "M18 6 6 18" }], ["path", { d: "m6 6 12 12" }]],
 			check: [["path", { d: "M20 6 9 17l-5-5" }]]
 		};
 		function ChannelSidebarIcon({ name = "panels-top-left", size = 16 }) {
@@ -1171,33 +1203,53 @@ window.__ModuleLoader__.load({
 				children
 			});
 		}
-		function SidebarCardRow({ icon, iconLabel, selection, title, titleClassName, hint, chips, meta, trailing, detail, onClick, disabled, muted, mainClassName, dialog, expanded, controls, state, anchor }) {
-			const body = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [icon === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: "bh-card-icon",
-				role: iconLabel === void 0 ? void 0 : "img",
-				"aria-label": iconLabel,
-				title: iconLabel,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChannelSidebarIcon, {
-					name: icon,
-					size: 16
-				})
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				className: "bh-card-body",
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
-						children: title
-					}),
-					chips === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bh-card-chips",
-						children: chips
-					}),
-					meta === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bh-card-meta",
-						children: meta
+		function SidebarCardRow({ icon, leading, iconLabel, selection, title, titleClassName, badge, summary, flipKey, hint, chips, meta, trailing, detail, onClick, disabled, muted, mainClassName, dialog, expanded, controls, state, anchor }) {
+			const body = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				leading === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-card-leading",
+					children: leading
+				}),
+				icon === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-card-icon",
+					role: iconLabel === void 0 ? void 0 : "img",
+					"aria-label": iconLabel,
+					title: iconLabel,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChannelSidebarIcon, {
+						name: icon,
+						size: 16
 					})
-				]
-			})] });
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					className: "bh-card-body",
+					children: [
+						badge === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
+							children: title
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: "bh-card-title-row",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
+								children: title
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: "bh-card-badge",
+								children: badge
+							})]
+						}),
+						summary === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-summary",
+							children: summary
+						}),
+						chips === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-chips",
+							children: chips
+						}),
+						meta === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-meta",
+							children: meta
+						})
+					]
+				})
+			] });
 			const className = mainClassName === void 0 ? "bh-card-main" : "bh-card-main " + mainClassName;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
 				className: "bh-card-row",
@@ -1205,6 +1257,7 @@ window.__ModuleLoader__.load({
 				"data-state": state,
 				"data-selected": selection?.checked === true ? "true" : void 0,
 				"data-anchor": anchor,
+				"data-flip-key": flipKey,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "bh-card-line",
 					children: [selection?.multiple === true ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
@@ -1301,6 +1354,8 @@ window.__ModuleLoader__.load({
 			"entry.takeover.active": "接管中",
 			"entry.label": "浏览器",
 			"entry.access.title": "Browser Access",
+			"entry.access.on": "Browser Access 已开启",
+			"entry.access.description": "开启后，该 Bot 的会话可以使用浏览器",
 			"entry.access.enable": "启用 Browser Access",
 			"entry.access.disable": "停用 Browser Access",
 			"entry.access.failed": "切换 Browser Access 失败",
@@ -1346,6 +1401,12 @@ window.__ModuleLoader__.load({
 			"entry.fail.provision-no-permission.fault": "这是本机目录权限的问题。",
 			"entry.fail.provision-no-permission.action": "请机器管理员放开浏览器目录的写权限后，再点一次“打开”。",
 			"entry.fail.provision-missing-libs.title": "这台机器缺少浏览器需要的系统库。",
+			"entry.install.missing": "需要安装 {count} 个系统包。",
+			"entry.install.manual": "安装需要管理员密码。请在这台机器的终端里运行下面的命令，装好后再点「打开」。",
+			"entry.install.button": "一键安装",
+			"entry.install.copy": "复制命令",
+			"entry.install.copied": "已复制",
+			"entry.install.progress": "正在安装系统库：{percent}%",
 			"entry.fail.provision-missing-libs.fault": "这是机器环境的问题，不是浏览器设置的问题。",
 			"entry.fail.provision-missing-libs.action": "Ubuntu 24.04 上按“详情”里的命令安装系统库，装好后再点“打开”。",
 			"entry.fail.provision-failed.title": "浏览器下载失败。",
@@ -1359,7 +1420,7 @@ window.__ModuleLoader__.load({
 			"entry.fail.startup-spawn-failed.action": "把浏览器目录加入杀毒软件白名单（或找机器管理员看权限），再点一次“打开”。",
 			"entry.fail.startup-sandbox.title": "浏览器因系统沙箱限制拒绝启动。",
 			"entry.fail.startup-sandbox.fault": "这是本机系统限制的问题。",
-			"entry.fail.startup-sandbox.action": "在浏览器插件配置中打开 headless 后，再点一次“打开”。",
+			"entry.fail.startup-sandbox.action": "Ubuntu 23.10 起通常是 AppArmor 限制了用户命名空间：按“详情”给这个浏览器加 AppArmor 配置后，再点一次“打开”。",
 			"entry.fail.startup-crashed.title": "浏览器在启动过程中退出了。",
 			"entry.fail.startup-crashed.fault": "这是本机浏览器的问题，不是页面问题。",
 			"entry.fail.startup-crashed.action": "再点一次“打开”重试；多次失败请把“详情”发给机器管理员。",
@@ -1423,6 +1484,8 @@ window.__ModuleLoader__.load({
 			"entry.takeover.active": "Taking over",
 			"entry.label": "Browser",
 			"entry.access.title": "Browser Access",
+			"entry.access.on": "Browser Access is on",
+			"entry.access.description": "This PersonaBot's sessions may use the browser",
 			"entry.access.enable": "Enable Browser Access",
 			"entry.access.disable": "Disable Browser Access",
 			"entry.access.failed": "Failed to switch Browser Access",
@@ -1468,6 +1531,12 @@ window.__ModuleLoader__.load({
 			"entry.fail.provision-no-permission.fault": "This is about folder permissions on this machine.",
 			"entry.fail.provision-no-permission.action": "Ask the machine owner to make the browser folder writable, then click Open again.",
 			"entry.fail.provision-missing-libs.title": "This machine is missing system libraries the browser needs.",
+			"entry.install.missing": "{count} system packages need to be installed.",
+			"entry.install.manual": "Installing needs an administrator password. Run this command in a terminal on this machine, then click Open again.",
+			"entry.install.button": "Install",
+			"entry.install.copy": "Copy command",
+			"entry.install.copied": "Copied",
+			"entry.install.progress": "Installing system libraries: {percent}%",
 			"entry.fail.provision-missing-libs.fault": "This is about the machine setup, not your browser settings.",
 			"entry.fail.provision-missing-libs.action": "On Ubuntu 24.04, install them with the command in Details, then click Open again.",
 			"entry.fail.provision-failed.title": "The browser download failed.",
@@ -1481,7 +1550,7 @@ window.__ModuleLoader__.load({
 			"entry.fail.startup-spawn-failed.action": "Allow-list the browser folder in your antivirus (or ask the machine owner about permissions), then click Open again.",
 			"entry.fail.startup-sandbox.title": "The browser refused to start because of its OS sandbox.",
 			"entry.fail.startup-sandbox.fault": "This is about OS restrictions on this machine.",
-			"entry.fail.startup-sandbox.action": "Enable headless in the browser plugin configuration, then click Open again.",
+			"entry.fail.startup-sandbox.action": "On Ubuntu 23.10 and later this is usually AppArmor restricting user namespaces: add the AppArmor profile from Details for this browser, then click Open again.",
 			"entry.fail.startup-crashed.title": "The browser exited during startup.",
 			"entry.fail.startup-crashed.fault": "This is about the browser on this machine, not the page.",
 			"entry.fail.startup-crashed.action": "Click Open to retry; if it keeps failing, show Details to the machine owner.",
@@ -1508,26 +1577,377 @@ window.__ModuleLoader__.load({
 			return typeof value === "string" && BROWSER_FAILURE_KINDS.includes(value);
 		}
 		//#endregion
+		//#region node_modules/.pnpm/@stylexjs+stylex@0.19.1/node_modules/@stylexjs/stylex/lib/es/stylex.mjs
+		var styleq = {};
+		var hasRequiredStyleq;
+		function requireStyleq() {
+			if (hasRequiredStyleq) return styleq;
+			hasRequiredStyleq = 1;
+			Object.defineProperty(styleq, "__esModule", { value: true });
+			styleq.styleq = void 0;
+			var cache = /* @__PURE__ */ new WeakMap();
+			var compiledKey = "$$css";
+			function createStyleq(options) {
+				var disableCache;
+				var disableMix;
+				var transform;
+				if (options != null) {
+					disableCache = options.disableCache === true;
+					disableMix = options.disableMix === true;
+					transform = options.transform;
+				}
+				return function styleq() {
+					var definedProperties = [];
+					var className = "";
+					var inlineStyle = null;
+					var debugString = "";
+					var nextCache = disableCache ? null : cache;
+					var styles = new Array(arguments.length);
+					for (var i = 0; i < arguments.length; i++) styles[i] = arguments[i];
+					while (styles.length > 0) {
+						var possibleStyle = styles.pop();
+						if (possibleStyle == null || possibleStyle === false) continue;
+						if (Array.isArray(possibleStyle)) {
+							for (var _i = 0; _i < possibleStyle.length; _i++) styles.push(possibleStyle[_i]);
+							continue;
+						}
+						var style = transform != null ? transform(possibleStyle) : possibleStyle;
+						if (style.$$css != null) {
+							var classNameChunk = "";
+							if (nextCache != null && nextCache.has(style)) {
+								var cacheEntry = nextCache.get(style);
+								if (cacheEntry != null) {
+									classNameChunk = cacheEntry[0];
+									debugString = cacheEntry[2];
+									definedProperties.push.apply(definedProperties, cacheEntry[1]);
+									nextCache = cacheEntry[3];
+								}
+							} else {
+								var definedPropertiesChunk = [];
+								for (var prop in style) {
+									var value = style[prop];
+									if (prop === compiledKey) {
+										var compiledKeyValue = style[prop];
+										if (compiledKeyValue !== true) debugString = debugString ? compiledKeyValue + "; " + debugString : compiledKeyValue;
+										continue;
+									}
+									if (typeof value === "string" || value === null) {
+										if (!definedProperties.includes(prop)) {
+											definedProperties.push(prop);
+											if (nextCache != null) definedPropertiesChunk.push(prop);
+											if (typeof value === "string") classNameChunk += classNameChunk ? " " + value : value;
+										}
+									} else console.error("styleq: ".concat(prop, " typeof ").concat(String(value), " is not \"string\" or \"null\"."));
+								}
+								if (nextCache != null) {
+									var weakMap = /* @__PURE__ */ new WeakMap();
+									nextCache.set(style, [
+										classNameChunk,
+										definedPropertiesChunk,
+										debugString,
+										weakMap
+									]);
+									nextCache = weakMap;
+								}
+							}
+							if (classNameChunk) className = className ? classNameChunk + " " + className : classNameChunk;
+						} else if (disableMix) {
+							if (inlineStyle == null) inlineStyle = {};
+							inlineStyle = Object.assign({}, style, inlineStyle);
+						} else {
+							var subStyle = null;
+							for (var _prop in style) {
+								var _value = style[_prop];
+								if (_value !== void 0) {
+									if (!definedProperties.includes(_prop)) {
+										if (_value != null) {
+											if (inlineStyle == null) inlineStyle = {};
+											if (subStyle == null) subStyle = {};
+											subStyle[_prop] = _value;
+										}
+										definedProperties.push(_prop);
+										nextCache = null;
+									}
+								}
+							}
+							if (subStyle != null) inlineStyle = Object.assign(subStyle, inlineStyle);
+						}
+					}
+					return [
+						className,
+						inlineStyle,
+						debugString
+					];
+				};
+			}
+			var styleq$1 = styleq.styleq = createStyleq();
+			styleq$1.factory = createStyleq;
+			return styleq;
+		}
+		var styleqExports = /*@__PURE__*/ requireStyleq();
+		function props(...styles) {
+			const [className, style, dataStyleSrc] = styleqExports.styleq(styles);
+			const result = {};
+			if (className != null && className !== "") result.className = className;
+			if (style != null && Object.keys(style).length > 0) result.style = style;
+			if (dataStyleSrc != null && dataStyleSrc !== "") result["data-style-src"] = dataStyleSrc;
+			return result;
+		}
+		Object.freeze({});
+		//#endregion
+		//#region packages/client/src/client/ds/tokens.stylex.ts
+		const space = {
+			x1: "2px",
+			x2: "4px",
+			x3: "8px",
+			x4: "12px",
+			x5: "16px",
+			x6: "24px"
+		};
+		const text = {
+			metaSize: "12px",
+			metaLine: "16px",
+			bodySize: "13px",
+			bodyLine: "20px",
+			titleSize: "14px",
+			titleLine: "20px",
+			regular: "400",
+			strong: "500"
+		};
+		const radius = {
+			xs: "var(--dsw-radius-xs, 4px)",
+			sm: "var(--dsw-radius-sm, 8px)",
+			md: "var(--dsw-radius-md, 12px)",
+			lg: "var(--dsw-radius-lg, 16px)",
+			panel: "var(--dsw-radius-panel)",
+			round: "50%"
+		};
+		const border = {
+			hairline: "1px",
+			focus: "var(--dsw-focus-ring-width, 2px)"
+		};
+		const color = {
+			fg: "var(--dsw-alias-label-primary)",
+			muted: "var(--dsw-alias-label-secondary)",
+			subtle: "var(--dsw-alias-label-tertiary)",
+			divider: "var(--dsw-alias-border-l1)",
+			border: "var(--dsw-alias-border-l2)",
+			borderStrong: "var(--dsw-alias-border-l3)",
+			hover: "var(--dsw-alias-interactive-bg-hover)",
+			selected: "var(--dsw-alias-interactive-bg-active)",
+			navSelected: "var(--dsw-specific-sidebar-nav-item-active)",
+			accent: "var(--dsw-alias-state-business-primary)",
+			onAccent: "var(--dsw-alias-label-primary-foreground)",
+			danger: "var(--dsw-alias-state-error-primary)",
+			onDanger: "var(--dsw-alias-label-primary-foreground)",
+			dangerEdge: "var(--dsw-alias-state-error-secondary)",
+			dangerSoft: "var(--dsw-alias-interactive-bg-hover-danger)",
+			warning: "var(--dsw-alias-state-warn-primary)",
+			warningEdge: "var(--dsw-alias-state-warn-secondary)",
+			warningSoft: "var(--dsw-alias-state-warn-tertiary)",
+			success: "var(--dsw-alias-state-success-primary)",
+			surface: "var(--dsw-alias-bg-module-platform)",
+			elevated: "var(--dsw-alias-button-elevated-fill)",
+			base: "var(--dsw-alias-bg-base)",
+			well: "var(--dsw-alias-bg-base)",
+			accentTint: "var(--dsw-alias-state-business-tertiary)"
+		};
+		//#endregion
+		//#region packages/client/src/client/ds/note.tsx
+		const styles$1 = {
+			note: {
+				kogj98: "bhx1ghz6dp",
+				kGuDYH: "bhxgowt09",
+				kLWn49: "bhx12cu2lo",
+				kHjlTd: "bhxj0a0fe",
+				$$css: true
+			},
+			inset: {
+				k8WAf4: "bhx89kiln",
+				kg3NbH: "bhx1w8vjyx",
+				$$css: true
+			},
+			muted: {
+				kMwMTN: "bhxr3raxm",
+				$$css: true
+			},
+			subtle: {
+				kMwMTN: "bhxwq55zj",
+				$$css: true
+			},
+			danger: {
+				kMwMTN: "bhx8ay0r6",
+				$$css: true
+			},
+			success: {
+				kMwMTN: "bhx1pideu2",
+				$$css: true
+			},
+			warning: {
+				kMwMTN: "bhxz9v26x",
+				$$css: true
+			}
+		};
+		function Note({ tone = "muted", inset = false, children }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				role: tone === "danger" ? "alert" : "status",
+				...props(styles$1.note, inset && styles$1.inset, styles$1[tone]),
+				children
+			});
+		}
+		//#endregion
+		//#region packages/client/src/client/missing-packages.tsx
+		function ProgressLine({ percent, label }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				role: "status",
+				className: "bhxrvj5dj bhx5v8n67 bhxh8yej3 bhxr3raxm bhxgowt09 bhx12cu2lo",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("progress", {
+					className: "bhxh8yej3 bhxols6we bhx1g31g6d",
+					max: 100,
+					value: Math.max(0, Math.min(100, percent))
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: label })]
+			});
+		}
+		function MissingPackages({ command, access, installing, busy = false, onInstall, labels, children }) {
+			const [copied, setCopied] = (0, react.useState)(false);
+			const copy = () => {
+				navigator.clipboard?.writeText(command).then(() => setCopied(true));
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "bhxrvj5dj bhx2zm2ee bhx619ttb bhxh8yej3",
+				children: [
+					installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+						tone: "warning",
+						children: labels.missing
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
+						percent: installing.percent,
+						label: installing.label
+					}),
+					access === "none" && installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: labels.manual }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+						className: "bhx1ghz6dp bhxh8yej3 bhx9f619 bhx89kiln bhx1w8vjyx bhx4g09nt bhx1xojs80 bhx24dycr bhxmz2490 bhxgowt09 bhx12cu2lo bhx126k92a bhxj0a0fe",
+						children: command
+					})] }) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "bhx78zum5 bhx12e6dxb bhx1a02dak",
+						children: [
+							access !== "none" && installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								size: "sm",
+								variant: "primary",
+								disabled: busy,
+								onClick: onInstall,
+								children: labels.install
+							}) : null,
+							access === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								size: "sm",
+								variant: "outline",
+								onClick: copy,
+								children: copied ? labels.copied : labels.copy
+							}) : null,
+							children
+						]
+					})
+				]
+			});
+		}
+		//#endregion
 		//#region packages/browser/src/client/browser-failure.tsx
 		var BrowserApiError = class extends Error {
 			code;
 			detail;
-			constructor(message, code, detail) {
+			packages;
+			constructor(message, code, detail, packages) {
 				super(message);
 				this.name = "BrowserApiError";
 				if (code !== void 0) this.code = code;
 				if (detail !== void 0) this.detail = detail;
+				if (packages !== void 0) this.packages = packages;
 			}
 		};
 		function readFailure(cause) {
 			if (cause instanceof BrowserApiError) return {
 				message: cause.message,
 				...cause.code === void 0 ? {} : { code: cause.code },
-				...cause.detail === void 0 ? {} : { detail: cause.detail }
+				...cause.detail === void 0 ? {} : { detail: cause.detail },
+				...cause.packages === void 0 ? {} : { packages: cause.packages }
 			};
 			return { message: cause instanceof Error ? cause.message : String(cause) };
 		}
-		function BrowserFailureNotice({ failure, t }) {
+		const INSTALL_ENDPOINT = "/api/browser/install-packages";
+		function BrowserMissingLibs({ packages, t, onRetry }) {
+			const [install, setInstall] = (0, react.useState)({});
+			const [busy, setBusy] = (0, react.useState)(false);
+			const [error, setError] = (0, react.useState)();
+			const retried = (0, react.useRef)(false);
+			const read = (0, react.useCallback)(async () => {
+				const next = await (await fetch(INSTALL_ENDPOINT, { cache: "no-store" })).json();
+				setInstall(next);
+				return next;
+			}, []);
+			const resource = (0, react.useCallback)((node) => {
+				if (node === null) return;
+				read().catch(() => void 0);
+			}, [read]);
+			const poll = () => {
+				read().then((next) => {
+					if (next.state === "installing") {
+						setTimeout(poll, 1e3);
+						return;
+					}
+					if (next.state === "installed" && !retried.current) {
+						retried.current = true;
+						onRetry?.();
+					}
+				}).catch((cause) => setError(String(cause)));
+			};
+			const start = () => {
+				setBusy(true);
+				setError(void 0);
+				fetch(INSTALL_ENDPOINT, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({
+						authorize: true,
+						packages
+					})
+				}).then(async (response) => {
+					if (!response.ok) throw new Error((await response.json()).error);
+					poll();
+				}).catch((cause) => setError(String(cause))).finally(() => setBusy(false));
+			};
+			const installing = install.state === "installing";
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				ref: resource,
+				className: "bh-browser-failure-install",
+				children: [
+					install.state === "failed" && install.text !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "bh-browser-failure-action",
+						children: install.text
+					}) : null,
+					error === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "bh-browser-failure-action",
+						children: error
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(MissingPackages, {
+						command: `sudo apt install -y ${packages.join(" ")}`,
+						access: install.access ?? "none",
+						installing: installing ? {
+							percent: install.percent ?? 0,
+							label: t("entry.install.progress", { percent: String(install.percent ?? 0) })
+						} : void 0,
+						busy,
+						onInstall: start,
+						labels: {
+							missing: t("entry.install.missing", { count: String(packages.length) }),
+							manual: t("entry.install.manual"),
+							install: t("entry.install.button"),
+							copy: t("entry.install.copy"),
+							copied: t("entry.install.copied")
+						}
+					})
+				]
+			});
+		}
+		function BrowserFailureNotice({ failure, t, onRetry }) {
 			if (!isBrowserFailureKind(failure.code)) return null;
 			const kind = failure.code;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -1542,7 +1962,11 @@ window.__ModuleLoader__.load({
 						className: "bh-browser-failure-fault",
 						children: t(`entry.fail.${kind}.fault`)
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					kind === "provision-missing-libs" && (failure.packages?.length ?? 0) > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BrowserMissingLibs, {
+						packages: failure.packages ?? [],
+						t,
+						onRetry
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 						className: "bh-browser-failure-action",
 						children: t(`entry.fail.${kind}.action`)
 					}),
@@ -1581,13 +2005,13 @@ window.__ModuleLoader__.load({
 		//#region packages/client/src/client/combobox.tsx
 		const COMBOBOX_CSS = `
 .bh-combobox { position: relative; flex: 1; min-width: 0; }
-.bh-combobox-input { display: flex; padding-right: 26px; }
+.bh-combobox-input { display: flex; padding-right: ${space.x6}; }
 .bh-combobox input { width: 100%; text-overflow: ellipsis; }
 .bh-combobox input[readonly] { cursor: pointer; }
 .bh-combobox-toggle {
   position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
-  border: 0; border-radius: 6px; padding: 0;
+  border: 0; border-radius: ${radius.sm}; padding: 0;
   color: var(--dsw-alias-label-secondary); background: transparent; cursor: pointer;
 }
 .bh-combobox-toggle:hover { background: var(--dsw-alias-interactive-bg-hover); }
@@ -1599,21 +2023,21 @@ window.__ModuleLoader__.load({
   box-shadow: var(--dsw-elevation-prominent);
 }
 .bh-combobox-scroll > button {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  width: 100%; min-height: 34px; padding: 6px 8px;
-  border: 0; border-radius: 6px; background: transparent;
-  color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: 13px; line-height: 20px; cursor: pointer;
+  display: flex; align-items: baseline; justify-content: space-between; gap: ${space.x4};
+  width: 100%; min-height: 34px; padding: ${space.x2} ${space.x3};
+  border: 0; border-radius: ${radius.sm}; background: transparent;
+  color: var(--dsw-alias-label-primary); text-align: left; font: inherit; font-size: ${text.bodySize}; line-height: ${text.bodyLine}; cursor: pointer;
   overflow-wrap: anywhere;
 }
-.bh-combobox-scroll > button[aria-selected="true"] { font-weight: 600; }
+.bh-combobox-scroll > button[aria-selected="true"] { font-weight: ${text.strong}; }
 .bh-combobox-scroll > button:disabled { color: var(--dsw-alias-label-tertiary); cursor: default; }
 .bh-combobox-scroll > button:not(:disabled):hover, .bh-combobox-scroll > button[data-active] {
   background: var(--dsw-alias-interactive-bg-hover);
 }
-.bh-combobox-scroll { max-height: 260px; overflow-y: auto; padding: 4px; box-sizing: border-box; }
-.bh-combobox-hint { flex: none; color: var(--dsw-alias-label-secondary); font-size: 12px; font-weight: 400; }
-.bh-combobox-empty { padding: 6px 8px; color: var(--dsw-alias-label-secondary); font-size: 13px; }
-.bh-combobox-scroll > .bh-combobox-action { justify-content: flex-start; align-items: center; gap: 6px; border-top: 1px solid var(--dsw-alias-border-l2); border-radius: 0; margin-top: 4px; }
+.bh-combobox-scroll { max-height: 260px; overflow-y: auto; padding: ${space.x2}; box-sizing: border-box; }
+.bh-combobox-hint { flex: none; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; font-weight: ${text.regular}; }
+.bh-combobox-empty { padding: ${space.x2} ${space.x3}; color: var(--dsw-alias-label-secondary); font-size: ${text.bodySize}; }
+.bh-combobox-scroll > .bh-combobox-action { justify-content: flex-start; align-items: center; gap: ${space.x2}; border-top: ${border.hairline} solid ${color.divider}; border-radius: 0; margin-top: ${space.x2}; }
 `;
 		function Combobox({ value, options, onSelect, label, toggleLabel, disabled = false, invalid = false, errorId, placeholder, emptyLabel, fallbackValue, createLabel, searchable = true, className, action }) {
 			const root = (0, react.useRef)(null);
@@ -1815,45 +2239,137 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region packages/client/src/client/ds/pill-button.tsx
+		const pillStyles = { pill: {
+			k1xSpc: "bhx3nfvp2",
+			kGNEyG: "bhx6s0dn4",
+			kOIVth: "bhx12e6dxb",
+			ks0D6T: "bhx193iq5w",
+			kZKoxP: "bhxxevliy",
+			kg3NbH: "bhx1vid4s1",
+			kMzoRj: "bhxc342km",
+			kaIpWk: "bhx4g09nt",
+			kWkggS: "bhxw43b1w bhx1lc0nsx",
+			kMwMTN: "bhx24dycr",
+			kMv6JI: "bhxjb2p0i",
+			kGuDYH: "bhx5g6txa",
+			kLWn49: "bhx3350y7",
+			khDVqt: "bhxuxw1ft",
+			kkrTdU: "bhx1ypdohk bhxtgyt42",
+			kSiTet: "bhx1hc1fzr bhxijokvz",
+			kI3sdo: "bhx1a2a7pz bhx1m95a6t",
+			kInvED: "bhx1y3gkto",
+			$$css: true
+		} };
+		//#endregion
+		//#region packages/client/src/client/ds/select.tsx
+		function Select({ label, value, options, onChange, disabled = false, align = "end", autoFocus = false }) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const current = options.find((option) => option.value === value);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open: open && !disabled,
+				portal: true,
+				align,
+				items: options.map((option) => ({
+					id: option.value,
+					label: option.label
+				})),
+				selectedId: value,
+				onSelect: (id) => {
+					setOpen(false);
+					const next = options.find((option) => option.value === id);
+					if (next !== void 0 && next.value !== value) onChange(next.value);
+				},
+				onClose: () => {
+					setOpen(false);
+				},
+				anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					"aria-label": label,
+					"aria-haspopup": "menu",
+					"aria-expanded": open && !disabled,
+					disabled,
+					"data-modal-autofocus": autoFocus ? "" : void 0,
+					onClick: () => {
+						setOpen((previous) => !previous);
+					},
+					...props(pillStyles.pill),
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: "bhxeuugli bhxb3r6kr bhxlyipyv bhxuxw1ft",
+						children: current?.label
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
+					})]
+				})
+			});
+		}
+		//#endregion
+		//#region packages/client/src/client/ds/settings-row.tsx
+		function SettingsRows({ children, rootRef }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				ref: rootRef,
+				className: "bhx78zum5 bhxdt5ytf bhxeuugli",
+				children
+			});
+		}
+		function SettingsRow({ title, description, control, children, rootRef, data }) {
+			const id = (0, react.useId)();
+			const titleId = `${id}-title`;
+			const descriptionId = `${id}-description`;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				ref: rootRef,
+				role: "group",
+				"aria-labelledby": titleId,
+				"aria-describedby": description === void 0 ? void 0 : descriptionId,
+				...data,
+				className: "bhx78zum5 bhx6s0dn4 bhx15bqsqq bhx1q0g3np bhx1uptv2i bhx1mckxr8 bhxv0lzym bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg bhx1bta2m4",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: "bhx78zum5 bhxdt5ytf bhx5v8n67 bhx1iyjqo2 bhxs83m0k bhx1r8uery bhxeuugli",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							id: titleId,
+							className: "bhx24dycr bhxskcadq bhx1gy5ux2 bhx1nj67n bhxj0a0fe",
+							children: title
+						}),
+						description === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							id: descriptionId,
+							className: "bhxr3raxm bhxgowt09 bhx12cu2lo bhxj0a0fe",
+							children: description
+						}),
+						children
+					]
+				}), control === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "bhx78zum5 bhx1a02dak bhx6s0dn4 bhx13a6bvl bhx3xz8fp bhx2zm2ee bhx2lah0s bhxeuugli bhxh9uqaf bhx1cnm762",
+					children: control
+				})]
+			});
+		}
+		//#endregion
 		//#region packages/browser/src/client/settings.tsx
 		function ConfigChoice({ scope, field, value, writable, title, items }) {
-			const [open, setOpen] = (0, react.useState)(false);
 			const [saving, setSaving] = (0, react.useState)(false);
 			const [error, setError] = (0, react.useState)();
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "bh-settings-row",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "bh-settings-row-title",
-					children: title
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-					portal: true,
-					align: "end",
-					open,
-					selectedId: value,
-					items,
-					onClose: () => setOpen(false),
-					onSelect: (id) => {
-						setOpen(false);
-						if (!items.some((item) => item.id === id)) return;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+				title,
+				control: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
+					label: title,
+					value,
+					options: items.map((item) => ({
+						value: item.id,
+						label: item.label
+					})),
+					disabled: !writable || saving,
+					onChange: (id) => {
 						setSaving(true);
 						setError(void 0);
 						scope.set(field, id).then(() => {
 							if (scope.getSnapshot().value?.[field] !== id) throw new Error("Browser setting was not saved");
 						}).catch((cause) => setError(String(cause))).finally(() => setSaving(false));
-					},
-					anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-						type: "button",
-						className: "bh-settings-selector",
-						"aria-haspopup": "menu",
-						"aria-expanded": open,
-						disabled: !writable || saving,
-						onClick: () => setOpen(!open),
-						children: [items.find((item) => item.id === value)?.label ?? value, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, {})]
-					})
-				})]
-			}), error === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				role: "alert",
-				className: "bh-browser-error",
+					}
+				})
+			}), error === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+				tone: "danger",
 				children: error
 			})] });
 		}
@@ -1864,36 +2380,33 @@ window.__ModuleLoader__.load({
 			}), [scope]);
 			const snapshot = (0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot);
 			const target = snapshot.value?.target ?? "local";
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "bh-settings-rows bh-browser-settings",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
-					scope,
-					field: "target",
-					value: target,
-					writable: snapshot.writable,
-					title: t("settings.target"),
-					items: [
-						"local",
-						"container",
-						"extension",
-						"daily-control",
-						"profile-control"
-					].map((id) => ({
-						id,
-						label: t(`settings.${id}`)
-					}))
-				}), target !== "local" && target !== "container" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
-					scope,
-					field: target === "container" ? "containerDriver" : "localDriver",
-					value: (target === "container" ? snapshot.value?.containerDriver : snapshot.value?.localDriver) ?? "current",
-					writable: snapshot.writable,
-					title: t(target === "container" ? "settings.containerDriver" : "settings.localDriver"),
-					items: ["current", "agent-browser"].map((id) => ({
-						id,
-						label: t(`settings.driver.${id}`)
-					}))
-				})]
-			});
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(SettingsRows, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
+				scope,
+				field: "target",
+				value: target,
+				writable: snapshot.writable,
+				title: t("settings.target"),
+				items: [
+					"local",
+					"container",
+					"extension",
+					"daily-control",
+					"profile-control"
+				].map((id) => ({
+					id,
+					label: t(`settings.${id}`)
+				}))
+			}), target !== "local" && target !== "container" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ConfigChoice, {
+				scope,
+				field: target === "container" ? "containerDriver" : "localDriver",
+				value: (target === "container" ? snapshot.value?.containerDriver : snapshot.value?.localDriver) ?? "current",
+				writable: snapshot.writable,
+				title: t(target === "container" ? "settings.containerDriver" : "settings.localDriver"),
+				items: ["current", "agent-browser"].map((id) => ({
+					id,
+					label: t(`settings.driver.${id}`)
+				}))
+			})] });
 		}
 		function registerBrowserSettings(ctx, t) {
 			ctx.inject(["configForms", "slots"], (settingsCtx) => {
@@ -2258,57 +2771,127 @@ window.__ModuleLoader__.load({
 		//#region packages/browser/src/client/styles.ts
 		const styles = COMBOBOX_CSS + `
 .bh-browser-access-control { position: relative; display: flex; align-items: center; }
-.bh-browser-borrow { display: grid; gap: 8px; font-size: 12.5px; }
-.bh-browser-borrow-title, .bh-browser-daily-install { color: var(--bh-browser-label); text-underline-offset: 3px; }
+.bh-browser-borrow { display: grid; gap: ${space.x3}; font-size: ${text.metaSize}; }
+.bh-browser-borrow-title, .bh-browser-daily-install { color: var(--dsw-alias-label-primary); text-underline-offset: 3px; }
 .bh-browser-borrow-url { overflow-wrap: anywhere; }
-.bh-browser-borrow-url { color: var(--bh-browser-secondary); }
+.bh-browser-borrow-url { color: var(--dsw-alias-label-secondary); }
 .bh-browser-access-power {
   display: flex; align-items: center; justify-content: center; width: 28px; height: 28px;
-  padding: 0; border: 0; border-radius: var(--dsw-radius-md); background: transparent;
+  padding: 0; border: 0; border-radius: ${radius.md}; background: transparent;
   color: var(--dsw-alias-label-secondary); cursor: pointer;
 }
 .bh-browser-access-power:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .bh-browser-access-power[aria-pressed='true'] { color: var(--dsw-alias-state-business-primary); background: var(--dsw-alias-interactive-bg-hover); }
-.bh-browser-access-power:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+.bh-browser-access-power:focus-visible { outline: ${border.focus} solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
 .bh-browser-access-power:disabled { opacity: 0.5; cursor: default; }
 .bh-browser-access-power.bh-access-failed { color: var(--dsw-alias-state-error-primary); }
-.bh-browser-access-error { order: -1; padding: 0 4px; color: var(--dsw-alias-state-error-primary); font-size: 11px; line-height: 16px; white-space: nowrap; }
+.bh-browser-access-error { order: -1; padding: 0 ${space.x2}; color: var(--dsw-alias-state-error-primary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: nowrap; }
 
-/* @bh-browser-aliases:start */
-.bh-browser-body, .bh-browser-profiles, .bh-browser-settings {
-  --bh-browser-error: var(--dsw-alias-state-error-primary);
-  --bh-browser-secondary: var(--dsw-alias-label-secondary);
-  --bh-browser-label: var(--dsw-alias-label-primary);
-  --bh-browser-hover: var(--dsw-alias-interactive-bg-hover);
-  --bh-browser-elevation: var(--dsw-elevation-prominent);
-  --bh-browser-stroke: var(--dsw-alias-border-l1);
-  --bh-browser-radius: var(--dsw-radius-md);
-}
-/* @bh-browser-aliases:end */
-.bh-browser-local { display: grid; gap: 8px; font-size: 12.5px; }
-.bh-browser-card-detail { display: grid; gap: 8px; justify-items: start; font-size: 12px; }
-.bh-browser-card-field { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; color: var(--bh-browser-secondary); }
+.bh-browser-local { display: grid; gap: ${space.x3}; font-size: ${text.metaSize}; }
+.bh-browser-card-detail { display: grid; gap: ${space.x3}; justify-items: start; font-size: ${text.metaSize}; }
+.bh-browser-card-field { display: flex; align-items: center; justify-content: space-between; gap: ${space.x3}; width: 100%; color: var(--dsw-alias-label-secondary); }
 .bh-browser-card-field > span:first-child { flex: none; }
 .bh-browser-cards .bh-card-meta [role="status"] { color: inherit; }
-.bh-browser-note { color: var(--bh-browser-secondary); }
-.bh-browser-frame { display: block; width: 100%; border: 1px solid var(--bh-browser-stroke); border-radius: var(--bh-browser-radius); }
-.bh-browser-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.bh-browser-tab[aria-pressed="true"] { background: var(--bh-browser-hover); }
-.bh-browser-tab[aria-current="true"] .bh-browser-tab-title { font-weight: 600; }
+.bh-browser-note { color: var(--dsw-alias-label-secondary); }
+.bh-browser-frame { display: block; width: 100%; border: ${border.hairline} solid ${color.divider}; border-radius: ${radius.md}; }
+.bh-browser-actions { display: flex; flex-wrap: wrap; gap: ${space.x3}; }
+.bh-browser-tab[aria-pressed="true"] { background: var(--dsw-alias-interactive-bg-hover); }
+.bh-browser-tab[aria-current="true"] .bh-browser-tab-title { font-weight: ${text.strong}; }
 .bh-browser-tab .bh-browser-tab-url { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bh-browser-tabs .bh-card-main { padding: 7px 10px; }
-.bh-browser-error { color: var(--bh-browser-error); overflow-wrap: anywhere; }
-.bh-viewer-btn-content { display: inline-flex; align-items: center; gap: 6px; }
+.bh-browser-tabs .bh-card-main { padding: ${space.x3} ${space.x3}; }
+.bh-browser-error { color: var(--dsw-alias-state-error-primary); overflow-wrap: anywhere; }
+.bh-viewer-btn-content { display: inline-flex; align-items: center; gap: ${space.x2}; }
 @media (max-width: 560px) {
   [data-bh-viewer-btn-label] { display: none; }
 }
-.bh-browser-progress { display: grid; gap: 4px; color: var(--bh-browser-secondary); }
+.bh-browser-progress { display: grid; gap: ${space.x2}; color: var(--dsw-alias-label-secondary); }
 .bh-browser-progress-bar { width: 100%; height: 6px; accent-color: var(--dsw-alias-state-business-primary); }
-.bh-browser-failure { display: grid; gap: 4px; overflow-wrap: anywhere; }
-.bh-browser-failure-title { color: var(--bh-browser-label); font-weight: 600; }
-.bh-browser-failure-fault, .bh-browser-failure-action { color: var(--bh-browser-secondary); }
-.bh-browser-failure-details { color: var(--bh-browser-secondary); }
-.bh-browser-failure-details pre { overflow-x: auto; white-space: pre-wrap; font-size: 11px; }
+.bh-browser-failure { display: grid; gap: ${space.x2}; overflow-wrap: anywhere; }
+.bh-browser-failure-title { color: var(--dsw-alias-label-primary); font-weight: ${text.strong}; }
+.bh-browser-failure-fault, .bh-browser-failure-action { color: var(--dsw-alias-label-secondary); }
+.bh-browser-failure-details { color: var(--dsw-alias-label-secondary); }
+.bh-browser-failure-details pre { overflow-x: auto; white-space: pre-wrap; font-size: ${text.metaSize}; }
+
+.bhx-level-0{}
+.bhx-level-1:not(#\\#){}
+.bhx1ghz6dp:not(#\\#){margin:0}
+.bhx-level-2:not(#\\#):not(#\\#){}
+.bhx4g09nt:not(#\\#):not(#\\#){border-radius:var(--dsw-radius-sm, 8px)}
+.bhxc342km:not(#\\#):not(#\\#){border-width:0}
+.bhx1mckxr8:not(#\\#):not(#\\#){gap:12px}
+.bhx5v8n67:not(#\\#):not(#\\#){gap:2px}
+.bhx12e6dxb:not(#\\#):not(#\\#){gap:4px}
+.bhx2zm2ee:not(#\\#):not(#\\#){gap:8px}
+.bhx1a2a7pz:not(#\\#):not(#\\#){outline:none}
+.bhxb3r6kr:not(#\\#):not(#\\#){overflow:hidden}
+.bhxe74ayl:not(#\\#):not(#\\#){padding-block:12px}
+.bhx89kiln:not(#\\#):not(#\\#){padding-block:4px}
+.bhx1vid4s1:not(#\\#):not(#\\#){padding-inline:12px 8px}
+.bhx1w8vjyx:not(#\\#):not(#\\#){padding-inline:4px}
+.bhx1m95a6t:focus-visible:not(#\\#):not(#\\#){outline:var(--dsw-focus-ring-width, 2px) solid var(--dsw-alias-state-business-primary)}
+@media (max-width: 648px){.bhxv0lzym.bhxv0lzym:not(#\\#):not(#\\#){gap:8px}}
+.bhx-level-3:not(#\\#):not(#\\#):not(#\\#){}
+.bhx1g31g6d:not(#\\#):not(#\\#):not(#\\#){accent-color:var(--dsw-alias-state-business-primary)}
+.bhx6s0dn4:not(#\\#):not(#\\#):not(#\\#){align-items:center}
+.bhxw43b1w:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-bg-module-platform)}
+.bhx1xojs80:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-interactive-bg-hover)}
+.bhx9f619:not(#\\#):not(#\\#):not(#\\#){box-sizing:border-box}
+.bhx24dycr:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-label-primary)}
+.bhxr3raxm:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-label-secondary)}
+.bhxwq55zj:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-label-tertiary)}
+.bhx8ay0r6:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-state-error-primary)}
+.bhx1pideu2:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-state-success-primary)}
+.bhxz9v26x:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-state-warn-primary)}
+.bhx1ypdohk:not(#\\#):not(#\\#):not(#\\#){cursor:pointer}
+.bhx78zum5:not(#\\#):not(#\\#):not(#\\#){display:flex}
+.bhxrvj5dj:not(#\\#):not(#\\#):not(#\\#){display:grid}
+.bhx3nfvp2:not(#\\#):not(#\\#):not(#\\#){display:inline-flex}
+.bhx1r8uery:not(#\\#):not(#\\#):not(#\\#){flex-basis:0}
+.bhxdt5ytf:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}
+.bhx1q0g3np:not(#\\#):not(#\\#):not(#\\#){flex-direction:row}
+.bhx1iyjqo2:not(#\\#):not(#\\#):not(#\\#){flex-grow:1}
+.bhx2lah0s:not(#\\#):not(#\\#):not(#\\#){flex-shrink:0}
+.bhxs83m0k:not(#\\#):not(#\\#):not(#\\#){flex-shrink:1}
+.bhx1a02dak:not(#\\#):not(#\\#):not(#\\#){flex-wrap:wrap}
+.bhxjb2p0i:not(#\\#):not(#\\#):not(#\\#){font-family:inherit}
+.bhxmz2490:not(#\\#):not(#\\#):not(#\\#){font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bhxgowt09:not(#\\#):not(#\\#):not(#\\#){font-size:12px}
+.bhx5g6txa:not(#\\#):not(#\\#):not(#\\#){font-size:13px}
+.bhxskcadq:not(#\\#):not(#\\#):not(#\\#){font-size:14px}
+.bhx1nj67n:not(#\\#):not(#\\#):not(#\\#){font-weight:500}
+.bhx13a6bvl:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-end}
+.bhx619ttb:not(#\\#):not(#\\#):not(#\\#){justify-items:start}
+.bhx12cu2lo:not(#\\#):not(#\\#):not(#\\#){line-height:16px}
+.bhx1gy5ux2:not(#\\#):not(#\\#):not(#\\#){line-height:20px}
+.bhx3350y7:not(#\\#):not(#\\#):not(#\\#){line-height:20px}
+.bhx1hc1fzr:not(#\\#):not(#\\#):not(#\\#){opacity:1}
+.bhx1y3gkto:not(#\\#):not(#\\#):not(#\\#){outline-offset:1px}
+.bhxj0a0fe:not(#\\#):not(#\\#):not(#\\#){overflow-wrap:anywhere}
+.bhxp4054r:not(#\\#):not(#\\#):not(#\\#){text-align:end}
+.bhxlyipyv:not(#\\#):not(#\\#):not(#\\#){text-overflow:ellipsis}
+.bhxuxw1ft:not(#\\#):not(#\\#):not(#\\#){white-space:nowrap}
+.bhx126k92a:not(#\\#):not(#\\#):not(#\\#){white-space:pre-wrap}
+.bhxtgyt42:disabled:not(#\\#):not(#\\#):not(#\\#){cursor:default}
+.bhxijokvz:disabled:not(#\\#):not(#\\#):not(#\\#){opacity:.5}
+.bhx1lc0nsx:hover:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-interactive-bg-hover)}
+@media (max-width: 648px){.bhx15bqsqq.bhx15bqsqq:not(#\\#):not(#\\#):not(#\\#){align-items:stretch}}
+@media (max-width: 648px){.bhx1uptv2i.bhx1uptv2i:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}}
+@media (max-width: 648px){.bhx3xz8fp.bhx3xz8fp:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-start}}
+.bhx-level-4:not(#\\#):not(#\\#):not(#\\#):not(#\\#){}
+.bhxnoyelg:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:var(--dsw-alias-border-l1)}
+.bhx1q0q8m5:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-style:solid}
+.bhxrvphhj:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-width:1px}
+.bhxxevliy:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:28px}
+.bhxols6we:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:6px}
+.bhx193iq5w:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}
+.bhxh9uqaf:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:60%}
+.bhxeuugli:not(#\\#):not(#\\#):not(#\\#):not(#\\#){min-width:0}
+.bhx1e1oj2y:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-bottom:4px}
+.bhxb590mu:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:16px}
+.bhxh8yej3:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:100%}
+.bhx10zg81t:first-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:0}
+.bhx1bta2m4:last-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:transparent}
+@media (max-width: 648px){.bhx1cnm762.bhx1cnm762:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}}
 `;
 		//#endregion
 		//#region packages/browser/src/client/access-power-icon.tsx
@@ -2392,8 +2975,17 @@ window.__ModuleLoader__.load({
 				...init
 			});
 			const body = await response.json();
-			if (!response.ok || body.ok === false) throw new BrowserApiError(body.error ?? `HTTP ${String(response.status)}`, body.code, body.detail);
+			if (!response.ok || body.ok === false) throw new BrowserApiError(body.error ?? `HTTP ${String(response.status)}`, body.code, body.detail, body.packages);
 			return body;
+		}
+		const botInfoStores = /* @__PURE__ */ new Map();
+		function botInfoStore(botSlug) {
+			const key = botSlug ?? "";
+			const existing = botInfoStores.get(key);
+			if (existing !== void 0) return existing;
+			const created = createBotInfoStore(botSlug);
+			botInfoStores.set(key, created);
+			return created;
 		}
 		function createBotInfoStore(botSlug) {
 			let info = {
@@ -2403,7 +2995,7 @@ window.__ModuleLoader__.load({
 				profiles: []
 			};
 			const listeners = /* @__PURE__ */ new Set();
-			let started = false;
+			let loadedAt = Number.NEGATIVE_INFINITY;
 			const load = () => {
 				const rpc = connectionRpc;
 				if (rpc === void 0 || botSlug === void 0) return;
@@ -2431,8 +3023,8 @@ window.__ModuleLoader__.load({
 					for (const listener of listeners) listener();
 				},
 				subscribe(listener) {
-					if (!started) {
-						started = true;
+					if (listeners.size === 0 && Date.now() - loadedAt > 5e3) {
+						loadedAt = Date.now();
 						load();
 					}
 					listeners.add(listener);
@@ -2510,14 +3102,13 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function BrowserHeaderAction({ botSlug, t, setExpandable, setExpanded }) {
-			const [store] = (0, react.useState)(() => createBotInfoStore(botSlug));
+			const store = botInfoStore(botSlug);
 			const [busy, setBusy] = (0, react.useState)(false);
 			const inFlight = (0, react.useRef)(false);
 			const [error, setError] = (0, react.useState)(false);
 			const subscribe = (listener) => {
 				const sync = () => {
-					const access = store.getSnapshot().browserAccess === true;
-					setExpandable?.(access);
+					setExpandable?.(store.getSnapshot().browserAccess !== void 0);
 				};
 				const unsubscribe = store.subscribe(() => {
 					sync();
@@ -2544,7 +3135,6 @@ window.__ModuleLoader__.load({
 					}
 					const applied = result.value.bot?.browserAccess === true;
 					store.setAccess(applied);
-					setExpandable?.(applied);
 					setExpanded?.(applied);
 				}).catch(() => {
 					setError(true);
@@ -2580,7 +3170,7 @@ window.__ModuleLoader__.load({
 		}
 		function BrowserBody({ botSlug, t }) {
 			const [store] = (0, react.useState)(() => createObservationStore(botSlug));
-			const [infoStore] = (0, react.useState)(() => createBotInfoStore(botSlug));
+			const infoStore = botInfoStore(botSlug);
 			const observation = (0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot);
 			const info = (0, react.useSyncExternalStore)(infoStore.subscribe, infoStore.getSnapshot);
 			const [follow, setFollow] = (0, react.useState)(true);
@@ -2617,7 +3207,8 @@ window.__ModuleLoader__.load({
 			const cleanupRequired = observation?.cleanupRequired === true;
 			const failureNotice = !cleanupRequired && failure !== void 0 && isBrowserFailureKind(failure.code) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BrowserFailureNotice, {
 				failure,
-				t
+				t,
+				onRetry: () => invoke(OPEN_ENDPOINT, follow || preview === void 0 ? {} : { tab: preview })
 			}) : null;
 			let visibleError = failure?.message;
 			if (cleanupRequired) visibleError = t("entry.view.cleanupFailed");
@@ -3024,9 +3615,25 @@ window.__ModuleLoader__.load({
 		}
 		function createBrowserBody(t) {
 			return function BrowserBodyView(props) {
+				const store = botInfoStore(props.botSlug);
+				if ((0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot).browserAccess === false) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "bh-browser-note",
+					children: t("entry.access.description")
+				});
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(BrowserBody, {
 					...props,
 					t
+				});
+			};
+		}
+		function createBrowserBadge(t) {
+			return function BrowserBadge({ botSlug }) {
+				const store = botInfoStore(botSlug);
+				if ((0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot).browserAccess !== true) return null;
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-channel-sidebar-live-dot",
+					role: "img",
+					"aria-label": t("entry.access.on")
 				});
 			};
 		}
@@ -3039,10 +3646,13 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function apply(ctx) {
+			botInfoStores.clear();
 			const t = ctx.locale.bind(LOCALE_NS);
 			registerBrowserSettings(ctx, t);
 			ctx.effect(() => {
 				const sheet = document.createElement("style");
+				sheet.dataset.plugin = "@botharness/browser";
+				sheet.dataset.pluginCss = "@botharness/browser/client.css";
 				sheet.textContent = styles;
 				document.head.append(sheet);
 				return () => sheet.remove();
@@ -3062,7 +3672,9 @@ window.__ModuleLoader__.load({
 					order: 41,
 					scope: "personabot",
 					component: createBrowserBody(t),
-					headerAction: createBrowserHeader(t)
+					headerAction: createBrowserHeader(t),
+					badge: createBrowserBadge(t),
+					tab: "screen"
 				}), "botharness-browser: channel sidebar entry");
 			});
 		}

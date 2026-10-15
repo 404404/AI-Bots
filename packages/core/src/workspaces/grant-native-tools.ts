@@ -18,6 +18,8 @@ export const NATIVE_FILE_TOOL_NAMES = new Set([
   'grep',
 ]);
 
+export const NATIVE_SHELL_TOOL_NAMES = new Set(['bash', 'pwsh']);
+
 function within(root: string, target: string): boolean {
   const tail = relative(root, target);
   return tail === '' || (tail !== '..' && !tail.startsWith('..' + sep) && !isAbsolute(tail));
@@ -39,6 +41,16 @@ function canonicalTarget(path: string): string | undefined {
     } catch {
       return undefined;
     }
+  }
+}
+
+function canonicalRoot(root: string): string | undefined {
+  try {
+    const path = resolve(root);
+    const canonical = realpathSync(path);
+    return canonical === join(realpathSync(dirname(path)), basename(path)) ? canonical : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -125,11 +137,8 @@ export function nativeFileToolDenial(
     return undefined;
   const roots = currentRoots(core, session, request.kind);
   for (const root of roots) {
-    try {
-      const canonicalRoot = realpathSync(root);
-
-      if (canonicalRoot === resolve(root) && within(canonicalRoot, target)) return undefined;
-    } catch {}
+    const canonical = canonicalRoot(root);
+    if (canonical !== undefined && within(canonical, target)) return undefined;
   }
   return "Path is outside this Session's authorized workspace";
 }
@@ -141,10 +150,10 @@ export function nativeExecutionRoot(
   args: unknown,
 ): string {
   const input = typeof args === 'object' && args !== null ? (args as Record<string, unknown>) : {};
-  const request =
-    name === 'bash'
-      ? { path: typeof input.workdir === 'string' ? input.workdir : '.', kind: 'write' as const }
-      : nativePath(name, args);
+  const shell = NATIVE_SHELL_TOOL_NAMES.has(name);
+  const request = shell
+    ? { path: typeof input.workdir === 'string' ? input.workdir : '.', kind: 'write' as const }
+    : nativePath(name, args);
   if (request === undefined || session.header.cwd === undefined)
     throw new Error('BotHarness requires an authorized execution path');
   const target = canonicalTarget(resolve(session.header.cwd, request.path));
@@ -154,14 +163,13 @@ export function nativeExecutionRoot(
         session.id,
         target,
         request.kind,
-        name === 'bash',
+        shell,
       );
       if (original !== undefined) return original;
     }
     for (const root of currentRoots(core, session, request.kind)) {
-      try {
-        if (realpathSync(root) === resolve(root) && within(root, target)) return root;
-      } catch {}
+      const canonical = canonicalRoot(root);
+      if (canonical !== undefined && within(canonical, target)) return root;
     }
   }
   throw new Error("Path is outside this Session's authorized workspace");
@@ -171,10 +179,7 @@ export function authorizedPathRoot(roots: readonly string[], path: string): stri
   const target = canonicalTarget(path);
   if (target === undefined) return undefined;
   return roots.find((root) => {
-    try {
-      return realpathSync(root) === resolve(root) && within(root, target);
-    } catch {
-      return false;
-    }
+    const canonical = canonicalRoot(root);
+    return canonical !== undefined && within(canonical, target);
   });
 }

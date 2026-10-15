@@ -1,15 +1,16 @@
-import { useId, useState, useSyncExternalStore, type ReactElement } from 'react';
+import { useState, useSyncExternalStore, type ReactElement } from 'react';
 import {
-  Input,
-  Button,
   Switch,
   IconPinFillRegular,
   IconPinOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
+import { NumberStepper } from './ds/number-stepper.js';
+import { SettingsRow } from './ds/settings-row.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { WindowCompanions } from './window-companions.js';
 import { WindowCompanionView, type WindowCompanionViewProps } from './window-companion-view.js';
 import { CompanionBubbles } from './companion-bubbles.js';
+import { CompanionFrames } from './companion-frames.js';
 import { CompanionSound } from './companion-sound.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { BotModePrefs } from './bot-mode-prefs.js';
@@ -65,6 +66,7 @@ export function WindowCompanionsView({
     () => false,
   );
   const [bubbles] = useState(() => new CompanionBubbles());
+  const [frames] = useState(() => new CompanionFrames());
   const [sound] = useState(() => new CompanionSound());
   const audioMount = useMountedResource<HTMLSpanElement>(() => {
     const sync = () => {
@@ -101,6 +103,7 @@ export function WindowCompanionsView({
           {...props}
           companion={child}
           bubbles={bubbles}
+          frames={frames}
           sound={sound}
           onRemove={(botId) => companion.remove(botId)}
         />
@@ -117,84 +120,38 @@ export function CompanionSettings({
   t: BotHarnessTranslate;
 }): ReactElement {
   const state = useSyncExternalStore(companion.subscribe, companion.getSnapshot);
-  const id = useId();
-  const [error, setError] = useState(false);
   return (
     <>
-      <div className="bh-settings-row">
-        <div className="bh-settings-row-text">
-          <div className="bh-settings-row-title">{t('companion.speechSound')}</div>
-          <div className="bh-settings-row-desc">{t('companion.speechSoundHint')}</div>
-        </div>
-        <Switch
-          checked={state.speechSound}
-          onChange={(enabled: boolean) => companion.configureSpeechSound(enabled)}
-          disabled={!state.ready}
-          label={t('companion.speechSound')}
-        />
-      </div>
-      <form
-        className="bh-settings-row bh-companion-settings"
-        key={`${state.capacity.layers}:${state.capacity.retention}`}
-        onSubmit={(event) => {
-          event.preventDefault();
-          const data = new FormData(event.currentTarget);
-          const layers = Number(data.get('layers'));
-          const retention = Number(data.get('retention'));
-          if (
-            !Number.isInteger(layers) ||
-            layers < 1 ||
-            layers > 10 ||
-            !Number.isInteger(retention) ||
-            retention < 1 ||
-            retention > 100
-          ) {
-            setError(true);
-            return;
-          }
-          companion.configureCapacity({ layers, retention });
-          setError(false);
-        }}
-      >
-        <div className="bh-settings-row-text">
-          <div className="bh-settings-row-title">{t('companion.settings')}</div>
-          <div className="bh-settings-row-desc">{t('companion.capacityHint')}</div>
-          {error ? <div role="alert">{t('companion.capacityError')}</div> : null}
-        </div>
-        <div className="bh-companion-capacity-controls">
-          <label htmlFor={`${id}-layers`}>
-            {t('companion.layers')}
-            <Input
-              id={`${id}-layers`}
-              name="layers"
-              type="number"
-              min={1}
-              max={10}
-              step={1}
-              required
-              defaultValue={state.capacity.layers}
-              disabled={!state.ready}
-            />
-          </label>
-          <label htmlFor={`${id}-retention`}>
-            {t('companion.retention')}
-            <Input
-              id={`${id}-retention`}
-              name="retention"
-              type="number"
-              min={1}
-              max={100}
-              step={1}
-              required
-              defaultValue={state.capacity.retention}
-              disabled={!state.ready}
-            />
-          </label>
-          <Button type="submit" size="sm" variant="primary" disabled={!state.ready}>
-            {t('companion.save')}
-          </Button>
-        </div>
-      </form>
+      <SettingsRow
+        title={t('companion.speechSound')}
+        description={t('companion.speechSoundHint')}
+        control={
+          <Switch
+            checked={state.speechSound}
+            onChange={(enabled: boolean) => companion.configureSpeechSound(enabled)}
+            disabled={!state.ready}
+            label={t('companion.speechSound')}
+          />
+        }
+      />
+      <SettingsRow
+        title={t('companion.retention')}
+        description={t('companion.capacityHint')}
+        control={
+          <NumberStepper
+            label={t('companion.retention')}
+            value={state.capacity.retention}
+            min={1}
+            max={100}
+            disabled={!state.ready}
+            decreaseLabel={t('common.decrease')}
+            increaseLabel={t('common.increase')}
+            onChange={(retention) =>
+              companion.configureCapacity({ layers: state.capacity.layers, retention })
+            }
+          />
+        }
+      />
     </>
   );
 }

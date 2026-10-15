@@ -1,3 +1,4 @@
+import { paintBotName } from './bot-primary-color.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import { useRef, useState, type ReactElement } from 'react';
 import {
@@ -7,7 +8,12 @@ import {
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { UsageChart, UsageLegend, type UsageSummary } from './model-usage-charts.js';
+import {
+  UsageChart,
+  UsageLegend,
+  UsageToneLegend,
+  type UsageSummary,
+} from './model-usage-charts.js';
 import { useMountedResource } from './mounted-resource.js';
 export function OverviewUsageView({
   actions,
@@ -108,7 +114,12 @@ export function OverviewUsageView({
   const rows: UsageSummary[] =
     value?.days.map((row) => ({ ...row, key: row.day, label: row.day })) ?? [];
   const bots: UsageSummary[] =
-    value?.bots.map((bot) => ({ ...bot, key: bot.slug, label: bot.displayName })) ?? [];
+    value?.bots.map(({ primaryColor, ...bot }) => ({
+      ...bot,
+      key: bot.slug,
+      label: bot.displayName,
+      ...(typeof primaryColor === 'string' ? { identityColor: primaryColor } : {}),
+    })) ?? [];
   return (
     <section
       ref={mount}
@@ -162,7 +173,11 @@ export function OverviewUsageView({
             </span>
             <strong className="bh-profile-card-total" aria-live="polite">
               {t('overviewUsage.total')}:{' '}
-              <span data-usage-total>{count(value.totals.totalTokens)}</span> tokens
+              <span data-usage-total>
+                {count(value.totals.totalTokens)}
+                {value.totals.partial && value.totals.totalTokens !== null ? '+' : ''}
+              </span>{' '}
+              tokens
             </strong>
             {value.freshness !== 'ready' ? (
               <p className="bh-note" role="status">
@@ -170,7 +185,8 @@ export function OverviewUsageView({
               </p>
             ) : null}
             {value.legacyBaseline ? <p className="bh-note">{t('overviewUsage.legacy')}</p> : null}
-            {value.days.some((row) => Object.values(row).some((amount) => amount === null)) ? (
+            {value.totals.partial ||
+            value.days.some((row) => Object.values(row).some((amount) => amount === null)) ? (
               <p className="bh-note">{t('overviewUsage.partial')}</p>
             ) : null}
             {rows.some((row) => row.totalTokens !== null && row.totalTokens > 0) ? (
@@ -187,6 +203,7 @@ export function OverviewUsageView({
             <div className="bh-usage-models">
               <div className="bh-usage-model-heading">
                 <strong>{t('overviewUsage.bots')}</strong>
+                {value.bots.length === 0 ? null : <UsageToneLegend t={t} />}
               </div>
               {value.bots.length === 0 ? (
                 <p className="bh-profile-empty">{t('overviewUsage.empty')}</p>
@@ -200,7 +217,12 @@ export function OverviewUsageView({
                         data-usage-bot={bot.slug}
                       >
                         <span className="bh-overview-usage-bot-name" title={bot.displayName}>
-                          <span>{bot.displayName}</span>
+                          <span
+                            ref={(element) => paintBotName(element, bot.primaryColor)}
+                            data-usage-bot-name=""
+                          >
+                            {bot.displayName}
+                          </span>
                           {!bot.current ? <span>{t('overviewUsage.retained')}</span> : null}
                         </span>
                         <strong>{count(bot.totalTokens)}</strong>

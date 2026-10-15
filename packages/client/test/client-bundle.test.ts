@@ -28,6 +28,7 @@ const BASELINE_MODULES = new Set([
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-dockkit',
+  '@deepseek-ai/dsh-api-gateway/client',
 ]);
 
 function isBaselineModule(id: string): boolean {
@@ -35,6 +36,13 @@ function isBaselineModule(id: string): boolean {
 }
 
 function baselineModuleStub(id: string): Record<string, unknown> {
+  if (id === '@deepseek-ai/dsh-api-gateway/client') {
+    return {
+      RemoteJournalStream: class {},
+      RemoteSnapshotStream: class {},
+      RemoteStreamCarrierError: class extends Error {},
+    };
+  }
   if (id === '@deepseek-ai/dsh-client-store') {
     return {
       createSnapshotStore(initial: Record<string, unknown>) {
@@ -79,10 +87,12 @@ function loadedEntry(): LoadedEntry {
 }
 
 beforeAll(async () => {
-  await build({ ...clientBundleOptions, outDir: tempDir });
+  await build({ ...clientBundleOptions, config: false, outDir: tempDir });
   bundleCode = readFileSync(join(tempDir, 'client.js'), 'utf8');
   const sandbox = {
     window: {
+      matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }),
+      location: { hash: '' },
       __ModuleLoader__: {
         load: (loaded: LoadedEntry) => {
           entry = loaded;
@@ -94,6 +104,7 @@ beforeAll(async () => {
     TextDecoder,
     AbortController,
     AbortSignal,
+    EventTarget,
     console,
   };
   vm.createContext(sandbox);
@@ -105,6 +116,9 @@ afterAll(() => {
 });
 
 describe('@botharness/ui browser bundle', () => {
+  it('does not defer Node environment reads to browser interactions', () => {
+    expect(bundleCode).not.toMatch(/\bprocess\.env\b/);
+  });
   it('self-registers with the lazy-CJS module-loader contract', () => {
     const loaded = loadedEntry();
     expect(loaded.id).toBe('@botharness/ui');
@@ -124,6 +138,31 @@ describe('@botharness/ui browser bundle', () => {
       (id) => typeof id === 'string' && id.startsWith('@deepseek-ai/') && !BASELINE_MODULES.has(id),
     );
     expect(nonBaselineShell).toEqual([]);
+  });
+
+  it('inlines dockview with only its structural stylesheet, themed through DSH tokens', () => {
+    expect(bundleCode).not.toContain('@bh-dockview-css');
+    expect(bundleCode).not.toMatch(/require\("dockview/);
+    expect(bundleCode).toContain('.dv-split-view-container');
+    expect(bundleCode).not.toContain('.dockview-theme-');
+    expect(bundleCode).toContain('.bh-dock-theme');
+  });
+
+  it('compiles StyleX at build time and ships every class it uses in the plugin stylesheet', () => {
+    expect(bundleCode).not.toContain('@bh-stylex-css');
+    expect(bundleCode).not.toMatch(/require\("@stylexjs\//);
+    expect(bundleCode).not.toMatch(/Unexpected 'stylex\.\w+' call at runtime/);
+    const classes = new Set(
+      [...bundleCode.matchAll(/"(bhx[a-z0-9]+(?: bhx[a-z0-9]+)*)"/g)].flatMap((match) =>
+        match[1]!.split(' '),
+      ),
+    );
+    expect(classes.size).toBeGreaterThan(40);
+    const missing = [...classes].filter((name) => !bundleCode.includes(`.${name}`));
+    expect(missing).toEqual([]);
+    expect(bundleCode).toMatch(
+      /\.bhx[a-z0-9]+(?::not\(#\\\\#\))+\{color:var\(--dsw-alias-label-primary\)\}/,
+    );
   });
 
   it('exposes the plugin and registers the bot-mode panel plus the @ mention source', () => {
@@ -214,6 +253,12 @@ describe('@botharness/ui browser bundle', () => {
         locale: 'botharness',
         inject: expect.any(Function),
         children: { 'botharness.settings.section': { kind: 'list', scope: 'root' } },
+      },
+      {
+        name: 'shell.overlay',
+        id: 'botharness-shortcut-help',
+        locale: 'botharness',
+        inject: expect.any(Function),
       },
       {
         name: 'sidebar.panellist',

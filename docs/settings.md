@@ -11,9 +11,9 @@ This guide covers non-IM settings in the public **deepseekbot** package on DSH *
 | Native Agent tools and working style                          | Settings → Agent presets.                                                   |
 | Bot icon, motion, sorting, concurrency, your name             | Bot settings beside Bot mode, or Settings → Bot settings.                   |
 | One Bot's name and avatar                                     | Its DM header name/avatar → View details.                                   |
-| One Bot's models and wake policy                              | Model and Wake policy in the right sidebar of its DM.                       |
+| One Bot's models and wake policy                              | Model and Wake policy in its DM's Channel settings (header ··· menu).       |
 | Right sidebar layout and session views                        | Gear at the top of Channel sidebar.                                         |
-| One Bot's work folders and task permissions                   | Workspace grants in the right sidebar.                                      |
+| One Bot's work folders and task permissions                   | Workspace grants in the DM's Channel settings.                              |
 | An existing DSH Session's model and permissions               | Open it from Sessions in the right sidebar and inspect its native controls. |
 
 ## Complete environment backup and restore
@@ -116,7 +116,7 @@ These are native DSH settings. Initial values below were observed in a clean RC1
 | Bot list sorting              | Recently updated; manual                                | Default sorting; drag rows for manual order. Pinned areas/sections may have their own sort choice.                                                                        |
 | Developer mode                | Off                                                     | Shows workspace grant history and advanced options; grants no file access.                                                                                                |
 | Auto-accept Group invitations | On                                                      | Join invited BotHarness Groups without waking the Bot. When off, the invited Bot decides. Does not configure an IM connection.                                            |
-| Assignment concurrency limit  | 3; integer 1–32                                         | Enter and Save. Shared across Bots; limits executing tasks, not historical sessions. Lowering it does not stop running tasks.                                             |
+| Assignment concurrency limit  | 8; integer 1–32                                         | Enter and Save. Shared across Bots; limits executing tasks, not historical sessions. Lowering it does not stop running tasks.                                             |
 | DeepSeekBot version           | Shows the running version                               | Check for updates queries npm; Update now installs a new release, and on the web Restart now loads it. See [Update DeepSeekBot](/docs/update-deepseekbot).                |
 | My default name               | Empty → Human; maximum 128 characters                   | Save name for chat, mentions, and Bot context. Restore default or save empty to return to Human.                                                                          |
 | Anonymous usage statistics    | On                                                      | Switch saves immediately and applies without a restart; locked off when config or environment disables it. See [Anonymous usage statistics](#anonymous-usage-statistics). |
@@ -155,23 +155,25 @@ Local Groups allow an ordinary-message override for each Bot under **Group heade
 
 ## Channel sidebar display settings
 
-The [Channel sidebar chapter](/docs/channel-sidebar) provides step-by-step feature guides; see [Display and layout](/docs/channel-sidebar/display) for ordering, visibility and save/cancel behavior.
+The [Channel sidebar chapter](/docs/channel-sidebar) provides step-by-step feature guides; see [Display and layout](/docs/channel-sidebar/display) for tabs, ordering and visibility.
 
-Open the right sidebar's gear menu. These browser display preferences do not change durable Bot memory or task authorization.
+The chat header's **···** menu → **Channel settings…** opens the chat's Model, Workspace Grants, Wake policy, External identities, External connectors or Group management. Sidebar display options sit in the gear at the right of each section title; they are browser display preferences that do not change durable Bot memory or task authorization.
 
 ![Sidebar layout, memory terminology, and session view menus](/guides/settings/settings-sidebar-zh.webp)
 
-| Field                          | Default / effect                                                                                            |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| Edit sidebar                   | Drag entries into order, select visible entries, then finish. Bot DMs and Groups can use different layouts. |
-| Memory evolution → Terminology | Memory terms by default; Git terms rename the same underlying commit view.                                  |
-| Sessions → Scope               | Current by default; All expands the filter for that Bot's session view.                                     |
-| Sessions → Layout              | Flat by default; optionally group by workspace.                                                             |
-| Sidebar width                  | 320 px by default; drag the divider within 260–560 px. Sidebar/entry expanded states are retained too.      |
+| Field                          | Default / effect                                                                                                             |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| + Views (beside the tabs)      | Tick the tabs to show and drag them into order; applies at once. Bot DMs and Groups can use different layouts.               |
+| Edit sidebar (narrow overlay)  | Drag entries into order, select visible entries, then finish.                                                                |
+| Memory evolution → Terminology | Memory terms by default; Git terms rename the same underlying commit view.                                                   |
+| Bot Inbox → Show               | By time by default; optionally group by source.                                                                              |
+| Sessions → Scope               | Current by default; All expands the filter for that Bot's session view.                                                      |
+| Sessions → Layout              | By status (Working / Idle) by default; optionally group by workspace.                                                        |
+| Sidebar width                  | 320 px by default; drag the divider within 260–560 px. The selected tab, split heights and expanded states are retained too. |
 
 ## Workspace grants and task permissions
 
-Expand **Workspace grants** for the target Bot. Memory Repository is its memory directory. Use **Add folder** to choose extra task folders on the DSH Host; a remote browser does not substitute its own local paths.
+Open **Workspace grants** in the target Bot DM's **Channel settings** (header **···** menu → **Channel settings…**). Memory Repository is its memory directory. Use **Add folder** to choose extra task folders on the DSH Host; a remote browser does not substitute its own local paths.
 
 ![Workspace grants with no extra folder authorization](/guides/settings/settings-workspace-grants-zh.webp)
 

@@ -19,7 +19,10 @@ import {
   axModelEnvironment,
   axModelPatch,
   axRuntimeWorkspace,
+  goSessionQualified,
   DEFAULT_GO_MODEL,
+  GO_RUNTIME_PATCH,
+  GO_SESSION_PATCH,
   resolveAxModel,
   saveAxModel,
 } from '../dev-model.mjs';
@@ -36,16 +39,38 @@ afterEach(() => {
 
 describe('AX native OpenCode Go reuse', () => {
   it('qualifies the independent CLI without replacing other workspace decisions', () => {
+    const { root } = fixture();
+    const runtime = join(root, 'isolated CLI with spaces');
     const workspace = parse(
       axRuntimeWorkspace(
         'packages: [.]\nallowBuilds: {koffi: true}\npatchedDependencies: {other: other.patch}\n',
+        runtime,
       ),
     );
     expect(workspace.allowBuilds).toEqual({ koffi: true });
     expect(workspace.patchedDependencies.other).toBe('other.patch');
-    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1']).toContain(
-      '/patches/',
+    expect(workspace.patchedDependencies['@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.2']).toBe(
+      GO_RUNTIME_PATCH,
     );
+    const staged = join(runtime, GO_RUNTIME_PATCH);
+    expect(readFileSync(staged)).toEqual(readFileSync(GO_SESSION_PATCH));
+    writeFileSync(staged, 'stale patch');
+    axRuntimeWorkspace('packages: [.]\n', runtime);
+    expect(readFileSync(staged)).toEqual(readFileSync(GO_SESSION_PATCH));
+  });
+  it('keys the staged Go patch by the installed DSH and accepts rc.1 only for product artifacts', () => {
+    const { root } = fixture();
+    const runtime = join(root, 'packaged CLI');
+    const workspace = parse(axRuntimeWorkspace('packages: [.]\n', runtime, '0.2.0-rc.1'));
+    expect(workspace.patchedDependencies).toEqual({
+      '@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1': GO_RUNTIME_PATCH,
+    });
+    expect(readFileSync(join(runtime, GO_RUNTIME_PATCH))).toEqual(readFileSync(GO_SESSION_PATCH));
+    expect(goSessionQualified('0.2.0-rc.2', false)).toBe(true);
+    expect(goSessionQualified('0.2.0-rc.2', true)).toBe(true);
+    expect(goSessionQualified('0.2.0-rc.1', true)).toBe(true);
+    expect(goSessionQualified('0.2.0-rc.1', false)).toBe(false);
+    expect(goSessionQualified('0.2.1', true)).toBe(false);
   });
   it('requires explicit setup, then shares a protected key with successive launches', () => {
     const { path } = fixture();

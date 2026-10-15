@@ -22,6 +22,7 @@ function gate() {
 
 async function fixture(
   beforeNative?: (run: Parameters<BotAgentAdapter['runOrchestrator']>[0]) => void,
+  archived: ReadonlySet<string> = new Set(),
 ) {
   const home = createTempRoot('bh-native-question-runtime-');
   const owner = trackTestOwner(
@@ -42,11 +43,14 @@ async function fixture(
       sessions.push(run.sessionId);
       if (run.acceptNativeInput !== undefined) {
         expect(run.message).toBe('');
+        expect(runtime.canRequestPrivateInput?.(run.sessionId)).toBe(true);
         beforeNative?.(run);
         if (!run.acceptNativeInput()) return;
         await native.done;
         await run.channels.send({ body: 'Actual native answer reply' });
       } else {
+        expect(runtime.canRequestPrivateInput?.(run.sessionId)).toBe(true);
+        expect(runtime.canRequestPrivateInput?.('unowned')).toBe(false);
         bound = runtime.bindNativeQuestionInput?.(run.sessionId, dm.id);
         expect(runtime.bindNativeQuestionInput?.(run.sessionId, 'dm-other')).toBeUndefined();
         ready.release();
@@ -62,7 +66,14 @@ async function fixture(
     async close() {},
   };
   const ownership = createSessionOwnership(attachOperationalModule(owner, 'session-ownership'));
-  runtime = createBotRuntime({ database: owner, registry, channels, agents, ownership });
+  runtime = createBotRuntime({
+    database: owner,
+    registry,
+    channels,
+    agents,
+    ownership,
+    sessionArchived: (sessionId) => archived.has(sessionId),
+  });
   const admission = runtime.admitDmMessage({
     channelId: dm.id,
     messageId: 'human-question-origin',
@@ -100,6 +111,7 @@ describe('native question answer uses the owning Orchestrator runtime', () => {
     expect(state.channels.readMessages(state.dm.id)).toHaveLength(0);
     state.native.release();
     await state.runtime.whenIdle();
+    expect(state.runtime.canRequestPrivateInput?.(state.sessions[0]!)).toBe(false);
     expect(state.channels.readMessages(state.dm.id)[0]?.body).toBe('Actual native answer reply');
     const events = attachOperationalModule(state.owner, 'native-question-test').read((db) =>
       db.prepare('SELECT COUNT(*) AS count FROM source_events').get(),
@@ -116,6 +128,19 @@ describe('native question answer uses the owning Orchestrator runtime', () => {
     state.first.release();
     await state.admission.settled;
     state.ownership.markContentUnavailable();
+    const deliver = vi.fn(() => true);
+    expect(await state.getBound()(deliver)).toBe(false);
+    expect(deliver).not.toHaveBeenCalled();
+    expect(state.sessions).toHaveLength(1);
+    await state.runtime.close();
+  });
+
+  it('refuses a native answer once DSH archived its Orchestrator Session', async () => {
+    const archived = new Set<string>();
+    const state = await fixture(undefined, archived);
+    state.first.release();
+    await state.admission.settled;
+    archived.add(state.sessions[0]!);
     const deliver = vi.fn(() => true);
     expect(await state.getBound()(deliver)).toBe(false);
     expect(deliver).not.toHaveBeenCalled();

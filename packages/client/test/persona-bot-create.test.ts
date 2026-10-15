@@ -4,46 +4,35 @@ import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
-  Button: (props: { children?: ReactNode; disabled?: boolean; onClick?: () => void }) =>
-    createElement('button', { disabled: props.disabled, onClick: props.onClick }, props.children),
-  IconCloseOutlineRegular: () => createElement('span'),
-  SegmentedControl: (props: {
-    label: string;
-    value: string;
-    disabled?: boolean;
-    onChange: (value: string) => void;
-    options: { label: string; value: string }[];
-  }) =>
-    createElement(
-      'select',
-      {
-        'aria-label': props.label,
-        value: props.value,
-        disabled: props.disabled,
-        onChange: (event: { currentTarget: HTMLSelectElement }) =>
-          props.onChange(event.currentTarget.value),
-      },
-      ...props.options.map((option) =>
-        createElement('option', { key: option.value, value: option.value }, option.label),
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', async () => {
+  const { dialogPrimitives } = await import('./primitive-mocks.js');
+  const { createElement: element } = await import('react');
+  return {
+    ...dialogPrimitives(),
+    IconCloseOutlineRegular: () => element('span'),
+    SegmentedControl: (props: {
+      label: string;
+      value: string;
+      disabled?: boolean;
+      onChange: (value: string) => void;
+      options: { label: string; value: string }[];
+    }) =>
+      element(
+        'select',
+        {
+          'aria-label': props.label,
+          value: props.value,
+          disabled: props.disabled,
+          onChange: (event: { currentTarget: HTMLSelectElement }) =>
+            props.onChange(event.currentTarget.value),
+        },
+        ...props.options.map((option) =>
+          element('option', { key: option.value, value: option.value }, option.label),
+        ),
       ),
-    ),
-  Tag: (props: { children?: ReactNode }) => createElement('span', null, props.children),
-  Modal: (props: {
-    title: string;
-    description?: string;
-    children?: ReactNode;
-    footer?: ReactNode;
-  }) =>
-    createElement(
-      'section',
-      null,
-      createElement('h1', null, props.title),
-      createElement('p', null, props.description),
-      props.children,
-      props.footer,
-    ),
-}));
+    Tag: (props: { children?: ReactNode }) => element('span', null, props.children),
+  };
+});
 
 import type { BridgeActions } from '../src/client/actions.js';
 import { BridgeCallError } from '../src/client/bridge.js';
@@ -52,6 +41,7 @@ import {
   normalizeRoleBadges,
   personaBotCreateError,
 } from '../src/client/persona-bot-create.js';
+import { buttonNamed, dialog, fieldNamed, typeInto } from './primitive-mocks.js';
 
 describe('PersonaBot creation form', () => {
   it('asks for the Human-facing name, optional tags, and an optional bio', () => {
@@ -77,7 +67,7 @@ describe('PersonaBot creation form', () => {
     expect(markup).toContain('人格起点');
     expect(markup).toContain('同事');
     expect(markup).toContain('角色扮演');
-    expect(markup).toContain('<button disabled="">创建</button>');
+    expect(markup).toMatch(/<button type="submit"[^>]*disabled=""[^>]*>创建<\/button>/u);
   });
 
   it('identifies the target section when creating a PersonaBot inside it', () => {
@@ -133,6 +123,9 @@ describe('PersonaBot creation form', () => {
     expect(
       personaBotCreateError(new BridgeCallError('git-clone-timeout', 'private token')),
     ).toContain('超时');
+    expect(
+      personaBotCreateError(new BridgeCallError('invalid-memory-dir', 'missing folder')),
+    ).toContain('已存在的文件夹');
     expect(personaBotCreateError(new Error('disk read-only'))).toBe('disk read-only');
   });
 });
@@ -158,7 +151,11 @@ async function withForm(
     await act(async () =>
       root.render(
         createElement(CreatePersonaBotModal, {
-          actions: { createBot: create, openCreatedBot: open } as unknown as BridgeActions,
+          actions: {
+            createBot: create,
+            openCreatedBot: open,
+            pickWorkspaceFolder: vi.fn(async () => 'D:\\BotMemory'),
+          } as unknown as BridgeActions,
           source,
           onCancel: vi.fn(),
           onCreated,
@@ -193,9 +190,7 @@ async function choose(host: HTMLElement, label: string, value: string) {
 }
 
 async function submit(host: HTMLElement) {
-  await act(async () =>
-    [...host.querySelectorAll('button')].find((b) => b.textContent === '创建')!.click(),
-  );
+  await act(async () => buttonNamed('创建', host).click());
 }
 
 describe('editable creation starting points', () => {
@@ -275,9 +270,9 @@ describe('editable creation starting points', () => {
         expect(caption.textContent).toContain(
           'Git 输出：git@github.com: Permission denied (publickey).',
         );
-        await act(async () =>
-          [...host.querySelectorAll('button')].find((b) => b.textContent === '完成')!.click(),
-        );
+        expect(() => buttonNamed('取消', host)).toThrow();
+        expect(host.querySelector('[data-https-fallback-done]')?.textContent).toBe('完成');
+        await act(async () => buttonNamed('完成', host).click());
         expect(open).toHaveBeenCalledWith(expect.objectContaining({ slug: 'bot' }), undefined);
         expect(onCreated).toHaveBeenCalledOnce();
       },
@@ -304,5 +299,141 @@ describe('editable creation starting points', () => {
         undefined,
       );
     });
+  });
+});
+
+describe('memory location under Advanced settings', () => {
+  it('keeps the default location unless the Human chooses a folder', async () => {
+    await withForm(async (host, create) => {
+      const advanced = host.querySelector<HTMLDetailsElement>('[data-create-advanced]')!;
+      expect(advanced.open).toBe(false);
+      expect(advanced.querySelector('summary')!.textContent).toBe('进阶设置');
+      await typeText(host, 'input[placeholder="例如：小研"]', 'Ada');
+      await submit(host);
+      expect(create).toHaveBeenCalledWith(
+        { displayName: 'Ada', roles: [], persona: '' },
+        undefined,
+      );
+    });
+  });
+
+  it('submits a folder picked through the DSH folder picker', async () => {
+    await withForm(async (host, create) => {
+      await typeText(host, 'input[placeholder="例如：小研"]', 'Ada');
+      await act(async () => buttonNamed('选择文件夹…', host).click());
+      expect(host.querySelector<HTMLInputElement>('input[placeholder="默认位置"]')!.value).toBe(
+        'D:\\BotMemory',
+      );
+      await submit(host);
+      expect(create).toHaveBeenCalledWith(
+        { displayName: 'Ada', roles: [], persona: '', memoryLocation: 'D:\\BotMemory' },
+        undefined,
+      );
+    });
+  });
+
+  it('refuses a relative typed path before contacting the Host', async () => {
+    await withForm(async (host, create) => {
+      await typeText(host, 'input[placeholder="例如：小研"]', 'Ada');
+      await typeText(host, 'input[placeholder="默认位置"]', 'bots/memory');
+      expect(host.textContent).toContain('请输入完整路径');
+      await act(async () => host.querySelector('form')!.requestSubmit());
+      expect(create).not.toHaveBeenCalled();
+      await typeText(host, 'input[placeholder="默认位置"]', ' /data/bots ');
+      await submit(host);
+      expect(create).toHaveBeenCalledWith(
+        { displayName: 'Ada', roles: [], persona: '', memoryLocation: '/data/bots' },
+        undefined,
+      );
+    });
+  });
+
+  it('is not offered for a GitHub import', async () => {
+    await withForm(async (host) => {
+      expect(host.querySelector('[data-create-advanced]')).toBeNull();
+    }, 'git');
+  });
+});
+
+describe('PersonaBot creation dialog', () => {
+  async function render(createBot: ReturnType<typeof vi.fn>, onCancel = vi.fn()) {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    await act(async () =>
+      root.render(
+        createElement(CreatePersonaBotModal, {
+          actions: { createBot } as unknown as BridgeActions,
+          onCancel,
+          onCreated: vi.fn(),
+        }),
+      ),
+    );
+    return {
+      host,
+      done: async () => {
+        await act(async () => root.unmount());
+        host.remove();
+      },
+    };
+  }
+
+  it('labels each field and submits the trimmed name and bio on Enter', async () => {
+    const createBot = vi.fn(async () => ({ slug: 'ada', displayName: 'Ada' }));
+    const { done } = await render(createBot);
+    try {
+      expect(dialog().getAttribute('aria-label')).toBe('创建 Bot');
+      expect(fieldNamed('名称').placeholder).toBe('例如：小研');
+      expect(fieldNamed('简介（可选）').placeholder).toBe('例如：负责代码审查与质量把关');
+      expect(fieldNamed('标签（可选）').placeholder).toBe('例如：研究员');
+      await typeInto(fieldNamed('名称'), '  Ada  ');
+      await typeInto(fieldNamed('简介（可选）'), ' Reviews code ');
+      await act(async () => dialog().querySelector('form')!.requestSubmit());
+      expect(createBot).toHaveBeenCalledWith(
+        { displayName: 'Ada', roles: [], persona: '', description: 'Reviews code' },
+        undefined,
+      );
+    } finally {
+      await done();
+    }
+  });
+
+  it('refuses a blank name and cancels through the footer', async () => {
+    const createBot = vi.fn();
+    const onCancel = vi.fn();
+    const { done } = await render(createBot, onCancel);
+    try {
+      await act(async () => dialog().querySelector('form')!.requestSubmit());
+      expect(createBot).not.toHaveBeenCalled();
+      await act(async () => buttonNamed('取消').click());
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    } finally {
+      await done();
+    }
+  });
+
+  it('locks the dialog while creating and shows the Host refusal inline', async () => {
+    let reject: (cause: unknown) => void = () => undefined;
+    const createBot = vi.fn(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        }),
+    );
+    const { host, done } = await render(createBot);
+    try {
+      await typeInto(fieldNamed('名称'), 'Ada');
+      await act(async () => buttonNamed('创建').click());
+      expect(buttonNamed('创建中').disabled).toBe(true);
+      expect(buttonNamed('取消').disabled).toBe(true);
+      await act(async () => reject(new BridgeCallError('invalid-input', 'bad')));
+      expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+        '请检查 Bot 名称、标签或简介。',
+      );
+      expect(buttonNamed('创建').disabled).toBe(false);
+    } finally {
+      await done();
+    }
   });
 });

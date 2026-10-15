@@ -3,7 +3,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { productManifest, productImProvider, providerManifest } from '../product-artifacts.mjs';
+import {
+  productDsh,
+  productManifest,
+  productImProvider,
+  providerManifest,
+} from '../product-artifacts.mjs';
 import {
   packagedProfileManifest,
   packagedWorkspaceSettings,
@@ -54,7 +59,7 @@ function artifactSet(version = '0.0.0-test.823') {
     join(root, 'artifacts.json'),
     JSON.stringify({
       productVersion: version,
-      dsh: '0.2.0-rc.1',
+      dsh: productDsh,
       providerRuntime: { runtimeFiles: 1, runtimeSha256: 'a'.repeat(64) },
       artifacts,
     }),
@@ -179,7 +184,7 @@ describe('packaged product selection', () => {
     ]) {
       writeFileSync(
         join(root, 'artifacts.json'),
-        JSON.stringify({ productVersion: '0.0.0-test.823', dsh: '0.2.0-rc.1', artifacts: invalid }),
+        JSON.stringify({ productVersion: '0.0.0-test.823', dsh: productDsh, artifacts: invalid }),
       );
       expect(() => verifiedProductArtifacts(root)).toThrow();
     }
@@ -197,6 +202,25 @@ describe('packaged product selection', () => {
 });
 
 describe('release composition', () => {
+  it('ships the PersonaBot agent preset and selects it in both umbrella patches', () => {
+    for (const patch of ['cordis.patch.yml', 'cordis.im.patch.yml']) {
+      const rows = parse(
+        readFileSync(new URL(`../../packages/deepseekbot/${patch}`, import.meta.url), 'utf8'),
+      ).flatMap((row) => row.insert);
+      expect(rows.find((row) => row.id === 'botharness-core')).toMatchObject({
+        config: { agentPreset: 'deepseekbot' },
+      });
+      const preset = rows.find((row) => row.id === 'preset-deepseekbot');
+      expect(preset).toMatchObject({
+        name: '@deepseek-ai/dsh-agent-preset',
+        config: { id: 'deepseekbot' },
+      });
+      expect(preset.config.plugins.find((row) => row.id === 'tool-ask-user')).toMatchObject({
+        config: { mode: 'timed', timeout: 45 },
+      });
+    }
+  });
+
   it('ships headless Browser by default in both umbrella patches', () => {
     for (const patch of ['cordis.patch.yml', 'cordis.im.patch.yml']) {
       const rows = parse(
@@ -206,6 +230,15 @@ describe('release composition', () => {
         name: '@botharness/browser',
         config: { headless: true },
       });
+    }
+  });
+  it('declares no Bundle for umbrella members, so the Plugins page cannot add them twice', () => {
+    for (const member of ['browser', 'computer', 'core', 'client']) {
+      const manifest = JSON.parse(
+        readFileSync(new URL(`../../packages/${member}/package.json`, import.meta.url), 'utf8'),
+      );
+      expect(manifest.dsh?.bundle).toBeUndefined();
+      expect(manifest.files).not.toContain('cordis.patch.yml');
     }
   });
   it('refuses duplicates in a composed native Patch before a receiver can start', () => {
@@ -239,8 +272,8 @@ describe('release composition', () => {
     expect(() => verifyProductComposition(entries)).toThrow('conflicts');
   });
   it('keeps product provenance independent when the development Provider selection changes', () => {
-    expect(productImProvider.upstream.source).toBe('bddd7d93e1c1b969ce137721c2494f6d72bfa8bc');
-    expect(productImProvider.upstream.dsh).toBe('0.2.0-rc.1');
+    expect(productImProvider.upstream.source).toBe('beaed4a6dabb583654d28fb09298716267039b4a');
+    expect(productImProvider.upstream.dsh).toBe('0.2.0-rc.2');
   });
 
   it('pins independently named Provider and release packages in the product artifact', () => {
@@ -254,7 +287,7 @@ describe('release composition', () => {
       '@botharness/computer': '0.0.0-test.823',
       '@botharness/core': '0.0.0-test.823',
       '@botharness/ui': '0.0.0-test.823',
-      '@botharness/im-provider': '4.32.0-botharness.17',
+      '@botharness/im-provider': '4.32.0-botharness.21',
     });
     expect(release.dsh.bundle.patch).toBe('./cordis.im.patch.yml');
     expect(release.bin).toEqual({

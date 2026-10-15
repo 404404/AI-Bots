@@ -1,16 +1,28 @@
-import { useState, type ReactElement } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import {
   Button,
-  Input,
   Menu,
-  IconEllipsisOutlineRegular,
+  IconTrashOutlineRegular,
+  type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { ChannelSummary } from './store.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { Modal } from './modal.js';
+import { FormDialog } from './ds/form-dialog.js';
+import { TextField } from './ds/field.js';
+import { PersonaBotDeletionView } from './personabot-deletion.js';
+import { toggleHiddenDmAction } from './dm-actions.js';
+import {
+  CHANNEL_NICKNAME_ITEM,
+  CHANNEL_SETTINGS_ITEM,
+  channelNicknameItem,
+  channelSettingsItem,
+  dmActionKindOf,
+  dmActionsItem,
+  useHiddenDmActions,
+} from './channel-options.js';
 
-function NicknameDialog({
+export function NicknameDialog({
   channel,
   actions,
   t,
@@ -37,99 +49,120 @@ function NicknameDialog({
   };
   const valid = draft.length <= 128 && !/[\u0000-\u001f\u007f]/u.test(draft);
   return (
-    <Modal
-      open
+    <FormDialog
       title={t('humanNickname.title')}
       description={t('humanNickname.description', { channel: channel.name })}
-      onClose={() => {
+      labels={{ close: t('common.close'), cancel: t('common.cancel') }}
+      submitLabel={t('humanName.save')}
+      submitDisabled={!valid}
+      busy={busy}
+      error={error ? t('humanName.error') : undefined}
+      onCancel={() => {
         if (!busy) onClose();
       }}
-      closeLabel={t('common.close')}
-      footer={
-        <>
-          <Button variant="outline" disabled={busy} onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={busy || channel.humanNickname == null}
-            onClick={() => void save(null)}
-          >
-            {t('humanNickname.clear')}
-          </Button>
-          <Button
-            variant="primary"
-            disabled={busy || !valid}
-            onClick={() => void save(draft.trim() || null)}
-          >
-            {t('humanName.save')}
-          </Button>
-        </>
+      onSubmit={() => void save(draft.trim() || null)}
+      secondary={
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={busy || channel.humanNickname == null}
+          onClick={() => void save(null)}
+        >
+          {t('humanNickname.clear')}
+        </Button>
       }
     >
-      <div className="bh-group-setting bh-human-nickname-dialog">
-        <label htmlFor="bh-human-channel-nickname">{t('humanNickname.title')}</label>
-        <Input
-          id="bh-human-channel-nickname"
-          value={draft}
-          maxLength={128}
-          disabled={busy}
-          placeholder={t('humanNickname.inherit')}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.nativeEvent.isComposing && valid && !busy) {
-              event.preventDefault();
-              void save(draft.trim() || null);
-            }
-          }}
-        />
-        <p>{t('humanNickname.inherit')}</p>
-        {error ? (
-          <div className="bh-error" role="alert">
-            {t('humanName.error')}
-          </div>
-        ) : null}
-      </div>
-    </Modal>
+      <TextField
+        label={t('humanNickname.title')}
+        hint={t('humanNickname.inherit')}
+        data-human-nickname=""
+        value={draft}
+        maxLength={128}
+        disabled={busy}
+        placeholder={t('humanNickname.inherit')}
+        onChange={setDraft}
+        initialFocus
+      />
+    </FormDialog>
   );
 }
 
-export function HumanChannelNameMenu({
+export interface ChannelMenuTrigger {
+  readonly open: boolean;
+  readonly attention: boolean;
+  toggle(): void;
+}
+
+export function ChannelHeaderMenu({
   channel,
   actions,
   t,
+  anchor,
+  primaryAction,
+  onOpenSettings,
+  deleteBotSlug,
+  settingsAttention = false,
 }: {
   channel: ChannelSummary;
   actions: BridgeActions;
   t: BotHarnessTranslate;
-}): ReactElement | null {
+  anchor: (trigger: ChannelMenuTrigger) => ReactNode;
+  primaryAction?: { label: string; icon: ReactNode; run(): void } | undefined;
+  onOpenSettings?: (() => void) | undefined;
+  deleteBotSlug?: string | undefined;
+  settingsAttention?: boolean;
+}): ReactElement {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  if (channel.humanNickname === undefined) return null;
+  const [deleting, setDeleting] = useState(false);
+  const dmBotSlug = channel.type === 'dm' ? channel.botSlug : undefined;
+  const hidden = useHiddenDmActions(dmBotSlug);
+  const attention = settingsAttention && onOpenSettings !== undefined;
+  const optionItems: MenuEntry[] = [
+    ...(onOpenSettings === undefined ? [] : [channelSettingsItem(t, attention)]),
+    ...(channel.humanNickname === undefined ? [] : [channelNicknameItem(t)]),
+    ...(dmBotSlug === undefined ? [] : [dmActionsItem(t, hidden)]),
+  ];
+  const items: MenuEntry[] = [
+    ...(primaryAction === undefined
+      ? []
+      : [{ id: 'primary', label: primaryAction.label, icon: primaryAction.icon }]),
+    ...(primaryAction === undefined || optionItems.length === 0
+      ? []
+      : [{ type: 'separator' as const, id: 'primary-separator' }]),
+    ...optionItems,
+    ...(deleteBotSlug === undefined
+      ? []
+      : [
+          { type: 'separator' as const, id: 'delete-separator' },
+          {
+            id: 'delete',
+            label: t('deletion.title'),
+            icon: <IconTrashOutlineRegular size={16} />,
+            danger: true,
+          },
+        ]),
+  ];
   return (
-    <span className="bh-channel-options">
+    <>
       <Menu
         open={menuOpen}
         portal
         dense
-        align="end"
-        anchor={
-          <button
-            type="button"
-            className="bh-channel-sidebar-entry-action"
-            aria-label={t('humanNickname.menu')}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <IconEllipsisOutlineRegular size={16} />
-          </button>
-        }
-        items={[{ id: 'nickname', label: t('humanNickname.title') }]}
+        anchor={anchor({ open: menuOpen, attention, toggle: () => setMenuOpen((open) => !open) })}
+        items={items}
         onClose={() => setMenuOpen(false)}
-        onSelect={() => {
+        onSelect={(id) => {
+          const kind = dmActionKindOf(id);
+          if (kind !== undefined) {
+            if (dmBotSlug !== undefined) toggleHiddenDmAction(dmBotSlug, kind);
+            return;
+          }
           setMenuOpen(false);
-          setDialogOpen(true);
+          if (id === 'primary') primaryAction?.run();
+          else if (id === CHANNEL_SETTINGS_ITEM) onOpenSettings?.();
+          else if (id === CHANNEL_NICKNAME_ITEM) setDialogOpen(true);
+          else if (id === 'delete') setDeleting(true);
         }}
       />
       {dialogOpen ? (
@@ -140,6 +173,15 @@ export function HumanChannelNameMenu({
           onClose={() => setDialogOpen(false)}
         />
       ) : null}
-    </span>
+      {deleting && deleteBotSlug !== undefined ? (
+        <PersonaBotDeletionView
+          key={deleteBotSlug}
+          slug={deleteBotSlug}
+          actions={actions}
+          t={t}
+          onClose={() => setDeleting(false)}
+        />
+      ) : null}
+    </>
   );
 }

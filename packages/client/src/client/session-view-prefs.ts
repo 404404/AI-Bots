@@ -1,12 +1,15 @@
 import { defaultStorage, type ConfigStorage } from './roster-config.js';
+import { ASSIGNMENT_SECTIONS, type AssignmentSection } from './session-rows.js';
 
 export type SessionScope = 'current' | 'all';
-export type SessionLayout = 'flat' | 'workspace';
+export type SessionLayout = 'status' | 'workspace';
+export type SessionStatusSection = AssignmentSection;
 
 export interface SessionViewPreference {
   scope: SessionScope;
   layout: SessionLayout;
   collapsedWorkspaces: string[];
+  collapsedSections: SessionStatusSection[];
 }
 
 export const SESSION_VIEW_PREFERENCES_KEY = 'botharness/session-views.v1';
@@ -38,9 +41,13 @@ export function readSessionViewPreference(
 ): SessionViewPreference {
   const record = asRecord(allPreferences(storage)[botSlug]);
   const collapsed = record?.['collapsedWorkspaces'];
+  const sections = record?.['collapsedSections'];
   return {
     scope: record?.['scope'] === 'all' ? 'all' : 'current',
-    layout: record?.['layout'] === 'workspace' ? 'workspace' : 'flat',
+    layout: record?.['layout'] === 'workspace' ? 'workspace' : 'status',
+    collapsedSections: Array.isArray(sections)
+      ? ASSIGNMENT_SECTIONS.filter((section) => sections.includes(section))
+      : ['resolved'],
     collapsedWorkspaces: Array.isArray(collapsed)
       ? [
           ...new Set(

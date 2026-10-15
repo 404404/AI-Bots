@@ -4,10 +4,12 @@ import type { TutorialAction } from '../../../core/src/onboarding/types.js';
 import type { BridgeActions } from './actions.js';
 import { PersonaBotAvatar } from './avatar.js';
 import { BotBannerArt, bannerOf } from './bot-banner.js';
+import { botModeSidebarViewport } from './bot-mode-sidebar-viewport.js';
 import type { ModelCatalogEntryView, ModelRouteView } from './bridge.js';
 import { errorMessage } from './bridge.js';
 import { ModelPicker } from './model-picker.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
+import { SettingsRow } from './ds/settings-row.js';
 import { Modal } from './modal.js';
 import { OnboardingMemory } from './onboarding-memory.js';
 import { OnboardingAppBinding } from './onboarding-binding.js';
@@ -18,6 +20,9 @@ import { onboardingFor, requestBotCreation } from './onboarding.js';
 import { store } from './store.js';
 import type { WindowCompanions } from './window-companions.js';
 import { startInternalTour, type InternalTourSpec } from './internal-tour.js';
+import { OnboardingChecklist, markBotModeEntered } from './onboarding-checklist-view.js';
+import { checklistSettled } from './onboarding-checklist.js';
+import { startBotSessionsTour, takeSessionsTourReturn } from './onboarding-sessions-tour.js';
 
 export function OnboardingModelDialog({
   actions,
@@ -336,6 +341,7 @@ export function OnboardingWelcome({
 }
 
 function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
+  const ownSidebar = botModeSidebarViewport();
   return [
     {
       selector: '[data-onboarding-welcome]',
@@ -377,6 +383,11 @@ function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
       title: t('onboarding.tour.companion.title'),
       description: t('onboarding.tour.companion.hint'),
     },
+    {
+      selector: '[data-bh-tour="bot-mode"]',
+      title: t(ownSidebar ? 'onboarding.tour.exit.titleSidebar' : 'onboarding.tour.exit.title'),
+      description: t(ownSidebar ? 'onboarding.tour.exit.hintSidebar' : 'onboarding.tour.exit.hint'),
+    },
   ];
 }
 
@@ -390,9 +401,11 @@ export function OnboardingOverlay({
   t: BotHarnessTranslate;
 }): ReactElement {
   const controller = onboardingFor(actions);
+  controller.attachCompanion(companion);
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const enter = (): Promise<void> =>
     controller.enter(companion).then(() => {
+      void controller.refreshEvidence();
       const receipt = controller.getSnapshot().receipt;
       if (receipt !== undefined && !receipt.completed && receipt.tutorial === 'not-started')
         void controller.refresh(undefined, 'start', undefined, true);
@@ -400,7 +413,11 @@ export function OnboardingOverlay({
   const mount = useMountedResource<HTMLSpanElement>(() => {
     let active = true;
     let key = '';
-    void enter();
+    markBotModeEntered();
+    const returned = takeSessionsTourReturn();
+    void enter().then(() => {
+      if (active && returned) controller.openChecklist();
+    });
     const unsubscribe = store.subscribe(() => {
       const snapshot = store.getSnapshot();
       const channel = snapshot.conversation.channel;
@@ -416,11 +433,25 @@ export function OnboardingOverlay({
       if (active && store.getSnapshot().mode === 'bot' && !controller.getSnapshot().busy)
         void controller.refresh(store.getSnapshot().conversation.channel?.botSlug);
     }, 5000);
+    const evidenceTimer = setInterval(() => {
+      const snapshot = controller.getSnapshot();
+      if (
+        active &&
+        store.getSnapshot().mode === 'bot' &&
+        !checklistSettled(snapshot.receipt, snapshot.evidence)
+      )
+        void controller.refreshEvidence();
+    }, 20_000);
+    const unsubscribeCompanion = companion?.subscribe(() => controller.syncCompanionEvidence());
     return () => {
       active = false;
       controller.pauseGuide();
+      controller.closeSessionsTour(false);
+      controller.closeChecklist();
       unsubscribe();
+      unsubscribeCompanion?.();
       clearInterval(timer);
+      clearInterval(evidenceTimer);
     };
   }, [actions, companion]);
   const tourMount = useMountedResource<HTMLSpanElement>(() => {
@@ -441,7 +472,7 @@ export function OnboardingOverlay({
         controller.pauseGuide();
       },
       onFinished: () => {
-        controller.pauseGuide();
+        controller.finishTour();
       },
       onSkip: () => {
         void controller.refresh(undefined, 'skip');
@@ -454,10 +485,19 @@ export function OnboardingOverlay({
     state.modelOpen,
     state.sendOpen,
   ]);
+  const sessionsTourMount = useMountedResource<HTMLSpanElement>(() => {
+    if (!state.sessionsTourOpen || state.receipt?.tutorial !== 'active') return;
+    return startBotSessionsTour(t, {
+      onClosed: () => controller.closeSessionsTour(true),
+      onSkip: () => controller.skipTutorial(),
+    });
+  }, [state.sessionsTourOpen, state.receipt?.tutorial]);
   return (
     <>
       <span ref={mount} hidden aria-hidden="true" />
       <span ref={tourMount} hidden />
+      <span ref={sessionsTourMount} hidden />
+      <OnboardingChecklist actions={actions} t={t} />
       {state.error && !state.modelOpen && !state.sendOpen ? (
         <div role="alert" className="bh-root bh-onboarding-notice">
           <span className="bh-onboarding-notice-text">{state.error}</span>
@@ -549,22 +589,23 @@ export function OnboardingSetting({
         ? 'onboarding.start'
         : 'onboarding.continue';
   return (
-    <div className="bh-settings-row">
-      <div className="bh-settings-row-text">
-        <div className="bh-settings-row-title">{t('onboarding.settings.title')}</div>
-        <div className="bh-settings-row-desc">{t('onboarding.settings.description')}</div>
-      </div>
-      <Button
-        variant="outline"
-        disabled={state.busy}
-        onClick={() => {
-          closeBotSettings();
-          void controller.refresh(undefined, action, undefined, true);
-        }}
-      >
-        {t(label)}
-      </Button>
-    </div>
+    <SettingsRow
+      title={t('onboarding.settings.title')}
+      description={t('onboarding.settings.description')}
+      control={
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={state.busy}
+          onClick={() => {
+            closeBotSettings();
+            void controller.refresh(undefined, action, undefined, true);
+          }}
+        >
+          {t(label)}
+        </Button>
+      }
+    />
   );
 }
 
@@ -589,14 +630,16 @@ export function DefaultModelSettings({
       );
   }, [actions]);
   return (
-    <div ref={mount} className="bh-settings-row">
-      <div className="bh-settings-row-text">
-        <div className="bh-settings-row-title">{t('onboarding.defaultTitle')}</div>
-        <div className="bh-settings-row-desc">{t('onboarding.defaultDescription')}</div>
-      </div>
-      <Button variant="outline" onClick={() => setOpen(true)}>
-        {label || t('onboarding.model')}
-      </Button>
+    <SettingsRow
+      rootRef={mount}
+      title={t('onboarding.defaultTitle')}
+      description={t('onboarding.defaultDescription')}
+      control={
+        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+          {label || t('onboarding.model')}
+        </Button>
+      }
+    >
       {open ? (
         <OnboardingModelDialog
           actions={actions}
@@ -611,6 +654,6 @@ export function DefaultModelSettings({
           }}
         />
       ) : null}
-    </div>
+    </SettingsRow>
   );
 }

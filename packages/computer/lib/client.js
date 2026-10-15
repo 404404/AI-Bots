@@ -7,6 +7,182 @@ window.__ModuleLoader__.load({
 		let react = require("react");
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
 		let react_jsx_runtime = require("react/jsx-runtime");
+		//#region node_modules/.pnpm/@stylexjs+stylex@0.19.1/node_modules/@stylexjs/stylex/lib/es/stylex.mjs
+		var styleq = {};
+		var hasRequiredStyleq;
+		function requireStyleq() {
+			if (hasRequiredStyleq) return styleq;
+			hasRequiredStyleq = 1;
+			Object.defineProperty(styleq, "__esModule", { value: true });
+			styleq.styleq = void 0;
+			var cache = /* @__PURE__ */ new WeakMap();
+			var compiledKey = "$$css";
+			function createStyleq(options) {
+				var disableCache;
+				var disableMix;
+				var transform;
+				if (options != null) {
+					disableCache = options.disableCache === true;
+					disableMix = options.disableMix === true;
+					transform = options.transform;
+				}
+				return function styleq() {
+					var definedProperties = [];
+					var className = "";
+					var inlineStyle = null;
+					var debugString = "";
+					var nextCache = disableCache ? null : cache;
+					var styles = new Array(arguments.length);
+					for (var i = 0; i < arguments.length; i++) styles[i] = arguments[i];
+					while (styles.length > 0) {
+						var possibleStyle = styles.pop();
+						if (possibleStyle == null || possibleStyle === false) continue;
+						if (Array.isArray(possibleStyle)) {
+							for (var _i = 0; _i < possibleStyle.length; _i++) styles.push(possibleStyle[_i]);
+							continue;
+						}
+						var style = transform != null ? transform(possibleStyle) : possibleStyle;
+						if (style.$$css != null) {
+							var classNameChunk = "";
+							if (nextCache != null && nextCache.has(style)) {
+								var cacheEntry = nextCache.get(style);
+								if (cacheEntry != null) {
+									classNameChunk = cacheEntry[0];
+									debugString = cacheEntry[2];
+									definedProperties.push.apply(definedProperties, cacheEntry[1]);
+									nextCache = cacheEntry[3];
+								}
+							} else {
+								var definedPropertiesChunk = [];
+								for (var prop in style) {
+									var value = style[prop];
+									if (prop === compiledKey) {
+										var compiledKeyValue = style[prop];
+										if (compiledKeyValue !== true) debugString = debugString ? compiledKeyValue + "; " + debugString : compiledKeyValue;
+										continue;
+									}
+									if (typeof value === "string" || value === null) {
+										if (!definedProperties.includes(prop)) {
+											definedProperties.push(prop);
+											if (nextCache != null) definedPropertiesChunk.push(prop);
+											if (typeof value === "string") classNameChunk += classNameChunk ? " " + value : value;
+										}
+									} else console.error("styleq: ".concat(prop, " typeof ").concat(String(value), " is not \"string\" or \"null\"."));
+								}
+								if (nextCache != null) {
+									var weakMap = /* @__PURE__ */ new WeakMap();
+									nextCache.set(style, [
+										classNameChunk,
+										definedPropertiesChunk,
+										debugString,
+										weakMap
+									]);
+									nextCache = weakMap;
+								}
+							}
+							if (classNameChunk) className = className ? classNameChunk + " " + className : classNameChunk;
+						} else if (disableMix) {
+							if (inlineStyle == null) inlineStyle = {};
+							inlineStyle = Object.assign({}, style, inlineStyle);
+						} else {
+							var subStyle = null;
+							for (var _prop in style) {
+								var _value = style[_prop];
+								if (_value !== void 0) {
+									if (!definedProperties.includes(_prop)) {
+										if (_value != null) {
+											if (inlineStyle == null) inlineStyle = {};
+											if (subStyle == null) subStyle = {};
+											subStyle[_prop] = _value;
+										}
+										definedProperties.push(_prop);
+										nextCache = null;
+									}
+								}
+							}
+							if (subStyle != null) inlineStyle = Object.assign(subStyle, inlineStyle);
+						}
+					}
+					return [
+						className,
+						inlineStyle,
+						debugString
+					];
+				};
+			}
+			var styleq$1 = styleq.styleq = createStyleq();
+			styleq$1.factory = createStyleq;
+			return styleq;
+		}
+		var styleqExports = /*@__PURE__*/ requireStyleq();
+		function props(...styles) {
+			const [className, style, dataStyleSrc] = styleqExports.styleq(styles);
+			const result = {};
+			if (className != null && className !== "") result.className = className;
+			if (style != null && Object.keys(style).length > 0) result.style = style;
+			if (dataStyleSrc != null && dataStyleSrc !== "") result["data-style-src"] = dataStyleSrc;
+			return result;
+		}
+		Object.freeze({});
+		//#endregion
+		//#region packages/client/src/client/ds/tokens.stylex.ts
+		const space = {
+			x1: "2px",
+			x2: "4px",
+			x3: "8px",
+			x4: "12px",
+			x5: "16px",
+			x6: "24px"
+		};
+		const text = {
+			metaSize: "12px",
+			metaLine: "16px",
+			bodySize: "13px",
+			bodyLine: "20px",
+			titleSize: "14px",
+			titleLine: "20px",
+			regular: "400",
+			strong: "500"
+		};
+		const radius = {
+			xs: "var(--dsw-radius-xs, 4px)",
+			sm: "var(--dsw-radius-sm, 8px)",
+			md: "var(--dsw-radius-md, 12px)",
+			lg: "var(--dsw-radius-lg, 16px)",
+			panel: "var(--dsw-radius-panel)",
+			round: "50%"
+		};
+		const border = {
+			hairline: "1px",
+			focus: "var(--dsw-focus-ring-width, 2px)"
+		};
+		const color = {
+			fg: "var(--dsw-alias-label-primary)",
+			muted: "var(--dsw-alias-label-secondary)",
+			subtle: "var(--dsw-alias-label-tertiary)",
+			divider: "var(--dsw-alias-border-l1)",
+			border: "var(--dsw-alias-border-l2)",
+			borderStrong: "var(--dsw-alias-border-l3)",
+			hover: "var(--dsw-alias-interactive-bg-hover)",
+			selected: "var(--dsw-alias-interactive-bg-active)",
+			navSelected: "var(--dsw-specific-sidebar-nav-item-active)",
+			accent: "var(--dsw-alias-state-business-primary)",
+			onAccent: "var(--dsw-alias-label-primary-foreground)",
+			danger: "var(--dsw-alias-state-error-primary)",
+			onDanger: "var(--dsw-alias-label-primary-foreground)",
+			dangerEdge: "var(--dsw-alias-state-error-secondary)",
+			dangerSoft: "var(--dsw-alias-interactive-bg-hover-danger)",
+			warning: "var(--dsw-alias-state-warn-primary)",
+			warningEdge: "var(--dsw-alias-state-warn-secondary)",
+			warningSoft: "var(--dsw-alias-state-warn-tertiary)",
+			success: "var(--dsw-alias-state-success-primary)",
+			surface: "var(--dsw-alias-bg-module-platform)",
+			elevated: "var(--dsw-alias-button-elevated-fill)",
+			base: "var(--dsw-alias-bg-base)",
+			well: "var(--dsw-alias-bg-base)",
+			accentTint: "var(--dsw-alias-state-business-tertiary)"
+		};
+		//#endregion
 		//#region packages/client/src/client/mounted-resource.ts
 		function useMountedResource$1(start, dependencies) {
 			const cleanup = (0, react.useRef)(void 0);
@@ -836,17 +1012,26 @@ window.__ModuleLoader__.load({
 			"rows.target.container": "Docker Computer",
 			"local.title": "本机 Computer",
 			"local.granted": "桌面权限已授予",
-			"local.description": "直接操作运行 DSH 的 Mac。首次检查会安装桌面操作组件；请在这台电脑上完成登录。",
+			"local.description": "直接操作运行 DSH 的这台电脑（macOS、Windows 或 Linux）。首次检查会安装桌面操作组件；没有显示器的 Linux 服务器会启动一个虚拟桌面。登录请在这台电脑上完成。",
 			"local.check": "检查权限",
+			"local.downloading": "正在下载桌面操作组件 {percent}%（{downloaded} / {total}）",
+			"local.installing": "正在安装 {packages}：{percent}%",
+			"local.missing": "这台机器缺少桌面组件：{packages}",
+			"local.missing.manual": "安装需要管理员密码。请在这台机器的终端里运行下面的命令；装好后这里会自动重新检查。",
+			"local.install": "一键安装",
+			"local.copy": "复制命令",
+			"local.copied": "已复制",
 			"local.checking": "正在检查…",
 			"local.chip.granted": "已授权",
 			"local.chip.checking": "检查中",
 			"local.chip.unchecked": "未检查",
 			"local.chip.failed": "需要处理",
+			"local.chip.missing": "缺少组件",
 			"entry.label": "电脑",
 			"entry.screen.title": "{name} 的屏幕",
 			"entry.shared": "这台电脑由本 profile 的所有 PersonaBot 共享：各自拥有自己的窗口，共享登录态与文件。",
 			"entry.access.title": "Computer Access",
+			"entry.access.on": "Computer Access 已开启",
 			"entry.access.enable": "启用 Computer Access",
 			"entry.access.disable": "停用 Computer Access",
 			"entry.access.description": "开启后，该 Bot 的会话可以操作这台电脑",
@@ -941,17 +1126,26 @@ window.__ModuleLoader__.load({
 			"rows.target.container": "Docker Computer",
 			"local.title": "Local Computer",
 			"local.granted": "Desktop permissions granted",
-			"local.description": "Uses the Mac running DSH. The first check installs the required desktop helper. Complete logins on this computer.",
+			"local.description": "Uses the computer running DSH (macOS, Windows or Linux). The first check installs the required desktop helper; a Linux server without a display gets a virtual one. Complete logins on this computer.",
 			"local.check": "Check permissions",
+			"local.downloading": "Downloading the desktop helper {percent}% ({downloaded} / {total})",
+			"local.installing": "Installing {packages}: {percent}%",
+			"local.missing": "This machine is missing desktop packages: {packages}",
+			"local.missing.manual": "Installing needs an administrator password. Run this command in a terminal on this machine; this card checks again on its own once it is done.",
+			"local.install": "Install",
+			"local.copy": "Copy command",
+			"local.copied": "Copied",
 			"local.checking": "Checking…",
 			"local.chip.granted": "Granted",
 			"local.chip.checking": "Checking",
 			"local.chip.unchecked": "Not checked",
 			"local.chip.failed": "Needs attention",
+			"local.chip.missing": "Missing parts",
 			"entry.label": "Computer",
 			"entry.screen.title": "{name}'s screen",
 			"entry.shared": "This Computer is shared by every PersonaBot in the profile: each keeps its own window and they share logins and files.",
 			"entry.access.title": "Computer Access",
+			"entry.access.on": "Computer Access is on",
 			"entry.access.enable": "Enable Computer Access",
 			"entry.access.disable": "Disable Computer Access",
 			"entry.access.description": "This PersonaBot's sessions may act on the Computer",
@@ -1072,6 +1266,30 @@ window.__ModuleLoader__.load({
 		* PERFORMANCE OF THIS SOFTWARE.
 		*/
 		const glyphs = {
+			archive: [
+				["rect", {
+					width: "20",
+					height: "5",
+					x: "2",
+					y: "3",
+					rx: "1"
+				}],
+				["path", { d: "M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" }],
+				["path", { d: "M10 12h4" }]
+			],
+			"archive-restore": [
+				["rect", {
+					width: "20",
+					height: "5",
+					x: "2",
+					y: "3",
+					rx: "1"
+				}],
+				["path", { d: "M4 8v11a2 2 0 0 0 2 2h2" }],
+				["path", { d: "M20 8v11a2 2 0 0 1-2 2h-2" }],
+				["path", { d: "m9 15 3-3 3 3" }],
+				["path", { d: "M12 12v9" }]
+			],
 			"alarm-clock": [
 				["circle", {
 					cx: "12",
@@ -1089,6 +1307,13 @@ window.__ModuleLoader__.load({
 				["path", { d: "M22 8c0-2.3-.8-4.3-2-6" }],
 				["path", { d: "M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" }],
 				["path", { d: "M4 2C2.8 3.7 2 5.7 2 8" }]
+			],
+			bell: [["path", { d: "M10.268 21a2 2 0 0 0 3.464 0" }], ["path", { d: "M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" }]],
+			"bell-off": [
+				["path", { d: "M10.268 21a2 2 0 0 0 3.464 0" }],
+				["path", { d: "M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" }],
+				["path", { d: "m2 2 20 20" }],
+				["path", { d: "M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" }]
 			],
 			cpu: [
 				["path", { d: "M12 20v2" }],
@@ -1387,6 +1612,7 @@ window.__ModuleLoader__.load({
 					r: "1"
 				}]
 			],
+			x: [["path", { d: "M18 6 6 18" }], ["path", { d: "m6 6 12 12" }]],
 			check: [["path", { d: "M20 6 9 17l-5-5" }]]
 		};
 		function ChannelSidebarIcon({ name = "panels-top-left", size = 16 }) {
@@ -1417,33 +1643,53 @@ window.__ModuleLoader__.load({
 				children
 			});
 		}
-		function SidebarCardRow({ icon, iconLabel, selection, title, titleClassName, hint, chips, meta, trailing, detail, onClick, disabled, muted, mainClassName, dialog, expanded, controls, state, anchor }) {
-			const body = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [icon === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-				className: "bh-card-icon",
-				role: iconLabel === void 0 ? void 0 : "img",
-				"aria-label": iconLabel,
-				title: iconLabel,
-				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChannelSidebarIcon, {
-					name: icon,
-					size: 16
-				})
-			}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-				className: "bh-card-body",
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
-						children: title
-					}),
-					chips === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bh-card-chips",
-						children: chips
-					}),
-					meta === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "bh-card-meta",
-						children: meta
+		function SidebarCardRow({ icon, leading, iconLabel, selection, title, titleClassName, badge, summary, flipKey, hint, chips, meta, trailing, detail, onClick, disabled, muted, mainClassName, dialog, expanded, controls, state, anchor }) {
+			const body = /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				leading === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-card-leading",
+					children: leading
+				}),
+				icon === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-card-icon",
+					role: iconLabel === void 0 ? void 0 : "img",
+					"aria-label": iconLabel,
+					title: iconLabel,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChannelSidebarIcon, {
+						name: icon,
+						size: 16
 					})
-				]
-			})] });
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+					className: "bh-card-body",
+					children: [
+						badge === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
+							children: title
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: "bh-card-title-row",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: titleClassName === void 0 ? "bh-card-title" : "bh-card-title " + titleClassName,
+								children: title
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: "bh-card-badge",
+								children: badge
+							})]
+						}),
+						summary === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-summary",
+							children: summary
+						}),
+						chips === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-chips",
+							children: chips
+						}),
+						meta === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "bh-card-meta",
+							children: meta
+						})
+					]
+				})
+			] });
 			const className = mainClassName === void 0 ? "bh-card-main" : "bh-card-main " + mainClassName;
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
 				className: "bh-card-row",
@@ -1451,6 +1697,7 @@ window.__ModuleLoader__.load({
 				"data-state": state,
 				"data-selected": selection?.checked === true ? "true" : void 0,
 				"data-anchor": anchor,
+				"data-flip-key": flipKey,
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "bh-card-line",
 					children: [selection?.multiple === true ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
@@ -1507,11 +1754,232 @@ window.__ModuleLoader__.load({
 			}, dependencies);
 		}
 		//#endregion
-		//#region packages/computer/src/client/local-computer.tsx
-		const LOCAL_COMPUTER_COLORS = {
-			error: "var(--dsw-alias-state-error-primary)",
-			secondary: "var(--dsw-alias-label-secondary)"
+		//#region packages/client/src/client/ds/note.tsx
+		const styles = {
+			note: {
+				kogj98: "bhx1ghz6dp",
+				kGuDYH: "bhxgowt09",
+				kLWn49: "bhx12cu2lo",
+				kHjlTd: "bhxj0a0fe",
+				$$css: true
+			},
+			inset: {
+				k8WAf4: "bhx89kiln",
+				kg3NbH: "bhx1w8vjyx",
+				$$css: true
+			},
+			muted: {
+				kMwMTN: "bhxr3raxm",
+				$$css: true
+			},
+			subtle: {
+				kMwMTN: "bhxwq55zj",
+				$$css: true
+			},
+			danger: {
+				kMwMTN: "bhx8ay0r6",
+				$$css: true
+			},
+			success: {
+				kMwMTN: "bhx1pideu2",
+				$$css: true
+			},
+			warning: {
+				kMwMTN: "bhxz9v26x",
+				$$css: true
+			}
 		};
+		function Note({ tone = "muted", inset = false, children }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				role: tone === "danger" ? "alert" : "status",
+				...props(styles.note, inset && styles.inset, styles[tone]),
+				children
+			});
+		}
+		//#endregion
+		//#region packages/client/src/client/ds/pill-button.tsx
+		const pillStyles = { pill: {
+			k1xSpc: "bhx3nfvp2",
+			kGNEyG: "bhx6s0dn4",
+			kOIVth: "bhx12e6dxb",
+			ks0D6T: "bhx193iq5w",
+			kZKoxP: "bhxxevliy",
+			kg3NbH: "bhx1vid4s1",
+			kMzoRj: "bhxc342km",
+			kaIpWk: "bhx4g09nt",
+			kWkggS: "bhxw43b1w bhx1lc0nsx",
+			kMwMTN: "bhx24dycr",
+			kMv6JI: "bhxjb2p0i",
+			kGuDYH: "bhx5g6txa",
+			kLWn49: "bhx3350y7",
+			khDVqt: "bhxuxw1ft",
+			kkrTdU: "bhx1ypdohk bhxtgyt42",
+			kSiTet: "bhx1hc1fzr bhxijokvz",
+			kI3sdo: "bhx1a2a7pz bhx1m95a6t",
+			kInvED: "bhx1y3gkto",
+			$$css: true
+		} };
+		function PillButton({ children, ...rest }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				...rest,
+				className: "bhx3nfvp2 bhx6s0dn4 bhx12e6dxb bhx193iq5w bhxxevliy bhx1vid4s1 bhxc342km bhx4g09nt bhxw43b1w bhx1lc0nsx bhx24dycr bhxjb2p0i bhx5g6txa bhx3350y7 bhxuxw1ft bhx1ypdohk bhxtgyt42 bhx1hc1fzr bhxijokvz bhx1a2a7pz bhx1m95a6t bhx1y3gkto",
+				children
+			});
+		}
+		function PillFileButton({ children, ...input }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+				className: "bhx3nfvp2 bhx6s0dn4 bhx12e6dxb bhx193iq5w bhxxevliy bhx1vid4s1 bhxc342km bhx4g09nt bhxw43b1w bhx1lc0nsx bhx24dycr bhxjb2p0i bhx5g6txa bhx3350y7 bhxuxw1ft bhx1ypdohk bhxtgyt42 bhx1hc1fzr bhxijokvz bhx1a2a7pz bhx1m95a6t bhx1y3gkto",
+				children: [children, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+					...input,
+					type: "file",
+					hidden: true
+				})]
+			});
+		}
+		//#endregion
+		//#region packages/client/src/client/ds/select.tsx
+		function Select({ label, value, options, onChange, disabled = false, align = "end", autoFocus = false }) {
+			const [open, setOpen] = (0, react.useState)(false);
+			const current = options.find((option) => option.value === value);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+				open: open && !disabled,
+				portal: true,
+				align,
+				items: options.map((option) => ({
+					id: option.value,
+					label: option.label
+				})),
+				selectedId: value,
+				onSelect: (id) => {
+					setOpen(false);
+					const next = options.find((option) => option.value === id);
+					if (next !== void 0 && next.value !== value) onChange(next.value);
+				},
+				onClose: () => {
+					setOpen(false);
+				},
+				anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					type: "button",
+					"aria-label": label,
+					"aria-haspopup": "menu",
+					"aria-expanded": open && !disabled,
+					disabled,
+					"data-modal-autofocus": autoFocus ? "" : void 0,
+					onClick: () => {
+						setOpen((previous) => !previous);
+					},
+					...props(pillStyles.pill),
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: "bhxeuugli bhxb3r6kr bhxlyipyv bhxuxw1ft",
+						children: current?.label
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
+					})]
+				})
+			});
+		}
+		//#endregion
+		//#region packages/client/src/client/ds/settings-row.tsx
+		function SettingsRows({ children, rootRef }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				ref: rootRef,
+				className: "bhx78zum5 bhxdt5ytf bhxeuugli",
+				children
+			});
+		}
+		function SettingsRow({ title, description, control, children, rootRef, data }) {
+			const id = (0, react.useId)();
+			const titleId = `${id}-title`;
+			const descriptionId = `${id}-description`;
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				ref: rootRef,
+				role: "group",
+				"aria-labelledby": titleId,
+				"aria-describedby": description === void 0 ? void 0 : descriptionId,
+				...data,
+				className: "bhx78zum5 bhx6s0dn4 bhx15bqsqq bhx1q0g3np bhx1uptv2i bhx1mckxr8 bhxv0lzym bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg bhx1bta2m4",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: "bhx78zum5 bhxdt5ytf bhx5v8n67 bhx1iyjqo2 bhxs83m0k bhx1r8uery bhxeuugli",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							id: titleId,
+							className: "bhx24dycr bhxskcadq bhx1gy5ux2 bhx1nj67n bhxj0a0fe",
+							children: title
+						}),
+						description === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							id: descriptionId,
+							className: "bhxr3raxm bhxgowt09 bhx12cu2lo bhxj0a0fe",
+							children: description
+						}),
+						children
+					]
+				}), control === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "bhx78zum5 bhx1a02dak bhx6s0dn4 bhx13a6bvl bhx3xz8fp bhx2zm2ee bhx2lah0s bhxeuugli bhxh9uqaf bhx1cnm762",
+					children: control
+				})]
+			});
+		}
+		//#endregion
+		//#region packages/client/src/client/missing-packages.tsx
+		function formatProgressMiB(bytes) {
+			return `${(bytes / 1048576).toFixed(1)} MB`;
+		}
+		function ProgressLine({ percent, label }) {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				role: "status",
+				className: "bhxrvj5dj bhx5v8n67 bhxh8yej3 bhxr3raxm bhxgowt09 bhx12cu2lo",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("progress", {
+					className: "bhxh8yej3 bhxols6we bhx1g31g6d",
+					max: 100,
+					value: Math.max(0, Math.min(100, percent))
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: label })]
+			});
+		}
+		function MissingPackages({ command, access, installing, busy = false, onInstall, labels, children }) {
+			const [copied, setCopied] = (0, react.useState)(false);
+			const copy = () => {
+				navigator.clipboard?.writeText(command).then(() => setCopied(true));
+			};
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "bhxrvj5dj bhx2zm2ee bhx619ttb bhxh8yej3",
+				children: [
+					installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+						tone: "warning",
+						children: labels.missing
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
+						percent: installing.percent,
+						label: installing.label
+					}),
+					access === "none" && installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: labels.manual }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
+						className: "bhx1ghz6dp bhxh8yej3 bhx9f619 bhx89kiln bhx1w8vjyx bhx4g09nt bhx1xojs80 bhx24dycr bhxmz2490 bhxgowt09 bhx12cu2lo bhx126k92a bhxj0a0fe",
+						children: command
+					})] }) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "bhx78zum5 bhx12e6dxb bhx1a02dak",
+						children: [
+							access !== "none" && installing === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								size: "sm",
+								variant: "primary",
+								disabled: busy,
+								onClick: onInstall,
+								children: labels.install
+							}) : null,
+							access === "none" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+								size: "sm",
+								variant: "outline",
+								onClick: copy,
+								children: copied ? labels.copied : labels.copy
+							}) : null,
+							children
+						]
+					})
+				]
+			});
+		}
+		//#endregion
+		//#region packages/computer/src/client/local-computer.tsx
 		function LocalComputerStatus({ t }) {
 			const [payload, setPayload] = (0, react.useState)();
 			const [busy, setBusy] = (0, react.useState)(false);
@@ -1549,25 +2017,67 @@ window.__ModuleLoader__.load({
 					clearInterval(timer);
 				};
 			}, [refresh]);
-			const preparing = busy || payload?.status?.phase === "starting";
-			const failure = error ?? payload?.status?.detail ?? payload?.probe?.detail;
-			const check = () => {
+			const installing = payload?.install?.state === "installing";
+			const preparing = busy || installing || payload?.status?.phase === "starting";
+			const missing = payload?.status?.missing;
+			const failure = error ?? (payload?.install?.state === "failed" ? payload.install.text : void 0) ?? (missing === void 0 ? payload?.status?.detail : void 0) ?? payload?.probe?.detail;
+			const post = (path, body) => {
 				setBusy(true);
 				setError(void 0);
-				fetch("/api/computer/start", {
+				fetch(path, {
 					method: "POST",
 					credentials: "same-origin",
 					headers: { "content-type": "application/json" },
-					body: JSON.stringify({
-						authorize: true,
-						target: "local"
-					})
+					body: JSON.stringify(body)
 				}).then(async (response) => {
 					if (!response.ok) throw new Error(await response.text());
 					await refresh();
 				}).catch((error) => setError(String(error))).finally(() => setBusy(false));
 			};
+			const check = () => post("/api/computer/start", {
+				authorize: true,
+				target: "local"
+			});
+			const install = () => post("/api/computer/install-packages", { authorize: true });
 			const granted = payload?.status?.state === "running";
+			const download = payload?.status?.progress;
+			const installLabel = installing ? {
+				percent: payload?.install?.percent ?? 0,
+				label: t("local.installing", {
+					packages: (payload?.install?.packages ?? []).join(", "),
+					percent: String(payload?.install?.percent ?? 0)
+				})
+			} : void 0;
+			const checkButton = /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
+				size: "sm",
+				variant: "outline",
+				disabled: preparing || payload?.probe?.available === false,
+				onClick: check,
+				children: t(preparing ? "local.checking" : "local.check")
+			});
+			const packages = installing ? payload?.install?.packages ?? [] : missing?.packages ?? [];
+			const body = packages.length > 0 && (missing !== void 0 || installing) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(MissingPackages, {
+				command: missing?.command ?? "",
+				access: missing?.install ?? "root",
+				installing: installLabel,
+				busy,
+				onInstall: install,
+				labels: {
+					missing: t("local.missing", { packages: packages.join(", ") }),
+					manual: t("local.missing.manual"),
+					install: t("local.install"),
+					copy: t("local.copy"),
+					copied: t("local.copied")
+				},
+				children: checkButton
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [payload?.status?.phase === "starting" && (download?.totalBytes ?? 0) > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ProgressLine, {
+				percent: download?.percent ?? 0,
+				label: t("local.downloading", {
+					percent: String(download?.percent ?? 0),
+					downloaded: formatProgressMiB(download?.downloadedBytes ?? 0),
+					total: formatProgressMiB(download?.totalBytes ?? 0)
+				})
+			}) : null, checkButton] });
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				ref: resource,
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SidebarCardList, {
@@ -1581,6 +2091,9 @@ window.__ModuleLoader__.load({
 						}) : preparing ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tag, {
 							tone: "info",
 							children: t("local.chip.checking")
+						}) : missing !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tag, {
+							tone: "warning",
+							children: t("local.chip.missing")
 						}) : failure === void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Tag, {
 							tone: "neutral",
 							children: t("local.chip.unchecked")
@@ -1590,27 +2103,11 @@ window.__ModuleLoader__.load({
 						}),
 						meta: t(granted ? "local.granted" : "local.description"),
 						detail: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							style: {
-								display: "grid",
-								gap: 8,
-								justifyItems: "start"
-							},
-							children: [failure === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								role: "alert",
-								style: {
-									color: LOCAL_COMPUTER_COLORS.error,
-									fontSize: 12,
-									lineHeight: "16px",
-									overflowWrap: "anywhere"
-								},
+							className: "bhxrvj5dj bhx2zm2ee bhx619ttb",
+							children: [failure === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+								tone: "danger",
 								children: failure
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Button, {
-								size: "sm",
-								variant: "outline",
-								disabled: preparing || payload?.probe?.available === false,
-								onClick: check,
-								children: t(preparing ? "local.checking" : "local.check")
-							})]
+							}), body]
 						})
 					})
 				})
@@ -1812,35 +2309,20 @@ window.__ModuleLoader__.load({
 				}
 			};
 		}
-		function Row({ title, description, children }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "bh-settings-row",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: "bh-settings-row-text",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "bh-settings-row-title",
-						children: title
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "bh-settings-row-desc",
-						children: description
-					})]
-				}), children]
-			});
-		}
 		function Selector({ label, open, onToggle, disabled }) {
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-				type: "button",
-				className: "bh-settings-selector",
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(PillButton, {
 				"aria-haspopup": "menu",
 				"aria-expanded": open,
 				disabled: disabled === true,
 				onClick: onToggle,
-				children: [label, /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { className: "bh-settings-chevron" })]
+				children: [label, /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bhx3nfvp2 bhx2lah0s bhxr3raxm",
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutlineRegular, { size: 12 })
+				})]
 			});
 		}
 		function ComputerSettingsRows({ t, prefs, pickerAvailable, pickDirectory, openDirectory, exportArchive, downloadUrl, importArchive, requestUpload, sendUploadBytes, listArchives, hostExportDir }) {
 			const snapshot = (0, react.useSyncExternalStore)(prefs.subscribe, prefs.getSnapshot);
-			const [targetOpen, setTargetOpen] = (0, react.useState)(false);
 			const [targetError, setTargetError] = (0, react.useState)();
 			const [targetSaving, setTargetSaving] = (0, react.useState)(false);
 			const [idleOpen, setIdleOpen] = (0, react.useState)(false);
@@ -2043,311 +2525,218 @@ window.__ModuleLoader__.load({
 				openDirectory(exportDir).catch((error) => setDirNote(String(error)));
 			}, [exportDir, openDirectory]);
 			const selectedFile = uploadName ?? (confirming === "import" ? archives?.[0] : void 0);
-			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "bh-settings-rows",
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						hidden: true,
-						ref: hostDirResource
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(SettingsRows, { children: [
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					hidden: true,
+					ref: hostDirResource
+				}),
+				busy === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					hidden: true,
+					ref: busyResource
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					className: "bhx1ghz6dp bhxb590mu bhx1e1oj2y bhxr3raxm bhxgowt09 bhx12cu2lo",
+					children: t("section.description")
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+					title: t("rows.target.title"),
+					description: t("rows.target.description"),
+					control: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Select, {
+						label: t("rows.target.title"),
+						value: snapshot.target,
+						options: ["local", "container"].map((id) => ({
+							value: id,
+							label: t(`rows.target.${id}`)
+						})),
+						disabled: !writable || targetSaving,
+						onChange: (id) => {
+							setTargetSaving(true);
+							setTargetError(void 0);
+							prefs.setTarget(id).catch((error) => setTargetError(String(error))).finally(() => setTargetSaving(false));
+						}
+					})
+				}),
+				targetError === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, {
+					tone: "danger",
+					children: targetError
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+					title: t("rows.autoAllow.title"),
+					description: t("rows.autoAllow.description"),
+					control: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
+						checked: snapshot.autoAllowActions,
+						disabled: !writable,
+						onChange: (next) => {
+							prefs.setAutoAllowActions(next);
+						},
+						label: t("rows.autoAllow.title")
+					})
+				}),
+				snapshot.target === "local" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LocalComputerStatus, { t }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+						title: t("rows.exportDir.title"),
+						description: hasDir ? t("rows.exportDir.current", { dir: exportDir }) : t("rows.exportDir.empty"),
+						control: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+							canAdjust ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(PillButton, {
+								disabled: !writable,
+								onClick: pickExportDir,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 14 }), t("rows.exportDir.pick")]
+							}) : null,
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+								disabled: !hasDir,
+								onClick: openDir,
+								children: t("rows.exportDir.open")
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+								disabled: !writable,
+								onClick: () => {
+									setManualOpen((value) => !value);
+									setManualPath(exportDir);
+								},
+								children: t("rows.exportDir.manual")
+							})
+						] })
 					}),
-					busy === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						hidden: true,
-						ref: busyResource
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "bh-settings-section-head",
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "bh-settings-section-desc",
-							children: t("section.description")
-						})
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Row, {
-						title: t("rows.target.title"),
-						description: t("rows.target.description"),
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-							open: targetOpen,
+					manualOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "bhx78zum5 bhx6s0dn4 bhx1mckxr8 bhxeuugli bhxe74ayl bhxrvphhj bhx1q0q8m5 bhxnoyelg",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Input, {
+							className: { className: "bhx1iyjqo2 bhxs83m0k bhx1r8uery bhxeuugli" }.className ?? "",
+							value: manualPath,
+							placeholder: "/absolute/path",
+							"aria-label": t("rows.exportDir.manual"),
+							onChange: (event) => {
+								setManualPath(event.target.value);
+							}
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+							disabled: !writable || saving || manualPath.trim() === "",
+							onClick: saveManualPath,
+							children: saving ? t("rows.exportDir.saving") : t("rows.exportDir.save")
+						})]
+					}) : null,
+					dirNote === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: dirNote }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+						title: t("rows.idle.title"),
+						description: t("rows.idle.description"),
+						control: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+							open: idleOpen,
 							portal: true,
 							align: "end",
-							items: ["local", "container"].map((id) => ({
-								id,
-								label: t(`rows.target.${id}`)
+							items: IDLE_OPTIONS.map((minutes) => ({
+								id: String(minutes),
+								label: t("rows.idle.minutes", { minutes })
 							})),
-							selectedId: snapshot.target,
+							selectedId: String(snapshot.idleStopMinutes),
 							onSelect: (id) => {
-								setTargetOpen(false);
-								if (id !== "local" && id !== "container") return;
-								setTargetSaving(true);
-								setTargetError(void 0);
-								prefs.setTarget(id).catch((error) => setTargetError(String(error))).finally(() => setTargetSaving(false));
+								setIdleOpen(false);
+								prefs.setIdleStopMinutes(Number(id));
 							},
-							onClose: () => setTargetOpen(false),
+							onClose: () => {
+								setIdleOpen(false);
+							},
 							anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Selector, {
-								label: t(`rows.target.${snapshot.target}`),
-								open: targetOpen,
-								disabled: !writable || targetSaving,
-								onToggle: () => setTargetOpen((value) => !value)
-							})
-						})
-					}),
-					targetError === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						role: "alert",
-						className: "bh-note",
-						style: { color: LOCAL_COMPUTER_COLORS.error },
-						children: targetError
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Row, {
-						title: t("rows.autoAllow.title"),
-						description: t("rows.autoAllow.description"),
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Switch, {
-							checked: snapshot.autoAllowActions,
-							disabled: !writable,
-							onChange: (next) => {
-								prefs.setAutoAllowActions(next);
-							},
-							label: t("rows.autoAllow.title")
-						})
-					}),
-					snapshot.target === "local" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LocalComputerStatus, { t }) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Row, {
-							title: t("rows.exportDir.title"),
-							description: hasDir ? t("rows.exportDir.current", { dir: exportDir }) : t("rows.exportDir.empty"),
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								style: {
-									display: "flex",
-									gap: 8,
-									alignItems: "center",
-									flexWrap: "wrap"
-								},
-								children: [
-									canAdjust ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										disabled: !writable,
-										onClick: pickExportDir,
-										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconFolderOpenOutlineRegular, { size: 14 }), t("rows.exportDir.pick")]
-									}) : null,
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										disabled: !hasDir,
-										onClick: openDir,
-										children: t("rows.exportDir.open")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										disabled: !writable,
-										onClick: () => {
-											setManualOpen((value) => !value);
-											setManualPath(exportDir);
-										},
-										children: t("rows.exportDir.manual")
-									})
-								]
-							})
-						}),
-						manualOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: "bh-settings-row",
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: "bh-settings-row-text",
-								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									className: "bh-settings-input",
-									value: manualPath,
-									placeholder: "/absolute/path",
-									"aria-label": t("rows.exportDir.manual"),
-									onChange: (event) => {
-										setManualPath(event.target.value);
-									}
-								})
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: "bh-settings-selector",
-								disabled: !writable || saving || manualPath.trim() === "",
-								onClick: saveManualPath,
-								children: saving ? t("rows.exportDir.saving") : t("rows.exportDir.save")
-							})]
-						}) : null,
-						dirNote === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "bh-note",
-							children: dirNote
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Row, {
-							title: t("rows.idle.title"),
-							description: t("rows.idle.description"),
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+								label: t("rows.idle.minutes", { minutes: snapshot.idleStopMinutes }),
 								open: idleOpen,
+								disabled: !writable,
+								onToggle: () => {
+									setIdleOpen((value) => !value);
+								}
+							})
+						})
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+						title: t("rows.exportSection.title"),
+						description: t("rows.exportSection.description"),
+						control: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [confirming === "export" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+							onClick: () => {
+								setConfirming(void 0);
+							},
+							children: t("entry.cancel")
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+							onClick: runExport,
+							children: t("rows.authorizeExport")
+						})] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+							disabled: !hasDir && !canAdjust || busy !== void 0,
+							onClick: startExport,
+							children: busy === "export" ? t("rows.exporting") : canAdjust ? t("rows.exportTo") : t("rows.export")
+						}), download === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+							onClick: () => {
+								globalThis.location?.assign(downloadUrl(download.token));
+							},
+							children: t("rows.download")
+						})] })
+					}),
+					confirming === "export" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: t("rows.exportTarget", { dir: exportTarget ?? exportDir }) }) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SettingsRow, {
+						title: t("rows.importSection.title"),
+						description: t("rows.importSection.description"),
+						control: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+							uploadName !== void 0 ? null : confirming === "import" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+								onClick: () => {
+									setConfirming(void 0);
+								},
+								children: t("rows.cancelImport")
+							}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
+								open: importOpen,
 								portal: true,
 								align: "end",
-								items: IDLE_OPTIONS.map((minutes) => ({
-									id: String(minutes),
-									label: t("rows.idle.minutes", { minutes })
+								items: (archives ?? []).map((file) => ({
+									id: file,
+									label: file
 								})),
-								selectedId: String(snapshot.idleStopMinutes),
 								onSelect: (id) => {
-									setIdleOpen(false);
-									prefs.setIdleStopMinutes(Number(id));
+									setConfirming("import");
+									setArchives([id]);
 								},
 								onClose: () => {
-									setIdleOpen(false);
+									setImportOpen(false);
 								},
 								anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Selector, {
-									label: t("rows.idle.minutes", { minutes: snapshot.idleStopMinutes }),
-									open: idleOpen,
-									disabled: !writable,
-									onToggle: () => {
-										setIdleOpen((value) => !value);
-									}
+									label: busy === "import" ? t("rows.importing") : t("rows.import"),
+									open: importOpen,
+									disabled: !hasDir || busy !== void 0,
+									onToggle: openImport
 								})
-							})
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Row, {
-							title: t("rows.exportSection.title"),
-							description: t("rows.exportSection.description"),
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								style: {
-									display: "flex",
-									gap: 8,
-									alignItems: "center",
-									flexWrap: "wrap"
+							}),
+							uploadName === void 0 && confirming === "import" && archives?.[0] !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+								disabled: busy !== void 0,
+								onClick: () => {
+									const file = archives[0];
+									if (file !== void 0) runImport(file);
 								},
-								children: [confirming === "export" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "bh-settings-selector",
-									onClick: () => {
-										setConfirming(void 0);
-									},
-									children: t("entry.cancel")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "bh-settings-selector",
-									onClick: runExport,
-									children: t("rows.authorizeExport")
-								})] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "bh-settings-selector",
-									disabled: !hasDir && !canAdjust || busy !== void 0,
-									onClick: startExport,
-									children: busy === "export" ? t("rows.exporting") : canAdjust ? t("rows.exportTo") : t("rows.export")
-								}), download === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "bh-settings-selector",
-									onClick: () => {
-										globalThis.location?.assign(downloadUrl(download.token));
-									},
-									children: t("rows.download")
-								})]
-							})
-						}),
-						confirming === "export" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "bh-note",
-							children: t("rows.exportTarget", { dir: exportTarget ?? exportDir })
-						}) : null,
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Row, {
-							title: t("rows.importSection.title"),
-							description: t("rows.importSection.description"),
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								style: {
-									display: "flex",
-									gap: 8,
-									alignItems: "center",
-									flexWrap: "wrap"
+								children: t("rows.authorizeImportConfirm")
+							}) : null,
+							uploadName !== void 0 || confirming === "import" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillFileButton, {
+								accept: ".tar,application/x-tar",
+								disabled: busy !== void 0,
+								onChange: (event) => {
+									const file = event.target.files?.[0] ?? null;
+									event.target.value = "";
+									takeUploadFile(file);
 								},
-								children: [
-									uploadName !== void 0 ? null : confirming === "import" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										onClick: () => {
-											setConfirming(void 0);
-										},
-										children: t("rows.cancelImport")
-									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.Menu, {
-										open: importOpen,
-										portal: true,
-										align: "end",
-										items: (archives ?? []).map((file) => ({
-											id: file,
-											label: file
-										})),
-										onSelect: (id) => {
-											setConfirming("import");
-											setArchives([id]);
-										},
-										onClose: () => {
-											setImportOpen(false);
-										},
-										anchor: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Selector, {
-											label: busy === "import" ? t("rows.importing") : t("rows.import"),
-											open: importOpen,
-											disabled: !hasDir || busy !== void 0,
-											onToggle: openImport
-										})
-									}),
-									uploadName === void 0 && confirming === "import" && archives?.[0] !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										disabled: busy !== void 0,
-										onClick: () => {
-											const file = archives[0];
-											if (file !== void 0) runImport(file);
-										},
-										children: t("rows.authorizeImportConfirm")
-									}) : null,
-									uploadName !== void 0 || confirming === "import" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-										className: "bh-settings-selector",
-										children: [t("rows.chooseFile"), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-											type: "file",
-											accept: ".tar,application/x-tar",
-											hidden: true,
-											disabled: busy !== void 0,
-											onChange: (event) => {
-												const file = event.target.files?.[0] ?? null;
-												event.target.value = "";
-												takeUploadFile(file);
-											}
-										})]
-									}),
-									uploadName === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										onClick: () => {
-											setUploadName(void 0);
-											uploadFile.current = null;
-										},
-										children: t("entry.cancel")
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "bh-settings-selector",
-										disabled: busy !== void 0,
-										onClick: runUpload,
-										children: busy === "upload" ? t("rows.importing") : t("rows.authorizeImportConfirm")
-									})] })
-								]
-							})
-						}),
-						selectedFile === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "bh-note",
-							style: {
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-								whiteSpace: "nowrap"
-							},
-							children: selectedFile
-						}),
-						busy !== void 0 && phaseKey !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "bh-note",
-							children: `${t(phaseKey)} · ${t("entry.elapsed", { seconds: liveElapsed })}`
-						}) : null
-					] }),
-					snapshot.status === "unavailable" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "bh-note",
-						children: t("rows.noSettings")
-					}) : null,
-					snapshot.target !== "container" || transferNote === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "bh-note",
-						children: transferNote
-					})
-				]
-			});
+								children: t("rows.chooseFile")
+							}),
+							uploadName === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+								onClick: () => {
+									setUploadName(void 0);
+									uploadFile.current = null;
+								},
+								children: t("entry.cancel")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(PillButton, {
+								disabled: busy !== void 0,
+								onClick: runUpload,
+								children: busy === "upload" ? t("rows.importing") : t("rows.authorizeImportConfirm")
+							})] })
+						] })
+					}),
+					selectedFile === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+						className: "bhx1ghz6dp bhxb3r6kr bhxlyipyv bhxuxw1ft bhxr3raxm bhxgowt09 bhx12cu2lo",
+						children: selectedFile
+					}),
+					busy !== void 0 && phaseKey !== void 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: `${t(phaseKey)} · ${t("entry.elapsed", { seconds: liveElapsed })}` }) : null
+				] }),
+				snapshot.status === "unavailable" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: t("rows.noSettings") }) : null,
+				snapshot.target !== "container" || transferNote === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Note, { children: transferNote })
+			] });
 		}
 		//#endregion
 		//#region packages/computer/src/client/access-power-icon.tsx
@@ -2366,20 +2755,23 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region packages/client/src/client/ds/stylex-css.ts
+		const STYLEX_CSS = "\n.bhx-level-0{}\n.bhx-level-1:not(#\\#){}\n.bhx1ghz6dp:not(#\\#){margin:0}\n.bhx-level-2:not(#\\#):not(#\\#){}\n.bhx4g09nt:not(#\\#):not(#\\#){border-radius:var(--dsw-radius-sm, 8px)}\n.bhxc342km:not(#\\#):not(#\\#){border-width:0}\n.bhx1mckxr8:not(#\\#):not(#\\#){gap:12px}\n.bhx5v8n67:not(#\\#):not(#\\#){gap:2px}\n.bhx12e6dxb:not(#\\#):not(#\\#){gap:4px}\n.bhx2zm2ee:not(#\\#):not(#\\#){gap:8px}\n.bhx1a2a7pz:not(#\\#):not(#\\#){outline:none}\n.bhxb3r6kr:not(#\\#):not(#\\#){overflow:hidden}\n.bhxe74ayl:not(#\\#):not(#\\#){padding-block:12px}\n.bhx89kiln:not(#\\#):not(#\\#){padding-block:4px}\n.bhx1vid4s1:not(#\\#):not(#\\#){padding-inline:12px 8px}\n.bhx1w8vjyx:not(#\\#):not(#\\#){padding-inline:4px}\n.bhx1m95a6t:focus-visible:not(#\\#):not(#\\#){outline:var(--dsw-focus-ring-width, 2px) solid var(--dsw-alias-state-business-primary)}\n@media (max-width: 648px){.bhxv0lzym.bhxv0lzym:not(#\\#):not(#\\#){gap:8px}}\n.bhx-level-3:not(#\\#):not(#\\#):not(#\\#){}\n.bhx1g31g6d:not(#\\#):not(#\\#):not(#\\#){accent-color:var(--dsw-alias-state-business-primary)}\n.bhx6s0dn4:not(#\\#):not(#\\#):not(#\\#){align-items:center}\n.bhxw43b1w:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-bg-module-platform)}\n.bhx1xojs80:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-interactive-bg-hover)}\n.bhx9f619:not(#\\#):not(#\\#):not(#\\#){box-sizing:border-box}\n.bhx24dycr:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-label-primary)}\n.bhxr3raxm:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-label-secondary)}\n.bhxwq55zj:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-label-tertiary)}\n.bhx8ay0r6:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-state-error-primary)}\n.bhx1pideu2:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-state-success-primary)}\n.bhxz9v26x:not(#\\#):not(#\\#):not(#\\#){color:var(--dsw-alias-state-warn-primary)}\n.bhx1ypdohk:not(#\\#):not(#\\#):not(#\\#){cursor:pointer}\n.bhx78zum5:not(#\\#):not(#\\#):not(#\\#){display:flex}\n.bhxrvj5dj:not(#\\#):not(#\\#):not(#\\#){display:grid}\n.bhx3nfvp2:not(#\\#):not(#\\#):not(#\\#){display:inline-flex}\n.bhx1r8uery:not(#\\#):not(#\\#):not(#\\#){flex-basis:0}\n.bhxdt5ytf:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}\n.bhx1q0g3np:not(#\\#):not(#\\#):not(#\\#){flex-direction:row}\n.bhx1iyjqo2:not(#\\#):not(#\\#):not(#\\#){flex-grow:1}\n.bhx2lah0s:not(#\\#):not(#\\#):not(#\\#){flex-shrink:0}\n.bhxs83m0k:not(#\\#):not(#\\#):not(#\\#){flex-shrink:1}\n.bhx1a02dak:not(#\\#):not(#\\#):not(#\\#){flex-wrap:wrap}\n.bhxjb2p0i:not(#\\#):not(#\\#):not(#\\#){font-family:inherit}\n.bhxmz2490:not(#\\#):not(#\\#):not(#\\#){font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}\n.bhxgowt09:not(#\\#):not(#\\#):not(#\\#){font-size:12px}\n.bhx5g6txa:not(#\\#):not(#\\#):not(#\\#){font-size:13px}\n.bhxskcadq:not(#\\#):not(#\\#):not(#\\#){font-size:14px}\n.bhx1nj67n:not(#\\#):not(#\\#):not(#\\#){font-weight:500}\n.bhx13a6bvl:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-end}\n.bhx619ttb:not(#\\#):not(#\\#):not(#\\#){justify-items:start}\n.bhx12cu2lo:not(#\\#):not(#\\#):not(#\\#){line-height:16px}\n.bhx1gy5ux2:not(#\\#):not(#\\#):not(#\\#){line-height:20px}\n.bhx3350y7:not(#\\#):not(#\\#):not(#\\#){line-height:20px}\n.bhx1hc1fzr:not(#\\#):not(#\\#):not(#\\#){opacity:1}\n.bhx1y3gkto:not(#\\#):not(#\\#):not(#\\#){outline-offset:1px}\n.bhxj0a0fe:not(#\\#):not(#\\#):not(#\\#){overflow-wrap:anywhere}\n.bhxp4054r:not(#\\#):not(#\\#):not(#\\#){text-align:end}\n.bhxlyipyv:not(#\\#):not(#\\#):not(#\\#){text-overflow:ellipsis}\n.bhxuxw1ft:not(#\\#):not(#\\#):not(#\\#){white-space:nowrap}\n.bhx126k92a:not(#\\#):not(#\\#):not(#\\#){white-space:pre-wrap}\n.bhxtgyt42:disabled:not(#\\#):not(#\\#):not(#\\#){cursor:default}\n.bhxijokvz:disabled:not(#\\#):not(#\\#):not(#\\#){opacity:.5}\n.bhx1lc0nsx:hover:not(#\\#):not(#\\#):not(#\\#){background-color:var(--dsw-alias-interactive-bg-hover)}\n@media (max-width: 648px){.bhx15bqsqq.bhx15bqsqq:not(#\\#):not(#\\#):not(#\\#){align-items:stretch}}\n@media (max-width: 648px){.bhx1uptv2i.bhx1uptv2i:not(#\\#):not(#\\#):not(#\\#){flex-direction:column}}\n@media (max-width: 648px){.bhx3xz8fp.bhx3xz8fp:not(#\\#):not(#\\#):not(#\\#){justify-content:flex-start}}\n.bhx-level-4:not(#\\#):not(#\\#):not(#\\#):not(#\\#){}\n.bhxnoyelg:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:var(--dsw-alias-border-l1)}\n.bhx1q0q8m5:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-style:solid}\n.bhxrvphhj:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-width:1px}\n.bhxxevliy:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:28px}\n.bhxols6we:not(#\\#):not(#\\#):not(#\\#):not(#\\#){height:6px}\n.bhx193iq5w:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}\n.bhxh9uqaf:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:60%}\n.bhxeuugli:not(#\\#):not(#\\#):not(#\\#):not(#\\#){min-width:0}\n.bhx1e1oj2y:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-bottom:4px}\n.bhxb590mu:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:16px}\n.bhxh8yej3:not(#\\#):not(#\\#):not(#\\#):not(#\\#){width:100%}\n.bhx10zg81t:first-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){padding-top:0}\n.bhx1bta2m4:last-child:not(#\\#):not(#\\#):not(#\\#):not(#\\#){border-bottom-color:transparent}\n@media (max-width: 648px){.bhx1cnm762.bhx1cnm762:not(#\\#):not(#\\#):not(#\\#):not(#\\#){max-width:100%}}\n";
+		//#endregion
 		//#region packages/computer/src/client/index.tsx
 		const ACCESS_STYLE = `
 .bh-computer-access-control { position: relative; display: flex; align-items: center; }
 .bh-computer-access-power {
   display: flex; align-items: center; justify-content: center; width: 28px; height: 28px;
-  padding: 0; border: 0; border-radius: ${BH.radiusMd}; background: transparent;
-  color: ${BH.labelSecondary}; cursor: pointer;
+  padding: 0; border: 0; border-radius: ${radius.md}; background: transparent;
+  color: ${color.muted}; cursor: pointer;
 }
-.bh-computer-access-power:hover { background: ${BH.hoverFill}; }
-.bh-computer-access-power[aria-pressed='true'] { color: ${BH.businessPrimary}; background: ${BH.hoverFill}; }
-.bh-computer-access-power:focus-visible { outline: 2px solid ${BH.businessPrimary}; outline-offset: 2px; }
+.bh-computer-access-power:hover { background: ${color.hover}; }
+.bh-computer-access-power[aria-pressed='true'] { color: ${color.accent}; background: ${color.hover}; }
+.bh-computer-access-power:focus-visible { outline: ${border.focus} solid ${color.accent}; outline-offset: 2px; }
 .bh-computer-access-power:disabled { opacity: 0.5; cursor: default; }
-.bh-computer-access-power.bh-access-failed { color: ${BH.errorPrimary}; }
-.bh-computer-access-error { order: -1; padding: 0 4px; color: ${BH.errorPrimary}; font-size: 11px; line-height: 16px; white-space: nowrap; }
+.bh-computer-access-power.bh-access-failed { color: ${color.danger}; }
+.bh-computer-access-error { order: -1; padding: 0 ${space.x2}; color: ${color.danger}; font-size: ${text.metaSize}; line-height: ${text.metaLine}; white-space: nowrap; }
 
 `;
 		const name = "botharness-computer-client";
@@ -2675,11 +3067,37 @@ window.__ModuleLoader__.load({
 		}
 		function createComputerEntry(t) {
 			return function ComputerEntryWithLocale(props) {
+				const { computerAccess } = useBotInfo(props.botSlug);
+				if (computerAccess === false) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "bh-computer-access-off",
+					style: noteStyle,
+					children: t("entry.access.description")
+				});
 				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ComputerEntry, {
 					...props,
 					t
 				});
 			};
+		}
+		function createComputerBadge(t) {
+			return function ComputerBadge({ botSlug }) {
+				const { computerAccess } = useBotInfo(botSlug);
+				if (computerAccess !== true) return null;
+				return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					className: "bh-channel-sidebar-live-dot",
+					role: "img",
+					"aria-label": t("entry.access.on")
+				});
+			};
+		}
+		const botInfoStores = /* @__PURE__ */ new Map();
+		function botInfoStore(botSlug) {
+			const key = botSlug ?? "";
+			const existing = botInfoStores.get(key);
+			if (existing !== void 0) return existing;
+			const created = createBotInfoStore(botSlug);
+			botInfoStores.set(key, created);
+			return created;
 		}
 		function createBotInfoStore(botSlug) {
 			let info = {
@@ -2687,7 +3105,7 @@ window.__ModuleLoader__.load({
 				computerAccess: void 0
 			};
 			const listeners = /* @__PURE__ */ new Set();
-			let started = false;
+			let loadedAt = Number.NEGATIVE_INFINITY;
 			const load = () => {
 				const rpc = connectionRpc;
 				if (rpc === void 0 || botSlug === void 0) return;
@@ -2711,8 +3129,8 @@ window.__ModuleLoader__.load({
 					for (const listener of listeners) listener();
 				},
 				subscribe(listener) {
-					if (!started) {
-						started = true;
+					if (listeners.size === 0 && Date.now() - loadedAt > 5e3) {
+						loadedAt = Date.now();
 						load();
 					}
 					listeners.add(listener);
@@ -2724,7 +3142,7 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function useBotInfo(botSlug) {
-			const [store] = (0, react.useState)(() => createBotInfoStore(botSlug));
+			const store = botInfoStore(botSlug);
 			const info = (0, react.useSyncExternalStore)(store.subscribe, store.getSnapshot);
 			return {
 				displayName: info.displayName ?? botSlug,
@@ -2732,14 +3150,13 @@ window.__ModuleLoader__.load({
 			};
 		}
 		function ComputerHeaderAction({ botSlug, t, setExpandable, setExpanded }) {
-			const [store] = (0, react.useState)(() => createBotInfoStore(botSlug));
+			const store = botInfoStore(botSlug);
 			const [busy, setBusy] = (0, react.useState)(false);
 			const inFlight = (0, react.useRef)(false);
 			const [error, setError] = (0, react.useState)(false);
 			const subscribe = (listener) => {
 				const sync = () => {
-					const access = store.getSnapshot().computerAccess === true;
-					setExpandable?.(access);
+					setExpandable?.(store.getSnapshot().computerAccess !== void 0);
 				};
 				const unsubscribe = store.subscribe(() => {
 					sync();
@@ -2766,7 +3183,6 @@ window.__ModuleLoader__.load({
 					}
 					const applied = result.value.bot?.computerAccess === true;
 					store.setAccess(applied);
-					setExpandable?.(applied);
 					setExpanded?.(applied);
 				}).catch(() => {
 					setError(true);
@@ -2926,6 +3342,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		function apply(ctx) {
+			botInfoStores.clear();
 			const settingsPrefs = new ComputerSettingsPrefs();
 			ctx.inject(["configForms"], (settingsCtx) => {
 				const scope = settingsCtx.configForms.get(COMPUTER_SETTINGS_NAMESPACE);
@@ -2953,7 +3370,9 @@ window.__ModuleLoader__.load({
 				if (typeof document === "undefined") return () => {};
 				const style = document.createElement("style");
 				style.setAttribute("data-botharness-computer", "client");
-				style.textContent = ACCESS_STYLE;
+				style.dataset.plugin = "@botharness/computer";
+				style.dataset.pluginCss = "@botharness/computer/client.css";
+				style.textContent = ACCESS_STYLE + STYLEX_CSS;
 				document.head.appendChild(style);
 				return () => {
 					style.remove();
@@ -2975,7 +3394,9 @@ window.__ModuleLoader__.load({
 					order: 40,
 					scope: "personabot",
 					component: createComputerEntry(t),
-					headerAction: createComputerHeader(t)
+					headerAction: createComputerHeader(t),
+					badge: createComputerBadge(t),
+					tab: "screen"
 				}), "botharness-computer: channel sidebar entry");
 			});
 		}
@@ -2987,6 +3408,7 @@ window.__ModuleLoader__.load({
 		exports.StreamOverlay = StreamOverlay;
 		exports.ViewerTitleBar = ViewerTitleBar;
 		exports.apply = apply;
+		exports.createComputerBadge = createComputerBadge;
 		exports.createComputerEntry = createComputerEntry;
 		exports.createComputerHeader = createComputerHeader;
 		exports.inject = inject;

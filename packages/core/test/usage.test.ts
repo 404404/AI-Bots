@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { mountOperationalDatabase } from '../src/database/owner.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
@@ -50,6 +50,82 @@ function expectedDay(time: number): string {
 }
 
 describe('Usage projection', () => {
+  it('reads scoped Session totals through the same bucket rules, skips inherited/duplicate events, and makes no writes', async () => {
+    const { usage, ownership } = usageProjection({
+      root: { botSlug: 'ada', rootRole: 'orchestrator' },
+    });
+    ownership.claim({
+      sessionId: 'child',
+      botSlug: 'ada',
+      rootRole: 'orchestrator',
+      provenance: 'subagent',
+      parentSessionId: 'root',
+      at: '2026-09-29T00:00:00.000Z',
+    });
+    const rootEvent = event('assistant/message', TURN_END);
+    const childEvent = event('assistant/message', TURN_END);
+    const read = vi.fn(async (sessionId: string) => ({
+      events: sessionId === 'root' ? [rootEvent, rootEvent] : [rootEvent, childEvent],
+      inheritedEventCount: sessionId === 'root' ? 0 : 1,
+    }));
+    expect(await usage.sessionSummary('ada', 'root', SINCE, read)).toEqual({
+      totalTokens: 310,
+      status: 'ready',
+    });
+    expect(usage.activity('ada', SINCE)).toEqual([]);
+    expect(await usage.sessionSummary('other', 'root', SINCE, read)).toEqual({
+      totalTokens: null,
+      status: 'unavailable',
+    });
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(await usage.sessionSummary('ada', 'child', SINCE, read)).toEqual({
+      totalTokens: null,
+      status: 'unavailable',
+    });
+    expect(await usage.sessionSummary('ada', 'root', '2099-01-01T00:00:00.000Z', read)).toEqual({
+      totalTokens: 0,
+      status: 'ready',
+    });
+  });
+
+  it('keeps absent usage unknown and failed logs unavailable, with a post-read deletion fence', async () => {
+    const { usage } = usageProjection({ root: { botSlug: 'ada', rootRole: 'orchestrator' } });
+    const missing = { ...event('assistant/message', TURN_END), data: {} };
+    expect(
+      await usage.sessionSummary('ada', 'root', SINCE, async () => ({
+        events: [missing],
+        inheritedEventCount: 0,
+      })),
+    ).toEqual({ totalTokens: null, status: 'unknown' });
+    expect(await usage.sessionSummary('ada', 'root', SINCE, async () => undefined)).toEqual({
+      totalTokens: null,
+      status: 'unavailable',
+    });
+    const known = event('assistant/message', TURN_END);
+    expect(
+      await usage.sessionSummary('ada', 'root', SINCE, async () => ({
+        events: [missing, known],
+        inheritedEventCount: 0,
+      })),
+    ).toEqual({ totalTokens: 155, status: 'partial' });
+    expect(
+      await usage.sessionSummary('ada', 'root', SINCE, async () => {
+        usage.purgeBot('ada');
+        return { events: [known], inheritedEventCount: 0 };
+      }),
+    ).toEqual({ totalTokens: null, status: 'unavailable' });
+  });
+  it('refuses malformed inherited prefixes instead of counting them as owned events', async () => {
+    const { usage } = usageProjection({ root: { botSlug: 'ada', rootRole: 'orchestrator' } });
+    for (const inheritedEventCount of [-1, 0.5, 2, NaN]) {
+      expect(
+        await usage.sessionSummary('ada', 'root', SINCE, async () => ({
+          events: [event('assistant/message', TURN_END)],
+          inheritedEventCount,
+        })),
+      ).toEqual({ totalTokens: null, status: 'unavailable' });
+    }
+  });
   it('folds a completed turn into one Host-local daily bucket exactly once', () => {
     const { usage } = usageProjection({
       'session-1': { botSlug: 'ada', rootRole: 'orchestrator' },
@@ -77,6 +153,41 @@ describe('Usage projection', () => {
     usage.handleSessionEvent('session-1', event('assistant/message', TURN_END + 1000));
     usage.handleSessionEvent('session-1', event('turn/end', TURN_END + 1000));
     expect(usage.activity('ada', SINCE)).toHaveLength(1);
+  });
+
+  it('keeps a replaced Orchestrator Session in the Bot totals and counts its successor separately', async () => {
+    const { usage, ownership } = usageProjection({
+      archived: { botSlug: 'ada', rootRole: 'orchestrator' },
+    });
+    ownership.claim({
+      sessionId: 'replacement',
+      botSlug: 'ada',
+      rootRole: 'orchestrator',
+      at: '2026-10-12T00:00:00.000Z',
+    });
+    const logs = {
+      archived: [event('assistant/message', TURN_END - 2000)],
+      replacement: [event('assistant/message', TURN_END - 1000)],
+    };
+    for (const [sessionId, events] of Object.entries(logs))
+      for (const entry of events) usage.handleSessionEvent(sessionId, entry);
+
+    expect(usage.activity('ada', SINCE)).toMatchObject([
+      { purpose: 'orchestrator', inputTokens: 200, outputTokens: 80, totalTokens: 310 },
+    ]);
+    const readLog = async (sessionId: string) => ({
+      events: logs[sessionId as keyof typeof logs] ?? [],
+      inheritedEventCount: 0,
+    });
+    expect(await usage.sessionSummary('ada', 'replacement', SINCE, readLog)).toEqual({
+      totalTokens: 155,
+      status: 'ready',
+    });
+    expect(await usage.rebuild(['archived', 'replacement'], readLog)).toMatchObject({
+      folded: 0,
+      failed: 0,
+    });
+    expect(usage.activity('ada', SINCE)).toMatchObject([{ totalTokens: 310 }]);
   });
 
   it('attributes fork-owned work to its trusted root role', () => {

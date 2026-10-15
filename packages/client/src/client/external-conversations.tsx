@@ -1,5 +1,5 @@
 import { useState, type ReactElement, type ReactNode } from 'react';
-import { Button, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Checkbox, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { MessagingConversationInput } from '../../../core/src/messaging/conversations.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
 import type { MessagingIdentityView } from '../../../core/src/messaging/identity.js';
@@ -155,14 +155,34 @@ export function ExternalConversations({
           t={t}
         />
       ) : open === grant.id && grant.groupPolicy ? (
-        <GroupReceptionSettings
-          key={`${grant.id}:${grant.groupPolicy.revision}:${grant.groupPolicy.defaultRevision ?? 0}`}
-          policy={grant.groupPolicy}
-          verified={grant.ordinaryDelivery === 'verified'}
-          busy={busy}
-          t={t}
-          save={(input) => rules(grant.id, input)}
-        />
+        <>
+          {identity.platform === 'feishu' ? (
+            <div className="bh-im-field">
+              <Checkbox
+                label={t('conversation.openGroup')}
+                checked={grant.openGroup === true}
+                disabled={busy}
+                onChange={(enabled) =>
+                  void change({
+                    kind: 'open-group',
+                    grantId: grant.id,
+                    expectedRevision: grant.preferenceRevision ?? 0,
+                    open: enabled,
+                  })
+                }
+              />
+              <p className="bh-muted">{t('conversation.openGroupHint')}</p>
+            </div>
+          ) : null}
+          <GroupReceptionSettings
+            key={`${grant.id}:${grant.groupPolicy.revision}:${grant.groupPolicy.defaultRevision ?? 0}`}
+            policy={grant.groupPolicy}
+            verified={grant.ordinaryDelivery === 'verified'}
+            busy={busy}
+            t={t}
+            save={(input) => rules(grant.id, input)}
+          />
+        </>
       ) : undefined);
     return (
       <SidebarCardRow
@@ -327,7 +347,9 @@ export function ExternalConversations({
           {t(
             identity.platform === 'qq'
               ? 'identity.qqConversationsEmpty'
-              : 'identity.conversationsEmpty',
+              : identity.platform === 'discord'
+                ? 'identity.discordConversationsEmpty'
+                : 'identity.conversationsEmpty',
           )}
         </p>
         {history}

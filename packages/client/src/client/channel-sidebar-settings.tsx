@@ -4,7 +4,6 @@ import {
   useId,
   useRef,
   useState,
-  useSyncExternalStore,
   type ReactElement,
   type ReactNode,
 } from 'react';
@@ -15,18 +14,8 @@ import {
   MenuSurface,
   Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives';
-import type {
-  ChannelSidebarEntry,
-  ChannelSidebarEntryProps,
-  ChannelSidebarSettingsProps,
-} from './channel-sidebar.js';
+import type { ChannelSidebarEntry, ChannelSidebarEntryProps } from './channel-sidebar.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
-import { channelSidebarPrefs } from './channel-sidebar-prefs.js';
-import {
-  sessionViewPreferenceSnapshot,
-  subscribeSessionViewPreference,
-  updateSessionViewPreference,
-} from './session-view-prefs.js';
 
 const SubmenuContext = createContext<{
   active: string | undefined;
@@ -34,7 +23,7 @@ const SubmenuContext = createContext<{
   hide(id: string): void;
 }>({ active: undefined, show: () => {}, hide: () => {} });
 
-function SettingsSubmenu({
+export function SettingsSubmenu({
   label,
   children,
   onPreview,
@@ -95,81 +84,6 @@ function SettingsSubmenu({
         </MenuSurface>
       ) : null}
     </div>
-  );
-}
-
-export function SessionsDisplaySettings({
-  botSlug,
-  t,
-  onPreview,
-}: ChannelSidebarSettingsProps): ReactElement {
-  const slug = botSlug ?? '';
-  const preference = useSyncExternalStore(
-    (listener) => subscribeSessionViewPreference(slug, listener),
-    () => sessionViewPreferenceSnapshot(slug),
-    () => sessionViewPreferenceSnapshot(slug),
-  );
-  return (
-    <>
-      <SettingsSubmenu
-        label={t('entry.sessions') + ' · ' + t('sessions.view')}
-        onPreview={onPreview}
-      >
-        {(['current', 'all'] as const).map((scope) => (
-          <MenuItemButton
-            key={scope}
-            icon={preference.scope === scope ? <ChannelSidebarIcon name="check" /> : undefined}
-            onSelect={() => {
-              updateSessionViewPreference(slug, (current) => ({ ...current, scope }));
-            }}
-          >
-            {t(scope === 'current' ? 'sessions.current' : 'sessions.all')}
-          </MenuItemButton>
-        ))}
-      </SettingsSubmenu>
-      <SettingsSubmenu
-        label={t('entry.sessions') + ' · ' + t('sessions.layout')}
-        onPreview={onPreview}
-      >
-        {(['flat', 'workspace'] as const).map((layout) => (
-          <MenuItemButton
-            key={layout}
-            icon={preference.layout === layout ? <ChannelSidebarIcon name="check" /> : undefined}
-            onSelect={() => {
-              updateSessionViewPreference(slug, (current) => ({ ...current, layout }));
-            }}
-          >
-            {t(layout === 'flat' ? 'sessions.layout.flat' : 'sessions.layout.workspace')}
-          </MenuItemButton>
-        ))}
-      </SettingsSubmenu>
-    </>
-  );
-}
-
-export function MemoryDisplaySettings({ t, onPreview }: ChannelSidebarSettingsProps): ReactElement {
-  const terminology = useSyncExternalStore(
-    channelSidebarPrefs.subscribe,
-    () => channelSidebarPrefs.getSnapshot().memoryTerminology,
-    () => channelSidebarPrefs.getSnapshot().memoryTerminology,
-  );
-  return (
-    <SettingsSubmenu
-      label={t('entry.memoryEvolution') + ' · ' + t('memory.terminology')}
-      onPreview={onPreview}
-    >
-      {(['memory', 'git'] as const).map((term) => (
-        <MenuItemButton
-          key={term}
-          icon={terminology === term ? <ChannelSidebarIcon name="check" /> : undefined}
-          onSelect={() => {
-            channelSidebarPrefs.setMemoryTerminology(term);
-          }}
-        >
-          {t(term === 'memory' ? 'memory.terms.memory' : 'memory.terms.git')}
-        </MenuItemButton>
-      ))}
-    </SettingsSubmenu>
   );
 }
 

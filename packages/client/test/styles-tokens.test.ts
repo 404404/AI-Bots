@@ -1,11 +1,16 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { describe, expect, it, vi } from 'vitest';
 
-import { describe, expect, it } from 'vitest';
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({}));
 
-const source = readFileSync(
-  fileURLToPath(new URL('../src/client/styles.ts', import.meta.url)),
-  'utf8',
+import { COMBOBOX_CSS } from '../src/client/combobox.js';
+import { COMPOSER_CONTEXT_CSS } from '../src/client/composer-context-styles.js';
+import { INTERNAL_TOUR_CSS } from '../src/client/internal-tour-styles.js';
+import { CSS } from '../src/client/styles.js';
+import { WINDOW_COMPANION_CSS } from '../src/client/window-companion-styles.js';
+
+const source = [COMPOSER_CONTEXT_CSS, INTERNAL_TOUR_CSS, COMBOBOX_CSS, WINDOW_COMPANION_CSS].reduce(
+  (sheet, included) => sheet.replace(included, ''),
+  CSS,
 );
 
 const ALIAS_START = '/* @bh-brand-aliases:start';
@@ -22,6 +27,26 @@ function aliasBounds(): { start: number; end: number } {
 }
 
 describe('client styles', () => {
+  it('pins a message group avatar to the timeline bottom edge while its group scrolls past', () => {
+    expect(source).toMatch(/\.bh-message-group \{[^}]*align-items: flex-end/);
+    expect(source).toMatch(/\.bh-message-group-avatar \{[^}]*position: sticky;\s*bottom: 0;/);
+  });
+  it('keeps mixed composer attachments in fixed-height cards on one horizontal scroll row', () => {
+    expect(source).toMatch(/\.bh-composer-attachments \{[^}]*flex-wrap: nowrap/);
+    expect(source).toMatch(/\.bh-composer-attachments \{[^}]*overflow-x: auto/);
+    expect(source).toMatch(/\.bh-composer-attachments \{[^}]*overflow-y: hidden/);
+    expect(source).toMatch(/\.bh-composer-attachment-card \{[^}]*flex: 0 0 180px/);
+    expect(source).toMatch(/\.bh-composer-attachment-card \{[^}]*height: 48px/);
+    expect(source).toMatch(/\.bh-composer-attachment-card \{[^}]*box-sizing: border-box/);
+  });
+  it('aligns the attachment reference and remove controls in matching inset boxes', () => {
+    expect(source).toMatch(
+      /\.bh-composer-file-reference \{[^}]*bottom: 2px; right: 2px; width: 20px; height: 20px/,
+    );
+    expect(source).toMatch(
+      /\.bh-composer-attachment-card \.bh-composer-attachment-remove \{[^}]*top: 2px; right: 2px; width: 20px; height: 20px/,
+    );
+  });
   it('contains no literal colours outside the brand alias block', () => {
     const { start, end } = aliasBounds();
     const outside = `${source.slice(0, start)}${source.slice(end)}`;
@@ -48,7 +73,11 @@ describe('client styles', () => {
   });
   it('floats the channel island over a non-interactive fade without header dividers', () => {
     expect(source).toMatch(/\.bh-topbar \{[^}]*position: absolute/);
-    expect(source).toMatch(/\.bh-channel-island:hover \{[^}]*background:/);
+    expect(source).toMatch(
+      /\.bh-channel-island:hover \{[^}]*background: color-mix\([^;]*var\(--dsw-alias-bg-module-platform\)/,
+    );
+    expect(source).toMatch(/\.bh-channel-island-wrap \{[^}]*align-items: center/);
+    expect(source).toContain(".bh-topbar[data-channel-detail='true'] { display: none; }");
     expect(source).toMatch(/\.bh-chat-top-fade \{[^}]*mask-image: linear-gradient\(/);
     expect(source).toMatch(/\.bh-chat-top-fade \{[^}]*pointer-events: none/);
     expect(source).not.toMatch(/\.bh-topbar \{[^}]*border-bottom:/);
@@ -128,7 +157,19 @@ describe('client styles', () => {
   });
 
   it('moves bubble copy/reply actions into the long-press menu on narrow screens', () => {
-    expect(source).toMatch(/@media \(max-width: 640px\) \{\s*\.bh-bubble-meta \{\s*display: none/);
+    expect(source).toMatch(
+      /@media \(max-width: 640px\) \{\s*\.bh-bubble-meta,\s*\.bh-bubble-toolbar \{\s*display: none/,
+    );
+  });
+
+  it('floats bubble hover actions over the top-right edge without shifting layout', () => {
+    expect(source).toMatch(
+      /\.bh-bubble-toolbar \{\s*position: absolute;[^}]*top: 0;[^}]*justify-content: safe flex-end;[^}]*opacity: 0;/,
+    );
+    expect(source).toMatch(
+      /\.bh-message-group-me \.bh-bubble-toolbar \{\s*justify-content: flex-end;/,
+    );
+    expect(source).toMatch(/\.bh-bubble-toolbar:has\(\[aria-expanded='true'\]\) \{\s*opacity: 1;/);
   });
 
   it('fits ordered Channels into the native 36px collapsed rail and separates pins', () => {
@@ -146,11 +187,8 @@ describe('client styles', () => {
     );
   });
 
-  it('keeps hidden-channel content inside the native Modal body box', () => {
-    expect(source).toMatch(/\.bh-hidden-manager \{[^}]*gap: 0;[^}]*min-width: 0/);
-    expect(source).toMatch(
-      /\.bh-hidden-manager > :last-child \{[^}]*gap: 8px;[^}]*margin-top: 12px/,
-    );
+  it('keeps hidden-channel rows inside the shared dialog body', () => {
+    expect(source).not.toContain('.bh-hidden-manager');
     expect(source).toMatch(/\.bh-hidden-search \{[^}]*box-sizing: border-box;[^}]*width: 100%/);
     expect(source).toMatch(
       /\.bh-hidden-row \{[^}]*box-sizing: border-box;[^}]*gap: 8px;[^}]*min-height: 40px;[^}]*padding: 2px 4px/,
@@ -177,11 +215,11 @@ describe('client styles', () => {
     expect(source).toMatch(/\.bh-composer \{[^}]*min-height: 50px/);
     expect(source).toMatch(/\.bh-composer \{[^}]*border-radius: 25px/);
     expect(source).toMatch(/\.bh-composer-expanded \{[^}]*padding-bottom: 48px/);
-    expect(source).toMatch(
-      /\.bh-composer-expanded \{[^}]*border-radius: var\(--bh-composer-radius-panel\)/,
-    );
+    expect(source).toMatch(/\.bh-composer-expanded \{[^}]*border-radius: 20px/);
     expect(source).toMatch(/\.bh-composer-with-footer \{[^}]*padding: 10px 12px 48px/);
-    expect(source).toMatch(/\.bh-composer \{[^}]*background: var\(--bh-composer-panel-bg\)/);
+    expect(source).toMatch(
+      /\.bh-composer \{[^}]*background: var\(--dsw-alias-bg-module-platform\)/,
+    );
     expect(source).toMatch(/\.bh-composer-shell \{[^}]*safe-area-inset-bottom/);
     expect(source).toMatch(/\.bh-composer-activity-facepile \.bh-persona-avatar[^}]*border: 0/);
     expect(source).toMatch(

@@ -30,9 +30,12 @@ function fakeHost(initial: Partial<BotModeScopeSnapshot> = {}) {
     status: 'ready',
     value: {
       botIcon: 'mascot' as const,
+      sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
-      assignmentConcurrencyLimit: 3,
+      assignmentConcurrencyLimit: 8,
       developerMode: false,
+      showBotSessions: false,
+      showApprovalReviewSessions: false,
       motionPreference: 'system',
       sortMode: 'updated',
       sortModes: {},
@@ -89,9 +92,12 @@ describe('BOT-mode policy store', () => {
     expect(prefs.source.getSnapshot()).toEqual({
       motionPreference: 'system',
       botIcon: 'mascot' as const,
+      sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
-      assignmentConcurrencyLimit: 3,
+      assignmentConcurrencyLimit: 8,
       developerMode: false,
+      showBotSessions: true,
+      showApprovalReviewSessions: false,
       effectiveMotion: 'full',
       sortMode: 'updated',
       sortModes: {},
@@ -100,13 +106,32 @@ describe('BOT-mode policy store', () => {
     });
   });
 
+  it('shows Bot Sessions unless the Host holds an explicit choice to hide them', () => {
+    const { showBotSessions: _omitted, ...withoutChoice } = fakeHost().host.getSnapshot().value!;
+    const unset = new BotModePrefs();
+    unset.attach(fakeHost({ value: withoutChoice as never }).host);
+    expect(unset.source.getSnapshot().showBotSessions).toBe(true);
+
+    const hidden = new BotModePrefs();
+    hidden.attach(
+      fakeHost({
+        value: { ...withoutChoice, showBotSessions: false } as never,
+        user: { showBotSessions: false },
+      }).host,
+    );
+    expect(hidden.source.getSnapshot().showBotSessions).toBe(false);
+  });
+
   it('adopts the accepted Host global and per-section values on every accepted change', () => {
     const scope = fakeHost({
       value: {
         botIcon: 'mascot' as const,
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
+        showApprovalReviewSessions: false,
         motionPreference: 'reduce',
         sortMode: 'manual',
         sortModes: { s1: 'updated' },
@@ -119,9 +144,12 @@ describe('BOT-mode policy store', () => {
     expect(prefs.source.getSnapshot()).toEqual({
       motionPreference: 'reduce',
       botIcon: 'mascot' as const,
+      sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
+      showApprovalReviewSessions: false,
       effectiveMotion: 'reduce',
       sortMode: 'manual',
       sortModes: { s1: 'updated' },
@@ -132,9 +160,12 @@ describe('BOT-mode policy store', () => {
     scope.push({
       value: {
         botIcon: 'mascot' as const,
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
+        showApprovalReviewSessions: false,
         motionPreference: 'system',
         sortMode: 'updated',
         sortModes: {},
@@ -167,9 +198,12 @@ describe('BOT-mode policy store', () => {
     expect(prefs.source.getSnapshot()).toMatchObject({
       motionPreference: 'reduce',
       botIcon: 'mascot' as const,
+      sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
-      assignmentConcurrencyLimit: 3,
+      assignmentConcurrencyLimit: 8,
       developerMode: false,
+      showBotSessions: false,
+      showApprovalReviewSessions: false,
       effectiveMotion: 'reduce',
     });
     expect(scope.set).toHaveBeenCalledWith('motionPreference', 'reduce');
@@ -177,6 +211,31 @@ describe('BOT-mode policy store', () => {
     scope.set.mockClear();
     prefs.setMotionPreference('reduce');
     expect(scope.set).not.toHaveBeenCalled();
+  });
+
+  it('sends with Enter by default and persists the chosen send key', () => {
+    const scope = fakeHost();
+    const prefs = new BotModePrefs();
+    prefs.attach(scope.host);
+
+    expect(prefs.source.getSnapshot().sendKey).toBe('enter');
+    prefs.setSendKey('mod-enter');
+    expect(prefs.source.getSnapshot().sendKey).toBe('mod-enter');
+    expect(scope.set).toHaveBeenCalledWith('sendKey', 'mod-enter');
+
+    scope.push({
+      value: {
+        botIcon: 'mascot',
+        sendKey: 'bogus' as never,
+        autoAcceptGroupInvites: true,
+        assignmentConcurrencyLimit: 3,
+        developerMode: false,
+        motionPreference: 'system',
+        sortMode: 'updated',
+        sortModes: {},
+      },
+    });
+    expect(prefs.source.getSnapshot().sendKey).toBe('enter');
   });
 
   it('keeps developer details off by default and persists an explicit toggle', () => {
@@ -192,6 +251,7 @@ describe('BOT-mode policy store', () => {
     scope.push({
       value: {
         botIcon: 'mascot',
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: true,
@@ -229,9 +289,12 @@ describe('BOT-mode policy store', () => {
     const snapshot = {
       motionPreference: 'system' as const,
       botIcon: 'mascot' as const,
+      sendKey: 'enter' as const,
       autoAcceptGroupInvites: true,
       assignmentConcurrencyLimit: 3,
       developerMode: false,
+      showBotSessions: false,
+      showApprovalReviewSessions: false,
       effectiveMotion: 'full' as const,
       sortMode: 'updated' as const,
       sortModes: { s1: 'manual' as const },
@@ -299,9 +362,12 @@ describe('BOT-mode policy store', () => {
     scope.push({
       value: {
         botIcon: 'mascot' as const,
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
+        showApprovalReviewSessions: false,
         motionPreference: 'system',
         sortMode: 'updated',
         sortModes: {},
@@ -385,9 +451,12 @@ describe('legacy roster.json sort migration', () => {
     const scope = fakeHost({
       value: {
         botIcon: 'mascot' as const,
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
+        showApprovalReviewSessions: false,
         motionPreference: 'system',
         sortMode: 'updated',
         sortModes: { s1: 'updated' },
@@ -447,9 +516,12 @@ describe('roster migration sort-mode remap', () => {
       value: {
         motionPreference: 'system',
         botIcon: 'mascot' as const,
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
+        showApprovalReviewSessions: false,
         sortMode: 'updated',
         sortModes: { 'section-1': 'manual' },
       },
@@ -522,9 +594,12 @@ describe('roster migration sort-mode remap', () => {
       value: {
         motionPreference: 'system',
         botIcon: 'mascot' as const,
+        sendKey: 'enter' as const,
         autoAcceptGroupInvites: true,
         assignmentConcurrencyLimit: 3,
         developerMode: false,
+        showBotSessions: false,
+        showApprovalReviewSessions: false,
         sortMode: 'updated',
         sortModes: { 'section-1': 'manual' },
       },
@@ -553,7 +628,7 @@ describe('Assignment limit persistence', () => {
         settle = resolve;
       });
     const pending = prefs.setAssignmentConcurrencyLimit(5);
-    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(3);
+    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(8);
     scope.push({ value: { ...scope.host.getSnapshot().value!, assignmentConcurrencyLimit: 5 } });
     settle!(true);
     expect(await pending).toBe(true);
@@ -589,6 +664,6 @@ describe('Assignment limit persistence', () => {
       throw new Error('Host unavailable');
     };
     await expect(prefs.setAssignmentConcurrencyLimit(2)).rejects.toThrow('Host unavailable');
-    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(3);
+    expect(prefs.source.getSnapshot().assignmentConcurrencyLimit).toBe(8);
   });
 });

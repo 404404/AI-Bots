@@ -9,17 +9,25 @@ import {
   BOT_MODE_GROUP_AUTO_ACCEPT_FIELD,
   DEFAULT_BOT_MODE_GROUP_AUTO_ACCEPT,
   BOT_MODE_MOTION_FIELD,
+  BOT_MODE_SEND_KEY_FIELD,
   BOT_MODE_SORT_FIELD,
   BOT_MODE_SORT_MODES_FIELD,
+  BOT_MODE_SHOW_APPROVAL_REVIEW_SESSIONS_FIELD,
+  BOT_MODE_SHOW_BOT_SESSIONS_FIELD,
   DEFAULT_BOT_MODE_ICON,
   DEFAULT_BOT_MODE_DEVELOPER,
   DEFAULT_BOT_MODE_MOTION,
+  DEFAULT_BOT_MODE_SEND_KEY,
   DEFAULT_BOT_MODE_SORT,
+  DEFAULT_BOT_MODE_SHOW_APPROVAL_REVIEW_SESSIONS,
+  DEFAULT_BOT_MODE_SHOW_BOT_SESSIONS,
   isBotModeIcon,
   isBotModeMotionPreference,
+  isBotModeSendKey,
   type BotModeIcon,
   type BotModeSettings,
   type BotModeMotionPreference,
+  type BotModeSendKey,
   type BotModeSortMode,
 } from '../bot-mode-settings.js';
 import {
@@ -57,8 +65,11 @@ export interface BotModePrefsSnapshot {
   assignmentConcurrencyLimit: number;
   autoAcceptGroupInvites: boolean;
   developerMode: boolean;
+  showBotSessions: boolean;
+  showApprovalReviewSessions: boolean;
   motionPreference: BotModeMotionPreference;
   botIcon: BotModeIcon;
+  sendKey: BotModeSendKey;
   effectiveMotion: EffectiveMotion;
   sortMode: BotModeSortMode;
   sortModes: Record<string, BotModeSortMode>;
@@ -82,7 +93,10 @@ export interface BotModePrefsFace {
   };
   setMotionPreference: (preference: BotModeMotionPreference) => void;
   setBotIcon: (icon: BotModeIcon) => void;
+  setSendKey: (sendKey: BotModeSendKey) => void;
   setDeveloperMode: (enabled: boolean) => void;
+  setShowBotSessions: (enabled: boolean) => void;
+  setShowApprovalReviewSessions: (enabled: boolean) => void;
   setAutoAcceptGroupInvites: (enabled: boolean) => void;
   setSortMode: (mode: BotModeSortMode) => void;
   setSectionSortMode: (sectionId: string, mode: BotModeSortMode | undefined) => void;
@@ -99,8 +113,17 @@ export function botModePrefsFace(prefs: BotModePrefs): BotModePrefsFace {
     setBotIcon: (icon) => {
       prefs.setBotIcon(icon);
     },
+    setSendKey: (sendKey) => {
+      prefs.setSendKey(sendKey);
+    },
     setDeveloperMode: (enabled) => {
       prefs.setDeveloperMode(enabled);
+    },
+    setShowBotSessions: (enabled) => {
+      prefs.setShowBotSessions(enabled);
+    },
+    setShowApprovalReviewSessions: (enabled) => {
+      prefs.setShowApprovalReviewSessions(enabled);
     },
     setSortMode: (mode) => {
       prefs.setSortMode(mode);
@@ -159,7 +182,10 @@ export class BotModePrefs {
       autoAcceptGroupInvites: DEFAULT_BOT_MODE_GROUP_AUTO_ACCEPT,
       motionPreference: DEFAULT_BOT_MODE_MOTION,
       botIcon: DEFAULT_BOT_MODE_ICON,
+      sendKey: DEFAULT_BOT_MODE_SEND_KEY,
       developerMode: DEFAULT_BOT_MODE_DEVELOPER,
+      showBotSessions: DEFAULT_BOT_MODE_SHOW_BOT_SESSIONS,
+      showApprovalReviewSessions: DEFAULT_BOT_MODE_SHOW_APPROVAL_REVIEW_SESSIONS,
       effectiveMotion: resolveEffectiveMotion(DEFAULT_BOT_MODE_MOTION, this.systemReduced),
       sortMode: DEFAULT_BOT_MODE_SORT,
       sortModes: {},
@@ -229,6 +255,14 @@ export class BotModePrefs {
     if (this.host !== undefined) this.persist(this.host.set(BOT_MODE_ICON_FIELD, icon));
   }
 
+  setSendKey(sendKey: BotModeSendKey): void {
+    if (this.source.getSnapshot().sendKey === sendKey) return;
+    this.source.update((draft) => {
+      draft.sendKey = sendKey;
+    });
+    if (this.host !== undefined) this.persist(this.host.set(BOT_MODE_SEND_KEY_FIELD, sendKey));
+  }
+
   async setAssignmentConcurrencyLimit(limit: number): Promise<boolean> {
     if (!isAssignmentConcurrencyLimit(limit)) return false;
     const host = this.host;
@@ -265,6 +299,24 @@ export class BotModePrefs {
       draft.developerMode = enabled;
     });
     if (this.host !== undefined) this.persist(this.host.set(BOT_MODE_DEVELOPER_FIELD, enabled));
+  }
+
+  setShowBotSessions(enabled: boolean): void {
+    if (this.source.getSnapshot().showBotSessions === enabled) return;
+    this.source.update((draft) => {
+      draft.showBotSessions = enabled;
+    });
+    if (this.host !== undefined)
+      this.persist(this.host.set(BOT_MODE_SHOW_BOT_SESSIONS_FIELD, enabled));
+  }
+
+  setShowApprovalReviewSessions(enabled: boolean): void {
+    if (this.source.getSnapshot().showApprovalReviewSessions === enabled) return;
+    this.source.update((draft) => {
+      draft.showApprovalReviewSessions = enabled;
+    });
+    if (this.host !== undefined)
+      this.persist(this.host.set(BOT_MODE_SHOW_APPROVAL_REVIEW_SESSIONS_FIELD, enabled));
   }
 
   setSortMode(mode: BotModeSortMode): void {
@@ -344,12 +396,17 @@ export class BotModePrefs {
         draft.sortMode = section.sortMode;
         draft.sortModes = { ...section.sortModes };
         draft.botIcon = isBotModeIcon(section.botIcon) ? section.botIcon : DEFAULT_BOT_MODE_ICON;
+        draft.sendKey = isBotModeSendKey(section.sendKey)
+          ? section.sendKey
+          : DEFAULT_BOT_MODE_SEND_KEY;
         draft.assignmentConcurrencyLimit = isAssignmentConcurrencyLimit(
           section.assignmentConcurrencyLimit,
         )
           ? section.assignmentConcurrencyLimit
           : DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT;
         draft.developerMode = section.developerMode === true;
+        draft.showBotSessions = section.showBotSessions !== false;
+        draft.showApprovalReviewSessions = section.showApprovalReviewSessions === true;
         draft.autoAcceptGroupInvites = section.autoAcceptGroupInvites !== false;
       }
     });

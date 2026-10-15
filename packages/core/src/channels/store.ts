@@ -25,8 +25,10 @@ import {
   isGroupAvatar,
   isValidChannelId,
   type LocalHumanIdentity,
+  type BotCreateAction,
   type ChannelMemoryCommit,
   type ChannelMessage,
+  type ChannelReaction,
   type ChannelRecord,
   type GroupInvitation,
   type GroupJoinRequest,
@@ -37,7 +39,10 @@ import {
 import {
   DEFAULT_MESSAGE_PAGE,
   MAX_MESSAGE_PAGE,
+  pageChannelJournal,
   pageChannelTimeline,
+  type ChannelJournalPage,
+  type ChannelJournalRequest,
   type ChannelTimelinePage,
   type ChannelTimelineRequest,
 } from './timeline.js';
@@ -52,6 +57,7 @@ export interface ChannelStoreOptions {
   onRecordChanged?: () => void;
   onAdmissionChanged?: (channelId: string, messageId: string, message: ChannelMessage) => void;
   onHumanReadChanged?: (channelId: string, humanId: string, revision: number) => void;
+  onReactionChanged?: (channelId: string, messageId: string, reactions: ChannelReaction[]) => void;
   warn?: (message: string) => void;
   isBotActive?: (botSlug: string) => boolean;
   botDisplayName?: (botSlug: string) => string | undefined;
@@ -99,6 +105,7 @@ export interface ChannelMessageQueryOptions {
   to?: string;
   cursor?: string;
   limit?: number;
+  visibleFrom?: number;
 
   orderBy?: 'time';
 }
@@ -115,6 +122,7 @@ export interface PreparedChannelMessageQuery {
   from?: number;
   to?: number;
   beforeId?: string;
+  visibleFrom?: number;
   orderBy?: 'time';
   filter: string;
   limit: number;
@@ -148,6 +156,11 @@ export function prepareChannelMessageQuery(
     (from !== undefined && to !== undefined && from > to)
   )
     throw new Error('channel_read: invalid date range');
+  if (
+    options.visibleFrom !== undefined &&
+    (!Number.isSafeInteger(options.visibleFrom) || options.visibleFrom < 0)
+  )
+    throw new Error('channel_read: invalid visible revision');
   const text = options.text?.trim().toLowerCase();
   const filter = createHash('sha256')
     .update(
@@ -159,6 +172,7 @@ export function prepareChannelMessageQuery(
         from,
         to,
         orderBy: options.orderBy,
+        visibleFrom: options.visibleFrom,
       }),
     )
     .digest('hex')
@@ -190,6 +204,7 @@ export function prepareChannelMessageQuery(
     ...(from === undefined ? {} : { from }),
     ...(to === undefined ? {} : { to }),
     ...(beforeId === undefined ? {} : { beforeId }),
+    ...(options.visibleFrom === undefined ? {} : { visibleFrom: options.visibleFrom }),
     ...(options.orderBy === undefined ? {} : { orderBy: options.orderBy }),
     filter,
     limit: Math.max(
@@ -229,6 +244,8 @@ export function queryChannelMessages(
     )
       return false;
     if (query.authorKind !== undefined && message.author.kind !== query.authorKind) return false;
+    if (query.visibleFrom !== undefined && (message.channelRevision ?? 0) < query.visibleFrom)
+      return false;
     const at = Date.parse(message.at);
     if ((query.from !== undefined || query.to !== undefined) && !Number.isFinite(at)) return false;
     if (query.from !== undefined && at < query.from) return false;
@@ -283,7 +300,7 @@ export interface ChannelStore {
     messageId: string,
     identity: string,
   ): ChannelAttachmentRef | undefined;
-  getOrCreateDm(botSlug: string, botName: string): ChannelRecord | undefined;
+  getOrCreateDm(botSlug: string, botName?: string): ChannelRecord | undefined;
   getOrCreateBotDm(
     firstBotSlug: string,
     secondBotSlug: string,
@@ -356,6 +373,11 @@ export interface ChannelStore {
     causeSourceEventId: string;
     commits: ReadonlyArray<Omit<ChannelMemoryCommit, 'botSlug'>>;
   }): ChannelMessage[];
+  appendBotCreateAction?(input: {
+    botSlug: string;
+    causeSourceEventId: string;
+    created: BotCreateAction;
+  }): ChannelMessage | undefined;
   rename(id: string, name: string): ChannelRecord | undefined;
   previewAllBotMention(id: string): AllBotPreview;
   appendMessageOnce(
@@ -363,9 +385,23 @@ export interface ChannelStore {
     message: ChannelMessage,
     preview?: AllBotPreview,
     origin?: ChannelMessageOrigin,
+    canCommit?: () => boolean,
   ): Promise<ChannelAppendOnceResult>;
   readPosition(id: string): ChannelReadPosition | undefined;
   markRead(id: string, messageId: string): Promise<ChannelReadPosition | undefined>;
+  setHumanReaction?(
+    id: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): ChannelReaction[] | undefined;
+  setBotReaction?(
+    id: string,
+    botSlug: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): ChannelReaction[] | undefined;
   appendMessage(
     id: string,
     message: ChannelMessage,
@@ -373,8 +409,13 @@ export interface ChannelStore {
   ): Promise<ChannelMessage | undefined>;
   readMessages(id: string, options?: ChannelReadOptions): ChannelMessage[];
   queryMessages(id: string, options?: ChannelMessageQueryOptions): ChannelMessageQueryPage;
+  searchHumanMessages?(
+    id: string,
+    options: Pick<ChannelMessageQueryOptions, 'text' | 'cursor' | 'limit'>,
+  ): ChannelMessageQueryPage | undefined;
   readTimeline(id: string, request?: ChannelTimelineRequest): ChannelTimelinePage | undefined;
   readHumanTimeline(id: string, request?: ChannelTimelineRequest): ChannelTimelinePage | undefined;
+  readHumanJournalPage(id: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
   revision(id: string): number;
   messagesAfter(id: string, revision: number): ChannelMessageCommit[] | undefined;
   admissionChanged?(channelId: string, messageId: string): void;
@@ -400,6 +441,13 @@ export interface ChannelOutputObservation {
 
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
+}
+
+export class ChannelReactionLimitError extends Error {
+  constructor() {
+    super('A message holds at most 20 of your reactions');
+    this.name = 'ChannelReactionLimitError';
+  }
 }
 
 export class ChannelMentionTargetError extends Error {
@@ -704,7 +752,9 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
       const id = dmChannelId(botSlug);
       const existing = read(id);
       if (existing !== undefined) return existing;
-      const name = botName.trim();
+      const displayName = botName ?? options.botDisplayName?.(botSlug);
+      if (displayName === undefined) return undefined;
+      const name = displayName.trim();
       const timestamp = now().toISOString();
       const record: ChannelRecord = {
         id,
@@ -858,7 +908,7 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
         options.botDisplayName ?? (() => undefined),
       );
     },
-    appendMessageOnce(id, message, preview, origin) {
+    appendMessageOnce(id, message, preview, origin, canCommit) {
       return enqueue(id, () => {
         const record = read(id);
         if (record === undefined) return { status: 'missing' };
@@ -871,6 +921,7 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
             message: projectReply(existing, messageIndex(priorMessages)),
           };
         }
+        if (canCommit?.() === false) return { status: 'conflict' };
         if (preview !== undefined) {
           if (message.author.kind !== 'human') throw new Error('All Bots requires a Human sender');
           assertAllBotPreview(
@@ -946,6 +997,20 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
       const channel = this.get(id);
       if (channel === undefined) return undefined;
       return this.readTimeline(id, request);
+    },
+    readHumanJournalPage(id, request) {
+      if (this.get(id) === undefined) return undefined;
+      const messages = readValidMessages(id);
+      const page = pageChannelJournal(id, messages, request);
+      if (page === undefined) return undefined;
+      const byId = messageIndex(messages);
+      return {
+        ...page,
+        entries: page.entries.map((entry) => ({
+          ...entry,
+          message: projectReply(entry.message, byId),
+        })),
+      };
     },
     revision: revisionOf,
     messagesAfter(id, revision) {

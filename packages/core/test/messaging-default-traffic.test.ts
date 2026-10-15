@@ -1,16 +1,18 @@
 import { setImmediate as tick } from 'node:timers/promises';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { createCore, type BotHarnessCore } from '../src/plugin.js';
 import { attachOperationalModule } from '../src/database/owner.js';
 import { createDshImProvider, type DshImOutboundService } from '../src/messaging/dsh-im.js';
 import type { MessagingInboundEvent, MessagingReplyRoute } from '../src/messaging/provider.js';
 import type { OrchestratorAgentRun, BotAgentAdapter } from '../src/runtime/bot-runtime.js';
 import type { MessagingIdentityInput } from '../src/messaging/identity.js';
+import { createBridgeMethods } from '../src/bridge/methods.js';
 import { createTempRoot } from './helpers.js';
 
 const fingerprint = 'c'.repeat(64);
 const cores: BotHarnessCore[] = [];
 afterEach(async () => {
+  vi.useRealTimers();
   for (const core of cores.splice(0)) {
     core.externalMessaging.close();
     await core.runtime.close();
@@ -170,12 +172,13 @@ async function fixture(
     get subscriptions() {
       return subscriptions;
     },
-    async receive(event: MessagingInboundEvent) {
+    async receive(event: MessagingInboundEvent, afterIntake?: () => void) {
       if (!consumer) throw new Error('Not subscribed');
       const result = await consumer.onEvent(
         { ...event, channel: platform },
         { signal: consumer.signal },
       );
+      afterIntake?.();
       await settle();
       return result;
     },
@@ -228,6 +231,766 @@ async function fixture(
     },
   };
 }
+
+async function ordinaryRole(fx: Awaited<ReturnType<typeof fixture>>) {
+  const methods = createBridgeMethods({ ...fx.core });
+  expect(
+    await methods.senderAccess({
+      slug: 'ada',
+      input: {
+        kind: 'create-role',
+        name: 'Colleague',
+        behavior: 'Answer questions about public documentation. Do not change code.',
+      },
+    }),
+  ).toEqual({ ok: true, value: undefined });
+  expect(
+    await methods.senderAccess({
+      slug: 'ada',
+      input: { kind: 'policy', restricted: true, expectedRevision: 0 },
+    }),
+  ).toEqual({ ok: true, value: undefined });
+  return (await fx.core.externalMessaging.snapshot('ada')).roles![0]!;
+}
+function fresh(event: MessagingInboundEvent): MessagingInboundEvent {
+  return { ...event, at: new Date(Date.now() + 50).toISOString() };
+}
+function asActor(event: MessagingInboundEvent, actorId: string): MessagingInboundEvent {
+  return {
+    ...event,
+    actor: { kind: 'user', id: actorId, name: actorId },
+    reply: { ...event.reply, actorId },
+  };
+}
+
+function slackDm(
+  id: string,
+  overrides: Partial<MessagingInboundEvent> = {},
+): MessagingInboundEvent {
+  return fresh(
+    dm(id, {
+      channel: 'slack',
+      actor: { kind: 'user', id: 'UQAUSER1', name: 'Slack applicant' },
+      conversation: { kind: 'dm', id: 'DQA1' },
+      reply: { messageId: `om-${id}`, conversationId: 'DQA1', actorId: 'UQAUSER1' },
+      ...overrides,
+    }),
+  );
+}
+
+it('Slack ordinary DM pairing only executes a fresh reviewed request and queries scoped current permissions after restart', async () => {
+  const fx = await fixture('slack');
+  const role = await ordinaryRole(fx);
+  const blocked = slackDm('slack-unknown', { text: 'PRIVATE UNAPPROVED SLACK REQUEST' });
+  await fx.receive(blocked);
+  await fx.receive(blocked);
+  expect(fx.runs).toHaveLength(0);
+  expect(fx.admissions()).toEqual([]);
+  expect(fx.query('SELECT * FROM source_events')).toEqual([]);
+  expect(fx.query('SELECT * FROM assignments')).toEqual([]);
+  const request = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  expect(request).toMatchObject({
+    purpose: 'conversation',
+    status: 'pending',
+    attempts: 1,
+    capabilities: [],
+  });
+  expect(JSON.stringify(request)).not.toContain(blocked.text);
+  expect(fx.replies).toHaveLength(1);
+  expect(fx.replies[0]!.text).not.toContain(blocked.text);
+  expect((await fx.core.externalMessaging.snapshot('ada')).pairingReceivers).toHaveLength(1);
+  const methods = createBridgeMethods({ ...fx.core });
+  const review = {
+    kind: 'approve' as const,
+    id: request.id,
+    expectedRevision: request.revision,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  };
+  expect(await methods.pairingReview({ slug: 'ada', input: review })).toMatchObject({
+    ok: true,
+    value: { pairing: { roleId: role.id, capabilities: [] } },
+  });
+  expect(fx.replies.at(-1)!.text).toContain('send your question again');
+  expect(fx.runs).toHaveLength(0);
+  await fx.restart();
+  await fx.receive(blocked);
+  expect(fx.admissions()).toEqual([]);
+  await fx.receive(slackDm('slack-new'));
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.runs[0]!.inbox).toContain('slack-workspace-user-id');
+  expect(fx.runs[0]!.inbox).not.toContain(role.behavior);
+  expect(fx.runs[0]!.inbox).not.toContain(blocked.text);
+  const source = fx.sourceId('om-slack-new');
+  expect(fx.core.externalMessaging.senderPermissions('ada', source)).toMatchObject({
+    status: 'paired',
+    role,
+    sender: {
+      actorId: 'UQAUSER1',
+      providerId: 'dsh-im/slack',
+      namespace: 'slack-workspace-user-id',
+    },
+  });
+  expect(fx.core.externalMessaging.directory('ada', { kind: 'people' }).rows).toEqual([
+    expect.objectContaining({ actorId: 'UQAUSER1', namespace: 'slack-workspace-user-id', role }),
+  ]);
+  await fx.core.externalMessaging.reply('ada', source, 'Fresh Slack answer');
+  expect(fx.replies.at(-1)).toMatchObject({
+    route: { conversationId: 'DQA1', actorId: 'UQAUSER1', messageId: 'om-slack-new' },
+    text: 'Fresh Slack answer',
+  });
+  const approved = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  expect(
+    await createBridgeMethods({ ...fx.core }).pairingReview({
+      slug: 'ada',
+      input: { kind: 'revoke', id: approved.id, expectedRevision: approved.revision },
+    }),
+  ).toMatchObject({ ok: true });
+  expect(fx.core.externalMessaging.senderPermissions('ada', source)).toMatchObject({
+    status: 'revoked',
+  });
+  await fx.receive(slackDm('slack-revoked'));
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.admissions()).toHaveLength(1);
+  expect(fx.core.externalMessaging.directory('ada', { kind: 'people' }).rows).toEqual([]);
+});
+
+it('Slack ordinary pairing refuses untrusted routes and does not enable native management or group pairing', async () => {
+  const fx = await fixture('slack');
+  await ordinaryRole(fx);
+  for (const bad of [
+    slackDm('slack-name', { actor: { kind: 'user', id: 'display-name', name: 'UQAUSER1' } }),
+    slackDm('slack-copied', {
+      reply: { messageId: 'om-slack-copied', conversationId: 'DOTHER', actorId: 'UQAUSER1' },
+    }),
+    slackDm('slack-other-app', { botId: 'other-app' }),
+    slackDm('slack-other-workspace', { fingerprint: 'd'.repeat(64) }),
+  ]) {
+    await fx.receive(bad).catch(() => undefined);
+    expect(fx.runs).toHaveLength(0);
+    expect(fx.admissions()).toEqual([]);
+    expect(fx.core.externalMessaging.pairing.list('ada')).toEqual([]);
+  }
+  await fx.receive(slackDm('slack-control', { text: '/pair' }));
+  expect(fx.runs).toHaveLength(0);
+  expect(fx.core.externalMessaging.pairing.list('ada')).toEqual([]);
+  const group = slackDm('slack-group', {
+    conversation: { kind: 'group', id: 'CQA1' },
+    mentionedAccount: true,
+    reply: { messageId: 'om-slack-group', conversationId: 'CQA1', actorId: 'UQAUSER1' },
+  });
+  expect(() =>
+    fx.core.externalMessaging.pairing.request(fx.identity.id, group, 'conversation'),
+  ).toThrow('untrusted-pairing');
+  expect(() =>
+    fx.core.externalMessaging.pairing.request(
+      fx.identity.id,
+      slackDm('slack-management', { text: '/pair' }),
+      'management',
+    ),
+  ).toThrow('untrusted-pairing');
+});
+
+it('Slack replacement Binding and a fresh re-pair never inherit the old ordinary authorization', async () => {
+  const fx = await fixture('slack');
+  const role = await ordinaryRole(fx);
+  await fx.receive(slackDm('slack-before-rebind'));
+  const first = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  fx.core.externalMessaging.pairing.review('ada', {
+    kind: 'approve',
+    id: first.id,
+    expectedRevision: first.revision,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  });
+  const current = (await fx.core.externalMessaging.snapshot('ada')).identities![0]!;
+  await fx.core.externalMessaging.identity('ada', {
+    kind: 'unbind',
+    id: current.id,
+    expectedRevision: current.revision,
+  });
+  await fx.core.externalMessaging.identity('ada', {
+    kind: 'bind',
+    providerId: 'dsh-im/slack',
+    accountRef: 'lark-app',
+    fingerprint,
+  });
+  await fx.settle();
+  await fx.receive(slackDm('slack-after-rebind'));
+  expect(fx.runs).toHaveLength(0);
+  const pending = fx.core.externalMessaging.pairing
+    .list('ada')
+    .find((p) => p.status === 'pending')!;
+  expect(pending.bindingId).not.toBe(first.bindingId);
+  expect(pending.roleId).toBeUndefined();
+  expect(pending.permissionExceptions).toBeUndefined();
+  expect(fx.core.externalMessaging.directory('ada', { kind: 'people' }).rows).toEqual([]);
+});
+
+it('queries pageable current people, configured conversations and observed paired people without changing authority', async () => {
+  const fx = await fixture();
+  const role = await ordinaryRole(fx);
+  const approve = async (actorId: string) => {
+    await fx.receive(fresh(asActor(dm(`request-${actorId}`), actorId)));
+    const request = fx.core.externalMessaging.pairing
+      .list('ada')
+      .find((p) => p.actorId === actorId)!;
+    await fx.core.externalMessaging.reviewPairing('ada', {
+      kind: 'approve',
+      id: request.id,
+      expectedRevision: request.revision,
+      roleId: role.id,
+      expectedRoleRevision: role.revision,
+    });
+  };
+  await approve('ou_owner');
+  await approve('ou_unobserved');
+  expect(fx.runs).toEqual([]);
+  await fx.receive(fresh(mention('directory-anchor')));
+  const sourceEventId = fx.sourceId('om-directory-anchor');
+  const query = fx.runs.at(-1)!.externalMessaging!.directory!;
+  const before = {
+    admissions: fx.admissions().length,
+    replies: fx.replies.length,
+    runs: fx.runs.length,
+  };
+  const first = query({ kind: 'people', limit: 1 });
+  expect(first.rows).toHaveLength(1);
+  expect(first.nextCursor).toBeDefined();
+  const second = query({ kind: 'people', limit: 1, cursor: first.nextCursor! });
+  expect(second.rows).toHaveLength(1);
+  expect(second.nextCursor).toBeUndefined();
+  expect([...first.rows, ...second.rows]).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ actorId: 'ou_owner', role }),
+      expect.objectContaining({ actorId: 'ou_unobserved', role }),
+    ]),
+  );
+  expect(() => query({ kind: 'conversations', cursor: first.nextCursor! })).toThrow(
+    'directory-cursor-invalid',
+  );
+  expect(() => query({ kind: 'people', limit: 51 })).toThrow();
+  expect(() => query({ kind: 'observed-people' })).toThrow('directory-source-required');
+  expect(() => query({ kind: 'observed-people', sourceEventId: 'guessed' })).toThrow(
+    'source-unavailable',
+  );
+  const conversations = query({ kind: 'conversations', limit: 1 });
+  expect(conversations.nextCursor).toBeDefined();
+  expect(
+    query({ kind: 'conversations', limit: 1, cursor: conversations.nextCursor! }).rows,
+  ).toHaveLength(1);
+  expect(query({ kind: 'conversations' }).rows).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        bindingId: fx.identity.id,
+        conversation: expect.objectContaining({ id: 'oc_team' }),
+        state: 'allowed',
+      }),
+    ]),
+  );
+  const observed = query({ kind: 'observed-people', sourceEventId });
+  expect(observed.rows).toEqual([
+    expect.objectContaining({
+      actorId: 'ou_owner',
+      role,
+      firstObservedAt: expect.any(String),
+      lastObservedAt: expect.any(String),
+    }),
+  ]);
+  expect(observed.coverage).toMatchObject({
+    incomplete: true,
+    currentPlatformMembership: false,
+    scanTruncated: false,
+  });
+  expect(fx.admissions()).toHaveLength(before.admissions);
+  expect(fx.replies).toHaveLength(before.replies);
+  expect(fx.runs).toHaveLength(before.runs);
+  const request = fx.core.externalMessaging.pairing
+    .list('ada')
+    .find((p) => p.actorId === 'ou_owner')!;
+  await fx.core.externalMessaging.reviewPairing('ada', {
+    kind: 'revoke',
+    id: request.id,
+    expectedRevision: request.revision,
+  });
+  expect(query({ kind: 'people' }).rows).toEqual([
+    expect.objectContaining({ actorId: 'ou_unobserved' }),
+  ]);
+  expect(query({ kind: 'observed-people', sourceEventId }).rows).toEqual([]);
+  expect(fx.core.registry.create({ slug: 'grace', displayName: 'Grace' }).ok).toBe(true);
+  expect(fx.core.externalMessaging.directory('grace', { kind: 'people' }).rows).toEqual([]);
+  expect(() =>
+    fx.core.externalMessaging.directory('grace', { kind: 'observed-people', sourceEventId }),
+  ).toThrow('source-unavailable');
+});
+
+it('observations respect shared-source access and purge without treating other App identities as paired people', async () => {
+  const fx = await fixture();
+  const role = await ordinaryRole(fx);
+  for (const actorId of ['ou_owner', 'ou_colleague']) {
+    await fx.receive(fresh(asActor(dm(`request-${actorId}`), actorId)));
+    const request = fx.core.externalMessaging.pairing
+      .list('ada')
+      .find((p) => p.actorId === actorId)!;
+    await fx.core.externalMessaging.reviewPairing('ada', {
+      kind: 'approve',
+      id: request.id,
+      expectedRevision: request.revision,
+      roleId: role.id,
+      expectedRoleRevision: role.revision,
+    });
+  }
+  await fx.receive(fresh(mention('purge-anchor')));
+  await fx.receive(fresh(asActor(mention('purge-colleague'), 'ou_colleague')));
+  const anchor = fx.sourceId('om-purge-anchor');
+  const colleague = fx.sourceId('om-purge-colleague');
+  expect(
+    fx.core.externalMessaging.directory('ada', { kind: 'observed-people', sourceEventId: anchor })
+      .rows,
+  ).toHaveLength(2);
+  expect(fx.core.registry.create({ slug: 'grace', displayName: 'Grace' }).ok).toBe(true);
+  const group = fx.core.channels.createGroup({
+    name: 'Shared QA evidence',
+    members: ['ada', 'grace'],
+  });
+  fx.core.externalMessaging.inbound.share('ada', colleague, group.id);
+  expect(fx.core.externalMessaging.inbound.readShared('grace', colleague).event.actor.id).toBe(
+    'ou_colleague',
+  );
+  expect(() =>
+    fx.core.externalMessaging.directory('grace', {
+      kind: 'observed-people',
+      sourceEventId: colleague,
+    }),
+  ).toThrow('directory-scope-unavailable');
+  fx.core.channels.deleteGroup(group.id);
+  const preview = fx.core.contentPurge.preview(group.id, [colleague]);
+  fx.core.contentPurge.confirm(group.id, preview.sourceEventIds, preview.token);
+  expect(
+    fx.core.externalMessaging.directory('ada', { kind: 'observed-people', sourceEventId: anchor })
+      .rows,
+  ).toEqual([expect.objectContaining({ actorId: 'ou_owner' })]);
+  expect(() =>
+    fx.core.externalMessaging.directory('ada', {
+      kind: 'observed-people',
+      sourceEventId: colleague,
+    }),
+  ).toThrow('content-purged');
+  await fx.core.externalMessaging.identity('ada', {
+    kind: 'unbind',
+    id: fx.identity.id,
+    expectedRevision: fx.identity.revision,
+  });
+  const replacement = await fx.core.externalMessaging.identity('ada', {
+    kind: 'bind',
+    providerId: 'dsh-im/feishu',
+    accountRef: 'lark-app',
+    fingerprint,
+  });
+  expect(replacement.id).not.toBe(fx.identity.id);
+  expect(fx.core.externalMessaging.directory('ada', { kind: 'people' }).rows).toEqual([]);
+  expect(fx.core.externalMessaging.directory('ada', { kind: 'conversations' }).rows).toEqual([]);
+});
+
+it('unknown Lark requests are bounded controls; Web ordinary-role review asks again and only fresh messages run', async () => {
+  const fx = await fixture();
+  const role = await ordinaryRole(fx);
+  const blocked = fresh(dm('unknown', { text: 'PRIVATE BLOCKED BODY' }));
+  await fx.receive(blocked);
+  await fx.receive(blocked);
+  expect(fx.runs).toHaveLength(0);
+  expect(fx.admissions()).toEqual([]);
+  expect(fx.query('SELECT * FROM source_events')).toEqual([]);
+  expect(fx.query('SELECT * FROM assignments')).toEqual([]);
+  const request = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  expect(request).toMatchObject({
+    purpose: 'conversation',
+    status: 'pending',
+    capabilities: [],
+    attempts: 1,
+  });
+  expect(JSON.stringify(request)).not.toContain(blocked.text);
+  expect(fx.replies).toHaveLength(1);
+  expect(fx.replies[0]!.text).not.toContain(blocked.text);
+  const methods = createBridgeMethods({ ...fx.core });
+  const review = {
+    kind: 'approve' as const,
+    id: request.id,
+    expectedRevision: request.revision,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  };
+  expect(await methods.pairingReview({ slug: 'ada', input: review })).toMatchObject({
+    ok: true,
+    value: { pairing: { roleId: role.id, capabilities: [] } },
+  });
+  expect(fx.replies.at(-1)!.text).toContain('send your question again');
+  expect(fx.runs).toHaveLength(0);
+  await fx.receive(blocked);
+  expect(fx.admissions()).toEqual([]);
+  await fx.receive(fresh(dm('new')));
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.runs[0]!.inbox).not.toContain('Colleague');
+  expect(fx.runs[0]!.inbox).not.toContain(role.behavior);
+  expect(fx.runs[0]!.inbox).toContain('lark-app-open-id');
+  const permissions = fx.runs[0]!.externalMessaging!.senderPermissions!(fx.sourceId('om-new'));
+  expect(permissions).toMatchObject({
+    status: 'paired',
+    role,
+    policyRevision: 1,
+    sender: { actorId: 'ou_owner', bindingId: fx.identity.id },
+  });
+  expect(Number.isFinite(Date.parse(permissions.queriedAt))).toBe(true);
+  expect(() =>
+    fx.core.externalMessaging.senderPermissions('another-bot', fx.sourceId('om-new')),
+  ).toThrow();
+  expect(() => fx.core.externalMessaging.senderPermissions('ada', 'guessed-source')).toThrow(
+    'source-unavailable',
+  );
+  expect(fx.runs[0]!.inbox).not.toContain(blocked.text);
+  expect(() =>
+    fx.core.externalMessaging.pairing.assert('ada', fx.identity.id, 'ou_owner', 'approve'),
+  ).toThrow('pairing-unauthorized');
+  await fx.core.externalMessaging.reply('ada', fx.sourceId('om-new'), 'Fresh reply');
+  expect(fx.replies.at(-1)).toMatchObject({
+    route: { messageId: 'om-new', conversationId: 'oc_owner' },
+    text: 'Fresh reply',
+  });
+  const paired = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  await methods.pairingReview({
+    slug: 'ada',
+    input: { kind: 'revoke', id: paired.id, expectedRevision: paired.revision },
+  });
+  expect(fx.core.externalMessaging.senderPermissions('ada', fx.sourceId('om-new'))).toMatchObject({
+    status: 'revoked',
+  });
+  expect(
+    fx.core.externalMessaging.senderPermissions('ada', fx.sourceId('om-new')).role,
+  ).toBeUndefined();
+  await fx.receive(fresh(dm('revoked')));
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.admissions()).toHaveLength(1);
+});
+
+it('one active run refreshes role edits and reassignment while dated permission results and legacy management remain distinct', async () => {
+  const fx = await fixture();
+  const role = await ordinaryRole(fx);
+  await fx.receive(fresh(dm('role-request')));
+  const pending = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  fx.core.externalMessaging.pairing.review('ada', {
+    kind: 'approve',
+    id: pending.id,
+    expectedRevision: pending.revision,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  });
+  await fx.receive(fresh(dm('role-question')));
+  const lookup = fx.runs[0]!.externalMessaging!.senderPermissions!;
+  const source = fx.sourceId('om-role-question');
+  const prior = lookup(source);
+  const editedAt = new Date(Date.now() + 1000).toISOString();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(editedAt);
+  const edit = {
+    kind: 'edit-role' as const,
+    id: role.id,
+    expectedRevision: role.revision,
+    name: 'Reviewer',
+    behavior: 'Read docs and reject approval requests only.',
+    capabilities: ['reject' as const],
+  };
+  fx.core.externalMessaging.senderAccess('ada', edit);
+  expect(lookup(source).role).toMatchObject({ createdAt: role.createdAt, updatedAt: editedAt });
+  expect(lookup(source)).toMatchObject({
+    role: { name: 'Reviewer', revision: 2, capabilities: ['reject'] },
+    policyRevision: 2,
+  });
+  expect(prior).toMatchObject({
+    role: { name: 'Colleague', revision: 1, capabilities: [] },
+    policyRevision: 1,
+  });
+  expect(() => fx.core.externalMessaging.senderAccess('ada', edit)).toThrow('role-stale');
+  expect(lookup(source).role?.updatedAt).toBe(editedAt);
+  expect(fx.core.externalMessaging.directory('ada', { kind: 'people' }).rows[0]).toMatchObject({
+    role: { name: 'Reviewer', revision: 2 },
+  });
+  fx.core.externalMessaging.senderAccess('ada', {
+    kind: 'create-role',
+    name: 'Reader',
+    behavior: 'Public documentation only.',
+  });
+  const nextRole = (await fx.core.externalMessaging.snapshot('ada')).roles!.find(
+    (item) => item.name === 'Reader',
+  )!;
+  const reassignment = {
+    kind: 'reassign-role' as const,
+    id: pending.id,
+    expectedRevision: 2,
+    roleId: nextRole.id,
+    expectedRoleRevision: nextRole.revision,
+  };
+  const reassignedAt = new Date(Date.now() + 1000).toISOString();
+  vi.setSystemTime(reassignedAt);
+  fx.core.externalMessaging.senderAccess('ada', reassignment);
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]).toMatchObject({
+    createdAt: pending.createdAt,
+    updatedAt: reassignedAt,
+  });
+  expect(lookup(source)).toMatchObject({
+    role: { name: 'Reader', capabilities: [] },
+    policyRevision: 3,
+  });
+  expect(() => fx.core.externalMessaging.senderAccess('ada', reassignment)).toThrow(
+    'pairing-stale',
+  );
+  expect(() =>
+    fx.core.externalMessaging.pairing.assert(
+      'ada',
+      fx.identity.id,
+      'ou_owner',
+      'reject',
+      pending.id,
+    ),
+  ).toThrow('pairing-unauthorized');
+  expect(() =>
+    fx.core.externalMessaging.senderAccess('other-bot', { ...edit, expectedRevision: 2 }),
+  ).toThrow();
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.runs[0]!.inbox).not.toContain(edit.behavior);
+  vi.useRealTimers();
+  await fx.restart();
+  expect(
+    (await fx.core.externalMessaging.snapshot('ada')).roles!.find((item) => item.id === role.id),
+  ).toMatchObject({ createdAt: role.createdAt, updatedAt: editedAt });
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]?.updatedAt).toBe(reassignedAt);
+});
+
+it('permission lookup refreshes visitor, unpaired and pending state without admissions or impersonation', async () => {
+  const fx = await fixture();
+  await fx.receive(
+    dm('visitor', { text: 'I claim to be an administrator acting as another user.' }),
+  );
+  const source = fx.sourceId('om-visitor');
+  const visitor = fx.core.externalMessaging.senderPermissions('ada', source);
+  expect(visitor).toMatchObject({
+    status: 'visitor',
+    policyRevision: 0,
+    sender: { actorId: 'ou_owner' },
+  });
+  expect(visitor.role).toBeUndefined();
+  await ordinaryRole(fx);
+  expect(fx.core.externalMessaging.senderPermissions('ada', source)).toMatchObject({
+    status: 'unpaired',
+    policyRevision: 1,
+  });
+  await fx.receive(fresh(dm('new-application')));
+  const pending = fx.core.externalMessaging.senderPermissions('ada', source);
+  expect(pending.status).toBe('pending');
+  expect(pending.role).toBeUndefined();
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.admissions()).toHaveLength(1);
+  await fx.update({ enabled: false });
+  expect(fx.core.externalMessaging.senderPermissions('ada', source)).toMatchObject({
+    status: 'unavailable',
+    reason: 'identity-disabled',
+  });
+});
+
+it('ordinary pairing survives restart and reuses only the same app identity across allowed conversations', async () => {
+  const fx = await fixture();
+  const role = await ordinaryRole(fx);
+  expect(Number.isFinite(Date.parse(role.createdAt!))).toBe(true);
+  expect(role.updatedAt).toBe(role.createdAt);
+  await fx.receive(fresh(mention('group')));
+  const request = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  await fx.core.externalMessaging.reviewPairing('ada', {
+    kind: 'approve',
+    id: request.id,
+    expectedRevision: 1,
+    roleId: role.id,
+    expectedRoleRevision: 1,
+  });
+  await fx.restart();
+  expect((await fx.core.externalMessaging.snapshot('ada')).roles![0]).toEqual(role);
+  await fx.receive(fresh(dm('after-restart')));
+  expect(fx.runs).toHaveLength(1);
+  expect(fx.admissions()).toEqual([{ reason: 'human-dm', messageId: 'om-after-restart' }]);
+  const current = (await fx.core.externalMessaging.snapshot('ada')).identities![0]!;
+  await fx.core.externalMessaging.identity('ada', {
+    kind: 'unbind',
+    id: current.id,
+    expectedRevision: current.revision,
+  });
+  await fx.core.externalMessaging.identity('ada', {
+    kind: 'bind',
+    providerId: 'dsh-im/feishu',
+    accountRef: 'lark-app',
+    fingerprint,
+  });
+  await fx.settle();
+  await fx.receive(fresh(dm('rebound')));
+  expect(fx.runs).toHaveLength(1);
+  expect(
+    fx.core.externalMessaging.pairing.list('ada').filter((item) => item.status === 'pending'),
+  ).toHaveLength(1);
+});
+
+it('failed re-ask notification preserves approval and stale review never launches or replays a request', async () => {
+  const fx = await fixture();
+  const role = await ordinaryRole(fx);
+  await fx.receive(fresh(dm('failure')));
+  const request = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  fx.prepareReply(async () => {
+    throw new Error('offline');
+  });
+  const input = {
+    kind: 'approve' as const,
+    id: request.id,
+    expectedRevision: 1,
+    roleId: role.id,
+    expectedRoleRevision: 1,
+  };
+  const approved = await fx.core.externalMessaging.reviewPairing('ada', input);
+  expect(approved.status).toBe('approved');
+  expect(approved.notifications?.at(-1)).toMatchObject({ outcome: 'unconfirmed', attempts: 1 });
+  await expect(fx.core.externalMessaging.reviewPairing('ada', input)).rejects.toThrow(
+    'pairing-stale',
+  );
+  expect(fx.runs).toEqual([]);
+  expect(fx.admissions()).toEqual([]);
+  fx.prepareReply(async () => {});
+  await fx.receive(fresh(dm('later')));
+  expect(fx.runs).toHaveLength(1);
+});
+
+it('ordinary group text creates no pairing request or wake contribution for a restricted Bot', async () => {
+  const fx = await fixture();
+  await ordinaryRole(fx);
+  for (let n = 0; n < 8; n++) await fx.receive(fresh(mention(`ordinary-${n}`, false)));
+  expect(fx.core.externalMessaging.pairing.list('ada')).toEqual([]);
+  expect(fx.admissions()).toEqual([]);
+  expect(fx.runs).toEqual([]);
+});
+
+it.each(['restrict', 'revoke'] as const)(
+  'pending collected messages close with a supported durable state on %s',
+  async (action) => {
+    const fx = await fixture();
+    let pairing;
+    if (action === 'revoke') {
+      const role = await ordinaryRole(fx);
+      await fx.receive(fresh(dm('pending-pair')));
+      pairing = fx.core.externalMessaging.pairing.list('ada')[0]!;
+      fx.core.externalMessaging.pairing.review('ada', {
+        kind: 'approve',
+        id: pairing.id,
+        expectedRevision: pairing.revision,
+        roleId: role.id,
+        expectedRoleRevision: role.revision,
+      });
+    }
+    await fx.receive(fresh(mention('pending-bootstrap')));
+    const {
+      revision,
+      changedAt: _at,
+      ...preferences
+    } = fx.core.externalMessaging.defaults('feishu');
+    await fx.core.externalMessaging.setDefaults({
+      ...preferences,
+      expectedRevision: revision,
+      collection: 'all',
+      wake: 'digest',
+      count: 100,
+      intervalSeconds: 86400,
+    });
+    await fx.receive(fresh(mention('pending-collected', false)));
+    const source = fx.sourceId('om-pending-collected');
+    expect(
+      fx.query(`SELECT attempt_state FROM inbox_admissions WHERE source_event_id = '${source}'`),
+    ).toEqual([{ attempt_state: 'pending' }]);
+    const runs = fx.runs.length;
+    if (pairing)
+      fx.core.externalMessaging.pairing.review('ada', {
+        kind: 'revoke',
+        id: pairing.id,
+        expectedRevision: 2,
+      });
+    else await ordinaryRole(fx);
+    expect(
+      fx.query(
+        `SELECT attempt_state, wake_count, wake_interval_ms, ignored_at IS NOT NULL AS ignored FROM inbox_admissions WHERE source_event_id = '${source}'`,
+      ),
+    ).toEqual([{ attempt_state: 'handled', wake_count: null, wake_interval_ms: null, ignored: 1 }]);
+    await fx.restart();
+    expect(fx.runs).toHaveLength(runs);
+  },
+);
+
+it('automatic pairing acknowledges intake before a checked reply enters the Provider transition queue', async () => {
+  const fx = await fixture();
+  await ordinaryRole(fx);
+  let intakeReturned = false;
+  fx.prepareReply(async () => {
+    if (!intakeReturned) throw new Error('provider-transition-still-locked');
+  });
+  await fx.receive(fresh(dm('queue-fence')), () => {
+    intakeReturned = true;
+  });
+  expect(fx.replies).toHaveLength(1);
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]!.notifications?.[0]?.outcome).toBe(
+    'accepted',
+  );
+  expect(fx.admissions()).toEqual([]);
+});
+
+it('restricted chatting preserves explicit management pairing without granting ordinary chat eligibility', async () => {
+  const fx = await fixture();
+  await ordinaryRole(fx);
+  await fx.receive(fresh({ ...dm('management'), text: '/pair' }));
+  const management = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  expect(management.purpose ?? 'management').toBe('management');
+  await fx.core.externalMessaging.reviewPairing('ada', {
+    kind: 'approve',
+    id: management.id,
+    expectedRevision: management.revision,
+    capabilities: ['approve'],
+  });
+  expect(() =>
+    fx.core.externalMessaging.pairing.assert('ada', fx.identity.id, 'ou_owner', 'approve'),
+  ).not.toThrow();
+  await fx.receive(fresh(dm('still-needs-chat-role')));
+  expect(fx.runs).toEqual([]);
+  expect(fx.admissions()).toEqual([]);
+  expect(
+    fx.core.externalMessaging.pairing.list('ada').filter((item) => item.purpose === 'conversation'),
+  ).toMatchObject([{ status: 'pending', capabilities: [] }]);
+});
+
+it('chat review refuses a different Bot role and an outdated role revision', async () => {
+  const fx = await fixture();
+  const ownRole = await ordinaryRole(fx);
+  expect(fx.core.registry.create({ slug: 'grace', displayName: 'Grace' }).ok).toBe(true);
+  fx.core.externalMessaging.senderAccess('grace', {
+    kind: 'create-role',
+    name: 'Other Bot role',
+    behavior: 'Another Bot policy',
+  });
+  const foreignRole = (await fx.core.externalMessaging.snapshot('grace')).roles![0]!;
+  await fx.receive(fresh(dm('role-review')));
+  const request = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  for (const role of [foreignRole, { ...ownRole, revision: ownRole.revision + 1 }])
+    await expect(
+      fx.core.externalMessaging.reviewPairing('ada', {
+        kind: 'approve',
+        id: request.id,
+        expectedRevision: request.revision,
+        roleId: role.id,
+        expectedRoleRevision: role.revision,
+      }),
+    ).rejects.toThrow('role-stale');
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]!.status).toBe('pending');
+  expect(fx.runs).toEqual([]);
+});
 
 it('a bound Lark app admits a DM to the Inbox with no saved target and replies in the same DM', async () => {
   const fx = await fixture();
@@ -721,6 +1484,117 @@ async function grantFor(fx: Awaited<ReturnType<typeof fixture>>, conversation: s
   )!;
 }
 
+it('explicit open groups admit visitors without powers, close to reviewed pairing, and preserve scope across restart', async () => {
+  const fx = await fixture();
+  await fx.receive(fresh(mention('open-bootstrap')));
+  await ordinaryRole(fx);
+  const grant = await grantFor(fx, 'oc_team');
+  const open = { kind: 'open-group' as const, grantId: grant.id, expectedRevision: 0, open: true };
+  await fx.core.externalMessaging.conversation('ada', open);
+  await expect(fx.core.externalMessaging.conversation('ada', open)).rejects.toThrow(
+    'conversation-stale',
+  );
+  await expect(fx.core.externalMessaging.conversation('other-bot', open)).rejects.toThrow();
+  await fx.receive(fresh(asActor(mention('visitor-open'), 'ou_visitor')));
+  const source = fx.sourceId('om-visitor-open');
+  expect(fx.core.externalMessaging.senderPermissions('ada', source)).toMatchObject({
+    status: 'visitor',
+  });
+  expect(fx.core.externalMessaging.senderPermissions('ada', source).role).toBeUndefined();
+  expect(fx.core.externalMessaging.pairing.list('ada')).toHaveLength(0);
+  expect(() =>
+    fx.core.externalMessaging.pairing.assert('ada', fx.identity.id, 'ou_visitor', 'approve'),
+  ).toThrow();
+  await fx.core.externalMessaging.reply('ada', source, 'Visitor answer');
+  await fx.settle();
+  expect(fx.replies.at(-1)?.route.conversationId).toBe('oc_team');
+  await fx.core.externalMessaging.conversation('ada', {
+    ...open,
+    expectedRevision: 1,
+    open: false,
+  });
+  const runs = fx.runs.length;
+  await fx.receive(fresh(asActor(mention('visitor-closed'), 'ou_visitor')));
+  expect(fx.runs).toHaveLength(runs);
+  expect(fx.core.externalMessaging.pairing.list('ada')[0]?.status).toBe('pending');
+  await fx.core.externalMessaging.conversation('ada', { ...open, expectedRevision: 2 });
+  await fx.restart();
+  await fx.receive(fresh(asActor(mention('visitor-reopened'), 'ou_visitor')));
+  expect(fx.runs.length).toBe(runs + 1);
+  await fx.receive(fresh(asActor(dm('visitor-dm'), 'ou_visitor')));
+  expect(fx.runs.length).toBe(runs + 1);
+  await fx.core.externalMessaging.conversation('ada', {
+    kind: 'block',
+    grantId: grant.id,
+    expectedRevision: grant.revision,
+  });
+  await expect(
+    fx.core.externalMessaging.conversation('ada', { ...open, expectedRevision: 3 }),
+  ).rejects.toThrow();
+  await fx.receive(fresh(asActor(mention('visitor-blocked'), 'ou_visitor')));
+  expect(fx.runs.length).toBe(runs + 1);
+});
+
+it('unpaired collected authors remain context-only and cannot fill a paired digest threshold', async () => {
+  const fx = await fixture();
+  await fx.receive(fresh(mention('passive-bootstrap')));
+  const role = await ordinaryRole(fx);
+  await fx.receive(fresh(dm('paired-person')));
+  const pairing = fx.core.externalMessaging.pairing.list('ada')[0]!;
+  fx.core.externalMessaging.pairing.review('ada', {
+    kind: 'approve',
+    id: pairing.id,
+    expectedRevision: pairing.revision,
+    roleId: role.id,
+    expectedRoleRevision: role.revision,
+  });
+  const grant = await grantFor(fx, 'oc_team');
+  await fx.receive(fresh(mention('verify-ordinary-delivery', false)));
+  await fx.core.externalMessaging.inbound.setPolicy(
+    'ada',
+    grant.id,
+    {
+      inheritance: 'custom',
+      expectedRevision: 0,
+      expectedDefaultRevision: 0,
+      collection: 'all',
+      wake: 'digest',
+      count: 2,
+      intervalSeconds: 86400,
+    },
+    { kind: 'human' },
+  );
+  const runs = fx.runs.length;
+  for (let n = 0; n < 6; n++)
+    await fx.receive(fresh(asActor(mention(`passive-${n}`, false), 'ou_visitor')));
+  expect(fx.runs).toHaveLength(runs);
+  expect(fx.core.externalMessaging.pairing.list('ada')).toHaveLength(1);
+  expect(
+    fx.query(
+      "SELECT wake_mode, wake_count, wake_interval_ms FROM inbox_admissions WHERE source_policy_wake_mode = 'context'",
+    ),
+  ).toHaveLength(6);
+  for (const row of fx.query(
+    "SELECT wake_count, wake_interval_ms FROM inbox_admissions WHERE source_policy_wake_mode = 'context'",
+  ))
+    expect(row).toMatchObject({ wake_count: null, wake_interval_ms: null });
+  await fx.receive(fresh(mention('one-eligible', false)));
+  expect(fx.runs).toHaveLength(runs);
+  await fx.restart();
+  expect(fx.runs).toHaveLength(runs);
+  await fx.receive(fresh(mention('eligible-question')));
+  expect(fx.runs.length).toBe(runs + 1);
+  expect(fx.runs.at(-1)?.inbox).toContain('chatter passive-0');
+  expect(fx.runs.at(-1)?.inbox).toContain('ou_visitor');
+  expect(fx.runs.at(-1)?.inbox).not.toContain(role.behavior);
+  expect(
+    fx.core.externalMessaging.senderPermissions('ada', fx.sourceId('om-passive-0')),
+  ).toMatchObject({ status: 'unpaired' });
+  expect(
+    fx.core.externalMessaging.senderPermissions('ada', fx.sourceId('om-eligible-question')),
+  ).toMatchObject({ status: 'paired', role: { id: role.id } });
+});
+
 it('blocking an entry stops admission and survives restart and rebind; allowing again admits only new messages', async () => {
   const fx = await fixture();
   await fx.receive(mention('ask'));
@@ -833,6 +1707,44 @@ it('QQ blocking during native preparation fences dispatch through replyChecked',
   expect((await fx.core.externalMessaging.snapshot('ada')).blockedConversations).toHaveLength(1);
 });
 
+it('editing a proactive quota preserves a prepared source reply and its exclusive receiver', async () => {
+  const fx = await fixture('qq');
+  await fx.receive(qqMention('quota-reply'));
+  let prepared!: () => void;
+  let resume!: () => void;
+  const preparing = new Promise<void>((resolve) => {
+    prepared = resolve;
+  });
+  const gate = new Promise<void>((resolve) => {
+    resume = resolve;
+  });
+  fx.prepareReply(async () => {
+    prepared();
+    await gate;
+  });
+  const pending = fx.core.externalMessaging.reply(
+    'ada',
+    fx.sourceId('om-quota-reply'),
+    'Still reply',
+  );
+  await preparing;
+  const subscriptions = fx.subscriptions;
+  try {
+    const updated = await fx.core.externalMessaging.setPostLimit(
+      'ada',
+      fx.identity.id,
+      fx.identity.postLimitRevision!,
+      1,
+    );
+    expect(updated.revision).toBe(fx.identity.revision);
+    expect(fx.subscriptions).toBe(subscriptions);
+  } finally {
+    resume();
+  }
+  expect((await pending).state).toBe('provider-accepted');
+  expect(fx.replies).toMatchObject([{ text: 'Still reply' }]);
+});
+
 it('a muted entry is admitted silently without a run and can still be answered', async () => {
   const fx = await fixture();
   await fx.receive(mention('ask'));
@@ -895,6 +1807,48 @@ it('ask mode holds a new conversation without a Source Event until it is allowed
   expect(fx.admissions()).toEqual([]);
   await fx.receive({ ...mention('third'), at: new Date(Date.now() + 1000).toISOString() });
   expect(fx.admissions()).toEqual([{ reason: 'group-mention', messageId: 'om-third' }]);
+});
+
+it('a held conversation permits an explicit reachable post without replaying held traffic', async () => {
+  const fx = await fixture();
+  const describeBot = fx.service.describeBot;
+  fx.service.reachableConversationVersion = 1;
+  fx.service.describeBot = async (botId) => {
+    const description = await describeBot!(botId);
+    return {
+      ...description,
+      capabilities: [...description.capabilities, 'reachable-conversations-checked'],
+    };
+  };
+  fx.service.listReachableConversations = async () => ({
+    version: 1,
+    conversations: [{ id: 'oc_team', kind: 'group', name: 'Team' }],
+    hasMore: false,
+  });
+  const posts: string[] = [];
+  fx.service.postConversationChecked = async (_account, conversationId, text, options) => {
+    expect(options.beforeSend()).toBe(true);
+    posts.push(text);
+    return { sent: true, receipt: { version: 1, messageId: 'om_explicit', conversationId } };
+  };
+  fx.replaceProvider();
+  await fx.settle();
+  await fx.update({ newConversations: 'ask' });
+  await fx.receive(mention('held'));
+  expect((await fx.core.externalMessaging.snapshot('ada')).heldConversations).toHaveLength(1);
+  expect(
+    await fx.core.externalMessaging.postConversation(
+      'ada',
+      fx.identity.id,
+      'oc_team',
+      'explicit-held-post',
+      'Explicit report',
+    ),
+  ).toMatchObject({ state: 'provider-accepted' });
+  expect(posts).toEqual(['Explicit report']);
+  expect(fx.query('SELECT count(*) AS n FROM source_events')).toEqual([{ n: 0 }]);
+  expect(fx.admissions()).toEqual([]);
+  expect(fx.runs).toEqual([]);
 });
 
 it('blocking a held conversation keeps it out of the Inbox', async () => {

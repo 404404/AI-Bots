@@ -2,6 +2,7 @@ import { driver } from 'driver.js';
 
 export interface InternalTourSpec {
   selector: string;
+  fallback?: string;
   title: string;
   description: string;
 }
@@ -14,10 +15,12 @@ export interface InternalTourStep {
 
 export interface InternalTourOptions {
   closeLabel: string;
-  skipLabel: string;
+  skipLabel?: string;
   previousLabel: string;
   nextLabel: string;
   doneLabel: string;
+  doneIcon?: 'done' | 'next';
+  progress?: { offset: number; total?: number };
   onClosed(): void;
   onFinished(): void;
   onSkip(): void;
@@ -26,9 +29,9 @@ export interface InternalTourOptions {
 const FIRST_STEP_TIMEOUT_MS = 4000;
 
 const TOUR_ICON_PATHS = {
-  previous: 'M10 4L6.70711 7.29289C6.31658 7.68342 6.31658 8.31658 6.70711 8.70711L10 12',
-  next: 'M6 12L9.29289 8.70711C9.68342 8.31658 9.68342 7.68342 9.29289 7.29289L6 4',
-  done: 'M2.25 8.5L5.49732 11.7473C5.90519 12.1552 6.57263 12.1344 6.95426 11.7018L13.75 4',
+  previous: 'm15 18-6-6 6-6',
+  next: 'm9 18 6-6-6-6',
+  done: 'm16 9-5.5 5.5L8 12',
 };
 
 function setNavigationIcon(
@@ -38,18 +41,30 @@ function setNavigationIcon(
   pathData: string,
 ): void {
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('viewBox', '0 0 24 24');
   svg.setAttribute('width', '16');
   svg.setAttribute('height', '16');
   svg.setAttribute('fill', 'none');
   svg.setAttribute('aria-hidden', 'true');
   const path = doc.createElementNS('http://www.w3.org/2000/svg', 'path');
+  if (pathData === TOUR_ICON_PATHS.done) {
+    const circle = doc.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', '12');
+    circle.setAttribute('cy', '12');
+    circle.setAttribute('r', '10');
+    circle.setAttribute('stroke', 'currentColor');
+    circle.setAttribute('stroke-width', '2');
+    svg.append(circle);
+  }
   path.setAttribute('d', pathData);
   path.setAttribute('stroke', 'currentColor');
-  path.setAttribute('stroke-width', '1');
+  path.setAttribute('stroke-width', '2');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
   svg.append(path);
   button.replaceChildren(svg);
   button.classList.add('bh-internal-tour-navigation');
+  button.classList.toggle('bh-internal-tour-done', pathData === TOUR_ICON_PATHS.done);
   button.setAttribute('aria-label', label);
   button.title = label;
 }
@@ -60,7 +75,9 @@ export function resolveTourSteps(
 ): InternalTourStep[] {
   const steps: InternalTourStep[] = [];
   for (const spec of specs) {
-    const element = doc.querySelector(spec.selector);
+    const element =
+      doc.querySelector(spec.selector) ??
+      (spec.fallback === undefined ? null : doc.querySelector(spec.fallback));
     if (element !== null) steps.push({ element, title: spec.title, description: spec.description });
   }
   return steps;
@@ -89,7 +106,13 @@ export function startInternalTour(
     if (started) return;
     if (!allowPartial && doc.querySelector(first.selector) === null) return;
     const steps = resolveTourSteps(doc, specs);
-    if (steps.length === 0) return;
+    if (steps.length === 0) {
+      if (allowPartial) {
+        stopWaiting();
+        options.onClosed();
+      }
+      return;
+    }
     started = true;
     stopWaiting();
     const escape = (event: KeyboardEvent): void => {
@@ -141,6 +164,10 @@ export function startInternalTour(
         popover.wrapper.setAttribute('role', 'dialog');
         popover.wrapper.setAttribute('aria-label', tour?.getActiveStep()?.popover?.title ?? '');
         popover.closeButton.setAttribute('aria-label', options.closeLabel);
+        const progress = options.progress;
+        const index = tour?.getActiveIndex();
+        if (progress !== undefined && index !== undefined)
+          popover.progress.textContent = `${index + 1 + progress.offset} / ${progress.total ?? progress.offset + steps.length}`;
         setNavigationIcon(
           doc,
           popover.previousButton,
@@ -152,13 +179,17 @@ export function startInternalTour(
           doc,
           popover.nextButton,
           lastStep ? options.doneLabel : options.nextLabel,
-          lastStep ? TOUR_ICON_PATHS.done : TOUR_ICON_PATHS.next,
+          lastStep && options.doneIcon !== 'next' ? TOUR_ICON_PATHS.done : TOUR_ICON_PATHS.next,
         );
-        if (popover.footerButtons.querySelector('.bh-internal-tour-skip') === null) {
+        const skipLabel = options.skipLabel;
+        if (
+          skipLabel !== undefined &&
+          popover.footerButtons.querySelector('.bh-internal-tour-skip') === null
+        ) {
           const skip = doc.createElement('button');
           skip.type = 'button';
           skip.className = 'bh-internal-tour-skip';
-          skip.textContent = options.skipLabel;
+          skip.textContent = skipLabel;
           skip.addEventListener('click', () => {
             options.onSkip();
             tour?.destroy();

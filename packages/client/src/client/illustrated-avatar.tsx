@@ -154,6 +154,7 @@ export function IllustratedAvatar({
   surface = 'portrait',
   still = false,
   mouth = 'saved',
+  facing,
 }: {
   personaBotId: string;
   recipe: AvatarRecipe;
@@ -164,21 +165,28 @@ export function IllustratedAvatar({
   mouth?: PixelMouthState | undefined;
   surface?: 'portrait' | 'companion' | undefined;
   still?: boolean | undefined;
+  facing?: 'front' | 'left' | 'right' | undefined;
 }): ReactElement {
   const blinkTiming = useMemo(() => {
     const random = seededRandom(`botharness-blink:${personaBotId}`);
     return { duration: 4400 + random() * 1600, phase: random() * 0.75 };
   }, [personaBotId]);
   const speech = surface === 'companion' && recipe.family === 'illustrated';
-  const turning = !still && state === 'thinking' && size > 64;
+  const turning =
+    !still && facing === undefined && (state === 'thinking' || state === 'working') && size > 64;
   const markup = useMemo(
     () =>
-      avatarSvg(recipe, {
-        surface,
-        mouthLayers: speech,
-        ...(turning ? { turns: AVATAR_TURNS } : {}),
-      }),
-    [recipe, turning, surface, speech],
+      avatarSvg(
+        facing !== undefined && recipe.family === 'illustrated' && recipe.pose !== facing
+          ? { ...recipe, pose: facing }
+          : recipe,
+        {
+          surface,
+          mouthLayers: speech,
+          ...(turning ? { turns: AVATAR_TURNS } : {}),
+        },
+      ),
+    [recipe, facing, turning, surface, speech],
   );
   const line = useRef<LineShown>({ velocity: 0, since: 0 });
   const pixel = useRef<PixelShown>({ since: 0 });
@@ -428,7 +436,7 @@ export function IllustratedAvatar({
             }
             const turns = [...node.querySelectorAll<SVGGElement>('[data-avatar-turn]')];
             const body = node.querySelector<SVGGElement>('.bh-illustrated-body');
-            if (turns.length && body) {
+            if (state === 'thinking' && turns.length && body) {
               const schedule = turnSchedule((markup.length % 97) / 15.4);
               const frames = (delta: number): Keyframe[] =>
                 schedule.map((value, index) => ({

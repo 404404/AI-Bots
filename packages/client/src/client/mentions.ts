@@ -51,7 +51,7 @@ export function activeMentionQuery(
   mentions: readonly SelectedMention[],
 ): MentionQuery | undefined {
   const start = value.lastIndexOf('@', caret - 1);
-  if (start < 0 || caret - start > 34 || (start > 0 && !/[\s([{]/u.test(value[start - 1]!)))
+  if (start < 0 || caret - start > 34 || (start > 0 && /[A-Za-z0-9._%+-]/u.test(value[start - 1]!)))
     return undefined;
   const query = value.slice(start + 1, caret);
   if (/[\n\r@#]/u.test(query)) return undefined;
@@ -81,6 +81,24 @@ export function selectMention(
     mentions: [...rebased, selected].sort((a, b) => a.start - b.start),
     caret: selected.end + trailing.length,
   };
+}
+
+export function appendMention(
+  value: string,
+  mentions: readonly SelectedMention[],
+  botSlug: string,
+  label: string,
+): { value: string; mentions: SelectedMention[]; caret: number } {
+  if (mentions.some((item) => item.botSlug === botSlug))
+    return { value, mentions: [...mentions], caret: value.length };
+  const spaced = value.length === 0 || /\s$/u.test(value) ? value : value + ' ';
+  return selectMention(
+    spaced,
+    mentions,
+    { start: spaced.length, end: spaced.length, query: '' },
+    botSlug,
+    label,
+  );
 }
 
 export function mentionRuns(

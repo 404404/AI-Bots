@@ -7,6 +7,7 @@ import {
   verifyProductComposition,
   parseProductComposition,
 } from './packaged-profile.mjs';
+import { productDsh } from './product-artifacts.mjs';
 import {
   qualifiedImProvider,
   withQualifiedImProvider,
@@ -31,6 +32,7 @@ import {
   assertInstalledGoModel,
   axModelPatch,
   axRuntimeWorkspace,
+  goSessionQualified,
 } from './dev-model.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -65,6 +67,7 @@ function parseArgs(argv) {
     imProvider: false,
     productArtifacts: null,
     json: false,
+    trustedHosts: [],
     clientDiagnostics: process.env['BOTHARNESS_CLIENT_DIAGNOSTICS'] !== '0',
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -89,6 +92,11 @@ function parseArgs(argv) {
         break;
       case '--build':
         options.build = true;
+        break;
+      case '--trusted-host':
+        if (!next) throw new Error('--trusted-host needs a host or host:port authority');
+        options.trustedHosts.push(next);
+        index += 1;
         break;
       case '--im-provider':
         options.imProvider = true;
@@ -159,8 +167,8 @@ function ensureProfile(options) {
     );
   }
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (options.productArtifacts && installedDshVersion(runtime) !== '0.2.0-rc.1')
-    throw new Error('Qualified product artifacts require DSH 0.2.0-rc.1');
+  if (options.productArtifacts && installedDshVersion(runtime) !== productDsh)
+    throw new Error(`Qualified product artifacts require DSH ${productDsh}`);
   const base = options.productArtifacts
     ? packagedProfileManifest(manifest, options.productArtifacts)
     : developmentProfileManifest(manifest, options.worktree);
@@ -224,6 +232,7 @@ function launch(options) {
       ...(options.modelPatch ? ['--patch', options.modelPatch] : []),
       '--port',
       String(options.port),
+      ...options.trustedHosts.flatMap((host) => ['--trusted-host', host]),
       '--no-open',
     ],
     { env, cwd: runtime, detached: true, stdio: ['ignore', logFd, logFd] },
@@ -289,8 +298,10 @@ async function main() {
       : JSON.parse(readFileSync(join(options.worktree, 'package.json'), 'utf8')).devDependencies[
           '@deepseek-ai/dsh'
         ];
-    if (options.axModel && version !== '0.2.0-rc.1')
-      throw new Error('AX Go session qualification requires DSH 0.2.0-rc.1');
+    if (options.axModel && !goSessionQualified(version, options.productArtifacts !== null))
+      throw new Error(
+        'AX Go session qualification requires DSH 0.2.0-rc.2, or 0.2.0-rc.1 with product artifacts',
+      );
     options.runtime = join(options.home, options.productArtifacts ? 'packaged-cli' : 'ax-cli');
     mkdirSync(options.runtime, { recursive: true });
     const runtimeWorkspace = join(options.runtime, 'pnpm-workspace.yaml');
@@ -300,7 +311,10 @@ async function main() {
         "packages: [.]\nallowBuilds:\n  '@deepseek-ai/dsh-subprocess-local': true\n  '@google/genai': false\n  koffi: true\n  node-pty: true\n  protobufjs: false\n",
       );
     if (options.axModel)
-      writeFileSync(runtimeWorkspace, axRuntimeWorkspace(readFileSync(runtimeWorkspace, 'utf8')));
+      writeFileSync(
+        runtimeWorkspace,
+        axRuntimeWorkspace(readFileSync(runtimeWorkspace, 'utf8'), options.runtime, version),
+      );
     writeFileSync(
       join(options.runtime, 'package.json'),
       `${JSON.stringify({ name: 'botharness-isolated-cli-qa', private: true, devDependencies: { '@deepseek-ai/dsh': version } }, null, 2)}\n`,

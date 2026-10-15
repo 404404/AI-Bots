@@ -4,8 +4,10 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
   type ReactElement,
 } from 'react';
+import * as stylex from '@stylexjs/stylex';
 import {
   Menu,
   IconEllipsisOutlineRegular,
@@ -13,7 +15,7 @@ import {
   IconNewChatOutlineRegular,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
-import { PersonaBotAvatar, personaBotPresentationSummary } from './avatar.js';
+import { PersonaBotAvatar } from './avatar.js';
 import { attentionCount } from './activity-attention.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { BotHarnessTranslate } from './locale.js';
@@ -21,12 +23,141 @@ import type { CompanionBot } from '../../../core/src/companions/feed.js';
 import type { CompanionViewState, WindowCompanion } from './window-companion.js';
 import { CompanionMotion, type CompanionPoint } from './companion-motion.js';
 import { CompanionBubbles, type BubblePlacement } from './companion-bubbles.js';
+import { CompanionFrames, type CompanionFrameTask } from './companion-frames.js';
 import { isAvatarAppearance } from '../../../core/src/bots/avatar-appearance.js';
 import { companionMessageIdentity } from '../../../core/src/companions/sources.js';
 import { companionBabble, type CompanionSound } from './companion-sound.js';
 import type { BridgeActions } from './actions.js';
 import { CompanionRequests } from './companion-requests-view.js';
+import { beatStart } from './companion-beats.js';
 import type { AvatarAnchor } from './avatar-anchor.js';
+import { companionSurface } from './companion-surface.js';
+import { hooked } from './ds/hooked.js';
+import { border, color, radius, size, space, text } from './ds/tokens.stylex.js';
+
+const CHARACTER = '96px';
+const SHADOW = `color-mix(in srgb, ${color.fg} 16%, transparent)`;
+
+const styles = stylex.create({
+  stage: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    pointerEvents: 'none',
+    overflow: 'clip',
+  },
+  companion: {
+    position: 'absolute',
+    width: CHARACTER,
+    height: CHARACTER,
+    pointerEvents: 'auto',
+  },
+  tether: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    overflow: 'visible',
+    pointerEvents: 'none',
+  },
+  tetherPath: {
+    fill: 'none',
+    stroke: color.fg,
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    strokeDasharray: '0 6',
+  },
+  bubble: {
+    paddingBlock: space.x3,
+    paddingInline: space.x4,
+  },
+  source: {
+    display: 'flex',
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    flexDirection: 'column',
+    minWidth: 0,
+    gap: space.x1,
+  },
+  context: {
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+  },
+  headerButton: {
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    color: color.muted,
+    fontSize: text.metaSize,
+    cursor: { default: 'pointer', ':disabled': 'default' },
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+  },
+  sourceButton: {
+    textAlign: 'left',
+    lineHeight: text.metaLine,
+  },
+  toolbar: {
+    position: 'absolute',
+    bottom: space.x3,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: space.x1,
+    padding: space.x2,
+    backgroundColor: color.base,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.fg,
+    borderRadius: radius.panel,
+    boxShadow: `0 6px 16px ${SHADOW}`,
+  },
+  tool: {
+    display: 'grid',
+    placeItems: 'center',
+    minWidth: size.icon,
+    height: size.inlineIcon,
+    borderWidth: 0,
+    borderRadius: radius.sm,
+    backgroundColor: { default: 'transparent', ':hover': color.hover },
+    color: color.fg,
+    cursor: 'pointer',
+  },
+  attention: {
+    position: 'absolute',
+    zIndex: 2,
+    right: space.x2,
+    top: space.x2,
+    minWidth: '20px',
+    height: '20px',
+    paddingBlock: 0,
+    paddingInline: space.x1,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.border,
+    backgroundColor: color.base,
+    color: color.warning,
+    cursor: 'pointer',
+  },
+  character: {
+    width: CHARACTER,
+    height: CHARACTER,
+    padding: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    cursor: { default: 'grab', ':active': 'grabbing' },
+    touchAction: 'none',
+  },
+});
 
 function avatarLimitation(
   bot: CompanionBot | undefined,
@@ -35,19 +166,35 @@ function avatarLimitation(
   if (bot?.avatar && !bot.appearance) return 'imageOnly';
   return;
 }
-const statusVisible = (state: CompanionViewState): boolean =>
-  Boolean(
-    (state.selection?.activity && state.activity && state.activity.state !== 'idle') ||
-    state.bot?.paused ||
-    avatarLimitation(state.bot) ||
-    state.sync !== 'live',
-  );
+const speaking = (state: CompanionViewState): boolean =>
+  state.cards.length > 0 || state.requests.length > 0;
 
-function CompanionMessageText({ text, context }: { text: string; context: boolean }): ReactElement {
+const tails = new Set<HTMLElement>();
+const followTails = (): void => {
+  const targets = [...tails]
+    .filter((node) => node.isConnected)
+    .map((node) => [node, Math.max(0, node.scrollHeight - node.clientHeight)] as const);
+  tails.clear();
+  for (const [node, top] of targets) node.scrollTop = top;
+};
+const followTail = (node: HTMLElement): void => {
+  if (!tails.size) queueMicrotask(followTails);
+  tails.add(node);
+};
+
+function CompanionMessageText({
+  text,
+  context,
+  typing,
+}: {
+  text: string;
+  context: boolean;
+  typing: boolean;
+}): ReactElement {
   const following = useRef(true);
   const viewport = useMountedResource<HTMLParagraphElement>(
     (node) => {
-      if (following.current) node.scrollTop = Math.max(0, node.scrollHeight - node.clientHeight);
+      if (following.current) followTail(node);
     },
     [text, context],
   );
@@ -62,6 +209,7 @@ function CompanionMessageText({ text, context }: { text: string; context: boolea
       }}
     >
       {text}
+      {typing ? <span className="bh-companion-caret" aria-hidden="true" /> : null}
     </p>
   );
 }
@@ -74,6 +222,7 @@ export interface WindowCompanionViewProps {
   t: BotHarnessTranslate;
   onRemove?(botId: string): void;
   bubbles?: CompanionBubbles | undefined;
+  frames?: CompanionFrames | undefined;
   openSettings?(): void;
   sound?: CompanionSound | undefined;
   actions?: BridgeActions | undefined;
@@ -86,6 +235,7 @@ export function WindowCompanionView({
   t,
   onRemove,
   bubbles,
+  frames,
   openSettings,
   sound,
   actions,
@@ -124,6 +274,8 @@ export function WindowCompanionView({
   }, []);
   const [localBubbles] = useState(() => new CompanionBubbles());
   const bubbleOwner = bubbles ?? localBubbles;
+  const [localFrames] = useState(() => new CompanionFrames());
+  const frameOwner = frames ?? localFrames;
   const [bubble, setBubble] = useState<BubblePlacement | undefined>(undefined);
   const root = useRef<HTMLDivElement | null>(null);
   const character = useRef<HTMLButtonElement | null>(null);
@@ -141,6 +293,7 @@ export function WindowCompanionView({
     | undefined
   >(undefined);
   const direction = useRef(1);
+  const [stride, setStride] = useState<'left' | 'right' | undefined>(undefined);
   const hovering = useRef(false);
   const exit = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clickReset = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -216,7 +369,6 @@ export function WindowCompanionView({
   const mount = useMountedResource<HTMLDivElement>(
     (node) => {
       root.current = node;
-      let frame = 0;
       let previous = performance.now();
       let elapsed = 0;
       let measured = false;
@@ -232,18 +384,14 @@ export function WindowCompanionView({
       const placeBubble = (next: CompanionPoint, sampled: ReturnType<AvatarAnchor['read']>) => {
         const state = latest.current;
         if (state.selection) {
-          if (statusVisible(state) || state.cards.length || state.requests.length) {
+          if (speaking(state)) {
             const placement = bubbleOwner.place(
               state.selection.botId,
               next.x,
               next.y,
               next.width,
               viewport.current.height,
-              state.requests.length
-                ? 4
-                : state.reading
-                  ? state.cards.length
-                  : Math.min(state.cards.length, state.capacity.layers),
+              state.requests.length ? 4 : 1,
               state.reading || state.requests.length > 0,
               sampled
                 ? {
@@ -296,8 +444,8 @@ export function WindowCompanionView({
         }
         presentPoint.current(next);
       };
+      let sampled: ReturnType<AvatarAnchor['read']>;
       const tick = (now: number) => {
-        frame = 0;
         const milliseconds = Math.max(0, now - previous);
         const motionMilliseconds = Math.max(0, now - motionFrameAt.current);
         motionFrameAt.current = now;
@@ -322,34 +470,42 @@ export function WindowCompanionView({
             state.bot?.paused !== true &&
             state.sync === 'live' &&
             !state.reading &&
+            !speaking(state) &&
             motion.point.phase === 'rest' &&
             !pointer.current &&
             !reduced,
           );
           const previousPoint = motion.point;
-          const sampled =
-            statusVisible(state) || state.cards.length || state.requests.length
-              ? anchor.current?.read()
-              : undefined;
           const next = motion.advance(motionMilliseconds, reduced, walking, direction.current);
           placeBubble(next, sampled);
           if (walking && (next.x <= 8 || next.x >= Math.max(8, next.width - 104)))
             direction.current *= -1;
+          setStride(walking ? (direction.current > 0 ? 'right' : 'left') : undefined);
           if (next !== previousPoint) setPoint(next);
           if (previousPoint.phase !== 'rest' && next.phase === 'rest') persistPosition();
         }
-        if (!document.hidden && stageVisible) frame = requestAnimationFrame(tick);
+        sampled = undefined;
+        if (document.hidden || !stageVisible) frameOwner.stop(task);
+      };
+      const task: CompanionFrameTask = {
+        read: () => {
+          const state = latest.current;
+          sampled =
+            !document.hidden && stageVisible && speaking(state)
+              ? anchor.current?.read()
+              : undefined;
+        },
+        write: tick,
       };
       const visibility = () => {
         audible.current = !document.hidden && stageVisible && visible;
         if (document.hidden || !stageVisible || !visible)
           sound?.stop(latest.current.selection?.botId);
-        cancelAnimationFrame(frame);
-        frame = 0;
+        frameOwner.stop(task);
         previous = performance.now();
         motionFrameAt.current = previous;
         elapsed = 0;
-        if (!document.hidden && stageVisible) frame = requestAnimationFrame(tick);
+        if (!document.hidden && stageVisible) frameOwner.start(task);
       };
       const observer =
         typeof IntersectionObserver === 'undefined'
@@ -382,7 +538,7 @@ export function WindowCompanionView({
         audible.current = false;
         unsubscribeAudio();
         sound?.stop(latest.current.selection?.botId ?? view.selection?.botId);
-        cancelAnimationFrame(frame);
+        frameOwner.stop(task);
         observer?.disconnect();
         policy.disconnect();
         window.removeEventListener('resize', measure);
@@ -395,7 +551,22 @@ export function WindowCompanionView({
         root.current = null;
       };
     },
-    [companion, view.selection?.botId, bubbleOwner, sound],
+    [companion, view.selection?.botId, bubbleOwner, frameOwner, sound],
+  );
+  const popKey = view.cards[0] ? view.cards[0].channelId + '\n' + view.cards[0].messageId : '';
+  const pop = useMountedResource<HTMLElement>(
+    (node) => {
+      if (!popKey || reducedMotion() || typeof node.animate !== 'function') return;
+      const animation = node.animate(
+        [
+          { transform: 'scale(.5)', opacity: 0 },
+          { transform: 'none', opacity: 1 },
+        ],
+        { duration: 260, easing: 'cubic-bezier(.3, 1.5, .5, 1)' },
+      );
+      return () => animation.cancel();
+    },
+    [popKey],
   );
   if (!view.selection || !view.bot) return null;
   const { selection, bot, activity } = view;
@@ -404,11 +575,6 @@ export function WindowCompanionView({
   const limitation = limitationKey ? t(`companion.${limitationKey}`) : undefined;
   const attention = activity?.attention;
   const items: MenuEntry[] = [
-    {
-      id: 'activity',
-      label: t('companion.activity'),
-      icon: <span aria-hidden="true">{selection.activity ? '✓' : ''}</span>,
-    },
     {
       id: 'dm',
       label: t('companion.dm'),
@@ -431,32 +597,58 @@ export function WindowCompanionView({
     ...(openSettings ? [{ id: 'settings', label: t('companion.settings') }] : []),
     { id: 'remove', label: t('companion.remove') },
   ];
-  const cards = view.reading ? view.cards : view.cards.slice(-view.capacity.layers);
+  const head = view.cards[0];
+  const queued = view.cards.length - 1 + view.pending;
+  const headIdentity = head ? companionMessageIdentity(head.channelId, head.messageId) : '';
+  const headContext = head
+    ? [
+        head.source === 'bot-dm' ? head.participants?.join(' ↔ ') : '',
+        head.canOpen === false || unavailable.has(headIdentity)
+          ? t('companion.sourceUnavailable')
+          : '',
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+  const condition =
+    [
+      view.sync !== 'live' ? t('companion.stale') : bot.paused ? t('companion.archived') : '',
+      limitation ?? '',
+    ]
+      .filter(Boolean)
+      .join(' · ') || undefined;
+  const facing = speaking(view) ? 'front' : stride;
   const bubbleLeft = bubble
     ? bubble.left - point.x
     : Math.max(-point.x + 8, Math.min(-108, point.width - point.x - 328));
-  const bubbleBottom = (bubble?.bottom ?? point.y + 134) - point.y;
+  const bubbleBottom = (bubble?.bottom ?? point.y + 100) - point.y;
   const connector =
-    bubble && (statusVisible(view) || view.cards.length || view.requests.length)
+    bubble && speaking(view)
       ? {
           x: Math.max(
-            bubble.left + 12,
-            Math.min(bubble.originX, bubble.left + Math.min(308, point.width - 28)),
+            bubble.left + 24,
+            Math.min(bubble.originX, bubble.left + Math.min(276, point.width - 40)),
           ),
-          y: viewport.current.height - bubble.bottom - (statusVisible(view) ? 0 : 40),
+          y: viewport.current.height - bubble.bottom,
         }
       : undefined;
+  const tail = connector && bubble ? connector.x - bubble.left : undefined;
+  const tethered =
+    connector !== undefined &&
+    bubble !== undefined &&
+    (bubble.bottom - bubble.originY > 24 || Math.abs(connector.x - bubble.originX) > 1);
   return (
-    <div ref={mount} className="bh-root bh-companion-stage">
-      {connector && bubble ? (
-        <svg className="bh-companion-tether" aria-hidden="true">
+    <div ref={mount} {...hooked('bh-root bh-companion-stage', styles.stage)}>
+      {tethered && connector && bubble ? (
+        <svg {...hooked('bh-companion-tether', styles.tether)} aria-hidden="true">
           <path
-            d={`M ${bubble.originX} ${viewport.current.height - bubble.originY} V ${connector.y + 8} H ${connector.x} V ${connector.y}`}
+            {...stylex.props(styles.tetherPath)}
+            d={`M ${bubble.originX} ${viewport.current.height - bubble.originY} V ${connector.y + 16} H ${connector.x} V ${connector.y + 10}`}
           />
         </svg>
       ) : null}
       <section
-        className="bh-companion"
+        {...hooked('bh-companion', styles.companion)}
         aria-label={t('companion.label', { name: bot.name })}
         data-bh-tour="companion"
         data-reading={view.reading}
@@ -464,6 +656,7 @@ export function WindowCompanionView({
         data-sync={view.sync}
         data-motion={point.phase}
         data-bot={bot.slug}
+        data-toolbar={point.x > point.width - 150 ? 'left' : 'right'}
         style={{
           left: 0,
           bottom: 0,
@@ -491,20 +684,6 @@ export function WindowCompanionView({
           if (!event.currentTarget.contains(event.relatedTarget)) leave();
         }}
       >
-        {statusVisible(view) ? (
-          <div
-            className="bh-companion-activity"
-            style={{ left: bubbleLeft, bottom: bubbleBottom }}
-            role="status"
-          >
-            {view.sync !== 'live'
-              ? t('companion.stale')
-              : bot.paused
-                ? t('companion.archived')
-                : personaBotPresentationSummary(state, activity?.activity, undefined, t)}
-            {limitation ? ` · ${limitation}` : null}
-          </div>
-        ) : null}
         {view.requests.length ? (
           <CompanionRequests
             requests={view.requests}
@@ -515,127 +694,108 @@ export function WindowCompanionView({
             restoreFocus={() => {
               if (character.current?.isConnected) character.current.focus();
             }}
-            style={{
-              left: bubbleLeft,
-              bottom: bubbleBottom + 40,
-              maxHeight:
-                bubble?.cardHeight ??
-                Math.min(
-                  448,
-                  Math.max(112, viewport.current.height - point.y - bubbleBottom - 40 - 16),
-                ),
-            }}
-          />
-        ) : view.cards.length ? (
-          <ol
-            className="bh-companion-cards"
-            aria-label={t('companion.messages')}
-            style={{
-              left: bubbleLeft,
-              bottom: bubbleBottom + 40,
-              height: view.reading
-                ? (bubble?.cardHeight ??
+            style={
+              {
+                left: bubbleLeft,
+                bottom: bubbleBottom,
+                ...(tail === undefined ? {} : { '--bh-companion-tail': `${tail}px` }),
+                maxHeight:
+                  bubble?.cardHeight ??
                   Math.min(
-                    cards.length * 112,
-                    Math.max(112, viewport.current.height - point.y - bubbleBottom - 40 - 16),
-                  ))
-                : 112,
-            }}
+                    448,
+                    Math.max(112, viewport.current.height - point.y - bubbleBottom - 16),
+                  ),
+              } as CSSProperties
+            }
+          />
+        ) : head ? (
+          <article
+            ref={pop}
+            {...hooked('bh-companion-bubble', companionSurface.speech, styles.bubble)}
+            aria-label={t('companion.messages')}
+            style={
+              {
+                left: bubbleLeft,
+                bottom: bubbleBottom,
+                ...(tail === undefined ? {} : { '--bh-companion-tail': `${tail}px` }),
+              } as CSSProperties
+            }
           >
-            {cards.map((card, index) => {
-              const identity = companionMessageIdentity(card.channelId, card.messageId);
-              const layer = cards.length - index - 1;
-              const context = [
-                card.source === 'bot-dm' ? card.participants?.join(' ↔ ') : '',
-                card.canOpen === false || unavailable.has(identity)
-                  ? t('companion.sourceUnavailable')
-                  : '',
-              ]
-                .filter(Boolean)
-                .join(' · ');
-              return (
-                <li
-                  key={identity}
-                  ref={(node) => {
-                    if (node) node.inert = !view.reading && layer !== 0;
+            <header {...stylex.props(companionSurface.header)}>
+              <div {...stylex.props(styles.source)}>
+                <button
+                  type="button"
+                  {...stylex.props(styles.headerButton, styles.sourceButton)}
+                  disabled={head.canOpen === false}
+                  title={head.canOpen === false ? t('companion.sourceUnavailable') : undefined}
+                  onClick={async () => {
+                    if (head.canOpen === false) return;
+                    try {
+                      await openChannel(head.channelId, head.messageId);
+                      setUnavailable(
+                        (prior) => new Set([...prior].filter((id) => id !== headIdentity)),
+                      );
+                    } catch {
+                      setUnavailable(
+                        (prior) =>
+                          new Set([...prior, headIdentity].slice(-view.capacity.retention)),
+                      );
+                    }
                   }}
-                  className="bh-companion-card"
-                  style={{
-                    top: view.reading ? index * 112 : 0,
-                    transform: view.reading
-                      ? 'none'
-                      : `translateY(${-layer * 8}px) scale(${1 - layer * 0.04})`,
-                    zIndex: view.reading ? 1 : index + 1,
-                  }}
-                  aria-hidden={!view.reading && layer !== 0}
                 >
-                  <header>
-                    <div className="bh-companion-source">
-                      <button
-                        type="button"
-                        disabled={card.canOpen === false}
-                        title={
-                          card.canOpen === false ? t('companion.sourceUnavailable') : undefined
-                        }
-                        onClick={async () => {
-                          if (card.canOpen === false) return;
-                          try {
-                            await openChannel(card.channelId, card.messageId);
-                            setUnavailable(
-                              (prior) => new Set([...prior].filter((id) => id !== identity)),
-                            );
-                          } catch {
-                            setUnavailable(
-                              (prior) =>
-                                new Set([...prior, identity].slice(-view.capacity.retention)),
-                            );
-                          }
-                        }}
-                      >
-                        {t(
-                          card.source === 'shared-group' || card.source === 'bot-group'
-                            ? 'companion.sourceGroup'
-                            : 'companion.source',
-                          { name: card.channelName },
-                        )}
-                      </button>
-                      {context && <small title={context}>{context}</small>}
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={t('companion.dismiss')}
-                      onClick={(event) => {
-                        if (document.activeElement === event.currentTarget) {
-                          const controls = [
-                            ...root.current!.querySelectorAll<HTMLButtonElement>(
-                              '.bh-companion-card header > button',
-                            ),
-                          ];
-                          const current = controls.indexOf(event.currentTarget);
-                          (
-                            controls[current + 1] ??
-                            controls[current - 1] ??
-                            character.current
-                          )?.focus();
-                        }
-                        companion.dismiss(card.messageId, card.channelId);
-                      }}
-                    >
-                      <IconCloseFillRegular size={14} />
-                    </button>
-                  </header>
-                  <CompanionMessageText
-                    text={card.body.slice(0, card.shown)}
-                    context={Boolean(context)}
-                  />
-                </li>
-              );
-            })}
-          </ol>
+                  {t(
+                    head.source === 'shared-group' || head.source === 'bot-group'
+                      ? 'companion.sourceGroup'
+                      : 'companion.source',
+                    { name: head.channelName },
+                  )}
+                </button>
+                {headContext && (
+                  <small
+                    {...stylex.props(companionSurface.label, styles.context)}
+                    title={headContext}
+                  >
+                    {headContext}
+                  </small>
+                )}
+              </div>
+              {queued > 0 ? (
+                <span
+                  {...hooked('bh-companion-queue', companionSurface.label, companionSurface.queue)}
+                  title={t('companion.queued', { count: queued })}
+                  aria-label={t('companion.queued', { count: queued })}
+                >
+                  +{queued}
+                </span>
+              ) : null}
+              <button
+                type="button"
+                {...stylex.props(styles.headerButton)}
+                aria-label={t('companion.dismiss')}
+                onClick={(event) => {
+                  if (document.activeElement === event.currentTarget && queued === 0)
+                    character.current?.focus();
+                  companion.dismiss(head.messageId, head.channelId);
+                }}
+              >
+                <IconCloseFillRegular size={14} />
+              </button>
+            </header>
+            <CompanionMessageText
+              text={
+                view.reading
+                  ? head.body.slice(0, head.shown)
+                  : head.body.slice(beatStart(head.beats, head.shown), head.shown).trim()
+              }
+              context={Boolean(headContext)}
+              typing={head.shown < head.body.length}
+            />
+          </article>
         ) : null}
-        <div className="bh-companion-toolbar" data-open={menu}>
+        <div {...hooked('bh-companion-toolbar', styles.toolbar)} data-open={menu}>
           <button
             type="button"
+            {...stylex.props(styles.tool)}
             aria-label={t('companion.openDm')}
             title={t('companion.openDm')}
             onClick={() => openDm(bot.slug)}
@@ -644,6 +804,7 @@ export function WindowCompanionView({
           </button>
           <button
             type="button"
+            {...stylex.props(styles.tool)}
             aria-label={t(selection.walking ? 'companion.pause' : 'companion.walk')}
             title={t(selection.walking ? 'companion.pause' : 'companion.walk')}
             aria-pressed={!selection.walking}
@@ -664,6 +825,7 @@ export function WindowCompanionView({
             anchor={
               <button
                 type="button"
+                {...stylex.props(styles.tool)}
                 aria-label={t('companion.more')}
                 aria-expanded={menu}
                 onClick={() => setMenu(!menu)}
@@ -683,7 +845,6 @@ export function WindowCompanionView({
                 if (onRemove) onRemove(bot.slug);
                 else companion.remove();
               }
-              if (id === 'activity') companion.configure({ activity: !selection.activity });
               if (id === 'dm') companion.configure({ dm: !selection.dm });
               if (id === 'group') companion.configure({ group: !selection.group });
               if (id === 'walking') companion.configure({ walking: !selection.walking });
@@ -693,12 +854,11 @@ export function WindowCompanionView({
               closeMenu();
             }}
           />
-          {view.pending ? <span role="status">+{view.pending}</span> : null}
         </div>
         {attentionCount(attention) > 0 || attention?.informationalCount ? (
           <button
             type="button"
-            className="bh-companion-attention"
+            {...hooked('bh-companion-attention', styles.attention)}
             aria-label={t('companion.attention')}
             onClick={openAttention}
           >
@@ -707,13 +867,16 @@ export function WindowCompanionView({
         ) : null}
         <button
           type="button"
-          className="bh-companion-character"
+          {...hooked('bh-companion-character', styles.character)}
           ref={character}
           style={{
             rotate: `${point.tilt}deg`,
             transform: `scale(${1 + point.squash}, ${1 - point.squash})`,
           }}
+          data-facing={facing ?? 'saved'}
           aria-label={t('companion.drag', { name: bot.name })}
+          aria-description={condition}
+          title={condition}
           onClick={() => {
             if (!suppressClick.current) openDm(bot.slug);
           }}
@@ -794,6 +957,7 @@ export function WindowCompanionView({
             surface="companion"
             anchorRef={anchorRef}
             mouth={view.mouth}
+            facing={facing}
             indicator={false}
             still={bot.paused}
             t={t}

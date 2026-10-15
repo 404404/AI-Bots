@@ -26,6 +26,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconPaperclipOutlineRegular: () => null,
   IconSendOutlineRegular: () => null,
   ImageLightbox: () => null,
+  fileSizeText: (size: number) => `${size} B`,
 }));
 
 import {
@@ -254,10 +255,10 @@ describe('Channel composer', () => {
       }),
     );
 
-    expect(markup).toContain('class="bh-composer-image-attachment"');
+    expect(markup).toContain('class="bh-composer-attachment-card bh-composer-image-attachment"');
     expect(markup).toContain('class="bh-composer-image-preview"');
     expect(markup).toContain('aria-haspopup="dialog"');
-    expect(markup).toContain('class="bh-composer-file-attachment"');
+    expect(markup).toContain('class="bh-composer-attachment-card bh-composer-file-attachment"');
     expect(markup).toContain(
       'data-file-type-icon="a-very-long-report-name-that-needs-truncation.docx"',
     );
@@ -286,6 +287,36 @@ describe('Channel composer', () => {
     expect(key({ isComposing: true })).toBe(false);
     expect(key({ keyCode: 229 })).toBe(false);
     expect(key({ key: 'a' })).toBe(false);
+  });
+
+  it('sends with Ctrl or ⌘+Enter when that send key is chosen, leaving Enter for new lines', () => {
+    const key = (patch: { ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean }) =>
+      shouldSubmitComposerKey(
+        {
+          key: 'Enter',
+          shiftKey: patch.shiftKey ?? false,
+          ctrlKey: patch.ctrlKey ?? false,
+          metaKey: patch.metaKey ?? false,
+          nativeEvent: { isComposing: false, keyCode: 13 },
+        } as never,
+        'mod-enter',
+      );
+
+    expect(key({})).toBe(false);
+    expect(key({ ctrlKey: true })).toBe(true);
+    expect(key({ metaKey: true })).toBe(true);
+    expect(key({ metaKey: true, shiftKey: true })).toBe(false);
+    expect(
+      shouldSubmitComposerKey(
+        {
+          key: 'Enter',
+          shiftKey: false,
+          ctrlKey: true,
+          nativeEvent: { isComposing: false, keyCode: 13 },
+        } as never,
+        'enter',
+      ),
+    ).toBe(true);
   });
 
   it('grows, shrinks back to one line, and switches to bounded scrolling', () => {

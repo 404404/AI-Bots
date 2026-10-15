@@ -11,6 +11,8 @@ export interface MemoryReadCache {
   graphError: string | undefined;
   workingError: string | undefined;
   files: Map<string, MemoryFile>;
+  revision: number;
+  listeners: Set<() => void>;
 }
 const memoryCaches = new WeakMap<
   ChannelSidebarEntryProps['actions'],
@@ -37,9 +39,24 @@ export function cachedMemory(
       graphError: undefined,
       workingError: undefined,
       files: new Map(),
+      revision: 0,
+      listeners: new Set(),
     };
     channels.set(channelId, cache);
     if (channels.size > 30) channels.delete(channels.keys().next().value!);
   }
   return cache;
+}
+
+export function invalidateMemory(cache: MemoryReadCache): void {
+  cache.snapshot = undefined;
+  cache.graph = undefined;
+  cache.working = undefined;
+  cache.files.clear();
+  cache.revision += 1;
+  for (const listener of cache.listeners) listener();
+}
+export function subscribeMemory(cache: MemoryReadCache, listener: () => void): () => void {
+  cache.listeners.add(listener);
+  return () => cache.listeners.delete(listener);
 }

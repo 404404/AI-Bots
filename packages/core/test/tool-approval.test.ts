@@ -106,6 +106,70 @@ describe('Channel tool approval', () => {
     expect(broker.status(botSlug, state.messages[0]!.id)).toBe('expired');
   });
 
+  it('shows the new-Bot preview on a bot_create card, and declining reports rejected', async () => {
+    const state = fixture();
+    const preview = { memoryFolder: '/bots/<new-bot-id>/memory', defaultLocation: true };
+    state.broker.track(
+      {
+        ...state.execution(),
+        name: 'bot_create',
+        arguments: { display_name: 'Tim', tags: ['translator'] },
+      } as ToolExecution,
+      'operation',
+      false,
+      undefined,
+      preview,
+    );
+    const answer = state.broker.ask({
+      agent: state.agent,
+      toolName: 'bot_create',
+      callId: 'call-1',
+    });
+    await vi.waitFor(() => expect(state.messages).toHaveLength(1));
+    expect(state.messages[0]?.toolApprovalRequest).toMatchObject({
+      toolName: 'bot_create',
+      botCreatePreview: preview,
+    });
+    expect(JSON.parse(state.messages[0]!.toolApprovalRequest!.input)).toEqual({
+      display_name: 'Tim',
+      tags: ['translator'],
+    });
+    expect(await state.broker.decide(botSlug, state.messages[0]!.id, 'rejected')).toBe(true);
+    expect(await answer).toBe('rejected');
+  });
+
+  it('lets a saved rule allow bot_create without a card', async () => {
+    const state = fixture();
+    const match = vi.fn(() => ({ id: 'rule-1' }));
+    const broker = new ChannelToolApproval(state.channels, state.ownership, {
+      match,
+    } as never);
+    broker.track({
+      ...state.execution(),
+      name: 'bot_create',
+      arguments: { display_name: 'Tim' },
+    } as ToolExecution);
+    expect(await broker.ask({ agent: state.agent, toolName: 'bot_create', callId: 'call-1' })).toBe(
+      'allowed-once',
+    );
+    expect(match).toHaveBeenCalledWith(expect.objectContaining({ toolName: 'bot_create' }));
+    expect(state.messages).toHaveLength(0);
+  });
+
+  it('posts a card for a tool input longer than 16 KB instead of refusing the call', async () => {
+    const state = fixture();
+    const execution = {
+      ...state.execution(),
+      arguments: { command: 'echo ' + 'x'.repeat(20_000) },
+    } as ToolExecution;
+    expect(state.broker.track(execution)).toBeTypeOf('function');
+    const answer = state.broker.ask({ agent: state.agent, toolName: 'bash', callId: 'call-1' });
+    await vi.waitFor(() => expect(state.messages).toHaveLength(1));
+    expect(state.messages[0]!.toolApprovalRequest?.input.length).toBeGreaterThan(20_000);
+    expect(await state.broker.decide(botSlug, state.messages[0]!.id, 'allowed-once')).toBe(true);
+    expect(await answer).toBe('allowed-once');
+  });
+
   it('keeps one native tool call paused until a Human decision is committed', async () => {
     const state = fixture();
     const untrack = state.broker.track(state.execution());
@@ -229,6 +293,59 @@ describe('Channel tool approval', () => {
     expect(state.messages).toHaveLength(0);
     active = false;
     expect(broker.validAfterDecision(state.agent, 'call-1')).toBe(false);
+    broker.close();
+  });
+
+  it('asks every time for an each-use call and never saves a rule for it', async () => {
+    const state = fixture();
+    const rules = {
+      match: vi.fn(() => ({ id: 'rule-all' })),
+      createPending: vi.fn(),
+      activate: vi.fn(),
+      revoke: vi.fn(),
+      list: vi.fn(),
+    } as unknown as import('../src/workspaces/tool-approval-rules.js').ToolApprovalRuleStore;
+    const broker = new ChannelToolApproval(state.channels, state.ownership, rules);
+    broker.track(state.execution(), 'each-use');
+    expect(broker.willPrompt(state.agent, 'call-1')).toBe(true);
+    const answer = broker.ask({ agent: state.agent, toolName: 'bash', callId: 'call-1' });
+    await vi.waitFor(() => expect(state.messages).toHaveLength(1));
+    const request = state.messages[0]!;
+    expect(request.toolApprovalRequest).toMatchObject({ externalDecision: 'each-use' });
+    expect(await broker.decide(botSlug, request.id, 'allowed-always-exact')).toBe(false);
+    expect(await broker.decide(botSlug, request.id, 'allowed-always-all')).toBe(false);
+    expect(
+      await broker.decide(botSlug, request.id, 'allowed-once', {
+        actor: { kind: 'external' } as never,
+        authorized: () => true,
+      }),
+    ).toBe(false);
+    expect(rules.createPending).not.toHaveBeenCalled();
+    expect(await broker.decide(botSlug, request.id, 'allowed-once')).toBe(true);
+    expect(await answer).toBe('allowed-once');
+    broker.close();
+  });
+
+  it('remembers a rememberable each-use call without saving a rule', async () => {
+    const state = fixture();
+    const rules = {
+      match: vi.fn(() => undefined),
+      createPending: vi.fn(),
+      activate: vi.fn(),
+      revoke: vi.fn(),
+      list: vi.fn(),
+    } as unknown as import('../src/workspaces/tool-approval-rules.js').ToolApprovalRuleStore;
+    const broker = new ChannelToolApproval(state.channels, state.ownership, rules);
+    broker.track(state.execution(), 'each-use', true);
+    const answer = broker.ask({ agent: state.agent, toolName: 'bash', callId: 'call-1' });
+    await vi.waitFor(() => expect(state.messages).toHaveLength(1));
+    const request = state.messages[0]!;
+    expect(broker.remembered(state.agent, 'call-1')).toBe(false);
+    expect(await broker.decide(botSlug, request.id, 'allowed-always-all')).toBe(false);
+    expect(await broker.decide(botSlug, request.id, 'allowed-always-exact')).toBe(true);
+    expect(await answer).toBe('allowed-once');
+    expect(broker.remembered(state.agent, 'call-1')).toBe(true);
+    expect(rules.createPending).not.toHaveBeenCalled();
     broker.close();
   });
 

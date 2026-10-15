@@ -1,3 +1,4 @@
+import { directToolTrace, summarizeToolTrace, type TurnTrace } from '../bots/tool-trace.js';
 import type { BotOnboarding, OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
 import type { HttpsFallback } from '../memory/clone.js';
 import {
@@ -8,6 +9,7 @@ import {
   type PurgePreview,
 } from '../purge/contracts.js';
 import { pairingReviewInput, type PairingRequest } from '../messaging/pairing.js';
+import { senderAccessInput } from '../messaging/sender-access.js';
 import type { GroupMemberWakePolicy } from '../channels/channel.js';
 import {
   parseAllBotMention,
@@ -82,9 +84,11 @@ import { z } from 'zod';
 import {
   isValidChannelId,
   isGroupAvatar,
+  isReactionEmoji,
   type LocalHumanIdentity,
   type ChannelMention,
   type ChannelMessage,
+  type ChannelReaction,
   type ChannelRecord,
   type ChannelReference,
 } from '../channels/channel.js';
@@ -115,9 +119,21 @@ import {
   partFileName,
 } from '../bots/part-file.js';
 import type { AvatarAppearance, RetainedAvatarAppearance } from '../bots/avatar-appearance.js';
-import { ChannelMentionTargetError, ChannelReplyTargetError } from '../channels/store.js';
+import {
+  currentBotPrimaryColor,
+  historicalBotPrimaryColor,
+  resolveBotPrimaryColor,
+  type BotPrimaryColor,
+} from '../bots/primary-color.js';
+import {
+  ChannelMentionTargetError,
+  ChannelReactionLimitError,
+  ChannelReplyTargetError,
+} from '../channels/store.js';
 import { ChannelAttachmentError } from '../attachments/store.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
+import type { ChannelAttachmentRef } from '../attachments/ref.js';
+import type { ComposerRecoveryIdentity } from './composer-recovery.js';
 import type { ChannelReadPosition, ChannelStore, ChannelSendStatus } from '../channels/store.js';
 import { groupProfileActivity, type GroupProfileActivity } from '../channels/profile-activity.js';
 import { channelActivityToday, type ChannelActivityToday } from '../channels/activity-today.js';
@@ -136,6 +152,11 @@ import type {
 } from '../bots/deletion.js';
 import { isValidSlug } from '../bots/slug.js';
 import {
+  memoryMoveTarget,
+  moveMemoryDirectory,
+  type MemoryMoveResult,
+} from '../bots/memory-move.js';
+import {
   MAX_ROSTER_BATCH_SIZE,
   RosterStore,
   RosterUnavailableError,
@@ -150,6 +171,8 @@ import {
   type MemoryAcceptedCommit,
   type MemoryAcceptedSnapshot,
   type MemoryGitGraph,
+  type MemoryVersion,
+  type MemoryVersionName,
   type MemoryGitCommitDiff,
   type MemoryWorkingChange,
   type MemoryWorkingDiff,
@@ -158,7 +181,11 @@ import {
 } from '../memory/accepted.js';
 import type { MemoryRecoveryCheckpoint } from '../memory/recovery.js';
 import type { MemoryService } from '../memory/service.js';
-import type { UsageProjection } from '../usage/usage.js';
+import type {
+  UsageProjection,
+  DshUsageSessionLogReader,
+  SessionUsageSummary,
+} from '../usage/usage.js';
 import { usageFilterSchema, type UsageQueryResult } from '../usage/query.js';
 import {
   isAssignmentModelOption,
@@ -212,19 +239,34 @@ import {
   type BotScheduleTrigger,
   previewBotScheduleTrigger,
 } from '../schedules/bot-schedules.js';
-import type {
-  HumanAttentionQuery,
-  HumanAttentionDecisions,
-  HumanAttentionPage,
-  HumanAttentionCategory,
+import {
+  HUMAN_INBOX_SNOOZE_MAX_MS,
+  type HumanAttentionQuery,
+  type HumanAttentionDecisions,
+  type HumanAttentionPage,
+  type HumanAttentionCategory,
 } from '../runtime/human-attention.js';
+import { DirectBotToolError } from '../runtime/bot-runtime.js';
 import type {
   AssignmentActivity,
   AssignmentDetail,
+  AssignmentReportState,
   AssignmentSummary,
   BotRuntime,
+  ChannelAssignmentSummary,
+  DirectBotToolSpec,
   DmAdmissionFailure,
 } from '../runtime/bot-runtime.js';
+import type { AssignmentExecutionWait } from '../runtime/assignment-approval-capacity.js';
+import {
+  createApprovalTemplateLibrary,
+  type ApprovalTemplate,
+  type ApprovalTemplateLibrary,
+  type ApprovalTemplateWriteResult,
+} from '../workspaces/approval-templates.js';
+import type { ApprovalReviewerSettings } from '../workspaces/approval-reviewer-settings.js';
+
+export type ApprovalTemplateEntry = ApprovalTemplate & { usedBy: string[] };
 import type {
   AggregatedState,
   BotStateSnapshot,
@@ -262,9 +304,11 @@ export interface PersonaBotSummary {
   avatar?: string;
   appearance?: AvatarAppearance | RetainedAvatarAppearance;
   banner?: BotBannerSummary;
+  primaryColor?: BotPrimaryColor;
   avatarSeed?: 2;
   paused?: boolean;
   deleted?: boolean;
+  approvalTemplate?: string;
   standingLimits: StandingLimits;
   aggregateState: AggregatedState;
   workspaces: string[];
@@ -289,7 +333,14 @@ export interface ProfileActivityReasonDay extends ProfileActivityDay {
 }
 
 export interface OverviewUsage extends Omit<UsageOverviewResult, 'bots'> {
-  bots: Array<UsageOverviewBuckets & { slug: string; displayName: string; current: boolean }>;
+  bots: Array<
+    UsageOverviewBuckets & {
+      slug: string;
+      displayName: string;
+      current: boolean;
+      primaryColor: string;
+    }
+  >;
 }
 
 export interface ProfileTokenBuckets {
@@ -331,6 +382,20 @@ export interface ProfileActivity {
   modelUsageStatus: 'ready' | 'unavailable';
 }
 
+export interface ProfileSessionUsage {
+  slug: string;
+  weeks: number;
+  since: string;
+  rows: Array<
+    SessionUsageSummary & {
+      sessionId: string;
+      role: SessionRootRole;
+      label: string;
+      updatedAt: string;
+    }
+  >;
+}
+
 export interface ChannelListItem extends ChannelRecord {
   humanMembers?: Array<{ humanId: string; displayName: string }>;
   humanNickname?: string | null;
@@ -344,6 +409,12 @@ export interface OwnedSessionSummary {
   cwdReference?: string;
   assignmentActivity?: AssignmentActivity;
   assignmentAccessMode?: AssignmentAccessMode;
+  assignmentReportState?: AssignmentReportState;
+  assignmentExecutionWait?: AssignmentExecutionWait;
+  assignmentArchived?: true;
+  assignmentPurpose?: string;
+  currentOrchestrator?: boolean;
+  triageOpenCount?: number;
 }
 
 export interface OwnedSessionBot {
@@ -373,7 +444,21 @@ export interface BridgeMethods {
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
   channelRetry(payload: unknown): Promise<BridgeResult<{ accepted: true }>>;
+  channelBotStop(
+    payload: unknown,
+  ): Promise<BridgeResult<{ stopped: { botSlug: string; sessionId: string; messageId: string } }>>;
   approvalRoute(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
+  failureAlertsSet(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
+  failureAlertsTest(
+    payload: unknown,
+  ): Promise<
+    BridgeResult<{ delivery: import('../messaging/failure-alerts.js').FailureAlertDelivery }>
+  >;
+  failureAlertsRetry(
+    payload: unknown,
+  ): Promise<
+    BridgeResult<{ delivery: import('../messaging/failure-alerts.js').FailureAlertDelivery }>
+  >;
   approvalTest(
     payload: unknown,
   ): Promise<
@@ -385,6 +470,7 @@ export interface BridgeMethods {
     BridgeResult<{ delivery: import('../messaging/approval-messaging.js').ApprovalDelivery }>
   >;
   pairingReview(payload: unknown): Promise<BridgeResult<{ pairing: PairingRequest }>>;
+  senderAccess(payload: unknown): Promise<BridgeResult<void>>;
   channelBridges(payload: unknown): Promise<BridgeResult<ChannelBridgeSnapshot>>;
   channelIngests(payload: unknown): Promise<BridgeResult<ConversationIngestSnapshot>>;
   channelIngest(payload: unknown): Promise<BridgeResult<{ updated: true }>>;
@@ -399,6 +485,12 @@ export interface BridgeMethods {
   messagingDefaultsSet(payload: unknown): Promise<BridgeResult<MessagingDefaults>>;
   messagingApps(): Promise<BridgeResult<MessagingAppsView>>;
   messagingSnapshot(payload: unknown): Promise<BridgeResult<MessagingSnapshot>>;
+  messagingReachable(
+    payload: unknown,
+  ): Promise<BridgeResult<import('../messaging/provider.js').MessagingReachablePage>>;
+  messagingPostConversation(payload: unknown): Promise<BridgeResult<{ intent: OutboxIntent }>>;
+  messagingPostRequest(payload: unknown): Promise<BridgeResult<{ intent: OutboxIntent | null }>>;
+  messagingPostLimit(payload: unknown): Promise<BridgeResult<{ identity: MessagingIdentity }>>;
   messagingTargets(payload: unknown): Promise<BridgeResult<{ targets: MessagingTarget[] }>>;
   messagingAuthorize(payload: unknown): Promise<BridgeResult<{ grant: MessagingGrant }>>;
   messagingRevoke(payload: unknown): Promise<BridgeResult<{ revoked: true }>>;
@@ -433,6 +525,10 @@ export interface BridgeMethods {
   pause(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   resume(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   humanIdentity(payload: unknown): BridgeResult<LocalHumanIdentity>;
+  composerIdentity(payload: unknown): BridgeResult<ComposerRecoveryIdentity>;
+  composerValidate(
+    payload: unknown,
+  ): BridgeResult<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }>;
   humanNameSet(payload: unknown): BridgeResult<LocalHumanIdentity>;
   channelHumanNameSet(payload: unknown): BridgeResult<{ channel: ChannelListItem }>;
   channels(payload: unknown): BridgeResult<{ channels: ChannelListItem[] }>;
@@ -459,6 +555,10 @@ export interface BridgeMethods {
   channelReadPosition(payload: unknown): BridgeResult<{ position?: ChannelReadPosition }>;
   channelMarkAllRead(payload: unknown): Promise<BridgeResult<{ channels: number }>>;
   channelMarkRead(payload: unknown): Promise<BridgeResult<{ position: ChannelReadPosition }>>;
+  channelReact(payload: unknown): BridgeResult<{ reactions: ChannelReaction[] }>;
+  channelSearch(
+    payload: unknown,
+  ): BridgeResult<{ messages: ChannelMessage[]; nextCursor?: string }>;
   channelMessages(payload: unknown): BridgeResult<{ messages: ChannelMessage[]; revision: number }>;
   channelAllBotPreview(payload: unknown): BridgeResult<AllBotPreview>;
   channelSend(payload: unknown): Promise<BridgeResult<{ message: ChannelMessage }>>;
@@ -472,9 +572,14 @@ export interface BridgeMethods {
   humanAttention(payload: unknown): BridgeResult<HumanAttentionPage>;
   humanAssignmentContext(payload: unknown): BridgeResult<{ context: HumanAssignmentContext }>;
   humanAttentionStatus(payload: unknown): BridgeResult<{ unreadCount: number; hasAction: boolean }>;
+  channelUnreadCounts(
+    payload: unknown,
+  ): BridgeResult<{ channels: Array<{ channelId: string; unreadCount: number }> }>;
   humanAttentionDismiss(payload: unknown): BridgeResult<{ accepted: boolean }>;
   humanAttentionIgnore(payload: unknown): BridgeResult<{ accepted: boolean }>;
+  humanAttentionSnooze(payload: unknown): BridgeResult<{ accepted: boolean }>;
   assignments(payload: unknown): BridgeResult<{ assignments: AssignmentSummary[] }>;
+  channelAssignments(payload: unknown): BridgeResult<{ assignments: ChannelAssignmentSummary[] }>;
   assignment(payload: unknown): BridgeResult<{ assignment: AssignmentDetail }>;
   workspaceOptions(
     payload: unknown,
@@ -483,7 +588,9 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ target: { path: string; relativePath: ''; kind: 'directory' } }>;
   grants(payload: unknown): BridgeResult<{ grants: WorkspaceGrant[] }>;
-  grantCreate(payload: unknown): Promise<BridgeResult<{ grant: WorkspaceGrant }>>;
+  grantCreate(
+    payload: unknown,
+  ): Promise<BridgeResult<{ grant: WorkspaceGrant; created?: boolean }>>;
   grantRevoke(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   grantWriteSet(payload: unknown): BridgeResult<{ grant: WorkspaceGrant }>;
   assignmentAccessGet(payload: unknown): BridgeResult<{ preset: AssignmentAccessPreset }>;
@@ -492,15 +599,31 @@ export interface BridgeMethods {
   toolApprovalRuleRevoke(payload: unknown): BridgeResult<{ rule: ToolApprovalRule }>;
   toolApprovalStatus(payload: unknown): BridgeResult<{
     status: 'pending' | 'expired';
+    expiresAt?: string;
     execution?: 'waiting-human' | 'waiting-capacity' | 'running' | 'settled' | 'needs-repair';
   }>;
   toolApprovalDecide(payload: unknown): Promise<BridgeResult<{ accepted: boolean }>>;
+  toolAutoRejectionOverride(
+    payload: unknown,
+  ): Promise<BridgeResult<{ accepted: true; channelId: string; messageId: string }>>;
   userQuestionStatus(
     payload: unknown,
   ): BridgeResult<{ status: 'pending' | 'submitted' | 'answered' | 'expired' }>;
   userQuestionAnswer(payload: unknown): Promise<BridgeResult<{ accepted: boolean }>>;
   sessions(payload: unknown): BridgeResult<{ sessions: OwnedSessionSummary[] }>;
+  botToolTrace(
+    payload: unknown,
+  ): Promise<BridgeResult<{ slug: string; sessionId: string; turns: TurnTrace[] }>>;
+  botTools(payload: unknown): BridgeResult<{ sessionId: 'direct'; tools: DirectBotToolSpec[] }>;
+  botToolRun(
+    payload: unknown,
+  ): Promise<BridgeResult<{ slug: string; tool: string; sessionId: 'direct'; result: unknown }>>;
+  sessionArchiveSet(payload: unknown): Promise<BridgeResult<{ archived: boolean }>>;
+  memoryMove(
+    payload: unknown,
+  ): Promise<BridgeResult<{ memoryDir: string; moved: boolean; leftover?: string }>>;
   sessionOwner(payload: unknown): BridgeResult<{ owner: OwnedSessionBot | null }>;
+  botSessionIds(payload: unknown): BridgeResult<{ sessionIds: string[] }>;
   messageAttachmentTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memoryFileTarget(payload: unknown): BridgeResult<{ target: MemoryFileTarget }>;
   memorySnapshot(payload: unknown): BridgeResult<{ snapshot: MemoryAcceptedSnapshot }>;
@@ -520,8 +643,18 @@ export interface BridgeMethods {
     payload: unknown,
   ): BridgeResult<{ checkpoint: MemoryRecoveryCheckpoint; archivePath: string }>;
   memorySave(payload: unknown): BridgeResult<{ commit: MemoryAcceptedCommit }>;
+  memoryRestoreCommit(payload: unknown): BridgeResult<{
+    head: string;
+    backup: string | null;
+    version: MemoryVersionName | null;
+    saved: MemoryRecoveryCheckpoint;
+  }>;
+  memoryNameVersion(payload: unknown): BridgeResult<{ version: MemoryVersionName }>;
+  memoryVersions(payload: unknown): BridgeResult<{ versions: MemoryVersion[] }>;
+  memoryRemoveVersionName(payload: unknown): BridgeResult<{ removed: true }>;
   memoryRepair(payload: unknown): BridgeResult<{ repair: MemoryRepairEvent }>;
   profileActivity(payload: unknown): BridgeResult<ProfileActivity>;
+  profileSessionUsage(payload: unknown): Promise<BridgeResult<ProfileSessionUsage>>;
   overviewMemory(payload: unknown): Promise<BridgeResult<OverviewMemory>>;
   overviewUsage(payload: unknown): BridgeResult<OverviewUsage>;
   profileUsage(payload: unknown): BridgeResult<UsageQueryResult>;
@@ -535,15 +668,28 @@ export interface BridgeMethods {
   topReorder(payload: unknown): Promise<BridgeResult<{ topOrder: TopOrderEntry[] }>>;
   pinsSet(payload: unknown): Promise<BridgeResult<{ pins: string[] }>>;
   hiddenSet(payload: unknown): Promise<BridgeResult<{ hidden: string[] }>>;
+  channelMuteSet(payload: unknown): Promise<BridgeResult<{ muted: string[] }>>;
   rosterBatch(payload: unknown): Promise<BridgeResult<RosterSnapshot>>;
   developerModeSet(payload: unknown): BridgeResult<{ accepted: boolean }>;
   computerAccessSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   browserAccessSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   browserProfileSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  approvalTemplates(
+    payload?: unknown,
+  ): BridgeResult<{ templates: ApprovalTemplateEntry[]; selected?: string | null }>;
+  approvalTemplateCreate(payload: unknown): BridgeResult<{ template: ApprovalTemplateEntry }>;
+  approvalTemplateUpdate(payload: unknown): BridgeResult<{ template: ApprovalTemplateEntry }>;
+  approvalTemplateDelete(
+    payload: unknown,
+  ): BridgeResult<{ template: { name: string }; clearedBots: string[] }>;
+  botApprovalTemplateSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  approvalReviewerModel(payload?: unknown): Promise<BridgeResult<ApprovalReviewerModelView>>;
+  approvalReviewerModelSet(payload: unknown): Promise<BridgeResult<ApprovalReviewerModelView>>;
   standingLimitsSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botAvatarSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botBannerSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botAppearanceSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  botPrimaryColorSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   partLibraryList(): BridgeResult<{ parts: PartLibraryEntry[] }>;
   partLibraryAdd(payload: unknown): BridgeResult<{ entry: PartLibraryEntry }>;
   partLibraryExport(payload: unknown): BridgeResult<{ fileName: string; data: string }>;
@@ -576,9 +722,19 @@ export interface BridgeMethods {
   schedulePreview(payload: unknown): BridgeResult<{ occurrences: string[] }>;
 }
 
+export interface ApprovalReviewerModelView {
+  follows: 'bot' | 'model' | 'invalid';
+  model: ModelRoute | null;
+  available?: boolean;
+  unavailableReason?: string;
+}
+
 export interface BridgeMethodsDeps {
+  approvalReviewer?: ApprovalReviewerSettings;
+  composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
+  approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
   attachments?: AttachmentStore;
@@ -598,6 +754,7 @@ export interface BridgeMethodsDeps {
   ownership: SessionOwnership;
   memory?: MemoryService;
   usage?: UsageProjection;
+  readUsageSessionLog?: DshUsageSessionLogReader;
   roster: RosterStore;
   runtime?: BotRuntime;
   attention?: BotAttentionQuery;
@@ -735,6 +892,30 @@ function scheduleFailure(error: unknown): BridgeResult<never> {
   return invalidInput(String(error));
 }
 
+function templateWriteFailure(
+  name: string,
+  reason: Extract<ApprovalTemplateWriteResult, { ok: false }>['reason'],
+): BridgeResult<never> {
+  const messages = {
+    'invalid-name':
+      'A template name uses lowercase letters, digits and dashes (at most 64), like my-rules',
+    'invalid-text': 'Template text must be non-empty Markdown of at most 32 KiB',
+    exists: `An Approval Template named ${name} already exists`,
+    'not-found': `The Host has no Approval Template named ${name}`,
+    'built-in': `${name} is a built-in Approval Template and is read-only; copy it under a new name`,
+    unavailable: 'Approval Templates cannot be written on this Host',
+  } as const;
+  const codes = {
+    'invalid-name': 'invalid-input',
+    'invalid-text': 'invalid-input',
+    exists: 'template-exists',
+    'not-found': 'unknown-template',
+    'built-in': 'template-read-only',
+    unavailable: 'unavailable',
+  } as const;
+  return { ok: false, error: { code: codes[reason], message: messages[reason] } };
+}
+
 function unknownBot(slug: string): BridgeResult<never> {
   return { ok: false, error: { code: 'not-found', message: `unknown PersonaBot: ${slug}` } };
 }
@@ -777,6 +958,15 @@ function unknownAssignment(sessionId: string): BridgeResult<never> {
   };
 }
 
+const DIRECT_TOOL_TIMEOUT_MS = 10 * 60_000;
+
+function directToolsUnavailable(): BridgeResult<never> {
+  return {
+    ok: false,
+    error: { code: 'unavailable', message: 'Direct Bot tools are unavailable on this Host' },
+  };
+}
+
 function unavailable(): BridgeResult<never> {
   return {
     ok: false,
@@ -805,6 +995,7 @@ const topReorderPayload = z.object({
 });
 const pinsSetPayload = z.object({ pins: z.array(z.string()) });
 const hiddenSetPayload = z.object({ hidden: z.array(z.string()) });
+const channelMuteSetPayload = z.object({ channelId: z.string().trim().min(1), muted: z.boolean() });
 const rosterBatchPayload = z.object({
   action: z.enum(['pin', 'unpin', 'hide', 'move']),
   channelIds: z
@@ -835,7 +1026,14 @@ function createFailure(
     case 'invalid-input':
       return invalidInput('invalid PersonaBot input');
     case 'invalid-memory-dir':
-      return invalidInput('memoryDir must be an absolute path');
+      return {
+        ok: false,
+        error: {
+          code: 'invalid-memory-dir',
+          message:
+            'The Memory location must be an existing absolute folder that does not already hold this Bot.',
+        },
+      };
     case 'git-not-found':
       return {
         ok: false,
@@ -894,6 +1092,9 @@ function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): Person
     roles: record.roles ?? (record.tag === undefined ? [] : [record.tag]),
     standingLimits: { ...(record.standingLimits ?? DEFAULT_STANDING_LIMITS) },
     ...(record.appearance === undefined ? {} : { appearance: record.appearance }),
+    ...(currentBotPrimaryColor(record.primaryColor) === undefined
+      ? {}
+      : { primaryColor: currentBotPrimaryColor(record.primaryColor)! }),
     ...(record.description === undefined ? {} : { description: record.description }),
     ...(record.avatar === undefined
       ? {}
@@ -910,6 +1111,7 @@ function summarize(record: PersonaBotRecord, snapshot: BotStateSnapshot): Person
     ...(record.computerAccess === undefined ? {} : { computerAccess: record.computerAccess }),
     ...(record.browserAccess === undefined ? {} : { browserAccess: record.browserAccess }),
     ...(record.browserProfile === undefined ? {} : { browserProfile: record.browserProfile }),
+    ...(record.approvalTemplate === undefined ? {} : { approvalTemplate: record.approvalTemplate }),
   };
 }
 
@@ -925,6 +1127,42 @@ function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBo
 }
 
 export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
+  const approvalTemplateLibrary = deps.approvalTemplates ?? createApprovalTemplateLibrary();
+  const templateUsers = (name: string): string[] =>
+    deps.registry
+      .list()
+      .filter((record) => record.approvalTemplate === name)
+      .map((record) => record.slug);
+  const templateEntry = (template: ApprovalTemplate): ApprovalTemplateEntry => ({
+    ...template,
+    usedBy: templateUsers(template.name),
+  });
+  const reviewerModelView = async (
+    route: ModelRoute | undefined,
+  ): Promise<ApprovalReviewerModelView> => {
+    if (route === undefined) return { follows: 'bot', model: null };
+    if (deps.modelCatalog === undefined) return { follows: 'model', model: route };
+    try {
+      await deps.modelCatalog.validate(route);
+      return { follows: 'model', model: route, available: true };
+    } catch (error) {
+      return {
+        follows: 'model',
+        model: route,
+        available: false,
+        unavailableReason: error instanceof Error ? error.message : String(error),
+      };
+    }
+  };
+  const askingBot = (channelId: string, messageId: string): string | undefined => {
+    const channel = deps.channels.get(channelId);
+    if (channel === undefined) return undefined;
+    if (channel.type === 'dm') return channel.botSlug;
+    const author = deps.channels.message(channelId, messageId)?.author;
+    return author?.kind === 'bot' && channel.members.includes(author.slug)
+      ? author.slug
+      : undefined;
+  };
   const channelView = (channel: ChannelRecord): ChannelListItem => {
     const humanNickname = deps.channels.humanNickname(channel.id);
     return {
@@ -1190,6 +1428,41 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         source: service.inbound.read(input.data.slug, input.data.sourceEventId),
       }));
     },
+    failureAlertsSet(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          enabled: z.boolean(),
+          expectedRevision: z.number().int().nonnegative(),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid failure-alert settings'));
+      return messagingCall(async (service) => {
+        service.failureAlerts.set(input.data.slug, input.data.enabled, input.data.expectedRevision);
+        return { updated: true as const };
+      });
+    },
+    failureAlertsTest(payload) {
+      const input = z
+        .object({ slug: z.string().min(1) })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid Bot'));
+      return messagingCall(async (service) => ({
+        delivery: await service.failureAlerts.test(input.data.slug),
+      }));
+    },
+    failureAlertsRetry(payload) {
+      const input = z
+        .object({ slug: z.string().min(1), id: z.string().uuid() })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid notification'));
+      return messagingCall(async (service) => ({
+        delivery: await service.failureAlerts.retry(input.data.slug, input.data.id),
+      }));
+    },
     approvalRoute(payload) {
       const input = z
         .object({
@@ -1229,6 +1502,16 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         delivery: await service.approvals.retry(input.data.slug, input.data.id),
       }));
     },
+    senderAccess(payload) {
+      const input = z
+        .object({ slug: z.string().min(1), input: senderAccessInput })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid sender access'));
+      return messagingCall(async (service) =>
+        service.senderAccess(input.data.slug, input.data.input),
+      );
+    },
     pairingReview(payload) {
       const input = z
         .object({ slug: z.string().min(1), input: pairingReviewInput })
@@ -1236,7 +1519,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         .safeParse(payload);
       if (!input.success) return Promise.resolve(invalidInput('Invalid pairing review'));
       return messagingCall(async (service) => ({
-        pairing: service.pairing.review(input.data.slug, input.data.input),
+        pairing: await service.reviewPairing(input.data.slug, input.data.input),
       }));
     },
     messagingIdentity(payload) {
@@ -1317,6 +1600,85 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return Promise.resolve(invalidInput('Known bot required'));
       return messagingCall((service) => service.snapshot(slug));
     },
+    messagingReachable(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          bindingId: z.string().uuid(),
+          cursor: z.string().min(1).max(2048).optional(),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid reachable group query'));
+      return messagingCall((service) =>
+        service.reachable(input.data.slug, input.data.bindingId, input.data.cursor),
+      );
+    },
+    messagingPostRequest(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          bindingId: z.string().uuid(),
+          conversationId: z.string().min(1).max(512),
+          requestId: z.string().min(8).max(128),
+          text: z.string().trim().min(1).max(4000),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid proactive request query'));
+      return messagingCall(async (service) => ({
+        intent:
+          service.postRequest(
+            input.data.slug,
+            input.data.bindingId,
+            input.data.conversationId,
+            input.data.requestId,
+            input.data.text,
+          ) ?? null,
+      }));
+    },
+    messagingPostConversation(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          bindingId: z.string().uuid(),
+          conversationId: z.string().min(1).max(512),
+          requestId: z.string().min(8).max(128),
+          text: z.string().trim().min(1).max(4000),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid proactive post'));
+      return messagingCall(async (service) => ({
+        intent: await service.postConversation(
+          input.data.slug,
+          input.data.bindingId,
+          input.data.conversationId,
+          input.data.requestId,
+          input.data.text,
+        ),
+      }));
+    },
+    messagingPostLimit(payload) {
+      const input = z
+        .object({
+          slug: z.string().min(1),
+          bindingId: z.string().uuid(),
+          expectedRevision: z.number().int().positive(),
+          limit: z.number().int().min(1).max(10000).nullable(),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success) return Promise.resolve(invalidInput('Invalid post limit'));
+      return messagingCall(async (service) => ({
+        identity: await service.setPostLimit(
+          input.data.slug,
+          input.data.bindingId,
+          input.data.expectedRevision,
+          input.data.limit,
+        ),
+      }));
+    },
     messagingTargets(payload) {
       const input = z
         .object({ providerId: z.string().min(1), accountRef: z.string().min(1) })
@@ -1362,6 +1724,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         .object({
           slug: z.string().min(1),
           input: z.discriminatedUnion('kind', [
+            z
+              .object({
+                kind: z.literal('open-group'),
+                grantId: z.string().uuid(),
+                expectedRevision: revision,
+                open: z.boolean(),
+              })
+              .strict(),
             z
               .object({
                 kind: z.literal('mute'),
@@ -1421,7 +1791,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         const grant = snapshot.grants.find((value) => value.id === grantId);
         return {
           intent:
-            grant?.platform === 'weixin'
+            grant?.platform === 'weixin' || grant?.platform === 'qq'
               ? await service.post(slug, grantId, requestId, text)
               : await service.send(slug, grantId, requestId, text),
         };
@@ -1530,6 +1900,44 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       } catch (error) {
         return invalidInput(error instanceof Error ? error.message : 'Retry unavailable');
       }
+    },
+    async channelBotStop(payload) {
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
+      const botSlug = asNonBlank(source, 'botSlug');
+      if (!channelId || !botSlug) return invalidInput('channelId and botSlug are required');
+      const channel = deps.channels.get(channelId);
+      if (channel === undefined || channel.deletedAt) return unknownChannel(channelId);
+      const bot = deps.registry.get(botSlug);
+      if (bot === undefined) return unknownBot(botSlug);
+      if (
+        channel.type === 'group' ? !channel.members.includes(botSlug) : channel.botSlug !== botSlug
+      )
+        return invalidInput(`${bot.displayName} is not in this Channel`);
+      const stopped = await deps.runtime?.stopTurn?.(botSlug);
+      if (stopped === undefined)
+        return {
+          ok: false,
+          error: { code: 'not-working', message: `${bot.displayName} is not working right now` },
+        };
+      const human = deps.channels.listHumanMembers(channelId)[0]?.displayName ?? 'Human';
+      const appended = await deps.channels.appendMessage(channelId, {
+        id: `turn-stopped-${randomUUID()}`,
+        at: new Date().toISOString(),
+        author: { kind: 'system' },
+        body: `${human} stopped ${bot.displayName}.`,
+        turnStop: {
+          botSlug,
+          botName: bot.displayName,
+          humanName: human,
+          sessionId: stopped.sessionId,
+        },
+      });
+      if (appended === undefined) return unknownChannel(channelId);
+      return {
+        ok: true,
+        value: { stopped: { botSlug, sessionId: stopped.sessionId, messageId: appended.id } },
+      };
     },
     async modelCatalog() {
       if (deps.modelCatalog === undefined) return unavailable();
@@ -1862,7 +2270,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         })
         .map((record) => ({
           ...summarize(record, deps.states.snapshot(record.slug)),
-          ...(deps.registry.get(record.slug) === undefined ? { deleted: true, paused: true } : {}),
+          ...(deps.registry.get(record.slug) === undefined
+            ? {
+                deleted: true,
+                paused: true,
+                primaryColor: historicalBotPrimaryColor(record.slug, record.primaryColor),
+              }
+            : {}),
         }));
       return { ok: true, value: { bots } };
     },
@@ -1962,14 +2376,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('displayName is required');
       }
       const persona = parseOptional(source, 'persona');
+      const coreMemory = parseOptional(source, 'coreMemory');
       const roles = parseRoles(source);
       const description = parseOptional(source, 'description');
       const model = parseOptional(source, 'model');
       const preset = parseOptional(source, 'preset');
       const workspaces = parseWorkspaces(source);
       const avatar = parseOptional(source, 'avatar');
+      const memoryLocation = parseOptional(source, 'memoryLocation');
       if (
+        !memoryLocation.ok ||
         !persona.ok ||
+        !coreMemory.ok ||
         !roles.ok ||
         !description.ok ||
         !model.ok ||
@@ -1984,12 +2402,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         slug,
         displayName,
         ...(persona.value === undefined ? {} : { persona: persona.value }),
+        ...(coreMemory.value === undefined ? {} : { coreMemory: coreMemory.value }),
         ...(roles.value === undefined ? {} : { roles: roles.value }),
         ...(description.value === undefined ? {} : { description: description.value }),
         ...(model.value === undefined ? {} : { model: model.value }),
         ...(preset.value === undefined ? {} : { preset: preset.value }),
         ...(workspaces.value === undefined ? {} : { workspaces: workspaces.value }),
         ...(avatar.value === undefined ? {} : { avatar: avatar.value }),
+        ...(memoryLocation.value === undefined ? {} : { memoryLocation: memoryLocation.value }),
       });
       if (!result.ok) return createFailure(slug, result);
       return { ok: true, value: detailOf(result.record) };
@@ -2233,6 +2653,105 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       deps.browserProfile?.changed(slug);
       return { ok: true, value: detailOf(result.record) };
     },
+    approvalTemplates(payload) {
+      const templates = approvalTemplateLibrary.list().map(templateEntry);
+      if (asObject(payload)['slug'] === undefined) return { ok: true, value: { templates } };
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug must be a Bot id');
+      const record = deps.registry.get(slug);
+      if (record === undefined) return unknownBot(slug);
+      return { ok: true, value: { templates, selected: record.approvalTemplate ?? null } };
+    },
+    approvalTemplateCreate(payload) {
+      const object = asObject(payload);
+      const name = object['name'];
+      const from = object['from'];
+      let text = object['text'];
+      if (typeof name !== 'string') return invalidInput('name is required');
+      if (from !== undefined) {
+        if (typeof from !== 'string' || text !== undefined)
+          return invalidInput('from names one template to copy, in place of text');
+        const source = approvalTemplateLibrary.get(from);
+        if (source === undefined) return templateWriteFailure(from, 'not-found');
+        text = source.text;
+      }
+      if (typeof text !== 'string') return invalidInput('text (Markdown) or from is required');
+      const result = approvalTemplateLibrary.create(name, text);
+      if (!result.ok) return templateWriteFailure(name, result.reason);
+      return { ok: true, value: { template: templateEntry(result.template) } };
+    },
+    approvalTemplateUpdate(payload) {
+      const object = asObject(payload);
+      const name = object['name'];
+      const text = object['text'];
+      if (typeof name !== 'string' || typeof text !== 'string')
+        return invalidInput('name and text (Markdown) are required');
+      const result = approvalTemplateLibrary.update(name, text);
+      if (!result.ok) return templateWriteFailure(name, result.reason);
+      return { ok: true, value: { template: templateEntry(result.template) } };
+    },
+    approvalTemplateDelete(payload) {
+      const name = asObject(payload)['name'];
+      if (typeof name !== 'string') return invalidInput('name is required');
+      const result = approvalTemplateLibrary.delete(name);
+      if (!result.ok) return templateWriteFailure(name, result.reason);
+      const clearedBots = templateUsers(name);
+      for (const slug of clearedBots) deps.registry.setApprovalTemplate(slug, undefined);
+      return { ok: true, value: { template: { name }, clearedBots } };
+    },
+    botApprovalTemplateSet(payload) {
+      const slug = asSlug(payload);
+      const template = asObject(payload)['template'];
+      if (slug === undefined || (template !== null && typeof template !== 'string'))
+        return invalidInput('slug and template (a template name, or null for none) are required');
+      if (typeof template === 'string' && approvalTemplateLibrary.get(template) === undefined)
+        return invalidInput('unknown Approval Template ' + template);
+      const result = deps.registry.setApprovalTemplate(slug, template ?? undefined);
+      if (!result.ok) return unknownBot(slug);
+      return { ok: true, value: detailOf(result.record) };
+    },
+    async approvalReviewerModel() {
+      if (deps.approvalReviewer === undefined) return unavailable();
+      const setting = deps.approvalReviewer.model();
+      if (setting.kind === 'invalid')
+        return {
+          ok: true,
+          value: {
+            follows: 'invalid',
+            model: null,
+            available: false,
+            unavailableReason: 'The reviewer model setting cannot be read.',
+          },
+        };
+      return {
+        ok: true,
+        value: await reviewerModelView(setting.kind === 'bot' ? undefined : setting.route),
+      };
+    },
+    async approvalReviewerModelSet(payload) {
+      if (deps.approvalReviewer === undefined) return unavailable();
+      const model = asObject(payload)['model'];
+      if (model !== null && !isModelRoute(model))
+        return invalidInput(
+          'model must be {provider, model, reasoningEffort?}, or null to follow each Bot',
+        );
+      const route =
+        model === null
+          ? undefined
+          : {
+              provider: model.provider.trim(),
+              model: model.model.trim(),
+              ...(model.reasoningEffort === undefined
+                ? {}
+                : { reasoningEffort: model.reasoningEffort.trim() }),
+            };
+      try {
+        deps.approvalReviewer.setModel(route);
+      } catch (error) {
+        return invalidInput(error instanceof Error ? error.message : String(error));
+      }
+      return { ok: true, value: await reviewerModelView(route) };
+    },
     standingLimitsSet(payload) {
       const slug = asSlug(payload);
       const object = asObject(payload);
@@ -2439,6 +2958,21 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           : invalidInput('invalid banner');
       return { ok: true, value: detailOf(result.record) };
     },
+    botPrimaryColorSet(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const result = deps.registry.setPrimaryColor(
+        scope.botSlug,
+        asObject(payload)['primaryColor'],
+      );
+      if (!result.ok)
+        return result.reason === 'not-found'
+          ? unknownBot(scope.botSlug)
+          : invalidInput(
+              "primaryColor must be { mode: 'automatic' } or { mode: 'custom', color: '#rrggbb' }",
+            );
+      return { ok: true, value: detailOf(result.record) };
+    },
     botAvatarSet(payload) {
       const scope = dmMemory(payload);
       if (!('botSlug' in scope)) return scope;
@@ -2456,6 +2990,63 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     },
     humanIdentity() {
       return { ok: true, value: deps.channels.humanIdentity() };
+    },
+    composerIdentity() {
+      try {
+        if (deps.composerIdentity === undefined) throw new Error();
+        return { ok: true, value: deps.composerIdentity() };
+      } catch {
+        return {
+          ok: false,
+          error: { code: 'storage-unavailable', message: 'Composer recovery identity unavailable' },
+        };
+      }
+    },
+    composerValidate(payload) {
+      const input = z
+        .object({
+          channelId: z.string(),
+          replyTo: z.string().optional(),
+          attachments: z.array(z.unknown()).max(10),
+        })
+        .strict()
+        .safeParse(payload);
+      if (!input.success || !input.data.attachments.every(isChannelAttachmentRef))
+        return invalidInput('invalid composer references');
+      const channel = deps.channels.get(input.data.channelId);
+      if (
+        channel === undefined ||
+        (channel.type === 'dm'
+          ? channel.botSlug === undefined
+          : !deps.channels
+              .listHumanMembers(channel.id)
+              .some((member) => member.humanId === deps.channels.humanIdentity().humanId))
+      )
+        return invalidInput('Channel is unavailable');
+      const reply =
+        input.data.replyTo === undefined
+          ? undefined
+          : deps.channels
+              .readHumanTimeline(channel.id, {
+                direction: 'around',
+                around: input.data.replyTo,
+                olderLimit: 0,
+                newerLimit: 0,
+              })
+              ?.entries.find((message) => message.id === input.data.replyTo);
+      const attachments = input.data.attachments.map((ref) => {
+        try {
+          return deps.attachments?.current(ref) ?? null;
+        } catch (error) {
+          if (
+            error instanceof ChannelAttachmentError &&
+            ['not-found', 'invalid-ref'].includes(error.code)
+          )
+            return null;
+          throw error;
+        }
+      });
+      return { ok: true, value: { ...(reply === undefined ? {} : { reply }), attachments } };
     },
     humanNameSet(payload) {
       const input = z
@@ -2930,6 +3521,66 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (position === undefined) return invalidInput('message does not belong to channel');
       return { ok: true, value: { position } };
     },
+    channelReact(payload) {
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
+      const messageId = asNonBlank(source, 'messageId');
+      const emoji = source['emoji'];
+      const active = source['active'] ?? true;
+      if (channelId === undefined || messageId === undefined)
+        return invalidInput('channelId and messageId are required');
+      if (!isReactionEmoji(emoji)) return invalidInput('emoji must be a single emoji');
+      if (typeof active !== 'boolean') return invalidInput('active must be a boolean');
+      if (deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
+      if (deps.channels.setHumanReaction === undefined)
+        return {
+          ok: false,
+          error: { code: 'storage-unavailable', message: 'reactions are unavailable' },
+        };
+      try {
+        const reactions = deps.channels.setHumanReaction(channelId, messageId, emoji, active);
+        if (reactions === undefined)
+          return invalidInput('message cannot take reactions in this Channel');
+        return { ok: true, value: { reactions } };
+      } catch (error) {
+        if (error instanceof ChannelReactionLimitError) return invalidInput(error.message);
+        throw error;
+      }
+    },
+    channelSearch(payload) {
+      const source = asObject(payload);
+      const channelId = asNonBlank(source, 'channelId');
+      const text = source['text'];
+      const cursor = source['cursor'];
+      const limit = source['limit'];
+      if (channelId === undefined) return invalidInput('channelId is required');
+      if (typeof text !== 'string' || text.trim().length === 0 || text.length > 200)
+        return invalidInput('text must be 1 to 200 characters');
+      if (cursor !== undefined && (typeof cursor !== 'string' || cursor.length > 512))
+        return invalidInput('cursor must be the nextCursor of the previous page');
+      if (
+        limit !== undefined &&
+        (typeof limit !== 'number' || !Number.isSafeInteger(limit) || limit < 1 || limit > 50)
+      )
+        return invalidInput('limit must be an integer from 1 to 50');
+      if (deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
+      if (deps.channels.searchHumanMessages === undefined)
+        return {
+          ok: false,
+          error: { code: 'storage-unavailable', message: 'search is unavailable' },
+        };
+      try {
+        const page = deps.channels.searchHumanMessages(channelId, {
+          text,
+          limit: limit ?? 20,
+          ...(cursor === undefined ? {} : { cursor }),
+        });
+        if (page === undefined) return unknownChannel(channelId);
+        return { ok: true, value: page };
+      } catch (error) {
+        return invalidInput((error as Error).message.replace(/^channel_read: /u, ''));
+      }
+    },
     async channelMarkAllRead() {
       try {
         return { ok: true, value: await markAllHumanMessagesRead(deps.channels) };
@@ -3194,17 +3845,20 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       )
         return invalidInput('Grant approval replies must reference an active Workspace Grant');
       if (grantRequestResolution !== undefined) {
-        if (channel.type !== 'dm' || channel.botSlug === undefined)
-          return invalidInput('Grant request resolution requires a PersonaBot DM');
+        const requester =
+          grantRequestTarget?.grantRequest === true && grantRequestTarget.author.kind === 'bot'
+            ? grantRequestTarget.author.slug
+            : undefined;
         if (
-          grantRequestTarget?.grantRequest !== true ||
-          grantRequestTarget.author.kind !== 'bot' ||
-          grantRequestTarget.author.slug !== channel.botSlug
+          requester === undefined ||
+          (channel.type === 'dm'
+            ? channel.botSlug !== requester
+            : !channel.members.includes(requester))
         )
-          return invalidInput('Grant request is unavailable in this DM');
+          return invalidInput('Grant request is unavailable in this Channel');
         if (
           !deps.grants
-            ?.list(channel.botSlug)
+            ?.list(requester)
             .some(
               (grant) =>
                 grant.id === grantRequestResolution.grantId && grant.revokedAt === undefined,
@@ -3329,9 +3983,16 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('cursor must be a Source Event ID');
       if (
         state !== undefined &&
-        !['pending', 'processing', 'observed', 'deferred', 'needs-repair', 'handled'].includes(
-          String(state),
-        )
+        ![
+          'pending',
+          'processing',
+          'observed',
+          'deferred',
+          'needs-repair',
+          'open',
+          'snoozed',
+          'handled',
+        ].includes(String(state))
       )
         return invalidInput('unknown Bot attention state');
       try {
@@ -3604,6 +4265,12 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const channelId = source['channelId'];
       const limit = source['limit'];
       const cursor = source['cursor'];
+      const snoozed = source['snoozed'];
+      const kind = source['kind'];
+      if (snoozed !== undefined && typeof snoozed !== 'boolean')
+        return invalidInput('snoozed must be a boolean');
+      if (kind !== undefined && kind !== 'auto-rejection')
+        return invalidInput('kind must be auto-rejection');
       if (
         category !== undefined &&
         category !== 'action' &&
@@ -3642,6 +4309,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
             ...(channelId === undefined ? {} : { channelId: channelId as string }),
             ...(limit === undefined ? {} : { limit: limit as number }),
             ...(cursor === undefined ? {} : { cursor: cursor as string }),
+            ...(snoozed === true ? { snoozed: true } : {}),
+            ...(kind === undefined ? {} : { kind }),
           }) ?? { items: [] },
         };
       } catch (error) {
@@ -3654,6 +4323,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           ok: true,
           value: deps.humanAttention?.status() ?? { unreadCount: 0, hasAction: false },
         };
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+    },
+    channelUnreadCounts() {
+      try {
+        return { ok: true, value: { channels: deps.humanAttention?.unreadByChannel() ?? [] } };
       } catch (error) {
         return invalidInput(String(error));
       }
@@ -3712,6 +4388,39 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput(String(error));
       }
     },
+    humanAttentionSnooze(payload) {
+      const source = asObject(payload);
+      const itemId = asNonBlank(source, 'itemId');
+      const sourceKey = source?.['sourceKey'];
+      const until = source?.['until'];
+      if (
+        itemId === undefined ||
+        itemId.length > 350 ||
+        typeof sourceKey !== 'string' ||
+        sourceKey.length > 150
+      )
+        return invalidInput('itemId and sourceKey are required');
+      if (until !== null) {
+        const at = typeof until === 'string' ? Date.parse(until) : Number.NaN;
+        if (Number.isNaN(at) || new Date(at).toISOString() !== until)
+          return invalidInput('until must be an ISO time, or null to bring the item back');
+        const left = at - Date.now();
+        if (left <= 0 || left > HUMAN_INBOX_SNOOZE_MAX_MS)
+          return invalidInput('until must be in the future and at most 30 days away');
+      }
+      try {
+        const item = deps.humanAttention?.item(itemId, sourceKey);
+        if (
+          item === undefined ||
+          (item.sourceEventId ?? '') !== sourceKey ||
+          deps.humanAttentionDecisions?.snooze(item, until) !== true
+        )
+          return invalidInput('Inbox item cannot be snoozed');
+        return { ok: true, value: { accepted: true } };
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+    },
     humanAttentionIgnore(payload) {
       const source = asObject(payload);
       const sourceEventId = asNonBlank(source, 'sourceEventId');
@@ -3733,6 +4442,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       return {
         ok: true,
         value: { assignments: deps.runtime?.listAssignments(slug) ?? [] },
+      };
+    },
+    channelAssignments(payload) {
+      const parsed = z.object({ channelId: z.string().min(1) }).safeParse(asObject(payload));
+      if (!parsed.success) return invalidInput('invalid Group channel');
+      const channel = deps.channels.get(parsed.data.channelId);
+      if (
+        channel?.type !== 'group' ||
+        channel.deletedAt ||
+        !deps.channels
+          .listHumanMembers(channel.id)
+          .some((member) => member.humanId === 'local-human')
+      )
+        return invalidInput('Group channel unavailable');
+      return {
+        ok: true,
+        value: { assignments: deps.runtime?.listChannelAssignments?.(channel.id) ?? [] },
       };
     },
     assignment(payload) {
@@ -3819,6 +4545,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const slug = asSlug(payload);
       if (slug === undefined) return invalidInput('slug is required');
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      const source = asObject(payload);
+      if (source?.['scope'] !== undefined) {
+        const parsed = z
+          .object({ channelId: z.string().min(1), path: z.string().min(1) })
+          .safeParse(source['scope']);
+        if (!parsed.success) return invalidInput('Invalid Group workspace scope');
+        const channel = deps.channels.get(parsed.data.channelId);
+        if (
+          channel?.type !== 'group' ||
+          !channel.members.includes(slug) ||
+          deps.registry.get(slug)?.paused
+        )
+          return invalidInput('Bot is no longer an eligible Group member');
+        try {
+          const grants = (deps.grants?.list(slug) ?? [])
+            .filter(
+              (grant) => grant.revokedAt === undefined && grant.workspacePath === parsed.data.path,
+            )
+            .map((grant) => deps.grants!.requireActive(slug, grant.id));
+          return { ok: true, value: { grants } };
+        } catch (error) {
+          if (error instanceof WorkspaceGrantError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
       return { ok: true, value: { grants: deps.grants?.list(slug) ?? [] } };
     },
     async grantCreate(payload) {
@@ -3834,8 +4586,53 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           ok: false,
           error: { code: 'unavailable', message: 'Workspace Grants are unavailable' },
         };
+      const scope = source?.['scope'];
+      const parsedScope =
+        scope === undefined
+          ? undefined
+          : z
+              .object({
+                channelId: z.string().min(1),
+                path: z.string().min(1),
+              })
+              .safeParse(scope);
+      if (parsedScope !== undefined && !parsedScope.success)
+        return invalidInput('Invalid Group workspace scope');
+      const validate = (): void => {
+        if (parsedScope?.success !== true) return;
+        const channel = deps.channels.get(parsedScope.data.channelId);
+        const bot = deps.registry.get(slug);
+        if (
+          channel?.type !== 'group' ||
+          !channel.members.includes(slug) ||
+          bot === undefined ||
+          bot.paused
+        ) {
+          throw new WorkspaceGrantError(
+            'invalid-grant',
+            'Bot is no longer an eligible Group member',
+          );
+        }
+        if (
+          deps.grants?.availableWorkspaces().find((workspace) => workspace.id === workspaceId)
+            ?.path !== parsedScope.data.path
+        ) {
+          throw new WorkspaceGrantError(
+            'unavailable-workspace',
+            'Workspace no longer matches the confirmed directory',
+          );
+        }
+      };
       try {
-        return { ok: true, value: { grant: await deps.grants.create(slug, workspaceId) } };
+        validate();
+        let created = false;
+        const grant = await deps.grants.create(slug, workspaceId, {
+          validate,
+          onCreated: () => {
+            created = true;
+          },
+        });
+        return { ok: true, value: { grant, ...(scope === undefined ? {} : { created }) } };
       } catch (error) {
         if (error instanceof WorkspaceGrantError) {
           return { ok: false, error: { code: error.code, message: error.message } };
@@ -3900,6 +4697,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           preset: deps.assignmentAccess?.get(slug) ?? {
             botSlug: slug,
             mode: 'workspace-write',
+            scope: 'chat',
             revision: 0,
           },
         },
@@ -3916,7 +4714,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
       if (deps.assignmentAccess === undefined)
         return invalidInput('Assignment access is unavailable');
-      return { ok: true, value: { preset: deps.assignmentAccess.set(slug, mode) } };
+      const scope = source['scope'];
+      if (scope !== undefined && scope !== 'chat' && scope !== 'assignments')
+        return invalidInput('scope must be chat or assignments');
+      return { ok: true, value: { preset: deps.assignmentAccess.set(slug, mode, scope) } };
     },
     toolApprovalRules(payload) {
       const slug = asSlug(payload);
@@ -3930,6 +4731,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (slug === undefined || id === undefined) return invalidInput('slug and id are required');
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
       const rule = deps.toolRules?.revoke(slug, id);
+      if (rule) deps.externalMessaging?.approvals.refreshRules(slug);
       return rule === undefined
         ? invalidInput('Unknown tool approval rule')
         : { ok: true, value: { rule } };
@@ -3941,10 +4743,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (channelId === undefined || messageId === undefined) {
         return invalidInput('channelId and messageId are required');
       }
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined) {
-        return invalidInput('Tool approval is available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined) {
+        return invalidInput('Tool approval is available only in a PersonaBot DM or Group');
       }
+      const channel = { botSlug: asker };
       const request = deps.channels.message(channelId, messageId)?.toolApprovalRequest;
       if (request === undefined) {
         return invalidInput('Unknown tool approval request');
@@ -3964,10 +4767,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
                   : deps.runtime.assignmentApprovalWait(request.sessionId, request.callId)) ??
                 'running')
               : 'settled';
+      const status = deps.toolApproval?.status(channel.botSlug, messageId) ?? 'expired';
+      const expiresAt =
+        status === 'pending' ? deps.toolApproval?.expiresAt(channel.botSlug, messageId) : undefined;
       return {
         ok: true,
         value: {
-          status: deps.toolApproval?.status(channel.botSlug, messageId) ?? 'expired',
+          status,
+          ...(expiresAt === undefined ? {} : { expiresAt }),
           ...(execution === undefined ? {} : { execution }),
         },
       };
@@ -3983,20 +4790,87 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         (outcome !== 'allowed-once' &&
           outcome !== 'allowed-always-exact' &&
           outcome !== 'allowed-always-all' &&
+          outcome !== 'allowed-always-kind' &&
           outcome !== 'rejected')
       ) {
         return invalidInput('channelId, messageId, and a valid outcome are required');
       }
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined) {
-        return invalidInput('Tool approval is available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined) {
+        return invalidInput('Tool approval is available only in a PersonaBot DM or Group');
       }
-      if (deps.channels.message(channelId, messageId)?.toolApprovalRequest === undefined) {
+      const channel = { botSlug: asker };
+      const request = deps.channels.message(channelId, messageId)?.toolApprovalRequest;
+      if (request === undefined) {
         return invalidInput('Unknown tool approval request');
       }
-      const accepted = await deps.toolApproval?.decide(channel.botSlug, messageId, outcome);
+      if (outcome === 'allowed-always-kind' && request.toolName !== 'secret_cli')
+        return invalidInput('allowed-always-kind applies only to a secret_cli approval');
+      const accepted = await deps.toolApproval?.decide(
+        channel.botSlug,
+        messageId,
+        outcome === 'allowed-always-kind' ? 'allowed-always-exact' : outcome,
+      );
       if (accepted !== true) return invalidInput('Tool approval request is no longer pending');
       return { ok: true, value: { accepted: true } };
+    },
+    async toolAutoRejectionOverride(payload) {
+      const source = asObject(payload);
+      const itemId = asNonBlank(source, 'itemId');
+      if (itemId === undefined || itemId.length > 350 || !itemId.startsWith('autoreject:'))
+        return invalidInput('itemId must name an auto-rejected Inbox item');
+      let item;
+      try {
+        item = deps.humanAttention?.item(itemId);
+      } catch (error) {
+        return invalidInput(String(error));
+      }
+      if (
+        item?.kind !== 'auto-rejection' ||
+        item.channelId === undefined ||
+        item.messageId === undefined
+      )
+        return {
+          ok: false,
+          error: {
+            code: 'auto-rejection-unavailable',
+            message: 'This auto-rejected call is no longer waiting for the Human',
+          },
+        };
+      const channel = deps.channels.get(item.channelId);
+      const bot = deps.registry.get(item.botSlug);
+      if (
+        channel === undefined ||
+        bot === undefined ||
+        bot.paused === true ||
+        (channel.type === 'dm'
+          ? channel.botSlug !== item.botSlug
+          : !channel.members.includes(item.botSlug))
+      )
+        return invalidInput('The PersonaBot is no longer active in this Channel');
+      const result = await deps.toolApproval?.overrideRejection(item.channelId, item.messageId);
+      if (result === undefined || !result.ok)
+        return {
+          ok: false,
+          error: {
+            code: 'auto-rejection-unavailable',
+            message: 'This auto-rejected call is no longer waiting for the Human',
+          },
+        };
+      try {
+        if (channel.type === 'group')
+          deps.runtime?.admitGroupMessage(item.channelId, result.message.id);
+        else
+          deps.runtime?.admitDmMessage({
+            channelId: item.channelId,
+            messageId: result.message.id,
+            body: result.message.body,
+          });
+      } catch {}
+      return {
+        ok: true,
+        value: { accepted: true, channelId: item.channelId, messageId: result.message.id },
+      };
     },
     userQuestionStatus(payload) {
       const source = asObject(payload);
@@ -4004,14 +4878,17 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const messageId = asNonBlank(source, 'messageId');
       if (channelId === undefined || messageId === undefined)
         return invalidInput('channelId and messageId are required');
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined)
-        return invalidInput('Questions are available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined)
+        return invalidInput('Questions are available only in a PersonaBot DM or Group');
+      const channel = { botSlug: asker };
       if (deps.channels.message(channelId, messageId)?.userQuestionRequest === undefined)
         return invalidInput('Unknown user question');
       return {
         ok: true,
-        value: { status: deps.userQuestions?.status(channel.botSlug, messageId) ?? 'expired' },
+        value: {
+          status: deps.userQuestions?.status(channel.botSlug, messageId, channelId) ?? 'expired',
+        },
       };
     },
     async userQuestionAnswer(payload) {
@@ -4021,9 +4898,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const answer = asObject(source['answer']);
       if (channelId === undefined || messageId === undefined || !Array.isArray(answer['answers']))
         return invalidInput('channelId, messageId, and answers are required');
-      const channel = deps.channels.get(channelId);
-      if (channel?.type !== 'dm' || channel.botSlug === undefined)
-        return invalidInput('Questions are available only in a PersonaBot DM');
+      const asker = askingBot(channelId, messageId);
+      if (asker === undefined)
+        return invalidInput('Questions are available only in a PersonaBot DM or Group');
+      const channel = { botSlug: asker };
       if (deps.channels.message(channelId, messageId)?.userQuestionRequest === undefined)
         return invalidInput('Unknown user question');
       const accepted = await deps.userQuestions?.answer(
@@ -4035,6 +4913,72 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('Question is no longer pending or answer is invalid');
       return { ok: true, value: { accepted: true } };
     },
+    async botToolTrace(payload) {
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug is required');
+      if (deps.registry.getHistorical(slug) === undefined) return unknownBot(slug);
+      const source = asObject(payload) ?? {};
+      const turns = source['turns'] === undefined ? 3 : source['turns'];
+      if (typeof turns !== 'number' || !Number.isInteger(turns) || turns < 1 || turns > 20)
+        return invalidInput('turns must be an integer from 1 to 20');
+      const roots = deps.ownership.rootsFor(slug);
+      const requested = source['sessionId'];
+      if (requested !== undefined && typeof requested !== 'string')
+        return invalidInput('sessionId must be a string');
+      if (requested === 'direct')
+        return {
+          ok: true,
+          value: {
+            slug,
+            sessionId: 'direct',
+            turns: directToolTrace(deps.runtime?.directBotToolCalls?.(slug) ?? [], { turns }),
+          },
+        };
+      const sessionId =
+        requested ??
+        deps.runtime?.currentOrchestratorSessionId?.(slug) ??
+        [...roots].reverse().find((root) => root.rootRole === 'orchestrator')?.sessionId;
+      if (sessionId === undefined || !roots.some((root) => root.sessionId === sessionId))
+        return invalidInput('The Session does not belong to this PersonaBot');
+      if (deps.readUsageSessionLog === undefined) return unavailable();
+      const log = await deps.readUsageSessionLog(sessionId);
+      if (log === undefined) return unavailable();
+      return { ok: true, value: { slug, sessionId, ...summarizeToolTrace(log.events, { turns }) } };
+    },
+    botTools() {
+      const tools = deps.runtime?.directBotTools?.();
+      if (tools === undefined) return directToolsUnavailable();
+      return { ok: true, value: { sessionId: 'direct', tools } };
+    },
+    async botToolRun(payload) {
+      const slug = asSlug(payload);
+      if (slug === undefined) return invalidInput('slug is required');
+      const source = asObject(payload);
+      const tool = source['tool'];
+      if (typeof tool !== 'string' || tool.trim() === '') return invalidInput('tool is required');
+      const args = source['args'] ?? {};
+      if (typeof args !== 'object' || args === null || Array.isArray(args))
+        return invalidInput('args must be an object of tool arguments');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.runDirectBotTool === undefined) return directToolsUnavailable();
+      try {
+        const run = await deps.runtime.runDirectBotTool(
+          slug,
+          tool.trim(),
+          args as Record<string, unknown>,
+          AbortSignal.timeout(DIRECT_TOOL_TIMEOUT_MS),
+        );
+        return { ok: true, value: { slug, ...run } };
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: error instanceof DirectBotToolError ? error.code : 'tool-failed',
+            message: error instanceof Error ? error.message : String(error),
+          },
+        };
+      }
+    },
     sessions(payload) {
       const slug = asSlug(payload);
       if (slug === undefined) return invalidInput('slug is required');
@@ -4045,20 +4989,114 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           assignment,
         ]),
       );
+      const resumed =
+        deps.runtime?.currentOrchestratorSessionId === undefined
+          ? undefined
+          : (deps.runtime.currentOrchestratorSessionId(slug) ?? null);
+      const triage = deps.runtime?.triageOpenCount?.(slug);
       const sessions = deps.ownership.rootsFor(slug).map((root) => {
         const assignment = assignments.get(root.sessionId);
         return {
           sessionId: root.sessionId,
           role: root.rootRole,
           createdAt: root.createdAt,
+          ...(resumed === undefined || root.rootRole !== 'orchestrator'
+            ? {}
+            : { currentOrchestrator: root.sessionId === resumed }),
+          ...(triage === undefined || root.rootRole !== 'orchestrator' || root.sessionId !== resumed
+            ? {}
+            : { triageOpenCount: triage }),
           ...(root.cwdReference === undefined ? {} : { cwdReference: root.cwdReference }),
           ...(assignment === undefined ? {} : { assignmentActivity: assignment.activity }),
           ...(assignment?.permission === undefined
             ? {}
             : { assignmentAccessMode: assignment.permission.mode }),
+          ...(assignment?.latestReport === undefined
+            ? {}
+            : { assignmentReportState: assignment.latestReport.state }),
+          ...(assignment?.executionWait === undefined
+            ? {}
+            : { assignmentExecutionWait: assignment.executionWait }),
+          ...(assignment?.archivedAt === undefined ? {} : { assignmentArchived: true as const }),
+          ...(assignment === undefined ? {} : { assignmentPurpose: assignment.purpose }),
         };
       });
       return { ok: true, value: { sessions } };
+    },
+    async sessionArchiveSet(payload) {
+      const input = asObject(payload);
+      const slug = asSlug(payload);
+      const sessionId = asNonBlank(input, 'sessionId');
+      const archived = input?.['archived'];
+      if (slug === undefined || sessionId === undefined || typeof archived !== 'boolean')
+        return invalidInput('slug, sessionId and archived are required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.setAssignmentArchived === undefined)
+        return invalidInput('Assignment archive is unavailable');
+      if (deps.runtime.getAssignment(slug, sessionId) === undefined)
+        return invalidInput('Unknown Assignment Session');
+      const outcome = await deps.runtime.setAssignmentArchived(slug, sessionId, archived);
+      if (outcome.outcome === 'refused') return invalidInput(outcome.message);
+      return { ok: true, value: { archived: outcome.outcome === 'archived' } };
+    },
+    async memoryMove(payload) {
+      const input = asObject(payload);
+      const slug = asSlug(payload);
+      const location = input?.['location'];
+      if (slug === undefined || (location !== null && typeof location !== 'string'))
+        return invalidInput('slug and location (a folder, or null for the default) are required');
+      if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      if (deps.runtime?.replaceOrchestrator === undefined)
+        return invalidInput('Moving Memory is unavailable on this Host');
+      const target = memoryMoveTarget(
+        deps.registry,
+        slug,
+        typeof location === 'string' && location.trim() !== '' ? location.trim() : null,
+      );
+      if (!target.ok) return { ok: false, error: { code: target.code, message: target.message } };
+      if (target.to === target.from)
+        return { ok: true, value: { memoryDir: target.from, moved: false } };
+      try {
+        if (deps.memory?.snapshot(slug).provisional === true)
+          return {
+            ok: false,
+            error: {
+              code: 'memory-conflict',
+              message: 'Finish the Memory repair before moving Memory.',
+            },
+          };
+      } catch {}
+      let outcome;
+      try {
+        outcome = await deps.runtime.replaceOrchestrator(slug, (): MemoryMoveResult => {
+          const moved = moveMemoryDirectory(target.from, target.to);
+          try {
+            deps.registry.setMemoryDir(slug, target.custom ? target.to : undefined);
+          } catch (error) {
+            moveMemoryDirectory(target.to, target.from);
+            throw error;
+          }
+          return moved;
+        });
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: 'memory-unavailable',
+            message: `Memory was not moved: ${error instanceof Error ? error.message : String(error)}`,
+          },
+        };
+      }
+      if (outcome.outcome === 'refused')
+        return { ok: false, error: { code: outcome.code, message: outcome.message } };
+      return {
+        ok: true,
+        value: {
+          memoryDir: target.to,
+          moved: true,
+          ...(outcome.value.leftover === undefined ? {} : { leftover: outcome.value.leftover }),
+        },
+      };
     },
     sessionOwner(payload) {
       const sessionId = asNonBlank(asObject(payload), 'sessionId');
@@ -4087,6 +5125,12 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           },
         },
       };
+    },
+    botSessionIds() {
+      const sessionIds = deps.registry
+        .list()
+        .flatMap((bot) => deps.ownership.rootsFor(bot.slug).map((root) => root.sessionId));
+      return { ok: true, value: { sessionIds } };
     },
     memoryFileTarget(payload) {
       const source = asObject(payload);
@@ -4220,6 +5264,67 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         }),
       }));
     },
+    memoryRestoreCommit(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const source = asObject(payload);
+      const sha = asNonBlank(source, 'sha');
+      const expectedHead = asNonBlank(source, 'expectedHead');
+      const restoreId = asNonBlank(source, 'restoreId');
+      const name = source['name'];
+      if (
+        (name !== undefined &&
+          (typeof name !== 'string' || name.length > 60 || /[\r\n]/u.test(name))) ||
+        sha === undefined ||
+        expectedHead === undefined ||
+        restoreId === undefined ||
+        !/^[0-9a-f]{40}$/u.test(sha) ||
+        !/^[0-9a-f]{40}$/u.test(expectedHead) ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(restoreId)
+      )
+        return invalidInput('valid sha, expectedHead, restoreId, and name are required');
+      return memoryCall(() =>
+        deps.memory!.restoreCommitHuman({
+          botSlug: scope.botSlug,
+          sha,
+          expectedHead,
+          restoreId,
+          ...(name === undefined ? {} : { name }),
+        }),
+      );
+    },
+    memoryVersions(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      return memoryCall(() => ({ versions: deps.memory!.versions(scope.botSlug) }));
+    },
+    memoryNameVersion(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const source = asObject(payload);
+      const sha = asNonBlank(source, 'sha');
+      const name = asNonBlank(source, 'name');
+      if (
+        sha === undefined ||
+        name === undefined ||
+        !/^[0-9a-f]{40}$/u.test(sha) ||
+        name.length > 60
+      )
+        return invalidInput('valid sha and name are required');
+      return memoryCall(() => ({
+        version: deps.memory!.nameVersionHuman({ botSlug: scope.botSlug, sha, name }),
+      }));
+    },
+    memoryRemoveVersionName(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      const tag = asNonBlank(asObject(payload), 'tag');
+      if (tag === undefined || tag.length > 200) return invalidInput('valid tag is required');
+      return memoryCall(() => {
+        deps.memory!.removeVersionNameHuman({ botSlug: scope.botSlug, tag });
+        return { removed: true as const };
+      });
+    },
     memoryRepair(payload) {
       const scope = dmMemory(payload);
       if (!('botSlug' in scope)) return scope;
@@ -4274,10 +5379,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
             ...result,
             bots: result.bots.map((row) => {
               const bot = deps.registry.get(row.slug);
+              const historical = deps.registry.getHistorical(row.slug);
               return {
                 ...row,
-                displayName: deps.registry.getHistorical(row.slug)?.displayName ?? row.slug,
+                displayName: historical?.displayName ?? row.slug,
                 current: bot !== undefined,
+                primaryColor:
+                  bot === undefined
+                    ? historicalBotPrimaryColor(row.slug, historical?.primaryColor).retained!
+                    : resolveBotPrimaryColor({
+                        ...bot,
+                        primaryColor: currentBotPrimaryColor(bot.primaryColor),
+                      }).color,
               };
             }),
           },
@@ -4300,6 +5413,60 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (deps.usage === undefined) return unavailable();
       try {
         return { ok: true, value: deps.usage.query(scope.botSlug, parsed.data) };
+      } catch (error) {
+        if (error instanceof OperationalDatabaseError) return unavailable();
+        throw error;
+      }
+    },
+    async profileSessionUsage(payload) {
+      const scope = dmMemory(payload);
+      if (!('botSlug' in scope)) return scope;
+      if (deps.usage === undefined || deps.readUsageSessionLog === undefined) return unavailable();
+      try {
+        const slug = scope.botSlug;
+        const weeks = 26;
+        const since = new Date(Date.now() - weeks * 7 * 24 * 60 * 60 * 1000).toISOString();
+        const assignments = new Map(
+          (deps.runtime?.listAssignments(slug) ?? []).map((entry) => [entry.sessionId, entry]),
+        );
+        const roots = deps.ownership.rootsFor(slug);
+        const resumed =
+          deps.runtime?.currentOrchestratorSessionId === undefined
+            ? undefined
+            : (deps.runtime.currentOrchestratorSessionId(slug) ?? null);
+        const orchestrator = roots
+          .filter(
+            (root) =>
+              root.rootRole === 'orchestrator' &&
+              (resumed === undefined || root.sessionId === resumed),
+          )
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+          .slice(0, 1);
+        const updatedAt = (root: (typeof roots)[number]) =>
+          assignments.get(root.sessionId)?.updatedAt ?? root.createdAt;
+        const recent = roots
+          .filter((root) => root.rootRole === 'assignment')
+          .sort((left, right) => updatedAt(right).localeCompare(updatedAt(left)))
+          .slice(0, 5);
+        const rows: ProfileSessionUsage['rows'] = [];
+        for (const root of [...orchestrator, ...recent]) {
+          const summary = await deps.usage.sessionSummary(
+            slug,
+            root.sessionId,
+            since,
+            deps.readUsageSessionLog,
+          );
+          rows.push({
+            ...summary,
+            sessionId: root.sessionId,
+            role: root.rootRole,
+            label: assignments.get(root.sessionId)?.purpose.slice(0, 160) ?? root.rootRole,
+            updatedAt: updatedAt(root),
+          });
+        }
+        const current = dmMemory(payload);
+        if (!('botSlug' in current) || current.botSlug !== slug) return unavailable();
+        return { ok: true, value: { slug, weeks, since, rows } };
       } catch (error) {
         if (error instanceof OperationalDatabaseError) return unavailable();
         throw error;
@@ -4468,6 +5635,13 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const parsed = hiddenSetPayload.safeParse(payload);
       if (!parsed.success) return invalidInput('invalid hiddenSet payload');
       return rosterWrite(async () => ({ hidden: await deps.roster.hiddenSet(parsed.data.hidden) }));
+    },
+    async channelMuteSet(payload) {
+      const parsed = channelMuteSetPayload.safeParse(payload);
+      if (!parsed.success) return invalidInput('channelId and a boolean muted are required');
+      const { channelId, muted } = parsed.data;
+      if (muted && deps.channels.get(channelId) === undefined) return unknownChannel(channelId);
+      return rosterWrite(async () => ({ muted: await deps.roster.mutedSet(channelId, muted) }));
     },
     async rosterBatch(payload) {
       const parsed = rosterBatchPayload.safeParse(payload);

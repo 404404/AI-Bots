@@ -2,6 +2,7 @@ import { isPixelBannerRecipe, type PixelBannerRecipe } from '@botharness/pixel-b
 import { parseToolApprovalActor } from '../../../core/src/workspaces/tool-approval-actor.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { PairingRequest, PairingReviewInput } from '../../../core/src/messaging/pairing.js';
+import type { SenderAccessInput } from '../../../core/src/messaging/sender-access.js';
 import { parsePublicAttention } from './activity-attention.js';
 import {
   isAvatarAppearance,
@@ -16,6 +17,7 @@ import type {
   MessagingDefaultsInput,
 } from '../../../core/src/messaging/defaults.js';
 import type { GroupMemberWakePolicy } from '../../../core/src/channels/channel.js';
+import type { ChannelAssignmentSummary } from '../../../core/src/runtime/bot-runtime.js';
 import type { AllBotPreview, AllBotMention } from '../../../core/src/channels/all-bot-mention.js';
 
 import type {
@@ -47,12 +49,15 @@ import {
 } from '../../../core/src/marketplace/client.js';
 import { parseChallenge, type AltchaChallenge } from '../../../core/src/marketplace/altcha.js';
 import type { OverviewUsage } from '../../../core/src/bridge/methods.js';
+import type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
+export type { ProfileSessionUsage } from '../../../core/src/bridge/methods.js';
 import type { UsageOverviewPeriod } from '../../../core/src/usage/overview.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
 import type { MessagingConversationInput } from '../../../core/src/messaging/conversations.js';
 import { isPartLibraryEntry, type PartLibraryEntry } from '../../../core/src/bots/part-library.js';
 import type { PixelCustomPart } from '../../../core/src/bots/avatar-appearance.js';
+import { isBotPrimaryColor } from '../../../core/src/bots/primary-color.js';
 import type { ActivityOverview } from '../../../core/src/bridge/methods.js';
 import type { ExternalSource } from '../../../core/src/messaging/inbound.js';
 import type {
@@ -69,6 +74,8 @@ import type {
 } from '../../../core/src/messaging/outbound.js';
 import type { MessagingTarget } from '../../../core/src/messaging/provider.js';
 import type { HostFileTarget } from './host-file-actions.js';
+import type { ComposerRecoveryIdentity } from '../../../core/src/bridge/composer-recovery.js';
+import { isChannelAttachmentRef } from '../../../core/src/attachments/ref.js';
 import type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 export type { UsageFilter, UsageQueryResult } from '../../../core/src/usage/query.js';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
@@ -87,6 +94,7 @@ import type {
   ChannelAuthor,
   ChannelAttachmentRef,
   ChannelMessage,
+  ChannelReaction,
   ChannelSummary,
   OwnedSessionSummary,
   StandingLimitsView,
@@ -137,6 +145,7 @@ export interface AssignmentModelOptionView {
   model: string;
   allowedEfforts: string[];
   defaultEffort: string;
+  note?: string;
 }
 
 export interface ModelCatalogEntryView {
@@ -312,6 +321,7 @@ export interface CreatePersonaBotInput {
   description?: string;
   gitUrl?: string;
   origin?: 'marketplace';
+  memoryLocation?: string;
 }
 
 export interface BotSourcePolicyView {
@@ -581,6 +591,8 @@ async function unwrap(
   return result.value;
 }
 
+export type BotPrimaryColorChoice = { mode: 'automatic' } | { mode: 'custom'; color: string };
+
 export function parseBotSummary(value: unknown): BotSummary | undefined {
   const record = asRecord(value);
   if (record === undefined) return undefined;
@@ -610,6 +622,7 @@ export function parseBotSummary(value: unknown): BotSummary | undefined {
         ? { appearanceUnsupported: true as const }
         : {}),
     ...(parseBanner(record['banner']) ?? {}),
+    ...(isBotPrimaryColor(record['primaryColor']) ? { primaryColor: record['primaryColor'] } : {}),
     ...(record['avatarSeed'] === 2 ? { avatarSeed: 2 as const } : {}),
     ...(typeof record['paused'] === 'boolean' ? { paused: record['paused'] } : {}),
     ...(record['deleted'] === true ? { deleted: true } : {}),
@@ -849,10 +862,10 @@ export function channelAttachmentUrl(
 ): string {
   if (owner === undefined) throw new Error('Message ownership is required for attachments');
   if (ref.fileId !== undefined) {
-    return '/api/botharness/attachment?' + new URLSearchParams({ ...owner, fileId: ref.fileId });
+    return './api/botharness/attachment?' + new URLSearchParams({ ...owner, fileId: ref.fileId });
   }
   return (
-    '/api/botharness/attachment?' +
+    './api/botharness/attachment?' +
     new URLSearchParams({ hash: ref.hash, name: ref.name, ...owner })
   );
 }
@@ -863,7 +876,7 @@ export async function uploadChannelAttachment(
   uploadId?: string,
 ): Promise<ChannelAttachmentRef> {
   const response = await fetch(
-    `/api/botharness/attachment/upload?${new URLSearchParams({ name: file.name, ...(uploadId === undefined ? {} : { uploadId }) })}`,
+    `./api/botharness/attachment/upload?${new URLSearchParams({ name: file.name, ...(uploadId === undefined ? {} : { uploadId }) })}`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/octet-stream' },
@@ -948,6 +961,22 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       (request['role'] !== 'orchestrator' && request['role'] !== 'assignment')
     )
       return undefined;
+    const preview = asRecord(request['botCreatePreview']);
+    const botCreatePreview =
+      preview !== undefined &&
+      typeof preview['memoryFolder'] === 'string' &&
+      typeof preview['defaultLocation'] === 'boolean'
+        ? {
+            memoryFolder: preview['memoryFolder'],
+            defaultLocation: preview['defaultLocation'],
+            ...(typeof preview['avatar'] === 'string' && preview['avatar'].startsWith('data:image/')
+              ? { avatar: preview['avatar'] }
+              : {}),
+            ...(typeof preview['avatarError'] === 'string'
+              ? { avatarError: preview['avatarError'] }
+              : {}),
+          }
+        : undefined;
     toolApprovalRequest = {
       sessionId: request['sessionId'],
       callId: request['callId'],
@@ -955,6 +984,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       role: request['role'],
       cwd: request['cwd'],
       input: request['input'],
+      ...(botCreatePreview === undefined ? {} : { botCreatePreview }),
     };
   }
   let userQuestionRequest: ChannelMessage['userQuestionRequest'];
@@ -966,8 +996,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       author.kind !== 'bot' ||
       typeof request['sessionId'] !== 'string' ||
       !Array.isArray(questions) ||
-      questions.length === 0 ||
-      questions.length > 3
+      questions.length === 0
     )
       return undefined;
     const parsed = questions.map((value) => {
@@ -1035,7 +1064,53 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     };
   }
   let memberDeparture: ChannelMessage['memberDeparture'];
-  if (record['memberDeparture'] !== undefined) {
+  let turnStop: ChannelMessage['turnStop'];
+  let toolAutoApproval: ChannelMessage['toolAutoApproval'];
+  let toolAutoApprovalPause: ChannelMessage['toolAutoApprovalPause'];
+  if (record['toolAutoApprovalPause'] !== undefined) {
+    const pause = asRecord(record['toolAutoApprovalPause']);
+    if (
+      pause === undefined ||
+      author.kind !== 'system' ||
+      ['botSlug', 'sessionId', 'template'].some(
+        (key) => typeof pause[key] !== 'string' || (pause[key] as string).length === 0,
+      ) ||
+      (pause['state'] !== 'paused' && pause['state'] !== 'resumed') ||
+      (pause['reason'] !== undefined &&
+        pause['reason'] !== 'consecutive' &&
+        pause['reason'] !== 'session')
+    )
+      return undefined;
+    toolAutoApprovalPause = {
+      botSlug: pause['botSlug'] as string,
+      sessionId: pause['sessionId'] as string,
+      template: pause['template'] as string,
+      state: pause['state'],
+      ...(pause['reason'] === undefined ? {} : { reason: pause['reason'] }),
+    };
+  } else if (record['toolAutoApproval'] !== undefined) {
+    const auto = asRecord(record['toolAutoApproval']);
+    if (
+      auto === undefined ||
+      author.kind !== 'system' ||
+      ['botSlug', 'sessionId', 'callId', 'toolName', 'template', 'reason'].some(
+        (key) => typeof auto[key] !== 'string' || (auto[key] as string).length === 0,
+      ) ||
+      typeof auto['input'] !== 'string' ||
+      (auto['outcome'] !== 'allowed' && auto['outcome'] !== 'rejected')
+    )
+      return undefined;
+    toolAutoApproval = {
+      botSlug: auto['botSlug'] as string,
+      sessionId: auto['sessionId'] as string,
+      callId: auto['callId'] as string,
+      toolName: auto['toolName'] as string,
+      input: auto['input'],
+      template: auto['template'] as string,
+      outcome: auto['outcome'],
+      reason: auto['reason'] as string,
+    };
+  } else if (record['memberDeparture'] !== undefined) {
     const departure = asRecord(record['memberDeparture']);
     if (
       departure === undefined ||
@@ -1058,6 +1133,16 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     };
   } else if (record['memoryCommit'] !== undefined) {
     if (author.kind !== 'system') return undefined;
+  } else if (record['turnStop'] !== undefined) {
+    const stop = asRecord(record['turnStop']);
+    if (
+      stop === undefined ||
+      author.kind !== 'system' ||
+      typeof stop['botName'] !== 'string' ||
+      typeof stop['humanName'] !== 'string'
+    )
+      return undefined;
+    turnStop = { botName: stop['botName'], humanName: stop['humanName'] };
   } else if (author.kind === 'system' && asRecord(record['onboardingWelcome'])?.['version'] !== 1) {
     return undefined;
   }
@@ -1122,6 +1207,35 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       recipientBotSlug: action['recipientBotSlug'],
     };
   }
+  let botCreateAction: ChannelMessage['botCreateAction'];
+  if (record['botCreateAction'] !== undefined) {
+    const action = asRecord(record['botCreateAction']);
+    if (
+      action === undefined ||
+      author.kind !== 'bot' ||
+      typeof action['botSlug'] !== 'string' ||
+      typeof action['displayName'] !== 'string'
+    )
+      return undefined;
+    botCreateAction = { botSlug: action['botSlug'], displayName: action['displayName'] };
+  }
+  let botChannelPost: ChannelMessage['botChannelPost'];
+  if (record['botChannelPost'] !== undefined) {
+    const post = asRecord(record['botChannelPost']);
+    if (
+      post === undefined ||
+      author.kind !== 'bot' ||
+      typeof post['channelId'] !== 'string' ||
+      typeof post['messageId'] !== 'string'
+    )
+      return undefined;
+    botChannelPost = { channelId: post['channelId'], messageId: post['messageId'] };
+  }
+  const botChannelPostPreview =
+    typeof record['botChannelPostPreview'] === 'string' || record['botChannelPostPreview'] === null
+      ? (record['botChannelPostPreview'] as string | null)
+      : undefined;
+  const noticeOriginChannel = asRecord(record['noticeOrigin'])?.['channelId'];
   const rawAttachments = record['attachments'];
   const attachments = Array.isArray(rawAttachments)
     ? rawAttachments.map(parseChannelAttachment)
@@ -1147,6 +1261,10 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
         'messageId',
         'senderId',
       ].every((key) => typeof origin[key] === 'string' && origin[key].length > 0) ||
+      ['accountRef', 'accountName'].some(
+        (key) =>
+          origin[key] !== undefined && (typeof origin[key] !== 'string' || !origin[key].trim()),
+      ) ||
       (origin['threadId'] !== undefined &&
         (typeof origin['threadId'] !== 'string' || origin['threadId'].length === 0))
     )
@@ -1159,22 +1277,41 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     if (
       !bridgeOrigin ||
       !media ||
-      Object.keys(media).some((key) => !['items', 'parts'].includes(key)) ||
+      Object.keys(media).some((key) => !['items', 'parts', 'voice'].includes(key)) ||
       !Array.isArray(media['items']) ||
       media['items'].length > 32
     )
       return;
+    if (media['voice'] !== undefined) {
+      const voice = asRecord(media['voice']);
+      if (
+        bridgeOrigin.platform !== 'qq' ||
+        !voice ||
+        Object.keys(voice).some((key) => !['transcript', 'durationMs'].includes(key)) ||
+        (voice['transcript'] !== 'platform' && voice['transcript'] !== 'unavailable') ||
+        (voice['durationMs'] !== undefined &&
+          (typeof voice['durationMs'] !== 'number' ||
+            !Number.isSafeInteger(voice['durationMs']) ||
+            voice['durationMs'] < 0))
+      )
+        return;
+    }
     const ids = new Set<string>();
     for (const raw of media['items']) {
       const item = asRecord(raw);
       if (
         !item ||
-        item['kind'] !== 'image' ||
+        (item['kind'] === 'audio' && !media['voice']) ||
+        (item['kind'] !== 'image' && item['kind'] !== 'file' && item['kind'] !== 'audio') ||
         typeof item['id'] !== 'string' ||
         !/^[a-f0-9]{64}$/.test(item['id']) ||
         typeof item['name'] !== 'string' ||
         ids.has(item['id']) ||
-        Object.keys(item).some((key) => !['id', 'kind', 'name'].includes(key))
+        (item['sizeBytes'] !== undefined &&
+          (typeof item['sizeBytes'] !== 'number' ||
+            !Number.isSafeInteger(item['sizeBytes']) ||
+            item['sizeBytes'] < 0)) ||
+        Object.keys(item).some((key) => !['id', 'kind', 'name', 'sizeBytes'].includes(key))
       )
         return;
       ids.add(item['id']);
@@ -1356,6 +1493,9 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       }))
   )
     return undefined;
+  const reactions =
+    record['reactions'] === undefined ? undefined : parseReactions(record['reactions']);
+  if (record['reactions'] !== undefined && reactions === undefined) return undefined;
   const deliveries = record['deliveries'];
   if (
     deliveries !== undefined &&
@@ -1406,6 +1546,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       ? {}
       : { humanReceipts: humanReceipts as NonNullable<ChannelMessage['humanReceipts']> }),
     ...(channelRevision === undefined ? {} : { channelRevision }),
+    ...(reactions === undefined || reactions.length === 0 ? {} : { reactions }),
     ...(grantRequest === true ? { grantRequest: true as const } : {}),
     ...(grantRequest === true && record['grantRequestResolved'] === true
       ? { grantRequestResolved: true }
@@ -1413,11 +1554,25 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
     ...(assignmentReply === undefined ? {} : { assignmentReply }),
     ...(botDmAction === undefined ? {} : { botDmAction }),
+    ...(botCreateAction === undefined ? {} : { botCreateAction }),
+    ...(botChannelPost === undefined ? {} : { botChannelPost }),
+    ...(botChannelPost === undefined || botChannelPostPreview === undefined
+      ? {}
+      : { botChannelPostPreview }),
+    ...(typeof noticeOriginChannel === 'string'
+      ? { noticeOrigin: { channelId: noticeOriginChannel } }
+      : {}),
     ...(memoryCommit === undefined ? {} : { memoryCommit }),
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
+    ...(turnStop === undefined ? {} : { turnStop }),
+    ...(toolAutoApproval === undefined ? {} : { toolAutoApproval }),
+    ...(toolAutoApprovalPause === undefined ? {} : { toolAutoApprovalPause }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
     ...(sessionFailure === undefined ? {} : { sessionFailure }),
     ...(toolApprovalDecision === undefined ? {} : { toolApprovalDecision }),
+    ...(record['privateInputRequest'] === undefined
+      ? {}
+      : { privateInputRequest: parsePrivateInputCard(record['privateInputRequest']) }),
     ...(userQuestionRequest === undefined ? {} : { userQuestionRequest }),
     ...(userQuestionResolution === undefined ? {} : { userQuestionResolution }),
     ...(attachments === undefined ? {} : { attachments: attachments as ChannelAttachmentRef[] }),
@@ -1429,6 +1584,67 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
   };
 }
 
+export function parseReactions(value: unknown): ChannelReaction[] | undefined {
+  if (!Array.isArray(value) || value.length > 200) return undefined;
+  const reactions: ChannelReaction[] = [];
+  for (const entry of value) {
+    const item = asRecord(entry);
+    const emoji = item?.['emoji'];
+    const actors = item?.['actors'];
+    if (typeof emoji !== 'string' || emoji.length === 0 || emoji.length > 16) return undefined;
+    if (!Array.isArray(actors) || actors.length === 0) return undefined;
+    const parsed: ChannelReaction['actors'] = [];
+    for (const actor of actors) {
+      const record = asRecord(actor);
+      const kind = record?.['kind'];
+      const id = record?.['id'];
+      if ((kind !== 'human' && kind !== 'bot') || typeof id !== 'string' || id.length === 0)
+        return undefined;
+      parsed.push({ kind, id });
+    }
+    reactions.push({ emoji, actors: parsed });
+  }
+  return reactions;
+}
+
+export async function reactToChannelMessage(
+  call: BridgeCall,
+  channelId: string,
+  messageId: string,
+  emoji: string,
+  active: boolean,
+): Promise<ChannelReaction[]> {
+  const value = asRecord(
+    await unwrap(call, 'channelReact', { channelId, messageId, emoji, active }),
+  );
+  const reactions = parseReactions(value?.['reactions']);
+  if (reactions === undefined) throw new Error('invalid channelReact response');
+  return reactions;
+}
+
+export async function searchChannelMessages(
+  call: BridgeCall,
+  channelId: string,
+  text: string,
+  cursor?: string,
+): Promise<{ messages: ChannelMessage[]; nextCursor?: string }> {
+  const value = asRecord(
+    await unwrap(call, 'channelSearch', {
+      channelId,
+      text,
+      limit: 20,
+      ...(cursor === undefined ? {} : { cursor }),
+    }),
+  );
+  const nextCursor = value?.['nextCursor'];
+  if (value === undefined || (nextCursor !== undefined && typeof nextCursor !== 'string'))
+    throw new Error('invalid channelSearch response');
+  return {
+    messages: parseChannelMessages(value),
+    ...(nextCursor === undefined ? {} : { nextCursor }),
+  };
+}
+
 export function parseChannelMessages(value: unknown): ChannelMessage[] {
   const messages = asRecord(value)?.['messages'];
   if (!Array.isArray(messages)) return [];
@@ -1436,6 +1652,59 @@ export function parseChannelMessages(value: unknown): ChannelMessage[] {
     const message = parseChannelMessage(entry);
     return message === undefined ? [] : [message];
   });
+}
+
+function parsePrivateInputCard(value: unknown): NonNullable<ChannelMessage['privateInputRequest']> {
+  const record = asRecord(value);
+  if (
+    record === undefined ||
+    Object.keys(record).some(
+      (key) =>
+        !['sessionId', 'account', 'purpose', 'fields', 'expiresAt', 'replacesMessageId'].includes(
+          key,
+        ),
+    ) ||
+    (record['sessionId'] === undefined
+      ? typeof record['replacesMessageId'] !== 'string'
+      : typeof record['sessionId'] !== 'string') ||
+    (record['replacesMessageId'] !== undefined &&
+      (typeof record['replacesMessageId'] !== 'string' ||
+        !/^[0-9a-f-]{36}$/.test(record['replacesMessageId']))) ||
+    typeof record['account'] !== 'string' ||
+    typeof record['purpose'] !== 'string' ||
+    (record['expiresAt'] !== undefined &&
+      (typeof record['expiresAt'] !== 'string' ||
+        !Number.isFinite(Date.parse(record['expiresAt'])))) ||
+    !Array.isArray(record['fields']) ||
+    record['fields'].length < 1 ||
+    record['fields'].length > 8
+  )
+    throw new Error('Invalid private input card');
+  const fields = record['fields'].map((value: unknown) => {
+    const field = asRecord(value);
+    if (
+      field === undefined ||
+      Object.keys(field).some((key) => !['id', 'label', 'required'].includes(key)) ||
+      typeof field['id'] !== 'string' ||
+      !/^[a-z][a-z0-9_]{0,47}$/.test(field['id']) ||
+      typeof field['label'] !== 'string' ||
+      typeof field['required'] !== 'boolean'
+    )
+      throw new Error('Invalid private input field');
+    return { id: field['id'], label: field['label'], required: field['required'] };
+  });
+  if (new Set(fields.map((field) => field.id)).size !== fields.length)
+    throw new Error('Invalid private input fields');
+  return {
+    ...(typeof record['sessionId'] === 'string' ? { sessionId: record['sessionId'] } : {}),
+    ...(typeof record['replacesMessageId'] === 'string'
+      ? { replacesMessageId: record['replacesMessageId'] }
+      : {}),
+    account: record['account'],
+    purpose: record['purpose'],
+    fields,
+    ...(typeof record['expiresAt'] === 'string' ? { expiresAt: record['expiresAt'] } : {}),
+  };
 }
 
 export interface SessionBotOwner {
@@ -1491,16 +1760,46 @@ export function parseOwnedSessionSummaries(value: unknown): OwnedSessionSummary[
     )
       return [];
     const cwdReference = record['cwdReference'];
+    const currentOrchestrator = record['currentOrchestrator'];
+    const reportState = record['assignmentReportState'];
+    const executionWait = record['assignmentExecutionWait'];
     return [
       {
         sessionId,
         role,
         createdAt,
         ...(typeof cwdReference === 'string' ? { cwdReference } : {}),
+        ...(role === 'orchestrator' && typeof currentOrchestrator === 'boolean'
+          ? { currentOrchestrator }
+          : {}),
+        ...(role === 'orchestrator' &&
+        typeof record['triageOpenCount'] === 'number' &&
+        Number.isSafeInteger(record['triageOpenCount']) &&
+        record['triageOpenCount'] > 0
+          ? { triageOpenCount: record['triageOpenCount'] }
+          : {}),
         ...(activity === undefined ? {} : { assignmentActivity: activity }),
         ...(role === 'assignment' &&
         (accessMode === 'workspace-write' || accessMode === 'danger-full-access')
           ? { assignmentAccessMode: accessMode }
+          : {}),
+        ...(role === 'assignment' &&
+        (reportState === 'progress' ||
+          reportState === 'completed' ||
+          reportState === 'blocked' ||
+          reportState === 'waiting-human' ||
+          reportState === 'failed')
+          ? { assignmentReportState: reportState }
+          : {}),
+        ...(role === 'assignment' &&
+        (executionWait === 'waiting-human' || executionWait === 'waiting-capacity')
+          ? { assignmentExecutionWait: executionWait }
+          : {}),
+        ...(role === 'assignment' && record['assignmentArchived'] === true
+          ? { assignmentArchived: true as const }
+          : {}),
+        ...(role === 'assignment' && typeof record['assignmentPurpose'] === 'string'
+          ? { assignmentPurpose: record['assignmentPurpose'] }
           : {}),
       },
     ];
@@ -1734,6 +2033,54 @@ export async function loadChannels(
   signal?: AbortSignal,
 ): Promise<ChannelSummary[]> {
   return parseChannelRecords(await unwrap(call, 'channels', {}, signal));
+}
+
+export async function loadComposerIdentity(
+  call: BridgeCall,
+  signal?: AbortSignal,
+): Promise<ComposerRecoveryIdentity> {
+  const value = asRecord(await unwrap(call, 'composerIdentity', {}, signal));
+  if (
+    value === undefined ||
+    !['hostId', 'profileId', 'humanId'].every(
+      (key) => typeof value[key] === 'string' && (value[key] as string).length > 0,
+    )
+  )
+    throw new Error('invalid composer identity');
+  return {
+    hostId: value['hostId'] as string,
+    profileId: value['profileId'] as string,
+    humanId: value['humanId'] as string,
+  };
+}
+
+export async function validateComposerDraft(
+  call: BridgeCall,
+  channelId: string,
+  attachments: ChannelAttachmentRef[],
+  replyTo?: string,
+): Promise<{ reply?: ChannelMessage; attachments: Array<ChannelAttachmentRef | null> }> {
+  const value = asRecord(
+    await unwrap(call, 'composerValidate', {
+      channelId,
+      attachments,
+      ...(replyTo === undefined ? {} : { replyTo }),
+    }),
+  );
+  if (
+    value === undefined ||
+    !Array.isArray(value['attachments']) ||
+    value['attachments'].length !== attachments.length ||
+    !value['attachments'].every((ref) => ref === null || isChannelAttachmentRef(ref))
+  )
+    throw new Error('invalid composer validation');
+  const reply = value['reply'] === undefined ? undefined : parseChannelMessage(value['reply']);
+  if (value['reply'] !== undefined && reply === undefined)
+    throw new Error('invalid composer reply');
+  return {
+    ...(reply === undefined ? {} : { reply }),
+    attachments: value['attachments'] as Array<ChannelAttachmentRef | null>,
+  };
 }
 
 export async function openDmChannel(
@@ -2004,6 +2351,17 @@ export async function setBotAppearance(
   return bot;
 }
 
+export async function setBotPrimaryColor(
+  call: BridgeCall,
+  channelId: string,
+  primaryColor: BotPrimaryColorChoice,
+): Promise<BotSummary> {
+  const value = asRecord(await unwrap(call, 'botPrimaryColorSet', { channelId, primaryColor }));
+  const bot = parseBotSummary(value?.['bot']);
+  if (bot === undefined) throw new Error('invalid botPrimaryColorSet response');
+  return bot;
+}
+
 export async function loadPartLibrary(call: BridgeCall): Promise<PartLibraryEntry[]> {
   const parts = asRecord(await unwrap(call, 'partLibraryList', {}))?.['parts'];
   if (!Array.isArray(parts)) throw new Error('invalid partLibraryList response');
@@ -2143,6 +2501,33 @@ export async function removeGroupMember(
   return channel;
 }
 
+const ASSIGNMENT_ACTIVITIES = ['working', 'idle', 'error', 'stopping', 'stopped'];
+const ASSIGNMENT_REPORT_STATES = ['progress', 'completed', 'blocked', 'waiting-human', 'failed'];
+
+export async function loadChannelAssignments(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ChannelAssignmentSummary[]> {
+  const value = asRecord(await unwrap(call, 'channelAssignments', { channelId }));
+  const assignments = value?.['assignments'];
+  if (
+    !Array.isArray(assignments) ||
+    assignments.some(
+      (row) =>
+        typeof row?.sessionId !== 'string' ||
+        typeof row.botSlug !== 'string' ||
+        typeof row.purpose !== 'string' ||
+        !ASSIGNMENT_ACTIVITIES.includes(row.activity) ||
+        typeof row.updatedAt !== 'string' ||
+        (row.latestReport !== undefined &&
+          (!ASSIGNMENT_REPORT_STATES.includes(row.latestReport?.state) ||
+            typeof row.latestReport.summary !== 'string')),
+    )
+  )
+    throw new Error('invalid channelAssignments response');
+  return assignments;
+}
+
 export async function loadGroupWakePolicies(
   call: BridgeCall,
   channelId: string,
@@ -2221,6 +2606,92 @@ export interface TimelinePageRequest {
   newerLimit?: number;
 }
 
+export interface JournalEntry {
+  channelId: string;
+  message: ChannelMessage;
+  revision: number;
+}
+export interface JournalPage {
+  entries: JournalEntry[];
+  olderCursor: string | null;
+  hasOlder: boolean;
+}
+
+export function parseStoredChannelMessage(value: unknown): ChannelMessage | undefined {
+  const parsed = parseChannelMessage(value);
+  if (parsed !== undefined) return parsed;
+  const record = asRecord(value);
+  const id = record?.['id'];
+  const at = record?.['at'];
+  const body = record?.['body'];
+  if (
+    typeof id !== 'string' ||
+    id.length === 0 ||
+    typeof at !== 'string' ||
+    at.length === 0 ||
+    typeof body !== 'string'
+  )
+    return undefined;
+  const revision = record?.['channelRevision'];
+  console.warn('botharness: showing an unreadable Channel message as plain text', id);
+  return {
+    id,
+    at,
+    author: parseAuthor(record?.['author']) ?? { kind: 'system' },
+    body,
+    format: 'text',
+    ...(typeof revision === 'number' && Number.isSafeInteger(revision) && revision >= 1
+      ? { channelRevision: revision }
+      : {}),
+  };
+}
+
+export function parseJournalEntry(value: unknown): JournalEntry | undefined {
+  const record = asRecord(value);
+  const revision = record?.['revision'];
+  const message = parseStoredChannelMessage(record?.['message']);
+  if (
+    typeof record?.['channelId'] !== 'string' ||
+    typeof revision !== 'number' ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1 ||
+    message === undefined
+  )
+    return undefined;
+  return { channelId: record['channelId'], message, revision };
+}
+
+export function parseJournalPage(value: unknown): JournalPage | undefined {
+  const raw = asRecord(value);
+  const entries = raw?.['entries'];
+  if (
+    !Array.isArray(entries) ||
+    !(raw?.['olderCursor'] === null || typeof raw?.['olderCursor'] === 'string') ||
+    typeof raw?.['hasOlder'] !== 'boolean'
+  )
+    return undefined;
+  const parsed = entries.map((entry) => parseJournalEntry(entry));
+  if (parsed.some((entry) => entry === undefined)) return undefined;
+  return {
+    entries: parsed as JournalEntry[],
+    olderCursor: raw['olderCursor'] as string | null,
+    hasOlder: raw['hasOlder'],
+  };
+}
+
+export async function loadJournalPage(
+  call: BridgeCall,
+  channelId: string,
+  request: { through: number; before?: number; limit?: number },
+  signal?: AbortSignal,
+): Promise<JournalPage> {
+  const page = parseJournalPage(
+    await unwrap(call, 'channelJournalPage', { channelId, ...request }, signal),
+  );
+  if (page === undefined) throw new Error('invalid channelJournalPage response');
+  return page;
+}
+
 export async function loadTimelinePage(
   call: BridgeCall,
   channelId: string,
@@ -2232,13 +2703,15 @@ export async function loadTimelinePage(
   );
   const revision = response?.['revision'];
   const raw = asRecord(response?.['page']);
-  const entries = raw?.['entries'];
+  const entries = Array.isArray(raw?.['entries'])
+    ? raw['entries'].map((entry: unknown) => parseStoredChannelMessage(entry))
+    : undefined;
   if (
     typeof revision !== 'number' ||
     !Number.isSafeInteger(revision) ||
     revision < 0 ||
-    !Array.isArray(entries) ||
-    !entries.every((entry) => parseChannelMessage(entry) !== undefined) ||
+    entries === undefined ||
+    entries.some((entry) => entry === undefined) ||
     !(raw?.['olderCursor'] === null || typeof raw?.['olderCursor'] === 'string') ||
     !(raw?.['newerCursor'] === null || typeof raw?.['newerCursor'] === 'string') ||
     typeof raw?.['hasOlder'] !== 'boolean' ||
@@ -2248,7 +2721,7 @@ export async function loadTimelinePage(
   return {
     revision,
     page: {
-      entries: entries.map((entry) => parseChannelMessage(entry)!),
+      entries: entries as ChannelMessage[],
       olderCursor: raw['olderCursor'] as string | null,
       newerCursor: raw['newerCursor'] as string | null,
       hasOlder: raw['hasOlder'],
@@ -2418,6 +2891,7 @@ export async function sendChannelMessage(
 export interface AssignmentAccessPresetView {
   botSlug: string;
   mode: 'workspace-write' | 'danger-full-access';
+  scope?: 'chat' | 'assignments';
   revision: number;
   changedAt?: string;
 }
@@ -2440,9 +2914,15 @@ export async function setAssignmentAccess(
   slug: string,
   mode: AssignmentAccessPresetView['mode'],
   acknowledgeRisk: boolean,
+  scope?: 'chat' | 'assignments',
 ): Promise<AssignmentAccessPresetView> {
   const response = asRecord(
-    await unwrap(call, 'assignmentAccessSet', { slug, mode, acknowledgeRisk }),
+    await unwrap(call, 'assignmentAccessSet', {
+      slug,
+      mode,
+      acknowledgeRisk,
+      ...(scope === undefined ? {} : { scope }),
+    }),
   );
   const preset = asRecord(response?.['preset']);
   if (preset?.['botSlug'] !== slug || preset['mode'] !== mode)
@@ -2455,11 +2935,12 @@ export interface ToolApprovalRuleView {
   botSlug: string;
   role: 'orchestrator' | 'assignment';
   scopeKey: string;
-  kind: 'exact' | 'all-opaque';
+  kind: 'exact' | 'all-opaque' | 'secret-cli';
   toolName: string;
   input: string;
   createdAt: string;
   revokedAt?: string;
+  externalCreator?: import('../../../core/src/workspaces/tool-approval-actor.js').ToolApprovalActor;
 }
 export async function loadToolApprovalRules(
   call: BridgeCall,
@@ -2469,6 +2950,145 @@ export async function loadToolApprovalRules(
   const rules = response?.['rules'];
   if (!Array.isArray(rules)) throw new Error('invalid toolApprovalRules response');
   return rules as ToolApprovalRuleView[];
+}
+export interface ApprovalTemplateView {
+  name: string;
+  title: string;
+  description: string;
+  builtIn: boolean;
+  usedBy: string[];
+  text?: string;
+}
+function parseApprovalTemplate(item: unknown): ApprovalTemplateView | undefined {
+  const template = asRecord(item);
+  if (
+    typeof template?.['name'] !== 'string' ||
+    typeof template['title'] !== 'string' ||
+    typeof template['description'] !== 'string'
+  )
+    return undefined;
+  const text = template['text'];
+  return {
+    name: template['name'],
+    title: template['title'],
+    description: template['description'],
+    builtIn: template['builtIn'] !== false,
+    usedBy: stringArray(template['usedBy']),
+    ...(typeof text === 'string' ? { text } : {}),
+  };
+}
+export async function loadApprovalTemplates(
+  call: BridgeCall,
+  slug?: string,
+): Promise<{ templates: ApprovalTemplateView[]; selected: string | null }> {
+  const response = asRecord(
+    await unwrap(call, 'approvalTemplates', slug === undefined ? {} : { slug }),
+  );
+  const templates = response?.['templates'];
+  const selected = response?.['selected'] ?? null;
+  if (!Array.isArray(templates) || (selected !== null && typeof selected !== 'string'))
+    throw new Error('invalid approvalTemplates response');
+  return {
+    templates: templates.flatMap((item: unknown) => {
+      const template = parseApprovalTemplate(item);
+      return template === undefined ? [] : [template];
+    }),
+    selected,
+  };
+}
+async function writtenApprovalTemplate(
+  call: BridgeCall,
+  endpoint: 'approvalTemplateCreate' | 'approvalTemplateUpdate',
+  payload: Record<string, unknown>,
+): Promise<ApprovalTemplateView> {
+  const template = parseApprovalTemplate(
+    asRecord(await unwrap(call, endpoint, payload))?.['template'],
+  );
+  if (template === undefined) throw new Error('invalid ' + endpoint + ' response');
+  return template;
+}
+export function createApprovalTemplate(
+  call: BridgeCall,
+  name: string,
+  source: { text: string } | { from: string },
+): Promise<ApprovalTemplateView> {
+  return writtenApprovalTemplate(call, 'approvalTemplateCreate', { name, ...source });
+}
+export function updateApprovalTemplate(
+  call: BridgeCall,
+  name: string,
+  text: string,
+): Promise<ApprovalTemplateView> {
+  return writtenApprovalTemplate(call, 'approvalTemplateUpdate', { name, text });
+}
+export async function deleteApprovalTemplate(
+  call: BridgeCall,
+  name: string,
+): Promise<{ clearedBots: string[] }> {
+  const response = asRecord(await unwrap(call, 'approvalTemplateDelete', { name }));
+  if (!Array.isArray(response?.['clearedBots']))
+    throw new Error('invalid approvalTemplateDelete response');
+  return { clearedBots: stringArray(response['clearedBots']) };
+}
+export async function setBotApprovalTemplate(
+  call: BridgeCall,
+  slug: string,
+  template: string | null,
+): Promise<void> {
+  const response = asRecord(await unwrap(call, 'botApprovalTemplateSet', { slug, template }));
+  if (asRecord(response?.['bot'])?.['slug'] !== slug)
+    throw new Error('invalid botApprovalTemplateSet response');
+}
+export interface ApprovalReviewerModelView {
+  follows: 'bot' | 'model' | 'invalid';
+  model: ModelRouteView | null;
+  available?: boolean;
+  unavailableReason?: string;
+}
+function approvalReviewerModelView(response: unknown, method: string): ApprovalReviewerModelView {
+  const view = asRecord(response);
+  const follows = view?.['follows'];
+  const model = asRecord(view?.['model']);
+  if (
+    (follows !== 'bot' && follows !== 'model' && follows !== 'invalid') ||
+    (view?.['model'] !== null &&
+      (typeof model?.['provider'] !== 'string' || typeof model['model'] !== 'string'))
+  )
+    throw new Error(`invalid ${method} response`);
+  return {
+    follows,
+    model:
+      model === undefined
+        ? null
+        : {
+            provider: model['provider'] as string,
+            model: model['model'] as string,
+            ...(typeof model['reasoningEffort'] === 'string'
+              ? { reasoningEffort: model['reasoningEffort'] }
+              : {}),
+          },
+    ...(typeof view?.['available'] === 'boolean' ? { available: view['available'] } : {}),
+    ...(typeof view?.['unavailableReason'] === 'string'
+      ? { unavailableReason: view['unavailableReason'] }
+      : {}),
+  };
+}
+export async function loadApprovalReviewerModel(
+  call: BridgeCall,
+): Promise<ApprovalReviewerModelView> {
+  return approvalReviewerModelView(
+    await unwrap(call, 'approvalReviewerModel', {}),
+    'approvalReviewerModel',
+  );
+}
+export async function setApprovalReviewerModel(
+  call: BridgeCall,
+  model: ModelRouteView | null,
+): Promise<ApprovalReviewerModelView> {
+  return approvalReviewerModelView(
+    await unwrap(call, 'approvalReviewerModelSet', { model }),
+    'approvalReviewerModelSet',
+  );
 }
 export async function revokeToolApprovalRule(
   call: BridgeCall,
@@ -2491,6 +3111,23 @@ export async function loadToolApprovalStatus(
     throw new Error('invalid toolApprovalStatus response');
   }
   return status;
+}
+
+export async function loadToolApprovalState(
+  call: BridgeCall,
+  channelId: string,
+  messageId: string,
+): Promise<{ status: 'pending' | 'expired'; expiresAt?: string }> {
+  const response = asRecord(await unwrap(call, 'toolApprovalStatus', { channelId, messageId }));
+  const status = response?.['status'];
+  if (status !== 'pending' && status !== 'expired') {
+    throw new Error('invalid toolApprovalStatus response');
+  }
+  const expiresAt = response?.['expiresAt'];
+  if (expiresAt === undefined || status !== 'pending') return { status };
+  if (typeof expiresAt !== 'string' || Number.isNaN(Date.parse(expiresAt)))
+    throw new Error('invalid toolApprovalStatus expiry');
+  return { status, expiresAt };
 }
 
 export type ToolApprovalExecutionState =
@@ -2652,6 +3289,35 @@ export async function createWorkspaceGrant(
   return grant;
 }
 
+export async function createGroupWorkspaceGrant(
+  call: BridgeCall,
+  slug: string,
+  workspaceId: string,
+  channelId: string,
+  path: string,
+): Promise<{ grant: WorkspaceGrantView; created: boolean }> {
+  const result = asRecord(
+    await unwrap(call, 'grantCreate', { slug, workspaceId, scope: { channelId, path } }),
+  );
+  const grant = parseWorkspaceGrant(result?.['grant']);
+  if (grant === undefined || typeof result?.['created'] !== 'boolean')
+    throw new Error('invalid scoped grantCreate response');
+  return { grant, created: result['created'] };
+}
+
+export async function readGroupWorkspaceGrant(
+  call: BridgeCall,
+  slug: string,
+  channelId: string,
+  path: string,
+): Promise<WorkspaceGrantView | undefined> {
+  const result = asRecord(await unwrap(call, 'grants', { slug, scope: { channelId, path } }));
+  if (!Array.isArray(result?.['grants'])) throw new Error('invalid scoped grants response');
+  const grants = result['grants'].map(parseWorkspaceGrant);
+  if (grants.some((grant) => grant === undefined)) throw new Error('invalid scoped grant readback');
+  return grants[0];
+}
+
 export async function setWorkspaceGrantWrite(
   call: BridgeCall,
   slug: string,
@@ -2689,6 +3355,8 @@ function parseBotAttentionItem(value: unknown): BotAttentionItem | undefined {
       'observed',
       'deferred',
       'needs-repair',
+      'open',
+      'snoozed',
       'handled',
       'ignored',
     ].includes(String(row['state']))
@@ -2775,7 +3443,9 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
     if (
       item['kind'] !== 'group-join-request' &&
       item['kind'] !== 'user-question' &&
+      item['kind'] !== 'private-input' &&
       item['kind'] !== 'tool-approval' &&
+      item['kind'] !== 'auto-rejection' &&
       item['kind'] !== 'workspace-grant-request' &&
       item['kind'] !== 'bot-dm-message' &&
       item['kind'] !== 'assignment-waiting-human' &&
@@ -2812,6 +3482,33 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
       return undefined;
     if (item['requestId'] !== undefined && typeof item['requestId'] !== 'string') return undefined;
     if (item['messageId'] !== undefined && typeof item['messageId'] !== 'string') return undefined;
+    if (item['snoozedUntil'] !== undefined && typeof item['snoozedUntil'] !== 'string')
+      return undefined;
+    if (
+      item['kind'] === 'auto-rejection' &&
+      (item['category'] !== 'action' ||
+        typeof item['messageId'] !== 'string' ||
+        typeof item['sourceEventId'] !== 'string')
+    )
+      return undefined;
+    if (item['autoRejection'] !== undefined) {
+      const detail = asRecord(item['autoRejection']);
+      if (
+        item['kind'] !== 'auto-rejection' ||
+        detail === undefined ||
+        ['sessionId', 'toolName', 'input', 'template', 'reason'].some(
+          (key) => typeof detail[key] !== 'string',
+        )
+      )
+        return undefined;
+    }
+    if (
+      item['kind'] === 'private-input' &&
+      (item['category'] !== 'action' ||
+        typeof item['messageId'] !== 'string' ||
+        typeof item['sourceEventId'] !== 'string')
+    )
+      return undefined;
     if (
       item['kind'] === 'channel-unread' &&
       (!Number.isSafeInteger(item['unreadCount']) ||
@@ -2875,6 +3572,7 @@ export async function loadHumanAttention(
       botSlug: filters.botSlug,
       channelId: filters.channelId,
       sort: filters.sort,
+      ...(filters.snoozed === true ? { snoozed: true } : {}),
     }),
   );
 }
@@ -2891,6 +3589,26 @@ export async function loadHumanAttentionStatus(
     throw new Error('invalid Human attention status');
   return { unreadCount: row['unreadCount'] as number, hasAction: row['hasAction'] };
 }
+export async function loadChannelUnreadCounts(call: BridgeCall): Promise<Record<string, number>> {
+  const channels = asRecord(await unwrap(call, 'channelUnreadCounts', {}))?.['channels'];
+  if (!Array.isArray(channels)) throw new Error('invalid channelUnreadCounts response');
+  const counts: Record<string, number> = {};
+  for (const entry of channels) {
+    const row = asRecord(entry);
+    const channelId = row?.['channelId'];
+    const unreadCount = row?.['unreadCount'];
+    if (
+      typeof channelId !== 'string' ||
+      channelId.length === 0 ||
+      !Number.isSafeInteger(unreadCount) ||
+      (unreadCount as number) < 0
+    )
+      throw new Error('invalid channelUnreadCounts response');
+    if ((unreadCount as number) > 0) counts[channelId] = unreadCount as number;
+  }
+  return counts;
+}
+
 export async function dismissHumanInboxItem(
   call: BridgeCall,
   itemId: string,
@@ -2898,6 +3616,21 @@ export async function dismissHumanInboxItem(
 ): Promise<void> {
   const value = asRecord(await unwrap(call, 'humanAttentionDismiss', { itemId, sourceKey }));
   if (value?.['accepted'] !== true) throw new Error('Inbox dismissal was not confirmed');
+}
+
+export async function overrideAutoRejection(call: BridgeCall, itemId: string): Promise<void> {
+  const value = asRecord(await unwrap(call, 'toolAutoRejectionOverride', { itemId }));
+  if (value?.['accepted'] !== true) throw new Error('Auto-rejection override was not confirmed');
+}
+
+export async function snoozeHumanInboxItem(
+  call: BridgeCall,
+  itemId: string,
+  sourceKey: string,
+  until: string | null,
+): Promise<void> {
+  const value = asRecord(await unwrap(call, 'humanAttentionSnooze', { itemId, sourceKey, until }));
+  if (value?.['accepted'] !== true) throw new Error('Inbox snooze was not confirmed');
 }
 
 export async function ignoreHumanAssignmentReport(
@@ -2916,12 +3649,42 @@ export async function loadSessionBotOwner(
   return parseSessionBotOwner(await unwrap(call, 'sessionOwner', { sessionId }, signal));
 }
 
+export async function loadBotSessionIds(call: BridgeCall, signal?: AbortSignal): Promise<string[]> {
+  const value = await unwrap(call, 'botSessionIds', {}, signal);
+  const ids =
+    typeof value === 'object' && value !== null
+      ? (value as { sessionIds?: unknown }).sessionIds
+      : [];
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
+}
+
 export async function loadSessions(
   call: BridgeCall,
   slug: string,
   signal?: AbortSignal,
 ): Promise<OwnedSessionSummary[]> {
   return parseOwnedSessionSummaries(await unwrap(call, 'sessions', { slug }, signal));
+}
+
+export async function setSessionArchived(
+  call: BridgeCall,
+  slug: string,
+  sessionId: string,
+  archived: boolean,
+): Promise<boolean> {
+  const value = asRecord(await unwrap(call, 'sessionArchiveSet', { slug, sessionId, archived }));
+  return value?.['archived'] === true;
+}
+
+export async function moveMemoryLocation(
+  call: BridgeCall,
+  slug: string,
+  location: string | null,
+): Promise<string> {
+  const value = asRecord(await unwrap(call, 'memoryMove', { slug, location }));
+  const memoryDir = value?.['memoryDir'];
+  if (typeof memoryDir !== 'string') throw new Error('Memory location is invalid');
+  return memoryDir;
 }
 
 export async function loadRoster(call: BridgeCall, signal?: AbortSignal): Promise<RosterSnapshot> {
@@ -3017,6 +3780,15 @@ export async function setRosterHidden(
   await unwrap(call, 'hiddenSet', { hidden }, signal);
 }
 
+export async function setChannelMute(
+  call: BridgeCall,
+  channelId: string,
+  muted: boolean,
+  signal?: AbortSignal,
+): Promise<void> {
+  await unwrap(call, 'channelMuteSet', { channelId, muted }, signal);
+}
+
 export interface MemoryAcceptedCommit {
   botSlug: string;
   sha: string;
@@ -3035,7 +3807,56 @@ export interface MemoryGitCommit {
   subject: string;
   authoredAt: string;
   branches: string[];
+  versions?: MemoryVersionName[];
   status: 'accepted' | 'pending' | 'needs-repair';
+}
+
+export interface MemoryVersionName {
+  tag: string;
+  name: string;
+}
+
+export interface MemoryVersion extends MemoryVersionName {
+  sha: string;
+  subject: string;
+  namedAt: string;
+}
+
+export async function loadMemoryVersions(
+  call: BridgeCall,
+  channelId: string,
+): Promise<MemoryVersion[]> {
+  const response = asRecord(await unwrap(call, 'memoryVersions', { channelId }));
+  const versions = response?.['versions'];
+  if (!Array.isArray(versions)) throw new Error('invalid Memory versions');
+  return versions.flatMap((item) => {
+    const version = asRecord(item);
+    return typeof version?.['tag'] === 'string' &&
+      typeof version['name'] === 'string' &&
+      typeof version['sha'] === 'string' &&
+      typeof version['subject'] === 'string' &&
+      typeof version['namedAt'] === 'string'
+      ? [
+          {
+            tag: version['tag'],
+            name: version['name'],
+            sha: version['sha'],
+            subject: version['subject'],
+            namedAt: version['namedAt'],
+          },
+        ]
+      : [];
+  });
+}
+
+function parseVersionNames(value: unknown): MemoryVersionName[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const version = asRecord(item);
+    return typeof version?.['tag'] === 'string' && typeof version['name'] === 'string'
+      ? [{ tag: version['tag'], name: version['name'] }]
+      : [];
+  });
 }
 
 export interface MemoryGitGraph {
@@ -3138,7 +3959,7 @@ export interface GroupProfileAuthorActivity {
   author: ChannelAuthor;
   bridgeOrigin?: Pick<
     NonNullable<ChannelMessage['bridgeOrigin']>,
-    'platform' | 'conversationId' | 'conversationName'
+    'platform' | 'conversationId' | 'conversationName' | 'accountRef' | 'accountName'
   >;
   total: number;
   days: ProfileActivityDay[];
@@ -3326,7 +4147,14 @@ export async function loadMemoryGitGraph(
     })
   )
     throw new Error('invalid Memory Git graph');
-  return response as unknown as MemoryGitGraph;
+  const graph = response as unknown as MemoryGitGraph;
+  return {
+    ...graph,
+    commits: graph.commits.map((commit) => ({
+      ...commit,
+      versions: parseVersionNames((commit as unknown as Record<string, unknown>)['versions']),
+    })),
+  };
 }
 
 export async function loadMemoryGitCommitDiff(
@@ -3420,6 +4248,39 @@ export async function loadProfileUsage(
   return value as unknown as UsageQueryResult;
 }
 
+export async function loadProfileSessionUsage(
+  call: BridgeCall,
+  channelId: string,
+): Promise<ProfileSessionUsage> {
+  const value = asRecord(await unwrap(call, 'profileSessionUsage', { channelId }));
+  if (
+    value === undefined ||
+    typeof value['slug'] !== 'string' ||
+    value['weeks'] !== 26 ||
+    typeof value['since'] !== 'string' ||
+    !Number.isFinite(Date.parse(value['since'])) ||
+    !Array.isArray(value['rows']) ||
+    value['rows'].length > 6 ||
+    !value['rows'].every((item) => {
+      const row = asRecord(item);
+      return (
+        row !== undefined &&
+        typeof row['sessionId'] === 'string' &&
+        ['orchestrator', 'assignment'].includes(String(row['role'])) &&
+        typeof row['label'] === 'string' &&
+        row['label'].length <= 160 &&
+        typeof row['updatedAt'] === 'string' &&
+        Number.isFinite(Date.parse(row['updatedAt'])) &&
+        ['ready', 'unknown', 'partial', 'unavailable'].includes(String(row['status'])) &&
+        (row['totalTokens'] === null ||
+          (Number.isSafeInteger(row['totalTokens']) && Number(row['totalTokens']) >= 0))
+      );
+    })
+  )
+    throw new Error('invalid Profile Session usage');
+  return value as unknown as ProfileSessionUsage;
+}
+
 export interface ProfileActivityWindow {
   before: string;
   weeks: number;
@@ -3509,7 +4370,11 @@ export async function loadGroupProfileActivity(
           (asRecord(entry['bridgeOrigin']) !== undefined &&
             ['platform', 'conversationId', 'conversationName'].every(
               (key) => typeof asRecord(entry['bridgeOrigin'])![key] === 'string',
-            )))
+            ) &&
+            ['accountRef', 'accountName'].every((key) => {
+              const value = asRecord(entry['bridgeOrigin'])![key];
+              return value === undefined || (typeof value === 'string' && value.trim().length > 0);
+            })))
       );
     })
   )
@@ -3599,6 +4464,49 @@ export async function restoreMemoryCheckpoint(
     checkpoint: checkpoint as unknown as MemoryRecoveryCheckpoint,
     archivePath: response['archivePath'] as string,
   };
+}
+
+export async function restoreMemoryCommit(
+  call: BridgeCall,
+  input: { channelId: string; sha: string; expectedHead: string; restoreId: string; name?: string },
+): Promise<{
+  head: string;
+  backup: string | null;
+  version: MemoryVersionName | null;
+  saved: MemoryRecoveryCheckpoint;
+}> {
+  const response = asRecord(await unwrap(call, 'memoryRestoreCommit', input));
+  const saved = asRecord(response?.['saved']);
+  if (
+    saved === undefined ||
+    typeof saved['id'] !== 'string' ||
+    typeof response?.['head'] !== 'string' ||
+    (response['backup'] !== null && typeof response['backup'] !== 'string')
+  )
+    throw new Error('invalid Memory restore result');
+  return {
+    head: response['head'] as string,
+    backup: response['backup'] as string | null,
+    version: parseVersionNames([response['version']])[0] ?? null,
+    saved: saved as unknown as MemoryRecoveryCheckpoint,
+  };
+}
+
+export async function nameMemoryVersion(
+  call: BridgeCall,
+  input: { channelId: string; sha: string; name: string },
+): Promise<MemoryVersionName> {
+  const response = asRecord(await unwrap(call, 'memoryNameVersion', input));
+  const version = parseVersionNames([response?.['version']])[0];
+  if (version === undefined) throw new Error('invalid Memory version name result');
+  return version;
+}
+
+export async function removeMemoryVersionName(
+  call: BridgeCall,
+  input: { channelId: string; tag: string },
+): Promise<void> {
+  await unwrap(call, 'memoryRemoveVersionName', input);
 }
 
 export async function saveMemoryFile(
@@ -3798,6 +4706,25 @@ export async function retryApprovalNotification(
   await unwrap(call, 'approvalRetry', { slug, id });
 }
 
+export async function setFailureAlerts(
+  call: BridgeCall,
+  slug: string,
+  enabled: boolean,
+  expectedRevision: number,
+): Promise<void> {
+  await unwrap(call, 'failureAlertsSet', { slug, enabled, expectedRevision });
+}
+export async function testFailureAlerts(call: BridgeCall, slug: string): Promise<void> {
+  await unwrap(call, 'failureAlertsTest', { slug });
+}
+export async function retryFailureAlerts(
+  call: BridgeCall,
+  slug: string,
+  id: string,
+): Promise<void> {
+  await unwrap(call, 'failureAlertsRetry', { slug, id });
+}
+
 export async function reviewPairing(
   call: BridgeCall,
   slug: string,
@@ -3814,6 +4741,13 @@ export async function reviewPairing(
   )
     throw new BridgeCallError('invalid-response', 'Invalid pairing review');
   return pairing as unknown as PairingRequest;
+}
+export async function changeExternalSenderAccess(
+  call: BridgeCall,
+  slug: string,
+  input: SenderAccessInput,
+): Promise<void> {
+  await unwrap(call, 'senderAccess', { slug, input });
 }
 export type { MessagingApp } from '../../../core/src/messaging/outbound.js';
 
@@ -3937,6 +4871,76 @@ export async function revokeMessaging(
   grantId: string,
 ): Promise<void> {
   await unwrap(call, 'messagingRevoke', { slug, grantId });
+}
+export async function loadMessagingReachable(
+  call: BridgeCall,
+  slug: string,
+  bindingId: string,
+  cursor?: string,
+): Promise<import('../../../core/src/messaging/provider.js').MessagingReachablePage> {
+  const page = asRecord(
+    await unwrap(call, 'messagingReachable', { slug, bindingId, ...(cursor ? { cursor } : {}) }),
+  );
+  if (
+    !page ||
+    page['version'] !== 1 ||
+    !Array.isArray(page['conversations']) ||
+    typeof page['hasMore'] !== 'boolean'
+  )
+    throw new BridgeCallError('invalid-response', 'Invalid group page');
+  return page as unknown as import('../../../core/src/messaging/provider.js').MessagingReachablePage;
+}
+export async function readMessagingPostRequest(
+  call: BridgeCall,
+  slug: string,
+  bindingId: string,
+  conversationId: string,
+  requestId: string,
+  text: string,
+): Promise<OutboxIntent | undefined> {
+  const record = asRecord(
+    await unwrap(call, 'messagingPostRequest', {
+      slug,
+      bindingId,
+      conversationId,
+      requestId,
+      text,
+    }),
+  );
+  if (record?.['intent'] === null) return undefined;
+  if (!record || !asRecord(record['intent']))
+    throw new BridgeCallError('invalid-response', 'Invalid intent');
+  return record['intent'] as OutboxIntent;
+}
+export async function postMessagingConversation(
+  call: BridgeCall,
+  slug: string,
+  bindingId: string,
+  conversationId: string,
+  requestId: string,
+  text: string,
+): Promise<OutboxIntent> {
+  const record = asRecord(
+    await unwrap(call, 'messagingPostConversation', {
+      slug,
+      bindingId,
+      conversationId,
+      requestId,
+      text,
+    }),
+  );
+  if (!record || !asRecord(record['intent']))
+    throw new BridgeCallError('invalid-response', 'Invalid intent');
+  return record['intent'] as OutboxIntent;
+}
+export async function setMessagingPostLimit(
+  call: BridgeCall,
+  slug: string,
+  bindingId: string,
+  expectedRevision: number,
+  limit: number | null,
+): Promise<void> {
+  await unwrap(call, 'messagingPostLimit', { slug, bindingId, expectedRevision, limit });
 }
 export async function sendMessaging(
   call: BridgeCall,
@@ -4292,7 +5296,8 @@ export async function loadOverviewUsage(
       row !== undefined &&
       ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'totalTokens'].every(
         (key) => row[key] === null || (Number.isSafeInteger(row[key]) && Number(row[key]) >= 0),
-      )
+      ) &&
+      (row['partial'] === undefined || typeof row['partial'] === 'boolean')
     );
   };
   if (

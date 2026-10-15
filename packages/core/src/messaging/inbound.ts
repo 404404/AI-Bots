@@ -20,7 +20,16 @@ import {
   type ConversationIngestSnapshot,
 } from './conversation-ingest.js';
 import type { MessagingIdentity } from './identity.js';
-import type { BotPairing } from './pairing.js';
+import type { BotPairing, PairingRequest } from './pairing.js';
+import { chatPairingApplies } from './chat-sender.js';
+import {
+  trustedSenderReference,
+  readSenderPolicy,
+  senderAdmissionAllowed,
+  senderContextAllowed,
+  sourceSenderAllowed,
+  type TrustedSenderReference,
+} from './sender-access.js';
 import { recordLocalReception } from './reception-history.js';
 import { readMessagingIdentity } from './identity.js';
 import {
@@ -132,6 +141,7 @@ export interface ExternalContextQuery {
   afterCount?: number;
 }
 export interface ExternalSource {
+  sender?: TrustedSenderReference;
   id: string;
   body: string;
   at: string;
@@ -163,6 +173,8 @@ export interface InboxSourceShare {
 }
 
 export interface InboundMessaging {
+  notifyPairing(request: PairingRequest): Promise<void>;
+  pairingRouteAvailable(request: PairingRequest): boolean;
   register(provider: MessagingProvider): () => void;
   setEnabled(botSlug: string, grantId: string, enabled: boolean): Promise<void>;
   channelBridge(channelId: string, input: ChannelBridgeInput): Promise<void>;
@@ -185,7 +197,7 @@ export interface InboundMessaging {
   ): Promise<ThreadReceptionPolicy>;
   ordinaryDelivery(grantId: string): 'verified' | 'unverified';
   status(grantId: string): 'off' | 'connecting' | 'receiving' | 'unavailable';
-  available(botSlug: string, sourceEventId: string): boolean;
+  available(botSlug: string, sourceEventId: string, context?: boolean): boolean;
   pendingPaths(
     botSlug: string,
     now: Date,
@@ -214,11 +226,12 @@ export interface InboundMessaging {
 export function createInboundMessaging(options: {
   onApprovalAction?(
     providerId: string,
-    event: import('./provider.js').MessagingApprovalAction,
+    event: import('./provider.js').MessagingCardAction,
     signal: AbortSignal,
   ): Promise<import('./provider.js').MessagingApprovalAck>;
   database: OperationalDatabaseModulePort;
   pairing?: BotPairing;
+  onPairingRequest?(request: PairingRequest): void;
   bindingAvailable?(id: string): boolean;
   sourcePolicy: BotSourcePolicyStore;
   isBotActive(slug: string): boolean;
@@ -650,6 +663,10 @@ export function createInboundMessaging(options: {
             event.conversation.id !== value.receiveScope!.conversationId
           )
             return { accepted: true };
+          if (!database.read((db) => senderContextAllowed(db, value.botSlug, event)))
+            return { accepted: true };
+          if (latest.receiveAfter && Date.parse(event.at) < Date.parse(latest.receiveAfter))
+            return { accepted: true };
           if (event.conversation.kind === 'dm' && !latest.bridgeRoutes) {
             if (latest.receiveTargetChannelId || latest.channelBridge || latest.bridgeRoutes)
               throw new MessagingError('capability-unavailable');
@@ -671,7 +688,16 @@ export function createInboundMessaging(options: {
             return { accepted: true };
           }
           if (event.conversation.kind === 'group' && !event.mentionedAccount) {
-            lease.ordinaryVerified = true;
+            if (!lease.ordinaryVerified) {
+              lease.ordinaryVerified = true;
+              options.warn?.(
+                JSON.stringify({
+                  event: 'messaging-inbound',
+                  phase: 'ordinary-delivery-verified',
+                  grantId: value.id,
+                }),
+              );
+            }
             if (ordinaryThreadReply(event))
               lease.ordinaryThreads.set(event.reply.threadId!, event.reply.rootId!);
           }
@@ -786,8 +812,10 @@ export function createInboundMessaging(options: {
                   const policy = options.sourcePolicy.resolveIn(db, value.botSlug, reason);
                   const ordinary =
                     thread?.mode === 'follow' && thread.wake ? thread.wake : reception;
-                  const wake =
-                    event.conversation.kind === 'dm' || event.mentionedAccount
+                  const passive = !senderAdmissionAllowed(db, value.botSlug, event);
+                  const wake = passive
+                    ? 'context'
+                    : event.conversation.kind === 'dm' || event.mentionedAccount
                       ? policy.wake
                       : thread?.wake || reception.inheritance === 'custom' || !policy.overrideActive
                         ? ordinary.wake
@@ -813,9 +841,9 @@ export function createInboundMessaging(options: {
                     policy.revision,
                     wake,
                     reception.revision,
-                    wake === 'immediate' ? 'all' : wake,
-                    wake === 'immediate' ? 1 : count,
-                    wake === 'immediate' ? 0 : seconds * 1000,
+                    passive ? 'silent' : wake === 'immediate' ? 'all' : wake,
+                    passive ? null : wake === 'immediate' ? 1 : count,
+                    passive ? null : wake === 'immediate' ? 0 : seconds * 1000,
                     thread?.revision ?? null,
                     reception.defaultRevision ?? null,
                   );
@@ -865,16 +893,6 @@ export function createInboundMessaging(options: {
               Date.parse(event.at) < Date.parse(latest.channelBridge.intakeAfter))
           )
             return { accepted: true };
-          if (!event.mentionedAccount && !lease.ordinaryVerified) {
-            lease.ordinaryVerified = true;
-            options.warn?.(
-              JSON.stringify({
-                event: 'messaging-inbound',
-                phase: 'ordinary-delivery-verified',
-                grantId: value.id,
-              }),
-            );
-          }
           if (ordinaryThreadReply(event))
             lease.ordinaryThreads.set(event.reply.threadId!, event.reply.rootId!);
           let placement: ChannelMessageCommit | undefined;
@@ -936,11 +954,14 @@ export function createInboundMessaging(options: {
               if (!event.mentionedAccount && source.localChannelId) return id;
               const reason = event.mentionedAccount ? 'group-mention' : 'group-ordinary';
               const policy = options.sourcePolicy.resolveIn(db, value.botSlug, reason);
-              const wake = event.mentionedAccount
-                ? policy.wake
-                : thread?.wake || reception.inheritance === 'custom' || !policy.overrideActive
-                  ? ordinary.wake
-                  : policy.wake;
+              const passive = !senderAdmissionAllowed(db, value.botSlug, event);
+              const wake = passive
+                ? 'context'
+                : event.mentionedAccount
+                  ? policy.wake
+                  : thread?.wake || reception.inheritance === 'custom' || !policy.overrideActive
+                    ? ordinary.wake
+                    : policy.wake;
               const count =
                 reception.inheritance !== 'custom' && !thread?.wake && policy.overrideActive
                   ? (policy.digestCount ?? ordinary.count)
@@ -959,7 +980,7 @@ export function createInboundMessaging(options: {
                 policy.revision,
                 wake,
                 reception.revision,
-                wake === 'immediate' ? 'all' : wake,
+                passive ? 'silent' : wake === 'immediate' ? 'all' : wake,
                 !event.mentionedAccount && (wake === 'immediate' || wake === 'digest')
                   ? wake === 'immediate'
                     ? 1
@@ -1136,7 +1157,9 @@ export function createInboundMessaging(options: {
           )
         : undefined;
     const report = database.read((db) => relatedReport(db, value, retained.event.reply));
+    const sender = database.read((db) => trustedSenderReference(db, botSlug, retained.event));
     return {
+      ...(sender ? { sender } : {}),
       ...(report ? { report } : {}),
       ...(quote ? { quote } : {}),
       ...(contextMessages.length === 0 ? {} : { contextMessages }),
@@ -1341,6 +1364,8 @@ export function createInboundMessaging(options: {
       placeIngests(identity, event);
       return { accepted: true };
     }
+    if (!database.read((db) => senderAdmissionAllowed(db, identity.botSlug, event)))
+      return { accepted: true };
     const result = await admitDefault(id, lease, identity, entry, event, signal);
     placeIngests(identity, event);
     return result;
@@ -1574,19 +1599,86 @@ export function createInboundMessaging(options: {
     })();
     return lease.ready;
   };
+  const sendPairingNotice = async (
+    request: PairingRequest,
+    key: string,
+    route: MessagingReplyRoute,
+    signal?: AbortSignal,
+    conversationKind = request.conversationKind ?? 'dm',
+  ) => {
+    if (!options.pairing || !options.pairing.notice(request.id, key)) return;
+    let outcome: 'accepted' | 'unconfirmed' = 'unconfirmed';
+    try {
+      const identity = database.read((db) => assertMessagingIdentity(db, request.bindingId));
+      const entry = providers.get(identity.providerId);
+      const lease = controls.get(request.bindingId);
+      if (!entry?.provider.reply || !lease || lease.controller.signal.aborted)
+        throw new MessagingError('consumer-unavailable');
+      const text = key.startsWith('approved:')
+        ? 'Pairing approved. Please send your question again as a new message. Your earlier request will not run. / 配对已批准，请重新发送新问题。之前的请求不会执行。'
+        : `Pairing request ${request.reference} is waiting for Human review and expires in 10 minutes. Your message will not run. / 配对申请 ${request.reference} 等待人工审核，10 分钟后过期。该消息不会执行。`;
+      await bounded(
+        entry.provider.reply({
+          accountRef: identity.accountRef,
+          fingerprint: identity.fingerprint,
+          route,
+          text,
+          signal: AbortSignal.any([
+            lease.controller.signal,
+            AbortSignal.timeout(15000),
+            ...(signal ? [signal] : []),
+          ]),
+          beforeSend: () => {
+            try {
+              const current = database.read((db) => assertMessagingIdentity(db, request.bindingId));
+              const paired = options
+                .pairing!.list(request.botSlug)
+                .find((item) => item.id === request.id);
+              return (
+                !closed &&
+                controls.get(request.bindingId) === lease &&
+                providers.get(identity.providerId) === entry &&
+                options.isBotActive(request.botSlug) &&
+                options.bindingAvailable?.(request.bindingId) !== false &&
+                current.fingerprint === identity.fingerprint &&
+                paired?.revision === request.revision &&
+                paired.status === request.status &&
+                !database.read((db) =>
+                  readBlock(db, request.botSlug, identity.fingerprint, {
+                    kind: conversationKind,
+                    id: route.conversationId,
+                  }),
+                )
+              );
+            } catch {
+              return false;
+            }
+          },
+        }),
+      );
+      outcome = 'accepted';
+    } catch {}
+    options.pairing.notice(request.id, key, outcome);
+    options.warn?.(
+      JSON.stringify({
+        event: 'bot-pairing',
+        phase: 'notification',
+        initiator: key.startsWith('approved:') ? 'authenticated-web' : 'sender-intake',
+        outcome,
+        requestId: request.id,
+      }),
+    );
+  };
   const controlIntake = async (
     provider: MessagingProvider,
     event: MessagingInboundEvent,
     signal: AbortSignal,
   ) => {
-    if (
-      !options.pairing ||
-      provider.id !== 'dsh-im/feishu' ||
-      event.channel !== 'feishu' ||
-      !/^\/pair(?:\s|$)/.test(event.text.trim())
-    )
+    if (!options.pairing || !chatPairingApplies(event) || provider.id !== `dsh-im/${event.channel}`)
       return false;
     signal.throwIfAborted();
+    const explicit = /^\/pair(?:\s|$)/.test(event.text.trim());
+    if (explicit && event.channel === 'slack') return true;
     const row = database.read((db) =>
       db
         .prepare(
@@ -1594,9 +1686,76 @@ export function createInboundMessaging(options: {
         )
         .get(provider.id, event.botId, event.fingerprint),
     ) as { id: string } | undefined;
-    if (!row) return true;
+    if (!row) return explicit;
     const lease = controls.get(row.id);
-    if (!lease || lease.controller.signal.aborted) return true;
+    if (!lease || lease.controller.signal.aborted) return explicit;
+    const identity = database.read((db) => readMessagingIdentity(db, row.id));
+    options.pairing.observePrivate(row.id, event);
+    const restricted = database.read((db) => readSenderPolicy(db, identity.botSlug).restricted);
+    const intentional = event.conversation.kind === 'dm' || event.mentionedAccount;
+    if (restricted && intentional && !explicit) {
+      const allowedConversation = database.read((db) => {
+        if (readBlock(db, identity.botSlug, identity.fingerprint, event.conversation)) return false;
+        const entries = conversationEntries(db, row.id, event.conversation);
+        if (entries.length)
+          return entries.some(
+            (value) =>
+              !value.revokedAt &&
+              !value.suspendedReason &&
+              targetAvailable(value) &&
+              value.channelBridge?.enabled !== false &&
+              (!value.bridgeRoutes || value.bridgeRoutes.some((route) => route.enabled)),
+          );
+        return (
+          identity.newConversations === 'auto' &&
+          admissionBound(db, row.id, new Date()) === undefined
+        );
+      });
+      if (
+        !allowedConversation ||
+        !identity.enabled ||
+        identity.revokedAt ||
+        options.bindingAvailable?.(row.id) === false ||
+        !options.isBotActive(identity.botSlug) ||
+        (identity.receiveAfter && Date.parse(event.at) < Date.parse(identity.receiveAfter))
+      )
+        return true;
+      if (!database.read((db) => senderAdmissionAllowed(db, identity.botSlug, event))) {
+        try {
+          const request = options.pairing.request(row.id, event, 'conversation');
+          if (request.status === 'pending' && event.channel === 'feishu')
+            options.onPairingRequest?.(request);
+          if (request.status === 'pending')
+            setImmediate(() => {
+              if (closed || signal.aborted || lease.controller.signal.aborted) return;
+              void sendPairingNotice(
+                request,
+                `pending:${event.messageId}`,
+                event.reply,
+                signal,
+                event.conversation.kind,
+              ).catch(() => options.warn?.('pairing-notification-state-unconfirmed'));
+            });
+        } catch (error) {
+          if (
+            !(error instanceof MessagingError) ||
+            !['pairing-rate-limited', 'pairing-capacity'].includes(error.code)
+          )
+            throw error;
+          options.warn?.(
+            JSON.stringify({
+              event: 'bot-pairing',
+              phase: 'request-refused',
+              initiator: 'sender-intake',
+              reason: error.code,
+            }),
+          );
+        }
+        return true;
+      }
+      return false;
+    }
+    if (!explicit) return false;
     if (
       event.conversation.kind !== 'dm' ||
       event.text.trim() !== '/pair' ||
@@ -1661,6 +1820,44 @@ export function createInboundMessaging(options: {
     return true;
   };
   const service: InboundMessaging = {
+    pairingRouteAvailable(request) {
+      try {
+        const binding = database.read((db) => assertMessagingIdentity(db, request.bindingId));
+        if (
+          closed ||
+          !controls.has(binding.id) ||
+          controls.get(binding.id)!.controller.signal.aborted ||
+          !options.isBotActive(request.botSlug) ||
+          options.bindingAvailable?.(binding.id) === false
+        )
+          return false;
+        return database.read((db) => {
+          const conversation = {
+            kind: request.conversationKind ?? 'dm',
+            id: request.conversationId,
+          };
+          if (readBlock(db, request.botSlug, binding.fingerprint, conversation)) return false;
+          const entries = conversationEntries(db, binding.id, conversation);
+          return entries.length
+            ? entries.some(
+                (value) =>
+                  !value.revokedAt &&
+                  !value.suspendedReason &&
+                  targetAvailable(value) &&
+                  value.channelBridge?.enabled !== false &&
+                  (!value.bridgeRoutes || value.bridgeRoutes.some((route) => route.enabled)),
+              )
+            : binding.newConversations === 'auto' &&
+                admissionBound(db, binding.id, new Date()) === undefined;
+        });
+      } catch {
+        return false;
+      }
+    },
+    async notifyPairing(request) {
+      if (request.purpose === 'conversation' && request.status === 'approved' && request.reply)
+        await sendPairingNotice(request, `approved:${request.revision}`, request.reply);
+    },
     readShared,
     register(provider) {
       const token = {};
@@ -2112,7 +2309,7 @@ export function createInboundMessaging(options: {
       )
         throw new MessagingError('grant-unavailable');
       const entry = providers.get(value.providerId)!;
-      const inspected = await entry.provider.inspect(value.accountRef, value.targetRef);
+      const inspected = await inspectGrant(entry.provider, value);
       if (
         providers.get(value.providerId) !== entry ||
         inspected.account.fingerprint !== value.fingerprint ||
@@ -2377,8 +2574,9 @@ export function createInboundMessaging(options: {
       );
       options.onReceptionChanged?.();
     },
-    available(botSlug, id) {
+    available(botSlug, id, context = false) {
       try {
+        if (!database.read((db) => sourceSenderAllowed(db, botSlug, id, context))) return false;
         const source = read(botSlug, id);
         const value = grant(source.grantId);
         if (source.receptionPaths)

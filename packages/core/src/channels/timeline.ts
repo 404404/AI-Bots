@@ -58,6 +58,52 @@ function cursorIndex(
   }
 }
 
+export interface ChannelJournalEntry {
+  channelId: string;
+  message: ChannelMessage;
+  revision: number;
+}
+
+export interface ChannelJournalPage {
+  entries: ChannelJournalEntry[];
+  olderCursor: string | null;
+  hasOlder: boolean;
+}
+
+export interface ChannelJournalRequest {
+  through: number;
+  before?: number | undefined;
+  limit?: number | undefined;
+  visibleFrom?: number | undefined;
+}
+
+export function pageChannelJournal(
+  channelId: string,
+  messages: readonly ChannelMessage[],
+  request: ChannelJournalRequest,
+): ChannelJournalPage | undefined {
+  const { through, before } = request;
+  if (!Number.isSafeInteger(through) || through < 0 || through > messages.length) return undefined;
+  if (before !== undefined && (!Number.isSafeInteger(before) || before < 1)) return undefined;
+  const limit = Math.max(1, Math.min(request.limit ?? DEFAULT_MESSAGE_PAGE, MAX_MESSAGE_PAGE));
+  const floor = Math.max(1, request.visibleFrom ?? 1);
+  const last = before === undefined ? through : Math.min(through, before - 1);
+  const first = Math.max(floor, last - limit + 1);
+  const entries =
+    last < first
+      ? []
+      : messages.slice(first - 1, last).map((message, index) => ({
+          channelId,
+          message,
+          revision: first + index,
+        }));
+  return {
+    entries,
+    olderCursor: entries[0] === undefined ? null : encodeCursor(channelId, entries[0].message),
+    hasOlder: entries.length > 0 && first > floor,
+  };
+}
+
 export function pageChannelTimeline(
   channelId: string,
   messages: readonly ChannelMessage[],

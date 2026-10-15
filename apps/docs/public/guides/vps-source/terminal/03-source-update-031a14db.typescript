@@ -1,0 +1,33 @@
+Script started on 2026-10-12 01:52:27+08:00 [COMMAND="runuser -u bh-seo -- env DSH_HOME=/opt/botharness/seo-tutorial/home/dsh PATH=/opt/botharness/seo-tutorial/toolchain/bin:/usr/bin:/bin node /opt/botharness/seo-tutorial/artifacts/source-031a14db/update-profile.mjs" <not executed on terminal>]
+
+[K[0J[1A[32m✓[39m Lockfile passes supply-chain policies (verified 18m ago)
+[K[0JProgress: resolved [96m1[39m, reused [96m195[39m, downloaded [96m0[39m, added [96m0[39m
+[K[0J[1AProgress: resolved [96m6[39m, reused [96m195[39m, downloaded [96m0[39m, added [96m0[39m
+Downloading file:../../../../artifacts/source-031a14db/product/botharness-im-provider-4.32.0-botharness.19.tgz: [96m0.00 B[39m/[96m9.57 MB[39m[0K
+[0K[K[0J[3APackages: [32m+6[39m [31m-6[39m[0K
+[32m+[39m[32m+[39m[32m+[39m[32m+[39m[32m+[39m[32m+[39m[31m-[39m[31m-[39m[31m-[39m[31m-[39m[31m-[39m[31m-[39m[0K
+Progress: resolved [96m6[39m, reused [96m195[39m, downloaded [96m6[39m, added [96m6[39m[0K
+Downloading file:../../../../artifacts/source-031a14db/product/botharness-im-provider-4.32.0-botharness.19.tgz: [96m0.00 B[39m/[96m9.57 MB[39m[0K
+[0K[K[0J[3AProgress: resolved [96m6[39m, reused [96m195[39m, downloaded [96m6[39m, added [96m6[39m, done
+[2B[K[0J[2A[0K
+[96mdependencies:[39m[0K
+[31m-[39m deepseekbot [90mfile:../../../../artifacts/source-73c75f86/product/deepseekbot-1.2.1-vps.20261012.sha73c75f86.tgz(a591a5e65a20b95b6676056f014339d2)[39m[0K
+[32m+[39m deepseekbot [90m1.2.1-vps.20261012.sha031a14db[39m[0K
+[0K
+Downloading file:../../../../artifacts/source-031a14db/product/botharness-im-provider-4.32.0-botharness.19.tgz: [96m0.00 B[39m/[96m9.57 MB[39m[0K
+[0K[K[0JDone in 493ms using pnpm v12.4.2
+[K[0J{
+  "installed": {
+    "version": "1.2.1-vps.20261012.sha031a14db",
+    "providerVersion": "4.32.0-botharness.19",
+    "source": "602baa37fa327f7069545aaadbbd34db8a8f4636",
+    "runtime": {
+      "runtimeFiles": 413,
+      "runtimeSha256": "09c8066e2565eb1ab018eaf59edef8d47e368c13314a14f9504b1664c836c01c"
+    }
+  },
+  "componentsVerified": true,
+  "sourceSha": "031a14db43af5b3bf52e76b01c30e27828e6e9c9"
+}
+
+Script done on 2026-10-12 01:52:28+08:00 [COMMAND_EXIT_CODE="0"]

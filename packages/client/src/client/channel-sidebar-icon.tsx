@@ -25,6 +25,18 @@
 import { createElement, type ReactElement } from 'react';
 
 const glyphs: Record<string, readonly [string, Record<string, string | number>][]> = {
+  archive: [
+    ['rect', { width: '20', height: '5', x: '2', y: '3', rx: '1' }],
+    ['path', { d: 'M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8' }],
+    ['path', { d: 'M10 12h4' }],
+  ],
+  'archive-restore': [
+    ['rect', { width: '20', height: '5', x: '2', y: '3', rx: '1' }],
+    ['path', { d: 'M4 8v11a2 2 0 0 0 2 2h2' }],
+    ['path', { d: 'M20 8v11a2 2 0 0 1-2 2h-2' }],
+    ['path', { d: 'm9 15 3-3 3 3' }],
+    ['path', { d: 'M12 12v9' }],
+  ],
   'alarm-clock': [
     ['circle', { cx: '12', cy: '13', r: '8' }],
     ['path', { d: 'M12 9v4l2 2' }],
@@ -43,6 +55,21 @@ const glyphs: Record<string, readonly [string, Record<string, string | number>][
       },
     ],
     ['path', { d: 'M4 2C2.8 3.7 2 5.7 2 8' }],
+  ],
+  bell: [
+    ['path', { d: 'M10.268 21a2 2 0 0 0 3.464 0' }],
+    [
+      'path',
+      {
+        d: 'M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326',
+      },
+    ],
+  ],
+  'bell-off': [
+    ['path', { d: 'M10.268 21a2 2 0 0 0 3.464 0' }],
+    ['path', { d: 'M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742' }],
+    ['path', { d: 'm2 2 20 20' }],
+    ['path', { d: 'M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05' }],
   ],
   cpu: [
     ['path', { d: 'M12 20v2' }],
@@ -457,6 +484,10 @@ const glyphs: Record<string, readonly [string, Record<string, string | number>][
     ['circle', { cx: '15', cy: '12', r: '1' }],
     ['circle', { cx: '15', cy: '5', r: '1' }],
     ['circle', { cx: '15', cy: '19', r: '1' }],
+  ],
+  x: [
+    ['path', { d: 'M18 6 6 18' }],
+    ['path', { d: 'm6 6 12 12' }],
   ],
   check: [
     [

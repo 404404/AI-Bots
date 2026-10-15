@@ -46,7 +46,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
     const core = createCore({
       dshHome: home,
       agents: adapter(async (run) => {
-        if (run.message !== 'Inspect Group') return;
+        if (!run.message.endsWith('Inspect Group')) return;
         const views = run.channels.read({ channelId: groupId, limit: 1 });
         expect(views).toHaveLength(1);
         returnedId = views[0]!.message.id;
@@ -89,7 +89,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
       expect(facts.find((row) => row.message_id !== returnedId)?.observed_at).toBeNull();
       expect(
         core.attention
-          .list({ botSlug: 'ada', state: 'handled' })
+          .list({ botSlug: 'ada', state: 'open' })
           .items.filter((item) => item.reason === 'group-ordinary'),
       ).toHaveLength(1);
     } finally {
@@ -104,7 +104,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
     const before = createCore({
       dshHome: home,
       agents: adapter(async (run) => {
-        if (run.bot.slug !== 'ada' || run.message !== 'Inspect Group') return;
+        if (run.bot.slug !== 'ada' || !run.message.endsWith('Inspect Group')) return;
         const found = run.channels.query({ scope: 'joined', text: 'ordinary one', limit: 1 });
         expect(found.messages.map((view) => view.message.id)).toEqual(['one']);
       }),
@@ -126,7 +126,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
         before.attention
           .list({ botSlug: 'ada' })
           .items.find((item) => item.reason === 'group-ordinary')?.state,
-      ).toBe('handled');
+      ).toBe('open');
       expect(
         before.attention
           .list({ botSlug: 'bea' })
@@ -156,7 +156,7 @@ describe('explicit Channel read handles returned Bot Inbox admissions on success
           .list({ botSlug: 'ada' })
           .items.filter((item) => item.reason === 'group-ordinary')
           .map((item) => item.state),
-      ).toEqual(['deferred', 'handled']);
+      ).toEqual(['deferred', 'open']);
     } finally {
       await resumed.runtime.close();
       resumed.operationalDatabase.close();

@@ -6,6 +6,12 @@ import {
 } from './assignment-approval-capacity.js';
 import { waitForAssignment, type AssignmentWaitOutcome } from './assignment-wait.js';
 import { externalMemberWake } from '../messaging/defaults.js';
+import {
+  sourceSenderAllowed,
+  trustedSenderReference,
+  type SenderPermissions,
+} from '../messaging/sender-access.js';
+import type { MessagingDirectoryQuery, MessagingDirectoryPage } from '../messaging/directory.js';
 import type {
   ThreadReceptionInput,
   ThreadReceptionPolicy,
@@ -26,6 +32,7 @@ import { authorizedPathRoot } from '../workspaces/grant-native-tools.js';
 import { mentionPeople, withMentionNames } from '../messaging/mention-text.js';
 import type { MessagingInboundEvent } from '../messaging/provider.js';
 import type { OutboxIntent, OutboundMessaging } from '../messaging/outbound.js';
+import type { PrivateInputOrigin } from '../credentials/im-origin.js';
 import type { MessagingProcessing } from '../messaging/typing.js';
 import type {
   ExternalSource,
@@ -40,10 +47,21 @@ import {
   type InboxHistoryPage,
   type InboxHistoryQuery,
 } from './inbox-history.js';
-import { join } from 'node:path';
+import { channelSql, OPEN_ADMISSION_SQL, SNOOZED_SQL } from './attention.js';
+import {
+  createInboxTriage,
+  type InboxTriage,
+  type OrchestratorInboxTriage,
+} from './inbox-triage.js';
+import { isAbsolute, join } from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 
-import type { PersonaBotRecord } from '../bots/persona-bot.js';
+import {
+  MAX_PERSONA_BOT_AVATAR_BYTES,
+  personaBotAvatarFromBytes,
+  type PersonaBotRecord,
+} from '../bots/persona-bot.js';
+import { readFileSync, statSync } from 'node:fs';
 import {
   isAssignmentModelChoice,
   isModelRoute,
@@ -53,17 +71,20 @@ import {
 import { isValidSlug } from '../bots/slug.js';
 import type { AssignmentAccessStore } from '../workspaces/assignment-access.js';
 import type { PersonaBotRegistry } from '../bots/registry.js';
+import type { BotCreatePreview } from '../workspaces/tool-approval.js';
 import type { MemoryChangeDelta, MemoryChangeScan } from '../memory/accepted.js';
 import type { MemoryService } from '../memory/service.js';
 import {
   isBotDmChannel,
   MAX_BOT_HOPS,
+  dmChannelId,
   type GroupInvitation,
   type GroupJoinRequest,
   type GroupWakePolicyView,
   type BotMessageCausation,
   type ChannelMention,
   type ChannelMessage,
+  type ChannelReaction,
   type ChannelRecord,
 } from '../channels/channel.js';
 import { ChannelReplyTargetError, MAX_MESSAGE_PAGE } from '../channels/store.js';
@@ -83,6 +104,7 @@ import {
 } from '../database/owner.js';
 import { createSessionOwnership, type SessionOwnership } from '../sessions/ownership.js';
 import { sessionMentionText } from './session-mentions.js';
+import { botMentionLabel, resolveBotMentionText } from '../channels/bot-mention-text.js';
 import {
   createBotSourcePolicyStore,
   type BotSourcePolicy,
@@ -141,6 +163,54 @@ export interface AssignmentSummary {
   openAsk?: AssignmentOpenAsk;
   permission?: AssignmentPermissionSnapshot;
   modelRoute?: ModelRoute;
+  archivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssignmentDirectoryQuery {
+  query?: string;
+  activity?: AssignmentActivity[];
+  includeArchived?: boolean;
+  limit?: number;
+  cursor?: string;
+}
+
+export interface AssignmentDirectoryPage {
+  assignments: AssignmentSummary[];
+  nextCursor?: string;
+}
+
+export type AssignmentArchiveOutcome =
+  | { outcome: 'archived'; assignment: AssignmentSummary }
+  | {
+      outcome: 'refused';
+      code: 'assignment-active';
+      assignment: AssignmentSummary;
+      message: string;
+    };
+
+export type OrchestratorReplacement<T> =
+  | { outcome: 'replaced'; value: T }
+  | { outcome: 'refused'; code: 'bot-busy'; message: string };
+
+const BOT_BUSY = {
+  outcome: 'refused',
+  code: 'bot-busy',
+  message: 'This Bot is working right now; wait for it to finish, then try again.',
+} as const;
+
+export interface NativeSessionArchive {
+  archiveSession(sessionId: string): Promise<void>;
+  unarchiveSession(sessionId: string): Promise<void>;
+}
+
+export interface ChannelAssignmentSummary {
+  sessionId: string;
+  botSlug: string;
+  purpose: string;
+  activity: AssignmentActivity;
+  latestReport?: AssignmentReport;
   createdAt: string;
   updatedAt: string;
 }
@@ -207,10 +277,14 @@ export interface OrchestratorAssignmentAccess {
     model?: ModelRoute;
   }): AssignmentRequestOutcome;
   stop(sessionId: string): Promise<AssignmentSummary>;
+  query?(input: AssignmentDirectoryQuery): AssignmentDirectoryPage;
+  archive?(sessionId: string): Promise<AssignmentArchiveOutcome>;
+  unarchive?(sessionId: string): Promise<{ outcome: 'unarchived'; assignment: AssignmentSummary }>;
 }
 
 export interface OrchestratorAgentRun {
   inboxHistory?(input?: InboxHistoryInput): InboxHistoryPage;
+  triage?: OrchestratorInboxTriage;
   acceptNativeInput?: () => boolean;
   requireContent?(): void;
   sessionId: string;
@@ -221,10 +295,40 @@ export interface OrchestratorAgentRun {
   inbox: string;
   inboundChannelId: string | undefined;
   externalMessaging?: {
+    connected(): boolean;
+    senderPermissions?(sourceEventId: string): SenderPermissions;
+    directory?(query: MessagingDirectoryQuery): MessagingDirectoryPage;
     targets?(): Promise<
-      Array<{ grantId: string; platform: string; accountName: string; targetName: string }>
+      Array<{
+        grantId: string;
+        bindingId: string;
+        accountRef: string;
+        platform: string;
+        accountName: string;
+        targetName: string;
+        conversationId: string;
+        canPost: true;
+      }>
     >;
     post?(grantId: string, requestId: string, text: string): ReturnType<OutboundMessaging['post']>;
+    reachable?(
+      bindingId?: string,
+      cursor?: string,
+    ): Promise<
+      Array<{
+        bindingId: string;
+        platform: string;
+        accountName: string;
+        page?: import('../messaging/provider.js').MessagingReachablePage;
+        reason?: string;
+      }>
+    >;
+    postConversation?(
+      bindingId: string,
+      conversationId: string,
+      requestId: string,
+      text: string,
+    ): ReturnType<OutboundMessaging['postConversation']>;
     outbox?(
       intentId?: string,
     ): OutboxIntent | Array<Omit<OutboxIntent, 'text'> & { preview: string }>;
@@ -351,6 +455,30 @@ export interface ChannelQueryPage {
   nextCursor?: string;
 }
 
+export interface BotCreateInput {
+  displayName: string;
+  description?: string;
+  tags?: string[];
+  avatarPath?: string;
+  soul?: string;
+  coreMemory?: string;
+  memoryLocation?: string;
+}
+
+export interface BotCreateOutcome {
+  botId: string;
+  displayName: string;
+  dmChannelId: string;
+  memoryDir: string;
+  model: 'host-default' | 'set';
+}
+
+export const NEW_BOT_ID_PLACEHOLDER = '<new-bot-id>';
+export const MAX_CREATED_BOT_NAME_LENGTH = 60;
+export const MAX_CREATED_BOT_TAGS = 8;
+export const MAX_CREATED_BOT_TAG_LENGTH = 32;
+export const MAX_CREATED_BOT_BIO_LENGTH = 160;
+
 export interface OrchestratorChannelAccess {
   list(input?: ChannelListInput): ChannelListPage;
   read(input?: { channelId?: string; before?: string; limit?: number }): ChannelMessageView[];
@@ -405,12 +533,14 @@ export interface OrchestratorChannelAccess {
     intervalSeconds: number;
   }): GroupWakePolicyView;
   leaveGroup(input: { channelId: string }): { channelId: string; left: boolean };
+  react?(input: BotReactionInput & { channelId?: string }): BotReactionResult;
   sendToBot(input: {
     botSlug: string;
     body: string;
     replyTo?: string;
     deliveryKey?: string;
   }): Promise<{ channelId: string; message: ChannelMessage }>;
+  createBot?(input: BotCreateInput): BotCreateOutcome;
   send(input: {
     body: string;
     channelId?: string;
@@ -422,14 +552,75 @@ export interface OrchestratorChannelAccess {
   }): Promise<ChannelMessage>;
 }
 
+export interface BotReactionInput {
+  messageId: string;
+  emoji: string;
+  active: boolean;
+}
+
+export interface BotReactionResult {
+  channelId: string;
+  messageId: string;
+  reactions: ChannelReaction[];
+}
+
+export interface OrchestratorServiceTurn {
+  sessionId: string;
+  channelId: string | undefined;
+  sourceEventId: string;
+  markSideEffect: () => void;
+  readAdmissions: Set<string>;
+  importedFiles: Map<string, ChannelAttachmentRef>;
+  turnSources: ReadonlySet<string>;
+  observeMemory: boolean;
+  observeReads: boolean;
+}
+
+export interface DirectBotToolSpec {
+  name: string;
+  description: string;
+  inputSchema: unknown;
+}
+
+export interface DirectBotToolCall {
+  callId: string;
+  tool: string;
+  args: Record<string, unknown>;
+  at: string;
+  durationMs: number;
+  outcome: 'ok' | 'error';
+  result: string;
+}
+
+const DIRECT_TOOL_CALL_LIMIT = 50;
+
+export class DirectBotToolError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'DirectBotToolError';
+  }
+}
+
 export interface BotAgentAdapter {
   runOrchestrator(run: OrchestratorAgentRun): Promise<void>;
 
   steerOrchestrator?(botSlug: string, text: string): boolean;
+  stopOrchestratorTurn?(botSlug: string): string | undefined;
   runAssignment(run: AssignmentAgentRun): Promise<void>;
   requestAssignment(run: AssignmentAgentRun): AssignmentRequestDelivery;
   stopAssignment?(sessionId: string): Promise<void>;
   stopBot?(botSlug: string, sessionIds: string[]): Promise<void>;
+  releaseSession?(sessionId: string): Promise<void>;
+  directTools?(): DirectBotToolSpec[];
+  runDirectTool?(
+    run: OrchestratorAgentRun,
+    tool: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<unknown>;
   close(): Promise<void>;
 }
 
@@ -452,6 +643,14 @@ export type DmMessageAdmission =
   | { admitted: false; reason: DmAdmissionFailure };
 
 export interface BotRuntime {
+  botCreatePreview?(botSlug: string, args: unknown): BotCreatePreview | undefined;
+  canRequestPrivateInput?(sessionId: string, sourceEventId?: string): boolean;
+  askChannel?(sessionId: string): string | undefined;
+  askNotice?(sessionId: string, toolName: string): string | undefined;
+  bindPrivateInputOrigin?(
+    sessionId: string,
+    sourceEventId?: string,
+  ): PrivateInputOrigin | undefined;
   beginAssignmentApprovalWait?(
     sessionId: string,
     callId: string,
@@ -471,6 +670,12 @@ export interface BotRuntime {
     sessionId: string,
     channelId: string,
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined;
+  recoverNativeQuestionInput?(
+    sessionId: string,
+    channelId: string,
+    requestMessageId: string,
+  ): ((deliver: () => boolean) => Promise<boolean>) | undefined;
+  nativeQuestionAvailable?(sessionId: string, channelId: string): boolean;
   originalAttachmentRoot?(
     sessionId: string,
     path: string,
@@ -491,19 +696,38 @@ export interface BotRuntime {
   admitGroupJoinRequest?(ownerDmChannelId: string, requestId: string): void;
   admitGroupJoinDecision?(requesterDmChannelId: string, requestId: string): void;
   listAssignments(botSlug: string): AssignmentSummary[];
+  currentOrchestratorSessionId?(botSlug: string): string | undefined;
+  replaceOrchestrator?<T>(botSlug: string, body: () => T): Promise<OrchestratorReplacement<T>>;
+  directBotTools?(): DirectBotToolSpec[];
+  directBotToolCalls?(botSlug: string): readonly DirectBotToolCall[];
+  runDirectBotTool?(
+    botSlug: string,
+    tool: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<{ tool: string; sessionId: 'direct'; result: unknown }>;
+  triageOpenCount?(botSlug: string): number | undefined;
+  listChannelAssignments?(channelId: string): ChannelAssignmentSummary[];
   getAssignment(botSlug: string, sessionId: string): AssignmentDetail | undefined;
+  setAssignmentArchived?(
+    botSlug: string,
+    sessionId: string,
+    archived: boolean,
+  ): Promise<AssignmentArchiveOutcome | { outcome: 'unarchived'; assignment: AssignmentSummary }>;
 
   admitExternalSource?(botSlug: string, sourceEventId: string): void;
   admitScheduleFiring?(botSlug: string): void;
   resumePendingDigests?(botSlug: string): void;
 
   stopBot?(botSlug: string): Promise<void>;
+  stopTurn?(botSlug: string): Promise<{ sessionId: string } | undefined>;
   whenIdle(): Promise<void>;
   close(): Promise<void>;
 }
 
 export interface BotRuntimeOptions {
   inboxHistory?: InboxHistoryQuery;
+  triageContinuation?: boolean;
   requireExecution?: (botSlug: string) => void;
   beginAssignmentWait?: (botSlug: string, orchestratorSessionId: string) => () => void;
   externalMessaging?: OutboundMessaging;
@@ -546,13 +770,18 @@ export interface BotRuntimeOptions {
 
   orchestratorCwd?: (bot: PersonaBotRecord) => string | undefined;
 
+  sessionArchived?: (sessionId: string) => boolean;
+
   assignmentConcurrencyLimit?: number | (() => number);
+
+  sessionArchive?: () => NativeSessionArchive | undefined;
 
   warn?: (message: string) => void;
   now?: () => Date;
   createSessionId?: () => string;
   createEventId?: () => string;
   createMessageId?: () => string;
+  createBotId?: () => string;
 }
 
 interface AssignmentRow {
@@ -576,6 +805,7 @@ interface AssignmentRow {
   approval_policy: string | null;
   preset_revision: number | null;
   model_route_json: string | null;
+  archived_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -602,6 +832,7 @@ interface InboxReportRow {
 }
 
 interface DigestRow {
+  bot_slug?: string;
   source_event_id: string;
   message_id: string;
   body: string;
@@ -762,6 +993,98 @@ function assignmentFromRow(row: AssignmentRow): AssignmentDetail {
     ...(openAsk === undefined ? {} : { openAsk }),
     ...(permissionFromRow(row) === undefined ? {} : { permission: permissionFromRow(row)! }),
     ...(modelRouteFromRow(row) === undefined ? {} : { modelRoute: modelRouteFromRow(row)! }),
+    ...(isArchivedRow(row) ? { archivedAt: row.archived_at } : {}),
+  };
+}
+
+function isArchivedRow(row: AssignmentRow): row is AssignmentRow & { archived_at: string } {
+  return typeof row.archived_at === 'string';
+}
+
+export const DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT = 8;
+const ASSIGNMENT_DIRECTORY_DEFAULT_LIMIT = 20;
+const ASSIGNMENT_DIRECTORY_MAX_LIMIT = 50;
+const ASSIGNMENT_ACTIVITIES: readonly AssignmentActivity[] = [
+  'working',
+  'idle',
+  'error',
+  'stopping',
+  'stopped',
+];
+
+function encodeDirectoryCursor(assignment: AssignmentSummary): string {
+  return Buffer.from(
+    JSON.stringify({ u: assignment.updatedAt, s: assignment.sessionId }),
+    'utf8',
+  ).toString('base64url');
+}
+
+function decodeDirectoryCursor(cursor: string): { updatedAt: string; sessionId: string } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+  } catch {
+    parsed = undefined;
+  }
+  const fields = parsed as { u?: unknown; s?: unknown } | null | undefined;
+  if (typeof fields?.u !== 'string' || typeof fields.s !== 'string')
+    throw new Error('Invalid Assignment Directory cursor; restart from the first page');
+  return { updatedAt: fields.u, sessionId: fields.s };
+}
+
+export function queryAssignmentDirectory(
+  assignments: readonly AssignmentSummary[],
+  input: AssignmentDirectoryQuery,
+): AssignmentDirectoryPage {
+  const limit = input.limit ?? ASSIGNMENT_DIRECTORY_DEFAULT_LIMIT;
+  if (!Number.isInteger(limit) || limit < 1 || limit > ASSIGNMENT_DIRECTORY_MAX_LIMIT)
+    throw new Error(
+      `Assignment Directory limit must be an integer from 1 to ${ASSIGNMENT_DIRECTORY_MAX_LIMIT}`,
+    );
+  const activity = input.activity === undefined ? undefined : new Set(input.activity);
+  for (const value of activity ?? [])
+    if (!ASSIGNMENT_ACTIVITIES.includes(value))
+      throw new Error(`Unknown Assignment activity filter: ${String(value)}`);
+  const text = input.query?.trim().toLocaleLowerCase();
+  const after = input.cursor === undefined ? undefined : decodeDirectoryCursor(input.cursor);
+  const matches = assignments.filter((assignment) => {
+    if (input.includeArchived !== true && assignment.archivedAt !== undefined) return false;
+    if (activity !== undefined && !activity.has(assignment.activity)) return false;
+    if (text !== undefined && text !== '') {
+      const haystack = [
+        assignment.purpose,
+        assignment.continuityKey ?? '',
+        assignment.latestReport?.summary ?? '',
+      ]
+        .join('\n')
+        .toLocaleLowerCase();
+      if (!haystack.includes(text)) return false;
+    }
+    if (after !== undefined)
+      return (
+        assignment.updatedAt < after.updatedAt ||
+        (assignment.updatedAt === after.updatedAt && assignment.sessionId > after.sessionId)
+      );
+    return true;
+  });
+  const ordered = [...matches].sort((left, right) =>
+    left.updatedAt === right.updatedAt
+      ? left.sessionId < right.sessionId
+        ? -1
+        : left.sessionId > right.sessionId
+          ? 1
+          : 0
+      : left.updatedAt < right.updatedAt
+        ? 1
+        : -1,
+  );
+  const page = ordered.slice(0, limit);
+  const last = page.at(-1);
+  return {
+    assignments: page,
+    ...(ordered.length > limit && last !== undefined
+      ? { nextCursor: encodeDirectoryCursor(last) }
+      : {}),
   };
 }
 
@@ -831,7 +1154,7 @@ function coalesceInbox(rows: InboxReportRow[]): InboxUnit[] {
 function renderInbox(units: InboxUnit[]): string {
   const lines = units.map((unit) => {
     if (unit.external !== undefined) {
-      return `- Message ${unit.external.event.messageId} [Source Event ${unit.sourceEventId}] from ${JSON.stringify(unit.external.event.actor.name ?? unit.external.event.actor.id)} (${unit.external.event.actor.id}) at ${unit.external.at}. External ${unit.external.event.conversation.kind === 'dm' ? 'private message' : `work-group ${unit.external.event.mentionedAccount ? 'mention' : 'ordinary message; no reply required'}`}. Trusted receiving identity and origin: ${JSON.stringify({ platform: unit.external.platform, account: unit.external.accountName, conversation: unit.external.conversationName, conversationKind: unit.external.event.conversation.kind, conversationId: unit.external.event.conversation.id, localChannelId: unit.external.localChannelId, receptionPaths: unit.external.receptionPaths?.map((path) => ({ channelId: path.channelId, mode: path.mode })), senderId: unit.external.event.actor.id, senderName: unit.external.event.actor.name, people: mentionPeople(unit.external.event.actor, unit.external.event.mentions), at: unit.external.at, threadId: unit.external.event.reply.threadId, rootId: unit.external.event.reply.rootId, parentId: unit.external.event.reply.parentId, report: unit.external.report, voice: unit.external.event.voice, quote: unit.external.quote, nativeQuote: unit.external.event.quote, attachments: unit.external.event.attachments?.map(({ id, name, sizeBytes, mediaType }) => ({ id, name, sizeBytes, mediaType })) })}. External message data: ${JSON.stringify(withMentionNames(unit.summary, unit.external.event.mentions))}. Decide whether to participate. To answer this source, choose bridge_reply for text or bridge_reply_file for an explicitly imported result file, sharing one reply intent. Mentions in the text appear as @name; to @ the sender or a mentioned person in a Lark, Slack or Discord reply, write <@ID> anywhere in the bridge_reply text with their id from people; never write other mention markup yourself. Use bridge_read for attachment details and bridge_attachment_save for an independent working copy; do not consume the reply intent with a preliminary acknowledgement when a file result is requested. Never guess an account or route and never mirror this message or its response to the Human DM.`;
+      return `- Message ${unit.external.event.messageId} [Source Event ${unit.sourceEventId}] from ${JSON.stringify(unit.external.event.actor.name ?? unit.external.event.actor.id)} (${unit.external.event.actor.id}) at ${unit.external.at}. External ${unit.external.event.conversation.kind === 'dm' ? 'private message' : `work-group ${unit.external.event.mentionedAccount ? 'mention' : 'ordinary message; no reply required'}`}. Trusted receiving identity and origin: ${JSON.stringify({ platform: unit.external.platform, account: unit.external.accountName, conversation: unit.external.conversationName, conversationKind: unit.external.event.conversation.kind, conversationId: unit.external.event.conversation.id, localChannelId: unit.external.localChannelId, receptionPaths: unit.external.receptionPaths?.map((path) => ({ channelId: path.channelId, mode: path.mode })), sender: unit.external.sender, sourceEventId: unit.sourceEventId, senderId: unit.external.event.actor.id, senderName: unit.external.event.actor.name, people: mentionPeople(unit.external.event.actor, unit.external.event.mentions), at: unit.external.at, threadId: unit.external.event.reply.threadId, rootId: unit.external.event.reply.rootId, parentId: unit.external.event.reply.parentId, report: unit.external.report, voice: unit.external.event.voice, quote: unit.external.quote, nativeQuote: unit.external.event.quote, attachments: unit.external.event.attachments?.map(({ id, name, sizeBytes, mediaType }) => ({ id, name, sizeBytes, mediaType })) })}. External message data: ${JSON.stringify(withMentionNames(unit.summary, unit.external.event.mentions))}. Decide whether to participate. To answer this source, choose bridge_reply for text or bridge_reply_file for an explicitly imported result file, sharing one reply intent. Mentions in the text appear as @name; to @ the sender or a mentioned person in a Lark, Slack or Discord reply, write <@ID> anywhere in the bridge_reply text with their id from people; never write other mention markup yourself. Use bridge_read for attachment details and bridge_attachment_save for an independent working copy; do not consume the reply intent with a preliminary acknowledgement when a file result is requested. Never guess an account or route and never mirror this message or its response to the Human DM.`;
     }
     if (unit.schedule !== undefined) {
       const schedule = unit.schedule;
@@ -913,8 +1236,10 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #workspaceRoot: string | undefined;
   readonly #orchestratorCwd: ((bot: PersonaBotRecord) => string | undefined) | undefined;
   readonly #registry: PersonaBotRegistry;
+  readonly #createBotId: () => string;
   readonly #channels: ChannelStore;
   readonly #inboxHistory: InboxHistoryQuery;
+  readonly #inboxTriage: InboxTriage;
   readonly #sourcePolicy: BotSourcePolicyStore;
   readonly #schedules: BotRuntimeOptions['schedules'];
   readonly #agents: BotAgentAdapter;
@@ -926,16 +1251,32 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #readAssignmentReportPage: BotRuntimeOptions['readAssignmentReportPage'];
   readonly #now: () => Date;
   readonly #createSessionId: () => string;
+  readonly #sessionArchived: ((sessionId: string) => boolean) | undefined;
   readonly #createEventId: () => string;
   readonly #createMessageId: () => string;
   readonly #assignmentConcurrencyLimit: () => number;
+  readonly #sessionArchive: (() => NativeSessionArchive | undefined) | undefined;
   readonly #approvalCapacity: AssignmentApprovalCapacity;
   readonly #warn: ((message: string) => void) | undefined;
+  readonly #triageContinuation: boolean;
   readonly #tails = new Map<string, Promise<unknown>>();
   readonly #activeTurns = new Map<string, Promise<void>>();
+  readonly #stoppedTurns = new Set<string>();
+  readonly #stopNotices = new Map<string, string>();
   readonly #typingTurns = new Map<string, MessagingProcessing>();
   readonly #typingAssignments = new Map<string, MessagingProcessing>();
-  readonly #turnSources = new Map<string, Set<string>>();
+  readonly #turnSources = new Map<
+    string,
+    {
+      sessionId: string;
+      eventIds: Set<string>;
+      acceptedEventIds: Set<string>;
+      inboundChannelId: string | undefined;
+      steeredChannelIds: Set<string>;
+      spokenChannelIds: Set<string>;
+      askNoticed: boolean;
+    }
+  >();
   readonly #activeMemoryEvents = new Map<
     string,
     { eventIds: string[]; preserveObservation: boolean }
@@ -943,16 +1284,23 @@ class BotRuntimeImplementation implements BotRuntime {
   readonly #steerSettlements = new Set<Promise<void>>();
   readonly #pendingHarvests = new Set<string>();
   readonly #digestTimers = new Map<string, NodeJS.Timeout>();
+  readonly #snoozeTimers = new Map<string, NodeJS.Timeout>();
+  readonly #triageQueued = new Set<string>();
+  readonly #triageRunning = new Map<string, number>();
+  readonly #triageBaseline = new Map<string, number>();
+  readonly #triageStalled = new Map<string, Set<string>>();
   readonly #groupAdmissionRetries = new Map<string, NodeJS.Timeout>();
   readonly #digestRetryAt = new Map<string, number>();
   readonly #digestFailureCount = new Map<string, number>();
   readonly #inboxFactoryRetries = new Map<string, { attempts: number; timer?: NodeJS.Timeout }>();
   readonly #assignmentRuns = new Map<string, Promise<void>>();
   readonly #assignmentAcceptances = new Set<string>();
+  readonly #assignmentArchives = new Set<string>();
   readonly #assignmentNotices = new Set<Promise<void>>();
   readonly #waitLifetime = new AbortController();
   readonly #waitOptions: Pick<BotRuntimeOptions, 'database' | 'beginAssignmentWait'>;
   #closed = false;
+  readonly #directToolCalls = new Map<string, DirectBotToolCall[]>();
 
   constructor(options: BotRuntimeOptions) {
     this.#waitOptions = options;
@@ -965,6 +1313,7 @@ class BotRuntimeImplementation implements BotRuntime {
       createSessionOwnership(attachOperationalModule(options.database, 'session-ownership'));
     this.#workspaceRoot = options.workspaceRoot;
     this.#orchestratorCwd = options.orchestratorCwd;
+    this.#sessionArchived = options.sessionArchived;
     this.#registry = options.registry;
     this.#requireExecution = options.requireExecution;
     this.#channels = options.channels;
@@ -975,6 +1324,7 @@ class BotRuntimeImplementation implements BotRuntime {
         options.channels,
         options.now,
       );
+    this.#inboxTriage = createInboxTriage(this.#database, options.channels, options.now);
     this.#sourcePolicy =
       options.sourcePolicy ?? createBotSourcePolicyStore(this.#database, options.now);
     this.#schedules = options.schedules;
@@ -988,10 +1338,14 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#createSessionId = options.createSessionId ?? (() => `botharness-${randomUUID()}`);
     this.#createEventId = options.createEventId ?? (() => randomUUID());
     this.#createMessageId = options.createMessageId ?? (() => randomUUID());
-    const configuredLimit = options.assignmentConcurrencyLimit ?? 3;
+    this.#createBotId = options.createBotId ?? (() => 'bot-' + randomUUID().replaceAll('-', ''));
+    const configuredLimit =
+      options.assignmentConcurrencyLimit ?? DEFAULT_ASSIGNMENT_CONCURRENCY_LIMIT;
     this.#assignmentConcurrencyLimit =
       typeof configuredLimit === 'function' ? configuredLimit : () => configuredLimit;
+    this.#sessionArchive = options.sessionArchive;
     this.#warn = options.warn;
+    this.#triageContinuation = options.triageContinuation === true;
     this.#approvalCapacity = new AssignmentApprovalCapacity({
       valid: (sessionId) => this.#assignmentExecutionAvailable(sessionId),
       available: () => this.#assignmentCapacityRefusal('awakened') === undefined,
@@ -1013,11 +1367,221 @@ class BotRuntimeImplementation implements BotRuntime {
     });
 
     if (options.database.mode === 'ready') {
-      this.#recoverInterruptedAttempts();
+      const interruptedDms = this.#recoverInterruptedAttempts();
       this.#recoverPendingChannelAdmissions();
+      for (const row of interruptedDms) {
+        const admission = this.admitDmMessage({
+          channelId: row.channel_id,
+          messageId: row.message_id,
+          body: row.body,
+        });
+        if (admission.admitted) void admission.settled.catch(() => undefined);
+      }
       this.#recoverPendingDigests();
       this.#recoverPendingAssignmentReports();
+      for (const bot of this.#registry.list()) this.#armSnooze(bot.slug);
     }
+  }
+
+  #armSnooze(botSlug: string): void {
+    const prior = this.#snoozeTimers.get(botSlug);
+    if (prior !== undefined) clearTimeout(prior);
+    this.#snoozeTimers.delete(botSlug);
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined) return;
+    const next = this.#database.read((database) =>
+      database
+        .prepare(`
+          SELECT MIN(snoozed_until) AS next FROM inbox_admissions
+           WHERE bot_slug = ? AND snoozed_until IS NOT NULL AND resolved_at IS NULL
+        `)
+        .get(botSlug),
+    ) as { next: string | null } | undefined;
+    if (next?.next == null) return;
+    const delay = Math.min(
+      2_147_483_647,
+      Math.max(bot.paused === true ? 60_000 : 1, Date.parse(next.next) - this.#now().getTime()),
+    );
+    const timer = setTimeout(() => {
+      this.#snoozeTimers.delete(botSlug);
+      if (this.#closed) return;
+      void this.#enqueue(botSlug, () => this.#runSnoozeReturnTurn(botSlug))
+        .finally(() => this.#armSnooze(botSlug))
+        .catch(() => undefined);
+    }, delay);
+    timer.unref();
+    this.#snoozeTimers.set(botSlug, timer);
+  }
+
+  #queueTriage(botSlug: string): void {
+    if (!this.#triageContinuation || this.#closed || this.#triageQueued.has(botSlug)) return;
+    this.#triageQueued.add(botSlug);
+    void this.#enqueue(botSlug, () => this.#runTriageTurn(botSlug)).catch(() => undefined);
+  }
+
+  async #runTriageTurn(botSlug: string): Promise<void> {
+    this.#triageQueued.delete(botSlug);
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined || bot.paused === true) return;
+    const ids = this.#inboxTriage.openIds(botSlug);
+    const baseline = this.#triageBaseline.get(botSlug);
+    this.#triageBaseline.delete(botSlug);
+    if (ids.length === 0) {
+      this.#triageStalled.delete(botSlug);
+      return;
+    }
+    if (baseline !== undefined && ids.length >= baseline) {
+      this.#triageStalled.set(botSlug, new Set(ids));
+      return;
+    }
+    const stalled = this.#triageStalled.get(botSlug);
+    if (stalled !== undefined && ids.every((id) => stalled.has(id))) return;
+    this.#triageStalled.delete(botSlug);
+    const anchor = ids[0]!;
+    const channel = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT ${channelSql('e')} AS channel_id FROM source_events e WHERE e.source_event_id = ?`,
+        )
+        .get(anchor),
+    ) as { channel_id: string | null } | undefined;
+    const channelId = channel?.channel_id ?? this.#dmChannel(botSlug)?.id;
+    const body = `[Triage] ${ids.length} item${ids.length === 1 ? ' is' : 's are'} still open after your last turn. Give each one a destination: act on it now, resolve it with inbox_resolve once it is done or needs nothing more, snooze it with inbox_snooze when it waits on someone or a later time, or ignore noise. Check a completed Assignment report against what you asked for before resolving it. You are woken again while open items remain, unless a round leaves the open count unchanged.`;
+    this.#triageBaseline.set(botSlug, ids.length);
+    this.#triageRunning.set(botSlug, ids.length);
+    try {
+      const orchestrator = this.#ensureOrchestrator(bot, this.#now().toISOString());
+      await this.#runOrchestratorTurn(
+        bot,
+        orchestrator,
+        anchor,
+        channelId,
+        body,
+        [],
+        false,
+        () => undefined,
+        [],
+        [],
+      );
+    } catch (error) {
+      this.#triageBaseline.delete(botSlug);
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'triage-turn-failed',
+          botSlug,
+          error: String(error).slice(0, 500),
+        }),
+      );
+    } finally {
+      this.#triageRunning.delete(botSlug);
+    }
+  }
+
+  async #runSnoozeReturnTurn(botSlug: string): Promise<void> {
+    if (this.#closed) return;
+    const bot = this.#registry.get(botSlug);
+    if (bot === undefined || bot.paused === true) return;
+    const timestamp = this.#now().toISOString();
+    const due = this.#database.transaction(
+      (database) => {
+        const rows = database
+          .prepare(`
+            SELECT a.source_event_id, a.snoozed_until, a.snooze_note, e.body,
+                   ${channelSql('e')} AS channel_id,
+                   CASE WHEN ${OPEN_ADMISSION_SQL} AND ${SNOOZED_SQL} THEN 1 ELSE 0 END AS hidden
+              FROM inbox_admissions a
+              JOIN source_events e ON e.source_event_id = a.source_event_id
+             WHERE a.bot_slug = ? AND a.snoozed_until IS NOT NULL AND a.snoozed_until <= ?
+               AND a.resolved_at IS NULL
+             ORDER BY a.snoozed_until, e.created_at
+          `)
+          .all(botSlug, timestamp) as unknown as Array<{
+          source_event_id: string;
+          snoozed_until: string;
+          snooze_note: string | null;
+          body: string;
+          channel_id: string | null;
+          hidden: number;
+        }>;
+        for (const row of rows)
+          database
+            .prepare(
+              'UPDATE inbox_admissions SET snoozed_until = NULL WHERE source_event_id = ? AND bot_slug = ?',
+            )
+            .run(row.source_event_id, botSlug);
+        return rows.filter((row) => row.hidden === 1);
+      },
+      ['bot-inbox'],
+    );
+    const anchor = due[0];
+    if (anchor === undefined) return;
+    const channelId = anchor.channel_id ?? this.#dmChannel(botSlug)?.id;
+    const body = [
+      `[Snooze returned] ${due.length} item${due.length === 1 ? '' : 's'} you snoozed ${due.length === 1 ? 'is' : 'are'} back. Decide what each needs now, then resolve it, act on it, or snooze it again.`,
+      ...due.map(
+        (row) =>
+          `- [Source Event ${row.source_event_id}] snoozed until ${row.snoozed_until}${row.snooze_note === null ? '' : `, note: ${JSON.stringify(row.snooze_note)}`}: ${JSON.stringify(row.body.replace(/\s+/g, ' ').slice(0, 300))}`,
+      ),
+    ].join('\n');
+    try {
+      const orchestrator = this.#ensureOrchestrator(bot, timestamp);
+      await this.#runOrchestratorTurn(
+        bot,
+        orchestrator,
+        anchor.source_event_id,
+        channelId,
+        body,
+        [],
+        false,
+        () => undefined,
+        [],
+        [],
+      );
+    } catch (error) {
+      const retryAt = new Date(this.#now().getTime() + 300_000).toISOString();
+      this.#database.transaction(
+        (database) => {
+          for (const row of due)
+            database
+              .prepare(`
+                UPDATE inbox_admissions SET snoozed_until = ?
+                 WHERE source_event_id = ? AND bot_slug = ? AND resolved_at IS NULL
+                   AND snoozed_until IS NULL
+              `)
+              .run(retryAt, row.source_event_id, botSlug);
+        },
+        ['bot-inbox'],
+      );
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'snooze-return-failed',
+          botSlug,
+          error: String(error).slice(0, 500),
+        }),
+      );
+    }
+  }
+
+  #react(botSlug: string, channel: ChannelRecord, input: BotReactionInput): BotReactionResult {
+    const bot = this.#registry.get(botSlug);
+    if (this.#closed || bot === undefined || bot.paused === true)
+      throw new Error('channel_send: Bot is unavailable');
+    if (this.#channels.setBotReaction === undefined)
+      throw new Error('channel_send: reactions are unavailable');
+    const reactions = this.#channels.setBotReaction(
+      channel.id,
+      botSlug,
+      input.messageId,
+      input.emoji,
+      input.active,
+    );
+    if (reactions === undefined)
+      throw new Error(
+        `channel_send: message ${input.messageId} cannot take this reaction in Channel ${channel.id}`,
+      );
+    return { channelId: channel.id, messageId: input.messageId, reactions };
   }
 
   async retryDmMessage(channelId: string, messageId: string): Promise<void> {
@@ -1195,7 +1759,7 @@ class BotRuntimeImplementation implements BotRuntime {
       for (const candidate of this.#pendingExternalRows(botSlug, true)) {
         if (
           candidate.source_event_id === sourceEventId ||
-          !this.#externalMessaging.inbound.available(botSlug, candidate.source_event_id)
+          !this.#externalMessaging.inbound.available(botSlug, candidate.source_event_id, true)
         )
           continue;
         const context = this.#externalMessaging.inbound.read(botSlug, candidate.source_event_id);
@@ -1241,6 +1805,7 @@ class BotRuntimeImplementation implements BotRuntime {
         return;
       }
       if (delivered) {
+        this.#acceptTurnSources(botSlug, [...included, ...contextIds]);
         this.#typingTurns.get(botSlug)?.add(included);
         for (const row of context?.rows ?? [])
           this.#observeAdmission(row.source_event_id, botSlug, context!.channelId, row.message_id);
@@ -1442,6 +2007,11 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#noteSteeredChannel(botSlug, channelId);
+    this.#acceptTurnSources(
+      botSlug,
+      admissions.map((admission) => admission.sourceEventId),
+    );
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
     const settlement = active.then(
@@ -1489,7 +2059,7 @@ class BotRuntimeImplementation implements BotRuntime {
       .prepare(`SELECT COUNT(*) AS count ${base}`)
       .get(botSlug, reason, channelId, excludeSourceEventId) as { count: number };
     if (total.count === 0) return undefined;
-    const columns = `SELECT a.source_event_id, e.message_id, e.body, e.created_at,
+    const columns = `SELECT a.source_event_id, a.bot_slug, e.message_id, e.body, e.created_at,
       json_extract(e.payload_json, '$.author.kind') AS author_kind,
       json_extract(e.payload_json, '$.author.slug') AS author_slug,
                  json_extract(e.payload_json, '$.external.event.actor.name') AS external_sender,
@@ -1653,6 +2223,11 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.admissionChanged?.(channelId, admission.messageId);
       return false;
     }
+    this.#noteSteeredChannel(botSlug, channelId);
+    this.#acceptTurnSources(
+      botSlug,
+      admissions.map((admission) => admission.sourceEventId),
+    );
     for (const admission of admissions)
       this.#observeAdmission(admission.sourceEventId, botSlug, channelId, admission.messageId);
 
@@ -1679,11 +2254,14 @@ class BotRuntimeImplementation implements BotRuntime {
         UPDATE inbox_admissions
            SET attempt_state = ?,
                handled_at = CASE WHEN ? THEN ? ELSE handled_at END,
+               opened_at = CASE WHEN ? THEN COALESCE(opened_at, ?) ELSE opened_at END,
                last_error = CASE WHEN ? THEN NULL ELSE 'Steered Orchestrator turn failed' END
          WHERE source_event_id = ? AND bot_slug = ? AND attempt_state = 'running'
       `)
             .run(
               succeeded ? 'handled' : 'needs-repair',
+              succeeded ? 1 : 0,
+              this.#now().toISOString(),
               succeeded ? 1 : 0,
               this.#now().toISOString(),
               succeeded ? 1 : 0,
@@ -2048,7 +2626,8 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#setObserved(collected.eventIds, timestamp, botSlug);
     let orchestrator: { sessionId: string; resume: boolean } | undefined;
     try {
-      orchestrator = this.#ensureOrchestrator(bot, timestamp);
+      const started = this.#ensureOrchestrator(bot, timestamp);
+      orchestrator = started;
       const sections = [
         ...claimed.items.map((item) =>
           this.#inboundChannelMessage(item.channelId, item.messageId, item.body),
@@ -2063,19 +2642,22 @@ class BotRuntimeImplementation implements BotRuntime {
         attentionCount > 1
           ? `[Bot Inbox harvest] ${attentionCount} attention items are ready. Handle them together where useful and in parallel where independent; long-running work belongs in Assignment Sessions.`
           : undefined;
-      await this.#runOrchestratorTurn(
-        bot,
-        orchestrator,
-        sourceEventId,
-        externalOnly && externalChannelId === undefined ? undefined : primaryChannelId,
-        [preamble, ...sections].filter((part): part is string => part !== undefined).join('\n\n'),
-        collected.units,
-        collected.eventIds.length > 0,
-        () => this.#markAdmissionsSideEffect(botSlug, includedIds),
-        collected.eventIds,
-        [...new Set([...includedIds, ...collected.eventIds])],
-      );
-      this.#markReportsHandled(collected.eventIds, botSlug, orchestrator.sessionId);
+      const ran = await this.#runOnLiveOrchestrator(bot, started, (session) => {
+        orchestrator = session;
+        return this.#runOrchestratorTurn(
+          bot,
+          session,
+          sourceEventId,
+          externalOnly && externalChannelId === undefined ? undefined : primaryChannelId,
+          [preamble, ...sections].filter((part): part is string => part !== undefined).join('\n\n'),
+          collected.units,
+          collected.eventIds.length > 0,
+          () => this.#markAdmissionsSideEffect(botSlug, includedIds),
+          collected.eventIds,
+          [...new Set([...includedIds, ...collected.eventIds])],
+        );
+      });
+      this.#markReportsHandled(collected.eventIds, botSlug, ran.sessionId);
       this.#settleHarvestHandled(botSlug, includedIds);
       for (const digest of claimed.digests) {
         this.#digestRetryAt.delete(`${botSlug}:${digest.channelId}`);
@@ -2252,7 +2834,7 @@ class BotRuntimeImplementation implements BotRuntime {
             continue;
           const candidates = database
             .prepare(`
-          SELECT a.source_event_id, e.message_id, e.body, e.created_at,
+          SELECT a.source_event_id, a.bot_slug, e.message_id, e.body, e.created_at,
                  json_extract(e.payload_json, '$.author.kind') AS author_kind,
                  json_extract(e.payload_json, '$.author.slug') AS author_slug,
                  json_extract(e.payload_json, '$.external.event.actor.name') AS external_sender,
@@ -2353,13 +2935,13 @@ class BotRuntimeImplementation implements BotRuntime {
       FROM inbox_admissions a JOIN source_events e ON e.source_event_id = a.source_event_id
      WHERE a.bot_slug = ? AND a.reason = 'group-ordinary' AND e.channel_id IS NOT NULL
            AND NOT EXISTS (SELECT 1 FROM messaging_source_paths rp WHERE rp.source_event_id = e.source_event_id)
-       AND a.wake_mode IN ('all', 'digest', 'mentions')
+       AND (a.wake_mode IN ('all', 'digest', 'mentions') OR (a.wake_mode = 'silent' AND a.source_policy_wake_mode = 'context'))
        AND a.attempt_state IN ('pending', 'retryable') AND e.channel_id = ?`;
     const total = database.prepare(`SELECT COUNT(*) AS count ${base}`).get(botSlug, channelId) as {
       count: number;
     };
     if (total.count === 0) return undefined;
-    const columns = `SELECT a.source_event_id, e.message_id, e.body, e.created_at,
+    const columns = `SELECT a.source_event_id, a.bot_slug, e.message_id, e.body, e.created_at,
       json_extract(e.payload_json, '$.author.kind') AS author_kind,
       json_extract(e.payload_json, '$.author.slug') AS author_slug,
                  json_extract(e.payload_json, '$.external.event.actor.name') AS external_sender,
@@ -2372,6 +2954,7 @@ class BotRuntimeImplementation implements BotRuntime {
       .all(botSlug, channelId, GROUP_PROMPT_CHANNEL_LIMIT) as unknown as DigestRow[];
     const rows: DigestRow[] = [];
     for (const row of candidates) {
+      if (!sourceSenderAllowed(database, botSlug, row.source_event_id, true)) continue;
       if (alreadyIncluded + rows.length >= GROUP_PROMPT_CHANNEL_LIMIT) break;
       const candidateContext = {
         channelId,
@@ -2393,6 +2976,21 @@ class BotRuntimeImplementation implements BotRuntime {
     return context;
   }
 
+  #trustedExternalSender(row: DigestRow): string {
+    if (!row.bot_slug || row.author_kind !== 'bridged') return '';
+    return this.#database.read((db) => {
+      const source = db
+        .prepare('SELECT payload_json FROM source_events WHERE source_event_id = ?')
+        .get(row.source_event_id) as { payload_json: string } | undefined;
+      const event = source
+        ? (JSON.parse(source.payload_json) as { external?: ExternalSource }).external?.event
+        : undefined;
+      const sender = event ? trustedSenderReference(db, row.bot_slug!, event) : undefined;
+      return sender
+        ? ` [Host sender reference for this author only: ${JSON.stringify(sender)}]`
+        : '';
+    });
+  }
   #groupContextSection(context: GroupContext): string {
     const channel = this.#channels.get(context.channelId);
     const humanName = this.#channels.listHumanMembers(context.channelId)[0]?.displayName;
@@ -2406,7 +3004,7 @@ class BotRuntimeImplementation implements BotRuntime {
       `Channel: ${channel?.name ?? context.channelId} (${context.channelId})`,
       ...context.rows.map(
         (row) =>
-          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}: ${groupMessageBody(row).slice(0, GROUP_CONTEXT_BODY_LIMIT)}${groupMessageBody(row).length > GROUP_CONTEXT_BODY_LIMIT ? ` [excerpt; ${groupMessageBody(row).length - GROUP_CONTEXT_BODY_LIMIT} more characters available with channel_read]` : ''}`,
+          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}${this.#trustedExternalSender(row)}: ${groupMessageBody(row).slice(0, GROUP_CONTEXT_BODY_LIMIT)}${groupMessageBody(row).length > GROUP_CONTEXT_BODY_LIMIT ? ` [excerpt; ${groupMessageBody(row).length - GROUP_CONTEXT_BODY_LIMIT} more characters available with channel_read]` : ''}`,
       ),
       context.omittedCount > 0
         ? `${context.omittedCount} earlier or intervening messages remain pending for later turns. Use channel_read if more history is needed.`
@@ -2430,7 +3028,7 @@ class BotRuntimeImplementation implements BotRuntime {
       `${rows.length} ordinary messages are due. Review them and respond only if useful; no acknowledgment is required.`,
       ...rows.map(
         (row) =>
-          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}: ${groupMessageBody(row).slice(0, 1000)}`,
+          `- Message ${row.message_id} [Source Event ${row.source_event_id}] from ${groupMessageAuthor(row, humanName)} at ${row.created_at}${this.#trustedExternalSender(row)}: ${groupMessageBody(row).slice(0, 1000)}`,
       ),
       ...(omittedCount > 0
         ? [
@@ -2440,9 +3038,20 @@ class BotRuntimeImplementation implements BotRuntime {
     ].join('\n');
   }
 
+  #noteSteeredChannel(botSlug: string, channelId: string): void {
+    const turn = this.#turnSources.get(botSlug);
+    if (turn !== undefined && turn.inboundChannelId !== channelId)
+      turn.steeredChannelIds.add(channelId);
+  }
+
+  #acceptTurnSources(botSlug: string, sourceEventIds: readonly string[]): void {
+    const turn = this.#turnSources.get(botSlug);
+    for (const id of sourceEventIds) turn?.acceptedEventIds.add(id);
+  }
+
   #markAdmissionsSideEffect(botSlug: string, sourceEventIds: string[]): void {
     if (sourceEventIds.length === 0) return;
-    for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.add(id);
+    for (const id of sourceEventIds) this.#turnSources.get(botSlug)?.eventIds.add(id);
     this.#database.transaction(
       (database) => {
         for (const id of sourceEventIds) {
@@ -2467,10 +3076,11 @@ class BotRuntimeImplementation implements BotRuntime {
         for (const id of sourceEventIds)
           database
             .prepare(`
-          UPDATE inbox_admissions SET attempt_state = 'handled', handled_at = ?
+          UPDATE inbox_admissions
+             SET attempt_state = 'handled', handled_at = ?, opened_at = COALESCE(opened_at, ?)
            WHERE source_event_id = ? AND bot_slug = ? AND attempt_state = 'running'
         `)
-            .run(this.#now().toISOString(), id, botSlug);
+            .run(this.#now().toISOString(), this.#now().toISOString(), id, botSlug);
       },
       ['bot-inbox'],
     );
@@ -2497,6 +3107,32 @@ class BotRuntimeImplementation implements BotRuntime {
     );
   }
 
+  #interruptedDmNotice(botSlug: string, channelId: string | undefined): string {
+    const rows = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT e.channel_id, e.message_id
+          FROM inbox_admissions a
+          JOIN source_events e ON e.source_event_id = a.source_event_id
+         WHERE a.bot_slug = ? AND a.reason = 'human-dm' AND e.source_kind = 'human-message'
+           AND a.attempt_state IN ('retryable', 'needs-repair')
+           AND e.channel_id IS NOT NULL AND e.message_id IS NOT NULL AND e.channel_id != ?
+           AND e.created_at > COALESCE((
+             SELECT MAX(handled_at) FROM inbox_admissions WHERE bot_slug = ? AND handled_at IS NOT NULL
+           ), '')
+         ORDER BY e.created_at, e.message_id
+         LIMIT 5
+      `)
+        .all(botSlug, channelId ?? '', botSlug),
+    ) as Array<{ channel_id: string; message_id: string }>;
+    return rows
+      .map(
+        (row) =>
+          `[Host: your earlier turn for Human DM ${row.channel_id}, message ${row.message_id}, ended without a reply. It stays in that DM for the Human to retry; do not answer it in another Channel.]\n\n`,
+      )
+      .join('');
+  }
+
   #groupMentionPrompt(channelId: string, messageId: string, body: string): string {
     const message = this.#channels.message(channelId, messageId);
     const sender = message?.author.kind === 'bot' ? `PersonaBot ${message.author.slug}` : 'Human';
@@ -2514,8 +3150,16 @@ class BotRuntimeImplementation implements BotRuntime {
       return '[Bot Inbox: Group join request]\n' + body;
     if (channel !== undefined && isBotDmChannel(channel) && message?.author.kind === 'bot')
       return `[Bot Inbox: direct message from PersonaBot ${message.author.slug}]\nChannel: ${channelId}\nMessage ID: ${messageId}\n${body}\nDecide whether a reply would be useful. You may finish without replying; if you speak in this Bot DM, use channel_send.`;
+    if (message?.author.kind === 'human' && message.toolAutoApprovalOverride !== undefined) {
+      const target = message.toolAutoApprovalOverride;
+      const input =
+        this.#channels.message(channelId, target.recordMessageId)?.toolAutoApproval?.input ?? '';
+      return `[Bot Inbox: Human allowed an auto-rejected call once]\nChannel: ${channelId}\nMessage ID: ${messageId}\nTool: ${target.toolName}\nSession: ${target.sessionId}\nInput:\n${input}\nThe Approval Reviewer rejected this call earlier, and the Human allowed it once anyway. You may retry it in that Session with exactly this input, every argument unchanged; that one retry runs without review. Later calls are still reviewed under your Approval Template. If the call came from an Assignment Session, relay this with send_assignment_request.`;
+    }
     if (channel?.type === 'group' && message?.mentions?.length)
       return this.#groupMentionPrompt(channelId, messageId, body);
+    if (channel?.type === 'group' && message?.grantRequestResolution !== undefined)
+      return `[Bot Inbox: Human answered your Workspace Grant request]\nChannel: ${channelId}\nMessage ID: ${messageId}\nMessage: ${body}\nContinue the task you requested access for; if you speak in this Group Channel, use channel_send.`;
     const mentionBody =
       channel?.type === 'dm' &&
       channel.botSlug !== undefined &&
@@ -2527,7 +3171,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (channel?.type !== 'dm' || channel.botSlug === undefined || message?.author.kind !== 'human')
       return text;
     const selected = [...new Set((message.mentions ?? []).map((mention) => mention.botSlug))];
-    const parts = [text];
+    const parts = [`[Human DM]\nChannel: ${channelId}\nMessage ID: ${messageId}\n${text}`];
     if (message.assignmentReply !== undefined)
       parts.push(
         `[Human response to Assignment Session ${message.assignmentReply.sessionId}, report Source Event ${message.assignmentReply.sourceEventId}]\nUse assignment inspection and send_assignment_request to relay this response to the addressed Assignment. This DM is Human input; it does not itself resume the Assignment or clear its open ask.`,
@@ -2591,17 +3235,229 @@ class BotRuntimeImplementation implements BotRuntime {
     if (changed) this.#channels.admissionChanged?.(channelId, messageId);
   }
 
+  askChannel(sessionId: string): string | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    if (this.#closed || owner?.rootRole !== 'orchestrator') return undefined;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (
+      turn?.sessionId !== sessionId ||
+      turn.inboundChannelId === undefined ||
+      turn.steeredChannelIds.size > 0
+    )
+      return undefined;
+    const channel = this.#channels.get(turn.inboundChannelId);
+    if (channel === undefined) return undefined;
+    if (channel.type === 'group')
+      return channel.members.includes(owner.botSlug) ? channel.id : undefined;
+    return channel.botSlug === owner.botSlug ? channel.id : undefined;
+  }
+
+  botCreatePreview(botSlug: string, args: unknown): BotCreatePreview | undefined {
+    if (typeof args !== 'object' || args === null) return undefined;
+    const input = args as Record<string, unknown>;
+    const location =
+      typeof input['memory_location'] === 'string' ? input['memory_location'].trim() : '';
+    let avatar: string | undefined;
+    let avatarError: string | undefined;
+    if (typeof input['avatar_path'] === 'string')
+      try {
+        avatar = this.#readCreatedAvatar(botSlug, input['avatar_path']);
+      } catch (error) {
+        avatarError = error instanceof Error ? error.message : 'invalid-avatar';
+      }
+    return {
+      memoryFolder:
+        location.length > 0
+          ? join(location, NEW_BOT_ID_PLACEHOLDER)
+          : join(this.#registry.rootDir, NEW_BOT_ID_PLACEHOLDER, 'memory'),
+      defaultLocation: location.length === 0,
+      ...(avatar === undefined ? {} : { avatar }),
+      ...(avatarError === undefined ? {} : { avatarError }),
+    };
+  }
+
+  askNotice(sessionId: string, toolName: string): string | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    if (this.#closed || owner?.rootRole !== 'orchestrator') return undefined;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (turn?.sessionId !== sessionId || turn.inboundChannelId === undefined || turn.askNoticed)
+      return undefined;
+    const channelId = this.askChannel(sessionId) ?? dmChannelId(owner.botSlug);
+    if (turn.spokenChannelIds.has(channelId)) return undefined;
+    const channel = this.#channels.get(channelId);
+    if (channel === undefined) return undefined;
+    turn.askNoticed = true;
+    const where =
+      channel.type === 'group' ? `Group ${JSON.stringify(channel.name)}` : 'your Human DM';
+    return `Not shown to the Human yet. First tell them what is going on, as a colleague would: send one short channel_send to ${where} (channel_id ${JSON.stringify(channelId)}) saying in a sentence or two what you are about to do and what you need from them. Then call ${toolName} again with the same arguments and the request will be shown. This is asked once per turn.`;
+  }
+
+  canRequestPrivateInput(sessionId: string, selected?: string): boolean {
+    const owner = this.#ownership.resolve(sessionId);
+    if (
+      this.#closed ||
+      owner?.rootRole !== 'orchestrator' ||
+      !this.#ownership.contentAvailable(sessionId)
+    )
+      return false;
+    const turn = this.#turnSources.get(owner.botSlug);
+    if (turn?.sessionId !== sessionId) return false;
+    try {
+      if (this.bindPrivateInputOrigin(sessionId, selected) !== undefined) return true;
+    } catch {
+      return false;
+    }
+    return this.#database.read((db) => {
+      const human = db.prepare(
+        `SELECT e.channel_id FROM source_events e
+         JOIN inbox_admissions a ON a.source_event_id = e.source_event_id
+         WHERE e.source_event_id = ? AND a.bot_slug = ? AND e.source_kind = 'human-message'
+           AND a.reason IN ('human-dm', 'group-mention', 'group-ordinary')`,
+      );
+      return [...turn.acceptedEventIds].some((id) => {
+        const source = human.get(id, owner.botSlug);
+        if (
+          typeof source?.channel_id !== 'string' ||
+          this.#channels.get(source.channel_id) === undefined
+        )
+          return false;
+        try {
+          requireSourceEffects(db, id, owner.botSlug);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+    });
+  }
+
+  bindPrivateInputOrigin(sessionId: string, selected?: string): PrivateInputOrigin | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    if (owner?.rootRole !== 'orchestrator' || turn?.sessionId !== sessionId) {
+      if (selected !== undefined) throw new Error('Private input IM source is unavailable');
+      return undefined;
+    }
+    const ids = this.#database.read((db) => {
+      const query = db.prepare('SELECT source_kind FROM source_events WHERE source_event_id = ?');
+      return [...turn.acceptedEventIds].filter(
+        (id) => query.get(id)?.source_kind === 'bridge-message',
+      );
+    });
+    if (ids.length === 0 && selected === undefined) return undefined;
+    const id = selected ?? (ids.length === 1 ? ids[0] : undefined);
+    if (id === undefined || !ids.includes(id) || this.#externalMessaging === undefined)
+      throw new Error('Select one live accepted IM source_event_id for private input');
+    const messaging = this.#externalMessaging;
+    const bot = this.#registry.get(owner.botSlug);
+    if (bot === undefined) throw new Error('Private input IM source is unavailable');
+    const signal = messaging.inbound.sourceSignal(owner.botSlug, id);
+    const applies = () => this.#turnSources.get(owner.botSlug) === turn;
+    const current = () => {
+      const currentOwner = this.#ownership.resolve(sessionId);
+      const currentBot = this.#registry.get(owner.botSlug);
+      if (
+        this.#closed ||
+        signal.aborted ||
+        currentBot?.createdAt !== bot.createdAt ||
+        currentBot.paused === true ||
+        currentOwner?.rootRole !== 'orchestrator' ||
+        currentOwner.botSlug !== owner.botSlug ||
+        !this.#ownership.contentAvailable(sessionId) ||
+        !applies() ||
+        !turn.acceptedEventIds.has(id) ||
+        !messaging.inbound.available(owner.botSlug, id)
+      )
+        return false;
+      try {
+        this.#database.read((db) => requireSourceEffects(db, id, owner.botSlug));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    if (!current()) throw new Error('Private input IM source is unavailable');
+    return { sourceEventId: id, signal, applies, current };
+  }
+
   bindNativeQuestionInput(
     sessionId: string,
     channelId: string,
   ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
     const owner = this.#ownership.resolve(sessionId);
-    const sources = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    const turn = owner === undefined ? undefined : this.#turnSources.get(owner.botSlug);
+    const sources = turn?.sessionId === sessionId ? turn.acceptedEventIds : undefined;
     const sourceEventId = sources?.values().next().value;
     if (owner?.rootRole !== 'orchestrator' || sourceEventId === undefined) return undefined;
-    const sourceIds = [...(sources ?? [])];
+    return this.#nativeQuestionInput(
+      owner.botSlug,
+      sessionId,
+      channelId,
+      sourceEventId,
+      [...(sources ?? [])],
+      () => this.#markSideEffectStarted(sourceEventId),
+    );
+  }
+
+  recoverNativeQuestionInput(
+    sessionId: string,
+    channelId: string,
+    requestMessageId: string,
+  ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
+    const owner = this.#ownership.resolve(sessionId);
+    if (owner?.rootRole !== 'orchestrator') return undefined;
+    const row = this.#database.read((db) =>
+      db
+        .prepare(`
+          SELECT e.source_event_id FROM source_events e
+           WHERE e.message_id = ? AND e.bot_slug = ? AND e.source_kind = 'bot-message'
+             AND ${channelSql('e')} = ?
+        `)
+        .get(requestMessageId, owner.botSlug, channelId),
+    ) as { source_event_id: string } | undefined;
+    if (row === undefined || !this.nativeQuestionAvailable(sessionId, channelId)) return undefined;
+    return this.#nativeQuestionInput(
+      owner.botSlug,
+      sessionId,
+      channelId,
+      row.source_event_id,
+      [row.source_event_id],
+      () => undefined,
+    );
+  }
+
+  nativeQuestionAvailable(sessionId: string, channelId: string): boolean {
+    const owner = this.#ownership.resolve(sessionId);
+    const bot = owner === undefined ? undefined : this.#registry.get(owner.botSlug);
     const channel = this.#channels.get(channelId);
-    if (channel?.type !== 'dm' || channel.botSlug !== owner.botSlug) return undefined;
+    return (
+      !this.#closed &&
+      bot !== undefined &&
+      owner?.rootRole === 'orchestrator' &&
+      this.#ownership.contentAvailable(sessionId) &&
+      this.#sessionArchived?.(sessionId) !== true &&
+      (channel?.type === 'group'
+        ? channel.members.includes(owner.botSlug)
+        : channel?.botSlug === owner.botSlug)
+    );
+  }
+
+  #nativeQuestionInput(
+    botSlug: string,
+    sessionId: string,
+    channelId: string,
+    sourceEventId: string,
+    sourceIds: readonly string[],
+    markAttemptSideEffect: () => void,
+  ): ((deliver: () => boolean) => Promise<boolean>) | undefined {
+    const owner = { botSlug };
+    const held = (): boolean => {
+      const channel = this.#channels.get(channelId);
+      return channel?.type === 'group'
+        ? channel.members.includes(owner.botSlug)
+        : channel?.botSlug === owner.botSlug;
+    };
+    if (!held()) return undefined;
     return (deliver) => {
       let accept!: (value: boolean) => void;
       const accepted = new Promise<boolean>((resolve) => {
@@ -2611,7 +3467,6 @@ class BotRuntimeImplementation implements BotRuntime {
         try {
           const bot = this.#registry.get(owner.botSlug);
           const current = this.#ownership.resolve(sessionId);
-          const dm = this.#channels.get(channelId);
           if (
             this.#closed ||
             bot === undefined ||
@@ -2619,8 +3474,8 @@ class BotRuntimeImplementation implements BotRuntime {
             current?.rootRole !== 'orchestrator' ||
             current.botSlug !== owner.botSlug ||
             !this.#ownership.contentAvailable(sessionId) ||
-            dm?.type !== 'dm' ||
-            dm.botSlug !== owner.botSlug
+            this.#sessionArchived?.(sessionId) === true ||
+            !held()
           )
             return;
           this.#database.read((db) => {
@@ -2634,13 +3489,12 @@ class BotRuntimeImplementation implements BotRuntime {
             '',
             [],
             false,
-            () => this.#markSideEffectStarted(sourceEventId),
+            markAttemptSideEffect,
             [],
             [],
             () => {
               const currentBot = this.#registry.get(owner.botSlug);
               const currentOwner = this.#ownership.resolve(sessionId);
-              const currentDm = this.#channels.get(channelId);
               if (
                 this.#closed ||
                 currentBot === undefined ||
@@ -2648,8 +3502,8 @@ class BotRuntimeImplementation implements BotRuntime {
                 currentOwner?.rootRole !== 'orchestrator' ||
                 currentOwner.botSlug !== owner.botSlug ||
                 !this.#ownership.contentAvailable(sessionId) ||
-                currentDm?.type !== 'dm' ||
-                currentDm.botSlug !== owner.botSlug
+                this.#sessionArchived?.(sessionId) === true ||
+                !held()
               ) {
                 accept(false);
                 return false;
@@ -2700,6 +3554,88 @@ class BotRuntimeImplementation implements BotRuntime {
     return run;
   }
 
+  directBotTools(): DirectBotToolSpec[] {
+    return this.#agents.directTools?.() ?? [];
+  }
+
+  directBotToolCalls(botSlug: string): readonly DirectBotToolCall[] {
+    return this.#directToolCalls.get(botSlug) ?? [];
+  }
+
+  async runDirectBotTool(
+    botSlug: string,
+    tool: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<{ tool: string; sessionId: 'direct'; result: unknown }> {
+    if (this.#closed) throw new DirectBotToolError('runtime-closed', 'BotRuntime is closed');
+    const bot = this.#registry.get(botSlug);
+    if (bot === undefined) throw new DirectBotToolError('unknown-bot', `Unknown bot: ${botSlug}`);
+    if (bot.paused === true)
+      throw new DirectBotToolError('bot-paused', `PersonaBot ${botSlug} is paused`);
+    const runDirect = this.#agents.runDirectTool?.bind(this.#agents);
+    if (runDirect === undefined)
+      throw new DirectBotToolError('unavailable', 'Direct Bot tools are unavailable on this Host');
+    if (!this.directBotTools().some((spec) => spec.name === tool))
+      throw new DirectBotToolError(
+        'tool-not-direct',
+        `${tool} is not a Bot tool the direct runner can call; list them with bot-tools`,
+      );
+    this.#requireExecution?.(bot.slug);
+    const sessionId = `direct-${randomUUID()}`;
+    const run: OrchestratorAgentRun = {
+      sessionId,
+      resume: false,
+      bot,
+      message: '',
+      inbox: '',
+      inboundChannelId: undefined,
+      ...this.#orchestratorServices(bot, {
+        sessionId,
+        channelId: undefined,
+        sourceEventId: `direct-${randomUUID()}`,
+        markSideEffect: () => undefined,
+        readAdmissions: new Set(),
+        importedFiles: new Map(),
+        turnSources: new Set(),
+        observeMemory: false,
+        observeReads: false,
+      }),
+    };
+    const started = this.#now();
+    const record = (outcome: 'ok' | 'error', result: string) => {
+      const calls = this.#directToolCalls.get(bot.slug) ?? [];
+      calls.push({
+        callId: sessionId,
+        tool,
+        args,
+        at: started.toISOString(),
+        durationMs: this.#now().getTime() - started.getTime(),
+        outcome,
+        result,
+      });
+      this.#directToolCalls.set(bot.slug, calls.slice(-DIRECT_TOOL_CALL_LIMIT));
+    };
+    try {
+      const result = await runDirect(run, tool, args, signal);
+      record('ok', typeof result === 'string' ? result : JSON.stringify(result));
+      return { tool, sessionId: 'direct', result };
+    } catch (error) {
+      record('error', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  currentOrchestratorSessionId(botSlug: string): string | undefined {
+    return this.#ownership
+      .rootsFor(botSlug, 'orchestrator')
+      .find(
+        (root) =>
+          this.#ownership.contentAvailable(root.sessionId) &&
+          this.#sessionArchived?.(root.sessionId) !== true,
+      )?.sessionId;
+  }
+
   listAssignments(botSlug: string): AssignmentSummary[] {
     const rows = this.#database.read((database) =>
       database
@@ -2709,7 +3645,7 @@ class BotRuntimeImplementation implements BotRuntime {
                   continuity_key, open_ask_source_event_id, open_ask_at,
                   grant_id, workspace_id, primary_cwd, permission_mode,
                   approval_policy, preset_revision, created_at, updated_at
-                  , model_route_json, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
+                  , model_route_json, archived_at, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
              FROM assignments
             WHERE bot_slug = ?
             ORDER BY updated_at DESC, session_id ASC`,
@@ -2727,6 +3663,99 @@ class BotRuntimeImplementation implements BotRuntime {
     });
   }
 
+  listChannelAssignments(channelId: string): ChannelAssignmentSummary[] {
+    const rows = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT a.session_id, a.source_event_id, a.bot_slug, a.purpose, a.activity, a.stop_state,
+                  a.latest_report_state, a.latest_report_summary, a.latest_report_at,
+                  a.continuity_key, a.open_ask_source_event_id, a.open_ask_at,
+                  a.grant_id, a.workspace_id, a.primary_cwd, a.permission_mode,
+                  a.approval_policy, a.preset_revision, a.created_at, a.updated_at,
+                  a.model_route_json
+             FROM assignments a
+             JOIN source_events s ON s.source_event_id = a.source_event_id
+            WHERE s.channel_id = ?
+            ORDER BY a.updated_at DESC, a.session_id ASC
+            LIMIT 200`,
+        )
+        .all(channelId),
+    ) as unknown as AssignmentRow[];
+    return rows.map((row) => {
+      const assignment = assignmentFromRow(row);
+      return {
+        sessionId: assignment.sessionId,
+        botSlug: assignment.botSlug,
+        purpose: assignment.purpose,
+        activity: assignment.activity,
+        ...(assignment.latestReport === undefined ? {} : { latestReport: assignment.latestReport }),
+        createdAt: assignment.createdAt,
+        updatedAt: assignment.updatedAt,
+      };
+    });
+  }
+
+  async setAssignmentArchived(
+    botSlug: string,
+    sessionId: string,
+    archived: boolean,
+  ): Promise<AssignmentArchiveOutcome | { outcome: 'unarchived'; assignment: AssignmentSummary }> {
+    const bot = this.#registry.get(botSlug);
+    if (bot === undefined) throw new Error(`Unknown PersonaBot: ${botSlug}`);
+    return archived
+      ? this.#archiveAssignment(bot, sessionId, () => {})
+      : this.#unarchiveAssignment(bot, sessionId, () => {});
+  }
+
+  async replaceOrchestrator<T>(
+    botSlug: string,
+    body: () => T,
+  ): Promise<OrchestratorReplacement<T>> {
+    if (this.#tails.has(botSlug)) return BOT_BUSY;
+    let result: OrchestratorReplacement<T> | undefined;
+    await this.#enqueue(botSlug, async () => {
+      result = await this.#replaceOrchestrator(botSlug, body);
+    });
+    if (result === undefined) throw new Error(`Unknown PersonaBot: ${botSlug}`);
+    return result;
+  }
+
+  async #replaceOrchestrator<T>(
+    botSlug: string,
+    body: () => T,
+  ): Promise<OrchestratorReplacement<T>> {
+    const current = this.currentOrchestratorSessionId(botSlug);
+    if (current === undefined) return { outcome: 'replaced', value: body() };
+    const archive = this.#sessionArchive?.();
+    if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+    try {
+      await archive.archiveSession(current);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'WorkspaceActiveSessionError') return BOT_BUSY;
+      throw error;
+    }
+    await this.#agents.releaseSession?.(current).catch(() =>
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'orchestrator-release-failed',
+          botSlug,
+          sessionId: current,
+        }),
+      ),
+    );
+    try {
+      return { outcome: 'replaced', value: body() };
+    } catch (error) {
+      await archive.unarchiveSession(current);
+      throw error;
+    }
+  }
+
+  triageOpenCount(botSlug: string): number | undefined {
+    return this.#triageRunning.get(botSlug);
+  }
+
   getAssignment(botSlug: string, sessionId: string): AssignmentDetail | undefined {
     const row = this.#database.read((database) =>
       database
@@ -2736,7 +3765,7 @@ class BotRuntimeImplementation implements BotRuntime {
                   continuity_key, open_ask_source_event_id, open_ask_at,
                   grant_id, workspace_id, primary_cwd, permission_mode,
                   approval_policy, preset_revision, created_at, updated_at
-                  , model_route_json, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
+                  , model_route_json, archived_at, (SELECT body FROM source_events WHERE source_event_id = assignments.open_ask_source_event_id) AS open_ask_summary
              FROM assignments
             WHERE bot_slug = ? AND session_id = ?`,
         )
@@ -2856,6 +3885,21 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#pendingHarvests.delete(botSlug);
   }
 
+  async stopTurn(botSlug: string): Promise<{ sessionId: string } | undefined> {
+    const turn = this.#turnSources.get(botSlug);
+    const active = this.#activeTurns.get(botSlug);
+    if (this.#closed || turn === undefined || active === undefined) return undefined;
+    const sessionId = this.#agents.stopOrchestratorTurn?.(botSlug);
+    if (sessionId === undefined) return undefined;
+    this.#stoppedTurns.add(botSlug);
+    this.#stopNotices.set(
+      botSlug,
+      `[Host: the Human stopped your previous turn at ${this.#now().toISOString()} before it finished. Do not resume that work unless they ask again.]\n\n`,
+    );
+    await active.catch(() => undefined);
+    return { sessionId };
+  }
+
   async whenIdle(): Promise<void> {
     for (;;) {
       const pending = [
@@ -2884,6 +3928,8 @@ class BotRuntimeImplementation implements BotRuntime {
     this.#typingAssignments.clear();
     for (const timer of this.#digestTimers.values()) clearTimeout(timer);
     this.#digestTimers.clear();
+    for (const timer of this.#snoozeTimers.values()) clearTimeout(timer);
+    this.#snoozeTimers.clear();
     for (const timer of this.#groupAdmissionRetries.values()) clearTimeout(timer);
     this.#groupAdmissionRetries.clear();
     this.#digestRetryAt.clear();
@@ -2903,6 +3949,17 @@ class BotRuntimeImplementation implements BotRuntime {
     await this.#agents.close();
   }
 
+  #admissionHandled(sourceEventId: string, botSlug: string): boolean {
+    const row = this.#database.read((database) =>
+      database
+        .prepare(
+          `SELECT attempt_state FROM inbox_admissions WHERE source_event_id = ? AND bot_slug = ?`,
+        )
+        .get(sourceEventId, botSlug),
+    ) as { attempt_state: string } | undefined;
+    return row?.attempt_state === 'handled';
+  }
+
   async #runHumanDmTurn(
     bot: PersonaBotRecord,
     channelId: string,
@@ -2914,25 +3971,29 @@ class BotRuntimeImplementation implements BotRuntime {
       throw new Error(`Source Event ${claim.sourceEventId} requires reconciliation before replay`);
     }
     if (!claim.shouldRun) return;
+    if (this.#admissionHandled(claim.sourceEventId, bot.slug)) return;
 
     const timestamp = this.#now().toISOString();
-    const orchestrator = this.#ensureOrchestrator(bot, timestamp);
+    let orchestrator = this.#ensureOrchestrator(bot, timestamp);
 
     const collected = this.#collectInbox(bot.slug);
     this.#setObserved(collected.eventIds, timestamp, bot.slug);
     try {
       this.#observeAdmission(claim.sourceEventId, bot.slug, channelId, messageId);
-      await this.#runOrchestratorTurn(
-        bot,
-        orchestrator,
-        claim.sourceEventId,
-        channelId,
-        this.#inboundChannelMessage(channelId, messageId, body),
-        collected.units,
-        this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
-        undefined,
-        collected.eventIds,
-      );
+      await this.#runOnLiveOrchestrator(bot, orchestrator, (session) => {
+        orchestrator = session;
+        return this.#runOrchestratorTurn(
+          bot,
+          session,
+          claim.sourceEventId,
+          channelId,
+          this.#inboundChannelMessage(channelId, messageId, body),
+          collected.units,
+          this.#channels.message(channelId, messageId)?.memorySwitchTarget !== undefined,
+          undefined,
+          collected.eventIds,
+        );
+      });
     } catch (error) {
       this.#setObserved(collected.eventIds, null, bot.slug);
       this.#markSourceEventFailed(claim.sourceEventId);
@@ -2960,10 +4021,10 @@ class BotRuntimeImplementation implements BotRuntime {
         database
           .prepare(`
           UPDATE inbox_admissions
-             SET handled_at = ?, attempt_state = 'handled'
+             SET handled_at = ?, attempt_state = 'handled', opened_at = COALESCE(opened_at, ?)
            WHERE source_event_id = ? AND bot_slug = ?
         `)
-          .run(handledAt, claim.sourceEventId, bot.slug);
+          .run(handledAt, handledAt, claim.sourceEventId, bot.slug);
       },
       ['source-event', 'bot-inbox'],
     );
@@ -3000,7 +4061,15 @@ class BotRuntimeImplementation implements BotRuntime {
       ...reportEventIds,
       ...nativeSourceIds,
     ]);
-    this.#turnSources.set(bot.slug, turnSources);
+    this.#turnSources.set(bot.slug, {
+      sessionId: orchestrator.sessionId,
+      eventIds: turnSources,
+      acceptedEventIds: new Set(turnSources),
+      inboundChannelId: channelId,
+      steeredChannelIds: new Set(),
+      spokenChannelIds: new Set(),
+      askNoticed: false,
+    });
     const typingSources = [sourceEventId, ...inboxUnits.map((unit) => unit.sourceEventId)];
     for (const unit of inboxUnits) {
       if (!unit.assignmentSessionId) continue;
@@ -3079,7 +4148,12 @@ class BotRuntimeImplementation implements BotRuntime {
         : { units: [], eventIds: [] };
       memoryEventIds = memoryInbox.eventIds;
       const units = [...inboxUnits, ...memoryInbox.units];
-      const inbox = units.length === 0 ? '' : renderInbox(units);
+      const inbox = [
+        units.length === 0 ? '' : renderInbox(units),
+        this.#inboxTriage.openSummary(bot.slug),
+      ]
+        .filter((part) => part.length > 0)
+        .join('\n\n');
       this.#setObserved(memoryEventIds, this.#now().toISOString());
       if (observeMemory)
         this.#activeMemoryEvents.set(bot.slug, {
@@ -3101,271 +4175,32 @@ class BotRuntimeImplementation implements BotRuntime {
         message: (() => {
           const human =
             channelId === undefined ? undefined : this.#channels.listHumanMembers(channelId)[0];
-          return human === undefined || human.displayName === 'Human'
-            ? body
-            : 'Current Channel Human: ' +
+          const stopped = this.#stopNotices.get(bot.slug) ?? '';
+          this.#stopNotices.delete(bot.slug);
+          return (
+            stopped +
+            this.#interruptedDmNotice(bot.slug, channelId) +
+            (human === undefined || human.displayName === 'Human'
+              ? body
+              : 'Current Channel Human: ' +
                 JSON.stringify({ humanId: human.humanId, displayName: human.displayName }) +
                 '\n' +
-                body;
+                body)
+          );
         })(),
         inbox,
         inboundChannelId: channelId,
-        ...(this.#externalMessaging === undefined
-          ? {}
-          : {
-              externalMessaging: {
-                targets: async () => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  return snapshot.grants
-                    .filter((g) => g.availability === 'available' && !g.revokedAt && g.canPost)
-                    .map((g) => ({
-                      grantId: g.id,
-                      platform: g.platform,
-                      accountName: g.accountName,
-                      targetName: g.targetName,
-                    }));
-                },
-                post: (grantId, requestId, text) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.post(bot.slug, grantId, requestId, text);
-                },
-                outbox: (intentId) => {
-                  if (intentId) return this.#externalMessaging!.inspectIntent(bot.slug, intentId);
-                  return this.#externalMessaging!
-                    .history(bot.slug)
-                    .filter((intent) => intent.report)
-                    .slice(0, 10)
-                    .map(({ text, ...intent }) => ({ ...intent, preview: text.slice(0, 160) }));
-                },
-                policies: async () => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  return snapshot.grants
-                    .filter((grant) => grant.receiveScope && grant.groupPolicy)
-                    .map((grant) => ({
-                      grantId: grant.id,
-                      group: grant.targetName,
-                      policy: grant.groupPolicy!,
-                      ...(grant.receiveTargetChannelId &&
-                      this.#channels.get(grant.receiveTargetChannelId)
-                        ? {
-                            memberWake: externalMemberWake(
-                              this.#channels.get(grant.receiveTargetChannelId)!,
-                              bot.slug,
-                              this.#sourcePolicy
-                                .list(bot.slug)
-                                .find((rule) => rule.sourceClass === 'group-ordinary'),
-                              this.#externalMessaging!.defaults(),
-                            ),
-                          }
-                        : {}),
-                      ordinaryDelivery: grant.ordinaryDelivery ?? 'unverified',
-                    }));
-                },
-                setPolicy: (grantId, input) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.inbound.setPolicy(bot.slug, grantId, input, {
-                    kind: 'bot',
-                    botSlug: bot.slug,
-                  });
-                },
-                threads: async () => {
-                  const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
-                  return snapshot.grants.flatMap((grant) =>
-                    (grant.threadPolicies ?? []).map((thread) => ({
-                      ...thread,
-                      grantId: grant.id,
-                      group: grant.targetName,
-                    })),
-                  );
-                },
-                setThread: (sourceEventId, input) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.inbound.setThread(
-                    bot.slug,
-                    sourceEventId,
-                    input,
-                    { kind: 'bot', botSlug: bot.slug },
-                  );
-                },
-                read: (id: string) => {
-                  const source = this.#externalMessaging!.inbound.readShared(bot.slug, id);
-                  this.#observeExternalRead(bot.slug, [id], readAdmissions);
-                  return source;
-                },
-                share: (id, destinationChannelId) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.inbound.share(bot.slug, id, destinationChannelId);
-                },
-                context: async (id: string, query: ExternalContextQuery, signal?: AbortSignal) => {
-                  const result = await this.#externalMessaging!.inbound.context(
-                    bot.slug,
-                    id,
-                    orchestrator.sessionId,
-                    query,
-                    signal,
-                  );
-                  this.#observeExternalRead(
-                    bot.slug,
-                    result.messages.map((item) => item.sourceEventId),
-                    readAdmissions,
-                  );
-                  return result;
-                },
-                saveFile: async (input) => {
-                  if (this.#attachments === undefined || this.#grants === undefined)
-                    throw new Error('Bridge file operations are unavailable');
-                  const destinationGrant = this.#grants.requireActive(bot.slug, input.grantId);
-                  if (destinationGrant.orchestratorWrite !== true)
-                    throw new Error('Destination requires Orchestrator write authorization');
-                  const ref = await (
-                    input.representation === 'playback'
-                      ? this.#externalMessaging!.prepareAudio
-                      : this.#externalMessaging!.acquireFile
-                  )(bot.slug, input.sourceEventId, input.attachmentId);
-                  return saveAttachmentFile(input, {
-                    botSlug: bot.slug,
-                    grants: this.#grants,
-                    attachments: this.#attachments,
-                    source: () => {
-                      if (
-                        !this.#externalMessaging!.inbound.available(bot.slug, input.sourceEventId)
-                      )
-                        throw new Error('Bridge file source is unavailable');
-                      return this.#attachments!.current(ref);
-                    },
-                  });
-                },
-                replyFile: (id: string, fileId: string) => {
-                  const ref = importedFiles.get(fileId);
-                  if (ref === undefined || this.#attachments === undefined)
-                    throw new Error(
-                      'Select a result file with channel_attachment_import in this run before replying',
-                    );
-                  markSideEffect();
-                  return this.#externalMessaging!.replyFile(
-                    bot.slug,
-                    id,
-                    this.#attachments.current(ref),
-                  );
-                },
-                reply: (id: string, text: string) => {
-                  markSideEffect();
-                  return this.#externalMessaging!.reply(bot.slug, id, text);
-                },
-              },
-            }),
-        inboxHistory: (input) => this.#inboxHistory.list(bot.slug, input),
-        channels: this.#channelAccess(
-          bot.slug,
+        ...this.#orchestratorServices(bot, {
+          sessionId: orchestrator.sessionId,
           channelId,
           sourceEventId,
-          orchestrator.sessionId,
           markSideEffect,
           readAdmissions,
-          (ref) => importedFiles.set(attachmentIdentity(ref), ref),
-        ),
-        sourcePolicy: {
-          list: () => this.#sourcePolicy.list(bot.slug),
-          setAssignmentReport: (wake) => {
-            markSideEffect();
-            const changed = this.#sourcePolicy.setAssignmentReport(bot.slug, wake, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-            return changed;
-          },
-          resetAssignmentReport: () => {
-            markSideEffect();
-            const changed = this.#sourcePolicy.resetAssignmentReport(bot.slug, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-            return changed;
-          },
-          setGroupOrdinary: (wake, digestCount, digestIntervalSeconds) => {
-            markSideEffect();
-            return this.#sourcePolicy.setGroupOrdinary(
-              bot.slug,
-              wake,
-              digestCount,
-              digestIntervalSeconds,
-              { kind: 'bot', botSlug: bot.slug },
-            );
-          },
-          setImmediateDelivery: (sourceClass, delivery) => {
-            markSideEffect();
-            return this.#sourcePolicy.setImmediateDelivery(bot.slug, sourceClass, delivery, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-          },
-          resetImmediateDelivery: (sourceClass) => {
-            markSideEffect();
-            return this.#sourcePolicy.resetImmediateDelivery(bot.slug, sourceClass, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-          },
-          resetGroupOrdinary: () => {
-            markSideEffect();
-            return this.#sourcePolicy.resetGroupOrdinary(bot.slug, {
-              kind: 'bot',
-              botSlug: bot.slug,
-            });
-          },
-        },
-        ...(this.#schedules === undefined
-          ? {}
-          : {
-              schedules: ((store) => ({
-                list: () => store.list(bot.slug),
-                create: (input: BotScheduleInput) => {
-                  markSideEffect();
-                  return store.create(bot.slug, input, 'personabot');
-                },
-                update: (id: string, change: BotScheduleChange) => {
-                  markSideEffect();
-                  return store.update(bot.slug, id, change, 'personabot');
-                },
-                remove: (id: string) => {
-                  markSideEffect();
-                  return store.remove(bot.slug, id, 'personabot');
-                },
-              }))(this.#schedules),
-            }),
-        ...(observeMemory
-          ? {
-              memory: {
-                continueFromCommit: (sha, branch) => {
-                  if (this.#memory === undefined) throw new Error('Memory is unavailable');
-                  const result = this.#memory.continueFromCommit({
-                    botSlug: bot.slug,
-                    sessionId: orchestrator.sessionId,
-                    sha,
-                    branch,
-                  });
-                  markSideEffect();
-                  return result;
-                },
-                switchBranch: (branch) => {
-                  if (this.#memory === undefined) throw new Error('Memory is unavailable');
-                  const result = this.#memory.switchBranch({
-                    botSlug: bot.slug,
-                    sessionId: orchestrator.sessionId,
-                    branch,
-                  });
-                  markSideEffect();
-                  return result;
-                },
-              },
-            }
-          : {}),
-        assignments: this.#assignmentAccess(
-          bot,
-          sourceEventId,
-          markSideEffect,
-          orchestrator.sessionId,
-        ),
+          importedFiles,
+          turnSources,
+          observeMemory,
+          observeReads: true,
+        }),
       });
       if (observeMemory) {
         this.#memory?.reconcileTurn({
@@ -3379,6 +4214,8 @@ class BotRuntimeImplementation implements BotRuntime {
       this.#markReportsHandled(memoryEventIds);
       this.#settleHarvestHandled(bot.slug, [...readAdmissions]);
       this.#notifyReadAdmissions(readAdmissions);
+      if (!this.#triageRunning.has(bot.slug)) this.#triageBaseline.delete(bot.slug);
+      if (!this.#stoppedTurns.has(bot.slug)) this.#queueTriage(bot.slug);
     } catch (error) {
       this.#setObserved(memoryEventIds, null);
       this.#settleHarvestFailure(bot.slug, [...readAdmissions], String(error));
@@ -3393,10 +4230,357 @@ class BotRuntimeImplementation implements BotRuntime {
     } finally {
       await processing?.stop();
       if (this.#typingTurns.get(bot.slug) === processing) this.#typingTurns.delete(bot.slug);
-      if (this.#turnSources.get(bot.slug) === turnSources) this.#turnSources.delete(bot.slug);
+      if (this.#turnSources.get(bot.slug)?.eventIds === turnSources) {
+        this.#turnSources.delete(bot.slug);
+        this.#stoppedTurns.delete(bot.slug);
+      }
       if (observeMemory) this.#activeMemoryEvents.delete(bot.slug);
       this.#originalAttachments.clear(orchestrator.sessionId);
     }
+  }
+
+  #orchestratorServices(
+    bot: PersonaBotRecord,
+    turn: OrchestratorServiceTurn,
+  ): Omit<
+    OrchestratorAgentRun,
+    'sessionId' | 'resume' | 'bot' | 'message' | 'inbox' | 'inboundChannelId'
+  > {
+    return {
+      ...(this.#externalMessaging === undefined
+        ? {}
+        : {
+            externalMessaging: {
+              connected: () => {
+                const { identities, grants } = this.#externalMessaging!.deletionDependencies(
+                  bot.slug,
+                );
+                return identities.length > 0 || grants.length > 0;
+              },
+              senderPermissions: (id) => this.#externalMessaging!.senderPermissions(bot.slug, id),
+              directory: (query) => this.#externalMessaging!.directory(bot.slug, query),
+              reachable: async (bindingId, cursor) => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                const identities = (snapshot.identities ?? []).filter(
+                  (identity) =>
+                    !identity.revokedAt &&
+                    identity.enabled &&
+                    identity.availability === 'available' &&
+                    (bindingId === undefined || identity.id === bindingId),
+                );
+                if (bindingId && !identities.length) throw new Error('identity-unavailable');
+                if (cursor && !bindingId) throw new Error('bad-request');
+                return Promise.all(
+                  identities.map(async (identity) => {
+                    const app = {
+                      bindingId: identity.id,
+                      platform: identity.platform,
+                      accountName: identity.name,
+                    };
+                    try {
+                      return {
+                        ...app,
+                        page: await this.#externalMessaging!.reachable(
+                          bot.slug,
+                          identity.id,
+                          cursor,
+                        ),
+                      };
+                    } catch (error) {
+                      return {
+                        ...app,
+                        reason:
+                          error instanceof Error &&
+                          'code' in error &&
+                          typeof error.code === 'string'
+                            ? error.code
+                            : 'provider-unavailable',
+                      };
+                    }
+                  }),
+                );
+              },
+              postConversation: (bindingId, conversationId, requestId, text) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.postConversation(
+                  bot.slug,
+                  bindingId,
+                  conversationId,
+                  requestId,
+                  text,
+                );
+              },
+              targets: async () => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                return snapshot.grants
+                  .filter((g) => g.availability === 'available' && !g.revokedAt && g.canPost)
+                  .flatMap((g) =>
+                    g.postConversationId
+                      ? [
+                          {
+                            grantId: g.id,
+                            bindingId: g.bindingId,
+                            accountRef: g.accountRef,
+                            platform: g.platform,
+                            accountName: g.accountName,
+                            targetName: g.targetName,
+                            conversationId: g.postConversationId,
+                            canPost: true as const,
+                          },
+                        ]
+                      : [],
+                  );
+              },
+              post: (grantId, requestId, text) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.post(bot.slug, grantId, requestId, text);
+              },
+              outbox: (intentId) => {
+                if (intentId) return this.#externalMessaging!.inspectIntent(bot.slug, intentId);
+                return this.#externalMessaging!
+                  .history(bot.slug)
+                  .filter((intent) => intent.report)
+                  .slice(0, 10)
+                  .map(({ text, ...intent }) => ({ ...intent, preview: text.slice(0, 160) }));
+              },
+              policies: async () => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                return snapshot.grants
+                  .filter((grant) => grant.receiveScope && grant.groupPolicy)
+                  .map((grant) => ({
+                    grantId: grant.id,
+                    group: grant.targetName,
+                    policy: grant.groupPolicy!,
+                    ...(grant.receiveTargetChannelId &&
+                    this.#channels.get(grant.receiveTargetChannelId)
+                      ? {
+                          memberWake: externalMemberWake(
+                            this.#channels.get(grant.receiveTargetChannelId)!,
+                            bot.slug,
+                            this.#sourcePolicy
+                              .list(bot.slug)
+                              .find((rule) => rule.sourceClass === 'group-ordinary'),
+                            this.#externalMessaging!.defaults(),
+                          ),
+                        }
+                      : {}),
+                    ordinaryDelivery: grant.ordinaryDelivery ?? 'unverified',
+                  }));
+              },
+              setPolicy: (grantId, input) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.inbound.setPolicy(bot.slug, grantId, input, {
+                  kind: 'bot',
+                  botSlug: bot.slug,
+                });
+              },
+              threads: async () => {
+                const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
+                return snapshot.grants.flatMap((grant) =>
+                  (grant.threadPolicies ?? []).map((thread) => ({
+                    ...thread,
+                    grantId: grant.id,
+                    group: grant.targetName,
+                  })),
+                );
+              },
+              setThread: (sourceEventId, input) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.inbound.setThread(bot.slug, sourceEventId, input, {
+                  kind: 'bot',
+                  botSlug: bot.slug,
+                });
+              },
+              read: (id: string) => {
+                const source = this.#externalMessaging!.inbound.readShared(bot.slug, id);
+                if (turn.observeReads)
+                  this.#observeExternalRead(bot.slug, [id], turn.readAdmissions);
+                return source;
+              },
+              share: (id, destinationChannelId) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.inbound.share(bot.slug, id, destinationChannelId);
+              },
+              context: async (id: string, query: ExternalContextQuery, signal?: AbortSignal) => {
+                const result = await this.#externalMessaging!.inbound.context(
+                  bot.slug,
+                  id,
+                  turn.sessionId,
+                  query,
+                  signal,
+                );
+                if (turn.observeReads)
+                  this.#observeExternalRead(
+                    bot.slug,
+                    result.messages.map((item) => item.sourceEventId),
+                    turn.readAdmissions,
+                  );
+                return result;
+              },
+              saveFile: async (input) => {
+                if (this.#attachments === undefined || this.#grants === undefined)
+                  throw new Error('Bridge file operations are unavailable');
+                const destinationGrant = this.#grants.requireActive(bot.slug, input.grantId);
+                if (destinationGrant.orchestratorWrite !== true)
+                  throw new Error('Destination requires Orchestrator write authorization');
+                const ref = await (
+                  input.representation === 'playback'
+                    ? this.#externalMessaging!.prepareAudio
+                    : this.#externalMessaging!.acquireFile
+                )(bot.slug, input.sourceEventId, input.attachmentId);
+                return saveAttachmentFile(input, {
+                  botSlug: bot.slug,
+                  grants: this.#grants,
+                  attachments: this.#attachments,
+                  source: () => {
+                    if (!this.#externalMessaging!.inbound.available(bot.slug, input.sourceEventId))
+                      throw new Error('Bridge file source is unavailable');
+                    return this.#attachments!.current(ref);
+                  },
+                });
+              },
+              replyFile: (id: string, fileId: string) => {
+                const ref = turn.importedFiles.get(fileId);
+                if (ref === undefined || this.#attachments === undefined)
+                  throw new Error(
+                    'Select a result file with channel_attachment_import in this run before replying',
+                  );
+                turn.markSideEffect();
+                return this.#externalMessaging!.replyFile(
+                  bot.slug,
+                  id,
+                  this.#attachments.current(ref),
+                );
+              },
+              reply: (id: string, text: string) => {
+                turn.markSideEffect();
+                return this.#externalMessaging!.reply(bot.slug, id, text);
+              },
+            },
+          }),
+      inboxHistory: (input) => this.#inboxHistory.list(bot.slug, input),
+      triage: this.#inboxTriage.access({
+        botSlug: bot.slug,
+        sessionId: turn.sessionId,
+        current: () => [...turn.turnSources, ...turn.readAdmissions],
+        changed: (changedChannelId, messageId) =>
+          this.#channels.admissionChanged?.(changedChannelId, messageId),
+        snoozed: () => this.#armSnooze(bot.slug),
+      }),
+      channels: this.#channelAccess(
+        bot.slug,
+        turn.channelId,
+        turn.sourceEventId,
+        turn.sessionId,
+        turn.markSideEffect,
+        turn.readAdmissions,
+        (ref) => turn.importedFiles.set(attachmentIdentity(ref), ref),
+        turn.observeReads,
+      ),
+      sourcePolicy: {
+        list: () => this.#sourcePolicy.list(bot.slug),
+        setAssignmentReport: (wake) => {
+          turn.markSideEffect();
+          const changed = this.#sourcePolicy.setAssignmentReport(bot.slug, wake, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+          return changed;
+        },
+        resetAssignmentReport: () => {
+          turn.markSideEffect();
+          const changed = this.#sourcePolicy.resetAssignmentReport(bot.slug, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+          return changed;
+        },
+        setGroupOrdinary: (wake, digestCount, digestIntervalSeconds) => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.setGroupOrdinary(
+            bot.slug,
+            wake,
+            digestCount,
+            digestIntervalSeconds,
+            { kind: 'bot', botSlug: bot.slug },
+          );
+        },
+        setImmediateDelivery: (sourceClass, delivery) => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.setImmediateDelivery(bot.slug, sourceClass, delivery, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+        },
+        resetImmediateDelivery: (sourceClass) => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.resetImmediateDelivery(bot.slug, sourceClass, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+        },
+        resetGroupOrdinary: () => {
+          turn.markSideEffect();
+          return this.#sourcePolicy.resetGroupOrdinary(bot.slug, {
+            kind: 'bot',
+            botSlug: bot.slug,
+          });
+        },
+      },
+      ...(this.#schedules === undefined
+        ? {}
+        : {
+            schedules: ((store) => ({
+              list: () => store.list(bot.slug),
+              create: (input: BotScheduleInput) => {
+                turn.markSideEffect();
+                return store.create(bot.slug, input, 'personabot');
+              },
+              update: (id: string, change: BotScheduleChange) => {
+                turn.markSideEffect();
+                return store.update(bot.slug, id, change, 'personabot');
+              },
+              remove: (id: string) => {
+                turn.markSideEffect();
+                return store.remove(bot.slug, id, 'personabot');
+              },
+            }))(this.#schedules),
+          }),
+      ...(turn.observeMemory
+        ? {
+            memory: {
+              continueFromCommit: (sha, branch) => {
+                if (this.#memory === undefined) throw new Error('Memory is unavailable');
+                const result = this.#memory.continueFromCommit({
+                  botSlug: bot.slug,
+                  sessionId: turn.sessionId,
+                  sha,
+                  branch,
+                });
+                turn.markSideEffect();
+                return result;
+              },
+              switchBranch: (branch) => {
+                if (this.#memory === undefined) throw new Error('Memory is unavailable');
+                const result = this.#memory.switchBranch({
+                  botSlug: bot.slug,
+                  sessionId: turn.sessionId,
+                  branch,
+                });
+                turn.markSideEffect();
+                return result;
+              },
+            },
+          }
+        : {}),
+      assignments: this.#assignmentAccess(
+        bot,
+        turn.sourceEventId,
+        turn.markSideEffect,
+        turn.sessionId,
+        turn.readAdmissions,
+      ),
+    };
   }
 
   async #publishSessionFailure(input: {
@@ -3454,6 +4638,7 @@ class BotRuntimeImplementation implements BotRuntime {
     sourceEventId: string,
     markAttemptSideEffect: () => void = () => this.#markSideEffectStarted(sourceEventId),
     orchestratorSessionId?: string,
+    readAdmissions?: Set<string>,
   ): OrchestratorAssignmentAccess {
     const markSideEffect = markAttemptSideEffect;
     return {
@@ -3465,6 +4650,9 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       grants: () => this.#grants?.list(bot.slug) ?? [],
       list: () => this.listAssignments(bot.slug),
+      query: (input) => queryAssignmentDirectory(this.listAssignments(bot.slug), input),
+      archive: (sessionId) => this.#archiveAssignment(bot, sessionId, markSideEffect),
+      unarchive: (sessionId) => this.#unarchiveAssignment(bot, sessionId, markSideEffect),
       inspect: (sessionId) => this.getAssignment(bot.slug, sessionId),
       tail: async (sessionId) => {
         if (this.getAssignment(bot.slug, sessionId) === undefined)
@@ -3513,6 +4701,10 @@ class BotRuntimeImplementation implements BotRuntime {
             this.#waitOptions.beginAssignmentWait?.(bot.slug, orchestratorSessionId) ?? (() => {}),
           signal: AbortSignal.any([signal, this.#waitLifetime.signal]),
           timeoutMs,
+        }).then((outcome) => {
+          if (outcome.outcome !== 'timeout' && readAdmissions !== undefined)
+            this.#claimAssignmentNotices(bot.slug, sessionId, readAdmissions);
+          return outcome;
         });
       },
       stop: (sessionId) => this.#stopAssignment(bot, sessionId, markSideEffect),
@@ -3652,7 +4844,21 @@ class BotRuntimeImplementation implements BotRuntime {
     );
   }
 
-  #recoverInterruptedAttempts(): void {
+  #recoverInterruptedAttempts(): Array<{ channel_id: string; message_id: string; body: string }> {
+    const interruptedDms = this.#database.read((database) =>
+      database
+        .prepare(`
+        SELECT e.channel_id, e.message_id, e.body
+          FROM source_events e
+          JOIN inbox_admissions a ON a.source_event_id = e.source_event_id
+         WHERE e.source_kind = 'human-message' AND a.reason = 'human-dm'
+           AND e.attempt_state = 'running' AND a.attempt_state = 'running'
+           AND e.side_effect_started_at IS NULL AND a.side_effect_started_at IS NULL
+           AND e.channel_id IS NOT NULL AND e.message_id IS NOT NULL
+         ORDER BY e.created_at, e.message_id
+      `)
+        .all(),
+    ) as Array<{ channel_id: string; message_id: string; body: string }>;
     this.#database.transaction(
       (database) => {
         database
@@ -3767,6 +4973,7 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       ['source-event', 'bot-inbox'],
     );
+    return interruptedDms;
   }
 
   originalAttachmentRoot(
@@ -3786,6 +4993,7 @@ class BotRuntimeImplementation implements BotRuntime {
     beforeSend: () => void,
     readAdmissions: Set<string>,
     onImport?: (ref: ChannelAttachmentRef) => void,
+    observeReads = true,
   ): OrchestratorChannelAccess {
     const authorize = beforeSend;
     beforeSend = () => {
@@ -4249,6 +5457,7 @@ class BotRuntimeImplementation implements BotRuntime {
         );
         return this.#channels.getGroupWakePolicy(channel.id, botSlug);
       },
+      react: (input) => this.#react(botSlug, resolve(input.channelId), input),
       leaveGroup: (input) => {
         const channel = this.#channels.get(input.channelId);
         if (channel === undefined) throw new Error('group_leave: channel-unavailable');
@@ -4258,6 +5467,7 @@ class BotRuntimeImplementation implements BotRuntime {
         this.#channels.removeGroupMember(channel.id, botSlug, 'left');
         return { channelId: channel.id, left: true };
       },
+      createBot: (input) => this.#createBot(botSlug, sourceEventId, beforeSend, input),
       sendToBot: async (input) => {
         const sender = this.#registry.get(botSlug);
         const target = this.#registry.get(input.botSlug);
@@ -4281,6 +5491,7 @@ class BotRuntimeImplementation implements BotRuntime {
           recipientBotSlug: target.slug,
           channel: dm,
           sourceEventId,
+          readSourceEventIds: readAdmissions,
           sessionId,
           beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
           ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -4331,6 +5542,9 @@ class BotRuntimeImplementation implements BotRuntime {
               .prepare(`
                 UPDATE inbox_admissions
                    SET ignored_at = ?, ignored_by_session_id = ?,
+                       resolved_at = COALESCE(resolved_at, ?),
+                       resolution = COALESCE(resolution, 'ignored'),
+                       resolved_by_session_id = COALESCE(resolved_by_session_id, ?),
                        observed_at = COALESCE(observed_at, ?),
                        attempt_state = CASE
                          WHEN attempt_state IN ('pending', 'retryable', 'running') THEN 'handled'
@@ -4340,7 +5554,16 @@ class BotRuntimeImplementation implements BotRuntime {
                          ELSE handled_at END
                  WHERE source_event_id = ? AND bot_slug = ? AND ignored_at IS NULL
               `)
-              .run(ignoredAt, sessionId, ignoredAt, ignoredAt, row.source_event_id, botSlug);
+              .run(
+                ignoredAt,
+                sessionId,
+                ignoredAt,
+                sessionId,
+                ignoredAt,
+                ignoredAt,
+                row.source_event_id,
+                botSlug,
+              );
             return { sourceEventId: row.source_event_id, ignoredAt, alreadyIgnored: false };
           },
           ['bot-inbox'],
@@ -4358,12 +5581,12 @@ class BotRuntimeImplementation implements BotRuntime {
             ...(input.limit === undefined ? {} : { limit: input.limit }),
           })
           .map((message) => viewOf(channel, message, humans));
-        this.#observeReadMessages(botSlug, messages, readAdmissions);
+        if (observeReads) this.#observeReadMessages(botSlug, messages, readAdmissions);
         return messages;
       },
       query: (input = {}) => {
         const page = queryPage(input);
-        this.#observeReadMessages(botSlug, page.messages, readAdmissions);
+        if (observeReads) this.#observeReadMessages(botSlug, page.messages, readAdmissions);
         return page;
       },
       readModel: (input = {}) => {
@@ -4379,7 +5602,8 @@ class BotRuntimeImplementation implements BotRuntime {
           const previous = contentProgress.get(chunk.hash) ?? 0;
           const progress = chunk.start <= previous ? Math.max(previous, chunk.end) : previous;
           contentProgress.set(chunk.hash, progress);
-          if (progress === chunk.total) this.#observeReadMessages(botSlug, [view], readAdmissions);
+          if (observeReads && progress === chunk.total)
+            this.#observeReadMessages(botSlug, [view], readAdmissions);
           return chunk.output;
         }
         if (input.contentCursor !== undefined)
@@ -4389,7 +5613,7 @@ class BotRuntimeImplementation implements BotRuntime {
           page,
           (count) => queryPage({ ...input, limit: count }).nextCursor,
         );
-        this.#observeReadMessages(botSlug, bounded.included, readAdmissions);
+        if (observeReads) this.#observeReadMessages(botSlug, bounded.included, readAdmissions);
         return bounded.output;
       },
       openAttachment: (input) => {
@@ -4517,8 +5741,14 @@ class BotRuntimeImplementation implements BotRuntime {
       },
       requestGrant: async (reason) => {
         const channel = resolve();
-        if (channel.type !== 'dm' || channel.botSlug !== botSlug) {
-          throw new Error('Workspace Grant requests must be sent in this PersonaBot DM');
+        if (
+          channel.type === 'group'
+            ? !channel.members.includes(botSlug)
+            : channel.botSlug !== botSlug
+        ) {
+          throw new Error(
+            'Workspace Grant requests must be sent in a Group this PersonaBot belongs to or in its Human DM',
+          );
         }
         const body = requireNonBlank(reason, 'Workspace Grant request reason');
         beforeSend();
@@ -4537,7 +5767,43 @@ class BotRuntimeImplementation implements BotRuntime {
         return appended;
       },
       send: async (input) => {
+        const steered = this.#turnSources.get(botSlug);
+        const turnChannelIds =
+          steered?.sessionId === sessionId && steered.steeredChannelIds.size > 0
+            ? [
+                ...(steered.inboundChannelId === undefined ? [] : [steered.inboundChannelId]),
+                ...steered.steeredChannelIds,
+              ]
+            : [];
+        const repliedChannelIds =
+          input.channelId === undefined && input.replyTo !== undefined
+            ? turnChannelIds.filter(
+                (id) => this.#channels.message(id, input.replyTo!) !== undefined,
+              )
+            : [];
+        if (input.channelId === undefined && repliedChannelIds.length === 1)
+          input = { ...input, channelId: repliedChannelIds[0]! };
+        if (input.channelId === undefined && turnChannelIds.length > 0)
+          throw new Error(
+            `This turn carries messages from several Channels: ${turnChannelIds
+              .map((id) => {
+                const candidate = this.#channels.get(id);
+                const kind =
+                  candidate === undefined
+                    ? 'Channel'
+                    : candidate.type === 'group'
+                      ? `Group ${JSON.stringify(candidate.name)}`
+                      : isBotDmChannel(candidate)
+                        ? 'Bot DM'
+                        : 'Human DM';
+                return `${kind} (channel_id ${JSON.stringify(id)})`;
+              })
+              .join(
+                '; ',
+              )}. Call channel_send again with channel_id for the Channel this reply belongs to, or with reply_to set to the message ID you are answering.`,
+          );
         const channel = resolve(input.channelId);
+        if (steered?.sessionId === sessionId) steered.spokenChannelIds.add(channel.id);
         if (input.mentionBotIds?.length && channel.type !== 'group')
           throw new Error('Bot mentions require a Group Channel');
         if (input.mentionHumanIds?.length && channel.type !== 'group')
@@ -4550,6 +5816,7 @@ class BotRuntimeImplementation implements BotRuntime {
             recipientBotSlug,
             channel,
             sourceEventId,
+            readSourceEventIds: readAdmissions,
             sessionId,
             beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
             ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -4565,6 +5832,7 @@ class BotRuntimeImplementation implements BotRuntime {
             botSlug,
             channel,
             sourceEventId,
+            readSourceEventIds: readAdmissions,
             sessionId,
             beforeSend: input.deliveryKey === undefined ? beforeSend : () => undefined,
             ...(input.deliveryKey === undefined ? {} : { afterSend: beforeSend }),
@@ -4606,6 +5874,7 @@ class BotRuntimeImplementation implements BotRuntime {
     botSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
+    readSourceEventIds?: ReadonlySet<string>;
     sessionId: string;
     beforeSend: () => void;
     afterSend?: () => void;
@@ -4622,12 +5891,22 @@ class BotRuntimeImplementation implements BotRuntime {
     const sender = this.#registry.get(botSlug);
     if (sender === undefined || sender.paused === true)
       throw new Error('Bot Group sender is no longer active');
-    const ids = input.mentionBotIds ?? [];
-    if (ids.length > 20 || ids.some((id) => !isValidSlug(id)))
+    const explicitIds = input.mentionBotIds ?? [];
+    if (explicitIds.length > 20 || explicitIds.some((id) => !isValidSlug(id)))
       throw new Error('Bot Group mentions require at most 20 valid Bot IDs');
+    const typed = resolveBotMentionText(
+      input.body,
+      this.#registry.list().map((bot) => ({
+        botSlug: bot.slug,
+        displayName: bot.displayName,
+        eligible: bot.slug !== botSlug && bot.paused !== true && channel.members.includes(bot.slug),
+      })),
+    );
+    const ids = [...new Set([...explicitIds, ...typed.botSlugs])];
+    if (ids.length > 20) throw new Error('Bot Group mentions require at most 20 valid Bot IDs');
     const mentions: ChannelMention[] = [];
     let prefix = '';
-    for (const id of new Set(ids)) {
+    for (const id of ids) {
       const target = this.#registry.get(id);
       if (
         id === botSlug ||
@@ -4636,7 +5915,7 @@ class BotRuntimeImplementation implements BotRuntime {
         !channel.members.includes(id)
       )
         throw new Error('Mentioned PersonaBot must be another active Group member');
-      const label = target.displayName.replace(/\s+/gu, ' ').trim().slice(0, 80);
+      const label = botMentionLabel(target.displayName);
       const token = '@' + label;
       mentions.push({
         botSlug: id,
@@ -4668,7 +5947,7 @@ class BotRuntimeImplementation implements BotRuntime {
       });
       prefix += token + ' ';
     }
-    const body = prefix + input.body;
+    const body = prefix + typed.body;
     if (!body.trim() && !input.attachments?.length)
       throw new Error('Group message requires a body or attachment');
     this.#channels.assertAttachmentRefs(input.attachments ?? []);
@@ -4679,7 +5958,9 @@ class BotRuntimeImplementation implements BotRuntime {
       at: this.#now().toISOString(),
       author: { kind: 'bot', slug: botSlug },
       body,
-      botCausation: this.#botCausation(input.sourceEventId),
+      botCausation: this.#botCausation(
+        this.#turnSourceIn(botSlug, channel.id, input.readSourceEventIds) ?? input.sourceEventId,
+      ),
       ...(mentions.length === 0 ? {} : { mentions }),
       ...(humanMentions.length === 0 ? {} : { humanMentions }),
       ...(input.replyTo === undefined ? {} : { replyTo: input.replyTo }),
@@ -4716,8 +5997,12 @@ class BotRuntimeImplementation implements BotRuntime {
     }
   }
 
-  #turnSourceIn(botSlug: string, channelId: string): string | undefined {
-    const sources = [...(this.#turnSources.get(botSlug) ?? [])];
+  #turnSourceIn(
+    botSlug: string,
+    channelId: string,
+    read: Iterable<string> = [],
+  ): string | undefined {
+    const sources = [...new Set([...(this.#turnSources.get(botSlug)?.eventIds ?? []), ...read])];
     if (sources.length === 0) return undefined;
     const row = this.#database.read(
       (database) =>
@@ -4784,11 +6069,132 @@ class BotRuntimeImplementation implements BotRuntime {
             .digest('hex');
   }
 
+  #createBot(
+    botSlug: string,
+    sourceEventId: string,
+    beforeSend: () => void,
+    input: BotCreateInput,
+  ): BotCreateOutcome {
+    const refuse = (code: string, message: string): never => {
+      throw new DirectBotToolError(code, `${code}: ${message}`);
+    };
+    const creator = this.#registry.get(botSlug);
+    if (this.#closed || creator === undefined || creator.paused === true)
+      refuse('creator-unavailable', 'The creating PersonaBot is no longer active');
+    const displayName = input.displayName.trim();
+    if (displayName.length === 0 || [...displayName].length > MAX_CREATED_BOT_NAME_LENGTH)
+      refuse(
+        'invalid-input',
+        `display_name must be 1 to ${MAX_CREATED_BOT_NAME_LENGTH} characters`,
+      );
+    const description = input.description?.trim();
+    if (description !== undefined && [...description].length > MAX_CREATED_BOT_BIO_LENGTH)
+      refuse(
+        'invalid-input',
+        `description must be at most ${MAX_CREATED_BOT_BIO_LENGTH} characters`,
+      );
+    const tags = [
+      ...new Set((input.tags ?? []).map((tag) => tag.trim()).filter((tag) => tag.length > 0)),
+    ];
+    if (
+      tags.length > MAX_CREATED_BOT_TAGS ||
+      tags.some((tag) => [...tag].length > MAX_CREATED_BOT_TAG_LENGTH)
+    )
+      refuse(
+        'invalid-input',
+        `tags allows at most ${MAX_CREATED_BOT_TAGS} tags of at most ${MAX_CREATED_BOT_TAG_LENGTH} characters`,
+      );
+    const memoryLocation = input.memoryLocation?.trim();
+    if (memoryLocation !== undefined && memoryLocation.length > 0 && !isAbsolute(memoryLocation))
+      refuse('invalid-memory-dir', 'memory_location must be an absolute folder path');
+    const avatar =
+      input.avatarPath === undefined
+        ? undefined
+        : this.#readCreatedAvatar(botSlug, input.avatarPath);
+    const slug = this.#createBotId();
+    beforeSend();
+    const created = this.#registry.create({
+      slug,
+      displayName,
+      ...(input.soul === undefined ? {} : { persona: input.soul }),
+      ...(input.coreMemory === undefined ? {} : { coreMemory: input.coreMemory }),
+      ...(tags.length === 0 ? {} : { roles: tags }),
+      ...(description ? { description } : {}),
+      ...(avatar === undefined ? {} : { avatar }),
+      ...(memoryLocation ? { memoryLocation } : {}),
+    });
+    if (!created.ok)
+      refuse(
+        created.reason === 'invalid-memory-dir' ||
+          created.reason === 'git-not-found' ||
+          created.reason === 'memory-unavailable'
+          ? created.reason
+          : 'invalid-input',
+        created.reason === 'invalid-memory-dir'
+          ? 'memory_location must be an existing absolute folder that does not already hold this Bot'
+          : created.reason === 'git-not-found'
+            ? 'Git is required to create a Memory Repository'
+            : (created.detail ?? 'The PersonaBot could not be created'),
+      );
+    const record = (created as Extract<typeof created, { ok: true }>).record;
+    const dm = this.#channels.getOrCreateDm(record.slug, record.displayName);
+    try {
+      this.#channels.appendBotCreateAction?.({
+        botSlug,
+        causeSourceEventId: sourceEventId,
+        created: { botSlug: record.slug, displayName: record.displayName },
+      });
+    } catch (error) {
+      this.#warn?.(
+        `bot-create-action-record-failed bot=${botSlug} created=${record.slug} reason=${error instanceof Error ? error.name : 'unknown'}`,
+      );
+    }
+    return {
+      botId: record.slug,
+      displayName: record.displayName,
+      dmChannelId: dm?.id ?? dmChannelId(record.slug),
+      memoryDir: this.#registry.memoryDirFor(record.slug) ?? '',
+      model: record.modelPlan === undefined && record.model === undefined ? 'host-default' : 'set',
+    };
+  }
+
+  #readCreatedAvatar(botSlug: string, path: string): string {
+    const refuse = (message: string): never => {
+      throw new DirectBotToolError('invalid-avatar', `invalid-avatar: ${message}`);
+    };
+    if (!isAbsolute(path)) refuse('avatar_path must be an absolute file path');
+    const roots = (this.#grants?.list(botSlug) ?? [])
+      .filter((grant) => grant.revokedAt === undefined)
+      .flatMap((grant) => {
+        try {
+          return [this.#grants!.requireActive(botSlug, grant.id).workspacePath];
+        } catch {
+          return [];
+        }
+      });
+    const memory = this.#registry.memoryDirFor(botSlug);
+    if (memory !== undefined) roots.push(memory);
+    if (authorizedPathRoot(roots, path) === undefined)
+      refuse('avatar_path is outside your Memory Repository and Workspace Grants');
+    let bytes: Buffer;
+    try {
+      const size = statSync(path).size;
+      if (size > MAX_PERSONA_BOT_AVATAR_BYTES)
+        refuse(`the image is larger than ${MAX_PERSONA_BOT_AVATAR_BYTES} bytes`);
+      bytes = readFileSync(path);
+    } catch (error) {
+      if (error instanceof DirectBotToolError) throw error;
+      return refuse('the image file cannot be read');
+    }
+    return personaBotAvatarFromBytes(bytes) ?? refuse('the image must be a PNG, JPEG or WebP file');
+  }
+
   async #sendBotDm(input: {
     botSlug: string;
     recipientBotSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
+    readSourceEventIds?: ReadonlySet<string>;
     sessionId: string;
     beforeSend: () => void;
     afterSend?: () => void;
@@ -4819,7 +6225,7 @@ class BotRuntimeImplementation implements BotRuntime {
     if (this.#channels.getOrCreateDm(botSlug, sender.displayName) === undefined)
       throw new Error('Sender Human DM is unavailable');
     const botCausation = this.#botCausation(
-      this.#turnSourceIn(botSlug, channel.id) ?? input.sourceEventId,
+      this.#turnSourceIn(botSlug, channel.id, input.readSourceEventIds) ?? input.sourceEventId,
     );
     const messageId = this.#deliveryMessageId(input.sessionId, input.deliveryKey);
     const message: ChannelMessage = {
@@ -4859,11 +6265,81 @@ class BotRuntimeImplementation implements BotRuntime {
     return channel;
   }
 
+  async #runOnLiveOrchestrator(
+    bot: PersonaBotRecord,
+    orchestrator: { sessionId: string; resume: boolean },
+    run: (orchestrator: { sessionId: string; resume: boolean }) => Promise<void>,
+  ): Promise<{ sessionId: string; resume: boolean }> {
+    try {
+      await run(orchestrator);
+      return orchestrator;
+    } catch (error) {
+      if (
+        this.#closed ||
+        this.#sessionArchived?.(orchestrator.sessionId) !== true ||
+        this.#turnSideEffectStarted(bot.slug)
+      )
+        throw error;
+      const replacement = this.#ensureOrchestrator(bot, this.#now().toISOString());
+      if (replacement.sessionId === orchestrator.sessionId) throw error;
+      this.#warn?.(
+        JSON.stringify({
+          component: 'bot-runtime',
+          event: 'orchestrator-archived-mid-turn',
+          botSlug: bot.slug,
+          archivedSessionId: orchestrator.sessionId,
+          sessionId: replacement.sessionId,
+        }),
+      );
+      await run(replacement);
+      return replacement;
+    }
+  }
+
+  #turnSideEffectStarted(botSlug: string): boolean {
+    return (
+      this.#database.read((database) =>
+        database
+          .prepare(
+            `SELECT 1 FROM inbox_admissions
+              WHERE bot_slug = ? AND attempt_state = 'running'
+                AND side_effect_started_at IS NOT NULL
+              LIMIT 1`,
+          )
+          .get(botSlug),
+      ) !== undefined
+    );
+  }
+
   #ensureOrchestrator(bot: PersonaBotRecord, at: string): { sessionId: string; resume: boolean } {
-    const existing = this.#ownership
-      .rootsFor(bot.slug, 'orchestrator')
-      .find((root) => this.#ownership.contentAvailable(root.sessionId));
-    if (existing !== undefined) return { sessionId: existing.sessionId, resume: true };
+    const existing = this.currentOrchestratorSessionId(bot.slug);
+    const orchestrator =
+      existing === undefined
+        ? { sessionId: this.#claimOrchestrator(bot, at), resume: false }
+        : { sessionId: existing, resume: true };
+    this.#releaseReplacedOrchestrators(bot.slug, orchestrator.sessionId);
+    return orchestrator;
+  }
+
+  #releaseReplacedOrchestrators(botSlug: string, current: string): void {
+    const release = this.#agents.releaseSession?.bind(this.#agents);
+    if (release === undefined) return;
+    for (const root of this.#ownership.rootsFor(botSlug, 'orchestrator')) {
+      if (root.sessionId === current) continue;
+      void release(root.sessionId).catch(() =>
+        this.#warn?.(
+          JSON.stringify({
+            component: 'bot-runtime',
+            event: 'orchestrator-release-failed',
+            botSlug,
+            sessionId: root.sessionId,
+          }),
+        ),
+      );
+    }
+  }
+
+  #claimOrchestrator(bot: PersonaBotRecord, at: string): string {
     const sessionId = this.#createSessionId();
     const cwdReference = this.#orchestratorCwdReference(bot);
     this.#ownership.claim({
@@ -4873,7 +6349,7 @@ class BotRuntimeImplementation implements BotRuntime {
       ...(cwdReference === undefined ? {} : { cwdReference }),
       at,
     });
-    return { sessionId, resume: false };
+    return sessionId;
   }
 
   #orchestratorCwdReference(bot: PersonaBotRecord): string | undefined {
@@ -5021,6 +6497,11 @@ class BotRuntimeImplementation implements BotRuntime {
   ): AssignmentRequestOutcome {
     const row = this.#assignmentRow(bot.slug, input.sessionId);
     if (row === undefined) throw new Error(`Unknown Assignment Session: ${input.sessionId}`);
+    if (isArchivedRow(row) || this.#assignmentArchives.has(input.sessionId)) {
+      throw new Error(
+        `Assignment Session ${input.sessionId} is archived; call unarchive_assignment before sending it a request`,
+      );
+    }
     if (row.stop_state !== 'running') {
       throw new Error(`Assignment Session ${input.sessionId} is stopped or stopping`);
     }
@@ -5232,6 +6713,97 @@ class BotRuntimeImplementation implements BotRuntime {
     return this.#requireAssignmentSummary(bot.slug, sessionId);
   }
 
+  async #archiveAssignment(
+    bot: PersonaBotRecord,
+    sessionId: string,
+    markSideEffect: () => void,
+  ): Promise<AssignmentArchiveOutcome> {
+    const row = this.#assignmentRow(bot.slug, sessionId);
+    if (row === undefined) throw new Error(`Unknown Assignment Session: ${sessionId}`);
+    if (isArchivedRow(row))
+      return {
+        outcome: 'archived',
+        assignment: this.#requireAssignmentSummary(bot.slug, sessionId),
+      };
+    const active = (message: string): AssignmentArchiveOutcome => ({
+      outcome: 'refused',
+      code: 'assignment-active',
+      assignment: this.#requireAssignmentSummary(bot.slug, sessionId),
+      message,
+    });
+    if (
+      row.activity === 'working' ||
+      row.stop_state === 'requested' ||
+      this.#assignmentAcceptances.has(sessionId)
+    )
+      return active(
+        `Assignment Session ${sessionId} is still active; nothing was archived. Wait for it to settle or call stop_assignment first.`,
+      );
+    const archive = this.#sessionArchive?.();
+    if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+    if (this.#assignmentArchives.has(sessionId))
+      return active(
+        `Assignment Session ${sessionId} is already being archived; inspect it shortly.`,
+      );
+    this.#assignmentArchives.add(sessionId);
+    try {
+      markSideEffect();
+      try {
+        await archive.archiveSession(sessionId);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'WorkspaceActiveSessionError')
+          return active(
+            `DSH reports Session ${sessionId} still has running work; nothing was archived. Stop it first, then retry.`,
+          );
+        throw error;
+      }
+      this.#database.transaction(
+        (database) => {
+          database
+            .prepare(
+              `UPDATE assignments SET archived_at = ?, continuity_key = NULL
+                WHERE bot_slug = ? AND session_id = ? AND archived_at IS NULL`,
+            )
+            .run(this.#now().toISOString(), bot.slug, sessionId);
+        },
+        ['assignments'],
+      );
+    } finally {
+      this.#assignmentArchives.delete(sessionId);
+    }
+    return { outcome: 'archived', assignment: this.#requireAssignmentSummary(bot.slug, sessionId) };
+  }
+
+  async #unarchiveAssignment(
+    bot: PersonaBotRecord,
+    sessionId: string,
+    markSideEffect: () => void,
+  ): Promise<{ outcome: 'unarchived'; assignment: AssignmentSummary }> {
+    const row = this.#assignmentRow(bot.slug, sessionId);
+    if (row === undefined) throw new Error(`Unknown Assignment Session: ${sessionId}`);
+    if (isArchivedRow(row)) {
+      const archive = this.#sessionArchive?.();
+      if (archive === undefined) throw new Error('DSH Session archive is unavailable');
+      markSideEffect();
+      await archive.unarchiveSession(sessionId);
+      this.#database.transaction(
+        (database) => {
+          database
+            .prepare(
+              `UPDATE assignments SET archived_at = NULL
+                WHERE bot_slug = ? AND session_id = ? AND archived_at IS NOT NULL`,
+            )
+            .run(bot.slug, sessionId);
+        },
+        ['assignments'],
+      );
+    }
+    return {
+      outcome: 'unarchived',
+      assignment: this.#requireAssignmentSummary(bot.slug, sessionId),
+    };
+  }
+
   #publishAssignmentRefusal(row: AssignmentRow, error: unknown): void {
     const channel = this.#dmChannel(row.bot_slug);
     if (channel === undefined) return;
@@ -5371,7 +6943,7 @@ class BotRuntimeImplementation implements BotRuntime {
       activeCount,
       limit,
       retryable: true,
-      message: `Assignment Concurrency Limit ${limit} reached; retryable: true. Nothing was ${action}. Wait for active work to settle before retrying.`,
+      message: `Assignment Concurrency Limit ${limit} reached; retryable: true. Nothing was ${action}. Wait for active work to settle before retrying; keep the item that asked for this open, or snooze it with inbox_snooze until then, and do not resolve it.`,
     };
   }
 
@@ -5763,7 +7335,7 @@ class BotRuntimeImplementation implements BotRuntime {
     const legacy = this.#database.read((db) =>
       db
         .prepare(`WITH pending AS (
-      SELECT e.source_event_id, e.body, e.created_at, a.attempt_state, a.reason, a.wake_mode,
+      SELECT e.source_event_id, e.body, e.created_at, a.attempt_state, a.reason, a.wake_mode, a.source_policy_wake_mode,
         a.wake_count, a.wake_interval_ms, g.id AS grant_id,
         SUM(CASE WHEN a.reason = 'group-ordinary' THEN 1 ELSE 0 END) OVER policy AS pending_count,
         MIN(CASE WHEN a.reason = 'group-ordinary' THEN e.created_at END) OVER policy AS first_at,
@@ -5780,12 +7352,12 @@ class BotRuntimeImplementation implements BotRuntime {
         AND NOT EXISTS (SELECT 1 FROM messaging_source_paths rp WHERE rp.source_event_id = e.source_event_id)
         AND (a.reason != 'group-ordinary' OR e.channel_id IS NULL)
         AND a.attempt_state IN ('pending', 'retryable') AND a.observed_at IS NULL
-      WINDOW policy AS (PARTITION BY g.id, a.wake_policy_revision, a.source_policy_revision, a.external_default_revision, a.reason, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.thread_id ELSE '' END, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.revision ELSE 0 END)
+      WINDOW policy AS (PARTITION BY g.id, a.wake_policy_revision, a.source_policy_revision, a.external_default_revision, a.reason, a.wake_mode, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.thread_id ELSE '' END, CASE WHEN json_extract(tp.body, '$.mode') = 'follow' THEN tp.revision ELSE 0 END)
     ) SELECT source_event_id, body, created_at, attempt_state FROM pending
       WHERE (reason = 'group-mention' AND wake_mode IS NOT 'silent') OR (reason = 'human-dm' AND wake_mode = 'all') OR (reason = 'group-ordinary' AND (
         wake_mode = 'all' OR (wake_mode = 'digest' AND (pending_count >= wake_count OR
           (julianday(?) - julianday(first_at)) * 86400000 >= wake_interval_ms)) OR
-        (? = 1 AND has_mention = 1 AND wake_mode IN ('digest', 'mentions'))))
+        (? = 1 AND has_mention = 1 AND (wake_mode IN ('digest', 'mentions') OR (wake_mode = 'silent' AND source_policy_wake_mode = 'context')))))
       ORDER BY CASE WHEN reason = 'group-mention' THEN 0 ELSE 1 END, created_at, source_event_id LIMIT 20
     `)
         .all(botSlug, this.#now().toISOString(), includeContext ? 1 : 0),
@@ -5835,7 +7407,7 @@ class BotRuntimeImplementation implements BotRuntime {
     rows.reverse();
     let externalCharacters = 0;
     for (const row of this.#pendingExternalRows(botSlug, true)) {
-      if (!this.#externalMessaging?.inbound.available(botSlug, row.source_event_id)) continue;
+      if (!this.#externalMessaging?.inbound.available(botSlug, row.source_event_id, true)) continue;
       const cost = row.body.length + 1600;
       if (externalCharacters + cost > 24000) break;
       externalCharacters += cost;
@@ -5971,6 +7543,36 @@ class BotRuntimeImplementation implements BotRuntime {
     return this.#channels
       .list()
       .find((channel) => channel.type === 'dm' && channel.botSlug === botSlug);
+  }
+
+  #claimAssignmentNotices(botSlug: string, sessionId: string, readAdmissions: Set<string>): void {
+    const at = this.#now().toISOString();
+    const claimed = this.#database.transaction(
+      (db) =>
+        db
+          .prepare(`UPDATE inbox_admissions SET observed_at = COALESCE(observed_at, ?),
+          attempt_state = 'running', last_error = NULL
+          WHERE bot_slug = ? AND reason IN ('assignment-report', 'assignment-lifecycle')
+            AND attempt_state IN ('pending', 'retryable')
+            AND source_event_id IN (SELECT source_event_id FROM source_events
+              WHERE bot_slug = ? AND assignment_session_id = ?)
+          RETURNING source_event_id`)
+          .all(at, botSlug, botSlug, sessionId) as unknown as Array<{ source_event_id: string }>,
+      ['bot-inbox'],
+    );
+    if (claimed.length === 0) return;
+    const ids = claimed.map((row) => row.source_event_id);
+    this.#database.transaction(
+      (db) =>
+        db
+          .prepare(
+            `UPDATE source_events SET observed_at = COALESCE(observed_at, ?)
+              WHERE source_event_id IN (${ids.map(() => '?').join(', ')})`,
+          )
+          .run(at, ...ids),
+      ['bot-inbox'],
+    );
+    for (const id of ids) readAdmissions.add(id);
   }
 
   #observeExternalRead(botSlug: string, ids: string[], readAdmissions: Set<string>): void {
@@ -6110,13 +7712,20 @@ class BotRuntimeImplementation implements BotRuntime {
       (database) => {
         database
           .prepare(`
-            UPDATE inbox_admissions SET attempt_state = 'handled', handled_at = ?
+            UPDATE inbox_admissions
+               SET attempt_state = 'handled', handled_at = ?, opened_at = COALESCE(opened_at, ?)
              WHERE reason IN ('assignment-report', 'assignment-lifecycle', 'memory-change', 'schedule', 'group-mention', 'group-ordinary', 'human-dm')
                AND attempt_state = 'running'
                AND (? IS NULL OR bot_slug = ?)
                AND source_event_id IN (${placeholders})
           `)
-          .run(this.#now().toISOString(), botSlug ?? null, botSlug ?? null, ...sourceEventIds);
+          .run(
+            this.#now().toISOString(),
+            this.#now().toISOString(),
+            botSlug ?? null,
+            botSlug ?? null,
+            ...sourceEventIds,
+          );
         if (sessionId !== undefined)
           database
             .prepare(`

@@ -139,12 +139,11 @@ const setName = async (name) => {
   await page.keyboard.up(selectAllModifier);
   await page.keyboard.press('Backspace');
   if (name) await page.type('#bh-human-default-name', name);
-  await page.waitForSelector('.bh-human-name-save:not(:disabled)');
   console.log(
     'Save DOM: ' +
       JSON.stringify(
         await page.evaluate(() =>
-          [...document.querySelectorAll('.bh-human-name-setting button')].map((b) => ({
+          [...document.querySelectorAll('[data-human-name-setting] button')].map((b) => ({
             text: b.textContent,
             type: b.type,
             disabled: b.disabled,
@@ -153,11 +152,11 @@ const setName = async (name) => {
         ),
       ),
   );
-  await page.click('.bh-human-name-save');
+  await page.press('#bh-human-default-name', 'Enter');
   await page.waitForFunction(
     () =>
       document
-        .querySelector('.bh-human-name-setting [role="status"]')
+        .querySelector('[data-human-name-setting] [role="status"]')
         ?.textContent?.includes('已保存'),
     { polling: 100 },
   );
@@ -179,17 +178,17 @@ const nickname = async (channelId, name) => {
   await page.click('.bh-channel-options button');
   await page.waitForSelector('[role="menuitem"]');
   await clickText('[role="menuitem"]', '我的昵称');
-  await page.waitForSelector('#bh-human-channel-nickname');
-  await page.click('#bh-human-channel-nickname', { clickCount: 3 });
+  await page.waitForSelector('[data-human-nickname]');
+  await page.click('[data-human-nickname]', { clickCount: 3 });
   await page.keyboard.down(selectAllModifier);
   await page.keyboard.press('A');
   await page.keyboard.up(selectAllModifier);
   await page.keyboard.press('Backspace');
-  if (name) await page.type('#bh-human-channel-nickname', name);
+  if (name) await page.type('[data-human-nickname]', name);
   await capture(name ? 'edit-' + (channelId.startsWith('dm-') ? 'dm' : 'group') : 'edit-reset');
   if (name) await page.keyboard.press('Enter');
   else await clickText('button', '恢复默认名字');
-  await page.waitForSelector('#bh-human-channel-nickname', { hidden: true });
+  await page.waitForSelector('[data-human-nickname]', { hidden: true });
   const channels = (await rpc('channels')).channels;
   assert.equal(channels.find((c) => c.id === channelId).humanNickname, name || null);
 };

@@ -1,0 +1,17 @@
+{
+  "firstMarker": "SEO_QQ_QA1_20261012_A_OK",
+  "restartMarker": "SEO_QQ_QA1_20261012_B_OK",
+  "nativeAppConnected": true,
+  "bindingRetained": true,
+  "distinctFreshSourceAfterRestart": true,
+  "sameNativeQqConversation": true,
+  "canonicalSourceCorrelated": true,
+  "inboxAdmissionHandled": true,
+  "outboxState": "provider-accepted",
+  "providerReceiptPresent": true,
+  "humanConfirmedOriginalGroupReplyBeforeAndAfterRestart": true,
+  "publicOriginalGroupVisualEvidenceAvailable": true,
+  "observedAt": "2026-10-11T18:19:56.105618+00:00",
+  "publicOriginalGroupVisualEvidence": "04-qq-group-before-after.png",
+  "visualEvidenceReceivedAt": "2026-10-12 JST"
+}

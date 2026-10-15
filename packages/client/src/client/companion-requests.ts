@@ -64,7 +64,8 @@ export function companionRequests(value: unknown, botSlug: string): CompanionReq
     if (
       !record(item) ||
       item['botSlug'] !== botSlug ||
-      item['channelId'] !== `dm-${botSlug}` ||
+      typeof item['channelId'] !== 'string' ||
+      !item['channelId'] ||
       typeof item['messageId'] !== 'string' ||
       !item['messageId'] ||
       typeof item['sessionId'] !== 'string' ||
@@ -81,13 +82,7 @@ export function companionRequests(value: unknown, botSlug: string): CompanionReq
     };
     if (item['kind'] === 'user-question') {
       const raw = item['questions'];
-      if (
-        !Array.isArray(raw) ||
-        raw.length < 1 ||
-        raw.length > 3 ||
-        JSON.stringify(raw).length > 16_000
-      )
-        return [];
+      if (!Array.isArray(raw) || raw.length < 1) return [];
       const questions = raw.flatMap((question: unknown) => {
         const parsed = questionItem(question);
         return parsed ? [parsed] : [];

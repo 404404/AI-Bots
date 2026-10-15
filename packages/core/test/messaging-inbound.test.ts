@@ -299,7 +299,7 @@ it('requires Human receive authorization, commits before ACK, runs the real Inbo
   ).toEqual([{ last_error: null }]);
   const item = fx.core.attention.list({ botSlug: 'ada' }).items[0];
   expect(item).toMatchObject({
-    state: 'handled',
+    state: 'open',
     authorKind: 'bridged',
     externalOrigin: {
       conversationName: 'QA team',
@@ -482,7 +482,7 @@ it('recovers pending committed events only after its exclusive provider lease re
   await fx.restart();
   await fx.idle();
   expect(fx.runs).toHaveLength(1);
-  expect(fx.core.attention.list({ botSlug: 'ada' }).items[0]).toMatchObject({ state: 'handled' });
+  expect(fx.core.attention.list({ botSlug: 'ada' }).items[0]).toMatchObject({ state: 'open' });
 });
 
 it('uses existing group-mention steer when an Orchestrator is already active', async () => {
@@ -509,8 +509,8 @@ it('uses existing group-mention steer when an Orchestrator is already active', a
   await fx.idle();
   expect(fx.runs).toHaveLength(1);
   expect(fx.core.attention.list({ botSlug: 'ada' }).items.map((item) => item.state)).toEqual([
-    'handled',
-    'handled',
+    'open',
+    'open',
   ]);
 });
 
@@ -2227,24 +2227,33 @@ it('queues immediate ordinary traffic behind the active turn without steer and i
     },
   });
   const id = await collectSharedOrdinary(fx);
-  fx.core.channels.setGroupWakePolicy(id, 'ada', { mode: 'all', count: 1, intervalSeconds: 60 });
-  fx.core.channels.setGroupWakePolicy(id, 'bea', {
-    mode: 'digest',
-    count: 100,
-    intervalSeconds: 1,
-  });
-  await fx.receive(ordinaryEvent('busy-one'));
-  await started;
-  await fx.receive(ordinaryEvent('busy-two'));
-  await tick();
-  expect(fx.runs.map((r) => r.bot.slug)).toEqual(['ada']);
-  expect(steer).not.toHaveBeenCalled();
-  await new Promise((r) => setTimeout(r, 1100));
-  expect(fx.runs.map((r) => r.bot.slug)).toEqual(['ada', 'bea']);
-  finish();
-  await fx.idle();
-  expect(fx.runs.map((r) => r.bot.slug)).toEqual(['ada', 'bea', 'ada']);
-  expect(fx.runs[2]?.message).toContain('busy-two');
+  vi.useFakeTimers({ toFake: ['Date'] });
+  const clock = Date.now();
+  try {
+    fx.core.channels.setGroupWakePolicy(id, 'ada', { mode: 'all', count: 1, intervalSeconds: 60 });
+    fx.core.channels.setGroupWakePolicy(id, 'bea', {
+      mode: 'digest',
+      count: 100,
+      intervalSeconds: 1,
+    });
+    await fx.receive(ordinaryEvent('busy-one'));
+    await started;
+    await fx.receive(ordinaryEvent('busy-two'));
+    await tick();
+    expect(fx.runs.map((r) => r.bot.slug)).toEqual(['ada']);
+    expect(steer).not.toHaveBeenCalled();
+    vi.setSystemTime(clock + 1100);
+    await new Promise((r) => setTimeout(r, 1100));
+    expect(fx.runs.map((r) => r.bot.slug)).toEqual(['ada', 'bea']);
+    finish();
+    await fx.idle();
+    expect(fx.runs.map((r) => r.bot.slug)).toEqual(['ada', 'bea', 'ada']);
+    expect(fx.runs[2]?.message).toContain('busy-two');
+  } finally {
+    finish();
+    await fx.idle();
+    vi.useRealTimers();
+  }
 });
 
 it('retains pending ordinary facts across restart, policy revisions, silent collection and membership removal', async () => {
@@ -4049,4 +4058,15 @@ it('refuses an edited source on a continuation with source-conflict and preserve
     outcome: 'refused',
     reason: 'source-conflict',
   });
+});
+
+it('changing the app post limit keeps its authenticated inbound subscription usable', async () => {
+  const fx = await fixture();
+  await fx.enable();
+  const binding = (await fx.core.externalMessaging.snapshot('ada')).identities![0]!;
+  await fx.core.externalMessaging.setPostLimit('ada', binding.id, binding.revision, 1);
+  const result = await fx.receive(event({ eventId: 'quota-event' }));
+  expect(result.accepted).toBe(true);
+  await fx.idle();
+  expect(fx.runs).toHaveLength(1);
 });

@@ -1,0 +1,8 @@
+# Goes to Chats and checks which computer it shows.
+# -e HOST=<host name>
+appId: ai.botharness.deepseekbot.dev
+---
+- tapOn: 'Chats'
+- extendedWaitUntil:
+    visible: '${HOST}, switch computer'
+    timeout: 15000

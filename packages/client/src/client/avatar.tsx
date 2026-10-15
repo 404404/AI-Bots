@@ -13,12 +13,12 @@ import { blobatar } from 'blobatar';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import {
   isAvatarAppearance,
-  seededAvatarFor,
   type AvatarAppearance,
   type PixelMouthState,
   type RetainedAvatarAppearance,
   pixelSymbolFor,
 } from '../../../core/src/bots/avatar-appearance.js';
+import { resolvedAvatarRecipe } from '../../../core/src/bots/primary-color.js';
 import { IllustratedAvatar } from './illustrated-avatar.js';
 import { createAvatarAnchor, type AvatarAnchor } from './avatar-anchor.js';
 import { useMountedResource } from './mounted-resource.js';
@@ -57,7 +57,9 @@ export interface PersonaBotAvatarProps {
   surface?: 'portrait' | 'companion' | undefined;
   still?: boolean | undefined;
   mouth?: PixelMouthState | undefined;
+  facing?: 'front' | 'left' | 'right' | undefined;
   anchorRef?: ((anchor: AvatarAnchor | undefined) => void) | undefined;
+  nativeTitle?: boolean | undefined;
 }
 
 export interface PersonaBotFacepileItem {
@@ -352,7 +354,9 @@ export function PersonaBotAvatar({
   surface = 'portrait',
   still = false,
   mouth = 'saved',
+  facing,
   anchorRef,
+  nativeTitle = true,
   t = zhTranslate,
 }: PersonaBotAvatarProps): ReactElement {
   const resolvedEffect =
@@ -361,7 +365,10 @@ export function PersonaBotAvatar({
   const composed = isAvatarAppearance(appearance);
   const seeded = !composed && (src === undefined || src.length === 0);
   const seededRecipe = useMemo(
-    () => (seeded ? seededAvatarFor(name || personaBotId, avatarSeed) : undefined),
+    () =>
+      seeded
+        ? resolvedAvatarRecipe({ slug: personaBotId, displayName: name, avatarSeed })
+        : undefined,
     [seeded, name, personaBotId, avatarSeed],
   );
   const mediaKind = composed ? 'composed' : seeded ? 'seeded' : 'image';
@@ -373,7 +380,7 @@ export function PersonaBotAvatar({
       anchorRef(createAvatarAnchor(node));
       return () => anchorRef(undefined);
     },
-    [anchorRef, appearance, seededRecipe, src, size, state, surface],
+    [anchorRef, appearance, seededRecipe, src, size, state, surface, facing],
   );
 
   return (
@@ -386,7 +393,7 @@ export function PersonaBotAvatar({
       data-effect={resolvedEffect}
       data-media={mediaKind}
       data-active={active ? 'true' : 'false'}
-      title={`${name} · ${summary}`}
+      title={nativeTitle ? `${name} · ${summary}` : undefined}
       role="img"
       aria-label={t('avatar.label', { name, activity: summary })}
     >
@@ -405,6 +412,7 @@ export function PersonaBotAvatar({
           surface={surface}
           still={still}
           mouth={mouth}
+          facing={facing}
         />
       ) : (
         <AvatarMedia key={src ?? ''} personaBotId={personaBotId} name={name} src={src} />

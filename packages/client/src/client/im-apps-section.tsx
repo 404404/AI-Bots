@@ -9,8 +9,12 @@ import { openExternalBindingSettings } from './bot-settings-open.js';
 import { externalPlatformLabel } from './bridge-source-label.js';
 import { loadMessagingApps, type BridgeCall, type MessagingApp } from './bridge.js';
 import { Combobox } from './combobox.js';
+import { EmptyState } from './ds/empty-state.js';
+import { Field } from './ds/field.js';
+import { ConfirmDialog, FormDialog, type DialogLabels } from './ds/form-dialog.js';
+import { Note } from './ds/note.js';
+import { SettingsRow, SettingsRows, SettingsValue } from './ds/settings-row.js';
 import { CreateAppForm } from './create-app-form.js';
-import { Modal } from './modal.js';
 import { useMountedResource } from './mounted-resource.js';
 import type { AppSetupDescriptor, ProviderAppSetup } from './provider-app-setup.js';
 import type { ClientStore } from './store.js';
@@ -165,212 +169,183 @@ export function ImAppsSection({
     }
   };
   const botPicker = (
-    <Combobox
-      label={t('imApps.bot')}
-      toggleLabel={t('imApps.bot')}
-      placeholder={t('imApps.chooseBot')}
-      searchable={false}
-      disabled={busy}
-      value={botSlug}
-      onSelect={setBotSlug}
-      options={bots.map((bot) => ({ value: bot.slug, label: bot.displayName }))}
-    />
+    <Field label={t('imApps.bot')} group>
+      {() => (
+        <Combobox
+          label={t('imApps.bot')}
+          toggleLabel={t('imApps.bot')}
+          placeholder={t('imApps.chooseBot')}
+          searchable={false}
+          disabled={busy}
+          value={botSlug}
+          onSelect={setBotSlug}
+          options={bots.map((bot) => ({ value: bot.slug, label: bot.displayName }))}
+        />
+      )}
+    </Field>
   );
-  const error = failed ? (
-    <p role="alert" className="bh-error">
-      {t('imApps.failed')}
-    </p>
-  ) : null;
+  const error = failed ? t('imApps.failed') : undefined;
+  const labels: DialogLabels = { close: t('common.close'), cancel: t('common.cancel') };
   const canCreate =
     imApps.appSetup !== undefined && loaded.status === 'ready' && loaded.setups.length > 0;
   return (
-    <div ref={mount} className="bh-settings-rows">
-      <div className="bh-settings-row">
-        <div className="bh-settings-row-text">
-          <div className="bh-settings-row-desc">{t('imApps.description')}</div>
-          {notice === 'settings-unavailable' ? (
-            <div className="bh-settings-row-desc" role="status">
-              {t('imApps.settingsUnavailable')}
-            </div>
-          ) : null}
-        </div>
-        {canCreate ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              open({ kind: 'create', creating: false });
-            }}
-          >
-            {t('imApps.create')}
-          </Button>
-        ) : null}
-        <Button variant="outline" size="sm" onClick={imApps.manage}>
-          {t('imApps.manage')}
-        </Button>
-      </div>
+    <SettingsRows rootRef={mount}>
+      <SettingsRow
+        title={t('imApps.allApps')}
+        description={t('imApps.description')}
+        control={
+          <>
+            {canCreate && loaded.status === 'ready' && loaded.apps.length > 0 ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  open({ kind: 'create', creating: false });
+                }}
+              >
+                {t('imApps.create')}
+              </Button>
+            ) : null}
+            <Button variant="outline" size="sm" onClick={imApps.manage}>
+              {t('imApps.manage')}
+            </Button>
+          </>
+        }
+      >
+        {notice === 'settings-unavailable' ? <Note>{t('imApps.settingsUnavailable')}</Note> : null}
+      </SettingsRow>
       {loaded.status === 'loading' ? null : loaded.status === 'failed' ? (
-        <div className="bh-settings-row" role="status">
-          <div className="bh-settings-row-desc">{t('imApps.loadFailed')}</div>
-        </div>
+        <EmptyState status title={t('imApps.loadFailed')} />
       ) : loaded.apps.length === 0 ? (
-        <div className="bh-settings-row">
-          <div className="bh-settings-row-desc">{t('imApps.empty')}</div>
-        </div>
+        <EmptyState
+          title={t('imApps.empty')}
+          description={t('imApps.emptyHint')}
+          action={
+            canCreate ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  open({ kind: 'create', creating: false });
+                }}
+              >
+                {t('imApps.create')}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        loaded.apps.map((app) => (
-          <div key={`${app.providerId}:${app.ref}`} className="bh-settings-row bh-im-apps-row">
-            <div className="bh-settings-row-text">
-              <div className="bh-settings-row-title">{app.name}</div>
-              <div className="bh-settings-row-desc">
-                {externalPlatformLabel(app.platform, t)} ·{' '}
-                {t(app.connected ? 'imApps.connected' : 'imApps.disconnected')}
-              </div>
-            </div>
-            {app.boundBotSlug === undefined ? (
-              <>
-                <Tag>{t('imApps.unbound')}</Tag>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={!app.connected || app.unsupported !== undefined}
-                  aria-label={t('imApps.bindFor', { app: app.name })}
-                  onClick={() => {
-                    open({ kind: 'bind', app });
-                  }}
-                >
-                  {t('imApps.bind')}
-                </Button>
-              </>
-            ) : (
-              <>
-                <span className="bh-im-apps-bot">{botName(app.boundBotSlug)}</span>
-                {bots.some((bot) => bot.slug === app.boundBotSlug) ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    aria-label={t('imApps.unbindFor', { app: app.name })}
-                    onClick={() => {
-                      open({ kind: 'unbind', app });
-                    }}
-                  >
-                    {t('imApps.unbind')}
-                  </Button>
-                ) : null}
-              </>
-            )}
-          </div>
-        ))
-      )}
-      <Modal
-        open={dialog?.kind === 'bind'}
-        onClose={dismiss}
-        closeLabel={t('common.close')}
-        title={dialog?.kind === 'bind' ? t('imApps.bindFor', { app: dialog.app.name }) : ''}
-        footer={
-          <div className="bh-sidebar-modal-actions">
-            <Button variant="outline" disabled={busy} onClick={dismiss}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              disabled={busy || botSlug === ''}
-              onClick={() => {
-                if (dialog?.kind === 'bind') void run(() => imApps.bind(dialog.app, botSlug));
-              }}
-            >
-              {t('imApps.bind')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="bh-sidebar-modal-form">
-          {error}
-          {botPicker}
-        </div>
-      </Modal>
-      <Modal
-        open={dialog?.kind === 'unbind'}
-        onClose={dismiss}
-        closeLabel={t('common.close')}
-        title={dialog?.kind === 'unbind' ? t('imApps.unbindFor', { app: dialog.app.name }) : ''}
-        footer={
-          <div className="bh-sidebar-modal-actions">
-            <Button variant="outline" disabled={busy} onClick={dismiss}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              className="bh-im-danger"
-              disabled={busy}
-              onClick={() => {
-                if (dialog?.kind === 'unbind') void run(() => imApps.unbind(dialog.app));
-              }}
-            >
-              {t('imApps.unbind')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="bh-sidebar-modal-form">
-          {error}
-          {dialog?.kind === 'unbind' && dialog.app.boundBotSlug !== undefined ? (
-            <p>
-              {t('imApps.unbindHint', {
-                bot: botName(dialog.app.boundBotSlug),
-                app: dialog.app.name,
-              })}
-            </p>
-          ) : null}
-        </div>
-      </Modal>
-      <Modal
-        open={dialog?.kind === 'create'}
-        onClose={dismiss}
-        closeLabel={t('common.close')}
-        title={t('imApps.create')}
-        {...(dialog?.kind === 'create' && dialog.creating
-          ? {}
-          : {
-              footer: (
-                <div className="bh-sidebar-modal-actions">
-                  <Button variant="outline" onClick={dismiss}>
-                    {t('common.cancel')}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    disabled={botSlug === ''}
-                    onClick={() => {
-                      setDialog({ kind: 'create', creating: true });
-                    }}
-                  >
-                    {t('imApps.next')}
-                  </Button>
-                </div>
-              ),
-            })}
-      >
-        <div className="bh-sidebar-modal-form">
-          {error}
-          {dialog?.kind === 'create' && dialog.creating && imApps.appSetup !== undefined ? (
-            <CreateAppForm
-              client={imApps.appSetup}
-              botSlug={botSlug}
-              descriptors={loaded.status === 'ready' ? loaded.setups : []}
-              t={t}
-              onBack={() => {
-                setDialog({ kind: 'create', creating: false });
-              }}
-              onCreated={() => run(() => imApps.bindCreated(botSlug))}
+        <>
+          {loaded.apps.map((app) => (
+            <SettingsRow
+              key={`${app.providerId}:${app.ref}`}
+              data={{ 'data-im-app': app.ref }}
+              title={app.name}
+              description={`${externalPlatformLabel(app.platform, t)} · ${t(
+                app.connected ? 'imApps.connected' : 'imApps.disconnected',
+              )}`}
+              control={
+                app.boundBotSlug === undefined ? (
+                  <>
+                    <Tag>{t('imApps.unbound')}</Tag>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!app.connected || app.unsupported !== undefined}
+                      aria-label={t('imApps.bindFor', { app: app.name })}
+                      onClick={() => {
+                        open({ kind: 'bind', app });
+                      }}
+                    >
+                      {t('imApps.bind')}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <SettingsValue>{botName(app.boundBotSlug)}</SettingsValue>
+                    {bots.some((bot) => bot.slug === app.boundBotSlug) ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        aria-label={t('imApps.unbindFor', { app: app.name })}
+                        onClick={() => {
+                          open({ kind: 'unbind', app });
+                        }}
+                      >
+                        {t('imApps.unbind')}
+                      </Button>
+                    ) : null}
+                  </>
+                )
+              }
             />
-          ) : (
-            <>
-              <p>{t('imApps.createHint')}</p>
-              {botPicker}
-            </>
-          )}
-        </div>
-      </Modal>
-    </div>
+          ))}
+        </>
+      )}
+      {dialog?.kind === 'bind' ? (
+        <FormDialog
+          title={t('imApps.bindFor', { app: dialog.app.name })}
+          labels={labels}
+          submitLabel={t('imApps.bind')}
+          submitDisabled={botSlug === ''}
+          busy={busy}
+          error={error}
+          onCancel={dismiss}
+          onSubmit={() => void run(() => imApps.bind(dialog.app, botSlug))}
+        >
+          {botPicker}
+        </FormDialog>
+      ) : null}
+      {dialog?.kind === 'unbind' ? (
+        <ConfirmDialog
+          title={t('imApps.unbindFor', { app: dialog.app.name })}
+          description={
+            dialog.app.boundBotSlug === undefined
+              ? undefined
+              : t('imApps.unbindHint', {
+                  bot: botName(dialog.app.boundBotSlug),
+                  app: dialog.app.name,
+                })
+          }
+          labels={labels}
+          confirmLabel={t('imApps.unbind')}
+          busy={busy}
+          error={error}
+          onCancel={dismiss}
+          onConfirm={() => void run(() => imApps.unbind(dialog.app))}
+        />
+      ) : null}
+      {dialog?.kind === 'create' && dialog.creating && imApps.appSetup !== undefined ? (
+        <CreateAppForm
+          client={imApps.appSetup}
+          botSlug={botSlug}
+          descriptors={loaded.status === 'ready' ? loaded.setups : []}
+          t={t}
+          title={t('imApps.create')}
+          labels={labels}
+          error={error}
+          onCancel={dismiss}
+          onBack={() => {
+            setDialog({ kind: 'create', creating: false });
+          }}
+          onCreated={() => run(() => imApps.bindCreated(botSlug))}
+        />
+      ) : dialog?.kind === 'create' ? (
+        <FormDialog
+          title={t('imApps.create')}
+          description={t('imApps.createHint')}
+          labels={labels}
+          submitLabel={t('imApps.next')}
+          submitDisabled={botSlug === ''}
+          error={error}
+          onCancel={dismiss}
+          onSubmit={() => {
+            setDialog({ kind: 'create', creating: true });
+          }}
+        >
+          {botPicker}
+        </FormDialog>
+      ) : null}
+    </SettingsRows>
   );
 }

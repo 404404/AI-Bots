@@ -72,7 +72,7 @@ it('coordinates a dirty Memory switch with an addressed Assignment and retries i
   const agents: BotAgentAdapter = {
     async runOrchestrator(run) {
       orchestratorSessions.push(run.sessionId);
-      if (run.message === 'start assignment') {
+      if (run.message.endsWith('start assignment')) {
         const created = run.assignments.create({
           grantId: TEST_GRANT_ID,
           purpose: 'Continue related project work while Memory is being updated',
@@ -97,7 +97,7 @@ it('coordinates a dirty Memory switch with an addressed Assignment and retries i
         await run.channels.send({ body: 'Coordinating with Assignment ' + working!.sessionId });
         return;
       }
-      if (run.inbox.includes('Cannot pause')) {
+      if (run.inbox.includes('Cannot pause') && !run.inbox.includes('Assignment paused')) {
         expect(() => run.memory!.switchBranch('history')).toThrow(
           /Git could not switch Memory branch/,
         );

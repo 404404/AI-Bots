@@ -1,11 +1,23 @@
 // @vitest-environment jsdom
+import { botNameColor } from '../src/client/bot-primary-color.js';
 import { act, createElement, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 vi.mock('../src/client/model-usage-charts.js', () => ({
-  UsageChart: ({ rows }: { rows: Array<{ key: string }> }) =>
-    createElement('div', { 'data-trend': rows.length }),
+  UsageChart: ({
+    rows,
+    kind,
+  }: {
+    rows: Array<{ key: string; identityColor?: string }>;
+    kind: string;
+  }) =>
+    createElement('div', {
+      'data-trend': rows.length,
+      'data-chart-kind': kind,
+      'data-identity': rows.map((row) => `${row.key}=${row.identityColor ?? ''}`).join(','),
+    }),
   UsageLegend: () => null,
+  UsageToneLegend: () => createElement('div', { 'data-tone-legend': '' }),
   UsageMeasures: () => null,
 }));
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
@@ -33,6 +45,7 @@ function result(period: 'today' | 'week', total = 155): OverviewUsage {
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
     totalTokens: total,
+    partial: false,
   };
   return {
     period,
@@ -56,7 +69,7 @@ function result(period: 'today' | 'week', total = 155): OverviewUsage {
             ][i]!
           : '2026-10-02',
     })),
-    bots: [{ ...buckets, slug: 'ada', displayName: 'Ada', current: true }],
+    bots: [{ ...buckets, slug: 'ada', displayName: 'Ada', current: true, primaryColor: '#e2b04a' }],
     freshness: 'ready',
     readAt: '2026-10-02T12:00:00Z',
     reconciledAt: null,
@@ -83,6 +96,20 @@ it('switches to seven days, opens Bot Profile and disposes read-only polling', a
       root.render(createElement(OverviewUsageView, { actions, t: zhTranslate })),
     );
     expect(container.querySelector('[data-usage-total]')?.textContent).toBe('155');
+    const name = container.querySelector<HTMLElement>(
+      '[data-usage-bot=ada] [data-usage-bot-name]',
+    )!;
+    expect(name.textContent).toBe('Ada');
+    expect(name.dataset['botNameSource']).toBe('#e2b04a');
+    expect(name.dataset['botNameColor']).toBe(botNameColor('#e2b04a', '#ffffff'));
+    expect(name.style.color).not.toBe('');
+    expect(container.querySelector('[data-chart-kind=model]')?.getAttribute('data-identity')).toBe(
+      'ada=#e2b04a',
+    );
+    expect(
+      container.querySelector('[data-chart-kind=daily]')?.getAttribute('data-identity'),
+    ).not.toContain('#');
+    expect(container.querySelectorAll('[data-tone-legend]')).toHaveLength(1);
     expect(container.querySelector('[data-trend]')?.getAttribute('data-trend')).toBe('1');
     await act(async () =>
       container.querySelector<HTMLButtonElement>('[data-usage-period=week]')!.click(),
@@ -155,6 +182,37 @@ it('drops a delayed Today refresh after changing range and surfaces unavailable 
     container.remove();
   }
 });
+it('marks a total that leaves out unreported usage as a lower bound', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const value = result('today');
+  value.totals.partial = true;
+  const call: BridgeCall = async () => ({ ok: true, value });
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        createElement(OverviewUsageView, {
+          actions: createActions(call, createStore()),
+          t: zhTranslate,
+        }),
+      ),
+    );
+    expect(container.querySelector('[data-usage-total]')?.textContent).toBe('155+');
+    expect(container.textContent).toContain(zhTranslate('overviewUsage.partial'));
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
+  await expect(
+    loadOverviewUsage(
+      async () => ({ ok: true, value: { ...value, totals: { ...value.totals, partial: 'yes' } } }),
+      'today',
+    ),
+  ).rejects.toThrow('invalid Overview usage');
+});
+
 it('preserves unknown totals and rejects malformed usage instead of reporting zero', async () => {
   const value = result('today');
   value.totals.totalTokens = null;
@@ -178,6 +236,7 @@ it('keeps all expanded Bot pages fresh during polling and manual refresh', async
       slug: `bot-${String(offset + i).padStart(2, '0')}`,
       displayName: `Bot ${offset + i}`,
       current: true,
+      primaryColor: '#1d1b22',
     }));
     if (!offset) value.nextCursor = 'bot-19';
     return { ok: true, value };

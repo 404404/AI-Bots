@@ -502,3 +502,169 @@ export function validateDshSkillReleaseLedgerPair(english, chinese, current) {
 
   return errors;
 }
+
+const FRAGMENT_LANGUAGES = new Map([
+  ['en', 'english'],
+  ['zh', 'chinese'],
+]);
+
+function fragmentEntries(lines) {
+  const entries = [];
+  const unexpected = [];
+  for (const line of lines) {
+    if (line.startsWith('- ')) {
+      entries.push([line]);
+    } else if (/^\s{2,}\S/.test(line) && entries.length > 0) {
+      entries.at(-1).push(line);
+    } else if (line.trim()) {
+      unexpected.push(line);
+    }
+  }
+  return {
+    entries: entries.map((entryLines) => {
+      const text = entryLines.map((line, index) => (index === 0 ? line.slice(2) : line.trim()));
+      return { lines: entryLines, text: text.join(' '), links: linksIn(text.join(' ')) };
+    }),
+    unexpected,
+  };
+}
+
+export function parseChangeFragment(markdown, source = 'fragment') {
+  const errors = [];
+  const lines = markdown.replaceAll('\r\n', '\n').split('\n');
+  const frontMatter = lines[0] === '---' ? lines.indexOf('---', 1) : -1;
+  const section =
+    frontMatter > 0
+      ? lines
+          .slice(1, frontMatter)
+          .map((line) => line.match(/^section:\s*(.+?)\s*$/)?.[1])
+          .find(Boolean)
+      : undefined;
+
+  if (!section) {
+    errors.push({
+      source,
+      code: 'fragment-section',
+      message: 'A change fragment starts with front matter that names its section.',
+    });
+  } else if (!RELEASE_LEDGER_SECTIONS.includes(section)) {
+    errors.push({
+      source,
+      code: 'unknown-section',
+      message: `${section} is not an allowed release section.`,
+    });
+  }
+
+  const blocks = { english: [], chinese: [] };
+  const seen = new Set();
+  let language;
+  const stray = [];
+  for (const line of lines.slice(frontMatter > 0 ? frontMatter + 1 : 0)) {
+    const heading = line.match(/^## (\S+)\s*$/);
+    if (heading) {
+      language = FRAGMENT_LANGUAGES.get(heading[1]);
+      if (!language || seen.has(language)) {
+        errors.push({
+          source,
+          code: 'fragment-language',
+          message: `Use exactly one "## en" and one "## zh" block, not "${line}".`,
+        });
+        language = undefined;
+        continue;
+      }
+      seen.add(language);
+      continue;
+    }
+    if (language) blocks[language].push(line);
+    else if (line.trim()) stray.push(line);
+  }
+
+  const english = fragmentEntries(blocks.english);
+  const chinese = fragmentEntries(blocks.chinese);
+  for (const line of [...stray, ...english.unexpected, ...chinese.unexpected]) {
+    errors.push({
+      source,
+      code: 'unexpected-section-content',
+      message: `"${line.trim()}" must be a change entry starting with "- ".`,
+    });
+  }
+  if (english.entries.length === 0 || chinese.entries.length === 0) {
+    errors.push({
+      source,
+      code: 'empty-section',
+      message: 'A change fragment needs at least one entry under both "## en" and "## zh".',
+    });
+  } else if (english.entries.length !== chinese.entries.length) {
+    errors.push({
+      source,
+      code: 'entry-parity',
+      message: 'The English and Chinese blocks have different entry counts.',
+    });
+  }
+  for (const entry of [...english.entries, ...chinese.entries]) {
+    if (!entry.links.some((link) => PROVENANCE_LINK.test(link))) {
+      errors.push({
+        source,
+        code: 'missing-provenance',
+        message: 'Every change entry links at least one Issue or PR.',
+      });
+    }
+  }
+  if (
+    english.entries.some(
+      (entry, index) =>
+        chinese.entries[index] && !sameValues(entry.links, chinese.entries[index].links),
+    )
+  ) {
+    errors.push({
+      source,
+      code: 'link-parity',
+      message: 'Corresponding English and Chinese entries have different link targets.',
+    });
+  }
+
+  return { section, english: english.entries, chinese: chinese.entries, errors };
+}
+
+function addToUnreleased(markdown, additions) {
+  const lines = markdown.replaceAll('\r\n', '\n').split('\n');
+  const start = lines.findIndex((line) => line.match(RELEASE_HEADING)?.[1] === 'Unreleased');
+  if (start < 0 || additions.length === 0) return markdown;
+  const blockEnd = () => {
+    const next = lines.findIndex((line, index) => index > start && line.startsWith('## '));
+    return next < 0 ? lines.length : next;
+  };
+  const lastContent = (from, to) => {
+    let index = to;
+    while (index > from && !lines[index - 1].trim()) index -= 1;
+    return index;
+  };
+
+  for (const { section, entries } of additions) {
+    const end = blockEnd();
+    const heading = lines.findIndex(
+      (line, index) => index > start && index < end && line === `### ${section}`,
+    );
+    const body = entries.flatMap((entry) => ['', ...entry.lines]);
+    if (heading < 0) {
+      lines.splice(lastContent(start, end), 0, '', `### ${section}`, ...body);
+      continue;
+    }
+    const next = lines.findIndex(
+      (line, index) => index > heading && index < end && line.startsWith('### '),
+    );
+    lines.splice(lastContent(heading, next < 0 ? end : next), 0, ...body);
+  }
+  return lines.join('\n');
+}
+
+export function composeReleaseLedgerPair(english, chinese, fragments) {
+  const additions = (language) =>
+    fragments
+      .filter((fragment) => fragment.section && fragment.errors.length === 0)
+      .map((fragment) => ({ section: fragment.section, entries: fragment[language] }));
+  return {
+    english: addToUnreleased(english, additions('english')),
+    chinese: addToUnreleased(chinese, additions('chinese')),
+  };
+}

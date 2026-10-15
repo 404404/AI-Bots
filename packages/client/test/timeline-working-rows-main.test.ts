@@ -13,6 +13,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   const stub = () => null;
   return {
     IconCodeOutlineRegular: () => null,
+    HoverCard: ({ anchor }: { anchor: unknown }) => anchor,
     Button: ({
       children,
       variant: _variant,
@@ -37,6 +38,9 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconCloseOutline16: stub,
     IconEllipsisOutline16: stub,
     IconEllipsisOutlineRegular: stub,
+    IconSettingsOutlineRegular: stub,
+    IconTrashOutlineRegular: stub,
+    IconUserOutlineRegular: stub,
     IconFolderCloseRegular: stub,
     IconFolderOpenRegular: stub,
     IconFolderOpenOutline16: stub,
@@ -49,6 +53,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconSearchOutline16: stub,
     IconSendOutline16: stub,
     IconSendOutlineRegular: stub,
+    IconStopFillRegular: stub,
     IconTrashOutline16: stub,
     FileTypeIcon: stub,
     ImageLightbox: stub,
@@ -102,6 +107,7 @@ import type { BridgeActions } from '../src/client/actions.js';
 import { BotMain } from '../src/client/bot-main.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
 import { store, type BotSummary, type ChannelSummary } from '../src/client/store.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 const AT = '2026-10-09T00:00:00Z';
 let container: HTMLDivElement;
@@ -133,14 +139,19 @@ const group: ChannelSummary = {
   updatedAt: AT,
 };
 const actions = new Proxy(
-  {},
-  { get: () => vi.fn(async () => undefined) },
+  { ...inertSubmissionActions, listWorkspaceGrants: vi.fn(async () => []) },
+  { get: (target, key) => Reflect.get(target, key) ?? vi.fn(async () => undefined) },
 ) as unknown as BridgeActions;
 
-async function open(channel: ChannelSummary, bots: BotSummary[]): Promise<HTMLElement> {
+async function open(
+  channel: ChannelSummary,
+  bots: BotSummary[],
+  from: 'bot' | 'channel' = 'bot',
+): Promise<HTMLElement> {
   await act(async () => {
     store.setRoster(bots, [channel]);
-    if (channel.type === 'dm') store.select({ kind: 'bot', slug: channel.botSlug! });
+    if (channel.type === 'dm' && from === 'bot')
+      store.select({ kind: 'bot', slug: channel.botSlug! });
     else store.select({ kind: 'channel', channelId: channel.id });
     store.setConversation({
       status: 'ready',
@@ -168,9 +179,9 @@ function layout(element: HTMLElement, scrollHeight: number, clientHeight = 400):
 }
 
 const rowNames = (): string[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('.bh-timeline-working-row')).map(
-    (row) => row.dataset['botSlug'] ?? '',
-  );
+  Array.from(
+    container.querySelectorAll<HTMLElement>('.bh-timeline-working .bh-persona-avatar'),
+  ).map((avatar) => (avatar.getAttribute('title') ?? '').split(' · ')[0]!.toLowerCase());
 
 beforeEach(() => {
   Object.assign(globalThis, {
@@ -200,19 +211,32 @@ describe('timeline working rows in the Channel body', () => {
       working?.previousElementSibling?.querySelector('[data-message-id="m-1"]'),
     ).not.toBeNull();
     expect(working?.getAttribute('aria-hidden')).toBe('true');
+    expect(working?.textContent).not.toContain('Mira');
     expect(container.querySelectorAll('.bh-composer-activity-summary[aria-live]')).toHaveLength(1);
+    expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe('停止 Mira');
 
     await setBots([bot('mira', 'Mira', 'idle')], dm);
     expect(chat.querySelector('.bh-timeline-working')).toBeNull();
+    expect(container.querySelector('.bh-stop-btn')).toBeNull();
   });
 
-  it('shows one row per active Bot in a Group and skips waiting Bots', async () => {
+  it('shows the working row when the DM is opened from the Channel list', async () => {
+    const chat = await open(dm, [bot('mira', 'Mira', 'working')], 'channel');
+    expect(rowNames()).toEqual(['mira']);
+    expect(chat.querySelector('.bh-timeline-working')).not.toBeNull();
+  });
+
+  it('stacks the active Bots of a Group in one row and skips waiting Bots', async () => {
     await open(group, [
       bot('mira', 'Mira', 'working'),
       bot('nova', 'Nova', 'thinking'),
       bot('kai', 'Kai', 'waiting'),
     ]);
     expect(rowNames()).toEqual(['mira', 'nova']);
+    expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe(
+      '停止 2 个 Bot',
+    );
+    expect(container.querySelectorAll('.bh-timeline-working-row')).toHaveLength(1);
   });
 
   it('replaces the row with the Bot streaming draft', async () => {

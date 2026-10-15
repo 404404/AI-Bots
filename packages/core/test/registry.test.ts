@@ -2,11 +2,10 @@ import { mountOperationalDatabase } from '../src/database/owner.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 import { createTestRegistry } from './registry-fixture.js';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { isValidSlug } from '../src/index.js';
 import { isPersonaBotRecord } from '../src/bots/persona-bot.js';
@@ -16,21 +15,11 @@ import { DEFAULT_ILLUSTRATED_RECIPE, avatarSvg } from '../src/bots/avatar-appear
 import { DEFAULT_LINE_RECIPE } from '../src/bots/avatar-line.js';
 import { ensureMemoryRepository } from '../src/memory/repository.js';
 
-const roots: string[] = [];
-const FIXED_NOW = (): Date => new Date('2026-09-17T00:00:00.000Z');
+import { createTempRoot, FIXED_NOW } from './helpers.js';
 
 function createRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'botharness-registry-'));
-  roots.push(root);
-  return root;
+  return createTempRoot('botharness-registry-');
 }
-
-afterEach(() => {
-  while (roots.length > 0) {
-    const root = roots.pop();
-    if (root !== undefined) rmSync(root, { recursive: true, force: true });
-  }
-});
 
 describe('isValidSlug', () => {
   it('accepts kebab-case slugs and rejects hostile ones', () => {
@@ -346,6 +335,64 @@ describe('createPersonaBotRegistry', () => {
     expect(registry.create({ slug: 'b', displayName: 'B', memoryDir: custom }).ok).toBe(true);
     expect(registry.memoryDirFor('b')).toBe(custom);
     expect(existsSync(custom)).toBe(true);
+  });
+
+  it('stores Memory in a new per-Bot folder under a chosen location', () => {
+    const root = createRoot();
+    const registry = createTestRegistry({ rootDir: root });
+    const location = join(root, 'D-drive', 'BotMemory');
+    mkdirSync(location, { recursive: true });
+    const created = registry.create({
+      slug: 'ada',
+      displayName: 'Ada',
+      persona: '# Ada\n',
+      memoryLocation: location,
+    });
+    expect(created.ok).toBe(true);
+    expect(registry.memoryDirFor('ada')).toBe(join(location, 'ada'));
+    expect(readFileSync(join(location, 'ada', 'SOUL.md'), 'utf8')).toBe('# Ada\n');
+    expect(existsSync(join(root, 'ada', 'memory'))).toBe(false);
+
+    expect(
+      registry.create({ slug: 'grace', displayName: 'Grace', memoryLocation: location }).ok,
+    ).toBe(true);
+    expect(registry.memoryDirFor('grace')).toBe(join(location, 'grace'));
+  });
+
+  it('refuses a relative, missing or already-occupied chosen Memory location', () => {
+    const root = createRoot();
+    const registry = createTestRegistry({ rootDir: root });
+    expect(
+      registry.create({ slug: 'a', displayName: 'A', memoryLocation: 'relative/folder' }),
+    ).toEqual({ ok: false, reason: 'invalid-memory-dir' });
+    expect(
+      registry.create({ slug: 'a', displayName: 'A', memoryLocation: join(root, 'missing') }),
+    ).toEqual({ ok: false, reason: 'invalid-memory-dir' });
+    expect(existsSync(join(root, 'missing'))).toBe(false);
+    const location = join(root, 'shared');
+    mkdirSync(join(location, 'b'), { recursive: true });
+    expect(registry.create({ slug: 'b', displayName: 'B', memoryLocation: location })).toEqual({
+      ok: false,
+      reason: 'invalid-memory-dir',
+    });
+    expect(registry.get('b')).toBeUndefined();
+  });
+
+  it('removes the new chosen Memory folder when Memory initialization fails', () => {
+    const root = createRoot();
+    const registry = createTestRegistry({
+      rootDir: root,
+      initializeMemory: () => ({ ok: false, message: 'no git' }),
+    });
+    const location = join(root, 'chosen');
+    mkdirSync(location);
+    expect(registry.create({ slug: 'c', displayName: 'C', memoryLocation: location })).toEqual({
+      ok: false,
+      reason: 'memory-unavailable',
+      detail: 'no git',
+    });
+    expect(existsSync(join(location, 'c'))).toBe(false);
+    expect(registry.get('c')).toBeUndefined();
   });
 
   it('finds a bot by workspace, tolerating trailing slashes and unknown paths', () => {

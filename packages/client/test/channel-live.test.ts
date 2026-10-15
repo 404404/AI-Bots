@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { BridgeActions } from '../src/client/actions.js';
-import { mountChannelLive, mountRosterLive } from '../src/client/channel-live.js';
+import {
+  installChannelFollow,
+  prependChannelJournal,
+  mountChannelLive,
+  type ChannelFollow,
+  mountRosterLive,
+} from '../src/client/channel-live.js';
 import { createStore, type ChannelSummary } from '../src/client/store.js';
 
 const CHANNEL: ChannelSummary = {
@@ -106,6 +112,105 @@ function setup(refresh = vi.fn(async () => undefined), channel = CHANNEL) {
   });
   return { store, sources, dispose, refresh };
 }
+describe('Channel live Client on the journal stream', () => {
+  const entry = (revision: number, id: string) => ({
+    channelId: CHANNEL.id,
+    revision,
+    message: {
+      id,
+      at: '2026-09-21T00:00:01.000Z',
+      author: { kind: 'bot' as const, slug: 'ada' },
+      body: id,
+    },
+  });
+  it('applies journal changes without opening a source, pages older through it and recovers when closed', async () => {
+    let handlers: Parameters<ChannelFollow>[1] | undefined;
+    const opened: string[] = [];
+    const prepends: number[] = [];
+    const stop = vi.fn();
+    const uninstall = installChannelFollow((channelId, next) => {
+      opened.push(channelId);
+      handlers = next;
+      return {
+        stop,
+        prepend: async (before) => {
+          prepends.push(before);
+          next.change({
+            type: 'prepend',
+            page: {
+              entries: [entry(4, 'four'), entry(5, 'five')],
+              olderCursor: 'c4',
+              hasOlder: true,
+            },
+            entries: [entry(4, 'four'), entry(5, 'five')],
+          });
+        },
+      };
+    });
+    const refresh = vi.fn(async () => undefined);
+    const store = createStore();
+    store.setMode('bot');
+    store.setRoster([], [CHANNEL]);
+    store.select({ kind: 'channel', channelId: CHANNEL.id });
+    store.setConversation({ status: 'ready', channel: CHANNEL, messages: [], revision: 0 });
+    const applied: unknown[] = [];
+    const dispose = mountChannelLive(store, {
+      refreshChannelMessages: refresh,
+      applyChannelTail: (channelId: string, page: { entries: { channelRevision?: number }[] }) => {
+        applied.push([channelId, page.entries.map((message) => message.channelRevision)]);
+        store.setConversation({
+          messages: page.entries as never,
+          revision: page.entries.at(-1)?.channelRevision ?? 0,
+        });
+      },
+    } as unknown as BridgeActions);
+    try {
+      expect(opened).toEqual([CHANNEL.id]);
+      const tail = [entry(6, 'six'), entry(7, 'seven')];
+      handlers!.change({
+        type: 'replace',
+        page: { entries: tail, olderCursor: 'c6', hasOlder: true },
+        entries: tail,
+      });
+      expect(applied).toEqual([[CHANNEL.id, [6, 7]]]);
+      handlers!.change({
+        type: 'notification',
+        notification: { kind: 'draft-baseline', channelId: CHANNEL.id, revision: 0, drafts: [] },
+      });
+      handlers!.change({ type: 'append', entry: entry(8, 'eight') });
+      expect(store.getSnapshot().conversation.revision).toBe(8);
+      expect(store.getSnapshot().conversation.messages.map((item) => item.id)).toEqual([
+        'six',
+        'seven',
+        'eight',
+      ]);
+
+      await prependChannelJournal(CHANNEL.id);
+      expect(prepends).toEqual([6]);
+      expect(store.getSnapshot().conversation.messages.map((item) => item.id)).toEqual([
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+      ]);
+      expect(store.getSnapshot().conversation.timeline).toMatchObject({
+        olderCursor: 'c4',
+        hasOlder: true,
+      });
+
+      handlers!.interrupted(true);
+      await vi.waitFor(() => expect(refresh).toHaveBeenCalledWith(CHANNEL.id));
+      expect(stop).toHaveBeenCalled();
+      await vi.waitFor(() => expect(opened.length).toBeGreaterThan(1));
+    } finally {
+      dispose();
+      uninstall();
+    }
+    expect(prependChannelJournal(CHANNEL.id)).toBeUndefined();
+  });
+});
+
 describe('Roster live Client', () => {
   it('refreshes only committed invalidations and recovers after a reconnect', async () => {
     vi.useFakeTimers();
@@ -129,7 +234,7 @@ describe('Roster live Client', () => {
         return source as unknown as EventSource;
       });
       expect(sources).toHaveLength(1);
-      expect(sources[0]?.url).toBe('/api/botharness/stream?scope=roster');
+      expect(sources[0]?.url).toBe('./api/botharness/stream?scope=roster');
       sources[0]?.listeners.get('roster/changed')?.(new MessageEvent('roster/changed'));
       await vi.advanceTimersByTimeAsync(80);
       expect(refreshRoster).toHaveBeenCalledTimes(1);
@@ -144,6 +249,50 @@ describe('Roster live Client', () => {
       expect(sources[0]?.closed).toBe(true);
     } finally {
       vi.useRealTimers();
+    }
+  });
+});
+
+describe('Roster live Client latest messages', () => {
+  it('moves a listed Channel preview forward without a roster refresh', () => {
+    const store = createStore();
+    store.setMode('bot');
+    const other = { ...CHANNEL, id: 'group-other', name: 'Other' };
+    store.setRoster([], [CHANNEL, other]);
+    const refreshRoster = vi.fn(async () => undefined);
+    const sources: FakeSource[] = [];
+    const dispose = mountRosterLive(store, { refreshRoster } as unknown as BridgeActions, (url) => {
+      const source = new FakeSource(url);
+      sources.push(source);
+      return source as unknown as EventSource;
+    });
+    const latest = (channelId: string, id: string, at: string): void =>
+      sources[0]?.listeners.get('roster/latest')?.(
+        new MessageEvent('roster/latest', {
+          data: JSON.stringify({
+            channelId,
+            message: { id, at, author: { kind: 'human' }, body: id },
+          }),
+        }),
+      );
+    const preview = () =>
+      store.getSnapshot().channels.find((item) => item.id === CHANNEL.id)?.latestMessage?.id;
+    try {
+      latest(CHANNEL.id, 'message-278', '2026-10-13T00:00:02.000Z');
+      expect(preview()).toBe('message-278');
+      expect(store.getSnapshot().channels.find((item) => item.id === CHANNEL.id)?.updatedAt).toBe(
+        '2026-10-13T00:00:02.000Z',
+      );
+      latest(CHANNEL.id, 'older', '2026-10-13T00:00:01.000Z');
+      expect(preview()).toBe('message-278');
+      latest('unknown', 'stray', '2026-10-13T00:00:03.000Z');
+      expect(store.getSnapshot().channels.map((item) => item.id)).not.toContain('unknown');
+      expect(
+        store.getSnapshot().channels.find((item) => item.id === other.id)?.latestMessage,
+      ).toBeUndefined();
+      expect(refreshRoster).not.toHaveBeenCalled();
+    } finally {
+      dispose();
     }
   });
 });
@@ -180,6 +329,37 @@ describe('Channel live Client', () => {
     expect(
       store.getSnapshot().conversation.messages.map((item) => item.humanReceipts?.[0]?.state),
     ).toEqual(['read', 'unread']);
+    dispose();
+  });
+
+  it('replaces one message reactions from a reaction event and drops an empty set', () => {
+    const { store, sources, dispose } = setup();
+    store.setConversation({
+      messages: [
+        {
+          id: 'first',
+          at: '2026-09-21T00:00:01.000Z',
+          author: { kind: 'bot', slug: 'ada' },
+          body: 'first',
+          channelRevision: 1,
+        },
+      ],
+      revision: 1,
+    });
+    const react = (reactions: unknown, channelId = CHANNEL.id) =>
+      sources[0]?.listeners.get('channel/reaction')?.(
+        new MessageEvent('channel/reaction', {
+          data: JSON.stringify({ channelId, messageId: 'first', reactions }),
+        }),
+      );
+    const reactions = [{ emoji: '👍', actors: [{ kind: 'human', id: 'local-human' }] }];
+    react(reactions);
+    expect(store.getSnapshot().conversation.messages[0]?.reactions).toEqual(reactions);
+    react([{ emoji: '👍', actors: 'everyone' }]);
+    react([], 'other-channel');
+    expect(store.getSnapshot().conversation.messages[0]?.reactions).toEqual(reactions);
+    react([]);
+    expect(store.getSnapshot().conversation.messages[0]).not.toHaveProperty('reactions');
     dispose();
   });
 

@@ -4,6 +4,11 @@ import { createHash } from 'node:crypto';
 import { isChannelAttachmentRef, type ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ToolApprovalDecision, ToolApprovalRequestCard } from '../workspaces/tool-approval.js';
 import type { ChannelQuestionRequest, ChannelQuestionResolution } from './user-questions.js';
+import {
+  privateRequestSchema,
+  type PrivateInputCard,
+  type PrivateInputResolution,
+} from '../credentials/contracts.js';
 
 export type ChannelType = 'dm' | 'group';
 
@@ -158,6 +163,39 @@ export interface ChannelDelivery {
   state: 'pending' | 'observed' | 'running' | 'retryable' | 'needs-repair' | 'handled' | 'ignored';
 }
 
+export interface ChannelToolAutoApproval {
+  botSlug: string;
+  sessionId: string;
+  callId: string;
+  toolName: string;
+  input: string;
+  template: string;
+  outcome: 'allowed' | 'rejected';
+  reason: string;
+}
+
+export interface ChannelToolAutoApprovalPause {
+  botSlug: string;
+  sessionId: string;
+  template: string;
+  state: 'paused' | 'resumed';
+  reason?: 'consecutive' | 'session';
+}
+
+export interface ChannelToolAutoApprovalOverride {
+  recordMessageId: string;
+  botSlug: string;
+  sessionId: string;
+  toolName: string;
+}
+
+export interface ChannelTurnStop {
+  botSlug: string;
+  botName: string;
+  humanName: string;
+  sessionId: string;
+}
+
 export interface ChannelMemberDeparture {
   memberKind: 'bot' | 'human';
   memberId: string;
@@ -170,6 +208,16 @@ export interface BotDmAction {
   channelId: string;
   messageId: string;
   recipientBotSlug: string;
+}
+
+export interface BotCreateAction {
+  botSlug: string;
+  displayName: string;
+}
+
+export interface BotChannelPost {
+  channelId: string;
+  messageId: string;
 }
 
 export interface BotMessageCausation {
@@ -216,6 +264,24 @@ function isMemoryCommit(value: unknown): value is ChannelMemoryCommit {
   );
 }
 
+export interface ChannelReaction {
+  emoji: string;
+  actors: { kind: 'human' | 'bot'; id: string }[];
+}
+
+export const MAX_REACTION_EMOJI_LENGTH = 16;
+export const MAX_ACTOR_REACTIONS_PER_MESSAGE = 20;
+
+export function isReactionEmoji(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_REACTION_EMOJI_LENGTH &&
+    /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value) &&
+    !/[\s\p{Cc}\p{L}\p{N}]/u.test(value)
+  );
+}
+
 export interface ChannelMessage {
   id: string;
   at: string;
@@ -235,9 +301,18 @@ export interface ChannelMessage {
   deliveries?: ChannelDelivery[];
 
   humanReceipts?: ChannelHumanReceipt[];
+  reactions?: ChannelReaction[];
   botDmAction?: BotDmAction;
+  botCreateAction?: BotCreateAction;
+  botChannelPost?: BotChannelPost;
+  botChannelPostPreview?: string | null;
   memoryCommit?: ChannelMemoryCommit;
+  noticeOrigin?: { channelId: string };
   memberDeparture?: ChannelMemberDeparture;
+  turnStop?: ChannelTurnStop;
+  toolAutoApproval?: ChannelToolAutoApproval;
+  toolAutoApprovalPause?: ChannelToolAutoApprovalPause;
+  toolAutoApprovalOverride?: ChannelToolAutoApprovalOverride;
   botCausation?: BotMessageCausation;
 
   grantRequest?: true;
@@ -255,14 +330,19 @@ export interface ChannelMessage {
   userQuestionRequest?: ChannelQuestionRequest;
 
   userQuestionResolution?: ChannelQuestionResolution;
+  privateInputRequest?: PrivateInputCard;
+  privateInputResolution?: PrivateInputResolution;
   attachments?: ChannelAttachmentRef[];
   bridgeMedia?: {
-    items: { id: string; kind: 'image'; name: string }[];
+    voice?: Pick<import('../messaging/provider.js').MessagingVoice, 'transcript' | 'durationMs'>;
+    items: { id: string; kind: 'image' | 'file' | 'audio'; name: string; sizeBytes?: number }[];
     parts?: import('../messaging/provider.js').MessagingContentPart[];
   };
   bridgeOrigin?: {
     sourceEventId: string;
     platform: string;
+    accountRef?: string;
+    accountName?: string;
     conversationId: string;
     conversationName: string;
     messageId: string;
@@ -536,6 +616,20 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     )
       return false;
   }
+  const autoOverride = message['toolAutoApprovalOverride'];
+  if (autoOverride !== undefined) {
+    const target = autoOverride as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'human' ||
+      typeof target !== 'object' ||
+      target === null ||
+      ['recordMessageId', 'botSlug', 'sessionId', 'toolName'].some(
+        (key) => typeof target[key] !== 'string' || target[key].length === 0,
+      ) ||
+      message['replyTo'] !== target['recordMessageId']
+    )
+      return false;
+  }
   const toolDecision = message['toolApprovalDecision'];
   if (toolDecision !== undefined) {
     if (
@@ -632,7 +726,6 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
         (typeof request['callId'] !== 'string' || request['callId'].length === 0)) ||
       !Array.isArray(request['questions']) ||
       request['questions'].length === 0 ||
-      request['questions'].length > 3 ||
       !request['questions'].every((value) => {
         if (typeof value !== 'object' || value === null) return false;
         const item = value as Record<string, unknown>;
@@ -695,6 +788,45 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       !isMemoryCommit(message['memoryCommit'])
     )
       return false;
+  } else if (message['turnStop'] !== undefined) {
+    const stop = message['turnStop'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof stop !== 'object' ||
+      stop === null ||
+      ['botSlug', 'botName', 'humanName', 'sessionId'].some(
+        (key) => typeof stop[key] !== 'string' || stop[key].length === 0,
+      )
+    )
+      return false;
+  } else if (message['toolAutoApproval'] !== undefined) {
+    const record = message['toolAutoApproval'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof record !== 'object' ||
+      record === null ||
+      ['botSlug', 'sessionId', 'callId', 'toolName', 'template', 'reason'].some(
+        (key) => typeof record[key] !== 'string' || record[key].length === 0,
+      ) ||
+      typeof record['input'] !== 'string' ||
+      (record['outcome'] !== 'allowed' && record['outcome'] !== 'rejected')
+    )
+      return false;
+  } else if (message['toolAutoApprovalPause'] !== undefined) {
+    const pause = message['toolAutoApprovalPause'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof pause !== 'object' ||
+      pause === null ||
+      ['botSlug', 'sessionId', 'template'].some(
+        (key) => typeof pause[key] !== 'string' || pause[key].length === 0,
+      ) ||
+      (pause['state'] !== 'paused' && pause['state'] !== 'resumed') ||
+      (pause['reason'] !== undefined &&
+        pause['reason'] !== 'consecutive' &&
+        pause['reason'] !== 'session')
+    )
+      return false;
   } else if (
     (message['author'] as ChannelMessageAuthor)?.kind === 'system' &&
     !(
@@ -713,6 +845,30 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       typeof action['channelId'] !== 'string' ||
       typeof action['messageId'] !== 'string' ||
       typeof action['recipientBotSlug'] !== 'string' ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+  }
+  const botCreateAction = message['botCreateAction'];
+  if (botCreateAction !== undefined) {
+    if (typeof botCreateAction !== 'object' || botCreateAction === null) return false;
+    const action = botCreateAction as Record<string, unknown>;
+    if (
+      typeof action['botSlug'] !== 'string' ||
+      action['botSlug'].length === 0 ||
+      typeof action['displayName'] !== 'string' ||
+      action['displayName'].length === 0 ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+  }
+  const botChannelPost = message['botChannelPost'];
+  if (botChannelPost !== undefined) {
+    if (typeof botChannelPost !== 'object' || botChannelPost === null) return false;
+    const post = botChannelPost as Record<string, unknown>;
+    if (
+      typeof post['channelId'] !== 'string' ||
+      typeof post['messageId'] !== 'string' ||
       (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
     )
       return false;
@@ -766,6 +922,10 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     )
       return false;
     const origin = bridgeOrigin as Record<string, unknown>;
+    for (const key of ['accountRef', 'accountName']) {
+      if (origin[key] !== undefined && (typeof origin[key] !== 'string' || !origin[key].trim()))
+        return false;
+    }
     for (const key of [
       'sourceEventId',
       'platform',
@@ -800,6 +960,57 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     if (
       origin['threadId'] !== undefined &&
       (typeof origin['threadId'] !== 'string' || origin['threadId'].length === 0)
+    )
+      return false;
+  }
+  const privateRequest = message['privateInputRequest'];
+  if (privateRequest !== undefined) {
+    if (
+      typeof privateRequest !== 'object' ||
+      privateRequest === null ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+    const { sessionId, expiresAt, replacesMessageId, ...declaration } = privateRequest as Record<
+      string,
+      unknown
+    >;
+    if (
+      (sessionId === undefined
+        ? replacesMessageId === undefined
+        : typeof sessionId !== 'string' || sessionId.length === 0) ||
+      (replacesMessageId !== undefined &&
+        (typeof replacesMessageId !== 'string' || !/^[0-9a-f-]{36}$/.test(replacesMessageId))) ||
+      (expiresAt !== undefined &&
+        (typeof expiresAt !== 'string' || !Number.isFinite(Date.parse(expiresAt)))) ||
+      !privateRequestSchema.safeParse(declaration).success
+    )
+      return false;
+  }
+  const privateResolution = message['privateInputResolution'];
+  if (privateResolution !== undefined) {
+    if (
+      typeof privateResolution !== 'object' ||
+      privateResolution === null ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'human'
+    )
+      return false;
+    const resolution = privateResolution as Record<string, unknown>;
+    if (
+      Object.keys(resolution).some(
+        (key) => !['requestMessageId', 'state', 'references'].includes(key),
+      ) ||
+      typeof resolution.requestMessageId !== 'string' ||
+      message['replyTo'] !== resolution.requestMessageId ||
+      !['configured', 'cancelled', 'expired'].includes(String(resolution.state)) ||
+      typeof resolution.references !== 'object' ||
+      resolution.references === null ||
+      Array.isArray(resolution.references) ||
+      (resolution.state !== 'configured' && Object.keys(resolution.references).length > 0) ||
+      !Object.values(resolution.references).every(
+        (ref) =>
+          typeof ref === 'string' && /^private:[0-9a-f-]{36}:[a-z][a-z0-9_]{0,47}$/.test(ref),
+      )
     )
       return false;
   }

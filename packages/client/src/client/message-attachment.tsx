@@ -8,10 +8,17 @@ import {
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import { channelAttachmentUrl } from './bridge.js';
-import { useHostFileMenu, type HostFileCommands } from './host-file-menu.js';
+import { HostFileOpenButton, useHostFileMenu, type HostFileCommands } from './host-file-menu.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { ChannelAttachmentRef } from './store.js';
 import { MessageAudio } from './message-audio.js';
+import { galleryImageKey, SingleImageGallery, useImageGallery } from './message-image-gallery.js';
+
+const INLINE_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+
+export function inlineImageAttachment(mime: string): boolean {
+  return INLINE_IMAGE_TYPES.includes(mime);
+}
 
 export function MessageAttachment({
   attachment: ref,
@@ -24,13 +31,14 @@ export function MessageAttachment({
   channelId?: string | undefined;
   messageId: string;
   actions?:
-    | Pick<
+    | (Pick<
         BridgeActions,
         | 'messageAttachmentTarget'
         | 'messageAttachmentApplications'
         | 'messageAttachmentOpen'
         | 'messageAttachmentDownload'
-      >
+      > &
+        Partial<Pick<BridgeActions, 'fileOpenPreferences'>>)
     | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
@@ -45,14 +53,16 @@ export function MessageAttachment({
             open: (owner, id, choice) =>
               actions.messageAttachmentOpen(owner, messageId, id, choice),
             download: (owner, id) => actions.messageAttachmentDownload(owner, messageId, id),
+            preferences: actions.fileOpenPreferences,
           },
     [actions, messageId],
   );
   const menu = useHostFileMenu(commands, channelId, t);
+  const gallery = useImageGallery();
   const id = ref.fileId;
   const url =
     channelId !== undefined ? channelAttachmentUrl(ref, { channelId, messageId }) : undefined;
-  const image = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(ref.mime);
+  const image = inlineImageAttachment(ref.mime);
   const audio = ref.mime.startsWith('audio/');
   if (audio) {
     return (
@@ -121,9 +131,26 @@ export function MessageAttachment({
     >
       {image ? (
         <div className="bh-message-image-row">
-          <a className="bh-message-image-link" href={url} target="_blank" rel="noopener noreferrer">
-            <img className="bh-message-image" src={url} alt={ref.name} loading="lazy" />
-          </a>
+          {url === undefined ? (
+            <img className="bh-message-image" alt={ref.name} />
+          ) : (
+            <SingleImageGallery t={t}>
+              {(openAlone) => (
+                <button
+                  type="button"
+                  className="bh-message-image-link"
+                  aria-label={t('message.image.open', { name: ref.name })}
+                  onClick={() => {
+                    const item = { key: galleryImageKey(messageId, ref), src: url, alt: ref.name };
+                    if (gallery === undefined) openAlone(item);
+                    else gallery.open(item.key, item);
+                  }}
+                >
+                  <img className="bh-message-image" src={url} alt={ref.name} loading="lazy" />
+                </button>
+              )}
+            </SingleImageGallery>
+          )}
           {hostMenuButton}
         </div>
       ) : (
@@ -143,6 +170,18 @@ export function MessageAttachment({
             >
               {contents}
             </button>
+          )}
+          {id === undefined || channelId === undefined || commands === undefined ? null : (
+            <>
+              <span className="bh-message-file-divider" aria-hidden="true" />
+              <HostFileOpenButton
+                actions={commands}
+                slug={channelId}
+                path={id}
+                name={ref.name}
+                t={t}
+              />
+            </>
           )}
           {downloadAction}
         </div>

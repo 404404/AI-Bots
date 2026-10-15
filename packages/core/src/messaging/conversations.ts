@@ -37,6 +37,7 @@ export interface BlockedConversation {
 
 export type MessagingConversationInput =
   | { kind: 'mute'; grantId: string; expectedRevision: number; muted: boolean }
+  | { kind: 'open-group'; grantId: string; expectedRevision: number; open: boolean }
   | { kind: 'block'; grantId: string; expectedRevision: number }
   | {
       kind: 'block-held';

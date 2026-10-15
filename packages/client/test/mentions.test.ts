@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   activeMentionQuery,
+  appendMention,
   deleteSelectedMention,
   mentionRuns,
   rebaseMentions,
@@ -69,11 +70,59 @@ describe('selected Channel mentions', () => {
     expect(sessionBotReference('ada')).toBe('\u2060@ada');
   });
 
+  it('opens the picker after CJK text and punctuation but not inside an email address', () => {
+    const first = [{ botSlug: 'lead', label: '主管', start: 0, end: 3 }];
+    expect(activeMentionQuery('@主管 你吃饭。@', 9, first)).toEqual({
+      start: 8,
+      end: 9,
+      query: '',
+    });
+    expect(activeMentionQuery('@主管 你吃饭。@画', 10, first)).toEqual({
+      start: 8,
+      end: 10,
+      query: '画',
+    });
+    expect(activeMentionQuery('请@主管', 4, [])).toEqual({ start: 1, end: 4, query: '主管' });
+    expect(activeMentionQuery('mail ada@example', 16, [])).toBeUndefined();
+  });
+
   it('does not turn typed or pasted names into selected identities', () => {
     expect(activeMentionQuery('@Ada', 4, [])).toEqual({ start: 0, end: 4, query: 'Ada' });
     expect(
       activeMentionQuery('@Ada ', 5, [{ botSlug: 'ada', label: 'Ada', start: 0, end: 4 }]),
     ).toBeUndefined();
     expect(rebaseMentions('', '@Ada', [])).toEqual([]);
+  });
+});
+
+describe('appendMention', () => {
+  it('appends a spaced mention token and keeps earlier ones', () => {
+    const empty = appendMention('', [], 'ada', 'Ada');
+    expect(empty).toEqual({
+      value: '@Ada ',
+      mentions: [{ botSlug: 'ada', label: 'Ada', start: 0, end: 4 }],
+      caret: 5,
+    });
+    const next = appendMention(
+      'hi' + empty.value + 'there',
+      empty.mentions.map((item) => ({ ...item, start: item.start + 2, end: item.end + 2 })),
+      'bea',
+      'Bea',
+    );
+    expect(next.value).toBe('hi@Ada there @Bea ');
+    expect(next.mentions.map((item) => [item.botSlug, item.start])).toEqual([
+      ['ada', 2],
+      ['bea', 13],
+    ]);
+    expect(next.caret).toBe(next.value.length);
+  });
+
+  it('does not repeat a Bot that is already mentioned', () => {
+    const first = appendMention('', [], 'ada', 'Ada');
+    expect(appendMention(first.value, first.mentions, 'ada', 'Ada')).toEqual({
+      value: first.value,
+      mentions: first.mentions,
+      caret: first.value.length,
+    });
   });
 });

@@ -1,8 +1,12 @@
 // @vitest-environment jsdom
-import { act, createElement, type PropsWithChildren } from 'react';
+import { act, createElement, forwardRef, type PropsWithChildren } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+
+const menus = vi.hoisted(
+  () => [] as Array<{ items?: Array<{ id: string }>; onSelect?(id: string): void }>,
+);
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   const stub = () => null;
@@ -14,10 +18,17 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconAgentPresetOutlineRegular: stub,
     IconCheckOutlineRegular: stub,
     IconChevronDownOutlineRegular: stub,
+    IconChevronLeftOutlineRegular: stub,
+    IconChevronRightOutlineRegular: stub,
+    IconDownloadOutlineRegular: stub,
     IconCloseFill14: stub,
     IconCopyOutlineRegular: stub,
+    IconGoalOutlineRegular: stub,
+    IconChecklistOutlineRegular: stub,
     IconCloseOutlineRegular: stub,
     IconEllipsisOutlineRegular: stub,
+    IconSettingsOutlineRegular: stub,
+    IconUserOutlineRegular: stub,
     IconFolderCloseRegular: stub,
     IconFolderOpenRegular: stub,
     IconFolderOpenOutlineRegular: stub,
@@ -32,10 +43,19 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconPinOutlineRegular: stub,
     IconTrashOutlineRegular: stub,
     FileTypeIcon: stub,
+    HoverCard: ({ anchor }: PropsWithChildren<{ anchor: unknown }>) =>
+      createElement('span', { 'data-hover-card': 'author' }, anchor as never),
+    fileSizeText: (size: number) => `${size} B`,
     ImageLightbox: stub,
     Input: stub,
-    Menu: stub,
+    Menu: (props: { anchor?: unknown; items?: Array<{ id: string }> }) => {
+      menus.push(props);
+      return props.anchor ?? null;
+    },
     MenuItemButton: stub,
+    MenuSurface: forwardRef<HTMLDivElement, PropsWithChildren>((props, ref) =>
+      createElement('div', { ...props, ref }),
+    ),
     MarkdownText: stub,
     Modal: stub,
     SegmentedControl: stub,
@@ -48,6 +68,13 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
 
 import type { BridgeActions } from '../src/client/actions.js';
 import { BotModePrefs } from '../src/client/bot-mode-prefs.js';
+import {
+  botNameColor,
+  contrastRatio,
+  parseColor,
+  REFERENCE_SURFACES,
+} from '../src/client/bot-primary-color.js';
+import { seededAvatarFor } from '../../core/src/bots/avatar-appearance.js';
 import { BotMain, committedMessageIds, resolvedGrantRequestIds } from '../src/client/bot-main.js';
 import { createChannelSidebarBuiltins } from '../src/client/channel-sidebar-builtins.js';
 import { createChannelSidebarRegistry } from '../src/client/channel-sidebar.js';
@@ -55,6 +82,7 @@ import { ChannelSidebarEntrySection } from '../src/client/channel-sidebar-view.j
 import { zhTranslate } from '../src/client/locale.js';
 import { store, type ChannelMessage } from '../src/client/store.js';
 import { WindowCompanions } from '../src/client/window-companions.js';
+import { inertSubmissionActions } from './inert-submissions.js';
 
 describe('Channel read position candidates', () => {
   it('does not resolve a Grant request from a pending or failed local echo', () => {
@@ -95,7 +123,7 @@ const entryProps = {
   scope: 'personabot' as const,
   channelId: 'dm-ada',
   botSlug: 'ada',
-  actions: {} as BridgeActions,
+  actions: { ...inertSubmissionActions } as BridgeActions,
   t: zhTranslate,
 };
 
@@ -134,12 +162,12 @@ describe('Bot main Sessions pane', () => {
     const container = document.createElement('div');
     container.innerHTML = renderToStaticMarkup(
       createElement(BotMain, {
-        actions: {} as BridgeActions,
+        actions: { ...inertSubmissionActions } as BridgeActions,
         channelSidebar: sidebarRegistry(),
       }),
     );
     const chip = container.querySelector('.bh-channel-island')!;
-    expect(chip.querySelector('.bh-title')?.textContent).toBe('Chip Bot');
+    expect(chip.querySelector('[data-conversation-title]')?.textContent).toBe('Chip Bot');
     expect(chip.querySelector('.bh-role-badges')).toBeNull();
     expect(chip.textContent).not.toContain('GEO');
     expect(chip.textContent).not.toContain('SEO');
@@ -166,7 +194,10 @@ describe('Bot main Sessions pane', () => {
     const registry = sidebarRegistry();
     const render = () =>
       renderToStaticMarkup(
-        createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: registry }),
+        createElement(BotMain, {
+          actions: { ...inertSubmissionActions } as BridgeActions,
+          channelSidebar: registry,
+        }),
       );
 
     store.setRoster([bot], [first, second]);
@@ -247,8 +278,11 @@ describe('Bot main Sessions pane', () => {
       root.render(
         createElement(BotMain, {
           actions: {
+            profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+            listWorkspaceGrants: async () => [],
             modelPlanState: async () => undefined,
             botSourcePolicies: async () => [],
+            ...inertSubmissionActions,
           } as unknown as BridgeActions,
           channelSidebar: sidebarRegistry(),
           companion,
@@ -269,9 +303,10 @@ describe('Bot main Sessions pane', () => {
     expect(markup).toContain('会话');
     expect(markup).toContain('收起 Channel sidebar');
     expect(markup).toContain('class="bh-channel-island"');
-    expect(markup).toContain('aria-haspopup="dialog"');
-    expect(markup).toContain('aria-label="打开 Ada 的 Profile"');
-    expect(markup).toContain('<span class="bh-title">Ada</span>');
+    expect(markup).toContain('aria-haspopup="menu"');
+    expect(markup).toContain('aria-label="Ada · ' + zhTranslate('humanNickname.menu') + '"');
+    expect(markup).toContain('data-channel-menu-caret=""');
+    expect(markup).toMatch(/<span data-conversation-title="" class="[^"]+">Ada<\/span>/);
     expect(markup).not.toContain('bh-channel-sidebar-title');
     expect(markup).toContain('class="bh-chat-top-fade"');
     expect(markup).not.toContain('研究发布状态');
@@ -282,9 +317,12 @@ describe('Bot main Sessions pane', () => {
     store.select({ kind: 'channel', channelId: channel.id });
     store.setConversation(beforeChannelSelection.conversation);
     const channelMarkup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
-    expect(channelMarkup).toContain('<span class="bh-title">Ada</span>');
+    expect(channelMarkup).toMatch(/<span data-conversation-title="" class="[^"]+">Ada<\/span>/);
     expect(channelMarkup).not.toContain('bh-channel-sidebar-title');
     store.select(beforeChannelSelection.selection);
     store.setConversation(beforeChannelSelection.conversation);
@@ -314,14 +352,18 @@ describe('Bot main Sessions pane', () => {
     store.setSessions({ status: 'ready', items: [], error: undefined });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
 
     expect(markup).toContain('class="bh-channel-island bh-group-channel-header"');
-    expect(markup).toContain('class="bh-group-channel-name"');
-    expect(markup).toContain('aria-label="打开 设计组 的群聊 Profile"');
-    expect(markup).toContain('aria-haspopup="dialog"');
-    expect(markup).toContain('<span class="bh-title">设计组</span>');
+    expect(markup).toContain('data-group-channel-name=""');
+    expect(markup).toContain('aria-label="设计组 · ' + zhTranslate('humanNickname.menu') + '"');
+    expect(markup).toContain('aria-haspopup="menu"');
+    expect(markup).toContain('data-channel-menu-caret=""');
+    expect(markup).toMatch(/<span data-conversation-title="" class="[^"]+">设计组<\/span>/);
 
     store.setRoster(previous.bots, previous.channels);
     store.select(previous.selection);
@@ -430,7 +472,10 @@ describe('Bot main Sessions pane', () => {
     store.setSessions({ status: 'ready', items: [], error: undefined });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('bh-bubble-pending');
     expect(markup).toContain('发送中');
@@ -474,7 +519,10 @@ describe('Bot main Sessions pane', () => {
       sending: false,
     });
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('hello');
     expect(markup).toContain('bh-bubble-failed');
@@ -508,7 +556,10 @@ describe('Bot main Sessions pane', () => {
     });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('bh-bot-dm-readonly');
     expect(markup).not.toContain('class="bh-memory-chat-composer"');
@@ -555,7 +606,7 @@ describe('Bot main Sessions pane', () => {
       });
       const markup = renderToStaticMarkup(
         createElement(BotMain, {
-          actions: {} as BridgeActions,
+          actions: { ...inertSubmissionActions } as BridgeActions,
           channelSidebar: sidebarRegistry(),
         }),
       );
@@ -567,6 +618,93 @@ describe('Bot main Sessions pane', () => {
       expect(author).toBeGreaterThan(-1);
       expect(time).toBeGreaterThan(author);
     } finally {
+      store.setRoster(previous.bots, previous.channels);
+      store.select(previous.selection);
+      store.setConversation(previous.conversation);
+    }
+  });
+  it('colors DM and Group Bot author names from the saved Bot Primary Color and nothing else', () => {
+    const previous = store.getSnapshot();
+    const at = '2026-10-12T00:00:00.000Z';
+    const dm = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: at,
+      updatedAt: at,
+    };
+    const group = { ...dm, id: 'group-team', type: 'group' as const, name: 'Team' };
+    const messages: ChannelMessage[] = [
+      { id: 'human-1', at, author: { kind: 'human' }, body: 'hello' },
+      { id: 'bot-1', at, author: { kind: 'bot', slug: 'ada' }, body: 'an existing reply' },
+    ];
+    const bot = (
+      primaryColor?: { mode: 'custom'; color: string; retained?: string },
+      deleted = false,
+    ) => ({
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle' as const,
+      workspaces: [],
+      createdAt: at,
+      ...(primaryColor === undefined ? {} : { primaryColor }),
+      ...(deleted ? { deleted: true } : {}),
+    });
+    const authors = (
+      summary: ReturnType<typeof bot>,
+      channel: typeof dm | typeof group,
+    ): HTMLElement[] => {
+      store.setRoster([summary], [channel]);
+      store.select(
+        channel.type === 'dm'
+          ? { kind: 'bot', slug: 'ada' }
+          : { kind: 'channel', channelId: channel.id },
+      );
+      store.setConversation({ status: 'ready', channel, sending: false, messages });
+      const host = document.createElement('div');
+      host.innerHTML = renderToStaticMarkup(
+        createElement(BotMain, {
+          actions: { ...inertSubmissionActions } as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
+      );
+      expect(host.querySelector('.bh-message-group [style*="color"]:not(.bh-bubble-author)')).toBe(
+        null,
+      );
+      return [...host.querySelectorAll<HTMLElement>('.bh-bubble-author')];
+    };
+    const contrast = (name: string, theme: 'light' | 'dark') =>
+      contrastRatio(parseColor(name)!.rgb, parseColor(REFERENCE_SURFACES[theme].background)!.rgb);
+    try {
+      const [human, automatic] = authors(bot(), dm);
+      expect(human!.hasAttribute('data-bot-name-color')).toBe(false);
+      expect(human!.getAttribute('style')).toBeNull();
+      const hair = seededAvatarFor('Ada', undefined).hairColor;
+      expect(automatic!.getAttribute('data-bot-name-color')).toBe(botNameColor(hair, '#ffffff'));
+
+      const white = bot({ mode: 'custom', color: '#ffffff' });
+      const light = authors(white, dm)[1]!.getAttribute('data-bot-name-color')!;
+      expect(light).not.toBe('#ffffff');
+      expect(contrast(light, 'light')).toBeGreaterThanOrEqual(4.5);
+      document.body.setAttribute('data-ds-dark-theme', '');
+      const dark = authors(white, dm)[1]!;
+      expect(dark.getAttribute('data-bot-name-color')).toBe('#ffffff');
+      expect(dark.style.color).not.toBe('');
+      expect(contrast('#ffffff', 'dark')).toBeGreaterThanOrEqual(4.5);
+
+      const [groupHuman, groupBot] = authors(white, group);
+      expect(groupHuman!.hasAttribute('data-bot-name-color')).toBe(false);
+      expect(groupBot!.getAttribute('data-bot-name-color')).toBe('#ffffff');
+      document.body.removeAttribute('data-ds-dark-theme');
+      expect(authors(white, group)[1]!.getAttribute('data-bot-name-color')).toBe(light);
+      const gone = bot({ mode: 'custom', color: '#ffffff', retained: '#1d1b22' }, true);
+      expect(authors(gone, group)[1]!.getAttribute('data-bot-name-color')).toBe('#1d1b22');
+      expect(authors(gone, dm)[1]!.getAttribute('data-bot-name-color')).toBe('#1d1b22');
+    } finally {
+      document.body.removeAttribute('data-ds-dark-theme');
       store.setRoster(previous.bots, previous.channels);
       store.select(previous.selection);
       store.setConversation(previous.conversation);
@@ -610,7 +748,7 @@ describe('Bot main Sessions pane', () => {
       });
       const markup = renderToStaticMarkup(
         createElement(BotMain, {
-          actions: {} as BridgeActions,
+          actions: { ...inertSubmissionActions } as BridgeActions,
           channelSidebar: sidebarRegistry(),
         }),
       );
@@ -669,19 +807,356 @@ describe('Bot main Sessions pane', () => {
     });
 
     const markup = renderToStaticMarkup(
-      createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
     );
     expect(markup).toContain('data-group-size="2"');
     expect(markup).toContain('data-group-position="first"');
     expect(markup).toContain('data-group-position="last"');
     expect(markup.match(/class="bh-message-group-avatar"/g)).toHaveLength(1);
     expect(markup).not.toContain('bh-message-group-avatar-link');
+    expect(markup.match(/data-hover-card="author"/g)).toHaveLength(2);
+    expect(markup).toContain('class="bh-message-group-avatar-focus" role="group" tabindex="0"');
+    const group = markup.slice(markup.indexOf('class="bh-message-group"'));
+    expect(group).toContain('class="bh-persona-avatar"');
+    expect(group).not.toMatch(/class="bh-persona-avatar"[^>]*title=/);
     expect(markup.match(/class="bh-bubble-time"/g)).toHaveLength(1);
     expect(markup).toContain('dateTime="2026-09-21T00:01:00.000Z"');
     expect(markup.match(/class="bh-bubble-meta"/g)).toHaveLength(2);
+    expect(markup.match(/class="bh-bubble-toolbar"/g)).toHaveLength(2);
     expect(markup.match(/aria-label="回复"/g)).toHaveLength(2);
     expect(markup.match(/aria-label="复制消息"/g)).toHaveLength(2);
     expect(markup).toContain('bh-bubble-focused');
+    expect(markup.match(/<time[^>]*dateTime="2026-09-21T00:01:05.000Z"/g)).toHaveLength(1);
+    expect(markup).not.toContain('data-unread-divider');
+  });
+  it('draws the new-messages divider after the read anchor and splits the group there', () => {
+    const bot = {
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-09-21T00:00:00.000Z',
+    };
+    const channel = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: '2026-09-21T00:00:00.000Z',
+      updatedAt: '2026-09-21T00:01:00.000Z',
+    };
+    store.setRoster([bot], [channel]);
+    store.select({ kind: 'bot', slug: 'ada' });
+    store.setConversation({
+      status: 'ready',
+      channel,
+      sending: false,
+      unreadAfterMessageId: 'b1',
+      messages: ['b1', 'b2', 'b3'].map((id, index) => ({
+        id,
+        at: `2026-09-21T00:01:0${index}.000Z`,
+        author: { kind: 'bot' as const, slug: 'ada' },
+        body: id,
+      })),
+    });
+    const container = document.createElement('div');
+    container.innerHTML = renderToStaticMarkup(
+      createElement(BotMain, {
+        actions: { ...inertSubmissionActions } as BridgeActions,
+        channelSidebar: sidebarRegistry(),
+      }),
+    );
+    const divider = container.querySelector('[data-unread-divider]')!;
+    expect(divider.getAttribute('role')).toBe('separator');
+    expect(divider.textContent).toBe('以下为新消息');
+    expect(container.querySelectorAll('[data-unread-divider]')).toHaveLength(1);
+    const block = divider.closest('.bh-message-block')!;
+    expect(block.querySelector('[data-message-id]')?.getAttribute('data-message-id')).toBe('b2');
+    expect(
+      Array.from(container.querySelectorAll('.bh-message-group')).map((group) =>
+        group.getAttribute('data-group-size'),
+      ),
+    ).toEqual(['1', '2']);
+  });
+  it('steps through every image attachment of the conversation in one preview', async () => {
+    const bot = {
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-09-21T00:00:00.000Z',
+    };
+    const channel = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: '2026-09-21T00:00:00.000Z',
+      updatedAt: '2026-09-21T00:01:00.000Z',
+    };
+    const image = (name: string) => ({
+      fileId: `file:${name}`,
+      name,
+      mime: 'image/png',
+      size: 1,
+    });
+    store.setRoster([bot], [channel]);
+    store.select({ kind: 'bot', slug: 'ada' });
+    store.setConversation({
+      status: 'ready',
+      channel,
+      sending: false,
+      messages: [
+        {
+          id: 'p1',
+          at: '2026-09-21T00:01:00.000Z',
+          author: { kind: 'human' },
+          body: '',
+          attachments: [image('one.png'), image('two.png')],
+        },
+        {
+          id: 'p2',
+          at: '2026-09-21T00:05:00.000Z',
+          author: { kind: 'human' },
+          body: '',
+          attachments: [image('three.png')],
+        },
+      ],
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () =>
+      root.render(
+        createElement(BotMain, {
+          actions: {
+            profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+            listWorkspaceGrants: async () => [],
+            modelPlanState: async () => undefined,
+            botSourcePolicies: async () => [],
+            ...inertSubmissionActions,
+          } as unknown as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
+      ),
+    );
+    const thumbs = container.querySelectorAll<HTMLButtonElement>('button.bh-message-image-link');
+    expect(thumbs).toHaveLength(3);
+    await act(async () => thumbs[1]!.click());
+    const dialog = () => document.body.querySelector('[role="dialog"][aria-modal="true"]');
+    expect(dialog()?.getAttribute('aria-label')).toBe('图片预览：two.png');
+    expect(dialog()?.textContent).toContain('2 / 3');
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    });
+    expect(dialog()?.getAttribute('aria-label')).toBe('图片预览：three.png');
+    expect(dialog()?.querySelector<HTMLButtonElement>('[aria-label="下一张"]')?.disabled).toBe(
+      true,
+    );
+    await act(async () =>
+      dialog()?.querySelector<HTMLButtonElement>('[aria-label="上一张"]')?.click(),
+    );
+    expect(dialog()?.getAttribute('aria-label')).toBe('图片预览：two.png');
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(dialog()).toBeNull();
+    await act(async () => root.unmount());
+    container.remove();
+  });
+  it('reacts from the hover bar and toggles reactions from their chips', async () => {
+    const bot = {
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-09-21T00:00:00.000Z',
+    };
+    const channel = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: '2026-09-21T00:00:00.000Z',
+      updatedAt: '2026-09-21T00:01:00.000Z',
+    };
+    store.setRoster([bot], [channel]);
+    store.select({ kind: 'bot', slug: 'ada' });
+    store.setConversation({
+      status: 'ready',
+      channel,
+      sending: false,
+      focusMessageId: undefined,
+      messages: [
+        {
+          id: 'b1',
+          at: '2026-09-21T00:01:00.000Z',
+          author: { kind: 'bot', slug: 'ada' },
+          body: 'Ready',
+          channelRevision: 1,
+          reactions: [{ emoji: '🎉', actors: [{ kind: 'bot', id: 'ada' }] }],
+        },
+      ],
+    });
+    const reactToMessage = vi.fn().mockResolvedValue(undefined);
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () =>
+      root.render(
+        createElement(BotMain, {
+          actions: {
+            profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+            listWorkspaceGrants: async () => [],
+            modelPlanState: async () => undefined,
+            botSourcePolicies: async () => [],
+            reactToMessage,
+            ...inertSubmissionActions,
+          } as unknown as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
+      ),
+    );
+    const chip = container.querySelector<HTMLButtonElement>('[data-reaction="🎉"]');
+    expect(chip?.getAttribute('aria-label')).toBe('Ada 用 🎉 回应');
+    expect(chip?.getAttribute('aria-pressed')).toBe('false');
+    await act(async () => chip!.click());
+    expect(reactToMessage).toHaveBeenLastCalledWith('dm-ada', 'b1', '🎉', true);
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[data-reaction-picker-trigger]')!.click(),
+    );
+    const picker = document.body.querySelector('[data-reaction-picker]');
+    expect(picker?.getAttribute('role')).toBe('menu');
+    const thumbs = picker!.querySelector<HTMLButtonElement>('[aria-label="回应 👍"]');
+    expect(document.activeElement?.textContent).toBe('👍');
+    await act(async () => thumbs!.click());
+    expect(reactToMessage).toHaveBeenLastCalledWith('dm-ada', 'b1', '👍', true);
+    expect(document.body.querySelector('[data-reaction-picker]')).toBeNull();
+    menus.length = 0;
+    await act(async () =>
+      container.querySelector('.bh-bubble-wrap')!.dispatchEvent(
+        new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: 40,
+          clientY: 60,
+        }),
+      ),
+    );
+    const menu = menus.findLast((props) => props.items?.some((item) => item.id === 'react'));
+    expect(menu?.items?.map((item) => item.id)).toEqual([
+      'reply',
+      'react',
+      'locate',
+      'copy',
+      'select',
+    ]);
+    await act(async () => menu!.onSelect!('react'));
+    const pressed = document.body.querySelector('[data-reaction-picker]');
+    expect(pressed).not.toBeNull();
+    await act(async () =>
+      pressed!.querySelector<HTMLButtonElement>('[aria-label="回应 🎉"]')!.click(),
+    );
+    expect(reactToMessage).toHaveBeenLastCalledWith('dm-ada', 'b1', '🎉', true);
+    expect(document.body.querySelector('[data-reaction-picker]')).toBeNull();
+    await act(async () => root.unmount());
+    container.remove();
+  });
+  it('opens conversation search with Ctrl+F and jumps to a result', async () => {
+    const bot = {
+      slug: 'ada',
+      displayName: 'Ada',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-09-21T00:00:00.000Z',
+    };
+    const channel = {
+      id: 'dm-ada',
+      type: 'dm' as const,
+      name: 'Ada',
+      members: ['ada'],
+      botSlug: 'ada',
+      createdAt: '2026-09-21T00:00:00.000Z',
+      updatedAt: '2026-09-21T00:01:00.000Z',
+    };
+    const hit = {
+      id: 'b0',
+      at: '2026-09-20T00:01:00.000Z',
+      author: { kind: 'bot' as const, slug: 'ada' },
+      body: 'The launch checklist lives in docs/launch.md',
+      channelRevision: 1,
+    };
+    store.setRoster([bot], [channel]);
+    store.select({ kind: 'bot', slug: 'ada' });
+    store.setConversation({
+      status: 'ready',
+      channel,
+      sending: false,
+      focusMessageId: undefined,
+      messages: [{ ...hit, id: 'b1', body: 'Latest', channelRevision: 2 }],
+    });
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const searchChannel = vi.fn().mockResolvedValue({ messages: [hit] });
+    const openAround = vi.fn().mockResolvedValue(undefined);
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    await act(async () =>
+      root.render(
+        createElement(BotMain, {
+          actions: {
+            profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+            listWorkspaceGrants: async () => [],
+            modelPlanState: async () => undefined,
+            botSourcePolicies: async () => [],
+            searchChannel,
+            openAround,
+            ...inertSubmissionActions,
+          } as unknown as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
+      ),
+    );
+    const shortcut = new KeyboardEvent('keydown', { key: 'f', ctrlKey: true, cancelable: true });
+    await act(async () => {
+      document.dispatchEvent(shortcut);
+    });
+    expect(shortcut.defaultPrevented).toBe(true);
+    const input = container.querySelector<HTMLInputElement>('[data-conversation-search] input');
+    expect(document.activeElement).toBe(input);
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+      setter.call(input, 'LAUNCH');
+      input!.dispatchEvent(new Event('input', { bubbles: true }));
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(searchChannel).toHaveBeenCalledWith('dm-ada', 'LAUNCH', undefined);
+    const result = container.querySelector<HTMLElement>('[data-search-result="b0"]');
+    expect(result?.querySelector('mark')?.textContent).toBe('launch');
+    expect(container.querySelector('[data-conversation-search] [role="status"]')?.textContent).toBe(
+      '1 条结果',
+    );
+    await act(async () => {
+      input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(openAround).toHaveBeenCalledWith('dm-ada', 'b0');
+    await act(async () => {
+      input!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(container.querySelector('[data-conversation-search]')).toBeNull();
+    vi.useRealTimers();
+    await act(async () => root.unmount());
+    container.remove();
   });
   it('renders a linked reply summary and safely degrades when the original is gone', () => {
     const bot = {
@@ -714,7 +1189,10 @@ describe('Bot main Sessions pane', () => {
     store.setConversation({ status: 'ready', channel, messages: [reply], sending: false });
     const render = () =>
       renderToStaticMarkup(
-        createElement(BotMain, { actions: {} as BridgeActions, channelSidebar: sidebarRegistry() }),
+        createElement(BotMain, {
+          actions: { ...inertSubmissionActions } as BridgeActions,
+          channelSidebar: sidebarRegistry(),
+        }),
       );
     const linked = render();
     expect(linked).toContain('class="bh-bubble-reply"');
@@ -725,6 +1203,71 @@ describe('Bot main Sessions pane', () => {
     const unavailable = render();
     expect(unavailable).toContain('bh-bubble-reply-unavailable');
     expect(unavailable).not.toContain('class="bh-bubble-reply"');
+  });
+});
+
+describe('DM usage refresh', () => {
+  it('retains the current snapshot while a committed-message refresh is pending', async () => {
+    const previous = store.getSnapshot();
+    const bot = {
+      slug: 'usage-refresh',
+      displayName: 'Usage refresh',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-10-11T00:00:00.000Z',
+    };
+    const channel = {
+      id: 'dm-usage-refresh',
+      type: 'dm' as const,
+      name: bot.displayName,
+      members: [bot.slug],
+      botSlug: bot.slug,
+      createdAt: bot.createdAt,
+      updatedAt: bot.createdAt,
+    };
+    const profileActivity = vi
+      .fn()
+      .mockResolvedValueOnce({ slug: bot.slug, modelUsageStatus: 'ready', modelUsageRows: [] })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const actions = {
+      profileActivity,
+      modelPlanState: async () => ({}),
+      modelCatalog: async () => ({ models: [] }),
+      listWorkspaceGrants: async () => [],
+      botSourcePolicies: async () => [],
+      markRead: async () => undefined,
+      ...inertSubmissionActions,
+    } as unknown as BridgeActions;
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    store.setRoster([bot], [channel]);
+    store.select({ kind: 'bot', slug: bot.slug });
+    store.setConversation({ status: 'ready', channel, messages: [], sending: false });
+    const node = document.createElement('div');
+    document.body.append(node);
+    const root = createRoot(node);
+    try {
+      await act(async () =>
+        root.render(createElement(BotMain, { actions, channelSidebar: sidebarRegistry() })),
+      );
+      const before = node.querySelector('[data-composer-chip="usage"]')!.textContent;
+      expect(before).toContain('0');
+      await act(async () => {
+        store.setConversation({
+          messages: [
+            { id: 'usage-committed', at: bot.createdAt, author: { kind: 'human' }, body: 'Hello' },
+          ],
+        });
+      });
+      expect(profileActivity).toHaveBeenCalledTimes(2);
+      expect(node.querySelector('[data-composer-chip="usage"]')!.textContent).toBe(before);
+    } finally {
+      await act(async () => root.unmount());
+      node.remove();
+      store.setRoster(previous.bots, previous.channels);
+      store.select(previous.selection);
+      store.setConversation(previous.conversation);
+    }
   });
 });
 
@@ -758,8 +1301,12 @@ describe('Bot main question developer details', () => {
       },
     };
     const actions = {
+      profileActivity: vi.fn().mockRejectedValue(new Error('Unavailable')),
+      modelPlanState: async () => ({}),
+      listWorkspaceGrants: async () => [],
       userQuestionStatus: vi.fn().mockResolvedValue('pending'),
       markRead: vi.fn().mockResolvedValue(undefined),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const prefs = new BotModePrefs();
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -780,15 +1327,14 @@ describe('Bot main question developer details', () => {
       );
       expect(node.querySelector('.bh-question-source')).toBeNull();
       const choice = node.querySelector<HTMLButtonElement>('.bh-question-item button')!;
-      await act(async () => choice.click());
       await act(async () => prefs.setDeveloperMode(true));
       expect(node.querySelector('.bh-question-source code')?.textContent).toBe(
         'orchestrator-private',
       );
-      expect(choice.getAttribute('aria-pressed')).toBe('true');
+      expect(node.querySelector('.bh-question-item button')).toBe(choice);
       await act(async () => prefs.setDeveloperMode(false));
       expect(node.querySelector('.bh-question-source')).toBeNull();
-      expect(choice.getAttribute('aria-pressed')).toBe('true');
+      expect(node.querySelector('.bh-question-item button')).toBe(choice);
       expect(actions.userQuestionStatus).toHaveBeenCalledTimes(1);
     } finally {
       await act(async () => root.unmount());

@@ -137,17 +137,23 @@ it.each([
           }),
         ),
       );
-      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(requestCount);
-      expect(node.querySelector('.bh-companion-cards')).toBeNull();
-      expect(node.textContent).toContain('/qa/release');
-      expect(node.textContent).toContain('滚动查看全部');
+      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(1);
+      expect(node.querySelector('.bh-companion-bubble')).toBeNull();
+      expect(node.textContent).not.toContain('/qa/release');
+      if (requestCount > 1) expect(node.textContent).toContain('1/2');
+      expect(node.querySelector('.bh-request-summary')?.getAttribute('aria-expanded')).toBe(
+        'false',
+      );
+      expect(node.querySelector('.bh-companion-details')).toBeNull();
       await act(() => companion.get('ada')!.advance(30_000));
-      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(requestCount);
+      expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(1);
       await act(() => events.dispatchEvent(new Event('error')));
       expect(
-        [...node.querySelectorAll<HTMLButtonElement>('.bh-tool-approval-card button')].every(
-          (button) => button.disabled,
-        ),
+        [
+          ...node.querySelectorAll<HTMLButtonElement>(
+            '.bh-tool-approval-card .bh-tool-approval-actions button',
+          ),
+        ].every((button) => button.disabled),
       ).toBe(true);
       expect(decisions).toEqual([]);
       await act(async () => {
@@ -187,6 +193,7 @@ it.each([
       expect(decisions).toEqual([{ channelId: 'dm-ada', messageId: 'one', outcome }]);
       expect(store.getSnapshot().selection).toEqual({ kind: 'channel', channelId: 'unrelated' });
       expect(node.querySelectorAll('.bh-companion-pending li')).toHaveLength(requestCount - 1);
+      expect(node.textContent).not.toContain('1/2');
       if (requestCount === 1 || movedFocus)
         expect(document.activeElement).toBe(node.querySelector('.bh-companion-character'));
       else
@@ -284,3 +291,118 @@ it.each(['native', 'wrong-target', 'unmounted'] as const)(
     }
   },
 );
+
+it.each([
+  ['bash', 'orchestrator', undefined, true],
+  ['secret_cli', 'orchestrator', undefined, false],
+  ['secret_mcp_connect', 'orchestrator', undefined, false],
+  ['bash', 'assignment', undefined, false],
+  ['bash', 'orchestrator', 'group-room', false],
+] as const)(
+  'offers the full access entry on a %s card (%s, channel %s): %s',
+  async (toolName, role, channelId, offered) => {
+    const call: BridgeCall = async () => ({ ok: true, value: { status: 'pending' } });
+    const message: ChannelMessage = {
+      id: 'request',
+      at: '2026-10-08T00:00:00Z',
+      author: { kind: 'bot', slug: 'ada' },
+      body: '',
+      toolApprovalRequest: {
+        sessionId: 'owned',
+        callId: 'call',
+        toolName,
+        role,
+        cwd: '/qa',
+        input: '{}',
+      },
+    };
+    const node = document.createElement('div');
+    document.body.append(node);
+    const root = createRoot(node);
+    const { channelSettings } = await import('../src/client/channel-settings-state.js');
+    try {
+      await act(async () =>
+        root.render(
+          createElement(ToolApprovalCard, {
+            message,
+            actions: createActions(call, store),
+            t: zhTranslate,
+            ...(channelId === undefined ? {} : { channelId }),
+          }),
+        ),
+      );
+      const entry = [...node.querySelectorAll<HTMLButtonElement>('button')].find(
+        (button) => button.textContent === zhTranslate('approval.fullAccessEntry'),
+      );
+      expect(entry !== undefined).toBe(offered);
+      if (entry !== undefined) {
+        await act(async () => entry.click());
+        expect(channelSettings.getSnapshot()).toEqual({
+          open: true,
+          sectionId: 'workspace-grants',
+        });
+      }
+    } finally {
+      channelSettings.close();
+      await act(() => root.unmount());
+      node.remove();
+    }
+  },
+);
+
+it('a secret_cli card offers always allow this kind with its one-line warning and saves it', async () => {
+  const calls: { method: string; args: unknown }[] = [];
+  const call: BridgeCall = async (method, args) => {
+    calls.push({ method, args });
+    return method === 'toolApprovalDecide'
+      ? { ok: true, value: { accepted: true } }
+      : { ok: true, value: { status: 'pending' } };
+  };
+  const message: ChannelMessage = {
+    id: 'request',
+    at: '2026-10-14T00:00:00Z',
+    author: { kind: 'bot', slug: 'ada' },
+    body: '',
+    toolApprovalRequest: {
+      sessionId: 'owned',
+      callId: 'call',
+      toolName: 'secret_cli',
+      role: 'orchestrator',
+      cwd: '/qa',
+      input: '{"program":"gh","account":"github-work","args":[],"env":[]}',
+    },
+  };
+  const old = store.getSnapshot();
+  store.select({ kind: 'inbox' } as never);
+  const node = document.createElement('div');
+  document.body.append(node);
+  const root = createRoot(node);
+  try {
+    await act(async () =>
+      root.render(
+        createElement(ToolApprovalCard, {
+          message,
+          actions: createActions(call, store),
+          t: zhTranslate,
+        }),
+      ),
+    );
+    const labels = [...node.querySelectorAll<HTMLButtonElement>('button')].map(
+      (button) => button.textContent,
+    );
+    expect(labels).toContain(zhTranslate('approval.allowKind'));
+    expect(labels).not.toContain(zhTranslate('approval.allowAll'));
+    expect(node.textContent).toContain(zhTranslate('approval.allowKindRisk'));
+    const kind = [...node.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === zhTranslate('approval.allowKind'),
+    )!;
+    await act(async () => kind.click());
+    expect(calls.find((c) => c.method === 'toolApprovalDecide')?.args).toMatchObject({
+      outcome: 'allowed-always-exact',
+    });
+  } finally {
+    await act(() => root.unmount());
+    node.remove();
+    store.select(old.selection);
+  }
+});

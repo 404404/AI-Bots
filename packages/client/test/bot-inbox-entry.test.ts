@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, createElement, type PropsWithChildren } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   const stub = () => null;
@@ -29,6 +29,8 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconSearchOutlineRegular: stub,
     IconPlusOutlineRegular: stub,
     IconEllipsisOutlineRegular: stub,
+    Menu: ({ anchor }: { anchor: unknown }) => anchor,
+    Tooltip: ({ children }: PropsWithChildren) => children,
     relativeTime: () => ({ unit: 'now', n: 0 }),
   };
 });
@@ -37,6 +39,7 @@ import type { ExternalSource } from '../../core/src/messaging/inbound.js';
 import type { BridgeActions } from '../src/client/actions.js';
 import { createChannelSidebarBuiltins } from '../src/client/channel-sidebar-builtins.js';
 import { ChannelSidebarEntrySection } from '../src/client/channel-sidebar-view.js';
+import { setInboxLayout } from '../src/client/inbox-view-prefs.js';
 import { zhTranslate } from '../src/client/locale.js';
 import { store, type BotAttentionItem } from '../src/client/store.js';
 
@@ -56,6 +59,8 @@ const item: BotAttentionItem = {
 };
 
 describe('DM Bot Inbox sidebar entry', () => {
+  beforeEach(() => setInboxLayout('source'));
+  afterEach(() => setInboxLayout('time'));
   it.each(['group', 'dm'] as const)(
     'shows a readable %s source and opens the same message without consuming it',
     async (type) => {
@@ -124,11 +129,10 @@ describe('DM Bot Inbox sidebar entry', () => {
             }),
           ),
         );
-        expect(container.querySelector('.bh-inbox-group-head')?.textContent).toContain(
+        expect(container.querySelector('[data-inbox-group] > summary')?.textContent).toContain(
           type === 'dm' ? 'Ada Lovelace' : 'Team',
         );
         expect(container.textContent).toContain('待处理');
-        expect(container.textContent).toContain('已处理或忽略 · 2');
         expect(container.textContent).toContain('已忽略');
         const button = [...container.querySelectorAll<HTMLButtonElement>('.bh-inbox-item')].find(
           (node) => node.textContent?.includes('Please check this'),
@@ -184,7 +188,7 @@ describe('DM Bot Inbox sidebar entry', () => {
     };
     try {
       await render();
-      const group = container.querySelector<HTMLDetailsElement>('.bh-inbox-group')!;
+      const group = container.querySelector<HTMLDetailsElement>('[data-inbox-group]')!;
       expect(group.open).toBe(false);
       await act(async () =>
         store.setBotInbox({
@@ -322,6 +326,61 @@ describe('DM Bot Inbox sidebar entry', () => {
       store.setBotInbox(previous);
     }
   });
+});
+
+it('lists every source newest first by default with a compact author, time and state head', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const previous = store.getSnapshot().botInbox;
+  store.setBotInbox({
+    status: 'ready',
+    items: [
+      { ...item, id: 'older', state: 'handled', summary: 'Older handled note' },
+      {
+        ...item,
+        id: 'newer',
+        createdAt: '2026-09-27T00:00:00.000Z',
+        sourceChannelId: 'group-other',
+        sourceChannelName: 'Other',
+        summary: 'Newer pending note',
+      },
+    ],
+    error: undefined,
+  });
+  const entry = createChannelSidebarBuiltins(zhTranslate).find((e) => e.id === 'bot-inbox')!;
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        createElement(ChannelSidebarEntrySection, {
+          entry,
+          expanded: true,
+          onToggle: () => undefined,
+          entryProps: {
+            scope: 'personabot',
+            channelId: 'dm-ada',
+            botSlug: 'ada',
+            actions: {} as BridgeActions,
+            t: zhTranslate,
+          },
+        }),
+      ),
+    );
+    expect(container.querySelector('[data-inbox-group]:not([data-section])')).toBeNull();
+    const rows = [...container.querySelectorAll('.bh-card-row')];
+    expect(rows.map((row) => row.querySelector('.bh-card-summary')?.textContent)).toEqual([
+      'Newer pending note',
+      'Older handled note',
+    ]);
+    expect(rows[0]?.querySelector('.bh-inbox-item-author')?.textContent).toBe('你 · Other');
+    expect(rows[0]?.querySelector('.bh-card-badge')?.textContent).toBe('待处理');
+    expect(rows[1]?.querySelector('.bh-card-badge')?.textContent).toBe('已处理');
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    store.setBotInbox(previous);
+  }
 });
 
 it('clears previous source content and ignores older requests after reopening', async () => {
@@ -579,7 +638,7 @@ it('loads checked images into their message bubble on open, retries refusals and
     );
     expect(container.querySelector('.bh-external-source-file img')).toBeNull();
     expect(fetchImage.mock.calls[1]?.[0]).toBe(
-      '/api/botharness/attachment?slug=ada&sourceEventId=source-1&attachmentId=image-one',
+      './api/botharness/attachment?slug=ada&sourceEventId=source-1&attachmentId=image-one',
     );
     expect(fetchImage.mock.calls[1]?.[1].credentials).toBe('same-origin');
     await click('Close source');
@@ -748,7 +807,7 @@ it('loads checked video into its bubble without autoplay, retries refusals and p
     expect(player.controls).toBe(true);
     expect(player.autoplay).toBe(false);
     expect(fetchVideo.mock.calls[1]?.[0]).toBe(
-      '/api/botharness/attachment?slug=ada&sourceEventId=source-1&attachmentId=video-one',
+      './api/botharness/attachment?slug=ada&sourceEventId=source-1&attachmentId=video-one',
     );
     expect(fetchVideo.mock.calls[1]?.[1].credentials).toBe('same-origin');
     await click('Close source');
@@ -797,5 +856,119 @@ it('loads checked video into its bubble without autoplay, retries refusals and p
     else Reflect.deleteProperty(URL, 'createObjectURL');
     if (originalRevoke) Object.defineProperty(URL, 'revokeObjectURL', originalRevoke);
     else Reflect.deleteProperty(URL, 'revokeObjectURL');
+  }
+});
+
+it('puts open items first, snoozed by return time next, and folds done items with their notes', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const previous = store.getSnapshot().botInbox;
+  store.setBotInbox({
+    status: 'ready',
+    items: [
+      {
+        ...item,
+        id: 'done',
+        state: 'handled',
+        createdAt: '2026-09-28T00:00:00.000Z',
+        summary: 'Done item',
+        resolutionNote: 'Shipped the fix',
+      },
+      {
+        ...item,
+        id: 'later',
+        state: 'snoozed',
+        summary: 'Later item',
+        snoozedUntil: '2026-10-02T00:00:00.000Z',
+      },
+      {
+        ...item,
+        id: 'sooner',
+        state: 'snoozed',
+        summary: 'Sooner item',
+        snoozedUntil: '2026-10-01T00:00:00.000Z',
+        snoozeNote: 'After the vendor replies',
+      },
+      { ...item, id: 'open', state: 'open', summary: 'Open item' },
+      {
+        ...item,
+        id: 'lifecycle',
+        state: 'open',
+        summary: '',
+        sourceKind: 'assignment-lifecycle',
+        authorKind: 'system',
+        assignmentSessionId: 'a-1',
+        assignmentPurpose: 'Ship the release notes',
+        createdAt: '2026-09-25T00:00:00.000Z',
+      },
+    ],
+    error: undefined,
+  });
+  const entries = createChannelSidebarBuiltins(zhTranslate);
+  const entry = entries.find((e) => e.id === 'bot-inbox')!;
+  const Badge = entry.badge!;
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  const entryProps = {
+    scope: 'personabot' as const,
+    channelId: 'dm-ada',
+    botSlug: 'ada',
+    actions: {} as BridgeActions,
+    t: zhTranslate,
+  };
+  try {
+    await act(async () =>
+      root.render(
+        createElement(
+          'div',
+          null,
+          createElement('span', { className: 'badge' }, createElement(Badge, entryProps)),
+          createElement(ChannelSidebarEntrySection, {
+            entry,
+            expanded: true,
+            onToggle: () => undefined,
+            entryProps,
+          }),
+        ),
+      ),
+    );
+    expect(container.querySelector('.badge')?.textContent).toBe('2');
+    const rows = [...container.querySelectorAll('.bh-card-row')].filter(
+      (row) => !row.textContent?.includes('Ship the release notes'),
+    );
+    const lifecycle = [...container.querySelectorAll('.bh-card-row')].find((row) =>
+      row.textContent?.includes('Ship the release notes'),
+    );
+    expect(lifecycle?.querySelector('.bh-inbox-item-author')?.textContent).toBe(
+      zhTranslate('inbox.assignment') + ' · Ship the release notes',
+    );
+    expect(rows.map((row) => row.querySelector('.bh-card-summary')?.textContent)).toEqual([
+      'Open item',
+      'Sooner item',
+      'Later item',
+      'Done item',
+    ]);
+    const sections = [
+      ...container.querySelectorAll<HTMLDetailsElement>('[data-inbox-group][data-section]'),
+    ];
+    expect(sections.map((section) => [section.dataset['section'], section.open])).toEqual([
+      ['snoozed', true],
+      ['done', false],
+    ]);
+    expect(rows[1]?.textContent).toContain('After the vendor replies');
+    expect(rows[1]?.querySelector('.bh-inbox-item-return')?.textContent).toContain('回来');
+    expect(rows[3]?.textContent).toContain('Shipped the fix');
+
+    store.setBotInbox({
+      status: 'ready',
+      items: [{ ...item, id: 'only-snoozed', state: 'snoozed' }],
+      error: undefined,
+    });
+    await act(async () => undefined);
+    expect(container.querySelector('.badge')?.textContent).toBe('');
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+    store.setBotInbox(previous);
   }
 });

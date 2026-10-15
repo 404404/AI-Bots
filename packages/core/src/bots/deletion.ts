@@ -95,6 +95,32 @@ export function recordMemoryOwnership(
   );
 }
 
+export function transferMemoryOwnership(
+  port: OperationalDatabaseModulePort,
+  slug: string,
+  path: string,
+): void {
+  let proof: MemoryOwnership;
+  try {
+    proof = memoryOwnership(path);
+  } catch {
+    proof = { path: '', device: -1, inode: -1 };
+  }
+  port.transaction(
+    (database) => {
+      const row = database
+        .prepare('SELECT body FROM persona_bot_memory_ownership WHERE slug = ?')
+        .get(slug);
+      if (row === undefined || (JSON.parse(String(row['body'])) as MemoryOwnership).device === -1)
+        return;
+      database
+        .prepare('UPDATE persona_bot_memory_ownership SET body = ? WHERE slug = ?')
+        .run(JSON.stringify(proof), slug);
+    },
+    ['bot-registry'],
+  );
+}
+
 function overlap(left: string, right: string): boolean {
   const contains = (root: string, child: string) => {
     const path = relative(root, child);
@@ -163,9 +189,13 @@ export function createPersonaBotDeletions(options: {
         ? undefined
         : (JSON.parse(String(row['body'])) as PersonaBotDeletion);
     });
-  const write = (state: PersonaBotDeletion): void => {
+  const write = (state: PersonaBotDeletion, retainedRecord?: string): void => {
     port.transaction(
       (database) => {
+        if (retainedRecord !== undefined)
+          database
+            .prepare('UPDATE persona_bots SET body = ? WHERE slug = ?')
+            .run(retainedRecord, state.slug);
         database
           .prepare(`INSERT INTO persona_bot_deletions (slug, body) VALUES (?, ?)
         ON CONFLICT (slug) DO UPDATE SET body = excluded.body`)
@@ -319,7 +349,11 @@ export function createPersonaBotDeletions(options: {
         memory: eraseMemory ? 'pending' : 'retained',
         ...(eraseMemory ? { ownership: check(slug, reviewed.memoryDir, owner(slug)) } : {}),
       };
-      write(state);
+      let retainedRecord: string | undefined;
+      try {
+        retainedRecord = options.registry.retainedRecordBody(slug);
+      } catch {}
+      write(state, retainedRecord);
       try {
         options.capture?.('bot_deleted');
       } catch {}

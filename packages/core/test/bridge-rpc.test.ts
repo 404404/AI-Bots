@@ -78,6 +78,15 @@ describe('bridge typert service', () => {
     const { service } = setup();
 
     expect(remoteMethods(service).map((marker) => marker.exportName ?? marker.method)).toEqual([
+      'privateInputStatus',
+      'privateInputSubmit',
+      'privateInputCancel',
+      'privateAccountStatus',
+      'privateInputReplace',
+      'privateAccountRevoke',
+      'privateAccounts',
+      'privateMcpServerRemove',
+      'privateMcpServerEnable',
       'messagingDefaults',
       'messagingDefaultsSet',
       'channelBridges',
@@ -93,10 +102,18 @@ describe('bridge typert service', () => {
       'approvalRoute',
       'approvalTest',
       'approvalRetry',
+      'failureAlertsSet',
+      'failureAlertsTest',
+      'failureAlertsRetry',
       'pairingReview',
+      'senderAccess',
       'messagingApps',
       'messagingSnapshot',
       'messagingTargets',
+      'messagingReachable',
+      'messagingPostConversation',
+      'messagingPostRequest',
+      'messagingPostLimit',
       'messagingAuthorize',
       'messagingRevoke',
       'messagingConversation',
@@ -105,6 +122,7 @@ describe('bridge typert service', () => {
       'onboardingModel',
       'modelPlanInherit',
       'channelRetry',
+      'channelBotStop',
       'modelCatalog',
       'modelPresets',
       'modelPresetCreate',
@@ -128,6 +146,8 @@ describe('bridge typert service', () => {
       'resume',
       'channels',
       'humanIdentity',
+      'composerIdentity',
+      'composerValidate',
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',
@@ -150,6 +170,9 @@ describe('bridge typert service', () => {
       'channelReadPosition',
       'channelMarkRead',
       'channelMarkAllRead',
+      'channelReact',
+      'channelSearch',
+      'channelUnreadCounts',
       'channelAllBotPreview',
       'channelSend',
       'channelSendStatus',
@@ -164,7 +187,9 @@ describe('bridge typert service', () => {
       'humanAttentionStatus',
       'humanAttentionIgnore',
       'humanAttentionDismiss',
+      'humanAttentionSnooze',
       'assignments',
+      'channelAssignments',
       'assignment',
       'workspaceOptions',
       'messageAttachmentTarget',
@@ -179,10 +204,17 @@ describe('bridge typert service', () => {
       'toolApprovalRuleRevoke',
       'toolApprovalStatus',
       'toolApprovalDecide',
+      'toolAutoRejectionOverride',
       'userQuestionStatus',
       'userQuestionAnswer',
       'sessions',
+      'botToolTrace',
+      'botTools',
+      'botToolRun',
+      'sessionArchiveSet',
+      'memoryMove',
       'sessionOwner',
+      'botSessionIds',
       'memoryFileTarget',
       'memorySnapshot',
       'memoryFile',
@@ -195,8 +227,13 @@ describe('bridge typert service', () => {
       'memoryRecoveryHistory',
       'memoryRestore',
       'memorySave',
+      'memoryRestoreCommit',
+      'memoryNameVersion',
+      'memoryRemoveVersionName',
+      'memoryVersions',
       'memoryRepair',
       'profileActivity',
+      'profileSessionUsage',
       'overviewMemory',
       'overviewUsage',
       'profileUsage',
@@ -210,14 +247,23 @@ describe('bridge typert service', () => {
       'topReorder',
       'pinsSet',
       'hiddenSet',
+      'channelMuteSet',
       'rosterBatch',
       'developerModeSet',
       'computerAccessSet',
       'browserAccessSet',
       'browserProfileSet',
+      'approvalTemplates',
+      'approvalTemplateCreate',
+      'approvalTemplateUpdate',
+      'approvalTemplateDelete',
+      'botApprovalTemplateSet',
+      'approvalReviewerModel',
+      'approvalReviewerModelSet',
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
+      'botPrimaryColorSet',
       'partLibraryList',
       'partLibraryAdd',
       'partLibraryExport',
@@ -245,7 +291,40 @@ describe('bridge typert service', () => {
       'scheduleHistory',
       'scheduleRunNow',
       'schedulePreview',
+      'channelJournalPage',
+      'followRoster',
+      'followActivity',
+      'followChannel',
+      'followCompanion',
     ]);
+  });
+
+  it('marks the live stream methods whose final parameter is the injected signal', () => {
+    const { service } = setup();
+
+    expect(remoteMethods(service).filter((marker) => marker.mode === 'stream')).toEqual([
+      { method: 'followRoster', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followActivity', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followChannel', mode: 'stream', invocation: { kind: 'direct' } },
+      { method: 'followCompanion', mode: 'stream', invocation: { kind: 'direct' } },
+    ]);
+    expect(parameterNames(service.followRoster)).toEqual(['signal']);
+    expect(parameterNames(service.followActivity)).toEqual(['signal']);
+    expect(parameterNames(service.followChannel)).toEqual([
+      'channelId',
+      'limit',
+      'drafts',
+      'signal',
+    ]);
+    expect(parameterNames(service.channelJournalPage)).toEqual([
+      'channelId',
+      'through',
+      'before',
+      'limit',
+    ]);
+    expect(parameterNames(service.followCompanion)).toEqual(['resume', 'lastEventId', 'signal']);
+    expect(parameterNames(service.botToolRun)).toEqual(['slug', 'tool', 'args']);
+    expect(parameterNames(service.memoryMove)).toEqual(['slug', 'location']);
   });
 
   it('reads parameter names from every form the SRC resolver accepts', () => {
@@ -268,6 +347,7 @@ describe('bridge typert service', () => {
       'preset',
       'workspaces',
       'avatar',
+      'memoryLocation',
     ]);
     expect(parameterNames(service.update)).toEqual(['slug', 'patch']);
     expect(parameterNames(service.pause)).toEqual(['slug']);
@@ -286,6 +366,13 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.marketplaceReport)).toEqual(['id', 'altcha', 'reason']);
     expect(parameterNames(service.releaseInfo)).toEqual(['since']);
     expect(parameterNames(service.releaseUpdate)).toEqual([]);
+    expect(parameterNames(service.channelReact)).toEqual([
+      'channelId',
+      'messageId',
+      'emoji',
+      'active',
+    ]);
+    expect(parameterNames(service.channelSearch)).toEqual(['channelId', 'text', 'cursor', 'limit']);
     expect(parameterNames(service.releaseInstall)).toEqual(['version']);
     expect(parameterNames(service.releaseRestart)).toEqual([]);
     expect(parameterNames(service.telemetryStatus)).toEqual([]);
@@ -345,6 +432,7 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.topReorder)).toEqual(['order']);
     expect(parameterNames(service.pinsSet)).toEqual(['pins']);
     expect(parameterNames(service.hiddenSet)).toEqual(['hidden']);
+    expect(parameterNames(service.channelMuteSet)).toEqual(['channelId', 'muted']);
     expect(parameterNames(service.rosterBatch)).toEqual(['action', 'channelIds', 'sectionId']);
   });
 

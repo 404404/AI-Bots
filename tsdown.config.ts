@@ -1,4 +1,10 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig, type UserConfig } from 'tsdown';
+
+import { dockviewCssPlugin } from './scripts/dockview-css-plugin.mjs';
+import { stylexPlugin } from './scripts/stylex-plugin.mjs';
+
+const ROOT_DIR = fileURLToPath(new URL('.', import.meta.url));
 
 const CLIENT_ID = '@botharness/ui';
 
@@ -13,6 +19,7 @@ const PLATFORM_MODULES = [
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-primitives',
   '@deepseek-ai/dsh-client-ui-dockkit',
+  '@deepseek-ai/dsh-api-gateway/client',
 ];
 
 function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
@@ -21,10 +28,12 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
     outDir,
     format: ['cjs'],
     platform: 'browser',
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     dts: false,
     clean: true,
     sourcemap: true,
     external: PLATFORM_MODULES,
+    plugins: [stylexPlugin({ rootDir: ROOT_DIR }), dockviewCssPlugin({ rootDir: ROOT_DIR })],
     outputOptions: {
       entryFileNames: 'client.js',
       banner: `window.__ModuleLoader__.load({
@@ -74,6 +83,7 @@ export default defineConfig([
       '@deepseek-ai/dsh-llm',
       '@deepseek-ai/dsh-session',
       '@deepseek-ai/dsh-tools',
+      '@deepseek-ai/dsh-scope',
     ],
   },
   {
@@ -91,6 +101,7 @@ export default defineConfig([
     platform: 'node',
     dts: true,
     clean: true,
+    external: ['sharp'],
   },
   {
     entry: {
@@ -102,6 +113,15 @@ export default defineConfig([
     platform: 'node',
     dts: true,
     clean: true,
+  },
+  {
+    entry: ['packages/todo/src/index.ts'],
+    outDir: 'packages/todo/dist',
+    format: ['esm'],
+    platform: 'node',
+    dts: true,
+    clean: true,
+    external: ['@deepseek-ai/dsh-tools'],
   },
   {
     entry: { 'bh-links': 'packages/links-cli/src/main.ts' },

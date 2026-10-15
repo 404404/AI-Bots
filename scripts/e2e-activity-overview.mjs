@@ -202,7 +202,7 @@ try {
         new Set(['orchestrator', 'assignment']),
       );
       await overview();
-      await click('.bh-overview-refresh', '刷新');
+      await click('.bh-overview-toolbar button', '刷新');
       await page.waitForFunction(
         (slug) =>
           document
@@ -239,7 +239,7 @@ try {
         const current = (await rpc('activityOverview')).bots.find((b) => b.slug === bot.slug);
         return current?.sessions.length === 0;
       }, 'executions finish');
-      await click('.bh-overview-refresh', '刷新');
+      await click('.bh-overview-toolbar button', '刷新');
       await page.waitForFunction(
         (slug) =>
           document
@@ -342,7 +342,7 @@ try {
     await page.click(`.bh-overview-bot[data-bot-id="${release.slug}"] .bh-overview-bot-header`);
     await page.waitForSelector('.bh-channel-options');
     assert.equal(
-      await page.$eval('.bh-topbar .bh-title', (n) => n.textContent),
+      await page.$eval('.bh-topbar [data-conversation-title]', (n) => n.textContent),
       release.displayName,
     );
     await shot('overview-bot-dm');

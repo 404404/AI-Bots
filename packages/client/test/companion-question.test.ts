@@ -171,8 +171,16 @@ it('keeps all question drafts through speech, reading, offline and current-state
         }),
       ),
     );
-    expect(node.querySelectorAll('.bh-companion-pending > ol > li')).toHaveLength(2);
+    expect(node.querySelectorAll('.bh-companion-pending > ol > li')).toHaveLength(1);
+    expect(node.querySelector('.bh-question-card')).toBeNull();
+    expect(node.textContent).toContain('1/2');
+    await act(() => node.querySelector<HTMLButtonElement>('[aria-label="下一项请求"]')!.click());
+    expect(node.textContent).toContain('2/2');
     const card = () => node.querySelector('.bh-question-card')!;
+    expect(card().textContent).toContain('Any instructions?');
+    expect(card().textContent).not.toContain('Current branch');
+    expect(card().textContent).not.toContain('Answer in your own words');
+    await act(() => button(card(), '详情').click());
     expect(card().textContent).toContain('Current branch');
     expect(card().textContent).toContain('Answer in your own words');
     expect(card().querySelector('[aria-pressed="true"]')).toBeNull();
@@ -192,6 +200,9 @@ it('keeps all question drafts through speech, reading, offline and current-state
         (field) => field.checked,
       ),
     ).toEqual([true, true]);
+    expect(
+      [...card().querySelectorAll('.bh-question-letter')].map((entry) => entry.textContent),
+    ).toEqual(['A', 'B', 'A', 'B']);
     await act(() => input(card(), 1, 'also check status'));
     await act(() => input(card(), 2, 'Keep it short'));
     await act(() => {
@@ -224,7 +235,7 @@ it('keeps all question drafts through speech, reading, offline and current-state
       'Keep it short',
     );
     expect(companion.get('ada')!.getSnapshot().cards[0]?.shown).toBe(0);
-    expect(node.querySelectorAll('.bh-companion-pending > ol > li')).toHaveLength(2);
+    expect(node.querySelectorAll('.bh-companion-pending > ol > li')).toHaveLength(1);
     await act(() => events.dispatchEvent(new Event('error')));
     expect(button(card(), '回答并继续').disabled).toBe(true);
     await act(async () => {
@@ -343,12 +354,18 @@ it('accepts only formal well-formed questions qualified for the selected Bot', (
   expect(companionRequests([{ ...request, callId: 'native-timed-call' }], 'ada')).toEqual([
     { ...request, callId: 'native-timed-call' },
   ]);
+  const many = {
+    ...request,
+    questions: [...questions, { id: 'extra', question: 'One more?', detail: 'x'.repeat(20_000) }],
+  };
+  expect(companionRequests([many], 'ada')).toEqual([many]);
   expect(
     companionRequests(
       [
         { ...request, kind: 'message' },
         { ...request, botSlug: 'bea' },
-        { ...request, channelId: 'group' },
+        { ...request, channelId: '' },
+        { ...request, channelId: 7 },
         { ...request, questions: [] },
         { ...request, callId: '' },
         { ...request, callId: 7 },

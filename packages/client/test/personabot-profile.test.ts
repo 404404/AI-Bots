@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, createElement, type PropsWithChildren } from 'react';
+import { act, createElement, type InputHTMLAttributes, type PropsWithChildren } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -13,8 +13,14 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
       children,
       onClick,
       disabled,
-    }: PropsWithChildren<{ onClick?: () => void; disabled?: boolean }>) =>
-      createElement('button', { type: 'button', onClick, disabled }, children),
+      type = 'button',
+      form,
+    }: PropsWithChildren<{
+      onClick?: () => void;
+      disabled?: boolean;
+      type?: 'button' | 'submit';
+      form?: string;
+    }>) => createElement('button', { type, form, onClick, disabled }, children),
     HoverCard: stub,
     IconAgentPresetOutlineRegular: stub,
     IconCheckOutlineRegular: stub,
@@ -38,12 +44,41 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
     IconSearchOutlineRegular: stub,
     IconSendOutlineRegular: stub,
     IconSettingsOutlineRegular: stub,
+    IconUserOutlineRegular: stub,
     IconTrashOutlineRegular: stub,
     FileTypeIcon: stub,
     ImageLightbox: stub,
-    Input: stub,
+    Input: ({ className: _className, ...props }: InputHTMLAttributes<HTMLInputElement>) =>
+      createElement('input', props),
     MarkdownText: stub,
-    Menu: stub,
+    Menu: ({
+      open,
+      anchor,
+      items = [],
+      onSelect,
+    }: {
+      open: boolean;
+      anchor?: unknown;
+      items?: readonly { id: string; type?: string }[];
+      onSelect?: (id: string) => void;
+    }) =>
+      createElement(
+        'span',
+        null,
+        anchor as never,
+        open
+          ? items
+              .filter((item) => item.type === undefined)
+              .map((item) =>
+                createElement('button', {
+                  key: item.id,
+                  type: 'button',
+                  'data-menu-id': item.id,
+                  onClick: () => onSelect?.(item.id),
+                }),
+              )
+          : null,
+      ),
     MenuItemButton: stub,
     Modal: ({
       open,
@@ -75,6 +110,8 @@ import { createProfileCardBuiltins } from '../src/client/profile-cards-builtins.
 import { createProfileCardRegistry } from '../src/client/profile-cards.js';
 import { ProfilePopover } from '../src/client/personabot-profile.js';
 import { store } from '../src/client/store.js';
+import { inertSubmissionActions } from './inert-submissions.js';
+import { fieldNamed } from './primitive-mocks.js';
 
 function sidebarRegistry() {
   const registry = createChannelSidebarRegistry();
@@ -156,6 +193,7 @@ describe('PersonaBot Profile surface', () => {
       tokenTotals: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
     }));
     const actions = {
+      listWorkspaceGrants: vi.fn(async () => []),
       modelCatalog: vi.fn(async () => ({ models: [] })),
       modelPresets: vi.fn(async () => []),
       modelPlanState: vi.fn(async () => ({
@@ -210,6 +248,7 @@ describe('PersonaBot Profile surface', () => {
         },
       ]),
       refreshBotInbox: vi.fn(async () => undefined),
+      ...inertSubmissionActions,
     } as unknown as BridgeActions;
     const container = document.createElement('div');
     document.body.append(container);
@@ -230,6 +269,7 @@ describe('PersonaBot Profile surface', () => {
       expect(container.querySelector('.bh-chat-body')).not.toBeNull();
 
       await act(async () => click(container, '.bh-channel-island'));
+      await act(async () => click(container, '[data-menu-id="primary"]'));
       const popover = container.querySelector('.bh-profile-popover');
       expect(popover).not.toBeNull();
       expect(popover?.textContent).toContain('Ada');
@@ -245,6 +285,10 @@ describe('PersonaBot Profile surface', () => {
       await act(async () => click(container, '.bh-profile-expand'));
       expect(container.querySelector('.bh-profile-popover')).toBeNull();
       expect(container.querySelector('.bh-profile-view')).not.toBeNull();
+      expect(container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail']).toBe(
+        'true',
+      );
+      expect(container.querySelector<HTMLElement>('.bh-chat-top-fade')?.style.display).toBe('none');
       const sections = container.querySelectorAll('.bh-profile-view > .bh-profile-section');
       expect([...sections].map((section) => section.getAttribute('aria-label'))).toEqual([
         '活动概览',
@@ -273,13 +317,13 @@ describe('PersonaBot Profile surface', () => {
       );
       expect(container.querySelectorAll('.bh-profile-avatar-button').length).toBe(1);
       expect(container.querySelectorAll('.bh-profile-card').length).toBe(3);
-      const sidebarLabels = [
-        ...container.querySelectorAll('.bh-channel-sidebar .bh-channel-sidebar-entry-label'),
-      ].map((label) => label.textContent);
-      expect(sidebarLabels).toContain('模型');
-      expect(sidebarLabels).toContain('唤醒策略');
-      expect(sidebarLabels).toContain('外部身份');
-      expect(sidebarLabels).toContain('外部连接器');
+      const sidebarLabels = [...container.querySelectorAll('.bh-channel-sidebar [role="tab"]')].map(
+        (tab) => tab.getAttribute('aria-label') ?? tab.textContent,
+      );
+      expect(sidebarLabels).not.toContain('模型');
+      expect(sidebarLabels).not.toContain('唤醒策略');
+      expect(sidebarLabels).not.toContain('外部身份');
+      expect(sidebarLabels).not.toContain('外部连接器');
       expect(container.querySelectorAll('.bh-profile-pin[aria-pressed="true"]').length).toBe(2);
 
       const headerButton = (label: string) =>
@@ -288,7 +332,7 @@ describe('PersonaBot Profile surface', () => {
         )!;
       await act(async () => headerButton('编辑资料').click());
       const editor = container.querySelector('[role="dialog"][aria-label="编辑资料"]')!;
-      const input = editor.querySelector<HTMLInputElement>('.bh-name-input')!;
+      const input = fieldNamed('名称', editor);
       expect(input.value).toBe('Ada');
       const saveButton = () =>
         [...editor.querySelectorAll<HTMLButtonElement>('button')].find(
@@ -296,12 +340,16 @@ describe('PersonaBot Profile surface', () => {
         )!;
       await act(async () => setNativeValue(input, '  '));
       expect(saveButton().disabled).toBe(true);
-      const bio = editor.querySelector<HTMLTextAreaElement>('.bh-profile-bio-input')!;
+      const bioLabel = [...editor.querySelectorAll('label')].find(
+        (label) => label.textContent === '简介',
+      )!;
+      const bio = document.getElementById(bioLabel.htmlFor) as HTMLTextAreaElement;
       expect(bio.value).toBe('与你一起发布研究。');
       await act(async () => setNativeValue(bio, 'x'.repeat(161)));
       await act(async () => setNativeValue(input, 'Bea'));
       expect(saveButton().disabled).toBe(true);
       expect(editor.textContent).toContain('161/160');
+      expect(bio.getAttribute('aria-invalid')).toBe('true');
       await act(async () => setNativeValue(bio, '帮你找资料'));
       await act(async () => saveButton().click());
       expect(renameChannel).toHaveBeenCalledWith('dm-ada', 'Bea');
@@ -341,7 +389,7 @@ describe('PersonaBot Profile surface', () => {
       expect(avatarMethods?.[1]?.textContent).toContain('使用中');
       await act(async () => click(container, '[data-avatar-remove]'));
       expect(setBotAvatar).toHaveBeenCalledWith('dm-ada', null);
-      expect(container.querySelector('.bh-profile-avatar-input')).not.toBeNull();
+      expect(avatarDialog?.querySelector('input[type="file"]')).not.toBeNull();
 
       const dialog = document.createElement('div');
       dialog.setAttribute('role', 'dialog');
@@ -360,9 +408,13 @@ describe('PersonaBot Profile surface', () => {
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       });
       expect(container.querySelector('.bh-profile-view')).toBeNull();
+      expect(
+        container.querySelector<HTMLElement>('.bh-topbar')?.dataset['channelDetail'],
+      ).toBeUndefined();
       expect(container.querySelector('.bh-chat-body')).not.toBeNull();
 
       await act(async () => click(container, '.bh-channel-island'));
+      await act(async () => click(container, '[data-menu-id="primary"]'));
       expect(container.querySelector('.bh-profile-popover')).not.toBeNull();
       await act(async () => {
         document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
@@ -403,16 +455,22 @@ describe('PersonaBot Profile surface', () => {
           createElement(BotMain, {
             actions: {
               allBotPreview: vi.fn(async () => ({ revision: '0'.repeat(64), recipients: [] })),
+              channelAssignments: vi.fn(async () => []),
+              groupProfileActivity: vi.fn(() => new Promise(() => {})),
+              ...inertSubmissionActions,
             } as unknown as BridgeActions,
             channelSidebar: sidebarRegistry(),
             t: zhTranslate,
           }),
         );
       });
-      const island = container.querySelector('.bh-group-channel-name');
+      const island = container.querySelector('[data-group-channel-name]');
       expect(island?.tagName).toBe('BUTTON');
-      expect(island?.getAttribute('aria-label')).toBe('打开 设计组 的群聊 Profile');
-      expect(island?.getAttribute('aria-haspopup')).toBe('dialog');
+      expect(island?.getAttribute('aria-label')).toBe('设计组 · 聊天菜单');
+      expect(island?.getAttribute('aria-haspopup')).toBe('menu');
+      await act(async () => click(container, '[data-group-channel-name]'));
+      await act(async () => click(container, '[data-menu-id="primary"]'));
+      expect(container.querySelector('.bh-profile-popover')).not.toBeNull();
     } finally {
       await act(async () => root.unmount());
       container.remove();

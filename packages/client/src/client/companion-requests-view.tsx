@@ -1,10 +1,63 @@
-import { useRef, type ReactElement, type CSSProperties } from 'react';
+import { useRef, useState, type ReactElement, type CSSProperties } from 'react';
+import * as stylex from '@stylexjs/stylex';
 import type { CompanionRequest } from '../../../core/src/companions/feed.js';
 import type { BridgeActions } from './actions.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { ToolApprovalCard } from './tool-approval-card.js';
 import { UserQuestionCard } from './user-question-card.js';
 import { useMountedResource } from './mounted-resource.js';
+import { companionSurface } from './companion-surface.js';
+import { hooked } from './ds/hooked.js';
+import { color, radius, space } from './ds/tokens.stylex.js';
+
+const styles = stylex.create({
+  pending: {
+    zIndex: 3,
+  },
+  header: {
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: 'auto',
+    paddingTop: space.x3,
+    paddingInline: space.x4,
+    paddingBottom: 0,
+  },
+  source: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
+    minWidth: 0,
+    overflow: 'hidden',
+    whiteSpace: 'nowrap',
+    textOverflow: 'ellipsis',
+  },
+  nav: {
+    display: 'inline-flex',
+    flexGrow: 0,
+    flexShrink: 0,
+    alignItems: 'center',
+    gap: space.x1,
+  },
+  step: {
+    width: '20px',
+    height: '20px',
+    padding: 0,
+    borderWidth: 0,
+    borderRadius: radius.round,
+    backgroundColor: { default: 'transparent', ':hover': color.hover },
+    color: color.fg,
+    cursor: 'pointer',
+  },
+  list: {
+    margin: 0,
+    paddingTop: space.x2,
+    paddingInline: space.x4,
+    paddingBottom: space.x4,
+    listStyle: 'none',
+    overflow: 'auto',
+    scrollbarWidth: 'thin',
+  },
+});
 
 function PendingRequest({
   request,
@@ -55,9 +108,6 @@ function PendingRequest({
           ownedFocus.current = false;
       }}
     >
-      <div className="bh-companion-request-source">
-        {t('companion.source', { name: request.channelName })}
-      </div>
       {actions && request.kind === 'tool-approval' ? (
         <ToolApprovalCard
           message={{
@@ -67,6 +117,7 @@ function PendingRequest({
             body: '',
             toolApprovalRequest: request,
           }}
+          channelId={request.channelId}
           actions={actions}
           t={t}
           companionTarget={{
@@ -83,6 +134,7 @@ function PendingRequest({
             body: '',
             userQuestionRequest: request,
           }}
+          channelId={request.channelId}
           actions={actions}
           t={t}
           companionTarget={companionTarget}
@@ -110,33 +162,80 @@ export function CompanionRequests({
   messageCount: number;
 }): ReactElement {
   const root = useRef<HTMLElement>(null);
+  const [chosen, setChosen] = useState<string | undefined>(undefined);
+  const found = requests.findIndex((request) => request.messageId === chosen);
+  const index = found < 0 ? 0 : found;
+  const request = requests[index]!;
   const release = (): void => {
-    const next = root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    const next =
+      root.current?.querySelector<HTMLElement>(
+        'li button:not(:disabled), li input:not(:disabled)',
+      ) ?? root.current?.querySelector<HTMLElement>('ol');
     if (next?.isConnected) next.focus();
     else restoreFocus();
   };
+  const step = (offset: number): void =>
+    setChosen(requests[(index + offset + requests.length) % requests.length]!.messageId);
   return (
     <section
       ref={root}
-      className="bh-companion-pending"
+      {...hooked('bh-companion-pending', companionSurface.speech, styles.pending)}
       aria-label={t('companion.requests')}
       style={style}
     >
-      <header>
-        {t('companion.requestCount', { count: requests.length })}
-        {messageCount ? <div>{t('companion.messagesWaiting', { count: messageCount })}</div> : null}
+      <header {...stylex.props(companionSurface.header, companionSurface.label, styles.header)}>
+        <span {...stylex.props(styles.source)}>
+          {t(request.channelId.startsWith('dm-') ? 'companion.source' : 'companion.sourceGroup', {
+            name: request.channelName,
+          })}
+        </span>
+        {messageCount ? (
+          <span
+            {...hooked('bh-companion-queue', companionSurface.label, companionSurface.queue)}
+            title={t('companion.messagesWaiting', { count: messageCount })}
+            aria-label={t('companion.messagesWaiting', { count: messageCount })}
+          >
+            +{messageCount}
+          </span>
+        ) : null}
+        {requests.length > 1 ? (
+          <span {...stylex.props(styles.nav)}>
+            <button
+              type="button"
+              {...stylex.props(styles.step)}
+              aria-label={t('companion.previousRequest')}
+              onClick={() => step(-1)}
+            >
+              ‹
+            </button>
+            <span
+              aria-label={t('companion.requestPosition', {
+                index: index + 1,
+                count: requests.length,
+              })}
+            >
+              {index + 1}/{requests.length}
+            </span>
+            <button
+              type="button"
+              {...stylex.props(styles.step)}
+              aria-label={t('companion.nextRequest')}
+              onClick={() => step(1)}
+            >
+              ›
+            </button>
+          </span>
+        ) : null}
       </header>
-      <ol tabIndex={0} aria-label={t('companion.requestList')}>
-        {requests.map((request) => (
-          <PendingRequest
-            key={request.messageId}
-            request={request}
-            actions={actions}
-            live={live}
-            t={t}
-            onReleaseFocus={release}
-          />
-        ))}
+      <ol tabIndex={-1} {...stylex.props(styles.list)}>
+        <PendingRequest
+          key={request.messageId}
+          request={request}
+          actions={actions}
+          live={live}
+          t={t}
+          onReleaseFocus={release}
+        />
       </ol>
     </section>
   );

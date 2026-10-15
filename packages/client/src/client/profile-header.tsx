@@ -1,10 +1,11 @@
-import { useId, useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, type ReactElement } from 'react';
+import * as stylex from '@stylexjs/stylex';
 import { BANNER_SCENES, seededBannerRecipe } from '@botharness/pixel-banner';
 import {
   Button,
   IconEllipsisOutlineRegular,
+  IconTrashOutlineRegular,
   Menu,
-  Tag,
   type MenuEntry,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 
@@ -13,10 +14,16 @@ import { PersonaBotAvatar } from './avatar.js';
 import { AvatarAppearanceEditor } from './avatar-appearance-editor.js';
 import { bannerOf, BotBannerArt } from './bot-banner.js';
 import { BotZipShareButton } from './bot-zip.js';
+import { Field, TextField } from './ds/field.js';
+import { FormDialog } from './ds/form-dialog.js';
+import { Note } from './ds/note.js';
+import { PanelDialog } from './ds/panel-dialog.js';
+import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import type { BotHarnessTranslate } from './locale.js';
-import { Modal } from './modal.js';
-import { NameInput } from './name-input.js';
 import { BannerCropModal, PersonaBotAvatarCropModal } from './personabot-avatar-crop.js';
+import { botPrimaryColorOf } from './bot-primary-color.js';
+import { PrimaryColorModal } from './primary-color-editor.js';
+import { ProfileTags } from './profile-tags.js';
 import type { BotBannerView, BotSummary, ChannelSummary } from './store.js';
 import {
   MAX_BOT_BIO_LENGTH,
@@ -26,18 +33,110 @@ import {
   tagsWithDraft,
 } from './tag-editor.js';
 
-export function ProfileTags({ tags }: { tags: readonly string[] }): ReactElement | null {
-  if (tags.length === 0) return null;
-  return (
-    <span className="bh-profile-roles">
-      {tags.map((tag) => (
-        <Tag key={tag} tone="neutral">
-          {tag}
-        </Tag>
-      ))}
-    </span>
-  );
-}
+const styles = stylex.create({
+  textarea: {
+    boxSizing: 'border-box',
+    width: '100%',
+    resize: 'vertical',
+    padding: space.x3,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.border,
+    borderRadius: radius.sm,
+    backgroundColor: 'var(--dsw-alias-bg-base)',
+    color: color.fg,
+    fontFamily: 'inherit',
+    fontSize: text.bodySize,
+    lineHeight: text.bodyLine,
+    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
+    outlineOffset: '1px',
+  },
+  hint: {
+    color: color.muted,
+    fontSize: text.metaSize,
+    lineHeight: text.metaLine,
+  },
+  file: { display: 'none' },
+  colorRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: space.x4,
+    marginBottom: space.x4,
+    paddingBlock: space.x3,
+    paddingInline: space.x4,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.border,
+    borderRadius: radius.md,
+  },
+  colorSwatch: {
+    flexShrink: 0,
+    width: '24px',
+    height: '24px',
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.border,
+    borderRadius: radius.round,
+  },
+  colorCopy: {
+    display: 'flex',
+    flexDirection: 'column',
+    flexGrow: 1,
+    minWidth: 0,
+  },
+  colorTitle: {
+    color: color.fg,
+    fontSize: text.bodySize,
+    lineHeight: text.bodyLine,
+  },
+  bannerPreview: {
+    aspectRatio: '3 / 1',
+    overflow: 'hidden',
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.border,
+    borderRadius: radius.md,
+  },
+  bannerActions: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: space.x3,
+  },
+  scenes: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))',
+    gap: space.x3,
+  },
+  scene: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: space.x2,
+    padding: space.x2,
+    borderWidth: border.hairline,
+    borderStyle: 'solid',
+    borderColor: color.border,
+    borderRadius: radius.sm,
+    backgroundColor: { default: 'transparent', ':hover': color.hover },
+    color: color.muted,
+    fontFamily: 'inherit',
+    fontSize: text.metaSize,
+    lineHeight: text.metaLine,
+    textAlign: 'center',
+    cursor: { default: 'pointer', ':disabled': 'default' },
+    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.fg}` },
+  },
+  sceneOn: {
+    borderColor: color.fg,
+    boxShadow: `0 0 0 1px ${color.fg}`,
+    color: color.fg,
+  },
+  sceneArt: {
+    display: 'block',
+    aspectRatio: '3 / 1',
+    overflow: 'hidden',
+    borderRadius: radius.sm,
+  },
+});
 
 export function ProfileBio({ text }: { text: string | undefined }): ReactElement | null {
   if (text === undefined || text.length === 0) return null;
@@ -57,9 +156,6 @@ function EditProfileModal({
   t: BotHarnessTranslate;
   onClose(): void;
 }): ReactElement {
-  const nameId = useId();
-  const tagsId = useId();
-  const bioId = useId();
   const [name, setName] = useState(bot.displayName);
   const [tags, setTags] = useState<string[]>([...bot.roles]);
   const [tagDraft, setTagDraft] = useState('');
@@ -70,7 +166,10 @@ function EditProfileModal({
   const bioLength = [...bio.trim()].length;
   const tagsInvalid =
     nextTags.length > MAX_BOT_TAGS || nextTags.some((tag) => [...tag].length > MAX_BOT_TAG_LENGTH);
-  const invalid = name.trim().length === 0 || bioLength > MAX_BOT_BIO_LENGTH || tagsInvalid;
+  const bioInvalid = bioLength > MAX_BOT_BIO_LENGTH;
+  const invalid = name.trim().length === 0 || bioInvalid || tagsInvalid;
+  const tagsLimit = t('profile.tags.limit', { max: MAX_BOT_TAGS, length: MAX_BOT_TAG_LENGTH });
+  const bioCount = t('profile.bio.count', { count: bioLength, max: MAX_BOT_BIO_LENGTH });
 
   const save = async (): Promise<void> => {
     if (invalid || busy) return;
@@ -98,47 +197,30 @@ function EditProfileModal({
   };
 
   return (
-    <Modal
-      open
-      onClose={onClose}
+    <FormDialog
       title={t('profile.edit.title')}
-      closeLabel={t('common.close')}
-      className="bh-sidebar-modal bh-profile-edit-modal"
-      footer={
-        <div className="bh-modal-footer">
-          <Button variant="outline" disabled={busy} onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" disabled={busy || invalid} onClick={() => void save()}>
-            {t('profile.save')}
-          </Button>
-        </div>
-      }
+      labels={{ close: t('common.close'), cancel: t('common.cancel') }}
+      submitLabel={t('profile.save')}
+      submitDisabled={invalid}
+      busy={busy}
+      error={failed ? t('profile.updateFailed') : undefined}
+      onCancel={onClose}
+      onSubmit={() => void save()}
     >
-      <form
-        className="bh-sidebar-modal-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
+      <TextField
+        label={t('profile.name')}
+        value={name}
+        disabled={busy}
+        onChange={setName}
+        initialFocus
+      />
+      <Field
+        label={t('profile.tags')}
+        {...(tagsInvalid ? { error: tagsLimit } : { hint: tagsLimit })}
       >
-        <div className="bh-personabot-field">
-          <label className="bh-personabot-label" htmlFor={nameId}>
-            {t('profile.name')}
-          </label>
-          <NameInput
-            id={nameId}
-            value={name}
-            disabled={busy}
-            onChange={(event) => setName(event.currentTarget.value)}
-          />
-        </div>
-        <div className="bh-personabot-field">
-          <label className="bh-personabot-label" htmlFor={tagsId}>
-            {t('profile.tags')}
-          </label>
+        {(control) => (
           <TagEditor
-            id={tagsId}
+            id={control.id}
             tags={tags}
             draft={tagDraft}
             disabled={busy}
@@ -146,37 +228,22 @@ function EditProfileModal({
             onTags={setTags}
             onDraft={setTagDraft}
           />
-          <span className="bh-personabot-hint" data-invalid={tagsInvalid ? 'true' : undefined}>
-            {t('profile.tags.limit', { max: MAX_BOT_TAGS, length: MAX_BOT_TAG_LENGTH })}
-          </span>
-        </div>
-        <div className="bh-personabot-field">
-          <label className="bh-personabot-label" htmlFor={bioId}>
-            {t('profile.bio')}
-          </label>
+        )}
+      </Field>
+      <Field label={t('profile.bio')} {...(bioInvalid ? { error: bioCount } : { hint: bioCount })}>
+        {(control) => (
           <textarea
-            id={bioId}
-            className="bh-profile-bio-input"
+            {...control}
             rows={3}
             value={bio}
             disabled={busy}
             placeholder={t('profile.bio.placeholder')}
             onChange={(event) => setBio(event.currentTarget.value)}
+            {...stylex.props(styles.textarea)}
           />
-          <span
-            className="bh-personabot-hint bh-profile-bio-count"
-            data-invalid={bioLength > MAX_BOT_BIO_LENGTH ? 'true' : undefined}
-          >
-            {t('profile.bio.count', { count: bioLength, max: MAX_BOT_BIO_LENGTH })}
-          </span>
-        </div>
-        {failed ? (
-          <div className="bh-error" role="alert">
-            {t('profile.updateFailed')}
-          </div>
-        ) : null}
-      </form>
-    </Modal>
+        )}
+      </Field>
+    </FormDialog>
   );
 }
 
@@ -193,6 +260,7 @@ function AvatarModal({
     BridgeActions,
     | 'setBotAppearance'
     | 'setBotAvatar'
+    | 'setBotPrimaryColor'
     | 'loadPartLibrary'
     | 'addLibraryPart'
     | 'exportLibraryParts'
@@ -205,6 +273,8 @@ function AvatarModal({
   const [file, setFile] = useState<File>();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [coloring, setColoring] = useState(false);
+  const primary = botPrimaryColorOf(bot);
   const input = useRef<HTMLInputElement | null>(null);
   const removeImage = async (): Promise<void> => {
     setBusy(true);
@@ -213,13 +283,28 @@ function AvatarModal({
     setFailed(!updated);
   };
   return (
-    <Modal
-      open
+    <PanelDialog
+      size="medium"
       onClose={onClose}
       title={t('profile.avatar.section')}
       closeLabel={t('common.close')}
-      className="bh-profile-avatar-modal"
     >
+      <div data-primary-color-source={primary.source} {...stylex.props(styles.colorRow)}>
+        <span
+          aria-hidden="true"
+          {...stylex.props(styles.colorSwatch)}
+          style={{ background: primary.color }}
+        />
+        <span {...stylex.props(styles.colorCopy)}>
+          <span {...stylex.props(styles.colorTitle)}>{t('profile.primaryColor.title')}</span>
+          <span {...stylex.props(styles.hint)}>
+            {t(`profile.primaryColor.summary.${primary.source}`)}
+          </span>
+        </span>
+        <Button size="sm" variant="outline" onClick={() => setColoring(true)}>
+          {t('profile.primaryColor.edit')}
+        </Button>
+      </div>
       <AvatarAppearanceEditor
         key={`avatar-${bot.slug}`}
         bot={bot}
@@ -239,19 +324,26 @@ function AvatarModal({
       />
       <input
         ref={input}
-        className="bh-profile-avatar-input"
         type="file"
         accept="image/png,image/jpeg,image/webp"
+        tabIndex={-1}
+        aria-hidden="true"
         onChange={(event) => {
           const chosen = event.currentTarget.files?.[0];
           event.currentTarget.value = '';
           if (chosen !== undefined) setFile(chosen);
         }}
+        {...stylex.props(styles.file)}
       />
-      {failed ? (
-        <div className="bh-error" role="alert">
-          {t('profile.avatar.failed')}
-        </div>
+      {failed ? <Note tone="danger">{t('profile.avatar.failed')}</Note> : null}
+      {coloring ? (
+        <PrimaryColorModal
+          bot={bot}
+          channel={channel}
+          actions={actions}
+          t={t}
+          onClose={() => setColoring(false)}
+        />
       ) : null}
       {file === undefined ? null : (
         <PersonaBotAvatarCropModal
@@ -265,7 +357,7 @@ function AvatarModal({
           }}
         />
       )}
-    </Modal>
+    </PanelDialog>
   );
 }
 
@@ -307,91 +399,88 @@ function BannerModal({
     else setFailed(true);
   };
   return (
-    <Modal
-      open
-      onClose={onClose}
+    <FormDialog
       title={t('profile.banner.title')}
-      closeLabel={t('common.close')}
-      className="bh-sidebar-modal bh-banner-modal"
-      footer={
-        <div className="bh-modal-footer">
-          <Button variant="outline" disabled={busy} onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button variant="primary" disabled={busy} onClick={() => void save()}>
-            {t('profile.save')}
-          </Button>
-        </div>
-      }
+      labels={{ close: t('common.close'), cancel: t('common.cancel') }}
+      submitLabel={t('profile.save')}
+      busy={busy}
+      error={failed ? t('profile.banner.failed') : undefined}
+      onCancel={onClose}
+      onSubmit={() => void save()}
     >
-      <div className="bh-banner-editor">
-        <div className="bh-banner-preview">
-          <BotBannerArt banner={draft} />
-        </div>
-        <div className="bh-banner-actions">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy || scene === undefined}
-            onClick={() =>
-              scene !== undefined && setDraft({ recipe: { scene, seed: randomSeed() } })
-            }
-          >
-            {t('profile.banner.reroll')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => input.current?.click()}
-          >
-            {t('profile.banner.upload')}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={busy}
-            onClick={() => setDraft({ recipe: seededBannerRecipe(bot.displayName) })}
-          >
-            {t('profile.banner.reset')}
-          </Button>
-        </div>
-        {scene === undefined ? (
-          <span className="bh-personabot-hint">{t('profile.banner.uploaded')}</span>
-        ) : null}
-        <div className="bh-banner-scenes" role="radiogroup" aria-label={t('profile.banner.scene')}>
-          {BANNER_SCENES.map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={scene === option}
-              className="bh-banner-scene"
-              disabled={busy}
-              onClick={() => setDraft({ recipe: { scene: option, seed } })}
-            >
-              <BotBannerArt banner={{ recipe: { scene: option, seed } }} />
-              <span>{t(`profile.banner.scene.${option}`)}</span>
-            </button>
-          ))}
-        </div>
-        <input
-          ref={input}
-          className="bh-profile-avatar-input"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(event) => {
-            const chosen = event.currentTarget.files?.[0];
-            event.currentTarget.value = '';
-            if (chosen !== undefined) setFile(chosen);
-          }}
-        />
-        {failed ? (
-          <div className="bh-error" role="alert">
-            {t('profile.banner.failed')}
-          </div>
-        ) : null}
+      <div {...stylex.props(styles.bannerPreview)}>
+        <BotBannerArt banner={draft} />
       </div>
+      <div {...stylex.props(styles.bannerActions)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy || scene === undefined}
+          onClick={() => scene !== undefined && setDraft({ recipe: { scene, seed: randomSeed() } })}
+        >
+          {t('profile.banner.reroll')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => input.current?.click()}
+        >
+          {t('profile.banner.upload')}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => setDraft({ recipe: seededBannerRecipe(bot.displayName) })}
+        >
+          {t('profile.banner.reset')}
+        </Button>
+      </div>
+      {scene === undefined ? <Note>{t('profile.banner.uploaded')}</Note> : null}
+      <Field label={t('profile.banner.scene')} group>
+        {() => (
+          <div
+            role="radiogroup"
+            aria-label={t('profile.banner.scene')}
+            {...stylex.props(styles.scenes)}
+          >
+            {BANNER_SCENES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={scene === option}
+                data-banner-scene={option}
+                disabled={busy}
+                onClick={() => setDraft({ recipe: { scene: option, seed } })}
+                {...stylex.props(styles.scene, scene === option && styles.sceneOn)}
+              >
+                <span {...stylex.props(styles.sceneArt)}>
+                  <BotBannerArt banner={{ recipe: { scene: option, seed } }} />
+                </span>
+                <span>{t(`profile.banner.scene.${option}`)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </Field>
+      <input
+        ref={input}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(event) => {
+          const chosen = event.currentTarget.files?.[0];
+          event.currentTarget.value = '';
+          if (chosen !== undefined) setFile(chosen);
+        }}
+        {...stylex.props(styles.file)}
+      />
       {file === undefined ? null : (
         <BannerCropModal
           file={file}
@@ -403,7 +492,7 @@ function BannerModal({
           }}
         />
       )}
-    </Modal>
+    </FormDialog>
   );
 }
 
@@ -422,7 +511,14 @@ export function ProfileHeader({
 }): ReactElement {
   const [panel, setPanel] = useState<'edit' | 'avatar' | 'banner'>();
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuItems: readonly MenuEntry[] = [{ id: 'delete', label: t('deletion.title') }];
+  const menuItems: readonly MenuEntry[] = [
+    {
+      id: 'delete',
+      label: t('deletion.title'),
+      icon: <IconTrashOutlineRegular size={16} />,
+      danger: true,
+    },
+  ];
   return (
     <header className="bh-profile-header">
       <div className="bh-profile-banner">

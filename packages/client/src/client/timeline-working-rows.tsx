@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import {
-  PersonaBotAvatar,
+  PersonaBotFacepile,
   personaBotActivitySummary,
   type PersonaBotFacepileItem,
 } from './avatar.js';
@@ -8,7 +8,7 @@ import { attentionCount } from './activity-attention.js';
 import type { ChannelComposerActivity } from './channel-composer.js';
 import type { BotHarnessTranslate } from './locale.js';
 
-const MAX_WORKING_ROWS = 2;
+const MAX_WORKING_ROWS = 3;
 
 export interface TimelineWorkingRows {
   items: readonly PersonaBotFacepileItem[];
@@ -65,46 +65,34 @@ export function TimelineWorkingRowsView({
   rows: TimelineWorkingRows;
   t: BotHarnessTranslate;
 }): ReactElement | null {
-  if (rows.items.length === 0) return null;
+  const [only] = rows.items;
+  if (only === undefined) return null;
+  const summary =
+    rows.items.length === 1 && rows.more === 0
+      ? personaBotActivitySummary(only.state ?? 'idle', rowActivity(only.activity), t)
+      : personaBotActivitySummary('working', undefined, t);
   return (
     <div className="bh-timeline-working" aria-hidden="true">
-      {rows.items.map((item) => (
-        <div
-          key={item.personaBotId}
-          className="bh-timeline-working-row"
-          data-bot-slug={item.personaBotId}
-        >
-          <span className="bh-message-group-avatar">
-            <PersonaBotAvatar
-              t={t}
-              personaBotId={item.personaBotId}
-              name={item.name}
-              src={item.src}
-              appearance={item.appearance}
-              avatarSeed={item.avatarSeed}
-              state={item.state}
-              activity={item.activity}
-              size={28}
-              indicator={false}
-            />
+      <div className="bh-timeline-working-row">
+        <PersonaBotFacepile
+          className="bh-timeline-working-avatars"
+          items={rows.items}
+          size={28}
+          max={MAX_WORKING_ROWS}
+          indicator={false}
+          t={t}
+        />
+        <span className="bh-timeline-working-summary">
+          {rows.more > 0
+            ? `${summary} · ${t('main.activity.more', { count: rows.more })}`
+            : summary}
+          <span className="bh-timeline-working-ellipsis">
+            <i>.</i>
+            <i>.</i>
+            <i>.</i>
           </span>
-          <span className="bh-timeline-working-summary">
-            <span className="bh-timeline-working-name">{item.name}</span>
-            {' · '}
-            {personaBotActivitySummary(item.state ?? 'idle', rowActivity(item.activity), t)}
-            <span className="bh-timeline-working-ellipsis">
-              <i>.</i>
-              <i>.</i>
-              <i>.</i>
-            </span>
-          </span>
-        </div>
-      ))}
-      {rows.more > 0 ? (
-        <div className="bh-timeline-working-more">
-          {t('main.activity.more', { count: rows.more })}
-        </div>
-      ) : null}
+        </span>
+      </div>
     </div>
   );
 }

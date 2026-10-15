@@ -4,21 +4,27 @@ import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import semver from 'semver';
+import { readComposedReleaseLedgers } from './change-fragments.mjs';
 import { providerRuntimeDigest } from './dev-im-provider.mjs';
 import { pnpmCommand } from './dev-package-manager.mjs';
 
+export const productDsh = '0.2.0-rc.2';
+export const productDshRange = productDsh;
+export const providerDshRange = '>=0.2.0-0';
+export const productDshVersions = Object.freeze([productDsh]);
+
 export const productImProvider = Object.freeze({
   name: '@botharness/im-provider',
-  version: '4.32.0-botharness.17',
-  sourceManifestSha256: '501e62d558eceb2b42ad9cd03fc0910e09581fd6531ec68e074fe5a16225ed1e',
-  sourceLockSha256: 'c7f16baaa5bb1ab3bbb607b59a10327f0af010c61e1ea1ab4a72d7d08af9ffe9',
+  version: '4.32.0-botharness.21',
+  sourceManifestSha256: '3331e8f771a91abf396eb4e7ed5c0acc4c3b504cdccc7d715e37062708384cc2',
+  sourceLockSha256: '3476c34c7d4515000d2617beaf2568b2a794b60de9b350cd8eafb7a2bf21adef',
   upstream: Object.freeze({
     package: '@xmanrui/dsh-im',
     packageVersion: '4.32.0',
-    source: 'bddd7d93e1c1b969ce137721c2494f6d72bfa8bc',
-    dsh: '0.2.0-rc.1',
-    runtimeFiles: 412,
-    runtimeSha256: 'c2047738952dc155f95eb1b23cd56ba96bb7585a7e343e3916ee7da63b282548',
+    source: 'beaed4a6dabb583654d28fb09298716267039b4a',
+    dsh: '0.2.0-rc.2',
+    runtimeFiles: 421,
+    runtimeSha256: '42e1140e67ba2f74122db3d49bb2c8aece239b7d75f9564ce713a8a491902706',
   }),
 });
 
@@ -35,11 +41,13 @@ export function productManifest(manifest, version) {
       directory: 'packages/deepseekbot',
     },
     description:
-      'DeepSeekBot: the open-source Grok Bot alternative for DeepSeek Harness. PersonaBots with their own identity, Git Memory, Groups and Lark, Slack, Discord and WeChat identities.',
-    homepage: 'https://deepseekbot.botharness.ai/en/',
+      'DeepSeekBot (DSB): the open-source Grok Bot alternative for DeepSeek Harness. PersonaBots with their own identity, Git Memory, Groups and Lark, Slack, Discord, QQ and WeChat identities. Not the same project as DS Bot (ds-bot).',
+    homepage: 'https://deepseekbot.app/en/',
     bugs: { url: 'https://github.com/BotHarness/BotHarness/issues' },
     keywords: [
       'deepseekbot',
+      'dsb',
+      'deepseek-bot',
       'deepseek',
       'deepseek-harness',
       'dsh',
@@ -53,6 +61,7 @@ export function productManifest(manifest, version) {
       'slack',
       'discord',
       'wechat',
+      'qq',
     ],
     publishConfig: { access: 'public' },
     dependencies: {
@@ -133,10 +142,18 @@ export function providerManifest(original) {
       'README.en.md',
       'PROVENANCE.json',
     ],
-    engines: { node: '>=22', dsh: productImProvider.upstream.dsh },
+    engines: { node: '>=22', dsh: providerDshRange },
+    peerDependencies: Object.fromEntries(
+      Object.entries(manifest.peerDependencies ?? {}).map(([name, range]) => [
+        name,
+        name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-')
+          ? providerDshRange
+          : range,
+      ]),
+    ),
     dsh: {
       ...manifest.dsh,
-      compatibility: { dsh: productImProvider.upstream.dsh, profiles: ['web'] },
+      compatibility: { dsh: providerDshRange, profiles: ['web'] },
     },
     botharness: { managedByProduct: true, upstreamSource: productImProvider.upstream.source },
   };
@@ -197,6 +214,7 @@ export function stageProvider(source, target, repoRoot) {
     ),
   );
   symlinkSync(join(source, 'node_modules'), join(target, 'node_modules'), 'dir');
+  writeJson(join(target, 'tsconfig.json'), { compilerOptions: { alwaysStrict: true } });
   const env = { ...process.env, DSH_IM_CLIENT_ID: productImProvider.name };
   run(process.execPath, ['plugin-src/client/build.mjs'], { cwd: target, env });
   run(process.execPath, ['plugin-src/host/build.mjs'], { cwd: target, env });
@@ -247,7 +265,11 @@ export function packProduct({ repoRoot, outputDirectory, providerSource, version
     const { private: _private, devDependencies: _dev, scripts: _scripts, ...release } = manifest;
     for (const path of manifest.files) copyAvailable(source, target, [path]);
     const ledgers = name === 'core' ? ['CHANGELOG.md', 'CHANGELOG.zh.md'] : [];
-    for (const ledger of ledgers) cpSync(join(repoRoot, ledger), join(target, ledger));
+    if (ledgers.length > 0) {
+      const { english, chinese } = readComposedReleaseLedgers(repoRoot);
+      writeFileSync(join(target, 'CHANGELOG.md'), english);
+      writeFileSync(join(target, 'CHANGELOG.zh.md'), chinese);
+    }
     cpSync(join(repoRoot, 'LICENSE'), join(target, 'LICENSE'));
     writeJson(join(target, 'package.json'), {
       ...release,
@@ -288,7 +310,7 @@ export function packProduct({ repoRoot, outputDirectory, providerSource, version
   }
   writeJson(join(output, 'artifacts.json'), {
     productVersion: version,
-    dsh: productImProvider.upstream.dsh,
+    dsh: productDsh,
     providerRuntime,
     artifacts,
   });

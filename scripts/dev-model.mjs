@@ -1,5 +1,6 @@
 import {
   existsSync,
+  copyFileSync,
   lstatSync,
   mkdirSync,
   readFileSync,
@@ -16,19 +17,31 @@ import { Document, isMap, isSeq, parseDocument } from 'yaml';
 
 export const AX_MODEL_PATH = join(homedir(), '.config', 'botharness', 'ax-model.json');
 export const GO_KEY_REF = 'OPENCODE_GO_API_KEY';
-export const DEFAULT_GO_MODEL = 'deepseek-v4-flash';
+export const DEFAULT_GO_MODEL = 'deepseek-v4.1-flash';
 export const GO_SESSION_PATCH = resolve(
   import.meta.dirname,
-  '../patches/@deepseek-ai__dsh-llm-pi-ai@0.2.0-rc.1.patch',
+  '../patches/@deepseek-ai__dsh-llm-pi-ai@0.2.0-rc.2.patch',
 );
 
-export function axRuntimeWorkspace(source) {
+export const GO_RUNTIME_PATCH = 'patches/dsh-llm-pi-ai-0.2.0-rc.2.patch';
+
+export const GO_SESSION_DSH = '0.2.0-rc.2';
+export const GO_SESSION_PACKAGED_DSH = '0.2.0-rc.1';
+
+export function goSessionQualified(version, packaged) {
+  return version === GO_SESSION_DSH || (packaged && version === GO_SESSION_PACKAGED_DSH);
+}
+
+export function axRuntimeWorkspace(source, runtime, version = GO_SESSION_DSH) {
   const document = parseDocument(source);
   if (document.errors.length || !isMap(document.contents))
     throw new Error('Invalid AX runtime workspace');
+  const stagedPatch = join(runtime, GO_RUNTIME_PATCH);
+  mkdirSync(dirname(stagedPatch), { recursive: true });
+  copyFileSync(GO_SESSION_PATCH, stagedPatch);
   document.setIn(
-    ['patchedDependencies', '@deepseek-ai/dsh-llm-pi-ai@0.2.0-rc.1'],
-    GO_SESSION_PATCH,
+    ['patchedDependencies', `@deepseek-ai/dsh-llm-pi-ai@${version}`],
+    GO_RUNTIME_PATCH,
   );
   return String(document);
 }

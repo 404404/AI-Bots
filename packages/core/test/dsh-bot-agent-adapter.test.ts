@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { BotScheduleError } from '../src/schedules/bot-schedules.js';
+import { isDshGovernedTool } from '../src/workspaces/grant-execution.js';
 import type { AssignmentAgentRun, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { FakeAgentHost, FAKE_BOT as BOT } from './dsh-agent-host-fixture.js';
 
@@ -44,6 +45,47 @@ const groupTools = {
   },
   leaveGroup: (): never => {
     throw new Error('unexpected Group leave');
+  },
+};
+
+const reportRun: OrchestratorAgentRun = {
+  sessionId: 'orchestrator-ada',
+  resume: false,
+  bot: BOT,
+  message: 'Write a long report',
+  inboundChannelId: 'dm-test',
+  inbox: '',
+  channels: {
+    ...groupTools,
+    contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+    sendToBot: async () => {
+      throw new Error('unexpected Bot DM');
+    },
+    ignore: () => ({ sourceEventId: 'source-1', ignoredAt: BOT.createdAt, alreadyIgnored: false }),
+    read: () => [],
+    requestGrant: async () => {
+      throw new Error('unexpected Grant request');
+    },
+    send: async (input) => ({
+      id: 'bot-1',
+      at: BOT.createdAt,
+      author: { kind: 'bot', slug: BOT.slug },
+      body: input.body,
+    }),
+  },
+  assignments: {
+    create: () => {
+      throw new Error('unexpected Assignment');
+    },
+    request: () => {
+      throw new Error('unexpected Assignment request');
+    },
+    grants: () => [],
+    list: () => [],
+    inspect: () => undefined,
+    stop: async () => {
+      throw new Error('unexpected stop');
+    },
   },
 };
 
@@ -96,6 +138,69 @@ describe('DSH Bot Agent adapter', () => {
       else expect(cancelledTurn).not.toHaveBeenCalled();
       expect(completedTurn).not.toHaveBeenCalled();
       expect(report).not.toHaveBeenCalled();
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it.each([true, false])(
+    'ends a Human-stopped Orchestrator turn without an error (stopped: %s)',
+    async (stopped) => {
+      let started!: () => void;
+      let finish!: () => void;
+      const running = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const host = new FakeAgentHost(
+        stopped ? { kind: 'aborted', reason: { kind: 'user' } } : { kind: 'completed' },
+        {
+          onTurn: () =>
+            new Promise<void>((resolve) => {
+              finish = resolve;
+              started();
+            }),
+        },
+      );
+      const adapter = createDshBotAgentAdapter({
+        agents: host,
+        defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+        orchestratorCwd: () => '/memory/ada',
+        ensureWorkspace: () => undefined,
+      });
+      try {
+        expect(adapter.stopOrchestratorTurn?.(BOT.slug)).toBeUndefined();
+        const turn = adapter.runOrchestrator(reportRun);
+        await running;
+        if (stopped) {
+          expect(adapter.stopOrchestratorTurn?.(BOT.slug)).toBe('orchestrator-ada');
+          expect(host.cancelled).toEqual([
+            { sessionId: 'orchestrator-ada', reason: { kind: 'user' } },
+          ]);
+        }
+        finish();
+        await expect(turn).resolves.toBeUndefined();
+        expect(adapter.stopOrchestratorTurn?.(BOT.slug)).toBeUndefined();
+      } finally {
+        await adapter.close();
+      }
+    },
+  );
+
+  it('still fails an Orchestrator turn aborted by anything but a Human stop', async () => {
+    const host = new FakeAgentHost(
+      { kind: 'aborted', reason: { kind: 'user' } },
+      { onTurn: async () => undefined },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    try {
+      await expect(adapter.runOrchestrator(reportRun)).rejects.toThrow(
+        'Agent turn ended without completion: aborted',
+      );
     } finally {
       await adapter.close();
     }
@@ -948,6 +1053,87 @@ describe('DSH Bot Agent adapter', () => {
     }
   });
 
+  it('lists bridge Tools and the external IM prompt only on turns where the Bot has IM', async () => {
+    const listed: string[][] = [];
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onTurn: async (_session, tools) => {
+          listed.push(tools.map((tool) => tool.name).filter((name) => name.startsWith('bridge_')));
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    let connected = false;
+    const run: OrchestratorAgentRun = {
+      sessionId: 'orchestrator-ada',
+      resume: false,
+      bot: BOT,
+      message: 'Turn',
+      inbox: '',
+      inboundChannelId: 'dm-test',
+      externalMessaging: {
+        connected: () => connected,
+      } as unknown as NonNullable<OrchestratorAgentRun['externalMessaging']>,
+      channels: {
+        ...groupTools,
+        contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+        sendToBot: async () => {
+          throw new Error('unexpected Bot DM');
+        },
+        ignore: () => ({
+          sourceEventId: 'source-1',
+          ignoredAt: BOT.createdAt,
+          alreadyIgnored: false,
+        }),
+        read: () => [],
+        requestGrant: async () => undefined as never,
+        send: async () => {
+          throw new Error('unexpected send');
+        },
+      },
+      assignments: {
+        create: () => ({ outcome: 'created', assignment: ASSIGNMENT }),
+        grants: () => [],
+        list: () => [],
+        inspect: () => undefined,
+        stop: async () => ASSIGNMENT,
+        request: () => ({ assignment: ASSIGNMENT, delivery: 'followup' }),
+      },
+    };
+    const imPrompt = () =>
+      host.scopes
+        .get(run.sessionId)
+        ?.sections.some((section) => section.name === 'botharness:external-im');
+    try {
+      await adapter.runOrchestrator(run);
+      expect(listed.at(-1)).toEqual([]);
+      expect(imPrompt()).toBe(false);
+
+      connected = true;
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toHaveLength(16);
+      expect(listed.at(-1)).toContain('bridge_reply');
+      expect(listed.at(-1)).toContain('bridge_reachable_groups');
+      expect(imPrompt()).toBe(true);
+
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toHaveLength(16);
+
+      connected = false;
+      await adapter.runOrchestrator({ ...run, resume: true });
+      expect(listed.at(-1)).toEqual([]);
+      expect(imPrompt()).toBe(false);
+    } finally {
+      await adapter.close();
+    }
+  });
+
   it('rejects when the durable turn outcome is an error even though the Agent becomes idle', async () => {
     const host = new FakeAgentHost({
       kind: 'error',
@@ -1003,8 +1189,92 @@ describe('DSH Bot Agent adapter', () => {
     await adapter.close();
   });
 
+  it('releases a replaced Orchestrator handle but keeps a running one', async () => {
+    let releaseDuringTurn: Promise<void> | undefined;
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onSessionEvent: (session, event) => {
+          if (session.id === 'orchestrator-new' && event.type === 'turn/start')
+            releaseDuringTurn = adapter.releaseSession!('orchestrator-new');
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    const run = (sessionId: string): OrchestratorAgentRun => ({
+      sessionId,
+      resume: false,
+      bot: BOT,
+      inboundChannelId: 'dm-test',
+      inbox: '',
+      message: '请核对发布状态',
+      channels: {
+        ...groupTools,
+        contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+        sendToBot: async () => {
+          throw new Error('unexpected Bot DM');
+        },
+        ignore: () => ({
+          sourceEventId: 'source-1',
+          ignoredAt: BOT.createdAt,
+          alreadyIgnored: false,
+        }),
+        read: () => [],
+        requestGrant: async () => undefined as never,
+        send: async (input) => ({
+          id: 'bot-1',
+          at: BOT.createdAt,
+          author: { kind: 'bot', slug: BOT.slug },
+          body: input.body,
+        }),
+      },
+      assignments: {
+        create: () => ({ outcome: 'created', assignment: ASSIGNMENT }),
+        grants: () => [],
+        list: () => [],
+        inspect: () => undefined,
+        stop: async () => ({
+          sessionId: 'test',
+          purpose: 'test',
+          activity: 'stopped',
+          createdAt: '',
+          updatedAt: '',
+        }),
+        request: () => ({ assignment: ASSIGNMENT, delivery: 'followup' }),
+      },
+    });
+    try {
+      await adapter.runOrchestrator(run('orchestrator-old'));
+      await adapter.runOrchestrator(run('orchestrator-new'));
+      expect(releaseDuringTurn).toBeDefined();
+      await releaseDuringTurn;
+      expect(host.disposed).toEqual([]);
+
+      await adapter.releaseSession!('orchestrator-old');
+      await adapter.releaseSession!('orchestrator-old');
+      await adapter.releaseSession!('never-opened');
+      expect(host.disposed).toEqual(['orchestrator-old']);
+    } finally {
+      await adapter.close();
+    }
+    expect(host.disposed.sort()).toEqual(['orchestrator-new', 'orchestrator-old']);
+  });
+
   it('runs independent scoped Orchestrator and Assignment roots and owns their handles', async () => {
-    const host = new FakeAgentHost();
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onSessionEvent: (session, event) => {
+          if (session.id === 'orchestrator-ada' && event.type === 'turn/start')
+            expect(adapter.steerOrchestrator?.(BOT.slug, '请继续回复当前 Channel')).toBe(true);
+        },
+      },
+    );
     const preparedWorkspaces: string[] = [];
     const adapter = createDshBotAgentAdapter({
       agents: host,
@@ -1126,26 +1396,18 @@ describe('DSH Bot Agent adapter', () => {
       'request_workspace_grant',
       'list_workspace_grants',
       'list_assignments',
+      'archive_assignment',
+      'unarchive_assignment',
       'inspect_assignment',
       'send_assignment_request',
       'wait_for_assignment',
       'stop_assignment',
       'channel_list',
-      'bridge_targets',
-      'bridge_post',
-      'bridge_outbox',
-      'bridge_read',
-      'bridge_share',
-      'bridge_group_policy_list',
-      'bridge_group_policy_set',
-      'bridge_thread_policy_list',
-      'bridge_thread_policy_set',
-      'bridge_context',
-      'bridge_attachment_save',
-      'bridge_reply_file',
-      'bridge_reply',
       'channel_read',
       'inbox_history',
+      'inbox_list',
+      'inbox_resolve',
+      'inbox_snooze',
       'inbox_ignore',
       'channel_attachment_open',
       'channel_attachment_save',
@@ -1153,6 +1415,7 @@ describe('DSH Bot Agent adapter', () => {
       'channel_read_image',
       'list_bot_contacts',
       'group_create',
+      'bot_create',
       'group_invite_bot',
       'group_invite_respond',
       'group_join_request',
@@ -1172,9 +1435,51 @@ describe('DSH Bot Agent adapter', () => {
       'bot_dm_send',
       'channel_send',
     ]);
+    expect(
+      host.scopes
+        .get('orchestrator-ada')
+        ?.tools.map((tool) => tool.name)
+        .filter((name) => isDshGovernedTool(name) && !name.startsWith('secret_')),
+    ).toEqual([]);
     const channelSend = host.scopes
       .get('orchestrator-ada')
       ?.tools.find((tool) => tool.name === 'channel_send');
+    const rolePrompt = host.scopes.get('orchestrator-ada')?.sections[0]?.text ?? '';
+    expect(rolePrompt).toContain('## Reply delivery contract');
+    expect(rolePrompt.indexOf('## Reply delivery contract')).toBeLessThan(
+      rolePrompt.indexOf('Use three complementary sources'),
+    );
+    expect(rolePrompt).toContain('Reading content or images does not send an answer');
+    expect(rolePrompt).toContain('Never imitate an earlier assistant-only answer');
+    expect(rolePrompt).toContain('If the Human explicitly asks for no reply');
+    expect(rolePrompt).toContain('External IM uses bridge_reply or bridge_reply_file');
+    expect(rolePrompt).toContain('retry an uncertain send blindly');
+    expect(rolePrompt).toContain('call ask_secret at once');
+    expect(rolePrompt).toContain('never ask them to paste a secret into a Channel');
+    expect(rolePrompt.replace(/\{\{(?:provider|model|cwd)\}\}/g, '')).not.toContain('{{');
+    expect(channelSend?.description).toContain('Assistant final text is private Session output');
+    expect(channelSend?.description).toContain('A request for "no tools"');
+    const deliveryPrompt = host.scopes
+      .get('orchestrator-ada')
+      ?.sections.find((section) => section.name === 'botharness:reply-delivery')?.text;
+    expect(deliveryPrompt).toContain('MUST deliver any intended Human-facing answer');
+    expect(deliveryPrompt).toContain('纯文本 final 不会发送给用户');
+    expect(deliveryPrompt).toContain('If no reply is wanted, remain silent');
+    const received = host.received.get('orchestrator-ada')?.[0]?.content;
+    expect(received).toHaveLength(2);
+    expect(received?.[0]).toEqual({ type: 'text', text: '请核对发布状态' });
+    expect(received?.[1]).toMatchObject({
+      type: 'text',
+      text: expect.stringContaining('[Host reply transport reminder]'),
+    });
+    expect(host.received.get('assignment-1')?.[0]?.content).toHaveLength(1);
+    expect(host.steered.get('orchestrator-ada')?.[0]?.content).toEqual([
+      { type: 'text', text: '请继续回复当前 Channel' },
+      {
+        type: 'text',
+        text: expect.stringContaining('[Host reply transport reminder]'),
+      },
+    ]);
     expect(channelSend?.parameters).toMatchObject({
       properties: { body: expect.any(Object), channel_id: expect.any(Object) },
       required: ['body'],
@@ -1229,7 +1534,9 @@ describe('DSH Bot Agent adapter', () => {
     expect(assignmentPrompt).toContain('Never access another workspace or the PersonaBot');
     expect(host.scopes.get('orchestrator-ada')?.restrictions).toEqual([]);
     expect(host.scopes.get('assignment-1')?.restrictions).toEqual([]);
-    expect(assignmentPrompt).toContain('unless the Human has saved a matching automatic rule');
+    expect(assignmentPrompt).toContain(
+      'when one asks DSH for permission, the approval card appears in the Bot Channel',
+    );
     expect(assignmentPrompt).toContain('expects_reply');
 
     await adapter.close();
@@ -1595,6 +1902,21 @@ describe('DSH Bot Agent adapter', () => {
 it('routes external Tools through the active owning Orchestrator without a local inbound Channel', async () => {
   const replies: string[][] = [];
   const reads: string[] = [];
+  const permissionsRead = vi.fn(() => ({
+    queriedAt: '2026-10-11T00:00:00Z',
+    status: 'visitor' as const,
+  }));
+  const directoryRead = vi.fn(() => ({
+    kind: 'observed-people' as const,
+    queriedAt: '2026-10-11T00:00:00Z',
+    policyRevision: 1,
+    rows: [],
+    coverage: {
+      kind: 'retained-authorized-observations' as const,
+      incomplete: true,
+      currentPlatformMembership: false as const,
+    },
+  }));
   let latePost: (() => Promise<unknown>) | undefined;
   const signal = new AbortController().signal;
   const contextRead = vi.fn<NonNullable<OrchestratorAgentRun['externalMessaging']>['context']>(
@@ -1610,6 +1932,29 @@ it('routes external Tools through the active owning Orchestrator without a local
     { kind: 'completed' },
     {
       onTurn: async (_session, tools) => {
+        const permissions = tools.find((tool) => tool.name === 'bridge_sender_permissions');
+        if (!permissions) throw new Error('permission tool unavailable');
+        expect(
+          JSON.parse(
+            String(
+              await permissions.execute({ source_event_id: 'source-1' }, {} as ToolRunContext),
+            ),
+          ),
+        ).toEqual({ queriedAt: '2026-10-11T00:00:00Z', status: 'visitor' });
+        await permissions.execute({ source_event_id: 'source-1' }, {} as ToolRunContext);
+        expect(permissionsRead).toHaveBeenCalledTimes(2);
+        expect(permissionsRead).toHaveBeenCalledWith('source-1');
+        const directory = tools.find((tool) => tool.name === 'bridge_directory');
+        if (!directory) throw new Error('directory tool unavailable');
+        await directory.execute(
+          { kind: 'observed-people', source_event_id: 'source-1', limit: 1 },
+          {} as ToolRunContext,
+        );
+        expect(directoryRead).toHaveBeenCalledWith({
+          kind: 'observed-people',
+          sourceEventId: 'source-1',
+          limit: 1,
+        });
         const contextTool = tools.find((tool) => tool.name === 'bridge_context');
         if (!contextTool) throw new Error('context tool unavailable');
         await contextTool.execute(
@@ -1621,6 +1966,20 @@ it('routes external Tools through the active owning Orchestrator without a local
           { scope: 'thread', cursor: 'opaque', maxCharacters: 1000 },
           signal,
         );
+        const groups = tools.find((tool) => tool.name === 'bridge_reachable_groups');
+        if (!groups) throw new Error('reachable groups tool unavailable');
+        expect(JSON.parse(String(await groups.execute({}, {} as ToolRunContext)))).toEqual([
+          {
+            bindingId: 'owned-app',
+            platform: 'feishu',
+            accountName: 'Owned app',
+            page: {
+              version: 1,
+              conversations: [{ id: 'oc_new', kind: 'group', name: 'New group' }],
+              hasMore: false,
+            },
+          },
+        ]);
         const targets = tools.find((tool) => tool.name === 'bridge_targets');
         const post = tools.find((tool) => tool.name === 'bridge_post');
         const outbox = tools.find((tool) => tool.name === 'bridge_outbox');
@@ -1632,6 +1991,17 @@ it('routes external Tools through the active owning Orchestrator without a local
             {} as ToolRunContext,
           ),
         ).rejects.toThrow('post ownership sentinel');
+        await expect(
+          post.execute(
+            {
+              binding_id: 'owned-app',
+              conversation_id: 'oc_new',
+              request_id: 'new_group_post',
+              text: 'Report',
+            },
+            {} as ToolRunContext,
+          ),
+        ).rejects.toThrow('reachable post ownership sentinel');
         await expect(
           outbox.execute({ intent_id: 'foreign' }, {} as ToolRunContext),
         ).rejects.toThrow('outbox ownership sentinel');
@@ -1685,6 +2055,24 @@ it('routes external Tools through the active owning Orchestrator without a local
     inbox: 'External Inbox',
     message: 'External turn',
     externalMessaging: {
+      connected: () => true,
+      senderPermissions: permissionsRead,
+      directory: directoryRead,
+      reachable: async () => [
+        {
+          bindingId: 'owned-app',
+          platform: 'feishu',
+          accountName: 'Owned app',
+          page: {
+            version: 1,
+            conversations: [{ id: 'oc_new', kind: 'group', name: 'New group' }],
+            hasMore: false,
+          },
+        },
+      ],
+      postConversation: async () => {
+        throw new Error('reachable post ownership sentinel');
+      },
       targets: async () => [],
       post: async () => {
         throw new Error('post ownership sentinel');
@@ -1960,6 +2348,129 @@ describe('Bot Schedule Tools', () => {
       expect(updated).toEqual([{ enabled: false }]);
       expect(denial).toContain('bot_schedule_create');
       expect(allowed).toBeUndefined();
+    } finally {
+      await adapter.close();
+    }
+  });
+});
+
+describe('Assignment Directory Tools', () => {
+  it('forward list filters and archive decisions to the Orchestrator run', async () => {
+    const calls: Array<Promise<unknown>> = [];
+    const queries: unknown[] = [];
+    const archived: string[] = [];
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onAgentCreated: () => {
+          const scope = host.scopes.get('orchestrator-ada');
+          const tool = (name: string) => {
+            const found = scope?.tools.find((candidate) => candidate.name === name);
+            if (found === undefined) throw new Error(`${name} not registered`);
+            return found;
+          };
+          calls.push(
+            tool('list_assignments').execute(
+              {
+                query: 'release',
+                activity: ['idle'],
+                include_archived: true,
+                limit: 5,
+                cursor: 'c1',
+              },
+              {} as ToolRunContext,
+            ),
+          );
+          calls.push(
+            tool('archive_assignment').execute({ session_id: 'a-1' }, {} as ToolRunContext),
+          );
+          calls.push(
+            tool('archive_assignment').execute({ session_id: 'busy' }, {} as ToolRunContext),
+          );
+          calls.push(
+            tool('unarchive_assignment').execute({ session_id: 'a-1' }, {} as ToolRunContext),
+          );
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    await adapter.runOrchestrator({
+      sessionId: 'orchestrator-ada',
+      resume: false,
+      bot: BOT,
+      message: 'Tidy up finished work',
+      inboundChannelId: 'dm-test',
+      inbox: '',
+      channels: {
+        ...groupTools,
+        contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+        sendToBot: async () => {
+          throw new Error('unexpected Bot DM');
+        },
+        ignore: () => {
+          throw new Error('unexpected ignore');
+        },
+        read: () => [],
+        requestGrant: async () => {
+          throw new Error('unexpected Grant request');
+        },
+        send: async (input) => ({
+          id: 'bot-1',
+          at: BOT.createdAt,
+          author: { kind: 'bot', slug: BOT.slug },
+          body: input.body,
+        }),
+      },
+      assignments: {
+        create: () => ({ outcome: 'created', assignment: ASSIGNMENT }),
+        grants: () => [],
+        list: () => [],
+        query: (input) => {
+          queries.push(input);
+          return { assignments: [ASSIGNMENT], nextCursor: 'c2' };
+        },
+        archive: async (sessionId) => {
+          if (sessionId === 'busy')
+            return {
+              outcome: 'refused',
+              code: 'assignment-active',
+              assignment: { ...ASSIGNMENT, sessionId, activity: 'working' },
+              message: 'still active',
+            };
+          archived.push(sessionId);
+          return {
+            outcome: 'archived',
+            assignment: { ...ASSIGNMENT, sessionId, archivedAt: BOT.createdAt },
+          };
+        },
+        unarchive: async (sessionId) => ({
+          outcome: 'unarchived',
+          assignment: { ...ASSIGNMENT, sessionId },
+        }),
+        inspect: () => undefined,
+        stop: async () => ASSIGNMENT,
+        request: () => {
+          throw new Error('unexpected Assignment request');
+        },
+      },
+    });
+    try {
+      const results = (await Promise.all(calls)).map((value) => JSON.parse(String(value)));
+      expect(queries).toEqual([
+        { query: 'release', activity: ['idle'], includeArchived: true, limit: 5, cursor: 'c1' },
+      ]);
+      expect(results).toMatchObject([
+        { assignments: [{ sessionId: ASSIGNMENT.sessionId }], nextCursor: 'c2' },
+        { outcome: 'archived', sessionId: 'a-1', archivedAt: BOT.createdAt },
+        { outcome: 'refused', code: 'assignment-active', sessionId: 'busy', activity: 'working' },
+        { outcome: 'unarchived', sessionId: 'a-1' },
+      ]);
+      expect(archived).toEqual(['a-1']);
     } finally {
       await adapter.close();
     }

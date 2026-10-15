@@ -1,6 +1,4 @@
-import { realpathSync } from 'node:fs';
-import { resolve } from 'node:path';
-
+import { changesApprovalPolicy } from './approval-templates.js';
 import type { Session } from '@deepseek-ai/dsh-session';
 import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy';
 import type { ApprovalService } from '@deepseek-ai/dsh-user-approval';
@@ -8,8 +6,54 @@ import type { ApprovalService } from '@deepseek-ai/dsh-user-approval';
 import type { BotHarnessCore } from '../plugin.js';
 import { NATIVE_FILE_TOOL_NAMES, nativeFileToolDenial } from './grant-native-tools.js';
 
+type AccessCore = { assignmentAccess?: Pick<BotHarnessCore['assignmentAccess'], 'get'> };
+
+export function orchestratorPermission(
+  core: AccessCore,
+  botSlug: string,
+): { mode: 'workspace-write' | 'danger-full-access'; approval: 'ask' | 'never' } {
+  const preset = core.assignmentAccess?.get(botSlug);
+  return preset?.mode === 'danger-full-access' && preset.scope === 'chat'
+    ? { mode: 'danger-full-access', approval: 'never' }
+    : { mode: 'workspace-write', approval: 'ask' };
+}
+
+export function sessionHasFullAccess(
+  core: Pick<BotHarnessCore, 'ownership' | 'runtime'> & AccessCore,
+  sessionId: string,
+): boolean {
+  const owner = core.ownership.resolve(sessionId);
+  if (owner === undefined) return false;
+  if (owner.rootRole === 'assignment')
+    return (
+      core.runtime.getAssignment(owner.botSlug, owner.sessionId)?.permission?.mode ===
+      'danger-full-access'
+    );
+  return (
+    owner.rootRole === 'orchestrator' &&
+    owner.provenance !== 'subagent' &&
+    orchestratorPermission(core, owner.botSlug).mode === 'danger-full-access'
+  );
+}
+
+export function deviceToolAuthorization(
+  tools: {
+    needsAuthorization?(sessionId: string): boolean;
+    authorizationScope?(sessionId?: string): string;
+    markAuthorized?(sessionId: string, scope?: string): boolean | void;
+  },
+  sessionId: string,
+  fullAccess: boolean,
+): 'authorized' | 'ask' | 'changed' {
+  if (tools.needsAuthorization?.(sessionId) !== true) return 'authorized';
+  if (!fullAccess) return 'ask';
+  return tools.markAuthorized?.(sessionId, tools.authorizationScope?.(sessionId)) === false
+    ? 'changed'
+    : 'authorized';
+}
+
 export function grantExecutionDenial(
-  core: Pick<BotHarnessCore, 'ownership' | 'runtime' | 'grants' | 'registry'>,
+  core: Pick<BotHarnessCore, 'ownership' | 'runtime' | 'grants' | 'registry'> & AccessCore,
   session: Session,
   policy: SandboxPolicyService | undefined,
   approval: ApprovalService | undefined,
@@ -41,10 +85,13 @@ export function grantExecutionDenial(
   const mode = policy.resolve({ session }).mode;
   const approvalPolicy = approval.overrideOf(session);
   if (owner.rootRole === 'orchestrator') {
-    if (mode !== 'workspace-write' || approvalPolicy !== (delegatedSubagent ? 'never' : 'ask')) {
-      return delegatedSubagent
-        ? 'Orchestrator Subagent requires workspace-write and never approval'
-        : 'Orchestrator Session requires workspace-write and ask';
+    if (delegatedSubagent) {
+      if (mode !== 'workspace-write' || approvalPolicy !== 'never')
+        return 'Orchestrator Subagent requires workspace-write and never approval';
+    } else {
+      const expected = orchestratorPermission(core, owner.botSlug);
+      if (mode !== expected.mode || approvalPolicy !== expected.approval)
+        return "Orchestrator Session permission differs from this PersonaBot's access setting";
     }
     const memoryCwd = core.registry.memoryDirFor(owner.botSlug);
     return memoryCwd !== undefined && session.header.cwd === memoryCwd
@@ -89,13 +136,18 @@ const BOT_TOOL_NAMES = new Set([
   'request_workspace_grant',
   'list_workspace_grants',
   'list_assignments',
+  'archive_assignment',
+  'unarchive_assignment',
   'inspect_assignment',
   'wait_for_assignment',
   'send_assignment_request',
   'stop_assignment',
   'channel_list',
   'channel_read',
+  'bridge_sender_permissions',
+  'bridge_directory',
   'bridge_targets',
+  'bridge_reachable_groups',
   'bridge_post',
   'bridge_outbox',
   'bridge_read',
@@ -108,6 +160,9 @@ const BOT_TOOL_NAMES = new Set([
   'bridge_thread_policy_set',
   'bridge_attachment_save',
   'bridge_reply_file',
+  'inbox_list',
+  'inbox_resolve',
+  'inbox_snooze',
   'inbox_ignore',
   'inbox_history',
   'channel_read_image',
@@ -132,54 +187,57 @@ const BOT_TOOL_NAMES = new Set([
   'bot_schedule_delete',
   'group_leave',
   'bot_dm_send',
+  'bot_create',
   'channel_send',
 
   'ask_user_question',
+  'ask_secret',
+  'secret_mcp_disconnect',
   'memory_switch_branch',
   'memory_continue_from_commit',
   'report_to_orchestrator',
 ]);
 
-export function requiresHumanToolApproval(name: string, args?: unknown): boolean {
+export function requiresHumanToolApproval(
+  name: string,
+  args?: unknown,
+  templateInUse?: (template: string) => boolean,
+): boolean {
   if (name === 'channel_attachment_open')
     return (
       typeof args !== 'object' ||
       args === null ||
       (args as Record<string, unknown>).access !== 'read'
     );
-  return !BOT_TOOL_NAMES.has(name) && !NATIVE_FILE_TOOL_NAMES.has(name);
+  if (name === 'secret_cli' || name === 'secret_mcp_connect' || name === 'bot_create') return true;
+  return isDshGovernedTool(name) && changesApprovalPolicy(policyInput(args), templateInUse);
 }
 
-export function isSafeMemoryDirectoryListing(
-  core: Pick<BotHarnessCore, 'ownership' | 'registry'>,
-  session: Session,
-  name: string,
-  args: unknown,
-): boolean {
-  if (name !== 'bash' || typeof args !== 'object' || args === null) return false;
-  const owner = core.ownership.resolve(session.id);
-  if (owner?.rootRole !== 'orchestrator') return false;
-  const memory = core.registry.memoryDirFor(owner.botSlug);
-  if (memory === undefined || session.header.cwd !== memory) return false;
-  try {
-    if (realpathSync(memory) !== resolve(memory)) return false;
-  } catch {
-    return false;
-  }
-  const input = args as Record<string, unknown>;
+export function approvalTemplateInUse(
+  registry: Pick<BotHarnessCore['registry'], 'list'>,
+): (template: string) => boolean {
+  return (template) => registry.list().some((record) => record.approvalTemplate === template);
+}
 
+function policyInput(args: unknown): string {
+  try {
+    return JSON.stringify(args) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+export function isDshGovernedTool(name: string): boolean {
   return (
-    typeof input.command === 'string' &&
-    /^(?:ls(?: -la)?|pwd)$/.test(input.command.trim()) &&
-    (input.workdir === undefined || input.workdir === '.' || input.workdir === memory) &&
-    input.run_in_background !== true &&
-    input.sandbox_permissions === undefined &&
-    input.justification === undefined
+    !BOT_TOOL_NAMES.has(name) &&
+    !NATIVE_FILE_TOOL_NAMES.has(name) &&
+    name !== 'channel_attachment_open'
   );
 }
 
 export function grantToolExecutionDenial(
-  core: Pick<BotHarnessCore, 'ownership' | 'runtime' | 'grants' | 'registry' | 'hostTools'>,
+  core: Pick<BotHarnessCore, 'ownership' | 'runtime' | 'grants' | 'registry' | 'hostTools'> &
+    AccessCore,
   session: Session,
   policy: SandboxPolicyService | undefined,
   approval: ApprovalService | undefined,
@@ -190,9 +248,6 @@ export function grantToolExecutionDenial(
   const denial = grantExecutionDenial(core, session, policy, approval);
   if (denial !== undefined) return denial;
   if (core.ownership.resolve(session.id) === undefined) return undefined;
-  if (typeof args === 'object' && args !== null && 'sandbox_permissions' in args) {
-    return 'BotHarness Session cannot request sandbox permission escalation';
-  }
   if (
     name === 'ask_user_question' &&
     core.ownership.resolve(session.id)?.rootRole !== 'orchestrator'
@@ -202,6 +257,10 @@ export function grantToolExecutionDenial(
     return !requiresHumanToolApproval(name, args) || allowedOnce
       ? undefined
       : 'Original attachment edit access requires Human approval';
+  if (name === 'bot_create')
+    return allowedOnce || sessionHasFullAccess(core, session.id)
+      ? undefined
+      : 'Creating a PersonaBot requires Human tool approval';
   if (BOT_TOOL_NAMES.has(name)) return undefined;
 
   if (core.hostTools.has(name)) return undefined;
@@ -212,8 +271,14 @@ export function grantToolExecutionDenial(
       'danger-full-access'
   )
     return undefined;
+  if (
+    owner?.rootRole === 'orchestrator' &&
+    owner.provenance !== 'subagent' &&
+    orchestratorPermission(core, owner.botSlug).mode === 'danger-full-access'
+  )
+    return undefined;
   if (NATIVE_FILE_TOOL_NAMES.has(name)) return nativeFileToolDenial(core, session, name, args);
-  if (isSafeMemoryDirectoryListing(core, session, name, args)) return undefined;
-  if (allowedOnce) return undefined;
-  return 'BotHarness Session cannot run an unconfined native tool: ' + name;
+  if (requiresHumanToolApproval(name, args, approvalTemplateInUse(core.registry)) && !allowedOnce)
+    return name + ' requires Human approval';
+  return undefined;
 }

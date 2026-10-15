@@ -55,6 +55,42 @@ describe('PersonaBot Session projection', () => {
     expect(rows[1]?.cwd).toBe('/projects/a');
   });
 
+  it('keeps idle Assignments in the current view so the Idle section shows them', () => {
+    const idle = [
+      ...owned,
+      { sessionId: 'idle', role: 'assignment' as const, createdAt, cwdReference: '/projects/d' },
+    ];
+    const rows = personaBotSessionRows(
+      idle,
+      { ...native, idle: { displayTitle: 'Done task', updatedAt: 50, running: false } },
+      'current',
+    );
+    expect(rows.map((row) => [row.sessionId, row.status])).toContainEqual(['idle', 'idle']);
+    expect(rows.map((row) => row.sessionId)).not.toContain('stopped');
+  });
+
+  it('pins the Orchestrator the runtime resumes, not a newer archived one', () => {
+    const replaced = [
+      { ...owned[0]!, sessionId: 'resumed', currentOrchestrator: true },
+      {
+        ...owned[0]!,
+        sessionId: 'archived',
+        createdAt: '2026-09-27T00:00:00.000Z',
+        currentOrchestrator: false,
+      },
+    ];
+    expect(personaBotSessionRows(replaced, {}, 'current').map((row) => row.sessionId)).toEqual([
+      'resumed',
+    ]);
+    expect(
+      personaBotSessionRows(
+        replaced.map((item) => ({ ...item, currentOrchestrator: false })),
+        {},
+        'current',
+      ),
+    ).toEqual([]);
+  });
+
   it('groups ordered Sessions by exact workspace path without changing row identity', () => {
     const rows = personaBotSessionRows(owned, native, 'all');
     const groups = groupSessionRowsByWorkspace(rows);

@@ -196,9 +196,25 @@ it('pins independently, exposes right-click controls and applies global bounded 
     });
     expect(node.querySelectorAll('.bh-companion-character')).toHaveLength(2);
     await act(() => {
+      for (const botId of ['ada', 'grace'])
+        events.dispatchEvent(
+          new MessageEvent('companion/message', {
+            data: JSON.stringify({
+              generation: 'host',
+              botId,
+              messageId: `${botId}-hello`,
+              channelId: `${botId}-dm`,
+              channelName: botId,
+              body: `Hello from ${botId}.`,
+            }),
+          }),
+        );
+    });
+    await act(() => {
       for (const callback of [...frames.values()]) callback(performance.now());
     });
-    const bubbles = [...node.querySelectorAll<HTMLElement>('.bh-companion-activity')];
+    expect(node.querySelector('.bh-companion-activity')).toBeNull();
+    const bubbles = [...node.querySelectorAll<HTMLElement>('.bh-companion-bubble')];
     expect(bubbles).toHaveLength(2);
     const positions = bubbles.map((bubble) => ({
       x:
@@ -231,7 +247,7 @@ it('pins independently, exposes right-click controls and applies global bounded 
     await act(() => {
       for (const callback of [...frames.values()]) callback(performance.now() + 30);
     });
-    const readingAnchor = grace.querySelector<HTMLElement>('.bh-companion-activity')!.style.bottom;
+    const readingAnchor = grace.querySelector<HTMLElement>('.bh-companion-bubble')!.style.bottom;
     await act(() => {
       events.dispatchEvent(
         new MessageEvent('companion/message', {
@@ -250,26 +266,19 @@ it('pins independently, exposes right-click controls and applies global bounded 
       for (const callback of [...frames.values()]) callback(performance.now() + 60);
     });
     expect(owner.get('grace')!.getSnapshot().reading).toBe(true);
-    expect(grace.querySelector<HTMLElement>('.bh-companion-activity')!.style.bottom).toBe(
+    expect(grace.querySelector<HTMLElement>('.bh-companion-bubble')!.style.bottom).toBe(
       readingAnchor,
     );
-    expect(grace.querySelectorAll('.bh-companion-card')).toHaveLength(3);
+    expect(grace.querySelectorAll('.bh-companion-bubble')).toHaveLength(1);
+    expect(grace.querySelector('.bh-companion-queue')?.textContent).toBe('+3');
     expect(grace.textContent).not.toContain('Independent message');
     const bounds = (botId: string) => {
       const character = node.querySelector<HTMLElement>(`[data-bot="${botId}"]`)!;
-      const cards = character.querySelector<HTMLElement>('.bh-companion-cards')!;
+      const bubble = character.querySelector<HTMLElement>('.bh-companion-bubble')!;
       const position = companionPosition(character);
-      const left = Number.parseFloat(position.left) + Number.parseFloat(cards.style.left);
-      const bottom = Number.parseFloat(position.bottom) + Number.parseFloat(cards.style.bottom);
-      return {
-        left,
-        right: left + 320,
-        bottom,
-        top:
-          bottom +
-          Number.parseFloat(cards.style.height) +
-          (character.dataset['reading'] === 'true' ? 0 : (cards.children.length - 1) * 8),
-      };
+      const left = Number.parseFloat(position.left) + Number.parseFloat(bubble.style.left);
+      const bottom = Number.parseFloat(position.bottom) + Number.parseFloat(bubble.style.bottom);
+      return { left, right: left + 300, bottom, top: bottom + 112 };
     };
     const graceBounds = bounds('grace');
     const adaBounds = bounds('ada');
@@ -284,14 +293,13 @@ it('pins independently, exposes right-click controls and applies global bounded 
       for (const card of owner.get('grace')!.getSnapshot().cards)
         owner.get('grace')!.dismiss(card.messageId);
     });
-    await act(() => owner.get('grace')!.configure({ activity: false }));
     for (let tick = 1; tick <= 2; tick++)
       await act(() => {
         for (const callback of [...frames.values()]) callback(performance.now() + tick * 60);
       });
     expect(
-      node.querySelector<HTMLElement>('[data-bot="ada"] .bh-companion-cards')!.style.bottom,
-    ).toBe('174px');
+      node.querySelector<HTMLElement>('[data-bot="ada"] .bh-companion-bubble')!.style.bottom,
+    ).toBe('112px');
     const ada = node.querySelector<HTMLElement>('[data-bot="ada"]')!;
     await act(() =>
       ada.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })),
@@ -337,17 +345,16 @@ it('pins independently, exposes right-click controls and applies global bounded 
     expect(narrowAda.left).toBeGreaterThanOrEqual(8);
     expect(narrowGrace.right).toBeLessThanOrEqual(352);
     expect(narrowAda.top <= narrowGrace.bottom || narrowGrace.top <= narrowAda.bottom).toBe(true);
-    const input = node.querySelector<HTMLInputElement>('[name="retention"]')!;
+    const input = node.querySelector<HTMLInputElement>(
+      'input[role="spinbutton"][aria-label="每个伙伴保留数量"]',
+    )!;
     await act(() => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '2');
       input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
     });
-    await act(() =>
-      node
-        .querySelector('form')!
-        .dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })),
-    );
+    await act(() => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
     expect(owner.getSnapshot().capacity).toEqual({ layers: 2, retention: 2 });
     expect(owner.get('grace')!.getSnapshot().capacity.retention).toBe(2);
     const speech = node.querySelector<HTMLButtonElement>('[role="switch"]')!;

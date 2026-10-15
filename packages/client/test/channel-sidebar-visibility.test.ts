@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconChevronDownOutlineRegular: () => null,
+  IconChevronRightOutlineRegular: () => null,
   Tooltip: ({ children }: { children: ReactNode }) => children,
   Menu: ({ open, anchor, children }: { open: boolean; anchor: ReactNode; children: ReactNode }) =>
     createElement('div', null, anchor, open ? children : null),
@@ -332,9 +333,7 @@ describe('Channel sidebar personal item visibility', () => {
     click('完成');
     expect(host.textContent).not.toContain('body-memory');
     expect(
-      host.querySelector<HTMLButtonElement>(
-        '[data-entry-id="memory"] .bh-channel-sidebar-entry-head',
-      )?.disabled,
+      host.querySelector<HTMLButtonElement>('[data-entry-id="memory"] [data-panel-head]')?.disabled,
     ).toBe(true);
   });
   it('preserves hidden registration identities and loads legacy preferences with every item shown', () => {

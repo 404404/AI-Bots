@@ -13,6 +13,22 @@ describe("generated developer reference", () => {
   it("extracts the core config from its schema and defaults", () => {
     expect(reference.config).toEqual([
       {
+        name: 'privateInputWebUrl',
+        type: 'string',
+        default: undefined,
+        description:
+          'Explicit credential-free Web origin for IM private input links; never use a login token URL.',
+        source: 'packages/core/src/plugin.ts',
+      },
+      {
+        name: "privateInputExecution",
+        type: "boolean",
+        default: false,
+        description:
+          "Removed. The Docker-protected Profile no longer exists; a Profile that sets this starts as an ordinary Profile and logs a warning.",
+        source: "packages/core/src/plugin.ts",
+      },
+      {
         name: "enabled",
         type: "boolean",
         default: true,
@@ -70,11 +86,15 @@ describe("generated developer reference", () => {
       { name: "agent/disposed", direction: "consumes", operation: "on" },
       { name: "agent/inbox/discarded", direction: "consumes", operation: "on" },
       { name: "agent/pre-step", direction: "consumes", operation: "on" },
+      { name: "agent/status", direction: "consumes", operation: "on" },
       { name: "approval/request", direction: "consumes", operation: "on" },
       { name: "botharness/personabot/activity", direction: "emits", operation: "emit" },
       { name: "session/event", direction: "consumes", operation: "on" },
+      { name: "system-prompt/assemble", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
       { name: "tools/execute", direction: "consumes", operation: "on" },
+      { name: "tools/execute", direction: "consumes", operation: "on" },
+      { name: "tools/post-execute", direction: "consumes", operation: "on" },
       { name: "tools/pre-execute", direction: "consumes", operation: "on" },
       { name: "tools/result", direction: "consumes", operation: "on" },
       { name: "user-questions/request", direction: "consumes", operation: "on" },

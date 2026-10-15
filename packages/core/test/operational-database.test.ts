@@ -61,64 +61,142 @@ function faultAt(
 }
 
 describe('operational database owner', () => {
-  it('upgrades the current main Profile without changing QQ and WeChat reception authority', () => {
-    const dshHome = createTempRoot('botharness-qq-main-upgrade-');
+  it('generation 79 adds empty groups without rewriting existing Role or pairing grants and refuses an older writer', () => {
+    const dshHome = createTempRoot('bh-group-upgrade-');
     const priorPlan = defineSchemaPlan(
-      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 73),
+      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 78),
     );
     const prior = mountOperationalDatabase({ dshHome, schemaPlan: priorPlan });
-    expect(prior.mode).toBe('ready');
-    const seed = attachOperationalModule(prior, 'qq-main-upgrade-seed');
-    seed.transaction((database) => {
-      for (const platform of ['qq', 'weixin'])
-        database
-          .prepare(`INSERT INTO messaging_bindings
+    const seed = attachOperationalModule(prior, 'messaging');
+    const role = JSON.stringify({
+      id: 'role',
+      botSlug: 'ada',
+      name: 'Reviewer',
+      behavior: 'Review',
+      capabilities: ['approve'],
+      revision: 6,
+    });
+    const pairing = JSON.stringify({
+      id: 'pair',
+      botSlug: 'ada',
+      bindingId: 'binding',
+      actorId: 'ou_alice',
+      purpose: 'management',
+      status: 'approved',
+      capabilities: ['reject', 'save-rules'],
+      revision: 4,
+    });
+    seed.transaction((db) => {
+      db.prepare(
+        'INSERT INTO messaging_bindings (id, bot_slug, provider_id, platform, account_ref, fingerprint, created_at, display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ).run(
+        'binding',
+        'ada',
+        'dsh-im/feishu',
+        'feishu',
+        'qa',
+        'a'.repeat(64),
+        FIXED_NOW().toISOString(),
+        'QA',
+      );
+      db.prepare('INSERT INTO messaging_external_roles (id, bot_slug, body) VALUES (?, ?, ?)').run(
+        'role',
+        'ada',
+        role,
+      );
+      db.prepare(
+        'INSERT INTO messaging_pairings (id, bot_slug, binding_id, actor_id, purpose, status, body) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      ).run('pair', 'ada', 'binding', 'ou_alice', 'management', 'approved', pairing);
+    });
+    prior.close();
+    const upgraded = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+    expect(upgraded.mode).toBe('ready');
+    const read = attachOperationalModule(upgraded, 'messaging');
+    expect(
+      read.read((db) =>
+        db.prepare('SELECT body FROM messaging_external_roles WHERE id = ?').get('role'),
+      ),
+    ).toEqual({ body: role });
+    expect(
+      read.read((db) => db.prepare('SELECT body FROM messaging_pairings WHERE id = ?').get('pair')),
+    ).toEqual({ body: pairing });
+    expect(
+      read.read((db) => db.prepare('SELECT * FROM messaging_permission_groups').all()),
+    ).toEqual([]);
+    upgraded.close();
+    const oldWriter = mountOperationalDatabase({ dshHome, schemaPlan: priorPlan });
+    expect(oldWriter.mode).toBe('recovery');
+    expect(oldWriter.diagnostics().recovery?.code).toBe('upgrade-required');
+    oldWriter.close();
+  });
+
+  it.each([73, 86, 87, 88])(
+    'upgrades generation %s without changing QQ and WeChat reception authority',
+    (generation) => {
+      const dshHome = createTempRoot('botharness-qq-main-upgrade-');
+      const priorPlan = defineSchemaPlan(
+        BOT_HARNESS_SCHEMA_PLAN.migrations.filter(
+          (migration) => migration.generation <= generation,
+        ),
+      );
+      const prior = mountOperationalDatabase({ dshHome, schemaPlan: priorPlan });
+      expect(prior.mode).toBe('ready');
+      const seed = attachOperationalModule(prior, 'qq-main-upgrade-seed');
+      seed.transaction((database) => {
+        for (const platform of ['qq', 'weixin'])
+          database
+            .prepare(`INSERT INTO messaging_bindings
           (id, bot_slug, provider_id, platform, account_ref, fingerprint, created_at,
            revision, enabled, display_name, enabled_inherited, typing_enabled,
            typing_inherited, receive_after)
           VALUES (?, 'ada', ?, ?, 'app', ?, ?, 7, 0, 'QA', 0, 0, 0, ?)`)
-          .run(
-            platform,
-            `dsh-im/${platform}`,
-            platform,
-            'a'.repeat(64),
-            '2026-10-08T00:00:00Z',
-            '2026-10-09T00:00:00Z',
-          );
-    });
-    const readBindings = (owner: ReturnType<typeof mountOperationalDatabase>) =>
-      attachOperationalModule(owner, 'qq-main-upgrade-read').read((database) =>
-        database.prepare('SELECT * FROM messaging_bindings ORDER BY id').all(),
+            .run(
+              platform,
+              `dsh-im/${platform}`,
+              platform,
+              'a'.repeat(64),
+              '2026-10-08T00:00:00Z',
+              '2026-10-09T00:00:00Z',
+            );
+      });
+      const readBindings = (owner: ReturnType<typeof mountOperationalDatabase>) =>
+        attachOperationalModule(owner, 'qq-main-upgrade-read').read((database) =>
+          database.prepare('SELECT * FROM messaging_bindings ORDER BY id').all(),
+        );
+      const before = readBindings(prior);
+      prior.close();
+      const upgraded = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+      expect(upgraded.mode).toBe('ready');
+      expect(upgraded.generation).toBe(BOT_HARNESS_SCHEMA_PLAN.targetGeneration);
+      expect(readBindings(upgraded)).toEqual(
+        before.map((row) => ({ ...row, post_limit: 60, post_limit_revision: 1 })),
       );
-    const before = readBindings(prior);
-    prior.close();
-    const upgraded = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
-    expect(upgraded.mode).toBe('ready');
-    expect(upgraded.generation).toBe(BOT_HARNESS_SCHEMA_PLAN.targetGeneration);
-    expect(readBindings(upgraded)).toEqual(before);
-    const module = attachOperationalModule(upgraded, 'qq-main-upgrade-history');
-    expect(
-      module.read((database) =>
-        database.prepare('SELECT * FROM messaging_reception_history').all(),
-      ),
-    ).toEqual([]);
-    module.transaction((database) =>
-      database
-        .prepare(
-          'INSERT INTO messaging_reception_history (bot_slug, provider_id, fingerprint, body) VALUES (?, ?, ?, ?)',
-        )
-        .run('ada', 'dsh-im/qq', 'a'.repeat(64), '[]'),
-    );
-    upgraded.close();
-    const reopened = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
-    expect(readBindings(reopened)).toEqual(before);
-    expect(
-      attachOperationalModule(reopened, 'qq-main-upgrade-reopen').read((database) =>
-        database.prepare('SELECT body FROM messaging_reception_history').all(),
-      ),
-    ).toEqual([{ body: '[]' }]);
-    reopened.close();
-  });
+      const module = attachOperationalModule(upgraded, 'qq-main-upgrade-history');
+      expect(
+        module.read((database) =>
+          database.prepare('SELECT * FROM messaging_reception_history').all(),
+        ),
+      ).toEqual([]);
+      module.transaction((database) =>
+        database
+          .prepare(
+            'INSERT INTO messaging_reception_history (bot_slug, provider_id, fingerprint, body) VALUES (?, ?, ?, ?)',
+          )
+          .run('ada', 'dsh-im/qq', 'a'.repeat(64), '[]'),
+      );
+      upgraded.close();
+      const reopened = mountOperationalDatabase({ dshHome, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+      expect(readBindings(reopened)).toEqual(
+        before.map((row) => ({ ...row, post_limit: 60, post_limit_revision: 1 })),
+      );
+      expect(
+        attachOperationalModule(reopened, 'qq-main-upgrade-reopen').read((database) =>
+          database.prepare('SELECT body FROM messaging_reception_history').all(),
+        ),
+      ).toEqual([{ body: '[]' }]);
+      reopened.close();
+    },
+  );
 
   it.each([59, 60, 61, 62, 63, 64, 65, 66])(
     'upgrades generation %s identities with a durable typing preference and preserves their authority',

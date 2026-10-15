@@ -18,6 +18,7 @@ import {
   type PixelMouthState,
 } from '../../../core/src/bots/avatar-appearance.js';
 import { parseActivitySnapshot } from './activity-live.js';
+import { beatHold, beatStart, speechBeats } from './companion-beats.js';
 import type { PersonaBotActivitySnapshot } from './store.js';
 import type { ConfigStorage } from './roster-config.js';
 
@@ -32,6 +33,7 @@ export interface CompanionSelection {
 }
 export interface CompanionCard extends CompanionMessage {
   boundaries: readonly number[];
+  beats: readonly number[];
   shown: number;
   remaining: number;
 }
@@ -77,8 +79,9 @@ function decode(event: Event): Record<string, unknown> | undefined {
 
 function speechMouth(state: CompanionViewState): PixelMouthState {
   if (state.bot?.paused || state.sync !== 'live' || state.requests.length) return 'saved';
-  const card = state.cards.find((card) => card.shown > 0 && card.shown < card.body.length);
-  if (!card) return 'saved';
+  const card = state.cards[0];
+  if (!card || card.shown === 0 || card.shown >= card.body.length) return 'saved';
+  if (card.remaining > 0) return 'closed';
   const index = card.boundaries.indexOf(card.shown);
   const grapheme = card.body.slice(card.boundaries[index - 1], card.shown);
   if (/[\p{P}\p{Z}\s]/u.test(grapheme)) return 'closed';
@@ -222,45 +225,47 @@ export class WindowCompanion {
     }
   }
   advance(milliseconds: number, reduced = false): void {
+    const [card, ...queued] = this.state.cards;
     if (
       this.disposed ||
       !Number.isFinite(milliseconds) ||
       milliseconds <= 0 ||
       this.state.requests.length > 0 ||
-      !this.state.cards.length
+      !card
     )
       return;
     const elapsed = Math.min(milliseconds, 30_000);
-    const cards = this.state.cards.flatMap((card): CompanionCard[] => {
-      if (card.shown < card.body.length) {
-        const shown = reduced
-          ? card.body.length
-          : card.boundaries[
-              Math.min(
-                card.boundaries.length - 1,
-                card.boundaries.indexOf(card.shown) + Math.max(1, Math.floor(elapsed / 35)),
+    let next: CompanionCard | undefined = card;
+    if (card.shown < card.body.length && card.remaining > 0)
+      next = { ...card, remaining: Math.max(0, card.remaining - elapsed) };
+    else if (card.shown < card.body.length) {
+      const end = card.beats.find((beat) => beat > card.shown) ?? card.body.length;
+      const shown = reduced
+        ? end
+        : card.boundaries[
+            Math.min(
+              card.boundaries.indexOf(end),
+              card.boundaries.indexOf(card.shown) + Math.max(1, Math.floor(elapsed / 35)),
+            )
+          ]!;
+      next = {
+        ...card,
+        shown,
+        remaining:
+          shown === end
+            ? beatHold(
+                card.body.slice(beatStart(card.beats, shown), shown),
+                shown === card.body.length,
+                queued.length + this.pendingCards.length > 0,
               )
-            ]!;
-        return [
-          {
-            ...card,
-            shown,
-            remaining:
-              shown === card.body.length
-                ? Math.max(3500, Math.min(20000, card.body.length * 45))
-                : 0,
-          },
-        ];
-      }
+            : 0,
+      };
+    } else {
       const remaining = card.remaining - (this.state.reading ? 0 : elapsed);
-      return remaining > 0 ? [remaining === card.remaining ? card : { ...card, remaining }] : [];
-    });
-    if (
-      cards.length === this.state.cards.length &&
-      cards.every((card, index) => card === this.state.cards[index])
-    )
-      return;
-    this.update({ cards });
+      next = remaining > 0 ? { ...card, remaining } : undefined;
+    }
+    if (next === card) return;
+    this.update({ cards: next ? [next, ...queued] : queued });
   }
   dismiss(messageId: string, channelId?: string): void {
     const cards = this.state.cards.filter(
@@ -318,7 +323,7 @@ export class WindowCompanion {
     let stream: CompanionStream;
     try {
       stream = this.deps.source(
-        `/api/botharness/companion?botId=${encodeURIComponent(selection.botId)}&dm=${selection.dm ? 1 : 0}&group=${selection.group ? 1 : 0}&visibility=${selection.visibility}`,
+        `./api/botharness/companion?botId=${encodeURIComponent(selection.botId)}&dm=${selection.dm ? 1 : 0}&group=${selection.group ? 1 : 0}&visibility=${selection.visibility}`,
       );
     } catch {
       this.update({ sync: 'stale' });
@@ -406,6 +411,7 @@ export class WindowCompanion {
       this.seen.push(companionMessageIdentity(value['channelId'], value['messageId']));
       if (this.seen.length > this.state.capacity.retention * 4) this.seen.shift();
       const body = messagePreview(value['body']);
+      const boundaries = messageGraphemeBoundaries(body);
       const card: CompanionCard = {
         generation: this.generation,
         botId: selection.botId,
@@ -418,7 +424,8 @@ export class WindowCompanion {
         participants: Array.isArray(value['participants'])
           ? value['participants'].filter((name): name is string => typeof name === 'string')
           : [],
-        boundaries: messageGraphemeBoundaries(body),
+        boundaries,
+        beats: speechBeats(body, boundaries),
         shown: 0,
         remaining: 0,
       };
