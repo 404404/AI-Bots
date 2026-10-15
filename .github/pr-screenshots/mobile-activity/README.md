@@ -1,5 +1,29 @@
 # Native activity evidence — #1919 / #1928
 
+## Spacing follow-up
+
+`spacing-{before,after}-{light,dark}.png` compares the Human-requested spacing
+change: vertical padding `space.x2` (4pt) to `space.x3` (8pt), leaving the
+label/detail gap at `space.x1` (2pt). Same Ada QA conversation, latest-message
+position, device, dimensions and data; increased content height moves earlier
+rows upward. All four raw images were inspected.
+
+- Source fix: `6437df6e820ad0ad50b37c45bd89512d3f69e46f`.
+- After integration: `560205fc2fb00dc1e38a4bfa71c245ac992bbbb3`, the frozen
+  batch plus only the spacing fix, documentation and regression test.
+- Before light: frozen batch `a42bc7ce27d0fd798c680f966a01b85b887fef0f`.
+  Before dark: after integration with only ActivityRow's padding temporarily
+  restored to `space.x2`; runtime source matches the frozen batch. The fix
+  was restored afterward and tracked batch files were clean.
+- No native rebuild or Host restart. Metro stopped and queue released afterward.
+- Source mobile suite: 415 passed / 8 skipped; mobile typecheck and changed-file
+  format passed. Focused integration spacing/style tests: 5 passed.
+
+The older feature captures below retain their original provenance and old
+spacing; they are not recaptured evidence for this follow-up.
+
+## Original feature comparison
+
 Captured on one shared iOS 26.0 Simulator, English locale, 1206 × 2622 pixels,
 using the existing development client. No native rebuild, second Simulator or
 shared Host restart was used for the comparison.
