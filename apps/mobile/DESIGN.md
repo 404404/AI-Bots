@@ -38,8 +38,8 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Android keeps two Material 3 tabs on `base`: like Slack, the selected tab is the foreground colour with a pill behind its icon (the Material indicator), and the others are muted.
   - The web preview draws a floating translucent capsule with the two tabs, standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it.
 - **Chats** shows the current Host:
-  - The header has the Host chip on the left, and on the right a compose button and the Human's avatar.
-    - Compose opens a native menu: **New PersonaBot** and **New Channel**. They open the app's create flow, or the full client where the app has none yet. Android has no compose button in the header; a Material FAB at the bottom right, above the tab bar, opens the same menu.
+  - The header has the Host chip on the left, and on the right a **+** button and the Human's avatar, on both iOS and Android.
+    - **+** is a round button on the `raised` layer fill, the same size as the avatar, so it stays visible on any Host band. It opens a native menu: **New PersonaBot** and **New Channel**. They open the app's create flow, or the full client where the app has none yet.
     - The avatar opens **Settings**. Until the Human has an avatar of their own it shows their initial on a neutral layer fill.
   - A **search field** at the top of the list panel, inset so its left edge lines up with the row avatars (`AVATAR_EDGE`), with corners concentric with the panel's rounded top: the field uses `radius.md` and the panel `radius.md + AVATAR_EDGE`. It scrolls away with the list. There are no shortcut cards: Activity already gathers what needs the Human.
   - One list of PersonaBot DMs and Channels together, grouped by the Host's **Channel sections** as on the desktop sidebar:

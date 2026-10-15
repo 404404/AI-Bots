@@ -1,6 +1,6 @@
 import { Redirect, Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
 import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
@@ -19,12 +19,7 @@ import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
 import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Text } from '../../../src/ui/primitives/text';
-import {
-  ComposeButton,
-  CreateFab,
-  useFabClearance,
-  type CreateTarget,
-} from '../../../src/ui/shell/create-button';
+import { CreateButton, type CreateTarget } from '../../../src/ui/shell/create-button';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { HumanAvatarButton } from '../../../src/ui/shell/human-avatar';
@@ -45,7 +40,6 @@ export default function HomeScreen() {
     () => (client === undefined || !connected ? undefined : () => loadHumanName(client)),
     [client, connected],
   );
-  const fabClearance = useFabClearance();
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
@@ -75,7 +69,6 @@ export default function HomeScreen() {
 
   const create = (target: CreateTarget) =>
     router.push({ pathname: '/full-client', params: fullClientParams(target) });
-  const fab = Platform.OS === 'android';
 
   const refresh = async () => {
     setRefreshing(true);
@@ -92,7 +85,7 @@ export default function HomeScreen() {
           look={look}
           actions={
             <>
-              {fab ? null : <ComposeButton onPick={create} />}
+              <CreateButton onPick={create} />
               <HumanAvatarButton loadName={loadName} onPress={() => router.push('/settings')} />
             </>
           }
@@ -103,7 +96,6 @@ export default function HomeScreen() {
             data={rows}
             contentInsetAdjustmentBehavior="automatic"
             keyExtractor={(row) => row.key}
-            contentContainerStyle={fab ? { paddingBottom: fabClearance } : undefined}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
             ListHeaderComponent={
               <>
@@ -150,7 +142,6 @@ export default function HomeScreen() {
               );
             }}
           />
-          {fab ? <CreateFab onPick={create} /> : null}
         </HomeHeader>
       </HostDrawerEdge>
     </>

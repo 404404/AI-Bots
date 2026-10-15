@@ -82,7 +82,7 @@ const createButton = (view: HTMLElement) =>
   view.querySelector<HTMLButtonElement>(`button[aria-label="${t.create}"]`);
 
 describe('Create from Chats', () => {
-  it('iOS: the header compose button opens a menu whose choices open their create flow', async () => {
+  it('iOS: the header + button opens a menu whose choices open their create flow', async () => {
     const view = await home('ios');
     expect(view.querySelector('header')!.contains(createButton(view))).toBe(true);
 
@@ -110,16 +110,16 @@ describe('Create from Chats', () => {
     expect(push).toHaveBeenCalledTimes(2);
   });
 
-  it('Android: a FAB below the list opens the same choices, and the header has no compose', async () => {
+  it('Android: the same header + button opens the same choices', async () => {
     const view = await home('android');
-    const fab = createButton(view)!;
-    expect(view.querySelector('header')!.contains(fab)).toBe(false);
+    const button = createButton(view)!;
+    expect(view.querySelector('header')!.contains(button)).toBe(true);
 
-    await act(async () => fab.click());
+    await act(async () => button.click());
     const [title, message, buttons] = alert.mock.lastCall!;
     expect(title).toBe(t.create);
     expect(message).toBeUndefined();
-    expect(buttons.map((button: { text: string }) => button.text)).toEqual([
+    expect(buttons.map((choice: { text: string }) => choice.text)).toEqual([
       t.cancel,
       t.newPersonaBot,
       t.newChannel,

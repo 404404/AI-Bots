@@ -75,15 +75,6 @@ export function PlusIcon(props: IconProps) {
   return <Glyph {...props} d="M12 5v14M5 12h14" />;
 }
 
-export function ComposeIcon(props: IconProps) {
-  return (
-    <Glyph
-      {...props}
-      d="M11 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5M17.5 3.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 8.5-8.5Z"
-    />
-  );
-}
-
 export function CloseIcon(props: IconProps) {
   return <Glyph {...props} d="m7 7 10 10M17 7 7 17" />;
 }

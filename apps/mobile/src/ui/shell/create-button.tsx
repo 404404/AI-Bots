@@ -1,10 +1,10 @@
-import { ActionSheetIOS, Alert, Platform, Pressable } from 'react-native';
+import { ActionSheetIOS, Alert, Platform, Pressable, View } from 'react-native';
 
 import type { FullClientTarget } from '../../host/full-client';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 import { t } from '../strings';
-import { ComposeIcon, PlusIcon } from './icons';
+import { PlusIcon } from './icons';
 
 export type CreateTarget = Extract<FullClientTarget, { kind: 'new-bot' | 'new-channel' }>;
 
@@ -36,8 +36,9 @@ export function openCreateMenu(onPick: (target: CreateTarget) => void): void {
   ]);
 }
 
-export function ComposeButton({ onPick }: { onPick: (target: CreateTarget) => void }) {
+export function CreateButton({ onPick }: { onPick: (target: CreateTarget) => void }) {
   const theme = useDesignTheme();
+  const size = theme.touch - space.x3;
   return (
     <Pressable
       onPress={() => openCreateMenu(onPick)}
@@ -51,43 +52,18 @@ export function ComposeButton({ onPick }: { onPick: (target: CreateTarget) => vo
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <ComposeIcon color={theme.color.fg} size={theme.type.title.line} />
-    </Pressable>
-  );
-}
-
-export function useFabClearance(): number {
-  const theme = useDesignTheme();
-  return theme.touch + space.x3 + space.x5 * 2;
-}
-
-export function CreateFab({ onPick }: { onPick: (target: CreateTarget) => void }) {
-  const theme = useDesignTheme();
-  const size = theme.touch + space.x3;
-  return (
-    <Pressable
-      onPress={() => openCreateMenu(onPick)}
-      accessibilityRole="button"
-      accessibilityLabel={t.create}
-      style={({ pressed }) => ({
-        position: 'absolute',
-        right: space.x5,
-        bottom: space.x5,
-        width: size,
-        height: size,
-        borderRadius: radius.lg,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.color.accent,
-        opacity: pressed ? 0.85 : 1,
-        shadowColor: theme.color.fg,
-        shadowOpacity: 0.12,
-        shadowRadius: radius.lg,
-        shadowOffset: { width: 0, height: space.x2 },
-        elevation: space.x3,
-      })}
-    >
-      <PlusIcon color={theme.color.onAccent} size={theme.type.display.size} />
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius.round,
+          backgroundColor: theme.layer.raised.fill,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <PlusIcon color={theme.color.fg} size={theme.type.title.line} />
+      </View>
     </Pressable>
   );
 }
