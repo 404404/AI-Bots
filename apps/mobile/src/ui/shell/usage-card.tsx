@@ -1,13 +1,15 @@
 import { useCallback, useState } from 'react';
 import { Pressable, View } from 'react-native';
 
-import { compactTokens, usageWeek, weekdayOf, type OverviewUsage } from '../../host/usage';
+import { compactTokenCount, weekdayLabel } from '../../host/usage-days';
+import { usageWeek, type OverviewUsage } from '../../host/usage';
 import { useDesignTheme } from '../design/theme';
+import { chart } from '../design/chart';
 import { radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
-import { WeekBars, type WeekBar } from '../primitives/week-bars';
-import { locale, t } from '../strings';
+import { DayBars, type DayBar } from '../primitives/day-bars';
+import { t } from '../strings';
 import { ChevronRightIcon } from './icons';
 
 export type Loaded<T> =
@@ -43,24 +45,40 @@ export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
 }
 
 export function tokenAmount(tokens: number | null): string {
-  return tokens === null ? t.usageUnknown : compactTokens(tokens, locale);
+  return tokens === null ? t.usageUnknown : compactTokenCount(tokens);
 }
 
-export function dayBars(days: readonly { day: string; tokens: number | null }[]): WeekBar[] {
+type Day = { day: string; tokens: number | null };
+
+export function dayBars(days: readonly Day[]): DayBar[] {
   return days.map(({ day, tokens }) => ({
     key: day,
-    value: tokens,
-    label: t.weekdayNarrow[weekdayOf(day)],
-    accessibilityLabel: t.usageBar(day, tokenAmount(tokens)),
+    segments: [tokens ?? 0],
+    label: weekdayLabel(day),
   }));
 }
 
-const EMPTY_WEEK: WeekBar[] = Array.from({ length: 7 }, (_, index) => ({
+export function daysLabel(days: readonly Day[]): string {
+  return days.map(({ day, tokens }) => t.usageBar(day, tokenAmount(tokens))).join(', ');
+}
+
+const EMPTY_WEEK: DayBar[] = Array.from({ length: 7 }, (_, index) => ({
   key: String(index),
-  value: null,
+  segments: [0],
 }));
 
-export const CHART_HEIGHT = space.x6 * 2;
+export function UsageBars({ days, height }: { days: readonly Day[] | undefined; height: number }) {
+  const theme = useDesignTheme();
+  return (
+    <DayBars
+      bars={days === undefined ? EMPTY_WEEK : dayBars(days)}
+      colors={[theme.color.accent]}
+      height={height}
+      empty={theme.layer.sheet.inset}
+      accessibilityLabel={days === undefined ? t.usageLoading : daysLabel(days)}
+    />
+  );
+}
 
 export function UsageCard({
   load,
@@ -99,10 +117,7 @@ export function UsageCard({
           {amount === undefined ? '—' : amount}
           <Text tone="muted">{t.usageUnit}</Text>
         </Text>
-        <WeekBars
-          bars={week === undefined ? EMPTY_WEEK : dayBars(week.days)}
-          height={CHART_HEIGHT}
-        />
+        <UsageBars days={week?.days} height={chart.spark} />
       </Pressable>
       {state.status === 'loading' && state.value === undefined ? (
         <Text

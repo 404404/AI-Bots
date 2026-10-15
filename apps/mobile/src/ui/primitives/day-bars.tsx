@@ -50,7 +50,9 @@ export function DayBars({
         const total = segments.reduce((sum, value) => sum + value, 0);
         return (
           <View key={bar.key} style={{ flex: 1, alignItems: 'center', gap: space.x2 }}>
-            <View style={{ height, width: '100%', alignItems: 'center', justifyContent: 'flex-end' }}>
+            <View
+              style={{ height, width: '100%', alignItems: 'center', justifyContent: 'flex-end' }}
+            >
               {total === 0 ? (
                 <View
                   style={{

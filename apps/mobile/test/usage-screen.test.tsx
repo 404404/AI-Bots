@@ -8,7 +8,7 @@ vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null, SvgX
 
 import type { OverviewMemory, OverviewUsage, UsagePeriod } from '../src/host/usage';
 import { SettingsView, type SettingsActions } from '../src/ui/settings-view';
-import { tokenAmount } from '../src/ui/shell/usage-card';
+import { daysLabel, tokenAmount } from '../src/ui/shell/usage-card';
 import { t } from '../src/ui/strings';
 import { UsageView, type UsageSources } from '../src/ui/usage-view';
 import usageWire from './fixtures/usage-wire.json';
@@ -70,10 +70,12 @@ describe('Usage card in Settings', () => {
     const card = button(view, t.usageCard(amount));
     expect(card).not.toBeNull();
     expect(card!.textContent).toContain(amount);
-    for (const day of active.overviewUsage.week.days)
-      expect(
-        card!.querySelector(`[aria-label="${t.usageBar(day.day, tokenAmount(day.totalTokens))}"]`),
-      ).not.toBeNull();
+    const days = active.overviewUsage.week.days.map((row) => ({
+      day: row.day,
+      tokens: row.totalTokens,
+    }));
+    expect(card!.querySelector(`[aria-label="${daysLabel(days)}"]`)).not.toBeNull();
+    expect(days).toHaveLength(7);
     expect(load).toHaveBeenCalledTimes(1);
 
     await act(async () => card!.click());

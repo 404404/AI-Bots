@@ -14,14 +14,15 @@ import {
 import type { MemoryActivityBot, UsageBot } from '../host/wire';
 import { BotAvatar } from './bot-avatar';
 import { useDesignTheme } from './design/theme';
+import { chart } from './design/chart';
 import { space } from './design/tokens';
 import { Button } from './primitives/button';
 import { Segmented } from './primitives/segmented';
 import { SettingsGroupItem, SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
-import { WeekBars } from './primitives/week-bars';
+import { DayBars } from './primitives/day-bars';
 import { ChevronRightIcon } from './shell/icons';
-import { CHART_HEIGHT, dayBars, tokenAmount, useLoaded, type Loaded } from './shell/usage-card';
+import { tokenAmount, UsageBars, useLoaded, type Loaded } from './shell/usage-card';
 import { t } from './strings';
 
 const AVATAR = 28;
@@ -127,7 +128,7 @@ function UsageSummary({
           </Text>
         </View>
         {period === 'week' && week !== undefined ? (
-          <WeekBars bars={dayBars(week.days)} height={CHART_HEIGHT * 2} />
+          <UsageBars days={week.days} height={chart.plot} />
         ) : null}
         {notes.map((note) => (
           <Text key={note} variant="meta" tone="muted">
@@ -241,10 +242,12 @@ function UsageRow({
         trailing={
           bot.state === 'ready' ? (
             <View style={{ width: SPARK_WIDTH }}>
-              <WeekBars
-                bars={bot.counts.map((value, index) => ({ key: String(index), value }))}
+              <DayBars
+                bars={bot.counts.map((value, index) => ({ key: String(index), segments: [value] }))}
+                colors={[theme.color.accent]}
                 height={space.x6}
-                strongLast={false}
+                empty={theme.layer.sheet.inset}
+                accessibilityLabel={t.memoryChanges(bot.total)}
               />
             </View>
           ) : undefined

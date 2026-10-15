@@ -274,17 +274,11 @@ async function main() {
       const tree = await page.accessibility.snapshot();
       writeFileSync(join(paths.evidence, `${label}.aria.txt`), JSON.stringify(tree, null, 1));
     };
-    const compact = (tokens) => {
-      for (const [unit, suffix] of [
-        [1e9, 'B'],
-        [1e6, 'M'],
-        [1e3, 'K'],
-      ]) {
-        if (tokens < unit) continue;
-        const value = tokens / unit;
-        return `${Number(value.toFixed(value < 10 ? 1 : 0)).toLocaleString('en')}${suffix}`;
-      }
-      return tokens.toLocaleString('en');
+    const compact = (count) => {
+      if (count < 1000) return String(count);
+      const divisor = count < 999_950 ? 1000 : count < 999_950_000 ? 1_000_000 : 1_000_000_000;
+      const suffix = divisor === 1000 ? 'K' : divisor === 1_000_000 ? 'M' : 'B';
+      return `${Number((count / divisor).toFixed(1))}${suffix}`;
     };
 
     await page.goto(`${origin}/`, { waitUntil: 'networkidle0' });
@@ -303,7 +297,7 @@ async function main() {
     checks.cardMatchesWebWeekTotal = true;
     checks.cardHasSevenDays = await page.$eval(
       `[aria-label="${card}"]`,
-      (node, days) => days.every((day) => node.querySelector(`[aria-label^="${day}: "]`) !== null),
+      (node, days) => days.every((day) => node.querySelector(`[aria-label*="${day}: "]`) !== null),
       week.days.map((day) => day.day),
     );
     await shot('1-settings-card');

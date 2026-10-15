@@ -59,7 +59,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
   - Opening an item jumps to the card in its chat.
 - **Settings** is a form sheet with a large detent, opened from the avatar, and closed by swiping down or the close button. It reuses the settings row and section components, in groups:
-  - **Usage** comes first, as one card for the current Host, like a fitness app's week: "Usage", "Last 7 days" and a chevron, the 7-day token total in `display`, and a bar per day (`WeekBars`, today's weekday label strong). An idle Host shows a quiet week of stubs, and a failed read shows a danger line with Try again under the card. Tapping it pushes the **Usage** screen:
+  - **Usage** comes first, as one card for the current Host, like a fitness app's week: "Usage", "Last 7 days" and a chevron, the 7-day token total in `display`, and a bar per day (`DayBars`). An idle Host shows a quiet week of stubs, and a failed read shows a danger line with Try again under the card. Tapping it pushes the **Usage** screen:
     - A Today / Last 7 days `Segmented` switch; switching reads the Host again.
     - The period's dates, its total, the daily bars for the week, and a muted note when some usage could not be counted or is still being counted.
     - **By kind**: Input, Output, Cache read and Cache write. **By PersonaBot**: avatar, name, share of the total and tokens; tapping a current Bot opens its profile, a deleted one reads "Removed". **Memory activity**: each Bot's Memory changes for the week with a small bar per day. Both lists page with Show more.
@@ -176,7 +176,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 ## Components
 
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
-- `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, `CountBadge`, `Segmented` (an iOS-style two- or three-way switch on the layer's `inset`), `WeekBars` (one bar per day, scaled to the busiest day), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Card`, `SettingsRow` and `EmptyState`.
+- `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, `CountBadge`, `Segmented` (an iOS-style two- or three-way switch on the layer's `inset`), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Card`, `SettingsRow` and `EmptyState`.
 - `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, working status and scroll-to-bottom.
 - `src/ui/shell/` will hold the Host drawer, the Human avatar button, shortcut cards, Channel section headers and the activity item.
 - `app/` routes, reads the Host client, and composes these components.

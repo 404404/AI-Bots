@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import { createHostClient } from '../src/host/client';
 import {
-  compactTokens,
   loadMemoryActivity,
   loadMoreMemoryActivity,
   loadMoreUsage,
@@ -10,7 +9,6 @@ import {
   usageIsPartial,
   usageShare,
   usageWeek,
-  weekdayOf,
   type OverviewMemory,
   type OverviewUsage,
 } from '../src/host/usage';
@@ -133,22 +131,9 @@ describe('Host usage', () => {
     );
   });
 
-  it('writes token counts short, in the reader’s units', () => {
-    expect(compactTokens(0, 'en')).toBe('0');
-    expect(compactTokens(950, 'en')).toBe('950');
-    expect(compactTokens(1234, 'en')).toBe('1.2K');
-    expect(compactTokens(393906, 'en')).toBe('394K');
-    expect(compactTokens(1_250_000, 'en')).toBe('1.3M');
-    expect(compactTokens(9_999, 'zh')).toBe('9,999');
-    expect(compactTokens(393906, 'zh')).toBe('39万');
-    expect(compactTokens(123_000_000, 'zh')).toBe('1.2亿');
+  it('gives the share of the total each Bot used', () => {
     expect(usageShare(25, 100)).toBe(25);
     expect(usageShare(25, 0)).toBeUndefined();
     expect(usageShare(null, 100)).toBeUndefined();
-  });
-
-  it("names the weekday of a Host day in the Host's calendar", () => {
-    expect(weekdayOf('2026-10-15')).toBe(4);
-    expect(weekdayOf('2026-10-11')).toBe(0);
   });
 });

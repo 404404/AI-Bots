@@ -79,30 +79,3 @@ export function usageShare(tokens: number | null, total: number | null): number 
   if (tokens === null || total === null || total <= 0) return undefined;
   return Math.round((tokens / total) * 100);
 }
-
-const COMPACT = {
-  en: [
-    [1e9, 'B'],
-    [1e6, 'M'],
-    [1e3, 'K'],
-  ],
-  zh: [
-    [1e8, '亿'],
-    [1e4, '万'],
-  ],
-} as const;
-
-export function compactTokens(tokens: number, locale: 'en' | 'zh'): string {
-  for (const [unit, suffix] of COMPACT[locale]) {
-    if (tokens < unit) continue;
-    const value = tokens / unit;
-    const digits = value < 10 ? 1 : 0;
-    return `${Number(value.toFixed(digits)).toLocaleString('en')}${suffix}`;
-  }
-  return tokens.toLocaleString('en');
-}
-
-export function weekdayOf(day: string): number {
-  const [year, month, date] = day.split('-').map(Number) as [number, number, number];
-  return new Date(year, month - 1, date).getDay();
-}
