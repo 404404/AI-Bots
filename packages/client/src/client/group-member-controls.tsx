@@ -293,6 +293,8 @@ function GroupAttentionModal({
               personaBotId={invitation.targetBotSlug}
               name={memberName(bots, invitation.targetBotSlug)}
               src={bots.find((bot) => bot.slug === invitation.targetBotSlug)?.avatar}
+              appearance={bots.find((bot) => bot.slug === invitation.targetBotSlug)?.appearance}
+              avatarSeed={bots.find((bot) => bot.slug === invitation.targetBotSlug)?.avatarSeed}
               size={28}
             />
             <span {...stylex.props(styles.attentionName)}>
@@ -327,6 +329,8 @@ function GroupAttentionModal({
               personaBotId={request.requesterBotSlug}
               name={memberName(bots, request.requesterBotSlug)}
               src={bots.find((bot) => bot.slug === request.requesterBotSlug)?.avatar}
+              appearance={bots.find((bot) => bot.slug === request.requesterBotSlug)?.appearance}
+              avatarSeed={bots.find((bot) => bot.slug === request.requesterBotSlug)?.avatarSeed}
               size={28}
             />
             <span {...stylex.props(styles.attentionName)}>

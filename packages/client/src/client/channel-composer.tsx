@@ -492,6 +492,8 @@ function PersonaBotActivityStatus({
                           personaBotId={item.personaBotId}
                           name={item.name}
                           src={item.src}
+                          appearance={item.appearance}
+                          avatarSeed={item.avatarSeed}
                           state={session.state}
                           size={20}
                           t={t}
@@ -525,6 +527,8 @@ function PersonaBotActivityStatus({
                         personaBotId={item.personaBotId}
                         name={item.name}
                         src={item.src}
+                        appearance={item.appearance}
+                        avatarSeed={item.avatarSeed}
                         state={item.state}
                         size={20}
                         t={t}
@@ -1171,6 +1175,8 @@ export function ChannelComposer({
                   personaBotId={candidate.slug}
                   name={candidate.displayName}
                   src={candidate.avatar}
+                  appearance={candidate.appearance}
+                  avatarSeed={candidate.avatarSeed}
                   size={28}
                   indicator={false}
                   t={t}
@@ -1330,6 +1336,8 @@ export function ChannelComposer({
               personaBotId={mount.botSlug}
               name={mount.name}
               src={mount.src}
+              appearance={mount.appearance}
+              avatarSeed={mount.avatarSeed}
               size={16}
               indicator={false}
               t={t}
