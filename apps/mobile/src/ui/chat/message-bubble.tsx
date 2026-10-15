@@ -16,6 +16,9 @@ import { bubbleRow, bubbleShape } from './bubble-shape';
 import { MessageAttachments } from './message-attachments';
 import { openMessageMenu } from './message-menu';
 import { ReactionChips } from './message-reactions';
+import { SpeakerRow, type Speaker } from './speaker-row';
+
+export type { Speaker } from './speaker-row';
 
 export function deliveryLabel(message: ConversationMessage): string | undefined {
   if (message.author !== 'human') return undefined;
@@ -34,7 +37,7 @@ export const MessageBubble = memo(function MessageBubble({
   onLongPress = (pressed) => openMessageMenu(pressed.body),
   onReact,
   botName = (id) => id,
-  author,
+  speaker,
 }: {
   message: ConversationMessage;
   first?: boolean;
@@ -45,7 +48,7 @@ export const MessageBubble = memo(function MessageBubble({
   onLongPress?: (message: ConversationMessage) => void;
   onReact?: (messageId: string, emoji: string, active: boolean) => void;
   botName?: (id: string) => string;
-  author?: string | undefined;
+  speaker?: Speaker | undefined;
 }) {
   const theme = useDesignTheme();
   const human = message.author === 'human';
@@ -94,29 +97,29 @@ export const MessageBubble = memo(function MessageBubble({
       ) : null}
     </View>
   );
-  return (
-    <View style={{ ...bubbleRow(first), gap: space.x1 }}>
-      {author === undefined ? null : <AuthorName name={author} />}
-      {failed || actionable ? (
-        <Pressable
-          {...(failed ? { accessibilityRole: 'button' as const, accessibilityLabel: label } : {})}
-          {...(actionable
-            ? {
-                accessibilityHint: onReact === undefined ? t.copyHint : t.messageActionsHint,
-                accessibilityActions: [
-                  { name: 'longpress', label: onReact === undefined ? t.copy : t.messageActions },
-                ],
-                onAccessibilityAction: () => onLongPress(message),
-                onLongPress: () => onLongPress(message),
-              }
-            : {})}
-          {...(failed ? { onPress: () => onRetry?.(message.id) } : {})}
-        >
-          {bubble}
-        </Pressable>
-      ) : (
-        bubble
-      )}
+  const surface =
+    failed || actionable ? (
+      <Pressable
+        {...(failed ? { accessibilityRole: 'button' as const, accessibilityLabel: label } : {})}
+        {...(actionable
+          ? {
+              accessibilityHint: onReact === undefined ? t.copyHint : t.messageActionsHint,
+              accessibilityActions: [
+                { name: 'longpress', label: onReact === undefined ? t.copy : t.messageActions },
+              ],
+              onAccessibilityAction: () => onLongPress(message),
+              onLongPress: () => onLongPress(message),
+            }
+          : {})}
+        {...(failed ? { onPress: () => onRetry?.(message.id) } : {})}
+      >
+        {bubble}
+      </Pressable>
+    ) : (
+      bubble
+    );
+  const after = (
+    <>
       {reactions.length === 0 ? null : (
         <ReactionChips
           reactions={reactions}
@@ -137,48 +140,75 @@ export const MessageBubble = memo(function MessageBubble({
           {label}
         </Text>
       )}
+    </>
+  );
+  const row = bubbleRow(first);
+  if (speaker !== undefined)
+    return (
+      <SpeakerRow
+        speaker={speaker}
+        rowKey={message.id}
+        inset={row.paddingTop}
+        style={row}
+        bubble={surface}
+        after={after}
+      />
+    );
+  return (
+    <View style={{ ...row, gap: space.x1 }}>
+      {surface}
+      {after}
     </View>
   );
 });
 
-function AuthorName({ name }: { name: string }) {
-  return (
-    <Text variant="meta" tone="muted" strong numberOfLines={1} style={{ paddingLeft: space.x2 }}>
-      {name}
-    </Text>
-  );
-}
-
 export const DraftBubble = memo(function DraftBubble({
   draft,
-  author,
+  speaker,
 }: {
   draft: ConversationDraft;
-  author?: string | undefined;
+  speaker?: Speaker | undefined;
 }) {
   const theme = useDesignTheme();
+  const surface = (
+    <View
+      style={{
+        maxWidth: '80%',
+        alignSelf: 'flex-start',
+        backgroundColor: theme.color.surface,
+        borderRadius: radius.lg,
+        paddingHorizontal: space.x4,
+        paddingVertical: space.x3,
+      }}
+    >
+      {draft.body.trim() === '' ? (
+        <Text tone="muted">…</Text>
+      ) : (
+        <MarkdownView source={draft.body} streaming />
+      )}
+    </View>
+  );
+  const typing = (
+    <Text variant="meta" tone="muted" accessibilityLiveRegion="polite">
+      {t.typing}
+    </Text>
+  );
+  const row = { paddingHorizontal: space.x4, paddingTop: space.x3 };
+  if (speaker !== undefined)
+    return (
+      <SpeakerRow
+        speaker={speaker}
+        rowKey={`draft:${draft.draftId}`}
+        inset={row.paddingTop}
+        style={row}
+        bubble={surface}
+        after={typing}
+      />
+    );
   return (
-    <View style={{ paddingHorizontal: space.x4, paddingTop: space.x3, gap: space.x1 }}>
-      {author === undefined ? null : <AuthorName name={author} />}
-      <View
-        style={{
-          maxWidth: '80%',
-          alignSelf: 'flex-start',
-          backgroundColor: theme.color.surface,
-          borderRadius: radius.lg,
-          paddingHorizontal: space.x4,
-          paddingVertical: space.x3,
-        }}
-      >
-        {draft.body.trim() === '' ? (
-          <Text tone="muted">…</Text>
-        ) : (
-          <MarkdownView source={draft.body} streaming />
-        )}
-      </View>
-      <Text variant="meta" tone="muted" accessibilityLiveRegion="polite">
-        {t.typing}
-      </Text>
+    <View style={{ ...row, gap: space.x1 }}>
+      {surface}
+      {typing}
     </View>
   );
 });
