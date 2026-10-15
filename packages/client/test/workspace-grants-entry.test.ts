@@ -38,6 +38,7 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     createElement('svg', { 'data-icon': 'sidebar-chevron', width: size, height: size }),
   IconCloseOutlineRegular: () => null,
   IconFolderOpenOutlineRegular: () => null,
+  IconPlusOutlineRegular: () => null,
   IconTrashOutlineRegular: () => null,
 }));
 
@@ -363,6 +364,10 @@ describe('Workspace Grant sidebar', () => {
         [zhTranslate('grant.delete'), true],
         [zhTranslate('grant.delete'), false],
       ]);
+      const lastRow = container.querySelector('.bh-workspace-folder-table')!.lastElementChild!;
+      expect(lastRow.querySelector('button.bh-workspace-folder-add')?.textContent).toBe(
+        zhTranslate('grant.addFolder'),
+      );
       expect(deletes[0]!.getAttribute('aria-label')).toBe(
         zhTranslate('grant.memoryDeleteUnavailable'),
       );
