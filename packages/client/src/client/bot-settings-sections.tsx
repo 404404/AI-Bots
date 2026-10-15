@@ -3,6 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
 
 import type { BridgeActions } from './actions.js';
+import { ApprovalReviewerModelSetting } from './approval-reviewer-model-setting.js';
 import {
   AssignmentConcurrencyRow,
   BotIconSetting,
@@ -85,6 +86,19 @@ export function ModelsSection(
   );
 }
 
+export function AutoApprovalSection(
+  props: SectionProps<{ actions: BridgeActions; call: BridgeCall; store: ClientStore }>,
+): ReactElement {
+  return (
+    <Rows>
+      <SettingsSection>
+        <ApprovalReviewerModelSetting actions={props.actions} t={props.t} />
+      </SettingsSection>
+      <ApprovalTemplateLibrarySettings call={props.call} store={props.store} t={props.t} />
+    </Rows>
+  );
+}
+
 export function MessagingSection(
   props: SectionProps<BotModePrefsFace & { call: BridgeCall }>,
 ): ReactElement {
@@ -94,18 +108,6 @@ export function MessagingSection(
         <GroupAutoAcceptSetting {...props} />
       </SettingsSection>
       <MessagingDefaultsSettings call={props.call} t={props.t} />
-    </Rows>
-  );
-}
-
-export function AutoApprovalSection({
-  call,
-  store,
-  t,
-}: SectionProps<{ call: BridgeCall; store: ClientStore }>): ReactElement {
-  return (
-    <Rows>
-      <ApprovalTemplateLibrarySettings call={call} store={store} t={t} />
     </Rows>
   );
 }

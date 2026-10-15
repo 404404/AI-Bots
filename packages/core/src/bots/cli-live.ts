@@ -83,6 +83,13 @@ import {
   runApprovalTemplateCommand,
   type ApprovalTemplateValues,
 } from './cli-approval-templates.js';
+import {
+  APPROVAL_REVIEWER_COMMANDS,
+  APPROVAL_REVIEWER_OPTIONS,
+  isApprovalReviewerCommand,
+  runApprovalReviewerCommand,
+  type ApprovalReviewerValues,
+} from './cli-approval-reviewer.js';
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
@@ -97,6 +104,7 @@ export const LIVE_OPTIONS = {
   ...PROFILE_OPTIONS,
   ...TODO_OPTIONS,
   ...APPROVAL_TEMPLATE_OPTIONS,
+  ...APPROVAL_REVIEWER_OPTIONS,
   host: { type: 'string' },
   'token-file': { type: 'string' },
   timeout: { type: 'string' },
@@ -183,6 +191,7 @@ export const LIVE_COMMANDS = [
   ...BOT_TOOL_COMMANDS,
   ...TODO_COMMANDS,
   ...APPROVAL_TEMPLATE_COMMANDS,
+  ...APPROVAL_REVIEWER_COMMANDS,
   {
     command: 'send',
     description: 'send a Human DM and collect its committed Bot reply from a live Host',
@@ -340,7 +349,8 @@ interface LiveValues
     BrowserComputerValues,
     ProfileValues,
     TodoValues,
-    ApprovalTemplateValues {
+    ApprovalTemplateValues,
+    ApprovalReviewerValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -684,6 +694,11 @@ export async function runLiveCli(
     );
   if (isProfileCommand(command))
     return runProfileCommand(command, rest, values, io, async () => {
+      const signal = AbortSignal.timeout(timeoutMs(values.timeout));
+      return (await connectLiveHost(values, io, signal)).rpc;
+    });
+  if (isApprovalReviewerCommand(command))
+    return runApprovalReviewerCommand(command, rest, values, async () => {
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));
       return (await connectLiveHost(values, io, signal)).rpc;
     });

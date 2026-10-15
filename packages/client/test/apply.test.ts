@@ -319,8 +319,8 @@ describe('client apply', () => {
     expect(sections.map(({ id, order }) => ({ id, order }))).toEqual([
       { id: 'general', order: 0 },
       { id: 'models', order: 10 },
+      { id: 'auto-approval', order: 15 },
       { id: 'messaging', order: 20 },
-      { id: 'auto-approval', order: 22 },
       { id: 'im-apps', order: 25 },
       { id: 'companions', order: 40 },
       { id: 'devices', order: 45 },

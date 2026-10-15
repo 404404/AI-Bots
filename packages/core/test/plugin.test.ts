@@ -546,6 +546,8 @@ describe('plugin entry', () => {
       'approvalTemplateUpdate',
       'approvalTemplateDelete',
       'botApprovalTemplateSet',
+      'approvalReviewerModel',
+      'approvalReviewerModelSet',
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',

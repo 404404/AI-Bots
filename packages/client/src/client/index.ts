@@ -42,13 +42,13 @@ import { createImApps, ImAppsSection } from './im-apps-section.js';
 import {
   AboutSection,
   AdvancedSection,
-  AutoApprovalSection,
   CompanionsSection,
   DataPrivacySection,
   DevicesSection,
   GeneralSection,
   MessagingSection,
   ModelsSection,
+  AutoApprovalSection,
 } from './bot-settings-sections.js';
 import { ReleaseNotesController } from './release-notes.js';
 import { TelemetryNoticeController } from './telemetry-notice.js';
@@ -673,6 +673,19 @@ export function apply(ctx: ClientContext): void {
       settingsCtx.slots.register(
         {
           name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.autoApproval,
+          order: 15,
+          label: () => t('botSettings.section.autoApproval'),
+          locale: LOCALE_NS,
+          inject: () => ({ actions, call, store }),
+        },
+        AutoApprovalSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
           id: BOT_SETTINGS_SECTIONS.messaging,
           order: 20,
           label: () => t('botSettings.section.messaging'),
@@ -680,19 +693,6 @@ export function apply(ctx: ClientContext): void {
           inject: () => ({ ...botModePrefsFace(prefs), call }),
         },
         MessagingSection,
-      ),
-    );
-    settingsCtx.slots.inject('botharness.settings.section', () =>
-      settingsCtx.slots.register(
-        {
-          name: 'botharness.settings.section',
-          id: BOT_SETTINGS_SECTIONS.autoApproval,
-          order: 22,
-          label: () => t('botSettings.section.autoApproval'),
-          locale: LOCALE_NS,
-          inject: () => ({ call, store }),
-        },
-        AutoApprovalSection,
       ),
     );
     const imApps = createImApps({ call, botSettings, actions });
@@ -1048,12 +1048,16 @@ export function apply(ctx: ClientContext): void {
   if (landing !== undefined) {
     ctx.effect(
       () =>
-        watchFullClientLanding(store, landing, (slug) => {
-          if (slug !== undefined) expectMobileConversation();
+        watchFullClientLanding(store, landing, (target) => {
+          if (target.kind !== 'home') expectMobileConversation();
           ctx.layout.selectPanel(PANEL_ID);
-          if (slug === undefined) return;
-          void actions.openBot(slug).catch(() => {
-            ctx.logger.warn('botharness: full-client landing Bot unavailable');
+          if (target.kind === 'home') return;
+          const opening =
+            target.kind === 'dm'
+              ? actions.openBot(target.slug)
+              : actions.openChannel(target.channelId);
+          void opening.catch(() => {
+            ctx.logger.warn('botharness: full-client landing conversation unavailable');
           });
         }),
       'botharness: full-client landing',
