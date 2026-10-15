@@ -1,8 +1,26 @@
 # Native activity evidence — #1919 / #1928
 
-## Current interaction and alignment follow-up
+## Latest: 12pt boundary gap
 
-The latest images are `aligned-dm-after-{light,dark}.png`,
+`gap12-{dm,group}-{light,dark}.png` are the latest captures, taken on the same
+single iOS 26.0 Simulator/dev client, English, 1206 × 2622, default text size.
+Source: `94a4bc24cfe33b3878354f917f3842b1dcd13003`; integrated batch:
+`aa8d57b5cd0dc9446d43624fce8a60fcc362e8f6`.
+Before: `aligned-{dm,group}-after-{light,dark}.png` at the 8pt revision below.
+Same QA records and latest-message anchor; increasing the gap shifts earlier
+content upward. All four new captures were inspected. The shared top gap is now
+`space.x4` (12pt), including ordinary new message groups; joined bubbles remain
+2pt and bubble internal vertical padding remains 8pt. No interaction changes.
+
+Source mobile tests: 421 passed / 8 skipped; typecheck, changed-file format and
+changelog checks passed. Integrated batch: 10 focused tests passed. No native
+rebuild, new Simulator, Host restart or phone use. These captures verify layout,
+not native touch timing, Android, large text or Human QA. Earlier menu captures
+below remain historical interaction evidence, not screenshots of this spacing.
+
+## Earlier interaction and alignment follow-up (8pt)
+
+The earlier images are `aligned-dm-after-{light,dark}.png`,
 `aligned-group-{before,after}-{light,dark}.png` and `activity-menu-{light,dark}.png`.
 DM before images are the earlier `spacing-after-{light,dark}.png`: same
 conversation, records, latest-message anchor and dimensions, before this change.
