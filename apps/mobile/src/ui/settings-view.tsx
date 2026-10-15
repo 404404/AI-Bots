@@ -84,7 +84,6 @@ export function SettingsView({
           </Text>
         </Pressable>
       </View>
-      {statistics}
       <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
       <SettingsSection title={t.connections} on={SHEET_GROUP}>
         <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
@@ -145,6 +144,7 @@ export function SettingsView({
           }
         />
       </SettingsSection>
+      {statistics}
     </ScrollView>
   );
 }

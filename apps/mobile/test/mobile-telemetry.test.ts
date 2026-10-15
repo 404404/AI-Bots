@@ -40,16 +40,12 @@ function fixture(overrides: Partial<TelemetryOptions> = {}) {
   };
 }
 
-describe('mobile statistics consent', () => {
-  it('sends nothing before consent and forgets the queue and identity on opt-out', async () => {
+describe('mobile statistics preference', () => {
+  it('defaults new installations on and forgets the queue and identity on opt-out', async () => {
     const { telemetry, send, stored } = fixture();
     await telemetry.ready;
     telemetry.foreground(true, 0);
-    await telemetry.flush();
-    expect(send).not.toHaveBeenCalled();
-    expect(JSON.stringify(stored() ?? {})).not.toContain('mobile_app_opened');
-    await telemetry.setEnabled(true);
-    telemetry.foreground(true, 0);
+    expect(telemetry.getSnapshot().enabled).toBe(true);
     await telemetry.flush();
     expect(send).toHaveBeenCalledTimes(1);
     const first = send.mock.calls[0]![0];
@@ -119,13 +115,13 @@ it('renews foreground sessions after 30 minutes, not permission dialogs; aborts 
   telemetry.dispose();
 });
 
-it('records each activation once per opt-in identity and rejects pre-consent or background observations', async () => {
+it('records activation once per identity and rejects pre-foreground or background observations', async () => {
   const { telemetry, send } = fixture();
   await telemetry.ready;
-  const beforeConsent = telemetry.send('dm');
+  const beforeForeground = telemetry.send('dm');
   await telemetry.setEnabled(true);
   telemetry.foreground(true, 1);
-  expect(beforeConsent.accepted()).toBe(false);
+  expect(beforeForeground.accepted()).toBe(false);
   const first = telemetry.send('dm');
   expect(first.accepted()).toBe(true);
   first.accepted();
@@ -147,7 +143,7 @@ it('records each activation once per opt-in identity and rejects pre-consent or 
   telemetry.dispose();
 });
 
-it('restores only sanitized unexpired data and activation deduplication; missing storage starts opted out', async () => {
+it('restores only sanitized unexpired data and activation deduplication; missing storage starts enabled', async () => {
   const first = fixture();
   await first.telemetry.setEnabled(true);
   first.telemetry.foreground(true, 1);
@@ -189,7 +185,7 @@ it('restores only sanitized unexpired data and activation deduplication; missing
   restored.dispose();
   const reinstalled = fixture();
   await reinstalled.telemetry.ready;
-  expect(reinstalled.telemetry.getSnapshot().enabled).toBe(false);
+  expect(reinstalled.telemetry.getSnapshot().enabled).toBe(true);
   reinstalled.telemetry.dispose();
 });
 
@@ -279,5 +275,56 @@ it('retains an in-flight send acceptance on background without observing a hidde
   expect(send.mock.calls[0]![0].filter((e) => e.event === 'mobile_activation_step')).toMatchObject([
     { properties: { step: 'message_accepted' } },
   ]);
+  telemetry.dispose();
+});
+
+it('preserves a saved opt-out on startup instead of applying the new default', async () => {
+  const { telemetry, send } = fixture({
+    storage: { read: async () => ({ version: 1, enabled: false }), write: vi.fn() },
+  });
+  await telemetry.ready;
+  expect(telemetry.getSnapshot().enabled).toBe(false);
+  telemetry.foreground(true, 1);
+  await telemetry.flush();
+  expect(send).not.toHaveBeenCalled();
+  telemetry.dispose();
+});
+
+it('does not replace an unreadable saved preference with default-on', async () => {
+  const write = vi.fn();
+  const { telemetry, send } = fixture({
+    storage: {
+      read: async () => {
+        throw new Error('read failure');
+      },
+      write,
+    },
+  });
+  await telemetry.ready;
+  expect(telemetry.getSnapshot()).toMatchObject({ enabled: false, storageError: true });
+  telemetry.foreground(true, 1);
+  await telemetry.flush();
+  expect(send).not.toHaveBeenCalled();
+  expect(write).not.toHaveBeenCalled();
+  telemetry.dispose();
+});
+
+it('records the first app open when foreground arrives before preference loading', async () => {
+  let finish!: (value: unknown) => void;
+  const { telemetry, send } = fixture({
+    storage: {
+      read: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+      write: vi.fn(),
+    },
+  });
+  telemetry.foreground(true, 0);
+  finish(undefined);
+  await telemetry.ready;
+  await telemetry.flush();
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(send.mock.calls[0]![0]).toEqual([expect.objectContaining({ event: 'mobile_app_opened' })]);
   telemetry.dispose();
 });

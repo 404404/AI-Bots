@@ -7,12 +7,15 @@ import { t } from '../strings';
 export function StatisticsSettings() {
   const state = useSyncExternalStore(mobileTelemetry.subscribe, mobileTelemetry.getSnapshot);
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   return (
     <SettingsSection
       footer={
         state.storageError
-          ? `${t.statisticsStorageError} ${t.statisticsNotice}`
-          : t.statisticsNotice
+          ? `${t.statisticsStorageError}${expanded ? ` ${t.statisticsNotice}` : ''}`
+          : expanded
+            ? t.statisticsNotice
+            : undefined
       }
     >
       <SettingsRow
@@ -28,6 +31,12 @@ export function StatisticsSettings() {
             }}
           />
         }
+      />
+      <SettingsRow
+        title={expanded ? t.statisticsHideDetails : t.statisticsDetails}
+        tone="muted"
+        onPress={() => setExpanded(!expanded)}
+        expanded={expanded}
       />
     </SettingsSection>
   );

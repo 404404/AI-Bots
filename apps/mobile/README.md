@@ -147,4 +147,4 @@ The device credential is stored only in the platform's secure storage and never 
 
 ## Optional statistics
 
-Phone statistics require explicit opt-in, independently of Host telemetry. See [privacy, configuration and device acceptance](../../docs/mobile-statistics.md). Builds send nothing unless explicitly configured for tagged QA or qualified production.
+Phone statistics default on for new installs and preserve saved opt-outs, independently of Host telemetry. Settings places the switch last with collapsed details. Unified-terms disclosure and acceptance integration are pending production gates. See [privacy, configuration and device acceptance](../../docs/mobile-statistics.md). Builds send nothing unless explicitly configured for tagged QA or qualified production.

@@ -19,7 +19,6 @@ import { pairHost, type PairingFailure } from '../src/host/pairing';
 import { mobileTelemetry } from '../src/telemetry/native';
 import type { PairingMethod } from '../src/telemetry/schema';
 import { Button } from '../src/ui/primitives/button';
-import { StatisticsSettings } from '../src/ui/shell/statistics-settings';
 import { useMounted } from '../src/ui/mounted';
 import { t } from '../src/ui/strings';
 import { useTheme } from '../src/ui/theme';
@@ -102,7 +101,6 @@ export default function PairScreen() {
       style={{ flex: 1, backgroundColor: theme.background }}
       contentContainerStyle={{ padding: 16, gap: 12 }}
     >
-      <StatisticsSettings />
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <View
         style={{

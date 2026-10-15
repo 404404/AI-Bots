@@ -27,7 +27,7 @@ Both journeys own their Host: they launch a fresh instance on a free port, resta
 
 ## Optional phone statistics
 
-Pairing and Settings show the same default-off statistics switch. In the shared-device QA lane, follow [the mobile statistics acceptance path](../../../../docs/mobile-statistics.md#runnable-device-acceptance): first prove zero vendor requests without consent, then enable tagged QA and correlate pairing, live Roster and first-chat events with PostHog. Repeat on physical iOS and Android. Capture both supported languages and opt-out while offline. Web exports and injected-sender tests do not qualify device delivery.
+Settings shows a default-on switch at the bottom with collapsed details; pairing has no statistics control. Saved opt-outs remain off. In the shared-device QA lane, follow [the mobile statistics acceptance path](../../../../docs/mobile-statistics.md#runnable-device-acceptance): first qualify unified-terms acceptance before collection (pending), prove zero vendor requests after opt-out, then enable tagged QA and correlate pairing, live Roster and first-chat events with PostHog. Repeat on physical iOS and Android. Capture both supported languages and opt-out while offline. Web exports and injected-sender tests do not qualify device delivery.
 
 ## Gotchas
 

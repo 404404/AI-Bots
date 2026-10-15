@@ -191,13 +191,28 @@ export function createMobileTelemetry(options: TelemetryOptions) {
     });
     everOpened = true;
   }
+  let readFailed = false;
   const ready = options.storage
     .read()
-    .catch(() => undefined)
+    .catch(() => {
+      readFailed = true;
+      return undefined;
+    })
     .then((value) => {
       if (disposed) return;
       const saved = record(value);
-      if (saved['version'] === 1 && saved['enabled'] === true && isUuid(saved['identity'])) {
+      if (readFailed) {
+        enabled = false;
+        loaded = true;
+        publish(true);
+        return;
+      }
+      enabled = false;
+      if (value === undefined) {
+        enabled = true;
+        identity = options.uuid();
+        persist();
+      } else if (saved['version'] === 1 && saved['enabled'] === true && isUuid(saved['identity'])) {
         enabled = true;
         identity = saved['identity'];
         for (const step of ['host_ready', 'message_accepted', 'bot_message_observed'] as const)

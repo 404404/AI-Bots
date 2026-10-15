@@ -75,9 +75,6 @@ it.each([
       await mobileTelemetry.ready;
       mobileTelemetry.foreground(true, 0);
       await mobileTelemetry.flush();
-      expect(wire.send).not.toHaveBeenCalled();
-      await mobileTelemetry.setEnabled(true);
-      await mobileTelemetry.flush();
       expect(wire.send).toHaveBeenCalledTimes(sends ? 1 : 0);
       if (sends)
         expect(wire.send).toHaveBeenCalledWith(

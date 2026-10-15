@@ -64,8 +64,10 @@ const en = {
     blocked: 'Blocked',
   } satisfies Record<AggregatedState, string>,
   statisticsTitle: 'Anonymous phone statistics',
+  statisticsDetails: 'About anonymous statistics',
+  statisticsHideDetails: 'Hide statistics details',
   statisticsNotice:
-    'Optional: help improve pairing, connections and first-chat reliability. PostHog receives a random phone statistics ID, app version and coarse operation results. No chat content, files, pairing links, credentials or Host identity. This switch is separate from computer statistics. Turning it off clears the phone ID and unsent events; already received events remain.',
+    'Helps improve pairing, connections and first-chat reliability. PostHog receives a random phone statistics ID, app version and coarse operation results. No chat content, files, pairing links, credentials or Host identity. You can turn this off at any time without affecting the app. This switch is separate from computer statistics. Turning it off clears the phone ID and unsent events; already received events remain.',
   statisticsStorageError:
     'Could not save this choice. Statistics are paused on this launch. Please try again.',
   pairTitle: 'Pair with your computer',
@@ -692,8 +694,10 @@ const zh: typeof en = {
     blocked: '受阻',
   },
   statisticsTitle: '手机匿名使用统计',
+  statisticsDetails: '了解匿名统计',
+  statisticsHideDetails: '收起统计说明',
   statisticsNotice:
-    '可选：帮助改善配对、连接和首次聊天的可靠性。PostHog 接收随机手机统计标识、应用版本和粗略操作结果，不含聊天内容、文件、配对链接、凭证或电脑身份。此开关独立于电脑端统计。关闭后清除手机统计标识和未发送事件，已接收的事件仍会保留。',
+    '帮助改善配对、连接和首次聊天的可靠性。PostHog 接收随机手机统计标识、应用版本和粗略操作结果，不含聊天内容、文件、配对链接、凭证或电脑身份。你可以随时关闭，不影响应用功能。此开关独立于电脑端统计。关闭后清除手机统计标识和未发送事件，已接收的事件仍会保留。',
   statisticsStorageError: '无法保存此选择，本次运行已暂停统计，请重试。',
   pairTitle: '与电脑配对',
   pairHint: '在电脑上打开 DeepSeekBot 设置 → 设备 → 配对手机，然后扫描二维码。',
