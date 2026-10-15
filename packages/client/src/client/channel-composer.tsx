@@ -30,7 +30,6 @@ import {
   fileSizeText,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import { createPortal } from 'react-dom';
-import type { PersonaBotSessionActivity } from '../../../core/src/state/tool-activity.js';
 
 import {
   PersonaBotAvatar,
@@ -70,12 +69,6 @@ import type { ChannelAttachmentRef } from './store.js';
 import { deleteAttachmentReference, insertAttachmentReferences } from './attachment-refs.js';
 import type { ComposerSendKey } from './composer-send-key.js';
 
-function sessionLatestSummary(session: PersonaBotSessionActivity, t: BotHarnessTranslate): string {
-  if (session.activity === undefined) return personaBotActivitySummary(session.state, undefined, t);
-  const { sources: _sources, ...activity } = session.activity;
-  return personaBotActivitySummary(session.state, activity, t);
-}
-
 export interface ChannelComposerActivity {
   presentation?: 'group' | undefined;
   items: readonly PersonaBotFacepileItem[];
@@ -85,6 +78,7 @@ export interface ChannelComposerActivity {
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 import { SessionRoleIcon } from './session-role-icon.js';
+import { sessionLatestSummary } from './session-summary.js';
 
 export interface ChannelComposerStop {
   label?: string | undefined;

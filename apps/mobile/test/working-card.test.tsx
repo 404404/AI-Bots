@@ -25,13 +25,14 @@ vi.mock('react-native', () => {
     View: host('View'),
     Text: host('Text'),
     Pressable: host('Pressable'),
+    Image: host('Image'),
     Platform: { OS: 'ios', select: (options: Record<string, unknown>) => options['ios'] },
     useColorScheme: () => 'light',
   };
 });
-vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
+vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null, SvgXml: () => null }));
 
-const { WorkingRow } = await import('../src/ui/chat/working-row');
+const { WorkingCard } = await import('../src/ui/chat/working-card');
 const { stepLabel, stepRows } = await import('../src/ui/chat/bot-steps');
 const { t } = await import('../src/ui/strings');
 
@@ -62,18 +63,21 @@ const mika: RosterBot = {
   ],
 };
 
-describe('working row', () => {
+describe('working card', () => {
   it('shows the current step and a Stop button named for the Bot', () => {
-    const html = renderToStaticMarkup(<WorkingRow bot={mika} stopping={false} onStop={() => {}} />);
-    expect(html).toContain(`Mika · ${t.effect.executing} · bash…`);
+    const html = renderToStaticMarkup(
+      <WorkingCard bot={mika} stopping={false} onStop={() => {}} />,
+    );
+    expect(html).toContain('Mika');
+    expect(html).toContain(`${t.effect.executing} · bash…`);
     expect(html).toContain(`data-accessibilitylabel="${t.stopBot('Mika')}"`);
-    expect(html).toContain(t.stop);
+    expect(html).not.toContain(`>${t.stop}<`);
     expect(html).not.toContain('Fix the release notes');
   });
 
   it('shows Stopping while the Host ends the turn', () => {
-    const html = renderToStaticMarkup(<WorkingRow bot={mika} stopping onStop={() => {}} />);
-    expect(html).toContain(t.stopping);
+    const html = renderToStaticMarkup(<WorkingCard bot={mika} stopping onStop={() => {}} />);
+    expect(html).toContain(`data-accessibilitylabel="${t.stopping}"`);
   });
 
   it('lists each working Session without internal names', () => {

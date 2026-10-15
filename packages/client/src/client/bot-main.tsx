@@ -1326,22 +1326,25 @@ function ConversationView({
   const activeFacepile = channelFacepile.filter(
     (item) => item.state !== 'idle' || item.attention !== undefined,
   );
+  const dmBot = bot ?? (channel?.type === 'dm' && !botDm ? profileBot : undefined);
+  const dmBotActivity = dmBot === undefined ? undefined : personaBotActivity(state, dmBot);
   const composerFacepile: PersonaBotFacepileItem[] =
-    bot === undefined
+    dmBot === undefined
       ? activeFacepile
-      : botActivity === undefined || (botActivity === 'idle' && attentionCount(bot.attention) === 0)
+      : dmBotActivity === undefined ||
+          (dmBotActivity === 'idle' && attentionCount(dmBot.attention) === 0)
         ? []
         : [
             {
-              personaBotId: bot.slug,
-              name: bot.displayName,
-              src: bot.avatar,
-              appearance: bot.appearance,
-              avatarSeed: bot.avatarSeed,
-              state: botActivity,
-              activity: bot.activity,
-              attention: bot.attention,
-              sessions: bot.sessionActivity,
+              personaBotId: dmBot.slug,
+              name: dmBot.displayName,
+              src: dmBot.avatar,
+              appearance: dmBot.appearance,
+              avatarSeed: dmBot.avatarSeed,
+              state: dmBotActivity,
+              activity: dmBot.activity,
+              attention: dmBot.attention,
+              sessions: dmBot.sessionActivity,
             },
           ];
   const composerActivity: ChannelComposerActivity | undefined =
@@ -1409,6 +1412,41 @@ function ConversationView({
         )
       : [];
   const channelStop = botStop?.channelId === channelId ? botStop : undefined;
+  const stopBots = (targets: readonly { slug: string; name: string }[]): void => {
+    if (channelId === undefined) return;
+    if (targets.length === 0 || channelStop?.stopping === true) return;
+    setBotStop({ channelId, stopping: true });
+    void Promise.allSettled(targets.map((target) => actions.stopBot(channelId, target.slug))).then(
+      (outcomes) => {
+        const failed = outcomes.find((outcome) => outcome.status === 'rejected');
+        const idle = targets.filter((_target, index) => {
+          const outcome = outcomes[index];
+          return outcome?.status === 'fulfilled' && outcome.value === 'not-working';
+        });
+        const notice =
+          failed !== undefined
+            ? t('composer.stopFailed', {
+                reason:
+                  failed.reason instanceof Error ? failed.reason.message : String(failed.reason),
+              })
+            : idle.length > 0 && idle.length === targets.length
+              ? t('composer.stopNotWorking', {
+                  name: idle.map((target) => target.name).join(', '),
+                })
+              : undefined;
+        if (notice === undefined) {
+          setBotStop(undefined);
+          return;
+        }
+        const shown = { channelId, stopping: false, notice };
+        setBotStop(shown);
+        window.setTimeout(
+          () => setBotStop((current) => (current === shown ? undefined : current)),
+          6000,
+        );
+      },
+    );
+  };
   const composerStop: ChannelComposerStop | undefined =
     channelId === undefined || (stopTargets.length === 0 && channelStop?.notice === undefined)
       ? undefined
@@ -1421,42 +1459,7 @@ function ConversationView({
                 : t('composer.stopBots', { count: stopTargets.length }),
           stopping: channelStop?.stopping === true,
           notice: channelStop?.notice,
-          onStop: () => {
-            if (stopTargets.length === 0 || channelStop?.stopping === true) return;
-            setBotStop({ channelId, stopping: true });
-            void Promise.allSettled(
-              stopTargets.map((target) => actions.stopBot(channelId, target.slug)),
-            ).then((outcomes) => {
-              const failed = outcomes.find((outcome) => outcome.status === 'rejected');
-              const idle = stopTargets.filter((_target, index) => {
-                const outcome = outcomes[index];
-                return outcome?.status === 'fulfilled' && outcome.value === 'not-working';
-              });
-              const notice =
-                failed !== undefined
-                  ? t('composer.stopFailed', {
-                      reason:
-                        failed.reason instanceof Error
-                          ? failed.reason.message
-                          : String(failed.reason),
-                    })
-                  : idle.length > 0 && idle.length === stopTargets.length
-                    ? t('composer.stopNotWorking', {
-                        name: idle.map((target) => target.name).join(', '),
-                      })
-                    : undefined;
-              if (notice === undefined) {
-                setBotStop(undefined);
-                return;
-              }
-              const shown = { channelId, stopping: false, notice };
-              setBotStop(shown);
-              window.setTimeout(
-                () => setBotStop((current) => (current === shown ? undefined : current)),
-                6000,
-              );
-            });
-          },
+          onStop: () => stopBots(stopTargets),
         };
   const selectedIds =
     selectedMessages !== undefined && selectedMessages.channelId === channelId
@@ -2865,7 +2868,20 @@ function ConversationView({
               })}
             </MessageSelectionContext.Provider>
             {imageGallery.lightbox}
-            <TimelineWorkingRowsView rows={workingRows} t={t} />
+            <TimelineWorkingRowsView
+              rows={workingRows}
+              stop={
+                stopTargets.length === 0
+                  ? undefined
+                  : {
+                      targets: new Set(stopTargets.map((target) => target.slug)),
+                      stopping: channelStop?.stopping === true,
+                      onStop: (slug) =>
+                        stopBots(stopTargets.filter((target) => target.slug === slug)),
+                    }
+              }
+              t={t}
+            />
             {conversation.timeline.hasNewer ? (
               <div className="bh-timeline-newer-sentinel">
                 {conversation.timeline.loadingNewer ? (

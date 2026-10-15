@@ -1,6 +1,15 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
+  IconAgentPresetOutlineRegular: () => null,
+  IconBranchOutlineRegular: () => null,
+  IconCodeOutlineRegular: () => null,
+  IconChevronDownOutlineRegular: () => null,
+  IconStopFillRegular: () => null,
+  Tooltip: ({ children }: { children: unknown }) => children,
+}));
 import type { PersonaBotFacepileItem } from '../src/client/avatar.js';
 import { groupComposerActivity } from '../src/client/group-composer-activity.js';
 import { zhTranslate } from '../src/client/locale.js';
@@ -79,7 +88,7 @@ describe('timelineWorkingRows', () => {
         t: zhTranslate,
       }),
     );
-    expect(html).toContain('Mira</span> · 正在搜索 · web_search · deepseek.com<span');
+    expect(html).toContain('正在搜索 · web_search · deepseek.com<span');
   });
 
   it('skips a thinking row for the Bot that wrote the latest message but keeps its tool row', () => {
@@ -131,21 +140,55 @@ describe('timelineWorkingRowsCover', () => {
 });
 
 describe('TimelineWorkingRowsView', () => {
-  it('renders the morphing avatar at message size with the safe summary, hidden from assistive tech', () => {
+  it('renders a card with the avatar, the name and the current step', () => {
     const html = renderToStaticMarkup(
       createElement(TimelineWorkingRowsView, {
         rows: { items: [mira], more: 0 },
         t: zhTranslate,
       }),
     );
-    expect(html).toContain('<div class="bh-timeline-working" aria-hidden="true">');
+    expect(html).toContain('<div class="bh-timeline-working">');
     expect(html).toContain('data-state="working"');
     expect(html).toContain('data-effect="searching"');
-    expect(html).toContain('width:28px;height:28px');
-    expect(html).toContain('Mira</span> · 正在搜索 · web_search');
+    expect(html).toContain('width:32px;height:32px');
+    expect(html).toContain('<span class="bh-timeline-working-name">Mira</span>');
+    expect(html).toContain('正在搜索 · web_search');
     expect(html).toContain('bh-timeline-working-ellipsis');
-    expect(html).not.toContain('role="status"');
+    expect(html).not.toContain('bh-timeline-working-stop');
     expect(html).not.toContain('aria-live');
+  });
+
+  it('adds an icon-only Stop for a Bot the Human can stop', () => {
+    const html = renderToStaticMarkup(
+      createElement(TimelineWorkingRowsView, {
+        rows: { items: [mira, nova], more: 0 },
+        stop: { targets: new Set(['mira']), stopping: false, onStop: () => {} },
+        t: zhTranslate,
+      }),
+    );
+    expect(html.match(/bh-timeline-working-stop/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="停止 Mira"');
+    expect(html).not.toContain('>停止<');
+  });
+
+  it('lets a card with Sessions expand', () => {
+    const html = renderToStaticMarkup(
+      createElement(TimelineWorkingRowsView, {
+        rows: {
+          items: [
+            {
+              ...mira,
+              sessions: [{ id: 's-1', role: 'orchestrator', state: 'working', at: 1, revision: 1 }],
+            },
+            nova,
+          ],
+          more: 0,
+        },
+        t: zhTranslate,
+      }),
+    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html.match(/disabled=""/g)).toHaveLength(1);
   });
 
   it('renders nothing without active Bots and a more line past the cap', () => {

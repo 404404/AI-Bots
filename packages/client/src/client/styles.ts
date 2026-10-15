@@ -3176,8 +3176,9 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
   outline: none;
 }
 .bh-message-group-avatar-link { cursor: pointer; }
-/* Client-only working rows under the latest message: the composer status
-   stays the live region, so these rows are hidden from assistive tech. */
+/* Working cards under the latest message: a flat card like the request cards,
+   with the Bot, its current step, the steps on expand and Stop. The composer
+   status stays the live region. */
 .bh-timeline-working {
   display: flex;
   flex-direction: column;
@@ -3185,20 +3186,93 @@ html[data-botharness-motion='reduce'] .bh-chat-body { transition: none; }
   margin-top: ${space.x3};
 }
 .bh-timeline-working-row {
+  display: grid;
+  gap: ${space.x3};
+  width: min(420px, 100%);
+  min-width: 0;
+  padding: ${space.x3} ${space.x3} ${space.x3} ${space.x4};
+  border-radius: ${radius.lg};
+  background: ${color.surface};
+}
+.bh-timeline-working-head {
   display: flex;
   align-items: center;
   gap: ${space.x3};
   min-width: 0;
 }
-.bh-timeline-working-summary {
+.bh-timeline-working-toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: ${space.x3};
   min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.bh-timeline-working-toggle:disabled { cursor: default; }
+.bh-timeline-working-toggle:focus-visible,
+.bh-timeline-working-stop:focus-visible { outline: ${border.focus} solid ${color.accent}; outline-offset: 2px; border-radius: ${radius.sm}; }
+.bh-timeline-working-text { display: grid; flex: 1; min-width: 0; }
+.bh-timeline-working-name {
   overflow: hidden;
-  color: var(--dsw-alias-label-tertiary);
+  color: ${color.fg};
   font-size: ${text.bodySize};
+  font-weight: ${text.strong};
+  line-height: ${text.bodyLine};
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bh-timeline-working-name { color: var(--dsw-alias-label-secondary); }
+.bh-timeline-working-summary {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-secondary);
+  font-size: ${text.metaSize};
+  line-height: ${text.metaLine};
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bh-timeline-working-chevron { flex-shrink: 0; color: var(--dsw-alias-label-tertiary); transition: transform 120ms ease; }
+.bh-timeline-working-row[data-open] .bh-timeline-working-chevron { transform: rotate(180deg); }
+.bh-timeline-working-stop {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bh-surface-selected);
+  color: ${color.fg};
+  cursor: pointer;
+}
+.bh-timeline-working-stop:hover:not(:disabled) { background: var(--bh-surface-pressed); }
+.bh-timeline-working-stop:disabled { opacity: 0.6; cursor: default; }
+.bh-timeline-working-sessions {
+  display: grid;
+  gap: ${space.x2};
+  margin: 0;
+  padding: ${space.x3};
+  border-radius: ${radius.md};
+  background: ${color.well};
+  list-style: none;
+}
+.bh-timeline-working-sessions li {
+  display: flex;
+  align-items: center;
+  gap: ${space.x2};
+  min-width: 0;
+  font-size: ${text.metaSize};
+  line-height: ${text.metaLine};
+}
+.bh-timeline-working-session-label { flex-shrink: 1; min-width: 0; overflow: hidden; color: ${color.fg}; font-weight: ${text.strong}; text-overflow: ellipsis; white-space: nowrap; }
+.bh-timeline-working-session-latest { flex-shrink: 2; min-width: 0; overflow: hidden; color: var(--dsw-alias-label-secondary); text-overflow: ellipsis; white-space: nowrap; }
 .bh-timeline-working-ellipsis i {
   font-style: normal;
   animation: bh-timeline-working-dot 1.2s ease-in-out infinite;

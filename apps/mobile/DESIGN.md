@@ -118,7 +118,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Regions are told apart by layer fills, not borders. The card is `raised` with no outline, and an outline appears only on the focused card (`edge.focus` in the accent).
   - A decided card collapses to one line: a coloured dot, then "subject · outcome" (for example "bash · Allowed once"). A card decided on another device or expired says so.
     - The collapsed line is a Bot bubble with different content: the same left edge, `surface` fill, padding, 80% width cap and radius `lg`, and it joins the Bot's message group (`xs` corners on the joined side, the tighter group gap), so it lines up with the bubbles above and below it. In a group Channel it stands alone, so the next bubble still carries the Bot's name.
-- While the Bot works (thinking or working), a working row at the bottom of the message list, after the newest message, shows "{Bot} · current step…" and a **Stop** button, like the Web Client's timeline working rows. Tapping it shows the steps. Nothing sits fixed above the composer, so the composer never moves when a Bot starts or stops; scrolled up, the row is out of view like any new message.
+- While the Bot works (thinking or working), a working card sits at the bottom of the message list, after the newest message, like the Web Client's. It is a flat card on the `raised` layer, the same family as the request cards: the Bot's avatar on the left, then two lines (the name, and the current step with "…"), and a round icon-only **Stop** (the square stop icon, no label) at the right end. Tapping the card expands it in place to list the Sessions at work on the `well` layer. Nothing sits fixed above the composer, so the composer never moves when a Bot starts or stops; scrolled up, the card is out of view like any new message.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text.
   - With one trailing button (the mic or Send) the pill is one row: **+**, the field and the button, bottom-aligned as the field grows. When the text no longer fits that one row, or with more (attached files, or the mic next to Send), it stacks like the web composer: the field on top at full width, and a row below with **+** (or **×**) on the left and the buttons on the right.
   - **+** opens Photos, Camera and File below the pill. Picked files show as removable tiles inside the pill, up to 10 per message. Send appears once there is text or a file.
@@ -134,7 +134,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - The header is the same floating header. Its centered chip, on the same frosted `raised` with a hairline `edge` like the Bot chip, holds a round `#` mark, the Channel name and its member count; it opens nothing, since there is no profile. The full client button sits on the right.
   - The first bubble of each Bot's group, and each Bot's streaming draft, carry the Bot's name above it in `meta`. A different Bot starts a new group even within 5 minutes.
   - `accent` stays the app's accent, since no one Bot owns the chat.
-  - Each working member Bot gets its own working row, and its **Stop** stops that Bot in this Channel.
+  - Each working member Bot gets its own working card, and its **Stop** stops that Bot in this Channel.
   - The composer says "Message #{Channel}" and has no Model and Workspace footer, since those belong to one Bot. A question card keeps its own Other field instead of "Or reply in the chat below.", because a message in a group goes to every member.
   - Typing `@` opens a suggestion list above the composer pill, on the `sheet` layer: **All Bots** (the Channel's active members, as the Web Client's "@All Bots") and the active member Bots with avatar and name, filtered by what follows the `@`. Choosing one inserts `@Name ` as a mention token, sent with the message like the Web Client's, so the mentioned Bots are woken even under a mentions-only wake policy. Editing inside a token turns it back into plain text.
   - A notification or Activity item for a group Channel reply, mention or card opens this chat, at the card when there is one.
@@ -172,7 +172,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
 - `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, `CountBadge`, and later `Icon`, `IconButton`, `Button`, `Avatar`, `Card`, `SettingsRow` and `EmptyState`.
-- `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, working row and scroll-to-bottom.
+- `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, working card and scroll-to-bottom.
 - `src/ui/shell/` will hold the Host drawer, the Human avatar button, shortcut cards, Channel section headers and the activity item.
 - `app/` routes, reads the Host client, and composes these components.
 

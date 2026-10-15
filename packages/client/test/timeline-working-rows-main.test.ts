@@ -205,7 +205,9 @@ describe('timeline working rows in the Channel body', () => {
     expect(
       working?.previousElementSibling?.querySelector('[data-message-id="m-1"]'),
     ).not.toBeNull();
-    expect(working?.getAttribute('aria-hidden')).toBe('true');
+    expect(working?.querySelector('.bh-timeline-working-stop')?.getAttribute('aria-label')).toBe(
+      '停止 Mira',
+    );
     expect(container.querySelectorAll('.bh-composer-activity-summary[aria-live]')).toHaveLength(1);
     expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe('停止 Mira');
 
@@ -224,6 +226,11 @@ describe('timeline working rows in the Channel body', () => {
     expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe(
       '停止 2 个 Bot',
     );
+    expect(
+      Array.from(container.querySelectorAll('.bh-timeline-working-stop')).map((button) =>
+        button.getAttribute('aria-label'),
+      ),
+    ).toEqual(['停止 Mira', '停止 Nova']);
   });
 
   it('replaces the row with the Bot streaming draft', async () => {

@@ -58,7 +58,7 @@ import { DraftBubble, MessageBubble } from './message-bubble';
 import { copyMessage } from './message-menu';
 import { chatRows, type ChatRow } from './message-groups';
 import { QuestionCard } from './question-card';
-import { WorkingRow } from './working-row';
+import { WorkingCard } from './working-card';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
 import { edgeFade, space } from '../design/tokens';
@@ -541,7 +541,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               working.length === 0 ? null : (
                 <View>
                   {working.map((entry) => (
-                    <WorkingRow
+                    <WorkingCard
                       key={entry.slug}
                       bot={entry}
                       stopping={stop?.status === 'stopping' && stop.bot.slug === entry.slug}
