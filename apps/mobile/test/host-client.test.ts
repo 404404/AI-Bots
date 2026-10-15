@@ -48,6 +48,81 @@ async function until(
 }
 
 describe('Host client', () => {
+  it.each(['call', 'api', 'upload'] as const)(
+    'never dispatches %s after a stop queued behind successful admission',
+    async (operation) => {
+      const host = new FakeHost();
+      let stopped = false;
+      const lateRequests: string[] = [];
+      client = createHostClient({
+        routes: [ROUTE],
+        credential: host.credential,
+        carrier: {
+          ...host.carrier,
+          request: (...args) => {
+            if (stopped) lateRequests.push(args[0]);
+            return host.carrier.request(...args);
+          },
+        },
+      });
+      const target = client;
+      target.start();
+      await until(target, (snapshot) => snapshot.connection.status === 'connected');
+      const pending =
+        operation === 'call'
+          ? target.call('list')
+          : operation === 'api'
+            ? target.api('/api/botharness/devices/compatibility', {})
+            : target.upload('test.txt', new Blob(['test']));
+      queueMicrotask(() => {
+        stopped = true;
+        target.stop();
+      });
+      await pending.catch(() => {});
+      expect(lateRequests).toEqual([]);
+    },
+  );
+
+  it('does not open a live socket when stopped during the admission roster request', async () => {
+    const host = new FakeHost();
+    let release: () => void = () => {};
+    let reached: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const roster = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    let opened = 0;
+    client = createHostClient({
+      routes: [ROUTE],
+      credential: host.credential,
+      carrier: {
+        ...host.carrier,
+        request: async (...args) => {
+          if (args[0].endsWith('/list')) {
+            reached();
+            await gate;
+          }
+          return host.carrier.request(...args);
+        },
+        openSocket: (...args) => {
+          opened += 1;
+          return host.carrier.openSocket(...args);
+        },
+      },
+      timeoutMs: 50,
+    });
+    client.start();
+    await roster;
+    client.stop();
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(opened).toBe(0);
+    expect(host.calls).toHaveLength(1);
+    expect(client.getSnapshot().connection.status).toBe('stopped');
+  });
+
   it('does not dispatch a queued operation after its client is stopped during admission', async () => {
     const host = new FakeHost();
     let release: () => void = () => {};

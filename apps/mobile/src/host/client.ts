@@ -597,12 +597,13 @@ export function createHostClient(options: HostClientOptions): HostClient {
     return admission;
   };
 
-  const admitOperation = async (): Promise<void> => {
+  const admitOperation = async <T>(operation: () => Promise<T>): Promise<T> => {
     const current = generation;
     if (stoppedByCaller) throw new Unreachable('The connection was stopped.');
     await admit(!running && snapshot.connection.status === 'stopped');
     if (stoppedByCaller || current !== generation)
       throw new Unreachable('The connection was stopped.');
+    return operation();
   };
 
   const openFollower = (follower: Follower): void => {
@@ -649,6 +650,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
     await admit(true);
     if (!running || current !== generation) return;
     await call('list');
+    if (!running || current !== generation) return;
     const baselines = { roster: false, activity: false };
     let resolveReady: () => void = () => {};
     let rejectReady: (error: Error) => void = () => {};
@@ -739,19 +741,21 @@ export function createHostClient(options: HostClientOptions): HostClient {
     try {
       await ready;
     } catch (error) {
+      if (!running || current !== generation) return;
       socket?.close();
       if (!opened) await call('list');
       throw error;
     } finally {
       clearTimeout(deadline);
     }
+    if (!running || current !== generation) return;
     await reload();
     if (current !== generation) return;
     attempt = 0;
     everConnected = true;
     publish({ status: 'connected', route });
     await closed;
-    admitted = false;
+    if (current === generation) admitted = false;
   };
 
   const loop = async (current: number): Promise<void> => {
@@ -833,8 +837,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
     },
     async call<T>(method: string, args: Record<string, unknown> = {}) {
       try {
-        await admitOperation();
-        return await call<T>(method, args);
+        return await admitOperation(() => call<T>(method, args));
       } catch (error) {
         refusedBy(error);
         throw error;
@@ -842,16 +845,14 @@ export function createHostClient(options: HostClientOptions): HostClient {
     },
     async api(path, init) {
       try {
-        await admitOperation();
-        return await api(path, init);
+        return await admitOperation(() => api(path, init));
       } catch (error) {
         refusedBy(error);
         throw error;
       }
     },
     async upload(...args) {
-      await admitOperation();
-      return upload(...args);
+      return admitOperation(() => upload(...args));
     },
     resource: (path) => ({ uri: absolute(path), headers: authorization }),
     onLive(listener) {
