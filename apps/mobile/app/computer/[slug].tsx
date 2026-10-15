@@ -36,7 +36,7 @@ import { radius, space } from '../../src/ui/design/tokens';
 import { useDesignTheme } from '../../src/ui/design/theme';
 import { Button } from '../../src/ui/primitives/button';
 import { Text } from '../../src/ui/primitives/text';
-import { CloseIcon } from '../../src/ui/shell/icons';
+import { CloseIcon, HandBackIcon } from '../../src/ui/shell/icons';
 import { useMounted } from '../../src/ui/mounted';
 import { t } from '../../src/ui/strings';
 
@@ -146,27 +146,41 @@ export default function ComputerScreen() {
           <Text variant="title" numberOfLines={1}>
             {t.computerTitle(bot?.displayName ?? slug ?? '')}
           </Text>
-          <Text variant="meta" tone={driving ? 'accent' : 'muted'} numberOfLines={2}>
-            {live ? (driving ? t.computerYouDriving : t.computerWatching) : ' '}
-          </Text>
+          <View
+            accessibilityLiveRegion="polite"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: space.x2 }}
+          >
+            {!live ? null : (
+              <View
+                style={{
+                  width: space.x3,
+                  height: space.x3,
+                  borderRadius: radius.round,
+                  backgroundColor: driving ? theme.color.accent : theme.color.success,
+                }}
+              />
+            )}
+            <Text variant="meta" tone={driving ? 'accent' : 'muted'} numberOfLines={1}>
+              {live ? (driving ? t.computerYouDriving : t.computerWatching) : ' '}
+            </Text>
+          </View>
         </View>
         {!driving ? null : (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t.computerHandBack}
             onPress={() => void viewer?.setControl(false)}
+            hitSlop={space.x3}
             style={({ pressed }) => ({
-              minHeight: theme.touch,
-              paddingHorizontal: space.x4,
+              width: theme.touch,
+              height: theme.touch,
               borderRadius: radius.round,
               alignItems: 'center',
               justifyContent: 'center',
               backgroundColor: pressed ? onAccent.pressed : onAccent.fill,
             })}
           >
-            <Text variant="meta" strong style={{ color: onAccent.label }}>
-              {t.computerHandBack}
-            </Text>
+            <HandBackIcon color={onAccent.label} size={theme.touch / 2} />
           </Pressable>
         )}
       </View>
