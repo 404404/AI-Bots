@@ -4958,6 +4958,25 @@ export async function sendMessaging(
   return record['intent'] as OutboxIntent;
 }
 
+export async function loadChannelMediaTarget(
+  call: BridgeCall,
+  channelId: string,
+  sourceEventId: string,
+  attachmentId: string,
+): Promise<HostFileTarget> {
+  const response = asRecord(
+    await unwrap(call, 'channelMediaTarget', { channelId, sourceEventId, attachmentId }),
+  );
+  const target = asRecord(response?.['target']);
+  if (
+    typeof target?.['path'] !== 'string' ||
+    typeof target['relativePath'] !== 'string' ||
+    target['kind'] !== 'file'
+  )
+    throw new Error('Invalid Channel media target');
+  return { path: target['path'], relativePath: target['relativePath'], kind: 'file' };
+}
+
 export async function loadMessageAttachmentTarget(
   call: BridgeCall,
   channelId: string,

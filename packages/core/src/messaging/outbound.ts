@@ -306,7 +306,7 @@ export interface OutboundMessaging {
     attachmentId: string;
     representation?: 'playback';
     signal: AbortSignal;
-  }): Promise<{ ref: ChannelAttachmentRef; body: ReadableStream<Uint8Array> }>;
+  }): Promise<{ ref: ChannelAttachmentRef; body: ReadableStream<Uint8Array>; inline?: boolean }>;
   prepareAudio(
     botSlug: string,
     sourceEventId: string,
