@@ -198,6 +198,7 @@ describe('Workspace Grant sidebar', () => {
       workspacePath: string;
       workspaceTitle: string;
       createdAt: string;
+      orchestratorWrite?: boolean;
     }> = [];
     const createWorkspaceGrant = vi.fn(async () => {
       const grant = {
@@ -212,7 +213,7 @@ describe('Workspace Grant sidebar', () => {
       return grant;
     });
     const actions = {
-      listWorkspaceGrants: vi.fn(async () => grants),
+      listWorkspaceGrants: vi.fn(async () => grants.map((row) => ({ ...row }))),
       listWorkspaceOptions: vi.fn(async () => [
         { id: 'project', path: '/resolved/project', title: 'Project' },
       ]),
@@ -232,7 +233,11 @@ describe('Workspace Grant sidebar', () => {
       assignmentAccess: vi.fn(async () => ({ mode: 'workspace-write' })),
       createWorkspaceGrant,
       setAssignmentAccess: vi.fn(),
-      setWorkspaceGrantWrite: vi.fn(),
+      setWorkspaceGrantWrite: vi.fn(async (_slug: string, id: string, enabled: boolean) => {
+        const index = grants.findIndex((row) => row.id === id);
+        grants[index] = { ...grants[index]!, orchestratorWrite: enabled };
+        return grants[index];
+      }),
     } as unknown as BridgeActions;
     const authorize = () =>
       Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
@@ -273,21 +278,26 @@ describe('Workspace Grant sidebar', () => {
         container.querySelector<HTMLButtonElement>('.bh-workspace-grant-confirm button')!.click(),
       );
       expect(createWorkspaceGrant).toHaveBeenCalledExactlyOnceWith('grant-composer', 'project');
+      expect(actions.setWorkspaceGrantWrite).toHaveBeenCalledExactlyOnceWith(
+        'grant-composer',
+        'composer-grant',
+        true,
+      );
       expect(container.querySelector('.bh-workspace-grant-confirm')).toBeNull();
-      expect(container.querySelector('[role="switch"]')).toBeNull();
+      expect(container.querySelector<HTMLInputElement>('[role="switch"]')!.checked).toBe(true);
       expect(
         Array.from(container.querySelectorAll('button')).filter(
           (button) => !button.disabled && button.textContent === zhTranslate('grant.authorize'),
         ),
       ).toHaveLength(0);
       expect(actions.setAssignmentAccess).not.toHaveBeenCalled();
-      expect(actions.setWorkspaceGrantWrite).not.toHaveBeenCalled();
+      expect(actions.setWorkspaceGrantWrite).toHaveBeenCalledOnce();
     } finally {
       await act(async () => root.unmount());
       container.remove();
     }
   });
-  it('lets the DM composer dialog switch an existing read-only folder to writable', async () => {
+  it('shows the write switch and open button in the composer folder row header', async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement('div');
     document.body.append(container);
@@ -333,13 +343,13 @@ describe('Workspace Grant sidebar', () => {
         Array.from(
           container.querySelectorAll<HTMLButtonElement>('button.bh-workspace-folder-toggle'),
         ).find((button) => button.querySelector('.bh-card-title')?.textContent === '.dsh')!;
-      expect(row().textContent).toContain(zhTranslate('grant.chip.read'));
-      act(() => row().click());
+      expect(row().getAttribute('aria-expanded')).toBe('false');
+      const header = row().closest('.bh-card-line')!;
       const toggle = () =>
         container.querySelector<HTMLInputElement>(
           `input[aria-label="${zhTranslate('grant.orchestratorWrite')}: .dsh"]`,
         );
-      expect(toggle()).not.toBeNull();
+      expect(header.contains(toggle())).toBe(true);
       expect(toggle()!.checked).toBe(false);
       await act(async () => toggle()!.click());
       expect(setWorkspaceGrantWrite).toHaveBeenCalledExactlyOnceWith(
@@ -348,7 +358,7 @@ describe('Workspace Grant sidebar', () => {
         true,
       );
       expect(toggle()!.checked).toBe(true);
-      expect(row().textContent).toContain(zhTranslate('grant.chip.write'));
+      expect(row().getAttribute('aria-expanded')).toBe('false');
       expect(actions.setAssignmentAccess).not.toHaveBeenCalled();
     } finally {
       await act(async () => root.unmount());
@@ -576,7 +586,9 @@ describe('Workspace Grant sidebar', () => {
           }),
         ),
       );
-      expect(container.querySelector('button[aria-label*="project"]')).toBeTruthy();
+      expect(
+        container.querySelector('button.bh-workspace-folder-remove[aria-label*="project"]'),
+      ).toBeTruthy();
       expect(container.textContent).not.toContain('正在加载工作区');
     } finally {
       await act(async () => root.unmount());
@@ -626,14 +638,18 @@ describe('Workspace Grant sidebar', () => {
           }),
         ),
       );
-      const remove = container.querySelector('button[aria-label*="project"]') as HTMLButtonElement;
+      const remove = container.querySelector(
+        'button.bh-workspace-folder-remove[aria-label*="project"]',
+      ) as HTMLButtonElement;
       expect(remove).toBeTruthy();
       vi.useFakeTimers();
       await act(async () => {
         remove.click();
         await Promise.resolve();
       });
-      expect(container.querySelector('button[aria-label*="project"]')).toBeNull();
+      expect(
+        container.querySelector('button.bh-workspace-folder-remove[aria-label*="project"]'),
+      ).toBeNull();
       await act(async () => {
         vi.advanceTimersByTime(15_001);
         await Promise.resolve();
@@ -681,7 +697,9 @@ describe('Workspace Grant sidebar', () => {
           }),
         ),
       );
-      const remove = container.querySelector('button[aria-label*="project"]') as HTMLButtonElement;
+      const remove = container.querySelector(
+        'button.bh-workspace-folder-remove[aria-label*="project"]',
+      ) as HTMLButtonElement;
       expect(remove).toBeTruthy();
       vi.useFakeTimers();
       act(() => remove.click());
