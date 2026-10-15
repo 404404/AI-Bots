@@ -5,7 +5,7 @@ client for this JavaScript-only change. Do not run a second Simulator or restart
 the shared QA Host. Use only the dedicated QA conversations.
 
 1. In a Human/Bot DM with a message followed by multiple activity records, compare
-   bubble-to-activity and activity-to-activity boundaries: one `space.x3` gap,
+   bubble-to-activity and activity-to-activity boundaries: one `space.x4` (12pt) gap,
    one line per activity, tail ellipsis for long content, icon at the Bot bubble's
    left edge. The current Bot has no repeated avatar/name; a Bot-DM action shows
    the recipient avatar after its icon.

@@ -127,7 +127,7 @@ describe('activity row layout and interaction', () => {
   it('uses the same single top gap and left inset as a new bubble, without bottom padding', () => {
     render(post, 'ada');
     expect(state.styles).toContainEqual(bubbleRow(true));
-    expect(bubbleRow(true)).toEqual({ paddingHorizontal: space.x4, paddingTop: space.x3 });
+    expect(bubbleRow(true)).toEqual({ paddingHorizontal: space.x4, paddingTop: space.x4 });
     expect(
       state.styles.every((style) => !('paddingBottom' in style) && !('paddingVertical' in style)),
     ).toBe(true);
