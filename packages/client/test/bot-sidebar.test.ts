@@ -249,6 +249,7 @@ function stubActions(): BridgeActions {
     openBot: vi.fn(async () => undefined),
     refreshBotInbox: vi.fn(async () => undefined),
     openActivityCenter: vi.fn(async () => undefined),
+    attachActivityCenterPanel: vi.fn(() => () => undefined),
     refreshOverview: vi.fn(async () => undefined),
     humanActionPage: vi.fn(async () => ({ items: [] })),
     openHumanInbox: vi.fn(async () => undefined),
@@ -261,6 +262,7 @@ function stubActions(): BridgeActions {
     openChannel: vi.fn(async () => undefined),
     openChannelAtMessage: vi.fn(async () => undefined),
     dismissHumanInbox: vi.fn(async () => undefined),
+    allowAutoRejectionOnce: vi.fn(async () => undefined),
     snoozeHumanInbox: vi.fn(async () => undefined),
     humanInboxContextPage: vi.fn(async () => ({
       entries: [],

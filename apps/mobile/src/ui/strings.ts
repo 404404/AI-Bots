@@ -208,9 +208,11 @@ const en = {
   cardLine: (subject: string, state: string) => `${subject} · ${state}`,
   cardLoadFailed: 'Could not read this request.',
   noBot: 'This PersonaBot is not on your computer anymore.',
-  home: 'Home',
+  chats: 'Chats',
   activity: 'Activity',
-  me: 'Me',
+  settings: 'Settings',
+  connections: 'Connections',
+  interface: 'Interface',
   back: 'Back',
   workingPreview: 'Working…',
   effect: {
@@ -234,7 +236,6 @@ const en = {
     [name, count === 1 ? '1 conversation' : `${count} conversations`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
       .join(', '),
-  computer: 'This computer',
   connected: 'Connected',
   notifications: 'Notifications',
   notificationsChannel: 'Requests from PersonaBots',
@@ -427,7 +428,6 @@ const en = {
   computerTouchMode: 'Touch',
   appIcon: 'App icon',
   appIconHint: 'Pick the icon on your home screen',
-  appIconInterface: 'Interface',
   appIconDefault: 'Default',
   appIconDefaultHint: 'The icon the app ships with',
   appIconDeepSeekBot: 'DeepSeekBot',
@@ -652,9 +652,11 @@ const zh: typeof en = {
   cardLine: (subject: string, state: string) => `${subject} · ${state}`,
   cardLoadFailed: '读取这个请求失败。',
   noBot: '你的电脑上已经没有这个 PersonaBot。',
-  home: '首页',
+  chats: '聊天',
   activity: '动态',
-  me: '我',
+  settings: '设置',
+  connections: '连接',
+  interface: '界面',
   back: '返回',
   workingPreview: '工作中…',
   effect: {
@@ -678,7 +680,6 @@ const zh: typeof en = {
     [name, `${count} 个对话`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
       .join('，'),
-  computer: '这台电脑',
   connected: '已连接',
   notifications: '通知',
   notificationsChannel: 'PersonaBot 的请求',
@@ -863,7 +864,6 @@ const zh: typeof en = {
   computerTouchMode: '触摸方式',
   appIcon: 'App 图标',
   appIconHint: '选择主屏幕上的图标',
-  appIconInterface: '界面',
   appIconDefault: '默认',
   appIconDefaultHint: 'App 自带的图标',
   appIconDeepSeekBot: 'DeepSeekBot',
