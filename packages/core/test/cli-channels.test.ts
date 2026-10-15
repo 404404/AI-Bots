@@ -130,7 +130,8 @@ describe('Channel and group CLI commands', () => {
       '--attachment',
       'media',
     ];
-    expect((await invoke(args, live.url)).code).toBe(0);
+    const resolved = await invoke(args, live.url);
+    expect(resolved.code, JSON.stringify(resolved.json)).toBe(0);
     expect(live.calls).toEqual([
       {
         method: 'channelMediaTarget',
