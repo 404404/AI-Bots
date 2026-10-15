@@ -79,12 +79,23 @@ export function SettingsView({
       </View>
       <ScrollView contentContainerStyle={{ gap: space.x6, padding: space.x5 }}>
         <UsageCard load={loadUsage} onOpen={actions.onUsage} />
-        <SettingsSection title={t.connections}>
-          <SettingsRow title={hostName ?? '—'} detail={status.join(' · ')} />
-          <SettingsRow title={t.computers} detail={t.computersHint} onPress={actions.onComputers} />
-          <SettingsRow title={t.notifications} onPress={actions.onNotifications} />
-          <SettingsRow title={t.openFullClient} tone="accent" onPress={actions.onOpenFullClient} />
+        <SettingsSection title={t.connections} on="raised">
+          <SettingsRow on="raised" title={hostName ?? '—'} detail={status.join(' · ')} />
           <SettingsRow
+            on="raised"
+            title={t.computers}
+            detail={t.computersHint}
+            onPress={actions.onComputers}
+          />
+          <SettingsRow on="raised" title={t.notifications} onPress={actions.onNotifications} />
+          <SettingsRow
+            on="raised"
+            title={t.openFullClient}
+            tone="accent"
+            onPress={actions.onOpenFullClient}
+          />
+          <SettingsRow
+            on="raised"
             title={t.unpair}
             tone="danger"
             onPress={() => {
@@ -96,9 +107,19 @@ export function SettingsView({
         {unpairError === undefined ? null : (
           <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
         )}
-        <SettingsSection title={t.interface}>
-          <SettingsRow title={t.hostLook} detail={t.hostLookHint} onPress={actions.onHostLook} />
-          <SettingsRow title={t.appIcon} detail={t.appIconHint} onPress={actions.onAppIcon} />
+        <SettingsSection title={t.interface} on="raised">
+          <SettingsRow
+            on="raised"
+            title={t.hostLook}
+            detail={t.hostLookHint}
+            onPress={actions.onHostLook}
+          />
+          <SettingsRow
+            on="raised"
+            title={t.appIcon}
+            detail={t.appIconHint}
+            onPress={actions.onAppIcon}
+          />
         </SettingsSection>
       </ScrollView>
     </View>
