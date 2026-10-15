@@ -79,6 +79,7 @@ export const pointer = {
 
 export const motion = {
   drawer: 250,
+  composer: 160,
 } as const;
 
 export const scrim = {
