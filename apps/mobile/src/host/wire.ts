@@ -338,3 +338,53 @@ export interface TimelinePage {
 
 export type ToolApprovalStatus = 'pending' | 'expired';
 export type UserQuestionStatus = 'pending' | 'submitted' | 'answered' | 'expired';
+
+export type UsagePeriod = 'today' | 'week';
+
+export interface UsageBuckets {
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  totalTokens: number | null;
+  partial?: boolean;
+}
+
+export interface UsageBot extends UsageBuckets {
+  slug: string;
+  displayName: string;
+  current: boolean;
+  primaryColor: string;
+}
+
+export interface OverviewUsage {
+  period: UsagePeriod;
+  start: string;
+  end: string;
+  timezone: string;
+  nextRefreshAt: string;
+  totals: UsageBuckets;
+  days: (UsageBuckets & { day: string })[];
+  bots: UsageBot[];
+  nextCursor?: string;
+  freshness: 'ready' | 'reconciling' | 'degraded';
+  readAt: string;
+  reconciledAt: string | null;
+  legacyBaseline: boolean;
+}
+
+export type MemoryActivityBot = { slug: string; displayName: string } & (
+  | { state: 'ready'; total: number; counts: number[]; dirty: boolean }
+  | { state: 'unavailable' }
+);
+
+export interface OverviewMemory {
+  start: string;
+  end: string;
+  days: string[];
+  timezone: string;
+  readAt: string;
+  nextRefreshAt: string;
+  bots: MemoryActivityBot[];
+  nextCursor?: string;
+}

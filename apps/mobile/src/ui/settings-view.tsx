@@ -2,16 +2,19 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import type { ConnectionState } from '../host/client';
+import type { OverviewUsage } from '../host/usage';
 import { SHEET_GROUP } from './chat/sheet';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
 import { errorText, Notice } from './request-parts';
+import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
 
 export interface SettingsActions {
   onClose(): void;
+  onUsage(): void;
   onOpenFullClient(): void;
   onComputers(): void;
   onAppIcon(): void;
@@ -31,10 +34,12 @@ const STATUS: Record<ConnectionState['status'], string> = {
 export function SettingsView({
   hostName,
   connection,
+  loadUsage,
   actions,
 }: {
   hostName: string | undefined;
   connection: ConnectionState;
+  loadUsage?: (() => Promise<OverviewUsage>) | undefined;
   actions: SettingsActions;
 }) {
   const theme = useDesignTheme();
@@ -67,6 +72,7 @@ export function SettingsView({
           </Text>
         </Pressable>
       </View>
+      <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
       <SettingsSection title={t.connections} on={SHEET_GROUP}>
         <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
         <SettingsRow
