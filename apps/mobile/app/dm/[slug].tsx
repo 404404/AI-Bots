@@ -33,6 +33,7 @@ import {
 import { useDictation } from '../../src/host/speech';
 import { botColor } from '../../src/ui/bot-color';
 import { ApprovalCard } from '../../src/ui/chat/approval-card';
+import type { BubbleGroup } from '../../src/ui/chat/bubble-shape';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
@@ -91,6 +92,7 @@ const RequestCard = memo(function RequestCard({
   resolution,
   focused,
   answeredHere,
+  group,
 }: {
   client: HostClient;
   inbox: Inbox | undefined;
@@ -101,6 +103,7 @@ const RequestCard = memo(function RequestCard({
   resolution: CardResolution | undefined;
   focused: boolean;
   answeredHere: boolean;
+  group: BubbleGroup;
 }) {
   const ref = useMemo<RequestRef>(
     () => ({ channelId: card.channelId, messageId: message.id, botSlug }),
@@ -136,6 +139,7 @@ const RequestCard = memo(function RequestCard({
         {...subject}
         {...(resolution?.kind === 'tool-approval' ? { resolution } : {})}
         focused={focused}
+        group={group}
       />
     );
   return (
@@ -145,6 +149,7 @@ const RequestCard = memo(function RequestCard({
       {...subject}
       {...(resolution?.kind === 'user-question' ? { resolution } : {})}
       focused={focused}
+      group={group}
       replyInChat
       answeredHere={answeredHere}
     />
@@ -328,6 +333,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           resolution={resolutions.get(item.message.id)}
           focused={item.message.id === focus}
           answeredHere={answered.has(item.message.id)}
+          group={item}
         />
       ) : (
         <MessageBubble

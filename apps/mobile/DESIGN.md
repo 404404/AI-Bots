@@ -105,6 +105,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - No keyboard shortcut hints, no explanatory boilerplate, and no paths or ids outside Details.
   - Regions are told apart by layer fills, not borders. The card is `raised` with no outline, and an outline appears only on the focused card (`edge.focus` in the accent).
   - A decided card collapses to one line: a coloured dot, then "subject · outcome" (for example "bash · Allowed once"). A card decided on another device or expired says so.
+    - The collapsed line is a Bot bubble with different content: the same left edge, `surface` fill, padding, 80% width cap and radius `lg`, and it joins the Bot's message group (`xs` corners on the joined side, the tighter group gap), so it lines up with the bubbles above and below it.
 - While the Bot works, a status strip above the composer shows the current step and a **Stop** button. Tapping it shows the steps.
 - The composer is a pill: **+** for attachments, the placeholder "Message {Bot}", and a mic that becomes Send once there is text. In a DM a footer row with the Model and Workspace chips sits under it.
   - With one trailing button (the mic or Send) the pill is one row: **+**, the field and the button, bottom-aligned as the field grows. When the text no longer fits that one row, or with more (attached files, or the mic next to Send), it stacks like the web composer: the field on top at full width, and a row below with **+** (or **×**) on the left and the buttons on the right.
