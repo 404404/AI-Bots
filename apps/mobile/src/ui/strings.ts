@@ -467,6 +467,7 @@ const en = {
   bannerChangePicture: 'Change picture',
   hostLookReset: 'Reset to default',
   hostLookPickFailed: 'Could not open your photos.',
+  hostLookMissing: 'This computer is no longer paired.',
 };
 
 const zh: typeof en = {
@@ -908,6 +909,7 @@ const zh: typeof en = {
   bannerChangePicture: '更换图片',
   hostLookReset: '恢复默认',
   hostLookPickFailed: '无法打开相册。',
+  hostLookMissing: '这台电脑已不再配对。',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()
