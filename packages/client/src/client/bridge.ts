@@ -961,6 +961,22 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       (request['role'] !== 'orchestrator' && request['role'] !== 'assignment')
     )
       return undefined;
+    const preview = asRecord(request['botCreatePreview']);
+    const botCreatePreview =
+      preview !== undefined &&
+      typeof preview['memoryFolder'] === 'string' &&
+      typeof preview['defaultLocation'] === 'boolean'
+        ? {
+            memoryFolder: preview['memoryFolder'],
+            defaultLocation: preview['defaultLocation'],
+            ...(typeof preview['avatar'] === 'string' && preview['avatar'].startsWith('data:image/')
+              ? { avatar: preview['avatar'] }
+              : {}),
+            ...(typeof preview['avatarError'] === 'string'
+              ? { avatarError: preview['avatarError'] }
+              : {}),
+          }
+        : undefined;
     toolApprovalRequest = {
       sessionId: request['sessionId'],
       callId: request['callId'],
@@ -968,6 +984,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       role: request['role'],
       cwd: request['cwd'],
       input: request['input'],
+      ...(botCreatePreview === undefined ? {} : { botCreatePreview }),
     };
   }
   let userQuestionRequest: ChannelMessage['userQuestionRequest'];
@@ -1049,7 +1066,29 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
   let memberDeparture: ChannelMessage['memberDeparture'];
   let turnStop: ChannelMessage['turnStop'];
   let toolAutoApproval: ChannelMessage['toolAutoApproval'];
-  if (record['toolAutoApproval'] !== undefined) {
+  let toolAutoApprovalPause: ChannelMessage['toolAutoApprovalPause'];
+  if (record['toolAutoApprovalPause'] !== undefined) {
+    const pause = asRecord(record['toolAutoApprovalPause']);
+    if (
+      pause === undefined ||
+      author.kind !== 'system' ||
+      ['botSlug', 'sessionId', 'template'].some(
+        (key) => typeof pause[key] !== 'string' || (pause[key] as string).length === 0,
+      ) ||
+      (pause['state'] !== 'paused' && pause['state'] !== 'resumed') ||
+      (pause['reason'] !== undefined &&
+        pause['reason'] !== 'consecutive' &&
+        pause['reason'] !== 'session')
+    )
+      return undefined;
+    toolAutoApprovalPause = {
+      botSlug: pause['botSlug'] as string,
+      sessionId: pause['sessionId'] as string,
+      template: pause['template'] as string,
+      state: pause['state'],
+      ...(pause['reason'] === undefined ? {} : { reason: pause['reason'] }),
+    };
+  } else if (record['toolAutoApproval'] !== undefined) {
     const auto = asRecord(record['toolAutoApproval']);
     if (
       auto === undefined ||
@@ -1167,6 +1206,18 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
       messageId: action['messageId'],
       recipientBotSlug: action['recipientBotSlug'],
     };
+  }
+  let botCreateAction: ChannelMessage['botCreateAction'];
+  if (record['botCreateAction'] !== undefined) {
+    const action = asRecord(record['botCreateAction']);
+    if (
+      action === undefined ||
+      author.kind !== 'bot' ||
+      typeof action['botSlug'] !== 'string' ||
+      typeof action['displayName'] !== 'string'
+    )
+      return undefined;
+    botCreateAction = { botSlug: action['botSlug'], displayName: action['displayName'] };
   }
   let botChannelPost: ChannelMessage['botChannelPost'];
   if (record['botChannelPost'] !== undefined) {
@@ -1503,6 +1554,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(grantRequestResolution === undefined ? {} : { grantRequestResolution }),
     ...(assignmentReply === undefined ? {} : { assignmentReply }),
     ...(botDmAction === undefined ? {} : { botDmAction }),
+    ...(botCreateAction === undefined ? {} : { botCreateAction }),
     ...(botChannelPost === undefined ? {} : { botChannelPost }),
     ...(botChannelPost === undefined || botChannelPostPreview === undefined
       ? {}
@@ -1514,6 +1566,7 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     ...(memberDeparture === undefined ? {} : { memberDeparture }),
     ...(turnStop === undefined ? {} : { turnStop }),
     ...(toolAutoApproval === undefined ? {} : { toolAutoApproval }),
+    ...(toolAutoApprovalPause === undefined ? {} : { toolAutoApprovalPause }),
     ...(toolApprovalRequest === undefined ? {} : { toolApprovalRequest }),
     ...(sessionFailure === undefined ? {} : { sessionFailure }),
     ...(toolApprovalDecision === undefined ? {} : { toolApprovalDecision }),
@@ -2564,10 +2617,39 @@ export interface JournalPage {
   hasOlder: boolean;
 }
 
+export function parseStoredChannelMessage(value: unknown): ChannelMessage | undefined {
+  const parsed = parseChannelMessage(value);
+  if (parsed !== undefined) return parsed;
+  const record = asRecord(value);
+  const id = record?.['id'];
+  const at = record?.['at'];
+  const body = record?.['body'];
+  if (
+    typeof id !== 'string' ||
+    id.length === 0 ||
+    typeof at !== 'string' ||
+    at.length === 0 ||
+    typeof body !== 'string'
+  )
+    return undefined;
+  const revision = record?.['channelRevision'];
+  console.warn('botharness: showing an unreadable Channel message as plain text', id);
+  return {
+    id,
+    at,
+    author: parseAuthor(record?.['author']) ?? { kind: 'system' },
+    body,
+    format: 'text',
+    ...(typeof revision === 'number' && Number.isSafeInteger(revision) && revision >= 1
+      ? { channelRevision: revision }
+      : {}),
+  };
+}
+
 export function parseJournalEntry(value: unknown): JournalEntry | undefined {
   const record = asRecord(value);
   const revision = record?.['revision'];
-  const message = parseChannelMessage(record?.['message']);
+  const message = parseStoredChannelMessage(record?.['message']);
   if (
     typeof record?.['channelId'] !== 'string' ||
     typeof revision !== 'number' ||
@@ -2621,13 +2703,15 @@ export async function loadTimelinePage(
   );
   const revision = response?.['revision'];
   const raw = asRecord(response?.['page']);
-  const entries = raw?.['entries'];
+  const entries = Array.isArray(raw?.['entries'])
+    ? raw['entries'].map((entry: unknown) => parseStoredChannelMessage(entry))
+    : undefined;
   if (
     typeof revision !== 'number' ||
     !Number.isSafeInteger(revision) ||
     revision < 0 ||
-    !Array.isArray(entries) ||
-    !entries.every((entry) => parseChannelMessage(entry) !== undefined) ||
+    entries === undefined ||
+    entries.some((entry) => entry === undefined) ||
     !(raw?.['olderCursor'] === null || typeof raw?.['olderCursor'] === 'string') ||
     !(raw?.['newerCursor'] === null || typeof raw?.['newerCursor'] === 'string') ||
     typeof raw?.['hasOlder'] !== 'boolean' ||
@@ -2637,7 +2721,7 @@ export async function loadTimelinePage(
   return {
     revision,
     page: {
-      entries: entries.map((entry) => parseChannelMessage(entry)!),
+      entries: entries as ChannelMessage[],
       olderCursor: raw['olderCursor'] as string | null,
       newerCursor: raw['newerCursor'] as string | null,
       hasOlder: raw['hasOlder'],
@@ -2871,33 +2955,80 @@ export interface ApprovalTemplateView {
   name: string;
   title: string;
   description: string;
+  builtIn: boolean;
+  usedBy: string[];
+  text?: string;
+}
+function parseApprovalTemplate(item: unknown): ApprovalTemplateView | undefined {
+  const template = asRecord(item);
+  if (
+    typeof template?.['name'] !== 'string' ||
+    typeof template['title'] !== 'string' ||
+    typeof template['description'] !== 'string'
+  )
+    return undefined;
+  const text = template['text'];
+  return {
+    name: template['name'],
+    title: template['title'],
+    description: template['description'],
+    builtIn: template['builtIn'] !== false,
+    usedBy: stringArray(template['usedBy']),
+    ...(typeof text === 'string' ? { text } : {}),
+  };
 }
 export async function loadApprovalTemplates(
   call: BridgeCall,
-  slug: string,
+  slug?: string,
 ): Promise<{ templates: ApprovalTemplateView[]; selected: string | null }> {
-  const response = asRecord(await unwrap(call, 'approvalTemplates', { slug }));
+  const response = asRecord(
+    await unwrap(call, 'approvalTemplates', slug === undefined ? {} : { slug }),
+  );
   const templates = response?.['templates'];
-  const selected = response?.['selected'];
+  const selected = response?.['selected'] ?? null;
   if (!Array.isArray(templates) || (selected !== null && typeof selected !== 'string'))
     throw new Error('invalid approvalTemplates response');
   return {
     templates: templates.flatMap((item: unknown) => {
-      const template = asRecord(item);
-      return typeof template?.['name'] === 'string' &&
-        typeof template['title'] === 'string' &&
-        typeof template['description'] === 'string'
-        ? [
-            {
-              name: template['name'],
-              title: template['title'],
-              description: template['description'],
-            },
-          ]
-        : [];
+      const template = parseApprovalTemplate(item);
+      return template === undefined ? [] : [template];
     }),
     selected,
   };
+}
+async function writtenApprovalTemplate(
+  call: BridgeCall,
+  endpoint: 'approvalTemplateCreate' | 'approvalTemplateUpdate',
+  payload: Record<string, unknown>,
+): Promise<ApprovalTemplateView> {
+  const template = parseApprovalTemplate(
+    asRecord(await unwrap(call, endpoint, payload))?.['template'],
+  );
+  if (template === undefined) throw new Error('invalid ' + endpoint + ' response');
+  return template;
+}
+export function createApprovalTemplate(
+  call: BridgeCall,
+  name: string,
+  source: { text: string } | { from: string },
+): Promise<ApprovalTemplateView> {
+  return writtenApprovalTemplate(call, 'approvalTemplateCreate', { name, ...source });
+}
+export function updateApprovalTemplate(
+  call: BridgeCall,
+  name: string,
+  text: string,
+): Promise<ApprovalTemplateView> {
+  return writtenApprovalTemplate(call, 'approvalTemplateUpdate', { name, text });
+}
+export async function deleteApprovalTemplate(
+  call: BridgeCall,
+  name: string,
+): Promise<{ clearedBots: string[] }> {
+  const response = asRecord(await unwrap(call, 'approvalTemplateDelete', { name }));
+  if (!Array.isArray(response?.['clearedBots']))
+    throw new Error('invalid approvalTemplateDelete response');
+  return { clearedBots: stringArray(response['clearedBots']) };
 }
 export async function setBotApprovalTemplate(
   call: BridgeCall,
@@ -3314,6 +3445,7 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
       item['kind'] !== 'user-question' &&
       item['kind'] !== 'private-input' &&
       item['kind'] !== 'tool-approval' &&
+      item['kind'] !== 'auto-rejection' &&
       item['kind'] !== 'workspace-grant-request' &&
       item['kind'] !== 'bot-dm-message' &&
       item['kind'] !== 'assignment-waiting-human' &&
@@ -3352,6 +3484,24 @@ function parseHumanAttentionPage(value: unknown): HumanAttentionPage {
     if (item['messageId'] !== undefined && typeof item['messageId'] !== 'string') return undefined;
     if (item['snoozedUntil'] !== undefined && typeof item['snoozedUntil'] !== 'string')
       return undefined;
+    if (
+      item['kind'] === 'auto-rejection' &&
+      (item['category'] !== 'action' ||
+        typeof item['messageId'] !== 'string' ||
+        typeof item['sourceEventId'] !== 'string')
+    )
+      return undefined;
+    if (item['autoRejection'] !== undefined) {
+      const detail = asRecord(item['autoRejection']);
+      if (
+        item['kind'] !== 'auto-rejection' ||
+        detail === undefined ||
+        ['sessionId', 'toolName', 'input', 'template', 'reason'].some(
+          (key) => typeof detail[key] !== 'string',
+        )
+      )
+        return undefined;
+    }
     if (
       item['kind'] === 'private-input' &&
       (item['category'] !== 'action' ||
@@ -3466,6 +3616,11 @@ export async function dismissHumanInboxItem(
 ): Promise<void> {
   const value = asRecord(await unwrap(call, 'humanAttentionDismiss', { itemId, sourceKey }));
   if (value?.['accepted'] !== true) throw new Error('Inbox dismissal was not confirmed');
+}
+
+export async function overrideAutoRejection(call: BridgeCall, itemId: string): Promise<void> {
+  const value = asRecord(await unwrap(call, 'toolAutoRejectionOverride', { itemId }));
+  if (value?.['accepted'] !== true) throw new Error('Auto-rejection override was not confirmed');
 }
 
 export async function snoozeHumanInboxItem(

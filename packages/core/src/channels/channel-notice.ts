@@ -2,9 +2,11 @@ import type { ChannelMessage } from './channel.js';
 
 const CHANNEL_NOTICE_FIELDS = [
   'botDmAction',
+  'botCreateAction',
   'botChannelPost',
   'memoryCommit',
   'toolAutoApproval',
+  'toolAutoApprovalPause',
 ] as const;
 
 export function isChannelNotice(

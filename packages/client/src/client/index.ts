@@ -17,6 +17,7 @@ import {
   fullClientLocator,
   privateInputLocator,
 } from '../../../core/src/credentials/web-locator.js';
+import { requestCreation } from './create-request.js';
 import { watchFullClientLanding, watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
 import { createFileOpenPreferences } from './file-open-preferences.js';
@@ -80,6 +81,7 @@ import { ShortcutHelp, ShortcutHelpView } from './shortcut-help.js';
 import { mountTabTitle } from './tab-title.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
 import { createDockPanelRegistry } from './dock-panels.js';
+import { createActivityCenterPanel } from './activity-center-panel.js';
 import { createProfileCardBuiltins } from './profile-cards-builtins.js';
 import { createGroupProfileCards } from './group-profile.js';
 import { createProfileCardRegistry } from './profile-cards.js';
@@ -361,6 +363,7 @@ export function apply(ctx: ClientContext): void {
         ...createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
           channelSidebar.register(entry),
         ),
+        dockPanels.register(createActivityCenterPanel(actions, t, nativeSessions)),
       ];
     };
     reconcile();
@@ -677,7 +680,7 @@ export function apply(ctx: ClientContext): void {
           order: 15,
           label: () => t('botSettings.section.autoApproval'),
           locale: LOCALE_NS,
-          inject: () => ({ actions }),
+          inject: () => ({ actions, call, store }),
         },
         AutoApprovalSection,
       ),
@@ -926,6 +929,7 @@ export function apply(ctx: ClientContext): void {
             actions,
             companion,
             channelSidebar,
+            dockPanels,
             shortcutBindings,
             ...botModePrefsFace(prefs),
             exitBotMode: () => ctx.layout.selectPanel(null),
@@ -1049,6 +1053,11 @@ export function apply(ctx: ClientContext): void {
     ctx.effect(
       () =>
         watchFullClientLanding(store, landing, (target) => {
+          if (target.kind === 'new-bot' || target.kind === 'new-channel') {
+            ctx.layout.selectPanel(PANEL_ID);
+            requestCreation(target.kind === 'new-bot' ? 'bot' : 'channel');
+            return;
+          }
           if (target.kind !== 'home') expectMobileConversation();
           ctx.layout.selectPanel(PANEL_ID);
           if (target.kind === 'home') return;

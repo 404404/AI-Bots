@@ -187,6 +187,7 @@ const BOT_TOOL_NAMES = new Set([
   'bot_schedule_delete',
   'group_leave',
   'bot_dm_send',
+  'bot_create',
   'channel_send',
 
   'ask_user_question',
@@ -197,15 +198,25 @@ const BOT_TOOL_NAMES = new Set([
   'report_to_orchestrator',
 ]);
 
-export function requiresHumanToolApproval(name: string, args?: unknown): boolean {
+export function requiresHumanToolApproval(
+  name: string,
+  args?: unknown,
+  templateInUse?: (template: string) => boolean,
+): boolean {
   if (name === 'channel_attachment_open')
     return (
       typeof args !== 'object' ||
       args === null ||
       (args as Record<string, unknown>).access !== 'read'
     );
-  if (name === 'secret_cli' || name === 'secret_mcp_connect') return true;
-  return isDshGovernedTool(name) && changesApprovalPolicy(policyInput(args));
+  if (name === 'secret_cli' || name === 'secret_mcp_connect' || name === 'bot_create') return true;
+  return isDshGovernedTool(name) && changesApprovalPolicy(policyInput(args), templateInUse);
+}
+
+export function approvalTemplateInUse(
+  registry: Pick<BotHarnessCore['registry'], 'list'>,
+): (template: string) => boolean {
+  return (template) => registry.list().some((record) => record.approvalTemplate === template);
 }
 
 function policyInput(args: unknown): string {
@@ -246,6 +257,10 @@ export function grantToolExecutionDenial(
     return !requiresHumanToolApproval(name, args) || allowedOnce
       ? undefined
       : 'Original attachment edit access requires Human approval';
+  if (name === 'bot_create')
+    return allowedOnce || sessionHasFullAccess(core, session.id)
+      ? undefined
+      : 'Creating a PersonaBot requires Human tool approval';
   if (BOT_TOOL_NAMES.has(name)) return undefined;
 
   if (core.hostTools.has(name)) return undefined;
@@ -263,7 +278,7 @@ export function grantToolExecutionDenial(
   )
     return undefined;
   if (NATIVE_FILE_TOOL_NAMES.has(name)) return nativeFileToolDenial(core, session, name, args);
-  if (requiresHumanToolApproval(name, args) && !allowedOnce)
+  if (requiresHumanToolApproval(name, args, approvalTemplateInUse(core.registry)) && !allowedOnce)
     return name + ' requires Human approval';
   return undefined;
 }

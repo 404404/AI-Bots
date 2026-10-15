@@ -123,7 +123,7 @@ import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
-import { AutoApprovalLine } from './approval-template-entry.js';
+import { AutoApprovalLine, AutoApprovalPauseLine } from './approval-template-entry.js';
 import { BotChannelPostLine, elsewhereAction } from './bot-channel-post-line.js';
 import {
   hiddenDmActionsSnapshot,
@@ -1326,22 +1326,25 @@ function ConversationView({
   const activeFacepile = channelFacepile.filter(
     (item) => item.state !== 'idle' || item.attention !== undefined,
   );
+  const dmBot = bot ?? (channel?.type === 'dm' && !botDm ? profileBot : undefined);
+  const dmBotActivity = dmBot === undefined ? undefined : personaBotActivity(state, dmBot);
   const composerFacepile: PersonaBotFacepileItem[] =
-    bot === undefined
+    dmBot === undefined
       ? activeFacepile
-      : botActivity === undefined || (botActivity === 'idle' && attentionCount(bot.attention) === 0)
+      : dmBotActivity === undefined ||
+          (dmBotActivity === 'idle' && attentionCount(dmBot.attention) === 0)
         ? []
         : [
             {
-              personaBotId: bot.slug,
-              name: bot.displayName,
-              src: bot.avatar,
-              appearance: bot.appearance,
-              avatarSeed: bot.avatarSeed,
-              state: botActivity,
-              activity: bot.activity,
-              attention: bot.attention,
-              sessions: bot.sessionActivity,
+              personaBotId: dmBot.slug,
+              name: dmBot.displayName,
+              src: dmBot.avatar,
+              appearance: dmBot.appearance,
+              avatarSeed: dmBot.avatarSeed,
+              state: dmBotActivity,
+              activity: dmBot.activity,
+              attention: dmBot.attention,
+              sessions: dmBot.sessionActivity,
             },
           ];
   const composerActivity: ChannelComposerActivity | undefined =
@@ -1360,11 +1363,13 @@ function ConversationView({
   const latestMessage = messages.findLast(
     (item) =>
       item.botDmAction === undefined &&
+      item.botCreateAction === undefined &&
       item.botChannelPost === undefined &&
       item.memoryCommit === undefined &&
       item.memberDeparture === undefined &&
       item.turnStop === undefined &&
-      item.toolAutoApproval === undefined,
+      item.toolAutoApproval === undefined &&
+      item.toolAutoApprovalPause === undefined,
   );
   const workingRows = timelineWorkingRows(
     conversation.status === 'ready' && !conversation.timeline.hasNewer
@@ -2620,6 +2625,13 @@ function ConversationView({
                         bots={state.bots}
                         t={t}
                       />
+                    ) : first.toolAutoApprovalPause !== undefined ? (
+                      <AutoApprovalPauseLine
+                        messageId={first.id}
+                        record={first.toolAutoApprovalPause}
+                        bots={state.bots}
+                        t={t}
+                      />
                     ) : first.turnStop !== undefined ? (
                       <div className="bh-member-departure" data-message-id={first.id}>
                         <span>
@@ -2694,6 +2706,26 @@ function ConversationView({
                           void actions.openBot(commit.botSlug);
                         }}
                       />
+                    ) : first.botCreateAction !== undefined ? (
+                      <button
+                        type="button"
+                        className="bh-bot-dm-action"
+                        data-message-id={first.id}
+                        onClick={() => void actions.openBot(first.botCreateAction!.botSlug)}
+                      >
+                        <BotDmActionLabel
+                          messageKey="botCreate.action"
+                          senderSlug={first.author.kind === 'bot' ? first.author.slug : undefined}
+                          senderName={authorLabel(first, state.bots, t, channelHumanName(channel))}
+                          recipientSlug={first.botCreateAction.botSlug}
+                          recipientName={
+                            state.bots.find((bot) => bot.slug === first.botCreateAction!.botSlug)
+                              ?.displayName ?? first.botCreateAction.displayName
+                          }
+                          bots={state.bots}
+                          t={t}
+                        />
+                      </button>
                     ) : first.botDmAction === undefined ? (
                       <OnboardingMemoryNavigation.Provider
                         value={{

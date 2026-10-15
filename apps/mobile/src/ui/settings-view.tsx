@@ -1,0 +1,115 @@
+import { useState } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
+
+import type { ConnectionState } from '../host/client';
+import { SHEET_GROUP } from './chat/sheet';
+import { useDesignTheme } from './design/theme';
+import { space } from './design/tokens';
+import { SettingsRow, SettingsSection } from './primitives/settings-row';
+import { Text } from './primitives/text';
+import { errorText, Notice } from './request-parts';
+import { t } from './strings';
+
+export interface SettingsActions {
+  onClose(): void;
+  onOpenFullClient(): void;
+  onComputers(): void;
+  onHostLook(): void;
+  onAppIcon(): void;
+  onNotifications(): void;
+  onUnpair(): Promise<void>;
+}
+
+const STATUS: Record<ConnectionState['status'], string> = {
+  connected: t.connected,
+  connecting: t.connecting,
+  reconnecting: t.reconnecting,
+  refused: t.refused,
+  unreachable: t.unreachable,
+  stopped: '',
+};
+
+export function SettingsView({
+  hostName,
+  connection,
+  actions,
+}: {
+  hostName: string | undefined;
+  connection: ConnectionState;
+  actions: SettingsActions;
+}) {
+  const theme = useDesignTheme();
+  const [unpairError, setUnpairError] = useState<string>();
+  const status = [STATUS[connection.status], connection.route].filter((part) => part !== '');
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.color.base }}
+      contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: -space.x3 }}>
+        <Text variant="title" accessibilityRole="header" style={{ flex: 1 }}>
+          {t.settings}
+        </Text>
+        <Pressable
+          onPress={actions.onClose}
+          accessibilityRole="button"
+          accessibilityLabel={t.done}
+          style={({ pressed }) => ({
+            minWidth: theme.touch,
+            minHeight: theme.touch,
+            paddingHorizontal: space.x3,
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text tone="accent" strong>
+            {t.done}
+          </Text>
+        </Pressable>
+      </View>
+      <SettingsSection title={t.connections} on={SHEET_GROUP}>
+        <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.computers}
+          detail={t.computersHint}
+          onPress={actions.onComputers}
+        />
+        <SettingsRow on={SHEET_GROUP} title={t.notifications} onPress={actions.onNotifications} />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.openFullClient}
+          tone="accent"
+          onPress={actions.onOpenFullClient}
+        />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.unpair}
+          tone="danger"
+          onPress={() => {
+            setUnpairError(undefined);
+            actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
+          }}
+        />
+      </SettingsSection>
+      {unpairError === undefined ? null : (
+        <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
+      )}
+      <SettingsSection title={t.interface} on={SHEET_GROUP}>
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.hostLook}
+          detail={t.hostLookHint}
+          onPress={actions.onHostLook}
+        />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.appIcon}
+          detail={t.appIconHint}
+          onPress={actions.onAppIcon}
+        />
+      </SettingsSection>
+    </ScrollView>
+  );
+}

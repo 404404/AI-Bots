@@ -12,7 +12,10 @@ function time(iso: string): number {
   return Number.isNaN(value) ? 0 : value;
 }
 
-export function chatRows(messages: readonly ConversationMessage[]): ChatRow[] {
+export function chatRows(
+  messages: readonly ConversationMessage[],
+  standalone: (message: ConversationMessage) => boolean = () => false,
+): ChatRow[] {
   const rows: ChatRow[] = [];
   let previous: ConversationMessage | undefined;
   for (const message of messages) {
@@ -22,8 +25,11 @@ export function chatRows(messages: readonly ConversationMessage[]): ChatRow[] {
     const joins =
       previous !== undefined &&
       !separated &&
+      !standalone(previous) &&
+      !standalone(message) &&
       message.author !== 'system' &&
       previous.author === message.author &&
+      previous.bot === message.bot &&
       gap < GROUP_MS;
     const before = rows.at(-1);
     if (joins && before?.kind === 'message') before.last = false;
@@ -31,6 +37,17 @@ export function chatRows(messages: readonly ConversationMessage[]): ChatRow[] {
     previous = message;
   }
   return rows;
+}
+
+export function messageGroups(rows: readonly ChatRow[]): Array<{ key: string; group: string }> {
+  const groups: Array<{ key: string; group: string }> = [];
+  let group = '';
+  for (const row of rows) {
+    if (row.kind !== 'message') continue;
+    if (row.first) group = row.key;
+    groups.push({ key: row.key, group });
+  }
+  return groups;
 }
 
 export function separatorLabel(iso: string, now: Date, yesterday: string, locale?: string): string {

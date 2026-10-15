@@ -143,10 +143,15 @@ const actions = new Proxy(
   { get: (target, key) => Reflect.get(target, key) ?? vi.fn(async () => undefined) },
 ) as unknown as BridgeActions;
 
-async function open(channel: ChannelSummary, bots: BotSummary[]): Promise<HTMLElement> {
+async function open(
+  channel: ChannelSummary,
+  bots: BotSummary[],
+  from: 'bot' | 'channel' = 'bot',
+): Promise<HTMLElement> {
   await act(async () => {
     store.setRoster(bots, [channel]);
-    if (channel.type === 'dm') store.select({ kind: 'bot', slug: channel.botSlug! });
+    if (channel.type === 'dm' && from === 'bot')
+      store.select({ kind: 'bot', slug: channel.botSlug! });
     else store.select({ kind: 'channel', channelId: channel.id });
     store.setConversation({
       status: 'ready',
@@ -174,9 +179,9 @@ function layout(element: HTMLElement, scrollHeight: number, clientHeight = 400):
 }
 
 const rowNames = (): string[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('.bh-timeline-working-row')).map(
-    (row) => row.dataset['botSlug'] ?? '',
-  );
+  Array.from(
+    container.querySelectorAll<HTMLElement>('.bh-timeline-working .bh-persona-avatar'),
+  ).map((avatar) => (avatar.getAttribute('title') ?? '').split(' · ')[0]!.toLowerCase());
 
 beforeEach(() => {
   Object.assign(globalThis, {
@@ -206,6 +211,7 @@ describe('timeline working rows in the Channel body', () => {
       working?.previousElementSibling?.querySelector('[data-message-id="m-1"]'),
     ).not.toBeNull();
     expect(working?.getAttribute('aria-hidden')).toBe('true');
+    expect(working?.textContent).not.toContain('Mira');
     expect(container.querySelectorAll('.bh-composer-activity-summary[aria-live]')).toHaveLength(1);
     expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe('停止 Mira');
 
@@ -214,7 +220,13 @@ describe('timeline working rows in the Channel body', () => {
     expect(container.querySelector('.bh-stop-btn')).toBeNull();
   });
 
-  it('shows one row per active Bot in a Group and skips waiting Bots', async () => {
+  it('shows the working row when the DM is opened from the Channel list', async () => {
+    const chat = await open(dm, [bot('mira', 'Mira', 'working')], 'channel');
+    expect(rowNames()).toEqual(['mira']);
+    expect(chat.querySelector('.bh-timeline-working')).not.toBeNull();
+  });
+
+  it('stacks the active Bots of a Group in one row and skips waiting Bots', async () => {
     await open(group, [
       bot('mira', 'Mira', 'working'),
       bot('nova', 'Nova', 'thinking'),
@@ -224,6 +236,7 @@ describe('timeline working rows in the Channel body', () => {
     expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe(
       '停止 2 个 Bot',
     );
+    expect(container.querySelectorAll('.bh-timeline-working-row')).toHaveLength(1);
   });
 
   it('replaces the row with the Bot streaming draft', async () => {
