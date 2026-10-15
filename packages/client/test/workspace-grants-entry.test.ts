@@ -287,6 +287,74 @@ describe('Workspace Grant sidebar', () => {
       container.remove();
     }
   });
+  it('lets the DM composer dialog switch an existing read-only folder to writable', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    let grant = {
+      id: 'composer-write-grant',
+      botSlug: 'composer-write',
+      workspaceId: 'dsh',
+      workspacePath: '/Users/me/.dsh',
+      workspaceTitle: '.dsh',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      orchestratorWrite: false,
+      writeRevision: 0,
+    };
+    const setWorkspaceGrantWrite = vi.fn(async (_slug: string, _id: string, enabled: boolean) => {
+      grant = { ...grant, orchestratorWrite: enabled, writeRevision: grant.writeRevision + 1 };
+      return grant;
+    });
+    const actions = {
+      listWorkspaceOptions: vi.fn(async () => []),
+      listWorkspaceGrants: vi.fn(async () => [grant]),
+      memoryDirectory: vi.fn(async () => undefined),
+      listToolApprovalRules: vi.fn(async () => []),
+      assignmentAccess: vi.fn(async () => ({ mode: 'workspace-write' })),
+      setAssignmentAccess: vi.fn(),
+      setWorkspaceGrantWrite,
+    } as unknown as BridgeActions;
+    try {
+      await act(async () =>
+        root.render(
+          createElement(WorkspaceGrantsEntry, {
+            scope: 'personabot',
+            channelId: 'dm-composer-write',
+            botSlug: 'composer-write',
+            botName: 'DeepSeek Bot',
+            actions,
+            t: zhTranslate,
+            composerOnly: true,
+          }),
+        ),
+      );
+      const row = () =>
+        Array.from(
+          container.querySelectorAll<HTMLButtonElement>('button.bh-workspace-folder-toggle'),
+        ).find((button) => button.querySelector('.bh-card-title')?.textContent === '.dsh')!;
+      expect(row().textContent).toContain(zhTranslate('grant.chip.read'));
+      act(() => row().click());
+      const toggle = () =>
+        container.querySelector<HTMLInputElement>(
+          `input[aria-label="${zhTranslate('grant.orchestratorWrite')}: .dsh"]`,
+        );
+      expect(toggle()).not.toBeNull();
+      expect(toggle()!.checked).toBe(false);
+      await act(async () => toggle()!.click());
+      expect(setWorkspaceGrantWrite).toHaveBeenCalledExactlyOnceWith(
+        'composer-write',
+        'composer-write-grant',
+        true,
+      );
+      expect(toggle()!.checked).toBe(true);
+      expect(row().textContent).toContain(zhTranslate('grant.chip.write'));
+      expect(actions.setAssignmentAccess).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
   it('keeps write permission off until the Host confirms and preserves it when revocation fails', async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement('div');
