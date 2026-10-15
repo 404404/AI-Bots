@@ -6,6 +6,7 @@ import type { BridgeActions } from './actions.js';
 import {
   AssignmentConcurrencyRow,
   BotIconSetting,
+  ApprovalReviewSessionsVisibilitySetting,
   BotSessionsVisibilitySetting,
   DeveloperModeSetting,
   GroupAutoAcceptSetting,
@@ -62,6 +63,7 @@ export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactEl
       <SortSetting {...props} />
       <SendKeySetting {...props} />
       <BotSessionsVisibilitySetting {...props} />
+      <ApprovalReviewSessionsVisibilitySetting {...props} />
       <DesktopNotificationSetting desktopNotifications={props.desktopNotifications} t={props.t} />
       <ShortcutHelpSetting shortcutHelp={props.shortcutHelp} t={props.t} />
       <OnboardingSetting

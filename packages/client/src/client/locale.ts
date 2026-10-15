@@ -732,6 +732,9 @@ export const zh = {
   'botSessions.row.title': '在会话列表显示 Bot 会话',
   'botSessions.row.description':
     'Bot 的 Orchestrator 和 Assignment 会话默认不出现在 DeepSeek Harness 的会话列表中。打开后会显示出来。',
+  'approvalReviewSessions.row.title': '在会话列表显示审批复核会话',
+  'approvalReviewSessions.row.description':
+    '自动审批每次复核都会开一个短会话。默认不显示，打开后可以在 DeepSeek Harness 里查看它是怎么判断的。',
   'sendKey.row.title': '发送消息',
   'sendKey.row.description': '选择发送消息的按键，另一种组合用于换行',
   'desktopNotify.row.title': '桌面通知',
@@ -4252,6 +4255,9 @@ export const en = {
   'botSessions.row.title': 'Show Bot sessions in the session list',
   'botSessions.row.description':
     "Bot Orchestrator and Assignment sessions stay out of DeepSeek Harness's session list by default. Turn this on to show them.",
+  'approvalReviewSessions.row.title': 'Show Approval Review Sessions in the session list',
+  'approvalReviewSessions.row.description':
+    'Auto approval opens a short session for each review. They stay hidden by default. Turn this on to see how each call was judged in DeepSeek Harness.',
   'sendKey.row.title': 'Send messages',
   'sendKey.row.description': 'Choose the key that sends a message; the other inserts a new line',
   'desktopNotify.row.title': 'Desktop notifications',
