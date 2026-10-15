@@ -52,7 +52,7 @@ const SCRIM: Record<ColorScheme, string> = { light: '#0f111566', dark: '#0000009
 const BODY_CONTRAST = 4.5;
 const LIGHT_SURFACE = 3;
 
-function mix(from: string, to: string, amount: number): string {
+export function mix(from: string, to: string, amount: number): string {
   const a = rgb(from);
   const b = rgb(to);
   return `#${[16, 8, 0]

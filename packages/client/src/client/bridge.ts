@@ -5299,7 +5299,8 @@ export async function loadOverviewUsage(
       row !== undefined &&
       ['inputTokens', 'outputTokens', 'cacheReadTokens', 'cacheWriteTokens', 'totalTokens'].every(
         (key) => row[key] === null || (Number.isSafeInteger(row[key]) && Number(row[key]) >= 0),
-      )
+      ) &&
+      (row['partial'] === undefined || typeof row['partial'] === 'boolean')
     );
   };
   if (

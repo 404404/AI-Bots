@@ -7,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 
 import { createBridgeMethods } from '../src/bridge/methods.js';
 import { createChannelStore } from '../src/channels/store.js';
-import { mountOperationalDatabase } from '../src/database/owner.js';
+import { attachOperationalModule, mountOperationalDatabase } from '../src/database/owner.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 import { createBotStateTracker } from '../src/state/bot-state.js';
 import { createUsageProjection, usageLocalDay } from '../src/usage/usage.js';
@@ -348,6 +348,35 @@ it('distinguishes a ready empty interval from missing provider usage and an unav
   const unknown = methods.overviewUsage({ period: 'today' });
   expect(unknown.ok && unknown.value.totals.totalTokens).toBeNull();
   expect(unknown.ok && unknown.value.days[0]?.inputTokens).toBeNull();
+});
+
+it('counts reported usage beside an unreported total and marks the sum as partial', () => {
+  const { methods, fold, owner, time } = setup();
+  fold({ inputTokens: 100, outputTokens: 40, totalTokens: 155 });
+  attachOperationalModule(owner, 'usage').transaction((db) =>
+    db
+      .prepare(
+        `INSERT INTO usage_daily
+          (bot_slug, day, provider, model, purpose, input_tokens, output_tokens, cache_read_tokens,
+           cache_write_tokens, total_tokens, unknown_cache_read, unknown_cache_write, unknown_total)
+         VALUES ('legacy', ?, 'actual', 'old', 'orchestrator', 300, 60, 0, 0, 0, 1, 1, 1)`,
+      )
+      .run(usageLocalDay(time)),
+  );
+  const result = methods.overviewUsage({ period: 'week' });
+  if (!result.ok) throw new Error(result.error.message);
+  expect(result.value.totals).toMatchObject({
+    inputTokens: 400,
+    outputTokens: 100,
+    cacheReadTokens: null,
+    totalTokens: 515,
+    partial: true,
+  });
+  expect(result.value.days.at(-1)).toMatchObject({ totalTokens: 515, partial: true });
+  expect(result.value.days[0]).toMatchObject({ totalTokens: 0, partial: false });
+  expect(
+    Object.fromEntries(result.value.bots.map((bot) => [bot.slug, [bot.totalTokens, bot.partial]])),
+  ).toEqual({ ada: [155, false], legacy: [360, true] });
 });
 
 it('uses seven local calendar dates across a daylight-saving change', () => {

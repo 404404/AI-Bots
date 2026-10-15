@@ -74,6 +74,16 @@ Native file output uploads with `file_type=4` without sending, then rechecks cur
 
 ## Understand the text path
 
+### Delayed results and explicit proactive posts
+
+The #1154 source candidate enables checked proactive text for an explicitly authorized saved QQ group target. The current Provider does not offer QQ group discovery, so use the existing saved-target authorization rather than treating a received mention as a proactive grant. Current app identity, target, conversation block, final authorization and the shared hourly post limit remain checked at send time.
+
+If a task finishes after QQ's five-minute reply window, `bridge_reply` records the failed `reply-window-expired` and retains the result in Outbox. To deliver that task's result, the Bot can inspect `bridge_targets`, choose a `canPost` target belonging to its own app and the exact original group, then explicitly call `bridge_post` with a distinct stable request ID. Without that target or platform permission, keep the result locally. Neither an unknown reply nor an unknown proactive outcome permits a new send; inspecting the same request after restart does not resend it.
+
+The saved-target Web send action uses the same checked post and native receipt. Provider acceptance is separate from seeing the result in QQ. Real delayed-task, refusal and current-artifact qualification remain tracked in [#1154](https://github.com/BotHarness/DeepSeekBot/issues/1154); ordinary group observation and intentional participation remain [#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155).
+
+**Qualified test application:** on 2026-10-14, the QA2 app on the `0df23253` worktree Host, DSH `0.2.0-rc.2` and the immutable `.20` Provider completed a genuine QQ-requested Schedule after 400.542 seconds. Its original reply was retained as `reply-window-expired`; a separate owned, authorized original-group post received a native receipt, and the Human confirmed one correct result. A real shared-hourly-limit refusal retained another result locally. Both original test Apps resumed normal replies after restoration. This qualifies that tested source/runtime path; final packed-product execution and matched visual evidence remain separate gates. See the [qualification record](research/2026-10-14-qq-delayed-native-qualification.md).
+
 | Behavior        | Current contract                                                |
 | --------------- | --------------------------------------------------------------- |
 | Input           | Text from a trusted `GROUP_AT_MESSAGE_CREATE` event             |
@@ -89,6 +99,14 @@ The [official group send contract](https://bot.q.qq.com/wiki/develop/api-v2/auto
 The text slice excludes private QQ messages, ordinary group traffic, attachments and compound or quoted payloads. [Ordinary group events](https://bot.q.qq.com/wiki/develop/api-v2/autogen/event/group_message_create.html) additionally require the application's receive-all setting; their explicit opt-in is tracked separately. Images, files, voice input and delayed proactive reports follow in the later slices.
 
 QQ does not provide this consumer with a group-history API or a durable resume cursor. Disconnects can leave gaps. After a Host restart, previously retained sources remain inspectable, but their process-local reply proof is unavailable until a qualifying native event is delivered again. An old source must never become permission to send an unrelated new message.
+
+## Ordinary group text candidate
+
+The [#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155) development candidate adds checked ordinary text from the Provider's exclusive QQ consumer. Mentions-only remains the collection default. The software capability does not prove receive-all permission: a fresh non-mentioned native group event must reach the active receiver before the existing Client can enable **all messages** for that conversation. A probe in mentions-only mode supplies current delivery evidence without placing its ordinary content in canonical collection or waking the Bot.
+
+Saved collection preference and current receiver evidence stay separate. With explicit collection enabled, eligible ordinary text keeps its own member, group and message attribution in the existing local Inbox/Channel path. Observation and count/time harvest can wake a Bot independently of direct mentions, without requiring a reply to every event. Intentional speech uses the independently authorized own-app proactive path. Ordinary media and remote QQ group history are outside this text slice.
+
+Switching back to mentions-only stops future ordinary collection. Blocking, disabling or losing the receiver applies existing fences; reconnect keeps valid preferences but requires current delivery evidence again. Events from a blocked intake interval do not qualify the newly allowed conversation or reconstruct missing history. Real QQ event, Client opt-in, understanding and contribution acceptance remain pending for this candidate.
 
 ## If the app does not appear or cannot reply
 

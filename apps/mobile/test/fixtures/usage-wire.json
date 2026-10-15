@@ -1,0 +1,293 @@
+{
+  "recordedFrom": "isolated Host via scripts/dev-instance.mjs, DSH 0.2.0-rc.2, 2026-10-15; two PersonaBots each answered one DM",
+  "rpc": {
+    "idle": {
+      "overviewUsage": {
+        "week": {
+          "period": "week",
+          "start": "2026-10-09",
+          "end": "2026-10-15",
+          "timezone": "UTC",
+          "nextRefreshAt": "2026-10-16T00:00:00.000Z",
+          "totals": {
+            "inputTokens": 0,
+            "outputTokens": 0,
+            "cacheReadTokens": 0,
+            "cacheWriteTokens": 0,
+            "totalTokens": 0
+          },
+          "days": [
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-09"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-10"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-11"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-12"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-13"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-14"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-15"
+            }
+          ],
+          "bots": [],
+          "legacyBaseline": false,
+          "readAt": "2026-10-15T14:09:03.712Z",
+          "freshness": "ready",
+          "reconciledAt": "2026-10-15T14:08:41.207Z"
+        }
+      },
+      "overviewMemory": {
+        "start": "2026-10-09",
+        "end": "2026-10-15",
+        "days": [
+          "2026-10-09",
+          "2026-10-10",
+          "2026-10-11",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15"
+        ],
+        "timezone": "UTC",
+        "readAt": "2026-10-15T14:09:03.850Z",
+        "nextRefreshAt": "2026-10-16T00:00:00.000Z",
+        "bots": []
+      }
+    },
+    "active": {
+      "overviewUsage": {
+        "week": {
+          "period": "week",
+          "start": "2026-10-09",
+          "end": "2026-10-15",
+          "timezone": "UTC",
+          "nextRefreshAt": "2026-10-16T00:00:00.000Z",
+          "totals": {
+            "inputTokens": 48232,
+            "outputTokens": 2378,
+            "cacheReadTokens": 343296,
+            "cacheWriteTokens": 0,
+            "totalTokens": 393906
+          },
+          "days": [
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-09"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-10"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-11"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-12"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-13"
+            },
+            {
+              "inputTokens": 0,
+              "outputTokens": 0,
+              "cacheReadTokens": 0,
+              "cacheWriteTokens": 0,
+              "totalTokens": 0,
+              "day": "2026-10-14"
+            },
+            {
+              "day": "2026-10-15",
+              "inputTokens": 48232,
+              "outputTokens": 2378,
+              "cacheReadTokens": 343296,
+              "cacheWriteTokens": 0,
+              "totalTokens": 393906
+            }
+          ],
+          "bots": [
+            {
+              "slug": "bot-16f973eb08464b4eb07e73e71965cb3a",
+              "inputTokens": 23766,
+              "outputTokens": 1048,
+              "cacheReadTokens": 121984,
+              "cacheWriteTokens": 0,
+              "totalTokens": 146798,
+              "displayName": "Juno",
+              "current": true,
+              "primaryColor": "#c4452f"
+            },
+            {
+              "slug": "bot-62ef6fae3b434474b58ccc3e2b27c528",
+              "inputTokens": 24466,
+              "outputTokens": 1330,
+              "cacheReadTokens": 221312,
+              "cacheWriteTokens": 0,
+              "totalTokens": 247108,
+              "displayName": "Mika",
+              "current": true,
+              "primaryColor": "#c4452f"
+            }
+          ],
+          "legacyBaseline": false,
+          "readAt": "2026-10-15T14:10:37.619Z",
+          "freshness": "ready",
+          "reconciledAt": "2026-10-15T14:08:41.207Z"
+        },
+        "today": {
+          "period": "today",
+          "start": "2026-10-15",
+          "end": "2026-10-15",
+          "timezone": "UTC",
+          "nextRefreshAt": "2026-10-16T00:00:00.000Z",
+          "totals": {
+            "inputTokens": 48232,
+            "outputTokens": 2378,
+            "cacheReadTokens": 343296,
+            "cacheWriteTokens": 0,
+            "totalTokens": 393906
+          },
+          "days": [
+            {
+              "day": "2026-10-15",
+              "inputTokens": 48232,
+              "outputTokens": 2378,
+              "cacheReadTokens": 343296,
+              "cacheWriteTokens": 0,
+              "totalTokens": 393906
+            }
+          ],
+          "bots": [
+            {
+              "slug": "bot-16f973eb08464b4eb07e73e71965cb3a",
+              "inputTokens": 23766,
+              "outputTokens": 1048,
+              "cacheReadTokens": 121984,
+              "cacheWriteTokens": 0,
+              "totalTokens": 146798,
+              "displayName": "Juno",
+              "current": true,
+              "primaryColor": "#c4452f"
+            },
+            {
+              "slug": "bot-62ef6fae3b434474b58ccc3e2b27c528",
+              "inputTokens": 24466,
+              "outputTokens": 1330,
+              "cacheReadTokens": 221312,
+              "cacheWriteTokens": 0,
+              "totalTokens": 247108,
+              "displayName": "Mika",
+              "current": true,
+              "primaryColor": "#c4452f"
+            }
+          ],
+          "legacyBaseline": false,
+          "readAt": "2026-10-15T14:10:37.768Z",
+          "freshness": "ready",
+          "reconciledAt": "2026-10-15T14:08:41.207Z"
+        }
+      },
+      "overviewMemory": {
+        "start": "2026-10-09",
+        "end": "2026-10-15",
+        "days": [
+          "2026-10-09",
+          "2026-10-10",
+          "2026-10-11",
+          "2026-10-12",
+          "2026-10-13",
+          "2026-10-14",
+          "2026-10-15"
+        ],
+        "timezone": "UTC",
+        "readAt": "2026-10-15T14:10:37.916Z",
+        "nextRefreshAt": "2026-10-16T00:00:00.000Z",
+        "bots": [
+          {
+            "slug": "bot-16f973eb08464b4eb07e73e71965cb3a",
+            "displayName": "Juno",
+            "state": "ready",
+            "counts": [0, 0, 0, 0, 0, 0, 2],
+            "total": 2,
+            "dirty": true
+          },
+          {
+            "slug": "bot-62ef6fae3b434474b58ccc3e2b27c528",
+            "displayName": "Mika",
+            "state": "ready",
+            "counts": [0, 0, 0, 0, 0, 0, 3],
+            "total": 3,
+            "dirty": false
+          }
+        ]
+      }
+    }
+  }
+}

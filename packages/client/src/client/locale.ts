@@ -596,7 +596,7 @@ export const zh = {
   'overviewUsage.reconciling': '正在核对用量，数据尚未完整。',
   'overviewUsage.degraded': '用量核对失败，当前统计可能不完整。',
   'overviewUsage.legacy': '历史基线尚未完全归类。',
-  'overviewUsage.partial': '部分 token 桶或总量未知；图表仅绘制已确认的用量。',
+  'overviewUsage.partial': '部分用量未上报；带 + 的总量和图表只计入已上报的用量。',
   'overviewUsage.trend': '每日 token 用量趋势',
   'overviewUsage.daily': '每日精确值',
   'overviewUsage.bots': '按 Bot',
@@ -4179,7 +4179,7 @@ export const en = {
   'overviewUsage.degraded': 'Usage reconciliation failed; statistics may be incomplete.',
   'overviewUsage.legacy': 'Historical baseline is not fully classified.',
   'overviewUsage.partial':
-    'Some token buckets or totals are unknown; the chart shows only confirmed usage.',
+    'Some usage was not reported; totals marked + and the chart count only reported usage.',
   'overviewUsage.trend': 'Daily token usage trend',
   'overviewUsage.daily': 'Exact daily values',
   'overviewUsage.bots': 'By Bot',

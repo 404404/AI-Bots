@@ -65,6 +65,8 @@ export default function BotProfileScreen() {
             }
           : {}),
         onNotifications: () => router.push('/notifications'),
+        onOpenActivity: () =>
+          router.push({ pathname: '/bot/[slug]/activity', params: { slug: bot.slug } }),
         onOpenMemory: (entry) =>
           router.push({
             pathname: '/bot/[slug]/memory',

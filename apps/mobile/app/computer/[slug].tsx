@@ -71,6 +71,7 @@ export default function ComputerScreen() {
   const cursor = useSharedValue({ x: 0, y: 0 });
   const openKeyboard = (password: boolean) => {
     setSecret(password);
+    void viewer?.hold(password);
     keyboard.current?.blur();
     setTimeout(() => keyboard.current?.focus(), 50);
   };
@@ -83,7 +84,10 @@ export default function ComputerScreen() {
   };
   const choose = (next: ComputerTool) => {
     if (next === 'keyboard') openKeyboard(secret);
-    else keyboard.current?.blur();
+    else {
+      keyboard.current?.blur();
+      void viewer?.hold(false);
+    }
     if (next === 'mouse') setMode('trackpad');
     setTool(next);
   };
@@ -193,7 +197,7 @@ export default function ComputerScreen() {
           {live ? (
             <BrowserStage
               frame={state.frame!}
-              interactive={driving}
+              interactive={live}
               mode={mode}
               cursor={cursor}
               pointerShape="arrow"
@@ -217,9 +221,20 @@ export default function ComputerScreen() {
                   </Text>
                 </>
               ) : (
-                <Text accessibilityRole="alert" tone="muted" style={{ textAlign: 'center' }}>
-                  {message}
-                </Text>
+                <>
+                  <Text accessibilityRole="alert" tone="muted" style={{ textAlign: 'center' }}>
+                    {message}
+                  </Text>
+                  {!revoked ? null : (
+                    <View style={{ alignSelf: 'stretch', marginTop: space.x5 }}>
+                      <Button
+                        label={t.pairAgain}
+                        tone="primary"
+                        onPress={() => router.replace('/pair')}
+                      />
+                    </View>
+                  )}
+                </>
               )}
             </View>
           )}
@@ -250,14 +265,7 @@ export default function ComputerScreen() {
               gap: space.x4,
             }}
           >
-            {!driving ? (
-              <Button
-                label={t.computerTakeControl}
-                tone="primary"
-                on="canvas"
-                onPress={() => void viewer?.setControl(true)}
-              />
-            ) : tool === 'keyboard' ? (
+            {tool === 'keyboard' ? (
               <ComputerKeyBar
                 modifiers={modifiers}
                 secret={secret}
@@ -270,7 +278,7 @@ export default function ComputerScreen() {
                 }
                 onKey={chord}
                 onSecret={() => openKeyboard(!secret)}
-                onHide={() => Keyboard.dismiss()}
+                onHide={() => choose('mouse')}
               />
             ) : (
               <>

@@ -177,7 +177,11 @@ export function OverviewUsageView({
             </span>
             <strong className="bh-profile-card-total" aria-live="polite">
               {t('overviewUsage.total')}:{' '}
-              <span data-usage-total>{count(value.totals.totalTokens)}</span> tokens
+              <span data-usage-total>
+                {count(value.totals.totalTokens)}
+                {value.totals.partial && value.totals.totalTokens !== null ? '+' : ''}
+              </span>{' '}
+              tokens
             </strong>
             {value.freshness !== 'ready' ? (
               <p className="bh-note" role="status">
@@ -185,7 +189,8 @@ export function OverviewUsageView({
               </p>
             ) : null}
             {value.legacyBaseline ? <p className="bh-note">{t('overviewUsage.legacy')}</p> : null}
-            {value.days.some((row) => Object.values(row).some((amount) => amount === null)) ? (
+            {value.totals.partial ||
+            value.days.some((row) => Object.values(row).some((amount) => amount === null)) ? (
               <p className="bh-note">{t('overviewUsage.partial')}</p>
             ) : null}
             {rows.some((row) => row.totalTokens !== null && row.totalTokens > 0) ? (

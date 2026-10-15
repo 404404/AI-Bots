@@ -256,6 +256,7 @@ export interface MessagingSnapshot {
     reception: ReturnType<InboundMessaging['status']>;
     canReceive?: boolean;
     canPost?: boolean;
+    postConversationId?: string;
     lastMessageAt?: string;
     groupPolicy?: GroupReceptionPolicy;
     threadPolicies?: ThreadReceptionView[];
@@ -1977,15 +1978,19 @@ export function createOutboundMessaging(options: {
           let availability: 'available' | 'unavailable' | 'rebind-required' = 'unavailable';
           let canReceive = false;
           let canPost = false;
+          let postConversationId: string | undefined;
           if (value.revokedAt === undefined) {
             try {
               const checked = await check(value);
               canPost =
+                checked.inspected.account.postSupported !== false &&
                 (value.origin === 'implicit'
                   ? checked.provider.postConversation !== undefined
                   : checked.provider.post !== undefined ||
                     checked.provider.postConversation !== undefined) &&
                 checked.inspected.target.receiveScope !== undefined;
+              if (canPost)
+                postConversationId = checked.inspected.target.receiveScope?.conversationId;
               canReceive =
                 checked.provider.consume !== undefined &&
                 checked.provider.reply !== undefined &&
@@ -2016,6 +2021,7 @@ export function createOutboundMessaging(options: {
             reception: inbound.status(value.id),
             canReceive,
             canPost,
+            ...(postConversationId ? { postConversationId } : {}),
             ...(current.revokedAt === undefined &&
             !current.suspendedReason &&
             options.isBotActive(botSlug) &&
