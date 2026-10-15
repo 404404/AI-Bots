@@ -36,6 +36,7 @@ import { ApprovalCard } from '../../src/ui/chat/approval-card';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
+import { HeaderBackButton, HeaderEdgeFade, systemGlassBar } from '../../src/ui/chat/header-chrome';
 import { useComposerContext } from '../../src/ui/chat/composer-context';
 import { modelLabel, workspaceLabel } from '../../src/ui/chat/composer-labels';
 import { ComposerFooter } from '../../src/ui/chat/composer-footer';
@@ -381,6 +382,10 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           headerShadowVisible: false,
           headerTransparent: true,
           headerStyle: { backgroundColor: 'transparent' },
+          scrollEdgeEffects: { top: 'soft', bottom: 'soft', left: 'hidden', right: 'hidden' },
+          ...(systemGlassBar
+            ? {}
+            : { headerLeft: () => <HeaderBackButton onPress={() => router.back()} /> }),
           headerTitle: () => (
             <ChatTitle
               bot={bot}
@@ -389,7 +394,9 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
             />
           ),
           headerRight: () =>
-            slug === undefined ? null : <OpenFullClientButton target={{ kind: 'dm', slug }} />,
+            slug === undefined ? null : (
+              <OpenFullClientButton target={{ kind: 'dm', slug }} round={!systemGlassBar} />
+            ),
         }}
       />
       <KeyboardAvoidingView
@@ -537,6 +544,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
               })}
         />
       </KeyboardAvoidingView>
+      {systemGlassBar ? null : <HeaderEdgeFade height={headerHeight} />}
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
       <MessageActions
         message={actionsFor}

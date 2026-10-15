@@ -9,6 +9,7 @@ import { t } from '../strings';
 import { botDotTone } from './bot-tone';
 
 const AVATAR = 28;
+const DOT = space.x3;
 
 export function ChatTitle({
   bot,
@@ -30,13 +31,13 @@ export function ChatTitle({
       disabled={bot === undefined}
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: theme.touch,
         maxWidth: '100%',
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.x3,
-        paddingLeft: bot === undefined ? space.x5 : space.x2,
-        paddingRight: space.x4,
+        height: theme.touch,
+        paddingLeft: bot === undefined ? theme.touch / 2 : (theme.touch - AVATAR) / 2,
+        paddingRight: bot === undefined ? theme.touch / 2 : (theme.touch - DOT) / 2,
         borderRadius: radius.round,
         borderWidth: edge.hairline,
         borderColor: theme.layer.raised.edge,
@@ -51,8 +52,8 @@ export function ChatTitle({
         <View
           testID="chat-title-state"
           style={{
-            width: space.x3,
-            height: space.x3,
+            width: DOT,
+            height: DOT,
             borderRadius: radius.round,
             backgroundColor: theme.color[botDotTone(bot)],
           }}

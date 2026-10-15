@@ -78,6 +78,9 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 
 - Header: transparent, with no fill of its own, so the messages scroll under it. Back on the left, the Bot's computer on the right, and a centered chip that opens the Bot profile.
   - The chip is a full-round pill on `raised` with a hairline `edge`, so it stays readable over the messages. In one row it holds the Bot's avatar (no state ring), its name, and a state dot: `success` when idle, `accent` while thinking or working, `warning` when it waits for the Human, `danger` when blocked, `muted` when paused. The state is read out in the chip's accessibility label.
+  - The chip's padding is concentric with its corners: it is `theme.touch` tall, so its corner radius is half that, and the avatar and the dot each sit that same distance from their end of the pill (padding = corner radius − the item's own radius).
+  - Back and the computer button are round buttons of `theme.touch`. On iOS 26 they are the system's Liquid Glass bar buttons; elsewhere they are drawn as circles on `raised` with a hairline `edge`, like the chip.
+  - Messages fade out under the header. On iOS 26 this is the system's soft scroll edge effect (`scrollEdgeEffects`), drawn by UIKit at no JavaScript cost. Elsewhere a static gradient from `base` to transparent covers the header and a little below it; there is no live blur, because a blur view over a scrolling list re-renders every frame and needs a native module.
   - The list leaves the header's height free at its top, so the oldest message still clears the header.
 - Messages:
   - An inverted list. Messages from the same author within 5 minutes form a group, and a time separator appears after a 30-minute gap.
