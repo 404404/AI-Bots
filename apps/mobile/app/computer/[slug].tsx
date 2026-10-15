@@ -34,6 +34,7 @@ import {
 import { buttonColors } from '../../src/ui/design/controls';
 import { radius, space } from '../../src/ui/design/tokens';
 import { useDesignTheme } from '../../src/ui/design/theme';
+import { Button } from '../../src/ui/primitives/button';
 import { Text } from '../../src/ui/primitives/text';
 import { CloseIcon, HandBackIcon } from '../../src/ui/shell/icons';
 import { useMounted } from '../../src/ui/mounted';
@@ -220,9 +221,20 @@ export default function ComputerScreen() {
                   </Text>
                 </>
               ) : (
-                <Text accessibilityRole="alert" tone="muted" style={{ textAlign: 'center' }}>
-                  {message}
-                </Text>
+                <>
+                  <Text accessibilityRole="alert" tone="muted" style={{ textAlign: 'center' }}>
+                    {message}
+                  </Text>
+                  {!revoked ? null : (
+                    <View style={{ alignSelf: 'stretch', marginTop: space.x5 }}>
+                      <Button
+                        label={t.pairAgain}
+                        tone="primary"
+                        onPress={() => router.replace('/pair')}
+                      />
+                    </View>
+                  )}
+                </>
               )}
             </View>
           )}
