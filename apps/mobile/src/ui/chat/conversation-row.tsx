@@ -104,7 +104,7 @@ export function ConversationRow({
   );
 }
 
-function NeedsYouBadge({ count }: { count: number }) {
+export function NeedsYouBadge({ count }: { count: number }) {
   const theme = useDesignTheme();
   return (
     <View

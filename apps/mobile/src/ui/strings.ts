@@ -229,6 +229,11 @@ const en = {
     working: (count: number) => (count === 1 ? '1 PersonaBot' : `${count} PersonaBots`),
   },
   noConversations: 'No conversations here.',
+  pinnedSection: 'Pinned',
+  sectionLabel: (name: string, count: number, needsYou: number) =>
+    [name, count === 1 ? '1 conversation' : `${count} conversations`]
+      .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
+      .join(', '),
   showAll: 'Show all',
   computer: 'This computer',
   connected: 'Connected',
@@ -556,6 +561,11 @@ const zh: typeof en = {
     working: (count: number) => `${count} 个 PersonaBot`,
   },
   noConversations: '这里还没有对话。',
+  pinnedSection: '已置顶',
+  sectionLabel: (name: string, count: number, needsYou: number) =>
+    [name, `${count} 个对话`]
+      .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
+      .join('，'),
   showAll: '显示全部',
   computer: '这台电脑',
   connected: '已连接',
