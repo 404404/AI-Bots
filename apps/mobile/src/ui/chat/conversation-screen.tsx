@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
+import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
 import type {
@@ -54,9 +55,10 @@ import {
   type SelectedMention,
 } from './mention-draft';
 import { MentionSuggestions } from './mention-suggestions';
-import { DraftBubble, MessageBubble } from './message-bubble';
+import { DraftBubble, MessageBubble, type Speaker } from './message-bubble';
 import { copyMessage } from './message-menu';
-import { chatRows, type ChatRow } from './message-groups';
+import { chatRows, messageGroups, type ChatRow } from './message-groups';
+import { createSpeakerRegistry, SpeakerStageContext } from './speaker-row';
 import { QuestionCard } from './question-card';
 import { WorkingRow } from './working-row';
 import { TimeSeparator } from './time-separator';
@@ -225,7 +227,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
   const [reactError, setReactError] = useState(false);
   const [composerHeight, setComposerHeight] = useState(0);
-  const list = useRef<FlatList<Row>>(null);
+  const list = useAnimatedRef<FlatList<Row>>();
   const jumped = useRef<string | undefined>(undefined);
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
 
@@ -245,13 +247,39 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     () => snapshot.messages.filter((message) => !hiddenResolution(message)),
     [snapshot.messages],
   );
-  const history = useMemo(
+  const chronological = useMemo(
     () =>
       chatRows(
         visible,
         (message) => message.card !== undefined && (!dm || !resolutions.has(message.id)),
-      ).reverse(),
+      ),
     [visible, resolutions, dm],
+  );
+  const history = useMemo(() => [...chronological].reverse(), [chronological]);
+  const [speakers] = useState(createSpeakerRegistry);
+  const groups = useMemo(() => messageGroups(chronological), [chronological]);
+  const groupOf = useMemo(() => new Map(groups.map((entry) => [entry.key, entry.group])), [groups]);
+  useLayoutEffect(() => {
+    speakers.setGroups([
+      ...groups,
+      ...snapshot.drafts.map((entry) => {
+        const key = `draft:${entry.draftId}`;
+        return { key, group: key };
+      }),
+    ]);
+  }, [speakers, groups, snapshot.drafts]);
+  const scroll = useScrollOffset(list);
+  const viewport = useAnimatedRef<View>();
+  const viewportLayout = useSharedValue(0);
+  const stage = useMemo(
+    () => ({
+      registry: speakers,
+      scroll,
+      viewport,
+      viewportLayout,
+      floor: composerHeight + edgeFade.bottom,
+    }),
+    [speakers, scroll, viewport, viewportLayout, composerHeight],
   );
   const latest = useFollowLatest(list, visible);
   const readMount = useMarkRead(client, inbox, conversation, stopChannel, !latest.away);
@@ -394,11 +422,29 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     [roster],
   );
 
+  const speakerOf = useCallback(
+    (id: string, row: { key: string; first: boolean; last: boolean }): Speaker => ({
+      name: botName(id),
+      bot: roster?.bots.find((entry) => entry.slug === id),
+      group: groupOf.get(row.key) ?? row.key,
+      first: row.first,
+      last: row.last,
+    }),
+    [roster, botName, groupOf],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: Row }) => {
       if (item.kind === 'draft')
         return (
-          <DraftBubble draft={item.draft} author={dm ? undefined : botName(item.draft.botSlug)} />
+          <DraftBubble
+            draft={item.draft}
+            speaker={
+              dm
+                ? undefined
+                : speakerOf(item.draft.botSlug, { key: item.key, first: true, last: true })
+            }
+          />
         );
       if (item.kind === 'separator') return <TimeSeparator at={item.at} />;
       const author = item.message.bot ?? slug;
@@ -433,15 +479,26 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
           onLongPress={setActionsFor}
           onReact={react}
           botName={botName}
-          author={
-            !dm && item.first && item.message.bot !== undefined
-              ? botName(item.message.bot)
-              : undefined
+          speaker={
+            !dm && item.message.bot !== undefined ? speakerOf(item.message.bot, item) : undefined
           }
         />
       );
     },
-    [dm, client, slug, inbox, resolutions, focus, answered, retry, share, react, botName],
+    [
+      dm,
+      client,
+      slug,
+      inbox,
+      resolutions,
+      focus,
+      answered,
+      retry,
+      share,
+      react,
+      botName,
+      speakerOf,
+    ],
   );
 
   const notice =
@@ -503,86 +560,95 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             {notice}
           </Text>
         )}
-        <View style={{ flex: 1 }}>
-          <FlatList
-            ref={list}
-            inverted
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-              paddingTop: composerHeight + edgeFade.bottom,
-              paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
-            }}
-            data={rows}
-            keyExtractor={(row) => row.key}
-            renderItem={renderItem}
-            onContentSizeChange={jump}
-            onScrollToIndexFailed={(info) => {
-              list.current?.scrollToOffset({
-                offset: info.averageItemLength * info.index,
-                animated: false,
-              });
-              setTimeout(
-                () =>
-                  list.current?.scrollToIndex({
-                    index: info.index,
-                    viewPosition: 0.5,
-                    animated: true,
-                  }),
-                100,
-              );
-            }}
-            onEndReached={() => void conversation?.loadOlder()}
-            onEndReachedThreshold={0.5}
-            {...latest.listProps}
-            scrollEventThrottle={32}
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            ListHeaderComponent={
-              working.length === 0 ? null : (
-                <View>
-                  {working.map((entry) => (
-                    <WorkingRow
-                      key={entry.slug}
-                      bot={entry}
-                      stopping={stop?.status === 'stopping' && stop.bot.slug === entry.slug}
-                      onStop={() => stopRun(entry)}
-                    />
-                  ))}
-                </View>
-              )
-            }
-            ListFooterComponent={
-              snapshot.loadingOlder ? (
-                <View
-                  style={{
-                    padding: space.x4,
-                    alignItems: 'center',
-                    gap: space.x2,
-                  }}
-                >
-                  <ActivityIndicator />
-                  <Text variant="meta" tone="muted">
-                    {t.olderLoading}
+        <Animated.View
+          ref={viewport}
+          collapsable={false}
+          style={{ flex: 1 }}
+          onLayout={() => {
+            viewportLayout.value += 1;
+          }}
+        >
+          <SpeakerStageContext.Provider value={dm ? undefined : stage}>
+            <Animated.FlatList
+              ref={list}
+              inverted
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                paddingTop: composerHeight + edgeFade.bottom,
+                paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
+              }}
+              data={rows}
+              keyExtractor={(row) => row.key}
+              renderItem={renderItem}
+              onContentSizeChange={jump}
+              onScrollToIndexFailed={(info) => {
+                list.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: false,
+                });
+                setTimeout(
+                  () =>
+                    list.current?.scrollToIndex({
+                      index: info.index,
+                      viewPosition: 0.5,
+                      animated: true,
+                    }),
+                  100,
+                );
+              }}
+              onEndReached={() => void conversation?.loadOlder()}
+              onEndReachedThreshold={0.5}
+              {...latest.listProps}
+              scrollEventThrottle={32}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={
+                working.length === 0 ? null : (
+                  <View>
+                    {working.map((entry) => (
+                      <WorkingRow
+                        key={entry.slug}
+                        bot={entry}
+                        stopping={stop?.status === 'stopping' && stop.bot.slug === entry.slug}
+                        onStop={() => stopRun(entry)}
+                      />
+                    ))}
+                  </View>
+                )
+              }
+              ListFooterComponent={
+                snapshot.loadingOlder ? (
+                  <View
+                    style={{
+                      padding: space.x4,
+                      alignItems: 'center',
+                      gap: space.x2,
+                    }}
+                  >
+                    <ActivityIndicator />
+                    <Text variant="meta" tone="muted">
+                      {t.olderLoading}
+                    </Text>
+                  </View>
+                ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
+                  <Text
+                    variant="meta"
+                    tone="muted"
+                    style={{ textAlign: 'center', padding: space.x5 }}
+                  >
+                    {dm ? t.beginning : t.beginningChannel}
                   </Text>
-                </View>
-              ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
-                <Text
-                  variant="meta"
-                  tone="muted"
-                  style={{ textAlign: 'center', padding: space.x5 }}
-                >
-                  {dm ? t.beginning : t.beginningChannel}
-                </Text>
-              ) : null
-            }
-            ListEmptyComponent={
-              snapshot.status === 'opening' ? (
-                <View style={{ padding: space.x6, alignItems: 'center' }}>
-                  <ActivityIndicator />
-                </View>
-              ) : null
-            }
-          />
+                ) : null
+              }
+              ListEmptyComponent={
+                snapshot.status === 'opening' ? (
+                  <View style={{ padding: space.x6, alignItems: 'center' }}>
+                    <ActivityIndicator />
+                  </View>
+                ) : null
+              }
+            />
+          </SpeakerStageContext.Provider>
           <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           {latest.away ? (
             <View
@@ -636,7 +702,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               onCancelDictation={dictation.cancel}
             />
           </View>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
       <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
       <ChatHeader
