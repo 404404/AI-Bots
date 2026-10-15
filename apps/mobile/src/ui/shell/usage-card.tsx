@@ -45,8 +45,9 @@ export function useLoaded<T, N>(load: (() => Promise<T>) | undefined) {
   return { state, read, mount };
 }
 
-export function tokenAmount(tokens: number | null): string {
-  return tokens === null ? t.usageUnknown : compactTokenCount(tokens);
+export function tokenAmount(tokens: number | null, partial = false): string {
+  if (tokens === null) return t.usageUnknown;
+  return partial ? `${compactTokenCount(tokens)}+` : compactTokenCount(tokens);
 }
 
 type Day = { day: string; tokens: number | null };
@@ -101,7 +102,7 @@ export function UsageCard({
   const theme = useDesignTheme();
   const { state, read, mount } = useLoaded<OverviewUsage, View>(load);
   const week = state.value === undefined ? undefined : usageWeek(state.value);
-  const amount = week === undefined ? undefined : tokenAmount(week.total);
+  const amount = week === undefined ? undefined : tokenAmount(week.total, week.partial);
   return (
     <View ref={mount}>
       <Pressable

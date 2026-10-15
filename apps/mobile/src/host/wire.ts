@@ -347,6 +347,7 @@ export interface UsageBuckets {
   cacheReadTokens: number | null;
   cacheWriteTokens: number | null;
   totalTokens: number | null;
+  partial?: boolean;
 }
 
 export interface UsageBot extends UsageBuckets {

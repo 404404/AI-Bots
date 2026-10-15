@@ -123,7 +123,7 @@ function UsageSummary({
                 : `${usage.start} – ${usage.end}`}
           </Text>
           <Text variant="display" accessibilityRole="header" numberOfLines={1}>
-            {week === undefined ? '—' : tokenAmount(week.total)}
+            {week === undefined ? '—' : tokenAmount(week.total, week.partial)}
             <Text tone="muted">{t.usageUnit}</Text>
           </Text>
         </View>
@@ -226,7 +226,7 @@ function UsageRow({
         }
         trailing={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x2 }}>
-            <Text tone="muted">{tokenAmount(bot.totalTokens)}</Text>
+            <Text tone="muted">{tokenAmount(bot.totalTokens, bot.partial === true)}</Text>
             {bot.current ? <ChevronRightIcon color={theme.color.muted} size={space.x5} /> : null}
           </View>
         }

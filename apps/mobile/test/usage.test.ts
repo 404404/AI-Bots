@@ -51,6 +51,15 @@ describe('Host usage', () => {
     expect(usageIsPartial(week)).toBe(false);
   });
 
+  it('marks a total the Host could only partly count as a lower bound', () => {
+    const week = structuredClone(active.overviewUsage.week) as OverviewUsage;
+    expect(usageWeek(week).partial).toBe(false);
+    week.totals.partial = true;
+    week.days[6]!.partial = true;
+    expect(usageWeek(week)).toMatchObject({ total: week.totals.totalTokens, partial: true });
+    expect(usageIsPartial(week)).toBe(true);
+  });
+
   it('reads today with the same call', async () => {
     const fake = host();
     const today = await loadUsage(client(fake), 'today');

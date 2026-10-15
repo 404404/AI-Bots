@@ -100,6 +100,24 @@ describe('Usage card in Settings', () => {
     expect(view.textContent).not.toContain(t.usageFailed);
   });
 
+  it('marks a week the Host could only partly count with +', async () => {
+    const week = structuredClone(usageWire.rpc.active.overviewUsage.week) as OverviewUsage;
+    week.totals.partial = true;
+    const view = await render(
+      <SettingsView
+        hostName="studio"
+        connection={{ status: 'connected', route: '' }}
+        loadUsage={async () => week}
+        actions={actions()}
+      />,
+    );
+    const amount = tokenAmount(week.totals.totalTokens, true);
+    expect(amount).toMatch(/\+$/u);
+    expect([...view.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toContain(
+      t.usageCard(amount),
+    );
+  });
+
   it('offers Try again when the Host cannot answer, and reads again', async () => {
     const load = vi
       .fn<() => Promise<OverviewUsage>>()
