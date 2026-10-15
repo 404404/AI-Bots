@@ -34,6 +34,10 @@ export function templateTitle(
   return fallback ?? name;
 }
 
+export function autoApprovalTemplateTitle(t: BotHarnessTranslate, name: string): string {
+  return templateTitle(t, name, undefined);
+}
+
 export function templateDescription(
   t: BotHarnessTranslate,
   template: ApprovalTemplateView,
@@ -291,6 +295,42 @@ export function AutoApprovalLine({
         <span className="bh-memory-commit-files">{record.toolName}</span>
       </button>
       {open ? <pre className="bh-tool-approval-input">{record.input}</pre> : null}
+    </div>
+  );
+}
+
+export function AutoApprovalPauseLine({
+  messageId,
+  record,
+  bots,
+  t,
+}: {
+  messageId: string;
+  record: NonNullable<ChannelMessage['toolAutoApprovalPause']>;
+  bots: readonly BotSummary[];
+  t: BotHarnessTranslate;
+}): ReactElement {
+  const name = bots.find((candidate) => candidate.slug === record.botSlug)?.displayName;
+  const params = {
+    name: name ?? record.botSlug,
+    template: templateTitle(t, record.template, undefined),
+  };
+  return (
+    <div
+      className="bh-member-departure"
+      data-message-id={messageId}
+      data-auto-approval-pause={record.state}
+    >
+      <span>
+        {record.state === 'resumed'
+          ? t('autoApproval.resumed', params)
+          : t(
+              record.reason === 'session'
+                ? 'autoApproval.paused.session'
+                : 'autoApproval.paused.consecutive',
+              params,
+            )}
+      </span>
     </div>
   );
 }

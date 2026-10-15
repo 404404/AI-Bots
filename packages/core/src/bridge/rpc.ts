@@ -1163,9 +1163,19 @@ export class BotharnessBridgeService extends TypertRemoteService {
     cursor?: string,
     sort?: 'newest' | 'oldest',
     snoozed?: boolean,
+    kind?: 'auto-rejection',
   ): HumanAttentionPage {
     return unwrap(
-      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort, snoozed }),
+      this.methods.humanAttention({
+        category,
+        botSlug,
+        channelId,
+        limit,
+        cursor,
+        sort,
+        snoozed,
+        kind,
+      }),
     );
   }
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
@@ -1285,6 +1295,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     outcome: 'allowed-once' | 'allowed-always-exact' | 'allowed-always-all' | 'rejected',
   ): Promise<{ accepted: boolean }> {
     return unwrapAsync(this.methods.toolApprovalDecide({ channelId, messageId, outcome }));
+  }
+
+  toolAutoRejectionOverride(
+    itemId: string,
+  ): Promise<{ accepted: true; channelId: string; messageId: string }> {
+    return unwrapAsync(this.methods.toolAutoRejectionOverride({ itemId }));
   }
 
   userQuestionStatus(
@@ -1754,6 +1770,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'toolApprovalRuleRevoke',
   'toolApprovalStatus',
   'toolApprovalDecide',
+  'toolAutoRejectionOverride',
   'userQuestionStatus',
   'userQuestionAnswer',
   'sessions',
