@@ -50,6 +50,27 @@ export function conversations(
     .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? '') || titleOf(a).localeCompare(titleOf(b)));
 }
 
+function searchKey(value: string): string {
+  return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/gu, ' ').trim();
+}
+
+export function searchConversations(
+  roster: RosterView | undefined,
+  action: HumanAttentionItem[],
+  query: string,
+): Conversation[] {
+  const needle = searchKey(query);
+  if (needle === '' || roster === undefined) return [];
+  const hidden = new Set(roster.hiddenChannelIds ?? []);
+  const rank = (row: Conversation): number => (searchKey(titleOf(row)).startsWith(needle) ? 0 : 1);
+  return conversations(roster, action)
+    .filter((row) => !(row.kind === 'channel' && hidden.has(row.channel.id)))
+    .filter((row) => searchKey(titleOf(row)).includes(needle))
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
+    .map(({ row }) => row);
+}
+
 export function titleOf(row: Conversation): string {
   return row.kind === 'bot' ? row.bot.displayName : row.channel.name;
 }

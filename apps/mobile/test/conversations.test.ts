@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import type { RosterView } from '../src/host/client';
 import type { HumanAttentionItem } from '../src/host/wire';
-import { conversations, shortcutCounts, shortTime } from '../src/ui/chat/conversations';
+import {
+  conversations,
+  searchConversations,
+  shortcutCounts,
+  shortTime,
+} from '../src/ui/chat/conversations';
 
 const roster: RosterView = {
   bots: [
@@ -100,5 +105,55 @@ describe('Home conversations', () => {
     );
     expect(shortTime(new Date('2026-10-12T09:05:00').toISOString(), now, 'en-GB')).toBe('12/10');
     expect(shortTime(undefined, now)).toBe('');
+  });
+});
+
+describe('Search', () => {
+  const people: RosterView = {
+    ...roster,
+    bots: [
+      ...roster.bots,
+      {
+        ...roster.bots[0]!,
+        slug: 'xiaoming',
+        displayName: '小明 助手',
+        dmChannelId: 'dm-xiaoming',
+      },
+      { ...roster.bots[1]!, slug: 'adam', displayName: 'Madam Ada' },
+    ],
+    channels: [
+      ...roster.channels,
+      { id: 'design', name: 'Design Review', memberCount: 2, members: [] },
+      { id: 'secret', name: 'Ada secret plans', memberCount: 1, members: [] },
+    ],
+    hiddenChannelIds: ['secret'],
+  };
+  const keys = (query: string) => searchConversations(people, [], query).map((row) => row.key);
+
+  it('matches PersonaBot names and Channel titles, ignoring case', () => {
+    expect(keys('ADA')).toEqual(['bot:ada', 'bot:adam']);
+    expect(keys('review')).toEqual(['channel:design']);
+    expect(keys('TEAM')).toEqual(['channel:team']);
+  });
+
+  it('matches Chinese names and full-width letters', () => {
+    expect(keys('小明')).toEqual(['bot:xiaoming']);
+    expect(keys('ＡＤＡ')).toEqual(['bot:ada', 'bot:adam']);
+  });
+
+  it('puts names that start with the query first', () => {
+    expect(keys('ad')).toEqual(['bot:ada', 'bot:adam']);
+    expect(keys('a')[0]).toBe('bot:ada');
+  });
+
+  it('leaves Hidden Channels out', () => {
+    expect(keys('plans')).toEqual([]);
+  });
+
+  it('finds nothing for an empty query or before the roster loads', () => {
+    expect(keys('')).toEqual([]);
+    expect(keys('   ')).toEqual([]);
+    expect(searchConversations(undefined, [], 'ada')).toEqual([]);
+    expect(keys('nobody')).toEqual([]);
   });
 });

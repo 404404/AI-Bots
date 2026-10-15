@@ -1034,12 +1034,16 @@ export function apply(ctx: ClientContext): void {
   if (landing !== undefined) {
     ctx.effect(
       () =>
-        watchFullClientLanding(store, landing, (slug) => {
-          if (slug !== undefined) expectMobileConversation();
+        watchFullClientLanding(store, landing, (target) => {
+          if (target.kind !== 'home') expectMobileConversation();
           ctx.layout.selectPanel(PANEL_ID);
-          if (slug === undefined) return;
-          void actions.openBot(slug).catch(() => {
-            ctx.logger.warn('botharness: full-client landing Bot unavailable');
+          if (target.kind === 'home') return;
+          const opening =
+            target.kind === 'dm'
+              ? actions.openBot(target.slug)
+              : actions.openChannel(target.channelId);
+          void opening.catch(() => {
+            ctx.logger.warn('botharness: full-client landing conversation unavailable');
           });
         }),
       'botharness: full-client landing',

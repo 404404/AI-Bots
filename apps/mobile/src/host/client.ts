@@ -59,6 +59,7 @@ export interface RosterChannel {
 export interface RosterView {
   bots: RosterBot[];
   channels: RosterChannel[];
+  hiddenChannelIds?: string[];
 }
 
 export interface HostSnapshot {
