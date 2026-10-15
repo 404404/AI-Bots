@@ -76,7 +76,12 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 
 **Chat**
 
-- Header: back, a centered avatar and name pill that opens the Bot profile, and the Bot's computer on the right.
+- Header: transparent, with no fill of its own, so the messages scroll under it. Back on the left, the Bot's computer on the right, and a centered chip that opens the Bot profile.
+  - The chip is a full-round pill on `raised` with a hairline `edge`, so it stays readable over the messages. In one row it holds the Bot's avatar (no state ring), its name, and a state dot: `success` when idle, `accent` while thinking or working, `warning` when it waits for the Human, `danger` when blocked, `muted` when paused. The state is read out in the chip's accessibility label.
+  - The chip's padding is concentric with its corners: it is `theme.touch` tall, so its corner radius is half that, and the avatar and the dot each sit that same distance from their end of the pill (padding = corner radius − the item's own radius).
+  - Back and the computer button are round buttons of `theme.touch`. On iOS 26 they are the system's Liquid Glass bar buttons; elsewhere they are drawn as circles on `raised` with a hairline `edge`, like the chip.
+  - Messages fade out under the header. On iOS 26 this is the system's soft scroll edge effect (`scrollEdgeEffects`), drawn by UIKit at no JavaScript cost. Elsewhere a static gradient from `base` to transparent covers the header and a little below it; there is no live blur, because a blur view over a scrolling list re-renders every frame and needs a native module.
+  - The list leaves the header's height free at its top, so the oldest message still clears the header.
 - Messages:
   - An inverted list. Messages from the same author within 5 minutes form a group, and a time separator appears after a 30-minute gap.
   - At the newest message the list follows a streaming reply. Once the Human drags or scrolls up into history, nothing moves the list under them: new text and messages land below while the part they are reading stays put. A round jump button (`raised`, with a ⌄) then floats centered above the composer, with an accent badge counting the Bot messages that arrived since they left (99+ at most), like the Web Client's "Return to latest messages". Tapping it, sending a message, or scrolling back down to the newest message follows again and hides the button.
@@ -118,7 +123,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
       3. **Auto approval template**: Off, Cautious and Get the work done (plus any other template on the Host), each with its one-line hint, the current one checked.
   - The mic dictates with the phone's speech recognizer, and the words fill the field so the Human edits them before sending. Like Telegram's voice button: hold the mic to talk and release to stop; while holding, a lock appears above the mic: slide left to cancel or up to lock. A tap works like a lock: it keeps listening until **■** stops it or the **×** that replaces **+** cancels it and clears the text. Dictation stays in the same row, and its status shows as the field's placeholder. A refused microphone or speech permission shows a notice and leaves the mic in place.
 - A group Channel opens the same chat screen, with these differences:
-  - The header shows a rounded `#` square, the Channel name and its member count, and the full client button on the right. There is no profile to open.
+  - The header is the same transparent header. Its centered chip, on `raised` with a hairline `edge` like the Bot chip, holds a round `#` mark, the Channel name and its member count; it opens nothing, since there is no profile. The full client button sits on the right.
   - The first bubble of each Bot's group, and each Bot's streaming draft, carry the Bot's name above it in `meta`. A different Bot starts a new group even within 5 minutes.
   - `accent` stays the app's accent, since no one Bot owns the chat.
   - The status strip shows the first member Bot that is working, and **Stop** stops that Bot in this Channel.
