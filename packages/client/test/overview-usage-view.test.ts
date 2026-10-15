@@ -110,7 +110,7 @@ it('switches to seven, 28 and 84 days, opens Bot Profile and disposes read-only 
     expect(container.querySelector('[data-trend]')?.getAttribute('data-trend')).toBe('7');
     expect(
       [...container.querySelectorAll('[data-usage-period]')].map((button) => button.textContent),
-    ).toEqual(['今日', '近 7 天', '近 4 周', '近 12 周']);
+    ).toEqual(['今日', '7 天', '4 周', '12 周']);
     for (const [period, days] of [
       ['month', '28'],
       ['quarter', '84'],

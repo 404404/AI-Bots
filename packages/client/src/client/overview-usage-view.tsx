@@ -142,7 +142,7 @@ export function OverviewUsageView({
                 data-usage-period={range}
                 onClick={() => setPeriod(range)}
               >
-                {t(`overviewUsage.${range}`)}
+                {t(`overviewUsage.period.${range}`)}
               </button>
             ))}
           </div>
