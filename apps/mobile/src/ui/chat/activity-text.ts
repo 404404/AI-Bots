@@ -16,6 +16,22 @@ export interface ActivityText {
   target?: ActivityTarget;
 }
 
+export function activityPeer(
+  activity: ChannelActivity,
+  actor: string | undefined,
+  roster: RosterView | undefined,
+): string | undefined {
+  if (activity.kind === 'dm-action') return activity.recipientBotSlug;
+  const channelId =
+    activity.kind === 'channel-post'
+      ? activity.channelId
+      : activity.kind === 'memory'
+        ? activity.noticeOrigin?.channelId
+        : undefined;
+  const channel = roster?.activityChannels?.find((entry) => entry.id === channelId);
+  return channel?.type === 'dm' ? channel.members.find((slug) => slug !== actor) : undefined;
+}
+
 export function activityText(
   message: ConversationMessage,
   activity: ChannelActivity,

@@ -14,6 +14,11 @@ function toolGroup(tool: string): ToolGroup {
 const en = {
   activityRow: {
     dm: (recipient: string) => `sent a direct message to ${recipient}`,
+    actions: 'Activity details',
+    actionsHint: 'Long-press for full details and navigation.',
+    openMemory: 'Open memory',
+    openChat: 'Open conversation',
+    openBot: 'Open new Bot',
     created: (recipient: string) => `created a new Bot, ${recipient}`,
     posted: (place: string, count: number) =>
       count === 1 ? `posted in ${place}:` : `posted ${count} messages in ${place}, latest:`,
@@ -659,6 +664,11 @@ const en = {
 const zh: typeof en = {
   activityRow: {
     dm: (recipient: string) => `向 ${recipient} 发送了私聊消息`,
+    actions: '活动详情',
+    actionsHint: '长按查看完整内容和跳转操作。',
+    openMemory: '打开记忆',
+    openChat: '打开会话',
+    openBot: '打开新 Bot',
     created: (recipient: string) => `创建了新 Bot ${recipient}`,
     posted: (place: string, count: number) =>
       count === 1 ? `在 ${place} 发言：` : `在 ${place} 发言 ${count} 条，最新：`,

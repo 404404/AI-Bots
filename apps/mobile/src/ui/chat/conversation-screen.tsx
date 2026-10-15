@@ -469,6 +469,27 @@ function ChatConversation({
             activity={item.message.activity}
             roster={roster}
             count={item.activityCount ?? 1}
+            dmSlug={slug}
+            lifted={item.message.id === actionsFor?.message.id}
+            onLongPress={(anchor, label, target) =>
+              setActionsFor({
+                message: { ...item.message, body: label },
+                anchor,
+                group: { first: true, last: true },
+                activity:
+                  target === undefined
+                    ? {}
+                    : {
+                        label:
+                          item.message.activity?.kind === 'memory'
+                            ? t.activityRow.openMemory
+                            : item.message.activity?.kind === 'bot-create'
+                              ? t.activityRow.openBot
+                              : t.activityRow.openChat,
+                        onOpen: () => router.push(target),
+                      },
+              })
+            }
           />
         );
       const author = item.message.bot ?? slug;
@@ -527,6 +548,7 @@ function ChatConversation({
       speakerOf,
       roster,
       botDm,
+      router,
     ],
   );
 
