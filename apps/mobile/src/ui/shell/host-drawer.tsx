@@ -28,11 +28,13 @@ import { createHostClient } from '../../host/client';
 import { createHostGlances, liveGlance, type HostStatus } from '../../host/host-glance';
 import { hostSession, useHostSession, useHostSnapshot, useInbox } from '../../host/host-session';
 import { nativeCarrier } from '../../host/native-carrier';
+import { useHostLook } from '../../host/native-host-look';
 import { glassShadow, useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
 import { edge, motion, radius, scrim, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
+import { HostTile } from './host-tile';
 import {
   createHostDrawer,
   drawerWidth,
@@ -175,9 +177,9 @@ function openHostMenu(row: HostDrawerRow): void {
   ]);
 }
 
-function HostTile({ name, current }: { name: string; current: boolean }) {
+function DrawerTile({ hostId, name, current }: { hostId: string; name: string; current: boolean }) {
   const theme = useDesignTheme();
-  const tile = theme.touch;
+  const look = useHostLook(hostId);
   return (
     <View
       style={{
@@ -187,18 +189,13 @@ function HostTile({ name, current }: { name: string; current: boolean }) {
         borderColor: current ? theme.color.fg : theme.layer.sheet.fill,
       }}
     >
-      <View
-        style={{
-          width: tile,
-          height: tile,
-          borderRadius: radius.md,
-          backgroundColor: theme.layer.sheet.inset,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Text variant="title">{Array.from(name.trim())[0]?.toUpperCase() ?? '?'}</Text>
-      </View>
+      <HostTile
+        hostName={name}
+        avatar={look.avatar}
+        size={theme.touch}
+        fill={theme.layer.sheet.inset}
+        letter={theme.color.fg}
+      />
     </View>
   );
 }
@@ -280,7 +277,7 @@ function HostRow({ row }: { row: HostDrawerRow }) {
           backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
         })}
       >
-        <HostTile name={row.hostName} current={row.current} />
+        <DrawerTile hostId={row.hostId} name={row.hostName} current={row.current} />
         <View style={{ flex: 1, gap: space.x1 }}>
           <Text strong numberOfLines={1}>
             {row.hostName}
