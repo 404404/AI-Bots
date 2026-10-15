@@ -19,12 +19,12 @@ The production factory omitted the dynamic `ordinaryText` option when constructi
 
 ## Fresh repaired-path proof and explicit collection
 
-| Native fact | Observed result |
-| --- | --- |
-| Fresh marker E, **14:35:23.141 UTC** | Pure `GROUP_MESSAGE_CREATE`, type 0, zero mentions, quotations and attachments; current-lease ordinary delivery became verified |
-| Mentions-only default | Bridge Source count remained 2, with no `QQ_1155_` Source and no new external intent |
-| Actual Client operation | External identities → QA2 → original-group Rules; Custom policy, All ordinary text messages, digest count 2, interval 600 seconds, saved and read back |
-| Fresh context, **14:40:01 UTC** | A and B arrived in one native message and became one pending canonical ordinary Source; both activity facts were preserved, without a per-message external reply |
+| Native fact                          | Observed result                                                                                                                                                  |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fresh marker E, **14:35:23.141 UTC** | Pure `GROUP_MESSAGE_CREATE`, type 0, zero mentions, quotations and attachments; current-lease ordinary delivery became verified                                  |
+| Mentions-only default                | Bridge Source count remained 2, with no `QQ_1155_` Source and no new external intent                                                                             |
+| Actual Client operation              | External identities → QA2 → original-group Rules; Custom policy, All ordinary text messages, digest count 2, interval 600 seconds, saved and read back           |
+| Fresh context, **14:40:01 UTC**      | A and B arrived in one native message and became one pending canonical ordinary Source; both activity facts were preserved, without a per-message external reply |
 
 The two context paragraphs were one QQ delivery, so they count as one message. No synthetic event or clock adjustment supplied a second message.
 
