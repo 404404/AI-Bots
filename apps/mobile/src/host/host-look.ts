@@ -67,6 +67,30 @@ export function parseHostLook(input: unknown): HostLook {
   };
 }
 
+export const LOOK_IMAGES = 'host-looks';
+
+export function rebaseLookImage(uri: string, folderUri: string): string {
+  const marker = `/${LOOK_IMAGES}/`;
+  const at = uri.lastIndexOf(marker);
+  if (at < 0) return uri;
+  return `${folderUri.replace(/\/?$/u, '/')}${uri.slice(at + marker.length)}`;
+}
+
+export function rebaseLookImages(input: unknown, folderUri: string): unknown {
+  const looks = record(input);
+  const slot = (value: unknown) => {
+    const part = record(value);
+    const uri = part['uri'];
+    return typeof uri === 'string' ? { ...part, uri: rebaseLookImage(uri, folderUri) } : value;
+  };
+  return Object.fromEntries(
+    Object.entries(looks).map(([hostId, look]) => {
+      const value = record(look);
+      return [hostId, { ...value, avatar: slot(value['avatar']), banner: slot(value['banner']) }];
+    }),
+  );
+}
+
 export function createHostLooks(storage: LookStorage): HostLooks {
   const byHost = new Map<string, HostLook>();
   const listeners = new Set<() => void>();
