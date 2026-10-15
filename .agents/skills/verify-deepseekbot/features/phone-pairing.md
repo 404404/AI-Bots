@@ -25,6 +25,10 @@ Both journeys own their Host: they launch a fresh instance on a free port, resta
 - **Protocol.** `node scripts/e2e-device-pairing.mjs --home <dir> --port <n>` drives the same flow over HTTP and the WebSocket, including a device call under a tailnet Host name and a refused upgrade after revoke.
 - **Web Client.** `node scripts/verify-app.mjs shot devices --name <n> --bot-mode --locale en --click "Bot settings" --click Devices --click-text "Pair a phone" --wait "Pairing QR code"` opens the QR dialog. Without Tailscale both the section and the dialog warn that a physical phone cannot reach the Host.
 
+## Optional phone statistics
+
+Pairing and Settings show the same default-off statistics switch. In the shared-device QA lane, follow [the mobile statistics acceptance path](../../../../docs/mobile-statistics.md#runnable-device-acceptance): first prove zero vendor requests without consent, then enable tagged QA and correlate pairing, live Roster and first-chat events with PostHog. Repeat on physical iOS and Android. Capture both supported languages and opt-out while offline. Web exports and injected-sender tests do not qualify device delivery.
+
 ## Gotchas
 
 - Neither journey needs a model credential.
