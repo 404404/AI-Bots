@@ -50,6 +50,15 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="computer/[slug]"
+            options={{
+              title: t.profileComputer,
+              presentation: 'fullScreenModal',
+              headerShown: false,
+              gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
             name="full-client"
             options={{
               title: t.fullClient,

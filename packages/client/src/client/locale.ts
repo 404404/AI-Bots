@@ -2991,6 +2991,7 @@ export const zh = {
   'schedule.done': '已完成',
   'entry.sessions': '会话',
   'entry.workspaceGrants': '工作区授权',
+  'entry.autoApproval': '自动审批',
   'entry.model': '模型',
   'entry.wakePolicy': '唤醒策略',
   'entry.externalIdentities': '外部身份',
@@ -3105,17 +3106,34 @@ export const zh = {
   'approval.externalCreator':
     'Lark 创建人：{actor}；每次调用前检查当前配对及 approve／save-rules 权限，失效后不自动恢复。',
   'approval.ruleDetails': '查看适用范围',
-  'access.title': '完全访问（所有文件，不再询问）',
-  'access.description': '默认只能写入工作区，执行命令前逐次询问。',
-  'access.hint':
-    '危险：开启后，此 Bot 的聊天会话和之后新建的事项可以读写这台电脑上的任何文件，执行命令不再逐次询问。群聊或 IM 里别人发来的内容也可能诱导它执行操作。',
+  'autoApproval.title': '自动审批模板',
+  'autoApproval.off': '关闭',
+  'autoApproval.section': '自动审批',
+  'autoApproval.offHint': '每张卡片由你批准',
+  'autoApproval.activeSection': '当前生效',
+  'autoApproval.templatesSection': '全部模板',
+  'autoApproval.activeTag': '生效中',
+  'autoApproval.hintOff':
+    '选一个模板后，审批员会先按模板替你回答此 Bot 的工具审批，拿不准的才发卡片给你。',
+  'autoApproval.hintOn': '{description} 审批员按这个模板替你回答，拿不准的仍发卡片给你。',
+  'autoApproval.allowed': '按「{template}」自动批准',
+  'autoApproval.rejected': '按「{template}」自动拒绝',
+  'autoApproval.tool': '工具：{tool}',
+  'autoApproval.template.cautious': '谨慎',
+  'autoApproval.template.cautiousHint': '允许读取和规划；凡是会离开这台电脑的操作都交给你。',
+  'autoApproval.template.getWorkDone': '把活干完',
+  'autoApproval.template.getWorkDoneHint': '让工作继续；只拦下破坏性或不可撤回的操作。',
+  'access.section': '权限',
+  'grant.section': '文件夹',
+  'access.title': '完全访问',
+  'access.description': '所有文件，不再询问。关闭时只能写入工作区，执行命令前逐次询问。',
   'access.confirmTitle': '开启危险文件权限？',
   'access.confirmRisk':
     '此 Bot 的聊天会话和之后新建的事项可访问工作区外的任何文件，命令不再逐次提问。别人在群聊或 IM 里发来的内容也可能诱导它执行操作。带密钥运行命令行工具仍然每次询问。开启后可以把范围改成“仅新事项”。关闭开关会让聊天会话恢复受限，但不会降低已有危险事项的权限。',
   'access.confirmEnable': '我了解风险，开启',
   'access.scopeTitle': '完全访问的范围',
-  'access.scopeChat': '聊天会话和新事项（默认）',
-  'access.scopeAssignments': '仅新事项：聊天会话保持受限并逐次询问',
+  'access.scopeChat': '聊天会话和新事项',
+  'access.scopeAssignments': '仅新事项',
   'access.activeWarningAssignments':
     '完全访问已开启（仅新事项）：之后新建的事项可访问任何文件且不再逐次提问；聊天会话仍然受限。',
   'access.activeWarning':
@@ -6612,6 +6630,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'schedule.done': 'Done',
   'entry.sessions': 'Sessions',
   'entry.workspaceGrants': 'Workspace Grants',
+  'entry.autoApproval': 'Auto approval',
   'entry.model': 'Model',
   'entry.wakePolicy': 'Wake policy',
   'entry.externalIdentities': 'External identities',
@@ -6729,18 +6748,38 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.externalCreator':
     'Lark creator: {actor}; current pairing and approve/save-rules authority are checked before each call. Disabled rules do not reactivate automatically.',
   'approval.ruleDetails': 'View scope',
-  'access.title': 'Full access (all files, no asking)',
+  'autoApproval.title': 'Auto approval template',
+  'autoApproval.off': 'Off',
+  'autoApproval.section': 'Auto approval',
+  'autoApproval.offHint': 'You approve each card',
+  'autoApproval.activeSection': 'Active',
+  'autoApproval.templatesSection': 'All templates',
+  'autoApproval.activeTag': 'Active',
+  'autoApproval.hintOff':
+    "Pick a template and an Approval Reviewer answers this Bot's tool approvals by it first. Only calls it can't decide come to you as cards.",
+  'autoApproval.hintOn':
+    '{description} The Approval Reviewer answers by this template; calls it is unsure about still come to you as cards.',
+  'autoApproval.allowed': 'auto-approved by {template}',
+  'autoApproval.rejected': 'auto-rejected by {template}',
+  'autoApproval.tool': 'Tool: {tool}',
+  'autoApproval.template.cautious': 'Cautious',
+  'autoApproval.template.cautiousHint':
+    'Allows reading and planning; sends anything that leaves the computer to you.',
+  'autoApproval.template.getWorkDone': 'Get the work done',
+  'autoApproval.template.getWorkDoneHint':
+    'Lets the work continue; stops only destructive or irreversible calls.',
+  'access.section': 'Access',
+  'grant.section': 'Folders',
+  'access.title': 'Full access',
   'access.description':
-    'By default it writes only within its workspace and asks before each command.',
-  'access.hint':
-    "Danger: when on, this Bot's chat Session and its new Assignments can read and write any file on this computer and run commands without asking. Content other people send in a Group or IM could steer it into acting.",
+    'All files, no asking. When off, it writes only within its workspace and asks before each command.',
   'access.confirmTitle': 'Enable dangerous file access?',
   'access.confirmRisk':
     "This Bot's chat Session and its new Assignments may access any file outside their workspace and will not ask for each command. Content other people send in a Group or IM could steer it into acting. Running a command-line tool with a secret still asks every time. Turning this off confines the chat Session again but does not downgrade existing dangerous Assignments.",
   'access.confirmEnable': 'I understand, enable',
   'access.scopeTitle': 'Scope of full access',
-  'access.scopeChat': 'Chat Session and new Assignments (default)',
-  'access.scopeAssignments': 'New Assignments only: the chat Session stays confined and asks',
+  'access.scopeChat': 'Chat and new Assignments',
+  'access.scopeAssignments': 'New Assignments only',
   'access.activeWarningAssignments':
     'Full access is on for new Assignments only: they may access any file without asking; the chat Session stays confined.',
   'access.activeWarning':
