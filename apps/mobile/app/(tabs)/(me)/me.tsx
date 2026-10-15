@@ -43,7 +43,10 @@ export default function MeScreen() {
             title={t.openFullClient}
             tone="accent"
             onPress={() =>
-              router.push({ pathname: '/full-client', params: fullClientParams({ kind: 'home' }) })
+              router.push({
+                pathname: '/full-client',
+                params: fullClientParams({ kind: 'home' }),
+              })
             }
           />
           <SettingsRow title={t.computers} detail={t.computersHint} onPress={openHostDrawer} />
@@ -62,6 +65,13 @@ export default function MeScreen() {
                 (error: unknown) => setUnpairError(errorText(error)),
               )
             }
+          />
+        </SettingsSection>
+        <SettingsSection title={t.appIconInterface}>
+          <SettingsRow
+            title={t.appIcon}
+            detail={t.appIconHint}
+            onPress={() => router.push('/app-icon')}
           />
         </SettingsSection>
         {unpairError === undefined ? null : (
