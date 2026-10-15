@@ -67,6 +67,7 @@ function actions(overrides: Partial<SettingsActions> = {}): SettingsActions {
     onAppIcon: vi.fn(),
     onNotifications: vi.fn(),
     onUnpair: vi.fn(async () => undefined),
+    onCopyVersion: vi.fn(),
     ...overrides,
   };
 }
@@ -78,6 +79,7 @@ describe('Usage card in Settings', () => {
     const view = await render(
       <SettingsView
         hostName="studio"
+        version="0.0.1"
         connection={{ status: 'connected', route: '' }}
         loadUsage={load}
         actions={handlers}
@@ -103,6 +105,7 @@ describe('Usage card in Settings', () => {
     const view = await render(
       <SettingsView
         hostName="studio"
+        version="0.0.1"
         connection={{ status: 'connected', route: '' }}
         loadUsage={async () =>
           structuredClone(usageWire.rpc.idle.overviewUsage.week) as OverviewUsage
@@ -120,6 +123,7 @@ describe('Usage card in Settings', () => {
     const view = await render(
       <SettingsView
         hostName="studio"
+        version="0.0.1"
         connection={{ status: 'connected', route: '' }}
         loadUsage={async () => week}
         actions={actions()}
@@ -140,6 +144,7 @@ describe('Usage card in Settings', () => {
     const view = await render(
       <SettingsView
         hostName="studio"
+        version="0.0.1"
         connection={{ status: 'connected', route: '' }}
         loadUsage={load}
         actions={actions()}
