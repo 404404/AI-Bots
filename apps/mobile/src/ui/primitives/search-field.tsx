@@ -5,10 +5,12 @@ import { radius, space } from '../design/tokens';
 
 export function SearchField({
   value,
+  inset,
   placeholder,
   onChangeText,
 }: {
   value: string;
+  inset: number;
   placeholder: string;
   onChangeText(text: string): void;
 }) {
@@ -27,11 +29,11 @@ export function SearchField({
       returnKeyType="search"
       style={{
         minHeight: theme.touch,
-        marginHorizontal: space.x3,
-        marginTop: space.x3,
-        marginBottom: space.x2,
-        paddingHorizontal: space.x3,
-        borderRadius: radius.lg - space.x3,
+        marginHorizontal: inset,
+        marginTop: inset,
+        marginBottom: space.x3,
+        paddingHorizontal: space.x4,
+        borderRadius: radius.md,
         backgroundColor: theme.layer.raised.fill,
         color: theme.color.fg,
         fontSize: theme.type.body.size,

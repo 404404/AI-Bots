@@ -36,7 +36,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - The header has the Host chip on the left, and on the right a compose button and the Human's avatar.
     - Compose opens a native menu: **New PersonaBot** and **New Channel**. They open the app's create flow, or the full client where the app has none yet. Android has no compose button in the header; a Material FAB at the bottom right, above the tab bar, opens the same menu.
     - The avatar opens **Settings**. Until the Human has an avatar of their own it shows their initial on a neutral layer fill.
-  - A **search field** at the top of the list panel, inset so its corners are concentric with the panel's rounded top. It scrolls away with the list. There are no shortcut cards: Activity already gathers what needs the Human.
+  - A **search field** at the top of the list panel, inset so its left edge lines up with the row avatars (`AVATAR_EDGE`), with corners concentric with the panel's rounded top: the field uses `radius.md` and the panel `radius.md + AVATAR_EDGE`. It scrolls away with the list. There are no shortcut cards: Activity already gathers what needs the Human.
   - One list of PersonaBot DMs and Channels together, grouped by the Host's **Channel sections** as on the desktop sidebar:
     - Sections come in the desktop's order. Ungrouped DMs and Channels sit between them in the desktop's top-level order.
     - A section header shows its name and Channel count and collapses or expands on tap. A collapsed section still shows a "Needs you" mark when something inside needs the Human. The collapse state is kept on the phone, per Host.

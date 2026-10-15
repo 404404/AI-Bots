@@ -5,6 +5,7 @@ import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { headerBand, useDesignTheme } from '../design/theme';
+import { AVATAR_EDGE } from '../chat/conversation-row';
 import { radius, space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
@@ -64,8 +65,8 @@ export function HomeHeader({ hostName, children }: { hostName: string; children:
         style={{
           flex: 1,
           backgroundColor: theme.color.base,
-          borderTopLeftRadius: radius.lg,
-          borderTopRightRadius: radius.lg,
+          borderTopLeftRadius: radius.md + AVATAR_EDGE,
+          borderTopRightRadius: radius.md + AVATAR_EDGE,
           overflow: 'hidden',
         }}
       >

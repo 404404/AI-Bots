@@ -4,7 +4,7 @@ import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native'
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
 import { sectionCollapse, useCollapsedSections } from '../../../src/host/native-section-collapse';
-import { ConversationRow } from '../../../src/ui/chat/conversation-row';
+import { AVATAR_EDGE, ConversationRow } from '../../../src/ui/chat/conversation-row';
 import {
   chatList,
   PINNED_SECTION,
@@ -80,6 +80,7 @@ export default function HomeScreen() {
                 onPairAgain={() => router.push('/pair')}
               />
               <SearchField
+                inset={AVATAR_EDGE}
                 value={query}
                 placeholder={t.searchPlaceholder}
                 onChangeText={setQuery}
