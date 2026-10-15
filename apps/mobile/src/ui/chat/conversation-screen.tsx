@@ -1,5 +1,4 @@
 import { Stack, useRouter } from 'expo-router';
-import { useHeaderHeight } from 'expo-router/react-navigation';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
@@ -39,7 +38,7 @@ import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
 import { Composer } from './composer';
-import { EdgeFade, HeaderBackButton, systemGlassBar } from './header-chrome';
+import { ChatHeader, EdgeFade, HeaderBackButton, useChatHeaderHeight } from './header-chrome';
 import { useFollowLatest } from './follow-latest';
 import { useMarkRead } from './mark-read';
 import { ImageViewer } from './image-viewer';
@@ -178,7 +177,7 @@ const RequestCard = memo(function RequestCard({
 function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | undefined }) {
   const theme = useDesignTheme();
   const router = useRouter();
-  const headerHeight = useHeaderHeight();
+  const headerHeight = useChatHeaderHeight();
   const { client, inbox } = useHostSession();
   const host = useHostSnapshot(client);
   const dm = place.kind === 'dm';
@@ -225,6 +224,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
   const [reactError, setReactError] = useState(false);
+  const [composerHeight, setComposerHeight] = useState(0);
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
@@ -479,34 +479,8 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     <>
       <Stack.Screen
         options={{
-          headerLargeTitle: false,
-          headerTitleAlign: 'center',
-          headerShadowVisible: false,
-          headerTransparent: true,
-          headerStyle: { backgroundColor: 'transparent' },
+          headerShown: false,
           scrollEdgeEffects: { top: 'hidden', bottom: 'hidden', left: 'hidden', right: 'hidden' },
-          ...(systemGlassBar
-            ? {}
-            : { headerLeft: () => <HeaderBackButton onPress={() => router.back()} /> }),
-          headerTitle: () =>
-            dm ? (
-              <ChatTitle
-                bot={bot}
-                fallback={slug ?? ''}
-                onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
-              />
-            ) : (
-              <ChannelTitle channel={channel} fallback={channelId ?? ''} />
-            ),
-          headerRight: () =>
-            slug !== undefined ? (
-              <OpenFullClientButton target={{ kind: 'dm', slug }} round={!systemGlassBar} />
-            ) : channelId !== undefined ? (
-              <OpenFullClientButton
-                target={{ kind: 'channel', channelId }}
-                round={!systemGlassBar}
-              />
-            ) : null,
         }}
       />
       <KeyboardAvoidingView
@@ -535,7 +509,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             inverted
             style={{ flex: 1 }}
             contentContainerStyle={{
-              paddingTop: edgeFade.bottom,
+              paddingTop: composerHeight + edgeFade.bottom,
               paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
             }}
             data={rows}
@@ -609,13 +583,13 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               ) : null
             }
           />
-          <EdgeFade edge="bottom" height={edgeFade.bottom} />
+          <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           {latest.away ? (
             <View
               pointerEvents="box-none"
               style={{
                 position: 'absolute',
-                bottom: space.x4,
+                bottom: composerHeight + space.x4,
                 left: 0,
                 right: 0,
                 alignItems: 'center',
@@ -624,42 +598,68 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />
             </View>
           ) : null}
+          <View
+            onLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+          >
+            <Composer
+              value={draft}
+              placeholder={
+                bot !== undefined
+                  ? t.messageBot(bot.displayName)
+                  : channel !== undefined
+                    ? t.messageBot(`#${channel.name}`)
+                    : t.messagePlaceholder
+              }
+              disabled={conversation === undefined}
+              files={files}
+              canAttach={files.length < MAX_PICKED}
+              dictation={dictation.state.status}
+              canDictate={conversation !== undefined}
+              onChange={edit}
+              selection={selection}
+              onSelection={(next) => {
+                setSelection(undefined);
+                setCaret(next);
+              }}
+              {...(candidates.length === 0
+                ? {}
+                : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
+              onSend={send}
+              onPick={pick}
+              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onDictate={() => {
+                setAttachError(false);
+                dictation.start();
+              }}
+              onStopDictation={dictation.stop}
+              onCancelDictation={dictation.cancel}
+            />
+          </View>
         </View>
-        <Composer
-          value={draft}
-          placeholder={
-            bot !== undefined
-              ? t.messageBot(bot.displayName)
-              : channel !== undefined
-                ? t.messageBot(`#${channel.name}`)
-                : t.messagePlaceholder
-          }
-          disabled={conversation === undefined}
-          files={files}
-          canAttach={files.length < MAX_PICKED}
-          dictation={dictation.state.status}
-          canDictate={conversation !== undefined}
-          onChange={edit}
-          selection={selection}
-          onSelection={(next) => {
-            setSelection(undefined);
-            setCaret(next);
-          }}
-          {...(candidates.length === 0
-            ? {}
-            : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-          onSend={send}
-          onPick={pick}
-          onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-          onDictate={() => {
-            setAttachError(false);
-            dictation.start();
-          }}
-          onStopDictation={dictation.stop}
-          onCancelDictation={dictation.cancel}
-        />
       </KeyboardAvoidingView>
-      <EdgeFade edge="top" height={headerHeight + edgeFade.extend} />
+      <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
+      <ChatHeader
+        left={<HeaderBackButton onPress={() => router.back()} />}
+        center={
+          dm ? (
+            <ChatTitle
+              bot={bot}
+              fallback={slug ?? ''}
+              onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
+            />
+          ) : (
+            <ChannelTitle channel={channel} fallback={channelId ?? ''} />
+          )
+        }
+        right={
+          slug !== undefined ? (
+            <OpenFullClientButton target={{ kind: 'dm', slug }} round />
+          ) : channelId !== undefined ? (
+            <OpenFullClientButton target={{ kind: 'channel', channelId }} round />
+          ) : null
+        }
+      />
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
       <MessageActions
         message={actionsFor}
