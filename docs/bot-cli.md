@@ -425,16 +425,25 @@ printf '{"title":"Water the plants"}' | deepseekbot todo-tool <bot-id> todos_add
 
 ### Auto approval (Approval Templates)
 
-A PersonaBot can select one Approval Template ([ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)). While one is selected, an Approval Reviewer answers the Bot's operation approvals (Shell commands that leave the sandbox, file tools, opening an attachment) by the template before any card is posted. Secret tools, Browser and Computer authorization, and any call that changes approval policy still go to the Human as cards. This release ships two read-only templates, `cautious` and `get-work-done`.
+A PersonaBot can select one Approval Template ([ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)). While one is selected, an Approval Reviewer answers the Bot's operation approvals (Shell commands that leave the sandbox, file tools, opening an attachment) by the template before any card is posted. Secret tools, Browser and Computer authorization, and any call that changes approval policy still go to the Human as cards.
+
+Templates are a Profile-wide library. Two are built in and read-only, `cautious` and `get-work-done`. Every other template is one Markdown file, `$DSH_HOME/botharness/approval-templates/<name>.md`, that the settings page (Settings → Auto approval) and these commands both read and write. A name uses lowercase letters, digits and dashes; the text is at most 32 KiB, and its first `#` heading and first line become the title and description.
 
 ```bash
-deepseekbot approval-templates [--bot <bot-id>]
-deepseekbot approval-template-show cautious
-deepseekbot approval-template-set <bot-id> get-work-done
+deepseekbot approval-template list [--bot <bot-id>]
+deepseekbot approval-template show cautious
+deepseekbot approval-template create night-shift --file night-shift.md
+cat night-shift.md | deepseekbot approval-template create night-shift --text-stdin
+deepseekbot approval-template create my-cautious --from cautious
+deepseekbot approval-template edit night-shift --file night-shift.md
+deepseekbot approval-template delete night-shift
+deepseekbot approval-template-set <bot-id> night-shift
 deepseekbot approval-template-set <bot-id> off
 ```
 
-`approval-templates` returns `{templates}` with each template's `name`, `title`, `description` and `builtIn`; with `--bot` it also returns that Bot's `selected` template, or `null`. `approval-template-show` returns `{template}` with its full Markdown `text`. `approval-template-set` returns `{bot}` with the new `approvalTemplate`. When a Bot runs `approval-template-set` from its own Shell, the call always becomes a Human approval card; neither a saved rule nor the Approval Reviewer can answer it. Refusals carry a code: `invalid-input` (an unknown template), `unknown-template` and `unknown-bot`.
+`list` returns `{templates}` with each template's `name`, `title`, `description`, `builtIn` and `usedBy` (the Bots that select it); with `--bot` it also returns that Bot's `selected` template, or `null`. `show` returns `{template}` with its full Markdown `text`. `create` and `edit` return `{template}`; `create --from` copies another template's text, which is how a built-in is changed. `delete` returns `{template, clearedBots}`: every Bot that used the template has its selection cleared, so its approvals go back to cards. `approval-template-set` returns `{bot}` with the new `approvalTemplate`. `approval-templates` and `approval-template-show` remain as aliases of `list` and `show`.
+
+Self-escalation guard: when a Bot runs these commands from its own Shell, writing a new template or editing one that no Bot uses needs no card, so a Bot can draft a template for you. Selecting a template, and editing or deleting one that some Bot currently uses, always becomes a Human approval card that neither a saved rule nor the Approval Reviewer can answer; when you reject it, the file stays unchanged. Refusals carry a code: `invalid-input` (a bad name, empty or oversized text, an unknown template to select), `template-exists`, `template-read-only` (a built-in), `unknown-template` and `unknown-bot`.
 
 ### Models, usage and activity
 

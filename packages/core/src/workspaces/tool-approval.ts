@@ -48,6 +48,7 @@ export interface ToolApprovalDecision {
 
 export interface ToolAutoApproval {
   template(botSlug: string): { name: string; text: string } | undefined;
+  templateInUse?(template: string): boolean;
   review(request: ApprovalReviewRequest): Promise<ApprovalReview>;
   log(entry: {
     botSlug: string;
@@ -210,7 +211,7 @@ export class ChannelToolApproval {
       this.#scope(request.agent, owner) !== tracked.scopeKey
     )
       return 'unavailable';
-    const policyChange = changesApprovalPolicy(tracked.toolName + ' ' + tracked.input);
+    const policyChange = this.#changesPolicy(tracked);
     if (
       !policyChange &&
       tracked.externalDecision !== 'each-use' &&
@@ -372,7 +373,7 @@ export class ChannelToolApproval {
       tracked !== undefined &&
       tracked.agent === agent &&
       (tracked.externalDecision === 'each-use' ||
-        changesApprovalPolicy(tracked.toolName + ' ' + tracked.input) ||
+        this.#changesPolicy(tracked) ||
         this.#rules?.match(tracked) === undefined)
     );
   }
@@ -592,6 +593,14 @@ export class ChannelToolApproval {
     for (const id of this.#pending.keys()) this.#settle(id, 'cancelled');
     this.#tracked.clear();
     this.#reviewRejections.clear();
+  }
+
+  #changesPolicy(tracked: TrackedCall): boolean {
+    const inUse = this.#autoApproval?.templateInUse;
+    return changesApprovalPolicy(
+      tracked.toolName + ' ' + tracked.input,
+      inUse === undefined ? undefined : (name) => inUse(name),
+    );
   }
 
   takeReviewRejection(sessionId: string, callId: string): string | undefined {

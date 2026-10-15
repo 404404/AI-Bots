@@ -13,6 +13,7 @@ import {
   SendKeySetting,
   SortSetting,
 } from './bot-mode-setting-rows.js';
+import { ApprovalTemplateLibrarySettings } from './approval-template-library.js';
 import type { BotModePrefsFace } from './bot-mode-prefs.js';
 import type { BridgeCall } from './bridge.js';
 import type { DesktopNotificationPrefs } from './desktop-notifications.js';
@@ -93,6 +94,18 @@ export function MessagingSection(
         <GroupAutoAcceptSetting {...props} />
       </SettingsSection>
       <MessagingDefaultsSettings call={props.call} t={props.t} />
+    </Rows>
+  );
+}
+
+export function AutoApprovalSection({
+  call,
+  store,
+  t,
+}: SectionProps<{ call: BridgeCall; store: ClientStore }>): ReactElement {
+  return (
+    <Rows>
+      <ApprovalTemplateLibrarySettings call={call} store={store} t={t} />
     </Rows>
   );
 }

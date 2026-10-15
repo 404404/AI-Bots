@@ -42,6 +42,7 @@ import { createImApps, ImAppsSection } from './im-apps-section.js';
 import {
   AboutSection,
   AdvancedSection,
+  AutoApprovalSection,
   CompanionsSection,
   DataPrivacySection,
   DevicesSection,
@@ -679,6 +680,19 @@ export function apply(ctx: ClientContext): void {
           inject: () => ({ ...botModePrefsFace(prefs), call }),
         },
         MessagingSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.autoApproval,
+          order: 22,
+          label: () => t('botSettings.section.autoApproval'),
+          locale: LOCALE_NS,
+          inject: () => ({ call, store }),
+        },
+        AutoApprovalSection,
       ),
     );
     const imApps = createImApps({ call, botSettings, actions });

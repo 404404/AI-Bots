@@ -259,10 +259,13 @@ import type {
 } from '../runtime/bot-runtime.js';
 import type { AssignmentExecutionWait } from '../runtime/assignment-approval-capacity.js';
 import {
-  approvalTemplate,
-  listApprovalTemplates,
+  createApprovalTemplateLibrary,
   type ApprovalTemplate,
+  type ApprovalTemplateLibrary,
+  type ApprovalTemplateWriteResult,
 } from '../workspaces/approval-templates.js';
+
+export type ApprovalTemplateEntry = ApprovalTemplate & { usedBy: string[] };
 import type {
   AggregatedState,
   BotStateSnapshot,
@@ -669,7 +672,12 @@ export interface BridgeMethods {
   browserProfileSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   approvalTemplates(
     payload?: unknown,
-  ): BridgeResult<{ templates: ApprovalTemplate[]; selected?: string | null }>;
+  ): BridgeResult<{ templates: ApprovalTemplateEntry[]; selected?: string | null }>;
+  approvalTemplateCreate(payload: unknown): BridgeResult<{ template: ApprovalTemplateEntry }>;
+  approvalTemplateUpdate(payload: unknown): BridgeResult<{ template: ApprovalTemplateEntry }>;
+  approvalTemplateDelete(
+    payload: unknown,
+  ): BridgeResult<{ template: { name: string }; clearedBots: string[] }>;
   botApprovalTemplateSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   standingLimitsSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
   botAvatarSet(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
@@ -712,6 +720,7 @@ export interface BridgeMethodsDeps {
   composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
+  approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
   attachments?: AttachmentStore;
@@ -867,6 +876,30 @@ function scheduleFailure(error: unknown): BridgeResult<never> {
   if (error instanceof BotScheduleError)
     return { ok: false, error: { code: error.code, message: error.message } };
   return invalidInput(String(error));
+}
+
+function templateWriteFailure(
+  name: string,
+  reason: Extract<ApprovalTemplateWriteResult, { ok: false }>['reason'],
+): BridgeResult<never> {
+  const messages = {
+    'invalid-name':
+      'A template name uses lowercase letters, digits and dashes (at most 64), like my-rules',
+    'invalid-text': 'Template text must be non-empty Markdown of at most 32 KiB',
+    exists: `An Approval Template named ${name} already exists`,
+    'not-found': `The Host has no Approval Template named ${name}`,
+    'built-in': `${name} is a built-in Approval Template and is read-only; copy it under a new name`,
+    unavailable: 'Approval Templates cannot be written on this Host',
+  } as const;
+  const codes = {
+    'invalid-name': 'invalid-input',
+    'invalid-text': 'invalid-input',
+    exists: 'template-exists',
+    'not-found': 'unknown-template',
+    'built-in': 'template-read-only',
+    unavailable: 'unavailable',
+  } as const;
+  return { ok: false, error: { code: codes[reason], message: messages[reason] } };
 }
 
 function unknownBot(slug: string): BridgeResult<never> {
@@ -1080,6 +1113,16 @@ function detail(record: PersonaBotRecord, snapshot: BotStateSnapshot): PersonaBo
 }
 
 export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
+  const approvalTemplateLibrary = deps.approvalTemplates ?? createApprovalTemplateLibrary();
+  const templateUsers = (name: string): string[] =>
+    deps.registry
+      .list()
+      .filter((record) => record.approvalTemplate === name)
+      .map((record) => record.slug);
+  const templateEntry = (template: ApprovalTemplate): ApprovalTemplateEntry => ({
+    ...template,
+    usedBy: templateUsers(template.name),
+  });
   const askingBot = (channelId: string, messageId: string): string | undefined => {
     const channel = deps.channels.get(channelId);
     if (channel === undefined) return undefined;
@@ -2577,7 +2620,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       return { ok: true, value: detailOf(result.record) };
     },
     approvalTemplates(payload) {
-      const templates = listApprovalTemplates();
+      const templates = approvalTemplateLibrary.list().map(templateEntry);
       if (asObject(payload)['slug'] === undefined) return { ok: true, value: { templates } };
       const slug = asSlug(payload);
       if (slug === undefined) return invalidInput('slug must be a Bot id');
@@ -2585,12 +2628,49 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (record === undefined) return unknownBot(slug);
       return { ok: true, value: { templates, selected: record.approvalTemplate ?? null } };
     },
+    approvalTemplateCreate(payload) {
+      const object = asObject(payload);
+      const name = object['name'];
+      const from = object['from'];
+      let text = object['text'];
+      if (typeof name !== 'string') return invalidInput('name is required');
+      if (from !== undefined) {
+        if (typeof from !== 'string' || text !== undefined)
+          return invalidInput('from names one template to copy, in place of text');
+        const source = approvalTemplateLibrary.get(from);
+        if (source === undefined) return templateWriteFailure(from, 'not-found');
+        text = source.text;
+      }
+      if (typeof text !== 'string') return invalidInput('text (Markdown) or from is required');
+      const result = approvalTemplateLibrary.create(name, text);
+      if (!result.ok) return templateWriteFailure(name, result.reason);
+      return { ok: true, value: { template: templateEntry(result.template) } };
+    },
+    approvalTemplateUpdate(payload) {
+      const object = asObject(payload);
+      const name = object['name'];
+      const text = object['text'];
+      if (typeof name !== 'string' || typeof text !== 'string')
+        return invalidInput('name and text (Markdown) are required');
+      const result = approvalTemplateLibrary.update(name, text);
+      if (!result.ok) return templateWriteFailure(name, result.reason);
+      return { ok: true, value: { template: templateEntry(result.template) } };
+    },
+    approvalTemplateDelete(payload) {
+      const name = asObject(payload)['name'];
+      if (typeof name !== 'string') return invalidInput('name is required');
+      const result = approvalTemplateLibrary.delete(name);
+      if (!result.ok) return templateWriteFailure(name, result.reason);
+      const clearedBots = templateUsers(name);
+      for (const slug of clearedBots) deps.registry.setApprovalTemplate(slug, undefined);
+      return { ok: true, value: { template: { name }, clearedBots } };
+    },
     botApprovalTemplateSet(payload) {
       const slug = asSlug(payload);
       const template = asObject(payload)['template'];
       if (slug === undefined || (template !== null && typeof template !== 'string'))
         return invalidInput('slug and template (a template name, or null for none) are required');
-      if (typeof template === 'string' && approvalTemplate(template) === undefined)
+      if (typeof template === 'string' && approvalTemplateLibrary.get(template) === undefined)
         return invalidInput('unknown Approval Template ' + template);
       const result = deps.registry.setApprovalTemplate(slug, template ?? undefined);
       if (!result.ok) return unknownBot(slug);

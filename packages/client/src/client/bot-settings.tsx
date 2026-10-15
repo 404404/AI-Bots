@@ -10,6 +10,7 @@ export const BOT_SETTINGS_SECTIONS = {
   general: 'general',
   models: 'models',
   messaging: 'messaging',
+  autoApproval: 'auto-approval',
   imApps: 'im-apps',
   companions: 'companions',
   devices: 'devices',

@@ -141,10 +141,14 @@ import {
   orchestratorPermission,
   isDshGovernedTool,
   requiresHumanToolApproval,
+  approvalTemplateInUse,
   sessionHasFullAccess,
 } from './workspaces/grant-execution.js';
 import { ChannelToolApproval, type ToolAutoApproval } from './workspaces/tool-approval.js';
-import { approvalTemplate, changesApprovalPolicy } from './workspaces/approval-templates.js';
+import {
+  changesApprovalPolicy,
+  createApprovalTemplateLibrary,
+} from './workspaces/approval-templates.js';
 import { runApprovalReview } from './workspaces/approval-reviewer.js';
 import { ChannelUserQuestions } from './channels/user-questions.js';
 import { mountPrivateInputs } from './credentials/mount.js';
@@ -1222,6 +1226,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     { global: true },
   );
+  const approvalTemplates = createApprovalTemplateLibrary(
+    join(dshHome, 'botharness', 'approval-templates'),
+  );
   let reviewLogs: LogDatabase | undefined;
   try {
     reviewLogs = openLogDatabase({ dir: join(dshHome, 'botharness') });
@@ -1229,12 +1236,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     reviewLogs = undefined;
   }
   ctx.effect(() => () => reviewLogs?.close(), 'botharness: approval review logs');
+  const templateInUse = approvalTemplateInUse(core.registry);
   const autoApproval: ToolAutoApproval = {
     template: (slug) => {
       const name = core.registry.get(slug)?.approvalTemplate;
-      const template = name === undefined ? undefined : approvalTemplate(name);
+      const template = name === undefined ? undefined : approvalTemplates.get(name);
       return template === undefined ? undefined : { name: template.name, text: template.text };
     },
+    templateInUse,
     review: (request) => {
       let route: { provider: string; model: string; reasoningEffort?: string } | undefined =
         core.registry.get(request.botSlug)?.modelPlan?.orchestrator;
@@ -1346,7 +1355,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         return next();
       if (
         !isDshGovernedTool(execution.name) &&
-        !requiresHumanToolApproval(execution.name, execution.arguments)
+        !requiresHumanToolApproval(execution.name, execution.arguments, templateInUse)
       )
         return next();
       const storeDenial = credentialStoreDenial(
@@ -1480,10 +1489,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       }
       const denial = permissionDenial(agent.session);
       if (denial !== undefined) return { kind: 'deny', reason: denial };
-      if (!requiresHumanToolApproval(execution.name, execution.arguments)) return next();
+      if (!requiresHumanToolApproval(execution.name, execution.arguments, templateInUse))
+        return next();
       const eachUse = execution.name === 'secret_cli' || execution.name === 'secret_mcp_connect';
       const fullAccess = sessionHasFullAccess(core, agent.session.id);
-      if (fullAccess) return next();
+      if (
+        fullAccess &&
+        !changesApprovalPolicy(JSON.stringify(execution.arguments) ?? '', templateInUse)
+      )
+        return next();
       const approval = ctx.get('approval') as ApprovalService | undefined;
       const untrack = toolApproval.track(
         execution,
@@ -1512,7 +1526,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               reason:
                 execution.name === 'channel_attachment_open'
                   ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-                  : changesApprovalPolicy(JSON.stringify(execution.arguments) ?? '')
+                  : changesApprovalPolicy(JSON.stringify(execution.arguments) ?? '', templateInUse)
                     ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
                     : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
@@ -1590,7 +1604,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       if (owner === undefined) return next();
       const untrack =
         isDshGovernedTool(execution.name) &&
-        !requiresHumanToolApproval(execution.name, execution.arguments)
+        !requiresHumanToolApproval(execution.name, execution.arguments, templateInUse)
           ? toolApproval.track(execution)
           : undefined;
       try {
@@ -1674,6 +1688,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       ),
     warn: (message) => ctx.logger.warn(message),
     registry: core.registry,
+    approvalTemplates,
     deletions: core.deletions,
     contentPurge: core.contentPurge,
     modelPresets: core.modelPresets,
