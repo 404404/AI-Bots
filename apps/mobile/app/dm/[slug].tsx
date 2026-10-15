@@ -3,6 +3,7 @@ import { useHeaderHeight } from 'expo-router/react-navigation';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
+import { botSettings } from '../../src/host/bot-settings';
 import type { HostClient } from '../../src/host/client';
 import type {
   CardResolution,
@@ -35,14 +36,21 @@ import { ApprovalCard } from '../../src/ui/chat/approval-card';
 import { botBusy } from '../../src/ui/chat/bot-tone';
 import { ChatTitle } from '../../src/ui/chat/chat-title';
 import { Composer } from '../../src/ui/chat/composer';
+import { useComposerContext } from '../../src/ui/chat/composer-context';
+import { modelLabel, workspaceLabel } from '../../src/ui/chat/composer-labels';
+import { ComposerFooter } from '../../src/ui/chat/composer-footer';
+import { useFollowLatest } from '../../src/ui/chat/follow-latest';
 import { ImageViewer } from '../../src/ui/chat/image-viewer';
+import { JumpToLatest } from '../../src/ui/chat/jump-to-latest';
 import { MessageActions } from '../../src/ui/chat/message-actions';
+import { ModelSheet } from '../../src/ui/chat/model-sheet';
 import { DraftBubble, MessageBubble } from '../../src/ui/chat/message-bubble';
 import { copyMessage } from '../../src/ui/chat/message-menu';
 import { chatRows, type ChatRow } from '../../src/ui/chat/message-groups';
 import { QuestionCard } from '../../src/ui/chat/question-card';
 import { StatusStrip } from '../../src/ui/chat/status-strip';
 import { TimeSeparator } from '../../src/ui/chat/time-separator';
+import { WorkspaceSheet } from '../../src/ui/chat/workspace-sheet';
 import { AccentProvider, useDesignTheme } from '../../src/ui/design/theme';
 import { space } from '../../src/ui/design/tokens';
 import { OpenFullClientButton } from '../../src/ui/open-full-client';
@@ -172,6 +180,13 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
   const [reactError, setReactError] = useState(false);
+  const [settingsSheet, setSettingsSheet] = useState<'model' | 'workspace'>();
+  const [workspaceOpened, setWorkspaceOpened] = useState(0);
+  const settings = useMemo(
+    () => (client === undefined || slug === undefined ? undefined : botSettings(client, slug)),
+    [client, slug],
+  );
+  const context = useComposerContext(settings);
   const list = useRef<FlatList<Row>>(null);
   const jumped = useRef<string | undefined>(undefined);
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
@@ -188,10 +203,12 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     [snapshot.messages],
   );
 
-  const history = useMemo(
-    () => chatRows(snapshot.messages.filter((message) => !hiddenResolution(message))).reverse(),
+  const visible = useMemo(
+    () => snapshot.messages.filter((message) => !hiddenResolution(message)),
     [snapshot.messages],
   );
+  const history = useMemo(() => chatRows(visible).reverse(), [visible]);
+  const latest = useFollowLatest(list, visible);
 
   const asking = snapshot.messages.findLast(
     (message) => message.card?.kind === 'user-question' && !resolutions.has(message.id),
@@ -225,6 +242,7 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
     if (dictation.state.status !== 'idle') dictation.cancel();
     setDraft('');
     setFiles([]);
+    latest.jumpToLatest();
     if (
       asking?.card === undefined ||
       client === undefined ||
@@ -393,66 +411,84 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
             {notice}
           </Text>
         )}
-        <FlatList
-          ref={list}
-          inverted
-          style={{ flex: 1 }}
-          contentContainerStyle={{ paddingVertical: space.x3 }}
-          data={rows}
-          keyExtractor={(row) => row.key}
-          renderItem={renderItem}
-          onContentSizeChange={jump}
-          onScrollToIndexFailed={(info) => {
-            list.current?.scrollToOffset({
-              offset: info.averageItemLength * info.index,
-              animated: false,
-            });
-            setTimeout(
-              () =>
-                list.current?.scrollToIndex({
-                  index: info.index,
-                  viewPosition: 0.5,
-                  animated: true,
-                }),
-              100,
-            );
-          }}
-          onEndReached={() => void conversation?.loadOlder()}
-          onEndReachedThreshold={0.5}
-          maintainVisibleContentPosition={{
-            minIndexForVisible: 0,
-            autoscrollToTopThreshold: 40,
-          }}
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          ListFooterComponent={
-            snapshot.loadingOlder ? (
-              <View
-                style={{
-                  padding: space.x4,
-                  alignItems: 'center',
-                  gap: space.x2,
-                }}
-              >
-                <ActivityIndicator />
-                <Text variant="meta" tone="muted">
-                  {t.olderLoading}
+        <View style={{ flex: 1 }}>
+          <FlatList
+            ref={list}
+            inverted
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingVertical: space.x3 }}
+            data={rows}
+            keyExtractor={(row) => row.key}
+            renderItem={renderItem}
+            onContentSizeChange={jump}
+            onScrollToIndexFailed={(info) => {
+              list.current?.scrollToOffset({
+                offset: info.averageItemLength * info.index,
+                animated: false,
+              });
+              setTimeout(
+                () =>
+                  list.current?.scrollToIndex({
+                    index: info.index,
+                    viewPosition: 0.5,
+                    animated: true,
+                  }),
+                100,
+              );
+            }}
+            onEndReached={() => void conversation?.loadOlder()}
+            onEndReachedThreshold={0.5}
+            {...latest.listProps}
+            scrollEventThrottle={32}
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            ListFooterComponent={
+              snapshot.loadingOlder ? (
+                <View
+                  style={{
+                    padding: space.x4,
+                    alignItems: 'center',
+                    gap: space.x2,
+                  }}
+                >
+                  <ActivityIndicator />
+                  <Text variant="meta" tone="muted">
+                    {t.olderLoading}
+                  </Text>
+                </View>
+              ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
+                <Text
+                  variant="meta"
+                  tone="muted"
+                  style={{ textAlign: 'center', padding: space.x5 }}
+                >
+                  {t.beginning}
                 </Text>
-              </View>
-            ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
-              <Text variant="meta" tone="muted" style={{ textAlign: 'center', padding: space.x5 }}>
-                {t.beginning}
-              </Text>
-            ) : null
-          }
-          ListEmptyComponent={
-            snapshot.status === 'opening' ? (
-              <View style={{ padding: space.x6, alignItems: 'center' }}>
-                <ActivityIndicator />
-              </View>
-            ) : null
-          }
-        />
+              ) : null
+            }
+            ListEmptyComponent={
+              snapshot.status === 'opening' ? (
+                <View style={{ padding: space.x6, alignItems: 'center' }}>
+                  <ActivityIndicator />
+                </View>
+              ) : null
+            }
+          />
+          {latest.away ? (
+            <View
+              pointerEvents="box-none"
+              style={{
+                position: 'absolute',
+                bottom: space.x4,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />
+            </View>
+          ) : null}
+        </View>
         {bot !== undefined && botBusy(bot) ? (
           <StatusStrip bot={bot} stopping={stop?.status === 'stopping'} onStop={stopRun} />
         ) : null}
@@ -474,6 +510,27 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
           }}
           onStopDictation={dictation.stop}
           onCancelDictation={dictation.cancel}
+          {...(bot === undefined
+            ? {}
+            : {
+                footer: (
+                  <ComposerFooter
+                    mountRef={context.mount}
+                    botName={bot.displayName}
+                    model={modelLabel(context.model)}
+                    workspace={workspaceLabel(context.grants)}
+                    onModel={() => {
+                      if (context.model.status !== 'ready') context.reloadModel();
+                      setSettingsSheet('model');
+                    }}
+                    onWorkspace={() => {
+                      context.openWorkspace();
+                      setWorkspaceOpened((count) => count + 1);
+                      setSettingsSheet('workspace');
+                    }}
+                  />
+                ),
+              })}
         />
       </KeyboardAvoidingView>
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
@@ -482,6 +539,35 @@ function DmConversation({ slug, focus }: { slug: string | undefined; focus: stri
         onClose={() => setActionsFor(undefined)}
         onReact={(message, emoji, active) => react(message.id, emoji, active)}
         onCopy={copyMessage}
+      />
+      <ModelSheet
+        visible={settingsSheet === 'model'}
+        botName={bot?.displayName ?? slug ?? ''}
+        model={context.model}
+        onRetry={context.reloadModel}
+        onChoose={async (model, entry) => {
+          await settings?.chooseModel(model, entry);
+          context.reloadModel();
+        }}
+        onPreset={async (presetId) => {
+          await settings?.applyPreset(presetId);
+          context.reloadModel();
+        }}
+        onClose={() => setSettingsSheet(undefined)}
+      />
+      <WorkspaceSheet
+        key={workspaceOpened}
+        visible={settingsSheet === 'workspace'}
+        botName={bot?.displayName ?? slug ?? ''}
+        settings={settings}
+        grants={context.grants}
+        access={context.access}
+        templates={context.templates}
+        onRetryGrants={context.reloadGrants}
+        onGrantsChanged={context.reloadGrants}
+        onAccess={context.setAccess}
+        onTemplates={context.setTemplates}
+        onClose={() => setSettingsSheet(undefined)}
       />
     </>
   );

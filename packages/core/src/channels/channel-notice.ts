@@ -6,6 +6,7 @@ const CHANNEL_NOTICE_FIELDS = [
   'botChannelPost',
   'memoryCommit',
   'toolAutoApproval',
+  'toolAutoApprovalPause',
 ] as const;
 
 export function isChannelNotice(
