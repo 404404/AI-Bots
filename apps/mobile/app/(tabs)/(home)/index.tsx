@@ -3,12 +3,15 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
+import { sectionCollapse, useCollapsedSections } from '../../../src/host/native-section-collapse';
 import { ConversationRow } from '../../../src/ui/chat/conversation-row';
 import {
-  conversations,
+  chatList,
+  PINNED_SECTION,
   shortcutCounts,
   type ConversationFilter,
 } from '../../../src/ui/chat/conversations';
+import { SectionHeader } from '../../../src/ui/chat/section-header';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
 import { Text } from '../../../src/ui/primitives/text';
@@ -27,9 +30,11 @@ export default function HomeScreen() {
   const [filter, setFilter] = useState<ConversationFilter>('all');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
+  const hostId = saved?.hostId;
+  const collapsed = useCollapsedSections(hostId);
   const rows = useMemo(
-    () => conversations(snapshot.roster, action, filter),
-    [snapshot.roster, action, filter],
+    () => chatList(snapshot.roster, action, filter, collapsed),
+    [snapshot.roster, action, filter, collapsed],
   );
   const counts = useMemo(() => shortcutCounts(snapshot.roster, action), [snapshot.roster, action]);
   const now = new Date();
@@ -79,18 +84,31 @@ export default function HomeScreen() {
               </View>
             )
           }
-          renderItem={({ item }) => (
-            <ConversationRow
-              row={item}
-              now={now}
-              {...(item.kind === 'bot'
-                ? {
-                    onPress: () =>
-                      router.push({ pathname: '/dm/[slug]', params: { slug: item.bot.slug } }),
-                  }
-                : {})}
-            />
-          )}
+          renderItem={({ item }) => {
+            if (item.kind === 'section')
+              return (
+                <SectionHeader
+                  name={item.id === PINNED_SECTION ? t.pinnedSection : (item.name ?? '')}
+                  count={item.count}
+                  needsYou={item.needsYou}
+                  collapsed={item.collapsed}
+                  onToggle={() => sectionCollapse.toggle(saved.hostId, item.id)}
+                />
+              );
+            const row = item.row;
+            return (
+              <ConversationRow
+                row={row}
+                now={now}
+                {...(row.kind === 'bot'
+                  ? {
+                      onPress: () =>
+                        router.push({ pathname: '/dm/[slug]', params: { slug: row.bot.slug } }),
+                    }
+                  : {})}
+              />
+            );
+          }}
         />
       </HomeHeader>
     </>
