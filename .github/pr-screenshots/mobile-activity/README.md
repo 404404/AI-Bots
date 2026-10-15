@@ -1,6 +1,6 @@
 # Native activity evidence — #1919 / #1928
 
-Captured on one shared iOS 26.0 Simulator, English locale, 942 × 2048 pixels,
+Captured on one shared iOS 26.0 Simulator, English locale, 1206 × 2622 pixels,
 using the existing development client. No native rebuild, second Simulator or
 shared Host restart was used for the comparison.
 
