@@ -204,6 +204,7 @@ describe('bridge typert service', () => {
       'toolApprovalRuleRevoke',
       'toolApprovalStatus',
       'toolApprovalDecide',
+      'toolAutoRejectionOverride',
       'userQuestionStatus',
       'userQuestionAnswer',
       'sessions',

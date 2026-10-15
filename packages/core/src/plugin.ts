@@ -334,7 +334,7 @@ function reviewerRejectionText(reason: string): string {
   return (
     "The Approval Reviewer rejected this call under the Bot's Approval Template: " +
     reason +
-    ' Try another way that the template allows, or ask the Human.'
+    ' Try another way that the template allows, or ask the Human. The Human can still allow this exact call once from the Inbox; you will be told if they do.'
   );
 }
 

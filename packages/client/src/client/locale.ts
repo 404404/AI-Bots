@@ -1027,6 +1027,12 @@ export const zh = {
   'humanInbox.assignmentBlocked': '{bot} 的事项受阻，需要关注',
   'humanInbox.assignmentReport': '{bot} 的事项已报告完成',
   'humanInbox.repair': '{bot} 的消息需要检查',
+  'humanInbox.autoRejection': '{bot} 的一次调用被自动拒绝',
+  'humanInbox.autoRejection.meta': '工具 {tool} · 模板「{template}」',
+  'humanInbox.autoRejection.allow': '仍然允许这一次',
+  'humanInbox.autoRejection.hint':
+    '只放行这一次完全相同的调用；Bot 会收到通知并可以重试，之后的调用仍按模板审核。',
+  'humanInbox.autoRejection.input': '调用参数',
   'humanInbox.openBotInbox': '查看 Bot 收件箱',
   'humanInbox.sourceUnavailable': '来源频道已不可用',
   'humanInbox.messageUnavailable': '来源消息已不可用',
@@ -1439,6 +1445,7 @@ export const zh = {
   'dock.reset': '重置布局',
   'dock.close': '关闭 {label}',
   'dock.empty': '当前 Channel 没有可显示的内容。',
+  'dock.cardUnavailable': '打开一个 Channel 后可用',
   'im.localTarget': '本地收件位置',
   'im.inboxTarget': '仅此 Bot 的 Inbox',
   'im.targetUnavailable': '原群组已不可用',
@@ -3130,6 +3137,11 @@ export const zh = {
   'autoApproval.allowed': '按「{template}」自动批准',
   'autoApproval.rejected': '按「{template}」自动拒绝',
   'autoApproval.tool': '工具：{tool}',
+  'autoApproval.paused.consecutive':
+    '{name} 的自动审批已在本会话暂停：连续 3 次被拒绝。之后每个请求都会发卡片，你批准一次即恢复。',
+  'autoApproval.paused.session':
+    '{name} 的自动审批已在本会话暂停：本会话已被拒绝 20 次。之后每个请求都会发卡片，你批准一次即恢复。',
+  'autoApproval.resumed': '{name} 的自动审批已在本会话恢复，继续按「{template}」审核',
   'autoApproval.template.cautious': '谨慎',
   'autoApproval.template.cautiousHint': '允许读取和规划；凡是会离开这台电脑的操作都交给你。',
   'autoApproval.template.getWorkDone': '把活干完',
@@ -4573,6 +4585,12 @@ export const en = {
   'humanInbox.assignmentBlocked': "{bot}'s Assignment is blocked",
   'humanInbox.assignmentReport': "{bot}'s Assignment is complete",
   'humanInbox.repair': "{bot}'s message needs review",
+  'humanInbox.autoRejection': "{bot}'s call was auto-rejected",
+  'humanInbox.autoRejection.meta': 'Tool {tool} · template {template}',
+  'humanInbox.autoRejection.allow': 'Allow this once anyway',
+  'humanInbox.autoRejection.hint':
+    'Only this exact call runs once. The Bot is told it may retry; later calls are still reviewed by the template.',
+  'humanInbox.autoRejection.input': 'Call input',
   'humanInbox.openBotInbox': 'Open Bot Inbox',
   'humanInbox.sourceUnavailable': 'Source Channel is unavailable',
   'humanInbox.messageUnavailable': 'Source message is unavailable',
@@ -5006,6 +5024,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'dock.reset': 'Reset layout',
   'dock.close': 'Close {label}',
   'dock.empty': 'Nothing to show for this Channel.',
+  'dock.cardUnavailable': 'Open a Channel to use it',
   'im.localTarget': 'Local receive target',
   'im.inboxTarget': 'This Bot Inbox only',
   'im.targetUnavailable': 'Previous group unavailable',
@@ -6784,6 +6803,11 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'autoApproval.allowed': 'auto-approved by {template}',
   'autoApproval.rejected': 'auto-rejected by {template}',
   'autoApproval.tool': 'Tool: {tool}',
+  'autoApproval.paused.consecutive':
+    'Auto approval paused for {name} in this Session after 3 rejections in a row. Every request posts a card until you approve one.',
+  'autoApproval.paused.session':
+    'Auto approval paused for {name} in this Session after 20 rejections. Every request posts a card until you approve one.',
+  'autoApproval.resumed': 'Auto approval resumed for {name} in this Session under {template}',
   'autoApproval.template.cautious': 'Cautious',
   'autoApproval.template.cautiousHint':
     'Allows reading and planning; sends anything that leaves the computer to you.',
