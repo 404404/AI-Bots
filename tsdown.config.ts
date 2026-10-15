@@ -51,7 +51,6 @@ function clientBundle(id: string, entry: string[], outDir: string): UserConfig {
 
 export const CLIENT_BUNDLE_OUT_DIR = 'packages/client/lib';
 
-/** Short git SHA and build time shown as the Build row in Settings → About. Env vars override git. */
 export function buildStamp(env: NodeJS.ProcessEnv = process.env): { sha: string; time: string } {
   let sha = env['BOTHARNESS_BUILD_SHA']?.trim();
   if (!sha) {
@@ -75,8 +74,6 @@ const clientBase = clientBundle(
   CLIENT_BUNDLE_OUT_DIR,
 );
 
-// Only the uncommitted Web Client bundle carries the stamp; the committed Browser and Computer
-// bundles stay reproducible for the verify workflow's git diff check.
 export const clientBundleOptions: UserConfig = {
   ...clientBase,
   define: { ...clientBase.define, __BOTHARNESS_BUILD__: JSON.stringify(buildStamp()) },

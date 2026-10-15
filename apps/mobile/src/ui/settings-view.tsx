@@ -41,7 +41,6 @@ export function SettingsView({
   hostName: string | undefined;
   connection: ConnectionState;
   loadUsage?: (() => Promise<OverviewUsage>) | undefined;
-  /** Build id shown under About, e.g. "d9bbfbdfe · 2026-10-15 18:30". */
   build?: string;
   actions: SettingsActions;
 }) {
