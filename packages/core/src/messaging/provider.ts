@@ -6,6 +6,7 @@ export interface MessagingAccount {
   connected: boolean;
   typingSupported?: boolean;
   reactionSupported?: boolean;
+  postSupported?: boolean;
   unsupported?: 'checked-send';
 }
 

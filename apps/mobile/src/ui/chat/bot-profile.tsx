@@ -8,7 +8,7 @@ import {
   type ProfilePart,
 } from '../../host/bot-profile';
 import type { RosterBot, RosterChannel } from '../../host/client';
-import type { BotScheduleSummary } from '../../host/wire';
+import type { BotScheduleSummary, ProfileActivity } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
@@ -23,6 +23,7 @@ import {
   PlusIcon,
 } from '../shell/icons';
 import { t } from '../strings';
+import { ActivityGlance } from './activity-glance';
 import { botStateTone } from './bot-tone';
 import { MemoryEntryRow } from './memory-browser';
 import { routineDetail } from './routine-text';
@@ -32,7 +33,14 @@ const ICON = 22;
 const COLLAPSED_LINES = 6;
 const LONG_TEXT = 280;
 
-export const PROFILE_SECTIONS = ['identity', 'memory', 'routines', 'channels', 'files'] as const;
+export const PROFILE_SECTIONS = [
+  'activity',
+  'identity',
+  'memory',
+  'routines',
+  'channels',
+  'files',
+] as const;
 export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 
 type RowBody =
@@ -41,6 +49,7 @@ type RowBody =
   | { kind: 'entry'; entry: MemoryEntry }
   | { kind: 'routine'; routine: BotScheduleSummary }
   | { kind: 'new-routine' }
+  | { kind: 'activity'; activity: ProfileActivity }
   | { kind: 'note'; text: string }
   | { kind: 'failed'; error: string }
   | { kind: 'loading' };
@@ -55,6 +64,7 @@ export interface BotProfileActions {
   onOpenMemory(entry: MemoryEntry): void;
   onOpenRoutine?(routine: BotScheduleSummary): void;
   onNewRoutine?(): void;
+  onOpenActivity(): void;
 }
 
 function frame(section: ProfileSection, bodies: RowBody[]): Row[] {
@@ -83,6 +93,14 @@ export function profileRows(
   addRoutine = false,
 ): Record<ProfileSection, Row[]> {
   return {
+    activity: frame(
+      'activity',
+      profile?.activity === undefined
+        ? [{ kind: 'loading' }]
+        : profile.activity.status === 'failed'
+          ? [{ kind: 'failed', error: profile.activity.error }]
+          : [{ kind: 'activity', activity: profile.activity.value }],
+    ),
     identity: frame(
       'identity',
       partRows(profile?.identity, 'identity', (soul) =>
@@ -92,7 +110,10 @@ export function profileRows(
     memory: frame(
       'memory',
       partRows(profile?.memory, 'memory', (memory) =>
-        memoryEntries(memory.files, '').map((entry) => ({ kind: 'entry', entry })),
+        memoryEntries(memory.files, '').map((entry) => ({
+          kind: 'entry',
+          entry,
+        })),
       ),
     ),
     routines: frame(
@@ -186,7 +207,12 @@ function ProfileHeader({
         </Text>
       )}
       <View
-        style={{ flexDirection: 'row', alignSelf: 'stretch', gap: space.x3, paddingTop: space.x3 }}
+        style={{
+          flexDirection: 'row',
+          alignSelf: 'stretch',
+          gap: space.x3,
+          paddingTop: space.x3,
+        }}
       >
         <ProfileAction
           label={t.profileMessage}
@@ -221,12 +247,14 @@ function ProfileHeader({
 }
 
 function ProfileRow({
+  bot,
   row,
   expanded,
   onToggle,
   onRetry,
   actions,
 }: {
+  bot: RosterBot;
   row: Row;
   expanded: boolean;
   onToggle(): void;
@@ -234,6 +262,8 @@ function ProfileRow({
   actions: BotProfileActions;
 }) {
   const theme = useDesignTheme();
+  if (row.kind === 'activity')
+    return <ActivityGlance bot={bot} activity={row.activity} onOpen={actions.onOpenActivity} />;
   if (row.kind === 'entry')
     return (
       <MemoryEntryRow
@@ -330,7 +360,11 @@ function ProfileRow({
           accessibilityRole="button"
           accessibilityLabel={t.tryAgain}
           onPress={onRetry}
-          style={{ minHeight: theme.touch, justifyContent: 'center', alignSelf: 'flex-start' }}
+          style={{
+            minHeight: theme.touch,
+            justifyContent: 'center',
+            alignSelf: 'flex-start',
+          }}
         >
           <Text tone="accent" strong>
             {t.tryAgain}
@@ -371,7 +405,11 @@ function ProfileRow({
           accessibilityRole="button"
           accessibilityLabel={expanded ? t.showLess : t.showMore}
           onPress={onToggle}
-          style={{ minHeight: theme.touch, justifyContent: 'center', alignSelf: 'flex-start' }}
+          style={{
+            minHeight: theme.touch,
+            justifyContent: 'center',
+            alignSelf: 'flex-start',
+          }}
         >
           <Text tone="accent" strong>
             {expanded ? t.showLess : t.showMore}
@@ -430,7 +468,10 @@ export function BotProfileSheet({
           onNewRoutine: () => setTarget({ kind: 'new' }),
         };
   const rows = profileRows(profile, channels, routines !== undefined);
-  const sections = PROFILE_SECTIONS.map((section) => ({ section, data: rows[section] }));
+  const sections = PROFILE_SECTIONS.map((section) => ({
+    section,
+    data: rows[section],
+  }));
 
   return (
     <SectionList
@@ -447,13 +488,18 @@ export function BotProfileSheet({
           variant="meta"
           tone="muted"
           strong
-          style={{ paddingHorizontal: space.x5, paddingTop: space.x5, paddingBottom: space.x3 }}
+          style={{
+            paddingHorizontal: space.x5,
+            paddingTop: space.x5,
+            paddingBottom: space.x3,
+          }}
         >
           {t.profileSection[section.section]}
         </Text>
       )}
       renderItem={({ item }) => (
         <ProfileRow
+          bot={bot}
           row={item}
           expanded={expanded.has(item.key)}
           onRetry={read}

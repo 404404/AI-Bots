@@ -31,6 +31,9 @@ import type {
   BotScheduleSummary,
   MemoryFile,
   MemorySnapshot,
+  OverviewMemory,
+  OverviewUsage,
+  ProfileActivity,
   WorkspaceGrantSummary,
   ChannelListItem,
   HumanAttentionItem,
@@ -90,4 +93,7 @@ export type WireContract = [
   Assert<Accepts<BotScheduleFiring, Value<'scheduleRunNow'>['firing']>>,
   Assert<Accepts<string[], Value<'schedulePreview'>['occurrences']>>,
   Assert<Accepts<WorkspaceGrantSummary, Value<'grants'>['grants'][number]>>,
+  Assert<Accepts<OverviewUsage, Value<'overviewUsage'>>>,
+  Assert<Accepts<OverviewMemory, Value<'overviewMemory'>>>,
+  Assert<Accepts<ProfileActivity, Value<'profileActivity'>>>,
 ];

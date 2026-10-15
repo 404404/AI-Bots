@@ -10,6 +10,10 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded production-factory option forwarding and fresh native receiver qualification in the [local development guide](../dsh-dev/SKILL.md), verified with a DSH `0.2.0-rc.2` Host and the immutable dsh-im ordinary-text candidate; DSH/Cordis Context and Skill behavior remain unchanged ([#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155)).
+
+- Recorded qualification of an external Provider's exported Service and per-account checked post capabilities in the [local development guide](../dsh-dev/SKILL.md), verified with a DSH `0.2.0-rc.2` Host and dsh-im `.20`; DSH/Cordis Context and Skill behavior remain unchanged ([#1154](https://github.com/BotHarness/DeepSeekBot/issues/1154)).
+
 - Recorded Windows pnpm absolute patch-path failure, isolated CLI staging and real DM verification in the [local development guide](../dsh-dev/SKILL.md), verified against DSH 0.2.0 RC1; DSH/Cordis vocabulary and Skill behavior remain unchanged ([#1409](https://github.com/BotHarness/DeepSeekBot/issues/1409)).
 
 - Recorded in the [local development guide](../dsh-dev/SKILL.md) that a stream method's Host refusal reaches the Client as a terminal Remote failure with its code, and that a stream and its legacy route should encode one frame source, verified with authenticated refusals on `/api/remote.mux` on DSH `0.2.0-rc.1`; DSH/Cordis Context and Skill behavior remain unchanged ([#1500](https://github.com/BotHarness/DeepSeekBot/issues/1500)).

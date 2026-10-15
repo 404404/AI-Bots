@@ -1,5 +1,5 @@
 {
-  "recordedFrom": "isolated Host via scripts/dev-instance.mjs, DSH 0.2.0-rc.2, 2026-10-14",
+  "recordedFrom": "isolated Host via scripts/dev-instance.mjs, DSH 0.2.0-rc.2, 2026-10-14; profileActivity from an isolated Host via scripts/verify-app.mjs, DSH 0.2.0-rc.2, opencode-go/step-5-preview-free, 2026-10-15 (two DM replies)",
   "login": {
     "accepted": {
       "status": 303,
@@ -285,6 +285,67 @@
                   "id": "ae3c2db4-eabc-436b-b693-e930d0ee8dbc"
                 }
               ]
+            }
+          }
+        }
+      }
+    ],
+    "profileActivity": [
+      {
+        "status": 200,
+        "body": {
+          "type": "server-response",
+          "rpcId": "0d6f3a52-5c1e-4f0b-9a57-2b8f4e1c7a10",
+          "result": {
+            "ok": true,
+            "value": {
+              "slug": "bot-bbd6fd939ee44e7582945888df0b86ca",
+              "weeks": 1,
+              "since": "2026-10-08T14:49:23.694Z",
+              "createdDay": "2026-10-15",
+              "today": "2026-10-15",
+              "events": [
+                {
+                  "day": "2026-10-15",
+                  "reason": "human-dm",
+                  "count": 2
+                }
+              ],
+              "memoryCommits": [
+                {
+                  "day": "2026-10-15",
+                  "count": 2
+                }
+              ],
+              "tokens": [
+                {
+                  "day": "2026-10-15",
+                  "inputTokens": 27018,
+                  "outputTokens": 773,
+                  "cacheReadTokens": 179648,
+                  "cacheWriteTokens": 0
+                }
+              ],
+              "tokenTotals": {
+                "inputTokens": 27018,
+                "outputTokens": 773,
+                "cacheReadTokens": 179648,
+                "cacheWriteTokens": 0
+              },
+              "modelUsageRows": [
+                {
+                  "day": "2026-10-15",
+                  "purpose": "orchestrator",
+                  "provider": "opencode-go",
+                  "model": "step-5-preview-free",
+                  "inputTokens": 27018,
+                  "outputTokens": 773,
+                  "cacheReadTokens": 179648,
+                  "cacheWriteTokens": 0,
+                  "totalTokens": 207439
+                }
+              ],
+              "modelUsageStatus": "ready"
             }
           }
         }
