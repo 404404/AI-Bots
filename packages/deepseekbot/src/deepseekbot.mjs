@@ -1,4 +1,4 @@
-import { runBotCreateCli } from '@botharness/core';
+import { runBotCreateCli } from '@botharness/core/cli';
 
 async function readStdin() {
   const chunks = [];
