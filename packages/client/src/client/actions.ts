@@ -141,6 +141,9 @@ import {
   loadToolApprovalRules,
   loadApprovalTemplates,
   setBotApprovalTemplate,
+  loadApprovalReviewerModel,
+  setApprovalReviewerModel,
+  type ApprovalReviewerModelView,
   type ApprovalTemplateView,
   loadAssignmentAccess,
   setAssignmentAccess,
@@ -676,6 +679,8 @@ export interface BridgeActions {
     slug: string,
   ): Promise<{ templates: ApprovalTemplateView[]; selected: string | null }>;
   setBotApprovalTemplate?(slug: string, template: string | null): Promise<void>;
+  approvalReviewerModel?(): Promise<ApprovalReviewerModelView>;
+  setApprovalReviewerModel?(model: ModelRouteView | null): Promise<ApprovalReviewerModelView>;
   revokeToolApprovalRule(slug: string, id: string): Promise<void>;
   toolApprovalStatus(channelId: string, messageId: string): Promise<'pending' | 'expired'>;
   privateInputStatus?(
@@ -1596,6 +1601,8 @@ export function createActions(
     listToolApprovalRules: (slug) => loadToolApprovalRules(call, slug),
     approvalTemplates: (slug) => loadApprovalTemplates(call, slug),
     setBotApprovalTemplate: (slug, template) => setBotApprovalTemplate(call, slug, template),
+    approvalReviewerModel: () => loadApprovalReviewerModel(call),
+    setApprovalReviewerModel: (model) => setApprovalReviewerModel(call, model),
     revokeToolApprovalRule: (slug, id) => revokeToolApprovalRule(call, slug, id),
     toolApprovalStatus: (channelId, messageId) =>
       loadToolApprovalStatus(call, channelId, messageId),

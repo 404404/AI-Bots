@@ -418,7 +418,7 @@ printf '{"title":"给植物浇水"}' | deepseekbot todo-tool <bot-id> todos_add 
 
 ### 自动审批（审批模板）
 
-PersonaBot 可以选择一个审批模板（[ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)）。选中后，审批员会先按模板回答此 Bot 的操作审批（越出沙箱的 Shell 命令、文件工具、打开附件），再决定是否发卡片。密钥工具、浏览器和电脑授权，以及任何修改审批策略的调用，仍然以卡片交给 Human。本版本内置两个只读模板：`cautious` 和 `get-work-done`。
+PersonaBot 可以选择一个审批模板（[ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)）。选中后，审批员会先按模板回答此 Bot 的审批，再决定是否发卡片：越出沙箱的 Shell 命令、文件工具、打开附件、`secret_cli` 和 `secret_mcp_connect` 调用，以及电脑和浏览器授权。对密钥工具，审批员只看到程序、参数、账号和占位符名称，看不到任何密钥值或环境变量值；对授权，它看到设备和 Session。`cautious` 把密钥工具和两种授权都交给 Human；`get-work-done` 允许已知程序配合它自己服务的账号，并在任务需要时允许浏览器授权。任何修改审批策略的调用仍然以卡片交给 Human。本版本内置两个只读模板：`cautious` 和 `get-work-done`。
 
 ```bash
 deepseekbot approval-templates [--bot <bot-id>]
@@ -439,6 +439,18 @@ deepseekbot inbox-allow-once autoreject:<source-event-id>
 `inbox-allow-once` 返回 `{accepted, channelId, messageId}`，其中 `messageId` 是 Human 在 Channel 里的放行消息。已经放行过的条目，或 Bot 已不在该 Channel 时，返回错误码 `auto-rejection-unavailable`。
 
 **熔断。** 同一会话连续 3 次被拒绝，或累计 20 次被拒绝后，此会话的自动审批暂停：之后每个请求都发卡片，Channel 里会出现一条提示。Human 在此会话里给出的下一次批准（卡片上或收件箱里）会恢复自动审批并重新计数。阈值固定。熔断状态和尚未使用的“允许这一次”只保存在 Host 内存里，所以 Host 重启后自动审批会重新计数并恢复，Bot 还没用掉的放行会失效，收件箱条目仍算已处理。
+
+### 审批员模型
+
+默认情况下，每个 Bot 的审批员用这个 Bot 自己的模型。一个 Profile 级设置可以改成所有 Bot 共用一个审批员模型，比如一个便宜又快的模型。
+
+```bash
+deepseekbot approval-reviewer-model
+deepseekbot approval-reviewer-model-set deepseek/<model> [--effort <effort>]
+deepseekbot approval-reviewer-model-set bot
+```
+
+两个命令都返回 `{follows, model}`：`follows` 为 `bot`（跟随每个 Bot 自己的模型，`model` 为 `null`）、`model`（所有审批都用指定模型）或 `invalid`（设置文件读不出来）。指定模型时还会返回 `available`，为 `false` 时附带 `unavailableReason`。不在模型目录里、或服务商没有可用密钥的模型仍会保存，但之后每次审批都会改发普通的人类审批卡片，并在 `logs.db` 里写入 `fallback=model-unavailable` 和原因；审批员绝不会自己换用别的模型。`logs.db` 里每条 `approval-review` 记录都写明这次用的 `model` 和 `reviewSession`。Bot 在自己的 Shell 里运行 `approval-reviewer-model-set` 时，这次调用一定会变成发给人类的审批卡片，已保存的规则和审批员都不能替你回答。拒绝时带错误码：`usage`（没有 `<provider>/<model>`，或对 `bot` 加了 `--effort`）和 `invalid-input`。
 
 ### 模型、用量与活动
 

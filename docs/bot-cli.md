@@ -425,7 +425,7 @@ printf '{"title":"Water the plants"}' | deepseekbot todo-tool <bot-id> todos_add
 
 ### Auto approval (Approval Templates)
 
-A PersonaBot can select one Approval Template ([ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)). While one is selected, an Approval Reviewer answers the Bot's operation approvals (Shell commands that leave the sandbox, file tools, opening an attachment) by the template before any card is posted. Secret tools, Browser and Computer authorization, and any call that changes approval policy still go to the Human as cards. This release ships two read-only templates, `cautious` and `get-work-done`.
+A PersonaBot can select one Approval Template ([ADR-0207](adr/0207-an-approval-template-lets-a-reviewer-session-answer-tool-approvals.md)). While one is selected, an Approval Reviewer answers the Bot's approvals by the template before any card is posted: Shell commands that leave the sandbox, file tools, opening an attachment, `secret_cli` and `secret_mcp_connect` calls, and Computer and Browser Authorization. For a secret tool the reviewer sees the program, its arguments, the account and the placeholder names, never a secret value or an environment value; for an Authorization it sees the device and the Session. `cautious` sends secret tools and both Authorizations to the Human; `get-work-done` allows a known program with the account for its own service, and Browser Authorization when the task needs it. Any call that changes approval policy still goes to the Human as a card. This release ships two read-only templates, `cautious` and `get-work-done`.
 
 ```bash
 deepseekbot approval-templates [--bot <bot-id>]
@@ -446,6 +446,18 @@ deepseekbot inbox-allow-once autoreject:<source-event-id>
 `inbox-allow-once` returns `{accepted, channelId, messageId}`, where `messageId` is the Human's override message in the Channel. An item that was already allowed, or whose Bot left the Channel, is refused with `auto-rejection-unavailable`.
 
 **Circuit breaker.** After 3 rejections in a row, or 20 in one Session, auto approval pauses for that Session: every request posts a card, and the Channel shows a notice. The next approval the Human gives in that Session, on a card or from the Inbox, resumes it with fresh counts. The thresholds are fixed. The breaker and unused "allow once" overrides live in Host memory, so a Host restart resumes auto approval with fresh counts and drops an override the Bot has not used yet; the Inbox item stays handled.
+
+### Approval Reviewer model
+
+By default each Bot's Approval Reviewer runs on that Bot's own model. One Profile-wide setting can name a single reviewer model for every Bot instead, for example a cheap, fast one.
+
+```bash
+deepseekbot approval-reviewer-model
+deepseekbot approval-reviewer-model-set deepseek/<model> [--effort <effort>]
+deepseekbot approval-reviewer-model-set bot
+```
+
+Both commands return `{follows, model}`: `follows` is `bot` (each Bot's own model, `model` is `null`), `model` (the named model is used for every review) or `invalid` (the setting file cannot be read). For a named model they also return `available` and, when it is `false`, `unavailableReason`. A model that is not in the catalog, or whose provider has no working key, is still saved, but every review then posts the ordinary Human card and writes `fallback=model-unavailable` with the reason to `logs.db`; the reviewer never switches to another model on its own. Each review's `approval-review` line in `logs.db` names the `model` and the `reviewSession` it used. When a Bot runs `approval-reviewer-model-set` from its own Shell, the call always becomes a Human approval card; neither a saved rule nor the Approval Reviewer can answer it. Refusals carry a code: `usage` (no `<provider>/<model>`, or `--effort` with `bot`) and `invalid-input`.
 
 ### Models, usage and activity
 

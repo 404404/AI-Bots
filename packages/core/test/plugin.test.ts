@@ -544,6 +544,8 @@ describe('plugin entry', () => {
       'browserProfileSet',
       'approvalTemplates',
       'botApprovalTemplateSet',
+      'approvalReviewerModel',
+      'approvalReviewerModelSet',
       'standingLimitsSet',
       'botAvatarSet',
       'botAppearanceSet',
