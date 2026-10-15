@@ -10,6 +10,7 @@ vi.mock('react-native-safe-area-context', () => ({
 vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null, SvgXml: () => null }));
 
 import type { OverviewMemory, OverviewUsage, UsagePeriod } from '../src/host/usage';
+import { dayLabel } from '../src/host/usage-days';
 import { SettingsView, type SettingsActions } from '../src/ui/settings-view';
 import { daysLabel, tokenAmount } from '../src/ui/shell/usage-card';
 import { t } from '../src/ui/strings';
@@ -219,5 +220,42 @@ describe('Usage screen', () => {
     expect(button(view, t.usageMore)).toBeNull();
     expect(view.textContent).toContain('Juno');
     expect(view.textContent).toContain('Mika');
+  });
+
+  it('shows the tapped day in the headline, and the week again on a second tap', async () => {
+    const source = sources();
+    const view = await render(<UsageView sources={source} roster={[]} onOpenBot={vi.fn()} />);
+    const days = active.overviewUsage.week.days;
+    const busy = days.findIndex((row) => (row.totalTokens ?? 0) > 0);
+    const quiet = days.findIndex((row) => row.totalTokens === 0);
+    const bar = (index: number) =>
+      view.querySelector<HTMLButtonElement>(`[data-testid="day-bar-${days[index]!.day}"]`)!;
+    const headline = () => view.querySelector('[role="header"]')!.textContent;
+    const total = tokenAmount(active.overviewUsage.week.totals.totalTokens);
+    expect(headline()).toContain(total);
+
+    await act(async () => bar(quiet).click());
+    expect(headline()).toBe(`0${t.usageUnit}`);
+    expect(view.textContent).toContain(dayLabel(days[quiet]!.day));
+
+    await act(async () => bar(busy).click());
+    expect(headline()).toBe(`${tokenAmount(days[busy]!.totalTokens)}${t.usageUnit}`);
+
+    await act(async () => bar(busy).click());
+    expect(headline()).toContain(total);
+    expect(view.textContent).not.toContain(dayLabel(days[quiet]!.day));
+  });
+
+  it('forgets the picked day when the period changes', async () => {
+    const view = await render(<UsageView sources={sources()} roster={[]} onOpenBot={vi.fn()} />);
+    const first = active.overviewUsage.week.days[0]!.day;
+    await act(async () =>
+      view.querySelector<HTMLButtonElement>(`[data-testid="day-bar-${first}"]`)!.click(),
+    );
+    await act(async () => button(view, t.usageToday)!.click());
+    await act(async () => button(view, t.usageWeek)!.click());
+    expect(view.querySelector('[role="header"]')!.textContent).toContain(
+      tokenAmount(active.overviewUsage.week.totals.totalTokens),
+    );
   });
 });

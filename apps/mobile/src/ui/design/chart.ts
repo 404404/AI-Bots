@@ -7,6 +7,7 @@ export const chart = {
   stub: 2,
   cell: 12,
   gap: 3,
+  dim: 0.35,
 } as const;
 
 const SERIES_STEPS = [0.62, 0.32, 0] as const;

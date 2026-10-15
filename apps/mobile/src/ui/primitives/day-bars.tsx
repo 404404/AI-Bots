@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { chart } from '../design/chart';
 import { useDesignTheme } from '../design/theme';
@@ -28,12 +28,16 @@ export function DayBars({
   height,
   empty,
   accessibilityLabel,
+  selected,
+  onSelect,
 }: {
   bars: readonly DayBar[];
   colors: readonly string[];
   height: number;
   empty: string;
   accessibilityLabel: string;
+  selected?: number | undefined;
+  onSelect?: (index?: number) => void;
 }) {
   const theme = useDesignTheme();
   const heights = barHeights(bars, height);
@@ -49,7 +53,18 @@ export function DayBars({
         const segments = heights[index] ?? [];
         const total = segments.reduce((sum, value) => sum + value, 0);
         return (
-          <View key={bar.key} style={{ flex: 1, alignItems: 'center', gap: space.x2 }}>
+          <Pressable
+            key={bar.key}
+            {...(onSelect === undefined ? {} : { testID: `day-bar-${bar.key}` })}
+            disabled={onSelect === undefined}
+            onPress={() => onSelect?.(selected === index ? undefined : index)}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              gap: space.x2,
+              opacity: selected === undefined || selected === index ? 1 : chart.dim,
+            }}
+          >
             <View
               style={{ height, width: '100%', alignItems: 'center', justifyContent: 'flex-end' }}
             >
@@ -94,7 +109,7 @@ export function DayBars({
                 {bar.label ?? ''}
               </Text>
             ) : null}
-          </View>
+          </Pressable>
         );
       })}
     </View>

@@ -6,6 +6,7 @@ export type { OverviewMemory, OverviewUsage, UsagePeriod } from './wire';
 export interface UsageDay {
   day: string;
   tokens: number | null;
+  partial?: boolean;
 }
 
 export interface UsageWeek {
@@ -68,7 +69,11 @@ export function usageWeek(usage: OverviewUsage): UsageWeek {
   return {
     total: usage.totals.totalTokens,
     partial: usage.totals.partial === true,
-    days: usage.days.map((row) => ({ day: row.day, tokens: row.totalTokens })),
+    days: usage.days.map((row) => ({
+      day: row.day,
+      tokens: row.totalTokens,
+      ...(row.partial === true ? { partial: true } : {}),
+    })),
   };
 }
 

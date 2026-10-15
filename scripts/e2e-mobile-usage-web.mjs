@@ -310,6 +310,36 @@ async function main() {
     await shot('2-usage-week');
     steps.push('the card opens the Usage screen with the split, the Bots and Memory activity');
 
+    const headline = (expected) =>
+      page.waitForFunction(
+        (expected) =>
+          [...document.querySelectorAll('[role="heading"]')].some(
+            (node) => node.textContent?.trim() === `${expected} tokens`,
+          ),
+        { timeout: 10_000 },
+        expected,
+      );
+    const bar = (index) => ({
+      click: async () => {
+        await new Promise((done) => setTimeout(done, 400));
+        const handle = await page.$(`[data-testid="day-bar-${week.days[index].day}"]`);
+        const box = await handle.boundingBox();
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      },
+    });
+    const busy = week.days.findLastIndex((row) => row.totalTokens > 0);
+    const quiet = week.days.findIndex((row) => row.totalTokens === 0);
+    await bar(quiet).click();
+    await headline('0');
+    await shot('2b-usage-day');
+    await bar(busy).click();
+    await headline(compact(week.days[busy].totalTokens));
+    checks.tapShowsDay = true;
+    await bar(busy).click();
+    await headline(compact(week.totals.totalTokens));
+    checks.tapAgainShowsWeek = true;
+    steps.push('tapping a bar shows that day in the headline; tapping it again shows the week');
+
     await page.locator('::-p-aria(Today)').click();
     await text(`${compact(today.totals.totalTokens)}`);
     checks.todaySwitchRefetched = true;
