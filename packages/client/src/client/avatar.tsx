@@ -477,15 +477,3 @@ export function PersonaBotFacepile({
     </span>
   );
 }
-
-export function Blobatar({ seed, size }: { seed: string; size: number }): ReactElement {
-  return (
-    <PersonaBotAvatar
-      personaBotId={seed}
-      name={seed}
-      size={size}
-      indicator={false}
-      t={zhTranslate}
-    />
-  );
-}

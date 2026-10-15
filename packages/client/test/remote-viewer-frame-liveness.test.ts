@@ -15,7 +15,7 @@ import {
   upstreamBusy,
   type StreamSample,
   type StreamTracker,
-} from '../src/client/frame-liveness.js';
+} from '../src/client/remote-viewer/frame-liveness.js';
 
 function statusElement(text: string, hidden: boolean): unknown {
   return {
