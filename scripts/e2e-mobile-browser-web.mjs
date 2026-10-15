@@ -337,6 +337,19 @@ async function main() {
     checks.resumed = (await takeover()).takeover === false;
     steps.push('tapped Resume: the Bot has the Browser again');
 
+    await page.locator('::-p-aria(Pause Bot)').click();
+    await page.waitForSelector('[aria-label="Resume"]', { timeout: 15_000 });
+    await page.locator('::-p-aria(Close the Browser)').click();
+    let released = false;
+    for (let i = 0; i < 50 && !released; i += 1) {
+      released = (await takeover()).takeover === false;
+      if (!released) await new Promise((done) => setTimeout(done, 200));
+    }
+    checks.closeHandsBack = released;
+    await page.locator('::-p-aria(Browser)').click();
+    await frameShown();
+    steps.push('paused again and closed the screen: the Bot has the Browser back');
+
     checks.nothingOutsideGateway = outside.length === 0;
 
     const listed = await (

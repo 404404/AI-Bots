@@ -55,6 +55,7 @@ export default function BrowserScreen() {
     return () => {
       shown.remove();
       hidden.remove();
+      if (viewer?.getState().takeover === true) void viewer.setTakeover(false);
       viewer?.stop();
     };
   }, [viewer]);
