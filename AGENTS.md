@@ -75,6 +75,10 @@ The dev VPS lives on the Human's Tailscale tailnet. Per-machine values (SSH host
 - Hands off other sessions' stacks (e.g. `/opt/botharness/bot-seo`): observe, never restart, rebuild, or reconfigure without that session's owner.
 - Phone QA without tailnet: keep DSH loopback-bound and publish it with a Cloudflare quick tunnel; see [the phone QA runbook](docs/agents/phone-qa-tunnel.md) for trusted-host, token rotation, and stale-shell handling.
 
+### Shared device QA (AX)
+
+Native checks for `apps/mobile` share one Mac, one QA Simulator, one physical iPhone and one QA Host among all coding agents. Before you boot a Simulator, build the app, start a Host or touch the phone, follow [shared device QA](docs/agents/device-qa.md): submit to the Simulator queue instead of running your own, batch on a local `qa/batch-<n>` branch, use the dedicated QA Host, ask the Human for the steps only they can do, and report redacted results on each PR.
+
 ### SEO research and tracking (AX)
 
 Before SEO research, blog planning, channel adaptation, or ranking tracking, read [the SEO AX adapter](docs/agents/seo-ax.md). It routes agents to the canonical bot-seo shared-VPS workflow; do not substitute a machine-local OpenSEO instance or treat multi-agent capacity as publishing permission.
