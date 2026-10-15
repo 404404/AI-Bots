@@ -71,6 +71,7 @@ import {
 } from './release/service.js';
 import { createGitService } from './memory/managed-git.js';
 import { createProcessRestarter, type ReleaseRestarter } from './release/restart.js';
+import { hostReleaseActivity } from './release/activity.js';
 import {
   createTelemetryService,
   installedDshVersion,
@@ -1814,6 +1815,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       ledgers: () => runningRelease.ledgers,
       installer: () => releaseInstaller.current,
       restarter: () => releaseRestarter.current,
+      activity: () => hostReleaseActivity({ agents: ctx.agents.list(), jobs: ctx.get('jobs') }),
     }),
     telemetry,
     git,
