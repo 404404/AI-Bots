@@ -13,8 +13,6 @@ import { Text } from '../primitives/text';
 import { ChevronRightIcon } from '../shell/icons';
 import { t } from '../strings';
 
-const ICON = 20;
-
 export function tokenTotalText(total: TokenTotal, compact = true): string {
   if (total.total === null)
     return total.status === 'unknown' ? t.activityUnknown : t.activityUnavailable;
@@ -40,21 +38,21 @@ function Glance({ activity, onOpen }: { activity: ProfileActivity; onOpen(): voi
       onPress={onOpen}
       style={({ pressed }) => ({
         gap: space.x4,
-        paddingHorizontal: space.x5,
-        paddingVertical: space.x4,
+        padding: space.x5,
         borderRadius: radius.md,
         backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
       })}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.x3 }}>
-        <View style={{ flex: 1, gap: space.x1 }}>
-          <Text variant="meta" tone="muted">
-            {t.activityTokensLabel}
-          </Text>
-          <Text variant="title">{tokens}</Text>
-        </View>
-        <ChevronRightIcon color={theme.color.subtle} size={ICON} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
+        <Text strong style={{ flex: 1 }}>
+          {t.activityTokensLabel}
+        </Text>
+        <ChevronRightIcon color={theme.color.muted} size={space.x5} />
       </View>
+      <Text variant="display" numberOfLines={1}>
+        {tokenTotalText(glance.total)}
+        <Text tone="muted">{t.usageUnit}</Text>
+      </Text>
       <DayBars
         bars={glance.days.map((day, index) => ({
           key: day,

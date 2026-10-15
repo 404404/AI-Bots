@@ -20,9 +20,9 @@ import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { DayBars } from '../primitives/day-bars';
 import { DayHeat } from '../primitives/day-heat';
+import { Segmented } from '../primitives/segmented';
 import { Text } from '../primitives/text';
 import { ChevronLeftIcon, ChevronRightIcon } from '../shell/icons';
-import { Chip } from '../shell/activity-filters';
 import { t } from '../strings';
 import { tokenTotalText } from './activity-glance';
 
@@ -395,19 +395,15 @@ export function ActivityDetailView({
         style={{ flex: 1, backgroundColor: theme.color.surface }}
         contentContainerStyle={{ padding: space.x5, gap: space.x3 }}
       >
-        <View
-          accessibilityLabel={t.activityWindowLabel}
-          style={{ flexDirection: 'row', gap: space.x3 }}
-        >
-          {ACTIVITY_WINDOWS.map((weeks) => (
-            <Chip
-              key={weeks}
-              label={t.activityWindow[weeks] ?? String(weeks)}
-              selected={query.weeks === weeks}
-              onPress={() => read({ weeks })}
-            />
-          ))}
-        </View>
+        <Segmented
+          label={t.activityWindowLabel}
+          options={ACTIVITY_WINDOWS.map((weeks) => ({
+            value: String(weeks),
+            label: t.activityWindow[weeks] ?? String(weeks),
+          }))}
+          value={String(query.weeks)}
+          onChange={(value) => read({ weeks: Number(value) as ActivityWindow })}
+        />
         {state.status === 'ready' ? (
           <Detail activity={state.value} onQuery={read} />
         ) : state.status === 'loading' ? (
