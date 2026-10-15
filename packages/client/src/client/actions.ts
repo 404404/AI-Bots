@@ -99,6 +99,7 @@ import {
   setMessagingChannelTarget,
   readMessagingSource,
   loadMessageAttachmentTarget,
+  loadChannelMediaTarget,
 } from './bridge.js';
 import {
   applyRosterBatch,
@@ -574,6 +575,11 @@ export interface BridgeActions {
     choice: HostFileOpen,
   ): Promise<void>;
   messageAttachmentDownload(channelId: string, messageId: string, fileId: string): Promise<void>;
+  bridgeFileCommands?(
+    sourceEventId: string,
+  ):
+    | (import('./host-file-menu.js').HostFileCommands & { available(): Promise<boolean> })
+    | undefined;
   workspaceFileTarget(slug: string, grantId: string): Promise<HostFileTarget>;
   workspaceFileApplications(slug: string, grantId: string): Promise<HostFileOptions>;
   workspaceFileOpen(slug: string, grantId: string, choice: HostFileOpen): Promise<void>;
@@ -2460,6 +2466,39 @@ export function createActions(
         },
       });
     },
+    bridgeFileCommands: (sourceEventId) =>
+      folderAccess?.nativeFiles === undefined
+        ? undefined
+        : {
+            available: () => folderAccess.nativeFiles!.available?.() ?? Promise.resolve(false),
+            target: (channelId, attachmentId) =>
+              loadChannelMediaTarget(call, channelId, sourceEventId, attachmentId),
+            applications: async (channelId, attachmentId) => {
+              const target = await loadChannelMediaTarget(
+                call,
+                channelId,
+                sourceEventId,
+                attachmentId,
+              );
+              return folderAccess.nativeFiles!.applications(target);
+            },
+            open: async (channelId, attachmentId, choice) => {
+              if (openingFile) throw new Error('A Host file open is already in progress');
+              openingFile = true;
+              try {
+                const target = await loadChannelMediaTarget(
+                  call,
+                  channelId,
+                  sourceEventId,
+                  attachmentId,
+                );
+                await folderAccess.nativeFiles!.open(target, choice);
+              } finally {
+                openingFile = false;
+              }
+            },
+            preferences: fileOpenPreferences,
+          },
     messageAttachmentTarget: (channelId, messageId, fileId) =>
       loadMessageAttachmentTarget(call, channelId, messageId, fileId),
     async messageAttachmentApplications(channelId, messageId, fileId) {

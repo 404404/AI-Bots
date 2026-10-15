@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -18,9 +18,22 @@ afterEach(async () => {
   );
 });
 
-async function host(handler: (method: string, args: Record<string, unknown>) => unknown) {
+async function host(
+  handler: (method: string, args: Record<string, unknown>) => unknown,
+  media?: { status: number; body: Uint8Array | string },
+) {
   const calls: Array<{ method: string; args: Record<string, unknown> }> = [];
+  const downloads: Array<{ url: string; authorized: boolean }> = [];
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (media && req.url?.startsWith('/api/botharness/attachment?')) {
+      downloads.push({ url: req.url, authorized: req.headers.cookie === 'authority=signed' });
+      res
+        .writeHead(media.status, {
+          'content-type': media.status === 200 ? 'application/octet-stream' : 'application/json',
+        })
+        .end(media.body);
+      return;
+    }
     if (req.method === 'GET') {
       res.setHeader('set-cookie', 'authority=signed; HttpOnly');
       res.writeHead(302, { location: '/' }).end();
@@ -44,7 +57,7 @@ async function host(handler: (method: string, args: Record<string, unknown>) => 
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('missing address');
-  return { url: `http://127.0.0.1:${address.port}`, calls };
+  return { url: `http://127.0.0.1:${address.port}`, calls, downloads };
 }
 
 async function invoke(argv: string[], url: string, stdin = '') {
@@ -65,6 +78,77 @@ const ok = (method: string, args: Record<string, unknown>) => ({
 });
 
 describe('Channel and group CLI commands', () => {
+  it('downloads exact original bytes with owner authorization without overwriting an existing file', async () => {
+    const bytes = Buffer.from('name,quantity\nalpha,17\n');
+    const live = await host(ok, { status: 200, body: bytes });
+    const path = join(mkdtempSync(join(tmpdir(), 'cli-source-media-')), 'original.csv');
+    const args = [
+      'channel-media-download',
+      'group',
+      '--source-event',
+      'source',
+      '--attachment',
+      'file',
+      '--out',
+      path,
+    ];
+    const result = await invoke(args, live.url);
+    expect(result.code).toBe(0);
+    expect(readFileSync(path)).toEqual(bytes);
+    expect(result.json.download).toMatchObject({
+      path,
+      bytes: bytes.byteLength,
+      mime: 'application/octet-stream',
+    });
+    expect(live.downloads).toEqual([
+      {
+        url: '/api/botharness/attachment?channelId=group&sourceEventId=source&attachmentId=file',
+        authorized: true,
+      },
+    ]);
+    writeFileSync(path, 'local edits');
+    expect((await invoke(args, live.url)).json.error.code).toBe('output-exists');
+    expect(readFileSync(path, 'utf8')).toBe('local edits');
+    const refused = await host(ok, {
+      status: 403,
+      body: JSON.stringify({
+        error: { code: 'source-unavailable', message: 'Attachment source is unavailable' },
+      }),
+    });
+    const denied = await invoke(args, refused.url);
+    expect(denied.code).not.toBe(0);
+    expect(denied.json.error.code).toBe('source-unavailable');
+    expect((await invoke(args.slice(0, -2), live.url)).json.error.code).toBe('usage');
+  });
+  it('resolves source media with Channel authority and preserves coded refusals', async () => {
+    const live = await host(ok);
+    const args = [
+      'channel-media-target',
+      'group',
+      '--source-event',
+      'source',
+      '--attachment',
+      'media',
+    ];
+    const resolved = await invoke(args, live.url);
+    expect(resolved.code, JSON.stringify(resolved.json)).toBe(0);
+    expect(live.calls).toEqual([
+      {
+        method: 'channelMediaTarget',
+        args: { channelId: 'group', sourceEventId: 'source', attachmentId: 'media' },
+      },
+    ]);
+    const refused = await host(() => ({
+      ok: false,
+      error: { code: 'source-unavailable', message: 'source-unavailable' },
+    }));
+    const result = await invoke(args, refused.url);
+    expect(result.code).not.toBe(0);
+    expect(result.json.error.code).toBe('source-unavailable');
+    for (const invalid of [args.slice(0, 2), [...args, '--source-event', 'other']])
+      expect((await invoke(invalid, live.url)).json.error.code).toBe('usage');
+    expect(live.calls).toHaveLength(1);
+  });
   it('maps each command to the bridge method and arguments the Web UI uses', async () => {
     const live = await host(ok);
     const png = join(mkdtempSync(join(tmpdir(), 'cli-channels-')), 'avatar.png');
