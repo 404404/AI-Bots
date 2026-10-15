@@ -92,7 +92,7 @@ describe('bot_create Bot tool', () => {
       display_name: 'Tim',
       dm_channel_id: dmChannelId('bot-new1'),
       memory_dir: registry.memoryDirFor('bot-new1'),
-      model: 'no-model-yet',
+      model: 'host-default',
     });
     const record = registry.get('bot-new1')!;
     expect(record).toMatchObject({

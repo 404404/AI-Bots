@@ -2656,7 +2656,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'bot_create',
         description:
-          'Create a new PersonaBot when the Human asks for one. Fill fields from the conversation; only display_name is required. Requires Human tool approval unless a saved rule or full access allows it. The new Bot is an independent peer with no Model Plan, grants, accesses or secrets copied from you. Report only from this result; on success it returns bot_id, display_name, dm_channel_id, memory_dir and model.',
+          'Create a new PersonaBot when the Human asks for one. Fill fields from the conversation; only display_name is required. Requires Human tool approval unless a saved rule or full access allows it. The new Bot is an independent peer with no Model Plan, grants, accesses or secrets copied from you. Report only from this result; on success it returns bot_id, display_name, dm_channel_id, memory_dir and model (host-default means it answers on the Host default model until a Model Plan is set; it can reply now).',
         parameters: {
           display_name: {
             type: 'string',

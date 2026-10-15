@@ -461,7 +461,7 @@ export interface BotCreateOutcome {
   displayName: string;
   dmChannelId: string;
   memoryDir: string;
-  model: 'no-model-yet' | 'set';
+  model: 'host-default' | 'set';
 }
 
 export const NEW_BOT_ID_PLACEHOLDER = '<new-bot-id>';
@@ -6129,7 +6129,7 @@ class BotRuntimeImplementation implements BotRuntime {
       displayName: record.displayName,
       dmChannelId: dm?.id ?? dmChannelId(record.slug),
       memoryDir: this.#registry.memoryDirFor(record.slug) ?? '',
-      model: record.modelPlan === undefined && record.model === undefined ? 'no-model-yet' : 'set',
+      model: record.modelPlan === undefined && record.model === undefined ? 'host-default' : 'set',
     };
   }
 
