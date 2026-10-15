@@ -74,6 +74,16 @@ Bot 通过 `bridge_attachment_save` 将独立副本保存到当前允许写入�
 
 ## 理解文字路径
 
+### 延迟结果与显式主动发送
+
+#1154 源码候选为已授权的保存 QQ 群目标启用受检主动文字发送。当前 Provider 不提供 QQ 群发现，因此沿用保存目标的授权，收到一次提及不会产生主动发送权限。发送时仍检查当前应用身份、目标、会话屏蔽、最终授权和共享每小时限额。
+
+任务超过 QQ 的五分钟回复窗口后，`bridge_reply` 将 `reply-window-expired` 记录为失败，并把结果保留在 Outbox。需要回传该任务结果时，Bot 可查询 `bridge_targets`，选择属于自己应用且对应原群的 `canPost` 目标，再用一个独立且稳定的 request ID 显式调用 `bridge_post`。没有匹配目标或平台权限时，保留本地结果。回复或主动发送的结果不确定时，都不能另建发送；重启后检查同一请求不会重发。
+
+保存目标的 Web 发送操作沿用相同受检发送与原生回执。Provider 接受和在 QQ 中看到结果是两个事实。真实延迟任务、拒绝分支和当前包验收仍记录在 [#1154](https://github.com/BotHarness/DeepSeekBot/issues/1154)；普通群观察与主动参与另归 [#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155)。
+
+**已验收的测试应用：**2026-10-14，QA2 应用在 `0df23253` 工作树 Host、DSH `0.2.0-rc.2` 和不可变 `.20` Provider 上，完成真实 QQ 请求的 Schedule，经过 400.542 秒回传结果。原回复以 `reply-window-expired` 保留；独立的同 App、已授权原群主动发送取得原生回执，Human 确认只收到一次正确结果。真实共享小时限额拒绝将另一结果保留在本地。恢复后，原两项测试 App 均恢复正常回复。这只验收当前来源／运行时路径，最终打包产品的原生执行与匹配视觉证据仍是独立门禁，见[验收记录](research/2026-10-14-qq-delayed-native-qualification.md)。
+
 | 行为           | 当前契约                                       |
 | -------------- | ---------------------------------------------- |
 | 入站           | 可信 `GROUP_AT_MESSAGE_CREATE` 事件中的文字    |
