@@ -256,6 +256,7 @@ describe('release service', () => {
     version = '1.0.1',
     restarter?: ReleaseRestarter,
     activity: () => 'idle' | 'busy' | 'unknown' = () => 'idle',
+    log?: (message: string) => void,
   ) {
     return createReleaseService({
       version: () => version,
@@ -266,6 +267,7 @@ describe('release service', () => {
       installer: () => manager,
       restarter: () => restarter,
       activity,
+      ...(log === undefined ? {} : { log }),
     });
   }
 
@@ -274,11 +276,23 @@ describe('release service', () => {
       { name: 'deepseekbot', installed: true, version: '1.1.0' },
     ]);
     const restarter = { restart: vi.fn() };
-    const service = installable(manager, '1.0.1', restarter, () => 'busy');
+    const logs: string[] = [];
+    const service = installable(
+      manager,
+      '1.0.1',
+      restarter,
+      () => 'busy',
+      (message) => logs.push(message),
+    );
     expect(await service.install('1.2.0')).toEqual({ status: 'failed', reason: 'busy' });
     expect(await service.restart()).toEqual({ status: 'failed', reason: 'busy' });
     expect(manager.installBundle).not.toHaveBeenCalled();
     expect(restarter.restart).not.toHaveBeenCalled();
+    expect(logs).toHaveLength(2);
+    expect(logs[0]).toMatch(
+      /^release-change initiator=explicit-request operation=install phase=admission outcome=refused reason=busy durationMs=\d+$/u,
+    );
+    expect(logs[1]).toContain('operation=restart phase=admission outcome=refused reason=busy');
   });
 
   it('restarts DSH only when an installed update is waiting and the launcher allows it', async () => {
@@ -353,6 +367,7 @@ describe('release service', () => {
 
   it.each([
     'running-agent',
+    'maintenance',
     'queued-input',
     'owned-job',
     'unowned-job',
@@ -367,6 +382,10 @@ describe('release service', () => {
             id: 'session-1',
             status: scenario === 'running-agent' ? 'running' : 'idle',
             inbox: { nextTurn: scenario === 'queued-input' ? [{}] : [], nextStep: [] },
+            runMaintenance: (task) => {
+              if (scenario === 'maintenance') throw new Error('already has active work');
+              return task();
+            },
           },
         ],
         jobs:
@@ -431,6 +450,37 @@ describe('release service', () => {
     timers.shift()!();
     expect(await retry).toEqual({ status: 'failed', reason: 'busy' });
     expect(exit).not.toHaveBeenCalled();
+    busy = false;
+    const idleRetry = service.restart();
+    await vi.waitFor(() => expect(timers).toHaveLength(1));
+    timers.shift()!();
+    expect(await idleRetry).toEqual({ status: 'restarting' });
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  it('admits truly idle Agents and settled Jobs without its no-op checks blocking the next phase', async () => {
+    let occupied = false;
+    const agent = {
+      id: 'idle-session',
+      status: 'idle',
+      inbox: { nextTurn: [], nextStep: [] },
+      runMaintenance: (task: () => Promise<void>) => {
+        if (occupied) throw new Error('already has active work');
+        occupied = true;
+        return task().finally(() => {
+          occupied = false;
+        });
+      },
+    };
+    const manager = installer({ application: 'restart-required' });
+    const service = installable(manager, '1.0.1', { restart: vi.fn() }, () =>
+      hostReleaseActivity({
+        agents: [agent],
+        jobs: { list: () => [{ status: 'completed' }, { status: 'killed' }, { status: 'failed' }] },
+      }),
+    );
+    expect(await service.install('1.1.0')).toMatchObject({ status: 'installed' });
+    expect(await service.restart()).toEqual({ status: 'restarting' });
   });
 
   it('offers one-click install only when the Plugin Manager holds the deepseekbot bundle', async () => {

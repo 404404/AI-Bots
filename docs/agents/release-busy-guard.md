@@ -8,6 +8,11 @@ same owner; confirmation is not permission to interrupt work.
 
 - The pinned DSH `0.2.0-rc.2` Agent Registry lists all live Agents, including non-PersonaBot
   Agents. A running Agent or nonempty next-turn/next-step Inbox is busy.
+- Public `idle` status can hide native maintenance such as compaction. Each otherwise-idle
+  Agent must synchronously admit a no-op through native `runMaintenance`; existing maintenance
+  refuses admission. The no-op touches no Session data and settles at the next microtask.
+  Preflight always yields before the next check, including a cached installed version. This
+  short native gate is not held for the download or shutdown lifetime.
 - The DSH Job Registry lists unowned Jobs when called without an owner. The guard also reads
   each live Agent's Jobs; running or stopping Jobs block the request. Terminal Jobs do not.
 - Missing activity services, unexpected statuses or probe exceptions fail closed with
@@ -21,6 +26,9 @@ same owner; confirmation is not permission to interrupt work.
   requires another explicit request. It never waits for idle and retries automatically.
 - Release install and restart cannot overlap through this Service. Existing same-request
   installation coalescing is retained. Activity checks and locks are process-local, not persisted.
+- Bounded `release-change` developer logs record explicit-request initiation, operation, refusal
+  phase/reason and elapsed milliseconds through the existing Host logger. They contain no task
+  identifiers, messages, paths or probe exception text, and are not telemetry or durable authority.
 
 This slice is **not** a universal maintenance/drain protocol: it does not freeze new Agent/Job
 admission during package download or asynchronous Host teardown, inspect arbitrary OS processes,

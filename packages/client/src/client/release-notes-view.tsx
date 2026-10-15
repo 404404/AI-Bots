@@ -416,10 +416,11 @@ export function ReleaseSettings({ releaseNotes, t }: ReleaseSettingsProps): Reac
               )}
             </div>
           ) : null}
-          {!update.installable ||
-          (install.status === 'failed' &&
-            install.reason !== 'busy' &&
-            install.reason !== 'activity-unavailable') ? (
+          {(!update.installable || install.status === 'failed') &&
+          !(
+            install.status === 'failed' &&
+            (install.reason === 'busy' || install.reason === 'activity-unavailable')
+          ) ? (
             <ManualUpdate latest={update.latest} t={t} />
           ) : null}
         </div>

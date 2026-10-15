@@ -1816,6 +1816,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       installer: () => releaseInstaller.current,
       restarter: () => releaseRestarter.current,
       activity: () => hostReleaseActivity({ agents: ctx.agents.list(), jobs: ctx.get('jobs') }),
+      log: (message) => ctx.logger.info(message),
     }),
     telemetry,
     git,

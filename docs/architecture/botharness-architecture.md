@@ -977,7 +977,9 @@ Pages contain at most 50 items and 300 Unicode characters per snippet. Literal s
 
 The application-defined Release Service keeps update/restart authority behind the existing
 authenticated bridge and matching CLI. Its process-local activity probe reads DSH-native live
-Agents, their queued Inbox input, and unowned plus live-Agent-owned Jobs; busy and unknown states
+Agents, their queued Inbox input, and unowned plus live-Agent-owned Jobs. Otherwise-idle Agents
+must admit a short no-op through native `runMaintenance`, because public idle status can hide
+active compaction. These gates settle at the next microtask; busy and unknown states
 refuse changes without a second durable store. Asynchronous preflight and the delayed process
 restart both recheck activity. Web preserves coded refusal and offers explicit retry rather than
 a manual bypass. This bounded admission guard is not a process-wide maintenance lock: it does

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { pairReleaseLedgers, selectReleaseNotes, type ReleaseNote } from './notes.js';
-import type { ReleaseRestarter } from './restart.js';
+import type { ReleaseActivityRefusal, ReleaseRestarter } from './restart.js';
 import { compareVersions, isReleaseVersion } from './version.js';
 
 export const RELEASE_PACKAGE = 'deepseekbot';
@@ -105,6 +105,7 @@ export interface ReleaseServiceOptions {
   installer?: () => ReleaseInstaller | undefined;
   restarter?: () => ReleaseRestarter | undefined;
   activity?: () => 'idle' | 'busy' | 'unknown';
+  log?: (message: string) => void;
 }
 
 function readFirst(candidates: readonly URL[]): string | undefined {
@@ -180,7 +181,23 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
   let installing: Promise<ReleaseInstall> | undefined;
   let restarting = false;
 
-  const activityRefusal = (): 'busy' | 'activity-unavailable' | undefined => {
+  const refuse = (
+    operation: 'install' | 'restart',
+    phase: 'admission' | 'preflight' | 'restart-delay',
+    reason: ReleaseActivityRefusal,
+    started: number,
+  ): { status: 'failed'; reason: ReleaseActivityRefusal } => {
+    try {
+      options.log?.(
+        `release-change initiator=explicit-request operation=${operation} phase=${phase} outcome=refused reason=${reason} durationMs=${Math.max(0, Math.round(now() - started))}`,
+      );
+    } catch {
+      return { status: 'failed', reason };
+    }
+    return { status: 'failed', reason };
+  };
+
+  const activityRefusal = (): ReleaseActivityRefusal | undefined => {
     try {
       const activity = options.activity?.();
       return activity === 'idle'
@@ -214,16 +231,17 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
       : undefined;
 
   const runInstall = async (version: string): Promise<ReleaseInstall> => {
+    const started = now();
     const current = options.version();
     if (!isReleaseVersion(version) || compareVersions(version, current) <= 0) {
       return { status: 'failed', reason: 'invalid-version' };
     }
     const refusal = activityRefusal();
-    if (refusal !== undefined) return { status: 'failed', reason: refusal };
+    if (refusal !== undefined) return refuse('install', 'admission', refusal, started);
     const installer = (await profileBundle())?.installer;
     if (installer === undefined) return { status: 'failed', reason: 'unavailable' };
     const latestRefusal = activityRefusal();
-    if (latestRefusal !== undefined) return { status: 'failed', reason: latestRefusal };
+    if (latestRefusal !== undefined) return refuse('install', 'preflight', latestRefusal, started);
     let result: ReleaseInstallerResult;
     try {
       result = await installer.installBundle(`${RELEASE_PACKAGE}@${version}`);
@@ -350,28 +368,32 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
       return { ...result, installable: bundle !== undefined };
     },
     install(version) {
-      if (restarting) return Promise.resolve({ status: 'failed', reason: 'busy' });
+      if (restarting) return Promise.resolve(refuse('install', 'admission', 'busy', now()));
       installing ??= runInstall(version).finally(() => {
         installing = undefined;
       });
       return installing;
     },
     async restart() {
-      if (installing !== undefined || restarting) return { status: 'failed', reason: 'busy' };
+      const started = now();
+      if (installing !== undefined || restarting)
+        return refuse('restart', 'admission', 'busy', started);
       restarting = true;
       let accepted = false;
       try {
         const refusal = activityRefusal();
-        if (refusal !== undefined) return { status: 'failed', reason: refusal };
+        if (refusal !== undefined) return refuse('restart', 'admission', refusal, started);
         const restarter = options.restarter?.();
         if (restarter === undefined) return { status: 'failed', reason: 'unavailable' };
-        const pendingVersion =
-          installed ?? newerInProfile(options.version(), (await profileBundle())?.version);
+        const bundle = await profileBundle();
+        const pendingVersion = installed ?? newerInProfile(options.version(), bundle?.version);
         if (pendingVersion === undefined) return { status: 'failed', reason: 'not-pending' };
         const latestRefusal = activityRefusal();
-        if (latestRefusal !== undefined) return { status: 'failed', reason: latestRefusal };
+        if (latestRefusal !== undefined)
+          return refuse('restart', 'preflight', latestRefusal, started);
         const restartRefusal = await restarter.restart(activityRefusal);
-        if (restartRefusal !== undefined) return { status: 'failed', reason: restartRefusal };
+        if (restartRefusal !== undefined)
+          return refuse('restart', 'restart-delay', restartRefusal, started);
         accepted = true;
         return { status: 'restarting' };
       } finally {

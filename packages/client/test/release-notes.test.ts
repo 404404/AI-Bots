@@ -464,6 +464,19 @@ describe('release notes views', () => {
         expect(view.host.querySelector('code')).toBeNull();
         expect(buttonNamed(view.host, '立即更新')?.disabled).toBe(false);
         call.mockImplementation(
+          bridge('1.0.1', () => [], {
+            status: 'available',
+            current: '1.0.1',
+            latest: '1.1.0',
+            releases: [],
+            installable: false,
+          }),
+        );
+        await act(async () => {
+          await controller.checkUpdate(true);
+        });
+        expect(view.host.querySelector('code')).toBeNull();
+        call.mockImplementation(
           bridge(
             '1.0.1',
             () => [],
