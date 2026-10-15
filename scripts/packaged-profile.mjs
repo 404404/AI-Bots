@@ -73,6 +73,7 @@ export const productAllowBuilds = {
   'node-pty': true,
   protobufjs: false,
   'agent-browser': false,
+  'react-native-enriched-markdown': false,
 };
 
 export function verifiedProductArtifacts(directory) {

@@ -394,6 +394,17 @@ const en = {
   autoApprovalGetWorkDoneHint:
     'Lets the work continue; stops only destructive or irreversible calls.',
   settingFailed: 'Could not change the setting:',
+  computerTitle: (name: string) => `${name}'s Computer`,
+  computerClose: 'Close the Computer',
+  computerLoading: 'Loading the Computer screen…',
+  computerNotRunning: 'The Computer is not running. Start it on your computer to see it here.',
+  computerUnreachable: 'Cannot reach the Computer on your computer.',
+  computerWatching: 'Watching the Computer. Take control to click and type.',
+  computerYouDriving:
+    'The Bot is paused and cannot see the screen. Use the lock key for passwords, then hand it back.',
+  computerTakeControl: 'Pause Bot and take control',
+  computerHandBack: 'Hand back',
+  computerPasswordKeyboard: 'Password keyboard',
 };
 
 const zh: typeof en = {
@@ -767,6 +778,16 @@ const zh: typeof en = {
   autoApprovalGetWorkDone: '把活干完',
   autoApprovalGetWorkDoneHint: '让工作继续；只拦下破坏性或不可撤回的操作。',
   settingFailed: '无法更改设置：',
+  computerTitle: (name: string) => `${name} 的 Computer`,
+  computerClose: '关闭 Computer',
+  computerLoading: '正在加载 Computer 画面…',
+  computerNotRunning: 'Computer 没有运行。在电脑上启动后会显示在这里。',
+  computerUnreachable: '无法连接电脑上的 Computer。',
+  computerWatching: '正在查看 Computer。接管后可以点击和输入。',
+  computerYouDriving: 'Bot 已暂停，看不到屏幕。输密码请用锁形键盘，用完请交还。',
+  computerTakeControl: '暂停 Bot 并接管',
+  computerHandBack: '交还',
+  computerPasswordKeyboard: '密码键盘',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()

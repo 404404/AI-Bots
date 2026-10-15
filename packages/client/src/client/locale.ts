@@ -2991,6 +2991,7 @@ export const zh = {
   'schedule.done': '已完成',
   'entry.sessions': '会话',
   'entry.workspaceGrants': '工作区授权',
+  'entry.autoApproval': '自动审批',
   'entry.model': '模型',
   'entry.wakePolicy': '唤醒策略',
   'entry.externalIdentities': '外部身份',
@@ -3108,6 +3109,10 @@ export const zh = {
   'autoApproval.title': '自动审批模板',
   'autoApproval.off': '关闭',
   'autoApproval.section': '自动审批',
+  'autoApproval.offHint': '每张卡片由你批准',
+  'autoApproval.activeSection': '当前生效',
+  'autoApproval.templatesSection': '全部模板',
+  'autoApproval.activeTag': '生效中',
   'autoApproval.hintOff':
     '选一个模板后，审批员会先按模板替你回答此 Bot 的工具审批，拿不准的才发卡片给你。',
   'autoApproval.hintOn': '{description} 审批员按这个模板替你回答，拿不准的仍发卡片给你。',
@@ -6623,6 +6628,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'schedule.done': 'Done',
   'entry.sessions': 'Sessions',
   'entry.workspaceGrants': 'Workspace Grants',
+  'entry.autoApproval': 'Auto approval',
   'entry.model': 'Model',
   'entry.wakePolicy': 'Wake policy',
   'entry.externalIdentities': 'External identities',
@@ -6743,6 +6749,10 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'autoApproval.title': 'Auto approval template',
   'autoApproval.off': 'Off',
   'autoApproval.section': 'Auto approval',
+  'autoApproval.offHint': 'You approve each card',
+  'autoApproval.activeSection': 'Active',
+  'autoApproval.templatesSection': 'All templates',
+  'autoApproval.activeTag': 'Active',
   'autoApproval.hintOff':
     "Pick a template and an Approval Reviewer answers this Bot's tool approvals by it first. Only calls it can't decide come to you as cards.",
   'autoApproval.hintOn':

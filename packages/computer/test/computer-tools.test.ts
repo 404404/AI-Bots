@@ -89,6 +89,7 @@ interface Harness {
   readonly created: (payload: { agent: Agent }) => void;
   setAccess(enabled: boolean): void;
   setRunning(running: boolean): void;
+  setPaused(paused: boolean): void;
   setAuto(allow: boolean): void;
 }
 
@@ -103,6 +104,7 @@ function harness(options: {
   const audits: ComputerAuditEvent[] = [];
   let access = options.access;
   let running = options.running;
+  let paused = false;
   let auto = options.auto ?? false;
   const handlers = new Map<string, (this: unknown, payload: { agent: Agent }) => unknown>();
   const slots: string[] = [];
@@ -128,6 +130,7 @@ function harness(options: {
     ctx,
     driver,
     isComputerRunning: () => running,
+    isPaused: () => paused,
     isAutoAllowed: () => auto,
     authorizationScope: options.authorizationScope,
     audit: (event) => audits.push(event),
@@ -155,6 +158,9 @@ function harness(options: {
     },
     setRunning: (next) => {
       running = next;
+    },
+    setPaused: (next) => {
+      paused = next;
     },
     setAuto: (next) => {
       auto = next;
@@ -439,11 +445,41 @@ describe('per-PersonaBot registration and authorization', () => {
     h.setRunning(false);
     await expect(h.provider.runDirect('bot-a', 'click', { pid: 7 })).rejects.toThrow('not running');
     h.setRunning(true);
+    h.setPaused(true);
+    await expect(h.provider.runDirect('bot-a', 'click', { pid: 7 })).rejects.toThrow(
+      'Computer Pause is active',
+    );
+    h.setPaused(false);
     h.setAccess(false);
     await expect(h.provider.runDirect('bot-a', 'click', { pid: 7 })).rejects.toThrow(
       'Computer Access is off',
     );
     expect(h.driver.call).toHaveBeenCalledTimes(1);
+  });
+
+  it('drains a Bot call admitted before the pause and withholds its result', async () => {
+    const h = harness({ access: true, running: true });
+    let finish: (() => void) | undefined;
+    vi.mocked(h.driver.call).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve({ content: [{ type: 'image', data: 'screen', mimeType: 'image/png' }] });
+        }),
+    );
+    const running = h.provider.runDirect('bot-a', 'click', { pid: 7 });
+    await vi.waitFor(() => expect(finish).toBeDefined());
+    h.setPaused(true);
+    let drained = false;
+    const draining = h.provider.drain(5_000).then(() => {
+      drained = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(drained).toBe(false);
+    finish?.();
+    await expect(running).rejects.toThrow('Computer Pause is active');
+    await draining;
+    expect(drained).toBe(true);
   });
 
   it('runs without a grant when the profile auto-allows', async () => {

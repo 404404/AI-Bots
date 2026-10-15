@@ -3561,29 +3561,46 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
   color: var(--dsw-alias-label-secondary);
   font-size: ${text.metaSize};
 }
+/* Hover actions float over the bubble's top-right edge so showing them never
+   shifts the layout. The lane spans the bubble and right-aligns the pill; a
+   Bot bubble narrower than the pill keeps it from spilling over the avatar. */
+.bh-bubble-toolbar {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  right: ${space.x3};
+  display: flex;
+  justify-content: safe flex-end;
+  transform: translateY(calc(-100% + ${space.x3}));
+  opacity: 0;
+  pointer-events: none;
+}
+.bh-message-group-me .bh-bubble-toolbar {
+  justify-content: flex-end;
+}
+.bh-bubble-wrap:hover .bh-bubble-toolbar,
+.bh-bubble-wrap:focus-within .bh-bubble-toolbar,
+.bh-bubble-toolbar:has([aria-expanded='true']) {
+  opacity: 1;
+}
 .bh-bubble-actions {
   display: flex;
   align-items: center;
   gap: ${space.x1};
+  padding: ${space.x1};
+  border: ${border.hairline} solid ${color.border};
+  border-radius: ${radius.md};
+  background: ${color.base};
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--dsw-alias-label-primary) 8%, transparent);
 }
-.bh-bubble-action {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 0;
-  border-radius: ${radius.sm};
-  color: var(--dsw-alias-label-secondary);
-  background: transparent;
-  cursor: pointer;
+.bh-bubble-wrap:hover .bh-bubble-actions,
+.bh-bubble-wrap:focus-within .bh-bubble-actions,
+.bh-bubble-toolbar:has([aria-expanded='true']) .bh-bubble-actions {
+  pointer-events: auto;
 }
-.bh-bubble-action:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.bh-bubble-action:focus-visible {
-  outline: ${border.focus} solid var(--dsw-alias-label-primary);
-  outline-offset: -2px;
+.bh-bubble-wrap.bh-bubble-selecting .bh-bubble-toolbar {
+  display: none;
 }
 @media (hover: none) {
   .bh-bubble-meta,
@@ -3595,7 +3612,8 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
 /* Narrow screens: inline copy/reply actions crowd the bubble, so they move
    into the long-press message menu and the bubble keeps the full width. */
 @media (max-width: 640px) {
-  .bh-bubble-meta {
+  .bh-bubble-meta,
+  .bh-bubble-toolbar {
     display: none;
   }
 }
