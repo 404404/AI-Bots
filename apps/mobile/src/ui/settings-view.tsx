@@ -13,6 +13,7 @@ export interface SettingsActions {
   onClose(): void;
   onOpenFullClient(): void;
   onComputers(): void;
+  onAppIcon(): void;
   onNotifications(): void;
   onUnpair(): Promise<void>;
 }
@@ -88,6 +89,9 @@ export function SettingsView({
         {unpairError === undefined ? null : (
           <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
         )}
+        <SettingsSection title={t.interface}>
+          <SettingsRow title={t.appIcon} detail={t.appIconHint} onPress={actions.onAppIcon} />
+        </SettingsSection>
       </ScrollView>
     </View>
   );

@@ -139,7 +139,7 @@ function actions(overrides: Partial<HostLookActions> = {}): HostLookActions {
 const button = (view: HTMLElement, label: string) =>
   view.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
 
-describe('Customize header sheet', () => {
+describe('Customize computer sheet', () => {
   it('picks a preset avatar and a solid banner colour', async () => {
     const handlers = actions();
     const view = await render(
