@@ -1,6 +1,13 @@
 import { Stack, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  View,
+} from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
@@ -499,8 +506,10 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     ],
   );
 
-  const notice =
-    snapshot.status === 'refused'
+  const hostRefused = host.connection.status === 'refused';
+  const notice = hostRefused
+    ? t.refused
+    : snapshot.status === 'refused'
       ? dm
         ? t.dmRefused
         : t.channelRefused
@@ -540,19 +549,37 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {notice === undefined ? null : (
-          <Text
-            accessibilityLiveRegion="polite"
-            variant="meta"
-            tone="warning"
+          <View
             style={{
               marginTop: headerHeight,
               backgroundColor: theme.color.warningSoft,
               paddingHorizontal: space.x5,
               paddingVertical: space.x3,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: space.x4,
             }}
           >
-            {notice}
-          </Text>
+            <Text
+              accessibilityLiveRegion="polite"
+              variant="meta"
+              tone="warning"
+              style={{ flex: 1 }}
+            >
+              {notice}
+            </Text>
+            {!hostRefused ? null : (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/pair')}
+                hitSlop={space.x3}
+              >
+                <Text variant="meta" tone="accent" strong>
+                  {t.pairAgain}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         )}
         <Animated.View
           ref={viewport}

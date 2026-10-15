@@ -118,9 +118,20 @@ export default function BrowserScreen() {
                 </Text>
               </>
             ) : (
-              <Text accessibilityRole="alert" tone="muted" style={{ textAlign: 'center' }}>
-                {message}
-              </Text>
+              <>
+                <Text accessibilityRole="alert" tone="muted" style={{ textAlign: 'center' }}>
+                  {message}
+                </Text>
+                {!revoked ? null : (
+                  <View style={{ alignSelf: 'stretch', marginTop: space.x5 }}>
+                    <Button
+                      label={t.pairAgain}
+                      tone="primary"
+                      onPress={() => router.replace('/pair')}
+                    />
+                  </View>
+                )}
+              </>
             )}
           </View>
         )}

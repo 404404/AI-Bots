@@ -352,6 +352,22 @@ async function main() {
     checks.revokedStops = true;
     await shot('4-revoked');
     steps.push('revoked the phone on the computer: the Browser screen says so');
+    await page.waitForSelector('::-p-aria(Pair again)', { timeout: 10_000 });
+    checks.viewerOffersPairAgain = true;
+    steps.push('the revoked Browser screen offers Pair again');
+
+    await page.locator('::-p-aria(Close the Browser)').click();
+    await page.goto(`${origin}/dm/${bot.slug}`, { waitUntil: 'networkidle0' });
+    await text('Your computer refused this app', 30_000);
+    await page.waitForSelector('::-p-aria(Pair again)', { timeout: 10_000 });
+    checks.dmOffersPairAgain = !(await page.evaluate(() =>
+      document.body.innerText.includes('Reconnecting to this DM'),
+    ));
+    await shot('5-dm-revoked');
+    await page.locator('::-p-aria(Pair again)').click();
+    await text('Or paste the pairing link', 30_000);
+    checks.pairAgainOpensPairing = true;
+    steps.push('the DM after revoke offers Pair again, which opens pairing');
 
     const log = console_.join('\n');
     writeFileSync(join(paths.evidence, 'console.txt'), redact(log));
