@@ -3,6 +3,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 
 import type { ConnectionState } from '../host/client';
 import type { OverviewUsage } from '../host/usage';
+import { SHEET_GROUP } from './chat/sheet';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
@@ -46,16 +47,11 @@ export function SettingsView({
   const [unpairError, setUnpairError] = useState<string>();
   const status = [STATUS[connection.status], connection.route].filter((part) => part !== '');
   return (
-    <View style={{ flex: 1, backgroundColor: theme.color.base }}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingTop: space.x4,
-          paddingLeft: space.x5,
-          paddingRight: space.x2,
-        }}
-      >
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.color.base }}
+      contentContainerStyle={{ gap: space.x6, padding: space.x5 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: -space.x3 }}>
         <Text variant="title" accessibilityRole="header" style={{ flex: 1 }}>
           {t.settings}
         </Text>
@@ -77,51 +73,49 @@ export function SettingsView({
           </Text>
         </Pressable>
       </View>
-      <ScrollView contentContainerStyle={{ gap: space.x6, padding: space.x5 }}>
-        <UsageCard load={loadUsage} onOpen={actions.onUsage} />
-        <SettingsSection title={t.connections} on="raised">
-          <SettingsRow on="raised" title={hostName ?? '—'} detail={status.join(' · ')} />
-          <SettingsRow
-            on="raised"
-            title={t.computers}
-            detail={t.computersHint}
-            onPress={actions.onComputers}
-          />
-          <SettingsRow on="raised" title={t.notifications} onPress={actions.onNotifications} />
-          <SettingsRow
-            on="raised"
-            title={t.openFullClient}
-            tone="accent"
-            onPress={actions.onOpenFullClient}
-          />
-          <SettingsRow
-            on="raised"
-            title={t.unpair}
-            tone="danger"
-            onPress={() => {
-              setUnpairError(undefined);
-              actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
-            }}
-          />
-        </SettingsSection>
-        {unpairError === undefined ? null : (
-          <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
-        )}
-        <SettingsSection title={t.interface} on="raised">
-          <SettingsRow
-            on="raised"
-            title={t.hostLook}
-            detail={t.hostLookHint}
-            onPress={actions.onHostLook}
-          />
-          <SettingsRow
-            on="raised"
-            title={t.appIcon}
-            detail={t.appIconHint}
-            onPress={actions.onAppIcon}
-          />
-        </SettingsSection>
-      </ScrollView>
-    </View>
+      <UsageCard load={loadUsage} on={SHEET_GROUP} onOpen={actions.onUsage} />
+      <SettingsSection title={t.connections} on={SHEET_GROUP}>
+        <SettingsRow on={SHEET_GROUP} title={hostName ?? '—'} detail={status.join(' · ')} />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.computers}
+          detail={t.computersHint}
+          onPress={actions.onComputers}
+        />
+        <SettingsRow on={SHEET_GROUP} title={t.notifications} onPress={actions.onNotifications} />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.openFullClient}
+          tone="accent"
+          onPress={actions.onOpenFullClient}
+        />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.unpair}
+          tone="danger"
+          onPress={() => {
+            setUnpairError(undefined);
+            actions.onUnpair().catch((error: unknown) => setUnpairError(errorText(error)));
+          }}
+        />
+      </SettingsSection>
+      {unpairError === undefined ? null : (
+        <Notice tone="danger">{`${t.unpairFailed} ${unpairError}`}</Notice>
+      )}
+      <SettingsSection title={t.interface} on={SHEET_GROUP}>
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.hostLook}
+          detail={t.hostLookHint}
+          onPress={actions.onHostLook}
+        />
+        <SettingsRow
+          on={SHEET_GROUP}
+          title={t.appIcon}
+          detail={t.appIconHint}
+          onPress={actions.onAppIcon}
+        />
+      </SettingsSection>
+    </ScrollView>
   );
 }
