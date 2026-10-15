@@ -2,7 +2,9 @@ import { radius, space } from '../design/tokens';
 
 export type BubbleGroup = { first: boolean; last: boolean };
 
-export function bubbleShape(human: boolean, { first, last }: BubbleGroup) {
+export const AVATAR_CORNER = radius.sm;
+
+export function bubbleShape(human: boolean, { first, last }: BubbleGroup, avatar = false) {
   return {
     maxWidth: '80%',
     alignSelf: human ? 'flex-end' : 'flex-start',
@@ -14,7 +16,7 @@ export function bubbleShape(human: boolean, { first, last }: BubbleGroup) {
         }
       : {
           borderTopLeftRadius: first ? radius.lg : radius.xs,
-          borderBottomLeftRadius: last ? radius.lg : radius.xs,
+          borderBottomLeftRadius: last ? (avatar ? AVATAR_CORNER : radius.lg) : radius.xs,
         }),
     paddingHorizontal: space.x4,
     paddingVertical: space.x3,

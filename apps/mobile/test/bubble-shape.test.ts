@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { bubbleRow, bubbleShape } from '../src/ui/chat/bubble-shape';
+import { AVATAR_CORNER, bubbleRow, bubbleShape } from '../src/ui/chat/bubble-shape';
 import { radius, space } from '../src/ui/design/tokens';
 
 describe('bubbleShape', () => {
@@ -22,6 +22,16 @@ describe('bubbleShape', () => {
       alignSelf: 'flex-end',
       borderTopRightRadius: radius.xs,
       borderBottomRightRadius: radius.lg,
+    });
+  });
+
+  it('matches the last Bot bubble corner to the avatar beside it', () => {
+    expect(bubbleShape(false, { first: true, last: true }, true)).toMatchObject({
+      borderTopLeftRadius: radius.lg,
+      borderBottomLeftRadius: AVATAR_CORNER,
+    });
+    expect(bubbleShape(false, { first: true, last: false }, true)).toMatchObject({
+      borderBottomLeftRadius: radius.xs,
     });
   });
 

@@ -12,7 +12,7 @@ import { useDesignTheme } from '../design/theme';
 import { MarkdownView } from '../markdown-view';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
-import { bubbleRow, bubbleShape } from './bubble-shape';
+import { AVATAR_CORNER, bubbleRow, bubbleShape } from './bubble-shape';
 import { MessageAttachments } from './message-attachments';
 import { openMessageMenu } from './message-menu';
 import { ReactionChips } from './message-reactions';
@@ -71,7 +71,7 @@ export const MessageBubble = memo(function MessageBubble({
   const bubble = (
     <View
       style={{
-        ...bubbleShape(human, { first, last }),
+        ...bubbleShape(human, { first, last }, speaker?.last === true),
         backgroundColor: human ? theme.color.accent : theme.color.surface,
         gap: space.x2,
         opacity: message.delivery === 'pending' ? 0.7 : 1,
@@ -177,6 +177,7 @@ export const DraftBubble = memo(function DraftBubble({
         alignSelf: 'flex-start',
         backgroundColor: theme.color.surface,
         borderRadius: radius.lg,
+        borderBottomLeftRadius: speaker === undefined ? radius.lg : AVATAR_CORNER,
         paddingHorizontal: space.x4,
         paddingVertical: space.x3,
       }}
