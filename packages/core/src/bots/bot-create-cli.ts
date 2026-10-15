@@ -9,7 +9,7 @@ import {
   writeFileSync,
   unlinkSync,
 } from 'node:fs';
-import { basename, join, relative, resolve, sep } from 'node:path';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { isMap, isScalar, parseDocument } from 'yaml';
 import { parseCredentialsDocument } from '@deepseek-ai/dsh-credentials-local';
@@ -71,10 +71,17 @@ import {
   BOT_ZIP_MAX_ENTRIES,
   BOT_ZIP_HISTORY_PATH,
 } from './bot-zip.js';
-import type { PersonaBotRecord } from './persona-bot.js';
+import { personaBotAvatarFromBytes, type PersonaBotRecord } from './persona-bot.js';
 import { createPersonaBotRegistry, type PersonaBotRegistry } from './registry.js';
 import { ZipArchiveError, writeZip, type ZipEntry } from './zip-archive.js';
+import { INBOX_HOST_COMMANDS } from './cli-inbox.js';
 import { CliLiveError, LIVE_COMMANDS, LIVE_OPTIONS, runLiveCli } from './cli-live.js';
+import { PROFILE_ONLINE_COMMANDS } from './cli-profile.js';
+import {
+  isScheduleCommand,
+  scheduleToggleFromFlags,
+  scheduleTriggerFromFlags,
+} from './cli-schedules.js';
 import {
   DIAGNOSTIC_COMMANDS,
   LIFECYCLE_COMMANDS,
@@ -115,8 +122,10 @@ export const BOT_CREATE_HELP = `deepseekbot: create PersonaBots without clicking
 
 Usage:
   deepseekbot create --name <name> [--persona <text> | --persona-stdin]
-                    [--description <text>] [--role <tag> ...]
-                    [--preset <model-preset-id>] [--home <dsh-home>]
+                    [--core-memory <text> | --core-memory-stdin]
+                    [--description <text>] [--role <tag> ...] [--avatar-file <image>]
+                    [--preset <model-preset-id>] [--memory-location <absolute-dir>]
+                    [--home <dsh-home>]
   deepseekbot create --name <name> --from-git <url | owner/repo> [...]
   deepseekbot create [--name <name>] --from-zip <file> [...]
   deepseekbot create [--name <name>] --from-dir <directory> [...]
@@ -142,14 +151,14 @@ Usage:
   deepseekbot channels [--home <dsh-home>]
   deepseekbot channel-messages <channel> [--limit <n>] [--before <id>] [--home <dsh-home>]
   deepseekbot grants <id> [--home <dsh-home>]
-  deepseekbot grant-revoke <id> --grant <grant> [--home <dsh-home>]
+  deepseekbot grant-revoke <id> --grant <grant> [--home <dsh-home>]   online: add --confirm
   deepseekbot grant-write-set <id> --grant <grant> (--enabled | --disabled) [--home <dsh-home>]
   deepseekbot schedules <id> [--home <dsh-home>]
   deepseekbot schedule-create <id> --title <t> --prompt <p> (--every <s> | --daily <HH:MM> |
                                   --weekly <HH:MM> --weekdays <0-6,..> | --once-date <d> --once-time <t> |
                                   --cron <expr>) [--timezone <tz>] [--enabled|--disabled] [--locked] [--home <dsh-home>]
   deepseekbot schedule-update <id> --sid <schedule> [--title ...] [--prompt ...] [trigger ...] [--home <dsh-home>]
-  deepseekbot schedule-delete <id> --sid <schedule> [--home <dsh-home>]
+  deepseekbot schedule-delete <id> --sid <schedule> [--confirm] [--home <dsh-home>]
   deepseekbot schedule-history <id> --sid <schedule> [--home <dsh-home>]
   deepseekbot schedule-run-now <id> --sid <schedule> [--home <dsh-home>]
   deepseekbot schedule-preview (--every <s> | --daily ... | ...) [--home <dsh-home>]
@@ -172,14 +181,129 @@ Usage:
   deepseekbot ask-secret-revoke <channel> --message-id <configured-card-id>
   deepseekbot ask-secret-accounts <id>
   deepseekbot release-info [--since <version>]
+  deepseekbot release-check
+  deepseekbot release-install <version> --confirm
+  deepseekbot release-restart --confirm
+  deepseekbot marketplace-list [--query <words>] [--topic <topic>] [--sort updated|stars] [--cursor <c>]
+  deepseekbot marketplace-topics
+  deepseekbot marketplace-detail <owner/repo>
+  deepseekbot marketplace-submit <github-repo-url>
+  deepseekbot marketplace-report <owner/repo> [--reason <text>]
+  deepseekbot telemetry-status
+  deepseekbot telemetry-set (--enabled | --disabled)
+  deepseekbot git-status
+  deepseekbot git-install
+  deepseekbot pairing-list <id>
+  deepseekbot pairing-review <id> <pairing-id> --decision approve|reject|revoke [--role <role-id> | --capability <c> ...] [--confirm]
   deepseekbot workspace-options
   deepseekbot grant-create <id> --workspace <workspace-id>
+  deepseekbot browser-access-set <id> (--enabled | --disabled)
+  deepseekbot computer-access-set <id> (--enabled | --disabled)
+  deepseekbot access <id>
+  deepseekbot access-set <id> --mode workspace-write|danger-full-access [--scope chat|assignments] [--acknowledge-risk]
+  deepseekbot settings <namespace>
+  deepseekbot settings-set <namespace> --patch-stdin
+  deepseekbot workspace-create <absolute-path>
+  deepseekbot group-create <name> --member <bot-id> [--member <bot-id> ...]
+  deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
+  deepseekbot im-app-status <platform>
+  deepseekbot im-app-remove <platform> --app <app-id>
+  deepseekbot im-bind <id> --app <app-id>
+  deepseekbot im-unbind <id> --app <app-id>
+  deepseekbot im-status <id>
+  deepseekbot channel-connect <channel> --bot <id> --conversation <external-id> [--app <app-id>]
+  deepseekbot channel-ingests <channel>
+  deepseekbot browser-open <id>
+  deepseekbot browser-frame <id> --out <absolute-file>
+  deepseekbot browser-takeover <id> (--enabled | --disabled)
+  deepseekbot browser-input <id> --args-stdin
+  deepseekbot browser-stop <id>
+  deepseekbot computer-start [--target local|container]
+  deepseekbot computer-status
+  deepseekbot computer-stop
+  deepseekbot browser-tools
+  deepseekbot browser-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
+  deepseekbot memory-file-target|memory-graph|memory-commit-diff|memory-changes <id> [...]
+  deepseekbot memory-working-diff <id> --path <file> --kind staged|unstaged|untracked|current
+  deepseekbot memory-checkpoints|memory-versions <id>
+  deepseekbot memory-restore <id> --checkpoint <id> --expected-current <id>
+  deepseekbot memory-restore-commit <id> --sha <commit> --expected-head <commit> [--name <version>]
+  deepseekbot memory-version-name <id> --sha <commit> --name <version>
+  deepseekbot memory-version-unname <id> --tag <version>
+  deepseekbot memory-repair <id> --expected-head <commit>
+  deepseekbot memory-move <id> (--memory-location <absolute-dir> | --default-location)
+  deepseekbot model-catalog
+  deepseekbot model-plan-set <id> --plan-stdin [--expected-revision <n>]
+  deepseekbot model-plan-customize <id> --orchestrator-provider <p> --orchestrator-model <m> [--orchestrator-effort <e>]
+  deepseekbot model-plan-inherit <id> [--expected-revision <n>]
+  deepseekbot model-plan-assignments-set <id> --plan-stdin [--expected-revision <n>]
+  deepseekbot model-preset-update <preset-id> [--name <n>] [--orchestrator-provider/-model/-effort ...]
+                                  [--assignment-provider/-model/-effort ...] [--plan-stdin] [--expected-revision <n>]
+  deepseekbot overview-usage [--period today|week] [--after <bot-cursor>]
+  deepseekbot overview-memory [--after <bot-cursor>]
+  deepseekbot activity-overview
+  deepseekbot channel-activity-today
+  deepseekbot bot-usage <id> --start <YYYY-MM-DD> --end <YYYY-MM-DD> [--model <m>] [--provider <p>]
+                        [--purpose orchestrator|assignment|subagent]
+  deepseekbot bot-session-usage <id>
+  deepseekbot bot-activity-history <id> [--before <YYYY-MM-DD>] [--weeks <1-104>]
+  deepseekbot group-activity <channel>
+  deepseekbot bot-trace <id> [--turns <1-20>] [--session <session-id>|direct]
+  deepseekbot bot-tools
+  deepseekbot bot-tool <id> <tool> [--args-stdin]
+  deepseekbot computer-tools
+  deepseekbot computer-tool <id> <tool> [--args-stdin] [--out <absolute-file>]
+  deepseekbot todos
+  deepseekbot todo-add --title <text>
+  deepseekbot todo-update <todo-id> [--title <text>] [--done | --not-done]
+  deepseekbot todo-remove <todo-id>
+  deepseekbot todo-tools
+  deepseekbot todo-tool <id> <tool> [--args-stdin]
   deepseekbot bot-attention <id> [--limit <1-100>] [--cursor <source-id>] [--state <state>]
   deepseekbot bot-sessions <id> [--limit <1-100>]
   deepseekbot bot-activity <id> [--limit <1-100>]
+  deepseekbot inbox [--category action|info|unread|replies|handled] [--bot <id>] [--channel <id>]
+                    [--limit <1-100>] [--cursor <cursor>] [--sort newest|oldest] [--snoozed]
+                    [--kind auto-rejection]
+  deepseekbot inbox-status
+  deepseekbot inbox-dismiss <item-id> [--source-key <source-event-id>]
+  deepseekbot inbox-allow-once <autoreject:item-id>
+  deepseekbot inbox-snooze <item-id> [--source-key <source-event-id>] (--until <ISO time> | --clear)
+  deepseekbot inbox-ignore <source-event-id>
+  deepseekbot assignment-context <id> --session <session-id> --source <source-event-id>
+  deepseekbot channel-assignments <group-channel>
+  deepseekbot channel-assign <channel> (--section <section-id> | --unsectioned) [--index <n>]
+  deepseekbot session-ids
+  deepseekbot session-owner <session-id>
+  deepseekbot session-archive-set <id> --session <session-id> (--archived | --unarchived)
+  deepseekbot tool-approval-rules <id>
+  deepseekbot tool-approval-rule-revoke <id> --rule <rule-id> --confirm
+  deepseekbot private-mcp-set <id> --server <name> (--enabled | --disabled)
+  deepseekbot private-mcp-remove <id> --server <name> --confirm
   deepseekbot bot-delete-preview <id>
   deepseekbot bot-delete-confirm <id> --confirmation-stdin
   deepseekbot bot-delete-retry <id>
+  deepseekbot bot-avatar-set|bot-banner-set <id> (--file <image> | --clear)
+  deepseekbot bot-banner-set|bot-appearance-set <id> --recipe-stdin
+  deepseekbot bot-primary-color-set <id> (--color <#rrggbb> | --automatic)
+  deepseekbot bot-source-policies <id>
+  deepseekbot bot-source-policy-set <id> --source-class <class> [--wake <w>] [--delivery steer|turn]
+                                    [--digest-count <n> --digest-interval <seconds>]
+  deepseekbot bot-source-policy-reset <id> --source-class <class>
+  deepseekbot bot-standing-limits-set <id> --soul <n> --core-memory <n>
+  deepseekbot developer-mode-set (--enabled | --disabled)
+  deepseekbot roster | human-identity | part-library
+  deepseekbot roster-batch pin|unpin|hide|move <channel>... [--section <section-id>]
+  deepseekbot roster-pins-set|roster-hidden-set [<channel>...]
+  deepseekbot roster-section-create <name>
+  deepseekbot roster-section-rename <section-id> --name <text>
+  deepseekbot roster-section-remove <section-id> --confirm
+  deepseekbot roster-section-reorder <section-id>...
+  deepseekbot roster-top-reorder section:<id>|channel:<id>...
+  deepseekbot part-library-add --part-stdin [--name <text>] [--parent <part-id>]
+  deepseekbot part-library-import --file <png|zip>
+  deepseekbot part-library-import-image --file <png> --slot <slot> --colors <n> [--name <text>]
+  deepseekbot part-library-export --out <absolute-file> [--part-id <id> | --part-stdin]
   deepseekbot im-apps
   deepseekbot im-authorize <feishu|weixin>
   deepseekbot im-credentials <attempt-id> --credentials-stdin
@@ -207,7 +331,8 @@ Machine contract:
   exits non-zero with {"error": {"code", "message"}} using a stable code
   (usage, secret-in-argv, bad-zip, bad-bundle, bad-ref, unknown-preset,
   unknown-bot, unknown-channel, duplicate-preset, git-not-found, git-clone-failed, git-clone-timeout,
-  memory-unavailable, lease-unavailable, bad-credentials, invalid-input). Human-readable lines go to stderr only.
+  memory-unavailable, lease-unavailable, bad-credentials, invalid-input, invalid-avatar,
+  file-unreadable). Human-readable lines go to stderr only.
   Stop the Host before offline database commands: the writer lease is exclusive.
 
 Live Host:
@@ -216,12 +341,14 @@ Live Host:
   Login is fresh per call; cookies stay in memory. --timeout defaults to 120 seconds (max 600).
   send returns its receipt and exact committed replies. Inspect send-status on timeout
   before retrying; send never automatically resubmits. channel-messages also accepts --host.
-  create (blank, Git, Zip and directory), list/show, model-presets/create/apply/plan
-  and channels use the Host when --host or DEEPSEEKBOT_HOST is set. Do not combine
+  create (blank, Git, Zip and directory), list/show, model-presets/create/apply/plan,
+  channels and the schedule* commands use the Host when --host or DEEPSEEKBOT_HOST is set. Do not combine
   --home with an online target; failures never fall back to local database access.
   Zip/directory uploads contain local bytes; Git cloning uses the Host environment.
   Creation errors retain known bot/steps; outcome unknown means inspect before retrying.
   Bot diagnostics are bounded summaries, not full execution logs or live streams.
+  grant-revoke and grant-write-set use the Host when it is targeted; revokes and removals
+  (grant, tool approval rule, private MCP server) need --confirm, like the Web UI.
   Deletion requires preview then stdin {"token":"<preview.token>"}; Memory is retained.
   Question stdin: {"answers":[{"id":"question-id","selected":["option"],"custom":"optional"}]}
   Private input stdin: {"field_id":"confidential value",...}; only declared fields.
@@ -340,12 +467,14 @@ const CREATE_OPTIONS = {
   name: { type: 'string' },
   persona: { type: 'string' },
   'persona-stdin': { type: 'boolean' },
+  'core-memory-stdin': { type: 'boolean' },
   description: { type: 'string' },
   role: { type: 'string', multiple: true },
   preset: { type: 'string' },
   'from-zip': { type: 'string' },
   'from-dir': { type: 'string' },
   'from-git': { type: 'string' },
+  'memory-location': { type: 'string' },
   home: { type: 'string' },
   'orchestrator-provider': { type: 'string' },
   'orchestrator-model': { type: 'string' },
@@ -613,6 +742,12 @@ function failureOf(reason: string, detail?: string): CliFailure {
           : `The Bot memory could not be initialized: ${detail}`,
         1,
       );
+    case 'invalid-memory-dir':
+      return new CliFailure(
+        'invalid-memory-dir',
+        'The Memory location must be an existing absolute folder that does not already hold this Bot.',
+        1,
+      );
     case 'duplicate':
       return new CliFailure('invalid-input', 'The minted bot id collided. Retry the command.', 1);
     default:
@@ -627,9 +762,12 @@ function failureOf(reason: string, detail?: string): CliFailure {
 export interface ValidatedCreate {
   displayName: string | undefined;
   persona: string | undefined;
+  coreMemory?: string;
+  avatar?: string;
   roles: string[] | undefined;
   description: string | undefined;
   presetId: string | undefined;
+  memoryLocation?: string;
   source:
     | { kind: 'blank' }
     | { kind: 'git'; gitUrl: string }
@@ -655,12 +793,33 @@ async function validatedCreate(
   if (persona !== undefined && personaStdin) {
     throw usageError('Pass --persona or --persona-stdin, not both.');
   }
+  const coreMemory = trimmed(values['core-memory']);
+  const coreMemoryStdin = values['core-memory-stdin'] === true;
+  if (coreMemory !== undefined && coreMemoryStdin)
+    throw usageError('Pass --core-memory or --core-memory-stdin, not both.');
+  if (personaStdin && coreMemoryStdin)
+    throw usageError('Only one of --persona-stdin and --core-memory-stdin can read stdin.');
+  const avatarFile = trimmed(values['avatar-file']);
+  if (
+    (coreMemory !== undefined || coreMemoryStdin || avatarFile !== undefined) &&
+    (zip !== undefined || dir !== undefined || git !== undefined)
+  )
+    throw usageError('--core-memory and --avatar-file apply to blank bots only.');
   const description = trimmed(values.description);
   const roles =
     values.role === undefined
       ? undefined
       : values.role.map((role) => role.trim()).filter((role) => role.length > 0);
   const presetId = trimmed(values.preset);
+  const memoryLocation = trimmed(values['memory-location']);
+  if (memoryLocation !== undefined) {
+    if (zip !== undefined || dir !== undefined || git !== undefined) {
+      throw usageError('--memory-location applies to blank bots only.');
+    }
+    if (!isAbsolute(memoryLocation)) {
+      throw new CliFailure('invalid-input', '--memory-location must be an absolute path.', 1);
+    }
+  }
   if (git !== undefined) {
     if (persona !== undefined || personaStdin) {
       throw usageError('The persona comes from the Git repository, not --persona.');
@@ -710,15 +869,38 @@ async function validatedCreate(
     };
   }
   if (name === undefined) throw usageError('--name is required for a blank bot.');
-  const piped = personaStdin === true ? (await readStdin()).trim() : '';
+  const avatar = avatarFile === undefined ? undefined : avatarFromFile(avatarFile);
+  const piped = personaStdin || coreMemoryStdin ? (await readStdin()).trim() : '';
+  const pipedCoreMemory = coreMemoryStdin && piped.length > 0 ? piped : undefined;
+  const chosenCoreMemory = coreMemory ?? pipedCoreMemory;
   return {
     displayName: name,
     persona: personaStdin === true ? (piped.length > 0 ? piped : undefined) : persona,
+    ...(chosenCoreMemory === undefined ? {} : { coreMemory: chosenCoreMemory }),
+    ...(avatar === undefined ? {} : { avatar }),
     roles,
     description,
     presetId,
+    ...(memoryLocation === undefined ? {} : { memoryLocation }),
     source: { kind: 'blank' },
   };
+}
+
+function avatarFromFile(path: string): string {
+  let bytes: Buffer;
+  try {
+    bytes = readFileSync(resolve(path));
+  } catch {
+    throw new CliFailure('file-unreadable', `Cannot read --avatar-file ${path}.`, 1);
+  }
+  const avatar = personaBotAvatarFromBytes(bytes);
+  if (avatar === undefined)
+    throw new CliFailure(
+      'invalid-avatar',
+      '--avatar-file must be a PNG, JPEG or WebP image of at most 128 KiB.',
+      1,
+    );
+  return avatar;
 }
 
 function nextActions(
@@ -778,6 +960,11 @@ async function runCreate(
           slug: candidate,
           displayName: validated.displayName!,
           ...(validated.persona === undefined ? {} : { persona: validated.persona }),
+          ...(validated.coreMemory === undefined ? {} : { coreMemory: validated.coreMemory }),
+          ...(validated.avatar === undefined ? {} : { avatar: validated.avatar }),
+          ...(validated.memoryLocation === undefined
+            ? {}
+            : { memoryLocation: validated.memoryLocation }),
           ...base,
         });
       let created = attempt(slug);
@@ -1690,53 +1877,7 @@ function runGrantWriteSet(
 }
 
 function parseTrigger(values: CreateValues): BotScheduleTrigger | undefined {
-  const every = trimmed(values.every);
-  const daily = trimmed(values.daily);
-  const weekly = trimmed(values.weekly);
-  const onceDate = trimmed(values['once-date']);
-  const onceTime = trimmed(values['once-time']);
-  const cron = trimmed(values.cron);
-  const selected = [
-    every === undefined ? 0 : 1,
-    daily === undefined ? 0 : 1,
-    weekly === undefined ? 0 : 1,
-    onceDate === undefined ? 0 : 1,
-    cron === undefined ? 0 : 1,
-  ].reduce((total, count) => total + count, 0);
-  if (selected === 0) return undefined;
-  if (selected > 1) {
-    throw usageError(
-      'Pass exactly one schedule trigger: --every, --daily, --weekly, --once-date, or --cron.',
-    );
-  }
-  const timeZone = trimmed(values.timezone);
-  if (every !== undefined) {
-    if (!/^[0-9]+$/u.test(every) || Number(every) < 1) {
-      throw usageError('--every must be a positive whole number of seconds.');
-    }
-    return { kind: 'every', everySeconds: Number(every) };
-  }
-  if (timeZone === undefined) {
-    throw usageError('--timezone is required for calendar triggers.');
-  }
-  if (daily !== undefined) return { kind: 'daily', time: daily, timeZone };
-  if (weekly !== undefined) {
-    const weekdays = trimmed(values.weekdays);
-    if (weekdays === undefined) throw usageError('--weekdays is required for --weekly.');
-    const days = weekdays.split(',').map((day) => day.trim());
-    if (
-      days.length === 0 ||
-      days.some((day) => !/^[0-9]+$/u.test(day) || Number(day) < 0 || Number(day) > 6)
-    ) {
-      throw usageError('--weekdays must be comma-separated days 0-6.');
-    }
-    return { kind: 'weekly', time: weekly, timeZone, weekdays: days.map(Number) };
-  }
-  if (onceDate !== undefined) {
-    if (onceTime === undefined) throw usageError('--once-time is required for --once-date.');
-    return { kind: 'once', date: onceDate, time: onceTime, timeZone };
-  }
-  return { kind: 'cron', expression: cron!, timeZone };
+  return scheduleTriggerFromFlags(values, usageError);
 }
 
 function enabledFlag(
@@ -1744,12 +1885,7 @@ function enabledFlag(
   on: 'enabled' | 'locked',
   off: 'disabled' | 'unlocked',
 ): boolean | undefined {
-  const isOn = values[on] === true;
-  const isOff = values[off] === true;
-  if (isOn && isOff) throw usageError(`Pass --${on} or --${off}, not both.`);
-  if (isOn) return true;
-  if (isOff) return false;
-  return undefined;
+  return scheduleToggleFromFlags(values, on, off, usageError);
 }
 
 function runSchedules(
@@ -2462,8 +2598,19 @@ export async function runBotCreateCli(
     }
     if (
       LIVE_COMMANDS.some((entry) => entry.command === command) ||
-      (command === 'channel-messages' &&
-        (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined))
+      (([
+        'channel-messages',
+        'grants',
+        'memory-snapshot',
+        'memory-file',
+        'memory-history',
+        'memory-diff',
+        'memory-save',
+        ...PROFILE_ONLINE_COMMANDS,
+      ].includes(command) ||
+        isScheduleCommand(command)) &&
+        (values.host !== undefined || io.env['DEEPSEEKBOT_HOST'] !== undefined)) ||
+      (online && INBOX_HOST_COMMANDS.some((entry) => entry === command))
     ) {
       if (values.home !== undefined)
         throw usageError('Do not combine --home and an online Host target.');
@@ -2473,10 +2620,7 @@ export async function runBotCreateCli(
     if (
       values.host !== undefined ||
       values['token-file'] !== undefined ||
-      (online &&
-        !['search', 'schedule-preview', 'secret-put', 'secret-list', 'secret-unset'].includes(
-          command,
-        ))
+      (online && !['search', 'secret-put', 'secret-list', 'secret-unset'].includes(command))
     )
       throw usageError(
         'This command has no online adapter yet; use its explicit offline maintenance mode.',

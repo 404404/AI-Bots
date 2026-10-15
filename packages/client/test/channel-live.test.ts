@@ -234,7 +234,7 @@ describe('Roster live Client', () => {
         return source as unknown as EventSource;
       });
       expect(sources).toHaveLength(1);
-      expect(sources[0]?.url).toBe('/api/botharness/stream?scope=roster');
+      expect(sources[0]?.url).toBe('./api/botharness/stream?scope=roster');
       sources[0]?.listeners.get('roster/changed')?.(new MessageEvent('roster/changed'));
       await vi.advanceTimersByTimeAsync(80);
       expect(refreshRoster).toHaveBeenCalledTimes(1);
@@ -329,6 +329,37 @@ describe('Channel live Client', () => {
     expect(
       store.getSnapshot().conversation.messages.map((item) => item.humanReceipts?.[0]?.state),
     ).toEqual(['read', 'unread']);
+    dispose();
+  });
+
+  it('replaces one message reactions from a reaction event and drops an empty set', () => {
+    const { store, sources, dispose } = setup();
+    store.setConversation({
+      messages: [
+        {
+          id: 'first',
+          at: '2026-09-21T00:00:01.000Z',
+          author: { kind: 'bot', slug: 'ada' },
+          body: 'first',
+          channelRevision: 1,
+        },
+      ],
+      revision: 1,
+    });
+    const react = (reactions: unknown, channelId = CHANNEL.id) =>
+      sources[0]?.listeners.get('channel/reaction')?.(
+        new MessageEvent('channel/reaction', {
+          data: JSON.stringify({ channelId, messageId: 'first', reactions }),
+        }),
+      );
+    const reactions = [{ emoji: '👍', actors: [{ kind: 'human', id: 'local-human' }] }];
+    react(reactions);
+    expect(store.getSnapshot().conversation.messages[0]?.reactions).toEqual(reactions);
+    react([{ emoji: '👍', actors: 'everyone' }]);
+    react([], 'other-channel');
+    expect(store.getSnapshot().conversation.messages[0]?.reactions).toEqual(reactions);
+    react([]);
+    expect(store.getSnapshot().conversation.messages[0]).not.toHaveProperty('reactions');
     dispose();
   });
 

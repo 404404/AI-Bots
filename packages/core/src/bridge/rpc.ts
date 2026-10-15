@@ -1,3 +1,4 @@
+import type { TurnTrace } from '../bots/tool-trace.js';
 import type { PartLibraryEntry } from '../bots/part-library.js';
 import type { OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
 import type { HttpsFallback } from '../memory/clone.js';
@@ -13,6 +14,7 @@ import {
   LiveUnavailable,
   type ActivityLiveFrame,
   type ChannelLiveFrame,
+  type DraftDelivery,
   type RosterLiveFrame,
 } from '../channels/live.js';
 import type { AllBotPreview, AllBotMention } from '../channels/all-bot-mention.js';
@@ -45,7 +47,7 @@ import type {
 } from '../release/service.js';
 import type { TelemetryStatus } from '../telemetry/service.js';
 import type { OverviewMemory } from '../memory/overview.js';
-import type { OverviewUsage } from './methods.js';
+import type { ApprovalReviewerModelView, OverviewUsage } from './methods.js';
 import type { PersonaBotActivitySnapshot } from '../state/bot-state.js';
 import type { HumanAssignmentContext } from '../runtime/assignment-human-context.js';
 import type { ThreadReceptionInput } from '../messaging/thread-policy.js';
@@ -82,6 +84,7 @@ import type {
   ChannelListItem,
   MessagingAppsView,
   PersonaBotDetail,
+  ApprovalTemplateEntry,
   PersonaBotSummary,
   OwnedSessionSummary,
   OwnedSessionBot,
@@ -90,7 +93,7 @@ import type {
 } from './methods.js';
 import type { ChannelActivityToday } from '../channels/activity-today.js';
 import type { GroupProfileActivity } from '../channels/profile-activity.js';
-import type { ChannelMessage, ChannelRecord } from '../channels/channel.js';
+import type { ChannelMessage, ChannelReaction, ChannelRecord } from '../channels/channel.js';
 import type { ChannelSendStatus } from '../channels/store.js';
 import type { ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ChannelReadPosition } from '../channels/store.js';
@@ -101,6 +104,7 @@ import type {
   AssignmentDetail,
   AssignmentSummary,
   ChannelAssignmentSummary,
+  DirectBotToolSpec,
 } from '../runtime/bot-runtime.js';
 import type { BotAttentionPage, BotAttentionState } from '../runtime/attention.js';
 import type {
@@ -185,6 +189,7 @@ export interface BridgeLive {
     channelId: string,
     limit: number,
     signal: AbortSignal,
+    drafts?: DraftDelivery,
   ): AsyncIterable<ChannelLiveFrame>;
   journalPage(channelId: string, request: ChannelJournalRequest): ChannelJournalPage | undefined;
   followCompanion(
@@ -276,12 +281,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   async *followChannel(
     channelId: string,
     limit: number,
+    drafts: DraftDelivery | undefined,
     signal: AbortSignal,
   ): AsyncGenerator<ChannelLiveFrame> {
     if (this.live === undefined)
       throw toRemoteError({ code: 'unavailable', message: 'Live stream is unavailable' });
     try {
-      yield* this.live.followChannel(channelId, limit, signal);
+      yield* this.live.followChannel(channelId, limit, signal, drafts ?? 'full');
     } catch (error) {
       if (error instanceof ChannelLiveRefused)
         throw toRemoteError({ code: error.code, message: error.message });
@@ -607,6 +613,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
   channelRetry(channelId: string, messageId: string): Promise<{ accepted: true }> {
     return unwrapAsync(this.methods.channelRetry({ channelId, messageId }));
   }
+  channelBotStop(
+    channelId: string,
+    botSlug: string,
+  ): Promise<{ stopped: { botSlug: string; sessionId: string; messageId: string } }> {
+    return unwrapAsync(this.methods.channelBotStop({ channelId, botSlug }));
+  }
   modelCatalog(): Promise<{
     models: ModelCatalogEntry[];
     default?: ModelRoute;
@@ -714,6 +726,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     preset?: string,
     workspaces?: string[],
     avatar?: string,
+    memoryLocation?: string,
   ): { bot: PersonaBotDetail } {
     return unwrap(
       this.methods.create({
@@ -725,6 +738,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
         preset,
         workspaces,
         avatar,
+        memoryLocation,
       }),
     );
   }
@@ -777,6 +791,47 @@ export class BotharnessBridgeService extends TypertRemoteService {
 
   browserProfileSet(slug: string, profile: string): { bot: PersonaBotDetail } {
     return unwrap(this.methods.browserProfileSet({ slug, profile }));
+  }
+
+  approvalTemplates(slug?: string): {
+    templates: ApprovalTemplateEntry[];
+    selected?: string | null;
+  } {
+    return unwrap(this.methods.approvalTemplates(slug === undefined ? {} : { slug }));
+  }
+
+  approvalTemplateCreate(
+    name: string,
+    text?: string,
+    from?: string,
+  ): { template: ApprovalTemplateEntry } {
+    return unwrap(
+      this.methods.approvalTemplateCreate({
+        name,
+        ...(text === undefined ? {} : { text }),
+        ...(from === undefined ? {} : { from }),
+      }),
+    );
+  }
+
+  approvalTemplateUpdate(name: string, text: string): { template: ApprovalTemplateEntry } {
+    return unwrap(this.methods.approvalTemplateUpdate({ name, text }));
+  }
+
+  approvalTemplateDelete(name: string): { template: { name: string }; clearedBots: string[] } {
+    return unwrap(this.methods.approvalTemplateDelete({ name }));
+  }
+
+  botApprovalTemplateSet(slug: string, template: string | null): { bot: PersonaBotDetail } {
+    return unwrap(this.methods.botApprovalTemplateSet({ slug, template }));
+  }
+
+  approvalReviewerModel(): Promise<ApprovalReviewerModelView> {
+    return unwrapAsync(this.methods.approvalReviewerModel({}));
+  }
+
+  approvalReviewerModelSet(model: ModelRoute | null): Promise<ApprovalReviewerModelView> {
+    return unwrapAsync(this.methods.approvalReviewerModelSet({ model }));
   }
 
   standingLimitsSet(slug: string, soul: number, coreMemory: number): { bot: PersonaBotDetail } {
@@ -997,6 +1052,24 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(await this.methods.channelMarkRead({ channelId, messageId }));
   }
 
+  channelReact(
+    channelId: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): { reactions: ChannelReaction[] } {
+    return unwrap(this.methods.channelReact({ channelId, messageId, emoji, active }));
+  }
+
+  channelSearch(
+    channelId: string,
+    text: string,
+    cursor?: string,
+    limit?: number,
+  ): { messages: ChannelMessage[]; nextCursor?: string } {
+    return unwrap(this.methods.channelSearch({ channelId, text, cursor, limit }));
+  }
+
   channelAllBotPreview(channelId: string): AllBotPreview {
     return unwrap(this.methods.channelAllBotPreview({ channelId }));
   }
@@ -1089,13 +1162,27 @@ export class BotharnessBridgeService extends TypertRemoteService {
     limit?: number,
     cursor?: string,
     sort?: 'newest' | 'oldest',
+    snoozed?: boolean,
+    kind?: 'auto-rejection',
   ): HumanAttentionPage {
     return unwrap(
-      this.methods.humanAttention({ category, botSlug, channelId, limit, cursor, sort }),
+      this.methods.humanAttention({
+        category,
+        botSlug,
+        channelId,
+        limit,
+        cursor,
+        sort,
+        snoozed,
+        kind,
+      }),
     );
   }
   humanAttentionStatus(): { unreadCount: number; hasAction: boolean } {
     return unwrap(this.methods.humanAttentionStatus({}));
+  }
+  channelUnreadCounts(): { channels: Array<{ channelId: string; unreadCount: number }> } {
+    return unwrap(this.methods.channelUnreadCounts({}));
   }
   humanAssignmentContext(
     slug: string,
@@ -1109,6 +1196,13 @@ export class BotharnessBridgeService extends TypertRemoteService {
   }
   humanAttentionIgnore(sourceEventId: string): { accepted: boolean } {
     return unwrap(this.methods.humanAttentionIgnore({ sourceEventId }));
+  }
+  humanAttentionSnooze(
+    itemId: string,
+    sourceKey: string,
+    until: string | null,
+  ): { accepted: boolean } {
+    return unwrap(this.methods.humanAttentionSnooze({ itemId, sourceKey, until }));
   }
 
   assignments(slug: string): { assignments: AssignmentSummary[] } {
@@ -1203,6 +1297,12 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.toolApprovalDecide({ channelId, messageId, outcome }));
   }
 
+  toolAutoRejectionOverride(
+    itemId: string,
+  ): Promise<{ accepted: true; channelId: string; messageId: string }> {
+    return unwrapAsync(this.methods.toolAutoRejectionOverride({ itemId }));
+  }
+
   userQuestionStatus(
     channelId: string,
     messageId: string,
@@ -1222,12 +1322,47 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.sessions({ slug }));
   }
 
+  botToolTrace(
+    slug: string,
+    sessionId?: string,
+    turns?: number,
+  ): Promise<{ slug: string; sessionId: string; turns: TurnTrace[] }> {
+    return unwrapAsync(
+      this.methods.botToolTrace({
+        slug,
+        ...(sessionId === undefined ? {} : { sessionId }),
+        ...(turns === undefined ? {} : { turns }),
+      }),
+    );
+  }
+
+  botTools(): { sessionId: 'direct'; tools: DirectBotToolSpec[] } {
+    return unwrap(this.methods.botTools({}));
+  }
+
+  botToolRun(
+    slug: string,
+    tool: string,
+    args?: Record<string, unknown>,
+  ): Promise<{ slug: string; tool: string; sessionId: 'direct'; result: unknown }> {
+    return unwrapAsync(
+      this.methods.botToolRun({ slug, tool, ...(args === undefined ? {} : { args }) }),
+    );
+  }
+
   sessionArchiveSet(
     slug: string,
     sessionId: string,
     archived: boolean,
   ): Promise<{ archived: boolean }> {
     return unwrapAsync(this.methods.sessionArchiveSet({ slug, sessionId, archived }));
+  }
+
+  memoryMove(
+    slug: string,
+    location: string | null,
+  ): Promise<{ memoryDir: string; moved: boolean; leftover?: string }> {
+    return unwrapAsync(this.methods.memoryMove({ slug, location }));
   }
 
   sessionOwner(sessionId: string): { owner: OwnedSessionBot | null } {
@@ -1401,6 +1536,9 @@ export class BotharnessBridgeService extends TypertRemoteService {
   hiddenSet(hidden: string[]): Promise<{ hidden: string[] }> {
     return unwrapAsync(this.methods.hiddenSet({ hidden }));
   }
+  channelMuteSet(channelId: string, muted: boolean): Promise<{ muted: string[] }> {
+    return unwrapAsync(this.methods.channelMuteSet({ channelId, muted }));
+  }
 
   rosterBatch(
     action: 'pin' | 'unpin' | 'hide' | 'move',
@@ -1550,6 +1688,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'onboardingModel',
   'modelPlanInherit',
   'channelRetry',
+  'channelBotStop',
   'modelCatalog',
   'modelPresets',
   'modelPresetCreate',
@@ -1597,6 +1736,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelReadPosition',
   'channelMarkRead',
   'channelMarkAllRead',
+  'channelReact',
+  'channelSearch',
+  'channelUnreadCounts',
   'channelAllBotPreview',
   'channelSend',
   'channelSendStatus',
@@ -1611,6 +1753,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'humanAttentionStatus',
   'humanAttentionIgnore',
   'humanAttentionDismiss',
+  'humanAttentionSnooze',
   'assignments',
   'channelAssignments',
   'assignment',
@@ -1627,10 +1770,15 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'toolApprovalRuleRevoke',
   'toolApprovalStatus',
   'toolApprovalDecide',
+  'toolAutoRejectionOverride',
   'userQuestionStatus',
   'userQuestionAnswer',
   'sessions',
+  'botToolTrace',
+  'botTools',
+  'botToolRun',
   'sessionArchiveSet',
+  'memoryMove',
   'sessionOwner',
   'botSessionIds',
   'memoryFileTarget',
@@ -1665,11 +1813,19 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'topReorder',
   'pinsSet',
   'hiddenSet',
+  'channelMuteSet',
   'rosterBatch',
   'developerModeSet',
   'computerAccessSet',
   'browserAccessSet',
   'browserProfileSet',
+  'approvalTemplates',
+  'approvalTemplateCreate',
+  'approvalTemplateUpdate',
+  'approvalTemplateDelete',
+  'botApprovalTemplateSet',
+  'approvalReviewerModel',
+  'approvalReviewerModelSet',
   'standingLimitsSet',
   'botAvatarSet',
   'botAppearanceSet',

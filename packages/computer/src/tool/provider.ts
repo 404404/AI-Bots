@@ -71,6 +71,7 @@ export interface ComputerToolProviderOptions {
   readonly ctx: Context;
   readonly driver: CuaDriver;
   readonly isComputerRunning: () => boolean;
+  readonly isPaused?: () => boolean;
   readonly isAutoAllowed: () => boolean;
   readonly guidance?: (() => string) | undefined;
   readonly authorizationScope?: (() => string) | undefined;
@@ -95,6 +96,14 @@ export interface ComputerToolProvider {
   reconcileBot(slug: string): Promise<void>;
   reconcileAll(): Promise<void>;
   resetRuntime(): void;
+  directTools(): Promise<readonly { name: string; description: string; inputSchema: unknown }[]>;
+  runDirect(
+    slug: string,
+    tool: string,
+    args: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<unknown>;
+  drain(timeoutMs: number): Promise<void>;
   dispose(): Promise<void>;
 }
 
@@ -134,6 +143,40 @@ export function createComputerToolProvider(
   options: ComputerToolProviderOptions,
 ): ComputerToolProvider {
   const { ctx, driver, isComputerRunning, isAutoAllowed, audit, core } = options;
+  const assertNotPaused = (): void => {
+    if (options.isPaused?.() === true)
+      throw new Error(
+        'Computer Pause is active: the Human is using the desktop from the phone. Wait for them to hand it back, then take a fresh screenshot before acting',
+      );
+  };
+  const inflight = new Set<Promise<unknown>>();
+  const botCall = async (
+    raw: string,
+    args: Record<string, unknown>,
+    signal: AbortSignal,
+  ): Promise<unknown> => {
+    assertNotPaused();
+    const call = driver.call(raw, args, signal);
+    inflight.add(call);
+    try {
+      const result = await call;
+      assertNotPaused();
+      return result;
+    } finally {
+      inflight.delete(call);
+    }
+  };
+  const drain = async (timeoutMs: number): Promise<void> => {
+    if (inflight.size === 0) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      Promise.allSettled([...inflight]),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
+  };
   const note = options.note ?? ((): void => undefined);
   const onActivity = options.onActivity ?? ((): void => undefined);
 
@@ -216,9 +259,10 @@ export function createComputerToolProvider(
                 'The Computer is not running; ask the Human to start it from the Computer panel',
               );
             }
+            assertNotPaused();
             const started = Date.now();
             try {
-              const result = await driver.call(raw, args, execution.signal);
+              const result = await botCall(raw, args, execution.signal);
               const failed =
                 typeof result === 'object' &&
                 result !== null &&
@@ -331,7 +375,74 @@ export function createComputerToolProvider(
     };
   });
 
+  const directCatalog = async (): Promise<
+    readonly { raw: string; descriptor: DriverToolDescriptor }[]
+  > => {
+    if (cachedTools === undefined && isComputerRunning()) {
+      warmCatalog();
+      await warming?.catch(() => undefined);
+    }
+    return selectCuratedTools(cachedTools ?? FALLBACK_TOOLS);
+  };
+
+  const directTools: ComputerToolProvider['directTools'] = async () =>
+    (await directCatalog()).map(({ raw, descriptor }) => ({
+      name: computerToolName(raw),
+      description: descriptor.description,
+      inputSchema: descriptor.inputSchema,
+    }));
+
+  const runDirect: ComputerToolProvider['runDirect'] = async (
+    slug,
+    tool,
+    args,
+    signal = new AbortController().signal,
+  ) => {
+    const raw = tool.startsWith('computer_') ? tool.slice('computer_'.length) : tool;
+    if (!(await directCatalog()).some((entry) => entry.raw === raw))
+      throw new Error(`Unknown Computer tool ${tool}`);
+    const name = computerToolName(raw);
+    const started = Date.now();
+    try {
+      onActivity();
+      if (core().registry?.get(slug)?.computerAccess !== true)
+        throw new Error('Computer Access is off for this PersonaBot');
+      if (!isComputerRunning())
+        throw new Error('The Computer is not running; start it with computer-start first');
+      const result = await botCall(raw, args, signal);
+      const failed =
+        typeof result === 'object' &&
+        result !== null &&
+        'isError' in result &&
+        result.isError === true;
+      record(
+        slug,
+        'direct',
+        name,
+        auditSummary(raw, args),
+        failed ? 'error' : 'ok',
+        Date.now() - started,
+        failed ? 'Computer driver reported a tool failure' : undefined,
+      );
+      return modelVisibleDriverResult(result);
+    } catch (error) {
+      record(
+        slug,
+        'direct',
+        name,
+        auditSummary(raw, args),
+        'error',
+        Date.now() - started,
+        error instanceof Error ? error.message : String(error),
+      );
+      throw error;
+    }
+  };
+
   return {
+    directTools,
+    runDirect,
+    drain,
     attachAgent(scope, sessionId, info) {
       if (disposed) return;
       sessions.set(sessionId, { scope, disposed: false });

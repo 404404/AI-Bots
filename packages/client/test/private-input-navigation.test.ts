@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { watchPrivateInputNavigation } from '../src/client/private-input-navigation.js';
+import {
+  watchFullClientLanding,
+  watchPrivateInputNavigation,
+} from '../src/client/private-input-navigation.js';
 import { createStore } from '../src/client/store.js';
 
 describe('private input Chat navigation', () => {
@@ -40,5 +43,49 @@ describe('private input Chat navigation', () => {
     expect(open).not.toHaveBeenCalled();
     watchPrivateInputNavigation(store, locator, open)();
     expect(open).toHaveBeenCalledExactlyOnceWith('dm-ada', 'private-card');
+  });
+});
+
+describe('full-client landing from the phone app', () => {
+  const ada = { slug: 'ada', displayName: 'Ada', roles: [] } as never;
+
+  it('lands on Bot mode once the roster is ready and opens the DM only for a known Bot', () => {
+    const store = createStore();
+    const land = vi.fn();
+    watchFullClientLanding(store, { kind: 'dm', slug: 'ada' }, land);
+    expect(land).not.toHaveBeenCalled();
+    store.setRoster([ada], []);
+    expect(land).toHaveBeenCalledExactlyOnceWith({ kind: 'dm', slug: 'ada' });
+    store.setRoster([ada], []);
+    expect(land).toHaveBeenCalledOnce();
+
+    const missing = vi.fn();
+    watchFullClientLanding(store, { kind: 'dm', slug: 'grace' }, missing);
+    expect(missing).toHaveBeenCalledExactlyOnceWith({ kind: 'home' });
+    const home = vi.fn();
+    watchFullClientLanding(store, { kind: 'home' }, home);
+    expect(home).toHaveBeenCalledExactlyOnceWith({ kind: 'home' });
+  });
+
+  it('opens a Channel the phone searched for, and falls back to home when it is gone', () => {
+    const team = { id: 'team', type: 'group', name: 'team', members: [] } as never;
+    const store = createStore();
+    const land = vi.fn();
+    watchFullClientLanding(store, { kind: 'channel', channelId: 'team' }, land);
+    store.setRoster([], [team]);
+    expect(land).toHaveBeenCalledExactlyOnceWith({ kind: 'channel', channelId: 'team' });
+
+    const gone = vi.fn();
+    watchFullClientLanding(store, { kind: 'channel', channelId: 'old' }, gone);
+    expect(gone).toHaveBeenCalledExactlyOnceWith({ kind: 'home' });
+  });
+
+  it('lands on a create target once the roster is ready', () => {
+    const store = createStore();
+    const land = vi.fn();
+    watchFullClientLanding(store, { kind: 'new-channel' }, land);
+    expect(land).not.toHaveBeenCalled();
+    store.setRoster([], []);
+    expect(land).toHaveBeenCalledExactlyOnceWith({ kind: 'new-channel' });
   });
 });

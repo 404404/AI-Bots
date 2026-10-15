@@ -1,0 +1,35 @@
+# Smoke flow for an unpaired development build on the iOS Simulator.
+# Needs Metro on 127.0.0.1:8081 (`pnpm --filter @botharness/mobile start`).
+appId: ai.botharness.deepseekbot.dev
+---
+- launchApp:
+    clearState: true
+    # Maestro grants every permission by default; a first launch has none.
+    permissions:
+      all: unset
+# A development build opens on the dev launcher; point it at Metro.
+- openLink: exp+deepseekbot://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081
+# iOS asks before an app opens its own link; the Simulator may be in any language.
+- tapOn:
+    text: 'Open|打开'
+    optional: true
+# First launch after clearState shows the dev menu onboarding.
+- tapOn:
+    text: Continue
+    optional: true
+- tapOn:
+    text: Close
+    optional: true
+- extendedWaitUntil:
+    visible: 'Pair with your computer|与电脑配对'
+    timeout: 60000
+- assertVisible: 'Allow the camera to scan|允许使用相机扫码'
+- assertVisible: 'Or paste the pairing link|或粘贴配对链接'
+- tapOn:
+    text: deepseekbot://pair\?p=…
+- inputText: not-a-link
+# With the keyboard still up, the field and Pair are both on screen.
+- assertVisible: not-a-link
+- tapOn: 'Pair|配对'
+- assertVisible: 'This is not a DeepSeekBot pairing code\.|这不是 DeepSeekBot 的配对二维码。'
+- takeScreenshot: pair-screen

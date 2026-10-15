@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { runBotCreateCli } from '../src/bots/bot-create-cli.js';
 import { writeZip } from '../src/bots/zip-archive.js';
+import { createPersonaBotRegistry } from '../src/bots/registry.js';
 import { createSqliteChannelStore } from '../src/channels/sqlite-store.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 import { attachOperationalModule, mountOperationalDatabase } from '../src/database/owner.js';
@@ -149,6 +150,29 @@ describe('deepseekbot create', () => {
     expect(result.stderr).toContain(result.json.bot.id);
   });
 
+  it('stores a blank bot Memory under a chosen absolute location', async () => {
+    const home = createTempRoot('botharness-create-location-');
+    const location = createTempRoot('botharness-create-location-target-');
+    const result = await invoke(['create', '--name', 'Ada', '--memory-location', location], home);
+    expect(result.code).toBe(0);
+    expect(result.json.dataDir).toBe(join(location, result.json.bot.id));
+    expect(existsSync(join(result.json.dataDir, '.git'))).toBe(true);
+    const shown = await invoke(['show', result.json.bot.id], home);
+    expect(shown.json.dataDir).toBe(join(location, result.json.bot.id));
+  });
+
+  it('refuses a relative or import-time Memory location as coded errors', async () => {
+    const home = createTempRoot('botharness-create-location-bad-');
+    const relative = await invoke(['create', '--name', 'Ada', '--memory-location', 'rel'], home);
+    expect(relative.code).not.toBe(0);
+    expect(relative.json.error.code).toBe('invalid-input');
+    const imported = await invoke(
+      ['create', '--name', 'Ada', '--from-git', 'owner/repo', '--memory-location', home],
+      home,
+    );
+    expect(imported.code).toBe(2);
+  });
+
   it('mints a second bot for a duplicate name', async () => {
     const home = createTempRoot('botharness-create-dup-');
     const first = await invoke(['create', '--name', 'Same'], home);
@@ -192,6 +216,68 @@ describe('deepseekbot create', () => {
     );
     expect(result.code).toBe(0);
     expect(readFileSync(join(result.json.dataDir, 'SOUL.md'), 'utf8')).toBe('You are a scout.');
+  });
+
+  it('creates a blank bot with an Avatar file and Core Memory', async () => {
+    const home = createTempRoot('botharness-create-avatar-');
+    const avatar = join(home, 'tim.png');
+    writeFileSync(
+      avatar,
+      Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.from('tiny')]),
+    );
+    const result = await invoke(
+      ['create', '--name', 'Tim', '--avatar-file', avatar, '--core-memory', '# Core\n- Fridays'],
+      home,
+    );
+    expect(result.code).toBe(0);
+    expect(readFileSync(join(result.json.dataDir, 'MEMORY.md'), 'utf8')).toBe('# Core\n- Fridays');
+    const owner = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
+    try {
+      const registry = createPersonaBotRegistry({
+        rootDir: join(home, 'botharness', 'bots'),
+        database: owner,
+      });
+      expect(registry.get(result.json.bot.id)?.avatar).toMatch(/^data:image\/png;base64,/u);
+    } finally {
+      owner.close();
+    }
+
+    const piped = await invoke(
+      ['create', '--name', 'Piped', '--core-memory-stdin'],
+      home,
+      {},
+      '# Piped core',
+    );
+    expect(piped.code).toBe(0);
+    expect(readFileSync(join(piped.json.dataDir, 'MEMORY.md'), 'utf8')).toBe('# Piped core');
+  });
+
+  it('refuses a bad or too-large Avatar file and conflicting stdin flags', async () => {
+    const home = createTempRoot('botharness-create-avatar-bad-');
+    const text = join(home, 'avatar.txt');
+    writeFileSync(text, 'not an image');
+    const large = join(home, 'large.png');
+    writeFileSync(
+      large,
+      Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffer.alloc(200_000)]),
+    );
+    for (const file of [text, large]) {
+      const refused = await invoke(['create', '--name', 'Tim', '--avatar-file', file], home);
+      expect(refused.code).not.toBe(0);
+      expect(refused.json.error.code).toBe('invalid-avatar');
+    }
+    const missing = await invoke(
+      ['create', '--name', 'Tim', '--avatar-file', join(home, 'missing.png')],
+      home,
+    );
+    expect(missing.json.error.code).toBe('file-unreadable');
+    const both = await invoke(
+      ['create', '--name', 'Tim', '--persona-stdin', '--core-memory-stdin'],
+      home,
+    );
+    expect(both.code).toBe(2);
+    const listed = await invoke(['list'], home);
+    expect(JSON.stringify(listed.json)).not.toContain('"Tim"');
   });
 
   it('rejects a missing name and mixed sources as usage errors', async () => {

@@ -15,6 +15,9 @@ import type {
 } from '../../../core/src/bots/deletion.js';
 import type { PairingRequest, PairingReviewInput } from '../../../core/src/messaging/pairing.js';
 import type { SenderAccessInput } from '../../../core/src/messaging/sender-access.js';
+import { unreadAfterAnchor } from './timeline-position.js';
+import { reactToChannelMessage, searchChannelMessages } from './bridge.js';
+import { toggledReactions } from './message-reactions-model.js';
 import {
   gitInstalling,
   loadGitAvailability,
@@ -57,7 +60,7 @@ import type {
   MessagingIdentityInput,
 } from '../../../core/src/messaging/identity.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
-import type { HumanAttentionPage } from './store.js';
+import type { HumanAttentionPage, HumanInboxState } from './store.js';
 import {
   readActivityCenterTab,
   writeActivityCenterTab,
@@ -136,6 +139,12 @@ import {
   loadWorkspaceOptions,
   loadWorkspaceGrants,
   loadToolApprovalRules,
+  loadApprovalTemplates,
+  setBotApprovalTemplate,
+  loadApprovalReviewerModel,
+  setApprovalReviewerModel,
+  type ApprovalReviewerModelView,
+  type ApprovalTemplateView,
   loadAssignmentAccess,
   setAssignmentAccess,
   type AssignmentAccessPresetView,
@@ -148,6 +157,7 @@ import {
   setWorkspaceGrantWrite,
   loadToolApprovalStatus,
   loadToolApprovalExecutionState,
+  loadToolApprovalState,
   type ToolApprovalExecutionState,
   decideToolApproval,
   loadUserQuestionStatus,
@@ -159,14 +169,18 @@ import {
   loadChannelActivityToday,
   loadHumanAttention,
   loadHumanAttentionStatus,
+  loadChannelUnreadCounts,
   loadHumanAssignmentContext,
   type HumanAssignmentContext,
   ignoreHumanAssignmentReport,
   dismissHumanInboxItem,
+  overrideAutoRejection,
+  snoozeHumanInboxItem,
   type TimelinePage,
   type TimelinePageRequest,
   loadSessions,
   setSessionArchived,
+  moveMemoryLocation,
   loadBots,
   loadMemorySnapshot,
   loadMemoryFile,
@@ -243,6 +257,7 @@ import {
   reorderTopOrder,
   sendChannelMessage,
   setRosterHidden,
+  setChannelMute,
   setRosterPins,
   type BridgeCall,
   type MemoryAcceptedCommit,
@@ -333,6 +348,7 @@ export interface BridgeActions {
   ): Promise<{ revision: number }>;
   inheritModel(slug: string, expectedRevision: number): Promise<{ revision: number }>;
   retryMessage(channelId: string, messageId: string): Promise<void>;
+  stopBot(channelId: string, botSlug: string): Promise<'stopped' | 'not-working'>;
 
   channelBridges(channelId: string): Promise<ChannelBridgeSnapshot>;
   channelBridge(channelId: string, input: ChannelBridgeInput): Promise<void>;
@@ -450,6 +466,7 @@ export interface BridgeActions {
     path: string,
   ): Promise<WorkspaceGrantView | undefined>;
   memoryDirectory(slug: string): Promise<string | undefined>;
+  moveMemoryLocation(slug: string, location: string | null): Promise<string>;
   load(signal?: AbortSignal): Promise<void>;
   deletionPreview(slug: string): Promise<PersonaBotDeletionPreview>;
   deletionConfirm(slug: string, token: string, eraseMemory: boolean): Promise<PersonaBotDeletion>;
@@ -462,6 +479,7 @@ export interface BridgeActions {
   openBot(slug: string, view?: 'profile'): Promise<void>;
   refreshBotInbox(slug: string): Promise<void>;
   openActivityCenter(view?: ActivityCenterTab): Promise<void>;
+  attachActivityCenterPanel(): () => void;
   refreshOverview(): Promise<void>;
   humanActionPage(botSlug: string, cursor?: string): Promise<HumanAttentionPage>;
   openHumanInbox(): Promise<void>;
@@ -470,6 +488,8 @@ export interface BridgeActions {
   setHumanInboxFilters(filters: HumanInboxFilters): Promise<void>;
   loadMoreHumanInbox(): Promise<void>;
   dismissHumanInbox(item: HumanAttentionItem): Promise<void>;
+  allowAutoRejectionOnce(item: HumanAttentionItem): Promise<void>;
+  snoozeHumanInbox(item: HumanAttentionItem, until: string | null): Promise<void>;
   humanInboxContextPage(
     channelId: string,
     request: TimelinePageRequest,
@@ -516,6 +536,18 @@ export interface BridgeActions {
   openAround(channelId: string, messageId: string): Promise<void>;
   markAllRead(): Promise<void>;
   markRead(channelId: string, messageId: string): Promise<void>;
+  reactToMessage?(
+    channelId: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): Promise<void>;
+  searchChannel?(
+    channelId: string,
+    text: string,
+    cursor?: string,
+  ): Promise<{ messages: ChannelMessage[]; nextCursor?: string }>;
+  markChannelRead(channelId: string): Promise<void>;
   refreshChannelMessages(channelId: string): Promise<void>;
   applyChannelTail(
     channelId: string,
@@ -644,6 +676,12 @@ export interface BridgeActions {
     scope?: 'chat' | 'assignments',
   ): Promise<AssignmentAccessPresetView>;
   listToolApprovalRules(slug: string): Promise<ToolApprovalRuleView[]>;
+  approvalTemplates?(
+    slug: string,
+  ): Promise<{ templates: ApprovalTemplateView[]; selected: string | null }>;
+  setBotApprovalTemplate?(slug: string, template: string | null): Promise<void>;
+  approvalReviewerModel?(): Promise<ApprovalReviewerModelView>;
+  setApprovalReviewerModel?(model: ModelRouteView | null): Promise<ApprovalReviewerModelView>;
   revokeToolApprovalRule(slug: string, id: string): Promise<void>;
   toolApprovalStatus(channelId: string, messageId: string): Promise<'pending' | 'expired'>;
   privateInputStatus?(
@@ -668,6 +706,10 @@ export interface BridgeActions {
     channelId: string,
     messageId: string,
   ): Promise<import('../../../core/src/credentials/contracts.js').PrivateRevocationResult>;
+  toolApprovalState?(
+    channelId: string,
+    messageId: string,
+  ): Promise<{ status: 'pending' | 'expired'; expiresAt?: string }>;
   toolApprovalExecutionState?(
     channelId: string,
     messageId: string,
@@ -800,6 +842,7 @@ export interface BridgeActions {
   setChannelPinned(channelId: string, pinned: boolean): Promise<boolean>;
   reorderPinnedChannels(order: readonly string[], beforePublish: () => void): Promise<boolean>;
   setChannelHidden(channelId: string, hidden: boolean): Promise<boolean>;
+  setChannelMuted(channelId: string, muted: boolean): Promise<boolean>;
   batchRoster(input: RosterBatchInput): Promise<boolean>;
   movePinnedChannel(
     channelId: string,
@@ -1062,6 +1105,7 @@ export function createActions(
       clientStore.setRosterState({
         pins: snapshot.pins,
         hidden: snapshot.hidden,
+        muted: snapshot.muted,
         sections: snapshot.sections,
         topOrder: snapshot.topOrder,
         readOnly: false,
@@ -1170,19 +1214,29 @@ export function createActions(
     }
   };
 
+  let activityPanelScope: object | undefined;
+  const humanInboxScope = (): object | undefined => {
+    const selection = currentSelection();
+    return selection?.kind === 'inbox' ? selection : activityPanelScope;
+  };
+  const overviewScope = (): object | undefined => {
+    const selection = currentSelection();
+    if (selection?.kind !== 'inbox') return activityPanelScope;
+    return selection.view === 'overview' ? selection : undefined;
+  };
   let overviewSeq = 0;
   const refreshOverview = async (): Promise<void> => {
-    const selection = currentSelection();
-    if (selection?.kind !== 'inbox' || selection.view !== 'overview') return;
+    const scope = overviewScope();
+    if (scope === undefined) return;
     const seq = ++overviewSeq;
     if (clientStore.getSnapshot().overview.status === 'idle')
       clientStore.setOverview({ status: 'loading', error: undefined });
     try {
       const value = await loadActivityOverview(call);
-      if (seq !== overviewSeq || currentSelection() !== selection) return;
+      if (seq !== overviewSeq || overviewScope() !== scope) return;
       clientStore.setOverview({ status: 'ready', value, error: undefined });
     } catch (error) {
-      if (seq !== overviewSeq || currentSelection() !== selection) return;
+      if (seq !== overviewSeq || overviewScope() !== scope) return;
       clientStore.setOverview({ status: 'error', error: errorMessage(error) });
     }
   };
@@ -1191,10 +1245,23 @@ export function createActions(
   let humanInboxPagesPending = 0;
   let humanInboxScopeVersion = 0;
   let humanInboxStatusSeq = 0;
+  const loadInboxStatus = async (): Promise<
+    Partial<Pick<HumanInboxState, 'unreadCount' | 'hasAction' | 'channelUnread'>>
+  > => {
+    const [status, channelUnread] = await Promise.allSettled([
+      loadHumanAttentionStatus(call),
+      loadChannelUnreadCounts(call),
+    ]);
+    if (status.status === 'rejected') throw status.reason;
+    return {
+      ...status.value,
+      ...(channelUnread.status === 'fulfilled' ? { channelUnread: channelUnread.value } : {}),
+    };
+  };
   const refreshHumanInboxStatus = async (): Promise<void> => {
     const requestSeq = ++humanInboxStatusSeq;
     try {
-      const status = await loadHumanAttentionStatus(call);
+      const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
     } catch {
       return;
@@ -1202,7 +1269,7 @@ export function createActions(
   };
   const loadHumanInboxFor = async (
     category: HumanInboxCategory,
-    selection: ConversationSelection,
+    scope: object,
     cursor?: string,
     retainedCount = clientStore.getSnapshot().humanInbox.items.length,
     background = false,
@@ -1211,9 +1278,9 @@ export function createActions(
     const requestSeq = head ? ++humanInboxHeadSeq : ++humanInboxPageSeq;
     const scopeVersion = humanInboxScopeVersion;
     const headVersion = humanInboxHeadSeq;
-    const { botSlug, channelId, sort } = clientStore.getSnapshot().humanInbox;
+    const { botSlug, channelId, sort, snoozed } = clientStore.getSnapshot().humanInbox;
     const isCurrent = (): boolean =>
-      currentSelection() === selection &&
+      humanInboxScope() === scope &&
       scopeVersion === humanInboxScopeVersion &&
       requestSeq === (head ? humanInboxHeadSeq : humanInboxPageSeq);
     if (cursor === undefined && clientStore.getSnapshot().humanInbox.status === 'idle')
@@ -1223,6 +1290,7 @@ export function createActions(
         botSlug,
         channelId,
         sort,
+        snoozed,
       });
       if (!isCurrent()) return;
       const priorState = clientStore.getSnapshot().humanInbox;
@@ -1230,7 +1298,7 @@ export function createActions(
       const prior = priorState.items;
       if (background && (humanInboxPagesPending > 0 || prior.length > 150)) return;
       if (!head && headVersion !== humanInboxHeadSeq) {
-        await loadHumanInboxFor(category, selection, undefined, prior.length + page.items.length);
+        await loadHumanInboxFor(category, scope, undefined, prior.length + page.items.length);
         return;
       }
       let canonicalItems = page.items;
@@ -1249,6 +1317,7 @@ export function createActions(
           botSlug,
           channelId,
           sort,
+          snoozed,
         });
         if (!isCurrent()) return;
         const seen = new Set(canonicalItems.map((item) => item.id));
@@ -1277,15 +1346,42 @@ export function createActions(
     const anchor = await loadReadPosition(call, channelId);
     if (anchor !== undefined) {
       try {
+        const opened = await loadTimelinePage(call, channelId, {
+          direction: 'around',
+          around: anchor,
+        });
         return {
-          ...(await loadTimelinePage(call, channelId, { direction: 'around', around: anchor })),
-          focusMessageId: anchor,
+          ...opened,
+          focusMessageId: undefined,
+          unreadAfterMessageId: unreadAfterAnchor(
+            opened.page.entries,
+            anchor,
+            opened.page.hasNewer,
+          ),
         };
       } catch (error) {
         if (!(error instanceof BridgeCallError) || error.code !== 'invalid-input') throw error;
       }
     }
-    return { ...(await loadTimelinePage(call, channelId)), focusMessageId: undefined };
+    return {
+      ...(await loadTimelinePage(call, channelId)),
+      focusMessageId: undefined,
+      unreadAfterMessageId: undefined,
+    };
+  };
+  const refreshUnreadDivider = async (
+    channelId: string,
+    active: ConversationSelection,
+  ): Promise<void> => {
+    const anchor = await loadReadPosition(call, channelId).catch(() => undefined);
+    const conversation = clientStore.getSnapshot().conversation;
+    if (currentSelection() !== active || conversation.channel?.id !== channelId) return;
+    const unreadAfterMessageId = unreadAfterAnchor(
+      conversation.messages,
+      anchor,
+      conversation.timeline.hasNewer,
+    );
+    if (unreadAfterMessageId !== undefined) clientStore.setConversation({ unreadAfterMessageId });
   };
 
   const openChannelById = async (channelId: string, messageId?: string): Promise<void> => {
@@ -1315,6 +1411,7 @@ export function createActions(
       clientStore.setConversation({ channel, error: undefined });
       try {
         await actions.refreshChannelMessages(channelId);
+        await refreshUnreadDivider(channelId, active);
       } catch (error) {
         if (currentSelection() === active)
           clientStore.setConversation({ error: errorMessage(error) });
@@ -1334,12 +1431,13 @@ export function createActions(
       sending: false,
     });
     try {
-      const { page, revision, focusMessageId } =
+      const { page, revision, focusMessageId, unreadAfterMessageId } =
         sourcePage === undefined
           ? await loadOpeningTimeline(channelId)
           : {
               ...sourcePage,
               focusMessageId: messageId,
+              unreadAfterMessageId: undefined,
             };
       const failures = remainingFailures(channelId, page.entries);
       const messages = page.hasNewer ? page.entries : [...page.entries, ...failures];
@@ -1351,6 +1449,7 @@ export function createActions(
         revision,
         timeline: { ...initialTimeline(), ...page },
         focusMessageId,
+        unreadAfterMessageId,
         error: undefined,
         sending: false,
       });
@@ -1390,11 +1489,11 @@ export function createActions(
                 item.kind !== kind || item.channelId !== channelId || item.messageId !== messageId,
             ),
         });
-      const selection = currentSelection();
+      const scope = humanInboxScope();
       await Promise.allSettled([
         refreshHumanInboxStatus(),
-        ...(selection?.kind === 'inbox'
-          ? [loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, selection)]
+        ...(scope !== undefined
+          ? [loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, scope)]
           : []),
       ]);
     }
@@ -1435,6 +1534,16 @@ export function createActions(
     async retryMessage(channelId, messageId) {
       await invoke('channelRetry', { channelId, messageId });
       await actions.refreshChannelMessages(channelId);
+    },
+    async stopBot(channelId, botSlug) {
+      try {
+        await invoke('channelBotStop', { channelId, botSlug });
+      } catch (error) {
+        if (error instanceof BridgeCallError && error.code === 'not-working') return 'not-working';
+        throw error;
+      }
+      await actions.refreshChannelMessages(channelId).catch(() => undefined);
+      return 'stopped';
     },
     modelCatalog: () => loadModelCatalog(call),
     modelPresets: () => loadModelPresets(call),
@@ -1490,6 +1599,7 @@ export function createActions(
       const bot = (result.value as { bot?: { memoryDir?: unknown } }).bot;
       return typeof bot?.memoryDir === 'string' ? bot.memoryDir : undefined;
     },
+    moveMemoryLocation: (slug, location) => moveMemoryLocation(call, slug, location),
     listWorkspaceOptions: () => loadWorkspaceOptions(call),
     listWorkspaceGrants: (slug) => loadWorkspaceGrants(call, slug),
     createWorkspaceGrant: (slug, workspaceId) => createWorkspaceGrant(call, slug, workspaceId),
@@ -1500,6 +1610,10 @@ export function createActions(
     setAssignmentAccess: (slug, mode, acknowledgeRisk, scope) =>
       setAssignmentAccess(call, slug, mode, acknowledgeRisk, scope),
     listToolApprovalRules: (slug) => loadToolApprovalRules(call, slug),
+    approvalTemplates: (slug) => loadApprovalTemplates(call, slug),
+    setBotApprovalTemplate: (slug, template) => setBotApprovalTemplate(call, slug, template),
+    approvalReviewerModel: () => loadApprovalReviewerModel(call),
+    setApprovalReviewerModel: (model) => setApprovalReviewerModel(call, model),
     revokeToolApprovalRule: (slug, id) => revokeToolApprovalRule(call, slug, id),
     toolApprovalStatus: (channelId, messageId) =>
       loadToolApprovalStatus(call, channelId, messageId),
@@ -1577,6 +1691,7 @@ export function createActions(
         throw new Error('Private account revocation was not accepted');
       return value;
     },
+    toolApprovalState: (channelId, messageId) => loadToolApprovalState(call, channelId, messageId),
     toolApprovalExecutionState: (channelId, messageId) =>
       loadToolApprovalExecutionState(call, channelId, messageId),
     decideToolApproval: (channelId, messageId, outcome) =>
@@ -1695,6 +1810,7 @@ export function createActions(
           clientStore.upsertChannel(channel);
           clientStore.setConversation({ channel, error: undefined });
           await actions.refreshChannelMessages(channel.id);
+          await refreshUnreadDivider(channel.id, active);
           await Promise.all([loadSessionsFor(slug, active), loadBotInboxFor(slug, active)]);
           return;
         }
@@ -1711,7 +1827,9 @@ export function createActions(
             error: undefined,
           });
         }
-        const { page, revision, focusMessageId } = await loadOpeningTimeline(channel.id);
+        const { page, revision, focusMessageId, unreadAfterMessageId } = await loadOpeningTimeline(
+          channel.id,
+        );
         const messages = page.entries;
         if (currentSelection() !== active) return;
         const listedChannel = clientStore
@@ -1734,6 +1852,7 @@ export function createActions(
           revision,
           timeline: { ...initialTimeline(), ...page },
           focusMessageId,
+          unreadAfterMessageId,
           error: undefined,
           sending: false,
         });
@@ -1767,6 +1886,16 @@ export function createActions(
       void refreshHumanInboxStatus();
       return refreshOverview();
     },
+    attachActivityCenterPanel() {
+      const scope = {};
+      activityPanelScope = scope;
+      humanInboxScopeVersion += 1;
+      return () => {
+        if (activityPanelScope !== scope) return;
+        activityPanelScope = undefined;
+        humanInboxScopeVersion += 1;
+      };
+    },
     refreshOverview,
     humanActionPage: (botSlug, cursor) =>
       loadHumanAttention(call, 'action', 50, cursor, {
@@ -1778,14 +1907,14 @@ export function createActions(
       rememberActivityTab('inbox');
       clientStore.select({ kind: 'inbox' });
       void refreshHumanInboxStatus();
-      const selection = currentSelection();
-      if (selection?.kind !== 'inbox') return Promise.resolve();
-      return loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, selection);
+      const scope = humanInboxScope();
+      if (scope === undefined) return Promise.resolve();
+      return loadHumanInboxFor(clientStore.getSnapshot().humanInbox.category, scope);
     },
     refreshHumanInboxStatus,
     refreshHumanInbox(category, background = false) {
-      const selection = currentSelection();
-      if (selection?.kind !== 'inbox') return Promise.resolve();
+      const scope = humanInboxScope();
+      if (scope === undefined) return Promise.resolve();
       const prior = clientStore.getSnapshot().humanInbox;
       if (background && (humanInboxPagesPending > 0 || prior.items.length > 150))
         return Promise.resolve();
@@ -1797,42 +1926,60 @@ export function createActions(
           sort: nextCategory === 'action' ? 'oldest' : 'newest',
           botSlug: nextCategory === 'unread' ? undefined : prior.botSlug,
           channelId: undefined,
+          snoozed: nextCategory === 'unread' || nextCategory === 'handled' ? false : prior.snoozed,
           status: 'loading',
           items: [],
           nextCursor: undefined,
           error: undefined,
         });
       }
-      return loadHumanInboxFor(nextCategory, selection, undefined, prior.items.length, background);
+      return loadHumanInboxFor(nextCategory, scope, undefined, prior.items.length, background);
     },
     setHumanInboxFilters(filters) {
-      const selection = currentSelection();
-      if (selection?.kind !== 'inbox') return Promise.resolve();
+      const scope = humanInboxScope();
+      if (scope === undefined) return Promise.resolve();
       const prior = clientStore.getSnapshot().humanInbox;
       if (
         prior.botSlug === filters.botSlug &&
         prior.channelId === filters.channelId &&
-        prior.sort === filters.sort
+        prior.sort === filters.sort &&
+        prior.snoozed === (filters.snoozed ?? prior.snoozed)
       )
         return Promise.resolve();
       humanInboxScopeVersion += 1;
       clientStore.setHumanInbox({
         ...filters,
+        snoozed: filters.snoozed ?? prior.snoozed,
         status: 'loading',
         items: [],
         nextCursor: undefined,
         error: undefined,
       });
-      return loadHumanInboxFor(prior.category, selection);
+      return loadHumanInboxFor(prior.category, scope);
     },
     loadMoreHumanInbox() {
-      const selection = currentSelection();
+      const scope = humanInboxScope();
       const state = clientStore.getSnapshot().humanInbox;
-      if (selection?.kind !== 'inbox' || state.nextCursor === undefined) return Promise.resolve();
+      if (scope === undefined || state.nextCursor === undefined) return Promise.resolve();
       humanInboxPagesPending += 1;
-      return loadHumanInboxFor(state.category, selection, state.nextCursor).finally(() => {
+      return loadHumanInboxFor(state.category, scope, state.nextCursor).finally(() => {
         humanInboxPagesPending -= 1;
       });
+    },
+    async allowAutoRejectionOnce(item) {
+      await overrideAutoRejection(call, item.id);
+      humanInboxScopeVersion += 1;
+      humanInboxHeadSeq += 1;
+      humanInboxPageSeq += 1;
+      const state = clientStore.getSnapshot().humanInbox;
+      clientStore.setHumanInbox({
+        items: state.items.filter(
+          (entry) => entry.id !== item.id || entry.sourceEventId !== item.sourceEventId,
+        ),
+      });
+      void Promise.all([actions.refreshHumanInbox(), actions.refreshHumanInboxStatus()]).catch(
+        () => undefined,
+      );
     },
     async dismissHumanInbox(item) {
       await dismissHumanInboxItem(call, item.id, item.sourceEventId ?? '');
@@ -1859,6 +2006,21 @@ export function createActions(
       )
         throw new Error('Source message is no longer available');
       return page;
+    },
+    async snoozeHumanInbox(item, until) {
+      await snoozeHumanInboxItem(call, item.id, item.sourceEventId ?? '', until);
+      humanInboxScopeVersion += 1;
+      humanInboxHeadSeq += 1;
+      humanInboxPageSeq += 1;
+      const state = clientStore.getSnapshot().humanInbox;
+      clientStore.setHumanInbox({
+        items: state.items.filter(
+          (entry) => entry.id !== item.id || entry.sourceEventId !== item.sourceEventId,
+        ),
+      });
+      void Promise.all([actions.refreshHumanInbox(), actions.refreshHumanInboxStatus()]).catch(
+        () => undefined,
+      );
     },
     async ignoreHumanReport(sourceEventId) {
       await ignoreHumanAssignmentReport(call, sourceEventId);
@@ -1976,14 +2138,61 @@ export function createActions(
         throw error;
       }
       const requestSeq = ++humanInboxStatusSeq;
-      const status = await loadHumanAttentionStatus(call);
+      const status = await loadInboxStatus();
       if (requestSeq === humanInboxStatusSeq) clientStore.setHumanInbox(status);
-      if (currentSelection()?.kind === 'inbox') await actions.refreshHumanInbox();
+      if (humanInboxScope() !== undefined) await actions.refreshHumanInbox();
     },
     async markRead(channelId, messageId) {
       await markReadPosition(call, channelId, messageId);
       await refreshHumanInboxStatus();
-      if (currentSelection()?.kind === 'inbox') await actions.refreshHumanInbox();
+      if (humanInboxScope() !== undefined) await actions.refreshHumanInbox();
+    },
+    async reactToMessage(channelId, messageId, emoji, active) {
+      const apply = (reactions: (current: ChannelMessage) => ChannelMessage['reactions']) => {
+        const snapshot = clientStore.getSnapshot();
+        if (snapshot.conversation.channel?.id !== channelId) return;
+        clientStore.setConversation({
+          messages: snapshot.conversation.messages.map((message) => {
+            if (message.id !== messageId) return message;
+            const next = reactions(message);
+            const { reactions: _previous, ...rest } = message;
+            return next === undefined || next.length === 0 ? rest : { ...rest, reactions: next };
+          }),
+        });
+      };
+      const before = clientStore
+        .getSnapshot()
+        .conversation.messages.find((message) => message.id === messageId)?.reactions;
+      apply((message) => toggledReactions(message.reactions, emoji, active));
+      try {
+        const reactions = await reactToChannelMessage(call, channelId, messageId, emoji, active);
+        apply(() => reactions);
+      } catch (error) {
+        apply(() => before);
+        throw error;
+      }
+    },
+    searchChannel(channelId, text, cursor) {
+      return searchChannelMessages(call, channelId, text, cursor);
+    },
+    async markChannelRead(channelId) {
+      const messageId = clientStore
+        .getSnapshot()
+        .channels.find((channel) => channel.id === channelId)?.latestMessage?.id;
+      if (messageId === undefined) return;
+      clientStore.setHumanInbox({
+        channelUnread: Object.fromEntries(
+          Object.entries(clientStore.getSnapshot().humanInbox.channelUnread).filter(
+            ([id]) => id !== channelId,
+          ),
+        ),
+      });
+      try {
+        await actions.markRead(channelId, messageId);
+      } catch (error) {
+        await refreshHumanInboxStatus();
+        throw error;
+      }
     },
     humanAssignmentContext(slug, sessionId, sourceEventId, signal) {
       return loadHumanAssignmentContext(call, slug, sessionId, sourceEventId, signal);
@@ -2017,7 +2226,7 @@ export function createActions(
       } finally {
         await Promise.allSettled([
           refreshHumanInboxStatus(),
-          ...(currentSelection()?.kind === 'inbox' ? [actions.refreshHumanInbox()] : []),
+          ...(humanInboxScope() !== undefined ? [actions.refreshHumanInbox()] : []),
         ]);
       }
     },
@@ -2275,7 +2484,7 @@ export function createActions(
       const target = await loadMessageAttachmentTarget(call, channelId, messageId, fileId);
       const anchor = document.createElement('a');
       anchor.href =
-        '/api/botharness/attachment?' + new URLSearchParams({ channelId, messageId, fileId });
+        './api/botharness/attachment?' + new URLSearchParams({ channelId, messageId, fileId });
       anchor.download = target.relativePath;
       document.body.append(anchor);
       anchor.click();
@@ -3096,12 +3305,19 @@ export function createActions(
         await setRosterHidden(call, next);
       });
     },
+    async setChannelMuted(channelId, muted) {
+      if (clientStore.getSnapshot().roster.muted.includes(channelId) === muted) return true;
+      return rosterMutate(async () => {
+        await setChannelMute(call, channelId, muted);
+      });
+    },
     async batchRoster(input) {
       try {
         const snapshot = await applyRosterBatch(call, input);
         clientStore.setRosterState({
           pins: snapshot.pins,
           hidden: snapshot.hidden,
+          muted: snapshot.muted,
           sections: snapshot.sections,
           topOrder: snapshot.topOrder,
           readOnly: false,

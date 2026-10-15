@@ -602,11 +602,19 @@ describe('Channel message body', () => {
     }
   });
 
-  it('keeps Human punctuation, whitespace and newlines literal', () => {
-    const markup = render({ kind: 'human' }, '# not a heading\n**not bold**  ');
-    expect(markup).toContain('# not a heading\n**not bold**  ');
+  it('keeps casual Human punctuation, whitespace and newlines literal', () => {
+    const markup = render({ kind: 'human' }, '#1 is 2*3\n_maybe_  ');
+    expect(markup).toContain('#1 is 2*3\n_maybe_  ');
     expect(markup).not.toContain('bh-bubble-body-markdown');
     expect(MarkdownText).not.toHaveBeenCalled();
+  });
+
+  it('renders Human Markdown and keeps the line breaks the Human typed', () => {
+    const markup = render({ kind: 'human' }, 'plan\n- **ship** it\n- run `pnpm test`');
+    expect(markup).toContain('bh-bubble-body-markdown');
+    expect(vi.mocked(MarkdownText).mock.calls[0]?.[0]).toMatchObject({
+      text: 'plan  \n- **ship** it  \n- run `pnpm test`',
+    });
   });
 
   it('honors an explicit text override for Bot messages', () => {
@@ -665,14 +673,14 @@ describe('Tool approval card', () => {
           }),
         ),
       );
-      expect(container.textContent).toContain('已批准这一次调用');
+      expect(container.textContent).toContain('终端 · 已允许');
       expect(container.textContent).toContain('等待运行名额');
       expect(container.textContent).not.toContain('仅批准这一次');
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1000);
       });
       expect(container.textContent).not.toContain('等待运行名额');
-      expect(container.textContent).toContain('已批准这一次调用');
+      expect(container.textContent).toContain('终端 · 已允许');
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
@@ -725,7 +733,7 @@ describe('Tool approval card', () => {
       });
       expect(toolApprovalStatus).toHaveBeenCalledTimes(2);
       expect(container.textContent).not.toContain('仅批准这一次');
-      expect(container.textContent).toContain('此请求已失效');
+      expect(container.textContent).toContain('终端 · 已过期');
     } finally {
       await act(async () => root.unmount());
       container.remove();

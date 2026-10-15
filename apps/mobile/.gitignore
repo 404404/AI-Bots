@@ -1,0 +1,8 @@
+.expo/
+dist/
+dist-web/
+ios/
+android/
+expo-env.d.ts
+*.apk
+*.ipa

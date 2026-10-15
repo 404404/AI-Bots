@@ -200,6 +200,9 @@ it('keeps all question drafts through speech, reading, offline and current-state
         (field) => field.checked,
       ),
     ).toEqual([true, true]);
+    expect(
+      [...card().querySelectorAll('.bh-question-letter')].map((entry) => entry.textContent),
+    ).toEqual(['A', 'B', 'A', 'B']);
     await act(() => input(card(), 1, 'also check status'));
     await act(() => input(card(), 2, 'Keep it short'));
     await act(() => {
@@ -351,6 +354,11 @@ it('accepts only formal well-formed questions qualified for the selected Bot', (
   expect(companionRequests([{ ...request, callId: 'native-timed-call' }], 'ada')).toEqual([
     { ...request, callId: 'native-timed-call' },
   ]);
+  const many = {
+    ...request,
+    questions: [...questions, { id: 'extra', question: 'One more?', detail: 'x'.repeat(20_000) }],
+  };
+  expect(companionRequests([many], 'ada')).toEqual([many]);
   expect(
     companionRequests(
       [

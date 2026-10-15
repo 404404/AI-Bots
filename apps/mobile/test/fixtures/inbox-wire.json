@@ -1,0 +1,609 @@
+{
+  "recordedFrom": "isolated Host via scripts/dev-instance.mjs, DSH 0.2.0-rc.2, real opencode-go model, 2026-10-14; the Bot's memory path is rewritten to /home/qa/.dsh",
+  "rpc": {
+    "humanAttention.action": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "items": [
+            {
+              "id": "approval:d0f7c4c6-2866-40fb-a99a-2f8294b8dfaa",
+              "category": "action",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:03:36.548Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "89106d66-52b0-493b-ad17-daf7306b97bb",
+              "sourceEventId": "d0f7c4c6-2866-40fb-a99a-2f8294b8dfaa"
+            }
+          ]
+        }
+      }
+    },
+    "channelTimeline.approvalPending": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "page": {
+            "entries": [
+              {
+                "id": "89106d66-52b0-493b-ad17-daf7306b97bb",
+                "at": "2026-10-14T08:03:36.548Z",
+                "author": {
+                  "kind": "bot",
+                  "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                },
+                "toolApprovalRequest": {
+                  "sessionId": "botharness-3ce707ac-c8de-486e-9648-68138a58aaae",
+                  "callId": "chatcmpl-tool-8478c6ad01813dfb",
+                  "toolName": "bash",
+                  "role": "orchestrator",
+                  "cwd": "/home/qa/.dsh/botharness/bots/bot-d32a2e3d21ff47c081afb74877d8d6da/memory",
+                  "input": "{\n  \"command\": \"ls /tmp/mobile-fixture\",\n  \"description\": \"List mobile fixture directory\"\n}",
+                  "externalDecision": "operation"
+                },
+                "body": "请求批准执行 bash",
+                "channelRevision": 49
+              }
+            ],
+            "olderCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6MzYuNTQ4WiIsImlkIjoiODkxMDZkNjYtNTJiMC00OTNiLWFkMTctZGFmNzMwNmI5N2JiIn0",
+            "newerCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6MzYuNTQ4WiIsImlkIjoiODkxMDZkNjYtNTJiMC00OTNiLWFkMTctZGFmNzMwNmI5N2JiIn0",
+            "hasOlder": true,
+            "hasNewer": false
+          },
+          "revision": 49
+        }
+      }
+    },
+    "toolApprovalStatus.pending": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "status": "pending"
+        }
+      }
+    },
+    "toolApprovalDecide.accepted": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "accepted": true
+        }
+      }
+    },
+    "toolApprovalDecide.refused": {
+      "type": "server-response",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "invalid-input",
+          "message": "Tool approval request is no longer pending",
+          "details": {}
+        }
+      }
+    },
+    "toolApprovalStatus.decided": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "status": "expired"
+        }
+      }
+    },
+    "channelTimeline.approvalDecided": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "page": {
+            "entries": [
+              {
+                "id": "89106d66-52b0-493b-ad17-daf7306b97bb",
+                "at": "2026-10-14T08:03:36.548Z",
+                "author": {
+                  "kind": "bot",
+                  "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                },
+                "toolApprovalRequest": {
+                  "sessionId": "botharness-3ce707ac-c8de-486e-9648-68138a58aaae",
+                  "callId": "chatcmpl-tool-8478c6ad01813dfb",
+                  "toolName": "bash",
+                  "role": "orchestrator",
+                  "cwd": "/home/qa/.dsh/botharness/bots/bot-d32a2e3d21ff47c081afb74877d8d6da/memory",
+                  "input": "{\n  \"command\": \"ls /tmp/mobile-fixture\",\n  \"description\": \"List mobile fixture directory\"\n}",
+                  "externalDecision": "operation"
+                },
+                "body": "请求批准执行 bash",
+                "channelRevision": 49
+              },
+              {
+                "id": "e35d1d2f-804a-4ca2-aa2c-9dabbe72d702",
+                "at": "2026-10-14T08:03:36.913Z",
+                "author": {
+                  "kind": "human"
+                },
+                "replyTo": "89106d66-52b0-493b-ad17-daf7306b97bb",
+                "toolApprovalDecision": {
+                  "requestMessageId": "89106d66-52b0-493b-ad17-daf7306b97bb",
+                  "outcome": "allowed-once"
+                },
+                "body": "已批准这一次工具调用",
+                "channelRevision": 50,
+                "deliveries": [
+                  {
+                    "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+                    "state": "pending"
+                  }
+                ],
+                "replyToPreview": {
+                  "author": {
+                    "kind": "bot",
+                    "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                  },
+                  "body": "请求批准执行 bash"
+                }
+              },
+              {
+                "id": "05aaf9aa-0d84-4192-878b-2d8565e8f369",
+                "at": "2026-10-14T08:03:38.852Z",
+                "author": {
+                  "kind": "bot",
+                  "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                },
+                "body": "Same result as before: `ls /tmp/mobile-fixture` reports \"ls: cannot access '/tmp/mobile-fixture': No such file or directory\" (exit code 2). The path still doesn't exist — let me know if you'd like me to check a different one.",
+                "channelRevision": 51
+              }
+            ],
+            "olderCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6MzYuNTQ4WiIsImlkIjoiODkxMDZkNjYtNTJiMC00OTNiLWFkMTctZGFmNzMwNmI5N2JiIn0",
+            "newerCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6MzguODUyWiIsImlkIjoiMDVhYWY5YWEtMGQ4NC00MTkyLTg3OGItMmQ4NTY1ZThmMzY5In0",
+            "hasOlder": true,
+            "hasNewer": false
+          },
+          "revision": 51
+        }
+      }
+    },
+    "humanAttention.actionQuestion": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "items": [
+            {
+              "id": "question:cf997c7c-b3ee-455e-81f1-4e949ec60e7f",
+              "category": "action",
+              "kind": "user-question",
+              "createdAt": "2026-10-14T08:03:44.632Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "Which colour?\nWhich snacks?",
+              "messageId": "3183a1f6-3c20-406f-ae40-c5b3aa5bac1e",
+              "sourceEventId": "cf997c7c-b3ee-455e-81f1-4e949ec60e7f"
+            }
+          ]
+        }
+      }
+    },
+    "channelTimeline.questionPending": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "page": {
+            "entries": [
+              {
+                "id": "3183a1f6-3c20-406f-ae40-c5b3aa5bac1e",
+                "at": "2026-10-14T08:03:44.632Z",
+                "author": {
+                  "kind": "bot",
+                  "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                },
+                "userQuestionRequest": {
+                  "sessionId": "botharness-3ce707ac-c8de-486e-9648-68138a58aaae",
+                  "questions": [
+                    {
+                      "id": "colour",
+                      "question": "Which colour?",
+                      "header": "Colour",
+                      "options": [
+                        {
+                          "label": "Teal"
+                        },
+                        {
+                          "label": "Amber"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "snacks",
+                      "question": "Which snacks?",
+                      "header": "Snacks",
+                      "options": [
+                        {
+                          "label": "Tea"
+                        },
+                        {
+                          "label": "Biscuits"
+                        }
+                      ],
+                      "multiSelect": true
+                    }
+                  ],
+                  "callId": "chatcmpl-tool-8168595815e13364"
+                },
+                "body": "Which colour?\nWhich snacks?",
+                "channelRevision": 53
+              }
+            ],
+            "olderCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6NDQuNjMyWiIsImlkIjoiMzE4M2ExZjYtM2MyMC00MDZmLWFlNDAtYzViM2FhNWJhYzFlIn0",
+            "newerCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6NDQuNjMyWiIsImlkIjoiMzE4M2ExZjYtM2MyMC00MDZmLWFlNDAtYzViM2FhNWJhYzFlIn0",
+            "hasOlder": true,
+            "hasNewer": false
+          },
+          "revision": 53
+        }
+      }
+    },
+    "userQuestionStatus.pending": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "status": "pending"
+        }
+      }
+    },
+    "userQuestionAnswer.invalid": {
+      "type": "server-response",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "invalid-input",
+          "message": "Question is no longer pending or answer is invalid",
+          "details": {}
+        }
+      }
+    },
+    "userQuestionAnswer.accepted": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "accepted": true
+        }
+      }
+    },
+    "userQuestionAnswer.refused": {
+      "type": "server-response",
+      "result": {
+        "ok": false,
+        "error": {
+          "code": "invalid-input",
+          "message": "Question is no longer pending or answer is invalid",
+          "details": {}
+        }
+      }
+    },
+    "userQuestionStatus.answered": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "status": "answered"
+        }
+      }
+    },
+    "channelTimeline.questionAnswered": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "page": {
+            "entries": [
+              {
+                "id": "3183a1f6-3c20-406f-ae40-c5b3aa5bac1e",
+                "at": "2026-10-14T08:03:44.632Z",
+                "author": {
+                  "kind": "bot",
+                  "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                },
+                "userQuestionRequest": {
+                  "sessionId": "botharness-3ce707ac-c8de-486e-9648-68138a58aaae",
+                  "questions": [
+                    {
+                      "id": "colour",
+                      "question": "Which colour?",
+                      "header": "Colour",
+                      "options": [
+                        {
+                          "label": "Teal"
+                        },
+                        {
+                          "label": "Amber"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "snacks",
+                      "question": "Which snacks?",
+                      "header": "Snacks",
+                      "options": [
+                        {
+                          "label": "Tea"
+                        },
+                        {
+                          "label": "Biscuits"
+                        }
+                      ],
+                      "multiSelect": true
+                    }
+                  ],
+                  "callId": "chatcmpl-tool-8168595815e13364"
+                },
+                "body": "Which colour?\nWhich snacks?",
+                "channelRevision": 53
+              },
+              {
+                "id": "793539e6-77b3-430c-84c8-0b744817d0a7",
+                "at": "2026-10-14T08:03:45.393Z",
+                "author": {
+                  "kind": "human"
+                },
+                "replyTo": "3183a1f6-3c20-406f-ae40-c5b3aa5bac1e",
+                "userQuestionResolution": {
+                  "requestMessageId": "3183a1f6-3c20-406f-ae40-c5b3aa5bac1e",
+                  "state": "answered",
+                  "answers": [
+                    {
+                      "id": "colour",
+                      "selected": ["Teal"]
+                    },
+                    {
+                      "id": "snacks",
+                      "selected": ["Tea"],
+                      "custom": "and fruit"
+                    }
+                  ]
+                },
+                "body": "Teal\nand fruit",
+                "channelRevision": 54,
+                "deliveries": [
+                  {
+                    "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+                    "state": "pending"
+                  }
+                ],
+                "replyToPreview": {
+                  "author": {
+                    "kind": "bot",
+                    "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                  },
+                  "body": "Which colour? Which snacks?"
+                }
+              },
+              {
+                "id": "43712144-9317-49ef-a921-c1c0f80b6a91",
+                "at": "2026-10-14T08:03:48.297Z",
+                "author": {
+                  "kind": "bot",
+                  "slug": "bot-d32a2e3d21ff47c081afb74877d8d6da"
+                },
+                "body": "Your answers — Colour: Teal. Snacks: Tea, plus you added \"and fruit\".",
+                "channelRevision": 55
+              }
+            ],
+            "olderCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6NDQuNjMyWiIsImlkIjoiMzE4M2ExZjYtM2MyMC00MDZmLWFlNDAtYzViM2FhNWJhYzFlIn0",
+            "newerCursor": "eyJ2IjoxLCJjaGFubmVsSWQiOiJkbS1ib3QtZDMyYTJlM2QyMWZmNDdjMDgxYWZiNzQ4NzdkOGQ2ZGEiLCJhdCI6IjIwMjYtMTAtMTRUMDg6MDM6NDguMjk3WiIsImlkIjoiNDM3MTIxNDQtOTMxNy00OWVmLWE5MjEtYzFjMGY4MGI2YTkxIn0",
+            "hasOlder": true,
+            "hasNewer": false
+          },
+          "revision": 55
+        }
+      }
+    },
+    "humanAttention.replies": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "items": []
+        }
+      }
+    },
+    "humanAttention.handled": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "items": [
+            {
+              "id": "handled:cf997c7c-b3ee-455e-81f1-4e949ec60e7f",
+              "category": "handled",
+              "kind": "user-question",
+              "createdAt": "2026-10-14T08:03:45.393Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "Which colour?\nWhich snacks?",
+              "messageId": "3183a1f6-3c20-406f-ae40-c5b3aa5bac1e",
+              "sourceEventId": "cf997c7c-b3ee-455e-81f1-4e949ec60e7f",
+              "responseMessageId": "793539e6-77b3-430c-84c8-0b744817d0a7",
+              "responseSourceEventId": "d10a6ccb-fcf2-4f2d-b27c-0ce8ad39754c"
+            },
+            {
+              "id": "handled:d0f7c4c6-2866-40fb-a99a-2f8294b8dfaa",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:03:36.913Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "89106d66-52b0-493b-ad17-daf7306b97bb",
+              "sourceEventId": "d0f7c4c6-2866-40fb-a99a-2f8294b8dfaa",
+              "responseMessageId": "e35d1d2f-804a-4ca2-aa2c-9dabbe72d702",
+              "responseSourceEventId": "7b452fb8-5689-4bec-b6c6-e81361b1b4f3"
+            },
+            {
+              "id": "handled:bb810568-64be-41c7-8a68-e7e6afd54bca",
+              "category": "handled",
+              "kind": "user-question",
+              "createdAt": "2026-10-14T08:03:18.527Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "Which colour?\nWhich snacks?",
+              "messageId": "ea2f542d-3328-4436-a1d1-96495e10a352",
+              "sourceEventId": "bb810568-64be-41c7-8a68-e7e6afd54bca",
+              "responseMessageId": "73b2c5ca-d1c3-4223-a9ec-9cdef2b0544e",
+              "responseSourceEventId": "a6460dee-cf1e-477a-a7de-550140132a17"
+            },
+            {
+              "id": "handled:89ce9197-3335-496d-82e7-7ff43480ef21",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:02:58.071Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "165be6f2-7b27-480d-9672-ee18758dfceb",
+              "sourceEventId": "89ce9197-3335-496d-82e7-7ff43480ef21",
+              "responseMessageId": "1d1b6b18-d32b-4bfc-bb21-0a9937ee2807",
+              "responseSourceEventId": "7a817bdc-175c-442e-9f96-0d2081d90f59"
+            },
+            {
+              "id": "handled:d77583a3-f32f-4978-8e33-fc6655ebe46b",
+              "category": "handled",
+              "kind": "user-question",
+              "createdAt": "2026-10-14T08:02:10.090Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "Which colour?",
+              "messageId": "9736b051-775d-4c1a-a02b-eef63836228a",
+              "sourceEventId": "d77583a3-f32f-4978-8e33-fc6655ebe46b",
+              "responseMessageId": "d625d9d9-b36f-4aba-904b-4b085d5e9ccc",
+              "responseSourceEventId": "e0d873fc-c230-40a7-9d9a-956be98e437e"
+            },
+            {
+              "id": "handled:1b85b498-0bc1-49ce-8bb5-c58fa2ff67ec",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:02:01.122Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "930fde69-ad22-4bd9-a07c-fe9d372d4a6d",
+              "sourceEventId": "1b85b498-0bc1-49ce-8bb5-c58fa2ff67ec",
+              "responseMessageId": "e97b4b59-c158-4d0f-b65f-ba50c9ad1bd7",
+              "responseSourceEventId": "250f31d6-7ebb-4149-9d18-269139932f8b"
+            },
+            {
+              "id": "handled:9c40fba4-1b3e-4864-bb79-1abe8b11d61d",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:01:46.108Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "e0e679c0-1970-450e-bf55-d7614bbc2be5",
+              "sourceEventId": "9c40fba4-1b3e-4864-bb79-1abe8b11d61d",
+              "responseMessageId": "4ab19438-245a-4371-82f8-b156bf26b43e",
+              "responseSourceEventId": "83a6f8be-7eac-4be5-8521-6de8845c31e5"
+            },
+            {
+              "id": "handled:812bb234-dc89-4732-8598-d8d41d9886a7",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:01:31.034Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "124dab78-5e18-4068-8f7a-ea4ed486a1f9",
+              "sourceEventId": "812bb234-dc89-4732-8598-d8d41d9886a7",
+              "responseMessageId": "d193612f-807f-45a2-9dda-a5082ed8a6d7",
+              "responseSourceEventId": "eed25f7c-5837-4ab9-8cac-ebd259f13f04"
+            },
+            {
+              "id": "handled:d2367290-b38d-4449-a561-875432134793",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T08:01:20.772Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "c4dc3bff-46c6-4f58-8664-9c83e534a529",
+              "sourceEventId": "d2367290-b38d-4449-a561-875432134793",
+              "responseMessageId": "d5b961a6-542d-453b-99cc-c3fb3833dd02",
+              "responseSourceEventId": "92204c1e-8ddf-402c-b452-e1aad8eade69"
+            },
+            {
+              "id": "handled:563c7303-f0dd-4fc3-b637-d848525718f4",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T07:58:46.580Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "edc4e418-13fd-4393-a373-eb54c0c3f519",
+              "sourceEventId": "563c7303-f0dd-4fc3-b637-d848525718f4",
+              "responseMessageId": "4535c85e-4856-4aca-9cc0-80cde6d77496",
+              "responseSourceEventId": "17cdddfa-44e6-4bfd-91d4-514d1694957f"
+            },
+            {
+              "id": "handled:1f5e6b5d-27a5-47c8-8ced-b96583a4dba7",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T07:56:15.817Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "15f62fde-9363-48ab-8533-ff74e7f81605",
+              "sourceEventId": "1f5e6b5d-27a5-47c8-8ced-b96583a4dba7",
+              "responseMessageId": "94cbe076-0967-47b3-9d11-c9aba482f580",
+              "responseSourceEventId": "be9200cc-9618-47ee-b0f1-a8bbd6bf7d32"
+            },
+            {
+              "id": "handled:15ee02c0-96a8-4539-b9c0-ca1cc6153541",
+              "category": "handled",
+              "kind": "tool-approval",
+              "createdAt": "2026-10-14T07:55:14.069Z",
+              "channelId": "dm-bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "channelName": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "botSlug": "bot-d32a2e3d21ff47c081afb74877d8d6da",
+              "summary": "请求批准执行 bash",
+              "messageId": "f44c6917-9547-4cb5-aa91-7042a7c7175d",
+              "sourceEventId": "15ee02c0-96a8-4539-b9c0-ca1cc6153541",
+              "responseMessageId": "1a23ca0d-c4fe-411d-8ba7-10c06e423a0b",
+              "responseSourceEventId": "128296af-8c95-4f50-8859-2ade65018a92"
+            }
+          ]
+        }
+      }
+    },
+    "humanAttention.actionEmpty": {
+      "type": "server-response",
+      "result": {
+        "ok": true,
+        "value": {
+          "items": []
+        }
+      }
+    }
+  }
+}

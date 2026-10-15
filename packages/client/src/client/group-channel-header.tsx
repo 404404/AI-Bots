@@ -1,16 +1,18 @@
 import type { ReactElement, ReactNode } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
+import { IconChevronDownOutlineRegular, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives';
 import {
   PersonaBotFacepile,
   personaBotPresentationSummary,
   type PersonaBotFacepileItem,
 } from './avatar.js';
+import { ChannelAttentionDot } from './channel-options.js';
+import type { ChannelMenuTrigger } from './human-channel-name.js';
 import type { BotHarnessTranslate } from './locale.js';
 import type { ChannelSummary } from './store.js';
 import { CompanionPin } from './window-companions-view.js';
 import type { WindowCompanions } from './window-companions.js';
-import { color, radius, text } from './ds/tokens.stylex.js';
+import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
   title: {
@@ -21,7 +23,7 @@ const styles = stylex.create({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    fontWeight: text.heavy,
+    fontWeight: text.strong,
   },
   mark: {
     display: 'inline-flex',
@@ -31,14 +33,11 @@ const styles = stylex.create({
     width: '22px',
     height: '22px',
     overflow: 'hidden',
-    borderWidth: '1px',
-    borderStyle: 'solid',
-    borderColor: color.border,
-    borderRadius: radius.control,
-    backgroundColor: color.elevated,
+    borderRadius: radius.sm,
+    backgroundColor: color.surface,
     color: color.muted,
     fontSize: text.metaSize,
-    fontWeight: text.heavy,
+    fontWeight: text.strong,
   },
   name: {
     display: 'inline-flex',
@@ -50,15 +49,44 @@ const styles = stylex.create({
     padding: 0,
     borderWidth: 0,
     borderStyle: 'none',
-    borderRadius: radius.control,
+    borderRadius: radius.sm,
     backgroundColor: 'transparent',
     color: 'inherit',
     fontFamily: 'inherit',
     cursor: 'pointer',
-    outline: { default: 'none', ':focus-visible': `2px solid ${color.accent}` },
+    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
     outlineOffset: '2px',
   },
+  nameWithCaret: {
+    gap: space.x3,
+  },
+  caret: {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+    flexShrink: 0,
+    color: color.muted,
+  },
+  caretDot: {
+    position: 'absolute',
+    top: '-2px',
+    insetInlineEnd: '-3px',
+    display: 'inline-flex',
+  },
 });
+
+export function ChannelMenuCaret({ attention }: { readonly attention: boolean }): ReactElement {
+  return (
+    <span aria-hidden="true" data-channel-menu-caret="" {...stylex.props(styles.caret)}>
+      <IconChevronDownOutlineRegular size={14} />
+      {attention ? (
+        <span {...stylex.props(styles.caretDot)}>
+          <ChannelAttentionDot />
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 export function ConversationTitle({ children }: { readonly children: ReactNode }): ReactElement {
   return (
@@ -85,6 +113,7 @@ export function GroupChannelHeader({
   onOpenActivity,
   onToggleProfile,
   companion,
+  menu,
 }: {
   channel: ChannelSummary;
   title: string;
@@ -94,6 +123,7 @@ export function GroupChannelHeader({
   onOpenActivity(): void;
   onToggleProfile(): void;
   companion?: WindowCompanions | undefined;
+  menu?: ChannelMenuTrigger | undefined;
 }): ReactElement {
   return (
     <span className="bh-channel-island bh-group-channel-header">
@@ -141,13 +171,25 @@ export function GroupChannelHeader({
       <button
         type="button"
         data-group-channel-name=""
-        {...stylex.props(styles.name)}
-        aria-haspopup="dialog"
-        aria-expanded={expanded}
-        aria-label={t('groupProfile.openAvatar', { name: channel.name })}
-        onClick={onToggleProfile}
+        {...stylex.props(styles.name, menu !== undefined && styles.nameWithCaret)}
+        {...(menu === undefined
+          ? {
+              'aria-haspopup': 'dialog' as const,
+              'aria-expanded': expanded,
+              'aria-label': t('groupProfile.openAvatar', { name: channel.name }),
+              onClick: onToggleProfile,
+            }
+          : {
+              'aria-haspopup': 'menu' as const,
+              'aria-expanded': menu.open,
+              'aria-label':
+                `${title} · ${t('humanNickname.menu')}` +
+                (menu.attention ? ` · ${t('channelSettings.needsAttention')}` : ''),
+              onClick: menu.toggle,
+            })}
       >
         <ConversationTitle>{title}</ConversationTitle>
+        {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
       </button>
     </span>
   );

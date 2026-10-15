@@ -36,6 +36,8 @@ export interface PersonaBotRecord {
   browserAccess?: boolean;
   browserProfile?: string;
 
+  approvalTemplate?: string;
+
   standingLimits?: StandingLimits;
 }
 
@@ -43,12 +45,14 @@ export interface CreatePersonaBotInput {
   slug: string;
   displayName: string;
   persona?: string;
+  coreMemory?: string;
   roles?: string[];
   description?: string;
   avatar?: string;
   model?: string;
   preset?: string;
   memoryDir?: string;
+  memoryLocation?: string;
   workspaces?: string[];
 }
 
@@ -103,6 +107,20 @@ export function isPersonaBotAvatar(value: unknown): value is string {
       : bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
 }
 
+export function personaBotAvatarFromBytes(bytes: Uint8Array): string | undefined {
+  const data = Buffer.from(bytes);
+  const type = data.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
+    ? 'png'
+    : data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff
+      ? 'jpeg'
+      : data.toString('ascii', 0, 4) === 'RIFF' && data.toString('ascii', 8, 12) === 'WEBP'
+        ? 'webp'
+        : undefined;
+  if (type === undefined) return undefined;
+  const avatar = `data:image/${type};base64,${data.toString('base64')}`;
+  return isPersonaBotAvatar(avatar) ? avatar : undefined;
+}
+
 export function isUsableAvatarAppearance(
   appearance: unknown,
   avatar: unknown,
@@ -133,6 +151,8 @@ export function isPersonaBotRecord(value: unknown, slug: string): value is Perso
   if (record['browserAccess'] !== undefined && typeof record['browserAccess'] !== 'boolean')
     return false;
   if (record['browserProfile'] !== undefined && typeof record['browserProfile'] !== 'string')
+    return false;
+  if (record['approvalTemplate'] !== undefined && typeof record['approvalTemplate'] !== 'string')
     return false;
   if (
     record['appearance'] !== undefined &&

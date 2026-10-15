@@ -38,7 +38,7 @@ function setClipboard(writeText: (text: string) => Promise<void>): void {
 }
 
 function buttons(): HTMLButtonElement[] {
-  return [...host.querySelectorAll<HTMLButtonElement>('.bh-bubble-action')];
+  return [...host.querySelectorAll<HTMLButtonElement>('[data-bubble-action]')];
 }
 
 describe('message Copy action', () => {

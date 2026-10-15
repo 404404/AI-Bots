@@ -3,24 +3,32 @@ import type { ReactElement, ReactNode } from 'react';
 import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots';
 
 import type { BridgeActions } from './actions.js';
+import { ApprovalReviewerModelSetting } from './approval-reviewer-model-setting.js';
 import {
   AssignmentConcurrencyRow,
   BotIconSetting,
+  ApprovalReviewSessionsVisibilitySetting,
   BotSessionsVisibilitySetting,
   DeveloperModeSetting,
   GroupAutoAcceptSetting,
   MotionSetting,
+  SendKeySetting,
   SortSetting,
 } from './bot-mode-setting-rows.js';
+import { ApprovalTemplateLibrarySettings } from './approval-template-library.js';
 import type { BotModePrefsFace } from './bot-mode-prefs.js';
 import type { BridgeCall } from './bridge.js';
+import type { DesktopNotificationPrefs } from './desktop-notifications.js';
 import { SettingsRows, SettingsSection } from './ds/settings-row.js';
 import { GitSettings } from './git-settings.js';
 import { HumanNameSettings } from './human-name-settings.js';
 import { MessagingDefaultsSettings } from './messaging-defaults-settings.js';
+import { DesktopNotificationSetting, ShortcutHelpSetting } from './notification-settings.js';
 import { DefaultModelSettings, OnboardingSetting } from './onboarding-view.js';
+import { PairedDevicesSettings } from './paired-devices.js';
 import { ProfileBackupSettings } from './profile-backup.js';
 import type { ReleaseNotesController } from './release-notes.js';
+import type { ShortcutHelp } from './shortcut-help.js';
 import { ReleaseSettings } from './release-notes-view.js';
 import type { ClientStore } from './store.js';
 import { TelemetrySettings } from './telemetry-settings.js';
@@ -39,6 +47,8 @@ export type GeneralSectionFace = BotModePrefsFace & {
   onSaved(): Promise<void>;
   actions: BridgeActions;
   closeBotSettings(): void;
+  desktopNotifications: DesktopNotificationPrefs;
+  shortcutHelp: ShortcutHelp;
 };
 
 export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactElement {
@@ -53,7 +63,11 @@ export function GeneralSection(props: SectionProps<GeneralSectionFace>): ReactEl
       <BotIconSetting {...props} />
       <MotionSetting {...props} />
       <SortSetting {...props} />
+      <SendKeySetting {...props} />
       <BotSessionsVisibilitySetting {...props} />
+      <ApprovalReviewSessionsVisibilitySetting {...props} />
+      <DesktopNotificationSetting desktopNotifications={props.desktopNotifications} t={props.t} />
+      <ShortcutHelpSetting shortcutHelp={props.shortcutHelp} t={props.t} />
       <OnboardingSetting
         actions={props.actions}
         closeBotSettings={props.closeBotSettings}
@@ -70,6 +84,19 @@ export function ModelsSection(
     <Rows>
       <DefaultModelSettings actions={props.actions} t={props.t} />
       <AssignmentConcurrencyRow {...props} />
+    </Rows>
+  );
+}
+
+export function AutoApprovalSection(
+  props: SectionProps<{ actions: BridgeActions; call: BridgeCall; store: ClientStore }>,
+): ReactElement {
+  return (
+    <Rows>
+      <SettingsSection>
+        <ApprovalReviewerModelSetting actions={props.actions} t={props.t} />
+      </SettingsSection>
+      <ApprovalTemplateLibrarySettings call={props.call} store={props.store} t={props.t} />
     </Rows>
   );
 }
@@ -94,6 +121,14 @@ export function CompanionsSection({
   return (
     <Rows>
       <CompanionSettings companion={companion} t={t} />
+    </Rows>
+  );
+}
+
+export function DevicesSection({ t }: PropsLocale<'botharness'>): ReactElement {
+  return (
+    <Rows>
+      <PairedDevicesSettings t={t} />
     </Rows>
   );
 }

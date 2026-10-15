@@ -13,8 +13,12 @@ import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { BOT_MODE_NAMESPACE, type BotModeSettings } from '../bot-mode-settings.js';
-import { privateInputLocator } from '../../../core/src/credentials/web-locator.js';
-import { watchPrivateInputNavigation } from './private-input-navigation.js';
+import {
+  fullClientLocator,
+  privateInputLocator,
+} from '../../../core/src/credentials/web-locator.js';
+import { requestCreation } from './create-request.js';
+import { watchFullClientLanding, watchPrivateInputNavigation } from './private-input-navigation.js';
 import { createNativeHostFiles } from './host-file-actions.js';
 import { createFileOpenPreferences } from './file-open-preferences.js';
 import { createActions, type BridgeActions } from './actions.js';
@@ -41,25 +45,43 @@ import {
   AdvancedSection,
   CompanionsSection,
   DataPrivacySection,
+  DevicesSection,
   GeneralSection,
   MessagingSection,
   ModelsSection,
+  AutoApprovalSection,
 } from './bot-settings-sections.js';
 import { ReleaseNotesController } from './release-notes.js';
 import { TelemetryNoticeController } from './telemetry-notice.js';
 import './bot-settings-slot.js';
 import { BotMain } from './bot-main.js';
-import { MobileBotPanel } from './mobile-bot-panel.js';
+import { expectMobileConversation, MobileBotPanel } from './mobile-bot-panel.js';
 import { mobileBotViewport, subscribeMobileBotViewport } from './mobile-viewport.js';
 import { clearConversationDrafts } from './conversation-draft.js';
 import { BotSidebar, createBotPanelEntry } from './bot-sidebar.js';
+import { BotModeSidebar } from './bot-mode-sidebar.js';
+import {
+  botModeSidebarViewport,
+  subscribeBotModeSidebarViewport,
+} from './bot-mode-sidebar-viewport.js';
 import { OnboardingEnterHint, OnboardingLauncher } from './onboarding-checklist-view.js';
 import {
   createChannelSidebarBuiltinTabs,
   createChannelSidebarBuiltins,
 } from './channel-sidebar-builtins.js';
-import { webBotModeShortcut, webShortcutBlocked } from './channel-shortcuts.js';
+import { webShortcutBlocked, webModalOpen, webShortcutHelpQuestion } from './channel-shortcuts.js';
+import { ShortcutBindings } from './shortcut-bindings.js';
+import {
+  browserNotificationApi,
+  DesktopNotificationPrefs,
+  mountDesktopNotifications,
+} from './desktop-notifications.js';
+import { openHumanAttentionSource } from './human-attention-source.js';
+import { ShortcutHelp, ShortcutHelpView } from './shortcut-help.js';
+import { mountTabTitle } from './tab-title.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
+import { createDockPanelRegistry } from './dock-panels.js';
+import { createActivityCenterPanel } from './activity-center-panel.js';
 import { createProfileCardBuiltins } from './profile-cards-builtins.js';
 import { createGroupProfileCards } from './group-profile.js';
 import { createProfileCardRegistry } from './profile-cards.js';
@@ -70,6 +92,7 @@ import {
   loadActivitySnapshot,
   loadBotSessionIds,
   loadSessionBotOwner,
+  loadHumanAttention,
   botExists,
 } from './bridge.js';
 import {
@@ -156,7 +179,7 @@ export function apply(ctx: ClientContext): void {
   const nativeChatT = ctx.locale.bind('chat');
   const call = createBridgeCall(ctx);
   const profileContext = async (): Promise<{ profileId: string }> => {
-    const response = await fetch('/api/botharness/companion', { credentials: 'same-origin' });
+    const response = await fetch('./api/botharness/companion', { credentials: 'same-origin' });
     if (!response.ok) throw new Error('Companion context unavailable');
     const value: unknown = await response.json();
     if (
@@ -201,7 +224,7 @@ export function apply(ctx: ClientContext): void {
     context: profileContext,
     source: (url) => companionSource?.(url) ?? new EventSource(url),
     update: async (value) => {
-      const response = await fetch('/api/botharness/companion', {
+      const response = await fetch('./api/botharness/companion', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
@@ -232,6 +255,9 @@ export function apply(ctx: ClientContext): void {
   }, 'botharness: independent Window Companion owner');
   const prefs = new BotModePrefs(storage);
   const botSettings = new BotSettings();
+  const shortcutHelp = new ShortcutHelp();
+  const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
+  const shortcutBindings = new ShortcutBindings(storage);
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       {
@@ -275,6 +301,17 @@ export function apply(ctx: ClientContext): void {
       BotSettingsView,
     ),
   );
+  ctx.slots.inject('shell.overlay', () =>
+    ctx.slots.register(
+      {
+        name: 'shell.overlay',
+        id: 'botharness-shortcut-help',
+        locale: LOCALE_NS,
+        inject: () => ({ shortcutHelp, shortcutBindings, ...botModePrefsFace(prefs) }),
+      },
+      ShortcutHelpView,
+    ),
+  );
   const releaseNotes = new ReleaseNotesController(call, storage);
   const telemetryNotice = new TelemetryNoticeController(call, storage, () => {
     botSettings.open(BOT_SETTINGS_SECTIONS.dataPrivacy);
@@ -311,7 +348,9 @@ export function apply(ctx: ClientContext): void {
       visibility.dispose();
     };
   }, 'botharness: Bot Session visibility');
-  const channelSidebar = createChannelSidebarRegistry();
+  const dockPanels = createDockPanelRegistry();
+  ctx.provide('dockPanels', dockPanels);
+  const channelSidebar = createChannelSidebarRegistry(dockPanels);
   ctx.provide('channelSidebar', channelSidebar);
   const profileCards = createProfileCardRegistry();
   ctx.provide('profileCards', profileCards);
@@ -324,6 +363,7 @@ export function apply(ctx: ClientContext): void {
         ...createChannelSidebarBuiltins(t, prefs, nativeSessions).map((entry) =>
           channelSidebar.register(entry),
         ),
+        dockPanels.register(createActivityCenterPanel(actions, t, nativeSessions)),
       ];
     };
     reconcile();
@@ -365,18 +405,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => {
     if (typeof document === 'undefined') return () => {};
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (
-        !webBotModeShortcut(event.code, {
-          alt: event.altKey,
-          ctrl: event.ctrlKey,
-          meta: event.metaKey,
-          shift: event.shiftKey,
-          altGraph: event.getModifierState('AltGraph'),
-          composing: event.isComposing,
-          repeat: event.repeat,
-          prevented: event.defaultPrevented,
-        })
-      ) {
+      if (!shortcutBindings.matches('bot-mode', event)) {
         return;
       }
       if (webShortcutBlocked(event.target, document)) return;
@@ -386,6 +415,93 @@ export function apply(ctx: ClientContext): void {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, 'botharness: Bot mode keyboard shortcut');
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (store.getSnapshot().mode !== 'bot') return;
+      const trigger = shortcutBindings.matches('help', event)
+        ? 'binding'
+        : webShortcutHelpQuestion(event.key, {
+              ctrl: event.ctrlKey,
+              meta: event.metaKey,
+              alt: event.altKey,
+              altGraph: event.getModifierState('AltGraph'),
+              composing: event.isComposing,
+              repeat: event.repeat,
+              prevented: event.defaultPrevented,
+            })
+          ? 'question'
+          : undefined;
+      if (trigger === undefined) return;
+      if (shortcutHelp.getSnapshot()) {
+        event.preventDefault();
+        shortcutHelp.close();
+        return;
+      }
+      if (
+        trigger === 'question' ? webShortcutBlocked(event.target, document) : webModalOpen(document)
+      )
+        return;
+      event.preventDefault();
+      shortcutHelp.open();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, 'botharness: keyboard shortcut list');
+  ctx.effect(() => {
+    if (typeof document === 'undefined') return () => {};
+    return mountTabTitle(store, document);
+  }, 'botharness: tab title attention count');
+  ctx.effect(() => {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return () => {};
+    return mountDesktopNotifications({
+      prefs: desktopNotifications,
+      load: async () => {
+        const [action, replies, unread] = await Promise.all([
+          loadHumanAttention(call, 'action', 20),
+          loadHumanAttention(call, 'replies', 20),
+          loadHumanAttention(call, 'unread', 20),
+        ]);
+        return [...action.items, ...replies.items, ...unread.items];
+      },
+      channels: () => store.getSnapshot().channels,
+      attentive: () => document.visibilityState === 'visible' && document.hasFocus(),
+      subscribe: (listener) => {
+        let prior = store.getSnapshot().humanInbox;
+        const offStore = store.subscribe(() => {
+          const next = store.getSnapshot().humanInbox;
+          if (next.unreadCount === prior.unreadCount && next.hasAction === prior.hasAction) return;
+          prior = next;
+          listener();
+        });
+        const offPrefs = desktopNotifications.subscribe(listener);
+        document.addEventListener('visibilitychange', listener);
+        window.addEventListener('focus', listener);
+        window.addEventListener('blur', listener);
+        return () => {
+          offStore();
+          offPrefs();
+          document.removeEventListener('visibilitychange', listener);
+          window.removeEventListener('focus', listener);
+          window.removeEventListener('blur', listener);
+        };
+      },
+      title: (kind, item) => {
+        const bot =
+          store.getSnapshot().bots.find((candidate) => candidate.slug === item.botSlug)
+            ?.displayName ??
+          (item.botSlug || item.channelName) ??
+          '';
+        return t(`desktopNotify.${kind}`, { bot, channel: item.channelName ?? '' });
+      },
+      open: (item) => {
+        ctx.layout.selectPanel(PANEL_ID);
+        void openHumanAttentionSource(actions, item).catch((error: unknown) => {
+          ctx.logger.warn('botharness: failed to open notification source', error);
+        });
+      },
+    });
+  }, 'botharness: desktop notifications');
   ctx.effect(
     () => (typeof EventSource === 'undefined' ? () => {} : mountChannelLive(store, actions)),
     'botharness: Channel live subscription',
@@ -536,6 +652,8 @@ export function apply(ctx: ClientContext): void {
             closeBotSettings: () => {
               botSettings.close();
             },
+            desktopNotifications,
+            shortcutHelp,
           }),
         },
         GeneralSection,
@@ -552,6 +670,19 @@ export function apply(ctx: ClientContext): void {
           inject: () => ({ ...botModePrefsFace(prefs), actions }),
         },
         ModelsSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.autoApproval,
+          order: 15,
+          label: () => t('botSettings.section.autoApproval'),
+          locale: LOCALE_NS,
+          inject: () => ({ actions, call, store }),
+        },
+        AutoApprovalSection,
       ),
     );
     settingsCtx.slots.inject('botharness.settings.section', () =>
@@ -592,6 +723,19 @@ export function apply(ctx: ClientContext): void {
           inject: () => ({ companion }),
         },
         CompanionsSection,
+      ),
+    );
+    settingsCtx.slots.inject('botharness.settings.section', () =>
+      settingsCtx.slots.register(
+        {
+          name: 'botharness.settings.section',
+          id: BOT_SETTINGS_SECTIONS.devices,
+          order: 45,
+          label: () => t('botSettings.section.devices'),
+          locale: LOCALE_NS,
+          inject: () => ({}),
+        },
+        DevicesSection,
       ),
     );
     settingsCtx.slots.inject('botharness.settings.section', () =>
@@ -695,6 +839,7 @@ export function apply(ctx: ClientContext): void {
           actions,
           companion,
           channelSidebar,
+          dockPanels,
           profileCards,
           nativeChatT,
           nativeSessions,
@@ -773,6 +918,35 @@ export function apply(ctx: ClientContext): void {
 
   registerModeShadow(
     ctx,
+    'sidebar',
+    () =>
+      ctx.slots.register(
+        {
+          name: 'sidebar',
+          priority: -1,
+          locale: LOCALE_NS,
+          inject: () => ({
+            actions,
+            companion,
+            channelSidebar,
+            dockPanels,
+            shortcutBindings,
+            ...botModePrefsFace(prefs),
+            exitBotMode: () => ctx.layout.selectPanel(null),
+            toggleSidebar: () => ctx.layout.toggleSidebar(),
+            openBotSettings: () => botSettings.open(),
+          }),
+        },
+        BotModeSidebar,
+      ),
+    store,
+    {
+      enabled: botModeSidebarViewport,
+      subscribe: subscribeBotModeSidebarViewport,
+    },
+  );
+  registerModeShadow(
+    ctx,
     'sidebar.workspaces',
     () =>
       ctx.slots.register(
@@ -780,7 +954,13 @@ export function apply(ctx: ClientContext): void {
           name: 'sidebar.workspaces',
           priority: -100,
           locale: LOCALE_NS,
-          inject: () => ({ actions, companion, ...botModePrefsFace(prefs) }),
+          inject: () => ({
+            actions,
+            companion,
+            channelSidebar,
+            shortcutBindings,
+            ...botModePrefsFace(prefs),
+          }),
         },
         BotSidebar,
       ),
@@ -803,6 +983,7 @@ export function apply(ctx: ClientContext): void {
             actions,
             companion,
             channelSidebar,
+            dockPanels,
             profileCards,
             nativeChatT,
             nativeSessions,
@@ -855,6 +1036,7 @@ export function apply(ctx: ClientContext): void {
     ctx.effect(
       () =>
         watchPrivateInputNavigation(store, privateLocator, (channelId, messageId) => {
+          expectMobileConversation();
           ctx.layout.selectPanel(PANEL_ID);
           void actions.openChannelAtMessage(channelId, messageId).catch(() => {
             ctx.logger.warn('botharness: private input card locator unavailable');
@@ -863,7 +1045,34 @@ export function apply(ctx: ClientContext): void {
       'botharness: private input Chat locator',
     );
   }
-  if (privateLocator === undefined && viewToRestore !== undefined) {
+  const landing =
+    typeof window === 'undefined' || privateLocator !== undefined
+      ? undefined
+      : fullClientLocator(window.location.hash);
+  if (landing !== undefined) {
+    ctx.effect(
+      () =>
+        watchFullClientLanding(store, landing, (target) => {
+          if (target.kind === 'new-bot' || target.kind === 'new-channel') {
+            ctx.layout.selectPanel(PANEL_ID);
+            requestCreation(target.kind === 'new-bot' ? 'bot' : 'channel');
+            return;
+          }
+          if (target.kind !== 'home') expectMobileConversation();
+          ctx.layout.selectPanel(PANEL_ID);
+          if (target.kind === 'home') return;
+          const opening =
+            target.kind === 'dm'
+              ? actions.openBot(target.slug)
+              : actions.openChannel(target.channelId);
+          void opening.catch(() => {
+            ctx.logger.warn('botharness: full-client landing conversation unavailable');
+          });
+        }),
+      'botharness: full-client landing',
+    );
+  }
+  if (privateLocator === undefined && landing === undefined && viewToRestore !== undefined) {
     ctx.effect(() => {
       let restored = false;
       const restore = (): void => {
