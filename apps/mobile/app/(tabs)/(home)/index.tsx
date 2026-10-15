@@ -2,6 +2,7 @@ import { Redirect, Stack, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
+import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
 import { loadHumanName } from '../../../src/host/human';
 import { useHostLook } from '../../../src/host/native-host-look';
@@ -19,6 +20,7 @@ import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
 import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Text } from '../../../src/ui/primitives/text';
+import { CreateButton, type CreateTarget } from '../../../src/ui/shell/create-button';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { HumanAvatarButton } from '../../../src/ui/shell/human-avatar';
@@ -42,19 +44,20 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
+  const unread = list.status === 'ready' ? list.unread : undefined;
   const hostId = saved?.hostId;
   const collapsed = useCollapsedSections(hostId);
   const searching = query.trim() !== '';
   const rows = useMemo(
     () =>
       searching
-        ? searchConversations(snapshot.roster, action, query).map((row): ChatListItem => ({
+        ? searchConversations(snapshot.roster, action, query, unread).map((row): ChatListItem => ({
             kind: 'row',
             key: row.key,
             row,
           }))
-        : chatList(snapshot.roster, action, collapsed),
-    [snapshot.roster, action, collapsed, query, searching],
+        : chatList(snapshot.roster, action, collapsed, unread),
+    [snapshot.roster, action, collapsed, query, searching, unread],
   );
   const now = new Date();
 
@@ -65,6 +68,9 @@ export default function HomeScreen() {
       </View>
     );
   if (saved === null) return <Redirect href="/pair" />;
+
+  const create = (target: CreateTarget) =>
+    router.push({ pathname: '/full-client', params: fullClientParams(target) });
 
   const refresh = async () => {
     setRefreshing(true);
@@ -80,7 +86,10 @@ export default function HomeScreen() {
           hostName={shownHostName(look, saved.hostName)}
           look={look}
           actions={
-            <HumanAvatarButton loadName={loadName} onPress={() => router.push('/settings')} />
+            <>
+              <CreateButton onPick={create} />
+              <HumanAvatarButton loadName={loadName} onPress={() => router.push('/settings')} />
+            </>
           }
         >
           <FlatList
@@ -121,6 +130,7 @@ export default function HomeScreen() {
                     name={item.id === PINNED_SECTION ? t.pinnedSection : (item.name ?? '')}
                     count={item.count}
                     needsYou={item.needsYou}
+                    unread={item.unread}
                     collapsed={item.collapsed}
                     onToggle={() => sectionCollapse.toggle(saved.hostId, item.id)}
                   />

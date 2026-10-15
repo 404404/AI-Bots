@@ -1,7 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
-import { useHeaderHeight } from 'expo-router/react-navigation';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
+import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
 import type {
@@ -15,7 +15,6 @@ import type { Inbox } from '../../host/inbox';
 import type { WireAllBotPreview } from '../../host/wire';
 import { shareAttachment } from '../../host/share-attachment';
 import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../host/pick-files';
-import { stopBot, type StopOutcome } from '../../host/stop';
 import {
   useChannelConversation,
   useConversation,
@@ -39,8 +38,9 @@ import { botBusy } from './bot-tone';
 import { ChannelTitle } from './channel-title';
 import { ChatTitle } from './chat-title';
 import { Composer } from './composer';
-import { EdgeFade, HeaderBackButton, systemGlassBar } from './header-chrome';
+import { ChatHeader, EdgeFade, HeaderBackButton, useChatHeaderHeight } from './header-chrome';
 import { useFollowLatest } from './follow-latest';
+import { useMarkRead } from './mark-read';
 import { ImageViewer } from './image-viewer';
 import { JumpToLatest } from './jump-to-latest';
 import { MessageActions } from './message-actions';
@@ -54,11 +54,12 @@ import {
   type SelectedMention,
 } from './mention-draft';
 import { MentionSuggestions } from './mention-suggestions';
-import { DraftBubble, MessageBubble } from './message-bubble';
+import { DraftBubble, MessageBubble, type Speaker } from './message-bubble';
 import { copyMessage } from './message-menu';
-import { chatRows, type ChatRow } from './message-groups';
+import { chatRows, messageGroups, type ChatRow } from './message-groups';
+import { createSpeakerRegistry, SpeakerStageContext } from './speaker-row';
 import { QuestionCard } from './question-card';
-import { WorkingRow } from './working-row';
+import { WorkingStatus } from './working-status';
 import { TimeSeparator } from './time-separator';
 import { AccentProvider, useDesignTheme } from '../design/theme';
 import { edgeFade, space } from '../design/tokens';
@@ -177,7 +178,7 @@ const RequestCard = memo(function RequestCard({
 function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | undefined }) {
   const theme = useDesignTheme();
   const router = useRouter();
-  const headerHeight = useHeaderHeight();
+  const headerHeight = useChatHeaderHeight();
   const { client, inbox } = useHostSession();
   const host = useHostSnapshot(client);
   const dm = place.kind === 'dm';
@@ -207,7 +208,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     [channel, host.roster],
   );
   const working = dm ? (bot !== undefined && botBusy(bot) ? [bot] : []) : members.filter(botBusy);
-  const stopChannel = dm ? bot?.dmChannelId : channelId;
+  const activeChannel = dm ? bot?.dmChannelId : channelId;
   const snapshot = useConversationSnapshot(conversation);
   const [draft, setDraft] = useState('');
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
@@ -217,14 +218,12 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
-  const [stop, setStop] = useState<
-    ((StopOutcome | { status: 'stopping' }) & { bot: RosterBot }) | undefined
-  >();
   const [shareError, setShareError] = useState(false);
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
   const [reactError, setReactError] = useState(false);
-  const list = useRef<FlatList<Row>>(null);
+  const [composerHeight, setComposerHeight] = useState(0);
+  const list = useAnimatedRef<FlatList<Row>>();
   const jumped = useRef<string | undefined>(undefined);
   const [answered, setAnswered] = useState<ReadonlySet<string>>(new Set());
 
@@ -244,15 +243,50 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     () => snapshot.messages.filter((message) => !hiddenResolution(message)),
     [snapshot.messages],
   );
-  const history = useMemo(
+  const chronological = useMemo(
     () =>
       chatRows(
         visible,
         (message) => message.card !== undefined && (!dm || !resolutions.has(message.id)),
-      ).reverse(),
+      ),
     [visible, resolutions, dm],
   );
+  const history = useMemo(() => [...chronological].reverse(), [chronological]);
+  const [speakers] = useState(createSpeakerRegistry);
+  const groups = useMemo(() => messageGroups(chronological), [chronological]);
+  const groupOf = useMemo(() => new Map(groups.map((entry) => [entry.key, entry.group])), [groups]);
+  useLayoutEffect(() => {
+    speakers.setGroups([
+      ...groups,
+      ...snapshot.drafts.map((entry) => {
+        const key = `draft:${entry.draftId}`;
+        return { key, group: key };
+      }),
+    ]);
+  }, [speakers, groups, snapshot.drafts]);
+  const scroll = useScrollOffset(list);
+  const viewport = useAnimatedRef<View>();
+  const viewportLayout = useSharedValue(0);
+  const stage = useMemo(
+    () => ({
+      registry: speakers,
+      scroll,
+      viewport,
+      viewportLayout,
+      floor: composerHeight + edgeFade.bottom,
+    }),
+    [speakers, scroll, viewport, viewportLayout, composerHeight],
+  );
   const latest = useFollowLatest(list, visible);
+  const readMount = useMarkRead(client, inbox, conversation, activeChannel, !latest.away);
+  const mountRef = dictation.mountRef;
+  const screenRef = useCallback(
+    (node: unknown) => {
+      mountRef(node);
+      readMount(node);
+    },
+    [mountRef, readMount],
+  );
 
   const asking = snapshot.messages.findLast(
     (message) => message.card?.kind === 'user-question' && !resolutions.has(message.id),
@@ -355,14 +389,6 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       .catch(() => setAttachError(true));
   };
 
-  const stopRun = (target: RosterBot) => {
-    if (client === undefined || stopChannel === undefined || stop?.status === 'stopping') return;
-    setStop({ status: 'stopping', bot: target });
-    void stopBot(client, stopChannel, target.slug).then((outcome) =>
-      setStop(outcome.status === 'stopped' ? undefined : { ...outcome, bot: target }),
-    );
-  };
-
   const share = useCallback((attachment: MessageAttachment): Promise<void> => {
     setShareError(false);
     return shareAttachment(attachment).catch(() => setShareError(true));
@@ -384,11 +410,29 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
     [roster],
   );
 
+  const speakerOf = useCallback(
+    (id: string, row: { key: string; first: boolean; last: boolean }): Speaker => ({
+      name: botName(id),
+      bot: roster?.bots.find((entry) => entry.slug === id),
+      group: groupOf.get(row.key) ?? row.key,
+      first: row.first,
+      last: row.last,
+    }),
+    [roster, botName, groupOf],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: Row }) => {
       if (item.kind === 'draft')
         return (
-          <DraftBubble draft={item.draft} author={dm ? undefined : botName(item.draft.botSlug)} />
+          <DraftBubble
+            draft={item.draft}
+            speaker={
+              dm
+                ? undefined
+                : speakerOf(item.draft.botSlug, { key: item.key, first: true, last: true })
+            }
+          />
         );
       if (item.kind === 'separator') return <TimeSeparator at={item.at} />;
       const author = item.message.bot ?? slug;
@@ -423,15 +467,26 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
           onLongPress={setActionsFor}
           onReact={react}
           botName={botName}
-          author={
-            !dm && item.first && item.message.bot !== undefined
-              ? botName(item.message.bot)
-              : undefined
+          speaker={
+            !dm && item.message.bot !== undefined ? speakerOf(item.message.bot, item) : undefined
           }
         />
       );
     },
-    [dm, client, slug, inbox, resolutions, focus, answered, retry, share, react, botName],
+    [
+      dm,
+      client,
+      slug,
+      inbox,
+      resolutions,
+      focus,
+      answered,
+      retry,
+      share,
+      react,
+      botName,
+      speakerOf,
+    ],
   );
 
   const notice =
@@ -453,54 +508,24 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
                 ? t.shareFailed
                 : reactError
                   ? t.reactFailed
-                  : stop?.status === 'not-working'
-                    ? t.stopNotWorking(stop.bot.displayName)
-                    : stop?.status === 'failed'
-                      ? `${t.stopFailed} ${stop.reason}`
-                      : dictation.state.status === 'denied'
-                        ? t.dictationDenied
-                        : dictation.state.status === 'unavailable'
-                          ? t.dictationUnavailable
-                          : dictation.state.status === 'failed'
-                            ? t.dictationFailed
-                            : undefined;
+                  : dictation.state.status === 'denied'
+                    ? t.dictationDenied
+                    : dictation.state.status === 'unavailable'
+                      ? t.dictationUnavailable
+                      : dictation.state.status === 'failed'
+                        ? t.dictationFailed
+                        : undefined;
 
   return (
     <>
       <Stack.Screen
         options={{
-          headerLargeTitle: false,
-          headerTitleAlign: 'center',
-          headerShadowVisible: false,
-          headerTransparent: true,
-          headerStyle: { backgroundColor: 'transparent' },
+          headerShown: false,
           scrollEdgeEffects: { top: 'hidden', bottom: 'hidden', left: 'hidden', right: 'hidden' },
-          ...(systemGlassBar
-            ? {}
-            : { headerLeft: () => <HeaderBackButton onPress={() => router.back()} /> }),
-          headerTitle: () =>
-            dm ? (
-              <ChatTitle
-                bot={bot}
-                fallback={slug ?? ''}
-                onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
-              />
-            ) : (
-              <ChannelTitle channel={channel} fallback={channelId ?? ''} />
-            ),
-          headerRight: () =>
-            slug !== undefined ? (
-              <OpenFullClientButton target={{ kind: 'dm', slug }} round={!systemGlassBar} />
-            ) : channelId !== undefined ? (
-              <OpenFullClientButton
-                target={{ kind: 'channel', channelId }}
-                round={!systemGlassBar}
-              />
-            ) : null,
         }}
       />
       <KeyboardAvoidingView
-        ref={dictation.mountRef}
+        ref={screenRef}
         style={{ flex: 1, backgroundColor: theme.color.base }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
@@ -519,93 +544,89 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             {notice}
           </Text>
         )}
-        <View style={{ flex: 1 }}>
-          <FlatList
-            ref={list}
-            inverted
-            style={{ flex: 1 }}
-            contentContainerStyle={{
-              paddingTop: edgeFade.bottom,
-              paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
-            }}
-            data={rows}
-            keyExtractor={(row) => row.key}
-            renderItem={renderItem}
-            onContentSizeChange={jump}
-            onScrollToIndexFailed={(info) => {
-              list.current?.scrollToOffset({
-                offset: info.averageItemLength * info.index,
-                animated: false,
-              });
-              setTimeout(
-                () =>
-                  list.current?.scrollToIndex({
-                    index: info.index,
-                    viewPosition: 0.5,
-                    animated: true,
-                  }),
-                100,
-              );
-            }}
-            onEndReached={() => void conversation?.loadOlder()}
-            onEndReachedThreshold={0.5}
-            {...latest.listProps}
-            scrollEventThrottle={32}
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            ListHeaderComponent={
-              working.length === 0 ? null : (
-                <View>
-                  {working.map((entry) => (
-                    <WorkingRow
-                      key={entry.slug}
-                      bot={entry}
-                      stopping={stop?.status === 'stopping' && stop.bot.slug === entry.slug}
-                      onStop={() => stopRun(entry)}
-                    />
-                  ))}
-                </View>
-              )
-            }
-            ListFooterComponent={
-              snapshot.loadingOlder ? (
-                <View
-                  style={{
-                    padding: space.x4,
-                    alignItems: 'center',
-                    gap: space.x2,
-                  }}
-                >
-                  <ActivityIndicator />
-                  <Text variant="meta" tone="muted">
-                    {t.olderLoading}
+        <Animated.View
+          ref={viewport}
+          collapsable={false}
+          style={{ flex: 1 }}
+          onLayout={() => {
+            viewportLayout.value += 1;
+          }}
+        >
+          <SpeakerStageContext.Provider value={dm ? undefined : stage}>
+            <Animated.FlatList
+              ref={list}
+              inverted
+              style={{ flex: 1 }}
+              contentContainerStyle={{
+                paddingTop: composerHeight + edgeFade.bottom,
+                paddingBottom: (notice === undefined ? headerHeight : 0) + space.x3,
+              }}
+              data={rows}
+              keyExtractor={(row) => row.key}
+              renderItem={renderItem}
+              onContentSizeChange={jump}
+              onScrollToIndexFailed={(info) => {
+                list.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: false,
+                });
+                setTimeout(
+                  () =>
+                    list.current?.scrollToIndex({
+                      index: info.index,
+                      viewPosition: 0.5,
+                      animated: true,
+                    }),
+                  100,
+                );
+              }}
+              onEndReached={() => void conversation?.loadOlder()}
+              onEndReachedThreshold={0.5}
+              {...latest.listProps}
+              scrollEventThrottle={32}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              ListHeaderComponent={<WorkingStatus bots={working} />}
+              ListFooterComponent={
+                snapshot.loadingOlder ? (
+                  <View
+                    style={{
+                      padding: space.x4,
+                      alignItems: 'center',
+                      gap: space.x2,
+                    }}
+                  >
+                    <ActivityIndicator />
+                    <Text variant="meta" tone="muted">
+                      {t.olderLoading}
+                    </Text>
+                  </View>
+                ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
+                  <Text
+                    variant="meta"
+                    tone="muted"
+                    style={{ textAlign: 'center', padding: space.x5 }}
+                  >
+                    {dm ? t.beginning : t.beginningChannel}
                   </Text>
-                </View>
-              ) : !snapshot.hasOlder && snapshot.status === 'live' ? (
-                <Text
-                  variant="meta"
-                  tone="muted"
-                  style={{ textAlign: 'center', padding: space.x5 }}
-                >
-                  {dm ? t.beginning : t.beginningChannel}
-                </Text>
-              ) : null
-            }
-            ListEmptyComponent={
-              snapshot.status === 'opening' ? (
-                <View style={{ padding: space.x6, alignItems: 'center' }}>
-                  <ActivityIndicator />
-                </View>
-              ) : null
-            }
-          />
-          <EdgeFade edge="bottom" height={edgeFade.bottom} />
+                ) : null
+              }
+              ListEmptyComponent={
+                snapshot.status === 'opening' ? (
+                  <View style={{ padding: space.x6, alignItems: 'center' }}>
+                    <ActivityIndicator />
+                  </View>
+                ) : null
+              }
+            />
+          </SpeakerStageContext.Provider>
+          <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           {latest.away ? (
             <View
               pointerEvents="box-none"
               style={{
                 position: 'absolute',
-                bottom: space.x4,
+                bottom: composerHeight + space.x4,
                 left: 0,
                 right: 0,
                 alignItems: 'center',
@@ -614,42 +635,68 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
               <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />
             </View>
           ) : null}
-        </View>
-        <Composer
-          value={draft}
-          placeholder={
-            bot !== undefined
-              ? t.messageBot(bot.displayName)
-              : channel !== undefined
-                ? t.messageBot(`#${channel.name}`)
-                : t.messagePlaceholder
-          }
-          disabled={conversation === undefined}
-          files={files}
-          canAttach={files.length < MAX_PICKED}
-          dictation={dictation.state.status}
-          canDictate={conversation !== undefined}
-          onChange={edit}
-          selection={selection}
-          onSelection={(next) => {
-            setSelection(undefined);
-            setCaret(next);
-          }}
-          {...(candidates.length === 0
-            ? {}
-            : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-          onSend={send}
-          onPick={pick}
-          onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-          onDictate={() => {
-            setAttachError(false);
-            dictation.start();
-          }}
-          onStopDictation={dictation.stop}
-          onCancelDictation={dictation.cancel}
-        />
+          <View
+            onLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
+            style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
+          >
+            <Composer
+              value={draft}
+              placeholder={
+                bot !== undefined
+                  ? t.messageBot(bot.displayName)
+                  : channel !== undefined
+                    ? t.messageBot(`#${channel.name}`)
+                    : t.messagePlaceholder
+              }
+              disabled={conversation === undefined}
+              files={files}
+              canAttach={files.length < MAX_PICKED}
+              dictation={dictation.state.status}
+              canDictate={conversation !== undefined}
+              onChange={edit}
+              selection={selection}
+              onSelection={(next) => {
+                setSelection(undefined);
+                setCaret(next);
+              }}
+              {...(candidates.length === 0
+                ? {}
+                : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
+              onSend={send}
+              onPick={pick}
+              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onDictate={() => {
+                setAttachError(false);
+                dictation.start();
+              }}
+              onStopDictation={dictation.stop}
+              onCancelDictation={dictation.cancel}
+            />
+          </View>
+        </Animated.View>
       </KeyboardAvoidingView>
-      <EdgeFade edge="top" height={headerHeight + edgeFade.extend} />
+      <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
+      <ChatHeader
+        left={<HeaderBackButton onPress={() => router.back()} />}
+        center={
+          dm ? (
+            <ChatTitle
+              bot={bot}
+              fallback={slug ?? ''}
+              onPress={() => router.push(`/bot/${bot?.slug ?? slug}`)}
+            />
+          ) : (
+            <ChannelTitle channel={channel} fallback={channelId ?? ''} />
+          )
+        }
+        right={
+          slug !== undefined ? (
+            <OpenFullClientButton target={{ kind: 'dm', slug }} round />
+          ) : channelId !== undefined ? (
+            <OpenFullClientButton target={{ kind: 'channel', channelId }} round />
+          ) : null
+        }
+      />
       <ImageViewer attachment={viewing} onClose={() => setViewing(undefined)} onShare={share} />
       <MessageActions
         message={actionsFor}

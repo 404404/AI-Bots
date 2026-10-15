@@ -11,6 +11,8 @@ const native = vi.hoisted(() => ({
   pick: 0,
 }));
 
+vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+
 vi.mock('react-native', () => {
   const host = (name: string) => {
     const Component = ({ children, ...props }: Record<string, unknown>) => {
@@ -96,6 +98,7 @@ vi.mock('react-native-svg', () => ({
 }));
 
 const { MessageBubble, DraftBubble, deliveryLabel } = await import('../src/ui/chat/message-bubble');
+const { createSpeakerRegistry } = await import('../src/ui/chat/speaker-row');
 const { t } = await import('../src/ui/strings');
 const { openMessageMenu } = await import('../src/ui/chat/message-menu');
 
@@ -215,14 +218,54 @@ describe('message states', () => {
     expect(draft).toContain(t.typing);
   });
 
-  it('names the Bot above its group bubbles and its draft in a group Channel', () => {
+  it('names a group Channel Bot above its first bubble and puts its avatar at the last one', () => {
     const bot = human({ author: 'bot', bot: 'ada', body: 'On it' });
-    expect(renderToStaticMarkup(<MessageBubble message={bot} author="Ada" />)).toContain('Ada');
+    const speaker = { name: 'Ada', bot: undefined, group: 'g' };
+    const avatar = '"Text">A</div>';
+    const only = renderToStaticMarkup(
+      <MessageBubble message={bot} speaker={{ ...speaker, first: true, last: true }} />,
+    );
+    expect(only).toContain('>Ada<');
+    expect(only).toContain(avatar);
+    const opening = renderToStaticMarkup(
+      <MessageBubble message={bot} speaker={{ ...speaker, first: true, last: false }} />,
+    );
+    expect(opening).toContain('>Ada<');
+    expect(opening).not.toContain(avatar);
+    const closing = renderToStaticMarkup(
+      <MessageBubble message={bot} speaker={{ ...speaker, first: false, last: true }} />,
+    );
+    expect(closing).not.toContain('>Ada<');
+    expect(closing).toContain(avatar);
     expect(renderToStaticMarkup(<MessageBubble message={bot} />)).not.toContain('Ada');
     const draft = renderToStaticMarkup(
-      <DraftBubble draft={{ draftId: 'd', botSlug: 'grace', body: 'Hel' }} author="Grace" />,
+      <DraftBubble
+        draft={{ draftId: 'd', botSlug: 'grace', body: 'Hel' }}
+        speaker={{ name: 'Grace', bot: undefined, group: 'draft:d', first: true, last: true }}
+      />,
     );
-    expect(draft).toContain('Grace');
+    expect(draft).toContain('>Grace<');
+    expect(draft).toContain('"Text">G</div>');
+  });
+
+  it('keeps sticky avatar spans only for rows still in the Channel', () => {
+    const registry = createSpeakerRegistry();
+    registry.setGroups([
+      { key: 'a', group: 'a' },
+      { key: 'b', group: 'a' },
+    ]);
+    registry.layout('a', 'a', { height: 80, bubbleTop: 30 });
+    registry.layout('b', 'a', { height: 50, bubbleTop: 4 });
+    const span = registry.span('a');
+    expect(span.value).toBe(50);
+    registry.setGroups([{ key: 'b', group: 'b' }]);
+    expect(registry.span('b').value).toBe(-4);
+    expect(registry.span('a')).not.toBe(span);
+    registry.setGroups([
+      { key: 'a', group: 'a' },
+      { key: 'b', group: 'a' },
+    ]);
+    expect(registry.span('a').value).toBe(0);
   });
 
   it('closes half-written Markdown in a streaming draft', () => {
