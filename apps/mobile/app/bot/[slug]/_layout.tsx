@@ -15,6 +15,7 @@ export default function BotProfileLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="memory" />
+      <Stack.Screen name="activity" />
     </Stack>
   );
 }

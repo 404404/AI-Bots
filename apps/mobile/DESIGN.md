@@ -166,7 +166,12 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 - Avatar, name, label and description.
 - Actions: Message (closes the sheet back to the DM), Computer (only when the Bot has Computer access; opens the live desktop view, where touching the screen pauses the Bot so the Human can click and type, the Bot resumes 30 seconds after the last input or at once from the hand-back icon, and the password keyboard keeps it paused), Notifications.
 - Under the actions, a **Bot settings** group with the Model and Workspace rows (see Chat), each opening its sheet from the bottom over the profile.
-- Sections: Identity (the Soul: persona and standing rules), Memory (the Memory repository as a folder tree: folders first, each opens to its own list inside the sheet, and a file opens as read-only text), Routines (schedules), Channels (group Channels the Bot is in), Files (folders shared with the Bot).
+- Then **Last 7 days**, kept light like a health app's summary rather than a dashboard: one card with the 7-day token total (`320K tokens`, from the Host's `profileActivity` with `weeks: 1`, the same numbers as the Web Client's Token usage card), a 7-day bar row of tokens, and a smaller 7-day row of events plus Memory commits with weekday initials. Bars use the Bot's primary colour; an empty day keeps a faint stub on the layer's `inset`. A Bot with no activity shows the quiet week and a muted line, never an error. No window picker, split or heatmap here.
+- Tapping the card pushes **Activity** for that Bot:
+  - Window chips (7 days, 4 weeks, 6 months, mapped to `weeks`) and ‹ › buttons that page by a whole window with `before`; › is off at the current window and ‹ at the Bot's creation day.
+  - **Token usage**: the exact total (with "Partially known" and the Web's partial-data callout on `warningSoft` when a provider reported nothing for a bucket), stacked bars of cache read, input and output (by day up to 31 days, by week beyond), a legend with the three totals and the cache and output shares, then **By model** rows with each model's total.
+  - **Events**: the total, bars per day or week, and counts by reason. **Memory commits**: the total and a heatmap of weeks × weekdays.
+- Sections: Last 7 days (above), Identity (the Soul: persona and standing rules), Memory (the Memory repository as a folder tree: folders first, each opens to its own list inside the sheet, and a file opens as read-only text), Routines (schedules), Channels (group Channels the Bot is in), Files (folders shared with the Bot).
 - Each section loads on its own: an empty section says so, and a failed one offers Try again without hiding the others.
 - Read-only for now; editing Identity and Memory from the phone comes later.
 
@@ -193,7 +198,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 ## Components
 
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
-- `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, `CountBadge`, `Segmented` (an iOS-style two- or three-way switch on the layer's `inset`), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Card`, `SettingsRow` and `EmptyState`.
+- `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, `CountBadge`, `Segmented` (an iOS-style two- or three-way switch on the layer's `inset`), `DayBars` (one bar per day or week, scaled to the busiest, optionally stacked in tones from `design/chart.ts`; an empty day keeps a stub on the layer's `inset`), `DayHeat` (a weeks × weekdays heatmap), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Card`, `SettingsRow` and `EmptyState`.
 - `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, working status and scroll-to-bottom.
 - `src/ui/shell/` will hold the Host drawer, the Human avatar button, shortcut cards, Channel section headers and the activity item.
 - `app/` routes, reads the Host client, and composes these components.

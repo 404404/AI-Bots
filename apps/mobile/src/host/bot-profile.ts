@@ -1,5 +1,12 @@
+import { loadProfileActivity } from './bot-activity';
 import type { HostClient, RosterChannel, RosterView } from './client';
-import type { BotScheduleSummary, MemoryFile, MemorySnapshot, WorkspaceGrantSummary } from './wire';
+import type {
+  BotScheduleSummary,
+  MemoryFile,
+  MemorySnapshot,
+  ProfileActivity,
+  WorkspaceGrantSummary,
+} from './wire';
 
 export type ProfilePart<T> = { status: 'ready'; value: T } | { status: 'failed'; error: string };
 
@@ -22,6 +29,7 @@ export interface BotProfile {
   memory: ProfilePart<ProfileMemory>;
   routines: ProfilePart<BotScheduleSummary[]>;
   files: ProfilePart<WorkspaceGrantSummary[]>;
+  activity: ProfilePart<ProfileActivity>;
 }
 
 const SOUL = 'SOUL.md';
@@ -36,7 +44,7 @@ function settle<T>(work: Promise<T>): Promise<ProfilePart<T>> {
   );
 }
 
-function dmChannel(client: HostClient, bot: ProfileBotRef): Promise<string> {
+export function dmChannel(client: HostClient, bot: ProfileBotRef): Promise<string> {
   if (bot.dmChannelId !== undefined) return Promise.resolve(bot.dmChannelId);
   return client
     .call<{ channel: { id: string } }>('channelDm', {
@@ -62,6 +70,14 @@ export async function loadMemoryFile(
 ): Promise<MemoryFile | undefined> {
   const channelId = await dmChannel(client, bot);
   return (await client.call<{ file?: MemoryFile }>('memoryFile', { channelId, path })).file;
+}
+
+export async function loadBotActivity(
+  client: HostClient,
+  bot: ProfileBotRef,
+  window: { weeks: number; before?: string },
+): Promise<ProfileActivity> {
+  return loadProfileActivity(client, await dmChannel(client, bot), window);
 }
 
 export function memoryEntries(files: readonly string[], folder: string): MemoryEntry[] {
@@ -91,7 +107,8 @@ export function memoryEntries(files: readonly string[], folder: string): MemoryE
 }
 
 export async function loadBotProfile(client: HostClient, bot: ProfileBotRef): Promise<BotProfile> {
-  const snapshot = dmChannel(client, bot).then(async (channelId) => ({
+  const channel = dmChannel(client, bot);
+  const snapshot = channel.then(async (channelId) => ({
     channelId,
     snapshot: await snapshotOf(client, channelId),
   }));
@@ -104,7 +121,7 @@ export async function loadBotProfile(client: HostClient, bot: ProfileBotRef): Pr
       ? undefined
       : file.body.trim();
   };
-  const [identity, memory, routines, files] = await Promise.all([
+  const [identity, memory, routines, files, activity] = await Promise.all([
     settle(soul()),
     settle(snapshot.then(({ snapshot: current }): ProfileMemory => ({ files: current.files }))),
     settle(
@@ -117,8 +134,9 @@ export async function loadBotProfile(client: HostClient, bot: ProfileBotRef): Pr
         .call<{ grants: WorkspaceGrantSummary[] }>('grants', { slug: bot.slug })
         .then((result) => result.grants.filter((grant) => grant.revokedAt === undefined)),
     ),
+    settle(channel.then((channelId) => loadProfileActivity(client, channelId, { weeks: 1 }))),
   ]);
-  return { identity, memory, routines, files };
+  return { identity, memory, routines, files, activity };
 }
 
 export function botChannels(roster: RosterView | undefined, slug: string): RosterChannel[] {

@@ -180,6 +180,50 @@ export interface WorkspaceGrantSummary {
   orchestratorWrite?: boolean;
 }
 
+export interface ProfileActivityDay {
+  day: string;
+  count: number;
+}
+
+export interface ProfileActivityReasonDay extends ProfileActivityDay {
+  reason: string;
+}
+
+export interface ProfileTokenBuckets {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
+export interface ProfileActivityTokensDay extends ProfileTokenBuckets {
+  day: string;
+}
+
+export interface ProfileModelUsageRow {
+  day: string;
+  purpose: string;
+  provider: string;
+  model: string;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+  totalTokens: number | null;
+}
+
+export interface ProfileActivity {
+  weeks: number;
+  before?: string;
+  createdDay?: string;
+  today: string;
+  events: ProfileActivityReasonDay[];
+  memoryCommits: ProfileActivityDay[];
+  tokens: ProfileActivityTokensDay[];
+  modelUsageRows: ProfileModelUsageRow[];
+  modelUsageStatus: 'ready' | 'unavailable';
+}
+
 export interface ChannelListItem {
   id: string;
   type: 'dm' | 'group' | (string & {});

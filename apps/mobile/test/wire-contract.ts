@@ -32,6 +32,7 @@ import type {
   MemorySnapshot,
   OverviewMemory,
   OverviewUsage,
+  ProfileActivity,
   WorkspaceGrantSummary,
   ChannelListItem,
   HumanAttentionItem,
@@ -88,4 +89,5 @@ export type WireContract = [
   Assert<Accepts<WorkspaceGrantSummary, Value<'grants'>['grants'][number]>>,
   Assert<Accepts<OverviewUsage, Value<'overviewUsage'>>>,
   Assert<Accepts<OverviewMemory, Value<'overviewMemory'>>>,
+  Assert<Accepts<ProfileActivity, Value<'profileActivity'>>>,
 ];
