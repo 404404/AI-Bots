@@ -1,6 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
-  IconBranchOutlineRegular,
   IconChevronDownOutlineRegular,
   IconChevronLeftOutlineRegular,
   IconRefreshOutlineRegular,
@@ -35,10 +34,6 @@ export function MemoryViewIconButton({
       </button>
     </Tooltip>
   );
-}
-
-export function MemoryBranchIcon(): ReactElement {
-  return <IconBranchOutlineRegular size={16} />;
 }
 
 export function MemoryDiffFile({
