@@ -254,9 +254,6 @@ importers:
       '@cloudflare/nimbus-docs':
         specifier: ^0.14.1
         version: 0.14.1(@types/node@22.20.3)(astro@7.3.1(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@22.20.3)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))(esbuild@0.28.2)(jiti@2.7.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(supports-color@10.2.2)(terser@5.51.2)
-      '@daypicker/react':
-        specifier: ^10.0.1
-        version: 10.0.1(@types/react@19.3.0)(react@19.3.0)
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.3.0
@@ -537,9 +534,6 @@ importers:
 
   packages/client:
     dependencies:
-      '@blobatar/react':
-        specifier: ^2.7.0
-        version: 2.7.0(blobatar@2.7.0(react@18.3.1))(react@18.3.1)
       '@botharness/botui-core':
         specifier: 0.3.0
         version: 0.3.0
@@ -1605,12 +1599,6 @@ packages:
       '@types/react':
         optional: true
 
-  '@blobatar/react@2.7.0':
-    resolution: {integrity: sha512-rysDM1+2qoeIwIezVw/em+ZxOMyqqjqJOGNEvtOOU1nFp0jmzyEjlXtJTDM6xPKamq59pq6wcG9+mHIUZV572A==}
-    peerDependencies:
-      blobatar: 2.x
-      react: '>=18'
-
   '@botharness/botui-core@0.3.0':
     resolution: {integrity: sha512-ZfuyXyAtxIijqxPb7zWKu3/aO3GKT8kTzQpCBYD08t9vOp858r/xL8BsQvwjswTTH2bTZ8saXBnUgjYBRnY8xQ==}
 
@@ -1860,16 +1848,6 @@ packages:
 
   '@date-fns/tz@1.5.0':
     resolution: {integrity: sha512-lwYN/vDPeNRULcepoE/LO2Pgx+7/RV+S9ARfbc9lr2DtGkOD7pAiruHvbR1RX3Qyf6ja47EWJDMsNK5vK08DJg==}
-
-  '@daypicker/react@10.0.1':
-    resolution: {integrity: sha512-lH4YQz4iMBWP8hsI1bD9Eg0T7t503IkSUR/WDGGkV5mKZvwVv+ukCkJz7yN+uVFBv7vHTK+ww7a5EvlkeFwPYQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@types/react': '>=16.8.0'
-      react: '>=16.8.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
 
   '@deepseek-ai/cordis-plugin-group@1.0.4':
     resolution: {integrity: sha512-/7tuY5pMQetHava4v6QUeOa4CwZA+mleNvbIoj+iqEmzkYUtlXbLqhzJIcbnDa/Hxgr1jaCwROrI77nuLyeCFg==}
@@ -10831,16 +10809,6 @@ packages:
       react: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
       react-dom: ^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1
 
-  react-day-picker@10.0.1:
-    resolution: {integrity: sha512-eNh6BlwcYInWaJtRv18mXQ06Ys/H6rdTZAnTaSdOYJuTpwP1JMCHNd1FDRadA+gbeinq+psdULN5Xnowy9mV8w==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@types/react': '>=16.8.0'
-      react: '>=16.8.0'
-    peerDependenciesMeta:
-      '@types/react':
-        optional: true
-
   react-devtools-core@6.1.5:
     resolution: {integrity: sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==}
 
@@ -13462,11 +13430,6 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
-  '@blobatar/react@2.7.0(blobatar@2.7.0(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      blobatar: 2.7.0(react@18.3.1)
-      react: 18.3.1
-
   '@botharness/botui-core@0.3.0': {}
 
   '@botharness/pixel-avatar@0.10.1':
@@ -13695,14 +13658,8 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
-  '@date-fns/tz@1.5.0': {}
-
-  '@daypicker/react@10.0.1(@types/react@19.3.0)(react@19.3.0)':
-    dependencies:
-      react: 19.3.0
-      react-day-picker: 10.0.1(@types/react@19.3.0)(react@19.3.0)
-    optionalDependencies:
-      '@types/react': 19.3.0
+  '@date-fns/tz@1.5.0':
+    optional: true
 
   '@deepseek-ai/cordis-plugin-group@1.0.4(@deepseek-ai/cordis-plugin-loader@1.0.5)(@deepseek-ai/cordis@4.0.4)':
     dependencies:
@@ -20851,7 +20808,8 @@ snapshots:
       whatwg-mimetype: 4.0.0
       whatwg-url: 14.2.0
 
-  date-fns@4.4.0: {}
+  date-fns@4.4.0:
+    optional: true
 
   dayjs@1.11.23: {}
 
@@ -23944,14 +23902,6 @@ snapshots:
       react-dom: 19.3.0(react@19.3.0)
       react-stately: 3.50.0(react@19.3.0)
       use-sync-external-store: 1.7.0(react@19.3.0)
-
-  react-day-picker@10.0.1(@types/react@19.3.0)(react@19.3.0):
-    dependencies:
-      '@date-fns/tz': 1.5.0
-      date-fns: 4.4.0
-      react: 19.3.0
-    optionalDependencies:
-      '@types/react': 19.3.0
 
   react-devtools-core@6.1.5:
     dependencies:

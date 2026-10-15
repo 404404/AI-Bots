@@ -21,12 +21,7 @@ import {
 import { createTransferTokens } from './transfer-tokens.js';
 import { createIdleWatcher } from './idle.js';
 import { DesktopViewError, createDesktopView, parseDesktopInput } from './desktop-view.js';
-import {
-  COMPUTER_EXPORT_DIR_FIELD,
-  COMPUTER_IDLE_STOP_FIELD,
-  COMPUTER_SETTINGS_NAMESPACE,
-  type ComputerSettings,
-} from './settings.js';
+import type { ComputerSettings } from './settings.js';
 import { DEFAULT_DOCKER_CONFIG, createDockerComputerProvider } from './providers/docker.js';
 import type { ComputerRuntimeResult, ComputerRuntimeRunner, ComputerStatus } from './provider.js';
 import { createComputerService, type ComputerService } from './service.js';
