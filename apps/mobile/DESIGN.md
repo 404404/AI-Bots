@@ -40,8 +40,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - The header has the Host chip on the left, and on the right a compose button and the Human's avatar.
     - Compose opens a native menu: **New PersonaBot** and **New Channel**. They open the app's create flow, or the full client where the app has none yet. Android has no compose button in the header; a Material FAB at the bottom right, above the tab bar, opens the same menu.
     - The avatar opens **Settings**. Until the Human has an avatar of their own it shows their initial on a neutral layer fill.
-  - A search field at the top of the list (see **Search**).
-  - A row of shortcut cards: **Needs you** and **Working**, each an icon, a name and a count that filters the list when tapped. The filter applies across all Channel sections. **Unread** joins them once the Host reports unread counts.
+  - A **search field** at the top of the list panel, inset so its left edge lines up with the row avatars (`AVATAR_EDGE`), with corners concentric with the panel's rounded top: the field uses `radius.md` and the panel `radius.md + AVATAR_EDGE`. It scrolls away with the list. There are no shortcut cards: Activity already gathers what needs the Human.
   - One list of PersonaBot DMs and Channels together, grouped by the Host's **Channel sections** as on the desktop sidebar:
     - Sections come in the desktop's order. Ungrouped DMs and Channels sit between them in the desktop's top-level order.
     - A section header shows its name and Channel count and collapses or expands on tap. A collapsed section still shows a "Needs you" mark when something inside needs the Human. The collapse state is kept on the phone, per Host.
@@ -49,9 +48,8 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
     - Changes made on the desktop show when the roster refreshes. Creating, renaming, reordering and moving Channels between sections stays on the desktop for now.
     - A Host with no sections shows one flat list by latest activity.
 - **Search** finds a PersonaBot or Channel on the current Host:
-  - A search field sits at the top of the Chats list, above the shortcut cards, and scrolls away with the list. It is the same on iOS and Android.
-  - Typing filters the list in place by PersonaBot display name and Channel title, on the device; names that start with the query come first. The shortcut cards hide while a query is typed.
-  - A result opens its chat. When nothing matches it says so in one line. Message full-text search is not part of it.
+  - Typing in the Chats search field filters the list in place, as chat apps do; there is no separate search tab.
+  - It matches PersonaBot display names and Channel titles on the device, ignoring case and full-width forms, with names that start with the query first. Hidden Channels stay out. A DM result opens its chat; a Channel opens the full client at that Channel until the app has a native Channel chat. When nothing matches it says so. Message full-text search is not part of it.
 - **Activity** is the Human Inbox across all Hosts:
   - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
   - Section headers stick to the top while their items scroll and show the section's count.

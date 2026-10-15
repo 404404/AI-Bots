@@ -11,10 +11,6 @@ export type Conversation =
   | { kind: 'bot'; key: string; bot: RosterBot; at?: string; needsYou: number }
   | { kind: 'channel'; key: string; channel: RosterChannel; at?: string; needsYou: number };
 
-export type ConversationFilter = 'all' | 'needs-you' | 'working';
-
-const BUSY = new Set(['thinking', 'working']);
-
 function needsYouFor(bot: RosterBot, action: HumanAttentionItem[]): number {
   return action.filter(
     (item) =>
@@ -26,7 +22,6 @@ function needsYouFor(bot: RosterBot, action: HumanAttentionItem[]): number {
 export function conversations(
   roster: RosterView | undefined,
   action: HumanAttentionItem[],
-  filter: ConversationFilter = 'all',
 ): Conversation[] {
   if (roster === undefined) return [];
   const hidden = new Set(roster.arrangement?.hidden);
@@ -46,16 +41,7 @@ export function conversations(
       needsYou: action.filter((item) => item.channelId === channel.id).length,
     })),
   ];
-  return rows
-    .filter((row) => !hidden.has(channelIdOf(row) ?? ''))
-    .filter((row) =>
-      filter === 'needs-you'
-        ? row.needsYou > 0
-        : filter === 'working'
-          ? row.kind === 'bot' && BUSY.has(row.bot.state)
-          : true,
-    )
-    .sort(byLatest);
+  return rows.filter((row) => !hidden.has(channelIdOf(row) ?? '')).sort(byLatest);
 }
 
 function channelIdOf(row: Conversation): string | undefined {
@@ -122,14 +108,12 @@ function topEntries(arrangement: RosterArrangement, loose: readonly string[]): T
 export function chatList(
   roster: RosterView | undefined,
   action: HumanAttentionItem[],
-  filter: ConversationFilter = 'all',
   collapsed: ReadonlySet<string> = new Set(),
 ): ChatListItem[] {
-  const rows = conversations(roster, action, filter);
+  const rows = conversations(roster, action);
   const arrangement = roster?.arrangement;
   const flat = rows.map((row): ChatListItem => ({ kind: 'row', key: row.key, row }));
-  if (filter !== 'all' || arrangement === undefined || arrangement.sections.length === 0)
-    return flat;
+  if (arrangement === undefined || arrangement.sections.length === 0) return flat;
 
   const byId = new Map<string, Conversation>();
   for (const row of rows) byId.set(channelIdOf(row) ?? row.key, row);
@@ -202,14 +186,23 @@ export function titleOf(row: Conversation): string {
   return row.kind === 'bot' ? row.bot.displayName : row.channel.name;
 }
 
-export function shortcutCounts(
+function searchKey(value: string): string {
+  return value.normalize('NFKC').toLocaleLowerCase().replace(/\s+/gu, ' ').trim();
+}
+
+export function searchConversations(
   roster: RosterView | undefined,
   action: HumanAttentionItem[],
-): Record<Exclude<ConversationFilter, 'all'>, number> {
-  return {
-    'needs-you': conversations(roster, action, 'needs-you').length,
-    working: (roster?.bots ?? []).filter((bot) => BUSY.has(bot.state)).length,
-  };
+  query: string,
+): Conversation[] {
+  const needle = searchKey(query);
+  if (needle === '' || roster === undefined) return [];
+  const rank = (row: Conversation): number => (searchKey(titleOf(row)).startsWith(needle) ? 0 : 1);
+  return conversations(roster, action)
+    .filter((row) => searchKey(titleOf(row)).includes(needle))
+    .map((row, index) => ({ row, index }))
+    .sort((a, b) => rank(a.row) - rank(b.row) || a.index - b.index)
+    .map(({ row }) => row);
 }
 
 export function shortTime(iso: string | undefined, now: Date, locale?: string): string {

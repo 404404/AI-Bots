@@ -223,18 +223,13 @@ const en = {
   stopNotWorking: (name: string) => `${name} had already finished.`,
   stopFailed: 'Could not stop:',
   needsYouCount: (count: number) => (count === 1 ? 'needs you' : `${count} need you`),
-  shortcut: { 'needs-you': 'Needs you', working: 'Working' },
-  shortcutDetail: {
-    'needs-you': (count: number) => (count === 1 ? '1 conversation' : `${count} conversations`),
-    working: (count: number) => (count === 1 ? '1 PersonaBot' : `${count} PersonaBots`),
-  },
-  noConversations: 'No conversations here.',
+  searchPlaceholder: 'Search PersonaBots and Channels',
+  searchNoMatch: (query: string) => `No PersonaBot or Channel matches “${query}”.`,
   pinnedSection: 'Pinned',
   sectionLabel: (name: string, count: number, needsYou: number) =>
     [name, count === 1 ? '1 conversation' : `${count} conversations`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? 'needs you' : `${needsYou} need you`])
       .join(', '),
-  showAll: 'Show all',
   computer: 'This computer',
   connected: 'Connected',
   notifications: 'Notifications',
@@ -576,18 +571,13 @@ const zh: typeof en = {
   stopNotWorking: (name: string) => `${name} 已经结束了。`,
   stopFailed: '无法停止：',
   needsYouCount: (count: number) => (count === 1 ? '等你处理' : `${count} 项等你处理`),
-  shortcut: { 'needs-you': '等你处理', working: '工作中' },
-  shortcutDetail: {
-    'needs-you': (count: number) => `${count} 个对话`,
-    working: (count: number) => `${count} 个 PersonaBot`,
-  },
-  noConversations: '这里还没有对话。',
+  searchPlaceholder: '搜索 PersonaBot 和频道',
+  searchNoMatch: (query: string) => `没有名称包含“${query}”的 PersonaBot 或频道。`,
   pinnedSection: '已置顶',
   sectionLabel: (name: string, count: number, needsYou: number) =>
     [name, `${count} 个对话`]
       .concat(needsYou === 0 ? [] : [needsYou === 1 ? '等你处理' : `${needsYou} 项等你处理`])
       .join('，'),
-  showAll: '显示全部',
   computer: '这台电脑',
   connected: '已连接',
   notifications: '通知',
