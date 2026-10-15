@@ -1,10 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis';
 import { join } from 'node:path';
-import {
-  clientObserverScript,
-  type ClientDiagnosticEvent,
-  type ClientDiagnosticSnapshot,
-} from './client-observer.js';
+import { clientObserverScript, type ClientDiagnosticEvent } from './client-observer.js';
 import { openLogDatabase, type LogDatabase, type LogEntryInput } from '../logs/log-db.js';
 
 export const CLIENT_DIAGNOSTICS_PATH = '/api/botharness/client-diagnostics';

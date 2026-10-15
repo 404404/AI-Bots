@@ -7,7 +7,7 @@ Third-party works distributed inside this package (inlined into `lib/client.js` 
 - Package: `blobatar` 2.7.0
 - License: MIT
 - Source: <https://github.com/Alain00/blobatar>
-- Used for: deterministic default avatars generated from a bot slug (`@blobatar/react` remains a declared dependency for the same work; generator code is inlined by the client bundle build).
+- Used for: deterministic default avatars generated from a bot slug (generator code is inlined by the client bundle build).
 
 ```
 MIT License

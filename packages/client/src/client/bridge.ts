@@ -2579,19 +2579,6 @@ export async function setGroupWakePolicy(
 export async function deleteGroupChannel(call: BridgeCall, channelId: string): Promise<void> {
   await unwrap(call, 'channelGroupDelete', { channelId });
 }
-
-export async function loadChannelMessages(
-  call: BridgeCall,
-  channelId: string,
-  signal?: AbortSignal,
-): Promise<{ messages: ChannelMessage[]; revision: number }> {
-  const value = await unwrap(call, 'channelMessages', { channelId }, signal);
-  const revision = asRecord(value)?.['revision'];
-  if (typeof revision !== 'number' || !Number.isSafeInteger(revision) || revision < 0) {
-    throw new Error('invalid channelMessages revision');
-  }
-  return { messages: parseChannelMessages(value).reverse(), revision };
-}
 export interface TimelinePage {
   entries: ChannelMessage[];
   olderCursor: string | null;

@@ -10,12 +10,9 @@ vi.mock('../src/ui/bot-avatar', () => ({
     createElement('span', { 'data-testid': `avatar-${bot.slug}` }),
 }));
 
-import type { RosterBot } from '../src/host/client';
-import type { InboxSnapshot } from '../src/host/inbox';
 import type { ApprovalRequest, DecisionResult, QuestionRequest } from '../src/host/requests';
 import type { HumanAttentionItem, QuestionAnswer } from '../src/host/wire';
 import { ApprovalView, type ApprovalPort } from '../src/ui/approval-view';
-import { InboxList } from '../src/ui/inbox-list';
 import { QuestionView, type QuestionPort } from '../src/ui/question-view';
 import { t } from '../src/ui/strings';
 import inboxWire from './fixtures/inbox-wire.json';
@@ -260,83 +257,5 @@ describe('Human question screen', () => {
       act(() => root?.unmount());
       view.remove();
     }
-  });
-});
-
-describe('Inbox list', () => {
-  const bot: RosterBot = {
-    slug: approvalItem.botSlug,
-    displayName: 'Inbox QA',
-    roles: [],
-    computerAccess: false,
-    browserAccess: false,
-    state: 'waiting',
-    paused: false,
-  };
-  const ready = (action: HumanAttentionItem[]): InboxSnapshot => ({
-    status: 'ready',
-    sections: {
-      action,
-      replies: [
-        {
-          id: 'reply:1',
-          category: 'replies',
-          kind: 'channel-mention',
-          createdAt: approvalItem.createdAt,
-          channelId: 'group-1',
-          channelName: 'launch',
-          botSlug: bot.slug,
-          summary: '@Human the draft is ready',
-        },
-      ],
-      handled: items('humanAttention.handled').slice(0, 2),
-    },
-  });
-
-  it('orders actions, then mentions and replies, then handled history', async () => {
-    const opened: string[] = [];
-    const view = await render(
-      createElement(InboxList, {
-        snapshot: ready([approvalItem, questionItem]),
-        bot: (slug: string) => (slug === bot.slug ? bot : undefined),
-        onOpen: (item: HumanAttentionItem) => opened.push(item.id),
-        refreshing: false,
-        onRefresh: () => undefined,
-        now: Date.parse(approvalItem.createdAt) + 5 * 60_000,
-      }),
-    );
-    const headers = [...view.querySelectorAll('[role="header"]')].map((node) => node.textContent);
-    expect(headers).toEqual([
-      t.inboxSections.action,
-      t.inboxSections.replies,
-      t.inboxSections.handled,
-    ]);
-    const rows = [...view.querySelectorAll('[data-testid^="inbox-row-"]')].map((node) =>
-      node.getAttribute('data-testid'),
-    );
-    expect(rows.slice(0, 3)).toEqual([
-      `inbox-row-${approvalItem.id}`,
-      `inbox-row-${questionItem.id}`,
-      'inbox-row-reply:1',
-    ]);
-    expect(view.textContent).toContain(t.inChannel('launch'));
-    expect(view.textContent).toContain(t.ago(5));
-    await press(view.querySelector<HTMLElement>(`[data-testid="inbox-row-${questionItem.id}"]`)!);
-    expect(opened).toEqual([questionItem.id]);
-  });
-
-  it('says nothing needs the Human when no action is waiting, and flags a stale read', async () => {
-    const snapshot = { ...ready([]), stale: 'The Host could not be reached.' } as InboxSnapshot;
-    const view = await render(
-      createElement(InboxList, {
-        snapshot,
-        bot: () => undefined,
-        onOpen: () => undefined,
-        refreshing: false,
-        onRefresh: () => undefined,
-      }),
-    );
-    expect(view.textContent).toContain(t.inboxEmpty);
-    expect(notice(view, 'warning')).toBe(`${t.inboxStale} The Host could not be reached.`);
   });
 });
