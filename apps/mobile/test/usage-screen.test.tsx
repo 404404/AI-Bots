@@ -49,7 +49,6 @@ function actions(overrides: Partial<SettingsActions> = {}): SettingsActions {
     onUsage: vi.fn(),
     onOpenFullClient: vi.fn(),
     onComputers: vi.fn(),
-    onHostLook: vi.fn(),
     onAppIcon: vi.fn(),
     onNotifications: vi.fn(),
     onUnpair: vi.fn(async () => undefined),

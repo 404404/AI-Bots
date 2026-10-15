@@ -512,8 +512,9 @@ const en = {
     'The home screen icon changes right away. Dark and tinted home screens get a matching version.',
   appIconUnsupported: 'This phone cannot change the app icon.',
   appIconFailed: 'Could not change the app icon:',
-  hostLook: 'Customize header',
-  hostLookHint: 'Avatar and banner for this computer',
+  hostLook: 'Customize computer',
+  hostCustomize: 'Customize',
+  hostLookName: 'Name',
   hostLookPreview: 'Preview',
   hostAvatar: 'Avatar',
   hostAvatarInitial: 'Initial',
@@ -533,6 +534,7 @@ const en = {
   bannerChangePicture: 'Change picture',
   hostLookReset: 'Reset to default',
   hostLookPickFailed: 'Could not open your photos.',
+  hostLookMissing: 'This computer is no longer paired.',
 };
 
 const zh: typeof en = {
@@ -1018,8 +1020,9 @@ const zh: typeof en = {
   appIconFooter: '主屏幕图标会立即更换。深色和着色主屏幕会用对应的版本。',
   appIconUnsupported: '这台手机不能更换 App 图标。',
   appIconFailed: '无法更换 App 图标：',
-  hostLook: '自定义顶栏',
-  hostLookHint: '这台电脑的头像和顶栏背景',
+  hostLook: '自定义电脑',
+  hostCustomize: '自定义',
+  hostLookName: '名称',
   hostLookPreview: '预览',
   hostAvatar: '头像',
   hostAvatarInitial: '首字母',
@@ -1039,6 +1042,7 @@ const zh: typeof en = {
   bannerChangePicture: '更换图片',
   hostLookReset: '恢复默认',
   hostLookPickFailed: '无法打开相册。',
+  hostLookMissing: '这台电脑已不再配对。',
 };
 
 export const locale: 'zh' | 'en' = Intl.DateTimeFormat()
