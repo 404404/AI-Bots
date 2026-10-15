@@ -4,7 +4,7 @@ import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import { botSettings } from '../../host/bot-settings';
-import type { HostClient } from '../../host/client';
+import type { HostClient, RosterBot } from '../../host/client';
 import type {
   CardResolution,
   ConversationDraft,
@@ -61,7 +61,7 @@ import { DraftBubble, MessageBubble } from './message-bubble';
 import { copyMessage } from './message-menu';
 import { chatRows, type ChatRow } from './message-groups';
 import { QuestionCard } from './question-card';
-import { StatusStrip } from './status-strip';
+import { WorkingRow } from './working-row';
 import { TimeSeparator } from './time-separator';
 import { WorkspaceSheet } from './workspace-sheet';
 import { AccentProvider, useDesignTheme } from '../design/theme';
@@ -206,11 +206,7 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
         : (host.roster?.bots ?? []).filter((entry) => channel.members.includes(entry.slug)),
     [channel, host.roster],
   );
-  const working = dm
-    ? bot !== undefined && botBusy(bot)
-      ? bot
-      : undefined
-    : members.find(botBusy);
+  const working = dm ? (bot !== undefined && botBusy(bot) ? [bot] : []) : members.filter(botBusy);
   const stopChannel = dm ? bot?.dmChannelId : channelId;
   const snapshot = useConversationSnapshot(conversation);
   const [draft, setDraft] = useState('');
@@ -221,7 +217,9 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachError, setAttachError] = useState(false);
   const dictation = useDictation(setDraft);
-  const [stop, setStop] = useState<StopOutcome | { status: 'stopping' } | undefined>();
+  const [stop, setStop] = useState<
+    ((StopOutcome | { status: 'stopping' }) & { bot: RosterBot }) | undefined
+  >();
   const [shareError, setShareError] = useState(false);
   const [viewing, setViewing] = useState<MessageAttachment>();
   const [actionsFor, setActionsFor] = useState<ConversationMessage>();
@@ -357,17 +355,11 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
       .catch(() => setAttachError(true));
   };
 
-  const stopRun = () => {
-    if (
-      client === undefined ||
-      working === undefined ||
-      stopChannel === undefined ||
-      stop?.status === 'stopping'
-    )
-      return;
-    setStop({ status: 'stopping' });
-    void stopBot(client, stopChannel, working.slug).then((outcome) =>
-      setStop(outcome.status === 'stopped' ? undefined : outcome),
+  const stopRun = (target: RosterBot) => {
+    if (client === undefined || stopChannel === undefined || stop?.status === 'stopping') return;
+    setStop({ status: 'stopping', bot: target });
+    void stopBot(client, stopChannel, target.slug).then((outcome) =>
+      setStop(outcome.status === 'stopped' ? undefined : { ...outcome, bot: target }),
     );
   };
 
@@ -460,8 +452,8 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
                 ? t.shareFailed
                 : reactError
                   ? t.reactFailed
-                  : stop?.status === 'not-working' && working !== undefined
-                    ? t.stopNotWorking(working.displayName)
+                  : stop?.status === 'not-working'
+                    ? t.stopNotWorking(stop.bot.displayName)
                     : stop?.status === 'failed'
                       ? `${t.stopFailed} ${stop.reason}`
                       : dictation.state.status === 'denied'
@@ -549,6 +541,20 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             scrollEventThrottle={32}
             keyboardDismissMode="interactive"
             keyboardShouldPersistTaps="handled"
+            ListHeaderComponent={
+              working.length === 0 ? null : (
+                <View>
+                  {working.map((entry) => (
+                    <WorkingRow
+                      key={entry.slug}
+                      bot={entry}
+                      stopping={stop?.status === 'stopping' && stop.bot.slug === entry.slug}
+                      onStop={() => stopRun(entry)}
+                    />
+                  ))}
+                </View>
+              )
+            }
             ListFooterComponent={
               snapshot.loadingOlder ? (
                 <View
@@ -596,9 +602,6 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             </View>
           ) : null}
         </View>
-        {working === undefined ? null : (
-          <StatusStrip bot={working} stopping={stop?.status === 'stopping'} onStop={stopRun} />
-        )}
         <Composer
           value={draft}
           placeholder={
