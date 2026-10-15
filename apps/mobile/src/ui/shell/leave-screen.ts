@@ -1,6 +1,4 @@
-import type { useRouter } from 'expo-router';
-
-type Router = Pick<ReturnType<typeof useRouter>, 'canGoBack' | 'back' | 'replace'>;
+type Router = { canGoBack(): boolean; back(): void; replace(href: '/'): void };
 
 export function leaveScreen(router: Router): void {
   if (router.canGoBack()) router.back();
