@@ -1508,10 +1508,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       const fullAccess = sessionHasFullAccess(core, agent.session.id);
       if (fullAccess) return next();
       const approval = ctx.get('approval') as ApprovalService | undefined;
+      const owner = core.ownership.resolve(agent.session.id);
       const untrack = toolApproval.track(
         execution,
         execution.name === 'secret_mcp_connect' ? 'each-use' : 'operation',
         execution.name === 'secret_mcp_connect',
+        undefined,
+        execution.name === 'bot_create' && owner !== undefined
+          ? core.runtime.botCreatePreview?.(owner.botSlug, execution.arguments)
+          : undefined,
       );
       if (approval === undefined || untrack === undefined) {
         return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
@@ -1535,9 +1540,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               reason:
                 execution.name === 'channel_attachment_open'
                   ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-                  : changesApprovalPolicy(JSON.stringify(execution.arguments) ?? '')
-                    ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
-                    : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
+                  : execution.name === 'bot_create'
+                    ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
+                    : changesApprovalPolicy(JSON.stringify(execution.arguments) ?? '')
+                      ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
+                      : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });
         if (outcome !== 'allowed-once') {
