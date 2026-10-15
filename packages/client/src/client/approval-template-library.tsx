@@ -258,7 +258,6 @@ export function ApprovalTemplateLibrarySettings({
       >
         <SettingsRow
           title={t('autoApproval.library.new')}
-          description={t('autoApproval.library.newHint')}
           data={{ 'data-approval-template-new': '' }}
           control={
             <Button

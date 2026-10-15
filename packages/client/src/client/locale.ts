@@ -3108,8 +3108,7 @@ export const zh = {
     'Lark 创建人：{actor}；每次调用前检查当前配对及 approve／save-rules 权限，失效后不自动恢复。',
   'approval.ruleDetails': '查看适用范围',
   'autoApproval.reviewerModel.title': '审批员模型',
-  'autoApproval.reviewerModel.description':
-    '审批员替你回答工具审批时用的模型。默认跟随每个 Bot 自己的模型；也可以让所有 Bot 共用一个便宜又快的模型。',
+  'autoApproval.reviewerModel.description': '替你回答工具审批的模型，默认跟随每个 Bot。',
   'autoApproval.reviewerModel.followBot': '跟随每个 Bot',
   'autoApproval.reviewerModel.missing': '{model}（不可用）',
   'autoApproval.reviewerModel.unavailable':
@@ -3132,11 +3131,9 @@ export const zh = {
   'autoApproval.template.getWorkDone': '把活干完',
   'autoApproval.template.getWorkDoneHint': '让工作继续；只拦下破坏性或不可撤回的操作。',
   'autoApproval.library.title': '审批模板',
-  'autoApproval.library.description':
-    '每个 Bot 在自己的“自动审批”设置里选用一个。内置模板只读，复制一份后再改。',
+  'autoApproval.library.description': '每个 Bot 在自己的设置里选用一个。',
   'autoApproval.library.new': '新建模板',
-  'autoApproval.library.newHint':
-    '用你自己的话写清楚：哪些可以批准、哪些必须拒绝、哪些交给你。也可以让 Bot 用 deepseekbot approval-template create 起草。',
+  'autoApproval.library.newHint': '写清楚哪些放行、哪些拒绝、哪些问你。',
   'autoApproval.library.create': '新建',
   'autoApproval.library.createSubmit': '创建',
   'autoApproval.library.createTitle': '新建审批模板',
@@ -6789,7 +6786,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'approval.ruleDetails': 'View scope',
   'autoApproval.reviewerModel.title': 'Reviewer model',
   'autoApproval.reviewerModel.description':
-    "The model the Approval Reviewer uses to answer tool approvals for you. By default it follows each Bot's own model; you can make every Bot share one cheap, fast model instead.",
+    "Answers tool approvals for you. Follows each Bot's model by default.",
   'autoApproval.reviewerModel.followBot': 'Follow each Bot',
   'autoApproval.reviewerModel.missing': '{model} (unavailable)',
   'autoApproval.reviewerModel.unavailable':
@@ -6815,11 +6812,9 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'autoApproval.template.getWorkDoneHint':
     'Lets the work continue; stops only destructive or irreversible calls.',
   'autoApproval.library.title': 'Approval Templates',
-  'autoApproval.library.description':
-    'Each Bot selects one in its own Auto approval settings. Built-in templates are read-only; copy one to change it.',
+  'autoApproval.library.description': 'Each Bot picks one in its own settings.',
   'autoApproval.library.new': 'New template',
-  'autoApproval.library.newHint':
-    'Write in your own words what may be approved, what must be refused and what comes to you. A Bot can also draft one with deepseekbot approval-template create.',
+  'autoApproval.library.newHint': 'Say what to allow, what to refuse and what to ask you.',
   'autoApproval.library.create': 'New',
   'autoApproval.library.createSubmit': 'Create',
   'autoApproval.library.createTitle': 'New Approval Template',
