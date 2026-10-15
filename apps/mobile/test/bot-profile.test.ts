@@ -174,8 +174,9 @@ describe('Bot profile', () => {
     expect(profile.activity.status).toBe('ready');
     const glance = weekGlance(parseProfileActivity(recordedActivity));
     expect(glance.days.at(-1)).toBe(recordedActivity.today);
-    expect(glance.total).toEqual({ status: 'ready', total: 0 });
-    expect(glance.activity.at(-1)).toBe(3);
+    expect(glance.total).toEqual({ status: 'ready', total: 207_439 });
+    expect(glance.tokens.at(-1)).toBe(207_439);
+    expect(glance.activity.at(-1)).toBe(4);
     expect(glance.quiet).toBe(false);
 
     fake.methods.set('profileActivity', () => {

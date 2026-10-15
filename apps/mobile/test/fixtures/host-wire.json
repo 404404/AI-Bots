@@ -1,5 +1,5 @@
 {
-  "recordedFrom": "isolated Host via scripts/dev-instance.mjs, DSH 0.2.0-rc.2, 2026-10-14; profileActivity from an isolated Host via scripts/verify-app.mjs, DSH 0.2.0-rc.2, 2026-10-15 (no model reply: provider quota)",
+  "recordedFrom": "isolated Host via scripts/dev-instance.mjs, DSH 0.2.0-rc.2, 2026-10-14; profileActivity from an isolated Host via scripts/verify-app.mjs, DSH 0.2.0-rc.2, opencode-go/step-5-preview-free, 2026-10-15 (two DM replies)",
   "login": {
     "accepted": {
       "status": 303,
@@ -299,16 +299,16 @@
           "result": {
             "ok": true,
             "value": {
-              "slug": "bot-21fed02de3b143b2a5fb9c174fa7678b",
+              "slug": "bot-bbd6fd939ee44e7582945888df0b86ca",
               "weeks": 1,
-              "since": "2026-10-08T14:20:15.417Z",
+              "since": "2026-10-08T14:49:23.694Z",
               "createdDay": "2026-10-15",
               "today": "2026-10-15",
               "events": [
                 {
                   "day": "2026-10-15",
                   "reason": "human-dm",
-                  "count": 1
+                  "count": 2
                 }
               ],
               "memoryCommits": [
@@ -320,16 +320,16 @@
               "tokens": [
                 {
                   "day": "2026-10-15",
-                  "inputTokens": 0,
-                  "outputTokens": 0,
-                  "cacheReadTokens": 0,
+                  "inputTokens": 27018,
+                  "outputTokens": 773,
+                  "cacheReadTokens": 179648,
                   "cacheWriteTokens": 0
                 }
               ],
               "tokenTotals": {
-                "inputTokens": 0,
-                "outputTokens": 0,
-                "cacheReadTokens": 0,
+                "inputTokens": 27018,
+                "outputTokens": 773,
+                "cacheReadTokens": 179648,
                 "cacheWriteTokens": 0
               },
               "modelUsageRows": [
@@ -337,12 +337,12 @@
                   "day": "2026-10-15",
                   "purpose": "orchestrator",
                   "provider": "opencode-go",
-                  "model": "deepseek-v4.1-flash",
-                  "inputTokens": 0,
-                  "outputTokens": 0,
-                  "cacheReadTokens": 0,
+                  "model": "step-5-preview-free",
+                  "inputTokens": 27018,
+                  "outputTokens": 773,
+                  "cacheReadTokens": 179648,
                   "cacheWriteTokens": 0,
-                  "totalTokens": 0
+                  "totalTokens": 207439
                 }
               ],
               "modelUsageStatus": "ready"
