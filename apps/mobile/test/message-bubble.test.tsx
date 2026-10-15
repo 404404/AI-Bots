@@ -111,7 +111,7 @@ const { MessageBubble, DraftBubble, deliveryLabel } = await import('../src/ui/ch
 const { createSpeakerRegistry } = await import('../src/ui/chat/speaker-row');
 const { t } = await import('../src/ui/strings');
 const { openMessageMenu, shareText } = await import('../src/ui/chat/message-menu');
-const { MessageActions, menuTime, messageMenuActions } =
+const { MessageActions, dismissQueue, menuTime, messageMenuActions } =
   await import('../src/ui/chat/message-actions');
 const { MENU_REACTIONS, QUICK_REACTIONS } = await import('../src/host/conversation');
 
@@ -420,6 +420,18 @@ describe('the long-press menu', () => {
     const now = new Date('2026-10-14T09:00:00.000Z');
     expect(menuTime(bot.at, now).startsWith(`${t.today} `)).toBe(true);
     expect(menuTime('2026-10-13T08:00:00.000Z', now).startsWith(t.yesterday)).toBe(true);
+  });
+
+  it('opens the share sheet on iOS only once the menu has gone', () => {
+    const ran: string[] = [];
+    const ios = dismissQueue('ios');
+    ios.after(() => ran.push('ios'));
+    expect(ran).toEqual([]);
+    ios.flush();
+    ios.flush();
+    expect(ran).toEqual(['ios']);
+    dismissQueue('android').after(() => ran.push('android'));
+    expect(ran).toEqual(['ios', 'android']);
   });
 
   it('shares the whole text through the system share sheet', async () => {
