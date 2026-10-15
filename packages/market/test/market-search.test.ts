@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SEARCH_RESULT_LIMIT } from '../src/catalog.js';
-import { createMarket, fakeRepository, submit, type FakeRepository } from './market-harness.js';
+import {
+  admin,
+  createMarket,
+  fakeRepository,
+  report,
+  submit,
+  type FakeRepository,
+} from './market-harness.js';
 
 interface PageBody {
   bots: { fullName: string }[];
@@ -148,6 +155,141 @@ describe('Marketplace Worker sort, search and topics', () => {
       topics: [
         { topic: 'writing', count: 2 },
         { topic: 'research', count: 1 },
+      ],
+    });
+  });
+
+  it.each(['translator', '像素画', '画', 'AI'])(
+    'searches descriptor-only tags: %s',
+    async (tag) => {
+      const market = createMarket();
+      await seed(market, [
+        { name: 'tagged', descriptor: JSON.stringify({ tags: [tag] }) },
+        { name: 'other' },
+      ]);
+
+      expect((await page(market, `/v1/bots?q=${encodeURIComponent(tag)}`)).bots).toEqual([
+        expect.objectContaining({ fullName: 'alice/tagged' }),
+      ]);
+    },
+  );
+
+  it.each([
+    ['translator', 'anslat'],
+    ['像素画助手', '素画助'],
+  ])('matches a substring of the descriptor tag %s', async (tag, query) => {
+    const market = createMarket();
+    await seed(market, [
+      { name: 'tagged', descriptor: JSON.stringify({ tags: [tag] }) },
+      { name: 'other' },
+    ]);
+
+    expect(await walk(market, `/v1/bots?q=${encodeURIComponent(query)}&limit=1`)).toEqual([
+      'alice/tagged',
+    ]);
+  });
+
+  it('ranks a descriptor-tag match above a README-only match', async () => {
+    const market = createMarket();
+    await seed(market, [
+      { name: 'tagged', descriptor: '{"tags":["translator"]}', stars: 1 },
+      { name: 'notes', readme: '# Notes\nWorks with a translator', stars: 99 },
+    ]);
+
+    expect(await walk(market, '/v1/bots?q=translator&limit=1')).toEqual([
+      'alice/tagged',
+      'alice/notes',
+    ]);
+  });
+
+  it('filters descriptor tags in browse, ranked search and short-term search', async () => {
+    const market = createMarket();
+    await seed(market, [
+      { name: 'tagged', descriptor: '{"tags":["画"]}', description: 'An AI helper' },
+      { name: 'other', description: 'An AI helper' },
+    ]);
+
+    for (const suffix of ['', '&q=helper', '&q=AI']) {
+      expect(
+        await walk(market, `/v1/bots?topic=${encodeURIComponent('画')}${suffix}&limit=1`),
+      ).toEqual(['alice/tagged']);
+    }
+  });
+
+  it('counts the union of topics and descriptor tags once per listed bot, including legacy roles', async () => {
+    const market = createMarket({ env: { REPORT_THRESHOLD: '1' } });
+    await seed(market, [
+      {
+        name: 'a',
+        topics: ['botharness-bot', 'writing'],
+        descriptor: '{"tags":["writing","画","botharness-bot"]}',
+      },
+      { name: 'b', topics: ['botharness-bot'], descriptor: '{"roles":["画"]}' },
+      { name: 'hidden', descriptor: '{"tags":["hidden-tag","画"]}' },
+      { name: 'blocked', descriptor: '{"tags":["blocked-tag","画"]}' },
+    ]);
+    expect((await report(market, 'R_alice_hidden')).status).toBe(202);
+    expect((await admin(market, { id: 'R_alice_blocked', action: 'block' })).status).toBe(200);
+
+    expect(await (await market.request('/v1/topics')).json()).toEqual({
+      topics: [
+        { topic: '画', count: 2 },
+        { topic: 'writing', count: 1 },
+      ],
+    });
+    expect(await walk(market, `/v1/bots?topic=${encodeURIComponent('画')}&limit=1`)).toEqual([
+      'alice/b',
+      'alice/a',
+    ]);
+    for (const tag of ['hidden-tag', 'blocked-tag']) {
+      expect(await walk(market, `/v1/bots?topic=${tag}`)).toEqual([]);
+      expect(await walk(market, `/v1/bots?q=${tag}`)).toEqual([]);
+    }
+  });
+
+  it('retains searchable tags after a content-fetch failure and replaces them when a retry succeeds', async () => {
+    const market = createMarket();
+    const repository = fakeRepository({ descriptor: '{"tags":["old-tag"]}' });
+    await seed(market, [repository]);
+    market.publish({
+      ...repository,
+      pushedAt: '2026-10-06T00:00:00Z',
+      descriptor: '{"tags":["new-tag"]}',
+    });
+    market.github.contentsDown.value = true;
+    await market.scheduled('17 * * * *');
+    expect(await walk(market, '/v1/bots?topic=old-tag&q=old-tag')).toEqual(['alice/helper-bot']);
+    expect(await walk(market, '/v1/bots?q=new-tag')).toEqual([]);
+
+    market.github.contentsDown.value = false;
+    await market.scheduled('17 * * * *');
+    expect(await walk(market, '/v1/bots?topic=new-tag&q=new-tag')).toEqual(['alice/helper-bot']);
+    expect(await walk(market, '/v1/bots?q=old-tag')).toEqual([]);
+  });
+
+  it('refreshes GitHub topics without a push and replaces descriptor tags after a push', async () => {
+    const market = createMarket();
+    const repository = fakeRepository({ descriptor: '{"tags":["old-tag"]}' });
+    await seed(market, [repository]);
+    market.publish({ ...repository, topics: ['botharness-bot', 'new-topic'] });
+    await market.scheduled('17 * * * *');
+    expect(await walk(market, '/v1/bots?topic=new-topic')).toEqual(['alice/helper-bot']);
+    expect(await walk(market, '/v1/bots?topic=writing')).toEqual([]);
+
+    market.publish({
+      ...repository,
+      topics: ['botharness-bot', 'new-topic'],
+      pushedAt: '2026-10-06T00:00:00Z',
+      descriptor: '{"tags":["new-tag"]}',
+    });
+    await market.scheduled('17 * * * *');
+    expect(await walk(market, '/v1/bots?topic=old-tag')).toEqual([]);
+    expect(await walk(market, '/v1/bots?q=old-tag')).toEqual([]);
+    expect(await walk(market, '/v1/bots?topic=new-tag&q=new-tag')).toEqual(['alice/helper-bot']);
+    expect(await (await market.request('/v1/topics')).json()).toEqual({
+      topics: [
+        { topic: 'new-tag', count: 1 },
+        { topic: 'new-topic', count: 1 },
       ],
     });
   });

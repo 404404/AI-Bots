@@ -21,6 +21,8 @@ Pixel Avatars can be an elf, dwarf, orc or talking flower with beards, medieval 
 
 ### Added
 
+- Bot Marketplace search and topic filters include the Bot's own `.botharness/bot.json` tags (including legacy `roles`) alongside GitHub topics, counting each Bot once per tag ([#1907](https://github.com/BotHarness/DeepSeekBot/issues/1907)).
+
 - Window Companions offer optional, quiet text-paced babble and grab, fast-drag, throw and first-impact landing sounds, off by default for each Profile, and a damped angular spring makes drag reversals and settling continuous without adding model tools or TTS. Idle companions hide the empty status bubble and fade action controls in on hover or keyboard focus; pointer focus after dragging no longer keeps reading open. Long message bubbles follow the latest revealed text without scrollbars; scrolling upward preserves the reading position until returning to the bottom. Dismissing the final card shows waiting replies and lets later arrivals display even while the character retains keyboard focus ([#1173](https://github.com/BotHarness/DeepSeekBot/issues/1173)).
 
 - The CLI can create blank, Zip/directory and GitHub/Git PersonaBots, configure models and inspect Channel, attention and Session summaries through a running Host, retaining known partial results and offering explicit identity cleanup with Memory preserved. See the [CLI guide](docs/bot-cli.md) ([#1363](https://github.com/BotHarness/DeepSeekBot/issues/1363)).

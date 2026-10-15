@@ -228,8 +228,9 @@ export function createCatalog(deps: {
       const topicClause =
         options.topic === undefined
           ? ''
-          : ' AND EXISTS (SELECT 1 FROM json_each(r.topics) WHERE json_each.value = ?)';
-      const topicValues = options.topic === undefined ? [] : [options.topic];
+          : ` AND (EXISTS (SELECT 1 FROM json_each(r.topics) WHERE value = ?)
+                   OR EXISTS (SELECT 1 FROM json_each(r.roles) WHERE value = ?))`;
+      const topicValues = options.topic === undefined ? [] : [options.topic, options.topic];
 
       if (query.length > 0) {
         if (cursor !== undefined && cursor.mode !== 'search') return undefined;
@@ -243,7 +244,7 @@ export function createCatalog(deps: {
                 `SELECT r.* FROM indexed_repositories_fts f
                  JOIN indexed_repositories r ON r.rowid = f.rowid
                  WHERE indexed_repositories_fts MATCH ? AND r.visibility = 'listed'${topicClause}
-                 ORDER BY bm25(indexed_repositories_fts, 10.0, 4.0, 4.0, 1.0), r.node_id
+                 ORDER BY bm25(indexed_repositories_fts, 10.0, 4.0, 4.0, 1.0, 4.0), r.node_id
                  LIMIT ? OFFSET ?`,
               )
               .bind(ftsQuery(terms), ...topicValues, take + 1, offset)
@@ -253,7 +254,7 @@ export function createCatalog(deps: {
                  WHERE r.visibility = 'listed'${terms
                    .map(
                      () =>
-                       " AND instr(lower(r.name || ' ' || coalesce(r.description, '') || ' ' || r.topics || ' ' || coalesce(r.readme, '')), lower(?)) > 0",
+                       " AND instr(lower(r.name || ' ' || coalesce(r.description, '') || ' ' || r.topics || ' ' || r.roles || ' ' || coalesce(r.readme, '')), lower(?)) > 0",
                    )
                    .join('')}${topicClause}
                  ORDER BY r.stars DESC, r.node_id DESC
@@ -312,10 +313,18 @@ export function createCatalog(deps: {
     async topics() {
       const { results } = await db
         .prepare(
-          `SELECT json_each.value AS topic, count(*) AS count
-           FROM indexed_repositories r, json_each(r.topics)
-           WHERE r.visibility = 'listed' AND json_each.value <> ?
-           GROUP BY json_each.value
+          `SELECT topic, count(*) AS count
+           FROM (
+             SELECT r.node_id, t.value AS topic
+             FROM indexed_repositories r, json_each(r.topics) t
+             WHERE r.visibility = 'listed'
+             UNION
+             SELECT r.node_id, t.value AS topic
+             FROM indexed_repositories r, json_each(r.roles) t
+             WHERE r.visibility = 'listed'
+           )
+           WHERE topic <> ?
+           GROUP BY topic
            ORDER BY count DESC, topic
            LIMIT 30`,
         )
