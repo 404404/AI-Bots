@@ -370,7 +370,11 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
   ctx.effect(() => () => runtime.dispose(), 'botharness-computer: target runtime');
   const activity = { touch: (): void => undefined };
   const driver = runtime.driver;
-  const desktopView = createDesktopView({ driver, isRunning: () => runtime.isRunning() });
+  const desktopView = createDesktopView({
+    driver,
+    isRunning: () => runtime.isRunning(),
+    scales: () => target() === 'local',
+  });
   const toolProvider = createComputerToolProvider({
     ctx,
     driver,

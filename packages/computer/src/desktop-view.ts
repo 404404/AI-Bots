@@ -246,6 +246,7 @@ function untilAborted<T>(work: Promise<T>, signal?: AbortSignal): Promise<T | un
 export function createDesktopView(options: {
   driver: Pick<CuaDriver, 'call'>;
   isRunning: () => boolean;
+  scales?: () => boolean;
   intervalMs?: number;
   waitMs?: number;
   pauseLeaseMs?: number;
@@ -280,7 +281,7 @@ export function createDesktopView(options: {
       lastStarted = now();
       captures += 1;
       const result = await options.driver.call('get_desktop_state', {
-        max_image_dimension: VIEWER_MAX_DIMENSION,
+        ...(options.scales?.() === false ? {} : { max_image_dimension: VIEWER_MAX_DIMENSION }),
         session: VIEWER_SESSION,
       });
       lastCaptureMs = now() - lastStarted;

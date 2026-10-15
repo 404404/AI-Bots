@@ -606,6 +606,8 @@ export function createDockerComputerProvider(
       `LC_ALL=${getLanguage?.() ?? config.language}`,
       '-e',
       'PIXELFLUX_WAYLAND=false',
+      '-e',
+      'DISABLE_IPV6=true',
       '-v',
       `${storage.target}:/config`,
       config.image,

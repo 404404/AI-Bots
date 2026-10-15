@@ -116,6 +116,23 @@ describe('desktop view frames', () => {
     });
   });
 
+  it('asks the container driver for a frame without max_image_dimension', async () => {
+    const driver = fakeDriver(['a']);
+    const view = createDesktopView({
+      driver,
+      isRunning: () => true,
+      scales: () => false,
+      intervalMs: 0,
+      waitMs: 1000,
+      encode: async () => undefined,
+    });
+    expect(await view.next(undefined)).toMatchObject({ seq: 1, data: 'a' });
+    expect(driver.calls[0]).toEqual({
+      tool: 'get_desktop_state',
+      args: { session: 'phone-viewer' },
+    });
+  });
+
   it('sends a changed screen as JPEG and keeps PNG when encoding fails', async () => {
     const png = await sharp({
       create: { width: 64, height: 40, channels: 3, background: '#3366cc' },
