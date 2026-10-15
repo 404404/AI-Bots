@@ -158,10 +158,6 @@ export function ActionCard({
   );
 }
 
-/**
- * A decided card, collapsed to a Bot bubble: same edge, width, padding and corners as the
- * messages around it, so it sits in their group. Only the content differs.
- */
 export function CardLine({
   text,
   tone,

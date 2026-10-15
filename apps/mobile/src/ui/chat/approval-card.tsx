@@ -88,7 +88,6 @@ export function ApprovalCard({
   subject?: string;
   resolution?: Extract<CardResolution, { kind: 'tool-approval' }>;
   focused?: boolean;
-  /** Where this card sits in its Bot message group, once collapsed. */
   group?: BubbleGroup;
   wide?: boolean;
   onSettled?(result: DecisionResult): void;

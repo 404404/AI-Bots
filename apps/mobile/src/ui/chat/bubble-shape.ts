@@ -2,7 +2,6 @@ import { radius, space } from '../design/tokens';
 
 export type BubbleGroup = { first: boolean; last: boolean };
 
-/** The corners, padding and width every chat bubble shares, so a collapsed card reads as one. */
 export function bubbleShape(human: boolean, { first, last }: BubbleGroup) {
   return {
     maxWidth: '80%',
@@ -22,7 +21,6 @@ export function bubbleShape(human: boolean, { first, last }: BubbleGroup) {
   } as const;
 }
 
-/** The row around a bubble: the chat gutter, and a tighter gap inside a group. */
 export function bubbleRow(first: boolean) {
   return { paddingHorizontal: space.x4, paddingTop: first ? space.x3 : space.x1 } as const;
 }

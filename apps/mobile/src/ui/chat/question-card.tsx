@@ -252,7 +252,6 @@ export function QuestionCard({
   subject?: string;
   resolution?: Extract<CardResolution, { kind: 'user-question' }>;
   focused?: boolean;
-  /** Where this card sits in its Bot message group, once collapsed. */
   group?: BubbleGroup;
   wide?: boolean;
   replyInChat?: boolean;
