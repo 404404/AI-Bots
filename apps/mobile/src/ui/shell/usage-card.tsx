@@ -5,6 +5,7 @@ import { compactTokenCount, weekdayLabel } from '../../host/usage-days';
 import { usageWeek, type OverviewUsage } from '../../host/usage';
 import { useDesignTheme } from '../design/theme';
 import { chart } from '../design/chart';
+import type { LayerName } from '../design/layers';
 import { radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
@@ -67,14 +68,22 @@ const EMPTY_WEEK: DayBar[] = Array.from({ length: 7 }, (_, index) => ({
   segments: [0],
 }));
 
-export function UsageBars({ days, height }: { days: readonly Day[] | undefined; height: number }) {
+export function UsageBars({
+  days,
+  height,
+  on = 'sheet',
+}: {
+  days: readonly Day[] | undefined;
+  height: number;
+  on?: LayerName;
+}) {
   const theme = useDesignTheme();
   return (
     <DayBars
       bars={days === undefined ? EMPTY_WEEK : dayBars(days)}
       colors={[theme.color.accent]}
       height={height}
-      empty={theme.layer.sheet.inset}
+      empty={theme.layer[on].inset}
       accessibilityLabel={days === undefined ? t.usageLoading : daysLabel(days)}
     />
   );
@@ -82,9 +91,11 @@ export function UsageBars({ days, height }: { days: readonly Day[] | undefined; 
 
 export function UsageCard({
   load,
+  on = 'raised',
   onOpen,
 }: {
   load: (() => Promise<OverviewUsage>) | undefined;
+  on?: LayerName;
   onOpen(): void;
 }) {
   const theme = useDesignTheme();
@@ -101,7 +112,7 @@ export function UsageCard({
           gap: space.x4,
           padding: space.x5,
           borderRadius: radius.md,
-          backgroundColor: pressed ? theme.layer.sheet.pressed : theme.layer.sheet.fill,
+          backgroundColor: pressed ? theme.layer[on].pressed : theme.layer[on].fill,
         })}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
@@ -117,7 +128,7 @@ export function UsageCard({
           {amount === undefined ? '—' : amount}
           <Text tone="muted">{t.usageUnit}</Text>
         </Text>
-        <UsageBars days={week?.days} height={chart.spark} />
+        <UsageBars days={week?.days} height={chart.spark} on={on} />
       </Pressable>
       {state.status === 'loading' && state.value === undefined ? (
         <Text
