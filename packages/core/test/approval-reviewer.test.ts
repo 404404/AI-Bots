@@ -319,13 +319,127 @@ describe('Approval Reviewer in the tool approval gate', () => {
     expect(await answer).toBe('rejected');
   });
 
-  it('does not review secret tools or device authorization in this slice', async () => {
+  const secretArgs = {
+    account: 'github',
+    references: ['private:00000000-0000-4000-8000-000000000000:token'],
+    program: 'gh',
+    args: ['pr', 'list'],
+    env: [
+      { name: 'GH_TOKEN', value: '{{token}}' },
+      { name: 'GH_ENTERPRISE_TOKEN', value: 'ghp_SECRETVALUE123 {{token}}' },
+      { name: 'GH_HOST', value: 'ghp_LITERALSECRET456' },
+    ],
+  };
+
+  it('reviews a secret_cli call and shows the program, arguments and placeholder names only', async () => {
     const state = fixture();
-    state.broker.track(state.execution({ program: 'gh' }, 'secret_cli'), 'each-use');
+    state.broker.track(state.execution(secretArgs, 'secret_cli'));
+    expect(await state.ask('secret_cli')).toBe('allowed-once');
+    expect(state.messages).toHaveLength(1);
+    expect(state.messages[0]!.toolApprovalRequest).toBeUndefined();
+    const call = state.review.mock.calls[0]![0].call;
+    expect(JSON.parse(call.input)).toEqual({
+      account: 'github',
+      program: 'gh',
+      args: ['pr', 'list'],
+      env: [
+        { name: 'GH_TOKEN', placeholders: ['token'] },
+        { name: 'GH_ENTERPRISE_TOKEN', placeholders: ['token'] },
+        { name: 'GH_HOST', placeholders: [] },
+      ],
+    });
+    const record = state.messages[0]!.toolAutoApproval!;
+    expect(record).toMatchObject({ outcome: 'allowed', toolName: 'secret_cli' });
+    expect(record.input).toBe(call.input);
+  });
+
+  it('never lets a secret value reach the reviewer input', async () => {
+    const secrets = ['ghp_SECRETVALUE123', 'ghp_LITERALSECRET456', 'private:00000000'];
+    const earlier = [
+      ...events,
+      {
+        type: 'assistant/message',
+        data: {
+          message: {
+            role: 'assistant',
+            content: [
+              {
+                type: 'tool-call',
+                id: 'earlier-secret',
+                name: 'secret_mcp_connect',
+                arguments: JSON.stringify({ ...secretArgs, server_name: 'github' }),
+              },
+            ],
+          },
+        },
+      },
+    ];
+    for (const [name, args] of [
+      ['secret_cli', secretArgs],
+      ['secret_mcp_connect', { ...secretArgs, server_name: 'github', program: 'npx' }],
+    ] as const) {
+      const state = fixture({
+        review: async () => ({ outcome: 'reject', reason: 'Not this account.' }),
+      });
+      const agent = state.execution().agent as unknown as {
+        session: { snapshotEvents: () => unknown };
+      };
+      agent.session.snapshotEvents = () => earlier;
+      state.broker.track(
+        state.execution(args, name),
+        name === 'secret_cli' ? 'operation' : 'each-use',
+      );
+      expect(await state.ask(name)).toBe('rejected');
+      const request = state.review.mock.calls[0]![0];
+      const seen = JSON.stringify(request) + reviewerUserPrompt(request);
+      for (const secret of secrets) expect(seen).not.toContain(secret);
+      expect(seen).toContain('secret_mcp_connect');
+      expect(JSON.stringify(state.messages)).not.toContain('ghp_');
+      expect(state.messages[0]!.toolAutoApproval?.outcome).toBe('rejected');
+    }
+  });
+
+  it('sends a secret call to the card when the reviewer asks the Human', async () => {
+    const state = fixture({
+      template: 'cautious',
+      review: async () => ({ outcome: 'ask-human', reason: 'Secret tools go to the Human.' }),
+    });
+    state.broker.track(state.execution(secretArgs, 'secret_cli'));
     const answer = state.ask('secret_cli');
     await vi.waitFor(() => expect(state.messages).toHaveLength(1));
-    expect(state.review).not.toHaveBeenCalled();
+    expect(state.review.mock.calls[0]![0].template.name).toBe('cautious');
+    expect(state.messages[0]!.toolApprovalRequest?.toolName).toBe('secret_cli');
     await state.broker.decide(botSlug, state.messages[0]!.id, 'rejected');
     expect(await answer).toBe('rejected');
+  });
+
+  it('grants Browser Authorization without a card and tells the reviewer the device and Session', async () => {
+    const state = fixture();
+    state.broker.track(
+      state.execution({ action: 'open', url: 'https://example.com' }, 'browser_navigate'),
+      'web-only',
+      false,
+      'browser',
+    );
+    expect(await state.ask('browser_navigate')).toBe('allowed-once');
+    expect(state.messages[0]!.toolAutoApproval?.outcome).toBe('allowed');
+    const request = state.review.mock.calls[0]![0];
+    expect(request.call.authorization).toEqual({ device: 'browser', sessionId });
+    const prompt = reviewerUserPrompt(request);
+    expect(prompt).toContain('"device": "Browser"');
+    expect(prompt).toContain('"session": "' + sessionId + '"');
+    expect(state.broker.validAfterDecision(state.execution().agent!, 'call-1')).toBe(true);
+  });
+
+  it('states a default for secret tools and device Authorization in both built-in templates', () => {
+    const cautious = approvalTemplate('cautious')!.text;
+    const askCautious = cautious.slice(cautious.indexOf('## Ask the Human'));
+    expect(askCautious).toContain('secret_cli');
+    expect(askCautious).toContain('Browser');
+    const work = approvalTemplate('get-work-done')!.text;
+    const allowWork = work.slice(work.indexOf('## Allow'), work.indexOf('## Reject'));
+    expect(allowWork).toContain('secret_cli');
+    expect(allowWork).toContain('known program');
+    expect(allowWork).toContain('Browser Authorization');
   });
 });

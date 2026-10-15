@@ -17,6 +17,7 @@ import {
 import type { AssignmentApprovalWaitLease } from '../runtime/assignment-approval-capacity.js';
 import {
   approvalSessionExcerpt,
+  reviewerCallInput,
   type ApprovalReview,
   type ApprovalReviewRequest,
   type ApprovalReviewResult,
@@ -72,6 +73,7 @@ type TrackedCall = ToolApprovalRequestCard & {
   remembered?: boolean;
   execution: ToolExecution;
   authorized?: () => boolean;
+  device?: 'computer' | 'browser';
 };
 type Pending = {
   botSlug: string;
@@ -153,6 +155,7 @@ export class ChannelToolApproval {
     execution: ToolExecution,
     externalDecision: 'operation' | 'web-only' | 'each-use' = 'operation',
     rememberable = false,
+    device?: 'computer' | 'browser',
   ): (() => void) | undefined {
     const agent = execution.agent;
     if (agent === undefined) return undefined;
@@ -182,6 +185,7 @@ export class ChannelToolApproval {
       execution,
       externalDecision,
       ...(rememberable ? { rememberable } : {}),
+      ...(device === undefined ? {} : { device }),
     });
     return () => {
       if (this.#tracked.get(key)?.agent === agent) {
@@ -233,10 +237,7 @@ export class ChannelToolApproval {
     const channel = this.#channels.get(channelId) ?? this.#channels.getOrCreateDm(tracked.botSlug);
     if (channel === undefined) return 'unavailable';
     if (channel.type !== 'group' && channel.botSlug !== tracked.botSlug) return 'unavailable';
-    const template =
-      !policyChange && tracked.externalDecision === 'operation'
-        ? this.#autoApproval?.template(tracked.botSlug)
-        : undefined;
+    const template = policyChange ? undefined : this.#autoApproval?.template(tracked.botSlug);
     if (template !== undefined) {
       const reviewed = await this.#review(tracked, template, channelId, request.signal);
       if (reviewed !== undefined) return reviewed;
@@ -640,10 +641,13 @@ export class ChannelToolApproval {
         template,
         call: {
           toolName: tracked.toolName,
-          input: tracked.input,
+          input: reviewerCallInput(tracked.toolName, tracked.input),
           cwd: tracked.cwd,
           role: tracked.role,
           channelId,
+          ...(tracked.device === undefined
+            ? {}
+            : { authorization: { device: tracked.device, sessionId: tracked.sessionId } }),
         },
         excerpt: approvalSessionExcerpt(tracked.agent.session.snapshotEvents(), tracked.callId),
         signal: signal ?? new AbortController().signal,
@@ -688,7 +692,7 @@ export class ChannelToolApproval {
         sessionId: tracked.sessionId,
         callId: tracked.callId,
         toolName: tracked.toolName,
-        input: tracked.input,
+        input: reviewerCallInput(tracked.toolName, tracked.input),
         template: template.name,
         outcome: allowed ? 'allowed' : 'rejected',
         reason: review.reason,

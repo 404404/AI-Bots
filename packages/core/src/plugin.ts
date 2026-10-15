@@ -1396,7 +1396,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           };
         const authorizationScope = computerTools.authorizationScope?.();
         const computerApproval = ctx.get('approval') as ApprovalService | undefined;
-        const untrackComputer = toolApproval.track(execution, 'web-only');
+        const untrackComputer = toolApproval.track(execution, 'web-only', false, 'computer');
         if (computerApproval === undefined || untrackComputer === undefined) {
           return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
         }
@@ -1409,7 +1409,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
             signal: execution.signal,
           });
           if (outcome !== 'allowed-once') {
-            return { kind: 'deny', reason: 'Human approval was ' + outcome };
+            const reviewed = toolApproval.takeReviewRejection(agent.session.id, execution.callId);
+            return {
+              kind: 'deny',
+              reason:
+                reviewed === undefined
+                  ? 'Human approval was ' + outcome
+                  : reviewerRejectionText(reviewed),
+            };
           }
           if (computerTools.markAuthorized?.(agent.session.id, authorizationScope) === false)
             return {
@@ -1455,7 +1462,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           };
         const browserAuthorizationScope = browserTools.authorizationScope?.(agent.session.id);
         const browserApproval = ctx.get('approval') as ApprovalService | undefined;
-        const untrackBrowser = toolApproval.track(execution, 'web-only');
+        const untrackBrowser = toolApproval.track(execution, 'web-only', false, 'browser');
         if (browserApproval === undefined || untrackBrowser === undefined) {
           return { kind: 'deny', reason: 'The tool call cannot be presented for Human approval' };
         }
@@ -1468,7 +1475,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
             signal: AbortSignal.any([execution.signal, browserSignal ?? execution.signal]),
           });
           if (outcome !== 'allowed-once') {
-            return { kind: 'deny', reason: 'Human approval was ' + outcome };
+            const reviewed = toolApproval.takeReviewRejection(agent.session.id, execution.callId);
+            return {
+              kind: 'deny',
+              reason:
+                reviewed === undefined
+                  ? 'Human approval was ' + outcome
+                  : reviewerRejectionText(reviewed),
+            };
           }
           if (browserTools.markAuthorized?.(agent.session.id, browserAuthorizationScope) === false)
             return {
