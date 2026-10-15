@@ -48,6 +48,61 @@ async function until(
 }
 
 describe('Host client', () => {
+  it('refuses a genuinely incompatible protocol before RPC and can retry after an explicit update', async () => {
+    const host = new FakeHost();
+    host.compatibility = {
+      status: 200,
+      body: {
+        schemaVersion: 1,
+        protocol: { min: 2, max: 2 },
+        host: { version: '3.0.0', source: 'def123456', platform: 'darwin', arch: 'arm64' },
+        features: { push: true },
+      },
+    };
+    const target = connect(host);
+    const snapshot = await until(target, (state) => state.connection.status === 'refused');
+    expect(snapshot.connection).toMatchObject({
+      code: 'protocol-incompatible',
+      reason: expect.stringContaining('Update'),
+    });
+    expect(host.calls).toHaveLength(0);
+    await expect(target.call('send', {})).rejects.toMatchObject({ code: 'protocol-incompatible' });
+    await expect(target.api('/api/botharness/anything', { body: {} })).rejects.toMatchObject({
+      code: 'protocol-incompatible',
+    });
+    host.compatibility = { status: 404, body: { code: 'not-found' } };
+    target.retryNow();
+    const reconnected = await until(target, (state) => state.connection.status === 'connected');
+    expect(reconnected.compatibility).toEqual({
+      status: 'unverified',
+      qualification: 'unverified',
+    });
+  });
+
+  it('connects with matching protocol while keeping artifact qualification unverified', async () => {
+    const host = new FakeHost();
+    host.compatibility = {
+      status: 200,
+      body: {
+        schemaVersion: 1,
+        protocol: { min: 1, max: 1 },
+        host: { version: '2.0.0-beta.1', source: 'abc123456', platform: 'darwin', arch: 'arm64' },
+        features: { push: false },
+      },
+    };
+    const target = connect(host);
+    const snapshot = await until(target, (state) => state.connection.status === 'connected');
+    expect(snapshot.compatibility).toMatchObject({
+      status: 'compatible',
+      qualification: 'unverified',
+      features: { push: false },
+    });
+    expect(snapshot.roster?.bots).toHaveLength(1);
+    expect(host.requests[0]).toBe(
+      `GET ${ROUTE}/botharness-device/api/botharness/devices/compatibility`,
+    );
+  });
+
   it('calls the device gateway with its credential and renders the recorded Roster', async () => {
     const host = new FakeHost();
     const target = connect(host);
@@ -65,8 +120,10 @@ describe('Host client', () => {
     ]);
     expect(snapshot.roster?.bots[0]).toMatchObject({ avatarSeed: 2 });
     expect(snapshot.roster?.bots[0]?.avatarUrl).toBeUndefined();
-    expect(host.requests[0]).toBe(`POST ${ROUTE}/botharness-device/api/botharness/list`);
-    expect(host.requests.some((line) => line.startsWith('GET'))).toBe(false);
+    expect(host.requests[0]).toBe(
+      `GET ${ROUTE}/botharness-device/api/botharness/devices/compatibility`,
+    );
+    expect(snapshot.compatibility).toEqual({ status: 'unverified', qualification: 'unverified' });
   });
 
   it('shows a Host state change live, from the recorded Activity frames', async () => {

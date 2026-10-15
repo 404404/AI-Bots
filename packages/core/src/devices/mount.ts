@@ -15,6 +15,8 @@ import {
   DEVICE_WEB_MUX_PATH,
 } from './gateway.js';
 import { createDevicesHttp, DEVICES_PATH } from './http.js';
+import { DEVICE_COMPATIBILITY_PATH, deviceCompatibility } from './compatibility.js';
+import { installedRelease } from '../release/service.js';
 import { createDevicePairing, type DevicePairingEvent } from './pairing.js';
 import { detectPhoneRoutes } from './routes.js';
 import {
@@ -145,9 +147,15 @@ export function mountDevicePairing(
     const connection = (webCtx as unknown as { connection: ConnectionLike }).connection;
     const webServer = (webCtx as unknown as { webServer: WebServerLike }).webServer;
     const routes = () => detectPhoneRoutes({ port: webServer.port });
-    const http = createDevicesHttp({ pairing, routes });
+    const release = installedRelease(import.meta.url);
+    const http = createDevicesHttp({
+      pairing,
+      routes,
+      compatibility: () => deviceCompatibility(release.version(), push !== undefined),
+    });
     for (const [path, methods] of [
       [DEVICES_PATH, ['GET']],
+      [DEVICE_COMPATIBILITY_PATH, ['GET']],
       [`${DEVICES_PATH}/offer`, ['POST']],
       [`${DEVICES_PATH}/revoke`, ['POST']],
     ] as const)

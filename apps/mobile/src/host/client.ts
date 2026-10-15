@@ -3,6 +3,12 @@ import type { HostCarrier, HostSocket } from './carrier';
 import { DEVICE_PREFIX } from './pairing';
 import { socketOrigin } from './route';
 import {
+  COMPATIBILITY_PATH,
+  ProtocolIncompatible,
+  readCompatibility,
+  type Compatibility,
+} from './compatibility';
+import {
   REMOTE_STREAM_MUX_PATH,
   type ActivityLiveFrame,
   type AttachmentRef,
@@ -23,7 +29,12 @@ export type ConnectionState =
   | { status: 'connected'; route: string }
   | { status: 'reconnecting'; route: string; attempt: number }
   | { status: 'unreachable'; route: string; attempt: number; reason: string }
-  | { status: 'refused'; route: string; code: DeviceRefusal; reason: string }
+  | {
+      status: 'refused';
+      route: string;
+      code: DeviceRefusal | 'protocol-incompatible';
+      reason: string;
+    }
   | { status: 'stopped'; route: string };
 
 export interface RosterBot {
@@ -88,6 +99,7 @@ export interface RosterView {
 
 export interface HostSnapshot {
   connection: ConnectionState;
+  compatibility?: Compatibility;
   roster?: RosterView;
 }
 
@@ -250,6 +262,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
   const listeners = new Set<() => void>();
   const liveListeners = new Set<(source: 'roster' | 'activity') => void>();
   let snapshot: HostSnapshot = { connection: { status: 'stopped', route } };
+  let compatibility: Compatibility | undefined;
   let bots: PersonaBotSummary[] | undefined;
   let channels = new Map<string, ChannelListItem>();
   let states = new Map<string, WireBotActivity>();
@@ -270,6 +283,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
   const publish = (connection: ConnectionState = snapshot.connection): void => {
     snapshot = {
       connection,
+      ...(compatibility === undefined ? {} : { compatibility }),
       ...(bots === undefined ? {} : { roster: view(bots) }),
     };
     for (const listener of listeners) listener();
@@ -433,7 +447,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       return attachment as AttachmentRef;
     }, uploadTimeoutMs);
 
-  const api = (path: string, init: HostApiInit = {}): Promise<HostApiAnswer> =>
+  const api = (path: string, init: HostApiInit = {}, via = route): Promise<HostApiAnswer> =>
     withDeadline(async (signal) => {
       const outer = init.signal;
       if (outer?.aborted === true) throw new Unreachable('The request was cancelled.');
@@ -442,7 +456,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       signal.addEventListener('abort', cancel);
       outer?.addEventListener('abort', cancel);
       try {
-        const response = await options.carrier.request(`${route}${DEVICE_PREFIX}${path}`, {
+        const response = await options.carrier.request(`${via}${DEVICE_PREFIX}${path}`, {
           method: init.body === undefined ? 'GET' : 'POST',
           ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
           headers: authorization,
@@ -537,11 +551,20 @@ export function createHostClient(options: HostClientOptions): HostClient {
     let failure: unknown;
     for (const candidate of routes) {
       try {
+        const answer = await api(COMPATIBILITY_PATH, {}, candidate);
+        const checked = readCompatibility(answer.status, answer.body);
+        if (checked.status === 'incompatible') {
+          route = candidate;
+          compatibility = checked;
+          throw new ProtocolIncompatible();
+        }
         await call('list', {}, candidate);
         route = candidate;
+        compatibility = checked;
         return;
       } catch (error) {
-        if (error instanceof CredentialRefused) throw error;
+        if (error instanceof CredentialRefused || error instanceof ProtocolIncompatible)
+          throw error;
         failure = error;
       }
     }
@@ -590,6 +613,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
 
   const connectOnce = async (current: number): Promise<void> => {
     await pickRoute();
+    if (!running || current !== generation) return;
     const baselines = { roster: false, activity: false };
     let resolveReady: () => void = () => {};
     let rejectReady: (error: Error) => void = () => {};
@@ -704,7 +728,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       } catch (error) {
         if (!running || current !== generation) return;
         socket?.close();
-        if (error instanceof CredentialRefused) {
+        if (error instanceof CredentialRefused || error instanceof ProtocolIncompatible) {
           running = false;
           publish({ status: 'refused', route, code: error.code, reason: error.message });
           return;
@@ -753,6 +777,13 @@ export function createHostClient(options: HostClientOptions): HostClient {
       publish({ status: 'stopped', route });
     },
     retryNow() {
+      if (
+        snapshot.connection.status === 'refused' &&
+        snapshot.connection.code === 'protocol-incompatible'
+      ) {
+        this.start();
+        return;
+      }
       if (!running) return;
       clearTimeout(retryTimer);
       wake?.();
@@ -762,6 +793,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       else this.retryNow();
     },
     async call<T>(method: string, args: Record<string, unknown> = {}) {
+      if (compatibility?.status === 'incompatible') throw new ProtocolIncompatible();
       try {
         return await call<T>(method, args);
       } catch (error) {
@@ -770,6 +802,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       }
     },
     async api(path, init) {
+      if (compatibility?.status === 'incompatible') throw new ProtocolIncompatible();
       try {
         return await api(path, init);
       } catch (error) {
@@ -777,7 +810,10 @@ export function createHostClient(options: HostClientOptions): HostClient {
         throw error;
       }
     },
-    upload,
+    async upload(...args) {
+      if (compatibility?.status === 'incompatible') throw new ProtocolIncompatible();
+      return upload(...args);
+    },
     resource: (path) => ({ uri: absolute(path), headers: authorization }),
     onLive(listener) {
       liveListeners.add(listener);

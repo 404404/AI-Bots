@@ -498,10 +498,14 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
   );
 
   const hostRefused = host.connection.status === 'refused';
+  const incompatible =
+    host.connection.status === 'refused' && host.connection.code === 'protocol-incompatible';
   const missing = host.roster !== undefined && (dm ? bot === undefined : channel === undefined);
   const leave = () => leaveScreen(router);
   const notice = hostRefused
-    ? t.refused
+    ? incompatible
+      ? t.compatibilityBlocked
+      : t.refused
     : snapshot.status === 'refused'
       ? dm
         ? t.dmRefused
@@ -564,11 +568,11 @@ function ChatConversation({ place, focus }: { place: ChatPlace; focus: string | 
             {hostRefused ? (
               <Pressable
                 accessibilityRole="button"
-                onPress={() => router.push('/pair')}
+                onPress={() => (incompatible ? client?.retryNow() : router.push('/pair'))}
                 hitSlop={space.x3}
               >
                 <Text variant="meta" tone="accent" strong>
-                  {t.pairAgain}
+                  {incompatible ? t.retry : t.pairAgain}
                 </Text>
               </Pressable>
             ) : notice === t.noBot || notice === t.noChannel ? (
