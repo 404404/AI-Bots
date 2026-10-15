@@ -1412,41 +1412,6 @@ function ConversationView({
         )
       : [];
   const channelStop = botStop?.channelId === channelId ? botStop : undefined;
-  const stopBots = (targets: readonly { slug: string; name: string }[]): void => {
-    if (channelId === undefined) return;
-    if (targets.length === 0 || channelStop?.stopping === true) return;
-    setBotStop({ channelId, stopping: true });
-    void Promise.allSettled(targets.map((target) => actions.stopBot(channelId, target.slug))).then(
-      (outcomes) => {
-        const failed = outcomes.find((outcome) => outcome.status === 'rejected');
-        const idle = targets.filter((_target, index) => {
-          const outcome = outcomes[index];
-          return outcome?.status === 'fulfilled' && outcome.value === 'not-working';
-        });
-        const notice =
-          failed !== undefined
-            ? t('composer.stopFailed', {
-                reason:
-                  failed.reason instanceof Error ? failed.reason.message : String(failed.reason),
-              })
-            : idle.length > 0 && idle.length === targets.length
-              ? t('composer.stopNotWorking', {
-                  name: idle.map((target) => target.name).join(', '),
-                })
-              : undefined;
-        if (notice === undefined) {
-          setBotStop(undefined);
-          return;
-        }
-        const shown = { channelId, stopping: false, notice };
-        setBotStop(shown);
-        window.setTimeout(
-          () => setBotStop((current) => (current === shown ? undefined : current)),
-          6000,
-        );
-      },
-    );
-  };
   const composerStop: ChannelComposerStop | undefined =
     channelId === undefined || (stopTargets.length === 0 && channelStop?.notice === undefined)
       ? undefined
@@ -1459,7 +1424,42 @@ function ConversationView({
                 : t('composer.stopBots', { count: stopTargets.length }),
           stopping: channelStop?.stopping === true,
           notice: channelStop?.notice,
-          onStop: () => stopBots(stopTargets),
+          onStop: () => {
+            if (stopTargets.length === 0 || channelStop?.stopping === true) return;
+            setBotStop({ channelId, stopping: true });
+            void Promise.allSettled(
+              stopTargets.map((target) => actions.stopBot(channelId, target.slug)),
+            ).then((outcomes) => {
+              const failed = outcomes.find((outcome) => outcome.status === 'rejected');
+              const idle = stopTargets.filter((_target, index) => {
+                const outcome = outcomes[index];
+                return outcome?.status === 'fulfilled' && outcome.value === 'not-working';
+              });
+              const notice =
+                failed !== undefined
+                  ? t('composer.stopFailed', {
+                      reason:
+                        failed.reason instanceof Error
+                          ? failed.reason.message
+                          : String(failed.reason),
+                    })
+                  : idle.length > 0 && idle.length === stopTargets.length
+                    ? t('composer.stopNotWorking', {
+                        name: idle.map((target) => target.name).join(', '),
+                      })
+                    : undefined;
+              if (notice === undefined) {
+                setBotStop(undefined);
+                return;
+              }
+              const shown = { channelId, stopping: false, notice };
+              setBotStop(shown);
+              window.setTimeout(
+                () => setBotStop((current) => (current === shown ? undefined : current)),
+                6000,
+              );
+            });
+          },
         };
   const selectedIds =
     selectedMessages !== undefined && selectedMessages.channelId === channelId
@@ -2868,20 +2868,7 @@ function ConversationView({
               })}
             </MessageSelectionContext.Provider>
             {imageGallery.lightbox}
-            <TimelineWorkingRowsView
-              rows={workingRows}
-              stop={
-                stopTargets.length === 0
-                  ? undefined
-                  : {
-                      targets: new Set(stopTargets.map((target) => target.slug)),
-                      stopping: channelStop?.stopping === true,
-                      onStop: (slug) =>
-                        stopBots(stopTargets.filter((target) => target.slug === slug)),
-                    }
-              }
-              t={t}
-            />
+            <TimelineWorkingRowsView rows={workingRows} t={t} />
             {conversation.timeline.hasNewer ? (
               <div className="bh-timeline-newer-sentinel">
                 {conversation.timeline.loadingNewer ? (

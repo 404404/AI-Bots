@@ -179,9 +179,9 @@ function layout(element: HTMLElement, scrollHeight: number, clientHeight = 400):
 }
 
 const rowNames = (): string[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('.bh-timeline-working-row')).map(
-    (row) => row.dataset['botSlug'] ?? '',
-  );
+  Array.from(
+    container.querySelectorAll<HTMLElement>('.bh-timeline-working .bh-persona-avatar'),
+  ).map((avatar) => (avatar.getAttribute('title') ?? '').split(' · ')[0]!.toLowerCase());
 
 beforeEach(() => {
   Object.assign(globalThis, {
@@ -210,9 +210,8 @@ describe('timeline working rows in the Channel body', () => {
     expect(
       working?.previousElementSibling?.querySelector('[data-message-id="m-1"]'),
     ).not.toBeNull();
-    expect(working?.querySelector('.bh-timeline-working-stop')?.getAttribute('aria-label')).toBe(
-      '停止 Mira',
-    );
+    expect(working?.getAttribute('aria-hidden')).toBe('true');
+    expect(working?.textContent).not.toContain('Mira');
     expect(container.querySelectorAll('.bh-composer-activity-summary[aria-live]')).toHaveLength(1);
     expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe('停止 Mira');
 
@@ -221,15 +220,13 @@ describe('timeline working rows in the Channel body', () => {
     expect(container.querySelector('.bh-stop-btn')).toBeNull();
   });
 
-  it('shows the card and its Stop when the DM is opened from the Channel list', async () => {
+  it('shows the working row when the DM is opened from the Channel list', async () => {
     const chat = await open(dm, [bot('mira', 'Mira', 'working')], 'channel');
     expect(rowNames()).toEqual(['mira']);
-    expect(chat.querySelector('.bh-timeline-working-stop')?.getAttribute('aria-label')).toBe(
-      '停止 Mira',
-    );
+    expect(chat.querySelector('.bh-timeline-working')).not.toBeNull();
   });
 
-  it('shows one row per active Bot in a Group and skips waiting Bots', async () => {
+  it('stacks the active Bots of a Group in one row and skips waiting Bots', async () => {
     await open(group, [
       bot('mira', 'Mira', 'working'),
       bot('nova', 'Nova', 'thinking'),
@@ -239,11 +236,7 @@ describe('timeline working rows in the Channel body', () => {
     expect(container.querySelector('.bh-stop-btn')?.getAttribute('aria-label')).toBe(
       '停止 2 个 Bot',
     );
-    expect(
-      Array.from(container.querySelectorAll('.bh-timeline-working-stop')).map((button) =>
-        button.getAttribute('aria-label'),
-      ),
-    ).toEqual(['停止 Mira', '停止 Nova']);
+    expect(container.querySelectorAll('.bh-timeline-working-row')).toHaveLength(1);
   });
 
   it('replaces the row with the Bot streaming draft', async () => {
