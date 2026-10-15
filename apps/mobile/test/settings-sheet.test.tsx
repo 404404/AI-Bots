@@ -32,6 +32,7 @@ async function render(element: ReactElement): Promise<HTMLElement> {
 function actions(overrides: Partial<SettingsActions> = {}): SettingsActions {
   return {
     onClose: vi.fn(),
+    onUsage: vi.fn(),
     onOpenFullClient: vi.fn(),
     onComputers: vi.fn(),
     onHostLook: vi.fn(),

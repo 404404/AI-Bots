@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import type { ConnectionState } from '../host/client';
+import type { OverviewUsage } from '../host/usage';
 import { useDesignTheme } from './design/theme';
 import { space } from './design/tokens';
 import { SettingsRow, SettingsSection } from './primitives/settings-row';
 import { Text } from './primitives/text';
 import { errorText, Notice } from './request-parts';
+import { UsageCard } from './shell/usage-card';
 import { t } from './strings';
 
 export interface SettingsActions {
   onClose(): void;
+  onUsage(): void;
   onOpenFullClient(): void;
   onComputers(): void;
   onHostLook(): void;
@@ -31,10 +34,12 @@ const STATUS: Record<ConnectionState['status'], string> = {
 export function SettingsView({
   hostName,
   connection,
+  loadUsage,
   actions,
 }: {
   hostName: string | undefined;
   connection: ConnectionState;
+  loadUsage?: (() => Promise<OverviewUsage>) | undefined;
   actions: SettingsActions;
 }) {
   const theme = useDesignTheme();
@@ -73,6 +78,7 @@ export function SettingsView({
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ gap: space.x6, padding: space.x5 }}>
+        <UsageCard load={loadUsage} onOpen={actions.onUsage} />
         <SettingsSection title={t.connections}>
           <SettingsRow title={hostName ?? '—'} detail={status.join(' · ')} />
           <SettingsRow title={t.computers} detail={t.computersHint} onPress={actions.onComputers} />
