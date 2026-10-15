@@ -5,7 +5,7 @@ import { actionCount } from '../../src/host/inbox';
 import { useHostSession, useInbox } from '../../src/host/host-session';
 import { glassShadow, glassTint, useDesignTheme } from '../../src/ui/design/theme';
 import { edge, glass, radius, space } from '../../src/ui/design/tokens';
-import { ActivityIcon, HomeIcon, MeIcon, SearchIcon } from '../../src/ui/shell/icons';
+import { ActivityIcon, HomeIcon, MeIcon } from '../../src/ui/shell/icons';
 import { t } from '../../src/ui/strings';
 
 export default function TabsLayout() {
@@ -52,7 +52,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen name="(me)" options={{ title: t.me, tabBarIcon: MeIcon }} />
-      <Tabs.Screen name="(search)" options={{ title: t.search, tabBarIcon: SearchIcon }} />
     </Tabs>
   );
 }

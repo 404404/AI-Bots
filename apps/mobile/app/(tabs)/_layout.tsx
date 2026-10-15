@@ -34,10 +34,6 @@ export default function TabsLayout() {
         />
         <NativeTabs.Trigger.Label>{t.me}</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(search)" role="search">
-        <NativeTabs.Trigger.Icon sf="magnifyingglass" md="search" />
-        <NativeTabs.Trigger.Label>{t.search}</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }

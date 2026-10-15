@@ -6,13 +6,16 @@ import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/hos
 import { ConversationRow } from '../../../src/ui/chat/conversation-row';
 import {
   conversations,
+  searchConversations,
   shortcutCounts,
   type ConversationFilter,
 } from '../../../src/ui/chat/conversations';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { space } from '../../../src/ui/design/tokens';
+import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Text } from '../../../src/ui/primitives/text';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
+import { openConversation } from '../../../src/ui/shell/open-conversation';
 import { ShortcutCards } from '../../../src/ui/shell/shortcut-cards';
 import { t } from '../../../src/ui/strings';
 import type { HumanAttentionItem } from '../../../src/host/wire';
@@ -25,11 +28,16 @@ export default function HomeScreen() {
   const snapshot = useHostSnapshot(client);
   const list = useInbox(inbox);
   const [filter, setFilter] = useState<ConversationFilter>('all');
+  const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const action = list.status === 'ready' ? list.sections.action : NONE;
+  const searching = query.trim() !== '';
   const rows = useMemo(
-    () => conversations(snapshot.roster, action, filter),
-    [snapshot.roster, action, filter],
+    () =>
+      searching
+        ? searchConversations(snapshot.roster, action, query)
+        : conversations(snapshot.roster, action, filter),
+    [snapshot.roster, action, filter, query, searching],
   );
   const counts = useMemo(() => shortcutCounts(snapshot.roster, action), [snapshot.roster, action]);
   const now = new Date();
@@ -53,6 +61,8 @@ export default function HomeScreen() {
       <Stack.Screen options={{ title: saved.hostName, headerShown: false }} />
       <HomeHeader hostName={saved.hostName}>
         <FlatList
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           data={rows}
           contentInsetAdjustmentBehavior="automatic"
           keyExtractor={(row) => row.key}
@@ -64,11 +74,24 @@ export default function HomeScreen() {
                 onRetry={() => client?.retryNow()}
                 onPairAgain={() => router.push('/pair')}
               />
-              <ShortcutCards counts={counts} filter={filter} onFilter={setFilter} />
+              <SearchField
+                value={query}
+                placeholder={t.searchPlaceholder}
+                onChangeText={setQuery}
+              />
+              {searching ? null : (
+                <ShortcutCards counts={counts} filter={filter} onFilter={setFilter} />
+              )}
             </>
           }
           ListEmptyComponent={
-            snapshot.roster === undefined ? null : (
+            snapshot.roster === undefined ? null : searching ? (
+              <View style={{ padding: space.x6, alignItems: 'center' }}>
+                <Text tone="muted" style={{ textAlign: 'center' }}>
+                  {t.searchNoMatch(query.trim())}
+                </Text>
+              </View>
+            ) : (
               <View style={{ padding: space.x6, alignItems: 'center', gap: space.x3 }}>
                 <Text tone="muted">{filter === 'all' ? t.noBots : t.noConversations}</Text>
                 {filter === 'all' ? null : (
@@ -80,16 +103,7 @@ export default function HomeScreen() {
             )
           }
           renderItem={({ item }) => (
-            <ConversationRow
-              row={item}
-              now={now}
-              {...(item.kind === 'bot'
-                ? {
-                    onPress: () =>
-                      router.push({ pathname: '/dm/[slug]', params: { slug: item.bot.slug } }),
-                  }
-                : {})}
-            />
+            <ConversationRow row={item} now={now} onPress={() => openConversation(router, item)} />
           )}
         />
       </HomeHeader>

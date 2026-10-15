@@ -1,7 +1,7 @@
 import { TextInput } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
-import { edge, radius, space } from '../design/tokens';
+import { radius, space } from '../design/tokens';
 
 export function SearchField({
   value,
@@ -23,7 +23,6 @@ export function SearchField({
       accessibilityRole="search"
       autoCapitalize="none"
       autoCorrect={false}
-      autoFocus
       clearButtonMode="while-editing"
       returnKeyType="search"
       style={{
@@ -32,9 +31,7 @@ export function SearchField({
         marginVertical: space.x3,
         paddingHorizontal: space.x5,
         borderRadius: radius.round,
-        borderWidth: edge.hairline,
-        borderColor: theme.layer.field.edge,
-        backgroundColor: theme.layer.field.fill,
+        backgroundColor: theme.layer.raised.fill,
         color: theme.color.fg,
         fontSize: theme.type.body.size,
       }}

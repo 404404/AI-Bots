@@ -36,10 +36,6 @@ export function MeIcon(props: IconProps) {
   return <Glyph {...props} d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7.5 8a7.5 7.5 0 0 1 15 0" />;
 }
 
-export function SearchIcon(props: IconProps) {
-  return <Glyph {...props} d="M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 4 4" />;
-}
-
 export function NeedsYouIcon(props: IconProps) {
   return (
     <Glyph
