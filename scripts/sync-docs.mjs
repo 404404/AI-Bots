@@ -390,6 +390,21 @@ export const PAGES = [
     },
   },
   {
+    slug: 'docs/discord-connection',
+    order: 24,
+    en: {
+      source: 'docs/discord-connection.md',
+      title: 'Connect a Bot to Discord',
+      description:
+        'Bind a Discord Bot identity and distinguish direct-user and managed-role mentions.',
+    },
+    zh: {
+      source: 'docs/discord-connection.zh.md',
+      title: '将 Bot 接入 Discord',
+      description: '绑定 Discord Bot 身份，区分用户提及、自身托管角色提及与普通角色。',
+    },
+  },
+  {
     slug: 'docs/qq-connection',
     order: 24,
     en: {
