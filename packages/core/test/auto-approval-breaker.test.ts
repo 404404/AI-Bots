@@ -74,26 +74,41 @@ function fixture() {
     session: { id: sessionId, header: { cwd: '/qa' }, snapshotEvents: () => [] },
   } as unknown as Agent;
   let calls = 0;
-  const call = (command: string) => {
+  const callWith = (args: Record<string, unknown>) => {
     calls += 1;
     const callId = 'call-' + String(calls);
     broker.track({
       agent,
       name: 'bash',
       callId,
-      arguments: { command },
+      arguments: args,
       token: Symbol(callId),
     } as ToolExecution);
     return broker.ask({ agent, toolName: 'bash', callId });
   };
+  const call = (command: string) => callWith({ command });
   const messages = () => core.channels.readMessages(channelId);
-  return { core, broker, methods, review, verdicts, channelId, sessionId, call, messages, runs };
+  return {
+    core,
+    broker,
+    methods,
+    review,
+    verdicts,
+    channelId,
+    sessionId,
+    call,
+    callWith,
+    messages,
+    runs,
+  };
 }
 
 describe('allow this once anyway from the Human Inbox', () => {
   it('lets the identical retry run without review while other calls stay reviewed', async () => {
     const f = fixture();
-    expect(await f.call('git push')).toBe('rejected');
+    expect(
+      await f.callWith({ command: 'git push', sandbox_permissions: 'danger-full-access' }),
+    ).toBe('rejected');
     const page = f.methods.humanAttention({ category: 'action', kind: 'auto-rejection' });
     if (!page.ok) throw new Error('inbox failed');
     expect(page.value.items).toHaveLength(1);
@@ -125,15 +140,18 @@ describe('allow this once anyway from the Human Inbox', () => {
     });
     await f.core.runtime.whenIdle();
     expect(f.runs.at(-1)?.message).toContain('Human allowed an auto-rejected call once');
+    expect(f.runs.at(-1)?.message).toContain('"command": "git push"');
     const after = f.methods.humanAttention({ category: 'action', kind: 'auto-rejection' });
     expect(after.ok && after.value.items).toEqual([]);
     expect((await f.methods.toolAutoRejectionOverride({ itemId: item.id })).ok).toBe(false);
 
     const reviewed = f.review.mock.calls.length;
-    expect(await f.call('git push')).toBe('allowed-once');
-    expect(f.review.mock.calls.length).toBe(reviewed);
-    expect(await f.call('git push --force')).toBe('rejected');
     expect(await f.call('git push')).toBe('rejected');
+    expect(f.review.mock.calls.length).toBe(reviewed + 1);
+    const retry = { sandbox_permissions: 'danger-full-access', command: 'git push' };
+    expect(await f.callWith(retry)).toBe('allowed-once');
+    expect(f.review.mock.calls.length).toBe(reviewed + 1);
+    expect(await f.callWith(retry)).toBe('rejected');
     expect(f.review.mock.calls.length).toBe(reviewed + 2);
   });
 });
