@@ -1,0 +1,22 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "app",
+    "src",
+    "expo-env.d.ts",
+    "test/inbox-screens.test.ts",
+    "test/action-cards.test.ts",
+    "test/activity-feed.test.ts",
+    "test/reanimated-shim.ts",
+    "test/**/*.tsx"
+  ]
+}

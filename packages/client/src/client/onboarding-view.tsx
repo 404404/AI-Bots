@@ -4,6 +4,7 @@ import type { TutorialAction } from '../../../core/src/onboarding/types.js';
 import type { BridgeActions } from './actions.js';
 import { PersonaBotAvatar } from './avatar.js';
 import { BotBannerArt, bannerOf } from './bot-banner.js';
+import { botModeSidebarViewport } from './bot-mode-sidebar-viewport.js';
 import type { ModelCatalogEntryView, ModelRouteView } from './bridge.js';
 import { errorMessage } from './bridge.js';
 import { ModelPicker } from './model-picker.js';
@@ -21,6 +22,7 @@ import type { WindowCompanions } from './window-companions.js';
 import { startInternalTour, type InternalTourSpec } from './internal-tour.js';
 import { OnboardingChecklist, markBotModeEntered } from './onboarding-checklist-view.js';
 import { checklistSettled } from './onboarding-checklist.js';
+import { startBotSessionsTour, takeSessionsTourReturn } from './onboarding-sessions-tour.js';
 
 export function OnboardingModelDialog({
   actions,
@@ -339,6 +341,7 @@ export function OnboardingWelcome({
 }
 
 function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
+  const ownSidebar = botModeSidebarViewport();
   return [
     {
       selector: '[data-onboarding-welcome]',
@@ -382,8 +385,8 @@ function onboardingTourSteps(t: BotHarnessTranslate): InternalTourSpec[] {
     },
     {
       selector: '[data-bh-tour="bot-mode"]',
-      title: t('onboarding.tour.exit.title'),
-      description: t('onboarding.tour.exit.hint'),
+      title: t(ownSidebar ? 'onboarding.tour.exit.titleSidebar' : 'onboarding.tour.exit.title'),
+      description: t(ownSidebar ? 'onboarding.tour.exit.hintSidebar' : 'onboarding.tour.exit.hint'),
     },
   ];
 }
@@ -411,7 +414,10 @@ export function OnboardingOverlay({
     let active = true;
     let key = '';
     markBotModeEntered();
-    void enter();
+    const returned = takeSessionsTourReturn();
+    void enter().then(() => {
+      if (active && returned) controller.openChecklist();
+    });
     const unsubscribe = store.subscribe(() => {
       const snapshot = store.getSnapshot();
       const channel = snapshot.conversation.channel;
@@ -440,6 +446,7 @@ export function OnboardingOverlay({
     return () => {
       active = false;
       controller.pauseGuide();
+      controller.closeSessionsTour(false);
       controller.closeChecklist();
       unsubscribe();
       unsubscribeCompanion?.();
@@ -478,10 +485,18 @@ export function OnboardingOverlay({
     state.modelOpen,
     state.sendOpen,
   ]);
+  const sessionsTourMount = useMountedResource<HTMLSpanElement>(() => {
+    if (!state.sessionsTourOpen || state.receipt?.tutorial !== 'active') return;
+    return startBotSessionsTour(t, {
+      onClosed: () => controller.closeSessionsTour(true),
+      onSkip: () => controller.skipTutorial(),
+    });
+  }, [state.sessionsTourOpen, state.receipt?.tutorial]);
   return (
     <>
       <span ref={mount} hidden aria-hidden="true" />
       <span ref={tourMount} hidden />
+      <span ref={sessionsTourMount} hidden />
       <OnboardingChecklist actions={actions} t={t} />
       {state.error && !state.modelOpen && !state.sendOpen ? (
         <div role="alert" className="bh-root bh-onboarding-notice">

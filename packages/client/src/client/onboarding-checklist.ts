@@ -1,9 +1,11 @@
 import type { OnboardingSnapshot } from '../../../core/src/onboarding/types.js';
 import type { BridgeActions } from './actions.js';
+import { sessionsTourSeen } from './onboarding-sessions-tour.js';
 
 export const CHECKLIST_ITEMS = [
   'model',
   'conversation',
+  'sessions',
   'memory',
   'im',
   'schedule',
@@ -15,6 +17,7 @@ export type ChecklistTier = 'required' | 'recommended' | 'extra';
 export const CHECKLIST_TIER: Record<ChecklistItem, ChecklistTier> = {
   model: 'required',
   conversation: 'required',
+  sessions: 'recommended',
   memory: 'recommended',
   im: 'recommended',
   schedule: 'recommended',
@@ -22,6 +25,7 @@ export const CHECKLIST_TIER: Record<ChecklistItem, ChecklistTier> = {
 };
 
 export const CHECKLIST_NEEDS_CONVERSATION: ReadonlySet<ChecklistItem> = new Set([
+  'sessions',
   'memory',
   'im',
   'schedule',
@@ -60,6 +64,7 @@ export async function loadChecklistEvidence(
   return {
     model,
     conversation: receipt.completed,
+    sessions: sessionsTourSeen(),
     memory,
     im,
     schedule,

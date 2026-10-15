@@ -17,13 +17,21 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
     disabled?: boolean;
   }) => createElement('button', { type: 'button', disabled, onClick: onSelect }, icon, children),
 }));
+const dshTour = vi.hoisted(() =>
+  vi.fn((..._args: unknown[]) => () => {}),
+);
+vi.mock('../src/client/internal-tour.js', () => ({ startInternalTour: dshTour }));
 vi.mock('../src/client/bot-icon.js', () => ({
   BotIcon: () => createElement('span', { 'data-icon': 'bot' }),
 }));
 
 import type { SessionBotOwner } from '../src/client/bridge.js';
 import { zhTranslate } from '../src/client/locale.js';
-import { SessionOwnerLeading, SessionReturnMenuItem } from '../src/client/session-return-action.js';
+import {
+  SessionOwnerLeading,
+  SessionReturnAction,
+  SessionReturnMenuItem,
+} from '../src/client/session-return-action.js';
 
 const OWNER: SessionBotOwner = {
   botSlug: 'qa-bot',
@@ -248,5 +256,47 @@ describe('native Session row PersonaBot avatar', () => {
       await act(async () => root.unmount());
       host.remove();
     }
+  });
+});
+
+describe('SessionReturnAction onboarding', () => {
+  it('continues the sessions walkthrough only after a jump from Bot mode', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    localStorage.clear();
+    sessionStorage.setItem('botharness/onboarding/sessions-tour', `${Date.now()}:2`);
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const returnToBot = vi.fn(async (_slug: string) => undefined);
+    const props = {
+      sessionId: 'orchestrator-1',
+      resolveOwner: async () => OWNER,
+      returnToBot,
+      t: zhTranslate,
+    };
+    await act(async () => root.render(createElement(SessionReturnAction, props as never)));
+    expect(localStorage.getItem('botharness/onboarding/sessions-seen')).toBe('1');
+    expect(sessionStorage.getItem('botharness/onboarding/sessions-tour')).toBeNull();
+    expect(dshTour).toHaveBeenCalledOnce();
+    const specs = dshTour.mock.calls[0]![0] as { selector: string; fallback?: string }[];
+    expect(specs).toMatchObject([
+      {
+        selector: '[role="tree"] [data-row-key="session:orchestrator-1"]',
+        fallback: '[role="tree"]',
+      },
+      { selector: '.bh-session-return-action' },
+    ]);
+    const options = dshTour.mock.calls[0]![1] as { skipLabel?: string; onFinished(): void };
+    expect(options.skipLabel).toBeUndefined();
+    expect(options).toMatchObject({ progress: { offset: 2 } });
+    await act(async () => options.onFinished());
+    expect(returnToBot).toHaveBeenCalledWith('qa-bot');
+    expect(sessionStorage.getItem('botharness/onboarding/sessions-return')).toBe('1');
+    await act(async () =>
+      root.render(createElement(SessionReturnAction, { ...props, sessionId: 'other' } as never)),
+    );
+    expect(dshTour).toHaveBeenCalledOnce();
+    await act(async () => root.unmount());
+    host.remove();
   });
 });

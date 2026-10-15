@@ -31,6 +31,12 @@ vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => {
   };
 });
 
+const ownSidebar = vi.hoisted(() => ({ desktop: false }));
+vi.mock('../src/client/bot-mode-sidebar-viewport.js', () => ({
+  botModeSidebarViewport: () => ownSidebar.desktop,
+  subscribeBotModeSidebarViewport: () => () => undefined,
+}));
+
 import { apply, PANEL_ID } from '../src/client/index.js';
 import { store } from '../src/client/store.js';
 import { WindowCompanions } from '../src/client/window-companions.js';
@@ -206,7 +212,11 @@ describe('client apply', () => {
       name: 'shell.overlay',
       id: 'botharness-bot-settings',
     });
-    const specs = registrations.slice(2);
+    expect(registrations[2]).toMatchObject({
+      name: 'shell.overlay',
+      id: 'botharness-shortcut-help',
+    });
+    const specs = registrations.slice(3);
 
     expect(specs.map((spec) => spec.name)).toEqual([
       'sidebar.panellist',
@@ -243,7 +253,7 @@ describe('client apply', () => {
     });
 
     store.setMode('bot');
-    specs.splice(0, specs.length, ...registrations.slice(2));
+    specs.splice(0, specs.length, ...registrations.slice(3));
     expect(specs.map((spec) => spec.name)).toEqual([
       'sidebar.panellist',
       'main',
@@ -264,6 +274,33 @@ describe('client apply', () => {
     expect(disposed.map((spec) => spec.name)).toEqual(['sidebar.workspaces', 'main']);
     expect(disposed).not.toContain(registrations[0]);
     expect(disposed).not.toContain(registrations[1]);
+    expect(disposed).not.toContain(registrations[2]);
+  });
+
+  it('shadows the whole sidebar at -1 in desktop Bot mode and returns it on exit', () => {
+    store.setMode('dsh');
+    ownSidebar.desktop = true;
+    try {
+      const registrations: Spec[] = [];
+      const disposed: Spec[] = [];
+      apply(createScoped(registrations, disposed) as never);
+      expect(registrations.some((spec) => spec.name === 'sidebar')).toBe(false);
+
+      store.setMode('bot');
+      const sidebar = registrations.find((spec) => spec.name === 'sidebar');
+      expect(sidebar).toMatchObject({ name: 'sidebar', priority: -1, locale: 'botharness' });
+      expect(sidebar?.inject?.()).toMatchObject({
+        exitBotMode: expect.any(Function),
+        toggleSidebar: expect.any(Function),
+        openBotSettings: expect.any(Function),
+      });
+
+      store.setMode('dsh');
+      expect(disposed.map((spec) => spec.name)).toContain('sidebar');
+    } finally {
+      ownSidebar.desktop = false;
+      store.setMode('dsh');
+    }
   });
 
   it('registers Bot Settings on the overlay and its sections only while configForms is served', () => {
@@ -282,9 +319,11 @@ describe('client apply', () => {
     expect(sections.map(({ id, order }) => ({ id, order }))).toEqual([
       { id: 'general', order: 0 },
       { id: 'models', order: 10 },
+      { id: 'auto-approval', order: 15 },
       { id: 'messaging', order: 20 },
       { id: 'im-apps', order: 25 },
       { id: 'companions', order: 40 },
+      { id: 'devices', order: 45 },
       { id: 'data-privacy', order: 50 },
       { id: 'advanced', order: 60 },
       { id: 'about', order: 70 },

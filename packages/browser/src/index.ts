@@ -1,12 +1,17 @@
+import { BROWSER_TOOLS, browserToolName } from './tool/catalog.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 import type { Context } from '@deepseek-ai/cordis';
 import Schema from '@deepseek-ai/schemastery';
 import { registerBrowserViewer, type BrowserViewerHost } from './viewer.js';
-import { LOCAL_VIEWER_PREFIX, localViewerUrl, registerLocalViewer } from './viewer-local.js';
+import {
+  LOCAL_VIEWER_PREFIX,
+  createLocalViewerActions,
+  localViewerUrl,
+  registerLocalViewer,
+} from './viewer-local.js';
 import { createTakeoverService } from './takeover.js';
-import type { ContainerBrowserOptions } from './runtime/container.js';
 import { createProfileControl } from './profile-control.js';
 import { registerProfileHttp } from './profile-http.js';
 import { createDailyControl } from './daily.js';
@@ -14,9 +19,25 @@ import { createBorrowService } from './borrow.js';
 import { registerBorrowHttp } from './borrow-http.js';
 
 import { createBrowserDiagnostics, toLogEntry } from './diagnostics.js';
-import { toBrowserErrorBody } from './runtime/provision.js';
+import { CHROME_LIB_PACKAGES, toBrowserErrorBody } from './runtime/provision.js';
+import {
+  createSpawnRunner,
+  installSystemPackages,
+  systemInstallAccess,
+  type SystemInstallAccess,
+} from '../../core/src/system/system-packages.js';
 import { openLogDatabase, type LogDatabase } from '../../core/src/logs/log-db.js';
-import { createBotBrowserRuntimes, listStoredProfileNames } from './runtimes.js';
+import { detectTailnetAddress } from '../../core/src/devices/routes.js';
+import {
+  createSelkiesWebRtc,
+  refuseWebRtcUpgrade,
+  type SelkiesWebRtc,
+} from '../../core/src/http/selkies-webrtc.js';
+import {
+  type BrowserViewerRegistration,
+  createBotBrowserRuntimes,
+  listStoredProfileNames,
+} from './runtimes.js';
 import {
   browserToolNames,
   createBrowserToolProvider,
@@ -156,20 +177,60 @@ export function apply(
     return `${target()}:${driver()}:${revision}:${borrow.revision}:${daily.revision}:${profile.revision}:${signal === undefined ? '' : registrationScopes.get(signal)}`;
   };
   let switching: Promise<void> = Promise.resolve();
-  let registerViewer: ContainerBrowserOptions['onViewer'];
+  let registerViewer: BrowserViewerRegistration | undefined;
+  const webrtcCalls = new Map<string, { calls: SelkiesWebRtc; touch: () => void }>();
   ctx.inject(['connection', 'webServer'], (viewerCtx) => {
     const services = viewerCtx as unknown as {
       webServer: BrowserViewerHost;
       connection: { requestRejection(request: { headers: Headers }): number | undefined };
     };
-    registerViewer = (prefix, upstream) =>
-      registerBrowserViewer({
+    registerViewer = (prefix, upstream, container, touch) => {
+      const release = registerBrowserViewer({
         host: services.webServer,
         prefix,
         upstream,
         rejection: (headers) => services.connection.requestRejection({ headers }),
       });
+      const viewer = prefix.slice(prefix.lastIndexOf('/') + 1);
+      const calls = createSelkiesWebRtc({
+        label: `browser viewer=${viewer}`,
+        upstream,
+        container: () => container,
+        tailnetAddress: () => detectTailnetAddress(),
+        log: (detail) => diagnostics.record('lifecycle', detail),
+      });
+      const entry = { calls, touch };
+      webrtcCalls.set(viewer, entry);
+      return () => {
+        if (webrtcCalls.get(viewer) === entry) webrtcCalls.delete(viewer);
+        void calls.close();
+        release();
+      };
+    };
+    const signaling = services.webServer.registerUpgrade({
+      path: '/api/browser/webrtc/signaling',
+      handler(request, socket, head) {
+        const headers = new Headers();
+        for (const [key, value] of Object.entries(request.headers))
+          if (typeof value === 'string') headers.set(key, value);
+        if (services.connection.requestRejection({ headers }) !== undefined) {
+          socket.destroy();
+          return;
+        }
+        const viewer = new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.get('viewer');
+        const entry = viewer === null ? undefined : webrtcCalls.get(viewer);
+        if (entry === undefined) {
+          refuseWebRtcUpgrade(socket, 'not-running');
+          return;
+        }
+        entry.touch();
+        const timer = setInterval(entry.touch, 60_000);
+        socket.once('close', () => clearInterval(timer));
+        void entry.calls.signal(request, socket, head);
+      },
+    });
     return () => {
+      signaling();
       registerViewer = undefined;
     };
   });
@@ -178,11 +239,12 @@ export function apply(
     target: () => (target() === 'container' ? 'container' : 'local'),
     driver,
     onIdleStop: (profile) => provider.invalidateProfile(profile),
-    onViewer: (prefix, upstream) => {
+    onViewer: (prefix, upstream, container, touch) => {
       if (registerViewer === undefined)
         throw new Error('The Container Browser viewer requires the DSH Web Host');
-      return registerViewer(prefix, upstream);
+      return registerViewer(prefix, upstream, container, touch);
     },
+    tailnetAddress: () => detectTailnetAddress(),
     installDir: pinnedBrowserDirectory(),
     ...(config.browserPath.trim() === '' ? {} : { browserPath: config.browserPath.trim() }),
     ...(config.headless ? { headless: true } : {}),
@@ -333,28 +395,34 @@ export function apply(
       return true;
     },
   });
+  const viewerOptions = {
+    runtimes,
+    currentTab: (slug: string) => provider.currentTab(slug),
+    isTakeover: (slug: string) => provider.isTakeover(slug),
+    touch: (slug: string) => {
+      runtimes.touch(slug);
+      provider.touch(slug);
+    },
+    hasAccess: (slug: string) =>
+      (
+        coreLookup()?.registry as
+          | { get(slug: string): { browserAccess?: boolean } | undefined }
+          | undefined
+      )?.get(slug)?.browserAccess === true,
+    note: (detail: string) => diagnostics.record('lifecycle', detail),
+    takeover: takeovers,
+  };
+  const viewerActions = createLocalViewerActions(viewerOptions);
+  ctx.effect(() => () => void viewerActions.close(), 'botharness-browser: viewer frame feeds');
   ctx.inject(['connection', 'webServer'], (localViewerCtx) => {
     const services = localViewerCtx as unknown as {
       webServer: BrowserViewerHost;
       connection: { requestRejection(request: { headers: Headers }): number | undefined };
     };
     const release = registerLocalViewer({
+      ...viewerOptions,
       host: services.webServer,
-      runtimes,
-      currentTab: (slug) => provider.currentTab(slug),
-      isTakeover: (slug) => provider.isTakeover(slug),
-      touch: (slug) => {
-        runtimes.touch(slug);
-        provider.touch(slug);
-      },
-      hasAccess: (slug) =>
-        (
-          coreLookup()?.registry as
-            | { get(slug: string): { browserAccess?: boolean } | undefined }
-            | undefined
-        )?.get(slug)?.browserAccess === true,
-      note: (detail) => diagnostics.record('lifecycle', detail),
-      takeover: takeovers,
+      actions: viewerActions,
       rejection: (headers) => services.connection.requestRejection({ headers }),
     });
     diagnostics.record('lifecycle', `local viewer ready prefix=${LOCAL_VIEWER_PREFIX}`);
@@ -441,10 +509,42 @@ export function apply(
     return () => clearInterval(timer);
   }, 'botharness-browser: idle stop');
 
+  const packageRunner = createSpawnRunner();
+  let installAccess: Promise<SystemInstallAccess> | undefined;
+  let packageInstall:
+    | {
+        state: 'installing' | 'installed' | 'failed';
+        packages: readonly string[];
+        percent: number;
+        text: string;
+      }
+    | undefined;
+
   ctx.inject(['connection'], (connectionCtx) => {
     const connection = (connectionCtx as unknown as { connection: HostConnectionLike }).connection;
     const json = (value: unknown, status = 200): Response =>
       Response.json(value as Record<string, unknown>, { status });
+
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: '/api/browser/webrtc',
+          methods: ['GET'],
+          requestBody: 'buffered',
+          fetch: async (request: Request): Promise<Response> => {
+            const viewer = new URL(request.url).searchParams.get('viewer') ?? '';
+            const entry = webrtcCalls.get(viewer);
+            return json({
+              viewer,
+              signaling: `/api/browser/webrtc/signaling?viewer=${encodeURIComponent(viewer)}`,
+              ...(entry === undefined
+                ? { available: false, code: 'not-running', fallback: 'websocket' }
+                : await entry.calls.status()),
+            });
+          },
+        }),
+      'botharness-browser: WebRTC status route',
+    );
 
     for (const action of ['pair', 'forget'] as const) {
       connectionCtx.effect(
@@ -576,6 +676,79 @@ export function apply(
         }
       },
     };
+    const installRoute = {
+      path: '/api/browser/install-packages',
+      methods: ['GET', 'POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        if (request.method === 'GET') {
+          installAccess ??= systemInstallAccess(packageRunner);
+          return json({ ok: true, access: await installAccess, ...(packageInstall ?? {}) });
+        }
+        let body: { authorize?: unknown; packages?: unknown } = {};
+        try {
+          body = (await request.json()) as typeof body;
+        } catch {
+          void 0;
+        }
+        if (body.authorize !== true)
+          return json(
+            { ok: false, code: 'authorize-required', error: 'explicit authorization required' },
+            400,
+          );
+        const packages = Array.isArray(body.packages)
+          ? body.packages.filter((name): name is string => typeof name === 'string')
+          : [];
+        if (packages.length === 0 || packages.some((name) => !CHROME_LIB_PACKAGES.has(name)))
+          return json({ ok: false, code: 'packages-invalid', error: 'unknown packages' }, 400);
+        if (packageInstall?.state === 'installing')
+          return json({ ok: false, code: 'install-running', error: 'an install is running' }, 409);
+        installAccess ??= systemInstallAccess(packageRunner);
+        const access = await installAccess;
+        if (access === 'none')
+          return json(
+            { ok: false, code: 'needs-administrator', error: 'administrator rights required' },
+            403,
+          );
+        const started = Date.now();
+        packageInstall = { state: 'installing', packages, percent: 0, text: '' };
+        diagnostics.record(
+          'lifecycle',
+          `install-packages start packages=${packages.join(',')} access=${access}`,
+        );
+        void installSystemPackages({
+          packages,
+          access,
+          runner: packageRunner,
+          onProgress: (progress) => {
+            packageInstall = { state: 'installing', packages, ...progress };
+          },
+        })
+          .then(() => {
+            packageInstall = { state: 'installed', packages, percent: 100, text: '' };
+            diagnostics.record(
+              'lifecycle',
+              `install-packages done durationMs=${String(Date.now() - started)}`,
+            );
+          })
+          .catch((error: unknown) => {
+            const detail = error instanceof Error ? error.message : String(error);
+            packageInstall = {
+              state: 'failed',
+              packages,
+              percent: packageInstall?.percent ?? 0,
+              text: detail,
+            };
+            diagnostics.record('lifecycle', `install-packages refused detail=${detail}`);
+          });
+        return json({ ok: true, started: true });
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(installRoute),
+      'botharness-browser: install-packages route',
+    );
+
     connectionCtx.effect(
       () => connection.fetch.register(openRoute),
       'botharness-browser: open route',
@@ -751,6 +924,53 @@ export function apply(
       'botharness-browser: takeover route',
     );
 
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: '/api/browser/frame',
+          methods: ['GET'],
+          requestBody: 'buffered',
+          async fetch(request: Request): Promise<Response> {
+            const url = new URL(request.url);
+            const result = await viewerActions.frame(
+              url.searchParams.get('slug') ?? '',
+              url.searchParams.get('after'),
+            );
+            if (result.status === 204) return new Response(null, { status: 204 });
+            if (result.status !== 200)
+              return json({ ok: false, error: result.error }, result.status);
+            const { status: _status, ...frame } = result;
+            return json({ ok: true, ...frame });
+          },
+        }),
+      'botharness-browser: frame route',
+    );
+
+    connectionCtx.effect(
+      () =>
+        connection.fetch.register({
+          path: '/api/browser/input',
+          methods: ['POST'],
+          requestBody: 'buffered',
+          async fetch(request: Request): Promise<Response> {
+            let body: Record<string, unknown> = {};
+            try {
+              const value = (await request.json()) as unknown;
+              if (typeof value === 'object' && value !== null)
+                body = value as Record<string, unknown>;
+            } catch {
+              return json({ ok: false, error: 'invalid input' }, 400);
+            }
+            const slug = typeof body['slug'] === 'string' ? body['slug'] : '';
+            const result = await viewerActions.input(slug, body);
+            if (result.status !== 200)
+              return json({ ok: false, error: result.error }, result.status);
+            return json({ ok: true, url: result.url, title: result.title });
+          },
+        }),
+      'botharness-browser: input route',
+    );
+
     const stopRoute = {
       path: '/api/browser/stop',
       methods: ['POST'] as const,
@@ -802,6 +1022,66 @@ export function apply(
     connectionCtx.effect(
       () => connection.fetch.register(stopRoute),
       'botharness-browser: stop route',
+    );
+
+    const toolsRoute = {
+      path: '/api/browser/tools',
+      methods: ['GET'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (): Promise<Response> =>
+        json({
+          ok: true,
+          tools: BROWSER_TOOLS.map((spec) => ({
+            name: browserToolName(spec.raw),
+            description: spec.description,
+            inputSchema: spec.inputSchema,
+          })),
+        }),
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(toolsRoute),
+      'botharness-browser: tool catalog route',
+    );
+
+    const toolRoute = {
+      path: '/api/browser/tool',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        let body: { slug?: unknown; tool?: unknown; args?: unknown } = {};
+        try {
+          body = (await request.json()) as typeof body;
+        } catch {
+          void 0;
+        }
+        const slug = typeof body.slug === 'string' ? body.slug : '';
+        const tool = typeof body.tool === 'string' ? body.tool : '';
+        const args = body.args ?? {};
+        if (
+          slug === '' ||
+          tool === '' ||
+          typeof args !== 'object' ||
+          args === null ||
+          Array.isArray(args)
+        )
+          return json({ ok: false, error: 'slug, tool and an args object are required' }, 400);
+        diagnostics.record('lifecycle', `direct tool slug=${slug} tool=${tool}`);
+        runtimes.touch(slug);
+        try {
+          await switching;
+          const result = await provider.runDirect(slug, tool, args as Record<string, unknown>);
+          return json({ ok: true, content: result.content });
+        } catch (error) {
+          return json(
+            { ok: false, error: error instanceof Error ? error.message : String(error) },
+            409,
+          );
+        }
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(toolRoute),
+      'botharness-browser: direct tool route',
     );
 
     const takeoverAuditRoute = {

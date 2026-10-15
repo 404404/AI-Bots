@@ -163,6 +163,39 @@ export interface ChannelDelivery {
   state: 'pending' | 'observed' | 'running' | 'retryable' | 'needs-repair' | 'handled' | 'ignored';
 }
 
+export interface ChannelToolAutoApproval {
+  botSlug: string;
+  sessionId: string;
+  callId: string;
+  toolName: string;
+  input: string;
+  template: string;
+  outcome: 'allowed' | 'rejected';
+  reason: string;
+}
+
+export interface ChannelToolAutoApprovalPause {
+  botSlug: string;
+  sessionId: string;
+  template: string;
+  state: 'paused' | 'resumed';
+  reason?: 'consecutive' | 'session';
+}
+
+export interface ChannelToolAutoApprovalOverride {
+  recordMessageId: string;
+  botSlug: string;
+  sessionId: string;
+  toolName: string;
+}
+
+export interface ChannelTurnStop {
+  botSlug: string;
+  botName: string;
+  humanName: string;
+  sessionId: string;
+}
+
 export interface ChannelMemberDeparture {
   memberKind: 'bot' | 'human';
   memberId: string;
@@ -175,6 +208,11 @@ export interface BotDmAction {
   channelId: string;
   messageId: string;
   recipientBotSlug: string;
+}
+
+export interface BotCreateAction {
+  botSlug: string;
+  displayName: string;
 }
 
 export interface BotChannelPost {
@@ -226,6 +264,24 @@ function isMemoryCommit(value: unknown): value is ChannelMemoryCommit {
   );
 }
 
+export interface ChannelReaction {
+  emoji: string;
+  actors: { kind: 'human' | 'bot'; id: string }[];
+}
+
+export const MAX_REACTION_EMOJI_LENGTH = 16;
+export const MAX_ACTOR_REACTIONS_PER_MESSAGE = 20;
+
+export function isReactionEmoji(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= MAX_REACTION_EMOJI_LENGTH &&
+    /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(value) &&
+    !/[\s\p{Cc}\p{L}\p{N}]/u.test(value)
+  );
+}
+
 export interface ChannelMessage {
   id: string;
   at: string;
@@ -245,12 +301,18 @@ export interface ChannelMessage {
   deliveries?: ChannelDelivery[];
 
   humanReceipts?: ChannelHumanReceipt[];
+  reactions?: ChannelReaction[];
   botDmAction?: BotDmAction;
+  botCreateAction?: BotCreateAction;
   botChannelPost?: BotChannelPost;
   botChannelPostPreview?: string | null;
   memoryCommit?: ChannelMemoryCommit;
   noticeOrigin?: { channelId: string };
   memberDeparture?: ChannelMemberDeparture;
+  turnStop?: ChannelTurnStop;
+  toolAutoApproval?: ChannelToolAutoApproval;
+  toolAutoApprovalPause?: ChannelToolAutoApprovalPause;
+  toolAutoApprovalOverride?: ChannelToolAutoApprovalOverride;
   botCausation?: BotMessageCausation;
 
   grantRequest?: true;
@@ -554,6 +616,20 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
     )
       return false;
   }
+  const autoOverride = message['toolAutoApprovalOverride'];
+  if (autoOverride !== undefined) {
+    const target = autoOverride as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'human' ||
+      typeof target !== 'object' ||
+      target === null ||
+      ['recordMessageId', 'botSlug', 'sessionId', 'toolName'].some(
+        (key) => typeof target[key] !== 'string' || target[key].length === 0,
+      ) ||
+      message['replyTo'] !== target['recordMessageId']
+    )
+      return false;
+  }
   const toolDecision = message['toolApprovalDecision'];
   if (toolDecision !== undefined) {
     if (
@@ -650,7 +726,6 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
         (typeof request['callId'] !== 'string' || request['callId'].length === 0)) ||
       !Array.isArray(request['questions']) ||
       request['questions'].length === 0 ||
-      request['questions'].length > 3 ||
       !request['questions'].every((value) => {
         if (typeof value !== 'object' || value === null) return false;
         const item = value as Record<string, unknown>;
@@ -713,6 +788,45 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       !isMemoryCommit(message['memoryCommit'])
     )
       return false;
+  } else if (message['turnStop'] !== undefined) {
+    const stop = message['turnStop'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof stop !== 'object' ||
+      stop === null ||
+      ['botSlug', 'botName', 'humanName', 'sessionId'].some(
+        (key) => typeof stop[key] !== 'string' || stop[key].length === 0,
+      )
+    )
+      return false;
+  } else if (message['toolAutoApproval'] !== undefined) {
+    const record = message['toolAutoApproval'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof record !== 'object' ||
+      record === null ||
+      ['botSlug', 'sessionId', 'callId', 'toolName', 'template', 'reason'].some(
+        (key) => typeof record[key] !== 'string' || record[key].length === 0,
+      ) ||
+      typeof record['input'] !== 'string' ||
+      (record['outcome'] !== 'allowed' && record['outcome'] !== 'rejected')
+    )
+      return false;
+  } else if (message['toolAutoApprovalPause'] !== undefined) {
+    const pause = message['toolAutoApprovalPause'] as Record<string, unknown> | null;
+    if (
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'system' ||
+      typeof pause !== 'object' ||
+      pause === null ||
+      ['botSlug', 'sessionId', 'template'].some(
+        (key) => typeof pause[key] !== 'string' || pause[key].length === 0,
+      ) ||
+      (pause['state'] !== 'paused' && pause['state'] !== 'resumed') ||
+      (pause['reason'] !== undefined &&
+        pause['reason'] !== 'consecutive' &&
+        pause['reason'] !== 'session')
+    )
+      return false;
   } else if (
     (message['author'] as ChannelMessageAuthor)?.kind === 'system' &&
     !(
@@ -731,6 +845,19 @@ export function isChannelMessage(value: unknown): value is ChannelMessage {
       typeof action['channelId'] !== 'string' ||
       typeof action['messageId'] !== 'string' ||
       typeof action['recipientBotSlug'] !== 'string' ||
+      (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
+    )
+      return false;
+  }
+  const botCreateAction = message['botCreateAction'];
+  if (botCreateAction !== undefined) {
+    if (typeof botCreateAction !== 'object' || botCreateAction === null) return false;
+    const action = botCreateAction as Record<string, unknown>;
+    if (
+      typeof action['botSlug'] !== 'string' ||
+      action['botSlug'].length === 0 ||
+      typeof action['displayName'] !== 'string' ||
+      action['displayName'].length === 0 ||
       (message['author'] as ChannelMessageAuthor)?.kind !== 'bot'
     )
       return false;

@@ -7,9 +7,10 @@ import {
   realpathSync,
   renameSync,
   rmSync,
+  statSync,
   type Dirent,
 } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 
 import { attachOperationalModule, type OperationalDatabaseOwner } from '../database/owner.js';
 import { deriveAvatarAppearance } from './avatar-snapshot.js';
@@ -36,7 +37,7 @@ import {
   readSharedPrimaryColor,
 } from './shared-presentation.js';
 import { isValidSlug } from './slug.js';
-import { recordMemoryOwnership } from './deletion.js';
+import { recordMemoryOwnership, transferMemoryOwnership } from './deletion.js';
 import type { HttpsFallback, MemoryCloneResult } from '../memory/clone.js';
 import { restoreBotHistory, writeBotFiles } from './bot-zip.js';
 import type { ZipEntry } from './zip-archive.js';
@@ -99,6 +100,8 @@ export interface PersonaBotRegistry {
   findByWorkspace(workspace: string): PersonaBotRecord | undefined;
   remove(slug: string, options?: RemovePersonaBotOptions): boolean;
   memoryDirFor(slug: string): string | undefined;
+  defaultMemoryDirFor(slug: string): string;
+  setMemoryDir(slug: string, memoryDir: string | undefined): UpdatePersonaBotResult;
   update(slug: string, patch: PersonaBotPatch): UpdatePersonaBotResult;
   setAppearance(slug: string, recipe: unknown): UpdatePersonaBotResult;
   setBanner(slug: string, banner: unknown): UpdatePersonaBotResult;
@@ -108,6 +111,7 @@ export interface PersonaBotRegistry {
   setComputerAccess(slug: string, enabled: boolean): UpdatePersonaBotResult;
   setBrowserAccess(slug: string, enabled: boolean): UpdatePersonaBotResult;
   setBrowserProfile(slug: string, profile: string): UpdatePersonaBotResult;
+  setApprovalTemplate(slug: string, template: string | undefined): UpdatePersonaBotResult;
   setStandingLimits(slug: string, limits: StandingLimits): UpdatePersonaBotResult;
   inheritModel(slug: string, expectedRevision: number): UpdatePersonaBotResult;
   applyModelPreset(slug: string, preset: ModelPreset): UpdatePersonaBotResult;
@@ -154,6 +158,14 @@ function normalizeWorkspacePath(path: string): string {
   }
 }
 
+function isDirectory(path: string): boolean {
+  try {
+    return statSync(path).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): PersonaBotRegistry {
   const rootDir = options.rootDir;
   const now = options.now ?? (() => new Date());
@@ -192,6 +204,7 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       'computerAccess',
       'browserAccess',
       'browserProfile',
+      'approvalTemplate',
     ] as const) {
       if (record[key] !== undefined) Object.assign(result, { [key]: record[key] });
     }
@@ -388,10 +401,26 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
     if (!isValidSlug(input.slug)) return { ok: false, reason: 'invalid-slug' };
     if (read(input.slug) !== undefined) return { ok: false, reason: 'duplicate' };
 
-    const memoryDir = input.memoryDir?.trim();
-    if (memoryDir !== undefined && memoryDir.length > 0 && !isAbsolute(memoryDir)) {
+    const explicitMemoryDir = input.memoryDir?.trim();
+    if (
+      explicitMemoryDir !== undefined &&
+      explicitMemoryDir.length > 0 &&
+      !isAbsolute(explicitMemoryDir)
+    ) {
       return { ok: false, reason: 'invalid-memory-dir' };
     }
+    const memoryLocation = input.memoryLocation?.trim();
+    let memoryDir = explicitMemoryDir;
+    if (memoryLocation !== undefined && memoryLocation.length > 0) {
+      if (explicitMemoryDir || !isAbsolute(memoryLocation)) {
+        return { ok: false, reason: 'invalid-memory-dir' };
+      }
+      const parent = resolve(memoryLocation);
+      if (!isDirectory(parent)) return { ok: false, reason: 'invalid-memory-dir' };
+      memoryDir = join(parent, input.slug);
+      if (existsSync(memoryDir)) return { ok: false, reason: 'invalid-memory-dir' };
+    }
+    const chosenLocation = memoryLocation !== undefined && memoryLocation.length > 0;
 
     const displayName = input.displayName.trim();
     const roles = normalizeRoles(input.roles);
@@ -419,9 +448,18 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
     const targetMemoryDir = memoryDirOf(record);
     const newMemoryDirectory = !existsSync(targetMemoryDir);
     const newBotDirectory = !existsSync(botDir(record.slug));
-    mkdirSync(targetMemoryDir, { recursive: true });
+    try {
+      mkdirSync(targetMemoryDir, { recursive: !chosenLocation });
+    } catch (cause) {
+      return {
+        ok: false,
+        reason: 'memory-unavailable',
+        detail: cause instanceof Error ? cause.message : String(cause),
+      };
+    }
     const seeded = seedStandingFiles(targetMemoryDir, {
       ...(input.persona === undefined ? {} : { soul: input.persona }),
+      ...(input.coreMemory === undefined ? {} : { coreMemory: input.coreMemory }),
       coreMemoryTemplate: sync,
     });
     const initialized = options.initializeMemory?.(targetMemoryDir) ?? { ok: true };
@@ -430,6 +468,7 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       if (newBotDirectory && !memoryDir) {
         rmSync(botDir(record.slug), { recursive: true, force: true });
       }
+      if (chosenLocation) rmSync(targetMemoryDir, { recursive: true, force: true });
       return {
         ok: false,
         reason: initialized.code === 'git-not-found' ? 'git-not-found' : 'memory-unavailable',
@@ -571,6 +610,19 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       if (record === undefined) return undefined;
       return memoryDirOf(record);
     },
+    defaultMemoryDirFor(slug) {
+      return defaultMemoryDir(slug);
+    },
+    setMemoryDir(slug, memoryDir) {
+      const record = active(slug);
+      if (record === undefined) return { ok: false, reason: 'not-found' };
+      const updated = { ...record };
+      if (memoryDir === undefined || memoryDir === defaultMemoryDir(slug)) delete updated.memoryDir;
+      else updated.memoryDir = memoryDir;
+      write(updated);
+      transferMemoryOwnership(port, slug, memoryDirOf(updated));
+      return { ok: true, record: updated };
+    },
     update(slug, patch) {
       const record = active(slug);
       if (record === undefined) return { ok: false, reason: 'not-found' };
@@ -694,6 +746,14 @@ export function createPersonaBotRegistry(options: PersonaBotRegistryOptions): Pe
       const trimmed = profile.trim();
       if (trimmed === '') delete record.browserProfile;
       else record.browserProfile = trimmed;
+      write(record);
+      return { ok: true, record };
+    },
+    setApprovalTemplate(slug, template) {
+      const record = active(slug);
+      if (record === undefined) return { ok: false, reason: 'not-found' };
+      if (template === undefined) delete record.approvalTemplate;
+      else record.approvalTemplate = template;
       write(record);
       return { ok: true, record };
     },

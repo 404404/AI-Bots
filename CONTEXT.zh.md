@@ -180,6 +180,18 @@ _避免使用_：Service Grant、Workspace、one-time approval、cwd inference
 Web Human 或当前获授权的外部审核人显式保存且可撤销的规则，针对一个 PersonaBot 角色与 Workspace Grant 范围，自动回答后续 DSH 审批请求。精确规则匹配原生工具名称与完整输入；全部不透明工具规则覆盖该范围内所有无法按路径核对的原生工具。外部审核人保存的规则依赖原配对及其当前批准／保存规则能力；失去授权会停用规则，不转移到后来的配对。每次命中仍产生独立的 DSH 审批决定与审计事件。
 _避免使用_：Workspace Grant、Provider Service Grant、sandbox preset、推断的命令相似性
 
+**Approval Template**：
+Profile 级、由 Human 用 Markdown 写成的审批规范，说明哪些工具审批可以允许、拒绝或交给 Human。每个 PersonaBot 选用一份或不选；选用、取消或修改正在使用的模板，必须由 Human 通过审批卡确认（ADR-0207）。
+_避免使用_：approval mode、auto mode、Tool Approval Rule
+
+**Approval Reviewer**：
+在 Approval Review Session 里按 PersonaBot 的 Approval Template 判断一条待审批请求的模型；上下文不含工具结果；结论是允许、拒绝并附理由，或交给 Human。它出错时一律退回 Human 审批卡。
+_避免使用_：classifier、guardian、auto-approver
+
+**Approval Review Session**：
+审批复核会话。Approval Reviewer 运行所在的全新、没有工具的 DSH Session，每次判断开一个、判断完就关闭。它不挂 Agent Preset、没有 Memory、只带复核提示词，不属于任何 PersonaBot，日志在 DeepSeek Harness 中仍可查看。会话列表默认隐藏它，Human 打开“显示审批复核会话”后才显示；这个开关与显示 Bot 会话分开。
+_避免使用_：reviewer Session、auto-approval Session、Orchestrator Session、Assignment Session
+
 **Assignment Access Preset**：
 Human 为单个 PersonaBot 选择、在新建 Assignment 时应用的权限预设。默认是 DSH workspace-write 与 ask；危险完全访问需要明确开启 DSH danger-full-access 与 never。所选模式固化在每个 Assignment 的权限快照中，仍须选择有效 Workspace Grant。
 _避免使用_：Workspace Grant、就地切换 Session 模式、Orchestrator 权限
@@ -229,11 +241,11 @@ Computer 位于何处的 profile 级选择：Local Computer（默认）或 Conta
 _避免使用_：device、driver、provider、backend
 
 **Local Computer**：
-由运行 DSH 的机器本身提供的 Computer——Human 自己的桌面，或带交互桌面的部署宿主。所有 PersonaBot 共享 Human 的真实桌面与登录态；除了这台机器本身，没有额外隔离。
+由运行 DSH 的机器本身提供的 Computer——Human 自己的 macOS 或 Windows 桌面，或 Linux 服务器的显示器（没有显示器时使用一个私有的虚拟桌面）。所有 PersonaBot 共享 Human 的真实桌面与登录态；除了这台机器本身，没有额外隔离。
 _避免使用_：host machine、personal computer、native target
 
 **Container Computer**：
-由 profile 的 Docker 桌面提供的 Computer；宿主没有交互桌面（headless VPS）时推荐使用。它是可选项：没有 Docker 的 profile 使用 Local Computer。
+由 profile 的 Docker 桌面提供的 Computer；Human 需要一个可观看、隔离的桌面时使用。它是可选项：没有 Docker 的 profile 使用 Local Computer。
 _避免使用_：sandbox、VM、docker computer
 
 **Computer Access**：
@@ -773,7 +785,7 @@ bot-mode sidebar 中展示 PersonaBot 与 Channel 及其 state 的列表。
 _避免使用_：dashboard、bot list
 
 **App Sidebar**：
-DSH 原生 client 的左侧栏；在 Bot mode 中呈现 Roster。采用此名称是为了与右侧的 Channel sidebar 区分。
+client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode（宽度 960 px 及以上）中由 BotHarness 换成自己的 Bot mode sidebar（DeepSeekBot 标题，其 Logo 悬停时变成「退出 Bot mode」；活动中心、Roster、Bot 设置），这一栏的宽度、拖动调整和收起仍由 DSH 负责；其他插件在左栏的内容在 Bot mode 期间隐藏（ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
 _避免使用_：left sidebar、main sidebar、navigation
 
 **Channel sidebar**：
@@ -791,6 +803,14 @@ _避免使用_：widget、card、tab、destination、Channel section
 **Channel sidebar tab**：
 桌面端 Channel sidebar 的一个图标标签页，包含一个或多个 Channel sidebar entry（会话 = Session + Bot Inbox；记忆 = 记忆文件 + 记忆演化）。没有指定已注册 tab 的 entry 自成一个 tab。有两个可见 entry 的 tab 分成上下两个区域。Human 在 + 视图菜单中排序和隐藏 tab，这些是浏览器本地的展示偏好。
 _避免使用_：view、page、rail item
+
+**Bot mode layout**：
+桌面端 Bot mode（宽度 960 px 及以上）中、App Sidebar 右侧的 `main` 区域：一个可停靠布局，Human 可以拖动、停靠、调整大小、关闭和重新打开 Dock panel。每个面板独立存在，面板之间不叠成 tab，Channel body 只有一个，布局按浏览器保存，并可恢复默认（提议中，ADR-0203）。窄布局与手机保持响应式布局。
+_避免使用_：workbench、panel layout、dock
+
+**Dock panel**：
+Bot mode layout 中注册的一个单元：稳定 id、标题、图标、scope（`channel` 面板跟随当前 Channel，`global` 面板不跟随）、默认位置与渲染器。Channel body 和每个 Channel sidebar entry 都是 Dock panel；App Sidebar 不是 Dock panel，留在布局之外；其他插件通过 `dockPanels` Service 注册更多面板。Dock panel 只是 UI Consumer；插件的数据存放在它自己的 Service 与 Provider 中（提议中，ADR-0203）。
+_避免使用_：widget、view、pane、DSH main panel
 
 **Channel settings**：
 当前 Channel 的运行配置 modal（频道设置）：PersonaBot DM 中是 Wake Policy、外部身份与外部连接器；群聊中是 Wake Policy、外部连接器与群管理。从 Channel sidebar 齿轮菜单和 Channel header 的「···」菜单打开，按 Channel settings section 组织。

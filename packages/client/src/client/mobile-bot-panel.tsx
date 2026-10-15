@@ -19,7 +19,7 @@ import { InboxIcon } from './inbox-icon.js';
 import { OnboardingLauncher } from './onboarding-checklist-view.js';
 import { BotIcon } from './bot-icon.js';
 import { hooked } from './ds/hooked.js';
-import { color, radius, space } from './ds/tokens.stylex.js';
+import { border, color, radius, space } from './ds/tokens.stylex.js';
 
 const TOUCH = '44px';
 const SAFE_LEFT = 'env(safe-area-inset-left)';
@@ -52,9 +52,9 @@ const styles = stylex.create({
     paddingTop: `max(${space.x2}, env(safe-area-inset-top))`,
     paddingInline: space.x3,
     paddingBottom: space.x2,
-    borderBottomWidth: '1px',
+    borderBottomWidth: border.hairline,
     borderBottomStyle: 'solid',
-    borderBottomColor: color.border,
+    borderBottomColor: color.divider,
   },
   pane: {
     flexGrow: 1,
@@ -71,9 +71,9 @@ const styles = stylex.create({
     paddingTop: space.x2,
     paddingInline: space.x3,
     paddingBottom: `max(${space.x2}, env(safe-area-inset-bottom))`,
-    borderTopWidth: '1px',
+    borderTopWidth: border.hairline,
     borderTopStyle: 'solid',
-    borderTopColor: color.border,
+    borderTopColor: color.divider,
   },
   touch: {
     display: 'inline-flex',
@@ -83,11 +83,11 @@ const styles = stylex.create({
     minHeight: TOUCH,
     minWidth: TOUCH,
     borderWidth: 0,
-    borderRadius: radius.row,
+    borderRadius: radius.sm,
     backgroundColor: 'transparent',
     color: color.fg,
     cursor: 'pointer',
-    outline: { default: 'none', ':focus-visible': `2px solid ${color.accent}` },
+    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
     outlineOffset: '-2px',
   },
   hover: {
@@ -158,6 +158,12 @@ export function MobileBotPanel(props: MobileBotPanelProps): ReactElement {
   return mobile ? <MobileNavigation {...props} /> : <BotPanel {...props} />;
 }
 
+let landingIntent = false;
+
+export function expectMobileConversation(): void {
+  landingIntent = true;
+}
+
 function MobileNavigation(props: MobileBotPanelProps): ReactElement {
   const { prefs, actions, companion, useBotModePrefs, t } = props;
   const botIcon = useBotModePrefs((value) => value.botIcon);
@@ -167,15 +173,19 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
     store.setMode('bot');
     const releaseShell = mountMobileBotShell(node);
     let selection = store.getSnapshot().selection;
+    const follow = (next: typeof selection): void => {
+      if (next === undefined || (!navigationIntent.current && !landingIntent)) return;
+      navigationIntent.current = false;
+      landingIntent = false;
+      setPage(next.kind === 'inbox' ? 'inbox' : 'conversation');
+    };
     const unsubscribe = store.subscribe(() => {
       const next = store.getSnapshot().selection;
       if (next === selection) return;
       selection = next;
-      if (next !== undefined && navigationIntent.current) {
-        navigationIntent.current = false;
-        setPage(next.kind === 'inbox' ? 'inbox' : 'conversation');
-      }
+      follow(next);
     });
+    follow(selection);
     return () => {
       unsubscribe();
       releaseShell();
@@ -245,6 +255,7 @@ function MobileNavigation(props: MobileBotPanelProps): ReactElement {
             actions={actions}
             companion={companion}
             useBotModePrefs={useBotModePrefs}
+            channelSidebar={props.channelSidebar}
             setSortMode={props.setSortMode}
             setSectionSortMode={props.setSectionSortMode}
             t={t}

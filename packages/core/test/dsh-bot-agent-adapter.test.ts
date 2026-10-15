@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createDshBotAgentAdapter } from '../src/runtime/dsh-bot-agent-adapter.js';
 import { BotScheduleError } from '../src/schedules/bot-schedules.js';
-import { requiresHumanToolApproval } from '../src/workspaces/grant-execution.js';
+import { isDshGovernedTool } from '../src/workspaces/grant-execution.js';
 import type { AssignmentAgentRun, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { FakeAgentHost, FAKE_BOT as BOT } from './dsh-agent-host-fixture.js';
 
@@ -45,6 +45,47 @@ const groupTools = {
   },
   leaveGroup: (): never => {
     throw new Error('unexpected Group leave');
+  },
+};
+
+const reportRun: OrchestratorAgentRun = {
+  sessionId: 'orchestrator-ada',
+  resume: false,
+  bot: BOT,
+  message: 'Write a long report',
+  inboundChannelId: 'dm-test',
+  inbox: '',
+  channels: {
+    ...groupTools,
+    contacts: () => ({ outputLimit: 12_000, contacts: [] }),
+    sendToBot: async () => {
+      throw new Error('unexpected Bot DM');
+    },
+    ignore: () => ({ sourceEventId: 'source-1', ignoredAt: BOT.createdAt, alreadyIgnored: false }),
+    read: () => [],
+    requestGrant: async () => {
+      throw new Error('unexpected Grant request');
+    },
+    send: async (input) => ({
+      id: 'bot-1',
+      at: BOT.createdAt,
+      author: { kind: 'bot', slug: BOT.slug },
+      body: input.body,
+    }),
+  },
+  assignments: {
+    create: () => {
+      throw new Error('unexpected Assignment');
+    },
+    request: () => {
+      throw new Error('unexpected Assignment request');
+    },
+    grants: () => [],
+    list: () => [],
+    inspect: () => undefined,
+    stop: async () => {
+      throw new Error('unexpected stop');
+    },
   },
 };
 
@@ -97,6 +138,69 @@ describe('DSH Bot Agent adapter', () => {
       else expect(cancelledTurn).not.toHaveBeenCalled();
       expect(completedTurn).not.toHaveBeenCalled();
       expect(report).not.toHaveBeenCalled();
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it.each([true, false])(
+    'ends a Human-stopped Orchestrator turn without an error (stopped: %s)',
+    async (stopped) => {
+      let started!: () => void;
+      let finish!: () => void;
+      const running = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const host = new FakeAgentHost(
+        stopped ? { kind: 'aborted', reason: { kind: 'user' } } : { kind: 'completed' },
+        {
+          onTurn: () =>
+            new Promise<void>((resolve) => {
+              finish = resolve;
+              started();
+            }),
+        },
+      );
+      const adapter = createDshBotAgentAdapter({
+        agents: host,
+        defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+        orchestratorCwd: () => '/memory/ada',
+        ensureWorkspace: () => undefined,
+      });
+      try {
+        expect(adapter.stopOrchestratorTurn?.(BOT.slug)).toBeUndefined();
+        const turn = adapter.runOrchestrator(reportRun);
+        await running;
+        if (stopped) {
+          expect(adapter.stopOrchestratorTurn?.(BOT.slug)).toBe('orchestrator-ada');
+          expect(host.cancelled).toEqual([
+            { sessionId: 'orchestrator-ada', reason: { kind: 'user' } },
+          ]);
+        }
+        finish();
+        await expect(turn).resolves.toBeUndefined();
+        expect(adapter.stopOrchestratorTurn?.(BOT.slug)).toBeUndefined();
+      } finally {
+        await adapter.close();
+      }
+    },
+  );
+
+  it('still fails an Orchestrator turn aborted by anything but a Human stop', async () => {
+    const host = new FakeAgentHost(
+      { kind: 'aborted', reason: { kind: 'user' } },
+      { onTurn: async () => undefined },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    try {
+      await expect(adapter.runOrchestrator(reportRun)).rejects.toThrow(
+        'Agent turn ended without completion: aborted',
+      );
     } finally {
       await adapter.close();
     }
@@ -1311,6 +1415,7 @@ describe('DSH Bot Agent adapter', () => {
       'channel_read_image',
       'list_bot_contacts',
       'group_create',
+      'bot_create',
       'group_invite_bot',
       'group_invite_respond',
       'group_join_request',
@@ -1334,7 +1439,7 @@ describe('DSH Bot Agent adapter', () => {
       host.scopes
         .get('orchestrator-ada')
         ?.tools.map((tool) => tool.name)
-        .filter((name) => name !== 'channel_attachment_open' && requiresHumanToolApproval(name)),
+        .filter((name) => isDshGovernedTool(name) && !name.startsWith('secret_')),
     ).toEqual([]);
     const channelSend = host.scopes
       .get('orchestrator-ada')
@@ -1429,7 +1534,9 @@ describe('DSH Bot Agent adapter', () => {
     expect(assignmentPrompt).toContain('Never access another workspace or the PersonaBot');
     expect(host.scopes.get('orchestrator-ada')?.restrictions).toEqual([]);
     expect(host.scopes.get('assignment-1')?.restrictions).toEqual([]);
-    expect(assignmentPrompt).toContain('unless the Human has saved a matching automatic rule');
+    expect(assignmentPrompt).toContain(
+      'when one asks DSH for permission, the approval card appears in the Bot Channel',
+    );
     expect(assignmentPrompt).toContain('expects_reply');
 
     await adapter.close();

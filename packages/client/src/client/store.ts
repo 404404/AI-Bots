@@ -109,6 +109,13 @@ export type ChannelAttachmentRef = { name: string; mime: string; size: number } 
   | { hash: string; fileId?: never }
 );
 
+export interface BotCreatePreview {
+  memoryFolder: string;
+  defaultLocation: boolean;
+  avatar?: string;
+  avatarError?: string;
+}
+
 export interface ToolApprovalRequestCard {
   sessionId: string;
   callId: string;
@@ -116,6 +123,7 @@ export interface ToolApprovalRequestCard {
   role: 'orchestrator' | 'assignment';
   cwd: string;
   input: string;
+  botCreatePreview?: BotCreatePreview;
 }
 
 export interface ToolApprovalDecision {
@@ -165,6 +173,11 @@ export interface SessionFailureCard {
   context?: string;
 }
 
+export interface ChannelReaction {
+  emoji: string;
+  actors: { kind: 'human' | 'bot'; id: string }[];
+}
+
 export interface ChannelMessage {
   onboardingWelcome?: { version: 1 };
   contentPurged?: true;
@@ -184,6 +197,7 @@ export interface ChannelMessage {
     state: 'unread' | 'read';
   }[];
   channelRevision?: number;
+  reactions?: ChannelReaction[];
   deliveries?: {
     botSlug: string;
     state:
@@ -196,6 +210,7 @@ export interface ChannelMessage {
       | 'ignored';
   }[];
   botDmAction?: { channelId: string; messageId: string; recipientBotSlug: string };
+  botCreateAction?: { botSlug: string; displayName: string };
   botChannelPost?: { channelId: string; messageId: string };
   botChannelPostPreview?: string | null;
   noticeOrigin?: { channelId: string };
@@ -208,6 +223,9 @@ export interface ChannelMessage {
     files: Array<{ path: string; added: number | null; deleted: number | null }>;
     moreFiles: number;
   };
+  turnStop?: { botName: string; humanName: string };
+  toolAutoApproval?: import('../../../core/src/channels/channel.js').ChannelToolAutoApproval;
+  toolAutoApprovalPause?: import('../../../core/src/channels/channel.js').ChannelToolAutoApprovalPause;
   memberDeparture?: {
     memberKind: 'bot' | 'human';
     memberId: string;
@@ -266,6 +284,7 @@ export interface HumanInboxFilters {
   botSlug: string | undefined;
   channelId: string | undefined;
   sort: HumanInboxSort;
+  snoozed?: boolean;
 }
 
 export interface HumanAttentionItem {
@@ -276,6 +295,7 @@ export interface HumanAttentionItem {
     | 'user-question'
     | 'private-input'
     | 'tool-approval'
+    | 'auto-rejection'
     | 'workspace-grant-request'
     | 'bot-dm-message'
     | 'assignment-waiting-human'
@@ -298,6 +318,14 @@ export interface HumanAttentionItem {
   isUnread?: boolean;
   responseMessageId?: string;
   responseSourceEventId?: string;
+  snoozedUntil?: string;
+  autoRejection?: {
+    sessionId: string;
+    toolName: string;
+    input: string;
+    template: string;
+    reason: string;
+  };
 }
 
 export interface HumanAttentionPage {
@@ -308,11 +336,13 @@ export interface HumanAttentionPage {
 export interface HumanInboxState {
   status: ClientStatus;
   unreadCount: number;
+  channelUnread: Readonly<Record<string, number>>;
   hasAction: boolean;
   category: HumanInboxCategory;
   botSlug: string | undefined;
   channelId: string | undefined;
   sort: HumanInboxSort;
+  snoozed: boolean;
   items: readonly HumanAttentionItem[];
   nextCursor: string | undefined;
   error: string | undefined;
@@ -355,6 +385,7 @@ export interface ConversationState {
   revision: number;
   timeline: ConversationTimeline;
   focusMessageId?: string | undefined;
+  unreadAfterMessageId?: string | undefined;
   error: string | undefined;
   sending: boolean;
 }
@@ -433,6 +464,7 @@ export interface SessionsState {
 export interface RosterState {
   pins: readonly string[];
   hidden: readonly string[];
+  muted: readonly string[];
   sections: readonly RosterSection[];
   topOrder: readonly TopOrderEntry[] | undefined;
   readOnly: boolean;
@@ -520,6 +552,7 @@ function initialConversation(): ConversationState {
     revision: 0,
     timeline: initialTimeline(),
     focusMessageId: undefined,
+    unreadAfterMessageId: undefined,
     error: undefined,
     sending: false,
   };
@@ -537,11 +570,13 @@ function initialHumanInbox(): HumanInboxState {
   return {
     status: 'idle',
     unreadCount: 0,
+    channelUnread: {},
     hasAction: false,
     category: 'action',
     botSlug: undefined,
     channelId: undefined,
     sort: 'oldest',
+    snoozed: false,
     items: [],
     nextCursor: undefined,
     error: undefined,
@@ -552,6 +587,7 @@ function initialRoster(): RosterState {
   return {
     pins: [],
     hidden: [],
+    muted: [],
     sections: [],
     topOrder: undefined,
     readOnly: false,
@@ -589,6 +625,7 @@ export function createStore(): ClientStore {
     if (channelId === undefined || conversation.status !== 'ready') return;
     rememberKeyed(conversations, channelId, {
       ...conversation,
+      unreadAfterMessageId: undefined,
       drafts: [],
       draftRevision: 0,
       draftNotice: undefined,

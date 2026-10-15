@@ -13,6 +13,7 @@ import {
 
 import type { BotModePrefs } from './bot-mode-prefs.js';
 import { WorkspaceGrantsEntry } from './workspace-grants-entry.js';
+import { AutoApprovalBadge, AutoApprovalSettingsEntry } from './approval-template-entry.js';
 import { ModelPresetProfile } from './model-preset-profile.js';
 import { modelPlanOf, rememberModelPlan, subscribeModelPlans } from './model-plan-store.js';
 import type { ModelPlanStateView, ModelPlanView } from './bridge.js';
@@ -72,7 +73,7 @@ import type { BotHarnessTranslate } from './locale.js';
 import type { BotAttentionItem } from './store.js';
 import { IconButton } from './ds/icon-button.js';
 import { GroupHeading } from './ds/group-heading.js';
-import { color, radius, space, text } from './ds/tokens.stylex.js';
+import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
   inboxGroup: { paddingBlock: space.x1 },
@@ -82,7 +83,7 @@ const styles = stylex.create({
     display: 'inline-flex',
     gap: space.x1,
     padding: space.x1,
-    borderRadius: radius.row,
+    borderRadius: radius.sm,
     backgroundColor: color.surface,
   },
   viewTab: {
@@ -90,20 +91,20 @@ const styles = stylex.create({
     paddingInline: space.x3,
     borderWidth: 0,
     borderStyle: 'none',
-    borderRadius: radius.control,
+    borderRadius: radius.sm,
     backgroundColor: 'transparent',
     color: { default: color.muted, ':hover': color.fg },
     fontFamily: 'inherit',
     fontSize: text.bodySize,
     lineHeight: text.bodyLine,
     cursor: 'pointer',
-    outline: { default: 'none', ':focus-visible': `2px solid ${color.accent}` },
+    outline: { default: 'none', ':focus-visible': `${border.focus} solid ${color.accent}` },
     outlineOffset: '-2px',
   },
   viewTabSelected: {
     backgroundColor: color.base,
     color: { default: color.fg, ':hover': color.fg },
-    fontWeight: text.heavy,
+    fontWeight: text.strong,
   },
 });
 
@@ -246,7 +247,7 @@ function BotInboxItemRow({
     else if (preview) setImageErrors((value) => ({ ...value, [attachmentId]: false }));
     try {
       const response = await fetch(
-        '/api/botharness/attachment?' +
+        './api/botharness/attachment?' +
           new URLSearchParams({
             slug: item.botSlug,
             sourceEventId: item.id,
@@ -1175,6 +1176,16 @@ export function createChannelSidebarBuiltins(
       order: 20,
       scope: 'personabot',
       component: WorkspaceGrantsWithPrefs,
+    },
+    {
+      id: 'auto-approval',
+      surface: 'settings',
+      icon: 'shield-check',
+      label: t('entry.autoApproval'),
+      order: 22,
+      scope: 'personabot',
+      component: AutoApprovalSettingsEntry,
+      badge: AutoApprovalBadge,
     },
     {
       id: 'model',

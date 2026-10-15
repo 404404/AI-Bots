@@ -70,6 +70,7 @@ async function setup(
         return { tabId: `${slug}-${profile || 'default'}`, url, title: 'Work' };
       },
       click: async (tabId: string) => ({ tabId, url: 'https://example.com', title: 'Work' }),
+      clickAt: async (tabId: string) => ({ tabId, url: 'https://example.com', title: 'Work' }),
       openWindow: async () => ({ tabId: `${slug}-default`, url: 'about:blank', title: 'Work' }),
       listTabs: async () =>
         [...profiles].map(([owner, profile]) => ({
@@ -161,6 +162,80 @@ async function setup(
 }
 
 describe('published Browser Host service', () => {
+  it('serves the live frame and paused Human input to native viewers through Host routes', async () => {
+    const h = await setup();
+    await h.open('bot-a');
+    const frame = await h.routes
+      .get('/api/browser/frame')!
+      .fetch(new Request('http://localhost/api/browser/frame?slug=bot-a'));
+    expect(await frame.json()).toMatchObject({
+      ok: true,
+      mode: 'snapshot',
+      mimeType: 'image/png',
+      data: 'frame',
+    });
+    const input = (body: unknown) =>
+      h.routes.get('/api/browser/input')!.fetch(
+        new Request('http://localhost/api/browser/input', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      );
+    const early = await input({ slug: 'bot-a', kind: 'click', x: 5, y: 6 });
+    expect(early.status).toBe(409);
+    expect(await early.json()).toEqual({ ok: false, error: 'Pause the bot before human input' });
+    await h.routes.get('/api/browser/takeover')!.fetch(
+      new Request('http://localhost/api/browser/takeover', {
+        method: 'POST',
+        body: JSON.stringify({ slug: 'bot-a', active: true }),
+      }),
+    );
+    expect(await (await input({ slug: 'bot-a', kind: 'click', x: 5, y: 6 })).json()).toEqual({
+      ok: true,
+      url: 'https://example.com',
+      title: 'Work',
+    });
+    expect((await input({ slug: 'bot-a', kind: 'dance' })).status).toBe(400);
+    expect(
+      (
+        await h.routes
+          .get('/api/browser/frame')!
+          .fetch(new Request('http://localhost/api/browser/frame'))
+      ).status,
+    ).toBe(400);
+  });
+  it('lists the Bot tools and runs one directly for the Owner through the Host route', async () => {
+    const h = await setup();
+    const listed = await h.routes
+      .get('/api/browser/tools')!
+      .fetch(new Request('http://localhost/api/browser/tools'));
+    const catalog = (await listed.json()) as { tools: { name: string; inputSchema: unknown }[] };
+    expect(catalog.tools.map((tool) => tool.name)).toContain('browser_open');
+    const run = (body: unknown) =>
+      h.routes.get('/api/browser/tool')!.fetch(
+        new Request('http://localhost/api/browser/tool', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      );
+    const opened = await run({
+      slug: 'bot-a',
+      tool: 'browser_open',
+      args: { url: 'https://example.com' },
+    });
+    expect(opened.status).toBe(200);
+    expect(await opened.json()).toMatchObject({ ok: true, content: [{ type: 'text' }] });
+    expect(h.opened).toHaveLength(1);
+    expect((await run({ tool: 'browser_open', args: {} })).status).toBe(400);
+    expect((await run({ slug: 'bot-a', tool: 'browser_open', args: [] })).status).toBe(400);
+    const unknown = await run({ slug: 'bot-a', tool: 'browser_teleport', args: {} });
+    expect(unknown.status).toBe(409);
+    expect(await unknown.json()).toMatchObject({
+      ok: false,
+      error: 'Unknown browser tool browser_teleport',
+    });
+  });
+
   it('fences another profile preview while retrying a failed global cleanup', async () => {
     const h = await setup(true);
     await h.open('bot-c');

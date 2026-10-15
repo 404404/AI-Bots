@@ -45,7 +45,7 @@ The real keyboard switch merges both used models into the single **deepseek-offi
 
 ## Reproduce and Human QA
 
-Launch an isolated Host with `scripts/dev-instance.mjs`. Set `BH_E2E_ORIGIN`, `BH_E2E_HOME`, `BH_E2E_SCREENSHOT`, and `BH_E2E_EXPECT_COORDINATED=1`, then run `node scripts/e2e-execution-usage.mjs`. An optional `BH_E2E_BOT_SLUG` rechecks an existing fixture without extra provider calls. The script waits for the Bot's public aggregate state to become idle, compares reported settlements within the same date window, and captures the default, expanded, empty and narrow presentations.
+Launch an isolated Host with the [verify-deepseekbot](../../.agents/skills/verify-deepseekbot/SKILL.md) skill and create a coordinated scenario with a machine-local model. The scripted journey for this page was removed because it targeted the earlier Profile usage UI.
 
 1. Open Bot mode, select the fixture above, and open its complete Profile.
 2. Default Token usage should show Last 7 days, daily usage, compact single-line model names and totals aligned with stacked bars, and a compact cache-ratio chart; input/cache/output details appear only on chart hover and Details stays collapsed.

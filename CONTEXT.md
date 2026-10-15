@@ -180,6 +180,18 @@ _Avoid_: Service Grant, Workspace, one-time approval, cwd inference
 A revocable instruction, explicitly saved by the Web Human or a currently authorized external reviewer, to answer future DSH approval requests automatically for one PersonaBot role and Workspace Grant scope. An exact rule matches the native tool name and complete input; an all-opaque rule covers every opaque native tool in that scope. An external reviewer's rule depends on that original pairing and current approval/rule-saving authority; loss disables it rather than transferring it to a later pairing. Each matching call still receives its own DSH approval decision and audit event.
 _Avoid_: Workspace Grant, provider Service Grant, sandbox preset, inferred command similarity
 
+**Approval Template**:
+A Profile-wide, Human-written Markdown policy that says which tool approvals may be allowed, refused or sent to the Human. A PersonaBot selects one or none; selecting, clearing or editing a template in use always needs a Human approval card (ADR-0207).
+_Avoid_: approval mode, auto mode, Tool Approval Rule
+
+**Approval Reviewer**:
+The model that applies a PersonaBot's Approval Template to one pending approval request inside an Approval Review Session, without tool results in its context, and answers allow, reject with a reason, or ask Human. Its failure always falls back to the Human card.
+_Avoid_: classifier, guardian, auto-approver
+
+**Approval Review Session**:
+The fresh, tool-less DSH Session the Approval Reviewer runs in, created for one decision and closed after it. It has no Agent Preset, no Memory and only the reviewer prompt, belongs to no PersonaBot, and its log stays readable in DeepSeek Harness. The session list hides it unless the Human shows Approval Review Sessions, which is separate from showing Bot Sessions.
+_Avoid_: reviewer Session, auto-approval Session, Orchestrator Session, Assignment Session
+
 **Assignment Access Preset**:
 A Human-controlled per-PersonaBot choice applied when a new Assignment is created. The default is DSH workspace-write with ask; dangerous full access is an explicit opt-in to DSH danger-full-access with never. The chosen mode is frozen in each Assignment's permission snapshot, while its selected Workspace Grant remains required.
 _Avoid_: Workspace Grant, in-place Session mode switch, Orchestrator permission
@@ -231,11 +243,11 @@ The profile-scoped choice of where a Computer lives: the Local Computer (default
 _Avoid_: device, driver, provider, backend
 
 **Local Computer**:
-The Computer served by the machine running DSH itself — the Human's own desktop, or the host of a deployment with an interactive desktop. Every PersonaBot shares the Human's real desktop and logins; it offers no isolation beyond that machine.
+The Computer served by the machine running DSH itself — the Human's own macOS or Windows desktop, or a Linux server's display (a private virtual one when the server has none). Every PersonaBot shares the Human's real desktop and logins; it offers no isolation beyond that machine.
 _Avoid_: host machine, personal computer, native target
 
 **Container Computer**:
-The Computer served by the profile's Docker desktop, recommended when the host has no interactive desktop (a headless VPS). It is optional: a profile without Docker uses the Local Computer.
+The Computer served by the profile's Docker desktop, for when the Human wants a watchable, isolated desktop. It is optional: a profile without Docker uses the Local Computer.
 _Avoid_: sandbox, VM, docker computer
 
 **Computer Access**:
@@ -775,7 +787,7 @@ The bot-mode sidebar list of PersonaBots and Channels, with their state.
 _Avoid_: dashboard, bot list
 
 **App Sidebar**:
-The DSH-native left column of the client, which in Bot mode renders the Roster. It is named to distinguish it from the Channel sidebar on the right.
+The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode (960 px and wider) BotHarness replaces it with its own Bot mode sidebar (a DeepSeekBot header whose logo turns into Exit Bot mode on hover, Activity Center, Roster, Bot settings) while DSH still sizes, resizes and collapses the column, and other plugins' left-column contributions are hidden until Bot mode ends (ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
 _Avoid_: left sidebar, main sidebar, navigation
 
 **Channel sidebar**:
@@ -793,6 +805,14 @@ _Avoid_: widget, card, tab, destination, Channel section
 **Channel sidebar tab**:
 One icon tab of the desktop Channel sidebar, grouping one or more Channel sidebar entries (Sessions holds Sessions and Bot Inbox; Memory holds Memory files and Memory evolution). An entry that names no registered tab is its own tab. A tab with two visible entries splits into top and bottom panes. The Human orders and hides tabs from the + Views menu; those are browser-local presentation preferences.
 _Avoid_: view, page, rail item
+
+**Bot mode layout**:
+The desktop Bot mode `main` area (960 px and wider), beside the App Sidebar: one dockable layout in which the Human drags, docks, resizes, closes and reopens Dock panels. Each panel stands alone: panels are never tabbed together, and there is exactly one Channel body, saved per browser with a Reset (proposed, ADR-0203). Narrow layouts and phones keep the responsive layout.
+_Avoid_: workbench, panel layout, dock
+
+**Dock panel**:
+One registered unit of the Bot mode layout: a stable id, title, icon, scope (`channel` panels follow the active Channel, `global` panels do not), a default position and a renderer. The Channel body and every Channel sidebar entry are Dock panels; the App Sidebar is not one and stays outside the layout; other plugins register more through the `dockPanels` Service. A Dock panel is a UI Consumer only; a plugin's data lives in its own Service and Provider (proposed, ADR-0203).
+_Avoid_: widget, view, pane, DSH main panel
 
 **Channel settings**:
 The per-Channel modal for operational configuration of the current Channel: in a PersonaBot DM its Wake Policy, external identities and External connectors; in a group its Wake Policy, External connectors and Group management. It opens from the Channel sidebar gear menu and the Channel header's "···" menu, and is organised into Channel settings sections.

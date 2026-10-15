@@ -4,19 +4,54 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
 
 concurrency:
-  group: verify-${{ github.event.pull_request.number || github.ref }}
+  group: verify-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'nightly' || 'run' }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  DOCS_SITE_TEST: apps/docs/test/changelog-public-surfaces.test.ts
+
 jobs:
-  verify:
-    name: lint, format, typecheck, test, build, docs
+  plan:
+    name: plan tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      tests: ${{ steps.plan.outputs.tests }}
+      docs-site: ${{ steps.plan.outputs.docs-site }}
+      related: ${{ steps.plan.outputs.related }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - name: List changed files
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --paginate
+          "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files?per_page=100"
+          --jq '.[] | [.status, .filename, (.previous_filename // "")] | @tsv'
+          > "$RUNNER_TEMP/changes.tsv"
+      - id: plan
+        run: node scripts/ci-plan.mjs --github --changes "$RUNNER_TEMP/changes.tsv"
+
+  static:
+    name: lint, format, typecheck, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -30,9 +65,102 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      # The docs site is built once, inside apps/docs/test/changelog-public-surfaces.test.ts,
-      # so the slides it embeds are synced first instead of running pnpm docs:build again.
-      - run: pnpm slides:build
-      - run: pnpm test
+      - run: pnpm --filter @botharness/mobile expo:doctor
       - run: pnpm build
       - run: git diff --exit-code -- packages/computer/lib/client.js packages/computer/lib/client.js.map packages/browser/lib/client.js packages/browser/lib/client.js.map
+
+  test-full:
+    name: test (shard ${{ matrix.shard }})
+    needs: plan
+    if: needs.plan.outputs.tests == 'full'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run --exclude "$DOCS_SITE_TEST" --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+
+  test-affected:
+    name: test (affected)
+    needs: plan
+    if: needs.plan.outputs.tests == 'affected'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - env:
+          RELATED: ${{ needs.plan.outputs.related }}
+        run: |
+          mapfile -t files < <(jq -r '.[]' <<<"$RELATED")
+          pnpm vitest related --run --passWithNoTests --exclude "$DOCS_SITE_TEST" "${files[@]}"
+
+  docs-site:
+    name: docs site build
+    needs: plan
+    if: needs.plan.outputs.docs-site == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm slides:build
+      - run: pnpm vitest run "$DOCS_SITE_TEST"
+
+  e2e-smoke:
+    name: e2e smoke (isolated DSH Host)
+    needs: plan
+    if: needs.plan.outputs.tests != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+        with:
+          run_install: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm e2e:smoke
+
+  verify:
+    name: lint, format, typecheck, test, build, docs
+    needs: [plan, static, test-full, test-affected, docs-site, e2e-smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -e '.plan.result == "success" and .static.result == "success"' <<<"$NEEDS"
+          jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")' <<<"$NEEDS"

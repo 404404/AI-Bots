@@ -20,6 +20,7 @@ import {
 } from '../../core/src/logs/log-db.js';
 import { createTransferTokens } from './transfer-tokens.js';
 import { createIdleWatcher } from './idle.js';
+import { DesktopViewError, createDesktopView, parseDesktopInput } from './desktop-view.js';
 import {
   COMPUTER_EXPORT_DIR_FIELD,
   COMPUTER_IDLE_STOP_FIELD,
@@ -27,13 +28,17 @@ import {
   type ComputerSettings,
 } from './settings.js';
 import { DEFAULT_DOCKER_CONFIG, createDockerComputerProvider } from './providers/docker.js';
-import type { ComputerRuntimeResult, ComputerRuntimeRunner } from './provider.js';
+import type { ComputerRuntimeResult, ComputerRuntimeRunner, ComputerStatus } from './provider.js';
 import { createComputerService, type ComputerService } from './service.js';
 import { createCuaDriver } from './tool/driver.js';
 import { createLocalCuaDriver } from './tool/local-driver.js';
+import { installSystemPackages } from '../../core/src/system/system-packages.js';
+import { detectTailnetAddress } from '../../core/src/devices/routes.js';
+import { createSelkiesWebRtc } from '../../core/src/http/selkies-webrtc.js';
+import { missingDesktopPackages } from './tool/local-display.js';
 import { createLocalComputerProvider } from './providers/local.js';
 import { computerTarget, createComputerTargetRuntime, type ComputerTarget } from './target.js';
-import { COMPUTER_GUIDANCE, LOCAL_COMPUTER_GUIDANCE } from './tool/catalog.js';
+import { COMPUTER_GUIDANCE, localComputerGuidance } from './tool/catalog.js';
 import type {} from '@deepseek-ai/cordis-plugin-loader';
 import {
   computerToolNames,
@@ -44,6 +49,8 @@ import {
 import { ViewerProxy, proxyUpgrade, viewerUpgradePaths } from './viewer.js';
 
 export const name = 'botharness-computer';
+
+const TAKEOVER_DRAIN_MS = 10_000;
 
 export interface ComputerConfig {
   target: ComputerTarget;
@@ -195,10 +202,12 @@ export function createProcessRunner(): ComputerRuntimeRunner {
   const spawnOnce = (
     argv: readonly string[],
     onChunk?: (chunk: string) => void,
+    extraEnv?: Readonly<Record<string, string>>,
   ): Promise<ComputerRuntimeResult> =>
     new Promise((resolve) => {
       const child = spawn(argv[0] ?? '', argv.slice(1), {
         stdio: ['ignore', 'pipe', 'pipe'],
+        ...(extraEnv === undefined ? {} : { env: { ...process.env, ...extraEnv } }),
       });
       let stdout = '';
       let stderr = '';
@@ -221,7 +230,7 @@ export function createProcessRunner(): ComputerRuntimeRunner {
     });
 
   return {
-    run: (argv) => spawnOnce(argv),
+    run: (argv, options) => spawnOnce(argv, undefined, options?.env),
     runStreaming: (argv, onChunk) => spawnOnce(argv, onChunk),
   };
 }
@@ -274,6 +283,15 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
   const service: ComputerService = createComputerService();
   let requestedLanguage = '';
   const runner = createProcessRunner();
+  let packageInstall:
+    | {
+        state: 'installing' | 'installed' | 'failed';
+        packages: readonly string[];
+        percent: number;
+        text: string;
+      }
+    | undefined;
+  let recheckingDesktop = false;
   let authorizationRevision = 0;
   const authorizationScope = (): string => `${target()}:${String(authorizationRevision)}`;
   const target = (): ComputerTarget => computerTarget(readLive(config.target));
@@ -316,6 +334,7 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
           hardenDesktop: config.hardenDesktop,
           language: config.language,
         },
+        tailnetAddress: () => detectTailnetAddress(),
       });
       const driver = createCuaDriver({
         runner,
@@ -345,12 +364,14 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
   ctx.effect(() => () => runtime.dispose(), 'botharness-computer: target runtime');
   const activity = { touch: (): void => undefined };
   const driver = runtime.driver;
+  const desktopView = createDesktopView({ driver, isRunning: () => runtime.isRunning() });
   const toolProvider = createComputerToolProvider({
     ctx,
     driver,
     isComputerRunning: () => runtime.isRunning(),
+    isPaused: () => desktopView.isPaused(),
     authorizationScope,
-    guidance: () => (target() === 'local' ? LOCAL_COMPUTER_GUIDANCE : COMPUTER_GUIDANCE),
+    guidance: () => (target() === 'local' ? localComputerGuidance() : COMPUTER_GUIDANCE),
     isAutoAllowed: () => effective().autoAllowActions,
     audit: (event) => diagnostics.record('computer-action', formatAudit(event)),
     note: (detail) => diagnostics.record('lifecycle', detail),
@@ -437,6 +458,15 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     return () => clearInterval(timer);
   }, 'botharness-computer: idle stop');
 
+  const webrtc = createSelkiesWebRtc({
+    label: 'computer',
+    upstream: () => (target() === 'container' ? service.upstream() : undefined),
+    container: () => (target() === 'container' ? service.webrtc() : undefined),
+    tailnetAddress: () => detectTailnetAddress(),
+    log: (detail) => diagnostics.record('container', detail),
+  });
+  ctx.effect(() => () => void webrtc.close(), 'botharness-computer: WebRTC calls');
+
   ctx.inject(['connection'], (connectionCtx) => {
     const connection = (connectionCtx as unknown as { connection: HostConnectionLike }).connection;
     const json = (value: unknown, status = 200): Response =>
@@ -444,6 +474,18 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
 
     const unknownToken = (kind: string): Response =>
       json({ ok: false, code: 'unknown-token', error: `unknown or expired ${kind} token` }, 404);
+
+    const webrtcRoute = {
+      path: '/api/computer/webrtc',
+      methods: ['GET'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (): Promise<Response> =>
+        json({ signaling: '/api/computer/webrtc/signaling', ...(await webrtc.status()) }),
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(webrtcRoute),
+      'botharness-computer: WebRTC status route',
+    );
 
     const statusRoute = {
       path: '/api/computer/status',
@@ -453,15 +495,34 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
         const probe = await service
           .probe()
           .catch((error: unknown) => ({ available: false, detail: String(error) }));
-        const status = await service
+        const status: ComputerStatus = await service
           .status()
           .catch((error: unknown) => ({ state: 'failed' as const, detail: String(error) }));
+        if (
+          status.missing !== undefined &&
+          packageInstall?.state !== 'installing' &&
+          !recheckingDesktop
+        ) {
+          const still = await missingDesktopPackages();
+          if (!still.includes('xvfb') && !still.includes('openbox')) {
+            recheckingDesktop = true;
+            log('desktop packages present; checking Local Computer again');
+            void service
+              .start()
+              .then(() => toolProvider.reconcileAll())
+              .catch(() => undefined)
+              .finally(() => {
+                recheckingDesktop = false;
+              });
+          }
+        }
         return json({
           target: target(),
           provider: service.providerName ?? null,
           probe,
           status,
           exportDir: target() === 'container' ? resolveExportDir() : '',
+          ...(packageInstall === undefined ? {} : { install: packageInstall }),
           ...(target() === 'container' ? { resolution: config.resolution } : {}),
         });
       },
@@ -521,6 +582,82 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
       'botharness-computer: start route',
     );
 
+    const installRoute = {
+      path: '/api/computer/install-packages',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const body = await request
+          .json()
+          .then((value) => value as { authorize?: unknown })
+          .catch(() => ({}) as { authorize?: unknown });
+        if (body.authorize !== true)
+          return json(
+            { ok: false, code: 'authorize-required', error: 'explicit authorization required' },
+            400,
+          );
+        if (packageInstall?.state === 'installing')
+          return json({ ok: false, code: 'install-running', error: 'an install is running' }, 409);
+        const missing = target() === 'local' ? (await service.status()).missing : undefined;
+        if (missing === undefined || missing.packages.length === 0)
+          return json({ ok: false, code: 'nothing-missing', error: 'nothing to install' }, 409);
+        if (missing.install === 'none')
+          return json(
+            {
+              ok: false,
+              code: 'needs-administrator',
+              error: `Run this on the Host: ${missing.command}`,
+            },
+            403,
+          );
+        const started = Date.now();
+        packageInstall = { state: 'installing', packages: missing.packages, percent: 0, text: '' };
+        log(
+          `install-packages start packages=${missing.packages.join(',')} access=${missing.install}`,
+        );
+        void installSystemPackages({
+          packages: missing.packages,
+          access: missing.install,
+          runner,
+          onProgress: (progress) => {
+            packageInstall = {
+              state: 'installing',
+              packages: missing.packages,
+              percent: progress.percent,
+              text: progress.text,
+            };
+          },
+        })
+          .then(async () => {
+            packageInstall = {
+              state: 'installed',
+              packages: missing.packages,
+              percent: 100,
+              text: '',
+            };
+            log(`install-packages done durationMs=${String(Date.now() - started)}`);
+            await service.start();
+            await toolProvider.reconcileAll();
+          })
+          .catch((error: unknown) => {
+            const detail = error instanceof Error ? error.message : String(error);
+            if (packageInstall?.state === 'installing')
+              packageInstall = {
+                state: 'failed',
+                packages: missing.packages,
+                percent: packageInstall.percent,
+                text: detail,
+              };
+            log(`install-packages refused detail=${detail}`);
+          });
+        return json({ ok: true, started: true });
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(installRoute),
+      'botharness-computer: install-packages route',
+    );
+
     const stopRoute = {
       path: '/api/computer/stop',
       methods: ['POST'] as const,
@@ -549,6 +686,149 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     connectionCtx.effect(
       () => connection.fetch.register(stopRoute),
       'botharness-computer: stop route',
+    );
+
+    const toolsRoute = {
+      path: '/api/computer/tools',
+      methods: ['GET'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (): Promise<Response> =>
+        json({ ok: true, tools: await toolProvider.directTools() }),
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(toolsRoute),
+      'botharness-computer: tool catalog route',
+    );
+
+    const toolRoute = {
+      path: '/api/computer/tool',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const body = (await parseBody(request)) as {
+          slug?: unknown;
+          tool?: unknown;
+          args?: unknown;
+        };
+        const slug = typeof body.slug === 'string' ? body.slug : '';
+        const tool = typeof body.tool === 'string' ? body.tool : '';
+        const args = body.args ?? {};
+        if (
+          slug === '' ||
+          tool === '' ||
+          typeof args !== 'object' ||
+          args === null ||
+          Array.isArray(args)
+        )
+          return json({ ok: false, error: 'slug, tool and an args object are required' }, 400);
+        diagnostics.record('lifecycle', `direct tool slug=${slug} tool=${tool}`);
+        try {
+          return json({
+            ok: true,
+            result: await toolProvider.runDirect(slug, tool, args as Record<string, unknown>),
+          });
+        } catch (error) {
+          return json(
+            { ok: false, error: error instanceof Error ? error.message : String(error) },
+            409,
+          );
+        }
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(toolRoute),
+      'botharness-computer: direct tool route',
+    );
+
+    const desktopRefusal = (error: unknown): Response => {
+      if (error instanceof DesktopViewError)
+        return json(
+          { ok: false, code: error.code, error: error.message },
+          error.code === 'not-running' || error.code === 'not-paused' ? 409 : 502,
+        );
+      return json({ ok: false, code: 'capture-failed', error: String(error) }, 502);
+    };
+
+    const frameRoute = {
+      path: '/api/computer/frame',
+      methods: ['GET'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const raw = new URL(request.url).searchParams.get('after');
+        const after = raw === null || raw === '' ? undefined : Number(raw);
+        if (after !== undefined && !Number.isSafeInteger(after))
+          return json({ ok: false, code: 'invalid-after', error: 'after must be an integer' }, 400);
+        try {
+          const frame = await desktopView.next(after, request.signal);
+          if (frame === undefined) return new Response(null, { status: 204 });
+          activity.touch();
+          return json({ ok: true, target: target(), paused: desktopView.isPaused(), ...frame });
+        } catch (error) {
+          return desktopRefusal(error);
+        }
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(frameRoute),
+      'botharness-computer: desktop frame route',
+    );
+
+    const takeoverRoute = {
+      path: '/api/computer/takeover',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const body = await parseBody(request);
+        if (typeof body['active'] !== 'boolean')
+          return json({ ok: false, code: 'invalid-input', error: 'active must be a boolean' }, 400);
+        if (body['active'] && !runtime.isRunning())
+          return json(
+            { ok: false, code: 'not-running', error: 'The Computer is not running.' },
+            409,
+          );
+        const paused = desktopView.setPaused(body['active']);
+        if (paused) await toolProvider.drain(TAKEOVER_DRAIN_MS);
+        activity.touch();
+        diagnostics.record('computer-action', `viewer takeover ${paused ? 'on' : 'off'}`);
+        return json({ ok: true, paused });
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(takeoverRoute),
+      'botharness-computer: desktop takeover route',
+    );
+
+    const inputRoute = {
+      path: '/api/computer/input',
+      methods: ['POST'] as const,
+      requestBody: 'buffered' as const,
+      fetch: async (request: Request): Promise<Response> => {
+        const input = parseDesktopInput(await parseBody(request));
+        if (input === undefined)
+          return json(
+            {
+              ok: false,
+              code: 'invalid-input',
+              error: 'input must be a click, scroll, type or key action',
+            },
+            400,
+          );
+        diagnostics.record(
+          'computer-action',
+          `viewer input kind=${input.kind}${input.kind === 'type' ? ` chars=${String(input.text.length)}` : ''}`,
+        );
+        try {
+          await desktopView.input(input, request.signal);
+          activity.touch();
+          return json({ ok: true });
+        } catch (error) {
+          return desktopRefusal(error);
+        }
+      },
+    };
+    connectionCtx.effect(
+      () => connection.fetch.register(inputRoute),
+      'botharness-computer: desktop input route',
     );
 
     const parseBody = async (request: Request): Promise<Record<string, unknown>> => {
@@ -976,6 +1256,26 @@ export function apply(ctx: Context, config: ComputerRuntimeConfig): void {
     );
 
     if (webServer.registerUpgrade !== undefined) {
+      ctx.effect(
+        () =>
+          webServer.registerUpgrade?.({
+            path: '/api/computer/webrtc/signaling',
+            handler: (request, socket, head) => {
+              const rejection = connection.requestRejection({
+                headers: new Headers(request.headers as Record<string, string>),
+              });
+              if (rejection !== undefined) {
+                socket.destroy();
+                return;
+              }
+              watcher.touch();
+              const timer = setInterval(() => watcher.touch(), 60_000);
+              socket.once('close', () => clearInterval(timer));
+              void webrtc.signal(request, socket, head);
+            },
+          }) ?? (() => undefined),
+        'botharness-computer: WebRTC signaling',
+      );
       for (const socketPath of viewerUpgradePaths(VIEWER_PREFIX)) {
         ctx.effect(
           () =>

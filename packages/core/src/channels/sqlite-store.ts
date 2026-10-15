@@ -48,6 +48,9 @@ import {
   isChannelRecord,
   isGroupAvatar,
   isValidChannelId,
+  isReactionEmoji,
+  MAX_ACTOR_REACTIONS_PER_MESSAGE,
+  type ChannelReaction,
   type LocalHumanIdentity,
   type ChannelMessage,
   type ChannelRecord,
@@ -58,6 +61,7 @@ import {
 } from './channel.js';
 import {
   ChannelMentionTargetError,
+  ChannelReactionLimitError,
   ChannelReplyTargetError,
   prepareChannelMessageQuery,
   type ChannelStore,
@@ -210,6 +214,7 @@ function rawMessage(message: ChannelMessage): ChannelMessage {
   delete result.noticeOrigin;
   delete result.deliveries;
   delete result.humanReceipts;
+  delete result.reactions;
   delete result.channelRevision;
   return result;
 }
@@ -363,6 +368,49 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         });
   };
 
+  let reactionTable = false;
+  const channelReactions = (
+    channelId: string,
+    messageId?: string,
+  ): Map<string, ChannelReaction[]> => {
+    reactionTable ||= database.read(
+      (db) =>
+        db
+          .prepare(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'channel_reactions'",
+          )
+          .get() !== undefined,
+    );
+    if (!reactionTable) return new Map();
+    const rows = database.read((db) =>
+      db
+        .prepare(
+          `SELECT r.message_id, r.emoji, r.actor_kind, r.actor_id,
+                  (SELECT MIN(f.reacted_at) FROM channel_reactions f
+                    WHERE f.channel_id = r.channel_id AND f.message_id = r.message_id
+                      AND f.emoji = r.emoji) AS first_at
+             FROM channel_reactions r
+            WHERE r.channel_id = ?${messageId === undefined ? '' : ' AND r.message_id = ?'}
+            ORDER BY r.message_id, first_at, r.emoji, r.reacted_at, r.actor_kind, r.actor_id`,
+        )
+        .all(...(messageId === undefined ? [channelId] : [channelId, messageId])),
+    ) as unknown as Array<{
+      message_id: string;
+      emoji: string;
+      actor_kind: 'human' | 'bot';
+      actor_id: string;
+    }>;
+    const result = new Map<string, ChannelReaction[]>();
+    for (const row of rows) {
+      let reactions = result.get(row.message_id);
+      if (reactions === undefined) result.set(row.message_id, (reactions = []));
+      let reaction = reactions.find((item) => item.emoji === row.emoji);
+      if (reaction === undefined) reactions.push((reaction = { emoji: row.emoji, actors: [] }));
+      reaction.actors.push({ kind: row.actor_kind, id: row.actor_id });
+    }
+    return result;
+  };
+
   const humanIdentity = (): LocalHumanIdentity => {
     const row = database.read((db) =>
       db
@@ -416,6 +464,63 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     ) as { nickname: string } | undefined;
     return row?.nickname ?? null;
   };
+  const setReaction = (
+    id: string,
+    actorKind: 'human' | 'bot',
+    actorId: string,
+    messageId: string,
+    emoji: string,
+    active: boolean,
+  ): ChannelReaction[] | undefined => {
+    if (!isReactionEmoji(emoji)) return undefined;
+    const row = database.read((db) =>
+      db
+        .prepare(`
+        SELECT e.payload_json, e.body FROM channel_placements p
+        JOIN source_events e ON e.source_event_id = p.source_event_id
+        WHERE p.channel_id = ? AND p.message_id = ?
+      `)
+        .get(id, messageId),
+    ) as { payload_json: string; body: string } | undefined;
+    const message =
+      row === undefined ? undefined : parseMessage(row.payload_json, row.body, messageId);
+    if (message === undefined || message.author.kind === 'system' || isChannelNotice(message))
+      return undefined;
+    if (active) {
+      const held = database.read((db) =>
+        db
+          .prepare(
+            `SELECT COUNT(*) AS count FROM channel_reactions
+                WHERE channel_id = ? AND message_id = ? AND actor_kind = ? AND actor_id = ? AND emoji <> ?`,
+          )
+          .get(id, messageId, actorKind, actorId, emoji),
+      ) as { count: number };
+      if (held.count >= MAX_ACTOR_REACTIONS_PER_MESSAGE) throw new ChannelReactionLimitError();
+    }
+    database.transaction(
+      (db) => {
+        if (active)
+          db.prepare(`
+          INSERT INTO channel_reactions (channel_id, message_id, actor_kind, actor_id, emoji, reacted_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+          ON CONFLICT DO NOTHING
+        `).run(id, messageId, actorKind, actorId, emoji, now().toISOString());
+        else
+          db.prepare(`
+          DELETE FROM channel_reactions
+           WHERE channel_id = ? AND message_id = ? AND actor_kind = ? AND actor_id = ? AND emoji = ?
+        `).run(id, messageId, actorKind, actorId, emoji);
+      },
+      ['channel'],
+    );
+    const reactions = channelReactions(id, messageId).get(messageId) ?? [];
+    try {
+      options.onReactionChanged?.(id, messageId, reactions);
+    } catch (error) {
+      options.warn?.('Reaction notification failed: ' + String(error));
+    }
+    return reactions;
+  };
   const participates = (id: string): boolean => {
     const channel = readRecord(id);
     if (channel === undefined || channel.deletedAt !== undefined) return false;
@@ -467,12 +572,14 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         .all(id),
     ) as unknown as PlacementRow[];
     const members = humanMembers(id);
+    const reactionsById = channelReactions(id);
     return rows.flatMap((row) => {
       const original = parseMessage(row.payload_json, row.body, row.message_id);
       if (original === undefined) return [];
       const message = attachmentMigration.project(row.source_event_id, original);
       const deliveries = admissionStatuses(row.source_event_id);
       const humanReceipts = humanReceiptsFor(message, row.revision, members);
+      const reactions = reactionsById.get(row.message_id);
       return [
         {
           ...message,
@@ -480,6 +587,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
           channelRevision: row.revision,
           ...(deliveries === undefined ? {} : { deliveries }),
           ...(humanReceipts === undefined ? {} : { humanReceipts }),
+          ...(reactions === undefined ? {} : { reactions }),
         },
       ];
     });
@@ -760,16 +868,21 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
               origin.sessionId,
               durable.author.slug,
             );
-          const botAlreadyAdmitted = (targetSlug: string, rootId: string): boolean =>
+          const botAlreadyAdmitted = (
+            targetSlug: string,
+            rootId: string,
+            fromBotSlug?: string,
+          ): boolean =>
             db
               .prepare(`
               SELECT 1 FROM inbox_admissions a
               JOIN source_events e ON e.source_event_id = a.source_event_id
               WHERE a.bot_slug = ? AND e.source_kind = 'bot-message'
                 AND json_extract(e.payload_json, '$.botCausation.rootSourceEventId') = ?
+                AND (? IS NULL OR (e.bot_slug = ? AND a.reason != 'group-ordinary'))
               LIMIT 1
             `)
-              .get(targetSlug, rootId) !== undefined;
+              .get(targetSlug, rootId, fromBotSlug ?? null, fromBotSlug ?? null) !== undefined;
           const candidateRecipients =
             durable.privateInputResolution !== undefined
               ? []
@@ -781,6 +894,11 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
                         ...mentions.map((item) => item.botSlug),
                         ...(channel.type === 'group' && grantRequester(durable, previous)
                           ? [grantRequester(durable, previous)!]
+                          : []),
+                        ...(channel.type === 'group' &&
+                        durable.toolAutoApprovalOverride !== undefined &&
+                        channel.members.includes(durable.toolAutoApprovalOverride.botSlug)
+                          ? [durable.toolAutoApprovalOverride.botSlug]
                           : []),
                       ]),
                     ].map((botSlug) => ({
@@ -795,7 +913,11 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
                       .filter(
                         (targetSlug) =>
                           targetSlug !== senderSlug &&
-                          !botAlreadyAdmitted(targetSlug, durable.botCausation!.rootSourceEventId),
+                          !botAlreadyAdmitted(
+                            targetSlug,
+                            durable.botCausation!.rootSourceEventId,
+                            senderSlug,
+                          ),
                       )
                       .map((botSlug) => ({ botSlug, reason: 'group-mention' }))
                   : botDm &&
@@ -2008,6 +2130,57 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       }
       return committed;
     },
+    appendBotCreateAction(input) {
+      const cause = causeChannel(input.causeSourceEventId, input.botSlug, '');
+      const channel =
+        (cause === 'target' ? undefined : cause) ?? readRecord(dmChannelId(input.botSlug));
+      if (channel === undefined) return undefined;
+      const message: ChannelMessage = {
+        id: `bot-create-action-${randomUUID()}`,
+        at: now().toISOString(),
+        author: { kind: 'bot', slug: input.botSlug },
+        body: '',
+        botCreateAction: { botSlug: input.created.botSlug, displayName: input.created.displayName },
+      };
+      const revision = allMessages(channel.id).length + 1;
+      const sourceEventId = randomUUID();
+      database.transaction(
+        (db) => {
+          db.prepare(`
+            INSERT INTO source_events (
+              source_event_id, source_kind, bot_slug, channel_id, message_id,
+              body, created_at, payload_json
+            ) VALUES (?, 'self-record', ?, ?, ?, '', ?, ?)
+          `).run(
+            sourceEventId,
+            input.botSlug,
+            channel.id,
+            message.id,
+            message.at,
+            JSON.stringify({
+              ...JSON.parse(eventPayload(message)),
+              causeSourceEventId: input.causeSourceEventId,
+            }),
+          );
+          db.prepare(`
+            INSERT INTO channel_placements (channel_id, revision, source_event_id, message_id)
+            VALUES (?, ?, ?, ?)
+          `).run(channel.id, revision, sourceEventId, message.id);
+          db.prepare(`
+            INSERT INTO inbox_admissions
+              (source_event_id, bot_slug, reason, attempt_state, handled_at)
+            VALUES (?, ?, 'bot-action', 'handled', ?)
+          `).run(sourceEventId, input.botSlug, message.at);
+        },
+        ['source-event', 'channel', 'bot-inbox'],
+      );
+      try {
+        options.onCommitted?.({ channelId: channel.id, message, revision });
+      } catch (error) {
+        options.warn?.(`Channel post-commit notification failed: ${String(error)}`);
+      }
+      return message;
+    },
     deleteGroup(channelId) {
       const channel = readRecord(channelId);
       if (channel?.type !== 'group') throw new Error('Group Channel not found');
@@ -2289,6 +2462,16 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       }
       return position;
     },
+    setHumanReaction(id, messageId, emoji, active) {
+      if (!participates(id)) return undefined;
+      return setReaction(id, 'human', LOCAL_HUMAN_ID, messageId, emoji, active);
+    },
+    setBotReaction(id, botSlug, messageId, emoji, active) {
+      const channel = readRecord(id);
+      if (channel === undefined || channel.deletedAt !== undefined) return undefined;
+      if (!channel.members.includes(botSlug)) return undefined;
+      return setReaction(id, 'bot', botSlug, messageId, emoji, active);
+    },
     async appendMessage(id, message, origin) {
       const result = append(id, message, false, undefined, origin);
       return result?.status === 'appended' ? result.message : undefined;
@@ -2350,6 +2533,10 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         }
       }
       if (query.orderBy === 'time') where.push('julianday(e.created_at) IS NOT NULL');
+      if (query.visibleFrom !== undefined) {
+        where.push('p.revision >= ?');
+        values.push(query.visibleFrom);
+      }
       if (query.text !== undefined && query.text.length > 0) {
         where.push('instr(botharness_unicode_lower(e.body), ?) > 0');
         values.push(query.text);
@@ -2390,12 +2577,14 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
           .all(...values, query.limit + 1);
       }) as unknown as PlacementRow[];
       const members = humanMembers(id);
+      const reactionsById = channelReactions(id);
       const selected = rows.slice(0, query.limit).flatMap((row) => {
         const original = parseMessage(row.payload_json, row.body, row.message_id);
         if (original === undefined) return [];
         const message = attachmentMigration.project(row.source_event_id, original);
         const deliveries = admissionStatuses(row.source_event_id);
         const humanReceipts = humanReceiptsFor(message, row.revision, members);
+        const reactions = reactionsById.get(row.message_id);
         return [
           {
             ...message,
@@ -2403,6 +2592,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
             channelRevision: row.revision,
             ...(deliveries === undefined ? {} : { deliveries }),
             ...(humanReceipts === undefined ? {} : { humanReceipts }),
+            ...(reactions === undefined ? {} : { reactions }),
           },
         ];
       });
@@ -2455,6 +2645,16 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
             ...page,
             entries: page.entries.map((message) => project(messages, message)),
           };
+    },
+    searchHumanMessages(id, request) {
+      const channel = readRecord(id);
+      if (channel === undefined) return undefined;
+      const member = humanMembers(id).find((entry) => entry.human_id === LOCAL_HUMAN_ID);
+      if (channel.type === 'group' && member === undefined) return undefined;
+      return this.queryMessages(id, {
+        ...request,
+        visibleFrom: member?.visible_from_revision ?? 0,
+      });
     },
     readHumanTimeline(id, request) {
       const channel = readRecord(id);

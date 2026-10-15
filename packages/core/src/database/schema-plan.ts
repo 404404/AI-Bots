@@ -2172,6 +2172,127 @@ const SECRET_MCP_ENABLEMENT_MIGRATION: SchemaMigration = {
   },
 };
 
+const DEVICE_PAIRING_MIGRATION: SchemaMigration = {
+  generation: 91,
+  module: 'device-pairing',
+  description: 'Record the Host identity and paired devices for the device gateway (ADR-0199)',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE device_pairing_host (
+        singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+        host_id TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+      CREATE TABLE paired_devices (
+        device_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        secret_hash TEXT NOT NULL,
+        public_key TEXT,
+        paired_at TEXT NOT NULL,
+        last_seen_at TEXT,
+        revoked_at TEXT
+      );
+    `);
+  },
+};
+
+const PUSH_DELIVERY_MIGRATION: SchemaMigration = {
+  generation: 92,
+  module: 'push',
+  description:
+    'Record push tokens, notification kinds and sent Human Inbox items per paired device',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE push_devices (
+        device_id TEXT PRIMARY KEY,
+        token TEXT NOT NULL,
+        platform TEXT NOT NULL CHECK (platform IN ('ios', 'android')),
+        locale TEXT,
+        preferences_json TEXT NOT NULL,
+        registered_at TEXT NOT NULL,
+        badge INTEGER
+      );
+      CREATE INDEX push_devices_token ON push_devices (token);
+      CREATE TABLE push_sent (
+        device_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        sent_at TEXT NOT NULL,
+        PRIMARY KEY (device_id, item_id)
+      );
+    `);
+  },
+};
+
+const HUMAN_INBOX_SNOOZE_MIGRATION: SchemaMigration = {
+  generation: 93,
+  module: 'human-attention',
+  description: 'Let the Human snooze a Human Inbox item until a later time',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE human_inbox_snoozes (
+        human_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        source_key TEXT NOT NULL,
+        until TEXT NOT NULL,
+        snoozed_at TEXT NOT NULL,
+        PRIMARY KEY (human_id, item_id, source_key)
+      );
+    `);
+  },
+};
+
+const CHANNEL_REACTION_MIGRATION: SchemaMigration = {
+  generation: 94,
+  module: 'messaging',
+  description: 'Record emoji reactions on Channel messages',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE channel_reactions (
+        channel_id TEXT NOT NULL REFERENCES channel_records(channel_id) ON DELETE CASCADE,
+        message_id TEXT NOT NULL,
+        actor_kind TEXT NOT NULL CHECK (actor_kind IN ('human', 'bot')),
+        actor_id TEXT NOT NULL,
+        emoji TEXT NOT NULL,
+        reacted_at TEXT NOT NULL,
+        PRIMARY KEY (channel_id, message_id, actor_kind, actor_id, emoji)
+      );
+    `);
+  },
+};
+
+const SECRET_CLI_TOOL_RULE_MIGRATION: SchemaMigration = {
+  generation: 95,
+  module: 'tool-approval-rules',
+  description: 'Allow secret_cli always-allow rules per program, account and variable names',
+  migrate(database) {
+    database.exec(`
+      CREATE TABLE tool_approval_rules_next (
+        id TEXT PRIMARY KEY,
+        bot_slug TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('orchestrator', 'assignment')),
+        scope_key TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('exact', 'all-opaque', 'secret-cli')),
+        tool_name TEXT NOT NULL,
+        input TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        active INTEGER NOT NULL CHECK (active IN (0, 1)),
+        revoked_at TEXT,
+        external_creator TEXT
+      );
+      INSERT INTO tool_approval_rules_next
+        (id, bot_slug, role, scope_key, kind, tool_name, input, created_at, active, revoked_at,
+         external_creator)
+      SELECT id, bot_slug, role, scope_key, kind, tool_name, input, created_at, active, revoked_at,
+             external_creator
+        FROM tool_approval_rules;
+      DROP TABLE tool_approval_rules;
+      ALTER TABLE tool_approval_rules_next RENAME TO tool_approval_rules;
+      CREATE INDEX tool_approval_rules_lookup
+        ON tool_approval_rules (bot_slug, role, scope_key, active, revoked_at);
+    `);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2262,4 +2383,9 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SECRET_MCP_SERVER_MIGRATION,
   PROACTIVE_POST_LIMIT_MIGRATION,
   SECRET_MCP_ENABLEMENT_MIGRATION,
+  DEVICE_PAIRING_MIGRATION,
+  PUSH_DELIVERY_MIGRATION,
+  HUMAN_INBOX_SNOOZE_MIGRATION,
+  CHANNEL_REACTION_MIGRATION,
+  SECRET_CLI_TOOL_RULE_MIGRATION,
 ]);
