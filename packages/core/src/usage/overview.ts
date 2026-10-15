@@ -7,6 +7,7 @@ export interface UsageOverviewBuckets {
   cacheReadTokens: number | null;
   cacheWriteTokens: number | null;
   totalTokens: number | null;
+  partial: boolean;
 }
 export interface UsageOverviewResult {
   period: UsageOverviewPeriod;
@@ -27,23 +28,33 @@ function dayOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 const columns = [
-  ['input_tokens', 'unknown_input', 'inputTokens'],
-  ['output_tokens', 'unknown_output', 'outputTokens'],
-  ['cache_read_tokens', 'unknown_cache_read', 'cacheReadTokens'],
-  ['cache_write_tokens', 'unknown_cache_write', 'cacheWriteTokens'],
-  ['total_tokens', 'unknown_total', 'totalTokens'],
-]
-  .map(
+  ...[
+    ['input_tokens', 'unknown_input', 'inputTokens'],
+    ['output_tokens', 'unknown_output', 'outputTokens'],
+    ['cache_read_tokens', 'unknown_cache_read', 'cacheReadTokens'],
+    ['cache_write_tokens', 'unknown_cache_write', 'cacheWriteTokens'],
+    [
+      'CASE WHEN unknown_total > 0 THEN MAX(total_tokens, input_tokens + output_tokens + cache_read_tokens + cache_write_tokens) ELSE total_tokens END',
+      'unknown_total',
+      'totalTokens',
+    ],
+  ].map(
     ([value, unknown, alias]) =>
-      `CASE WHEN SUM(${unknown}) > 0 THEN NULL ELSE COALESCE(SUM(${value}), 0) END AS ${alias}`,
-  )
-  .join(', ');
+      `CASE WHEN COALESCE(SUM(${value}), 0) = 0 AND SUM(${unknown}) > 0 THEN NULL ELSE COALESCE(SUM(${value}), 0) END AS ${alias}`,
+  ),
+  'COALESCE(SUM(unknown_total), 0) > 0 AS partial',
+].join(', ');
+type Row = Omit<UsageOverviewBuckets, 'partial'> & { partial: number };
+function bucketsOf<T extends Row>(row: T): Omit<T, 'partial'> & { partial: boolean } {
+  return { ...row, partial: row.partial > 0 };
+}
 const empty: UsageOverviewBuckets = {
   inputTokens: 0,
   outputTokens: 0,
   cacheReadTokens: 0,
   cacheWriteTokens: 0,
   totalTokens: 0,
+  partial: false,
 };
 export function queryOverviewUsage(
   db: DatabaseSync,
@@ -61,19 +72,23 @@ export function queryOverviewUsage(
     date.setDate(date.getDate() + 1);
   } while (days.at(-1) !== end);
   const start = days[0]!;
-  const totals = db
-    .prepare(`SELECT ${columns} FROM usage_daily WHERE day >= ? AND day <= ?`)
-    .get(start, end) as unknown as UsageOverviewBuckets;
+  const totals = bucketsOf(
+    db
+      .prepare(`SELECT ${columns} FROM usage_daily WHERE day >= ? AND day <= ?`)
+      .get(start, end) as unknown as Row,
+  );
   const daily = db
     .prepare(
       `SELECT day, ${columns} FROM usage_daily WHERE day >= ? AND day <= ? GROUP BY day ORDER BY day`,
     )
-    .all(start, end) as unknown as UsageOverviewResult['days'];
+    .all(start, end)
+    .map((row) => bucketsOf(row as unknown as Row & { day: string }));
   const bots = db
     .prepare(
       `SELECT bot_slug AS slug, ${columns} FROM usage_daily WHERE day >= ? AND day <= ? AND bot_slug > ? GROUP BY bot_slug ORDER BY bot_slug LIMIT 21`,
     )
-    .all(start, end, after ?? '') as unknown as UsageOverviewResult['bots'];
+    .all(start, end, after ?? '')
+    .map((row) => bucketsOf(row as unknown as Row & { slug: string }));
   return {
     period,
     start,

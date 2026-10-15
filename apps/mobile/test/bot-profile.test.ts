@@ -7,9 +7,13 @@ import {
   loadMemoryFiles,
   memoryEntries,
 } from '../src/host/bot-profile';
+import { parseProfileActivity, weekGlance } from '../src/host/bot-activity';
 import { createHostClient } from '../src/host/client';
 import { FakeHost } from './fake-host';
+import hostWire from './fixtures/host-wire.json';
 import profileWire from './fixtures/profile-wire.json';
+
+const recordedActivity = hostWire.rpc.profileActivity[0]!.body.result.value;
 
 const ROUTE = 'https://studio.tailnet-example.ts.net';
 
@@ -85,6 +89,7 @@ describe('Bot profile', () => {
       memory: { status: 'ready', value: { files: [] } },
       routines: { status: 'ready', value: [] },
       files: { status: 'ready', value: [] },
+      activity: { status: 'ready', value: parseProfileActivity(recordedActivity) },
     });
     expect(fake.calls[0]).toEqual({
       method: 'channelDm',
@@ -157,5 +162,29 @@ describe('Bot profile', () => {
       method: 'memoryFile',
       args: { channelId: dm, path: 'gone.md' },
     });
+  });
+
+  it('reads the last week of activity through the DM, and keeps the profile when it fails', async () => {
+    const fake = host();
+    const profile = await loadBotProfile(client(fake), { slug, dmChannelId: dm });
+    expect(fake.calls).toContainEqual({
+      method: 'profileActivity',
+      args: { channelId: dm, weeks: 1 },
+    });
+    expect(profile.activity.status).toBe('ready');
+    const glance = weekGlance(parseProfileActivity(recordedActivity));
+    expect(glance.days.at(-1)).toBe(recordedActivity.today);
+    expect(glance.total).toEqual({ status: 'ready', total: 207_439 });
+    expect(glance.tokens.at(-1)).toBe(207_439);
+    expect(glance.activity.at(-1)).toBe(4);
+    expect(glance.quiet).toBe(false);
+
+    fake.methods.set('profileActivity', () => {
+      throw new Error('Unknown PersonaBot');
+    });
+    const failed = await loadBotProfile(client(fake), { slug, dmChannelId: dm });
+    expect(failed.activity).toEqual({ status: 'failed', error: 'Unknown PersonaBot' });
+    expect(failed.identity.status).toBe('ready');
+    expect(failed.routines.status).toBe('ready');
   });
 });

@@ -19,6 +19,8 @@ vi.mock('../src/ui/shell/icons', () => ({
 }));
 
 import type { BotProfile } from '../src/host/bot-profile';
+import { shiftDay, today as localToday, trailingDays } from '../src/host/usage-days';
+import type { ProfileActivity } from '../src/host/wire';
 import type { RosterBot } from '../src/host/client';
 import { BotProfileSheet } from '../src/ui/chat/bot-profile';
 import { t } from '../src/ui/strings';
@@ -54,6 +56,29 @@ const bot: RosterBot = {
   paused: false,
 };
 
+const today = trailingDays(localToday(), 1)[0]!;
+const week: ProfileActivity = {
+  weeks: 1,
+  today,
+  events: [{ day: today, reason: 'human-dm', count: 4 }],
+  memoryCommits: [{ day: shiftDay(today, -2), count: 2 }],
+  tokens: [],
+  modelUsageRows: [
+    {
+      day: today,
+      purpose: 'orchestrator',
+      provider: 'opencode-go',
+      model: 'deepseek-v4',
+      inputTokens: 300_000,
+      outputTokens: 12_000,
+      cacheReadTokens: 8000,
+      cacheWriteTokens: 0,
+      totalTokens: 320_000,
+    },
+  ],
+  modelUsageStatus: 'ready',
+};
+
 const full: BotProfile = {
   identity: { status: 'ready', value: profileWire.rpc.memoryFile['SOUL.md'].file.body },
   memory: {
@@ -67,6 +92,7 @@ const full: BotProfile = {
     status: 'ready',
     value: profileWire.rpc.grants.grants.filter((grant) => !('revokedAt' in grant)),
   },
+  activity: { status: 'ready', value: week },
 };
 
 const empty: BotProfile = {
@@ -74,9 +100,18 @@ const empty: BotProfile = {
   memory: { status: 'ready', value: { files: [] } },
   routines: { status: 'ready', value: [] },
   files: { status: 'ready', value: [] },
+  activity: {
+    status: 'ready',
+    value: { ...week, events: [], memoryCommits: [], tokens: [], modelUsageRows: [] },
+  },
 };
 
-const actions = () => ({ onMessage: vi.fn(), onNotifications: vi.fn(), onOpenMemory: vi.fn() });
+const actions = () => ({
+  onMessage: vi.fn(),
+  onNotifications: vi.fn(),
+  onOpenMemory: vi.fn(),
+  onOpenActivity: vi.fn(),
+});
 const button = (view: HTMLElement, label: string) =>
   view.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
 const headers = (view: HTMLElement) =>
@@ -94,6 +129,7 @@ describe('Bot profile sheet', () => {
     );
     expect(headers(view)).toEqual([
       bot.displayName,
+      t.profileSection.activity,
       t.profileSection.identity,
       t.profileSection.memory,
       t.profileSection.routines,
@@ -181,7 +217,7 @@ describe('Bot profile sheet', () => {
     const view = await render(
       <BotProfileSheet bot={bot} channels={[]} load={async () => full} actions={handlers} />,
     );
-    const memory = [...view.querySelectorAll('section')][1]!;
+    const memory = [...view.querySelectorAll('section')][2]!;
     expect(
       [...memory.querySelectorAll('button')].map((node) => node.getAttribute('aria-label')),
     ).toEqual([
@@ -197,5 +233,49 @@ describe('Bot profile sheet', () => {
       [{ kind: 'folder', name: 'notes', path: 'notes', count: 1 }],
       [{ kind: 'file', name: 'MEMORY.md', path: 'MEMORY.md' }],
     ]);
+  });
+
+  it('shows the last 7 days and opens the Activity screen', async () => {
+    const handlers = actions();
+    const view = await render(
+      <BotProfileSheet bot={bot} channels={[]} load={async () => full} actions={handlers} />,
+    );
+    const glance = view.querySelector<HTMLButtonElement>(
+      `button[aria-label^="${t.activityHeading}"]`,
+    )!;
+    expect(glance.textContent).toContain(t.activityTokens('320K'));
+    expect(glance.textContent).toContain(t.activityCount(6));
+    expect(glance.querySelectorAll('[role="image"]')).toHaveLength(2);
+    expect(glance.textContent).not.toContain(t.activityQuiet);
+    await act(async () => glance.click());
+    expect(handlers.onOpenActivity).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a quiet week for a Bot with no activity, and Try again when the call fails', async () => {
+    const quiet = await render(
+      <BotProfileSheet bot={bot} channels={[]} load={async () => empty} actions={actions()} />,
+    );
+    expect(quiet.textContent).toContain(t.activityTokens('0'));
+    expect(quiet.textContent).toContain(t.activityQuiet);
+    act(() => root?.unmount());
+
+    let attempt = 0;
+    const failed = await render(
+      <BotProfileSheet
+        bot={bot}
+        channels={[]}
+        load={async () =>
+          (attempt += 1) === 1
+            ? { ...full, activity: { status: 'failed', error: 'Unknown PersonaBot' } }
+            : full
+        }
+        actions={actions()}
+      />,
+    );
+    expect(failed.textContent).toContain(`${t.profileFailed} Unknown PersonaBot`);
+    expect(failed.textContent).toContain('Morning digest');
+    await act(async () => button(failed, t.tryAgain)!.click());
+    await act(async () => undefined);
+    expect(failed.textContent).toContain(t.activityTokens('320K'));
   });
 });

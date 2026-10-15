@@ -8,7 +8,7 @@ import {
   type ProfilePart,
 } from '../../host/bot-profile';
 import type { RosterBot, RosterChannel } from '../../host/client';
-import type { ScheduleTrigger } from '../../host/wire';
+import type { ProfileActivity, ScheduleTrigger } from '../../host/wire';
 import { BotAvatar } from '../bot-avatar';
 import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
@@ -16,6 +16,7 @@ import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
 import { ActivityIcon, BrowserIcon, ComputerIcon, MessageIcon } from '../shell/icons';
 import { t } from '../strings';
+import { ActivityGlance } from './activity-glance';
 import { botStateTone } from './bot-tone';
 import { MemoryEntryRow } from './memory-browser';
 
@@ -24,13 +25,21 @@ const ICON = 22;
 const COLLAPSED_LINES = 6;
 const LONG_TEXT = 280;
 
-export const PROFILE_SECTIONS = ['identity', 'memory', 'routines', 'channels', 'files'] as const;
+export const PROFILE_SECTIONS = [
+  'activity',
+  'identity',
+  'memory',
+  'routines',
+  'channels',
+  'files',
+] as const;
 export type ProfileSection = (typeof PROFILE_SECTIONS)[number];
 
 type RowBody =
   | { kind: 'text'; label?: string; body: string }
   | { kind: 'item'; title: string; detail?: string }
   | { kind: 'entry'; entry: MemoryEntry }
+  | { kind: 'activity'; activity: ProfileActivity }
   | { kind: 'note'; text: string }
   | { kind: 'failed'; error: string }
   | { kind: 'loading' };
@@ -43,6 +52,7 @@ export interface BotProfileActions {
   onBrowser?(): void;
   onNotifications(): void;
   onOpenMemory(entry: MemoryEntry): void;
+  onOpenActivity(): void;
 }
 
 function frame(section: ProfileSection, bodies: RowBody[]): Row[] {
@@ -87,6 +97,14 @@ export function profileRows(
   channels: RosterChannel[],
 ): Record<ProfileSection, Row[]> {
   return {
+    activity: frame(
+      'activity',
+      profile?.activity === undefined
+        ? [{ kind: 'loading' }]
+        : profile.activity.status === 'failed'
+          ? [{ kind: 'failed', error: profile.activity.error }]
+          : [{ kind: 'activity', activity: profile.activity.value }],
+    ),
     identity: frame(
       'identity',
       partRows(profile?.identity, 'identity', (soul) =>
@@ -236,19 +254,25 @@ function ProfileHeader({
 }
 
 function ProfileRow({
+  bot,
   row,
   expanded,
   onToggle,
   onRetry,
   onOpenMemory,
+  onOpenActivity,
 }: {
+  bot: RosterBot;
   row: Row;
   expanded: boolean;
   onToggle(): void;
   onRetry(): void;
   onOpenMemory(entry: MemoryEntry): void;
+  onOpenActivity(): void;
 }) {
   const theme = useDesignTheme();
+  if (row.kind === 'activity')
+    return <ActivityGlance bot={bot} activity={row.activity} onOpen={onOpenActivity} />;
   if (row.kind === 'entry')
     return (
       <MemoryEntryRow entry={row.entry} first={row.first} last={row.last} onOpen={onOpenMemory} />
@@ -380,10 +404,12 @@ export function BotProfileSheet({
       )}
       renderItem={({ item }) => (
         <ProfileRow
+          bot={bot}
           row={item}
           expanded={expanded.has(item.key)}
           onRetry={read}
           onOpenMemory={actions.onOpenMemory}
+          onOpenActivity={actions.onOpenActivity}
           onToggle={() =>
             setExpanded((current) => {
               const next = new Set(current);

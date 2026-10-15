@@ -299,7 +299,16 @@ export interface OrchestratorAgentRun {
     senderPermissions?(sourceEventId: string): SenderPermissions;
     directory?(query: MessagingDirectoryQuery): MessagingDirectoryPage;
     targets?(): Promise<
-      Array<{ grantId: string; platform: string; accountName: string; targetName: string }>
+      Array<{
+        grantId: string;
+        bindingId: string;
+        accountRef: string;
+        platform: string;
+        accountName: string;
+        targetName: string;
+        conversationId: string;
+        canPost: true;
+      }>
     >;
     post?(grantId: string, requestId: string, text: string): ReturnType<OutboundMessaging['post']>;
     reachable?(
@@ -4305,12 +4314,22 @@ class BotRuntimeImplementation implements BotRuntime {
                 const snapshot = await this.#externalMessaging!.snapshot(bot.slug);
                 return snapshot.grants
                   .filter((g) => g.availability === 'available' && !g.revokedAt && g.canPost)
-                  .map((g) => ({
-                    grantId: g.id,
-                    platform: g.platform,
-                    accountName: g.accountName,
-                    targetName: g.targetName,
-                  }));
+                  .flatMap((g) =>
+                    g.postConversationId
+                      ? [
+                          {
+                            grantId: g.id,
+                            bindingId: g.bindingId,
+                            accountRef: g.accountRef,
+                            platform: g.platform,
+                            accountName: g.accountName,
+                            targetName: g.targetName,
+                            conversationId: g.postConversationId,
+                            canPost: true as const,
+                          },
+                        ]
+                      : [],
+                  );
               },
               post: (grantId, requestId, text) => {
                 turn.markSideEffect();

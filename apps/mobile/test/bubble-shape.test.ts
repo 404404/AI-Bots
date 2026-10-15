@@ -26,11 +26,11 @@ describe('bubbleShape', () => {
   });
 
   it('matches the last Bot bubble corner to the avatar beside it', () => {
-    expect(bubbleShape(false, { first: true, last: true }, true)).toMatchObject({
+    expect(bubbleShape(false, { first: true, last: true, avatar: true })).toMatchObject({
       borderTopLeftRadius: radius.lg,
       borderBottomLeftRadius: AVATAR_CORNER,
     });
-    expect(bubbleShape(false, { first: true, last: false }, true)).toMatchObject({
+    expect(bubbleShape(false, { first: true, last: false, avatar: true })).toMatchObject({
       borderBottomLeftRadius: radius.xs,
     });
   });

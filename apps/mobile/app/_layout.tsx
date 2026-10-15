@@ -40,6 +40,16 @@ export default function RootLayout() {
               }}
             />
             <Stack.Screen
+              name="group/[id]"
+              options={{
+                title: t.groupInfo,
+                headerShown: false,
+                presentation: 'formSheet',
+                sheetAllowedDetents: [0.75, 1],
+                sheetGrabberVisible: true,
+              }}
+            />
+            <Stack.Screen
               name="settings"
               options={{
                 title: t.settings,
@@ -52,6 +62,7 @@ export default function RootLayout() {
             <Stack.Screen name="pair" options={{ title: t.pairTitle, presentation: 'modal' }} />
             <Stack.Screen name="inbox/[id]" options={{ title: t.inbox }} />
             <Stack.Screen name="notifications" options={{ title: t.notifications }} />
+            <Stack.Screen name="usage" options={{ title: t.usage }} />
             <Stack.Screen name="app-icon" options={{ title: t.appIcon }} />
             <Stack.Screen
               name="browser/[slug]"
