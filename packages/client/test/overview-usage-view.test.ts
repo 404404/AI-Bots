@@ -45,6 +45,7 @@ function result(period: 'today' | 'week', total = 155): OverviewUsage {
     cacheReadTokens: 0,
     cacheWriteTokens: 0,
     totalTokens: total,
+    partial: false,
   };
   return {
     period,
@@ -181,6 +182,37 @@ it('drops a delayed Today refresh after changing range and surfaces unavailable 
     container.remove();
   }
 });
+it('marks a total that leaves out unreported usage as a lower bound', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const value = result('today');
+  value.totals.partial = true;
+  const call: BridgeCall = async () => ({ ok: true, value });
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  try {
+    await act(async () =>
+      root.render(
+        createElement(OverviewUsageView, {
+          actions: createActions(call, createStore()),
+          t: zhTranslate,
+        }),
+      ),
+    );
+    expect(container.querySelector('[data-usage-total]')?.textContent).toBe('155+');
+    expect(container.textContent).toContain(zhTranslate('overviewUsage.partial'));
+  } finally {
+    await act(async () => root.unmount());
+    container.remove();
+  }
+  await expect(
+    loadOverviewUsage(
+      async () => ({ ok: true, value: { ...value, totals: { ...value.totals, partial: 'yes' } } }),
+      'today',
+    ),
+  ).rejects.toThrow('invalid Overview usage');
+});
+
 it('preserves unknown totals and rejects malformed usage instead of reporting zero', async () => {
   const value = result('today');
   value.totals.totalTokens = null;
