@@ -449,9 +449,12 @@ export function Composer({
       onContentSizeChange={(event) => setContentHeight(event.nativeEvent.contentSize.height)}
       style={{
         flex: 1,
-        height: wraps
-          ? composerFieldHeight(contentHeight, theme.type.body.line, fieldPadding)
-          : lineHeight,
+        ...(wraps
+          ? {
+              minHeight: composerFieldHeight(contentHeight, theme.type.body.line, fieldPadding),
+              maxHeight: composerFieldHeight(Infinity, theme.type.body.line, fieldPadding),
+            }
+          : { height: lineHeight }),
         paddingVertical: fieldPadding,
         paddingHorizontal: stacked || leading === null ? space.x3 : 0,
         color: theme.color.fg,
