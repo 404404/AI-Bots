@@ -510,18 +510,19 @@ export function WorkspaceGrantsEntry({
   const [loading, setLoading] = useState(cached === undefined);
   const activeSlug = useRef<string | undefined>(undefined);
   const requestVersion = useRef(0);
-  const writableByDefault = async (grant: WorkspaceGrantView): Promise<WorkspaceGrantView> => {
-    if (botSlug === undefined || grant.orchestratorWrite === true) return grant;
-    const current = cachedWorkspace(actions, botSlug)?.grants ?? grants;
-    if (current.some((row) => row.id === grant.id && row.revokedAt === undefined)) return grant;
-    return actions.setWorkspaceGrantWrite(botSlug, grant.id, true);
-  };
   const showGrant = (grant: WorkspaceGrantView): void => {
     if (botSlug === undefined || activeSlug.current !== botSlug) return;
     const current = cachedWorkspace(actions, botSlug)?.grants ?? grants;
     const next = [...current.filter((row) => row.id !== grant.id), grant];
     rememberWorkspace(actions, botSlug, { grants: next });
     setGrants(next);
+  };
+  const writableByDefault = async (grant: WorkspaceGrantView): Promise<WorkspaceGrantView> => {
+    if (botSlug === undefined || grant.orchestratorWrite === true) return grant;
+    const current = cachedWorkspace(actions, botSlug)?.grants ?? grants;
+    if (current.some((row) => row.id === grant.id && row.revokedAt === undefined)) return grant;
+    showGrant(grant);
+    return actions.setWorkspaceGrantWrite(botSlug, grant.id, true);
   };
 
   const refresh = async (slug: string): Promise<void> => {

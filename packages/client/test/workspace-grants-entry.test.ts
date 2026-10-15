@@ -386,6 +386,76 @@ describe('Workspace Grant sidebar', () => {
       container.remove();
     }
   });
+  it('keeps a newly added folder listed when turning on write access fails', async () => {
+    Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+    const container = document.createElement('div');
+    document.body.append(container);
+    const root = createRoot(container);
+    const grant = {
+      id: 'manual-grant',
+      botSlug: 'manual-write',
+      workspaceId: 'manual',
+      workspacePath: '/tmp/manual',
+      workspaceTitle: 'manual folder',
+      createdAt: '2026-10-01T00:00:00.000Z',
+      orchestratorWrite: false,
+    };
+    const actions = {
+      listWorkspaceOptions: vi.fn(async () => []),
+      listWorkspaceGrants: vi.fn(async () => []),
+      memoryDirectory: vi.fn(async () => undefined),
+      listToolApprovalRules: vi.fn(async () => []),
+      assignmentAccess: vi.fn(async () => ({ mode: 'workspace-write' })),
+      authorizeWorkspacePath: vi.fn(async () => grant),
+      setWorkspaceGrantWrite: vi.fn(async () => {
+        throw new Error('Host rejected permission change');
+      }),
+    } as unknown as BridgeActions;
+    try {
+      await act(async () =>
+        root.render(
+          createElement(WorkspaceGrantsEntry, {
+            scope: 'personabot',
+            channelId: 'dm-manual-write',
+            botSlug: 'manual-write',
+            actions,
+            t: zhTranslate,
+            developerMode: true,
+          }),
+        ),
+      );
+      const input = container.querySelector<HTMLInputElement>(
+        `input[aria-label="${zhTranslate('grant.pathLabel')}"]`,
+      )!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(
+          input,
+          '/tmp/manual',
+        );
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      await act(async () =>
+        Array.from(container.querySelectorAll<HTMLButtonElement>('button'))
+          .find((button) => button.textContent === zhTranslate('grant.authorize'))!
+          .click(),
+      );
+      expect(actions.setWorkspaceGrantWrite).toHaveBeenCalledWith(
+        'manual-write',
+        'manual-grant',
+        true,
+      );
+      expect(container.textContent).toContain('manual folder');
+      expect(container.textContent).toContain('Host rejected permission change');
+      expect(
+        container.querySelector<HTMLInputElement>(
+          `input[aria-label="${zhTranslate('grant.orchestratorWrite')}: manual folder"]`,
+        )!.checked,
+      ).toBe(false);
+    } finally {
+      await act(async () => root.unmount());
+      container.remove();
+    }
+  });
   it('keeps write permission off until the Host confirms and preserves it when revocation fails', async () => {
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const container = document.createElement('div');
