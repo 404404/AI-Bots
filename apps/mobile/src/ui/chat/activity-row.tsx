@@ -44,7 +44,7 @@ export function ActivityRow({
         justifyContent: 'center',
         minHeight: theme.touch,
         paddingHorizontal: space.x6,
-        paddingVertical: space.x2,
+        paddingVertical: space.x3,
         gap: space.x1,
         backgroundColor: pressed ? theme.layer.sheet.pressed : 'transparent',
       })}
