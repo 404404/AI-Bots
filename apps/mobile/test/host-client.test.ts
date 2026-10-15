@@ -48,6 +48,52 @@ async function until(
 }
 
 describe('Host client', () => {
+  it('does not dispatch a queued operation after its client is stopped during admission', async () => {
+    const host = new FakeHost();
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    client = createHostClient({
+      routes: [ROUTE],
+      credential: host.credential,
+      carrier: {
+        ...host.carrier,
+        request: async (...args) => {
+          await gate;
+          return host.carrier.request(...args);
+        },
+      },
+    });
+    const pending = client.call('list');
+    client.stop();
+    release();
+    await expect(pending).rejects.toThrow('stopped');
+    expect(host.calls).toHaveLength(0);
+  });
+
+  it('requires protocol admission for a notification-created client that never starts live streams', async () => {
+    const host = new FakeHost();
+    host.compatibility = {
+      status: 200,
+      body: {
+        schemaVersion: 1,
+        protocol: { min: 2, max: 2 },
+        host: { version: '3.0.0', source: 'def123456', platform: 'darwin', arch: 'arm64' },
+        features: { push: true },
+      },
+    };
+    client = createHostClient({
+      routes: [ROUTE],
+      credential: host.credential,
+      carrier: host.carrier,
+    });
+    await expect(client.call('toolApprovalDecide', { decision: 'approve' })).rejects.toMatchObject({
+      code: 'protocol-incompatible',
+    });
+    expect(host.calls).toHaveLength(0);
+  });
+
   it('refuses a genuinely incompatible protocol before RPC and can retry after an explicit update', async () => {
     const host = new FakeHost();
     host.compatibility = {

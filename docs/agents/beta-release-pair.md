@@ -28,7 +28,7 @@ gateway at `/botharness-device/api/botharness/devices/compatibility`. No new cre
 database authority are introduced. The matching agent command is:
 
 ```sh
-deepseekbot device-compatibility --home <isolated-profile>
+deepseekbot device-compatibility --host <isolated-host-origin> --token-file <private-token-file>
 ```
 
 Schema 1 reports `{ protocol: { min, max }, host: { version, source, platform, arch },
@@ -130,6 +130,13 @@ reviewer-visible evidence. Required checks are `identity`, `fresh-install`, `upg
 `store-install`, `shared-binary-safety`, `quota`, `human-qa`, `distribution-approval`.
 Human QA and distribution approval must follow the qualification evidence. A changed artifact/source
 invalidates the old witnesses. Do not include tokens, personal tester addresses or workspace content.
+
+Both approvals also carry `reviewedEvidence`, obtained with
+`node scripts/release-combination.mjs --approval-digests pair.json`. First record Human QA with its
+digest after reviewing all non-approval evidence, baseline dispositions and install URLs. Then compute
+the digests again and record distribution approval, which also binds the Human QA witness. Changing
+any reviewed content invalidates approval even when timestamps and binaries remain unchanged.
+Computing a digest does not grant approval; only record the named Human's actual decision.
 
 Enumerate `stable`, `beta-1`, `beta-2` baselines once each with
 `{ kind, status, reason, evidenceUrl, mobileSha256, combination? }`. Status is `tested`, `blocked`, or

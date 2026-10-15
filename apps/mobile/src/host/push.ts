@@ -166,7 +166,8 @@ export function createHostPush(carrier: HostCarrier, timeoutMs = 10_000): HostPu
             headers: { authorization: `Device ${host.credential}` },
             signal: controller.signal,
           });
-          const info: unknown = JSON.parse(await probe.text());
+          const probeBody = await probe.text();
+          const info: unknown = probe.status === 404 ? undefined : JSON.parse(probeBody);
           if (probe.status === 401) {
             const code = record(info)['code'];
             if (

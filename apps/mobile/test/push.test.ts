@@ -318,6 +318,25 @@ describe('notification buttons', () => {
 });
 
 describe('push registration with a real Host gateway', () => {
+  it.each(['', 'Not Found'])(
+    'preserves legacy push when compatibility returns a non-JSON 404: %j',
+    async (body) => {
+      const requests: string[] = [];
+      const carrier = nodeCarrier();
+      const legacy = createHostPush({
+        ...carrier,
+        request: async (url) => {
+          requests.push(url);
+          return url.endsWith('/compatibility')
+            ? new Response(body, { status: 404 })
+            : new Response('{}');
+        },
+      });
+      await expect(legacy.test(host('a'))).resolves.toBeUndefined();
+      expect(requests.at(-1)).toBe('https://mac.tailnet.ts.net/botharness-device/push/test');
+    },
+  );
+
   it('does not register or test notifications when the Host explicitly lacks push support', async () => {
     const requests: string[] = [];
     const carrier = nodeCarrier();

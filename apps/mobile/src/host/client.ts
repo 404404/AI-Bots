@@ -263,11 +263,14 @@ export function createHostClient(options: HostClientOptions): HostClient {
   const liveListeners = new Set<(source: 'roster' | 'activity') => void>();
   let snapshot: HostSnapshot = { connection: { status: 'stopped', route } };
   let compatibility: Compatibility | undefined;
+  let admitted = false;
+  let admission: Promise<void> | undefined;
   let bots: PersonaBotSummary[] | undefined;
   let channels = new Map<string, ChannelListItem>();
   let states = new Map<string, WireBotActivity>();
   let arrangement: RosterArrangement | undefined;
   let running = false;
+  let stoppedByCaller = false;
   let everConnected = false;
   let attempt = 0;
   let generation = 0;
@@ -558,7 +561,6 @@ export function createHostClient(options: HostClientOptions): HostClient {
           compatibility = checked;
           throw new ProtocolIncompatible();
         }
-        await call('list', {}, candidate);
         route = candidate;
         compatibility = checked;
         return;
@@ -569,6 +571,38 @@ export function createHostClient(options: HostClientOptions): HostClient {
       }
     }
     throw failure instanceof Error ? failure : new Unreachable('The Host could not be reached.');
+  };
+
+  const admit = (refresh = false): Promise<void> => {
+    if (admission !== undefined) return admission;
+    if (admitted && !refresh)
+      return compatibility?.status === 'incompatible'
+        ? Promise.reject(new ProtocolIncompatible())
+        : Promise.resolve();
+    admitted = false;
+    admission = pickRoute()
+      .then(
+        () => {
+          admitted = true;
+          publish();
+        },
+        (error: unknown) => {
+          admitted = error instanceof ProtocolIncompatible;
+          throw error;
+        },
+      )
+      .finally(() => {
+        admission = undefined;
+      });
+    return admission;
+  };
+
+  const admitOperation = async (): Promise<void> => {
+    const current = generation;
+    if (stoppedByCaller) throw new Unreachable('The connection was stopped.');
+    await admit(!running && snapshot.connection.status === 'stopped');
+    if (stoppedByCaller || current !== generation)
+      throw new Unreachable('The connection was stopped.');
   };
 
   const openFollower = (follower: Follower): void => {
@@ -612,8 +646,9 @@ export function createHostClient(options: HostClientOptions): HostClient {
   };
 
   const connectOnce = async (current: number): Promise<void> => {
-    await pickRoute();
+    await admit(true);
     if (!running || current !== generation) return;
+    await call('list');
     const baselines = { roster: false, activity: false };
     let resolveReady: () => void = () => {};
     let rejectReady: (error: Error) => void = () => {};
@@ -716,6 +751,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
     everConnected = true;
     publish({ status: 'connected', route });
     await closed;
+    admitted = false;
   };
 
   const loop = async (current: number): Promise<void> => {
@@ -728,6 +764,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       } catch (error) {
         if (!running || current !== generation) return;
         socket?.close();
+        admitted = error instanceof ProtocolIncompatible;
         if (error instanceof CredentialRefused || error instanceof ProtocolIncompatible) {
           running = false;
           publish({ status: 'refused', route, code: error.code, reason: error.message });
@@ -757,6 +794,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
     },
     start() {
       if (running) return;
+      stoppedByCaller = false;
       running = true;
       generation += 1;
       publish(
@@ -768,6 +806,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
     },
     stop() {
       running = false;
+      stoppedByCaller = true;
       interruptFollowers('stopped');
       generation += 1;
       clearTimeout(retryTimer);
@@ -793,8 +832,8 @@ export function createHostClient(options: HostClientOptions): HostClient {
       else this.retryNow();
     },
     async call<T>(method: string, args: Record<string, unknown> = {}) {
-      if (compatibility?.status === 'incompatible') throw new ProtocolIncompatible();
       try {
+        await admitOperation();
         return await call<T>(method, args);
       } catch (error) {
         refusedBy(error);
@@ -802,8 +841,8 @@ export function createHostClient(options: HostClientOptions): HostClient {
       }
     },
     async api(path, init) {
-      if (compatibility?.status === 'incompatible') throw new ProtocolIncompatible();
       try {
+        await admitOperation();
         return await api(path, init);
       } catch (error) {
         refusedBy(error);
@@ -811,7 +850,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
       }
     },
     async upload(...args) {
-      if (compatibility?.status === 'incompatible') throw new ProtocolIncompatible();
+      await admitOperation();
       return upload(...args);
     },
     resource: (path) => ({ uri: absolute(path), headers: authorization }),

@@ -80,6 +80,39 @@ export function releaseCombinationId(record) {
   return sha256(JSON.stringify(identities(record)));
 }
 
+function ordered(value) {
+  if (Array.isArray(value)) return value.map(ordered);
+  if (value !== null && typeof value === 'object')
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, ordered(value[key])]),
+    );
+  return value;
+}
+
+export function releaseApprovalDigest(record, check) {
+  if (check !== 'human-qa' && check !== 'distribution-approval')
+    throw new Error('Invalid approval scope');
+  return sha256(
+    JSON.stringify(
+      ordered({
+        identities: identities(record),
+        mobileInstallUrl: record.mobile.installUrl,
+        computerInstallUrl: record.computer.installUrl,
+        evidence: record.evidence
+          .filter(
+            (entry) =>
+              entry.check !== 'distribution-approval' &&
+              (check === 'distribution-approval' || entry.check !== 'human-qa'),
+          )
+          .toSorted((left, right) => left.check.localeCompare(right.check)),
+        baselines: record.baselines.toSorted((left, right) => left.kind.localeCompare(right.kind)),
+      }),
+    ),
+  );
+}
+
 export function verifyReleaseCombination(record, { mobileFile, productDirectory }) {
   const id = releaseCombinationId(record);
   if (sha256(readFileSync(mobileFile)) !== record.mobile.sha256)
@@ -142,9 +175,14 @@ export function verifyReleaseCombination(record, { mobileFile, productDirectory 
   }
   for (const kind of ['stable', 'beta-1', 'beta-2'])
     if (!baselineKinds.has(kind)) blockers.push(`Missing baseline disposition: ${kind}`);
+  for (const approval of record.evidence.filter(
+    (entry) => entry.check === 'human-qa' || entry.check === 'distribution-approval',
+  ))
+    if (approval.reviewedEvidence !== releaseApprovalDigest(record, approval.check))
+      blockers.push(`Stale approval: ${approval.check}`);
   return {
     id,
-    identitiesMatch: true,
+    artifactChecksumsMatch: true,
     qualification: blockers.length ? 'blocked' : 'evidence-recorded',
     blockers,
   };
@@ -156,6 +194,18 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       process.argv.slice(2);
     if (mode === '--id' && file && !mobileFlag) {
       console.log(releaseCombinationId(JSON.parse(readFileSync(file, 'utf8'))));
+    } else if (mode === '--approval-digests' && file && !mobileFlag) {
+      const record = JSON.parse(readFileSync(file, 'utf8'));
+      console.log(
+        JSON.stringify(
+          {
+            'human-qa': releaseApprovalDigest(record, 'human-qa'),
+            'distribution-approval': releaseApprovalDigest(record, 'distribution-approval'),
+          },
+          null,
+          2,
+        ),
+      );
     } else if (
       mode === '--check' &&
       file &&
@@ -173,7 +223,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       process.exitCode = result.qualification === 'blocked' ? 2 : 0;
     } else {
       throw new Error(
-        'Usage: release-combination.mjs --id record.json OR --check record.json --mobile-artifact app.ipa --computer-artifacts packages-directory',
+        'Usage: release-combination.mjs --id record.json OR --approval-digests record.json OR --check record.json --mobile-artifact app.ipa --computer-artifacts packages-directory',
       );
     }
   } catch (error) {

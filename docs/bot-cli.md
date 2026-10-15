@@ -4,7 +4,7 @@
 
 ## Usage
 
-`deepseekbot device-compatibility [--home <dsh-home>]` reads the authenticated Host's
+`deepseekbot device-compatibility --host <host-origin> --token-file <private-file>` reads the authenticated Host's
 phone protocol range, installed version/source and optional push support. It takes no
 positional arguments, creates no pairing offer, and does not prove artifact qualification.
 See [Beta pair qualification](agents/beta-release-pair.md).

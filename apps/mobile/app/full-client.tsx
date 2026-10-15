@@ -77,7 +77,7 @@ export default function FullClientScreen() {
             </Text>
           </Pressable>
         </View>
-      ) : saved === undefined || route === '' ? (
+      ) : saved === undefined || route === '' || snapshot.connection.status !== 'connected' ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator />
         </View>

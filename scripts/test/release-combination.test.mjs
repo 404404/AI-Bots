@@ -4,7 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { productDsh, productImProvider } from '../product-artifacts.mjs';
-import { verifyReleaseCombination, releaseCombinationId } from '../release-combination.mjs';
+import {
+  verifyReleaseCombination,
+  releaseCombinationId,
+  releaseApprovalDigest,
+} from '../release-combination.mjs';
 
 const roots = [];
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
@@ -103,7 +107,24 @@ describe('exact Release Combination qualification', () => {
       evidenceUrl: 'https://github.com/BotHarness/DeepSeekBot/issues/1931',
       mobileSha256: record.mobile.sha256,
     }));
+    const approve = () => {
+      for (const check of ['human-qa', 'distribution-approval'])
+        record.evidence.find((entry) => entry.check === check).reviewedEvidence =
+          releaseApprovalDigest(record, check);
+    };
+    approve();
     expect(verifyReleaseCombination(record, files).qualification).toBe('evidence-recorded');
+    record.evidence.find((entry) => entry.check === 'dm-reply').url =
+      'https://github.com/BotHarness/DeepSeekBot/issues/1931#changed';
+    expect(verifyReleaseCombination(record, files).blockers).toContain('Stale approval: human-qa');
+    approve();
+    record.baselines[0].reason = 'Changed baseline audit';
+    expect(verifyReleaseCombination(record, files).blockers).toContain('Stale approval: human-qa');
+    approve();
+    record.mobile.installUrl = 'https://testflight.apple.com/join/changed';
+    expect(verifyReleaseCombination(record, files).blockers).toContain(
+      'Stale approval: distribution-approval',
+    );
     record.evidence.find((entry) => entry.check === 'dm-reply').at = '2026-10-16T11:00:00Z';
     expect(verifyReleaseCombination(record, files).blockers).toContain(
       'Human approval predates qualification evidence',
@@ -115,7 +136,7 @@ describe('exact Release Combination qualification', () => {
   it('checks actual phone bytes and the existing qualified npm set but cannot mistake a build for approval', () => {
     const { record, files } = fixture();
     const result = verifyReleaseCombination(record, files);
-    expect(result.identitiesMatch).toBe(true);
+    expect(result.artifactChecksumsMatch).toBe(true);
     expect(result.qualification).toBe('blocked');
     expect(result.blockers).toContain('Missing evidence: human-qa');
     expect(result.blockers).toContain('Missing evidence: store-install');
