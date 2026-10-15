@@ -25,18 +25,18 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Tapping a Host switches to it and closes the drawer. Tapping the backdrop or swiping left closes it.
   - It takes screen-reader focus when it opens and returns focus to the Host chip when it closes. With Reduce Motion on it appears without sliding.
   - Android uses the standard Material navigation drawer with the same contents.
-- **Tabs** are native (`NativeTabs`): **Chats** and **Activity**, plus the system search tab on iOS.
+- **Tabs** are native (`NativeTabs`): **Chats** and **Activity**. There is no search tab.
   - Activity carries a badge with the Human Inbox action count.
-  - The search tab (`role="search"`) comes last. iOS 26 draws it as a separate round glass button at the bottom right, beside the tab capsule.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
   - iOS draws the system tab bar with no background colour of ours: Liquid Glass on iOS 26 (a floating capsule above the home indicator, with the system's glass pill behind the selected tab), the translucent system bar before it. The selected tint is the resolved `fg`, passed as a plain colour so the bar re-tints when the scheme changes while the app is open. Minimize on scroll stays off.
   - Content scrolls under the bar. Each tab's list sets `contentInsetAdjustmentBehavior="automatic"`, so its last row clears the bar and the home indicator.
   - Android keeps two Material 3 tabs on `base`: like Slack, the selected tab is the foreground colour with a pill behind its icon (the Material indicator), and the others are muted.
-  - The web preview draws a floating translucent capsule with the two tabs, standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it, and a round search button beside it.
+  - The web preview draws a floating translucent capsule with the two tabs, standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it.
 - **Chats** shows the current Host:
   - The header has the Host chip on the left, and on the right a compose button and the Human's avatar.
     - Compose opens a native menu: **New PersonaBot** and **New Channel**. They open the app's create flow, or the full client where the app has none yet. Android has no compose button in the header; a Material FAB at the bottom right, above the tab bar, opens the same menu.
     - The avatar opens **Settings**. Until the Human has an avatar of their own it shows their initial on a neutral layer fill.
+  - A search field at the top of the list (see **Search**).
   - A row of shortcut cards: **Needs you** and **Working**, each an icon, a name and a count that filters the list when tapped. The filter applies across all Channel sections. **Unread** joins them once the Host reports unread counts.
   - One list of PersonaBot DMs and Channels together, grouped by the Host's **Channel sections** as on the desktop sidebar:
     - Sections come in the desktop's order. Ungrouped DMs and Channels sit between them in the desktop's top-level order.
@@ -45,8 +45,9 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
     - Changes made on the desktop show when the roster refreshes. Creating, renaming, reordering and moving Channels between sections stays on the desktop for now.
     - A Host with no sections shows one flat list by latest activity.
 - **Search** finds a PersonaBot or Channel on the current Host:
-  - On iOS the search tab opens with the field at the bottom, above the keyboard. Android has a search bar at the top of Chats.
-  - It matches PersonaBot display names and Channel titles on the device, and a result opens its chat. When nothing matches it says so. Message full-text search is not part of it.
+  - A search field sits at the top of the Chats list, above the shortcut cards, and scrolls away with the list. It is the same on iOS and Android.
+  - Typing filters the list in place by PersonaBot display name and Channel title, on the device; names that start with the query come first. The shortcut cards hide while a query is typed.
+  - A result opens its chat. When nothing matches it says so in one line. Message full-text search is not part of it.
 - **Activity** is the Human Inbox across all Hosts:
   - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
   - Section headers stick to the top while their items scroll and show the section's count.
