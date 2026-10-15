@@ -28,7 +28,6 @@ import { createHostClient } from '../../host/client';
 import { createHostGlances, liveGlance, type HostStatus } from '../../host/host-glance';
 import { hostSession, useHostSession, useHostSnapshot, useInbox } from '../../host/host-session';
 import { nativeCarrier } from '../../host/native-carrier';
-import { NeedsYouBadge } from '../chat/conversation-row';
 import { glassShadow, useDesignTheme } from '../design/theme';
 import { useMounted } from '../mounted';
 import { edge, motion, radius, scrim, space } from '../design/tokens';
@@ -42,7 +41,7 @@ import {
   settleOpen,
   type HostDrawerRow,
 } from './host-drawer-model';
-import { ActivityIcon, MoreIcon, PlusIcon } from './icons';
+import { ActivityIcon, MessageIcon, MoreIcon, NeedsYouIcon, PlusIcon } from './icons';
 
 export const hostDrawer = createHostDrawer({
   switchTo: (hostId) => hostSession.switchTo(hostId),
@@ -183,7 +182,7 @@ function HostTile({ name, current }: { name: string; current: boolean }) {
     <View
       style={{
         padding: space.x1,
-        borderRadius: radius.md + space.x2,
+        borderRadius: radius.lg,
         borderWidth: edge.focus,
         borderColor: current ? theme.color.fg : theme.layer.sheet.fill,
       }}
@@ -204,21 +203,40 @@ function HostTile({ name, current }: { name: string; current: boolean }) {
   );
 }
 
-function UnreadBadge({ count }: { count: number }) {
+function CountChip({
+  count,
+  tone,
+  label,
+}: {
+  count: number;
+  tone: 'needs-you' | 'unread';
+  label: string;
+}) {
   const theme = useDesignTheme();
+  const needsYou = tone === 'needs-you';
+  const ink = needsYou
+    ? theme.color[theme.scheme === 'dark' ? 'base' : 'fg']
+    : theme.color.onAccent;
+  const glyph = theme.type.meta.size + space.x1;
   return (
     <View
+      accessibilityLabel={label}
       style={{
-        minWidth: theme.type.meta.line + space.x2,
-        height: theme.type.meta.line + space.x2,
-        borderRadius: radius.round,
-        paddingHorizontal: space.x2,
-        backgroundColor: theme.color.accent,
+        height: theme.type.meta.line + space.x3,
+        flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        gap: space.x2,
+        paddingHorizontal: space.x3,
+        borderRadius: radius.round,
+        backgroundColor: needsYou ? theme.color.warning : theme.color.accent,
       }}
     >
-      <Text variant="meta" strong tone="onAccent">
+      {needsYou ? (
+        <NeedsYouIcon color={ink} size={glyph} />
+      ) : (
+        <MessageIcon color={ink} size={glyph} />
+      )}
+      <Text variant="meta" strong style={{ color: ink }}>
         {String(count)}
       </Text>
     </View>
@@ -281,8 +299,16 @@ function HostRow({ row }: { row: HostDrawerRow }) {
             </Text>
           </View>
         </View>
-        {pending > 0 ? <NeedsYouBadge count={pending} /> : null}
-        {unread > 0 ? <UnreadBadge count={unread} /> : null}
+        {pending > 0 || unread > 0 ? (
+          <View style={{ gap: space.x2, alignItems: 'flex-end' }}>
+            {pending > 0 ? (
+              <CountChip count={pending} tone="needs-you" label={t.hostPending(pending)} />
+            ) : null}
+            {unread > 0 ? (
+              <CountChip count={unread} tone="unread" label={t.hostUnread(unread)} />
+            ) : null}
+          </View>
+        ) : null}
       </Pressable>
       <Pressable
         onPress={() => openHostMenu(row)}
