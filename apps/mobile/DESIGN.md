@@ -24,11 +24,12 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
     - Banner: the accent band (default), a solid colour (ten swatches or a typed hex), a two-stop gradient (six presets or typed stops), or a picture under a dark scrim.
     - A custom colour goes through the accent band's steps, so dark mode mutes it the same way. The ink is white or near-black, whichever reads on every stop; a picture always takes white ink with a soft shadow.
 - **Host drawer** switches Hosts. It slides in from the left, covers about 85% of the width and dims the list behind it.
-  - It lists each Host with its initial tile, online or offline status and pending count, the current one marked, plus "Pair a new computer", which opens the pairing flow.
+  - Like Slack's workspace drawer it has three parts on the `sheet` layer: a fixed "Computers" header, a scrolling list of Hosts, and a fixed footer with **Pair a new computer** (opens the pairing flow) and **Notifications** (opens notification settings), separated from the list by a divider.
+  - Each Host row has its Computer avatar tile (the same tile as the Host chip; the current Host's tile has an `fg` ring at radius `lg`, concentric with the tile, as Slack marks the current workspace), its name, an online/offline/checking dot and label, then one count badge on the right: a rounded rectangle at radius `sm` with the number centred in tabular figures, capped at 99+. It shows **Needs you** (`warning` fill, the count only) when anything waits for the Human, because that matters most; otherwise it shows **Unread** (`accent` fill, the count of unread conversations only). A ⋯ button at the end opens the Host's menu: Show this computer and Unpair, which asks for confirmation.
   - The Host chip opens it, and so does a swipe right from the left edge of a tab's root screen. The edge swipe is never attached inside a pushed chat, where it stays the system Back.
   - Tapping a Host switches to it and closes the drawer. Tapping the backdrop or swiping left closes it.
   - It takes screen-reader focus when it opens and returns focus to the Host chip when it closes. With Reduce Motion on it appears without sliding.
-  - Android uses the standard Material navigation drawer with the same contents.
+  - Android Back closes it. Android draws the same drawer.
 - **Tabs** are native (`NativeTabs`): **Chats** and **Activity**. There is no search tab.
   - Activity carries a badge with the Human Inbox action count.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
@@ -157,7 +158,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
 5. **Lists virtualize.** The chat is an inverted list.
 6. **Motion and haptics are limited.**
-   - Motion uses Reanimated, only for bubble entry, card collapse, the status dot and the image viewer's gestures.
+   - Motion uses Reanimated, only for bubble entry, card collapse, the status dot, the Host drawer and the image viewer's gestures.
    - Haptics fire only on send, approve or deny, and submitting a choice.
 7. **Copy lives in `src/ui/strings.ts`.** Internal ids and protocol names stay out of the UI.
 8. **UI PRs show the change.** They include light and dark screenshots from the web export, and a native check on a development build is recorded under Human QA.

@@ -1,4 +1,4 @@
-import { useIsFocused, useRouter } from 'expo-router';
+import { useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
@@ -8,8 +8,10 @@ import { AVATAR_EDGE } from '../chat/conversation-row';
 import { DEFAULT_HOST_LOOK, type HostLook } from '../design/host-look';
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
+import { useMounted } from '../mounted';
 import { t } from '../strings';
 import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
+import { focusOn, hostDrawer, openHostDrawer, useHostDrawerOpen } from './host-drawer';
 
 export function HomeHeader({
   hostName,
@@ -21,19 +23,25 @@ export function HomeHeader({
   children: ReactNode;
 }) {
   const theme = useDesignTheme();
-  const router = useRouter();
   const focused = useIsFocused();
+  const drawerOpen = useHostDrawerOpen();
   const insets = useSafeAreaInsets();
   const band = useHostBand(look.banner);
+  const chip = useMounted<View>((node) => {
+    hostDrawer.setReturnFocus(() => focusOn(node));
+    return () => hostDrawer.setReturnFocus(undefined);
+  }, []);
   return (
     <HostBandLayer
       band={band}
       banner={look.banner}
       header={
         <Pressable
-          onPress={() => router.push('/hosts')}
+          ref={chip}
+          onPress={openHostDrawer}
           accessibilityRole="button"
           accessibilityLabel={t.switchComputer(hostName)}
+          accessibilityState={{ expanded: drawerOpen }}
           style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',

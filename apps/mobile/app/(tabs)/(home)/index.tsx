@@ -18,6 +18,7 @@ import { space } from '../../../src/ui/design/tokens';
 import { SearchField } from '../../../src/ui/primitives/search-field';
 import { Text } from '../../../src/ui/primitives/text';
 import { HomeHeader } from '../../../src/ui/shell/home-header';
+import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { openConversation } from '../../../src/ui/shell/open-conversation';
 import { t } from '../../../src/ui/strings';
 import type { HumanAttentionItem } from '../../../src/host/wire';
@@ -66,56 +67,62 @@ export default function HomeScreen() {
   return (
     <>
       <Stack.Screen options={{ title: saved.hostName, headerShown: false }} />
-      <HomeHeader hostName={saved.hostName} look={look}>
-        <FlatList
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          data={rows}
-          contentInsetAdjustmentBehavior="automatic"
-          keyExtractor={(row) => row.key}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-          ListHeaderComponent={
-            <>
-              <ConnectionBanner
-                connection={snapshot.connection}
-                onRetry={() => client?.retryNow()}
-                onPairAgain={() => router.push('/pair')}
-              />
-              <SearchField
-                inset={AVATAR_EDGE}
-                value={query}
-                placeholder={t.searchPlaceholder}
-                onChangeText={setQuery}
-              />
-            </>
-          }
-          ListEmptyComponent={
-            snapshot.roster === undefined ? null : (
-              <View style={{ padding: space.x6, alignItems: 'center' }}>
-                <Text tone="muted" style={{ textAlign: 'center' }}>
-                  {searching ? t.searchNoMatch(query.trim()) : t.noBots}
-                </Text>
-              </View>
-            )
-          }
-          renderItem={({ item }) => {
-            if (item.kind === 'section')
+      <HostDrawerEdge>
+        <HomeHeader hostName={saved.hostName} look={look}>
+          <FlatList
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            data={rows}
+            contentInsetAdjustmentBehavior="automatic"
+            keyExtractor={(row) => row.key}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+            ListHeaderComponent={
+              <>
+                <ConnectionBanner
+                  connection={snapshot.connection}
+                  onRetry={() => client?.retryNow()}
+                  onPairAgain={() => router.push('/pair')}
+                />
+                <SearchField
+                  inset={AVATAR_EDGE}
+                  value={query}
+                  placeholder={t.searchPlaceholder}
+                  onChangeText={setQuery}
+                />
+              </>
+            }
+            ListEmptyComponent={
+              snapshot.roster === undefined ? null : (
+                <View style={{ padding: space.x6, alignItems: 'center' }}>
+                  <Text tone="muted" style={{ textAlign: 'center' }}>
+                    {searching ? t.searchNoMatch(query.trim()) : t.noBots}
+                  </Text>
+                </View>
+              )
+            }
+            renderItem={({ item }) => {
+              if (item.kind === 'section')
+                return (
+                  <SectionHeader
+                    name={item.id === PINNED_SECTION ? t.pinnedSection : (item.name ?? '')}
+                    count={item.count}
+                    needsYou={item.needsYou}
+                    collapsed={item.collapsed}
+                    onToggle={() => sectionCollapse.toggle(saved.hostId, item.id)}
+                  />
+                );
+              const row = item.row;
               return (
-                <SectionHeader
-                  name={item.id === PINNED_SECTION ? t.pinnedSection : (item.name ?? '')}
-                  count={item.count}
-                  needsYou={item.needsYou}
-                  collapsed={item.collapsed}
-                  onToggle={() => sectionCollapse.toggle(saved.hostId, item.id)}
+                <ConversationRow
+                  row={row}
+                  now={now}
+                  onPress={() => openConversation(router, row)}
                 />
               );
-            const row = item.row;
-            return (
-              <ConversationRow row={row} now={now} onPress={() => openConversation(router, row)} />
-            );
-          }}
-        />
-      </HomeHeader>
+            }}
+          />
+        </HomeHeader>
+      </HostDrawerEdge>
     </>
   );
 }

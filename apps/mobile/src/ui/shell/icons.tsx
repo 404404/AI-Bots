@@ -1,5 +1,5 @@
 import type { ColorValue } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 type IconProps = { color: ColorValue; size: number; focused?: boolean };
 
@@ -169,5 +169,15 @@ export function FolderIcon(props: IconProps) {
       {...props}
       d="M4 6a1 1 0 0 1 1-1h4.5l2 2H19a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6Z"
     />
+  );
+}
+
+export function MoreIcon({ color, size }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle cx={12} cy={5.5} r={1.8} fill={color} />
+      <Circle cx={12} cy={12} r={1.8} fill={color} />
+      <Circle cx={12} cy={18.5} r={1.8} fill={color} />
+    </Svg>
   );
 }

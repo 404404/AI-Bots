@@ -4,7 +4,7 @@ The phone app keeps every paired computer and shows one. A push notification nam
 
 ## Sub-features
 
-- `switch` changes the shown computer from the Home header (the "<name>, switch computer" button) or Me → Computers; the current row is selected ("Showing").
+- `switch` changes the shown computer in the Host drawer, opened from the Home header (the "<name>, switch computer" button), a swipe from the left edge of Home or Activity, or Me → Computers; the current row is selected ("<name>, Showing, …").
 - `permission` shows Me → Notifications as off, denied (with "Open phone settings"), unavailable (a build without an EAS projectId), or on, with a switch per kind and "Send a test notification".
 - `tap` routes a notification: a Tool approval or question opens the request (`/inbox/[id]`, or the card in the Bot's DM when the shown computer's Roster has that DM), a reply opens the DM, and a test or badge-only notification opens Activity. A notification for another computer switches first.
 - `badge` sets the app badge to the shown computer's unresolved actions and dismisses banners for items no longer unresolved whenever the shown computer's Inbox changes.
@@ -12,7 +12,7 @@ The phone app keeps every paired computer and shows one. A push notification nam
 
 ## How to get to it (user POV)
 
-- Phone: pair a second computer from Me → Computers → "Pair a new computer"; switch from the Home header. Me → Notifications holds the permission state, the switches and the test button.
+- Phone: pair a second computer from the Host drawer's "Pair a new computer"; switch from the same drawer. Me → Notifications holds the permission state, the switches and the test button.
 - Notification: approve a Tool call by tapping the banner, then Allow once.
 
 ## Driving it with verify-app
