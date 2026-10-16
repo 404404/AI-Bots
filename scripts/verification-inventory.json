@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "auditedBase": "fd337d929a5dbd794af69aa96d40041c4287c899",
+  "auditedBase": "1d1f8ac0cfeb26a8f3bf3a04550e6b92cee52bd9",
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
@@ -433,6 +433,14 @@
       "source": "packages/core/src/messaging/dm-controls.ts",
       "guide": ".agents/skills/verify-deepseekbot/features/im-conversation-mirroring.md",
       "task": 1983,
+      "gap": null
+    },
+    {
+      "id": "desktop.grants.temporary-read-revoke",
+      "label": "Authorize one temporary Workspace, read through direct attachment import, explicitly revoke and refuse the same read",
+      "source": "packages/core/src/workspaces/grants.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/workspace-grant.md",
+      "task": 1974,
       "gap": null
     }
   ],
@@ -1484,6 +1492,14 @@
       "reason": "Private launcher/fixture and installed macOS apps; public target guards and browser actions; dispatch alone does not prove native window.",
       "task": 1974,
       "sha256": "22b1dbd5e85b6429fac6f9d27a561b016fe4267a9d29e2f73757c5e3bb733622"
+    },
+    {
+      "path": "scripts/e2e-workspace-grant.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.grants.temporary-read-revoke"],
+      "reason": "Dedicated temporary sample outside Host data; actual Web Grant authorization, direct attachment-import read, explicit CLI revocation, same-read denial and before/after visible evidence. No model/native file tool/Shell security claim.",
+      "task": 1974,
+      "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
     }
   ],
   "native": [

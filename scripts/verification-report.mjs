@@ -4,6 +4,7 @@ import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { behavior as idleBehavior, coverageRow } from './activity-idle-report.mjs';
+import { behavior as grantBehavior, coverageRow as grantRow } from './workspace-grant-report.mjs';
 import { checkFeatureMap } from './check-feature-map.mjs';
 import { auditInventory, categories } from './verification-inventory.mjs';
 
@@ -17,6 +18,7 @@ export function verificationReport({
   commit,
   dirty = false,
   activityRun,
+  workspaceRun,
   inventory,
 } = {}) {
   if (!sha(commit)) throw new Error('Report requires a full source commit');
@@ -34,6 +36,20 @@ export function verificationReport({
         errors.push('Selected evidence belongs to a different behavior');
     } catch {
       errors.push('Selected evidence run record is missing or invalid');
+    }
+  }
+  const workspace = grantRow(workspaceRun, commit, dirty);
+  if (workspaceRun && !audit.inventory.behaviors.some((row) => row.id === grantBehavior))
+    errors.push('Selected Workspace evidence has no matching inventory behavior');
+  if (workspaceRun) {
+    try {
+      if (
+        JSON.parse(readFileSync(resolve(workspaceRun, 'run.json'), 'utf8')).behavior !==
+        grantBehavior
+      )
+        errors.push('Selected Workspace evidence belongs to a different behavior');
+    } catch {
+      errors.push('Selected Workspace evidence run record is missing or invalid');
     }
   }
   const rows = audit.inventory.behaviors.map((row) => {
@@ -55,17 +71,19 @@ export function verificationReport({
       result:
         row.id === idleBehavior
           ? idle
-          : {
-              status: 'not-run',
-              commit,
-              reason:
-                'No current run selected; instructions and script assertions are not execution evidence',
-              evidence: [],
-              humanQA: 'not-run',
-              model: 'not-run',
-              native: 'not-run',
-              im: 'not-run',
-            },
+          : row.id === grantBehavior
+            ? workspace
+            : {
+                status: 'not-run',
+                commit,
+                reason:
+                  'No current run selected; instructions and script assertions are not execution evidence',
+                evidence: [],
+                humanQA: 'not-run',
+                model: 'not-run',
+                native: 'not-run',
+                im: 'not-run',
+              },
     };
   });
   const classification = Object.fromEntries(
@@ -120,7 +138,10 @@ const safe = (value) =>
     .replaceAll('|', '\\|')
     .replaceAll('\n', ' ');
 const link = (label, target) => `[${safe(label)}](${target})`;
-export function reportMarkdown(report, { sourcePrefix = '.', evidencePrefix = '.' } = {}) {
+export function reportMarkdown(
+  report,
+  { sourcePrefix = '.', evidencePrefix = '.', workspaceEvidencePrefix = '.' } = {},
+) {
   const source = (path) => link(path, `${sourcePrefix}/${path}`);
   const { metrics } = report;
   const lines = [
@@ -161,6 +182,7 @@ export function reportMarkdown(report, { sourcePrefix = '.', evidencePrefix = '.
   ];
   for (const row of report.behaviors.filter((entry) => entry.result.recordedStatus)) {
     const result = row.result;
+    const prefix = row.id === grantBehavior ? workspaceEvidencePrefix : evidencePrefix;
     lines.push(
       `### ${row.id}`,
       '',
@@ -170,7 +192,7 @@ export function reportMarkdown(report, { sourcePrefix = '.', evidencePrefix = '.
       '',
       `Expected: ${safe(result.expected)}. Actual: ${safe(result.actual ?? result.reason)}.`,
       '',
-      `Evidence: ${result.evidence.map((name) => link(name, `${evidencePrefix}/${name}`)).join(', ') || 'partial/missing'}.`,
+      `Evidence: ${result.evidence.map((name) => link(name, `${prefix}/${name}`)).join(', ') || 'partial/missing'}.`,
       '',
       'Human QA, model, native device and IM: not run in this report. Historical Human acceptance of #1972 does not qualify this source.',
       '',
@@ -204,6 +226,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     options: {
       json: { type: 'boolean' },
       'activity-run': { type: 'string' },
+      'workspace-run': { type: 'string' },
+      'workspace-evidence-prefix': { type: 'string' },
       'source-prefix': { type: 'string' },
       'evidence-prefix': { type: 'string' },
     },
@@ -213,12 +237,18 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     commit: git('rev-parse', 'HEAD'),
     dirty: git('status', '--porcelain').length > 0,
     activityRun: values['activity-run'],
+    workspaceRun: values['workspace-run'],
   });
   console.log(
     values.json
       ? JSON.stringify(report, null, 2)
       : reportMarkdown(report, {
           sourcePrefix: values['source-prefix'],
+          workspaceEvidencePrefix:
+            values['workspace-evidence-prefix'] ??
+            (values['workspace-run']
+              ? relative(process.cwd(), resolve(values['workspace-run']))
+              : '.'),
           evidencePrefix:
             values['evidence-prefix'] ??
             (values['activity-run']
