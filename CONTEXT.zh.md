@@ -4,6 +4,16 @@
 
 ## 语言
 
+### 产品发布
+
+**Product Release Version**：
+电脑端 DeepSeekBot 产品及其同步发布组件共用的唯一发布身份；它与独立版本的 DSH runtime、Provider、工具／Skill 和手机应用不同。
+_避免使用_：独立桌面版本、独立 npm 版本、未限定的 Version
+
+**Development Build Identity**：
+未发布 DeepSeekBot 构建的身份及源码状态。它不是 Product Release Version，也不证明发布产物已通过资格验证。
+_避免使用_：已安装发布版、latest 版本、0.0.0 发布版
+
 ### PersonaBot（持久机器人身份）
 
 **PersonaBot**：

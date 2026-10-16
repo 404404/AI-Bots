@@ -727,6 +727,10 @@ Registry 在 Generation 66 持久化不可恢复的身份关闭状态和确认�
 - Memory 跨设备同步是 Orchestrator 的原生 Git 行为，不是 Host 服务；BotHarness 不持有远端仓库或凭据，也不提供一键同步，非 Git 所有者经 Portability 迁移记忆（ADR-0084）。
 - Roadmap Project #1 保持 private；文档同步只用 `read:project` 读取显式 `In Progress` 和 Artifact，经过 fail-closed 白名单投影后才提交公开 JSON。Project notes、private items、assignee、backlog 与 ETA 不跨越这条发布边界。
 
+### 产品发布身份（已接受设计，执行门禁待交付）
+
+[ADR-0216](../adr/0216-dsb-product-versions-identify-immutable-package-sets.md) 将电脑端 DSB 软件身份与 npm 产品包身份统一；Core／UI／Browser／Computer 同号，DSH／独立 Provider／手机保持各自版本。既有准备流程的冻结 Release Plan 绑定源码与完整产物，而不是新增版本服务。交付 QA 后版本与字节不可替换；Beta 转正式须验证新的正式包集合。Host 的现有 Release Service 投影实际运行身份和独立的待生效版本，经既有认证 bridge 同时提供 CLI／Web；缺失发布元数据不能伪装源码构建。发布按依赖核验后推进产品入口，失败恢复同一计划／字节，不宣称多包原子性。规则详见[版本规范](../agents/version-policy.zh.md)，实施由 [#1979](https://github.com/BotHarness/DeepSeekBot/issues/1979) 的三个切片负责；本节不表示运行校验已实现，也不授予标签迁移、发布或共享设备使用权限。
+
 ## 8 · 实现顺序与可并发范围
 
 1. #77 验证 pinned DSH 的 Agent/SessionPersistence/Subagent seams；#79 建立 operational database owner。这两项可并行。
