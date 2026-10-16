@@ -58,3 +58,5 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 
 - `scripts/e2e-activity-entry.mjs` passed login, then timed out on `.bh-overview` behind onboarding.
 - `scripts/e2e-harvest.mjs` needed a model reply and timed out without one.
+
+| Default Bot Browser open, observe, stop and Access refusal | no | `scripts/e2e-browser-lifecycle.mjs` | [browser-lifecycle.md](browser-lifecycle.md) |

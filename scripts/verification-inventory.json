@@ -341,11 +341,11 @@
     },
     {
       "id": "desktop.browser.lifecycle",
-      "label": "Enable/start/stop Browser, profile isolation/reset, pause/takeover/resume",
+      "label": "Broader Browser lifecycle: profile isolation/reset, pause/takeover/resume and alternate targets",
       "source": "packages/core/src/bots/cli-browser-computer.ts",
       "guide": null,
       "task": 1976,
-      "gap": "No maintained feature-map recipe binds this behavior to setup, user actions, authoritative read, cleanup and failure observation. Historical scripts below are candidates, not qualified paths."
+      "gap": "The separate default local open/observe/stop row does not qualify profile isolation/reset, takeover/resume or alternate targets."
     },
     {
       "id": "desktop.browser.tools",
@@ -441,6 +441,14 @@
       "source": "packages/core/src/workspaces/grants.ts",
       "guide": ".agents/skills/verify-deepseekbot/features/workspace-grant.md",
       "task": 1974,
+      "gap": null
+    },
+    {
+      "id": "desktop.browser.open-observe-stop",
+      "label": "Default local Browser: one fixture tab, observation, stop and Access-off refusal",
+      "source": "packages/browser/src/client/index.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/browser-lifecycle.md",
+      "task": 1976,
       "gap": null
     }
   ],
@@ -732,6 +740,14 @@
       "reason": "Prepared live Session; six keyboard operations check one coded refusal and retained focus/tab with redacted audit.",
       "task": 1976,
       "sha256": "fd70f45c2366250c615887b2d19d3aa4642bbef668f9cf6e941adbb6e2a18e54"
+    },
+    {
+      "path": "scripts/e2e-browser-lifecycle.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.browser.open-observe-stop"],
+      "task": 1976,
+      "reason": "One disposable Bot on an isolated Host; deterministic loopback fixture; real panel lifecycle and same-owner CLI/direct tools; no model.",
+      "sha256": "af6af58d510c4426ded497ac230d60b620e516678fdd21120763b0b38fab6a60"
     },
     {
       "path": "scripts/e2e-browser-multitab.mjs",
@@ -1246,6 +1262,14 @@
       "sha256": "229f70c342aadb16e985b0e8f8df2760edc6a4f742967699ca190a635ba2f1d4"
     },
     {
+      "path": "scripts/e2e-memory-restore.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.memory.read-restore"],
+      "reason": "Own isolated Host; two owner-saved versions, real Web/CLI read, descendant restore and stale-head refusal; immutable evidence; retains Memory.",
+      "task": 1975,
+      "sha256": "dfe816b10b04620373e7cbbb33926462bc6bf67914a71d2fc23c75d3bf0aaef8"
+    },
+    {
       "path": "scripts/e2e-message-inline-actions.mjs",
       "category": "historical-regression",
       "behaviors": ["desktop.timeline.messages"],
@@ -1500,14 +1524,6 @@
       "reason": "Dedicated temporary sample outside Host data; actual Web Grant authorization, direct attachment-import read, explicit CLI revocation, same-read denial and before/after visible evidence. No model/native file tool/Shell security claim.",
       "task": 1974,
       "sha256": "4d06c35370b6a936c644e5f662d33644f30201a3203a92f6fbefebb0cefc0cf4"
-    },
-    {
-      "path": "scripts/e2e-memory-restore.mjs",
-      "category": "mapped",
-      "behaviors": ["desktop.memory.read-restore"],
-      "reason": "Own isolated Host; two owner-saved versions, real Web/CLI read, descendant restore and stale-head refusal; immutable evidence; retains Memory.",
-      "task": 1975,
-      "sha256": "dfe816b10b04620373e7cbbb33926462bc6bf67914a71d2fc23c75d3bf0aaef8"
     }
   ],
   "native": [

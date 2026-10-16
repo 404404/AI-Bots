@@ -6,6 +6,10 @@ import { parseArgs } from 'node:util';
 import { behavior as idleBehavior, coverageRow } from './activity-idle-report.mjs';
 import { behavior as grantBehavior, coverageRow as grantRow } from './workspace-grant-report.mjs';
 import { behavior as memoryBehavior, coverageRow as memoryRow } from './memory-restore-report.mjs';
+import {
+  behavior as browserBehavior,
+  coverageRow as browserRow,
+} from './browser-lifecycle-report.mjs';
 import { checkFeatureMap } from './check-feature-map.mjs';
 import { auditInventory, categories } from './verification-inventory.mjs';
 
@@ -21,6 +25,7 @@ export function verificationReport({
   activityRun,
   workspaceRun,
   memoryRun,
+  browserRun,
   inventory,
 } = {}) {
   if (!sha(commit)) throw new Error('Report requires a full source commit');
@@ -67,6 +72,20 @@ export function verificationReport({
       errors.push('Selected Memory evidence run record is missing or invalid');
     }
   }
+  const browser = browserRow(browserRun, commit, dirty);
+  if (browserRun && !audit.inventory.behaviors.some((row) => row.id === browserBehavior))
+    errors.push('Selected Browser evidence has no matching inventory behavior');
+  if (browserRun) {
+    try {
+      if (
+        JSON.parse(readFileSync(resolve(browserRun, 'run.json'), 'utf8')).behavior !==
+        browserBehavior
+      )
+        errors.push('Selected Browser evidence belongs to a different behavior');
+    } catch {
+      errors.push('Selected Browser evidence run record is missing or invalid');
+    }
+  }
   const rows = audit.inventory.behaviors.map((row) => {
     const scripts = unique(
       audit.inventory.scripts
@@ -90,17 +109,19 @@ export function verificationReport({
             ? workspace
             : row.id === memoryBehavior
               ? memory
-              : {
-                  status: 'not-run',
-                  commit,
-                  reason:
-                    'No current run selected; instructions and script assertions are not execution evidence',
-                  evidence: [],
-                  humanQA: 'not-run',
-                  model: 'not-run',
-                  native: 'not-run',
-                  im: 'not-run',
-                },
+              : row.id === browserBehavior
+                ? browser
+                : {
+                    status: 'not-run',
+                    commit,
+                    reason:
+                      'No current run selected; instructions and script assertions are not execution evidence',
+                    evidence: [],
+                    humanQA: 'not-run',
+                    model: 'not-run',
+                    native: 'not-run',
+                    im: 'not-run',
+                  },
     };
   });
   const classification = Object.fromEntries(
@@ -162,6 +183,7 @@ export function reportMarkdown(
     evidencePrefix = '.',
     workspaceEvidencePrefix = '.',
     memoryEvidencePrefix = '.',
+    browserEvidencePrefix = '.',
   } = {},
 ) {
   const source = (path) => link(path, `${sourcePrefix}/${path}`);
@@ -205,11 +227,13 @@ export function reportMarkdown(
   for (const row of report.behaviors.filter((entry) => entry.result.recordedStatus)) {
     const result = row.result;
     const prefix =
-      row.id === memoryBehavior
-        ? memoryEvidencePrefix
-        : row.id === grantBehavior
-          ? workspaceEvidencePrefix
-          : evidencePrefix;
+      row.id === browserBehavior
+        ? browserEvidencePrefix
+        : row.id === memoryBehavior
+          ? memoryEvidencePrefix
+          : row.id === grantBehavior
+            ? workspaceEvidencePrefix
+            : evidencePrefix;
     lines.push(
       `### ${row.id}`,
       '',
@@ -253,6 +277,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     options: {
       json: { type: 'boolean' },
       'activity-run': { type: 'string' },
+      'browser-run': { type: 'string' },
+      'browser-evidence-prefix': { type: 'string' },
       'memory-run': { type: 'string' },
       'memory-evidence-prefix': { type: 'string' },
       'workspace-run': { type: 'string' },
@@ -268,12 +294,16 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     activityRun: values['activity-run'],
     workspaceRun: values['workspace-run'],
     memoryRun: values['memory-run'],
+    browserRun: values['browser-run'],
   });
   console.log(
     values.json
       ? JSON.stringify(report, null, 2)
       : reportMarkdown(report, {
           sourcePrefix: values['source-prefix'],
+          browserEvidencePrefix:
+            values['browser-evidence-prefix'] ??
+            (values['browser-run'] ? relative(process.cwd(), resolve(values['browser-run'])) : '.'),
           memoryEvidencePrefix:
             values['memory-evidence-prefix'] ??
             (values['memory-run'] ? relative(process.cwd(), resolve(values['memory-run'])) : '.'),
