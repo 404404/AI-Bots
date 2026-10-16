@@ -17,11 +17,7 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
-vi.mock('expo-router', () => ({
-  useRouter: () => ({ push: () => undefined }),
-  useIsFocused: () => true,
-}));
-vi.mock('expo-status-bar', () => ({ StatusBar: () => null }));
+vi.mock('expo-router', () => ({ useRouter: () => ({ push: () => undefined }) }));
 vi.mock('../src/ui/bot-avatar', () => ({
   BotAvatar: ({ bot }: { bot: { slug: string } }) =>
     createElement('span', { 'data-testid': `avatar-${bot.slug}` }),

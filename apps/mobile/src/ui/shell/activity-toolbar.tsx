@@ -1,5 +1,3 @@
-import { useIsFocused } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,7 +30,6 @@ export function ActivityToolbar({
   onHeight(height: number): void;
 }) {
   const theme = useDesignTheme();
-  const focused = useIsFocused();
   const insets = useSafeAreaInsets();
   const [searching, setSearching] = useState(false);
   const [sorting, setSorting] = useState(false);
@@ -43,7 +40,6 @@ export function ActivityToolbar({
   ];
   return (
     <>
-      {focused ? <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} /> : null}
       <View
         onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
         style={{
