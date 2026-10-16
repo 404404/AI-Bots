@@ -10,7 +10,9 @@ if (puppeteerDir === undefined) throw new Error('Puppeteer unavailable');
 const puppeteer = createRequire(resolve(pnpm, puppeteerDir, 'node_modules/'))('puppeteer');
 if (process.env.BH_E2E_INSTANCE === undefined) throw new Error('Set BH_E2E_INSTANCE');
 const instance = JSON.parse(readFileSync(process.env.BH_E2E_INSTANCE, 'utf8'));
-const shots = process.env.BH_SCREENSHOT_DIR ?? resolve(dirname(process.env.BH_E2E_INSTANCE), 'e2e');
+const evidenceRoot =
+  process.env.BH_SCREENSHOT_DIR ?? resolve(dirname(process.env.BH_E2E_INSTANCE), 'e2e');
+const shots = resolve(evidenceRoot, `attempt-${Date.now()}-${process.pid}`);
 mkdirSync(shots, { recursive: true });
 
 const overlayButtons = ['Continue', 'Configure later', 'Skip tutorial'];
@@ -25,10 +27,12 @@ const browser = await puppeteer.launch({
 });
 let page;
 const pageErrors = [];
+let observationStep = 'opening-page';
 try {
   page = await browser.newPage();
   const observations = [];
   const observeShell = async (step) => {
+    observationStep = step;
     await page.waitForFunction(
       () => window.__BOTHARNESS_CLIENT_DIAGNOSTICS__?.snapshot().state === 'shell-ready',
       { timeout: 15_000 },
@@ -155,8 +159,18 @@ try {
   await page.screenshot({ waitForFonts: false, path: resolve(shots, '04-native-after-exit.png') });
   if (pageErrors.length > 0) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
   console.log('BOT MODE SIDEBAR PASS');
+  console.log(JSON.stringify({ evidence: shots }));
 } catch (error) {
   await Promise.allSettled([
+    (async () => {
+      const snapshot = await page?.evaluate(() =>
+        window.__BOTHARNESS_CLIENT_DIAGNOSTICS__?.snapshot(),
+      );
+      writeFileSync(
+        resolve(shots, 'failure-observation.json'),
+        JSON.stringify({ step: observationStep, snapshot: snapshot ?? null }, null, 2),
+      );
+    })(),
     (async () => {
       await page?.screenshot({ waitForFonts: false, path: resolve(shots, 'failure.png') });
     })(),
