@@ -192,6 +192,9 @@ import {
   MessageReactionSurface,
   ReactionIcon,
 } from './message-reactions.js';
+import { useFooterPreferences } from './composer-footer-preferences.js';
+import { useReplyPerf } from './use-reply-perf.js';
+import { useMobileBotViewport } from './mobile-viewport.js';
 import { ConversationSearch } from './conversation-search.js';
 import { reactableMessage } from './message-reactions-model.js';
 import {
@@ -1739,6 +1742,15 @@ function ConversationView({
     messages.findLast((message) => !message.pending && !message.failed && !message.streaming)?.id,
   ]);
 
+  const footerPreferences = useFooterPreferences();
+  const compactFooter = useMobileBotViewport();
+  const { mount: replyPerfMount, average: avgPerf } = useReplyPerf(
+    actions,
+    channelId,
+    state.channels.find((item) => item.id === channelId)?.latestMessage,
+    !compactFooter && !footerPreferences.hidden.includes('avg-perf'),
+    state.contentPurgeRevision ?? 0,
+  );
   const dmComposerContext = useDmComposerContext({
     bot: channel?.type === 'dm' && !readOnlyDm ? profileBot : undefined,
     channelId,
@@ -1747,6 +1759,7 @@ function ConversationView({
     activity: profileActivity,
     loading: profileUsageLoading,
     t,
+    avgPerf,
     onUsage: () => {
       setProfilePopoverOpen(false);
       setProfileViewOpen(true);
@@ -1758,6 +1771,7 @@ function ConversationView({
     members: channelBots,
     actions,
     t,
+    avgPerf,
   });
   const baseComposerContext = dmComposerContext ?? groupComposerContext;
   const openProfileView = (): void => {
@@ -3185,6 +3199,7 @@ function ConversationView({
     <div ref={conversationMount} className="bh-root bh-main">
       <span ref={allBotPreviewMount} hidden />
       <span ref={searchShortcutMount} hidden />
+      <span ref={replyPerfMount} hidden />
       <span ref={dockInboxMount} hidden />
       <div className="bh-chat-layout" data-sidebar={docked ? 'dock' : sidebar.mode}>
         <GeneratedFilesContext.Provider

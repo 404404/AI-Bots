@@ -5,6 +5,25 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Keep fixture ports distinct from a shorter Host port while removing private Host data.
+export function redactBrowserEvidence(text, instance, root) {
+  let value = String(text);
+  if (instance?.url) {
+    value = value.replaceAll(instance.url, '[redacted]');
+    const origin = new URL(instance.url).origin;
+    value = value.replaceAll(origin, (match, offset, whole) =>
+      /\d/u.test(whole[offset + match.length] ?? '') ? match : '[redacted]',
+    );
+  }
+  for (const secret of [
+    instance?.home,
+    root,
+    instance?.url && new URL(instance.url).searchParams.get('token'),
+  ].filter(Boolean))
+    value = value.replaceAll(secret, '[redacted]');
+  return value;
+}
+
 export const behavior = 'desktop.browser.open-observe-stop';
 export const phases = ['off', 'running', 'stopped', 'disabled'];
 export const visualEvidence = [

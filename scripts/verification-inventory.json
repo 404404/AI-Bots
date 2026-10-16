@@ -450,6 +450,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/browser-lifecycle.md",
       "task": 1976,
       "gap": null
+    },
+    {
+      "id": "desktop.composer.footer",
+      "label": "Customize footer visibility, order and alignment; opt into bounded reply speed",
+      "source": "packages/client/src/client/composer-context-bar.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/composer-footer.md",
+      "task": 1958,
+      "gap": null
     }
   ],
   "scripts": [
@@ -747,7 +755,7 @@
       "behaviors": ["desktop.browser.open-observe-stop"],
       "task": 1976,
       "reason": "One disposable Bot on an isolated Host; deterministic loopback fixture; real panel lifecycle and same-owner CLI/direct tools; no model.",
-      "sha256": "eb3378261331b6520f79c2b64cd31274c5dc51d03ff3c3d22e442eeb204cabeb"
+      "sha256": "34db1d4026f62b27d9613f0c534784056f50b952b70ae9e83f50463d2e5b0997"
     },
     {
       "path": "scripts/e2e-browser-multitab.mjs",

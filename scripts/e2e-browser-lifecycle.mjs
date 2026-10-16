@@ -7,6 +7,7 @@ import { collectObservation, verifyPaths, rpc } from './verify-app.mjs';
 import { readClientDiagnostics } from './dev-client-diagnostics.mjs';
 import {
   behavior,
+  redactBrowserEvidence,
   digest,
   browserProblems,
   coverageRow,
@@ -24,6 +25,7 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 const run = {
   version: 1,
   behavior,
+  redactBrowserEvidence,
   commit: null,
   base: null,
   dirty: true,
@@ -60,18 +62,7 @@ const fixture = {
 let stage = 'preconditions';
 const errors = [];
 const httpErrors = [];
-const redact = (text) => {
-  let value = String(text);
-  for (const secret of [
-    instance?.url,
-    instance && new URL(instance.url).origin,
-    instance?.home,
-    root,
-    instance && new URL(instance.url).searchParams.get('token'),
-  ].filter(Boolean))
-    value = value.replaceAll(secret, '[redacted]');
-  return value;
-};
+const redact = (text) => redactBrowserEvidence(text, instance, root);
 const command = (args, input, allowRefusal = false) => {
   const url = new URL(instance.url);
   const result = spawnSync(

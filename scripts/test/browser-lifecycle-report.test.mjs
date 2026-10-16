@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   behavior,
+  redactBrowserEvidence,
   coverageRow,
   digest,
   phases,
@@ -107,6 +108,7 @@ function fixture() {
   const run = {
     version: 1,
     behavior,
+    redactBrowserEvidence,
     commit,
     base: commit,
     dirty: false,
@@ -375,6 +377,36 @@ describe('bounded Browser lifecycle proof', () => {
     );
     expect(reportMarkdown(report, { browserEvidencePrefix: './browser' })).toContain(
       './browser/frame.jpg',
+    );
+  });
+});
+
+describe('Browser evidence redaction', () => {
+  const instance = {
+    url: 'http://127.0.0.1:5433/?token=synthetic-secret',
+    home: '/private/fixture-home',
+  };
+  it('preserves longer fixture ports while hiding complete Host origins', () => {
+    expect(
+      redactBrowserEvidence(
+        'http://127.0.0.1:54334/ http://127.0.0.1:5433/api http://127.0.0.1:5433',
+        instance,
+        '/fixture-root',
+      ),
+    ).toBe('http://127.0.0.1:54334/ [redacted]/api [redacted]');
+  });
+  it('removes the full login URL before the origin and keeps standalone token/path redaction', () => {
+    expect(
+      redactBrowserEvidence(
+        `${instance.url} synthetic-secret ${instance.home}/state /fixture-root/log`,
+        instance,
+        '/fixture-root',
+      ),
+    ).toBe('[redacted] [redacted] [redacted]/state [redacted]/log');
+  });
+  it('can redact early precondition evidence before an instance exists', () => {
+    expect(redactBrowserEvidence('/fixture-root/log', undefined, '/fixture-root')).toBe(
+      '[redacted]/log',
     );
   });
 });

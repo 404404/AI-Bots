@@ -196,6 +196,7 @@ import { ActivityToolDetails, createToolDetailIndex } from './state/tool-details
 import { createDshActivityProjection } from './state/dsh-activity.js';
 import { readPublicToolDetail } from './state/tool-activity.js';
 import { createUsageProjection, type UsageProjection } from './usage/usage.js';
+import { createMessagePerfTracker, type MessagePerfTracker } from './usage/message-perf.js';
 import { installBotSubagentModelTools } from './runtime/subagent-model-tools.js';
 
 export const name = 'botharness-core';
@@ -319,6 +320,7 @@ export interface BotHarnessCore {
   memory: MemoryService;
 
   usage?: UsageProjection;
+  messagePerf: MessagePerfTracker;
   channels: ChannelStore;
   attachments: AttachmentStore;
   live: ChannelLiveHub;
@@ -766,9 +768,11 @@ export function createCore(
     onAdmitted: (slug) => runtime?.admitScheduleFiring?.(slug),
     ...(options.warn === undefined ? {} : { warn: options.warn }),
   });
+  const messagePerf: MessagePerfTracker = createMessagePerfTracker();
   runtime = createBotRuntime({
     triageContinuation: options.triageContinuation === true,
     inboxHistory,
+    messagePerf,
     requireExecution: (slug) => profileRecovery.requireExecution(slug),
     schedules,
     assignmentConcurrencyLimit: () =>
@@ -897,6 +901,7 @@ export function createCore(
     ownership,
     memory,
     ...(usage === undefined ? {} : { usage }),
+    messagePerf,
     grants,
     toolRules,
     assignmentAccess,
@@ -2176,6 +2181,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         ctx.logger.warn('approval-result-publication-failed');
       }
       core.usage?.handleSessionEvent(session.id, event);
+      core.messagePerf.observeSessionEvent(session.id, event);
       handleCompactionEvent(
         {
           ownership: core.ownership,
@@ -2216,6 +2222,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     ({ agent }) => {
       userQuestions.cancelSession(agent.session.id);
       activity.handleSessionDisposed(agent.session.id);
+      core.messagePerf.clear(agent.session.id);
     },
     { global: true },
   );
