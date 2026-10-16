@@ -11,6 +11,7 @@ export function ActivityToolbar({
   search,
   filtered,
   onSearch,
+  onSearchFocus,
   onFilter,
 }: ActivityToolbarProps) {
   const theme = useDesignTheme();
@@ -19,6 +20,7 @@ export function ActivityToolbar({
   function dismissSearch() {
     if (!searching.current) return;
     searching.current = false;
+    onSearchFocus(false);
     searchBar.current?.cancelSearch();
   }
   useImperativeHandle(
@@ -26,7 +28,7 @@ export function ActivityToolbar({
     () => ({
       dismissSearch,
     }),
-    [],
+    [onSearchFocus],
   );
   return (
     <>
@@ -58,10 +60,10 @@ export function ActivityToolbar({
         placement="integratedButton"
         allowToolbarIntegration={false}
         hideWhenScrolling={false}
-        hideNavigationBar={false}
         obscureBackground={false}
         onFocus={() => {
           searching.current = true;
+          onSearchFocus(true);
           searchBar.current?.setText(search);
           searchBar.current?.toggleCancelButton(false);
         }}
@@ -74,6 +76,7 @@ export function ActivityToolbar({
         }}
         onCancelButtonPress={() => {
           searching.current = false;
+          onSearchFocus(false);
         }}
       />
     </>

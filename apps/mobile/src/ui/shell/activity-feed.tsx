@@ -355,6 +355,7 @@ export function ActivityFeed({
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
   const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [sort, setSort] = useState<ActivitySort>('default');
   const [filtering, setFiltering] = useState(false);
   const initialHeight = useChatHeaderHeight();
@@ -406,7 +407,7 @@ export function ActivityFeed({
           paddingBottom: space.x6,
         }}
         scrollIndicatorInsets={{ top: headerHeight }}
-        automaticallyAdjustKeyboardInsets
+        automaticallyAdjustKeyboardInsets={!searchFocused}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         style={{ backgroundColor: theme.color.base }}
@@ -534,6 +535,7 @@ export function ActivityFeed({
       <ActivityToolbar
         ref={toolbar}
         search={search}
+        onSearchFocus={setSearchFocused}
         filtered={
           sort !== 'default' ||
           filter.section !== 'all' ||
