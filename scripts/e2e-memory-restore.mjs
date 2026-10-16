@@ -373,8 +373,11 @@ try {
     ),
   );
   save('refused.json', authority());
-  await page.locator('.bh-memory-commit-view ::-p-aria([name="Refresh"][role="button"])').click();
-  run.actions.push({ click: 'Refresh', surface: 'Memory files' });
+  await page.reload({ waitUntil: 'networkidle2', timeout: 30_000 });
+  run.actions.push({ reload: true, phase: 'refused' });
+  await page.waitForSelector('.bh-mode-sidebar', { visible: true });
+  await selectBot();
+  await openFile();
   await observe('refused', fixture.v1);
   run.status = 'pass';
   run.actual = `${run.botId}: v1 ${v1.file.head}, v2 ${before.file.head}, restored ${restored.head}; old expected-head refused, current content/HEAD unchanged.`;

@@ -20,7 +20,7 @@ Memory owner. Reload, reselect that Bot and open the file: version one is visibl
 A restore creates a new commit whose parent is the pre-restore HEAD; it does not rewind
 HEAD to the historical commit. The owner saves a recovery checkpoint before restoring.
 The CLI's subsequent stale `--expected-head` request must return `memory-conflict`;
-refresh the file and confirm the restored contents remain. UI agreement alone does
+reload the Web Client, reopen the file and confirm the restored contents remain. UI agreement alone does
 not prove the Git relationship: inspect the saved graph and checkpoint reads.
 
 ## Driving it with verify-app
