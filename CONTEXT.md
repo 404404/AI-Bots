@@ -872,6 +872,12 @@ _Avoid_: secret, API key, token
 
 ### Telemetry and campaigns
 
+**Mobile Telemetry**:
+Application-defined, default-on optional statistics from the Expo app, separate from Host telemetry. It observes coarse pairing, live connection and first-chat results; it owns no product authority and never carries conversation content or domain identifiers (ADR-0214).
+
+**Mobile Install ID**:
+A random statistics-only UUID saved on the phone while statistics are enabled. It is independent of Host Install ID, paired-device identity, Human accounts and site visitors. Opt-out clears it and the unsent queue; re-enabling creates a new one. OS app-data restoration may restore the saved preference and identifier.
+
 **Telemetry**:
 Anonymous product usage events the Host sends to the project's analytics service, on by default and turned off by plugin config `telemetry: false`, `DO_NOT_TRACK=1` or `BOTHARNESS_TELEMETRY=0`. It never carries names, Memory, conversation content, paths or IP addresses (ADR-0132).
 _Avoid_: tracking, analytics SDK, crash reporter
