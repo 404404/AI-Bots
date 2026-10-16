@@ -28,7 +28,11 @@ Some files contain manual paths or API-only journeys. Read each file's precondit
 limits. Native journeys run only through the [shared device QA queue](../../../../docs/agents/device-qa.md).
 After a failed drive use [observation](../references/observation.md) before retrying.
 
-Run `node scripts/check-feature-map.mjs` for the current mapped/unmapped script inventory.
+Run `node scripts/verification-report.mjs` for the complete behavior/script inventory and
+selected runtime evidence. See the [coverage report guide](../../../../docs/agents/verification-inventory.md)
+for metrics, evidence selection and contributor requirements.
+
+Run `node scripts/check-feature-map.mjs` for reference and inventory integrity.
 The check fails for a missing feature row, required section, local link or script, and when
 an index row's scripted journeys disagree with its feature file. It runs in lint. Passing
 checks only reference integrity: update and run the affected paths when the product changes.
