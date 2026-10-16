@@ -22,6 +22,8 @@ export const edge = {
   focus: 2,
 } as const;
 
+export const sheetHandle = { width: 32, height: 4 } as const;
+
 export type TypeRole = { size: number; line: number };
 
 export const typeScale: Record<

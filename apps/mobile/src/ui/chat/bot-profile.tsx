@@ -14,6 +14,7 @@ import { useDesignTheme } from '../design/theme';
 import { edge, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
+import { ProfileSheet } from '../primitives/profile-sheet';
 import {
   ActivityIcon,
   BrowserIcon,
@@ -474,56 +475,59 @@ export function BotProfileSheet({
   }));
 
   return (
-    <SectionList
-      ref={mount}
-      sections={sections}
-      keyExtractor={(row) => row.key}
-      stickySectionHeadersEnabled={false}
-      style={{ flex: 1, backgroundColor: theme.color.surface }}
-      contentContainerStyle={{ padding: space.x5, paddingTop: space.x6 }}
-      ListHeaderComponent={<ProfileHeader bot={bot} actions={actions} settings={settings} />}
-      renderSectionHeader={({ section }) => (
-        <Text
-          accessibilityRole="header"
-          variant="meta"
-          tone="muted"
-          strong
-          style={{
-            paddingHorizontal: space.x5,
-            paddingTop: space.x5,
-            paddingBottom: space.x3,
-          }}
-        >
-          {t.profileSection[section.section]}
-        </Text>
-      )}
-      renderItem={({ item }) => (
-        <ProfileRow
-          bot={bot}
-          row={item}
-          expanded={expanded.has(item.key)}
-          onRetry={read}
-          actions={actions}
-          onToggle={() =>
-            setExpanded((current) => {
-              const next = new Set(current);
-              if (!next.delete(item.key)) next.add(item.key);
-              return next;
-            })
-          }
-        />
-      )}
-      ListFooterComponent={
-        routines === undefined || target === undefined ? null : (
-          <>
-            {routines.sheet({
-              target,
-              onChanged: refreshRoutines,
-              onClose: () => setTarget(undefined),
-            })}
-          </>
-        )
-      }
-    />
+    <ProfileSheet>
+      <SectionList
+        ref={mount}
+        sections={sections}
+        keyExtractor={(row) => row.key}
+        stickySectionHeadersEnabled={false}
+        nestedScrollEnabled
+        style={{ flex: 1, backgroundColor: theme.color.surface }}
+        contentContainerStyle={{ padding: space.x5, paddingTop: space.x6 }}
+        ListHeaderComponent={<ProfileHeader bot={bot} actions={actions} settings={settings} />}
+        renderSectionHeader={({ section }) => (
+          <Text
+            accessibilityRole="header"
+            variant="meta"
+            tone="muted"
+            strong
+            style={{
+              paddingHorizontal: space.x5,
+              paddingTop: space.x5,
+              paddingBottom: space.x3,
+            }}
+          >
+            {t.profileSection[section.section]}
+          </Text>
+        )}
+        renderItem={({ item }) => (
+          <ProfileRow
+            bot={bot}
+            row={item}
+            expanded={expanded.has(item.key)}
+            onRetry={read}
+            actions={actions}
+            onToggle={() =>
+              setExpanded((current) => {
+                const next = new Set(current);
+                if (!next.delete(item.key)) next.add(item.key);
+                return next;
+              })
+            }
+          />
+        )}
+        ListFooterComponent={
+          routines === undefined || target === undefined ? null : (
+            <>
+              {routines.sheet({
+                target,
+                onChanged: refreshRoutines,
+                onClose: () => setTarget(undefined),
+              })}
+            </>
+          )
+        }
+      />
+    </ProfileSheet>
   );
 }

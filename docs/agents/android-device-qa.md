@@ -172,6 +172,19 @@ an appropriately configured build/device; camera, microphone, haptics, backgroun
 notification decisions need their own phone result. Leave system permissions, biometrics and
 final approval decisions to the Human. Failures return to the PR and recheck in the next batch.
 
+The pairing screen has a real Android regression journey:
+`node scripts/e2e-mobile-pair-android.mjs --serial <serial> --owner <task> --batch <batch>`.
+It checks the input and button against the system IME bounds, preserving a screenshot and
+machine-readable failure if either is obscured. The field must be empty before this capture.
+After a Human scans or pastes a fresh offer from the isolated QA Host, add
+`--paired --instance <private-json> --expect-bot <name>` to verify its single live device,
+visible Host/Bot roster and app process restart. The paired check does not capture an input
+field or generate/type a link. Chinese IMEs can compose ADB hardware-key injection, so do
+not rely on `adb input text` for a pairing URL. For USB transport, explicitly map a free
+phone loopback port to the isolated Host and use that origin in the offer routes. Keep the
+Host and exact reverse mapping for a Human handoff, or stop only that Host and remove only
+that mapping after the run. Host restart, revoke and real notifications need separate proof.
+
 Sources: [scrcpy capabilities and prerequisites](https://github.com/Genymobile/scrcpy),
 [recording options](https://github.com/Genymobile/scrcpy/blob/master/doc/recording.md),
 [ADB device selection / reverse](https://developer.android.com/tools/adb),

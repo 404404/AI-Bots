@@ -1,16 +1,9 @@
 import { Stack, useRouter } from 'expo-router';
 import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
-import type { HostClient, RosterBot } from '../../host/client';
+import type { HostClient } from '../../host/client';
 import { visibleDmActivity } from '../../host/dm-activity';
 import { useHiddenDmActivity } from '../../host/native-dm-activity';
 import {
@@ -78,6 +71,7 @@ import { edgeFade, space } from '../design/tokens';
 import { OpenFullClientButton } from '../open-full-client';
 import { leaveScreen } from '../shell/leave-screen';
 import { Text } from '../primitives/text';
+import { KeyboardChatFrame } from '../primitives/keyboard-frame';
 import { t } from '../strings';
 
 type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraft };
@@ -592,10 +586,53 @@ function ChatConversation({
           scrollEdgeEffects: { top: 'hidden', bottom: 'hidden', left: 'hidden', right: 'hidden' },
         }}
       />
-      <KeyboardAvoidingView
-        ref={screenRef}
-        style={{ flex: 1, backgroundColor: theme.color.base }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardChatFrame
+        onMount={screenRef}
+        backgroundColor={theme.color.base}
+        onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
+        composer={
+          botDm ? (
+            <View style={{ padding: space.x5, alignItems: 'center' }}>
+              <Text variant="meta" tone="muted">
+                {t.activityRow.botDm}
+              </Text>
+            </View>
+          ) : (
+            <Composer
+              value={draft}
+              placeholder={
+                bot !== undefined
+                  ? t.messageBot(bot.displayName)
+                  : channel !== undefined
+                    ? t.messageBot(`#${channel.name}`)
+                    : t.messagePlaceholder
+              }
+              disabled={conversation === undefined}
+              files={files}
+              canAttach={files.length < MAX_PICKED}
+              dictation={dictation.state.status}
+              canDictate={conversation !== undefined}
+              onChange={edit}
+              selection={selection}
+              onSelection={(next) => {
+                setSelection(undefined);
+                setCaret(next);
+              }}
+              {...(candidates.length === 0
+                ? {}
+                : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
+              onSend={send}
+              onPick={pick}
+              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+              onDictate={() => {
+                setAttachError(false);
+                dictation.start();
+              }}
+              onStopDictation={dictation.stop}
+              onCancelDictation={dictation.cancel}
+            />
+          )
+        }
       >
         {notice === undefined ? null : (
           <View
@@ -731,54 +768,8 @@ function ChatConversation({
               <JumpToLatest unseen={latest.unseen} onPress={latest.jumpToLatest} />
             </View>
           ) : null}
-          <View
-            onLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
-            style={{ position: 'absolute', left: 0, right: 0, bottom: 0 }}
-          >
-            {botDm ? (
-              <View style={{ padding: space.x5, alignItems: 'center' }}>
-                <Text variant="meta" tone="muted">
-                  {t.activityRow.botDm}
-                </Text>
-              </View>
-            ) : (
-              <Composer
-                value={draft}
-                placeholder={
-                  bot !== undefined
-                    ? t.messageBot(bot.displayName)
-                    : channel !== undefined
-                      ? t.messageBot(`#${channel.name}`)
-                      : t.messagePlaceholder
-                }
-                disabled={conversation === undefined}
-                files={files}
-                canAttach={files.length < MAX_PICKED}
-                dictation={dictation.state.status}
-                canDictate={conversation !== undefined}
-                onChange={edit}
-                selection={selection}
-                onSelection={(next) => {
-                  setSelection(undefined);
-                  setCaret(next);
-                }}
-                {...(candidates.length === 0
-                  ? {}
-                  : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-                onSend={send}
-                onPick={pick}
-                onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-                onDictate={() => {
-                  setAttachError(false);
-                  dictation.start();
-                }}
-                onStopDictation={dictation.stop}
-                onCancelDictation={dictation.cancel}
-              />
-            )}
-          </View>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </KeyboardChatFrame>
       <EdgeFade edge="top" height={headerHeight + edgeFade.top} />
       <ChatHeader
         left={<HeaderBackButton onPress={leave} />}
