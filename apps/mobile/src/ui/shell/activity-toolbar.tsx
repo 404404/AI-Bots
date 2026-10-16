@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useImperativeHandle, useState, type ReactNode, type Ref } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,7 +9,10 @@ import { Text } from '../primitives/text';
 import { t } from '../strings';
 import { ActivityFilterIcon, ActivitySearchIcon, CloseIcon } from './icons';
 
+export type ActivityToolbarHandle = { dismissSearch(): void };
+
 export type ActivityToolbarProps = {
+  ref?: Ref<ActivityToolbarHandle>;
   search: string;
   filtered: boolean;
   onSearch(value: string): void;
@@ -18,6 +21,7 @@ export type ActivityToolbarProps = {
 };
 
 export function ActivityToolbar({
+  ref,
   search,
   filtered,
   onSearch,
@@ -27,6 +31,16 @@ export function ActivityToolbar({
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const [searching, setSearching] = useState(false);
+  useImperativeHandle(
+    ref,
+    () => ({
+      dismissSearch() {
+        setSearching(false);
+        onSearch('');
+      },
+    }),
+    [onSearch],
+  );
   return (
     <>
       <View

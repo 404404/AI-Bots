@@ -1,14 +1,29 @@
 import { Stack } from 'expo-router';
-import { useRef } from 'react';
+import { useImperativeHandle, useRef } from 'react';
 import type { SearchBarCommands } from 'react-native-screens';
 
 import { useDesignTheme } from '../design/theme';
 import { t } from '../strings';
 import type { ActivityToolbarProps } from './activity-toolbar';
 
-export function ActivityToolbar({ search, filtered, onSearch, onFilter }: ActivityToolbarProps) {
+export function ActivityToolbar({
+  ref,
+  search,
+  filtered,
+  onSearch,
+  onFilter,
+}: ActivityToolbarProps) {
   const theme = useDesignTheme();
   const searchBar = useRef<SearchBarCommands>(null);
+  useImperativeHandle(
+    ref,
+    () => ({
+      dismissSearch() {
+        searchBar.current?.cancelSearch();
+      },
+    }),
+    [],
+  );
   return (
     <>
       <Stack.Screen

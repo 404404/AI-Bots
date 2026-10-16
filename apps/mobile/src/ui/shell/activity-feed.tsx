@@ -1,5 +1,12 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCallback, useMemo, useState, useSyncExternalStore, type ReactElement } from 'react';
+import {
+  useCallback,
+  useRef,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactElement,
+} from 'react';
 import { Platform, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 
@@ -33,7 +40,7 @@ import { ChevronDownIcon, ChevronRightIcon } from './icons';
 import { Loading, Notice } from '../request-parts';
 import { EdgeFade, useChatHeaderHeight } from '../chat/header-chrome';
 import { Button } from '../primitives/button';
-import { ActivityToolbar } from './activity-toolbar';
+import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
 import { t } from '../strings';
 import {
   ALL_ACTIVITY,
@@ -342,6 +349,7 @@ export function ActivityFeed({
   now?: number;
 }) {
   const theme = useDesignTheme();
+  const toolbar = useRef<ActivityToolbarHandle>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
@@ -393,6 +401,7 @@ export function ActivityFeed({
       <Animated.FlatList
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{
+          flexGrow: 1,
           paddingTop: Math.max(0, headerHeight - (Platform.OS === 'ios' ? insets.top : 0)),
           paddingBottom: space.x6,
         }}
@@ -405,6 +414,14 @@ export function ActivityFeed({
         keyExtractor={(row) => row.key}
         itemLayoutAnimation={LinearTransition}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListFooterComponentStyle={{ flexGrow: 1 }}
+        ListFooterComponent={
+          <Pressable
+            accessible={false}
+            onPress={() => toolbar.current?.dismissSearch()}
+            style={{ flex: 1 }}
+          />
+        }
         ListHeaderComponent={
           <View style={{ gap: space.x3 }}>
             {header}
@@ -515,6 +532,7 @@ export function ActivityFeed({
       />
       {Platform.OS === 'ios' ? null : <EdgeFade edge="top" height={headerHeight + space.x6} />}
       <ActivityToolbar
+        ref={toolbar}
         search={search}
         filtered={
           sort !== 'default' ||
