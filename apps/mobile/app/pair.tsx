@@ -1,17 +1,9 @@
+import { Text, TextInput } from '../src/ui/primitives/system-text';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Keyboard,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Keyboard, Platform, Pressable, ScrollView, View } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
 import { nativeCarrier } from '../src/host/native-carrier';

@@ -1,5 +1,6 @@
+import { Text, TextInput } from './primitives/system-text';
 import { useCallback, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, ScrollView, View } from 'react-native';
 
 import {
   buildAnswer,

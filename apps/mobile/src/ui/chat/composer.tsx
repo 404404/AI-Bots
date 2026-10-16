@@ -1,3 +1,4 @@
+import { TextInput } from '../primitives/system-text';
 import { useRef, useState, type ReactNode } from 'react';
 import {
   Image,
@@ -5,7 +6,6 @@ import {
   PanResponder,
   Pressable,
   ScrollView,
-  TextInput,
   View,
   type ViewStyle,
 } from 'react-native';
@@ -109,7 +109,8 @@ function AttachmentTile({ file, onRemove }: { file: PickedFile; onRemove(): void
       ) : (
         <View
           style={{
-            height: tile,
+            minHeight: tile,
+            paddingVertical: space.x3,
             maxWidth: tile * 3,
             flexDirection: 'row',
             alignItems: 'center',
@@ -281,7 +282,8 @@ function AttachMenu({ onPick }: { onPick(source: PickSource): void }) {
   return (
     <View
       style={{
-        flexDirection: 'row',
+        flexDirection: theme.largeText ? 'column' : 'row',
+        gap: space.x3,
         justifyContent: 'space-around',
         paddingTop: space.x5,
         paddingBottom: space.x2,
@@ -370,8 +372,9 @@ export function Composer({
   const [contentHeight, setContentHeight] = useState(0);
   const [pill, setPill] = useState({ width: 0, height: 0 });
   const [wraps, setWraps] = useState(false);
-  const lineHeight = theme.touch - space.x4;
-  const fieldPadding = (lineHeight - theme.type.body.line) / 2;
+  const textLine = theme.type.body.line * theme.fontScale;
+  const lineHeight = Math.max(theme.touch - space.x4, textLine);
+  const fieldPadding = Math.max(space.x2, (lineHeight - textLine) / 2);
   const inset = space.x3;
   const pillHeight = useSharedValue(lineHeight + 2 * (inset + edge.hairline));
   const pillStyle = useAnimatedStyle(() => ({ height: pillHeight.value }));
@@ -451,10 +454,10 @@ export function Composer({
         flex: 1,
         ...(wraps
           ? {
-              minHeight: composerFieldHeight(contentHeight, theme.type.body.line, fieldPadding),
-              maxHeight: composerFieldHeight(Infinity, theme.type.body.line, fieldPadding),
+              minHeight: composerFieldHeight(contentHeight, textLine, fieldPadding),
+              maxHeight: composerFieldHeight(Infinity, textLine, fieldPadding),
             }
-          : { height: lineHeight }),
+          : { height: textLine + fieldPadding * 2 }),
         paddingVertical: fieldPadding,
         paddingHorizontal: stacked || leading === null ? space.x3 : 0,
         color: theme.color.fg,
@@ -563,9 +566,7 @@ export function Composer({
             variant="body"
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
-            onLayout={(event) =>
-              setWraps(event.nativeEvent.layout.height > theme.type.body.line * 1.5)
-            }
+            onLayout={(event) => setWraps(event.nativeEvent.layout.height > textLine * 1.5)}
             style={{ position: 'absolute', opacity: 0, width: compactWidth, left: 0, top: 0 }}
           >
             {value === '' ? ' ' : value}

@@ -1,4 +1,5 @@
-import { Text as NativeText, type TextProps } from 'react-native';
+import { Text as NativeText } from './system-text';
+import { type TextProps } from 'react-native';
 
 import type { ColorRole } from '../design/resolve-theme';
 import { useDesignTheme } from '../design/theme';

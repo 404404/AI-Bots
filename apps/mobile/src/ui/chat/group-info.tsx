@@ -1,5 +1,6 @@
+import { TextInput } from '../primitives/system-text';
 import { useState, type ReactNode } from 'react';
-import { Alert, FlatList, Pressable, SectionList, TextInput, View } from 'react-native';
+import { Alert, FlatList, Pressable, SectionList, View } from 'react-native';
 
 import { errorText } from '../../host/bot-settings';
 import {
@@ -97,7 +98,7 @@ function MemberAvatar({ entry }: { entry: { slug: string; bot?: RosterBot } }) {
         justifyContent: 'center',
       }}
     >
-      <Text strong tone="muted">
+      <Text strong tone="muted" allowFontScaling={false}>
         {Array.from(memberName(entry))[0] ?? ''}
       </Text>
     </View>

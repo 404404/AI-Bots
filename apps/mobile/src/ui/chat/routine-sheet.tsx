@@ -1,5 +1,6 @@
+import { TextInput } from '../primitives/system-text';
 import { useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Keyboard, ScrollView, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, ScrollView, View } from 'react-native';
 
 import { errorText, type Loadable } from '../../host/bot-settings';
 import {

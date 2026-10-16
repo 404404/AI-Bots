@@ -208,14 +208,20 @@ function Row({
         <BotAvatar bot={bot} size={size} />
       )}
       <View style={{ flex: 1, gap: space.x1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
-          <Text numberOfLines={1} strong={!settled} style={{ flexShrink: 1 }}>
+        <View
+          style={{
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'flex-start' : 'center',
+            gap: space.x3,
+          }}
+        >
+          <Text numberOfLines={theme.largeText ? 2 : 1} strong={!settled} style={{ flexShrink: 1 }}>
             {t.rowTitle(kind, name)}
             {settled && item.summary.length > 0 ? (
               <Text tone="muted">{` · ${item.summary}`}</Text>
             ) : null}
           </Text>
-          <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
+          <Text variant="meta" tone="muted" style={{ marginLeft: theme.largeText ? 0 : 'auto' }}>
             {t.ago(minutesSince(item.createdAt, now))}
           </Text>
           {(item.unreadCount ?? 0) > 0 ? (
@@ -313,7 +319,7 @@ function Post({
           {name}
           <Text tone="muted">{where}</Text>
         </Text>
-        <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
+        <Text variant="meta" tone="muted" style={{ marginLeft: theme.largeText ? 0 : 'auto' }}>
           {t.ago(minutesSince(item.createdAt, now))}
         </Text>
       </Pressable>

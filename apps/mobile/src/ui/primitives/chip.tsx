@@ -26,7 +26,8 @@ export function Chip({
       hitSlop={{ top: slop, bottom: slop }}
       onPress={onPress}
       style={({ pressed }) => ({
-        height,
+        minHeight: height,
+        paddingVertical: space.x3,
         flexDirection: 'row',
         alignItems: 'center',
         gap: space.x2,
@@ -41,7 +42,7 @@ export function Chip({
             : theme.layer.canvas.fill,
       })}
     >
-      <Text strong={selected} numberOfLines={1}>
+      <Text strong={selected} style={{ flexShrink: 1 }}>
         {label}
       </Text>
       {count === undefined ? null : (
