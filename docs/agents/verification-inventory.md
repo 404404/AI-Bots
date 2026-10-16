@@ -97,3 +97,16 @@ Native provenance cites [#1919](https://github.com/BotHarness/DeepSeekBot/issues
 SHAs, device, capture scope and outstanding checks. Recheck their latest handoffs when
 updating those rows. Mobile Web export scripts are not native acceptance; all native work
 uses the [shared device queue](device-qa.md). This report never claims that queue or a receiver.
+
+## Temporary Workspace Grant evidence
+
+Use `--workspace-run <attempt>` to select the separate
+[Workspace Grant path](../../.agents/skills/verify-deepseekbot/features/workspace-grant.md).
+It qualifies only authorization → direct attachment-import read → explicit revocation →
+refusal for the same Bot/Workspace/Grant. Native file tools, Shell, #1841 and #1957 remain
+outside that evidence. The Activity Center row stays unrun unless separately selected.
+
+`--workspace-evidence-prefix` sets links for this path independently of `--evidence-prefix`
+(Activity Center), so two selected runs never point at each other's files. Keep the entire
+packet external or ignored and generate output to an external temporary file before copying,
+as above. Inspect all three screenshots and ARIA snapshots before recording visual review.
