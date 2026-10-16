@@ -2305,6 +2305,20 @@ function ConversationView({
       />
     );
 
+  const mentionBot = (botSlug: string): void => {
+    const member = channelBots.find(
+      (candidate) => candidate.slug === botSlug && candidate.deleted !== true,
+    );
+    if (channel?.type !== 'group' || member === undefined) return;
+    const next = appendMention(draft, mentionTokens, member.slug, member.displayName);
+    recovery.update({
+      text: next.value,
+      mentions: next.mentions,
+      channelRefs: rebaseChannelRefs(draft, next.value, channelRefTokens),
+    });
+    setRestoreFocusSignal((value) => value + 1);
+  };
+
   const dockContext = resolveChannelSidebarContext(state);
   const dockEntryProps: ChannelSidebarEntryProps | undefined =
     dockContext?.channel === undefined
@@ -2315,6 +2329,7 @@ function ConversationView({
           conversationRevision: state.conversation.revision,
           botSlug: dockContext.botSlug,
           actions,
+          onMentionBot: mentionBot,
           t,
           selectedMemoryCommitSha,
           selectedMemoryFilePath:
@@ -3168,17 +3183,7 @@ function ConversationView({
               )}
               t={t}
               onMessage={(botSlug) => void actions.openBot(botSlug)}
-              onMention={(botSlug) => {
-                const member = channelBots.find((candidate) => candidate.slug === botSlug);
-                if (member === undefined) return;
-                const next = appendMention(draft, mentionTokens, member.slug, member.displayName);
-                recovery.update({
-                  text: next.value,
-                  mentions: next.mentions,
-                  channelRefs: rebaseChannelRefs(draft, next.value, channelRefTokens),
-                });
-                setRestoreFocusSignal((value) => value + 1);
-              }}
+              onMention={mentionBot}
               onProfile={(botSlug) => void actions.openBot(botSlug, 'profile')}
               onClose={() => setAvatarMenu(undefined)}
             />
@@ -3234,6 +3239,7 @@ function ConversationView({
               actions={actions}
               controller={sidebar}
               t={t}
+              onMentionBot={mentionBot}
               selectedMemoryCommitSha={selectedMemoryCommitSha}
               selectedMemoryFilePath={
                 activeMemoryView?.kind === 'file' ? activeMemoryView.path : undefined
