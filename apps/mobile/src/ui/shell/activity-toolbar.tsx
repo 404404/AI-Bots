@@ -68,7 +68,11 @@ export function ActivityToolbar({
           >
             {t.activity}
           </Text>
-          <HeaderCircleButton label={t.activitySort} onPress={() => setSorting(true)}>
+          <HeaderCircleButton
+            label={t.activitySort}
+            selected={sort !== 'default'}
+            onPress={() => setSorting(true)}
+          >
             <ActivitySortIcon
               color={sort === 'default' ? theme.color.fg : theme.color.accent}
               size={theme.type.title.size}

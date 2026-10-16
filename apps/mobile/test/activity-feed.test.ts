@@ -209,6 +209,32 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('sends header sort and search choices to the Host and clears search on close', async () => {
+    const fake = host();
+    const queries: Record<string, unknown>[] = [];
+    fake.answers.set('humanAttention', (args) => {
+      queries.push(args);
+      return { ok: true, value: { items: args.category === 'replies' ? [reply] : [] } };
+    });
+    const view = await feed(fake, ready([]));
+    await press(button(view, t.activitySort));
+    await press(button(view, t.activitySortOldest));
+    expect(queries.at(-1)?.sort).toBe('oldest');
+    await press(button(view, t.activitySearch));
+    const field = view.querySelector('textarea')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        field,
+        'budget',
+      );
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await settle();
+    expect(queries.at(-1)?.search).toBe('budget');
+    await press(button(view, t.close));
+    expect(queries.at(-1)?.search).toBeUndefined();
+  });
+
   it('keeps filters behind the floating header entry instead of permanent chips', async () => {
     const view = await feed(host(), ready([question]));
     expect(view.querySelector(`button[aria-label="${t.filterChip(t.filterAll, 2)}"]`)).toBeNull();

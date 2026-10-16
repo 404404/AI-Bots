@@ -1,5 +1,6 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCallback, useMemo, useState, useSyncExternalStore, type ReactElement } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
@@ -349,6 +350,7 @@ export function ActivityFeed({
   const [sort, setSort] = useState<ActivitySort>('default');
   const [filtering, setFiltering] = useState(false);
   const initialHeight = useChatHeaderHeight();
+  const insets = useSafeAreaInsets();
   const [headerHeight, setHeaderHeight] = useState(initialHeight);
   const scoped = useMemo(
     () =>
@@ -389,8 +391,11 @@ export function ActivityFeed({
   return (
     <View style={{ flex: 1 }}>
       <Animated.FlatList
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: space.x6 }}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{
+          paddingTop: Math.max(0, headerHeight - (Platform.OS === 'ios' ? insets.top : 0)),
+          paddingBottom: space.x6,
+        }}
         scrollIndicatorInsets={{ top: headerHeight }}
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
@@ -406,11 +411,13 @@ export function ActivityFeed({
             {visible.status === 'ready' && visible.stale !== undefined ? (
               <View style={{ paddingHorizontal: space.x5 }}>
                 <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
+                <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
               </View>
             ) : null}
             {visible.status === 'error' ? (
               <View style={{ paddingHorizontal: space.x5 }}>
                 <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
+                <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
               </View>
             ) : null}
             {visible.status === 'loading' ? <Loading /> : null}

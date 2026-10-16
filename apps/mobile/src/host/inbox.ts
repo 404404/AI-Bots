@@ -134,7 +134,7 @@ export function createInbox(client: HostClient, options: InboxQuery = {}): Inbox
         const message = error instanceof Error ? error.message : String(error);
         publish(
           snapshot.status === 'ready'
-            ? { ...snapshot, stale: message }
+            ? { ...snapshot, stale: message, loadingMore: [] }
             : { status: 'error', error: message },
         );
       } finally {
@@ -166,7 +166,8 @@ export function createInbox(client: HostClient, options: InboxQuery = {}): Inbox
     },
     refresh,
     async loadMore(section) {
-      if (stopped || snapshot.status !== 'ready' || loading.has(section)) return;
+      if (stopped || reading !== undefined || snapshot.status !== 'ready' || loading.has(section))
+        return;
       const cursor = snapshot.cursors?.[section];
       if (!cursor) return;
       const at = revision;

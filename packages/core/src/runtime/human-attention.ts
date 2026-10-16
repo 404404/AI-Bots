@@ -407,6 +407,7 @@ export function createHumanAttentionQuery(
   mutedChannelIds: () => readonly string[] = () => [],
   now: () => Date = () => new Date(),
 ): HumanAttentionQuery {
+  let lowerRegistered = false;
   const activeSnooze = (id: string, source: string, at: string): string =>
     `EXISTS (SELECT 1 FROM human_inbox_snoozes s WHERE s.human_id = '${LOCAL_HUMAN_ID}' AND s.item_id = ${id} AND s.source_key = coalesce(${source}, '') AND s.until > '${at}')`;
   const snoozedUntil = (items: HumanAttentionItem[]): HumanAttentionItem[] => {
@@ -516,9 +517,19 @@ export function createHumanAttentionQuery(
       )
         throw new Error('Search must be at most 200 characters');
       const search = input.search?.trim().toLowerCase() ?? '';
+      if (search !== '' && !lowerRegistered) {
+        database.read((db) =>
+          db.function('botharness_activity_lower', { deterministic: true }, (value: unknown) =>
+            typeof value === 'string' ? value.toLowerCase() : '',
+          ),
+        );
+        lowerRegistered = true;
+      }
       const searchCte = 'WITH activity_search AS (SELECT ? AS term), ';
       const match = (body: string, channel: string, bot: string) =>
-        `AND instr(lower(coalesce(${body}, '') || ' ' || coalesce(${channel}, '') || ' ' || coalesce(${bot}, '')), (SELECT term FROM activity_search)) > 0`;
+        search === ''
+          ? ''
+          : `AND instr(botharness_activity_lower(coalesce(${body}, '') || ' ' || coalesce(${channel}, '') || ' ' || coalesce(${bot}, '')), (SELECT term FROM activity_search)) > 0`;
       const channelCte = CHANNEL_ATTENTION_CTE.replace('WITH ', searchCte);
       const actionCte = ACTION_ATTENTION_CTE.replace('WITH ', searchCte);
       const direction = sort === 'oldest' ? 'ASC' : 'DESC';

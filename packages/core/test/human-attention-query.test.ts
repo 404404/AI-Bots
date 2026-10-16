@@ -94,9 +94,13 @@ describe('Human attention projection', () => {
           id: `search-${i}`,
           at: new Date(Date.UTC(2026, 9, 1, 0, 0, i)).toISOString(),
           author: { kind: 'bot', slug: 'ada' },
-          body: i === 0 ? 'Needle budget' : 'Routine update',
+          body: i === 0 ? 'Needle budget ÉTUDE ПРОЕКТ' : 'Routine update',
         });
       const methods = createBridgeMethods({ ...core });
+      for (const search of ['ÉTUDE', 'étude', 'ПРОЕКТ', 'проект'])
+        expect(core.humanAttention.list({ category: 'unread', search }).items).toMatchObject([
+          { messageId: 'search-0' },
+        ]);
       expect(
         methods.humanAttention({ category: 'unread', search: 'needle', limit: 1 }),
       ).toMatchObject({
