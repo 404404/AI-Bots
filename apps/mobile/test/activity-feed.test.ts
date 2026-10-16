@@ -82,6 +82,7 @@ async function feed(
   snapshot: InboxSnapshot,
   collapse = createSectionCollapse({ read: async () => undefined, write() {} }),
   hostId = 'host-one',
+  timeoutMs = 200,
 ): Promise<HTMLElement> {
   act(() => root?.unmount());
   container?.remove();
@@ -107,7 +108,7 @@ async function feed(
     credential: fake.credential,
     carrier: fake.carrier,
     backoff: () => 5,
-    timeoutMs: 200,
+    timeoutMs,
   });
   client.start();
   container = document.createElement('div');
@@ -122,6 +123,7 @@ async function feed(
         inbox: undefined,
         snapshot,
         botSlugs: [question.botSlug, 'other-bot'],
+        channels: [{ id: 'other-channel', name: 'Other Channel' }],
         bot: () => undefined,
         onOpen: () => undefined,
       }),
@@ -238,7 +240,9 @@ describe('Activity feed', () => {
     await press(button(view, t.cancel));
     expect(queries.at(-1)?.sort).toBe('oldest');
     await press(button(view, t.activitySearch));
-    const field = view.querySelector('textarea')!;
+    const field = view.querySelector<HTMLTextAreaElement>(
+      `textarea[aria-label="${t.activitySearch}"]`,
+    )!;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
         field,
@@ -273,7 +277,9 @@ describe('Activity feed', () => {
     fake.answers.set('humanAttention', () => ({ ok: true, value: { items: [] } }));
     const view = await feed(fake, ready([]));
     await press(button(view, t.activitySearch));
-    const field = view.querySelector('textarea')!;
+    const field = view.querySelector<HTMLTextAreaElement>(
+      `textarea[aria-label="${t.activitySearch}"]`,
+    )!;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
         field,
@@ -480,6 +486,58 @@ describe('Activity feed', () => {
       `${t.kind['user-question']} · ${done.botSlug} · ${done.summary}`,
     );
   });
+
+  it.each(['search', 'channel'] as const)(
+    'does not restore a late refused question after the %s changes',
+    async (change) => {
+      const fake = host();
+      fake.answers.set('humanAttention', (args) => ({
+        ok: true,
+        value: {
+          items: args.category === 'action' && !args.search && !args.channelId ? [question] : [],
+        },
+      }));
+      let release: () => void = () => undefined;
+      const response = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fake.answers.delete('userQuestionAnswer');
+      fake.methods.set('userQuestionAnswer', async () => {
+        await response;
+        throw new Error('Already answered elsewhere');
+      });
+      const view = await feed(fake, ready([question]), undefined, 'host-one', 5000);
+      await press(button(view, t.option('A', 'Teal')));
+      await press(button(view, t.option('B', 'Biscuits')));
+      await press(button(view, t.submitChoice));
+      expect(fake.calls.some((call) => call.method === 'userQuestionAnswer')).toBe(true);
+      if (change === 'search') {
+        await press(button(view, t.activitySearch));
+        const field = view.querySelector<HTMLTextAreaElement>(
+          `textarea[aria-label="${t.activitySearch}"]`,
+        )!;
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+            field,
+            'unrelated',
+          );
+          field.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      } else {
+        await press(button(view, t.activityOptions));
+        await press(button(view, 'Other Channel'));
+        await press(button(view, t.cancel));
+      }
+      await settle();
+      expect(post(view, question)).toBeNull();
+      fake.answers.set('userQuestionStatus', () => recorded('userQuestionStatus.answered'));
+      fake.answers.set('channelTimeline', () => recorded('channelTimeline.questionAnswered'));
+      await act(async () => release());
+      await settle();
+      expect(post(view, question)).toBeNull();
+      if (change === 'search') expect(view.textContent).toContain(t.activityNoResults);
+    },
+  );
 
   it('keeps a post that lost to another device and says so', async () => {
     const fake = host();

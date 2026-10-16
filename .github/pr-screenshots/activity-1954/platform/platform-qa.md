@@ -8,15 +8,15 @@ PR #1966 remains Draft. No merge, release or physical-phone use.
 - Same iOS 26 Simulator, authenticated task Host and dataset, English/default text size. Fourteen unedited native PNGs at 402 × 874 points, individually inspected. The gear is the development-client overlay. Captures were taken at different times; relative ages advance.
 - Dataset: 39 production-Channel-owner seeded messages and one real model-generated question. Existing provider quota error retained. No request was answered or approved.
 
-| Check | Observed result |
-| --- | --- |
-| Floating header | Exactly two native iOS entries: Filter and sort, Search. Native navigation controls supply iOS 26 glass. Content scrolls under the native edge; title stays readable. |
-| Combined settings | Newest + For you applied together by Done; reply precedes mention. Cancel discards pending selection. Native downward swipe also discards pending selection; reopening confirms Default order retained. |
-| Reset and scrolling | Lower Channel choices and Reset all are reachable; Cancel/Done stay available. Reset restores default ordering and all filters. Search preservation is covered by source interaction tests. |
-| Native search | Integrated top search finds `needle`, the early matching message among 35 ordinary unread messages. Keyboard leaves result reachable; Close clears the query and restores sections. |
-| Light/dark | Overview, grouped settings and search captured in both appearances; native navigation theme corrected to match app theme. **Open:** dark status-bar text/icons still have poor contrast. |
-| Bottom clearance | Final scrolled light screenshot shows the last row above the floating tab bar. |
-| Android | Material-style leading radio selections, native switch, opaque/ripple toolbar actions and bottom sheet with Cancel/Done implemented. Source tests only; no Android device verification. |
+| Check               | Observed result                                                                                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Floating header     | Exactly two native iOS entries: Filter and sort, Search. Native navigation controls supply iOS 26 glass. Content scrolls under the native edge; title stays readable.                                   |
+| Combined settings   | Newest + For you applied together by Done; reply precedes mention. Cancel discards pending selection. Native downward swipe also discards pending selection; reopening confirms Default order retained. |
+| Reset and scrolling | Lower Channel choices and Reset all are reachable; Cancel/Done stay available. Reset restores default ordering and all filters. Search preservation is covered by source interaction tests.             |
+| Native search       | Integrated top search finds `needle`, the early matching message among 35 ordinary unread messages. Keyboard leaves result reachable; Close clears the query and restores sections.                     |
+| Light/dark          | Overview, grouped settings and search captured in both appearances; native navigation theme corrected to match app theme. **Open:** dark status-bar text/icons still have poor contrast.                |
+| Bottom clearance    | Final scrolled light screenshot shows the last row above the floating tab bar.                                                                                                                          |
+| Android             | Material-style leading radio selections, native switch, opaque/ripple toolbar actions and bottom sheet with Cancel/Done implemented. Source tests only; no Android device verification.                 |
 
 Full mobile suite: 432 passed / 8 skipped. Final mobile typecheck and lint passed; final focused Activity/style tests: 19 passed. Two-axis source review found no additional actionable defects in the platform-control changes; native limitations remain separate. No exact-head CI success is claimed by this document.
 

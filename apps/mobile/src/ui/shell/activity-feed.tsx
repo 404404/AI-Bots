@@ -1,6 +1,7 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useCallback,
+  useLayoutEffect,
   useRef,
   useMemo,
   useState,
@@ -378,6 +379,14 @@ export function ActivityFeed({
           }),
     [client, filter.section, filter.bot, filter.channel, filter.unreadOnly, search, sort],
   );
+  const settlementScope = useMemo(() => ({}), [hostId, scoped, filter, search, sort]);
+  const activeSettlementScope = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    activeSettlementScope.current = settlementScope;
+    return () => {
+      activeSettlementScope.current = undefined;
+    };
+  }, [settlementScope]);
   const scopedSnapshot = useSyncExternalStore(
     useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
     useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
@@ -391,6 +400,7 @@ export function ActivityFeed({
       ? [...botSlugs, filter.bot]
       : botSlugs;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
+    if (activeSettlementScope.current !== settlementScope) return;
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
   };
