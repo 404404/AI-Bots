@@ -174,6 +174,7 @@ describe('@botharness/ui browser bundle', () => {
     expect(plugin['name']).toBe('botharness-client');
     expect(plugin['inject']).toEqual([
       'slots',
+      'shortcuts',
       'connection',
       'inputTriggers',
       'layout',
@@ -194,6 +195,7 @@ describe('@botharness/ui browser bundle', () => {
     }[] = [];
     const sources: unknown[] = [];
     const scoped = {
+      shortcuts: { register: () => () => undefined },
       slots: {
         inject: (_name: string, callback: () => unknown) => callback(),
         register: (spec: {

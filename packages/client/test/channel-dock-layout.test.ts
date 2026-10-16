@@ -53,9 +53,12 @@ describe('Bot mode layout persistence', () => {
   it('round-trips a versioned dockview serialization', () => {
     const storage = memoryStorage();
     writeChannelDock({ layout, parked: { schedules: { direction: 'below' } } }, storage);
-    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(1);
+    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(2);
     expect(readChannelDock(storage)).toEqual({
-      version: 1,
+      version: 2,
+      gap: 4,
+      order: [],
+      members: { open: false, ratio: 0.3 },
       layout,
       parked: { schedules: { direction: 'below' } },
     });

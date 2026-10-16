@@ -1,5 +1,7 @@
 import { createElement } from 'react';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
+import { registerWorkspaceShortcuts } from './workspace-shortcuts.js';
+import type {} from '@deepseek-ai/dsh-client-shortcuts/client';
 import type { Context as ClientContext } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
 import type { InputTriggerSource } from '@deepseek-ai/dsh-client-ui-input-trigger/client';
@@ -141,6 +143,7 @@ export const name = 'botharness-client';
 
 export const inject = [
   'slots',
+  'shortcuts',
   'connection',
   'inputTriggers',
   'layout',
@@ -405,6 +408,40 @@ export function apply(ctx: ClientContext): void {
   const dockPanels = createDockPanelRegistry();
   ctx.provide('dockPanels', dockPanels);
   const channelSidebar = createChannelSidebarRegistry(dockPanels);
+  const workspace = {
+    actions,
+    companion,
+    channelSidebar,
+    dockPanels,
+    shortcutBindings,
+    prefs,
+    layout: ctx.layout,
+    shortcuts: ctx.shortcuts,
+    registerLayoutSettings: (setTarget: (node: HTMLDivElement | null) => void) =>
+      ctx.slots.inject('botharness.settings.section', () =>
+        ctx.slots.register(
+          {
+            name: 'botharness.settings.section',
+            id: 'workspace-layout',
+            order: 5,
+            label: () => t('workspace.appearance'),
+            locale: LOCALE_NS,
+          },
+          () => createElement('div', { ref: setTarget }),
+        ),
+      ),
+    exitBotMode: () => ctx.layout.selectPanel(null),
+    openBotSettings: () => botSettings.open(),
+  };
+
+  ctx.effect(() =>
+    registerWorkspaceShortcuts(
+      ctx.shortcuts,
+      dockPanels,
+      () => document.querySelector('[data-workspace-enabled]') !== null,
+      t,
+    ),
+  );
   ctx.provide('channelSidebar', channelSidebar);
   const profileCards = createProfileCardRegistry();
   ctx.provide('profileCards', profileCards);
@@ -901,6 +938,7 @@ export function apply(ctx: ClientContext): void {
           prefs,
           releaseNotes,
           telemetryNotice,
+          workspace,
           ...botModePrefsFace(prefs),
           exitBotMode: () => ctx.layout.selectPanel(null),
           openBotSettings: () => botSettings.open(),
@@ -1043,6 +1081,7 @@ export function apply(ctx: ClientContext): void {
             nativeChatT,
             nativeSessions,
             prefs,
+            workspace,
           }),
         },
         BotMain,

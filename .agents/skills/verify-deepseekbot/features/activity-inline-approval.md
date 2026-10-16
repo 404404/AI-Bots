@@ -3,6 +3,7 @@
 ## Sub-features
 
 - Full page and Dock open Human Inbox directly, without Overview or statistics.
+- Content fills the allocated Panel width in page and Dock, including after resizing; the workspace shell owns outer insets and gaps.
 - Tool approval preview, single decision, below-card context and source navigation.
 - A failed submission remains pending and retryable; success removes the inert card with
   a 220ms exit. Removing a focused card cannot approve the next item.
@@ -12,10 +13,11 @@
 
 ## How to get to it (user POV)
 
-Enter Bot mode and open the Activity Center pinned card. With a Channel open on desktop
-this opens Dock. With no Dock layout mounted, the same entry opens the full page. The
-narrow Web shell also exposes Activity Center in its Bot mode navigation; opening it and
-then widening the window preserves the full page. Close other Dock panels for a tall list.
+Enter Bot mode and open Activity Center from the workspace control rail on desktop.
+This opens Dock even without a selected Channel. The narrow Web shell exposes Activity
+Center in its Bot mode navigation and opens the full page. Wait for responsive navigation
+to finish mounting after resizing. Toggle the other panels off from the rail for a wide
+list; verify both a narrow allocated Panel and a width greater than the former 760px cap.
 Expand **View context** below an approval, then collapse it and choose **Allow once** or
 **Reject** directly. **Open source** opens the exact Channel message. Select reveals the
 existing checkboxes/batch controls; Filters and history retains the existing category filters.

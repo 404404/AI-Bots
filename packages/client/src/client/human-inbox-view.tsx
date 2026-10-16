@@ -1,4 +1,5 @@
 import { ActivityApproval, useActivityRows } from './activity-approval.js';
+import { PanelEmptyState } from './ds/empty-state.js';
 import { useCallback, useId, useRef, useState, type ReactElement } from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import {
@@ -600,13 +601,13 @@ export function HumanInboxView({
         {inbox.error === undefined ? null : <p role="alert">{inbox.error}</p>}
         {inbox.status === 'loading' ? <p>{t('humanInbox.loading')}</p> : null}
         {inbox.status === 'ready' && inbox.items.length === 0 ? (
-          <p>
+          <PanelEmptyState icon="bell">
             {t(
               inbox.snoozed && actionBotSlug === undefined
                 ? 'humanInbox.empty.snoozed'
                 : categoryCopy[inbox.category].empty,
             )}
-          </p>
+          </PanelEmptyState>
         ) : null}
         {selectable && inbox.items.some((item) => item.category !== 'handled') ? (
           <div

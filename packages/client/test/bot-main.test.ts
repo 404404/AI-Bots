@@ -225,7 +225,7 @@ describe('Bot main Sessions pane', () => {
     }
   });
 
-  it('shows separately focusable companion and Profile actions beside the DM title and Sessions', async () => {
+  it('shows the DM profile menu without the retired header pin shortcut', async () => {
     const bot = {
       slug: 'ada',
       displayName: 'Ada',
@@ -291,13 +291,9 @@ describe('Bot main Sessions pane', () => {
       ),
     );
     const markup = node.innerHTML;
-    expect(markup).toContain('class="bh-companion-pin"');
-    expect(markup).toContain('aria-label="' + zhTranslate('companion.show') + ' · Ada"');
+    expect(node.querySelector('.bh-companion-pin')).toBeNull();
     expect(node.querySelector('button button')).toBeNull();
-    const pin = node.querySelector<HTMLButtonElement>('.bh-companion-pin')!;
-    await act(() => pin.click());
-    expect(companion.get('ada')).toBeDefined();
-    expect(pin.getAttribute('aria-pressed')).toBe('true');
+    expect(companion.get('ada')).toBeUndefined();
     await act(() => root.unmount());
     node.remove();
 

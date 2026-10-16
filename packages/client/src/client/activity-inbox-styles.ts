@@ -1,9 +1,9 @@
 import { color, radius, space, text } from './ds/tokens.stylex.js';
 
 export const ACTIVITY_INBOX_CSS = `
-.bh-activity-triage > .bh-human-inbox { padding: 0 ${space.x5} ${space.x6}; }
-.bh-activity-triage .bh-activity-inbox { max-width: 760px; }
-.bh-activity-triage.bh-activity-center-panel > .bh-human-inbox { padding: 0; }
+.bh-activity-triage { min-width: 0; }
+.bh-activity-triage > .bh-human-inbox { min-width: 0; padding: 0; }
+.bh-activity-triage .bh-activity-inbox { width: 100%; max-width: none; min-width: 0; margin: 0; }
 .bh-activity-triage .bh-human-inbox-workspace { display: block; }
 .bh-activity-triage .bh-human-inbox-detail { grid-column: 1 / -1; min-width: 0; }
 .bh-activity-toolbar { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: ${space.x2}; padding: ${space.x4} 0; background: ${color.base}; }
