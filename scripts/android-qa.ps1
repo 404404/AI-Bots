@@ -126,6 +126,7 @@ if ($Action -eq 'emulator') {
 }
 if ($Action -eq 'metro') {
   $env:REACT_NATIVE_PACKAGER_HOSTNAME='127.0.0.1'
+  $env:NODE_OPTIONS="$env:NODE_OPTIONS --dns-result-order=ipv4first".Trim()
   # Explicit fixed-source capture mode. Restart after JS changes.
   $env:CI='1'
   Run 'pnpm.cmd' @('--dir',"$Repo/apps/mobile",'start','--localhost','--port',"$MetroPort")
@@ -171,8 +172,15 @@ if ($Action -eq 'install') {
 if ($Action -eq 'open') {
   Run $Adb @('-s',$Serial,'reverse',"tcp:$MetroPort","tcp:$MetroPort")
   $url="exp+deepseekbot://expo-development-client/?url=$([uri]::EscapeDataString("http://127.0.0.1:$MetroPort"))"
+  Run $Adb @('-s',$Serial,'shell','am','force-stop','ai.botharness.deepseekbot.dev')
   Run $Adb @('-s',$Serial,'shell','am','start','-a','android.intent.action.VIEW','-d',$url,'ai.botharness.deepseekbot.dev')
   exit
+}
+if ($Action -in @('screenshot','record')) {
+  $focus = & $Adb -s $Serial shell dumpsys window
+  if ($LASTEXITCODE -ne 0 -or ($focus -join "`n") -notmatch 'mCurrentFocus=.*ai\.botharness\.deepseekbot\.dev/') {
+    throw 'QA_APP_NOT_FOREGROUND: open DeepSeekBot and finish any Human/system prompts before capture.'
+  }
 }
 if ($Label -notmatch '^[a-z0-9][a-z0-9-]*$') { throw 'Use a lowercase filename label with letters, digits and hyphens.' }
 $prefix=Join-Path $Evidence "$Label-$([DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfffZ'))"

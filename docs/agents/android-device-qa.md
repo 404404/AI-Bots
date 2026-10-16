@@ -93,8 +93,13 @@ Native input changes (`app.json` native fields, config plugins, Expo/RN or nativ
 versions) require a rebuild; check the batch base as well as its PRs. JS-only batches may reuse
 a dev client only after recording its build provenance/native compatibility. `metro` deliberately
 sets `CI=1` to disable the watcher that timed out on this Windows checkout: restart Metro after
-source changes. The claim's `-MetroPort` (default 8085) must be free; never take another runner's port.
+source changes. It also sets Node's DNS order to `ipv4first`: a Metro listening only on `::1`
+left a USB phone stuck loading because ADB reverse targeted IPv4. Check
+`http://127.0.0.1:<metro-port>/status` before opening the phone. The claim's `-MetroPort`
+(default 8085) must be free; never take another runner's port.
 No EAS initialization, Expo account or cloud build is needed for this local debug workflow.
+`open` restarts only the development app process before opening its Metro link, so a previous
+failed connection is not reused; it preserves app data and pairing credentials.
 
 ## Dedicated Host and pairing
 
@@ -140,7 +145,8 @@ pwsh -NoProfile -File $qa record -Owner $runner -Batch $batch -Label chat-flow -
 `mirror` opens scrcpy for keyboard/mouse control. `record` uses H.264 without audio or a second
 window; the recording process does not inject input. Both pin the same SDK ADB and serial.
 The recorder times out cleanly, finalizing the MP4. `screenshot` saves a binary PNG and a
-UI Automator XML snapshot. Evidence and commit/serial manifests live under
+UI Automator XML snapshot. Capture refuses to start unless DeepSeekBot is the focused app;
+finish system prompts before retrying. Evidence and commit/serial manifests live under
 `<queue-root>/evidence/<batch>/<lane>/`; lifecycle phases go to bounded JSONL entries in
 `events.jsonl`. These are private process evidence, not a second test-status authority.
 
