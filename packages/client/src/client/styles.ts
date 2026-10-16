@@ -2232,37 +2232,6 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
   max-width: min(100%, 440px);
   pointer-events: auto;
 }
-.bh-profile-popover {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 8;
-  display: flex;
-  flex-direction: column;
-  gap: ${space.x3};
-  width: max-content;
-  min-width: 248px;
-  max-width: min(320px, 80vw);
-  padding: ${space.x4};
-  border: ${border.hairline} solid ${color.border};
-  border-radius: ${radius.md};
-  background: var(--dsw-alias-bg-module-platform);
-  box-shadow: 0 6px 24px color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent);
-  text-align: left;
-}
-.bh-profile-popover-identity {
-  display: flex;
-  align-items: center;
-  gap: ${space.x3};
-  min-width: 0;
-}
-.bh-profile-popover-text {
-  display: flex;
-  flex-direction: column;
-  gap: ${space.x1};
-  min-width: 0;
-}
 .bh-profile-name {
   font-weight: ${text.strong};
   overflow: hidden;
@@ -2281,23 +2250,6 @@ html[data-botharness-motion='full'] .bh-skeleton-line {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
   overflow: hidden;
-}
-.bh-profile-expand {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: ${space.x3};
-  width: 100%;
-  padding: ${space.x2} ${space.x3};
-  border: 0;
-  border-radius: ${radius.sm};
-  background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  cursor: pointer;
-}
-.bh-profile-expand:hover {
-  background: var(--bh-hover);
 }
 .bh-avatar-media-composed svg { overflow: visible; }
 .bh-illustrated-head { transform-box: fill-box; transform-origin: 50% 65%; }
@@ -2443,16 +2395,6 @@ canvas.bh-banner-art { image-rendering: pixelated; }
 /* No max-height: with aspect-ratio, WebKit turns it into a max-width and the banner stops
    short of the popover's right edge. Uploads are cropped to 3:1, so the ratio alone fits.
    The art is absolutely placed so its intrinsic width doesn't widen the popover. */
-.bh-profile-popover-banner {
-  position: relative;
-  flex: none;
-  margin: -${space.x4} -${space.x4} 0;
-  aspect-ratio: 3 / 1;
-  overflow: hidden;
-  border-radius: ${radius.md} ${radius.md} 0 0;
-  border-bottom: ${border.hairline} solid ${color.divider};
-}
-.bh-profile-popover-banner > .bh-banner-art { position: absolute; inset: 0; }
 .bh-profile-header-body {
   display: flex;
   flex-direction: column;
@@ -2576,11 +2518,6 @@ canvas.bh-banner-art { image-rendering: pixelated; }
   gap: ${space.x2};
   font-size: ${text.metaSize};
   color: var(--dsw-alias-label-secondary);
-}
-.bh-profile-popover-cards {
-  display: flex;
-  flex-direction: column;
-  gap: ${space.x3};
 }
 .bh-profile-card-body {
   display: flex;

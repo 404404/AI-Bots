@@ -397,6 +397,7 @@ function buildDefaultLayout(api: DockviewApi, entries: ReadonlyMap<string, DockP
 
 export interface ChannelDockProps {
   body: ReactNode;
+  revealBody?: boolean | undefined;
   panels: readonly DockPanelRegistration[];
   channel?: DockPanelChannel | undefined;
   registry?: DockPanelHost | undefined;
@@ -408,6 +409,7 @@ export interface ChannelDockProps {
 
 export function ChannelDock({
   body,
+  revealBody = false,
   panels,
   channel,
   registry,
@@ -521,6 +523,14 @@ export function ChannelDock({
     }
     if (workspace)
       ready.getPanel(CHANNEL_BODY_PANEL)?.api.updateParameters({ entryId: CHANNEL_BODY_PANEL });
+    if (workspace && revealBody) {
+      const message = known.current.get(CHANNEL_BODY_PANEL);
+      if (message && !ready.getPanel(CHANNEL_BODY_PANEL)) {
+        addEntryPanel(ready, message, parked.current[CHANNEL_BODY_PANEL]);
+        delete parked.current[CHANNEL_BODY_PANEL];
+      }
+      ready.getPanel(CHANNEL_BODY_PANEL)?.api.setActive();
+    }
     hideBodyHeader(ready);
     if (newWorkspace && stored === undefined) {
       ready.getPanel('sessions')?.api.setSize({ width: 320 });

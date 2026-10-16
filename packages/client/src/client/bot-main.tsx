@@ -10,7 +10,6 @@ import {
   GroupChannelHeader,
 } from './group-channel-header.js';
 import { MobileConversationHeader } from './mobile-conversation-header.js';
-import { CompanionPin } from './window-companions-view.js';
 import { useDmComposerContext } from './dm-composer-context.js';
 import { useGroupComposerContext } from './group-composer-context.js';
 import type { WindowCompanions } from './window-companions.js';
@@ -122,8 +121,8 @@ import { MemoryCommitView } from './memory-commit-view.js';
 import { MemoryFileView, MemoryWorkingView } from './memory-current-view.js';
 import { LoadingSkeleton } from './loading-skeleton.js';
 import { groupChannelMessages, type MessageGroup } from './message-groups.js';
-import { ProfilePopover, ProfileView } from './personabot-profile.js';
-import { GroupProfilePopover, GroupProfileView } from './group-profile.js';
+import { ProfileView } from './personabot-profile.js';
+import { GroupProfileView } from './group-profile.js';
 import { personaBotActivity } from './persona-activity.js';
 import { BotDmActionLabel } from './bot-dm-action-line.js';
 import { MemoryCommitLine } from './memory-commit-line.js';
@@ -141,15 +140,7 @@ import {
 } from './timeline-working-rows.js';
 import { groupComposerActivity } from './group-composer-activity.js';
 import { attentionCount } from './activity-attention.js';
-import {
-  EMPTY_PROFILE_CARDS,
-  loadPinnedProfileCards,
-  loadPinnedGroupProfileCards,
-  savePinnedProfileCards,
-  savePinnedGroupProfileCards,
-  togglePinnedProfileCard,
-  type ProfileCardRegistry,
-} from './profile-cards.js';
+import { EMPTY_PROFILE_CARDS, type ProfileCardRegistry } from './profile-cards.js';
 import {
   store,
   type BotSummary,
@@ -1223,20 +1214,12 @@ function ConversationView({
   const [selectedMessages, setSelectedMessages] = useState<
     { channelId: string; ids: readonly string[] } | undefined
   >();
-  const [profilePopoverOpen, setProfilePopoverOpen] = useState(false);
   const [profileViewOpen, setProfileViewOpen] = useState(
     state.selection?.kind === 'bot' && state.selection.profile === true,
   );
   const [profileActivity, setProfileActivity] = useState<ProfileActivity | undefined>(undefined);
   const [profileUsageLoading, setProfileUsageLoading] = useState(true);
   const [groupProfileActivity, setGroupProfileActivity] = useState<GroupProfileActivity>();
-  const [pinnedProfileCards, setPinnedProfileCards] = useState<readonly string[]>(() =>
-    loadPinnedProfileCards(),
-  );
-  const [pinnedGroupProfileCards, setPinnedGroupProfileCards] = useState<readonly string[]>(() =>
-    loadPinnedGroupProfileCards(),
-  );
-  const profileTriggerRef = useRef<HTMLSpanElement | null>(null);
   const conversation = state.conversation;
   const channel = conversation.channel;
   const botNames = new Map(state.bots.map((member) => [member.slug, member.displayName]));
@@ -1646,7 +1629,7 @@ function ConversationView({
   }, [channelId]);
 
   const profileMount = useMountedResource<HTMLDivElement>(() => {
-    if (channel?.type !== 'dm' && !profilePopoverOpen && !profileViewOpen) return;
+    if (channel?.type !== 'dm' && !profileViewOpen) return;
     let cancelled = false;
     let fetching = false;
     const refreshUsage = (): void => {
@@ -1684,31 +1667,22 @@ function ConversationView({
     const usageTimer =
       channel?.type === 'dm' ? window.setInterval(refreshUsage, 30_000) : undefined;
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (!profilePopoverOpen && !profileViewOpen) return;
+      if (!profileViewOpen) return;
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]') !== null) return;
       event.preventDefault();
-      if (profilePopoverOpen) setProfilePopoverOpen(false);
-      else setProfileViewOpen(false);
+      setProfileViewOpen(false);
     };
     document.addEventListener('keydown', onKeyDown);
-    const onPointerDown = (event: Event): void => {
-      const target = event.target;
-      if (target instanceof Node && profileTriggerRef.current?.contains(target) === true) return;
-      setProfilePopoverOpen(false);
-    };
-    if (profilePopoverOpen) document.addEventListener('pointerdown', onPointerDown);
     return () => {
       cancelled = true;
       window.clearInterval(usageTimer);
       document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('pointerdown', onPointerDown);
     };
   }, [
     actions,
     channel?.type,
     channelId,
-    profilePopoverOpen,
     profileViewOpen,
     messages.findLast((message) => !message.pending && !message.failed && !message.streaming)?.id,
   ]);
@@ -1731,7 +1705,6 @@ function ConversationView({
     t,
     avgPerf,
     onUsage: () => {
-      setProfilePopoverOpen(false);
       setProfileViewOpen(true);
     },
   });
@@ -1745,7 +1718,6 @@ function ConversationView({
   });
   const baseComposerContext = dmComposerContext ?? groupComposerContext;
   const openProfileView = (): void => {
-    setProfilePopoverOpen(false);
     setSelectedMemoryView(undefined);
     setProfileViewOpen(true);
   };
@@ -1796,21 +1768,6 @@ function ConversationView({
           ...baseComposerContext,
           shortcuts: [...baseComposerContext.shortcuts, ...conversationShortcuts],
         };
-
-  const togglePinnedCard = (id: string): void => {
-    setPinnedProfileCards((current) => {
-      const next = togglePinnedProfileCard(current, id);
-      savePinnedProfileCards(next);
-      return next;
-    });
-  };
-  const togglePinnedGroupCard = (id: string): void => {
-    setPinnedGroupProfileCards((current) => {
-      const next = togglePinnedProfileCard(current, id);
-      savePinnedGroupProfileCards(next);
-      return next;
-    });
-  };
 
   const loadOlderAtTop = (retry = false): void => {
     const element = scrollRef.current;
@@ -2343,45 +2300,26 @@ function ConversationView({
             t={t}
           />
         ) : channel?.type === 'group' ? (
-          <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
+          <span className="bh-channel-island-wrap">
             {channelHeaderMenu(
               {
                 label: t('groupProfile.label'),
                 icon: <ChannelSidebarIcon name="id-card" size={16} />,
-                run: () => setProfilePopoverOpen(true),
+                run: openProfileView,
               },
               (menu) => (
                 <GroupChannelHeader
                   channel={channel}
                   title={title}
                   members={channelFacepile}
-                  companion={companion}
-                  expanded={profilePopoverOpen}
+                  expanded={profileViewOpen}
                   menu={menu}
                   t={t}
-                  onOpenActivity={() => setProfilePopoverOpen(true)}
-                  onToggleProfile={() => setProfilePopoverOpen((open) => !open)}
+                  onOpenActivity={openProfileView}
+                  onToggleProfile={openProfileView}
                 />
               ),
             )}
-            {profilePopoverOpen ? (
-              <GroupProfilePopover
-                members={channelFacepile}
-                channel={channel}
-                activity={
-                  groupProfileActivity?.channelId === channel.id ? groupProfileActivity : undefined
-                }
-                cards={profileCards}
-                pinned={pinnedGroupProfileCards}
-                botNames={botNames}
-                t={t}
-                onExpand={() => {
-                  setProfilePopoverOpen(false);
-                  setSelectedMemoryView(undefined);
-                  setProfileViewOpen(true);
-                }}
-              />
-            ) : null}
           </span>
         ) : profileBot === undefined ? (
           <span className="bh-companion-chip">
@@ -2431,17 +2369,14 @@ function ConversationView({
                 </button>
               ),
             )}
-            {bot && companion ? (
-              <CompanionPin companion={companion} botId={bot.slug} name={bot.displayName} t={t} />
-            ) : null}
           </span>
         ) : (
-          <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
+          <span className="bh-channel-island-wrap">
             {channelHeaderMenu(
               {
                 label: t('profile.view'),
                 icon: <ChannelSidebarIcon name="id-card" size={16} />,
-                run: () => setProfilePopoverOpen(true),
+                run: openProfileView,
               },
               (menu) => (
                 <button
@@ -2449,10 +2384,8 @@ function ConversationView({
                   className="bh-channel-island"
                   {...(menu === undefined
                     ? {
-                        'aria-haspopup': 'dialog' as const,
-                        'aria-expanded': profilePopoverOpen,
                         'aria-label': t('profile.openAvatar', { name: profileBot.displayName }),
-                        onClick: () => setProfilePopoverOpen((open) => !open),
+                        onClick: openProfileView,
                       }
                     : {
                         'aria-haspopup': 'menu' as const,
@@ -2477,28 +2410,6 @@ function ConversationView({
                 </button>
               ),
             )}
-            {companion ? (
-              <CompanionPin
-                companion={companion}
-                botId={profileBot.slug}
-                name={profileBot.displayName}
-                t={t}
-              />
-            ) : null}
-            {profilePopoverOpen ? (
-              <ProfilePopover
-                bot={profileBot}
-                activity={profileActivity}
-                cards={profileCards}
-                pinned={pinnedProfileCards}
-                t={t}
-                onExpand={() => {
-                  setProfilePopoverOpen(false);
-                  setSelectedMemoryView(undefined);
-                  setProfileViewOpen(true);
-                }}
-              />
-            ) : null}
           </span>
         )}
       </div>
@@ -2511,15 +2422,14 @@ function ConversationView({
       />
       {profileViewOpen && channel?.type === 'group' ? (
         <GroupProfileView
+          members={channelFacepile}
           channel={channel}
           activity={
             groupProfileActivity?.channelId === channel.id ? groupProfileActivity : undefined
           }
           cards={profileCards}
-          pinned={pinnedGroupProfileCards}
           botNames={botNames}
           t={t}
-          onTogglePin={togglePinnedGroupCard}
           onClose={() => setProfileViewOpen(false)}
         />
       ) : profileViewOpen && profileBot !== undefined && channel !== undefined ? (
@@ -2528,10 +2438,8 @@ function ConversationView({
           channel={channel}
           activity={profileActivity}
           cards={profileCards}
-          pinned={pinnedProfileCards}
           actions={actions}
           t={t}
-          onTogglePin={togglePinnedCard}
           onClose={() => setProfileViewOpen(false)}
         />
       ) : (
@@ -3189,6 +3097,7 @@ function ConversationView({
           {docked ? (
             <ChannelDock
               body={chatPane}
+              revealBody={state.selection?.kind === 'bot' && state.selection.profile === true}
               panels={dockPanelList}
               channel={dockChannel}
               registry={dockPanels}

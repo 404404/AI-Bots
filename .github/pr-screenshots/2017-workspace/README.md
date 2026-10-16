@@ -8,7 +8,7 @@
 
 Runtime checks: native sidebar allocation and restoration; rail left/middle/right; switch drag ordering; panel drag node identity; continuous 0/16/12px spacing; Messages close/reopen and refresh; Web proportional resize; narrow fallback; all panels closed with a 56px rail; companion drag retaining the message node; group-member split persistence; native custom shortcut after reload/reset; native fullscreen clearance and window drag. Light-theme Web was also inspected.
 
-The complete platform matrix, Windows/Linux Desktop, embedded Browser/Computer state during movement, and final Human QA remain separate. This PR does not merge or deploy the workspace.
+The complete platform matrix, Windows/Linux Desktop, embedded Browser/Computer state during movement, and final Human QA remain separate. Deployment is outside this PR.
 
 ## Empty-state refinement
 
@@ -17,3 +17,7 @@ The complete platform matrix, Windows/Linux Desktop, embedded Browser/Computer s
 ## Expanded Channel search alignment
 
 `search-before.png` captures parent `1aacd52fbb1e2639ce42badb086f1f344277136f`; `search-after.png` captures this refinement in the same real Web Client (1440 × 900, English, dark, default Bot welcome). The former search extends 2px past its clipping ancestor and ends 6px short of the Channel row; the latter matches both row edges. A 1000 × 800 Web check also matches both edges. Actual macOS fullscreen matches both edges; windowed top-left headers retain the existing traffic-light clearance (27px in the tested layout) while aligning the right edge. No native before/after pair is claimed for this CSS refinement.
+
+## Direct profile details
+
+`profile-before.png` captures parent `b75f3963aa0c24a9b52509fd3df28f451acac44c`; `profile-after.png` captures the direct detail view in the same isolated Web Client, 1440 × 900, English, dark, default Bot. The full workspace journey verifies header navigation, absence of preview/pin controls, and opening a DM profile after Messages was closed and the page refreshed. Actual macOS rc.2 Chinese native menus also verified both header navigation and Channel context-menu navigation with Messages closed; the rail becomes active and the correct full profile appears. No messages were sent.

@@ -209,6 +209,21 @@ try {
   await page.focus('[data-dock-header="bh:channels"] input');
   await page.keyboard.press('Escape');
 
+  step = 'header-profile-details';
+  await page.click('.bh-topbar .bh-channel-island');
+  await page.locator(`::-p-aria(${chinese ? '查看资料' : 'View profile'})`).click();
+  await page.waitForSelector('.bh-profile-view');
+  assert.equal(await page.$('.bh-profile-popover'), null, 'profile opens without a popover');
+  assert.equal(
+    await page.$('.bh-profile-card-head .bh-profile-pin'),
+    null,
+    'profile cards have no pin controls',
+  );
+  assert.equal(await page.$('.bh-topbar .bh-companion-pin'), null, 'header has no pin shortcut');
+  await proof('01c-profile-details');
+  await page.click('.bh-profile-back');
+  await page.waitForSelector('[data-message-id]');
+
   const liveMessage = await page.$('[data-message-id]');
   const liveRoster = await page.$(`${channels} [data-channel-id]`);
   const assertLive = async () => {
@@ -341,9 +356,25 @@ try {
   await page.reload({ waitUntil: 'networkidle2' });
   await page.waitForSelector(rail);
   assert.equal(await page.$('.bh-dock-body'), null, 'closed Messages stays closed after refresh');
-  await page.click('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]');
+  step = 'profile-reopens-messages';
+  const profileRow = await page.$(`${channels} [data-channel-id]`);
+  const expectedProfileName = await profileRow.$eval('.bh-name', (node) => node.textContent);
+  await profileRow.click({ button: 'right' });
+  await page.locator(`::-p-aria(${chinese ? '查看资料' : 'View profile'})`).click();
+  await page.waitForSelector('.bh-dock-body .bh-profile-view');
+  assert.equal(
+    await page.$eval('.bh-profile-view-name', (node) => node.textContent),
+    expectedProfileName,
+  );
+  assert.equal(
+    await page.$eval('.bh-workspace-rail [data-pinned-panel="bh:channel-body"]', (node) =>
+      node.getAttribute('aria-pressed'),
+    ),
+    'true',
+  );
+  await proof('07b-profile-reopens-messages');
+  await page.click('.bh-profile-back');
   await page.waitForSelector('[data-message-id]');
-  await proof('07b-reopen-messages');
   if (!desktop) {
     const ratio = () =>
       page.$eval(
