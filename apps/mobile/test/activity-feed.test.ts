@@ -219,7 +219,7 @@ describe('Activity feed', () => {
     const view = await feed(fake, ready([]));
     await press(button(view, t.activityOptions));
     await press(button(view, t.activitySortOldest));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     expect(queries.at(-1)?.sort).toBe('oldest');
     await press(button(view, t.activitySearch));
     const field = view.querySelector('textarea')!;
@@ -236,7 +236,7 @@ describe('Activity feed', () => {
     expect(queries.at(-1)?.search).toBeUndefined();
   });
 
-  it('discards canceled edits and resets sort with filters only when applied', async () => {
+  it('applies options immediately, keeps them on dismissal and resets without confirmation', async () => {
     const fake = host();
     const queries: Record<string, unknown>[] = [];
     fake.answers.set('humanAttention', (args) => {
@@ -245,20 +245,20 @@ describe('Activity feed', () => {
     });
     const view = await feed(fake, ready([]));
     await press(button(view, t.activityOptions));
+    expect(view.querySelector(`button[aria-label="${t.done}"]`)).toBeNull();
     await press(button(view, t.activitySortNewest));
+    expect(queries.at(-1)?.sort).toBe('newest');
+    expect(view.querySelector('[role="dialog"]')).not.toBeNull();
     await press(button(view, t.inboxSections.replies));
-    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.at(-1)?.category).toBe('replies');
+    expect(queries.at(-1)?.sort).toBe('newest');
     await press(button(view, t.cancel));
-    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.at(-1)?.sort).toBe('newest');
     await press(button(view, t.activityOptions));
-    await press(button(view, t.activitySortOldest));
-    await press(button(view, t.done));
-    expect(queries.at(-1)?.sort).toBe('oldest');
-    await press(button(view, t.activityOptions));
+    expect(button(view, t.activitySortNewest).getAttribute('aria-checked')).toBe('true');
     await press(button(view, t.activityReset));
-    expect(queries.at(-1)?.sort).toBe('oldest');
-    await press(button(view, t.done));
     expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(view.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
   it('keeps filters behind the floating header entry instead of permanent chips', async () => {
@@ -338,12 +338,12 @@ describe('Activity feed', () => {
     });
     await press(button(view, t.activityOptions));
     await press(button(view, question.botSlug));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     expect(button(view, t.sectionCount(t.inboxSections.unread, 2))).not.toBeNull();
     expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).not.toBeNull();
     await press(button(view, t.activityOptions));
     await press(button(view, t.filterAllBots));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     expect(button(view, t.sectionCount(t.inboxSections.unread, 10))).not.toBeNull();
   });
 
@@ -373,7 +373,7 @@ describe('Activity feed', () => {
     expect(post(view, question)).not.toBeNull();
     await press(button(view, t.activityOptions));
     await press(button(view, t.inboxSections.handled));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     expect(view.querySelector('[data-testid="inbox-row-done-1"]')).not.toBeNull();
     expect(post(view, question)).toBeNull();
   });
@@ -400,12 +400,12 @@ describe('Activity feed', () => {
     expect(post(view, question)).not.toBeNull();
     await press(button(view, t.activityOptions));
     await press(button(view, t.inboxSections.replies));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     expect(post(view, question)).toBeNull();
     expect(button(view, t.sectionCount(t.inboxSections.replies, 1))).not.toBeNull();
     await press(button(view, t.activityOptions));
     await press(button(view, t.filterAll));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     expect(post(view, question)).not.toBeNull();
   });
 
@@ -420,7 +420,7 @@ describe('Activity feed', () => {
     expect(replied.textContent?.split(reply.summary).length).toBe(2);
     await press(button(view, t.activityOptions));
     await press(button(view, t.inboxSections.handled));
-    await press(button(view, t.done));
+    await press(button(view, t.cancel));
     const handled = view.querySelector('[data-testid="inbox-row-done-1"]')!;
     expect(handled.textContent).toContain(
       `${t.kind['user-question']} · ${done.botSlug} · ${done.summary}`,

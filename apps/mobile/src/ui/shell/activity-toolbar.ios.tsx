@@ -40,7 +40,11 @@ export function ActivityToolbar({ search, filtered, onSearch, onFilter }: Activi
         allowToolbarIntegration={false}
         hideWhenScrolling={false}
         obscureBackground={false}
-        onFocus={() => searchBar.current?.setText(search)}
+        onFocus={() => {
+          searchBar.current?.setText(search);
+          searchBar.current?.toggleCancelButton(false);
+        }}
+        onBlur={() => searchBar.current?.cancelSearch()}
         onChangeText={(event) => {
           const value = event.nativeEvent.text.slice(0, 200);
           if (value !== event.nativeEvent.text) searchBar.current?.setText(value);

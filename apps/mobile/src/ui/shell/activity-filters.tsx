@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { FlatList, Modal, Platform, Pressable, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -93,8 +93,6 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const ios = Platform.OS === 'ios';
-  const [draft, setDraft] = useState(filter);
-  const [order, setOrder] = useState(sort);
   const group = (key: string, label: string, choices: Choice[]): Row[] => [
     { kind: 'heading', key, label },
     ...choices.map((choice, index) => ({
@@ -110,20 +108,20 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
       {
         key: 'default',
         label: t.activitySortDefault,
-        selected: order === 'default',
-        choose: () => setOrder('default'),
+        selected: sort === 'default',
+        choose: () => onSort('default'),
       },
       {
         key: 'newest',
         label: t.activitySortNewest,
-        selected: order === 'newest',
-        choose: () => setOrder('newest'),
+        selected: sort === 'newest',
+        choose: () => onSort('newest'),
       },
       {
         key: 'oldest',
         label: t.activitySortOldest,
-        selected: order === 'oldest',
-        choose: () => setOrder('oldest'),
+        selected: sort === 'oldest',
+        choose: () => onSort('oldest'),
       },
     ]),
     ...group(
@@ -132,8 +130,8 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
       SECTIONS.map((section) => ({
         key: `section:${section}`,
         label: section === 'all' ? t.filterAll : t.inboxSections[section],
-        selected: draft.section === section,
-        choose: () => setDraft({ ...draft, section }),
+        selected: filter.section === section,
+        choose: () => onFilter({ ...filter, section }),
       })),
     ),
     { kind: 'unread', key: 'unread' },
@@ -141,52 +139,46 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
       {
         key: 'bot:all',
         label: t.filterAllBots,
-        selected: draft.bot === undefined,
-        choose: () => setDraft({ ...draft, bot: undefined }),
+        selected: filter.bot === undefined,
+        choose: () => onFilter({ ...filter, bot: undefined }),
       },
       ...bots.map((bot) => ({
         key: `bot:${bot.slug}`,
         label: bot.name,
-        selected: draft.bot === bot.slug,
-        choose: () => setDraft({ ...draft, bot: bot.slug }),
+        selected: filter.bot === bot.slug,
+        choose: () => onFilter({ ...filter, bot: bot.slug }),
       })),
     ]),
     ...group('channels', t.channels, [
       {
         key: 'channel:all',
         label: t.activityAllChannels,
-        selected: draft.channel === undefined,
-        choose: () => setDraft({ ...draft, channel: undefined }),
+        selected: filter.channel === undefined,
+        choose: () => onFilter({ ...filter, channel: undefined }),
       },
       ...channels.map((channel) => ({
         key: `channel:${channel.id}`,
         label: channel.name,
-        selected: draft.channel === channel.id,
-        choose: () => setDraft({ ...draft, channel: channel.id }),
+        selected: filter.channel === channel.id,
+        choose: () => onFilter({ ...filter, channel: channel.id }),
       })),
     ]),
   ];
-  const apply = () => {
-    onFilter(draft);
-    onSort(order);
-    onClose();
-  };
-  const actions = (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: space.x4,
-      }}
-    >
-      <TextAction label={t.cancel} onPress={onClose} />
-      <TextAction label={t.done} onPress={apply} />
-    </View>
-  );
   const content = (
     <>
-      {ios ? actions : null}
+      {ios ? (
+        <View
+          style={{
+            alignSelf: 'center',
+            width: space.x6 + space.x3,
+            height: space.x2,
+            borderRadius: radius.round,
+            backgroundColor: theme.layer.canvas.selected,
+            marginTop: space.x3,
+            marginBottom: space.x3,
+          }}
+        />
+      ) : null}
       <Text
         variant="display"
         strong
@@ -234,8 +226,8 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
                 <Text style={{ flex: 1 }}>{t.activityUnreadOnly}</Text>
                 <Switch
                   accessibilityLabel={t.activityUnreadOnly}
-                  value={draft.unreadOnly === true}
-                  onValueChange={(unreadOnly) => setDraft({ ...draft, unreadOnly })}
+                  value={filter.unreadOnly === true}
+                  onValueChange={(unreadOnly) => onFilter({ ...filter, unreadOnly })}
                   trackColor={{ true: theme.color.accent }}
                 />
               </View>
@@ -279,14 +271,13 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
             <TextAction
               label={t.activityReset}
               onPress={() => {
-                setDraft(ALL_ACTIVITY);
-                setOrder('default');
+                onFilter(ALL_ACTIVITY);
+                onSort('default');
               }}
             />
           </View>
         }
       />
-      {ios ? null : actions}
     </>
   );
   return (
