@@ -16,7 +16,6 @@ export type ActivityToolbarProps = {
   search: string;
   filtered: boolean;
   onSearch(value: string): void;
-  onSearchFocus(focused: boolean): void;
   onFilter(): void;
   onHeight(height: number): void;
 };

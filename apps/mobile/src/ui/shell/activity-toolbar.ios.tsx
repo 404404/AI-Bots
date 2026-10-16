@@ -13,7 +13,6 @@ export function ActivityToolbar({
   search,
   filtered,
   onSearch,
-  onSearchFocus,
   onFilter,
 }: ActivityToolbarProps) {
   const theme = useDesignTheme();
@@ -21,10 +20,9 @@ export function ActivityToolbar({
   const [searching, setSearching] = useState(false);
   function dismissSearch() {
     setSearching(false);
-    onSearchFocus(false);
     Keyboard.dismiss();
   }
-  useImperativeHandle(ref, () => ({ dismissSearch }), [onSearchFocus]);
+  useImperativeHandle(ref, () => ({ dismissSearch }), []);
   return (
     <>
       <Stack.Screen
@@ -92,7 +90,6 @@ export function ActivityToolbar({
             accessibilityLabel={t.activitySearch}
             tintColor={search ? theme.color.accent : theme.color.fg}
             onPress={() => {
-              onSearchFocus(true);
               setSearching(true);
             }}
             separateBackground
