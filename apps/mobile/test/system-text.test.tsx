@@ -12,8 +12,19 @@ vi.mock('react-native', async () => ({
     },
   },
   useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: device.scale }),
-  Text: ({ style, allowFontScaling, children }: Record<string, unknown>) => (
-    <span data-metrics={JSON.stringify(style)} data-native-scaling={String(allowFontScaling)}>
+  Text: ({
+    style,
+    allowFontScaling,
+    dynamicTypeRamp,
+    maxFontSizeMultiplier,
+    children,
+  }: Record<string, unknown>) => (
+    <span
+      data-metrics={JSON.stringify(style)}
+      data-ramp={dynamicTypeRamp as string}
+      data-maximum={maxFontSizeMultiplier as number}
+      data-native-scaling={String(allowFontScaling)}
+    >
       {children as string}
     </span>
   ),
@@ -50,57 +61,46 @@ function render(node: React.ReactNode) {
 }
 
 describe('system text size', () => {
-  it('updates final overridden metrics at live maximum and minimum sizes without double scaling', () => {
-    let initial: HTMLSpanElement | undefined;
-    for (const scale of [1, 3.571, 0.823, 1]) {
-      device.scale = scale;
-      const span = render(
-        <Text style={[{ fontSize: 17, lineHeight: 22 }, { fontSize: 20 }]}>Launch</Text>,
-      ).querySelector('span')!;
-      initial ??= span;
-      expect(span).toBe(initial);
-      expect(JSON.parse(span.dataset.metrics!)).toEqual({
-        fontSize: 20 * scale,
-        lineHeight: 22 * scale,
-      });
-      expect(span.dataset.nativeScaling).toBe('false');
-    }
-  });
-
-  it('scales legacy root labels and default inputs without forcing nested font sizes', () => {
-    device.scale = 2;
-    const host = render(
-      <>
-        <Text>Paste link</Text>
-        <TextInput value="draft" />
-      </>,
-    );
-    expect(JSON.parse(host.querySelector('span')!.dataset.metrics!)).toEqual({ fontSize: 34 });
-    expect(JSON.parse(host.querySelector('textarea')!.dataset.metrics!)).toEqual({ fontSize: 34 });
-  });
-
-  it('inherits an explicit ancestor maximum while zero opts back into the system size', () => {
-    device.scale = 3.571;
-    const spans = render(
-      <Text maxFontSizeMultiplier={2} style={{ fontSize: 17 }}>
-        <Text style={{ fontSize: 10 }}>Inherited</Text>
-        <Text maxFontSizeMultiplier={0} style={{ fontSize: 12 }}>
-          Unbounded
-        </Text>
-      </Text>,
-    ).querySelectorAll('span');
-    expect(JSON.parse(spans[1]!.dataset.metrics!)).toEqual({ fontSize: 20 });
-    expect(JSON.parse(spans[2]!.dataset.metrics!)).toEqual({ fontSize: 12 * device.scale });
-  });
-
-  it('leaves Android nonlinear scaling to the native view', () => {
-    device.os = 'android';
-    device.scale = 2;
-    const span = render(<Text style={{ fontSize: 17, lineHeight: 22 }}>Launch</Text>).querySelector(
+  it('uses native semantic curves and renews stale iOS paragraphs after live resizing', () => {
+    const first = render(<Text style={{ fontSize: 28 }}>Filter and sort</Text>).querySelector(
       'span',
     )!;
-    expect(JSON.parse(span.dataset.metrics!)).toEqual({ fontSize: 17, lineHeight: 22 });
-    expect(span.dataset.nativeScaling).toBe('undefined');
+    expect(first.dataset.ramp).toBe('title1');
+    device.scale = 3.571;
+    const next = render(<Text style={{ fontSize: 28 }}>Filter and sort</Text>).querySelector(
+      'span',
+    )!;
+    expect(next).not.toBe(first);
+    expect(next.dataset.ramp).toBe('title1');
+    expect(next.dataset.nativeScaling).toBe('undefined');
+    expect(JSON.parse(next.dataset.metrics!)).toEqual([{ fontSize: 17 }, { fontSize: 28 }]);
+  });
+
+  it('passes explicit roles and maximum overrides to the native text owner', () => {
+    const spans = render(
+      <Text dynamicTypeRamp="headline" maxFontSizeMultiplier={2}>
+        <Text maxFontSizeMultiplier={0}>Unbounded</Text>
+      </Text>,
+    ).querySelectorAll('span');
+    expect(spans[0]!.dataset.ramp).toBe('headline');
+    expect(spans[0]!.dataset.maximum).toBe('2');
+    expect(spans[1]!.dataset.ramp).toBeUndefined();
+    expect(spans[1]!.dataset.maximum).toBe('0');
+  });
+
+  it('leaves Android nonlinear scaling and paragraph lifecycle to the native view', () => {
+    device.os = 'android';
+    const first = render(
+      <Text style={{ fontSize: 17, lineHeight: 22 }}>Launch</Text>,
+    ).querySelector('span')!;
+    device.scale = 2;
+    const next = render(<Text style={{ fontSize: 17, lineHeight: 22 }}>Launch</Text>).querySelector(
+      'span',
+    )!;
+    expect(next).toBe(first);
+    expect(JSON.parse(next.dataset.metrics!)).toEqual({ fontSize: 17, lineHeight: 22 });
+    expect(next.dataset.ramp).toBeUndefined();
+    expect(next.dataset.nativeScaling).toBe('undefined');
   });
 
   it('keeps the input node, draft and focus through a live size change', () => {
@@ -127,10 +127,11 @@ describe('system text size', () => {
     expect(document.activeElement).toBe(input);
     expect(input.selectionStart).toBe(3);
     expect(input.selectionEnd).toBe(8);
-    expect(JSON.parse(input.dataset.metrics!)).toEqual({
-      fontSize: 17 * device.scale,
-      lineHeight: 22 * device.scale,
-    });
+    expect(JSON.parse(input.dataset.metrics!)).toEqual([
+      { fontSize: 17 },
+      { fontSize: 17, lineHeight: 22 },
+    ]);
+    expect(input.dataset.nativeScaling).toBe('undefined');
   });
 
   it('keeps decorative initials unscaled and nested text metrics inherited', () => {
@@ -145,8 +146,8 @@ describe('system text size', () => {
         </Text>
       </>,
     ).querySelectorAll('span');
-    expect(JSON.parse(nodes[0]!.dataset.metrics!)).toEqual({ fontSize: 17 });
-    expect(JSON.parse(nodes[1]!.dataset.metrics!)).toEqual({ fontSize: 20 * device.scale });
+    expect(JSON.parse(nodes[0]!.dataset.metrics!)).toEqual([{ fontSize: 17 }, { fontSize: 17 }]);
+    expect(JSON.parse(nodes[1]!.dataset.metrics!)).toEqual([{ fontSize: 17 }, { fontSize: 20 }]);
     expect(nodes[2]!.dataset.metrics).toBeUndefined();
   });
 });

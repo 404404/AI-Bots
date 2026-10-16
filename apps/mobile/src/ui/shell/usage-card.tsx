@@ -147,7 +147,7 @@ export function UsageCard({
           {amount === undefined ? '—' : amount}
           <Text tone="muted">{t.usageUnit}</Text>
         </Text>
-        <UsageBars days={week?.days} height={chart.spark} on={on} />
+        {theme.largeText ? null : <UsageBars days={week?.days} height={chart.spark} on={on} />}
       </Pressable>
       {state.status === 'loading' && state.value === undefined ? (
         <Text

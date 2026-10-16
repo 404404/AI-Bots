@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   View,
+  useWindowDimensions,
   type ViewStyle,
 } from 'react-native';
 import Animated, {
@@ -33,6 +34,7 @@ import {
   PlusIcon,
   RecordingStopIcon,
 } from '../shell/icons';
+import { DraftEditor } from './draft-editor';
 import { haptic } from '../haptics';
 import { t } from '../strings';
 import {
@@ -369,12 +371,19 @@ export function Composer({
   const [footerHeight, setFooterHeight] = useState(0);
   const [menu, setMenu] = useState(false);
   const [held, setHeld] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const [pill, setPill] = useState({ width: 0, height: 0 });
   const [wraps, setWraps] = useState(false);
-  const textLine = theme.type.body.line * theme.fontScale;
+  const { height: viewportHeight } = useWindowDimensions();
+  const [measuredLine, setMeasuredLine] = useState({ scale: 0, height: 0 });
+  const textLine =
+    measuredLine.scale === theme.fontScale
+      ? measuredLine.height
+      : theme.type.body.line * theme.fontScale;
   const lineHeight = Math.max(theme.touch - space.x4, textLine);
   const fieldPadding = Math.max(space.x2, (lineHeight - textLine) / 2);
+  const fieldLimit = Math.max(textLine + 2 * fieldPadding, viewportHeight / 5);
   const inset = space.x3;
   const pillHeight = useSharedValue(lineHeight + 2 * (inset + edge.hairline));
   const pillStyle = useAnimatedStyle(() => ({ height: pillHeight.value }));
@@ -455,8 +464,8 @@ export function Composer({
         flex: 1,
         ...(expanded
           ? {
-              minHeight: composerFieldHeight(contentHeight, textLine, fieldPadding),
-              maxHeight: composerFieldHeight(Infinity, textLine, fieldPadding),
+              minHeight: composerFieldHeight(contentHeight, textLine, fieldPadding, fieldLimit),
+              maxHeight: composerFieldHeight(Infinity, textLine, fieldPadding, fieldLimit),
             }
           : { height: textLine + fieldPadding * 2 }),
         paddingVertical: fieldPadding,
@@ -502,7 +511,40 @@ export function Composer({
         paddingBottom: Math.max(insets.bottom, space.x3),
       }}
     >
-      {above}
+      {editing ? (
+        <DraftEditor
+          value={value}
+          placeholder={placeholder}
+          canSend={actions.includes('send')}
+          above={above}
+          selection={selection}
+          onSelection={onSelection}
+          onChange={onChange}
+          onClose={() => setEditing(false)}
+          onSend={() => {
+            haptic('send');
+            onSend();
+            setEditing(false);
+          }}
+        />
+      ) : null}
+      {editing ? null : above}
+      <Text
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        onTextLayout={(event) => {
+          const height = event.nativeEvent.lines[0]?.height;
+          if (height !== undefined && height > 0)
+            setMeasuredLine((current) =>
+              current.scale === theme.fontScale && current.height === height
+                ? current
+                : { scale: theme.fontScale, height },
+            );
+        }}
+        style={{ position: 'absolute', opacity: 0 }}
+      >
+        M
+      </Text>
       <Animated.View
         style={[
           {
@@ -557,6 +599,11 @@ export function Composer({
               }}
             >
               {leading}
+              {expanded && !listening ? (
+                <RoundButton label={t.expandDraft} filled={false} onPress={() => setEditing(true)}>
+                  <ChevronUpIcon color={theme.color.muted} size={icon} />
+                </RoundButton>
+              ) : null}
               <View pointerEvents="none" style={{ flex: 1 }} />
               {trailing}
             </View>

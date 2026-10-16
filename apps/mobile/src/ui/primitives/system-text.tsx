@@ -5,60 +5,49 @@ import {
   Text as NativeText,
   TextInput as NativeTextInput,
   useWindowDimensions,
-  type TextStyle,
-  type StyleProp,
+  type TextProps,
 } from 'react-native';
 
-import { systemTextStyle } from '../design/system-type';
+import { textRamp } from '../design/system-type';
 import { typeScale } from '../design/tokens';
 
-const TextAncestor = createContext<number | null>(null);
+const TextAncestor = createContext(false);
 
-function useSystemTextStyle(
-  style: StyleProp<TextStyle>,
-  allowFontScaling: boolean | undefined,
-  maxFontSizeMultiplier: number | undefined,
-) {
+export function Text({
+  style,
+  dynamicTypeRamp,
+  ...props
+}: ComponentPropsWithRef<typeof NativeText>) {
+  const nested = useContext(TextAncestor);
   const { fontScale } = useWindowDimensions();
-  return Platform.OS === 'ios'
-    ? systemTextStyle(StyleSheet.flatten(style), fontScale, allowFontScaling, maxFontSizeMultiplier)
-    : style;
-}
-
-export function Text({ style, ...props }: ComponentPropsWithRef<typeof NativeText>) {
-  const parentMaximum = useContext(TextAncestor);
-  const maximum = props.maxFontSizeMultiplier ?? parentMaximum ?? 0;
-  const scaled = useSystemTextStyle(
-    Platform.OS === 'ios' && parentMaximum === null
-      ? [{ fontSize: typeScale.ios.body.size }, style]
-      : style,
-    props.allowFontScaling,
-    maximum,
-  );
+  const ios = Platform.OS === 'ios';
+  const metrics = StyleSheet.flatten(style);
+  const ramp =
+    dynamicTypeRamp ??
+    (nested && metrics?.fontSize === undefined ? undefined : textRamp(metrics?.fontSize));
   return (
     <NativeText
       {...props}
-      style={scaled}
-      allowFontScaling={Platform.OS === 'ios' ? false : props.allowFontScaling}
+      key={ios && !nested && props.allowFontScaling !== false ? fontScale : undefined}
+      dynamicTypeRamp={ios ? ramp : undefined}
+      style={ios && !nested ? [{ fontSize: typeScale.ios.body.size }, style] : style}
     >
-      <TextAncestor.Provider value={maximum}>{props.children}</TextAncestor.Provider>
+      <TextAncestor.Provider value>{props.children}</TextAncestor.Provider>
     </NativeText>
   );
 }
 
 export type TextInput = NativeTextInput;
+type InputProps = ComponentPropsWithRef<typeof NativeTextInput> &
+  Pick<TextProps, 'dynamicTypeRamp'>;
 
-export function TextInput({ style, ...props }: ComponentPropsWithRef<typeof NativeTextInput>) {
-  const scaled = useSystemTextStyle(
-    Platform.OS === 'ios' ? [{ fontSize: typeScale.ios.body.size }, style] : style,
-    props.allowFontScaling,
-    props.maxFontSizeMultiplier ?? undefined,
-  );
+export function TextInput({ style, dynamicTypeRamp = 'body', ...props }: InputProps) {
+  const ios = Platform.OS === 'ios';
   return (
     <NativeTextInput
       {...props}
-      style={scaled}
-      allowFontScaling={Platform.OS === 'ios' ? false : props.allowFontScaling}
+      {...(ios ? { dynamicTypeRamp } : {})}
+      style={ios ? [{ fontSize: typeScale.ios.body.size }, style] : style}
     />
   );
 }

@@ -179,6 +179,22 @@ function Row({
       ? (item.channelName ?? t.otherKind)
       : (bot?.displayName ?? item.botSlug);
   const size = settled ? theme.type.body.line : AVATAR;
+  const metadata = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: space.x3,
+        marginLeft: theme.largeText ? 0 : 'auto',
+      }}
+    >
+      <Text variant="meta" tone="muted">
+        {t.ago(minutesSince(item.createdAt, now))}
+      </Text>
+      {(item.unreadCount ?? 0) > 0 ? <CountBadge count={item.unreadCount!} tone="unread" /> : null}
+    </View>
+  );
   return (
     <Pressable
       accessibilityRole="button"
@@ -215,24 +231,25 @@ function Row({
             gap: space.x3,
           }}
         >
-          <Text numberOfLines={theme.largeText ? 2 : 1} strong={!settled} style={{ flexShrink: 1 }}>
-            {t.rowTitle(kind, name)}
+          <Text
+            variant={theme.largeText ? 'meta' : 'body'}
+            numberOfLines={theme.largeText ? 2 : 1}
+            strong={!settled}
+            style={{ flexShrink: 1 }}
+          >
+            {theme.largeText ? name : t.rowTitle(kind, name)}
             {settled && item.summary.length > 0 ? (
               <Text tone="muted">{` · ${item.summary}`}</Text>
             ) : null}
           </Text>
-          <Text variant="meta" tone="muted" style={{ marginLeft: theme.largeText ? 0 : 'auto' }}>
-            {t.ago(minutesSince(item.createdAt, now))}
-          </Text>
-          {(item.unreadCount ?? 0) > 0 ? (
-            <CountBadge count={item.unreadCount!} tone="unread" />
-          ) : null}
+          {theme.largeText ? null : metadata}
         </View>
         {!settled && item.summary.length > 0 ? (
-          <Text tone="muted" numberOfLines={2}>
+          <Text tone={theme.largeText ? 'fg' : 'muted'} numberOfLines={2}>
             {item.summary}
           </Text>
         ) : null}
+        {theme.largeText ? metadata : null}
       </View>
     </Pressable>
   );
@@ -315,13 +332,27 @@ function Post({
         ) : (
           <BotAvatar bot={bot} size={AVATAR} />
         )}
-        <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
-          {name}
-          <Text tone="muted">{where}</Text>
-        </Text>
-        <Text variant="meta" tone="muted" style={{ marginLeft: theme.largeText ? 0 : 'auto' }}>
-          {t.ago(minutesSince(item.createdAt, now))}
-        </Text>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'flex-start' : 'center',
+            gap: space.x2,
+          }}
+        >
+          <Text strong numberOfLines={theme.largeText ? undefined : 1} style={{ flexShrink: 1 }}>
+            {name}
+            {theme.largeText ? null : <Text tone="muted">{where}</Text>}
+          </Text>
+          {theme.largeText && where !== '' ? (
+            <Text variant="meta" tone="muted">
+              {t.inChannel(item.channelName ?? '')}
+            </Text>
+          ) : null}
+          <Text variant="meta" tone="muted" style={{ marginLeft: theme.largeText ? 0 : 'auto' }}>
+            {t.ago(minutesSince(item.createdAt, now))}
+          </Text>
+        </View>
       </Pressable>
       {item.kind === 'tool-approval' ? (
         <ApprovalCard port={ports.approval} wide onSettled={settled} />

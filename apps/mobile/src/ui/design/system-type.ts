@@ -1,16 +1,20 @@
-import type { TextStyle } from 'react-native';
+import type { TextProps } from 'react-native';
 
-export function systemTextStyle(
-  style: TextStyle | undefined,
-  fontScale: number,
-  allowFontScaling = true,
-  maxFontSizeMultiplier = 0,
-): TextStyle | undefined {
-  if (!style || !allowFontScaling) return style;
-  const scale = maxFontSizeMultiplier >= 1 ? Math.min(fontScale, maxFontSizeMultiplier) : fontScale;
-  return {
-    ...style,
-    ...(style.fontSize === undefined ? {} : { fontSize: style.fontSize * scale }),
-    ...(style.lineHeight === undefined ? {} : { lineHeight: style.lineHeight * scale }),
-  };
+export function textRamp(size = 17): TextProps['dynamicTypeRamp'] {
+  if (size <= 11) return 'caption2';
+  if (size <= 12) return 'caption1';
+  if (size <= 13) return 'footnote';
+  if (size <= 15) return 'subheadline';
+  if (size <= 17) return 'body';
+  if (size <= 20) return 'title3';
+  if (size <= 22) return 'title2';
+  if (size <= 28) return 'title1';
+  return 'largeTitle';
 }
+
+export const variantRamp = {
+  meta: 'footnote',
+  body: 'body',
+  title: 'headline',
+  display: 'title1',
+} as const;

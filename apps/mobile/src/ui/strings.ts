@@ -203,6 +203,8 @@ const en = {
         : minutes < 1440
           ? `${Math.floor(minutes / 60)} h ago`
           : `${Math.floor(minutes / 1440)} d ago`,
+  expandDraft: 'Expand draft',
+  editDraft: 'Edit draft',
   messagePlaceholder: 'Message',
   messageBot: (name: string) => `Message ${name}`,
   yesterday: 'Yesterday',
@@ -866,6 +868,8 @@ const zh: typeof en = {
         : minutes < 1440
           ? `${Math.floor(minutes / 60)} 小时前`
           : `${Math.floor(minutes / 1440)} 天前`,
+  expandDraft: '展开草稿',
+  editDraft: '编辑草稿',
   messagePlaceholder: '发消息',
   messageBot: (name: string) => `发消息给 ${name}`,
   yesterday: '昨天',
