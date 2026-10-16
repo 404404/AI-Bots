@@ -6,6 +6,7 @@ param(
   [string]$Owner, [string]$Batch,
   [ValidateSet('emulator','phone')][string]$Lane='emulator',
   [string]$Serial, [string]$Label='capture',
+  [switch]$ViewOnly,
   [ValidateRange(1024,65535)][int]$MetroPort=8085,
   [ValidateRange(1,180)][int]$Seconds=30,
   [string]$QueueRoot
@@ -200,7 +201,8 @@ if ($Action -eq 'screenshot') {
   $version = & $Config.scrcpy --version
   if ($LASTEXITCODE -ne 0 -or "$version" -notmatch 'scrcpy (\d+\.\d+(?:\.\d+)?)' -or [version]$Matches[1] -lt [version]'5.0') { throw 'Configure official scrcpy 5.0+ in config.json.' }
   $arguments=@('--serial',$Serial,'--no-audio','--video-codec=h264','--max-fps=60')
-  if ($Action -eq 'record') { $arguments+=@("--record=$prefix.mp4","--time-limit=$Seconds",'--no-window','--no-control') }
+  if ($ViewOnly) { $arguments+='--no-control' }
+  if ($Action -eq 'record') { $arguments+=@("--record=$prefix.mp4","--time-limit=$Seconds") }
   Run $Config.scrcpy $arguments
 }
 @{ commit=(& git -C $Repo rev-parse HEAD); batch=$Batch; lane=$Lane; serial=$Serial; action=$Action; time=[DateTime]::UtcNow.ToString('o') } |

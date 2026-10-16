@@ -138,12 +138,14 @@ Human's production app/data. Replacing an existing dev build is part of the devi
 # Run after the phone claim; these commands work in either lane.
 pwsh -NoProfile -File $qa mirror -Owner $runner -Batch $batch
 pwsh -NoProfile -File $qa screenshot -Owner $runner -Batch $batch -Label chats-light
-# Start recording, then drive the app in the mirror; it stops after 30 seconds.
+# Close an existing mirror first. Recording opens its own controllable window.
 pwsh -NoProfile -File $qa record -Owner $runner -Batch $batch -Label chat-flow -Seconds 30
 ```
 
-`mirror` opens scrcpy for keyboard/mouse control. `record` uses H.264 without audio or a second
-window; the recording process does not inject input. Both pin the same SDK ADB and serial.
+`mirror` opens scrcpy for keyboard/mouse control. `record` opens one window with control and
+H.264 recording, without audio. Use one scrcpy process per device: simultaneous mirror and
+recorder connections failed on the QA phone. Add `-ViewOnly` to either command for viewing or
+recording without computer input. Both pin the same SDK ADB and serial.
 The recorder times out cleanly, finalizing the MP4. `screenshot` saves a binary PNG and a
 UI Automator XML snapshot. Capture refuses to start unless DeepSeekBot is the focused app;
 finish system prompts before retrying. Evidence and commit/serial manifests live under
@@ -156,6 +158,11 @@ The iOS `simctl push` journey in `e2e-mobile-sim.mjs` is not an Android test run
 captures inside the QA app, enable the Human's preferred notification privacy, and inspect
 frames before sharing. Redact serials, account names, hostnames, paths, personal notifications,
 pairing links and tokens. Publish only redacted evidence under the existing PR evidence rules.
+
+On Xiaomi/POCO, ordinary USB debugging can allow video while computer input fails with
+`INJECT_EVENTS`. The Human must enable the separate **USB debugging (Security Settings)**
+option and reboot, then reconnect and authorize ADB. Until then, `-ViewOnly` still supports
+captures while the Human operates the phone; report computer control as untested.
 
 For every [feature-map](../../.agents/skills/verify-deepseekbot/features/README.md) step, record
 the action, visible result and canonical Host fact. Report **pass / fail / untested** per lane
