@@ -16,7 +16,9 @@
 Bot mode → the test PersonaBot DM → **Workspace Grants · <Bot name> · 0 workspaces**
 under the composer → **Advanced: enter Host path** → enter the dedicated fixture path →
 **Authorize workspace** → inspect the Bot/path confirmation → **Authorize workspace**.
-The folder appears in the Workspace Grants dialog. Keep Memory Repository collapsed.
+The folder appears in the Workspace Grants dialog. Select the test Bot explicitly and
+dismiss **Skip tutorial** if onboarding appears before opening the dialog. Wait for its
+folder content and opening animation before capturing it. Keep Memory Repository collapsed.
 
 Read the owning Host's `grants` list and use the same Bot ID with the existing
 `channel_attachment_import` tool. Revoke the exact Grant with the CLI's explicit

@@ -25,8 +25,9 @@ behaviors and a behavior to several scripts; each file and behavior is counted o
   product behavior denominator is incomplete. Catalogue rows group related acceptance
   paths and are not an exhaustive count of product features. Scripted/manual/gap counts
   describe this catalogue only; a mapped script may cover just part of a grouped row.
-- **Qualified catalogue rows** count only current evidence accepted by the existing
-  Activity Center validator. Manual instructions and past CI results never become passes.
+- **Qualified catalogue rows** count only current evidence accepted by the behavior-specific
+  Activity Center or Workspace Grant validator. Manual instructions and past CI results
+  never become passes.
 
 This audit includes every current map document and E2E file, and additional implemented
 Client, CLI and mobile entry points found in those scripts and their owning modules.
