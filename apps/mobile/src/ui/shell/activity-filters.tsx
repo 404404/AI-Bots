@@ -179,15 +179,17 @@ function OptionsEditor({ bots, channels, filter, sort, onFilter, onSort, onClose
           }}
         />
       ) : null}
-      <Text
-        variant="display"
-        strong
-        accessibilityRole="header"
-        style={{ paddingHorizontal: space.x5, paddingTop: space.x2, paddingBottom: space.x3 }}
-      >
-        {t.activityOptions}
-      </Text>
       <FlatList
+        ListHeaderComponent={
+          <Text
+            variant="display"
+            strong
+            accessibilityRole="header"
+            style={{ paddingHorizontal: space.x5, paddingTop: space.x2, paddingBottom: space.x3 }}
+          >
+            {t.activityOptions}
+          </Text>
+        }
         data={rows}
         keyExtractor={(row) => row.key}
         keyboardShouldPersistTaps="handled"

@@ -1,5 +1,7 @@
-import { Text as NativeText, type TextProps } from 'react-native';
+import { Text as NativeText } from './system-text';
+import { type TextProps } from 'react-native';
 
+import { variantRamp } from '../design/system-type';
 import type { ColorRole } from '../design/resolve-theme';
 import { useDesignTheme } from '../design/theme';
 
@@ -16,6 +18,7 @@ export function Text({
   const role = theme.type[variant];
   return (
     <NativeText
+      dynamicTypeRamp={variantRamp[variant]}
       {...props}
       style={[
         {

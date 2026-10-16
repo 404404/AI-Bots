@@ -1,5 +1,6 @@
+import { TextInput } from '../primitives/system-text';
 import { useState, type ReactNode } from 'react';
-import { Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
 import {

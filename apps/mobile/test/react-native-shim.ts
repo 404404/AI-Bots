@@ -132,3 +132,11 @@ export const FlatList = (props: {
         )),
     props.ListFooterComponent ?? null,
   );
+
+export const StyleSheet = {
+  flatten(style: unknown): object | undefined {
+    if (Array.isArray(style))
+      return Object.assign({}, ...style.map((item) => StyleSheet.flatten(item)));
+    return style && typeof style === 'object' ? style : undefined;
+  },
+};

@@ -1,5 +1,6 @@
+import { TextInput } from '../primitives/system-text';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import type { CardResolution } from '../../host/conversation';
 import {
@@ -87,7 +88,7 @@ function Option({
   onPress(): void;
 }) {
   const theme = useDesignTheme();
-  const badge = theme.type.body.line + space.x2;
+  const badge = theme.type.body.line * theme.fontScale + space.x2;
   return (
     <Pressable
       accessibilityRole={multiple ? 'checkbox' : 'radio'}

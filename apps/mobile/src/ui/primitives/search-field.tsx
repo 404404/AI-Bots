@@ -1,5 +1,6 @@
+import { TextInput } from './system-text';
 import type { ReactNode } from 'react';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';

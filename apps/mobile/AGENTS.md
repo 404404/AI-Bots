@@ -19,6 +19,8 @@ Read docs for SDK 57 (`https://docs.expo.dev/versions/v57.0.0/...`), not `latest
 
 Screens follow [DESIGN.md](./DESIGN.md): the Host-as-workspace structure, the screen anatomy, and the code rules. No literal colours, type, spacing, radii or edge widths outside `src/ui/design/` (`test/style-guard.test.ts`); text through `src/ui/primitives/text`; new visual elements land in `src/ui/primitives`, `chat` or `shell` before a screen uses them.
 
+**System text and large-text usability are required for every new or changed UI.** Read the [implementation and acceptance contract](./DESIGN.md#system-text-and-large-text-acceptance). Preserve iOS semantic Dynamic Type and Android native scaling; fix layout with wrapping, stacking, scrolling and reachable actions instead of disabling scaling or capping all text. Text/input adapter changes must preserve live drafts and editable-field identity. The PR records default/intermediate/maximum × light/dark native checks for both platforms, matched screenshots, actual interactions and explicit blockers. Do not infer Android or Human acceptance from iOS screenshots or source tests.
+
 ## Hard rules
 
 - **Native projects are generated.** `ios/` and `android/` are not committed (CNG). Change native configuration through `app.json` and config plugins, never by editing generated native files.
@@ -32,7 +34,7 @@ Screens follow [DESIGN.md](./DESIGN.md): the Host-as-workspace structure, the sc
 
 ## Native UI verification
 
-- On a Mac, start with `node scripts/e2e-mobile-sim.mjs`: one command makes its own Simulator and Metro port, builds the app, pairs with two isolated Hosts and opens notifications sent with `xcrun simctl push`; read the screenshots it keeps.
+- **First reserve the shared device lane** through [shared device QA](../../docs/agents/device-qa.md). Do not start a separate Simulator, Metro, Host or build outside the assigned batch. The runner may use `node scripts/e2e-mobile-sim.mjs` only when its Simulator/build/Host lifecycle fits the assigned window; it is not a bypass of the queue.
 - On a Mac, verify native UI with Callstack's `agent-device` on the iOS Simulator: open the development build, read its accessibility snapshot, act by ref, and save a screenshot. The commands are in `README.md` ("Drive it on the iOS Simulator").
 - Regression flows live in `.maestro/` and run with `pnpm --filter @botharness/mobile e2e:ios`. Target elements by their visible text from the snapshot, not by coordinates.
 - The Mac, its Simulator, the physical iPhone and the QA Host are shared by every agent. Queue, branch, build, Host and reporting rules are in [shared device QA](../../docs/agents/device-qa.md).

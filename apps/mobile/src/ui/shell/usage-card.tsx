@@ -128,8 +128,14 @@ export function UsageCard({
           backgroundColor: pressed ? theme.layer[on].pressed : theme.layer[on].fill,
         })}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
-          <Text strong style={{ flex: 1 }}>
+        <View
+          style={{
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'flex-start' : 'center',
+            gap: space.x3,
+          }}
+        >
+          <Text strong style={theme.largeText ? undefined : { flex: 1 }}>
             {t.usage}
           </Text>
           <Text variant="meta" tone="muted">
@@ -137,11 +143,11 @@ export function UsageCard({
           </Text>
           <ChevronRightIcon color={theme.color.muted} size={space.x5} />
         </View>
-        <Text variant="display" numberOfLines={1}>
+        <Text variant="display">
           {amount === undefined ? '—' : amount}
           <Text tone="muted">{t.usageUnit}</Text>
         </Text>
-        <UsageBars days={week?.days} height={chart.spark} on={on} />
+        {theme.largeText ? null : <UsageBars days={week?.days} height={chart.spark} on={on} />}
       </Pressable>
       {state.status === 'loading' && state.value === undefined ? (
         <Text

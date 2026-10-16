@@ -56,12 +56,17 @@ export function SettingsView({
     >
       <View
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: theme.largeText ? 'column' : 'row',
+          alignItems: theme.largeText ? 'stretch' : 'center',
+          gap: space.x3,
           marginRight: -space.x3,
         }}
       >
-        <Text variant="title" accessibilityRole="header" style={{ flex: 1 }}>
+        <Text
+          variant="title"
+          accessibilityRole="header"
+          style={theme.largeText ? undefined : { flex: 1 }}
+        >
           {t.settings}
         </Text>
         <Pressable
@@ -69,6 +74,7 @@ export function SettingsView({
           accessibilityRole="button"
           accessibilityLabel={t.done}
           style={({ pressed }) => ({
+            alignSelf: theme.largeText ? 'flex-end' : 'auto',
             minWidth: theme.touch,
             minHeight: theme.touch,
             paddingHorizontal: space.x3,

@@ -12,7 +12,11 @@ const ICON = 22;
 
 export function useChatHeaderHeight(): number {
   const theme = useDesignTheme();
-  return useSafeAreaInsets().top + theme.touch + space.x2 * 2;
+  return (
+    useSafeAreaInsets().top +
+    Math.max(theme.touch, theme.type.body.line * theme.fontScale + space.x3) +
+    space.x2 * 2
+  );
 }
 
 export function ChatHeader({

@@ -12,6 +12,8 @@ export type Appearance = {
 
 export type DesignTheme = {
   scheme: ColorScheme;
+  fontScale: number;
+  largeText: boolean;
   color: Record<ColorRole, string>;
   layer: Record<LayerName, Layer>;
   scrim: string;
@@ -129,6 +131,8 @@ export function resolveTheme(
   const color = withAccent({ ...palette[scheme] }, appearance.accent);
   return {
     scheme,
+    fontScale: 1,
+    largeText: false,
     color,
     layer: layers(scheme, color),
     scrim: SCRIM[scheme],
