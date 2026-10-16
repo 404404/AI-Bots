@@ -120,6 +120,7 @@ export function browserProblems(run, read) {
     const visible = read(`visible-${phase}`);
     if (
       visible.rendered !== true ||
+      visible.fullscreen !== false ||
       visible.selectedChannels?.length !== 1 ||
       !read('created').dm?.channelId ||
       visible.selectedChannels[0] !== read('created').dm.channelId ||

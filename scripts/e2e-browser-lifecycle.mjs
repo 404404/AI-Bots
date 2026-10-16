@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectObservation, verifyPaths, rpc } from './verify-app.mjs';
@@ -302,6 +302,7 @@ try {
     save(`visible-${phase}.json`, {
       ...(await page.$eval('.bh-browser-body', (el) => ({
         rendered: el.checkVisibility(),
+        fullscreen: !!document.querySelector('[data-bh-remote-viewer-fullscreen]'),
         text: el.innerText,
       }))),
       selectedChannels: await page.$$eval('.bh-selected[data-channel-id]', (nodes) => [
@@ -331,6 +332,8 @@ try {
       ),
     { timeout: 60000 },
   );
+  await click('Leave fullscreen');
+  await page.waitForFunction(() => !document.querySelector('[data-bh-remote-viewer-fullscreen]'));
   stage = 'navigate-local-fixture';
   save(
     'opened.json',
@@ -392,6 +395,21 @@ try {
   run.reason = `${stage}: ${redact(error.message)}`;
   run.actual = run.reason;
   save('failure.json', { stage, reason: run.reason, botId: run.botId ?? null });
+  if (run.botId && instance) {
+    for (const [name, read] of [
+      ['failure-browser.json', authority],
+      [
+        'failure-lifecycle.json',
+        () => command(['computer-logs', '--plugin', 'browser', '--limit', '100']),
+      ],
+    ]) {
+      try {
+        save(name, read());
+      } catch (collectionError) {
+        save(name, { collectionFailed: true, reason: redact(collectionError.message) });
+      }
+    }
+  }
   await capturePage();
 } finally {
   if (run.botId && instance) {
@@ -419,10 +437,20 @@ try {
       run.reason = redact(error.message);
     }
   }
+  if (run.status === 'fail' && !existsSync(resolve(directory, 'failure.json')))
+    save('failure.json', {
+      stage: 'cleanup-or-validation',
+      reason: run.reason,
+      botId: run.botId ?? null,
+    });
   run.finishedAt = new Date().toISOString();
-  writeFileSync(resolve(directory, 'run.json'), `${JSON.stringify(run, null, 2)}\n`, {
-    mode: 0o600,
-  });
+  writeFileSync(
+    resolve(directory, 'run.json'),
+    `${JSON.stringify(run, (_key, item) => (typeof item === 'string' ? redact(item) : item), 2)}\n`,
+    {
+      mode: 0o600,
+    },
+  );
   const row = coverageRow(directory, run.commit, run.dirty);
   writeFileSync(resolve(directory, 'coverage.md'), markdownRow(row), { mode: 0o600 });
   console.log(JSON.stringify({ ...row, directory }, null, 2));

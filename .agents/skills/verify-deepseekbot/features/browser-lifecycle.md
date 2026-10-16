@@ -12,7 +12,7 @@ profile reset/isolation, takeover/resume and alternate Computer targets remain s
 
 Bot mode → select the newly created **AX Browser …** Bot → **Browser**.
 With Browser Access off, the existing direct open tool must refuse without starting it.
-Enable **Browser Access**, click **Open Bot Browser**, then use the existing direct
+Enable **Browser Access**, click **Open Bot Browser**, click **Leave fullscreen**, then use the existing direct
 `browser_open` tool to navigate the same tab to the fixture. The Browser panel must show
 the fixture title, URL and actual picture. `browser-observation`, `browser_tabs list`
 and `browser_observe` must agree on that Bot's current tab and fixture content.
@@ -75,6 +75,10 @@ recipe; agent screenshot inspection is recorded separately from Human QA.
   must retain diagnostics, never switch targets or silently enable Browser Access.
 - Access-off and stopped/no-tab currently use `host-refused` with distinct existing
   messages. Transport failure is not an acceptable substitute for either refusal.
+- Opening the Browser enters fullscreen. Leave fullscreen before inspecting the inline
+  panel and clicking Stop; a DOM-visible Stop behind the overlay is not an operable control.
+- On failure, save Browser authority and lifecycle logs before cleanup; collection errors
+  remain separate from the original failure.
 - Browser frames are canvas pixels inside the real panel viewer. ARIA names identify
   the tab but do not establish its rendered contents; inspect the screenshot and frame.
 - Dismiss onboarding before selecting the created Bot. Read the actual selected DM.

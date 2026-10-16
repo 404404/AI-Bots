@@ -89,6 +89,7 @@ function fixture() {
     };
     data[`visible-${phase}`] = {
       rendered: true,
+      fullscreen: false,
       text: phase === 'running' ? sample.title + ' ' + sample.url : 'Stopped',
       selectedChannels: ['dm'],
       viewers: phase === 'running' ? [{ visible: true }] : [],
@@ -262,6 +263,12 @@ describe('bounded Browser lifecycle proof', () => {
       'visible-running',
       (v) => {
         v.viewers = [];
+      },
+    ],
+    [
+      'visible-running',
+      (v) => {
+        v.fullscreen = true;
       },
     ],
     [
