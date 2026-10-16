@@ -321,7 +321,7 @@ it('defaults loaded eligible Bots without writing, and preserves a custom empty 
     Array.from(container.querySelectorAll<HTMLInputElement>('input[type=checkbox]'));
   try {
     await act(async () => root.render(createElement(Harness)));
-    await act(async () => context!.shortcuts[0]!.run());
+    await act(async () => context!.shortcuts.find((item) => item.id === 'workspace')!.run());
     expect(checks()).toHaveLength(0);
     members = [ada, bea, { ...bob, paused: true }, { ...ada, slug: 'deleted', deleted: true }];
     await act(async () => root.render(createElement(Harness)));
@@ -374,8 +374,8 @@ it('offers only the shared workspace shortcut in Group and resets scope on Chann
   }
   try {
     await act(async () => root.render(createElement(Harness)));
-    expect(context!.shortcuts.map((item) => item.id)).toEqual(['workspace']);
-    await act(async () => context!.shortcuts[0]!.run());
+    expect(context!.shortcuts.map((item) => item.id)).toEqual(['workspace', 'footer']);
+    await act(async () => context!.shortcuts.find((item) => item.id === 'workspace')!.run());
     expect(container.querySelector('[role=dialog]')).not.toBeNull();
     id = 'two';
     await act(async () => root.render(createElement(Harness)));

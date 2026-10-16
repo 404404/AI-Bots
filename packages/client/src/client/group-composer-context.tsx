@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactElement } from 'react';
+import { useRef, useState, type Ref, type ReactElement } from 'react';
 import { Button, Tag } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BridgeActions } from './actions.js';
 import type { AssignmentAccessPresetView, WorkspaceGrantView, WorkspaceOption } from './bridge.js';
@@ -19,7 +19,7 @@ import {
 } from './workspace-grants-entry.js';
 import { subscribeWorkspaceGrantChanges } from './workspace-grant-events.js';
 import { authorizeGroupMembers, type GroupGrantResult } from './group-workspace-authorization.js';
-import { ComposerContextBar } from './composer-context-bar.js';
+import { ComposerContextBar, type ComposerFooterHandle } from './composer-context-bar.js';
 import { ChipButton } from './ds/chip-button.js';
 import type { AveragePerfView } from './message-perf.js';
 
@@ -43,6 +43,7 @@ export function useGroupComposerContext({
   t: BotHarnessTranslate;
   avgPerf?: AveragePerfView | undefined;
 }): ComposerContext | undefined {
+  const footerSettings = useRef<ComposerFooterHandle>(null);
   const [openChannel, setOpenChannel] = useState<string>();
   if (channel?.type !== 'group') return;
   const open = () => setOpenChannel(channel.id);
@@ -55,10 +56,12 @@ export function useGroupComposerContext({
         icon: <ChannelSidebarIcon name="folder-key" />,
         run: open,
       },
+      { id: 'footer', label: t('footer.settings'), run: () => footerSettings.current?.open() },
     ],
     content: (
       <GroupComposerContextView
         key={channel.id}
+        footerSettings={footerSettings}
         channelId={channel.id}
         members={members.filter((bot) => !bot.deleted && !bot.paused)}
         actions={actions}
@@ -73,6 +76,7 @@ export function useGroupComposerContext({
 }
 
 export function GroupComposerContextView({
+  footerSettings,
   channelId,
   members,
   actions,
@@ -82,6 +86,7 @@ export function GroupComposerContextView({
   avgPerf,
   onClose,
 }: {
+  footerSettings?: Ref<ComposerFooterHandle>;
   channelId: string;
   members: BotSummary[];
   actions: BridgeActions;
@@ -203,14 +208,15 @@ export function GroupComposerContextView({
   );
   const retry = results.some((row) => row.status === 'unknown' || row.status === 'failed');
   return (
-    <div ref={mount}>
+    <>
+      <div ref={mount} hidden />
       <ComposerContextBar
+        settingsRef={footerSettings}
         available={['workspace', 'avg-perf']}
         t={t}
         label={t('composerContext.label')}
       >
         <ChipButton
-          touchTarget
           ref={factMount}
           data-composer-chip="workspace"
           collapseLabel
@@ -221,7 +227,6 @@ export function GroupComposerContextView({
         />
         {avgPerf === undefined ? null : (
           <ChipButton
-            touchTarget
             data-composer-chip="avg-perf"
             icon={<ChannelSidebarIcon name="gauge" size={14} />}
             label={t('message.perf.speed', { tps: avgPerf.tokensPerSecond })}
@@ -360,7 +365,7 @@ export function GroupComposerContextView({
           </details>
         </PanelDialog>
       ) : null}
-    </div>
+    </>
   );
 }
 

@@ -1,4 +1,11 @@
-import { useCallback, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
+import {
+  useCallback,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type Ref,
+  type ReactElement,
+} from 'react';
 import type { BridgeActions } from './actions.js';
 import type {
   ModelCatalogEntryView,
@@ -24,7 +31,7 @@ import type { AveragePerfView } from './message-perf.js';
 import { PROFILE_ACTIVITY_WEEKS } from './profile-cards-builtins.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { DmComposerUsagePopover } from './dm-composer-usage.js';
-import { ComposerContextBar } from './composer-context-bar.js';
+import { ComposerContextBar, type ComposerFooterHandle } from './composer-context-bar.js';
 import { ChipButton } from './ds/chip-button.js';
 
 const subscribeUnavailable = (): (() => void) => () => {};
@@ -51,6 +58,7 @@ export function useDmComposerContext({
   onUsage(): void;
   avgPerf?: AveragePerfView | undefined;
 }): ComposerContext | undefined {
+  const footerSettings = useRef<ComposerFooterHandle>(null);
   const [panel, setPanel] = useState<{ slug: string; kind: 'model' | 'workspace' }>();
   const companionState = useSyncExternalStore(
     companion?.subscribe ?? subscribeUnavailable,
@@ -89,10 +97,12 @@ export function useDmComposerContext({
           else companion.select(bot.slug);
         },
       },
+      { id: 'footer', label: t('footer.settings'), run: () => footerSettings.current?.open() },
     ],
     content: (
       <DmComposerContextView
         key={bot.slug}
+        footerSettings={footerSettings}
         bot={bot}
         channelId={channelId}
         actions={actions}
@@ -110,6 +120,7 @@ export function useDmComposerContext({
 }
 
 function DmComposerContextView({
+  footerSettings,
   bot,
   channelId,
   actions,
@@ -122,6 +133,7 @@ function DmComposerContextView({
   panel,
   onClose,
 }: {
+  footerSettings?: Ref<ComposerFooterHandle>;
   bot: BotSummary;
   channelId: string;
   actions: BridgeActions;
@@ -263,11 +275,11 @@ function DmComposerContextView({
   return (
     <>
       <ComposerContextBar
+        settingsRef={footerSettings}
         t={t}
         label={t('composerContext.label')}
         trailing={
           <ChipButton
-            touchTarget
             ref={usageMount}
             data-composer-chip="usage"
             icon={<ChannelSidebarIcon name="ruler" size={14} />}
@@ -280,7 +292,6 @@ function DmComposerContextView({
         }
       >
         <ChipButton
-          touchTarget
           ref={modelMount}
           data-composer-chip="model"
           collapseLabel
@@ -292,7 +303,6 @@ function DmComposerContextView({
         />
         {avgPerf === undefined ? null : (
           <ChipButton
-            touchTarget
             data-composer-chip="avg-perf"
             icon={<ChannelSidebarIcon name="gauge" size={14} />}
             label={t('message.perf.speed', { tps: avgPerf.tokensPerSecond })}
@@ -302,7 +312,6 @@ function DmComposerContextView({
           />
         )}
         <ChipButton
-          touchTarget
           ref={grantMount}
           data-composer-chip="workspace"
           collapseLabel
