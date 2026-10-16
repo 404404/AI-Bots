@@ -20,6 +20,9 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 
 ## Not mapped yet
 
+Native activity layout and explicit menu navigation: [phone-activity.md](phone-activity.md).
+The shared-Simulator manual path uses existing QA records; it is not a fresh-Host scripted journey.
+
 `scripts/` holds 119 issue-era `e2e-*.mjs` journeys. Most expect a hand-prepared Host, a specific port or seeded fixture. Journeys whose selectors, menu items or schema assertions no longer exist in the current code were deleted on 2026-10-14; the PR evidence pages under `docs/assets/pr/` still name them as history. Map a feature here only after its journey passes against a fresh instance. Known state on 2026-10-14:
 
 - `e2e-activity-entry.mjs` passes login, then times out on `.bh-overview` behind the onboarding dialog.
