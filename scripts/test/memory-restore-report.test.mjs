@@ -17,7 +17,7 @@ afterEach(() => {
   for (const path of directories.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 function fixture() {
-  const dir = mkdtempSync(join(tmpdir(), 'grant-proof-'));
+  const dir = mkdtempSync(join(tmpdir(), 'memory-proof-'));
   directories.push(dir);
   const v1 = '1'.repeat(40),
     v2 = '2'.repeat(40),
@@ -32,7 +32,7 @@ function fixture() {
   const checkpoint = { id: 'saved', head: v2, botSlug: 'bot' };
   const data = {
     identity: { identity: { kind: 'development', source: { revision: commit, dirty: false } } },
-    created: { bot: { id: 'bot' } },
+    created: { bot: { id: 'bot' }, dm: { id: 'dm-bot' } },
     fixture: sample,
     initial: { snapshot: { head: '0'.repeat(40) } },
     'saved-v1': { commit: { sha: v1 } },
@@ -62,7 +62,7 @@ function fixture() {
     };
     data[`visible-${phase}`] = {
       rendered: true,
-      botId: 'bot',
+      selectedChannels: ['dm-bot'],
       text: '1111111 ' + (phase === 'before' ? sample.v2 : sample.v1),
     };
   }
@@ -209,7 +209,7 @@ describe('one disposable Memory restore proof', () => {
     [
       'visible-history',
       (v) => {
-        v.botId = 'other';
+        v.selectedChannels = ['other'];
       },
     ],
     [

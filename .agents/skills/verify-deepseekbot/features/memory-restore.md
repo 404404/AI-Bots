@@ -11,8 +11,8 @@
 
 ## How to get to it (user POV)
 
-Bot mode → select the newly created **AX Memory …** PersonaBot → **Memory** tab →
-**Memory files** → **AX-1975.md**. Version two is visible. In **Memory evolution**,
+Bot mode → select the newly created **AX Memory …** PersonaBot → **Memory files** toolbar button →
+Memory file list → **AX-1975.md**. Version two is visible. Open the **Memory evolution** toolbar button, then
 select version one's commit by its short SHA; the historical diff shows version one.
 The existing `memory-restore-commit` CLI then restores version one through the same
 Memory owner. Reload, reselect that Bot and open the file: version one is visible.
@@ -79,6 +79,8 @@ Agent visual review is recorded separately from Human QA.
   is clean, so it requires `backup: null` and exactly one new descendant restore commit.
 - Transport errors are not the expected conflict code. Preserve the before/after reads.
 - Select the created Bot explicitly; dismiss onboarding before entering Memory.
+  Desktop dock entries are toolbar buttons, not a Memory tab. The first failed attempt
+  preserved the obsolete-tab timeout with healthy Host/Client diagnostics.
 - After an unexpected drive, inspect the screenshot, ARIA, console and
   [observation guide](../references/observation.md) before retrying. Never repeat an
   unknown-outcome mutation automatically or overwrite the first failure.

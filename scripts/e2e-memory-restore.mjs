@@ -194,7 +194,12 @@ try {
     'Isolated Memory read and restore verification. No messages, models or schedules are used.',
   ]);
   run.botId = created.bot?.id;
-  save('created.json', { bot: created.bot, steps: created.steps, outcome: created.outcome });
+  save('created.json', {
+    bot: created.bot,
+    dm: created.dm,
+    steps: created.steps,
+    outcome: created.outcome,
+  });
   if (!run.botId) throw new Error('creation-outcome-unknown-do-not-retry');
   const initial = command(['memory-snapshot', run.botId]);
   save('initial.json', initial);
@@ -281,15 +286,8 @@ try {
     await dismissOnboarding();
   };
   await selectBot();
-  const memoryTab = async () => {
-    await page.locator('::-p-aria([name="Memory"][role="tab"])').click();
-    run.actions.push({ click: 'Memory', role: 'tab' });
-  };
   const openFile = async () => {
-    await memoryTab();
-    const header = await page.$('::-p-aria([name="Memory files"][role="button"])');
-    if (header && (await header.evaluate((el) => el.getAttribute('aria-expanded') === 'false')))
-      await header.click();
+    await click('Memory files');
     await page.locator('::-p-aria([name="AX-1975.md"][role="treeitem"])').click();
     run.actions.push({ click: fixture.path, role: 'treeitem' });
   };
@@ -315,7 +313,13 @@ try {
         rendered: el.checkVisibility(),
         text: el.innerText,
       }))),
-      botId: run.botId,
+      selectedChannels: await page.$$eval('.bh-selected[data-channel-id]', (nodes) => [
+        ...new Set(
+          nodes
+            .filter((el) => el.checkVisibility())
+            .map((el) => el.getAttribute('data-channel-id')),
+        ),
+      ]),
     });
     await capturePage(phase);
   };
@@ -323,9 +327,7 @@ try {
   await openFile();
   await observe('before', fixture.v2);
   stage = 'read-historical-Web-Memory';
-  const evolution = await page.$('::-p-aria([name="Memory evolution"][role="button"])');
-  if (evolution && (await evolution.evaluate((el) => el.getAttribute('aria-expanded') === 'false')))
-    await evolution.click();
+  await click('Memory evolution');
   await page.waitForSelector(`.bh-memory-graph-row[title="${v1.file.head}"]`, { visible: true });
   const tree = await page.accessibility.snapshot({ interestingOnly: false });
   const findCommit = (node) => {
