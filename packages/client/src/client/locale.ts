@@ -1499,6 +1499,7 @@ export const zh = {
   'bridge.dmTarget': 'DM 消息历史 · {name}',
   'bridge.inboxOnly': '仅 Bot Inbox',
   'bridge.inboxOnlyHint': '直接进入此 Bot 的 Inbox，不添加 DM 历史消息。',
+  'bridge.inboxMirrorHint': '直接进入此 Bot 的 Inbox，并同步到私聊记录，不产生第二次唤醒。',
   'bridge.contextOnly': '仅作上下文',
   'bridge.paths': '收件路径',
   'bridge.pathEvidence': '连接器 {route} · 配置 v{revision} · {target}',
@@ -1551,6 +1552,14 @@ export const zh = {
   'bridge.ownerDM': '扫码绑定者私聊消息',
   'bridge.wechatDMHint':
     '仅接收已授权的扫码绑定者私聊。微信没有子话题；投递到本地群不代表支持微信群。',
+  'bridge.dmMirror': '镜像 IM 会话到本地',
+  'bridge.dmMirrorHint':
+    '默认关闭。开启后，将这个账户的新私聊消息和已发送回复展示在 Bot 的本地私聊中，不重复唤醒 Bot。不会补录旧消息；关闭后停止新增镜像，已有记录保留，清除原消息会同时清除镜像。附件仅显示名称。',
+  'bridge.dmForward': '转发本地私聊到 IM',
+  'bridge.dmForwardHint':
+    '默认关闭。开启后，将本地私聊中新发送的消息和 Bot 回复转发到这个 IM 账户的已授权私聊。与镜像开关独立，受主动发送权限和每小时上限限制；附件仅转发名称。关闭后停止尚未发送的消息，已经发出的消息无法撤回。',
+  'bridge.dmForwardUnavailable':
+    '需要先在「IM 应用」里为这个微信私聊设置主动发送目标，才能把网页私聊同步到微信。',
   'bridge.mentions': '仅收 @ 接收身份',
   'bridge.all': '所有普通文字消息',
   'bridge.enableFor': '启用外部连接器：{name}',
@@ -5138,6 +5147,8 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'bridge.dmTarget': 'DM history · {name}',
   'bridge.inboxOnly': 'Bot Inbox only',
   'bridge.inboxOnlyHint': 'Deliver directly to this Bot’s Inbox without adding a DM message.',
+  'bridge.inboxMirrorHint':
+    'Deliver directly to this Bot’s Inbox and mirror to DM history without waking the Bot again.',
   'bridge.contextOnly': 'Context only',
   'bridge.paths': 'Reception paths',
   'bridge.pathEvidence': 'Connector {route} · configuration v{revision} · {target}',
@@ -5196,6 +5207,14 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'bridge.ownerDM': 'Paired-owner DM messages',
   'bridge.wechatDMHint':
     'Receives only the authorized paired-owner DM. WeChat has no topics here; delivery to a local Group does not enable native WeChat groups.',
+  'bridge.dmMirror': 'Mirror IM conversation locally',
+  'bridge.dmMirrorHint':
+    'Off by default. Show new messages and accepted replies from this account in the Bot’s local DM without waking it again. No history backfill. Turning this off keeps existing entries; purging the original removes its mirror. Attachments appear as names only.',
+  'bridge.dmForward': 'Forward local DM to IM',
+  'bridge.dmForwardHint':
+    'Off by default and independent of mirroring. Forward new local DM messages and Bot replies to this account’s authorized private conversation. Proactive-send permissions and hourly limits apply. Attachments appear as names only. Turning this off stops unsent messages; messages already sent cannot be recalled.',
+  'bridge.dmForwardUnavailable':
+    'Set up a proactive-send target for this WeChat DM under IM apps first to send web DMs to WeChat.',
   'bridge.mentions': 'Only mentions of the receiving identity',
   'bridge.all': 'All ordinary text messages',
   'bridge.enableFor': 'Enable connector: {name}',
