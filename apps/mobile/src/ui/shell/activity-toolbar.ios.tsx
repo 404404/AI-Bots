@@ -44,7 +44,7 @@ export function ActivityToolbar({
           <Stack.Toolbar.View hidesSharedBackground={false}>
             <View
               style={{
-                width: width - space.x5 * 2 - space.x2,
+                width: width - space.x5 * 2 - space.x3,
                 height: theme.touch,
                 flexDirection: 'row',
                 alignItems: 'center',
