@@ -1,0 +1,57 @@
+{
+  "slug": "bot-d25c27417a3146d5b49d4377e2c7ec57",
+  "sessionId": "direct",
+  "turns": [
+    {
+      "turn": 1,
+      "startedAt": "2026-10-16T14:07:57.210Z",
+      "endReason": "direct",
+      "noToolCalls": false,
+      "calls": [
+        {
+          "name": "channel_attachment_import",
+          "callId": "direct-ab6bc4c3-1a49-4d7f-bf06-9bbdf4d3a8c8",
+          "args": {
+            "file_path": "[redacted]/README.md"
+          },
+          "outcome": "error",
+          "result": "Selected file is outside current authorized directories"
+        }
+      ]
+    },
+    {
+      "turn": 2,
+      "startedAt": "2026-10-16T14:08:09.070Z",
+      "endReason": "direct",
+      "noToolCalls": false,
+      "calls": [
+        {
+          "name": "channel_attachment_import",
+          "callId": "direct-51d72edb-5325-4d56-ab25-763833f5a6b4",
+          "args": {
+            "file_path": "[redacted]/README.md"
+          },
+          "outcome": "ok",
+          "result": "{\"fileId\":\"file:79dd7844-94a6-43ee-8392-10070a3c26d9\",\"name\":\"README.md\",\"mime\":\"text/plain\",\"size\":43}"
+        }
+      ]
+    },
+    {
+      "turn": 3,
+      "startedAt": "2026-10-16T14:08:10.554Z",
+      "endReason": "direct",
+      "noToolCalls": false,
+      "calls": [
+        {
+          "name": "channel_attachment_import",
+          "callId": "direct-3ec35c1d-44fb-4499-ad67-8c4d61e93d24",
+          "args": {
+            "file_path": "[redacted]/README.md"
+          },
+          "outcome": "error",
+          "result": "Selected file is outside current authorized directories"
+        }
+      ]
+    }
+  ]
+}

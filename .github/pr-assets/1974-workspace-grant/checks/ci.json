@@ -1,0 +1,93 @@
+{
+  "headRefOid": "3e7929b50080ea2a4e9e90eb2696db77593793ec",
+  "mergeable": "MERGEABLE",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:09:58Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557149/job/117015171663",
+      "name": "real-model scenarios",
+      "startedAt": "2026-10-16T14:09:59Z",
+      "status": "COMPLETED",
+      "workflowName": "llm e2e"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:10:34Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117015169716",
+      "name": "plan tests",
+      "startedAt": "2026-10-16T14:10:02Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:11:53Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117015169488",
+      "name": "lint, format, typecheck, build",
+      "startedAt": "2026-10-16T14:10:01Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:10:34Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117015444974",
+      "name": "test (shard ${{ matrix.shard }})",
+      "startedAt": "2026-10-16T14:10:34Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:11:45Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117015442995",
+      "name": "test (affected)",
+      "startedAt": "2026-10-16T14:10:37Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:12:28Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117015443000",
+      "name": "docs site build",
+      "startedAt": "2026-10-16T14:10:37Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:11:50Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117015443227",
+      "name": "e2e smoke (isolated DSH Host)",
+      "startedAt": "2026-10-16T14:10:37Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-16T14:12:34Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/BotHarness/DeepSeekBot/actions/runs/38913557140/job/117016309683",
+      "name": "lint, format, typecheck, test, build, docs",
+      "startedAt": "2026-10-16T14:12:31Z",
+      "status": "COMPLETED",
+      "workflowName": "verify"
+    },
+    {
+      "__typename": "StatusContext",
+      "context": "CodeRabbit",
+      "startedAt": "2026-10-16T14:10:03Z",
+      "state": "SUCCESS",
+      "targetUrl": ""
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "grants": [
+    {
+      "id": "acddb93c-bee3-4895-8c8a-eb1bb43ae72e",
+      "botSlug": "bot-25af163926f143a7b3591bfb368eb368",
+      "workspaceId": "51a72bcc-57cb-4a04-9f07-d77e2646d4dc",
+      "workspacePath": "[redacted]",
+      "workspaceTitle": "bh-ax1974-CoEPSl",
+      "createdAt": "2026-10-16T14:10:24.384Z",
+      "orchestratorWrite": true,
+      "writeRevision": 1
+    }
+  ]
+}

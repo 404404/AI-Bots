@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "behavior": "desktop.grants.temporary-read-revoke",
+  "commit": "8c21907555f5d38d1718406b5773f0f93aa73115",
+  "base": "1d1f8ac0cfeb26a8f3bf3a04550e6b92cee52bd9",
+  "dirty": false,
+  "startedAt": "2026-10-16T13:52:28.112Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "The same PersonaBot and temporary Workspace have no Grant, then an active Grant permitting direct attachment-import reads, then an explicitly revoked Grant refusing the same read; visible Web state agrees.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "c304e2fe8fe1ea0edd0a295da93983d19a0176d32693c804f24e781be9b7d398",
+    "fixture.json": "db2c7c47454b4b72edaa509d870ce1cfdb75bdb11df092343758a6519d80fd08",
+    "created.json": "0ee1bf6df306f2d34b8d30515091dea51153ce6721963c7509948724ef7389b9",
+    "before.json": "a5e1694152ce3c81e38aaa9ab1c98ba9acc0d6244c14b69f2a9a8c235133e6ca",
+    "read-before.json": "e17225515d21cd7fdd4ceec4b402ed9fde08d4f2af3056a344039ee59f108b34",
+    "failure.json": "ba3f2edd677ca3698b75e844c8ca988b903a89ee5c513b3948fbeb99c797fb71",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "failure.aria.json": "fd846da9affb5bcef452977ca55af8d6b1a8196330e91503058e34fed105f48d",
+    "failure.png": "d594fa33c3748aba56a530aec4e326038cc6a0ae82e354fdb039798888f77d6b",
+    "failure.diagnostics.json": "bb57f51881c7ed755772d97f008c5a3f98c2719e393d7e9aab810cc42a8bd538",
+    "cleanup.json": "54f588a17ca975e4382916805ce04f1ff7af1b5b951171d33eb662013867f6f2"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T13:52:28.311Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Grant 1792158748872",
+        "--persona",
+        "Isolated temporary Workspace Grant verification. No messages, models or schedules are used."
+      ],
+      "at": "2026-10-16T13:52:29.242Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grants",
+        "bot-f39865ab83b34958813f49907b86307e"
+      ],
+      "at": "2026-10-16T13:52:29.391Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-tool",
+        "bot-f39865ab83b34958813f49907b86307e",
+        "channel_attachment_import",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T13:52:29.553Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T13:52:37.356Z"
+    }
+  ],
+  "botId": "bot-f39865ab83b34958813f49907b86307e",
+  "reason": "open-Workspace-Grants: Error: failed to find element matching selector \"[aria-label^=\"Workspace Grants ·\"]\"",
+  "actual": "open-Workspace-Grants: Error: failed to find element matching selector \"[aria-label^=\"Workspace Grants ·\"]\"",
+  "finishedAt": "2026-10-16T13:52:37.818Z"
+}

@@ -1,0 +1,7 @@
+| Behavior | Platform | Status | Commit | Expected / actual | Evidence | Human QA |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop.grants.temporary-read-revoke | desktop Web + CLI | fail | 8c21907555f5d38d1718406b5773f0f93aa73115 | The same PersonaBot and temporary Workspace have no Grant, then an active Grant permitting direct attachment-import reads, then an explicitly revoked Grant refusing the same read; visible Web state agrees. / open-Workspace-Grants: Error: failed to find element matching selector "[aria-label^="Workspace Grants ·"]" | [doctor.json](./doctor.json), [identity.json](./identity.json), [fixture.json](./fixture.json), [created.json](./created.json), [before.json](./before.json), [read-before.json](./read-before.json), [failure.json](./failure.json), [console.json](./console.json), [failure.aria.json](./failure.aria.json), [failure.png](./failure.png), [failure.diagnostics.json](./failure.diagnostics.json), [cleanup.json](./cleanup.json) | not-run |
+
+Reason: open-Workspace-Grants: Error: failed to find element matching selector "[aria-label^="Workspace Grants ·"]"
+
+Model, native-device and IM checks: not run. Only this temporary Grant and direct attachment-import read are qualified; native file tools, Shell, #1841 and #1957 remain outside this proof.

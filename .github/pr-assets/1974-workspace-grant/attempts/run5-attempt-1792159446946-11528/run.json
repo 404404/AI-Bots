@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "behavior": "desktop.grants.temporary-read-revoke",
+  "commit": "7c2a2c0f92264a0970cbc98a7c98de611c337c4e",
+  "base": "1d1f8ac0cfeb26a8f3bf3a04550e6b92cee52bd9",
+  "dirty": false,
+  "startedAt": "2026-10-16T14:04:07.154Z",
+  "status": "blocked",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark"
+  },
+  "expected": "The same PersonaBot and temporary Workspace have no Grant, then an active Grant permitting direct attachment-import reads, then an explicitly revoked Grant refusing the same read; visible Web state agrees.",
+  "evidence": {
+    "failure.json": "1936b58051633ac53b1ec2a456652b795ab6b4039c1256b9da179b22c25f3551"
+  },
+  "actions": [],
+  "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1974-run5/instance.json'",
+  "actual": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1974-run5/instance.json'",
+  "finishedAt": "2026-10-16T14:04:07.157Z"
+}

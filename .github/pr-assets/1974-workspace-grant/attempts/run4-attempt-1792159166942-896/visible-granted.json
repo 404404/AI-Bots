@@ -1,0 +1,5 @@
+{
+  "rendered": true,
+  "hasWorkspace": true,
+  "text": "Folders\nMemory Repository\nDelete\nbh-ax1974-K1lO7P\nWritable\nDelete\nAdd folder\nAdvanced: enter Host path\nEnter an existing absolute folder path on the DSH Host when the picker is unavailable.\nAuthorize workspace\nFolders registered in DSH\nAccess\nFull access\nAll files, no asking. When off, it writes only within its workspace and asks before each command.\nAuto approval\nAuto approval template\nPick a template and an Approval Reviewer answers this Bot's tool approvals by it first. Only calls it can't decide come to you as cards.\nOff"
+}

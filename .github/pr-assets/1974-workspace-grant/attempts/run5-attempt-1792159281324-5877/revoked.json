@@ -1,0 +1,13 @@
+{
+  "grant": {
+    "id": "c6ee8f37-d36c-4711-a826-c7cb30119c33",
+    "botSlug": "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+    "workspaceId": "4c214cea-d7d4-448e-99c5-27e1fe21214a",
+    "workspacePath": "[redacted]",
+    "workspaceTitle": "bh-ax1974-DlX5ab",
+    "createdAt": "2026-10-16T14:01:33.701Z",
+    "orchestratorWrite": true,
+    "writeRevision": 1,
+    "revokedAt": "2026-10-16T14:01:34.358Z"
+  }
+}

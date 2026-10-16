@@ -1,0 +1,185 @@
+{
+  "version": 1,
+  "behavior": "desktop.grants.temporary-read-revoke",
+  "commit": "7c2a2c0f92264a0970cbc98a7c98de611c337c4e",
+  "base": "1d1f8ac0cfeb26a8f3bf3a04550e6b92cee52bd9",
+  "dirty": false,
+  "startedAt": "2026-10-16T14:01:21.460Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "The same PersonaBot and temporary Workspace have no Grant, then an active Grant permitting direct attachment-import reads, then an explicitly revoked Grant refusing the same read; visible Web state agrees.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "b9f6eb727c69ba5f6069b4b5fdca618865a971a94585bf1f5e1d10d31d70f82a",
+    "fixture.json": "db2c7c47454b4b72edaa509d870ce1cfdb75bdb11df092343758a6519d80fd08",
+    "created.json": "83f5d8e1cd4714e635f9a13581a8df4955c136c87f17e41729d091897a356c28",
+    "before.json": "a5e1694152ce3c81e38aaa9ab1c98ba9acc0d6244c14b69f2a9a8c235133e6ca",
+    "read-before.json": "e17225515d21cd7fdd4ceec4b402ed9fde08d4f2af3056a344039ee59f108b34",
+    "visible-before.json": "61df62fcb922401b490477d5ef21f95ab27b3d174b2db28664d06d909be5e84c",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "before.aria.json": "7ffe3012ea09a4662e7219190e2962933782d22f65c4ab5209431e3eb791d1e5",
+    "before.png": "4ac1b168b2c52d1dd211a9865fe8f1fa854f635af3206f7b5bc6c5de010012f4",
+    "before.diagnostics.json": "0d00b77db2236f8269f0ac8929f4e4c568fa0ad06ead09bb1b89be09b10c0714",
+    "granted.json": "f3b9c7c7c2186296d3aa402ac212f9f3d777e211ff5f203528f5b0399bd18abc",
+    "read-granted.json": "d2bd18a4706a53cc132d75bd05c9b57b5aa8787414c1f63258af4117ab36a7f3",
+    "visible-granted.json": "1f1f6a0e7daac4bc6d14e43c9ab4fc7efee152f9243cd0011698f251188db019",
+    "granted.aria.json": "96f2484d92384b20a6111489154fa82709eb37c320b5d52370d016e27d6d82f1",
+    "granted.png": "e61089cd66ad37729f2c3b38b38bc6198d3910c385ae3a9d10ecd743272698b9",
+    "granted.diagnostics.json": "bfa19e505674d225dee4d79cf0973e47efb666c471dee51f1d2d9733b7beba21",
+    "unconfirmed-revoke.json": "9c43687235e0d6cbdc24b5d1c956323ee1dbb32f592826b25b427c7b2f1cb71e",
+    "after-unconfirmed.json": "f3b9c7c7c2186296d3aa402ac212f9f3d777e211ff5f203528f5b0399bd18abc",
+    "revoked.json": "6697eab0c3c26bf92f078521263d6a14783a5748758420f52ff89024de90c4b8",
+    "after.json": "69327f3b7e53a6e115825b687c93a0d588ee6d645ac9b0e8b894400c1550555d",
+    "read-after.json": "e17225515d21cd7fdd4ceec4b402ed9fde08d4f2af3056a344039ee59f108b34",
+    "cleanup.json": "54f588a17ca975e4382916805ce04f1ff7af1b5b951171d33eb662013867f6f2"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T14:01:21.652Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Grant 1792159282559",
+        "--persona",
+        "Isolated temporary Workspace Grant verification. No messages, models or schedules are used."
+      ],
+      "at": "2026-10-16T14:01:22.855Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grants",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82"
+      ],
+      "at": "2026-10-16T14:01:22.974Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-tool",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+        "channel_attachment_import",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T14:01:23.098Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T14:01:30.919Z"
+    },
+    {
+      "click": "AX Grant 1792159282559: Idle AX Grant 1792159282559 No messages yet",
+      "at": "2026-10-16T14:01:31.099Z"
+    },
+    {
+      "click": "Workspace Grants · AX Grant 1792159282559 · 0 workspaces",
+      "at": "2026-10-16T14:01:33.053Z"
+    },
+    {
+      "click": "Advanced: enter Host path"
+    },
+    {
+      "click": "Authorize workspace",
+      "at": "2026-10-16T14:01:33.583Z"
+    },
+    {
+      "click": "Authorize workspace",
+      "confirmation": true
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grants",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82"
+      ],
+      "at": "2026-10-16T14:01:33.874Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-tool",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+        "channel_attachment_import",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T14:01:34.007Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grant-revoke",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+        "--grant",
+        "c6ee8f37-d36c-4711-a826-c7cb30119c33"
+      ],
+      "at": "2026-10-16T14:01:34.152Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grants",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82"
+      ],
+      "at": "2026-10-16T14:01:34.266Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grant-revoke",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+        "--grant",
+        "c6ee8f37-d36c-4711-a826-c7cb30119c33",
+        "--confirm"
+      ],
+      "at": "2026-10-16T14:01:34.384Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grants",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82"
+      ],
+      "at": "2026-10-16T14:01:34.499Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-tool",
+        "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+        "channel_attachment_import",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T14:01:34.632Z"
+    },
+    {
+      "click": "AX Grant 1792159282559: Idle AX Grant 1792159282559 23:01 Welcome to DeepSeek Bot",
+      "at": "2026-10-16T14:01:36.142Z"
+    },
+    {
+      "click": "Workspace Grants · AX Grant 1792159282559 · 0 workspaces",
+      "at": "2026-10-16T14:01:37.979Z"
+    }
+  ],
+  "botId": "bot-67b1e0f226f049b9b0efdeb8aebd5a82",
+  "grantId": "c6ee8f37-d36c-4711-a826-c7cb30119c33",
+  "workspaceId": "4c214cea-d7d4-448e-99c5-27e1fe21214a",
+  "reason": "observe-revoked-Web-state: ENOSPC: no space left on device, open '[redacted]/.humanlayer/verify/ax1974-run5/workspace-grant/attempt-1792159281324-5877/visible-after.json'",
+  "actual": "observe-revoked-Web-state: ENOSPC: no space left on device, open '[redacted]/.humanlayer/verify/ax1974-run5/workspace-grant/attempt-1792159281324-5877/visible-after.json'",
+  "finishedAt": "2026-10-16T14:01:38.380Z"
+}

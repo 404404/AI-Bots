@@ -1,0 +1,44 @@
+{
+  "fixtures": [
+    {
+      "instance": "ax1974-run3",
+      "attempt": "attempt-1792159037175-98185",
+      "fixtureRemoved": true
+    },
+    {
+      "instance": "ax1974-run4",
+      "attempt": "attempt-1792159166942-896",
+      "fixtureRemoved": true
+    },
+    {
+      "instance": "ax1974-run5",
+      "attempt": "attempt-1792159281324-5877",
+      "fixtureRemoved": true
+    },
+    {
+      "instance": "ax1974-run2",
+      "attempt": "attempt-1792158747940-91429",
+      "fixtureRemoved": true
+    },
+    {
+      "instance": "ax1974-final",
+      "attempt": "attempt-1792159673622-17861",
+      "fixtureRemoved": true
+    },
+    {
+      "instance": "ax1974-final2",
+      "attempt": "attempt-1792159810849-19901",
+      "fixtureRemoved": true
+    }
+  ],
+  "ownedHostsStopped": [
+    "ax1974-discovery",
+    "ax1974-run2",
+    "ax1974-run3",
+    "ax1974-run4",
+    "ax1974-run5",
+    "ax1974-final",
+    "ax1974-final2"
+  ],
+  "evidenceRetained": true
+}
