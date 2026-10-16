@@ -286,6 +286,7 @@ function DmComposerContextView({
         <ChipButton
           ref={modelMount}
           data-composer-chip="model"
+          collapseLabel
           icon={<ChannelSidebarIcon name="cpu" size={14} />}
           label={modelLabel}
           title={modelLabel}
@@ -306,6 +307,7 @@ function DmComposerContextView({
           <ChipButton
             ref={grantMount}
             data-composer-chip="workspace"
+            collapseLabel
             icon={<ChannelSidebarIcon name="folder-key" size={14} />}
             label={workspaceLabel}
             onClick={() => onOpen('workspace')}

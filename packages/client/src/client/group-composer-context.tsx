@@ -215,8 +215,10 @@ export function GroupComposerContextView({
         <ChipButton
           ref={factMount}
           data-composer-chip="workspace"
+          collapseLabel
           icon={<ChannelSidebarIcon name="folder-key" size={14} />}
           label={chip}
+          aria-label={`${t('entry.workspaceGrants')} · ${chip}`}
           onClick={onOpen}
         />
         {avgPerf === undefined ? null : (

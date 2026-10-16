@@ -24,6 +24,8 @@ import {
 
 const styles = stylex.create({
   bar: {
+    containerType: 'inline-size',
+    containerName: 'composer-footer',
     display: { default: 'flex', ':is([hidden])': 'none' },
     alignItems: 'center',
     justifyContent: 'space-between',
