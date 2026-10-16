@@ -377,7 +377,7 @@ try {
 } finally {
   await browser?.close().catch(() => {
     run.status = 'fail';
-    run.reason = 'browser-cleanup-failed';
+    run.reason ??= 'browser-cleanup-failed';
   });
   if (fixture) {
     try {

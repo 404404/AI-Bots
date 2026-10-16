@@ -20,6 +20,7 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Native activity rows and explicit menu navigation | no (existing QA records) | none (shared-device manual path) | [phone-activity.md](phone-activity.md) |
 | About and running product identity | no (source-only observation; packaged/restart pending) | none (manual path) | [release-identity.md](release-identity.md) |
 | Desktop Activity Center: one idle PersonaBot | no | `scripts/e2e-activity-idle.mjs` | [activity-center-idle.md](activity-center-idle.md) |
+| Temporary Workspace Grant authorization, read and revocation | no | `scripts/e2e-workspace-grant.mjs` | [workspace-grant.md](workspace-grant.md) |
 
 ## Coverage and maintenance
 
@@ -46,7 +47,7 @@ present under `scripts/` does not make a journey current or safe to run indiscri
 Prioritize gaps touched by the current PR; add a map entry after its path works against an
 isolated instance, with the visible result and canonical read described.
 
-Known gaps include standalone Activity Center/Inbox workflows, Workspace Grants, Memory
+Known gaps include standalone Activity Center/Inbox workflows, Memory
 read/restore, desktop Browser/Computer lifecycle and IM connection/delivery. Some have partial
 coverage inside other feature files and CLI commands, but no complete feature-map entry.
 The unmapped inventory is a discovery list, not a claim that each script is broken.
@@ -55,5 +56,3 @@ Historical failures from 2026-10-14 (not requalified by this audit):
 
 - `scripts/e2e-activity-entry.mjs` passed login, then timed out on `.bh-overview` behind onboarding.
 - `scripts/e2e-harvest.mjs` needed a model reply and timed out without one.
-
-| Temporary Workspace Grant authorization, read and revocation | no | `scripts/e2e-workspace-grant.mjs` | [workspace-grant.md](workspace-grant.md) |
