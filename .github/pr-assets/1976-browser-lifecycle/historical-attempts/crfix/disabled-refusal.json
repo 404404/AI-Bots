@@ -1,0 +1,9 @@
+{
+  "exitCode": 1,
+  "value": {
+    "error": {
+      "code": "host-refused",
+      "message": "Browser Access is off for this PersonaBot"
+    }
+  }
+}

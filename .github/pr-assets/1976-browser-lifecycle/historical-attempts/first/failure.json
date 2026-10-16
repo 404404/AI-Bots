@@ -1,0 +1,5 @@
+{
+  "stage": "stop-from-panel",
+  "reason": "stop-from-panel: Waiting failed: 30000ms exceeded",
+  "botId": "bot-1da22e27884f4ef5ad4412a5d63b1033"
+}

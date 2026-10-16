@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "behavior": "desktop.browser.open-observe-stop",
+  "commit": "89a0aebf63b9907c57f68f81eb8c43dabad60cc6",
+  "base": "8ebf2781548530291ff49a05a456ad6025aea4af",
+  "dirty": false,
+  "startedAt": "2026-10-16T15:54:59.585Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "Default local Browser opens one deterministic fixture; panel, observation and direct tools agree on its tab; stop removes the tab; Access-off refusal remains distinct from stopped state.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "54f94a6fd27d8b7b936692f09511ffb50fc9186790869fed40b9e565e6cf032c",
+    "fixture.json": "d1f242ee44e30a7ab99c403a82b90350f42e4b0bf81f6f93342ab82cb9bd75fd",
+    "created.json": "021be26640942318a6182a7301cc086fe7f8b58728fea603f66d60357c306fdf",
+    "off.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "off-refusal.json": "71dd70f3a3d3e1dfe3238e07b92f917520916d90b04ab333a8d3b4a5a2807798",
+    "visible-off.json": "c937494f5b0e1eccc6411c0ef04a48db5fb2d63bcb4a4c50aee0fa134fefd9bc",
+    "console.json": "d7780ce9e731d2d713cd1c46aaa1a9c5052ad4dc7f6fead1d8acf21b52b5a7f4",
+    "off.aria.json": "df76c9f61deb5a1437c46beec54a5971be0b3d088cc430c0bdc8adad59e08fd9",
+    "off.png": "903018f0a12a90fadba0e3a8e05b76f1c24ec970748c998123f70de75a1084ee",
+    "off.diagnostics.json": "1414a0fbfbe2d086675116502bf8391e4b77d3cbd2eaf8f355129370e84e727d",
+    "opened.json": "a25a47466e2f1a9e63b176a5c895302e231e5dcfc633c64721f61a8bcb02e3d6",
+    "running.json": "16a560ad62cb835be6ded37aff7527a61445226cc1775c95371dbe8a941a8d1d",
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "direct-tabs.json": "56450f060b85ca72530ab8849ef1d9564411bb37e68cb3ec700f8cbe8836e4a3",
+    "direct-read.json": "9c02b482360f2f3758020510471b6c1d5dbb2a86b4f94357d847dcb65558c2ba",
+    "visible-running.json": "5bdf9f98e6160a7ebd63eddb1a75292b56521755dfe5e46010281dbe97a5ae88",
+    "running.aria.json": "00daf97c2d65f8ca7d0007e2973f99435cf8fee77fbdafb5709e057c73863b2d",
+    "running.png": "392de9d1373683e7136b48ce368782a0d43f1ff4a692c5b3b5e2f9e658840757",
+    "running.diagnostics.json": "c4d91756fc6ae949ec76ac75ccb4966774cedffc186954d16eb3c8f031909cd6",
+    "failure.json": "d834a0570f7544c3ac17a89600fc2800d8e3ce242560dc859e6d059745182be5",
+    "failure.aria.json": "f6a36604a7f9a10ed5c928a8db4fad940d0168e99cb3b56a50b80ff939f89ed1",
+    "failure.png": "0a399bdafb804a6178bb17f38f3dac91d0877fa2da79f5ebb6b6af49179dedd0",
+    "failure.diagnostics.json": "6e3836e05fb9ca9d9cee3215db3fa91967959c01924f964ce97619f2a71e0d52",
+    "cleanup-browser.json": "12b34da73b0c67a0319e6eddbd3582af66e3b558b4d44e4a6860e0cec20d726f",
+    "cleanup-observation.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T15:55:01.075Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Browser 1792166102785",
+        "--persona",
+        "Disposable Browser lifecycle verification. No model or messages."
+      ],
+      "at": "2026-10-16T15:55:03.268Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033"
+      ],
+      "at": "2026-10-16T15:55:03.565Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033",
+        "browser_open",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T15:55:03.810Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T15:55:11.663Z"
+    },
+    {
+      "click": "AX Browser 1792166102785: Idle AX Browser 1792166102785 00:55 Welcome to DeepSeek Bot",
+      "channelId": "dm-bot-1da22e27884f4ef5ad4412a5d63b1033",
+      "at": "2026-10-16T15:55:13.566Z"
+    },
+    {
+      "click": "Browser",
+      "at": "2026-10-16T15:55:15.426Z"
+    },
+    {
+      "click": "Enable Browser Access",
+      "at": "2026-10-16T15:55:15.826Z"
+    },
+    {
+      "click": "Open Bot Browser",
+      "at": "2026-10-16T15:55:16.028Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033",
+        "browser_open",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T15:55:25.760Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033",
+        "--out",
+        "[worktree]/.humanlayer/verify/ax1976-first/browser-lifecycle/attempt-1792166099585-6784/frame.jpg"
+      ],
+      "at": "2026-10-16T15:55:26.120Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033",
+        "browser_tabs",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T15:55:26.397Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033",
+        "browser_observe"
+      ],
+      "at": "2026-10-16T15:55:26.629Z"
+    },
+    {
+      "click": "Stop",
+      "at": "2026-10-16T15:55:28.256Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-stop",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033"
+      ],
+      "at": "2026-10-16T15:56:46.270Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-1da22e27884f4ef5ad4412a5d63b1033"
+      ],
+      "at": "2026-10-16T15:56:52.676Z"
+    }
+  ],
+  "botId": "bot-1da22e27884f4ef5ad4412a5d63b1033",
+  "reason": "stop-from-panel: Waiting failed: 30000ms exceeded",
+  "actual": "stop-from-panel: Waiting failed: 30000ms exceeded",
+  "finishedAt": "2026-10-16T15:57:00.023Z"
+}

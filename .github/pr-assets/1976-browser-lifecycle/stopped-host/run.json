@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "behavior": "desktop.browser.open-observe-stop",
+  "commit": "fdf40ca64d3bca9092b24b8dbfe21f2fe1c060eb",
+  "base": "49ba9623ebf4de679ba518d8a67c5e2b1bf65dee",
+  "dirty": false,
+  "startedAt": "2026-10-16T16:43:10.994Z",
+  "status": "blocked",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark"
+  },
+  "expected": "Default local Browser opens one deterministic fixture; panel, observation and direct tools agree on its tab; stop removes the tab; Access-off refusal remains distinct from stopped state.",
+  "evidence": {
+    "doctor.json": "e5e9fa74f0a595e8635df35bae16c6920ff04484badd359ce5382f7ef78ea233",
+    "failure.json": "c560b4c42a6e51bafa141b0ebfa38c34206694721475eb68b4fd08b7237c3e9a"
+  },
+  "actions": [],
+  "reason": "preconditions: Host-unavailable",
+  "actual": "preconditions: Host-unavailable",
+  "finishedAt": "2026-10-16T16:43:11.302Z"
+}

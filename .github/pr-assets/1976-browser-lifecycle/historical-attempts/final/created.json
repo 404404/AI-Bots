@@ -1,0 +1,28 @@
+{
+  "bot": {
+    "id": "bot-8d5196344b314fc1bca5e9dbd023cbba",
+    "name": "AX Browser 1792166973311"
+  },
+  "dm": {
+    "channelId": "dm-bot-8d5196344b314fc1bca5e9dbd023cbba"
+  },
+  "steps": [
+    {
+      "name": "validate",
+      "status": "ok"
+    },
+    {
+      "name": "create-bot",
+      "status": "ok"
+    },
+    {
+      "name": "model",
+      "status": "deferred",
+      "code": "no-model-yet"
+    },
+    {
+      "name": "dm",
+      "status": "ok"
+    }
+  ]
+}

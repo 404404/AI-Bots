@@ -1,0 +1,13 @@
+{
+  "rendered": true,
+  "text": "Local Browser\nRunning\nProfile\nFullscreen\nPause Bot\nStop\nAX Browser 1792166102785's Browser\nConnected\nWatch only\nTrackpad\nTake over\nAX Browser lifecycle 1976\nhttp://127.0.0.1:51266/",
+  "selectedChannels": [
+    "dm-bot-1da22e27884f4ef5ad4412a5d63b1033"
+  ],
+  "viewers": [
+    {
+      "src": "./botharness-browser/viewer/local/?slug=bot-1da22e27884f4ef5ad4412a5d63b1033&mode=direct",
+      "visible": true
+    }
+  ]
+}

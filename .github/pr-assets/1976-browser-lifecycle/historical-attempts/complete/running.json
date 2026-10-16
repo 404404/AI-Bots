@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "running": true,
+  "frame": {
+    "mimeType": "image/jpeg",
+    "bytes": 16670,
+    "path": "[redacted]/.humanlayer/verify/ax1976-complete/browser-lifecycle/attempt-1792167352425-27090/frame.jpg"
+  },
+  "focused": "C3279419AF349C559D4E34680FC9EABD",
+  "takeover": false,
+  "handoffPending": false,
+  "tabs": [
+    {
+      "targetId": "C3279419AF349C559D4E34680FC9EABD",
+      "url": "http://127.0.0.1:54334/",
+      "title": "AX Browser lifecycle 1976",
+      "current": true
+    }
+  ],
+  "profiles": [],
+  "target": "local",
+  "viewerUrl": "/botharness-browser/viewer/local/?slug=bot-6c4903c11a4840ae8f5c1f8032612cf1",
+  "provisioning": null
+}

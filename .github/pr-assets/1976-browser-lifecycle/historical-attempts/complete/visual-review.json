@@ -1,0 +1,18 @@
+{
+  "commit": "fa292c35b5a719302a96de90e4ef23bf2bd8d5b2",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected off/running/stopped/disabled screenshots and full ARIA plus actual frame.jpg. Same selected Bot and fixture tab/title/URL/text; inline live action present, viewer error empty; stopped has no frame/tabs; disabled shows access explanation. Console and HTTP errors are empty. Human QA not run.",
+  "reviewedAt": "2026-10-16T16:17:13.259Z",
+  "evidence": {
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "off.png": "205be043b1d03c064910f6c8a6eff8b8cd7e7dfed319d7c7d01041deec8ef18c",
+    "off.aria.json": "2f0a2454ad971ec7e872b145820b373acc9dc69ac2f5b81695c1d4161d74d434",
+    "running.png": "d87d55315e39d7a09413ee522916636a1b18c90fea1cbfa8dd76a1de3b3b16eb",
+    "running.aria.json": "2bf6bca1943efae37ec590d2bd4768a0c72b21e41f53da1aabc259a846011dd8",
+    "stopped.png": "42d6f3a4dec6d3679b397b634b5da264ed77f9fbd272fb6fcceaebc95f618636",
+    "stopped.aria.json": "3088bd7a8f342d6caf603f71ca202b698ae80528b978b699018c9cbf4f27d660",
+    "disabled.png": "fd38b71aaf261370d7ee8068ac7f2f01811512ce79f87ab55a962a8c0b449203",
+    "disabled.aria.json": "5ae42484a2c0aec466a3a586a3164c77adb59502261e068535dcd7b34c7e703a"
+  }
+}

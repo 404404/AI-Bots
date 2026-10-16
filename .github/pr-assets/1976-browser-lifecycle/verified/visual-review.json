@@ -1,0 +1,18 @@
+{
+  "commit": "fdf40ca64d3bca9092b24b8dbfe21f2fe1c060eb",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected all four Web screenshots and full ARIA plus saved Browser frame. Same Bot and local fixture correlate across visible panel, direct tools and authority. Running viewer is live without error; Stop removes tabs and frame; Access-off permission state differs from enabled Stopped. Console and HTTP errors empty; lifecycle and Client diagnostics inspected.",
+  "reviewedAt": "2026-10-16T16:43:09.059Z",
+  "evidence": {
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "off.png": "784f1111e75745ca51a375f4923303629bfa1a07c5c53a6c0290b0f9eed364bc",
+    "off.aria.json": "1db4ad07f9569b337d46ab59862880140a37b6986e12c0bc9e3aace57f3892ab",
+    "running.png": "fef65ac64f413ce3a5e3e915a1290b3c9aa6b518d74f326cb9c49b9a26d88937",
+    "running.aria.json": "eebe47d8f4e367afa9f341a534862e9f14985581e2ade869f59c024a5544366c",
+    "stopped.png": "de13ca9cfa8c5f5449afb2ebb403d7b1b64826d7504e0de066427a04dcc56537",
+    "stopped.aria.json": "3910cb3cc010c2a15095732476be09fc5ecebb10541edb897045df38c7a5db17",
+    "disabled.png": "cc8c724e8e2de87ff483cf0c8da8774661aa005ecb88f6516d0704839fc94ffd",
+    "disabled.aria.json": "33ac82a2d1362de6f65879f11b401c508bf1293d0d06ffcf08402652299d5284"
+  }
+}

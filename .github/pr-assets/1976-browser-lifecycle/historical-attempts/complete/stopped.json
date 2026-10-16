@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "running": false,
+  "frame": null,
+  "focused": null,
+  "takeover": false,
+  "handoffPending": false,
+  "tabs": [],
+  "profiles": [],
+  "target": "local",
+  "viewerUrl": null,
+  "provisioning": null
+}
