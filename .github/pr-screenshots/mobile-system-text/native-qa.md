@@ -1,5 +1,7 @@
 # System text size — bounded native QA
 
+Historical first pass. The [platform typography and large-text follow-up](v2/native-qa.md) supersedes the uniform iOS scaling implementation and expands the native matrix.
+
 Date: 2026-10-17. Refs #2004; stacked on #1966. No merge or release approval.
 
 ## Revisions and environment
