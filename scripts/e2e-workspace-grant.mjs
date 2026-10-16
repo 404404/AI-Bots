@@ -254,13 +254,16 @@ try {
   await page.setViewport({ width: 1440, height: 1100 });
   await page.goto(instance.url, { waitUntil: 'networkidle2', timeout: 30_000 });
   await page.waitForSelector('button[aria-label="Bot mode"]', { timeout: 30_000 });
-  for (let round = 0; round < 6; round++) {
-    for (const label of ['Continue', 'Configure later', 'Skip tutorial']) {
-      const handle = await page.$(`::-p-aria([name=${JSON.stringify(label)}][role="button"])`);
-      if (handle && (await handle.isVisible())) await handle.click();
+  const dismissOnboarding = async () => {
+    for (let round = 0; round < 6; round++) {
+      for (const label of ['Continue', 'Configure later', 'Skip tutorial']) {
+        const handle = await page.$(`::-p-aria([name=${JSON.stringify(label)}][role="button"])`);
+        if (handle && (await handle.isVisible())) await handle.click();
+      }
+      await new Promise((done) => setTimeout(done, 250));
     }
-    await new Promise((done) => setTimeout(done, 250));
-  }
+  };
+  await dismissOnboarding();
   stage = 'enter-Bot-mode';
   await click('Bot mode');
   await page.waitForSelector('.bh-mode-sidebar', { visible: true, timeout: 30_000 });
@@ -278,6 +281,7 @@ try {
     const label = findBot(tree);
     if (!label) throw new Error('created-Bot-sidebar-entry-missing');
     await click(label);
+    await dismissOnboarding();
     await page.waitForSelector('[aria-label^="Workspace Grants ·"]', { visible: true });
   };
   await selectBot();
@@ -288,9 +292,17 @@ try {
     if (!label.includes(botName)) throw new Error('wrong-Bot-workspace-entry');
     await click(label);
     await page.waitForSelector('.bh-workspace-grants', { visible: true });
-    await page.waitForFunction(
-      () => !document.querySelector('.bh-workspace-grants [aria-busy="true"]'),
-    );
+    await page.waitForSelector('.bh-workspace-grants .bh-workspace-folder-toggle', {
+      visible: true,
+    });
+    await page.evaluate(async () => {
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => {})),
+      );
+    });
   };
   const visible = async () =>
     page.$eval(
