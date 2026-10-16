@@ -59,6 +59,16 @@ describe('feature map integrity', () => {
       'feature.md: expected exactly one feature index row, found 2',
     );
   });
+  it('does not count a cross-reference outside the File column as a feature row', () => {
+    const { root, write } = fixture();
+    write(
+      `${mapDirectory}/README.md`,
+      '| [Related feature](feature.md) | scripts/e2e-mapped.mjs | no feature file |',
+    );
+    expect(checkFeatureMap(root).errors).toContain(
+      'feature.md: expected exactly one feature index row, found 0',
+    );
+  });
   it('rejects an index that hides a scripted journey', () => {
     const { root, write } = fixture();
     write(`${mapDirectory}/README.md`, '| none | [Feature](feature.md) |');

@@ -24,7 +24,11 @@ export function checkFeatureMap(repo = root) {
   for (const file of files) {
     const rows = index
       .split('\n')
-      .filter((line) => line.startsWith('|') && line.includes(`](${file})`));
+      .filter(
+        (line) =>
+          line.startsWith('|') &&
+          line.trimEnd().replace(/\|$/u, '').split('|').at(-1)?.includes(`](${file})`),
+      );
     if (rows.length !== 1)
       errors.push(`${file}: expected exactly one feature index row, found ${rows.length}`);
     const text = readFileSync(join(directory, file), 'utf8');

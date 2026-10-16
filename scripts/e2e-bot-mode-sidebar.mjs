@@ -156,12 +156,18 @@ try {
   if (pageErrors.length > 0) throw new Error(`Page errors: ${pageErrors.join(' | ')}`);
   console.log('BOT MODE SIDEBAR PASS');
 } catch (error) {
-  await page
-    ?.screenshot({ waitForFonts: false, path: resolve(shots, 'failure.png') })
-    .catch(() => undefined);
-  const tree = await page?.accessibility.snapshot().catch(() => null);
-  writeFileSync(resolve(shots, 'failure-aria.json'), JSON.stringify(tree ?? null, null, 2));
-  writeFileSync(resolve(shots, 'page-errors.json'), JSON.stringify(pageErrors, null, 2));
+  await Promise.allSettled([
+    (async () => {
+      await page?.screenshot({ waitForFonts: false, path: resolve(shots, 'failure.png') });
+    })(),
+    (async () => {
+      const tree = await page?.accessibility.snapshot();
+      writeFileSync(resolve(shots, 'failure-aria.json'), JSON.stringify(tree ?? null, null, 2));
+    })(),
+    (async () => {
+      writeFileSync(resolve(shots, 'page-errors.json'), JSON.stringify(pageErrors, null, 2));
+    })(),
+  ]);
   throw error;
 } finally {
   await browser.close();
