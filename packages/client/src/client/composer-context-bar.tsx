@@ -2,12 +2,15 @@ import {
   Children,
   isValidElement,
   useRef,
+  useImperativeHandle,
+  type Ref,
   useState,
   type ReactElement,
   type ReactNode,
 } from 'react';
 import * as stylex from '@stylexjs/stylex';
-import { Menu, type MenuEntry } from '@deepseek-ai/dsh-client-ui-primitives';
+import { Button, Switch } from '@deepseek-ai/dsh-client-ui-primitives';
+import { PanelDialog } from './ds/panel-dialog.js';
 import { border, color, space, size, text } from './ds/tokens.stylex.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
@@ -24,6 +27,9 @@ import {
 
 const styles = stylex.create({
   bar: {
+    userSelect: 'none',
+    containerType: 'inline-size',
+    containerName: 'composer-footer',
     display: { default: 'flex', ':is([hidden])': 'none' },
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -38,12 +44,15 @@ const styles = stylex.create({
     display: 'flex',
     flexWrap: 'nowrap',
     gap: space.x2,
-    minWidth: 0,
+    minWidth: { default: 0, '@container composer-footer (max-width: 480px)': 'min-content' },
     flexShrink: 1,
     alignItems: 'center',
   },
   leading: { flexGrow: 1, flexBasis: '0%' },
-  trailing: { justifyContent: 'flex-end', maxWidth: '55%' },
+  trailing: {
+    justifyContent: 'flex-end',
+    maxWidth: { default: '55%', '@container composer-footer (max-width: 480px)': '100%' },
+  },
   item: { display: 'flex', flexShrink: 1, minWidth: 0, maxWidth: '100%', position: 'relative' },
   editing: {
     outline: `${border.hairline} dashed ${color.borderStrong}`,
@@ -55,11 +64,12 @@ const styles = stylex.create({
   drop: { boxShadow: `inset ${border.focus} 0 ${color.accent}` },
   editingSide: {
     minHeight: size.row,
-    minWidth: size.row,
+    minWidth: { default: size.row, '@container composer-footer (max-width: 480px)': 'min-content' },
     flexGrow: 1,
     flexBasis: '0%',
     outline: `${border.hairline} dashed ${color.border}`,
   },
+  option: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: space.x4 },
   hint: {
     color: color.muted,
     fontSize: text.metaSize,
@@ -75,31 +85,92 @@ const labels = {
   'avg-perf': 'footer.speed',
 } as const;
 
+export interface ComposerFooterHandle {
+  open(): void;
+}
+
 export function ComposerContextBar({
+  settingsRef,
   label,
   hidden = false,
   trailing,
   children,
   t,
-  compact = false,
   available = FOOTER_ITEMS,
 }: {
+  readonly settingsRef?: Ref<ComposerFooterHandle> | undefined;
   readonly label: string;
   readonly hidden?: boolean;
   readonly trailing?: ReactNode;
   readonly children: ReactNode;
   readonly t?: BotHarnessTranslate;
-  readonly compact?: boolean;
   readonly available?: readonly FooterItem[];
 }): ReactElement {
   const preferences = useFooterPreferences();
   const root = useRef<HTMLDivElement | null>(null);
-  const [menu, setMenu] = useState<{ x: number; y: number }>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  useImperativeHandle(settingsRef, () => ({ open: () => setSettingsOpen(true) }), []);
   const [editing, setEditing] = useState(false);
   const drag = useRef<FooterItem | undefined>(undefined);
   const [drop, setDrop] = useState<{ side: FooterSide; before?: FooterItem }>();
   const dropRef = useRef<typeof drop>(undefined);
-  const configurable = t !== undefined && !compact;
+  const configurable = t !== undefined;
+  const pressMount = useMountedResource<HTMLDivElement>(
+    (node) => {
+      root.current = node;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let origin: { x: number; y: number; id: number } | undefined;
+      let held = false;
+      const cancel = () => {
+        clearTimeout(timer);
+        timer = undefined;
+        origin = undefined;
+      };
+      const start = (event: PointerEvent) => {
+        held = false;
+        cancel();
+        if (!configurable || editing || !event.isPrimary || event.pointerType === 'mouse') return;
+        if (!(event.target instanceof Node) || !node.contains(event.target)) return;
+        origin = { x: event.clientX, y: event.clientY, id: event.pointerId };
+        timer = setTimeout(() => {
+          held = true;
+          cancel();
+          setSettingsOpen(true);
+        }, 550);
+      };
+      const move = (event: PointerEvent) => {
+        if (
+          origin &&
+          (event.pointerId !== origin.id ||
+            Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 8)
+        )
+          cancel();
+      };
+      const click = (event: MouseEvent) => {
+        if (!held) return;
+        held = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      document.addEventListener('pointerdown', start, true);
+      document.addEventListener('pointermove', move, true);
+      document.addEventListener('pointerup', cancel, true);
+      document.addEventListener('pointercancel', cancel, true);
+      document.addEventListener('click', click, true);
+      window.addEventListener('blur', cancel);
+      return () => {
+        cancel();
+        root.current = null;
+        document.removeEventListener('pointerdown', start, true);
+        document.removeEventListener('pointermove', move, true);
+        document.removeEventListener('pointerup', cancel, true);
+        document.removeEventListener('pointercancel', cancel, true);
+        document.removeEventListener('click', click, true);
+        window.removeEventListener('blur', cancel);
+      };
+    },
+    [configurable, editing],
+  );
   const editMount = useMountedResource<HTMLSpanElement>(() => {
     if (!editing) return;
     const end = () => {
@@ -248,22 +319,26 @@ export function ComposerContextBar({
       </div>
     );
   };
-  const items: MenuEntry[] = configurable
-    ? [
-        ...available.map((id) => ({ id, label: t(labels[id]) })),
-        { id: 'layout', label: t(editing ? 'footer.done' : 'footer.layout') },
-        { id: 'reset', label: t('footer.reset') },
-      ]
-    : [];
+  const empty =
+    configurable && ![...preferences.left, ...preferences.right].some((id) => nodes.has(id));
+  const closeSettings = () => {
+    setSettingsOpen(false);
+    if (empty)
+      root.current
+        ?.closest('.bh-composer-shell')
+        ?.querySelector<HTMLElement>('[contenteditable="true"]')
+        ?.focus();
+    else root.current?.focus();
+  };
   return (
     <>
       <span ref={editMount} hidden />
       <div
-        ref={root}
+        ref={pressMount}
         role="group"
         aria-label={label}
         tabIndex={configurable ? 0 : undefined}
-        hidden={hidden}
+        hidden={hidden || empty}
         title={configurable ? t(editing ? 'footer.moveHint' : 'footer.customizeHint') : undefined}
         data-composer-context=""
         data-footer-editing={editing || undefined}
@@ -271,7 +346,7 @@ export function ComposerContextBar({
         onContextMenu={(event) => {
           if (!configurable) return;
           event.preventDefault();
-          setMenu({ x: event.clientX, y: event.clientY });
+          setSettingsOpen(true);
         }}
         onKeyDown={(event) => {
           if (
@@ -279,8 +354,7 @@ export function ComposerContextBar({
             (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10'))
           ) {
             event.preventDefault();
-            const rect = event.currentTarget.getBoundingClientRect();
-            setMenu({ x: rect.left, y: rect.top });
+            setSettingsOpen(true);
           }
         }}
       >
@@ -298,31 +372,49 @@ export function ComposerContextBar({
           </>
         )}
       </div>
-      {menu === undefined ? null : (
-        <Menu
-          open
-          portal
-          dense
-          autoFocus
-          anchor={<span />}
-          getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
-          items={items}
-          selectedIds={FOOTER_ITEMS.filter((id) => !preferences.hidden.includes(id))}
-          onClose={() => {
-            setMenu(undefined);
-            root.current?.focus();
-          }}
-          onSelect={(id) => {
-            setMenu(undefined);
-            if (id === 'layout') setEditing((value) => !value);
-            else if (id === 'reset') {
-              saveFooterPreferences(defaultFooterPreferences());
-              setEditing(false);
-            } else if (FOOTER_ITEMS.includes(id as FooterItem))
-              saveFooterPreferences(toggleFooterItem(preferences, id as FooterItem));
-            root.current?.focus();
-          }}
-        />
+      {!settingsOpen || t === undefined ? null : (
+        <PanelDialog
+          size="small"
+          title={t('footer.settings')}
+          description={t('footer.restoreHint')}
+          closeLabel={t('common.close')}
+          onClose={closeSettings}
+          secondary={
+            <Button
+              size="sm"
+              onClick={() => {
+                saveFooterPreferences(defaultFooterPreferences());
+                setEditing(false);
+              }}
+            >
+              {t('footer.reset')}
+            </Button>
+          }
+          actions={
+            <Button
+              size="sm"
+              disabled={empty}
+              onClick={() => {
+                setSettingsOpen(false);
+                setEditing((value) => !value);
+                root.current?.focus();
+              }}
+            >
+              {t(editing ? 'footer.done' : 'footer.layout')}
+            </Button>
+          }
+        >
+          {available.map((id) => (
+            <div key={id} {...stylex.props(styles.option)}>
+              <span>{t(labels[id])}</span>
+              <Switch
+                label={t(labels[id])}
+                checked={!preferences.hidden.includes(id)}
+                onChange={() => saveFooterPreferences(toggleFooterItem(preferences, id))}
+              />
+            </div>
+          ))}
+        </PanelDialog>
       )}
     </>
   );

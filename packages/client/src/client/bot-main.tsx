@@ -194,7 +194,6 @@ import {
 } from './message-reactions.js';
 import { useFooterPreferences } from './composer-footer-preferences.js';
 import { useReplyPerf } from './use-reply-perf.js';
-import { useMobileBotViewport } from './mobile-viewport.js';
 import { ConversationSearch } from './conversation-search.js';
 import { reactableMessage } from './message-reactions-model.js';
 import {
@@ -1743,12 +1742,11 @@ function ConversationView({
   ]);
 
   const footerPreferences = useFooterPreferences();
-  const compactFooter = useMobileBotViewport();
   const { mount: replyPerfMount, average: avgPerf } = useReplyPerf(
     actions,
     channelId,
     state.channels.find((item) => item.id === channelId)?.latestMessage,
-    !compactFooter && !footerPreferences.hidden.includes('avg-perf'),
+    !footerPreferences.hidden.includes('avg-perf'),
     state.contentPurgeRevision ?? 0,
   );
   const dmComposerContext = useDmComposerContext({
