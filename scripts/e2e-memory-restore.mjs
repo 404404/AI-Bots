@@ -275,6 +275,7 @@ try {
   await page.keyboard.press('Escape');
   const botName = created.bot.name;
   const selectBot = async () => {
+    await dismissOnboarding();
     const tree = await page.accessibility.snapshot({ interestingOnly: false });
     const findBot = (node) => {
       if (node.role === 'button' && node.name.startsWith(`${botName}: `)) return node.name;
@@ -285,7 +286,15 @@ try {
     };
     const label = findBot(tree);
     if (!label) throw new Error('created-Bot-sidebar-entry-missing');
-    await click(label);
+    await page
+      .locator(`.bh-mode-sidebar button[data-channel-id="${created.dm.channelId}"]`)
+      .setTimeout(20_000)
+      .click();
+    run.actions.push({
+      click: label,
+      channelId: created.dm.channelId,
+      at: new Date().toISOString(),
+    });
     await dismissOnboarding();
   };
   await selectBot();
