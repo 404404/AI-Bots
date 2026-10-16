@@ -66,7 +66,7 @@ function fixture() {
       },
     },
     'unconfirmed-revoke': {
-      exitCode: 1,
+      exitCode: 2,
       value: { error: { code: 'usage', message: 'requires --confirm' } },
     },
     'after-unconfirmed': { grants: [grant] },
@@ -154,6 +154,12 @@ describe('one temporary Workspace Grant proof', () => {
     expect(coverageRow(dir, commit).status).toBe('needs-revalidation');
   });
   it.each([
+    [
+      'unconfirmed-revoke',
+      (v) => {
+        v.exitCode = 1;
+      },
+    ],
     [
       'granted',
       (v) => {

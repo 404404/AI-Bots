@@ -103,7 +103,7 @@ export function grantProblems(run, read) {
     );
   const unconfirmed = read('unconfirmed-revoke');
   if (
-    unconfirmed.exitCode !== 1 ||
+    unconfirmed.exitCode !== 2 ||
     unconfirmed.value?.error?.code !== 'usage' ||
     !unconfirmed.value.error.message.includes('--confirm')
   )

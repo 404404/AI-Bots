@@ -309,8 +309,8 @@ try {
       '.bh-workspace-grants',
       (el, title) => ({
         rendered: el.checkVisibility(),
-        hasWorkspace: [...el.querySelectorAll('.bh-workspace-folder-toggle')].some((row) =>
-          row.textContent.includes(title),
+        hasWorkspace: [...el.querySelectorAll('.bh-workspace-folder-toggle')].some(
+          (row) => row.checkVisibility() && row.textContent.includes(title),
         ),
         text: el.innerText,
       }),
@@ -332,8 +332,8 @@ try {
   run.actions.push({ click: 'Authorize workspace', confirmation: true });
   await page.waitForFunction(
     (title) =>
-      [...document.querySelectorAll('.bh-workspace-folder-toggle')].some((el) =>
-        el.textContent.includes(title),
+      [...document.querySelectorAll('.bh-workspace-folder-toggle')].some(
+        (el) => el.checkVisibility() && el.textContent.includes(title),
       ),
     {},
     basename(fixture),

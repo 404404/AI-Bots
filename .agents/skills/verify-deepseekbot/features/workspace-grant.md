@@ -51,7 +51,7 @@ authorization, `grants` identifies the exact Bot, Workspace and active Grant;
 `bot-tool <bot> channel_attachment_import --args-stdin` with
 `{"file_path":"<temporary-workspace>/README.md"}` returns a new file reference with the
 sample's name and byte count. No message is sent. A call to
-`grant-revoke <bot> --grant <grant>` without `--confirm` must fail and leave the Grant
+`grant-revoke <bot> --grant <grant>` without `--confirm` must return the CLI usage exit code `2` and leave the Grant
 active. `grant-revoke <bot> --grant <grant> --confirm` then marks that same Grant
 revoked. The original record remains in the authoritative history; it disappears from
 the active set. Repeating the exact file-read tool call must fail on current authority.
@@ -98,6 +98,8 @@ feedback separately; agent screenshot inspection is not Human QA.
 - `channel_attachment_import` is an existing direct Bot tool that checks current active
   Grants on each file-read chunk. Native DSH `read` is not a tool in `bot-tools`; do not
   add a testing API or substitute full-access execution to make this test pass.
+- DSH may retain the directory in its collapsed registered-folder picker after revocation.
+  Inspect rendered active Grant rows, not hidden DOM text in that picker.
 - The CLI list retains a revoked record; checking list length zero would be wrong.
   A transport failure or unavailable tool is not the expected authorization refusal.
 - After a failed or surprising drive, inspect the saved console, ARIA, screenshot and
