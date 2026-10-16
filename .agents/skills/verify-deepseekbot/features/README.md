@@ -1,5 +1,9 @@
 # DeepSeekBot feature map
 
+| Feature | Needs a model | Scripted journey | File |
+| --- | --- | --- | --- |
+| DSH Session list Bot folders | for fresh execution | `scripts/e2e-bot-session-folders.mjs` | [bot-session-folders.md](bot-session-folders.md) |
+
 One file per user-facing feature. Each file has four sections: `Sub-features`, `How to get to it (user POV)`, `Driving it with verify-app`, and `Gotchas`.
 
 | Feature                                                                                            | Needs a model              | Scripted journey                                                                                     | File                                                 |

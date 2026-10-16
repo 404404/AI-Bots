@@ -4,6 +4,14 @@
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
+      "id": "desktop.sessions.bot-folders",
+      "label": "Group native Sessions under DeepSeekBot and Bot-avatar subgroups without changing execution directories",
+      "source": "packages/client/src/client/bot-session-folders.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/bot-session-folders.md",
+      "task": 1997,
+      "gap": null
+    },
+    {
       "id": "desktop.activity-center.idle-personabot",
       "label": "Show one idle PersonaBot with no sessions or actions",
       "source": "packages/client/src/client/activity-center-panel.tsx",
@@ -453,6 +461,14 @@
     }
   ],
   "scripts": [
+    {
+      "path": "scripts/e2e-bot-session-folders.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.sessions.bot-folders"],
+      "reason": "Prepared isolated Host with explicit Bot-owned roots; verifies product icon, Bot avatars, independent folding, reload, native navigation and retained cwd, with optional owned-Host restart.",
+      "task": 1997,
+      "sha256": "df0d4696321bab94ea2364c4c32b768fef20104757d2321bd68e73fdc87bb46b"
+    },
     {
       "path": "scripts/e2e-activity-entry.mjs",
       "category": "needs-repair",
