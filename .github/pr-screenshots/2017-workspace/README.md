@@ -13,3 +13,7 @@ The complete platform matrix, Windows/Linux Desktop, embedded Browser/Computer s
 ## Empty-state refinement
 
 `empty-before.png` is the real Web Client at parent `d27982b7df9e4ee40fad4247a5bccf199bac5fa4`, before this feedback. The refreshed `after-web.png` shows the same default welcome and empty Sessions/Inbox after the change: 40px panel glyph above a description, centered in the body. Channels has 2px outer insets on all sides. `empty-group.png` uses the synthetic, zero-message “Panel empty-state QA” group to show Messages and Work empty states. No model calls or real messages were sent. Native `after-macos.png` closes Inbox so the capture excludes private runtime events; the full-height Sessions empty state is visible. This refresh was also inspected in light Web and at 1100 × 700.
+
+## Expanded Channel search alignment
+
+`search-before.png` captures parent `1aacd52fbb1e2639ce42badb086f1f344277136f`; `search-after.png` captures this refinement in the same real Web Client (1440 × 900, English, dark, default Bot welcome). The former search extends 2px past its clipping ancestor and ends 6px short of the Channel row; the latter matches both row edges. A 1000 × 800 Web check also matches both edges. Actual macOS fullscreen matches both edges; windowed top-left headers retain the existing traffic-light clearance (27px in the tested layout) while aligning the right edge. No native before/after pair is claimed for this CSS refinement.

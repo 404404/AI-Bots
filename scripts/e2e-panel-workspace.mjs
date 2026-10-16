@@ -174,6 +174,41 @@ try {
   await page.keyboard.press('Escape');
   await page.waitForSelector('[data-message-id]', { timeout: 20000 });
   await proof('01-default');
+  step = 'channel-search-alignment';
+  await page.click('[data-dock-header="bh:channels"] .bh-search-btn');
+  await sleep(250);
+  const searchAlignment = await page.evaluate(() => {
+    const search = document.querySelector('[data-dock-header="bh:channels"] .bh-search-open');
+    const row = document.querySelector('[data-dock-panel="bh:channels"] [data-channel-id]');
+    const bounds = search.getBoundingClientRect();
+    const rowBounds = row.getBoundingClientRect();
+    let clipped = false;
+    for (let parent = search.parentElement; parent; parent = parent.parentElement) {
+      if (['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(parent).overflowX)) {
+        const box = parent.getBoundingClientRect();
+        clipped ||= bounds.left < box.left - 1 || bounds.right > box.right + 1;
+      }
+    }
+    const header = search.closest('[data-dock-header]');
+    const leadingClearance = parseFloat(getComputedStyle(header).paddingLeft);
+    return {
+      left: bounds.left - rowBounds.left,
+      right: bounds.right - rowBounds.right,
+      leadingClearance,
+      clipped,
+    };
+  });
+  assert.ok(
+    Math.abs(searchAlignment.left - searchAlignment.leadingClearance) < 1,
+    'search aligns with the Channel row left edge, preserving native window-control clearance',
+  );
+  assert.ok(Math.abs(searchAlignment.right) < 1, 'search aligns with the Channel row right edge');
+  assert.equal(searchAlignment.clipped, false, 'search border stays inside clipping ancestors');
+  results.push({ step, searchAlignment });
+  await proof('01b-search');
+  await page.focus('[data-dock-header="bh:channels"] input');
+  await page.keyboard.press('Escape');
+
   const liveMessage = await page.$('[data-message-id]');
   const liveRoster = await page.$(`${channels} [data-channel-id]`);
   const assertLive = async () => {
