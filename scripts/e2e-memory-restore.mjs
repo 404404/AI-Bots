@@ -24,9 +24,9 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 const run = {
   version: 1,
   behavior,
-  commit: git('rev-parse', 'HEAD'),
-  base: git('merge-base', 'origin/main', 'HEAD'),
-  dirty: git('status', '--porcelain').length > 0,
+  commit: null,
+  base: null,
+  dirty: true,
   startedAt: new Date().toISOString(),
   status: 'blocked',
   environment: {
@@ -151,6 +151,9 @@ const click = async (label) => {
   run.actions.push({ click: label, at: new Date().toISOString() });
 };
 try {
+  run.commit = git('rev-parse', 'HEAD');
+  run.dirty = git('status', '--porcelain').length > 0;
+  run.base = git('merge-base', 'origin/main', 'HEAD');
   instance = JSON.parse(readFileSync(paths.instance, 'utf8'));
   const url = new URL(instance.url);
   if (

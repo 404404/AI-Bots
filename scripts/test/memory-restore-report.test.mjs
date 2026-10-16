@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -285,5 +286,50 @@ describe('one disposable Memory restore proof', () => {
       v.behavior = 'other';
     });
     expect(verificationReport({ commit, memoryRun: dir }).ok).toBe(false);
+  });
+});
+
+describe('Memory runner provenance prerequisites', () => {
+  it('retains a blocked first failure when origin/main is missing', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'memory-provenance-'));
+    directories.push(directory);
+    const git = (...args) =>
+      execFileSync('git', args, { cwd: directory, encoding: 'utf8', stdio: 'pipe' }).trim();
+    git('init', '--quiet');
+    writeFileSync(join(directory, '.git/info/exclude'), 'scripts/\n.humanlayer/\n');
+    git(
+      '-c',
+      'user.name=AX regression',
+      '-c',
+      'user.email=ax@example.invalid',
+      '-c',
+      'core.hooksPath=/dev/null',
+      'commit',
+      '--allow-empty',
+      '--no-gpg-sign',
+      '-m',
+      'Disposable provenance regression',
+    );
+    const head = git('rev-parse', 'HEAD');
+    cpSync(new URL('../', import.meta.url), join(directory, 'scripts'), { recursive: true });
+    const result = spawnSync(
+      process.execPath,
+      ['scripts/e2e-memory-restore.mjs', '--name', 'missing-base'],
+      { cwd: directory, encoding: 'utf8', timeout: 10000 },
+    );
+    expect(result.status).toBe(1);
+    const attempts = join(directory, '.humanlayer/verify/missing-base/memory-restore');
+    const names = readdirSync(attempts);
+    expect(names).toHaveLength(1);
+    const attempt = join(attempts, names[0]);
+    const run = JSON.parse(readFileSync(join(attempt, 'run.json'), 'utf8'));
+    expect(run).toMatchObject({ status: 'blocked', commit: head, base: null, dirty: false });
+    expect(run.reason).toContain('preconditions:');
+    expect(run.reason).toContain('origin/main');
+    const failure = JSON.parse(readFileSync(join(attempt, 'failure.json'), 'utf8'));
+    expect(failure).toMatchObject({ stage: 'preconditions', reason: run.reason });
+    expect(run.evidence['failure.json']).toBe(digest(readFileSync(join(attempt, 'failure.json'))));
+    expect(readFileSync(join(attempt, 'coverage.md'), 'utf8')).toContain('blocked');
+    expect(JSON.parse(result.stdout)).toMatchObject({ status: 'blocked', reason: run.reason });
   });
 });

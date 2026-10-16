@@ -1507,7 +1507,7 @@
       "behaviors": ["desktop.memory.read-restore"],
       "reason": "Own isolated Host; two owner-saved versions, real Web/CLI read, descendant restore and stale-head refusal; immutable evidence; retains Memory.",
       "task": 1975,
-      "sha256": "dd1ce7f1e328d457007c696b5ab5e50bb0a3d42464b1db1354a267e6817b49d5"
+      "sha256": "f03b93459c5db346f31fbb0054329c7d99516627007fed052d416df98b1024e8"
     }
   ],
   "native": [
