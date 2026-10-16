@@ -1,10 +1,12 @@
 import { Stack } from 'expo-router';
-import { useImperativeHandle, useRef } from 'react';
-import type { SearchBarCommands } from 'react-native-screens';
+import { useImperativeHandle, useState } from 'react';
+import { Keyboard, TextInput, useWindowDimensions, View } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
+import { space } from '../design/tokens';
 import { t } from '../strings';
 import type { ActivityToolbarProps } from './activity-toolbar';
+import { ActivitySearchIcon } from './icons';
 
 export function ActivityToolbar({
   ref,
@@ -15,26 +17,19 @@ export function ActivityToolbar({
   onFilter,
 }: ActivityToolbarProps) {
   const theme = useDesignTheme();
-  const searchBar = useRef<SearchBarCommands>(null);
-  const searching = useRef(false);
+  const { width } = useWindowDimensions();
+  const [searching, setSearching] = useState(false);
   function dismissSearch() {
-    if (!searching.current) return;
-    searching.current = false;
+    setSearching(false);
     onSearchFocus(false);
-    searchBar.current?.cancelSearch();
+    Keyboard.dismiss();
   }
-  useImperativeHandle(
-    ref,
-    () => ({
-      dismissSearch,
-    }),
-    [onSearchFocus],
-  );
+  useImperativeHandle(ref, () => ({ dismissSearch }), [onSearchFocus]);
   return (
     <>
       <Stack.Screen
         options={{
-          title: t.activity,
+          title: searching ? '' : t.activity,
           headerShown: true,
           headerLargeTitleEnabled: false,
           headerTransparent: true,
@@ -45,43 +40,65 @@ export function ActivityToolbar({
         }}
       />
       <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button
-          icon="line.3.horizontal.decrease"
-          accessibilityLabel={t.activityOptions}
-          selected={filtered}
-          tintColor={filtered ? theme.color.accent : theme.color.fg}
-          onPress={onFilter}
-          separateBackground
-        />
+        {searching ? (
+          <Stack.Toolbar.View hidesSharedBackground={false}>
+            <View
+              style={{
+                width: width - space.x4 * 2,
+                height: theme.touch,
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: space.x4,
+                gap: space.x2,
+              }}
+            >
+              <ActivitySearchIcon color={theme.color.muted} size={theme.type.body.size} />
+              <TextInput
+                autoFocus
+                value={search}
+                onChangeText={onSearch}
+                onBlur={dismissSearch}
+                maxLength={200}
+                placeholder={t.activitySearch}
+                accessibilityLabel={t.activitySearch}
+                accessibilityRole="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+                returnKeyType="search"
+                placeholderTextColor={theme.color.subtle}
+                style={{
+                  flex: 1,
+                  height: theme.touch,
+                  color: theme.color.fg,
+                  fontSize: theme.type.body.size,
+                }}
+              />
+            </View>
+          </Stack.Toolbar.View>
+        ) : (
+          <>
+            <Stack.Toolbar.Button
+              icon="line.3.horizontal.decrease"
+              accessibilityLabel={t.activityOptions}
+              selected={filtered}
+              tintColor={filtered ? theme.color.accent : theme.color.fg}
+              onPress={onFilter}
+              separateBackground
+            />
+            <Stack.Toolbar.Button
+              icon="magnifyingglass"
+              accessibilityLabel={t.activitySearch}
+              tintColor={search ? theme.color.accent : theme.color.fg}
+              onPress={() => {
+                onSearchFocus(true);
+                setSearching(true);
+              }}
+              separateBackground
+            />
+          </>
+        )}
       </Stack.Toolbar>
-      <Stack.SearchBar
-        ref={searchBar}
-        placeholder={t.activitySearch}
-        placement="integratedButton"
-        allowToolbarIntegration={false}
-        hideWhenScrolling={false}
-        obscureBackground={false}
-        onFocus={() => {
-          searching.current = true;
-          onSearchFocus(true);
-          searchBar.current?.setText(search);
-          requestAnimationFrame(() => {
-            if (searching.current) searchBar.current?.toggleCancelButton(false);
-          });
-        }}
-        onBlur={dismissSearch}
-        onChangeText={(event) => {
-          if (!searching.current) return;
-          const value = event.nativeEvent.text.slice(0, 200);
-          if (value !== event.nativeEvent.text) searchBar.current?.setText(value);
-          onSearch(value);
-          searchBar.current?.toggleCancelButton(false);
-        }}
-        onCancelButtonPress={() => {
-          searching.current = false;
-          onSearchFocus(false);
-        }}
-      />
     </>
   );
 }

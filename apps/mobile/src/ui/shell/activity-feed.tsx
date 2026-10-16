@@ -403,9 +403,7 @@ export function ActivityFeed({
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{
           flexGrow: 1,
-          paddingTop: searchFocused
-            ? initialHeight
-            : Math.max(0, headerHeight - (Platform.OS === 'ios' ? insets.top : 0)),
+          paddingTop: Math.max(0, headerHeight - (Platform.OS === 'ios' ? insets.top : 0)),
           paddingBottom: space.x6,
         }}
         scrollIndicatorInsets={{ top: headerHeight }}
