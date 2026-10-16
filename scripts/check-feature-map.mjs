@@ -10,8 +10,13 @@ const sections = [
   'Driving it with verify-app',
   'Gotchas',
 ];
+const rowCells = (line) =>
+  line
+    .trim()
+    .replace(/^\||\|$/gu, '')
+    .split('|');
 const scriptsIn = (text) =>
-  new Set([...text.matchAll(/\bscripts\/[\w/-]+\.mjs\b/gu)].map(([path]) => path));
+  new Set([...text.matchAll(/\bscripts\/[\w/.-]+\.mjs\b/gu)].map(([path]) => path));
 
 export function checkFeatureMap(repo = root) {
   const directory = join(repo, mapDirectory);
@@ -24,24 +29,21 @@ export function checkFeatureMap(repo = root) {
   for (const file of files) {
     const rows = index
       .split('\n')
-      .filter(
-        (line) =>
-          line.startsWith('|') &&
-          line.trimEnd().replace(/\|$/u, '').split('|').at(-1)?.includes(`](${file})`),
-      );
+      .filter((line) => line.startsWith('|') && rowCells(line).at(-1)?.includes(`](${file})`));
     if (rows.length !== 1)
       errors.push(`${file}: expected exactly one feature index row, found ${rows.length}`);
     const text = readFileSync(join(directory, file), 'utf8');
     for (const heading of sections)
       if (!text.split('\n').includes(`## ${heading}`))
         errors.push(`${file}: missing section ${heading}`);
+    const indexJourneys = scriptsIn(rows.map((row) => rowCells(row).at(-2) ?? '').join('\n'));
     const journeys = [...scriptsIn(text)].filter((path) => path.startsWith('scripts/e2e-'));
     for (const journey of journeys) {
       mappedScripts.add(journey);
-      if (rows.length === 1 && !rows[0].includes(journey))
+      if (rows.length === 1 && !indexJourneys.has(journey))
         errors.push(`${file}: index row is missing journey ${journey}`);
     }
-    for (const journey of scriptsIn(rows.join('\n')))
+    for (const journey of indexJourneys)
       if (!journeys.includes(journey))
         errors.push(`${file}: index journey is absent from the feature: ${journey}`);
   }

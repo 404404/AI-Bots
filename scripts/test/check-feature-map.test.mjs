@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -74,6 +74,25 @@ describe('feature map integrity', () => {
     write(`${mapDirectory}/README.md`, '| none | [Feature](feature.md) |');
     expect(checkFeatureMap(root).errors).toContain(
       'feature.md: index row is missing journey scripts/e2e-mapped.mjs',
+    );
+  });
+  it('rejects a journey mentioned only outside the Scripted journey column', () => {
+    const { root, write } = fixture();
+    write(`${mapDirectory}/README.md`, '| scripts/e2e-mapped.mjs | none | [Feature](feature.md) |');
+    expect(checkFeatureMap(root).errors).toContain(
+      'feature.md: index row is missing journey scripts/e2e-mapped.mjs',
+    );
+  });
+  it('checks missing scripts with dotted basenames', () => {
+    const { root, write } = fixture();
+    const feature = readFileSync(join(root, mapDirectory, 'feature.md'), 'utf8');
+    write(`${mapDirectory}/feature.md`, feature.replaceAll('e2e-mapped.mjs', 'e2e-release.v2.mjs'));
+    write(
+      `${mapDirectory}/README.md`,
+      '| Feature | scripts/e2e-release.v2.mjs | [Feature](feature.md) |',
+    );
+    expect(checkFeatureMap(root).errors.join('\n')).toContain(
+      'missing script scripts/e2e-release.v2.mjs',
     );
   });
   it('rejects missing scripts, broken links, and incomplete feature instructions', () => {
