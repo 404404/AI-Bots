@@ -265,7 +265,7 @@ const closed: ConversationSnapshot = {
   fromCache: false,
 };
 
-export function useConversationSnapshot(conversation: Conversation | undefined) {
+function useConversationForeground(conversation: Conversation | undefined) {
   useFocusEffect(
     useCallback(() => {
       conversation?.setForeground?.(AppState.currentState === 'active');
@@ -278,11 +278,26 @@ export function useConversationSnapshot(conversation: Conversation | undefined) 
       };
     }, [conversation]),
   );
+}
+
+export function useConversationSnapshot(conversation: Conversation | undefined) {
+  useConversationForeground(conversation);
   return useSyncExternalStore(
     useCallback(
       (listener: () => void) => conversation?.subscribe(listener) ?? (() => {}),
       [conversation],
     ),
     () => conversation?.getSnapshot() ?? closed,
+  );
+}
+
+export function useConversationTimelineSnapshot(conversation: Conversation | undefined) {
+  useConversationForeground(conversation);
+  return useSyncExternalStore(
+    useCallback(
+      (listener: () => void) => conversation?.subscribe(listener) ?? (() => {}),
+      [conversation],
+    ),
+    () => conversation?.getTimelineSnapshot() ?? closed,
   );
 }

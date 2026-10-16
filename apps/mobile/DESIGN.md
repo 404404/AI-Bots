@@ -31,17 +31,16 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Tapping a Host switches to it and closes the drawer. Tapping the backdrop or swiping left closes it.
   - It takes screen-reader focus when it opens and returns focus to the Host chip when it closes. With Reduce Motion on it appears without sliding.
   - Android Back closes it. Android draws the same drawer.
-- **Tabs** are native (`NativeTabs`): **Chats** and **Activity**. There is no search tab.
+- **Tabs** are **Chats** and **Activity**. iOS uses `NativeTabs`; Android uses a custom floating bar through the JS tab navigator. There is no search tab.
   - Activity carries a badge with the Human Inbox action count.
   - A chat is pushed above the tabs, so the tab bar hides while it is open.
   - iOS draws the system tab bar with no background colour of ours: Liquid Glass on iOS 26 (a floating capsule above the home indicator, with the system's glass pill behind the selected tab), the translucent system bar before it. The selected tint is the resolved `fg`, passed as a plain colour so the bar re-tints when the scheme changes while the app is open. Minimize on scroll stays off.
   - Content scrolls under the bar. Each tab's list sets `contentInsetAdjustmentBehavior="automatic"`, so its last row clears the bar and the home indicator.
-  - Android keeps two Material 3 tabs on `base`: like Slack, the selected tab is the foreground colour with a pill behind its icon (the Material indicator), and the others are muted.
+  - Android uses a 64dp floating capsule on a tonal `raised` fill distinct from `base`, inset from the screen and system navigation. The selected icon has a 56×32dp Material indicator; its label remains below. Each tab reserves the measured bar and safe-area inset so its final row remains reachable. This floating container is a product choice; the component dimensions follow Material 3 Expressive, not Android 17's unrelated system bubble bar.
   - The web preview draws a floating translucent capsule with the two tabs, standing in for the glass, with the selection bubble behind the whole item (icon and label) as iOS draws it.
 - **Chats** shows the current Host:
-  - The header has the Host chip on the left, and on the right a **+** button and the Human's avatar, on both iOS and Android.
-    - **+** is a round button on the `raised` layer fill, the same size as the avatar, so it stays visible on any Host band. It opens a native menu: **New PersonaBot** and **New Channel**. They open the app's create flow, or the full client where the app has none yet.
-    - The avatar opens **Settings**. Until the Human has an avatar of their own it shows their initial on a neutral layer fill.
+  - The header has a compact Host title on the left and a Settings gear on the right, on both iOS and Android. The Host picker stays mounted between visits; its translation follows a critically damped UI-thread spring and its scrim is clamped. Hidden contents leave the accessibility tree.
+  - **+** sits at the right of the channel search field. It opens the native **New PersonaBot** / **New Channel** menu and uses the app's create flow, or the full client where the app has none yet.
   - A **search field** at the top of the list panel, inset so its left edge lines up with the row avatars (`AVATAR_EDGE`), with corners concentric with the panel's rounded top: the field uses `radius.md` and the panel `radius.md + AVATAR_EDGE`. It scrolls away with the list. There are no shortcut cards: Activity already gathers what needs the Human.
   - One list of PersonaBot DMs and Channels together, grouped by the Host's **Channel sections** as on the desktop sidebar:
     - Sections come in the desktop's order. Ungrouped DMs and Channels sit between them in the desktop's top-level order.
@@ -59,7 +58,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Posts and rows are separated by space and layer fills, not divider lines.
   - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
   - Opening an item jumps to the card in its chat.
-- **Settings** is a form sheet with a large detent, opened from the avatar, and closed by swiping down or the close button. It reuses the settings row and section components, in groups:
+- **Settings** is a form sheet with a large detent, opened from the gear, and closed by swiping down or the close button. Android keeps a fixed, accessible handle above its nested scrolling content and uses 28dp top corners. It reuses the settings row and section components, in groups:
   - **Usage** comes first, as one card for the current Host, like a fitness app's week: "Usage", "Last 7 days" and a chevron, the 7-day token total in `display`, and a bar per day (`DayBars`). An idle Host shows a quiet week of stubs, and a failed read shows a danger line with Try again under the card. Tapping it pushes the **Usage** screen:
     - A Today / 7 days / 4 weeks / 12 weeks `Segmented` switch; switching reads the Host again. A background 4-week read checks support on entry; until it succeeds, and on older Hosts, only Today and 7 days appear. An `invalid-input` refusal of a longer period returns to 7 days without showing an error. The Settings card does not probe or change its 7-day range.
     - The period's dates, its total, daily bars for 7 and 28 days, and 12 weekly bars for 84 days. Each week starts at the range's first day, not a calendar-week boundary; a selected weekly bar shows its date range and partial-aware total. Longer charts omit cramped weekday labels, retaining their dates in the chart's accessibility label. A muted note explains when some usage could not be counted or is still being counted.
@@ -101,6 +100,7 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
   - Activity rows do not navigate on tap. Long-press (or the accessibility details action) lifts the complete, scrollable plain-text content into the message menu, with Copy/Share and an explicit Open conversation, Open memory or Open new Bot action when a destination exists; there are no reactions. Consecutive posts by the same Bot into the same Channel on the same day fold into a counted row whose menu opens the latest post. Memory opens the Bot's memory files, not a commit diff. Bot-to-Bot DMs remain read-only. Keep full actor/action/detail text in the accessibility label and menu even when the compact memory line uses only the icon and commit subject.
   - An inverted list. Messages from the same author within 5 minutes form a group, and a time separator appears after a 30-minute gap.
   - At the newest message the list follows a streaming reply. Once the Human drags or scrolls up into history, nothing moves the list under them: new text and messages land below while the part they are reading stays put. A round jump button (`raised`, with a ⌄) then floats centered above the composer, with an accent badge counting the Bot messages that arrived since they left (99+ at most), like the Web Client's "Return to latest messages". Tapping it, sending a message, or scrolling back down to the newest message follows again and hides the button.
+  - Settings → **Message display** offers **Streaming** and **Complete bubbles**, saved on this device. Streaming buffers arriving text at a bounded cadence, preferring paragraph boundaries without waiting indefinitely for one. Complete bubbles keeps the working indicator and reveals each committed Channel Message independently. Switching modes changes presentation only; received drafts, committed messages and interruption semantics remain owned by Conversation and the Host. A draft-only append updates its row subscription while the timeline snapshot and historical message references stay stable. The bottom fade belongs to the keyboard-sticky composer.
   - Bot bubbles are `surface`. Human bubbles are `accent` with `onAccent` text.
   - In a DM, `accent` is that Bot's primary colour (`AccentProvider` with `botColor`), so each Bot's chat has its own Human bubble colour.
     - A colour too close to the chat background or the Bot bubble (under 1.3:1 against `base` or `surface`, such as black hair in dark mode) is first mixed toward `fg` until it separates from both.
@@ -208,10 +208,11 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
 
 ## Components
 
+- Profile navigation opens a lightweight shell immediately. Heavy sections wait for the native opening transition; loading is visible independently of data arrival. A bounded Host-client/Bot cache supplies the last successful sections while refreshing in the background, and failed refreshes retain earlier data with retry. Model and permission editors keep their existing fresh-load/save paths. See [ADR-0218](../../docs/adr/0218-mobile-presentation-keeps-caches-and-stream-buffers-local.md).
 - `src/ui/design/` holds the tokens and theme (ADR-0201).
 - `src/ui/primitives/` holds `Text` (variant `meta` / `body` / `title`, and a tone that is a colour role), `Button`, `Toggle`, `SettingsRow`, `SettingsSection` and `SettingsGroupItem`, `CountBadge`, `Segmented` (an iOS-style two- or three-way switch on the layer's `inset`), `DayBars` (one bar per day or week, scaled to the busiest, optionally stacked in tones from `design/chart.ts`; an empty day keeps a stub on the layer's `inset`), `DayHeat` (a weeks × weekdays heatmap), and later `Icon`, `IconButton`, `Button`, `Avatar`, `Card`, `SettingsRow` and `EmptyState`.
 - `src/ui/chat/` will hold the conversation row, bubble, message group, time separator, action cards, composer, working status and scroll-to-bottom.
-- `src/ui/shell/` will hold the Host drawer, the Human avatar button, shortcut cards, Channel section headers and the activity item.
+- `src/ui/shell/` holds the Host drawer, Settings gear, display preferences, Channel section headers and the activity item.
 - `app/` routes, reads the Host client, and composes these components.
 
 ## Code rules

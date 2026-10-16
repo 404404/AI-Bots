@@ -17,6 +17,7 @@ vi.mock('react-native', async () => ({
   Alert: { alert },
 }));
 vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
+vi.mock('expo-image', () => ({ Image: () => null }));
 vi.mock('expo-router', () => {
   const Stack = () => null;
   Stack.Screen = () => null;
@@ -84,9 +85,10 @@ const createButton = (view: HTMLElement) =>
   view.querySelector<HTMLButtonElement>(`button[aria-label="${t.create}"]`);
 
 describe('Create from Chats', () => {
-  it('iOS: the header + button opens a menu whose choices open their create flow', async () => {
+  it('iOS: the search + button opens a menu whose choices open their create flow', async () => {
     const view = await home('ios');
-    expect(view.querySelector('header')!.contains(createButton(view))).toBe(true);
+    expect(view.querySelector('header')!.contains(createButton(view))).toBe(false);
+    expect(createButton(view)!.parentElement!.querySelector('textarea')).not.toBeNull();
 
     const pick = async (index: number) => {
       await act(async () => createButton(view)!.click());
@@ -112,10 +114,11 @@ describe('Create from Chats', () => {
     expect(push).toHaveBeenCalledTimes(2);
   });
 
-  it('Android: the same header + button opens the same choices', async () => {
+  it('Android: the same search + button opens the same choices', async () => {
     const view = await home('android');
     const button = createButton(view)!;
-    expect(view.querySelector('header')!.contains(button)).toBe(true);
+    expect(view.querySelector('header')!.contains(button)).toBe(false);
+    expect(button.parentElement!.querySelector('textarea')).not.toBeNull();
 
     await act(async () => button.click());
     const [title, message, buttons] = alert.mock.lastCall!;

@@ -1,4 +1,4 @@
-import { memo, useRef, type ReactNode } from 'react';
+import { memo, useMemo, useRef, useSyncExternalStore, type ReactNode } from 'react';
 import {
   Platform,
   Pressable,
@@ -16,10 +16,13 @@ import Animated, {
 
 import {
   reactable,
+  type Conversation,
   type ConversationDraft,
+  type ConversationDraftReference,
   type ConversationMessage,
   type MessageAttachment,
 } from '../../host/conversation';
+import { createDraftPresentation } from '../../host/stream-presentation';
 import { lift, motion, radius, space } from '../design/tokens';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { MarkdownView } from '../markdown-view';
@@ -336,7 +339,7 @@ export const DraftBubble = memo(function DraftBubble({
       {draft.body.trim() === '' ? (
         <Text tone="muted">…</Text>
       ) : (
-        <MarkdownView source={draft.body} streaming />
+        <MarkdownView source={draft.body} streaming selectable={false} />
       )}
     </View>
   );
@@ -363,4 +366,21 @@ export const DraftBubble = memo(function DraftBubble({
       {typing}
     </View>
   );
+});
+
+export const LiveDraftBubble = memo(function LiveDraftBubble({
+  conversation,
+  reference,
+  speaker,
+}: {
+  conversation: Conversation;
+  reference: ConversationDraftReference;
+  speaker?: Speaker | undefined;
+}) {
+  const presentation = useMemo(
+    () => createDraftPresentation(conversation, reference.draftId),
+    [conversation, reference.draftId],
+  );
+  const draft = useSyncExternalStore(presentation.subscribe, presentation.getSnapshot);
+  return draft === undefined ? null : <DraftBubble draft={draft} speaker={speaker} />;
 });

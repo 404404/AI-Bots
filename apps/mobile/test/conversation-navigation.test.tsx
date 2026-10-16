@@ -2,11 +2,22 @@
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { RosterBot } from '../src/host/client';
+import type { ConversationSnapshot } from '../src/host/conversation';
 
 const state = vi.hoisted(() => ({
   history: [] as string[],
-  host: { connection: { status: 'connected' }, roster: { bots: [], channels: [] } },
-  conversation: { status: 'live', messages: [], drafts: [], hasOlder: false },
+  host: { connection: { status: 'connected' }, roster: { bots: [] as RosterBot[], channels: [] } },
+  conversation: {
+    status: 'live',
+    messages: [],
+    drafts: [],
+    hasOlder: false,
+    loadingOlder: false,
+    fromCache: false,
+  } as ConversationSnapshot,
+  active: false,
+  display: { mode: 'streaming', loaded: true },
 }));
 
 vi.mock('expo-router', () => ({
@@ -30,12 +41,15 @@ vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('../src/host/host-session', () => ({
   useHostSession: () => ({ client: undefined, inbox: undefined }),
   useHostSnapshot: () => state.host,
-  useConversation: () => undefined,
+  useConversation: () => (state.active ? {} : undefined),
   useChannelConversation: () => undefined,
-  useConversationSnapshot: () => state.conversation,
+  useConversationTimelineSnapshot: () => state.conversation,
 }));
 vi.mock('../src/host/share-attachment', () => ({ shareAttachment: vi.fn() }));
 vi.mock('../src/host/native-dm-activity', () => ({ useHiddenDmActivity: () => [] }));
+vi.mock('../src/host/native-message-display', () => ({
+  useMessageDisplay: () => state.display,
+}));
 vi.mock('../src/host/pick-files', () => ({ MAX_PICKED: 10, pickFiles: vi.fn() }));
 vi.mock('../src/host/speech', () => ({
   useDictation: () => ({ state: { status: 'idle' }, mountRef: () => undefined }),
@@ -67,12 +81,17 @@ vi.mock('../src/ui/chat/image-viewer', () => ({ ImageViewer: () => null }));
 vi.mock('../src/ui/chat/jump-to-latest', () => ({ JumpToLatest: () => null }));
 vi.mock('../src/ui/chat/message-actions', () => ({ MessageActions: () => null }));
 vi.mock('../src/ui/chat/message-bubble', () => ({
-  MessageBubble: () => null,
-  DraftBubble: () => null,
+  MessageBubble: ({ message }: { message: { body: string } }) => (
+    <span data-testid="message">{message.body}</span>
+  ),
+  LiveDraftBubble: () => <span data-testid="draft">visible draft</span>,
 }));
 vi.mock('../src/ui/chat/message-menu', () => ({ copyMessage: vi.fn(), shareText: vi.fn() }));
 vi.mock('../src/ui/chat/mention-suggestions', () => ({ MentionSuggestions: () => null }));
-vi.mock('../src/ui/chat/working-status', () => ({ WorkingStatus: () => null }));
+vi.mock('../src/ui/chat/working-status', () => ({
+  WorkingStatus: ({ bots }: { bots: RosterBot[] }) =>
+    bots.length ? <span data-testid="pending">pending</span> : null,
+}));
 vi.mock('../src/ui/chat/time-separator', () => ({ TimeSeparator: () => null }));
 vi.mock('../src/ui/open-full-client', () => ({ OpenFullClientButton: () => null }));
 
@@ -87,6 +106,63 @@ let container: HTMLElement | undefined;
 beforeEach(() => {
   state.host.connection.status = 'connected';
   state.conversation.status = 'live';
+  state.conversation.messages = [];
+  state.conversation.drafts = [];
+  state.host.roster.bots = [];
+  state.active = false;
+  state.display = { mode: 'streaming', loaded: true };
+});
+
+it('switches a live reply between buffered streaming and complete bubbles without hiding history', async () => {
+  state.active = true;
+  state.host.roster.bots = [
+    {
+      slug: 'ada',
+      displayName: 'Ada',
+      state: 'working',
+      description: '',
+      roles: [],
+      computerAccess: false,
+      browserAccess: false,
+      paused: false,
+    },
+  ];
+  state.conversation.messages = [
+    {
+      id: 'm1',
+      at: '',
+      author: 'bot',
+      bot: 'ada',
+      body: 'history',
+      attachments: [],
+      delivery: 'committed',
+    },
+  ];
+  state.conversation.drafts = [{ draftId: 'd1', botSlug: 'ada', body: 'incoming' }];
+  const place: ChatPlace = { kind: 'dm', slug: 'ada' };
+  const view = await render(place);
+  expect(view.querySelector('[data-testid="draft"]')).not.toBeNull();
+  state.display = { mode: 'complete', loaded: true };
+  await act(async () => root!.render(<ConversationScreen place={place} focus={undefined} />));
+  expect(view.querySelector('[data-testid="draft"]')).toBeNull();
+  expect(view.querySelector('[data-testid="pending"]')).not.toBeNull();
+  expect(view.textContent).toContain('history');
+  state.conversation.drafts = [];
+  state.conversation.messages = [
+    ...state.conversation.messages,
+    {
+      id: 'm2',
+      at: '',
+      author: 'bot',
+      bot: 'ada',
+      body: 'complete reply',
+      attachments: [],
+      delivery: 'committed',
+    },
+  ];
+  await act(async () => root!.render(<ConversationScreen place={place} focus={undefined} />));
+  expect(view.querySelectorAll('[data-testid="message"]')).toHaveLength(2);
+  expect(view.textContent).toContain('complete reply');
 });
 
 afterEach(() => {

@@ -6,10 +6,11 @@ import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react
 import type { HostClient } from '../../host/client';
 import { visibleDmActivity } from '../../host/dm-activity';
 import { useHiddenDmActivity } from '../../host/native-dm-activity';
+import { useMessageDisplay } from '../../host/native-message-display';
 import {
   shownInChat,
   type CardResolution,
-  type ConversationDraft,
+  type ConversationDraftReference,
   type ConversationMessage,
   type MessageAttachment,
   type MessageCard,
@@ -21,7 +22,7 @@ import { MAX_PICKED, pickFiles, type PickSource, type PickedFile } from '../../h
 import {
   useChannelConversation,
   useConversation,
-  useConversationSnapshot,
+  useConversationTimelineSnapshot,
   useHostSession,
   useHostSnapshot,
 } from '../../host/host-session';
@@ -58,7 +59,7 @@ import {
   type SelectedMention,
 } from './mention-draft';
 import { MentionSuggestions } from './mention-suggestions';
-import { DraftBubble, MessageBubble, type Speaker } from './message-bubble';
+import { LiveDraftBubble, MessageBubble, type Speaker } from './message-bubble';
 import { copyMessage, shareText } from './message-menu';
 import type { Rect } from './menu-placement';
 import { chatRows, messageGroups, type ChatRow } from './message-groups';
@@ -74,7 +75,8 @@ import { Text } from '../primitives/text';
 import { KeyboardChatFrame } from '../primitives/keyboard-frame';
 import { t } from '../strings';
 
-type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraft };
+type Row = ChatRow | { kind: 'draft'; key: string; draft: ConversationDraftReference };
+const NO_DRAFTS: ConversationDraftReference[] = [];
 
 export type ChatPlace =
   | { kind: 'dm'; slug: string | undefined }
@@ -223,7 +225,9 @@ function ChatConversation({
   );
   const working = dm ? (bot !== undefined && botBusy(bot) ? [bot] : []) : members.filter(botBusy);
   const activeChannel = dm ? bot?.dmChannelId : channelId;
-  const snapshot = useConversationSnapshot(conversation);
+  const snapshot = useConversationTimelineSnapshot(conversation);
+  const display = useMessageDisplay();
+  const shownDrafts = display.loaded && display.mode === 'streaming' ? snapshot.drafts : NO_DRAFTS;
   const [draft, setDraft] = useState('');
   const [mentions, setMentions] = useState<SelectedMention[]>([]);
   const [caret, setCaret] = useState(0);
@@ -272,12 +276,12 @@ function ChatConversation({
   useLayoutEffect(() => {
     speakers.setGroups([
       ...groups,
-      ...snapshot.drafts.map((entry) => {
+      ...shownDrafts.map((entry) => {
         const key = `draft:${entry.draftId}`;
         return { key, group: key };
       }),
     ]);
-  }, [speakers, groups, snapshot.drafts]);
+  }, [speakers, groups, shownDrafts]);
   const scroll = useScrollOffset(list);
   const viewport = useAnimatedRef<View>();
   const viewportLayout = useSharedValue(0);
@@ -308,14 +312,14 @@ function ChatConversation({
 
   const rows = useMemo<Row[]>(
     () => [
-      ...snapshot.drafts.map((entry): Row => ({
+      ...shownDrafts.map((entry): Row => ({
         kind: 'draft',
         key: `draft:${entry.draftId}`,
         draft: entry,
       })),
       ...history,
     ],
-    [snapshot.drafts, history],
+    [shownDrafts, history],
   );
 
   const jump = () => {
@@ -445,9 +449,10 @@ function ChatConversation({
   const renderItem = useCallback(
     ({ item }: { item: Row }) => {
       if (item.kind === 'draft')
-        return (
-          <DraftBubble
-            draft={item.draft}
+        return conversation === undefined ? null : (
+          <LiveDraftBubble
+            conversation={conversation}
+            reference={item.draft}
             speaker={
               dm
                 ? undefined
@@ -692,6 +697,7 @@ function ChatConversation({
             <Animated.FlatList
               ref={list}
               inverted
+              removeClippedSubviews={false}
               style={{ flex: 1 }}
               contentContainerStyle={{
                 paddingTop: composerHeight + edgeFade.bottom,

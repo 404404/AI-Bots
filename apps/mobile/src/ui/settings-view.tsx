@@ -40,6 +40,7 @@ export function SettingsView({
   version,
   actions,
   statistics,
+  messageDisplay,
 }: {
   hostName: string | undefined;
   connection: ConnectionState;
@@ -47,6 +48,7 @@ export function SettingsView({
   version: string;
   actions: SettingsActions;
   statistics?: ReactNode;
+  messageDisplay?: ReactNode;
 }) {
   const theme = useDesignTheme();
   const [unpairError, setUnpairError] = useState<string>();
@@ -124,6 +126,7 @@ export function SettingsView({
             onPress={actions.onAppIcon}
           />
         </SettingsSection>
+        {messageDisplay}
         <SettingsSection title={t.about} on={SHEET_GROUP}>
           <SettingsRow
             on={SHEET_GROUP}
