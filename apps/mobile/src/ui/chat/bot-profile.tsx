@@ -514,7 +514,7 @@ export function BotProfileSheet({
         />
       )}
       ListFooterComponent={
-        routines === undefined || target === undefined ? null : (
+        routines === undefined || target === undefined ? undefined : (
           <>
             {routines.sheet({
               target,

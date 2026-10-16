@@ -1,5 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+  type ViewInstance,
+  type ScrollViewInstance,
+} from 'react-native';
 
 import {
   buildAnswer,
@@ -70,7 +79,7 @@ export function QuestionView({
     }
   }, [port]);
 
-  const scroll = useRef<ScrollView | null>(null);
+  const scroll = useRef<ScrollViewInstance | null>(null);
   const height = useRef(0);
   const blocks = useRef<Record<string, { bottom: number; last: boolean }>>({});
   const focused = useRef<string | undefined>(undefined);
@@ -81,7 +90,7 @@ export function QuestionView({
     const y = block.bottom + 16 - (height.current - keyboard);
     if (y > 0) scroll.current?.scrollTo({ y, animated: true });
   };
-  const scrolled = useMounted<ScrollView>((node) => {
+  const scrolled = useMounted<ScrollViewInstance>((node) => {
     scroll.current = node;
     const shown = Keyboard.addListener('keyboardDidShow', (event) =>
       reveal(event.endCoordinates.height),
@@ -93,7 +102,7 @@ export function QuestionView({
   }, []);
 
   const seen = useRef<boolean | undefined>(undefined);
-  const mount = useMounted<View>(() => {
+  const mount = useMounted<ViewInstance>(() => {
     const first = seen.current === undefined;
     const dropped = seen.current === true && !listed;
     seen.current = listed;
@@ -222,7 +231,7 @@ export function QuestionView({
                 onFocus={() => {
                   focused.current = question.id;
                   const keyboard = Keyboard.metrics();
-                  if (keyboard !== undefined) reveal(keyboard.height);
+                  if (keyboard != null) reveal(keyboard.height);
                 }}
                 value={draft.custom}
                 onChangeText={(text) => update(question, typeCustom(question, draft, text))}

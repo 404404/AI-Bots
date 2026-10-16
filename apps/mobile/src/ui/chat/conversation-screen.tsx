@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   View,
+  type ViewInstance,
 } from 'react-native';
 import Animated, { useAnimatedRef, useScrollOffset, useSharedValue } from 'react-native-reanimated';
 
@@ -285,7 +286,7 @@ function ChatConversation({
     ]);
   }, [speakers, groups, snapshot.drafts]);
   const scroll = useScrollOffset(list);
-  const viewport = useAnimatedRef<View>();
+  const viewport = useAnimatedRef<ViewInstance>();
   const viewportLayout = useSharedValue(0);
   const stage = useMemo(
     () => ({
@@ -705,14 +706,14 @@ function ChatConversation({
                   >
                     {dm ? t.beginning : t.beginningChannel}
                   </Text>
-                ) : null
+                ) : undefined
               }
               ListEmptyComponent={
                 snapshot.status === 'opening' ? (
                   <View style={{ padding: space.x6, alignItems: 'center' }}>
                     <ActivityIndicator />
                   </View>
-                ) : null
+                ) : undefined
               }
             />
           </SpeakerStageContext.Provider>

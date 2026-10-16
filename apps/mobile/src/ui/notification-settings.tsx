@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, Switch, View } from 'react-native';
+import { ScrollView, Switch, View, type ScrollViewInstance } from 'react-native';
 
 import {
   PUSH_KINDS,
@@ -52,7 +52,7 @@ export function NotificationSettings({
     setError(undefined);
     port.load().then(setSettings, (reason: unknown) => setError(failure(reason)));
   }, [port]);
-  const mount = useMounted<ScrollView>(() => {
+  const mount = useMounted<ScrollViewInstance>(() => {
     if (on) load();
   }, [on, load]);
 

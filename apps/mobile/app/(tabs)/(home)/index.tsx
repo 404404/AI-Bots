@@ -115,7 +115,7 @@ export default function HomeScreen() {
               </>
             }
             ListEmptyComponent={
-              snapshot.roster === undefined ? null : (
+              snapshot.roster === undefined ? undefined : (
                 <View style={{ padding: space.x6, alignItems: 'center' }}>
                   <Text tone="muted" style={{ textAlign: 'center' }}>
                     {searching ? t.searchNoMatch(query.trim()) : t.noBots}

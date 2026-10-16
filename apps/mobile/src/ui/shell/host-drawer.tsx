@@ -12,6 +12,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   View,
+  type ViewInstance,
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -87,7 +88,7 @@ function reveal(): void {
   hostDrawer.reveal();
 }
 
-export function focusOn(node: View): void {
+export function focusOn(node: ViewInstance): void {
   AccessibilityInfo.sendAccessibilityEvent?.(node, 'focus');
 }
 
@@ -338,7 +339,7 @@ export function HostDrawer() {
     [hosts, currentId, glanceMap, connection, list],
   );
 
-  const heading = useMounted<View>(
+  const heading = useMounted<ViewInstance>(
     (node) => {
       if (!state.open) return;
       const stopWatching = glances.watch(hosts);

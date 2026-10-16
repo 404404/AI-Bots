@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View, type ViewInstance } from 'react-native';
 
 import { readableInput, type ApprovalRequest, type DecisionResult } from '../host/requests';
 import {
@@ -70,7 +70,7 @@ export function ApprovalView({
   }, [port]);
 
   const seen = useRef<boolean | undefined>(undefined);
-  const mount = useMounted<View>(() => {
+  const mount = useMounted<ViewInstance>(() => {
     const first = seen.current === undefined;
     const dropped = seen.current === true && !listed;
     seen.current = listed;
