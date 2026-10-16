@@ -43,7 +43,11 @@ const run = {
   actions: [],
 };
 const save = (name, value) => {
-  const bytes = Buffer.isBuffer(value) ? value : Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
+  const bytes = Buffer.isBuffer(value)
+    ? value
+    : Buffer.from(
+        `${JSON.stringify(value, (_key, item) => (typeof item === 'string' ? redact(item) : item), 2)}\n`,
+      );
   writeFileSync(resolve(directory, name), bytes, { mode: 0o600 });
   run.evidence[name] = digest(bytes);
 };
@@ -55,6 +59,7 @@ const redact = (text) => {
   let value = String(text);
   for (const secret of [
     instance?.url,
+    instance && new URL(instance.url).origin,
     instance?.home,
     root,
     instance && new URL(instance.url).searchParams.get('token'),
