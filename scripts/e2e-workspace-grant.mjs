@@ -153,7 +153,7 @@ const capturePage = async (phase = 'failure') => {
       save(`${phase}.png`, Buffer.from(await page.screenshot({ waitForFonts: false }))))(),
     (async () =>
       save(`${phase}.aria.json`, await page.accessibility.snapshot({ interestingOnly: false })))(),
-    (async () => save('diagnostics.json', await captureDiagnostics()))(),
+    (async () => save(`${phase}.diagnostics.json`, await captureDiagnostics()))(),
     (async () => save('console.json', errors))(),
   ]);
 };

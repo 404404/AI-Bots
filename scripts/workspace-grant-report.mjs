@@ -26,7 +26,9 @@ export const requiredEvidence = [
   'visible-before.json',
   'visible-granted.json',
   'visible-after.json',
-  'diagnostics.json',
+  'before.diagnostics.json',
+  'granted.diagnostics.json',
+  'after.diagnostics.json',
   'console.json',
   'trace.json',
   'cleanup.json',
@@ -115,14 +117,16 @@ export function grantProblems(run, read) {
     )
       problems.push(`${phase}: missing or incorrect visible Grant state`);
   }
-  const diagnostics = read('diagnostics');
-  if (
-    diagnostics.host?.ok !== true ||
-    diagnostics.client?.state !== 'shell-ready' ||
-    diagnostics.page?.state !== 'shell-ready' ||
-    diagnostics.page.firstFailure
-  )
-    problems.push('Missing/failed Host or Client observation');
+  for (const phase of ['before', 'granted', 'after']) {
+    const diagnostics = read(`${phase}.diagnostics`);
+    if (
+      diagnostics.host?.ok !== true ||
+      diagnostics.client?.state !== 'shell-ready' ||
+      diagnostics.page?.state !== 'shell-ready' ||
+      diagnostics.page.firstFailure
+    )
+      problems.push(`${phase}: missing/failed Host or Client observation`);
+  }
   const errors = read('console');
   if (!Array.isArray(errors) || errors.length)
     problems.push('Missing console observation or browser errors');
@@ -159,6 +163,8 @@ export function coverageRow(directory, commit, dirty = false) {
     expected: run.expected,
     actual: run.actual,
     botId: run.botId,
+    workspaceId: run.workspaceId,
+    grantId: run.grantId,
     evidence: Object.keys(run.evidence ?? {}),
   });
   if (run.behavior !== behavior || run.commit !== commit || run.dirty || dirty)

@@ -73,7 +73,7 @@ function fixture() {
     revoked: { grant: revoked },
     after: { grants: [revoked] },
     'read-after': refused,
-    diagnostics: {
+    'after.diagnostics': {
       host: { ok: true },
       client: { state: 'shell-ready' },
       page: { state: 'shell-ready' },
@@ -82,6 +82,8 @@ function fixture() {
     trace: { slug: 'bot', sessionId: 'direct', turns: [] },
     cleanup: { removed: true, sampleUnchanged: true },
   };
+  data['before.diagnostics'] = structuredClone(data['after.diagnostics']);
+  data['granted.diagnostics'] = structuredClone(data['after.diagnostics']);
   for (const phase of ['before', 'granted', 'after'])
     data[`visible-${phase}`] = {
       rendered: true,
@@ -213,7 +215,7 @@ describe('one temporary Workspace Grant proof', () => {
       },
     ],
     [
-      'diagnostics',
+      'after.diagnostics',
       (v) => {
         v.client.state = 'missing';
       },
@@ -229,6 +231,18 @@ describe('one temporary Workspace Grant proof', () => {
     change(dir, name, update);
     expect(coverageRow(dir, commit).status).toBe('needs-revalidation');
   });
+  it.each(['before', 'granted'])(
+    'retains a %s lifecycle failure even after a healthy reload',
+    (phase) => {
+      const dir = fixture();
+      change(dir, `${phase}.diagnostics`, (value) => {
+        value.page.state = 'shell-lost';
+        value.page.firstFailure = { code: 'shell-lost' };
+      });
+      expect(coverageRow(dir, commit)).toMatchObject({ status: 'needs-revalidation' });
+      expect(coverageRow(dir, commit).reason).toContain(phase);
+    },
+  );
   it('does not reuse old/dirty source, missing or inapplicable visual review', () => {
     const dir = fixture();
     expect(coverageRow(dir, 'b'.repeat(40)).status).toBe('needs-revalidation');
