@@ -234,7 +234,7 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
    - All user-facing text and visible inputs follow the live system text size, without a global maximum or shrink-to-fit. Use `primitives/system-text` for inputs and legacy styled text. Decorative avatar initials may remain unscaled because the containing control exposes the full accessible label; remote Browser/Computer hidden keyboard capture fields remain native.
    - iOS uses native `dynamicTypeRamp`/UIFontMetrics: body, headline, footnote and title1 for body/title/meta/display. Legacy explicit sizes map to the matching semantic ramp. Android retains native nonlinear scaling; never multiply text metrics by a global font scale. RN 0.86 can reuse stale paragraph measurements after a live size change, so only noneditable root Text nodes renew at a new iOS font scale. This may end text selection during that system change; TextInput nodes never remount. Native TextInput supports the body ramp through its native view attributes even though its TypeScript interface omits the prop. Keep this adapter covered by native resize and subsequent-update checks. Base tokens remain unscaled for icons/layout.
    - Let controls grow with padding/minimum sizes; wrap essential button/form labels. Use `theme.largeText` to stack crowded metadata and choices. Composer measures its native body line, bounds the field to one fifth of the viewport (at least one complete line), and preserves the input node, draft and selection. Long drafts scroll inside the field and can expand into a full-screen editor that shares the same draft, mention suggestions and send path. Filter headings scroll with choices; large-text Usage summaries keep their amount semantic role and move the chart to the existing detail screen. Native navigation chrome and Markdown keep their platform scaling owners.
-   - QA small/default/largest accessibility sizes and live default → largest → smallest → default transitions. Exercise chats/Markdown/composer, settings/forms and Activity/request sheets; check keyboard reachability, drafts, focus and an unrelated update after each resize. Source tests do not qualify native geometry.
+   - Follow the [system text and large-text acceptance contract](#system-text-and-large-text-acceptance) for implementation and native QA; source tests do not qualify native geometry.
    - Markdown bodies are the exception: `MarkdownView` renders them as native text with `react-native-enriched-markdown`, styled from the same tokens in `src/ui/markdown-style.ts`.
 3. **A new visual element is added to `primitives/`, `chat/` or `shell/` first.** The PR says why the existing ones do not fit.
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
@@ -243,4 +243,51 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
    - Motion uses Reanimated, only for bubble entry, a held bubble's lift, the message menu, card collapse, the status dot, the Host drawer, the image viewer's gestures and the composer growing line by line (up to five lines, then it scrolls).
    - Haptics fire only on send, approve or deny, submitting a choice, and opening a message's menu.
 7. **Copy lives in `src/ui/strings.ts`.** Internal ids and protocol names stay out of the UI.
-8. **UI PRs show the change.** They include light and dark screenshots from the web export, and a native check on a development build is recorded under Human QA.
+8. **UI PRs show the change.** Follow the [visual evidence rules](../../docs/agents/pr-ui-visual-evidence.md). Font, keyboard, native chrome and native control behavior require native captures and interaction checks; web previews are supplementary. Record source checks, platform-native results and Human QA separately.
+
+## System text and large-text acceptance
+
+This contract applies to new and changed Expo/React Native screens, shared components and text/input adapters. It is a review requirement, not a claim that every existing screen or platform has already passed. The implementation details above remain version-specific; recheck them when React Native or Expo changes.
+
+### Preserve platform ownership
+
+- Use semantic text roles through our shared primitives. iOS follows native Dynamic Type; Android follows native text scaling, including nonlinear scaling on supported versions. Do not impose one JavaScript multiplier on every text style, scale the entire UI, or apply native and manual scaling twice.
+- Do not disable scaling, shrink text to fit, change a title to a smaller semantic role at a breakpoint, or set a global `maxFontSizeMultiplier` to conceal a layout defect. A narrow exception must name the element, explain its purpose and accessible alternative, and carry native evidence in the PR. Existing decorative initials and hidden capture fields do not justify exceptions for visible content.
+- Keep native navigation and Markdown as their own scaling owners. Reuse the documented shared adapter for framework bugs; avoid screen-specific font workarounds. Live setting changes must retain editable fields, drafts, focus and mention metadata. Record any selection limitation rather than claiming complete editing acceptance.
+
+Platform references: [Apple Dynamic Type and adaptive layouts](https://developer.apple.com/videos/play/wwdc2024/10074/) and [Android nonlinear font scaling](https://developer.android.com/about/versions/14/features#non-linear-font-scaling). Follow documentation for the installed SDK/RN versions when choosing concrete APIs.
+
+### Reflow the task, not only the text
+
+- Let rows and controls grow using padding and minimum sizes. Wrap essential titles, action labels, validation and request details. Secondary previews may truncate only when complete content remains reachable; never hide the information needed to make an approval or form decision.
+- Stack crowded metadata and actions; give the conversation, message or decision priority over decorative labels, timestamps and charts. Keep a stable semantic role when moving content. Move secondary detail behind an accessible entry rather than squeezing the primary content.
+- Make sheets and forms scroll to their last option, error and action. Large headings must not consume a fixed part of the viewport. Preserve list virtualization; do not wrap a virtualized list in another scroll container to solve text overflow.
+- Measure floating surfaces and reserve matching content insets. Test status bars, safe areas and keyboard-open states. Primary actions must stay reachable and text must not be hidden beneath chrome. Maintain at least the existing 44pt iOS / 48dp Android touch targets and meaningful accessible names.
+- Bound inline editing so a long draft does not consume the task view. Provide scrolling and, where needed, expanded editing that shares the same draft, selection/mention handling and send path. Test returning, cancelling/dismissing and sending; do not create a second draft authority.
+
+### Native acceptance matrix
+
+For affected screens, check **default, an intermediate enlarged size and the maximum system size, in both light and dark appearance, on iOS and Android**. Use the OS setting, not page zoom or a mocked `fontScale`. Record the actual category/percentage, OS, viewport and installed binary; the platforms' sizes are not numerically equivalent.
+
+| Platform | Default                     | Intermediate enlarged                            | Maximum                                                    |
+| -------- | --------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| iOS      | `large`                     | `accessibility-large`                            | `accessibility-extra-extra-extra-large`                    |
+| Android  | Default system font setting | An available setting between default and maximum | Device maximum; include 200% on Android 14+ when supported |
+
+These iOS names identify the Simulator categories, not labels such as “Medium” in Settings. Also exercise live default → maximum → default changes while the view is open, with a subsequent ordinary update to catch stale measurements. Shared text/input adapter changes additionally cover the smallest setting and a return to default.
+
+| Affected surface                      | Required interaction checks                                                                                                                                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lists / Activity / search             | Read primary content; expand/collapse, search, clear and dismiss; retain the query; reach pagination and the last row.                                                                                      |
+| Sheets / settings / forms             | Reach the final option, reset, validation and primary action; apply/cancel/dismiss according to the existing contract.                                                                                      |
+| Chat / composer / editor              | Keep a multiline draft through live resizing; edit with keyboard open, use mentions, return from expanded editing and send through the real Host path. Verify resulting content/metadata, not only the tap. |
+| Approvals / questions / private input | Read the decision context and all choices, reach the actual response controls and verify the owning Host's outcome. A fixture without pending requests cannot pass this row.                                |
+
+For shared primitives, cover representative screens from each row and record gaps explicitly. Check relevant long/localized labels and actual CJK IME composition when editing changes; include VoiceOver/TalkBack and orientation checks when navigation, labels, reading order or responsive layout changes. The three-size matrix is the minimum for the affected flow, not whole-app accessibility certification.
+
+### Evidence and handoff
+
+- Use the [shared device QA queue](../../docs/agents/device-qa.md) before starting a Simulator, Metro, Host or build. Preserve others' pairings and requests, then restore default font size/appearance and stop task-owned resources when finished.
+- Capture matched native before/after states for the three sizes and both appearances on each tested platform. Match viewport, locale, test data and keyboard state; disclose scroll/caret differences. For a new view, label its former entry point or absence as Before. Embed sanitized, commit-pinned images in the PR body and verify they render.
+- Report each platform/case as passed, failed, blocked or unrun, with source/batch/binary identities, actions and observed outcomes. Missing Android tooling or a device is a blocker, not a pass inferred from iOS. Record a runnable next check for every capture blocker.
+- Source tests protect role mapping, nested text, input identity and behavior; they cannot establish native glyphs, keyboard geometry or usability. Screenshots alone cannot establish interaction, persistence, IME or screen-reader behavior. Keep source tests, native checks and Human acceptance distinct; documentation or green CI does not authorize merge.
