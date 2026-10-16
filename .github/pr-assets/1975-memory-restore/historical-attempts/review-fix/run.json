@@ -1,0 +1,129 @@
+{
+  "version": 1,
+  "behavior": "desktop.memory.read-restore",
+  "commit": "032efdca047c9eb6c52b7ac7b7517910c2beea9d",
+  "base": "53b98377154eef2878bfbac975f9da9225222657",
+  "dirty": false,
+  "startedAt": "2026-10-16T15:33:09.645Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "4fb6d871438f2c4a77263ce83e30ac972c3ceabed382f8de9ef2b10fcf895a23",
+    "fixture.json": "07a78706ecc2a529d8c596069a4119f4b2279f5e9ad467c7d9e450b768b12ae1",
+    "created.json": "54813c76d8352625c52cd6cf9386bb6387397c95ab731363e51e2984ee8a926f",
+    "initial.json": "ce866b667dbcb75ace00c6e0eb7e1079adc91d0badab58ab076297875722f2d5",
+    "saved-v1.json": "6e218e21cff61cc094f3c04417c09ab5709ad295786c481f0c96f132496a26ae",
+    "v1.json": "4e45ae1ebfd9fcce7e165b52505fa97d065c49e1a9f7106753bfc9bf6589ec32",
+    "saved-v2.json": "4b57e5ce6d5ec402444a1eb4a455e376e2e064ec10e48aedaa57abffd53bcce2",
+    "before.json": "5af51af374f855a6fa0048a09190fb85cbee4899c5a15e9de7eec66b2cebd5e9",
+    "history.json": "025fb6b79d02365c04da80a57cae2752c34397a96931418953a991e26fb66801",
+    "failure.json": "9686606162e20fc0c8f8c420a598f291440b838aa7e427a4f568b80d61cd1ebf",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "failure.aria.json": "5442d1271f682a64f7b00b8c4c3031e84478893493c00dcbdf64bcd7529e8c89",
+    "failure.diagnostics.json": "20f3da95b8226482451c3afc79c39a3b101b34725e71a7001ca14df605cfe36b",
+    "failure.png": "4b54aa4db87a0d6e39af3a99f05a60af3ad3f4aa459884875ff1ff73d224bfc6"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T15:33:09.890Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Memory 1792164790543",
+        "--persona",
+        "Isolated Memory read and restore verification. No messages, models or schedules are used."
+      ],
+      "at": "2026-10-16T15:33:10.830Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-snapshot",
+        "bot-d96be1bbc694466995428712f57571ee"
+      ],
+      "at": "2026-10-16T15:33:10.976Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-save",
+        "bot-d96be1bbc694466995428712f57571ee",
+        "--path",
+        "AX-1975.md",
+        "--body-stdin",
+        "--expected-head",
+        "a22bb5c51c7f06800503f29e2e1af66566c40ee7"
+      ],
+      "at": "2026-10-16T15:33:11.244Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-file",
+        "bot-d96be1bbc694466995428712f57571ee",
+        "--path",
+        "AX-1975.md"
+      ],
+      "at": "2026-10-16T15:33:11.380Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-save",
+        "bot-d96be1bbc694466995428712f57571ee",
+        "--path",
+        "AX-1975.md",
+        "--body-stdin",
+        "--expected-head",
+        "b7916af12e505fbc9cc3918cb80658a0a5aca405"
+      ],
+      "at": "2026-10-16T15:33:11.669Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-file",
+        "bot-d96be1bbc694466995428712f57571ee",
+        "--path",
+        "AX-1975.md"
+      ],
+      "at": "2026-10-16T15:33:11.856Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-commit-diff",
+        "bot-d96be1bbc694466995428712f57571ee",
+        "--sha",
+        "b7916af12e505fbc9cc3918cb80658a0a5aca405"
+      ],
+      "at": "2026-10-16T15:33:12.077Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T15:33:19.905Z"
+    }
+  ],
+  "botId": "bot-d96be1bbc694466995428712f57571ee",
+  "reason": "enter-Bot-mode: Timed out after waiting 20000ms",
+  "actual": "enter-Bot-mode: Timed out after waiting 20000ms",
+  "finishedAt": "2026-10-16T15:33:40.109Z"
+}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "behavior": "desktop.memory.read-restore",
+  "commit": "8195a4e9dce5da016925025424820d0303cb830d",
+  "base": null,
+  "dirty": false,
+  "startedAt": "2026-10-16T15:36:17.493Z",
+  "status": "blocked",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark"
+  },
+  "expected": "Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees.",
+  "evidence": {
+    "failure.json": "dee08b6d63cd81223724dd3f78640f549a7917e6446d485b98e96c1d3628e0a4"
+  },
+  "actions": [],
+  "reason": "preconditions: Command failed: git merge-base origin/main HEAD\nfatal: Not a valid object name origin/main\n",
+  "actual": "preconditions: Command failed: git merge-base origin/main HEAD\nfatal: Not a valid object name origin/main\n",
+  "finishedAt": "2026-10-16T15:36:17.513Z"
+}

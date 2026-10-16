@@ -1,0 +1,7 @@
+| Behavior | Platform | Status | Commit | Expected / actual | Evidence | Human QA |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop.memory.read-restore | desktop Web + CLI | fail | 1c3e2b6da9558f19cab100eb7dda568451ec3708 | Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees. / read-current-Web-Memory: Timed out after waiting 30000ms | [doctor.json](./doctor.json), [identity.json](./identity.json), [fixture.json](./fixture.json), [created.json](./created.json), [initial.json](./initial.json), [saved-v1.json](./saved-v1.json), [v1.json](./v1.json), [saved-v2.json](./saved-v2.json), [before.json](./before.json), [history.json](./history.json), [failure.json](./failure.json), [console.json](./console.json), [failure.aria.json](./failure.aria.json), [failure.png](./failure.png), [failure.diagnostics.json](./failure.diagnostics.json) | not-run |
+
+Reason: read-current-Web-Memory: Timed out after waiting 30000ms
+
+Model, native-device and IM checks: not run. Only disposable Memory history/read/commit restore and stale-head guard are qualified; no remote push, credentials, branch switch or complete Self-Record qualification.

@@ -1,0 +1,7 @@
+| Behavior | Platform | Status | Commit | Expected / actual | Evidence | Human QA |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop.memory.read-restore | desktop Web + CLI | fail | 032efdca047c9eb6c52b7ac7b7517910c2beea9d | Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees. / enter-Bot-mode: Timed out after waiting 20000ms | [doctor.json](./doctor.json), [identity.json](./identity.json), [fixture.json](./fixture.json), [created.json](./created.json), [initial.json](./initial.json), [saved-v1.json](./saved-v1.json), [v1.json](./v1.json), [saved-v2.json](./saved-v2.json), [before.json](./before.json), [history.json](./history.json), [failure.json](./failure.json), [console.json](./console.json), [failure.aria.json](./failure.aria.json), [failure.diagnostics.json](./failure.diagnostics.json), [failure.png](./failure.png) | not-run |
+
+Reason: enter-Bot-mode: Timed out after waiting 20000ms
+
+Model, native-device and IM checks: not run. Only disposable Memory history/read/commit restore and stale-head guard are qualified; no remote push, credentials, branch switch or complete Self-Record qualification.

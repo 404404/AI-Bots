@@ -1,0 +1,17 @@
+{
+  "commit": "871c739bc5263508a2773af49f6d53f381cb678b",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected all four screenshots and full ARIA: current v2, historical v1 diff at c2395a1, restored v1 at new dd9c091 HEAD, fresh Web read unchanged after CLI memory-conflict. Same selected Bot DM in every phase, no overlay or blank content. Host/client diagnostics healthy and console empty.",
+  "reviewedAt": "2026-10-16T15:39:47.585Z",
+  "evidence": {
+    "before.png": "e822d6e1b8571ee5b8c010c16105591af64dc6d255b53f2a23c0b25f480d4c3f",
+    "before.aria.json": "ba2961574266cc28909535e6ed8a222d595295e7cafb8480c4e96d32cd1bdd69",
+    "history.png": "c2cce99d4833e792cefe35db20caed9aa228942f72ae4d863f84257675065f56",
+    "history.aria.json": "e5dfcc17b697e7c31182b4f603db29a59798473ed8aea4c73965558e6e53e02c",
+    "after.png": "e030a89ae51eba5c4ef8b990b3ce42efa949d52bf766ea196a78f2f4969cfa3d",
+    "after.aria.json": "bc45ceca7567e1475dc011a8ceb461b9f8027897788d4b326db0198adb763b6b",
+    "refused.png": "e030a89ae51eba5c4ef8b990b3ce42efa949d52bf766ea196a78f2f4969cfa3d",
+    "refused.aria.json": "ff6254ed81996e744acedbf7dd93f6f80fa1afc44074914734113ef24a1c6017"
+  }
+}

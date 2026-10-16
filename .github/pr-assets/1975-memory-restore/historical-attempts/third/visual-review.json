@@ -1,0 +1,17 @@
+{
+  "commit": "448528b143b4ba53f4ca9a49a493f48924b817c5",
+  "decision": "fail",
+  "reviewer": "Codex",
+  "note": "Current/history/restored content and DM identity agree. Refused phase unexpectedly shows the Panels menu after the Refresh click; retain this attempt and requalify with a fresh page read.",
+  "reviewedAt": "2026-10-16T15:09:34.156Z",
+  "evidence": {
+    "before.png": "eb08843eae14757ce9ddba5e5e28d66525063ea193de69b22c33f26fa228d336",
+    "before.aria.json": "7dc3f3acaef61fcebdc688bd89dc166d3be397e945e32bb99ed9c4eaabec6360",
+    "history.png": "9c73b0739d91cf3d98586c5e5899ea8a585eba07fe6b531e2987c002f239c941",
+    "history.aria.json": "d32c24b49c9e61058ceaea7d4865979e39e1ba111d50e31caa3d96633f4a2a4c",
+    "after.png": "959ca79a10af4f1f7a8eecf9eb459e0b9b92ef6360322a958ae2b0fbc038fcd4",
+    "after.aria.json": "229589b806d3571cd6e8940852951592ff45ea0aca6272abd831017c4754d608",
+    "refused.png": "6cf5742baabefb85a14d7e0bbfba2f277c1108f06b46a61a2b3698af3cfda618",
+    "refused.aria.json": "bc269dda6d5b050a051ac9ebe38bb42bd6b9d08ab15b9d52bfd1aba645f2b4a5"
+  }
+}

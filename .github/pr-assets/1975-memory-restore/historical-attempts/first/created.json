@@ -1,0 +1,25 @@
+{
+  "bot": {
+    "id": "bot-9a2d95e0b36948c0ab123fc9c63e5986",
+    "name": "AX Memory 1792163050687"
+  },
+  "steps": [
+    {
+      "name": "validate",
+      "status": "ok"
+    },
+    {
+      "name": "create-bot",
+      "status": "ok"
+    },
+    {
+      "name": "model",
+      "status": "deferred",
+      "code": "no-model-yet"
+    },
+    {
+      "name": "dm",
+      "status": "ok"
+    }
+  ]
+}

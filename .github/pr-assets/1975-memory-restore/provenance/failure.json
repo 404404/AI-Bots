@@ -1,0 +1,5 @@
+{
+  "stage": "preconditions",
+  "reason": "preconditions: Command failed: git merge-base origin/main HEAD\nfatal: Not a valid object name origin/main\n",
+  "botId": null
+}

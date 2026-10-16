@@ -1,0 +1,8 @@
+{
+  "kind": "negative control; no Host or PersonaBot created",
+  "testedSource": "871c739bc5263508a2773af49f6d53f381cb678b",
+  "fixtureCommit": "8195a4e9dce5da016925025424820d0303cb830d",
+  "expected": "blocked record when origin/main is absent",
+  "actual": "blocked",
+  "exitCode": 1
+}

@@ -1,0 +1,1608 @@
+{
+  "role": "RootWebArea",
+  "backendNodeId": 2,
+  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+  "name": "DeepSeek Harness",
+  "url": "[redacted]/",
+  "children": [
+    {
+      "role": "none",
+      "backendNodeId": 23,
+      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+      "children": [
+        {
+          "role": "generic",
+          "backendNodeId": 191,
+          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+          "name": "",
+          "children": [
+            {
+              "role": "generic",
+              "backendNodeId": 194,
+              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+              "name": "",
+              "children": [
+                {
+                  "role": "generic",
+                  "backendNodeId": 196,
+                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                  "name": "",
+                  "children": [
+                    {
+                      "role": "none",
+                      "backendNodeId": 197,
+                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                      "children": [
+                        {
+                          "role": "navigation",
+                          "backendNodeId": 948,
+                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                          "name": "Bot mode",
+                          "children": [
+                            {
+                              "role": "none",
+                              "backendNodeId": 942,
+                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                              "children": [
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 561,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Exit Bot mode",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 556,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 562,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "children": [
+                                    {
+                                      "role": "StaticText",
+                                      "backendNodeId": 952,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                      "name": "DeepSeekBot",
+                                      "children": [
+                                        {
+                                          "role": "InlineTextBox",
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "name": "DeepSeekBot"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 563,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Collapse sidebar"
+                                }
+                              ]
+                            },
+                            {
+                              "role": "group",
+                              "backendNodeId": 943,
+                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                              "name": "Panels",
+                              "children": [
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 611,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Activity Center",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 612,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Bot files",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 613,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Work",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 614,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Memory files",
+                                  "pressed": true
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 615,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Memory evolution",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 616,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Members",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 617,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Sessions",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 618,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Bot Inbox",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 619,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Schedules",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 620,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Computer",
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 621,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Browser",
+                                  "pressed": false
+                                }
+                              ]
+                            },
+                            {
+                              "role": "none",
+                              "backendNodeId": 944,
+                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                              "children": [
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 935,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 930,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                      "children": [
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 639,
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 955,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "name": "Messages",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "Messages"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 640,
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "children": [
+                                            {
+                                              "role": "generic",
+                                              "backendNodeId": 627,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 625,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "Search",
+                                                  "expanded": false
+                                                },
+                                                {
+                                                  "role": "textbox",
+                                                  "backendNodeId": 626,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "Search Bots or channels",
+                                                  "multiline": false,
+                                                  "readonly": false,
+                                                  "required": false,
+                                                  "children": [
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 950,
+                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                    },
+                                                    {
+                                                      "role": "generic",
+                                                      "backendNodeId": 949,
+                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                      "name": ""
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 641,
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "children": [
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 637,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 632,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "More"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 638,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 636,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "New"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 933,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                      "children": [
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 928,
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "children": [
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 927,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 926,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "AX Memory 1792163292530: Idle AX Memory 1792163292530 00:08 Welcome to DeepSeek Bot",
+                                                  "description": "Alt+1 to open channel",
+                                                  "keyshortcuts": "Alt+1",
+                                                  "pressed": false,
+                                                  "children": [
+                                                    {
+                                                      "role": "image",
+                                                      "backendNodeId": 924,
+                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                      "name": "AX Memory 1792163292530: Idle",
+                                                      "description": "AX Memory 1792163292530 · Idle",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 919,
+                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 925,
+                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 922,
+                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 920,
+                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 953,
+                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                  "name": "AX Memory 1792163292530",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                      "name": "AX Memory 1792163292530"
+                                                                    },
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                      "name": "AX Memory 179216329"
+                                                                    },
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                      "name": "…"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "role": "time",
+                                                              "backendNodeId": 963,
+                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                              "name": "",
+                                                              "description": "2026/10/17 00:08:21",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 964,
+                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                  "name": "00:08",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                      "name": "00:08"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 923,
+                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 921,
+                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 954,
+                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                  "name": "Welcome to DeepSeek Bot",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                      "name": "Welcome to DeepSeek Bot"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "role": "none",
+                              "backendNodeId": 945,
+                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                              "children": [
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 941,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Bot settings",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 939,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                    },
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 940,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 951,
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "name": "Bot settings",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "name": "Bot settings"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "role": "none",
+                      "backendNodeId": 351,
+                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                      "children": [
+                        {
+                          "role": "none",
+                          "backendNodeId": 3467,
+                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                          "children": [
+                            {
+                              "role": "generic",
+                              "backendNodeId": 3463,
+                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                              "name": "",
+                              "children": [
+                                {
+                                  "role": "region",
+                                  "backendNodeId": 3458,
+                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                  "name": "Bot mode layout",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 3456,
+                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                      "children": [
+                                        {
+                                          "role": "generic",
+                                          "backendNodeId": 3477,
+                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "generic",
+                                              "backendNodeId": 3476,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "name": ""
+                                            },
+                                            {
+                                              "role": "generic",
+                                              "backendNodeId": 3484,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "generic",
+                                                  "backendNodeId": 3482,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": ""
+                                                },
+                                                {
+                                                  "role": "generic",
+                                                  "backendNodeId": 3483,
+                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                  "name": "",
+                                                  "children": [
+                                                    {
+                                                      "role": "generic",
+                                                      "backendNodeId": 3486,
+                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 3485,
+                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                          "children": [
+                                                            {
+                                                              "role": "generic",
+                                                              "backendNodeId": 3480,
+                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                              "name": "",
+                                                              "children": [
+                                                                {
+                                                                  "role": "generic",
+                                                                  "backendNodeId": 3478,
+                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                  "name": ""
+                                                                },
+                                                                {
+                                                                  "role": "generic",
+                                                                  "backendNodeId": 3479,
+                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                  "name": "",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "generic",
+                                                                      "backendNodeId": 3481,
+                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                      "name": "",
+                                                                      "children": [
+                                                                        {
+                                                                          "role": "none",
+                                                                          "backendNodeId": 3468,
+                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                          "children": [
+                                                                            {
+                                                                              "role": "generic",
+                                                                              "backendNodeId": 3473,
+                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                              "name": "",
+                                                                              "children": [
+                                                                                {
+                                                                                  "role": "none",
+                                                                                  "backendNodeId": 3549,
+                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                  "children": [
+                                                                                    {
+                                                                                      "role": "generic",
+                                                                                      "backendNodeId": 3543,
+                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                      "name": "",
+                                                                                      "children": [
+                                                                                        {
+                                                                                          "role": "generic",
+                                                                                          "backendNodeId": 3541,
+                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                          "name": "",
+                                                                                          "children": [
+                                                                                            {
+                                                                                              "role": "generic",
+                                                                                              "backendNodeId": 4671,
+                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                              "name": ""
+                                                                                            }
+                                                                                          ]
+                                                                                        },
+                                                                                        {
+                                                                                          "role": "generic",
+                                                                                          "backendNodeId": 3542,
+                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                          "name": "",
+                                                                                          "children": [
+                                                                                            {
+                                                                                              "role": "generic",
+                                                                                              "backendNodeId": 3545,
+                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                              "name": "",
+                                                                                              "children": [
+                                                                                                {
+                                                                                                  "role": "region",
+                                                                                                  "backendNodeId": 3544,
+                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                  "name": "bh:channel-body",
+                                                                                                  "children": [
+                                                                                                    {
+                                                                                                      "role": "none",
+                                                                                                      "backendNodeId": 3505,
+                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "role": "none",
+                                                                                                          "backendNodeId": 3504,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    },
+                                                                                                    {
+                                                                                                      "role": "tabpanel",
+                                                                                                      "backendNodeId": 3502,
+                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                      "name": "bh:channel-body",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "role": "generic",
+                                                                                                          "backendNodeId": 3506,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                          "name": "",
+                                                                                                          "children": [
+                                                                                                            {
+                                                                                                              "role": "generic",
+                                                                                                              "backendNodeId": 4582,
+                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                              "name": "",
+                                                                                                              "children": [
+                                                                                                                {
+                                                                                                                  "role": "generic",
+                                                                                                                  "backendNodeId": 4544,
+                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                  "name": "",
+                                                                                                                  "children": [
+                                                                                                                    {
+                                                                                                                      "role": "region",
+                                                                                                                      "backendNodeId": 4836,
+                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                      "name": "Memory files",
+                                                                                                                      "children": [
+                                                                                                                        {
+                                                                                                                          "role": "none",
+                                                                                                                          "backendNodeId": 4834,
+                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "role": "button",
+                                                                                                                              "backendNodeId": 4830,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "name": "Back to chat"
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "strong",
+                                                                                                                              "backendNodeId": 4831,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "name": "",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "button",
+                                                                                                                                  "backendNodeId": 4817,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "File actions: AX-1975.md",
+                                                                                                                                  "expanded": false,
+                                                                                                                                  "haspopup": "menu",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "StaticText",
+                                                                                                                                      "backendNodeId": 4837,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "AX-1975.md",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "InlineTextBox",
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "AX-1975.md"
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4832,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "none",
+                                                                                                                                  "backendNodeId": 4826,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "button",
+                                                                                                                                      "backendNodeId": 4824,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "Open on the Host computer: AX-1975.md",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4821,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "StaticText",
+                                                                                                                                              "backendNodeId": 4838,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "Open",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "InlineTextBox",
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "Open"
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    },
+                                                                                                                                    {
+                                                                                                                                      "role": "button",
+                                                                                                                                      "backendNodeId": 4825,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "Choose another application or set a default: AX-1975.md",
+                                                                                                                                      "expanded": false,
+                                                                                                                                      "haspopup": "menu"
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "button",
+                                                                                                                              "backendNodeId": 4833,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "name": "Refresh"
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        },
+                                                                                                                        {
+                                                                                                                          "role": "generic",
+                                                                                                                          "backendNodeId": 4840,
+                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                          "name": "",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "role": "StaticText",
+                                                                                                                              "backendNodeId": 4841,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "name": "AX Memory version two.\n",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "InlineTextBox",
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "AX Memory version two."
+                                                                                                                                },
+                                                                                                                                {
+                                                                                                                                  "role": "InlineTextBox",
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "\n"
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      ]
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                      "role": "none",
+                                                                                                                      "backendNodeId": 4477,
+                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                    },
+                                                                                                                    {
+                                                                                                                      "role": "none",
+                                                                                                                      "backendNodeId": 4476,
+                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                    }
+                                                                                                                  ]
+                                                                                                                },
+                                                                                                                {
+                                                                                                                  "role": "none",
+                                                                                                                  "backendNodeId": 4545,
+                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                  "children": [
+                                                                                                                    {
+                                                                                                                      "role": "button",
+                                                                                                                      "backendNodeId": 4542,
+                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                      "name": "Panels",
+                                                                                                                      "expanded": false,
+                                                                                                                      "haspopup": "menu"
+                                                                                                                    }
+                                                                                                                  ]
+                                                                                                                }
+                                                                                                              ]
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    }
+                                                                                                  ]
+                                                                                                }
+                                                                                              ]
+                                                                                            },
+                                                                                            {
+                                                                                              "role": "generic",
+                                                                                              "backendNodeId": 4670,
+                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                              "name": "",
+                                                                                              "children": [
+                                                                                                {
+                                                                                                  "role": "region",
+                                                                                                  "backendNodeId": 4669,
+                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                  "name": "Memory files",
+                                                                                                  "children": [
+                                                                                                    {
+                                                                                                      "role": "none",
+                                                                                                      "backendNodeId": 4666,
+                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "role": "none",
+                                                                                                          "backendNodeId": 4661,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                        },
+                                                                                                        {
+                                                                                                          "role": "generic",
+                                                                                                          "backendNodeId": 4662,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                          "name": "",
+                                                                                                          "children": [
+                                                                                                            {
+                                                                                                              "role": "tablist",
+                                                                                                              "backendNodeId": 4659,
+                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                              "name": "",
+                                                                                                              "multiselectable": false,
+                                                                                                              "orientation": "horizontal",
+                                                                                                              "children": [
+                                                                                                                {
+                                                                                                                  "role": "tab",
+                                                                                                                  "backendNodeId": 4674,
+                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                  "name": "Memory files",
+                                                                                                                  "selected": true,
+                                                                                                                  "children": [
+                                                                                                                    {
+                                                                                                                      "role": "generic",
+                                                                                                                      "backendNodeId": 4673,
+                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                      "name": "",
+                                                                                                                      "children": [
+                                                                                                                        {
+                                                                                                                          "role": "none",
+                                                                                                                          "backendNodeId": 4721,
+                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4719,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "none",
+                                                                                                                                  "backendNodeId": 4717,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4710,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4709,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4706,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                                            },
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4707,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                                            },
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4708,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    },
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4711,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "StaticText",
+                                                                                                                                          "backendNodeId": 4725,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "Memory files",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "InlineTextBox",
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "Memory files"
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                },
+                                                                                                                                {
+                                                                                                                                  "role": "none",
+                                                                                                                                  "backendNodeId": 4718,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4716,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "button",
+                                                                                                                                          "backendNodeId": 4715,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "Close Memory files",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4714,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "none",
+                                                                                                                                                  "backendNodeId": 4712,
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                                                },
+                                                                                                                                                {
+                                                                                                                                                  "role": "none",
+                                                                                                                                                  "backendNodeId": 4713,
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      ]
+                                                                                                                    }
+                                                                                                                  ]
+                                                                                                                }
+                                                                                                              ]
+                                                                                                            },
+                                                                                                            {
+                                                                                                              "role": "generic",
+                                                                                                              "backendNodeId": 4660,
+                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                              "name": ""
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        },
+                                                                                                        {
+                                                                                                          "role": "none",
+                                                                                                          "backendNodeId": 4663,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                        },
+                                                                                                        {
+                                                                                                          "role": "none",
+                                                                                                          "backendNodeId": 4664,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                        },
+                                                                                                        {
+                                                                                                          "role": "none",
+                                                                                                          "backendNodeId": 4665,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    },
+                                                                                                    {
+                                                                                                      "role": "tabpanel",
+                                                                                                      "backendNodeId": 4667,
+                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                      "name": "Memory files",
+                                                                                                      "children": [
+                                                                                                        {
+                                                                                                          "role": "generic",
+                                                                                                          "backendNodeId": 4675,
+                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                          "name": "",
+                                                                                                          "children": [
+                                                                                                            {
+                                                                                                              "role": "generic",
+                                                                                                              "backendNodeId": 4720,
+                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                              "name": "",
+                                                                                                              "children": [
+                                                                                                                {
+                                                                                                                  "role": "none",
+                                                                                                                  "backendNodeId": 4705,
+                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                  "children": [
+                                                                                                                    {
+                                                                                                                      "role": "none",
+                                                                                                                      "backendNodeId": 4704,
+                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                      "children": [
+                                                                                                                        {
+                                                                                                                          "role": "tree",
+                                                                                                                          "backendNodeId": 4804,
+                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                          "name": "Memory files",
+                                                                                                                          "multiselectable": false,
+                                                                                                                          "required": false,
+                                                                                                                          "orientation": "vertical",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4799,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "treeitem",
+                                                                                                                                  "backendNodeId": 4741,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "SOUL.md Standing 89/5,000",
+                                                                                                                                  "description": "SOUL.md",
+                                                                                                                                  "selected": false,
+                                                                                                                                  "level": 1,
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4735,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "StaticText",
+                                                                                                                                          "backendNodeId": 4806,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "SOUL.md",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "InlineTextBox",
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "SOUL.md"
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    },
+                                                                                                                                    {
+                                                                                                                                      "role": "generic",
+                                                                                                                                      "backendNodeId": 4736,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "",
+                                                                                                                                      "description": "Soul: part of the system prompt at the start of every new Session; it says who the Bot is.",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4731,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4730,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "StaticText",
+                                                                                                                                                  "backendNodeId": 4807,
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "Standing",
+                                                                                                                                                  "children": [
+                                                                                                                                                    {
+                                                                                                                                                      "role": "InlineTextBox",
+                                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                      "name": "Standing"
+                                                                                                                                                    }
+                                                                                                                                                  ]
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        },
+                                                                                                                                        {
+                                                                                                                                          "role": "generic",
+                                                                                                                                          "backendNodeId": 4732,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "",
+                                                                                                                                          "description": "2% used: 89/5,000 chars",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "StaticText",
+                                                                                                                                              "backendNodeId": 4808,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "89/5,000",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "InlineTextBox",
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "89/5,000"
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                },
+                                                                                                                                {
+                                                                                                                                  "role": "button",
+                                                                                                                                  "backendNodeId": 4742,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "File actions: SOUL.md",
+                                                                                                                                  "expanded": false,
+                                                                                                                                  "haspopup": "menu"
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4800,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "treeitem",
+                                                                                                                                  "backendNodeId": 4758,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "MEMORY.md Standing 394/3,000",
+                                                                                                                                  "description": "MEMORY.md",
+                                                                                                                                  "selected": false,
+                                                                                                                                  "level": 1,
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4752,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "StaticText",
+                                                                                                                                          "backendNodeId": 4809,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "MEMORY.md",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "InlineTextBox",
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "MEMORY.md"
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    },
+                                                                                                                                    {
+                                                                                                                                      "role": "generic",
+                                                                                                                                      "backendNodeId": 4753,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "",
+                                                                                                                                      "description": "Core Memory: part of the system prompt at the start of every new Session, so the Bot starts knowing what it remembers.",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4748,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4747,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "StaticText",
+                                                                                                                                                  "backendNodeId": 4810,
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "Standing",
+                                                                                                                                                  "children": [
+                                                                                                                                                    {
+                                                                                                                                                      "role": "InlineTextBox",
+                                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                      "name": "Standing"
+                                                                                                                                                    }
+                                                                                                                                                  ]
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        },
+                                                                                                                                        {
+                                                                                                                                          "role": "generic",
+                                                                                                                                          "backendNodeId": 4749,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "",
+                                                                                                                                          "description": "13% used: 394/3,000 chars",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "StaticText",
+                                                                                                                                              "backendNodeId": 4811,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "394/3,000",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "InlineTextBox",
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "394/3,000"
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                },
+                                                                                                                                {
+                                                                                                                                  "role": "button",
+                                                                                                                                  "backendNodeId": 4759,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "File actions: MEMORY.md",
+                                                                                                                                  "expanded": false,
+                                                                                                                                  "haspopup": "menu"
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4801,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "none",
+                                                                                                                                  "backendNodeId": 4773,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "treeitem",
+                                                                                                                                      "backendNodeId": 4771,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": ".botharness",
+                                                                                                                                      "expanded": false,
+                                                                                                                                      "level": 1,
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4766,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "StaticText",
+                                                                                                                                              "backendNodeId": 4812,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": ".botharness",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "InlineTextBox",
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": ".botharness"
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    },
+                                                                                                                                    {
+                                                                                                                                      "role": "button",
+                                                                                                                                      "backendNodeId": 4772,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "File actions: .botharness",
+                                                                                                                                      "expanded": false,
+                                                                                                                                      "haspopup": "menu"
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4802,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "treeitem",
+                                                                                                                                  "backendNodeId": 4784,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": ".gitattributes",
+                                                                                                                                  "selected": false,
+                                                                                                                                  "level": 1,
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4779,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "StaticText",
+                                                                                                                                          "backendNodeId": 4813,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": ".gitattributes",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "InlineTextBox",
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": ".gitattributes"
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                },
+                                                                                                                                {
+                                                                                                                                  "role": "button",
+                                                                                                                                  "backendNodeId": 4785,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "File actions: .gitattributes",
+                                                                                                                                  "expanded": false,
+                                                                                                                                  "haspopup": "menu"
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            },
+                                                                                                                            {
+                                                                                                                              "role": "none",
+                                                                                                                              "backendNodeId": 4803,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "treeitem",
+                                                                                                                                  "backendNodeId": 4797,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "AX-1975.md",
+                                                                                                                                  "focused": true,
+                                                                                                                                  "selected": true,
+                                                                                                                                  "level": 1,
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "none",
+                                                                                                                                      "backendNodeId": 4792,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "StaticText",
+                                                                                                                                          "backendNodeId": 4814,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "name": "AX-1975.md",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "InlineTextBox",
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "name": "AX-1975.md"
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                },
+                                                                                                                                {
+                                                                                                                                  "role": "button",
+                                                                                                                                  "backendNodeId": 4798,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "name": "File actions: AX-1975.md",
+                                                                                                                                  "expanded": false,
+                                                                                                                                  "haspopup": "menu"
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        },
+                                                                                                                        {
+                                                                                                                          "role": "list",
+                                                                                                                          "backendNodeId": 4703,
+                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                          "name": "Standing memory limits",
+                                                                                                                          "children": [
+                                                                                                                            {
+                                                                                                                              "role": "listitem",
+                                                                                                                              "backendNodeId": 4701,
+                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                              "name": "",
+                                                                                                                              "level": 1,
+                                                                                                                              "children": [
+                                                                                                                                {
+                                                                                                                                  "role": "none",
+                                                                                                                                  "backendNodeId": 4700,
+                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                  "children": [
+                                                                                                                                    {
+                                                                                                                                      "role": "button",
+                                                                                                                                      "backendNodeId": 4699,
+                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                      "name": "Standing memory limits SOUL.md 5,000 · MEMORY.md 3,000",
+                                                                                                                                      "description": "Edit standing memory limits",
+                                                                                                                                      "haspopup": "dialog",
+                                                                                                                                      "children": [
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4697,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4"
+                                                                                                                                        },
+                                                                                                                                        {
+                                                                                                                                          "role": "none",
+                                                                                                                                          "backendNodeId": 4698,
+                                                                                                                                          "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                          "children": [
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4695,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "StaticText",
+                                                                                                                                                  "backendNodeId": 4723,
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "Standing memory limits",
+                                                                                                                                                  "children": [
+                                                                                                                                                    {
+                                                                                                                                                      "role": "InlineTextBox",
+                                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                      "name": "Standing memory limits"
+                                                                                                                                                    }
+                                                                                                                                                  ]
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            },
+                                                                                                                                            {
+                                                                                                                                              "role": "none",
+                                                                                                                                              "backendNodeId": 4696,
+                                                                                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                              "children": [
+                                                                                                                                                {
+                                                                                                                                                  "role": "StaticText",
+                                                                                                                                                  "backendNodeId": 4724,
+                                                                                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                  "name": "SOUL.md 5,000 · MEMORY.md 3,000",
+                                                                                                                                                  "children": [
+                                                                                                                                                    {
+                                                                                                                                                      "role": "InlineTextBox",
+                                                                                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                                                                                      "name": "SOUL.md 5,000 · MEMORY.md 3,000"
+                                                                                                                                                    }
+                                                                                                                                                  ]
+                                                                                                                                                }
+                                                                                                                                              ]
+                                                                                                                                            }
+                                                                                                                                          ]
+                                                                                                                                        }
+                                                                                                                                      ]
+                                                                                                                                    }
+                                                                                                                                  ]
+                                                                                                                                }
+                                                                                                                              ]
+                                                                                                                            }
+                                                                                                                          ]
+                                                                                                                        }
+                                                                                                                      ]
+                                                                                                                    }
+                                                                                                                  ]
+                                                                                                                }
+                                                                                                              ]
+                                                                                                            }
+                                                                                                          ]
+                                                                                                        }
+                                                                                                      ]
+                                                                                                    }
+                                                                                                  ]
+                                                                                                }
+                                                                                              ]
+                                                                                            }
+                                                                                          ]
+                                                                                        }
+                                                                                      ]
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            {
+                                                                              "role": "status",
+                                                                              "backendNodeId": 3474,
+                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                              "name": "",
+                                                                              "atomic": true,
+                                                                              "live": "polite",
+                                                                              "relevant": "additions text",
+                                                                              "children": [
+                                                                                {
+                                                                                  "role": "StaticText",
+                                                                                  "backendNodeId": 4676,
+                                                                                  "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                  "name": "Memory files opened",
+                                                                                  "children": [
+                                                                                    {
+                                                                                      "role": "InlineTextBox",
+                                                                                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                                      "name": "Memory files opened"
+                                                                                    }
+                                                                                  ]
+                                                                                }
+                                                                              ]
+                                                                            },
+                                                                            {
+                                                                              "role": "alert",
+                                                                              "backendNodeId": 3475,
+                                                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                                                              "name": "",
+                                                                              "atomic": true,
+                                                                              "live": "assertive",
+                                                                              "relevant": "additions text"
+                                                                            }
+                                                                          ]
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "generic",
+                                              "backendNodeId": 3487,
+                                              "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                                              "name": ""
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "role": "generic",
+                      "backendNodeId": 458,
+                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                      "name": ""
+                    },
+                    {
+                      "role": "generic",
+                      "backendNodeId": 490,
+                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                      "name": ""
+                    },
+                    {
+                      "role": "generic",
+                      "backendNodeId": 493,
+                      "loaderId": "1C0AF22CC88698A19097ED238DE9C5F4",
+                      "name": ""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

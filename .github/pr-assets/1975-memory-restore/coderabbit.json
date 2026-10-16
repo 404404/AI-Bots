@@ -1,0 +1,9 @@
+{
+  "source": "871c739bc5263508a2773af49f6d53f381cb678b",
+  "reviewId": 5549997497,
+  "thread": "PRRT_kwDOUeCh-M6tRE-s",
+  "status": "resolved",
+  "finding": "Git provenance could throw before evidence capture",
+  "fix": "Run provenance reads inside captured preconditions; missing-origin/main runner regression passes",
+  "acknowledgedBy": "coderabbitai"
+}

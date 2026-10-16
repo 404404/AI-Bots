@@ -1,0 +1,9 @@
+{
+  "exitCode": 1,
+  "value": {
+    "error": {
+      "code": "memory-conflict",
+      "message": "Memory changed since the Human opened it"
+    }
+  }
+}
