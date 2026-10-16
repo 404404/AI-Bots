@@ -399,7 +399,8 @@ export function Composer({
     if (!menu) Keyboard.dismiss();
     setMenu(!menu);
   };
-  const stacked = composerStacked(actions, files.length, wraps);
+  const expanded = theme.largeText || wraps;
+  const stacked = composerStacked(actions, files.length, expanded);
   const icon = theme.type.title.line;
   const button = theme.touch - space.x4;
   const compactWidth = pill.width - 2 * (inset + button + space.x2);
@@ -452,7 +453,7 @@ export function Composer({
       onContentSizeChange={(event) => setContentHeight(event.nativeEvent.contentSize.height)}
       style={{
         flex: 1,
-        ...(wraps
+        ...(expanded
           ? {
               minHeight: composerFieldHeight(contentHeight, textLine, fieldPadding),
               maxHeight: composerFieldHeight(Infinity, textLine, fieldPadding),
@@ -563,7 +564,6 @@ export function Composer({
         </View>
         {compactWidth > 0 ? (
           <Text
-            key={theme.fontScale}
             variant="body"
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
