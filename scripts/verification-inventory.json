@@ -1499,7 +1499,7 @@
       "behaviors": ["desktop.grants.temporary-read-revoke"],
       "reason": "Dedicated temporary sample outside Host data; actual Web Grant authorization, direct attachment-import read, explicit CLI revocation, same-read denial and before/after visible evidence. No model/native file tool/Shell security claim.",
       "task": 1974,
-      "sha256": "2ab5106df2cc0aad04e92c89e8cc7c279aac98e09e9b9a717bd98a6f223c8a9d"
+      "sha256": "654500a51c62e7a5628b1cbc4a1a328ff9bdb9ec05d1a90b7fe4e87d24e32954"
     }
   ],
   "native": [

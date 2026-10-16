@@ -266,6 +266,21 @@ try {
   await page.waitForSelector('.bh-mode-sidebar', { visible: true, timeout: 30_000 });
   await page.keyboard.press('Escape');
   const botName = created.bot.name;
+  const selectBot = async () => {
+    const tree = await page.accessibility.snapshot({ interestingOnly: false });
+    const findBot = (node) => {
+      if (node.role === 'button' && node.name.startsWith(`${botName}: `)) return node.name;
+      for (const child of node.children ?? []) {
+        const label = findBot(child);
+        if (label) return label;
+      }
+    };
+    const label = findBot(tree);
+    if (!label) throw new Error('created-Bot-sidebar-entry-missing');
+    await click(label);
+    await page.waitForSelector('[aria-label^="Workspace Grants ·"]', { visible: true });
+  };
+  await selectBot();
   const openGrants = async () => {
     const label = await page.$eval('[aria-label^="Workspace Grants ·"]', (el) =>
       el.getAttribute('aria-label'),
@@ -333,7 +348,8 @@ try {
   save('read-after.json', readFixture());
   stage = 'observe-revoked-Web-state';
   await page.reload({ waitUntil: 'networkidle2', timeout: 30_000 });
-  await page.waitForSelector('[aria-label^="Workspace Grants ·"]', { visible: true });
+  await page.waitForSelector('.bh-mode-sidebar', { visible: true });
+  await selectBot();
   await openGrants();
   save('visible-after.json', await visible());
   await capturePage('after');
