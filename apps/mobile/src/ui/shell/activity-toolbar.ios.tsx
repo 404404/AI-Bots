@@ -44,7 +44,9 @@ export function ActivityToolbar({
           <Stack.Toolbar.View hidesSharedBackground={false}>
             <View
               style={{
-                width: width - space.x4 * 2,
+                // The native shared background adds a small horizontal allowance.
+                // Reserve it along with both outer gutters so the glass stays centered.
+                width: width - space.x5 * 2 - space.x2,
                 height: theme.touch,
                 flexDirection: 'row',
                 alignItems: 'center',
