@@ -288,6 +288,10 @@ try {
     await dismissOnboarding();
   };
   await selectBot();
+  for (const label of ['Close Sessions', 'Close Bot Inbox']) {
+    const handle = await page.$(`::-p-aria([name=${JSON.stringify(label)}][role="button"])`);
+    if (handle && (await handle.isVisible())) await click(label);
+  }
   await click('Browser');
   const observe = async (phase, text) => {
     const accessOff = ['off', 'disabled'].includes(phase);
@@ -311,7 +315,9 @@ try {
         fullscreen: !!document.querySelector('[data-bh-remote-viewer-fullscreen]'),
         text: el.innerText,
       }))),
-      accessLabel: accessOff ? 'Enable Browser Access' : 'Disable Browser Access',
+      accessLabel: await page.$eval('.bh-browser-access-power', (el) =>
+        el.getAttribute('aria-label'),
+      ),
       selectedChannels: await page.$$eval('.bh-selected[data-channel-id]', (nodes) => [
         ...new Set(
           nodes
@@ -391,7 +397,6 @@ try {
   save('bot-final.json', {
     bot: (await rpc(instance, 'botharness/list')).bots.find((bot) => bot.slug === run.botId),
   });
-  await click('Browser');
   await observe('disabled', "This PersonaBot's sessions may use the browser");
   save('lifecycle.json', command(['computer-logs', '--plugin', 'browser', '--limit', '100']));
   run.status = 'pass';

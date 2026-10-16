@@ -10,7 +10,8 @@ profile reset/isolation, takeover/resume and alternate Computer targets remain s
 
 ## How to get to it (user POV)
 
-Bot mode → select the newly created **AX Browser …** Bot → **Browser**.
+Bot mode → select the newly created **AX Browser …** Bot → close Sessions/Bot Inbox
+panels to give Browser room → **Browser**.
 With Browser Access off, the panel shows its access description and **Enable Browser Access**.
 The existing direct open tool must refuse without starting it. Only the enabled, stopped
 Browser shows the **Stopped** card; do not accept a transient card before Access loads.
@@ -23,6 +24,8 @@ Click **Stop** in the panel. Observation must show stopped, no tabs, no focused 
 no frame. A subsequent direct observe must report the existing no-tab refusal and leave
 it stopped. Disable Browser Access, then attempt direct open again: the Access-off
 refusal must remain distinct, with Access still off and no replacement target/start.
+The docked Browser panel stays open when Access is disabled; inspect the permission
+explanation there. Clicking the sidebar Browser button again would close the panel.
 
 ## Driving it with verify-app
 
