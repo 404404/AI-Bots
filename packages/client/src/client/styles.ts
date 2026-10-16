@@ -1,3 +1,4 @@
+import { WORKSPACE_CSS } from './workspace-styles.js';
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 import { INTERNAL_TOUR_CSS } from './internal-tour-styles.js';
 import { COMPOSER_CONTEXT_CSS } from './composer-context-styles.js';
@@ -10,6 +11,7 @@ import { DEEPSEEKBOT_TRANSPARENT_DATA_URI } from './bot-icon-assets.js';
 import { STYLEX_CSS } from './ds/stylex-css.js';
 
 export const CSS =
+  WORKSPACE_CSS +
   COMPOSER_CONTEXT_CSS +
   INTERNAL_TOUR_CSS +
   COMBOBOX_CSS +

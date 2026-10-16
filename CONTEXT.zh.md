@@ -797,7 +797,7 @@ bot-mode sidebar 中展示 PersonaBot 与 Channel 及其 state 的列表。
 _避免使用_：dashboard、bot list
 
 **App Sidebar**：
-client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode（宽度 960 px 及以上）中由 BotHarness 换成自己的 Bot mode sidebar（DeepSeekBot 标题，其 Logo 悬停时变成「退出 Bot mode」；活动中心、Roster、Bot 设置），这一栏的宽度、拖动调整和收起仍由 DSH 负责；其他插件在左栏的内容在 Bot mode 期间隐藏（ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
+client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode 回退布局中由 BotHarness 换成自己的 Bot mode sidebar（DeepSeekBot 标题，其 Logo 悬停时变成「退出 Bot mode」；活动中心、Roster、Bot 设置），这一栏的宽度、拖动调整和收起仍由 DSH 负责；其他插件在左栏的内容在 Bot mode 期间隐藏（ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
 _避免使用_：left sidebar、main sidebar、navigation
 
 **Channel sidebar**：
@@ -817,11 +817,15 @@ _避免使用_：widget、card、tab、destination、Channel section
 _避免使用_：view、page、rail item
 
 **Bot mode layout**：
-桌面端 Bot mode（宽度 960 px 及以上）中、App Sidebar 右侧的 `main` 区域：一个可停靠布局，Human 可以拖动、停靠、调整大小、关闭和重新打开 Dock panel。每个面板独立存在，面板之间不叠成 tab，Channel body 只有一个，布局按浏览器保存，并可恢复默认（提议中，ADR-0203）。窄布局与手机保持响应式布局。
+桌面端 Bot mode（宽度 961 px 及以上）的可停靠工作区，Human 可以拖动、停靠、调整大小、关闭和重新打开 Dock panel。符合条件的 Web/macOS shell 释放原生侧栏占位，显示 Workspace Control Rail 和独立 Channel 列表。面板不组成标签页；至多一个消息面板呈现当前 Channel body。几何、开关排序和间距保存在浏览器本地，重置位于 Bot Settings（ADR-0203）。窄屏及不符合条件的 shell 保留响应式回退。
 _避免使用_：workbench、panel layout、dock
 
+**Workspace Control Rail（工作区控制列）**：
+Bot mode layout 中唯一、不可关闭、占据整列高度的控制区域。顶部为 DSB 模式退出入口，中间是可排序的 Dock panel 开关，底部是 Bot Settings。设置上方的拖拽把手在悬停或键盘聚焦时显示，用于把整列移动到各根列之间。它只控制呈现，不持有 Channel 或 Session 选择；Channel 列表是独立 Dock panel。控制列与其他面板使用一致的小圆角。布局偏好放在 Bot Settings，不另设控制列弹窗。
+_避免使用_：panel control、panel control sidebar、App Sidebar、Channel 列表
+
 **Dock panel**：
-Bot mode layout 中注册的一个单元：稳定 id、标题、图标、scope（`channel` 面板跟随当前 Channel，`global` 面板不跟随）、默认位置与渲染器。Channel body 和每个 Channel sidebar entry 都是 Dock panel；App Sidebar 不是 Dock panel，留在布局之外；其他插件通过 `dockPanels` Service 注册更多面板。Dock panel 只是 UI Consumer；插件的数据存放在它自己的 Service 与 Provider 中（提议中，ADR-0203）。
+Bot mode layout 中一个已注册的内容单元：稳定 id、标题、图标、scope（`channel` 跟随当前 Channel，`global` 不跟随）、默认位置与渲染器。消息面板呈现 Channel body；Channel 列表是全局面板；群成员为消息面板的内部左右分割。其他插件通过 `dockPanels` Service 注册面板。Workspace Control Rail 是特殊布局控制区域，不是普通可关闭内容面板。Dock panel 只是 UI Consumer；插件的数据仍属于自己的 Service 和 Provider（ADR-0203）。
 _避免使用_：widget、view、pane、DSH main panel
 
 **Channel settings**：

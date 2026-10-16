@@ -1073,7 +1073,7 @@ export function createChannelSidebarBuiltinTabs(
       order: 1,
       scope: 'personabot',
     },
-    { id: 'memory', icon: 'files', label: t('tab.memory'), order: 2, scope: 'personabot' },
+    { id: 'memory', icon: 'brain', label: t('tab.memory'), order: 2, scope: 'personabot' },
     { id: 'screen', icon: 'monitor', label: t('tab.screen'), order: 3, scope: 'personabot' },
   ];
 }
@@ -1115,7 +1115,7 @@ export function createChannelSidebarBuiltins(
     {
       id: 'memory-files',
       tab: 'memory',
-      icon: 'files',
+      icon: 'brain',
       label: t('entry.memoryFiles'),
       order: 5,
       scope: 'personabot',
@@ -1136,7 +1136,7 @@ export function createChannelSidebarBuiltins(
     {
       id: 'sessions',
       tab: 'conversation',
-      icon: 'messages-square',
+      icon: 'terminal',
       label: t('entry.sessions'),
       order: 10,
       scope: 'personabot',

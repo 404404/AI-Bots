@@ -799,7 +799,7 @@ The bot-mode sidebar list of PersonaBots and Channels, with their state.
 _Avoid_: dashboard, bot list
 
 **App Sidebar**:
-The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode (960 px and wider) BotHarness replaces it with its own Bot mode sidebar (a DeepSeekBot header whose logo turns into Exit Bot mode on hover, Activity Center, Roster, Bot settings) while DSH still sizes, resizes and collapses the column, and other plugins' left-column contributions are hidden until Bot mode ends (ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
+The left column of the client. Outside Bot mode it is DSH-native; in desktop Bot mode fallback BotHarness replaces it with its own Bot mode sidebar (a DeepSeekBot header whose logo turns into Exit Bot mode on hover, Activity Center, Roster, Bot settings) while DSH still sizes, resizes and collapses the column, and other plugins' left-column contributions are hidden until Bot mode ends (ADR-0203). It is named to distinguish it from the Channel sidebar on the right.
 _Avoid_: left sidebar, main sidebar, navigation
 
 **Channel sidebar**:
@@ -819,11 +819,15 @@ One icon tab of the desktop Channel sidebar, grouping one or more Channel sideba
 _Avoid_: view, page, rail item
 
 **Bot mode layout**:
-The desktop Bot mode `main` area (960 px and wider), beside the App Sidebar: one dockable layout in which the Human drags, docks, resizes, closes and reopens Dock panels. Each panel stands alone: panels are never tabbed together, and there is exactly one Channel body, saved per browser with a Reset (proposed, ADR-0203). Narrow layouts and phones keep the responsive layout.
+The desktop Bot mode workspace (961 px and wider): one dockable layout in which the Human drags, docks, resizes, closes and reopens Dock panels. Qualified Web/macOS shells replace the native sidebar allocation with a Workspace Control Rail and an independent Channel list. Panels never form tabs; at most one Messages panel renders the active Channel body. Geometry, switch order and spacing are browser-local, with Reset in Bot Settings (ADR-0203). Narrow layouts and unqualified shells retain the responsive fallback.
 _Avoid_: workbench, panel layout, dock
 
+**Workspace Control Rail**:
+The unique, nonclosable, full-height control column in a Bot mode layout. It contains the DSB mode-exit control at the top, reorderable Dock panel switches, and Bot Settings at the bottom. A grip above Settings appears on hover or keyboard focus and moves the entire rail between root columns. It selects presentation, not a Channel or Session; the Channel list is a separate Dock panel. Its rounded surface follows other Dock panels. Layout preferences belong in Bot Settings, not a separate rail dialog.
+_Avoid_: panel control, panel control sidebar, App Sidebar, Channel list
+
 **Dock panel**:
-One registered unit of the Bot mode layout: a stable id, title, icon, scope (`channel` panels follow the active Channel, `global` panels do not), a default position and a renderer. The Channel body and every Channel sidebar entry are Dock panels; the App Sidebar is not one and stays outside the layout; other plugins register more through the `dockPanels` Service. A Dock panel is a UI Consumer only; a plugin's data lives in its own Service and Provider (proposed, ADR-0203).
+One registered content unit of the Bot mode layout: a stable id, title, icon, scope (`channel` panels follow the active Channel, `global` panels do not), a default position and a renderer. Messages renders the Channel body; the Channel list is global. Group members form an internal split of Messages. Other plugins register panels through the `dockPanels` Service. The Workspace Control Rail is a special layout control, not an ordinary closable content panel. A Dock panel is a UI Consumer only; a plugin's data lives in its own Service and Provider (ADR-0203).
 _Avoid_: widget, view, pane, DSH main panel
 
 **Channel settings**:

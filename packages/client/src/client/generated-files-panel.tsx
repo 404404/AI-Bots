@@ -160,7 +160,7 @@ export function createGeneratedFilesPanel(
   return {
     id: 'generated-files',
     title: t('generatedFiles.title'),
-    icon: 'archive',
+    icon: 'file',
     scope: 'channel',
     order: -90,
     defaultPosition: { zone: 'right' },

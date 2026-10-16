@@ -1,3 +1,5 @@
+import { Workspace, type WorkspaceOptions } from './workspace.js';
+import { WorkspaceContext } from './workspace-context.js';
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
 import { OnboardingOverlay } from './onboarding-view.js';
 import {
@@ -2353,6 +2355,7 @@ function ConversationView({
       <div
         ref={profileMount}
         className="bh-topbar"
+        data-window-drag
         data-bh-tour="topbar"
         data-channel-detail={profileViewOpen || activeMemoryView !== undefined ? 'true' : undefined}
         data-memory-diff={
@@ -3288,9 +3291,42 @@ function BotMainContent({
   t?: BotHarnessTranslate | undefined;
 }): ReactElement {
   const state = useClientState();
-  if (state.selection === undefined) return <Welcome state={state} t={t} />;
+  const workspace = useContext(WorkspaceContext);
+  const panels = useSyncExternalStore(
+    dockPanels?.subscribe ?? subscribeWithoutPrefs,
+    () => dockPanels?.panels(),
+    () => dockPanels?.panels(),
+  );
+  if (state.selection === undefined)
+    return workspace ? (
+      <div className="bh-root bh-main">
+        <ChannelDock
+          body={<Welcome state={state} t={t} />}
+          panels={panels ?? []}
+          registry={dockPanels}
+          entryProps={undefined}
+          shows={() => false}
+          t={t}
+        />
+      </div>
+    ) : (
+      <Welcome state={state} t={t} />
+    );
   if (state.selection.kind === 'inbox')
-    return <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />;
+    return workspace ? (
+      <div className="bh-root bh-main">
+        <ChannelDock
+          body={<ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />}
+          panels={panels ?? []}
+          registry={dockPanels}
+          entryProps={undefined}
+          shows={() => false}
+          t={t}
+        />
+      </div>
+    ) : (
+      <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />
+    );
   const scopeKey =
     state.selection.kind === 'bot'
       ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : 'chat'}`
@@ -3315,8 +3351,10 @@ const subscribeWithoutPrefs = (): (() => void) => () => {};
 
 export function BotMain({
   prefs,
+  workspace,
   ...props
 }: Parameters<typeof BotMainContent>[0] & {
+  workspace?: WorkspaceOptions | undefined;
   prefs?: Pick<BotModePrefs, 'source'> | undefined;
 }): ReactElement {
   const developerMode = useSyncExternalStore(
@@ -3332,7 +3370,9 @@ export function BotMain({
   return (
     <MessageDeveloperMode.Provider value={developerMode}>
       <ComposerSendKeyContext.Provider value={sendKey}>
-        <BotMainContent {...props} />
+        <Workspace options={workspace} t={props.t ?? zhTranslate}>
+          <BotMainContent {...props} />
+        </Workspace>
       </ComposerSendKeyContext.Provider>
     </MessageDeveloperMode.Provider>
   );
@@ -3340,6 +3380,7 @@ export function BotMain({
 
 export function BotPanel({
   onMobileBack,
+  workspace,
   prefs,
   actions,
   companion,
@@ -3363,6 +3404,7 @@ export function BotPanel({
   nativeChatT?: NativeChatFailureText | undefined;
   releaseNotes?: ReleaseNotesController | undefined;
   telemetryNotice?: TelemetryNoticeController | undefined;
+  workspace?: WorkspaceOptions | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
   const modeMount = useMountedResource<HTMLSpanElement>(() => {
@@ -3382,6 +3424,7 @@ export function BotPanel({
         <TelemetryNotice controller={telemetryNotice} releaseNotes={releaseNotes} t={t} />
       )}
       <BotMain
+        workspace={workspace}
         onMobileBack={onMobileBack}
         prefs={prefs}
         actions={actions}
