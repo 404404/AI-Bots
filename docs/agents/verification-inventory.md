@@ -118,3 +118,11 @@ for two owner-saved versions, historical diff, descendant restore commit and sta
 refusal. `memory-restore-report.mjs` requires all four visual phases, matching CLI
 content/HEAD/ancestry/checkpoint evidence and an applicable visual receipt. Retain the
 test Memory repository when stopping this slice's exact Host PID.
+
+## Default Bot Browser evidence
+
+Select `--browser-run <attempt>` for the independent `desktop.browser.open-observe-stop`
+row. Publish its evidence with `--browser-evidence-prefix ./verified`. The broader Browser
+lifecycle/tools rows remain gaps: this result does not qualify multi-tab, upload, profile
+reset, takeover, alternate targets or model use. Inspect four Web states and the captured
+Browser frame before recording `browser-lifecycle-report.mjs --visual-review pass`.
