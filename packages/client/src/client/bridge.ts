@@ -3648,6 +3648,31 @@ export async function loadBotSessionIds(call: BridgeCall, signal?: AbortSignal):
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
 }
 
+export async function loadBotSessionGroups(
+  call: BridgeCall,
+  signal?: AbortSignal,
+): Promise<{ botSlug: string; displayName: string; sessionIds: string[] }[]> {
+  const value = asRecord(await unwrap(call, 'botSessionIds', {}, signal));
+  const groups = value?.['groups'];
+  if (!Array.isArray(groups)) return [];
+  return groups.flatMap((item) => {
+    const group = asRecord(item);
+    if (
+      typeof group?.['botSlug'] !== 'string' ||
+      typeof group['displayName'] !== 'string' ||
+      !Array.isArray(group['sessionIds'])
+    )
+      return [];
+    return [
+      {
+        botSlug: group['botSlug'],
+        displayName: group['displayName'],
+        sessionIds: group['sessionIds'].filter((id): id is string => typeof id === 'string'),
+      },
+    ];
+  });
+}
+
 export async function loadSessions(
   call: BridgeCall,
   slug: string,
