@@ -4,7 +4,6 @@ import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/hos
 import { cardHref, unreadHref } from '../../../src/host/push';
 import { activityCollapse } from '../../../src/host/native-section-collapse';
 import type { HumanAttentionItem } from '../../../src/host/wire';
-import { useDesignTheme } from '../../../src/ui/design/theme';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { ActivityFeed } from '../../../src/ui/shell/activity-feed';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
@@ -12,7 +11,6 @@ import { t } from '../../../src/ui/strings';
 
 export default function ActivityScreen() {
   const router = useRouter();
-  const theme = useDesignTheme();
   const { saved, client, inbox } = useHostSession();
   const snapshot = useHostSnapshot(client);
   const list = useInbox(inbox);
@@ -47,13 +45,7 @@ export default function ActivityScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: t.activity,
-          headerShown: false,
-          statusBarStyle: theme.scheme === 'dark' ? 'light' : 'dark',
-        }}
-      />
+      <Stack.Screen options={{ title: t.activity, headerShown: false }} />
       <HostDrawerEdge>
         <ActivityFeed
           key={saved?.hostId ?? 'no-host'}
