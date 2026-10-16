@@ -19,6 +19,7 @@ export const View = (props: Props) =>
   createElement('div', { ...a11y(props), ref: props['ref'] }, props.children);
 export const Text = (props: Props) => createElement('span', a11y(props), props.children);
 export const ScrollView = View;
+export const KeyboardAvoidingView = View;
 export const Modal = (props: Props) =>
   props['visible'] === true ? createElement('div', { role: 'dialog' }, props.children) : null;
 export const useWindowDimensions = () => ({ width: 390, height: 844, scale: 3, fontScale: 1 });

@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
   type ReactElement,
 } from 'react';
-import { Platform, Pressable, RefreshControl, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
@@ -355,6 +355,7 @@ export function ActivityFeed({
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
   const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
   const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [sort, setSort] = useState<ActivitySort>('default');
   const [filtering, setFiltering] = useState(false);
   const initialHeight = useChatHeaderHeight();
@@ -397,7 +398,7 @@ export function ActivityFeed({
     void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
-    <View style={{ flex: 1 }}>
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={searchFocused} behavior="padding">
       <Animated.FlatList
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={{
@@ -406,7 +407,7 @@ export function ActivityFeed({
           paddingBottom: space.x6,
         }}
         scrollIndicatorInsets={{ top: headerHeight }}
-        automaticallyAdjustKeyboardInsets
+        automaticallyAdjustKeyboardInsets={!searchFocused}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         style={{ backgroundColor: theme.color.base }}
@@ -534,6 +535,7 @@ export function ActivityFeed({
       <ActivityToolbar
         ref={toolbar}
         search={search}
+        onSearchFocus={setSearchFocused}
         filtered={
           sort !== 'default' ||
           filter.section !== 'all' ||
@@ -564,6 +566,6 @@ export function ActivityFeed({
         }}
         onClose={() => setFiltering(false)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
