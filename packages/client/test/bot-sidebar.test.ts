@@ -10,6 +10,7 @@ const captured = vi.hoisted(() => ({
     items: readonly Record<string, unknown>[];
     selectedId?: string | undefined;
     onSelect?: (id: string) => void;
+    getAnchorRect?: () => DOMRect;
   }>,
 }));
 
@@ -1550,6 +1551,26 @@ describe('bot sidebar rows', () => {
     expect(markup).toContain('空分组');
     expect(markup).not.toContain('bh-empty-drop');
     expect(markup).not.toContain('bh-drop-scope');
+  });
+
+  it('anchors a Channel menu at viewport coordinates and exposes localized profile navigation', () => {
+    const profileAction = vi.fn();
+    renderToStaticMarkup(
+      createElement(ChannelMoveMenu, {
+        menu: { channelId: DM_CHANNEL.id, x: 140, y: 180 },
+        sections: [],
+        currentSectionId: undefined,
+        t: zhTranslate,
+        profileAction,
+        onPick: vi.fn(),
+        onClose: vi.fn(),
+      }),
+    );
+    const menu = captured.menus.at(-1)!;
+    expect(menu.getAnchorRect?.().toJSON()).toMatchObject({ x: 140, y: 180, width: 0, height: 0 });
+    expect(menu.items[0]).toMatchObject({ id: 'profile', label: '查看资料' });
+    menu.onSelect?.('profile');
+    expect(profileAction).toHaveBeenCalledOnce();
   });
 
   it('renders the 移动到 menu from every section plus 未分组 and maps picks to scopes', () => {

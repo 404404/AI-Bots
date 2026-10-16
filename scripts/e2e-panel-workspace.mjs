@@ -34,7 +34,6 @@ const labels = {
   'Workspace layout': '工作区布局',
   'Bot settings': 'Bot 设置',
   'Panel spacing': '面板间距',
-  'Close Channels': '关闭 Channel 列表',
 };
 const labelFor = (label) => (chinese ? (labels[label] ?? label) : label);
 const click = (label) =>
@@ -286,7 +285,7 @@ try {
   assert.equal((await storage()).gap, 12);
   await proof('05-spacing');
   step = 'close-reopen-channels';
-  await click('Close Channels');
+  await page.click('.bh-workspace-rail [data-pinned-panel="bh:channels"]');
   assert.ok((await storage()).parked['bh:channels']);
   await page.click('.bh-workspace-rail [data-pinned-panel="bh:channels"]');
   await page.waitForSelector(channels);

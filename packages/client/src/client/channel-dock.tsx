@@ -107,6 +107,8 @@ interface EntryRuntime {
 interface DockContextValue {
   body: ReactNode;
   rail?: ReactNode;
+  channelsHeader: HTMLSpanElement | null;
+  setChannelsHeader(node: HTMLSpanElement | null): void;
   members?:
     | { open: boolean; ratio: number; setOpen(open: boolean): void; setRatio(ratio: number): void }
     | undefined;
@@ -276,6 +278,7 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
         }
         action={
           <span
+            data-dock-actions=""
             {...stylex.props(styles.actions)}
             onPointerDown={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
@@ -290,21 +293,30 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
               </IconButton>
             )}
             {HeaderAction === undefined || props === undefined ? null : <HeaderAction {...props} />}
-            <Tooltip label={closeLabel} side="bottom" delayMs={500}>
-              <IconButton
-                tone="subtle"
-                aria-label={closeLabel}
-                data-dock-close={entryId}
-                onClick={() => dock.close(api.id)}
-              >
-                <ChannelSidebarIcon name="x" />
-              </IconButton>
-            </Tooltip>
+            {entryId === WORKSPACE_CHANNELS && (
+              <span className="bh-workspace-channel-actions" ref={dock.setChannelsHeader} />
+            )}
+            {!dock.rail && (
+              <Tooltip label={closeLabel} side="bottom" delayMs={500}>
+                <IconButton
+                  tone="subtle"
+                  aria-label={closeLabel}
+                  data-dock-close={entryId}
+                  onClick={() => dock.close(api.id)}
+                >
+                  <ChannelSidebarIcon name="x" />
+                </IconButton>
+              </Tooltip>
+            )}
           </span>
         }
       />
     </div>
   );
+}
+
+export function useChannelsHeader(): HTMLSpanElement | null {
+  return useDock().channelsHeader;
 }
 
 function WorkspaceRailPanel(): ReactElement {
@@ -402,6 +414,7 @@ export function ChannelDock({
   storage,
 }: ChannelDockProps): ReactElement {
   const workspace = useContext(WorkspaceContext);
+  const [channelsHeader, setChannelsHeader] = useState<HTMLSpanElement | null>(null);
   const [gap, updateGap] = useState(() => readChannelDock(storage)?.gap ?? DEFAULT_WORKSPACE_GAP);
   const gapRef = useRef(gap);
   const [order, updateOrder] = useState(() => readChannelDock(storage)?.order ?? []);
@@ -648,6 +661,8 @@ export function ChannelDock({
   };
   const value: DockContextValue = {
     body,
+    channelsHeader,
+    setChannelsHeader,
     members: workspace
       ? {
           ...members,

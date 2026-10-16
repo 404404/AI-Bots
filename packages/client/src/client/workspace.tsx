@@ -14,7 +14,7 @@ import { BotIcon } from './bot-icon.js';
 import { ExitIcon } from './exit-icon.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { PinnedPanelCards } from './pinned-panel-cards.js';
-import { useChannelDockActive } from './channel-dock.js';
+import { useChannelDockActive, useChannelsHeader } from './channel-dock.js';
 import { useMountedResource } from './mounted-resource.js';
 import { mountWorkspaceShell, type WorkspaceLayoutCommand } from './workspace-shell.js';
 import { CHANNEL_BODY_PANEL } from './channel-dock-layout.js';
@@ -71,6 +71,7 @@ export function Workspace({
         order: -1,
         defaultPosition: { zone: 'left' },
         component: function Channels() {
+          const headerTarget = useChannelsHeader();
           const usePrefs: BotModeSidebarProps['useBotModePrefs'] = (selector) =>
             useSyncExternalStore(options.prefs.source.subscribe, () =>
               selector(options.prefs.source.getSnapshot()),
@@ -79,6 +80,11 @@ export function Workspace({
             <div className="bh-workspace-channels">
               <BotSidebar
                 {...options}
+                headerTarget={headerTarget}
+                onViewProfile={(slug) => {
+                  registry.open(CHANNEL_BODY_PANEL);
+                  void options.actions.openBot(slug, 'profile');
+                }}
                 wide
                 useBotModePrefs={usePrefs}
                 setSortMode={(mode) => options.prefs.setSortMode(mode)}
@@ -214,6 +220,7 @@ function WorkspaceRail({
           portal
           anchor={
             <button
+              className="bh-workspace-move"
               aria-label={t('workspace.move')}
               aria-haspopup="menu"
               aria-expanded={menu}

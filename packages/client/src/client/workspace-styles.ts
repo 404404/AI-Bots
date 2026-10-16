@@ -23,7 +23,7 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 [data-workspace-dock] .bh-dock-menu { display:none; }
 [data-workspace-dock] .bh-dock-theme { --dv-activegroup-visiblepanel-tab-background-color:${panelBackground}; --dv-inactivegroup-visiblepanel-tab-background-color:${panelBackground}; --dv-separator-border:transparent; --dv-paneview-header-border-color:transparent; --dv-group-view-background-color:${panelBackground}; --dv-tabs-and-actions-container-background-color:${panelBackground}; }
 .bh-workspace-rail { border-radius:${radius.xs}; corner-shape:round; overflow:hidden; position:relative; height:100%; display:flex; flex-direction:column; align-items:center; gap:${space.x2}; padding:${space.x2}; box-sizing:border-box; background:${panelBackground}; }
-.bh-workspace-rail > button, .bh-workspace-rail > span > button { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:${size.row}; height:${size.row}; padding:0; border:0; border-radius:${radius.md}; corner-shape:round; color:${color.fg}; background:transparent; cursor:pointer; }
+.bh-workspace-rail > button, .bh-workspace-rail > span > button, .bh-workspace-move { display:flex; align-items:center; justify-content:center; flex-shrink:0; width:${size.row}; height:${size.row}; padding:0; border:0; border-radius:${radius.md}; corner-shape:round; color:${color.fg}; background:transparent; cursor:pointer; }
 .bh-workspace-rail button:hover { background:${color.hover}; }
 .bh-workspace-rail button:focus-visible { outline:${border.focus} solid ${color.accent}; outline-offset:calc(-1 * ${space.x1}); }
 .bh-workspace-grip { opacity:0; transition:opacity 120ms; }
@@ -33,6 +33,10 @@ html[data-platform="darwin"]:not([data-fullscreen]) [data-bh-mac-corner] .bh-top
 .bh-workspace-exit-icon { display:none; color:${color.danger}; }
 .bh-workspace-exit:hover .bh-workspace-brand, .bh-workspace-exit:focus-visible .bh-workspace-brand { display:none; }
 .bh-workspace-exit:hover .bh-workspace-exit-icon, .bh-workspace-exit:focus-visible .bh-workspace-exit-icon { display:flex; }
+.bh-workspace-channel-actions { display:flex; align-items:center; min-width:0; }
+.bh-workspace-channel-actions .bh-header { margin:0; padding:0; height:auto; }
+.bh-dock-header:has(.bh-search-open) [data-panel-head] { display:none !important; }
+.bh-dock-header:has(.bh-search-open) > div > span, .bh-dock-header:has(.bh-search-open) .bh-workspace-channel-actions, .bh-dock-header:has(.bh-search-open) .bh-header, .bh-dock-header:has(.bh-search-open) [data-dock-actions] { flex:1; min-width:0; }
 .bh-workspace-channels { display:flex; flex-direction:column; height:100%; min-height:0; }
 [data-dock-panel="bh:channels"] > [data-dock-panel-body] { padding:0; overflow:hidden; }
 .bh-workspace-channels > .bh-region { flex:1; min-height:0; }

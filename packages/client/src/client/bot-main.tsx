@@ -2469,7 +2469,7 @@ function ConversationView({
           <span className="bh-channel-island-wrap" ref={profileTriggerRef}>
             {channelHeaderMenu(
               {
-                label: t('profile.label'),
+                label: t('profile.view'),
                 icon: <ChannelSidebarIcon name="id-card" size={16} />,
                 run: () => setProfilePopoverOpen(true),
               },

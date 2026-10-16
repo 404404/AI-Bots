@@ -378,6 +378,7 @@ it('keeps live portal content during rail/panel movement and remembers a closed 
     );
   act(() => root.render(view()));
   await settle();
+  expect(host.querySelector('[data-dock-close]')).toBeNull();
   const draft = host.querySelector<HTMLInputElement>('[data-message-draft]')!;
   const search = host.querySelector<HTMLInputElement>('[data-roster-search]')!;
   draft.value = 'unsent draft';
