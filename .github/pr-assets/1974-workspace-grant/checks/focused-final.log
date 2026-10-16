@@ -1,0 +1,9 @@
+
+ RUN  v5.0.1 [worktree]
+
+
+ Test Files  3 passed (3)
+      Tests  90 passed (90)
+   Start at  23:33:15
+   Duration  1.41s (tests 81%, transform 12%, import 7%, worker 1%)
+

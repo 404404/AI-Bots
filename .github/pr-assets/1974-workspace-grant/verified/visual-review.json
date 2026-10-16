@@ -1,0 +1,15 @@
+{
+  "commit": "81e24bd81b3bb94939ccfc6ad2cd5aa9e744e695",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Reviewed all three current-commit screenshots and ARIA: same test Bot and sample folder; visible Grant count 0/1/0; Full access off; Memory Repository collapsed. Same-ID authority and direct read/refusal agree; phase diagnostics and console inspected.",
+  "reviewedAt": "2026-10-16T14:36:04.739Z",
+  "evidence": {
+    "before.png": "8ea9f64da5827a4707c39c86c010abcd577c2d4ee1f4cf4323bd2a4971204c27",
+    "before.aria.json": "7597102afc1d224d70177376b3178ab113531771ca7751f54df8e28fb228567e",
+    "granted.png": "cd4b626681c7f8933f469b27ca0b3bb0da5c25f02b8ab94136a06c1c006d91cc",
+    "granted.aria.json": "4ef9a85b4968bf4ee2bf83b95b0fe488d4c167e0118095b054cbacf2f441bb6f",
+    "after.png": "277480b6ef0724b50ccf47f210c30760795df9a9d19f56e5df1cb885d61fd538",
+    "after.aria.json": "438fb90fb42c61b6d34cbfd33dbaecb356b31a9b52b0e7f1015b4adba83b03ac"
+  }
+}

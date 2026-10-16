@@ -1,0 +1,299 @@
+$ tsdown
+ℹ tsdown v0.23.0 powered by rolldown v1.2.8
+ℹ config file: [worktree]/tsdown.config.ts 
+ℹ entry: packages/core/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/core/src/bots/bot-create-cli.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/client/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+ℹ entry: packages/computer/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/browser/src/index.ts, packages/browser/src/daily-worker.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+ℹ entry: packages/todo/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/links-cli/src/main.ts
+ℹ target: node22
+ℹ tsconfig: tsconfig.json
+ℹ entry: packages/deepseekbot/src/profile-cli.mjs, packages/deepseekbot/src/deepseekbot.mjs
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/client/src/client/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/computer/src/client/index.tsx
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/browser/src/client/index.tsx
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ Build start
+ℹ Cleaning 25 files
+
+ WARN  TypeScript 7.0 does not yet have a stable API and is experimental. Some options will be unavailable.
+
+ℹ Emit types with typescript@7.0.2
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': open [temporary-build-path] no space left on device.
+error TS5033: Could not write file '[temporary-build-path]': mkdir [temporary-build-path] no space left on device.
+error TS5033: 
+error TS5033: 
+error TS5033: 
+error TS5033: 
+
+
+
+
+
+
+
+
+
+
+
+

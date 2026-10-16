@@ -1,0 +1,32 @@
+{
+  "head": "81e24bd81b3bb94939ccfc6ad2cd5aa9e744e695",
+  "check": "SUCCESS",
+  "threads": [
+    {
+      "id": "PRRT_kwDOUeCh-M6tPbP9",
+      "isResolved": true,
+      "isOutdated": true,
+      "comments": {
+        "nodes": [
+          {
+            "databaseId": 4295666845
+          }
+        ]
+      }
+    },
+    {
+      "id": "PRRT_kwDOUeCh-M6tPbQE",
+      "isResolved": true,
+      "isOutdated": false,
+      "comments": {
+        "nodes": [
+          {
+            "databaseId": 4295666852
+          }
+        ]
+      }
+    }
+  ],
+  "newInlineFindings": 0,
+  "docstringWarning": "Not adopted: docs/agents/source-policy.md prohibits first-party code comments; repository lint passes."
+}

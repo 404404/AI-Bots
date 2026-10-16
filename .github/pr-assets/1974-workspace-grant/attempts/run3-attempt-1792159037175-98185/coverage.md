@@ -1,0 +1,7 @@
+| Behavior | Platform | Status | Commit | Expected / actual | Evidence | Human QA |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop.grants.temporary-read-revoke | desktop Web + CLI | fail | 471b00c506720b9a2ca8d7dc932f21ee8156d3f1 | The same PersonaBot and temporary Workspace have no Grant, then an active Grant permitting direct attachment-import reads, then an explicitly revoked Grant refusing the same read; visible Web state agrees. / authorize-through-Web: Timed out after waiting 30000ms | [doctor.json](./doctor.json), [identity.json](./identity.json), [fixture.json](./fixture.json), [created.json](./created.json), [before.json](./before.json), [read-before.json](./read-before.json), [visible-before.json](./visible-before.json), [console.json](./console.json), [before.aria.json](./before.aria.json), [before.png](./before.png), [before.diagnostics.json](./before.diagnostics.json), [failure.json](./failure.json), [failure.aria.json](./failure.aria.json), [failure.png](./failure.png), [failure.diagnostics.json](./failure.diagnostics.json), [cleanup.json](./cleanup.json) | not-run |
+
+Reason: authorize-through-Web: Timed out after waiting 30000ms
+
+Model, native-device and IM checks: not run. Only this temporary Grant and direct attachment-import read are qualified; native file tools, Shell, #1841 and #1957 remain outside this proof.

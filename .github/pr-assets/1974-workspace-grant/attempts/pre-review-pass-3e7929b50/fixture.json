@@ -1,0 +1,12 @@
+{
+  "path": "[redacted]",
+  "files": [
+    "README.md"
+  ],
+  "sample": "AX #1974 temporary Workspace read fixture.\n",
+  "bytes": 43,
+  "sha256": "c2286ccf815a3fb13b0d2a24b2925fa24a8ecb7536a8d0da9145f979f43fb08b",
+  "isolatedFromHost": true,
+  "notUserAncestor": true,
+  "taskCreated": true
+}

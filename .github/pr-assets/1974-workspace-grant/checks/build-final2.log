@@ -1,0 +1,575 @@
+$ tsdown
+ℹ tsdown v0.23.0 powered by rolldown v1.2.8
+ℹ config file: [worktree]/tsdown.config.ts 
+ℹ entry: packages/client/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+ℹ entry: packages/core/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/computer/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/core/src/bots/bot-create-cli.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/browser/src/index.ts, packages/browser/src/daily-worker.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+ℹ entry: packages/client/src/client/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/links-cli/src/main.ts
+ℹ target: node22
+ℹ tsconfig: tsconfig.json
+ℹ entry: packages/todo/src/index.ts
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/deepseekbot/src/profile-cli.mjs, packages/deepseekbot/src/deepseekbot.mjs
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/browser/src/client/index.tsx
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ entry: packages/computer/src/client/index.tsx
+ℹ target: node22.0.0
+ℹ tsconfig: tsconfig.json
+
+ WARN  `external` is deprecated. Use `deps.neverBundle` instead.
+
+ℹ Build start
+ℹ Cleaning 25 files
+
+ WARN  TypeScript 7.0 does not yet have a stable API and is experimental. Some options will be unavailable.
+
+ℹ Emit types with typescript@7.0.2
+ℹ [ESM] Granting execute permission to packages/deepseekbot/dist/deepseekbot.mjs
+ℹ [ESM] Granting execute permission to packages/deepseekbot/dist/profile-cli.mjs
+ℹ [ESM] Granting execute permission to packages/links-cli/dist/bh-links.mjs
+ℹ [ESM] packages/deepseekbot/dist/deepseekbot.mjs  0.83 kB │ gzip: 0.47 kB
+ℹ [ESM] packages/deepseekbot/dist/profile-cli.mjs  0.36 kB │ gzip: 0.26 kB
+ℹ [ESM] 2 files, total: 1.19 kB
+packages/deepseekbot/src/deepseekbot.mjs (1:32) [33m[UNRESOLVED_IMPORT] [0mCould not resolve '@botharness/core/cli' in packages/deepseekbot/src/deepseekbot.mjs
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m packages/deepseekbot/src/deepseekbot.mjs:1:33 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m1 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249mB[0m[38;5;249mo[0m[38;5;249mt[0m[38;5;249mC[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mC[0m[38;5;249ml[0m[38;5;249mi[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m'@botharness/core/cli'[38;5;249m;[0m
+ [38;5;240m  │[0m                                 ───────────┬──────────  
+ [38;5;240m  │[0m                                            ╰──────────── Module not found, treating it as an external dependency
+[38;5;246m───╯[0m
+
+ℹ [ESM] packages/links-cli/dist/bh-links.mjs  16.29 kB │ gzip: 4.94 kB
+ℹ [ESM] 1 files, total: 16.29 kB
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @stylexjs/stylex
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @stylexjs/stylex
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 11.4s of this 14.8s build (77%).
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (10 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 12.4s of this 14.8s build (84%).
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (4 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 15010ms
+✔ Build complete in 15012ms
+ℹ [CJS] packages/computer/lib/client.js      130.14 kB │ gzip: 32.30 kB
+ℹ [CJS] packages/computer/lib/client.js.map  236.67 kB │ gzip: 59.64 kB
+ℹ [CJS] 2 files, total: 366.81 kB
+ℹ [CJS] packages/browser/lib/client.js      145.60 kB │ gzip: 33.23 kB
+ℹ [CJS] packages/browser/lib/client.js.map  251.49 kB │ gzip: 58.43 kB
+ℹ [CJS] 2 files, total: 397.10 kB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 1.9s of this 15.2s build (13%).
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (16 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 15307ms
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 1.5s of this 15.2s build (10%).
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (12 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 15672ms
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/fiber.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/events.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/logger.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/registry.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/fiber.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/events.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/logger.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/registry.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/events.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/fiber.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/logger.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/registry.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/reflect.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/reflect.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/reflect.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/events.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/fiber.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/logger.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/registry.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/reflect.d.ts.
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @deepseek-ai/cosmokit
+- @standard-schema/spec
+- @deepseek-ai/cordis
+- @deepseek-ai/schemastery
+ℹ [ESM] packages/client/dist/index.mjs    37.24 kB │ gzip:  9.94 kB
+ℹ [ESM] packages/client/dist/index.d.mts  64.05 kB │ gzip: 16.63 kB
+ℹ [ESM] 2 files, total: 101.29 kB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 16.6s of this 16.8s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - rolldown-plugin-dts:generate buildStart (73%, 12.2s, 1 call)
+Additional hook time came from the hooks below and from hooks under 1s.
+3 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - rolldown-plugin-dts:resolver resolveId (134 calls)
+  - tsdown:deps resolveId (49 calls)
+  - rolldown-plugin-dts:fake-js transform (20 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 16884ms
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- yaml
+- @deepseek-ai/cosmokit
+- @deepseek-ai/cordis
+- @deepseek-ai/schemastery
+- readdirp
+- chokidar
+- @deepseek-ai/dsh-atomic-write
+- @deepseek-ai/dsh-home-paths
+- @deepseek-ai/dsh-launch-environment
+- @deepseek-ai/dsh-brand
+- @deepseek-ai/dsh-credentials
+- @deepseek-ai/dsh-credentials-local
+- zod
+- @deepseek-ai/dsh-typert-protocol
+- @deepseek-ai/dsh-util-values
+- @deepseek-ai/dsh-util-crypto
+- @deepseek-ai/dsh-timeout
+- @deepseek-ai/dsh-llm
+- jsbi
+- @js-temporal/polyfill
+- @deepseek-ai/dsh-scope
+- @deepseek-ai/dsh-session
+- @deepseek-ai/dsh-sandbox
+- @deepseek-ai/dsh-tools
+- @deepseek-ai/dsh-storage
+- @deepseek-ai/dsh-storage-domain
+- @deepseek-ai/dsh-schedule
+- @botharness/pixel-morph
+- @botharness/pixel-avatar
+- @botharness/pixel-banner
+ℹ [ESM] packages/core/cli/index.mjs  2.05 MB
+ℹ [ESM] 1 files, total: 2.05 MB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 16.5s of this 16.9s build (97%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - tsdown:deps generateBundle (9%, 1.6s, 1 call)
+Additional hook time came from the hooks below and from hooks under 1s.
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (426 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 17069ms
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @botharness/pixel-banner
+- @botharness/pixel-morph
+- @botharness/pixel-avatar
+- driver.js
+- blobatar
+- @stylexjs/stylex
+- @botharness/botui-core
+- morphicons
+- @tanstack/charts
+- d3-shape
+- internmap
+- d3-array
+- d3-scale
+- dockview-core
+- dockview-react
+- html-to-image
+- @tanstack/table-core
+- @tanstack/react-table
+ℹ [CJS] packages/client/lib/client.js      5.13 MB
+ℹ [CJS] packages/client/lib/client.js.map  8.65 MB
+ℹ [CJS] 2 files, total: 13.78 MB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 15.3s of this 17.0s build (90%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - botharness:stylex transform (77%, 13.1s, 709 calls)
+Additional hook time came from the hooks below and from hooks under 1s.
+1 hook is listed without a time. Its calls overlapped, so the time inside one call includes work from other calls. To find its cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (322 calls)
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 17162ms
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/events.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/fiber.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/logger.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/registry.d.ts.
+(rolldown-plugin-dts:fake-js plugin) `declare module "./context.ts"` will be kept as-is in the output. Relative module declaration may cause unexpected issues. Found in [worktree]/node_modules/.pnpm/@deepseek-ai+cordis@4.0.4_@deepseek-ai+cordis-plugin-include@1.0.9_@deepseek-ai+cordis-plugin-loader@1.0.5/node_modules/@deepseek-ai/cordis/lib/types/reflect.d.ts.
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @deepseek-ai/cosmokit
+- @standard-schema/spec
+- @deepseek-ai/cordis
+- @deepseek-ai/schemastery
+- @modelcontextprotocol/client
+- zod
+- @modelcontextprotocol/core
+- pkce-challenge
+- isexe
+- which
+- path-key
+- cross-spawn
+- shebang-regex
+- shebang-command
+- @deepseek-ai/dsh-computer-use
+- @deepseek-ai/dsh-scope
+- @deepseek-ai/dsh-timeout
+- @deepseek-ai/dsh-util-values
+- @deepseek-ai/dsh-http-proxy
+- @deepseek-ai/dsh-subprocess
+- @deepseek-ai/dsh-attachment
+- @deepseek-ai/dsh-typert-protocol
+- @deepseek-ai/dsh-util-crypto
+- @deepseek-ai/dsh-brand
+- @deepseek-ai/dsh-llm
+- @deepseek-ai/dsh-sandbox
+- @deepseek-ai/dsh-tools
+- @deepseek-ai/dsh-mcp-client
+ℹ [ESM] packages/computer/dist/index.mjs     1.41 MB
+ℹ [ESM] packages/computer/dist/index.d.mts  66.49 kB │ gzip: 16.93 kB
+ℹ [ESM] 2 files, total: 1.48 MB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 17.3s of this 17.5s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - rolldown-plugin-dts:generate buildStart (70%, 12.2s, 1 call)
+Additional hook time came from the hooks below and from hooks under 1s.
+4 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (483 calls)
+  - rolldown-plugin-dts:resolver resolveId (148 calls)
+  - rolldown-plugin-dts:fake-js transform (23 calls)
+  … and 1 more
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 17625ms
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @deepseek-ai/cosmokit
+- @standard-schema/spec
+- @deepseek-ai/cordis
+- @deepseek-ai/schemastery
+- @deepseek-ai/dsh-scope
+- @deepseek-ai/dsh-timeout
+- @modelcontextprotocol/client
+- zod
+- @modelcontextprotocol/core
+- pkce-challenge
+- @deepseek-ai/dsh-util-values
+- isexe
+- which
+- path-key
+- cross-spawn
+- shebang-regex
+- shebang-command
+- @deepseek-ai/dsh-http-proxy
+- @deepseek-ai/dsh-subprocess
+- @deepseek-ai/dsh-attachment
+- @deepseek-ai/dsh-typert-protocol
+- @deepseek-ai/dsh-util-crypto
+- @deepseek-ai/dsh-brand
+- @deepseek-ai/dsh-llm
+- @deepseek-ai/dsh-sandbox
+- @deepseek-ai/dsh-tools
+- @deepseek-ai/dsh-mcp-client
+- modern-tar
+- @puppeteer/browsers
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/be.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/az.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/bn.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ar.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/bg.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/yo.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ckb.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/cs.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ca.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/de.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/da.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/el.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/en.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fa.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/es.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fi.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fr.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ota.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ps.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/pl.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/no.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/eo.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/pt.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/pt-BR.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ro.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hi.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hr.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/sk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/he.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/sv.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hu.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ru.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/gu.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/sl.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hy.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/tg.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/id.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/th.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ta.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fr-CA.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/tk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/tr.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/it.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ja.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/is.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/uk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ua.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ka.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ur.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/vi.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/zh-TW.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/zh-CN.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/mk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/kn.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/km.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/lt.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ne.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/uz.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ko.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/nl.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/kh.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ms.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/nn.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+ℹ [ESM] packages/browser/dist/index.mjs            1.20 MB
+ℹ [ESM] packages/browser/dist/daily-worker.mjs     7.58 kB │ gzip:  2.70 kB
+ℹ [ESM] packages/browser/dist/main-BLgqOqI4.mjs   47.64 kB │ gzip: 11.36 kB
+ℹ [ESM] packages/browser/dist/fs-DfRlix99.mjs     36.77 kB │ gzip:  9.63 kB
+ℹ [ESM] packages/browser/dist/index.d.mts         64.89 kB │ gzip: 16.58 kB
+ℹ [ESM] packages/browser/dist/daily-worker.d.mts   0.01 kB │ gzip:  0.03 kB
+ℹ [ESM] 6 files, total: 1.36 MB
+node_modules/.pnpm/@puppeteer+browsers@3.2.2/node_modules/@puppeteer/browsers/lib/fileUtil.js (185:30) [33m[UNRESOLVED_IMPORT] [0mCould not resolve 'yauzl' in node_modules/.pnpm/@puppeteer+browsers@3.2.2/node_modules/@puppeteer/browsers/lib/fileUtil.js
+     [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m node_modules/.pnpm/@puppeteer+browsers@3.2.2/node_modules/@puppeteer/browsers/lib/fileUtil.js:185:31 [38;5;246m][0m
+     [38;5;246m│[0m
+ [38;5;246m185 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m/[0m[38;5;249m*[0m[38;5;249m [0m[38;5;249mw[0m[38;5;249me[0m[38;5;249mb[0m[38;5;249mp[0m[38;5;249ma[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249mI[0m[38;5;249mg[0m[38;5;249mn[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249m:[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249m [0m[38;5;249m*[0m[38;5;249m/[0m[38;5;249m [0m'yauzl'[38;5;249m)[0m[38;5;249m.[0m[38;5;249mc[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249mc[0m[38;5;249mh[0m[38;5;249m([0m[38;5;249m([0m[38;5;249m)[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m>[0m[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m    │[0m                               ───┬───  
+ [38;5;240m    │[0m                                  ╰───── Module not found, treating it as an external dependency
+[38;5;246m─────╯[0m
+
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 17.4s of this 17.6s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - rolldown-plugin-dts:generate buildStart (70%, 12.2s, 1 call)
+Additional hook time came from the hooks below and from hooks under 1s.
+4 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (693 calls)
+  - rolldown-plugin-dts:resolver resolveId (132 calls)
+  - rolldown-plugin-dts:generate load (2 calls)
+  … and 1 more
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 17704ms
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/az.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/bn.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ar.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/eo.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fr.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/bg.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/es.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fa.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/km.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/gu.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fi.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/he.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hr.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hi.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hy.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/is.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/fr-CA.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/hu.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/kh.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ja.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/it.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ka.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/pt-BR.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/lt.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/mk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ko.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ms.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/kn.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ne.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/yo.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ru.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/nn.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/no.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/nl.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/id.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ro.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/sl.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ps.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/sv.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/sk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ota.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/pt.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ta.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/tg.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/uk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ur.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/pl.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/tk.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/zh-CN.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/tr.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/th.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/zh-TW.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/uz.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/vi.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/de.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/el.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ca.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ckb.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/da.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/ua.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/en.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/be.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+(rolldown-plugin-dts:fake-js plugin) [worktree]/node_modules/.pnpm/zod@4.6.5/node_modules/zod/v4/locales/cs.d.cts uses CommonJS dts syntax. CommonJS dts modules cannot be bundled by rolldown-plugin-dts. Please mark this module as external in your Rolldown config.
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @deepseek-ai/cosmokit
+- @standard-schema/spec
+- @deepseek-ai/cordis
+- @deepseek-ai/schemastery
+- zod
+- @deepseek-ai/dsh-storage
+- @deepseek-ai/dsh-storage-domain
+ℹ [ESM] packages/todo/dist/index.mjs    207.63 kB │ gzip: 48.47 kB
+ℹ [ESM] packages/todo/dist/index.d.mts  340.02 kB │ gzip: 73.87 kB
+ℹ [ESM] 2 files, total: 547.66 kB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 18.0s of this 18.1s build (99%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - rolldown-plugin-dts:generate buildStart (68%, 12.2s, 1 call)
+Additional hook time came from the hooks below and from hooks under 1s.
+4 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - rolldown-plugin-dts:resolver resolveId (860 calls)
+  - tsdown:deps resolveId (84 calls)
+  - rolldown-plugin-dts:fake-js transform (125 calls)
+  … and 1 more
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 18249ms
+ℹ Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- @deepseek-ai/cosmokit
+- @standard-schema/spec
+- @deepseek-ai/cordis
+- @botharness/pixel-avatar
+- @botharness/pixel-banner
+- @deepseek-ai/schemastery
+- @deepseek-ai/dsh-brand
+- @deepseek-ai/dsh-attachment
+- @deepseek-ai/dsh-llm
+- @deepseek-ai/dsh-util-values
+- @deepseek-ai/dsh-session
+- @deepseek-ai/dsh-typert-protocol
+- @deepseek-ai/dsh-agent
+- @deepseek-ai/dsh-user-approval
+- @deepseek-ai/dsh-user-questions
+- zod
+- @deepseek-ai/dsh-storage
+- @deepseek-ai/dsh-storage-domain
+- @deepseek-ai/dsh-credentials
+- @deepseek-ai/dsh-timeout
+- @modelcontextprotocol/client
+- @modelcontextprotocol/core
+- pkce-challenge
+- eventsource-parser
+- isexe
+- which
+- path-key
+- cross-spawn
+- shebang-regex
+- shebang-command
+- @deepseek-ai/dsh-http-proxy
+- @deepseek-ai/dsh-subprocess
+- @deepseek-ai/dsh-mcp-client
+- @botharness/pixel-morph
+- yaml
+- @deepseek-ai/dsh-sandbox-policy
+- @deepseek-ai/dsh-fs
+- @deepseek-ai/dsh-util-code-language
+- diff
+- @deepseek-ai/dsh-sandbox
+- @deepseek-ai/dsh-tool-fs
+- @deepseek-ai/dsh-shell
+- @deepseek-ai/dsh-tool-bash
+- @deepseek-ai/dsh-tool-pwsh
+- jsbi
+- @js-temporal/polyfill
+- @deepseek-ai/dsh-schedule
+- uqr
+- @deepseek-ai/dsh-util-time
+- @deepseek-ai/dsh-chunked-list
+- @deepseek-ai/dsh-subagent
+- readdirp
+- chokidar
+- @deepseek-ai/dsh-atomic-write
+- @deepseek-ai/dsh-home-paths
+- @deepseek-ai/dsh-launch-environment
+- @deepseek-ai/dsh-credentials-local
+ℹ [ESM] packages/core/dist/index.mjs                        4.79 MB
+ℹ [ESM] packages/core/dist/rolldown-runtime-B4iAMlE-.mjs    1.58 kB │ gzip:   0.74 kB
+ℹ [ESM] packages/core/dist/index.d.mts                    689.31 kB │ gzip: 151.58 kB
+ℹ [ESM] 3 files, total: 5.48 MB
+[33m[PLUGIN_TIMINGS] [0mPlugin hooks ran for 18.1s of this 18.5s build (98%).
+The slowest hooks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - rolldown-plugin-dts:generate buildStart (66%, 12.2s, 1 call)
+Additional hook time came from the hooks below and from hooks under 1s.
+4 hooks are listed without a time. Their calls overlapped, so the time inside one call includes work from other calls. To find their cost, profile the build with `node --cpu-prof`:
+  - tsdown:deps resolveId (1393 calls)
+  - rolldown-plugin-dts:resolver resolveId (2280 calls)
+  - rolldown-plugin-dts:generate load (138 calls)
+  … and 1 more
+See https://rolldown.rs/reference/InputOptions.checks#plugintimings for more details.
+
+✔ Build complete in 18572ms

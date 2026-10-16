@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "behavior": "desktop.grants.temporary-read-revoke",
+  "commit": "471b00c506720b9a2ca8d7dc932f21ee8156d3f1",
+  "base": "1d1f8ac0cfeb26a8f3bf3a04550e6b92cee52bd9",
+  "dirty": false,
+  "startedAt": "2026-10-16T13:57:17.231Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "The same PersonaBot and temporary Workspace have no Grant, then an active Grant permitting direct attachment-import reads, then an explicitly revoked Grant refusing the same read; visible Web state agrees.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "e37523ac566b6628082597b965bb784ccf73ee80fd9d3c0d377c956cd10b1623",
+    "fixture.json": "db2c7c47454b4b72edaa509d870ce1cfdb75bdb11df092343758a6519d80fd08",
+    "created.json": "9b2687e8dca66da7ab89a1fbf3bb1d6a82ff80a6cdf797e110db4cbe4e99dea5",
+    "before.json": "a5e1694152ce3c81e38aaa9ab1c98ba9acc0d6244c14b69f2a9a8c235133e6ca",
+    "read-before.json": "e17225515d21cd7fdd4ceec4b402ed9fde08d4f2af3056a344039ee59f108b34",
+    "visible-before.json": "d6db62758bfe8c4e6513da48cca19975cd90feb9471df7b4627cf71801a6ca28",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "before.aria.json": "cb005e5d822028dfded8a8c5475577956668928c0352c9cf7901a331ac158de8",
+    "before.png": "afd2cb757e6819780c3affda6e61c6577ae74cc95036e1b0fd8aac1481be8dab",
+    "before.diagnostics.json": "9683afad764f0cdec11e60508f675b5a896c0a22828a921536eacd0a35824beb",
+    "failure.json": "87698d31cb38a4e3c4898f98a1896505d9763496edef0f40158d2947d59de04d",
+    "failure.aria.json": "6055f029801acb2f09d056b895888f4f712148e25a02a959c98e64408de207b1",
+    "failure.png": "67fdbba3fb2fac8064d34073b61614910afa6a7768b080a4d9c6dd7295ec005e",
+    "failure.diagnostics.json": "42b08fda1353614c1a2c2744bf4464456a56c2a2e87c41ca64e211b0b2dd3f2b",
+    "cleanup.json": "54f588a17ca975e4382916805ce04f1ff7af1b5b951171d33eb662013867f6f2"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T13:57:17.393Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Grant 1792159038736",
+        "--persona",
+        "Isolated temporary Workspace Grant verification. No messages, models or schedules are used."
+      ],
+      "at": "2026-10-16T13:57:18.975Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "grants",
+        "bot-fe84aea3cee845a6b690b3bf099d6b17"
+      ],
+      "at": "2026-10-16T13:57:19.091Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-tool",
+        "bot-fe84aea3cee845a6b690b3bf099d6b17",
+        "channel_attachment_import",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T13:57:19.210Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T13:57:27.337Z"
+    },
+    {
+      "click": "AX Grant 1792159038736: Idle AX Grant 1792159038736 No messages yet",
+      "at": "2026-10-16T13:57:27.478Z"
+    },
+    {
+      "click": "Workspace Grants · AX Grant 1792159038736 · Loading…",
+      "at": "2026-10-16T13:57:27.574Z"
+    }
+  ],
+  "botId": "bot-fe84aea3cee845a6b690b3bf099d6b17",
+  "reason": "authorize-through-Web: Timed out after waiting 30000ms",
+  "actual": "authorize-through-Web: Timed out after waiting 30000ms",
+  "finishedAt": "2026-10-16T13:57:57.961Z"
+}

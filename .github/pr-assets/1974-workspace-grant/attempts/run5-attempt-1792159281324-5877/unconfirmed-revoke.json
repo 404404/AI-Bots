@@ -1,0 +1,9 @@
+{
+  "exitCode": 2,
+  "value": {
+    "error": {
+      "code": "usage",
+      "message": "grant-revoke is destructive; repeat it with --confirm, as the Web UI asks you to."
+    }
+  }
+}

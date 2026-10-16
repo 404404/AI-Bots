@@ -1,0 +1,17 @@
+{
+  "tested": "actual browser-close handler from e2e-workspace-grant.mjs",
+  "cases": {
+    "preservesOriginalFailure": {
+      "status": "fail",
+      "reason": "authorize-through-Web: original failure"
+    },
+    "recordsCleanupOnlyFailure": {
+      "status": "fail",
+      "reason": "browser-cleanup-failed"
+    },
+    "successfulCleanup": {
+      "status": "pass"
+    }
+  },
+  "passed": 3
+}

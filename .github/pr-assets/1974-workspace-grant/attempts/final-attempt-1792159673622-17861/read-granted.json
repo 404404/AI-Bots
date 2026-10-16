@@ -1,0 +1,14 @@
+{
+  "exitCode": 0,
+  "value": {
+    "slug": "bot-d25c27417a3146d5b49d4377e2c7ec57",
+    "tool": "channel_attachment_import",
+    "sessionId": "direct",
+    "result": {
+      "fileId": "file:79dd7844-94a6-43ee-8392-10070a3c26d9",
+      "name": "README.md",
+      "mime": "text/plain",
+      "size": 43
+    }
+  }
+}

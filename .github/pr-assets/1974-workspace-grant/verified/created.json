@@ -1,0 +1,25 @@
+{
+  "bot": {
+    "id": "bot-32d94147af92418486d9acdaeb18bcf3",
+    "name": "AX Grant 1792161280676"
+  },
+  "steps": [
+    {
+      "name": "validate",
+      "status": "ok"
+    },
+    {
+      "name": "create-bot",
+      "status": "ok"
+    },
+    {
+      "name": "model",
+      "status": "deferred",
+      "code": "no-model-yet"
+    },
+    {
+      "name": "dm",
+      "status": "ok"
+    }
+  ]
+}

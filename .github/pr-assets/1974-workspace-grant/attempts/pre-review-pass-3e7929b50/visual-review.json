@@ -1,0 +1,15 @@
+{
+  "commit": "3e7929b50080ea2a4e9e90eb2696db77593793ec",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected all three 1440x1100 screenshots and full ARIA: same AX Grant Bot, sample folder appears only while active, count 0/1/0, full access stays off, Memory Repository collapsed; hidden registered-folder choices are not active Grants.",
+  "reviewedAt": "2026-10-16T14:11:46.452Z",
+  "evidence": {
+    "before.png": "4c912a5725e9a7b3e5e1bb02091f9720334899909dd894e19b3b6f0476e2830d",
+    "before.aria.json": "9d8c3fe252fe365ea8b25a9dd8e2095ed5f9745d8aaaef0dc75fb3154d86bf60",
+    "granted.png": "a4b196df6ef1290ddc5e953bc4065c33873fa26e17e0e7cff8bf98840eee0208",
+    "granted.aria.json": "e7dcf757b1e69d05271ddb0655adb747988ee8a338e6fb43fcafffe0e2b24050",
+    "after.png": "4c912a5725e9a7b3e5e1bb02091f9720334899909dd894e19b3b6f0476e2830d",
+    "after.aria.json": "97caa66ffb645b2ac9e362782f2e56d9cf4926cbcbd8bca374a13896c9581806"
+  }
+}

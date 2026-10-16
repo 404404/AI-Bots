@@ -1,0 +1,26 @@
+{
+  "complete": {
+    "status": "pass",
+    "reason": "Same temporary Workspace Grant authorized in Web, read by the direct attachment-import tool, explicitly revoked and refused; no native file-tool or Shell qualification"
+  },
+  "missing": {
+    "status": "needs-revalidation",
+    "reason": "Missing or changed evidence: after.png"
+  },
+  "stale": {
+    "status": "needs-revalidation",
+    "reason": "Behavior/commit mismatch or uncommitted source"
+  },
+  "notRun": {
+    "status": "not-run",
+    "reason": "No run selected"
+  },
+  "blocked": {
+    "status": "blocked",
+    "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1974-review/instance.json'"
+  },
+  "firstSemanticFailure": {
+    "status": "fail",
+    "reason": "Missing explicit revocation confirmation guard; after: missing or incorrect visible Grant state"
+  }
+}
