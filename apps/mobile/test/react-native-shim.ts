@@ -61,6 +61,7 @@ export const SectionList = (props: {
   renderSectionFooter?(info: { section: Section }): ReactNode;
   ListHeaderComponent?: ReactNode;
   ListFooterComponent?: ReactNode;
+  ListFooterComponent?: ReactNode;
   ref?: unknown;
 }) =>
   createElement(
@@ -111,6 +112,7 @@ export const FlatList = (props: {
   keyExtractor(item: unknown): string;
   renderItem(info: { item: unknown; index: number }): ReactNode;
   ListHeaderComponent?: ReactNode;
+  ListFooterComponent?: ReactNode;
   ListEmptyComponent?: ReactNode;
   ref?: unknown;
 }) =>
@@ -127,4 +129,5 @@ export const FlatList = (props: {
             props.renderItem({ item, index }),
           ),
         )),
+    props.ListFooterComponent ?? null,
   );

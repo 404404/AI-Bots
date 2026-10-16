@@ -351,7 +351,7 @@ export function ActivityFeed({
   const [filtering, setFiltering] = useState(false);
   const initialHeight = useChatHeaderHeight();
   const insets = useSafeAreaInsets();
-  const [headerHeight, setHeaderHeight] = useState(initialHeight);
+  const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
   const scoped = useMemo(
     () =>
       client === undefined
@@ -513,11 +513,11 @@ export function ActivityFeed({
           );
         }}
       />
-      <EdgeFade edge="top" height={headerHeight + space.x6} />
+      {Platform.OS === 'ios' ? null : <EdgeFade edge="top" height={headerHeight + space.x6} />}
       <ActivityToolbar
         search={search}
-        sort={sort}
         filtered={
+          sort !== 'default' ||
           filter.section !== 'all' ||
           filter.bot !== undefined ||
           filter.channel !== undefined ||
@@ -527,15 +527,16 @@ export function ActivityFeed({
           setHeld([]);
           setSearch(value);
         }}
-        onSort={(value) => {
-          setHeld([]);
-          setSort(value);
-        }}
         onFilter={() => setFiltering(true)}
         onHeight={setHeaderHeight}
       />
       <ActivityFilters
         visible={filtering}
+        sort={sort}
+        onSort={(value) => {
+          setHeld([]);
+          setSort(value);
+        }}
         filter={filter}
         channels={channels}
         bots={slugsWithSelection.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}

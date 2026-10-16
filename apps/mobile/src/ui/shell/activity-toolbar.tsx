@@ -1,43 +1,32 @@
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HeaderCircleButton } from '../chat/header-chrome';
-import { Sheet } from '../chat/sheet';
 import { useDesignTheme } from '../design/theme';
-import { space } from '../design/tokens';
+import { radius, space } from '../design/tokens';
 import { SearchField } from '../primitives/search-field';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
-import { ActivityOption, type ActivitySort } from './activity-filters';
-import { ActivityFilterIcon, ActivitySearchIcon, ActivitySortIcon, CloseIcon } from './icons';
+import { ActivityFilterIcon, ActivitySearchIcon, CloseIcon } from './icons';
+
+export type ActivityToolbarProps = {
+  search: string;
+  filtered: boolean;
+  onSearch(value: string): void;
+  onFilter(): void;
+  onHeight(height: number): void;
+};
 
 export function ActivityToolbar({
   search,
-  sort,
   filtered,
   onSearch,
-  onSort,
   onFilter,
   onHeight,
-}: {
-  search: string;
-  sort: ActivitySort;
-  filtered: boolean;
-  onSearch(value: string): void;
-  onSort(value: ActivitySort): void;
-  onFilter(): void;
-  onHeight(height: number): void;
-}) {
+}: ActivityToolbarProps) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const [searching, setSearching] = useState(false);
-  const [sorting, setSorting] = useState(false);
-  const options = [
-    { value: 'default' as const, label: t.activitySortDefault },
-    { value: 'newest' as const, label: t.activitySortNewest },
-    { value: 'oldest' as const, label: t.activitySortOldest },
-  ];
   return (
     <>
       <View
@@ -69,23 +58,13 @@ export function ActivityToolbar({
           >
             {t.activity}
           </Text>
-          <HeaderCircleButton
-            label={t.activitySort}
-            selected={sort !== 'default'}
-            onPress={() => setSorting(true)}
-          >
-            <ActivitySortIcon
-              color={sort === 'default' ? theme.color.fg : theme.color.accent}
-              size={theme.type.title.size}
-            />
-          </HeaderCircleButton>
-          <HeaderCircleButton label={t.filterActivity} onPress={onFilter} selected={filtered}>
+          <ActivityIconButton label={t.activityOptions} onPress={onFilter} selected={filtered}>
             <ActivityFilterIcon
               color={filtered ? theme.color.accent : theme.color.fg}
               size={theme.type.title.size}
             />
-          </HeaderCircleButton>
-          <HeaderCircleButton
+          </ActivityIconButton>
+          <ActivityIconButton
             label={searching ? t.close : t.activitySearch}
             onPress={() => {
               setSearching(!searching);
@@ -100,7 +79,7 @@ export function ActivityToolbar({
                 size={theme.type.title.size}
               />
             )}
-          </HeaderCircleButton>
+          </ActivityIconButton>
         </View>
         {searching ? (
           <SearchField
@@ -111,24 +90,39 @@ export function ActivityToolbar({
           />
         ) : null}
       </View>
-      <Sheet
-        visible={sorting}
-        label={t.activitySort}
-        title={t.activitySort}
-        onClose={() => setSorting(false)}
-      >
-        {options.map((option) => (
-          <ActivityOption
-            key={option.value}
-            label={option.label}
-            selected={sort === option.value}
-            onPress={() => {
-              onSort(option.value);
-              setSorting(false);
-            }}
-          />
-        ))}
-      </Sheet>
     </>
+  );
+}
+
+function ActivityIconButton({
+  label,
+  selected = false,
+  onPress,
+  children,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress(): void;
+  children: ReactNode;
+}) {
+  const theme = useDesignTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      android_ripple={{ color: theme.layer.canvas.pressed, borderless: true }}
+      style={({ pressed }) => ({
+        width: theme.touch,
+        height: theme.touch,
+        borderRadius: radius.round,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: pressed ? theme.layer.canvas.pressed : theme.layer.canvas.fill,
+      })}
+    >
+      {children}
+    </Pressable>
   );
 }

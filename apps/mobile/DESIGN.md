@@ -11,6 +11,15 @@ References:
 | Meta Muse | A Bot profile whose identity and memory are visible and editable.                                                                                                                            |
 | Slack     | Workspace switching, a row of shortcut cards on Chats, an Activity feed with filters, and agent steps with a Stop button.                                                                    |
 
+## Activity query controls
+
+- Activity has two header entries: **Filter and sort** and **Search Activity**. Sorting is part of the same options sheet as category, unread-only, Bot and conversation filters.
+- iOS uses the native navigation toolbar and integrated search button: the system supplies Liquid Glass on iOS 26 and its supported appearance on earlier versions. Android uses opaque Material-style icon actions and its native text input.
+- The iOS options sheet uses system page-sheet presentation with swipe dismissal, inset grouped rows and trailing checkmarks. Android uses the modal bottom-sheet surface, leading radio indicators and system Back dismissal. Unread-only uses a native switch on each platform. Long option lists virtualize and scroll; footer actions remain reachable.
+- Changes in the options sheet are a local draft. Cancel, swipe dismissal or Android Back discards the draft; Done applies both sort and filter together. Reset all changes the draft to default ordering and all categories/Bots/conversations with unread-only off. Search is independent of this reset.
+
+References: [Apple toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars), [Apple sheets](https://developer.apple.com/design/human-interface-guidelines/sheets), [Material bottom sheets](https://m3.material.io/components/bottom-sheets/guidelines), [Android radio selection](https://developer.android.com/develop/ui/compose/components/radio-button).
+
 ## Structure
 
 The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-with-settings-and-hosts-in-the-header.md): what the Human does most sits under the thumb, and what they do rarely sits in the header.
