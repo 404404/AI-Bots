@@ -17,12 +17,7 @@ import { createHostClient, type HostClient } from '../src/host/client';
 import type { InboxSnapshot } from '../src/host/inbox';
 import { createSectionCollapse, type SectionCollapse } from '../src/host/section-collapse';
 import type { HumanAttentionItem } from '../src/host/wire';
-import {
-  ActivityFeed,
-  activityBots,
-  activityCounts,
-  feedRows,
-} from '../src/ui/shell/activity-feed';
+import { ActivityFeed, activityCounts, feedRows } from '../src/ui/shell/activity-feed';
 import { t } from '../src/ui/strings';
 import { FakeHost } from './fake-host';
 import inboxWire from './fixtures/inbox-wire.json';
@@ -100,6 +95,7 @@ async function feed(
         client,
         inbox: undefined,
         snapshot,
+        botSlugs: [question.botSlug, 'other-bot'],
         bot: () => undefined,
         onOpen: () => undefined,
       }),
@@ -163,9 +159,6 @@ describe('Activity feed rows', () => {
   it('filters by Bot and counts what each section would show', () => {
     const other: HumanAttentionItem = { ...approval, id: 'other-1', botSlug: 'other-bot' };
     const snapshot = ready([question, other]);
-    expect(activityBots(snapshot)).toEqual([
-      ...new Set([question.botSlug, 'other-bot', reply.botSlug]),
-    ]);
     const rows = feedRows(snapshot, new Set(), [], { section: 'all', bot: 'other-bot' });
     expect(rows.map((row) => row.key)).toEqual([
       'header-action',
@@ -190,6 +183,29 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('preserves other sections and Hosts when toggled before preferences finish loading', async () => {
+    const original = { 'host-one': ['replies'], 'host-two': ['unread'] };
+    let saved: Record<string, string[]> = original;
+    let loaded!: (value: unknown) => void;
+    const collapse = createSectionCollapse({
+      read: () =>
+        new Promise((resolve) => {
+          loaded = resolve;
+        }),
+      write: (value) => {
+        saved = value;
+      },
+    });
+    const view = await feed(host(), ready([question]), collapse);
+    await press(button(view, t.sectionCount(t.inboxSections.action, 1)));
+    expect(saved['host-two']).toEqual(['unread']);
+    await act(async () => loaded(original));
+    expect(post(view, question)).toBeNull();
+    expect(view.querySelector('[data-testid="inbox-row-reply-1"]')).toBeNull();
+    expect(saved['host-one']).toEqual(expect.arrayContaining(['action', 'replies']));
+    expect(saved['host-two']).toEqual(['unread']);
+  });
+
   it('restores collapsed sections on reopen without carrying them to another Host', async () => {
     let saved: Record<string, string[]> = {};
     const persistence = (): SectionCollapse =>
@@ -234,7 +250,7 @@ describe('Activity feed', () => {
     fake.answers.set('channelUnreadCounts', () => ({ ok: true, value: { channels: [] } }));
     const view = await feed(fake, {
       status: 'ready',
-      sections: { action: [question], replies: [], unread: [unread], handled: [] },
+      sections: { action: [], replies: [], unread: [unread], handled: [] },
     });
     await press(button(view, question.botSlug));
     expect(button(view, t.sectionCount(t.inboxSections.unread, 2))).not.toBeNull();

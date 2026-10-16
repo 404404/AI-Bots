@@ -103,17 +103,6 @@ export function activityCounts(
   return counts;
 }
 
-export function activityBots(snapshot: InboxSnapshot): string[] {
-  if (snapshot.status !== 'ready') return [];
-  return [
-    ...new Set(
-      INBOX_SECTIONS.flatMap((section) =>
-        snapshot.sections[section].map((item) => item.botSlug),
-      ).filter(Boolean),
-    ),
-  ];
-}
-
 export function feedRows(
   snapshot: InboxSnapshot,
   gone: ReadonlySet<string>,
@@ -170,7 +159,7 @@ function Row({
   const kind = t.kind[item.kind] ?? t.otherKind;
   const name =
     item.kind === 'channel-unread'
-      ? (item.channelName ?? item.channelId ?? t.otherKind)
+      ? (item.channelName ?? t.otherKind)
       : (bot?.displayName ?? item.botSlug);
   const size = settled ? theme.type.body.line : AVATAR;
   return (
@@ -326,6 +315,7 @@ export function ActivityFeed({
   client,
   inbox,
   snapshot,
+  botSlugs,
   bot,
   onOpen,
   header,
@@ -336,6 +326,7 @@ export function ActivityFeed({
   client: HostClient | undefined;
   inbox: Inbox | undefined;
   snapshot: InboxSnapshot;
+  botSlugs: readonly string[];
   bot(slug: string): RosterBot | undefined;
   onOpen(item: HumanAttentionItem): void;
   header?: ReactElement | null;
@@ -362,7 +353,7 @@ export function ActivityFeed({
   const collapsed = useSyncExternalStore(collapse.subscribe, () => collapse.collapsed(hostId));
   const rows = feedRows(visible, gone, held, filter, collapsed);
   const sticky = rows.flatMap((row, index) => (row.kind === 'header' ? [index + 1] : []));
-  const slugs = activityBots(snapshot);
+  const slugs = botSlugs;
   const slugsWithSelection =
     filter.bot !== undefined && !slugs.includes(filter.bot) ? [...slugs, filter.bot] : slugs;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {

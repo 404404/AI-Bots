@@ -54,6 +54,7 @@ export default function ActivityScreen() {
           client={client}
           inbox={inbox}
           snapshot={list}
+          botSlugs={bots.map((bot) => bot.slug)}
           bot={(slug) => bots.find((bot) => bot.slug === slug)}
           onOpen={open}
           header={
