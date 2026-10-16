@@ -23,7 +23,7 @@ import { Button } from '../primitives/button';
 import { Text } from '../primitives/text';
 import { Notice } from '../request-parts';
 import { t } from '../strings';
-import { Chip } from './activity-filters';
+import { Chip } from '../primitives/chip';
 import { GradientFill } from './gradient-fill';
 import { HostBandLayer, HostChipFace, useHostBand } from './host-band';
 import { hostInitial, HostTile, presetAvatarSvg } from './host-tile';
