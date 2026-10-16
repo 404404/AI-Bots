@@ -39,8 +39,8 @@ export function ActivityToolbar({
           headerTintColor: theme.color.fg,
         }}
       />
-      <Stack.Toolbar placement="right">
-        {searching ? (
+      {searching ? (
+        <Stack.Toolbar placement="right">
           <Stack.Toolbar.View hidesSharedBackground={false}>
             <View
               style={{
@@ -76,29 +76,29 @@ export function ActivityToolbar({
               />
             </View>
           </Stack.Toolbar.View>
-        ) : (
-          <>
-            <Stack.Toolbar.Button
-              icon="line.3.horizontal.decrease"
-              accessibilityLabel={t.activityOptions}
-              selected={filtered}
-              tintColor={filtered ? theme.color.accent : theme.color.fg}
-              onPress={onFilter}
-              separateBackground
-            />
-            <Stack.Toolbar.Button
-              icon="magnifyingglass"
-              accessibilityLabel={t.activitySearch}
-              tintColor={search ? theme.color.accent : theme.color.fg}
-              onPress={() => {
-                onSearchFocus(true);
-                setSearching(true);
-              }}
-              separateBackground
-            />
-          </>
-        )}
-      </Stack.Toolbar>
+        </Stack.Toolbar>
+      ) : (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon="line.3.horizontal.decrease"
+            accessibilityLabel={t.activityOptions}
+            selected={filtered}
+            tintColor={filtered ? theme.color.accent : theme.color.fg}
+            onPress={onFilter}
+            separateBackground
+          />
+          <Stack.Toolbar.Button
+            icon="magnifyingglass"
+            accessibilityLabel={t.activitySearch}
+            tintColor={search ? theme.color.accent : theme.color.fg}
+            onPress={() => {
+              onSearchFocus(true);
+              setSearching(true);
+            }}
+            separateBackground
+          />
+        </Stack.Toolbar>
+      )}
     </>
   );
 }
