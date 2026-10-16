@@ -101,7 +101,7 @@ function fixture() {
         ? 'Enable Browser Access'
         : 'Disable Browser Access',
       selectedChannels: ['dm'],
-      viewers: phase === 'running' ? [{ visible: true }] : [],
+      viewers: phase === 'running' ? [{ visible: true, live: true, status: '' }] : [],
     };
   }
   const run = {
@@ -290,6 +290,18 @@ describe('bounded Browser lifecycle proof', () => {
       'visible-disabled',
       (v) => {
         v.accessLabel = 'Disable Browser Access';
+      },
+    ],
+    [
+      'visible-running',
+      (v) => {
+        v.viewers[0].status = 'browser not running';
+      },
+    ],
+    [
+      'visible-running',
+      (v) => {
+        v.viewers[0].live = false;
       },
     ],
     [

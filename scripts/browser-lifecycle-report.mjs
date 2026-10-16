@@ -145,8 +145,7 @@ export function browserProblems(run, read) {
     if (
       phase === 'running' &&
       (!visible.text.includes(fixture.url) ||
-        !visible.text.includes('Connected') ||
-        !visible.viewers?.some((v) => v.visible))
+        !visible.viewers?.some((v) => v.visible && v.live === true && v.status === ''))
     )
       problems.push('Running panel viewer or fixture URL missing');
     const d = read(`${phase}.diagnostics`);

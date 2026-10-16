@@ -337,7 +337,12 @@ try {
         ),
       ]),
       viewers: await page.$$eval('.bh-browser-body iframe', (nodes) =>
-        nodes.map((el) => ({ src: el.getAttribute('src'), visible: el.checkVisibility() })),
+        nodes.map((el) => ({
+          src: el.getAttribute('src'),
+          visible: el.checkVisibility(),
+          status: el.contentDocument?.querySelector('#status')?.textContent ?? null,
+          live: !!el.closest('[role="button"][aria-label="Open fullscreen"]'),
+        })),
       ),
     });
     await capturePage(phase);
@@ -374,15 +379,14 @@ try {
   );
   save('direct-read.json', command(['browser-tool', run.botId, 'browser_observe']));
   stage = 'observe-running-panel';
-  const reconnect = await page.$('::-p-aria([name="Reconnect"][role="button"])');
-  if (reconnect && (await reconnect.isVisible())) await click('Reconnect');
-  await page.waitForFunction(
-    () =>
-      [...document.querySelectorAll('.bh-browser-body')].some((el) =>
-        el.innerText.includes('Connected'),
-      ),
-    { timeout: 30000 },
+  const viewerError = await page.$eval(
+    '.bh-browser-body iframe',
+    (el) => el.contentDocument?.querySelector('#status')?.textContent ?? '',
   );
+  if (viewerError) await click('Reconnect');
+  await page.waitForSelector('.bh-browser-body [role="button"][aria-label="Open fullscreen"]', {
+    timeout: 30000,
+  });
   await page.waitForFunction(
     () =>
       [...document.querySelectorAll('.bh-browser-body iframe')].some((el) => {

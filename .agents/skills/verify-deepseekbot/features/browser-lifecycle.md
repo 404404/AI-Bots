@@ -17,9 +17,10 @@ The existing direct open tool must refuse without starting it. Only the enabled,
 Browser shows the **Stopped** card; do not accept a transient card before Access loads.
 Enable **Browser Access**, click **Open Bot Browser**, click **Leave fullscreen**, then use the existing direct
 `browser_open` tool to navigate the same tab to the fixture. The Browser panel must show
-the fixture title, URL and actual picture with **Connected** status. If the existing
-viewer offers **Reconnect** after navigation, use it and record that action before
-inspecting the stable frame. A stale error banner is not a passing visible state. `browser-observation`, `browser_tabs list`
+the fixture title, URL and actual picture with its **Open fullscreen** live-frame action available and no viewer error text.
+If navigation leaves a viewer error, use the existing **Reconnect** button and record
+that action before inspecting the stable frame. Reconnect is always offered in the
+inline footer; its presence alone is not a connection failure. A stale error banner is not a passing visible state. `browser-observation`, `browser_tabs list`
 and `browser_observe` must agree on that Bot's current tab and fixture content.
 
 Click **Stop** in the panel. Observation must show stopped, no tabs, no focused tab and
