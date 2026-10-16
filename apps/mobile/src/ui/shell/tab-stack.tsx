@@ -2,10 +2,15 @@ import { Stack } from 'expo-router';
 
 import { useDesignTheme } from '../design/theme';
 
-export function TabStack() {
+export function TabStack({ onAppear }: { onAppear?(): void } = {}) {
   const theme = useDesignTheme();
   return (
     <Stack
+      screenListeners={{
+        transitionEnd: (event) => {
+          if (!event.data.closing) onAppear?.();
+        },
+      }}
       screenOptions={{
         headerLargeTitleEnabled: true,
         headerShadowVisible: false,
