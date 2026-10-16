@@ -1,0 +1,20 @@
+{
+  "ci-final.json": "5a5e4f6d43692b3134835dda8a4bdb2a249661ad2311cd0cbb49990cb16d299f",
+  "format.log": "9b9294112cf1f65927fbf677ae10aec21a644a11508d83b939f7cd90857bdd52",
+  "explainer-narrow.png": "52a2fbfb13a27baccd2f8f66686673283ec225c857ecc452898ceb9ebc95e7cf",
+  "lint.log": "dafb233dcbb4e5a3d9cd33aa093735e28fbef01c95178aa11de36a7b377935d3",
+  "typecheck.log": "abd1290d688f96766b61a03425769eaefda087b65057ccb1266fd6a1279b97fe",
+  "explainer-checks.json": "1f373ee854ca962a762fdc3364d2300264ce773f2172265d89b77514a771a908",
+  "pr-explainer.html": "195aeba3551137005ef496f389ae3d3d433afc16d4c9cf90e5e183b54b67a3d7",
+  "first-failure.json": "6acd23fba03c5fb804c91a5b9fc80e65f2dea77a938656f9b8bd1c0f94775a44",
+  "README.md": "1f12297ba465cbacfe644048d2aaf7615cf6b9bd94aaf22704dc850db9ccaac8",
+  "reviews.md": "943b92c3e6d2d1577d3e441f6bd175b2638a449412606dbbd8f0b874f516e4ca",
+  "coverage.md": "a1be73a5c95f13d7a0b37292f0aabf49a443d1e38d15b276be2a047f31c5096f",
+  "explainer-desktop.png": "b1ce90963202168b9a05b1f39822bab6f8adad1016046b0d089730a83baae27b",
+  "pr-explainer.md": "cf44ca39e4e377a82d0316eff3515cc1c24805893f32c2691fc20cffab0c9136",
+  "focused.log": "07862478fe65f4a9dcb161dc565778add59c3f3a3e3b76f39740c67a25b994ba",
+  "report-tests.log": "fb0951a0805e4d8db35bfd382669144d3af9b3f306de41125764f70818bf7d87",
+  "build.log": "c58cfc0a89b5921123b6367758edacdb4f5f7147e3ee84eef397140bd4bbbeba",
+  "blocked/preflight.json": "7e98b245e8e0b2c44bd71b09eb3cc9ff6ad6897cbc3995091d86f790ddbdaaab",
+  "blocked/run.json": "b21c4c2ccd044d500c12dae1106a27c94f488ced202df95ed9048b45e7a4b1b7"
+}

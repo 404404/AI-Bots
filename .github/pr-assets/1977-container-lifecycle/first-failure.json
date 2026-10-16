@@ -1,0 +1,52 @@
+{
+  "source": "9e9a553f35adafc2b64baf497f3eae604a679e07",
+  "observedAt": "2026-10-16T18:16:51.673282+00:00",
+  "status": "blocked",
+  "stage": "existing-container-runtime-preflight",
+  "operations": [
+    {
+      "command": [
+        "docker",
+        "version",
+        "--format",
+        "{{json .}}"
+      ],
+      "exitCode": 1,
+      "stdout": "{\"Client\":{\"Version\":\"29.1.2\",\"ApiVersion\":\"1.52\",\"DefaultAPIVersion\":\"1.52\",\"GitCommit\":\"890dcca\",\"GoVersion\":\"go1.25.5\",\"Os\":\"darwin\",\"Arch\":\"arm64\",\"BuildTime\":\"Tue Dec  2 21:54:24 2025\",\"Context\":\"desktop-linux\"},\"Server\":null}\n",
+      "stderr": "EOF\n"
+    },
+    {
+      "command": [
+        "curl",
+        "-sS",
+        "-D",
+        "-",
+        "--max-time",
+        "8",
+        "--unix-socket",
+        "[docker-desktop-socket]",
+        "http://localhost/_ping"
+      ],
+      "exitCode": 0,
+      "stdout": "HTTP/1.1 200 OK\nDate: Fri, 16 Oct 2026 18:16:51 GMT\nContent-Length: 0\n\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "curl",
+        "-sS",
+        "-D",
+        "-",
+        "--max-time",
+        "8",
+        "--unix-socket",
+        "[docker-desktop-socket]",
+        "http://localhost/version"
+      ],
+      "exitCode": 0,
+      "stdout": "HTTP/1.1 200 OK\nDate: Fri, 16 Oct 2026 18:16:51 GMT\nContent-Length: 0\n\n",
+      "stderr": ""
+    }
+  ],
+  "actual": "Docker Client 29.1.2 exists; Server is null with EOF. Socket endpoints returned HTTP 200 with zero-length bodies; neither proves Engine health. No Host/container created, no restart/install/Local Computer switch."
+}

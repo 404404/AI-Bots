@@ -1,0 +1,19 @@
+{
+  "commit": "a57db12474ec5725201f9e85ae1b4bf5804a56ea",
+  "startedAt": "2026-10-16T18:24:12.137Z",
+  "status": "blocked",
+  "commands": [
+    {
+      "executable": "docker",
+      "args": [
+        "version",
+        "--format",
+        "{{json .}}"
+      ],
+      "exitCode": 1
+    }
+  ],
+  "reason": "docker version failed: EOF\n",
+  "finishedAt": "2026-10-16T18:24:12.386Z",
+  "actual": "docker version failed: EOF\n"
+}

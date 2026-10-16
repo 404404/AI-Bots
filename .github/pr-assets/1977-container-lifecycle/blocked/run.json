@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "behavior": "desktop.computer.container-start-frame-stop",
+  "commit": "a57db12474ec5725201f9e85ae1b4bf5804a56ea",
+  "base": "9e9a553f35adafc2b64baf497f3eae604a679e07",
+  "dirty": false,
+  "startedAt": "2026-10-16T18:24:12.137Z",
+  "finishedAt": "2026-10-16T18:24:12.386Z",
+  "status": "blocked",
+  "reason": "docker version failed: EOF\n",
+  "expected": "Existing Docker Engine and image, fresh isolated Profile and exclusive task resource names",
+  "actual": "docker version failed: EOF\n",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0"
+  },
+  "evidence": {
+    "preflight.json": "7e98b245e8e0b2c44bd71b09eb3cc9ff6ad6897cbc3995091d86f790ddbdaaab"
+  }
+}
