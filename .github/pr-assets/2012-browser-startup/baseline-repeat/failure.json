@@ -1,0 +1,5 @@
+{
+  "stage": "cleanup-or-validation",
+  "reason": "Missing console observation or browser errors",
+  "botId": "bot-c0f20cdb3a5a422ab03f58d558d5024d"
+}

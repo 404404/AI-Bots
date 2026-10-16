@@ -1,0 +1,17 @@
+{
+  "rendered": true,
+  "fullscreen": false,
+  "text": "Local Browser\nRunning\nProfile\nFullscreen\nPause Bot\nStop\nAX Browser 1792173557735's Browser\nReconnect\nAX Browser lifecycle 1976\nhttp://127.0.0.1:51211/",
+  "accessLabel": "Disable Browser Access",
+  "selectedChannels": [
+    "dm-bot-4d90eab02dd14075909ce9d2f33824d1"
+  ],
+  "viewers": [
+    {
+      "src": "./botharness-browser/viewer/local/?slug=bot-4d90eab02dd14075909ce9d2f33824d1&mode=direct",
+      "visible": true,
+      "status": "",
+      "live": true
+    }
+  ]
+}

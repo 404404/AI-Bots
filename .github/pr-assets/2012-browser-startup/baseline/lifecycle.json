@@ -1,0 +1,157 @@
+{
+  "ok": true,
+  "entries": [
+    {
+      "id": 21,
+      "ts": 1792172950906,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-834f279cfb724af3a919602053e62293 session=direct role=unknown browser_open url=http://127.0.0.1:49291/ -> error: Browser Access is off for this PersonaBot (0ms)"
+    },
+    {
+      "id": 20,
+      "ts": 1792172950905,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-834f279cfb724af3a919602053e62293 tool=browser_open"
+    },
+    {
+      "id": 19,
+      "ts": 1792172950417,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-834f279cfb724af3a919602053e62293 session=direct role=unknown browser_observe observe -> error: This PersonaBot has no Bot Browser tab yet; call browser_open with a URL first (0ms)"
+    },
+    {
+      "id": 18,
+      "ts": 1792172950416,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-834f279cfb724af3a919602053e62293 tool=browser_observe"
+    },
+    {
+      "id": 17,
+      "ts": 1792172949905,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "[default] stopped"
+    },
+    {
+      "id": 16,
+      "ts": 1792172949873,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "stop requested (panel) slug=bot-834f279cfb724af3a919602053e62293"
+    },
+    {
+      "id": 15,
+      "ts": 1792172948026,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-834f279cfb724af3a919602053e62293 session=direct role=unknown browser_observe observe -> ok (2ms)"
+    },
+    {
+      "id": 14,
+      "ts": 1792172948024,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-834f279cfb724af3a919602053e62293 tool=browser_observe"
+    },
+    {
+      "id": 13,
+      "ts": 1792172947890,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-834f279cfb724af3a919602053e62293 session=direct role=unknown browser_tabs list -> ok (0ms)"
+    },
+    {
+      "id": 12,
+      "ts": 1792172947889,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-834f279cfb724af3a919602053e62293 tool=browser_tabs"
+    },
+    {
+      "id": 11,
+      "ts": 1792172947605,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-834f279cfb724af3a919602053e62293 session=direct role=unknown browser_open url=http://127.0.0.1:49291/ -> ok (223ms)"
+    },
+    {
+      "id": 10,
+      "ts": 1792172947382,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-834f279cfb724af3a919602053e62293 tool=browser_open"
+    },
+    {
+      "id": 9,
+      "ts": 1792172946946,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "human window created slug=bot-834f279cfb724af3a919602053e62293 durationMs=5515"
+    },
+    {
+      "id": 8,
+      "ts": 1792172946664,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "[default] ready"
+    },
+    {
+      "id": 7,
+      "ts": 1792172941432,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "[default] launch /Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    },
+    {
+      "id": 6,
+      "ts": 1792172941430,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "open requested (panel) slug=bot-834f279cfb724af3a919602053e62293"
+    },
+    {
+      "id": 3,
+      "ts": 1792172928916,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-834f279cfb724af3a919602053e62293 session=direct role=unknown browser_open url=http://127.0.0.1:49291/ -> error: Browser Access is off for this PersonaBot (1ms)"
+    },
+    {
+      "id": 2,
+      "ts": 1792172928915,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-834f279cfb724af3a919602053e62293 tool=browser_open"
+    },
+    {
+      "id": 1,
+      "ts": 1792172926074,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "local viewer ready prefix=/botharness-browser/viewer/local"
+    }
+  ]
+}

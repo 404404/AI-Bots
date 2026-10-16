@@ -1,0 +1,257 @@
+{
+  "version": 1,
+  "behavior": "desktop.browser.open-observe-stop",
+  "commit": "4116e181cfeba38938c698f55f1260994f9fa1f7",
+  "base": "4116e181cfeba38938c698f55f1260994f9fa1f7",
+  "dirty": false,
+  "startedAt": "2026-10-16T16:47:23.463Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "Default local Browser opens one deterministic fixture; panel, observation and direct tools agree on its tab; stop removes the tab; Access-off refusal remains distinct from stopped state.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "59276bc69ee1a54f35c440bd2ec20f9616d6a816598781896cedcd5fffeaaddf",
+    "fixture.json": "140b42a4e20d296d5f2aad2250d4d93620fc7aad00033aaa65f6a3bdf1cc2450",
+    "created.json": "38b2e0729ee95d3ca7bb1ee0647d2b23e17937cc2a8999682772f1d9a619cb7f",
+    "off.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "off-refusal.json": "71dd70f3a3d3e1dfe3238e07b92f917520916d90b04ab333a8d3b4a5a2807798",
+    "visible-off.json": "dea9e6594cebd79930c30506b50659660a083901c48111ae0fbfefb431afc488",
+    "console.json": "1aaf4be4af02f6e9f2dda75ea404a881bf50acc96b872bf5738787d97752fead",
+    "http-errors.json": "e781e9cea5105fe7cd58e71ee5b98dd931a2a25f0b8b7d10efba4922e7b589e8",
+    "off.aria.json": "3cfabc4e6e7196bdbd93b0a6fbe59057108275df6e4d80c00758f7e4d33953fd",
+    "off.png": "78c26c58dbc46376c407aee53c76bb31996ebe1513c4b80f0083ea234163ed9d",
+    "off.diagnostics.json": "db506488802480ae42cc896dccefecbb5d76fd050c6cc3e547ef67388a1265f4",
+    "opened.json": "3322afdc72468b1d91d6b6dc92e17d7d988238611f7113104c0fa4198a1f6e40",
+    "running.json": "9fa0407e9e51e465b01694896d3d491c32fa9e3fd0e09738dca9237db592bbe1",
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "direct-tabs.json": "9883305eaa9c8c084d0f6e9cab31b0e27eb43bfce3cdfa0421d2ae221240c94b",
+    "direct-read.json": "60757ed3366d1cc6596caa01922a68a69d4d112c47ba8e5fec97d0814e02bc2a",
+    "visible-running.json": "225a7537139d0498152e4730e44a0033db0c90d3002c820733de433b6b20e315",
+    "running.aria.json": "80519595da46219e714ffaf96675c164ea106eb75275e642ce034f1805e3e2c8",
+    "running.png": "cb10c83cf60975ac399ab3f2ab0c619178bd13ec2f59bb23748e29eb75d572b7",
+    "running.diagnostics.json": "3ccf29f60031577eb659c39ccf4f875a8ac688e9d700976ef469dbb762e11ed3",
+    "visible-stopped.json": "a849a7d0232ab55444118dbaaf27c6bd2e72778a83ce8075b8f53b0cb053f418",
+    "stopped.aria.json": "943a9f3d1a5b2f86684ec496859d81b5fb32bdfed004e28c011567d2f6c36d11",
+    "stopped.png": "31a56cfa0a3c9731fda34f594d92913867b981c4d28d7240a0707ba19ba1a702",
+    "stopped.diagnostics.json": "5da3abe2752eb33fb4f239e77cc5e866ed059191ed3f881bb8be7b33fe8d465b",
+    "stopped.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "stopped-refusal.json": "b5f98162824c653daaf7126c6edc06467a0670f0d319bc9c443b4179f3d8844c",
+    "after-stopped-read.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "disabled-refusal.json": "71dd70f3a3d3e1dfe3238e07b92f917520916d90b04ab333a8d3b4a5a2807798",
+    "disabled.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "bot-final.json": "7dba137a12e7a1cef4e24f87fec9ebf7cb266e79e7b4dd039e843b3554a33d80",
+    "visible-disabled.json": "dea9e6594cebd79930c30506b50659660a083901c48111ae0fbfefb431afc488",
+    "disabled.aria.json": "c3195104537de0545a9e0bab3e92a53f3298085ea6785eb0e151d25fec5c7793",
+    "disabled.png": "ff627807352dbb0672f607430abc5bf56f56a012cbcf452458a047fafcc4e249",
+    "disabled.diagnostics.json": "22bc6d508a0b000af075bfbf69143b1c91a2b442b6b92784e689792d27704e3b",
+    "lifecycle.json": "78d85ad5ac5164ef6cc4660bb0ab731f67138ae21ede53bc09e40073a560629f",
+    "cleanup-browser.json": "12b34da73b0c67a0319e6eddbd3582af66e3b558b4d44e4a6860e0cec20d726f",
+    "cleanup-observation.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "failure.json": "c592ff54d5690562cc3c744084d9e836103a8270bbe138716f96ef03e8200d9f"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T16:47:23.684Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Browser 1792169244596",
+        "--persona",
+        "Disposable Browser lifecycle verification. No model or messages."
+      ],
+      "at": "2026-10-16T16:47:24.831Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a"
+      ],
+      "at": "2026-10-16T16:47:24.941Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "browser_open",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T16:47:25.055Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T16:47:33.175Z"
+    },
+    {
+      "click": "AX Browser 1792169244596: Idle AX Browser 1792169244596 01:47 Welcome to DeepSeek Bot",
+      "channelId": "dm-bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+      "at": "2026-10-16T16:47:35.045Z"
+    },
+    {
+      "click": "Close Sessions",
+      "at": "2026-10-16T16:47:36.954Z"
+    },
+    {
+      "click": "Close Bot Inbox",
+      "at": "2026-10-16T16:47:37.118Z"
+    },
+    {
+      "click": "Browser",
+      "at": "2026-10-16T16:47:37.190Z"
+    },
+    {
+      "click": "Enable Browser Access",
+      "at": "2026-10-16T16:47:37.686Z"
+    },
+    {
+      "click": "Open Bot Browser",
+      "at": "2026-10-16T16:47:37.892Z"
+    },
+    {
+      "click": "Leave fullscreen",
+      "at": "2026-10-16T16:47:39.558Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "browser_open",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T16:47:39.918Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "--out",
+        "[redacted]/.humanlayer/verify/ax1976-merged/browser-lifecycle/attempt-1792169243463-70815/frame.jpg"
+      ],
+      "at": "2026-10-16T16:47:40.060Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "browser_tabs",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T16:47:40.183Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "browser_observe"
+      ],
+      "at": "2026-10-16T16:47:40.309Z"
+    },
+    {
+      "click": "Reconnect",
+      "at": "2026-10-16T16:47:40.491Z"
+    },
+    {
+      "click": "Stop",
+      "at": "2026-10-16T16:47:45.282Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a"
+      ],
+      "at": "2026-10-16T16:47:45.666Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "browser_observe"
+      ],
+      "at": "2026-10-16T16:47:45.781Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a"
+      ],
+      "at": "2026-10-16T16:47:45.895Z"
+    },
+    {
+      "click": "Disable Browser Access",
+      "at": "2026-10-16T16:47:46.038Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+        "browser_open",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T16:47:46.191Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a"
+      ],
+      "at": "2026-10-16T16:47:46.307Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "computer-logs",
+        "--plugin",
+        "browser",
+        "--limit",
+        "100"
+      ],
+      "at": "2026-10-16T16:47:46.669Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-stop",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a"
+      ],
+      "at": "2026-10-16T16:47:46.787Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-2d2d8bc95c9d44a9be3396dc4e941e4a"
+      ],
+      "at": "2026-10-16T16:47:46.901Z"
+    }
+  ],
+  "botId": "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+  "actual": "bot-2d2d8bc95c9d44a9be3396dc4e941e4a: one local fixture tab observed through panel and direct tools; panel stop cleared running/tab state; stopped read and Access-off open refused distinctly.",
+  "reason": "Missing console observation or browser errors",
+  "finishedAt": "2026-10-16T16:47:46.990Z"
+}

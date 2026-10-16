@@ -1,0 +1,9 @@
+{
+  "pidAlive": true,
+  "worktree": true,
+  "dshVersion": "0.2.0-rc.2",
+  "dshVersionMatches": true,
+  "authenticatedApi": true,
+  "botCount": 0,
+  "ok": true
+}

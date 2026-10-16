@@ -1,0 +1,18 @@
+{
+  "commit": "5d81064d78ee4c2dabfa78c755c00908c780b423",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected light screenshots/ARIA and frame. Browser-side 1500ms latency during open exposes real Connecting overlay; iframe status records Waiting for the first frame. Then fixture renders without Reconnect; stopped/access-off states and CLI match, HTTP/console empty. Supplementary latency experiment, not native or Human QA.",
+  "reviewedAt": "2026-10-16T18:04:34.188Z",
+  "evidence": {
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "off.png": "6aa073a97e19ad3bf2cf8244c28ad0d957656e142b5af9d4bfcf210885d47628",
+    "off.aria.json": "4370511a0eb62c4464a1371226127fa91776730e5bc7438eb9e5d4ca09393b48",
+    "running.png": "d20080109a77e80cd2e17db1d5c2404a01bdef249df596792c437fff663360e9",
+    "running.aria.json": "69fd1851b3674493cad96c8dbefbf653cafd4e6f2cc97085c61f720c805b55f0",
+    "stopped.png": "cc9be320d32ac4ac307a3186c6a8387ed5e4cefb233bc849f2a57d4e8e083fb1",
+    "stopped.aria.json": "cc5eed50bd278c18308195986136d2dbc99fd79011f46e56b0d58a041e069561",
+    "disabled.png": "946815cc8d3843b1424add883b3ffd52ee8a26a3e1d49229d5e90b1f8732d79e",
+    "disabled.aria.json": "253ade420781a6325459e22d1f1d54565974cfcc793d54987b2c14fa07515b45"
+  }
+}

@@ -1,0 +1,78 @@
+
+ RUN  v5.0.1 [worktree]
+
+ ❯ packages/browser/test/viewer-local.test.ts (24 tests | 2 failed) 181ms
+   ❯ local browser viewer stream (24)
+     × reports unavailable first frames separately from a stopped Browser after the bounded wait 58ms
+     × does not deliver a delayed frame after Browser Access is revoked 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/browser/test/viewer-local.test.ts > local browser viewer stream > reports unavailable first frames separately from a stopped Browser after the bounded wait
+AssertionError: expected "vi.fn()" to be called with arguments: [ 503, Anything ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+-   503,
+-   Anything,
++   404,
++   {
++     "content-type": "text/plain; charset=utf-8",
++   },
+  ]
+
+
+Number of calls: 1
+
+ ❯ packages/browser/test/viewer-local.test.ts:443:32
+    441|     f.captureScreenshot.mockRejectedValue(new Error('first frame not r…
+    442|     const response = await f.call(`${LOCAL_VIEWER_PREFIX}/frame?slug=q…
+    443|     expect(response.writeHead).toHaveBeenCalledWith(503, expect.anythi…
+       |                                ^
+    444|     expect(response.end).toHaveBeenCalledWith('frame unavailable');
+    445|     f.dispose();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/browser/test/viewer-local.test.ts > local browser viewer stream > does not deliver a delayed frame after Browser Access is revoked
+AssertionError: expected "vi.fn()" to be called with arguments: [ 403, Anything ]
+
+Received:
+
+  1st vi.fn() call:
+
+  [
+-   403,
+-   Anything,
++   200,
++   {
++     "cache-control": "no-store",
++     "content-length": "13",
++     "content-type": "image/jpeg",
++     "x-frame-mode": "stream",
++     "x-frame-seq": "1",
++   },
+  ]
+
+
+Number of calls: 1
+
+ ❯ packages/browser/test/viewer-local.test.ts:456:32
+    454|     f.push('private frame');
+    455|     const response = await pending;
+    456|     expect(response.writeHead).toHaveBeenCalledWith(403, expect.anythi…
+       |                                ^
+    457|     expect(response.end).toHaveBeenCalledWith('Browser Access is off f…
+    458|     f.dispose();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 22 passed (24)
+   Start at  02:52:28
+   Duration  301ms (tests 79%, transform 15%, import 4%, worker 1%)
+

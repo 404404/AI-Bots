@@ -1,0 +1,39 @@
+
+ RUN  v5.0.1 [worktree]
+
+ ❯ packages/browser/test/host-service.test.ts (18 tests | 1 failed) 136ms
+   ❯ published Browser Host service (18)
+     × does not publish the local viewer while the Human window has no owned current tab 65ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/browser/test/host-service.test.ts > published Browser Host service > does not publish the local viewer while the Human window has no owned current tab
+AssertionError: expected { ok: true, running: true, …(9) } to match object { running: true, focused: null, …(1) }
+(8 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "focused": null,
+    "running": true,
+-   "viewerUrl": null,
++   "viewerUrl": "/botharness-browser/viewer/local/?slug=bot-a",
+  }
+
+ ❯ packages/browser/test/host-service.test.ts:186:21
+    184|     expect((await opening).status).toBe(200);
+    185|     expect(await h.observation('bot-a')).toMatchObject({ focused: 'bot…
+    186|     expect(pending).toMatchObject({ running: true, focused: null, view…
+       |                     ^
+    187|   });
+    188|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 passed (18)
+   Start at  02:51:50
+   Duration  441ms (tests 37%, transform 33%, import 30%)
+

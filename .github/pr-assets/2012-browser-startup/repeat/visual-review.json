@@ -1,0 +1,18 @@
+{
+  "commit": "5d81064d78ee4c2dabfa78c755c00908c780b423",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected four screenshots and ARIA, actual fixture frame, matching same-Bot/tab CLI reads, empty HTTP/console errors and no Reconnect actions. Off/disabled and stopped states match. Human QA not run.",
+  "reviewedAt": "2026-10-16T18:03:51.616Z",
+  "evidence": {
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "off.png": "f08bf573bdfb073c38a6bcc66a39b73c9acbb3d925c301983a986c1ede9c11ab",
+    "off.aria.json": "bbe028451d47b077b5b385b39c71020773e4556c8f3ec9814a0a811d21730f1f",
+    "running.png": "c1fa818b8467ae49d5aa114a78b52aea48f909bc4f7fb9d77eded03cee090fd7",
+    "running.aria.json": "eabd626ab4396371ae38e13ce9d3d4c4791ebb4be74c3fa6a8338084aadb8f0c",
+    "stopped.png": "3cfc8ed506066e5bcdbff26a332d9cf19043b2d7dc6e4784f0c868ba2375d257",
+    "stopped.aria.json": "6f1e35e83179e348ce3a493d077bcbc58ed3a35fdc217558832c637f90ce2209",
+    "disabled.png": "15dd7ac5782ac292a9dbc131e90fd6508600f1e9d163fe57ad951cf7c3842ef6",
+    "disabled.aria.json": "7770c9140e1d0a1bc16ac5e27269feabbc4cb9a8d5a0a1d9c6bde449a21a6a54"
+  }
+}

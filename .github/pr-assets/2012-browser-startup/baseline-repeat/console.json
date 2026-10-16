@@ -1,0 +1,8 @@
+[
+  {
+    "source": "console",
+    "stage": "start-Browser-from-panel",
+    "url": "[redacted]/botharness-browser/viewer/local/frame?slug=bot-c0f20cdb3a5a422ab03f58d558d5024d&t=1792173074206",
+    "message": "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  }
+]

@@ -1,0 +1,2 @@
+$ tsc --noEmit && pnpm --filter @botharness/mobile typecheck
+$ tsc --noEmit -p tsconfig.json

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "desktop",
+    "width": 1440,
+    "title": "Browser 启动 404 修复",
+    "overflow": false
+  },
+  {
+    "name": "narrow",
+    "width": 390,
+    "title": "Browser 启动 404 修复",
+    "overflow": false
+  }
+]

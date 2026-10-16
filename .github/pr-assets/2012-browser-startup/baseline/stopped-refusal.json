@@ -1,0 +1,9 @@
+{
+  "exitCode": 1,
+  "value": {
+    "error": {
+      "code": "host-refused",
+      "message": "This PersonaBot has no Bot Browser tab yet; call browser_open with a URL first"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "bot": {
+    "slug": "bot-47f06845f47144e2bd5f69484b3e5b8c",
+    "displayName": "AX Browser 1792173668919",
+    "aggregateState": "idle",
+    "workspaces": [],
+    "createdAt": "2026-10-16T18:01:09.009Z",
+    "roles": [],
+    "standingLimits": {
+      "soul": 5000,
+      "coreMemory": 3000
+    },
+    "banner": {
+      "recipe": {
+        "scene": "desert",
+        "seed": 2109842343
+      }
+    },
+    "avatarSeed": 2
+  }
+}

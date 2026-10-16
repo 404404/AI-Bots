@@ -1,0 +1,11 @@
+{
+  "version": "0.0.0",
+  "identity": {
+    "kind": "development",
+    "source": {
+      "revision": "5d81064d78ee4c2dabfa78c755c00908c780b423",
+      "dirty": false
+    }
+  },
+  "releases": []
+}
