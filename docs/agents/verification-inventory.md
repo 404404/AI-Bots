@@ -54,12 +54,19 @@ The command's exit code checks **report/reference integrity**, not product accep
 Inspect `behaviors[].result.status` for runtime outcomes; valid reports may contain failed
 or blocked runs. This permits reporting failures without hiding their evidence.
 
-For a reviewer-accessible report, save output beside sanitized evidence and use:
+For a reviewer-accessible report, keep the checkout clean while generating it. Keep the
+entire evidence packet outside the checkout or in an ignored directory until generation
+finishes. Write the report to a temporary file outside the checkout, then copy it into the
+packet; shell redirection directly into an unignored packet creates a dirty file before
+the report checks source status and expires the selected pass.
 
 ```bash
-node scripts/verification-report.mjs --activity-run <attempt> \
-  --source-prefix https://github.com/BotHarness/DeepSeekBot/blob/<full-source-sha> \
-  --evidence-prefix ./verified > <packet>/coverage.md
+coverage_report="$(mktemp)"
+node scripts/verification-report.mjs --activity-run "<attempt>" \
+  --source-prefix "https://github.com/BotHarness/DeepSeekBot/blob/<full-source-sha>" \
+  --evidence-prefix ./verified > "$coverage_report" &&
+  cp "$coverage_report" "<packet>/coverage.md"
+rm -- "$coverage_report"
 ```
 
 Publish the packet through the PR's existing evidence workflow. The report does not upload
