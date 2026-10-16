@@ -6,6 +6,8 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { color, radius, size, space, text } from './ds/tokens.stylex.js';
 import { PanelHeader } from './ds/panel-header.js';
+import { BotIcon } from './bot-icon.js';
+import type { BotModePrefsSnapshot } from './bot-mode-prefs.js';
 import type { ConfigStorage } from './roster-config.js';
 import type { LOCALE_NS } from './locale.js';
 import type {
@@ -195,7 +197,9 @@ const styles = stylex.create({
 export type BotSessionFoldersProps = PropsRuntime<'shell.overlay'> &
   PropsLocale<typeof LOCALE_NS> & {
     useBotFolderGroups<T>(selector: (groups: readonly BotSessionGroup[]) => T): T;
-    useBotFolderPrefs<T>(selector: (prefs: { showBotSessions: boolean }) => T): T;
+    useBotFolderPrefs<T>(
+      selector: (prefs: Pick<BotModePrefsSnapshot, 'showBotSessions' | 'botIcon'>) => T,
+    ): T;
     useBotFolderHost<T>(selector: (host: HTMLElement | null) => T): T;
     setMounted(node: HTMLElement | null): void;
     openSession(sessionId: string): void;
@@ -215,6 +219,7 @@ export function BotSessionFolders({
 }: BotSessionFoldersProps) {
   const groups = useBotFolderGroups((value) => value);
   const visible = useBotFolderPrefs((value) => value.showBotSessions);
+  const icon = useBotFolderPrefs((value) => value.botIcon);
   const list = useSessions((value) => value);
   const workspace = useWorkspaces((value) => value);
   const host = useBotFolderHost((value) => value);
@@ -258,13 +263,14 @@ export function BotSessionFolders({
       }}
     >
       <PanelHeader
+        icon={<BotIcon icon={icon} size={16} />}
         label="DeepSeekBot"
         badge={<span {...stylex.props(styles.count)}>{shown.length}</span>}
         disclosure={{
           expanded: rootExpanded,
           controls: bodyId,
           disabled: false,
-          chevron: true,
+          chevron: false,
           onToggle: () => toggle(BOT_FOLDER_ROOT_KEY),
         }}
       />

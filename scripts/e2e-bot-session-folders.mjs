@@ -82,6 +82,8 @@ try {
     await page.$eval(`${rootHeader} [data-panel-label]`, (node) => node.textContent),
     'DeepSeekBot',
   );
+  assert.ok(await page.$(`${rootHeader} .bh-bot-icon`));
+  assert.equal(await page.$(`${rootHeader} [data-panel-chevron]`), null);
   const folder = `[data-bot-folder="${group.botSlug}"]`;
   const folderHeader = `${folder} [data-panel-head]`;
   await page.waitForSelector(folder, { visible: true, timeout: 60_000 });
@@ -149,6 +151,33 @@ try {
   await page.waitForSelector('.conversation, header', { timeout: 30_000 });
   step('native-session-opened');
   await page.screenshot({ path: join(directory, 'opened-light.png'), waitForFonts: false });
+  await page.click(folderHeader);
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-panel-chevron]')].every(
+      (node) => node.getAnimations().length === 0,
+    ),
+  );
+  await page.screenshot({
+    path: join(directory, 'bot-collapsed-with-session.png'),
+    waitForFonts: false,
+  });
+  await page.click(rootHeader);
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-panel-chevron]')].every(
+      (node) => node.getAnimations().length === 0,
+    ),
+  );
+  await page.screenshot({
+    path: join(directory, 'section-collapsed-with-session.png'),
+    waitForFonts: false,
+  });
+  await page.click(rootHeader);
+  await page.click(folderHeader);
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('[data-panel-chevron]')].every(
+      (node) => node.getAnimations().length === 0,
+    ),
+  );
   await page.evaluate(() => document.body.setAttribute('data-ds-dark-theme', ''));
   await page.screenshot({ path: join(directory, 'expanded-dark.png'), waitForFonts: false });
   const after = await rpc(instance, 'botharness/sessions', { slug: group.botSlug });

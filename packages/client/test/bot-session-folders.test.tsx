@@ -10,6 +10,7 @@ import {
   type BotSessionFoldersProps,
 } from '../src/client/bot-session-folders.js';
 import { zhTranslate } from '../src/client/locale.js';
+import type { BotModeIcon } from '../src/bot-mode-settings.js';
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconChevronDownOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
@@ -42,6 +43,7 @@ describe('native Bot Session folders', () => {
     document.body.append(rootNode);
     const root = createRoot(rootNode);
     const openSession = vi.fn();
+    let icon: BotModeIcon = 'mascot';
     const values = new Map<string, string>();
     const list = {
       ids: ['orchestrator', 'assignment', 'ordinary', 'review'],
@@ -74,7 +76,7 @@ describe('native Bot Session folders', () => {
     });
     const props = stub<BotSessionFoldersProps>({
       useBotFolderGroups: (select) => select(groups),
-      useBotFolderPrefs: (select) => select({ showBotSessions: true }),
+      useBotFolderPrefs: (select) => select({ showBotSessions: true, botIcon: icon }),
       useBotFolderHost: (select) => select(folderHost),
       setMounted: (node) => projection.setMounted(node),
       useSessions: (select) => select(list as never),
@@ -93,6 +95,12 @@ describe('native Bot Session folders', () => {
       const rootHeader = () =>
         tree.querySelector<HTMLButtonElement>('[data-bot-folder-root] > div > [data-panel-head]')!;
       expect(rootHeader().textContent).toBe('DeepSeekBot2');
+      expect(rootHeader().querySelector('.bh-bot-icon img')).not.toBeNull();
+      expect(rootHeader().querySelector('[data-panel-chevron]')).toBeNull();
+      icon = 'bot';
+      await act(async () => root.render(createElement(BotSessionFolders, props)));
+      expect(rootHeader().querySelector('.bh-bot-icon img')).toBeNull();
+      expect(rootHeader().querySelector('.bh-bot-icon svg')).not.toBeNull();
       expect(tree.querySelectorAll('[data-bot-folder]')).toHaveLength(2);
       expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(3);
       expect(tree.querySelector('[data-bot-folder="lin"]')?.textContent).toContain('Review');
