@@ -65,10 +65,11 @@ import { mountDevicePairing, type DeviceWebUpgrade } from './devices/mount.js';
 import { humanInboxPushSource } from './push/source.js';
 import { createMarketplaceClient } from './marketplace/client.js';
 import {
-  createReleaseService,
+  createLoadingReleaseService,
   installedRelease,
   type ReleaseInstaller,
 } from './release/service.js';
+import { loadedReleaseComponents, stampReleaseComponent } from './release/component.js';
 import { createGitService } from './memory/managed-git.js';
 import { createProcessRestarter, type ReleaseRestarter } from './release/restart.js';
 import {
@@ -208,6 +209,7 @@ const PUSH_TOPICS = new Set([
 ]);
 
 const installedPackage = installedRelease(import.meta.url);
+stampReleaseComponent(apply, import.meta.url);
 const runningRelease = {
   version: installedPackage.version(),
   ledgers: installedPackage.ledgers(),
@@ -910,6 +912,10 @@ export function createCore(
 
 export function apply(ctx: Context, config: BotHarnessConfig): void {
   if (!config.enabled) return;
+  const profile = ctx.get('profileContext') as { installAnchor: string; dir: string } | undefined;
+  const releaseAnchors =
+    profile === undefined ? [] : [profile.installAnchor, join(profile.dir, 'package.json')];
+  installedPackage.identity(releaseAnchors);
   const dshHome = resolveDshHome();
   mountClientDiagnostics(ctx, dshHome);
   const release = installedRelease(import.meta.url);
@@ -1809,8 +1815,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     marketplace: createMarketplaceClient({
       baseUrl: config.marketplaceUrl ?? DEFAULT_MARKETPLACE_URL,
     }),
-    release: createReleaseService({
+    release: createLoadingReleaseService({
       version: () => runningRelease.version,
+      identity: () =>
+        installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
       ledgers: () => runningRelease.ledgers,
       installer: () => releaseInstaller.current,
       restarter: () => releaseRestarter.current,
