@@ -108,7 +108,6 @@ function fixture() {
   const run = {
     version: 1,
     behavior,
-    redactBrowserEvidence,
     commit,
     base: commit,
     dirty: false,

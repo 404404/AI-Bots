@@ -5,7 +5,6 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Keep fixture ports distinct from a shorter Host port while removing private Host data.
 export function redactBrowserEvidence(text, instance, root) {
   let value = String(text);
   if (instance?.url) {

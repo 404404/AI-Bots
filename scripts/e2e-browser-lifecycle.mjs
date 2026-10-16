@@ -25,7 +25,6 @@ const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8'
 const run = {
   version: 1,
   behavior,
-  redactBrowserEvidence,
   commit: null,
   base: null,
   dirty: true,
