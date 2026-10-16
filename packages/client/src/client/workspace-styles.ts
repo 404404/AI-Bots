@@ -54,7 +54,7 @@ body:not([data-ds-dark-theme]) .bh-dock[data-workspace-dock] .dv-tabs-and-action
 .bh-workspace-channels > .bh-region { flex:1; min-height:0; padding:0; }
 .bh-workspace-channels .bh-region:has(> [data-panel-empty]) .bh-roster-list:empty { display:none; }
 .bh-workspace-drop { position:absolute; top:0; bottom:0; width:${space.x1}; background:${color.accent}; z-index:1000; pointer-events:none; }
-.bh-message-split { display:flex; height:100%; min-height:0; }
+.bh-dock-body.bh-message-split { display:flex; flex-direction:row; height:100%; min-height:0; }
 .bh-message-content { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; }
 .bh-message-members { display:flex; flex-direction:column; min-width:0; min-height:0; }
 .bh-message-members > section { flex:1; min-height:0; overflow:auto; }
