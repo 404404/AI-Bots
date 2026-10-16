@@ -747,7 +747,7 @@
       "behaviors": ["desktop.browser.open-observe-stop"],
       "task": 1976,
       "reason": "One disposable Bot on an isolated Host; deterministic loopback fixture; real panel lifecycle and same-owner CLI/direct tools; no model.",
-      "sha256": "6548ac625ae399e12406653f020bddb75105defb6319e0661aa6ac2b733bfb5e"
+      "sha256": "34c15b5b0f4dfa5c9b6b789925d4122a0c8d95b3e4adf4fd25e850b4189f65e7"
     },
     {
       "path": "scripts/e2e-browser-multitab.mjs",

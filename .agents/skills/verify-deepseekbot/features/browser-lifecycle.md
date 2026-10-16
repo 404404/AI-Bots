@@ -17,7 +17,9 @@ The existing direct open tool must refuse without starting it. Only the enabled,
 Browser shows the **Stopped** card; do not accept a transient card before Access loads.
 Enable **Browser Access**, click **Open Bot Browser**, click **Leave fullscreen**, then use the existing direct
 `browser_open` tool to navigate the same tab to the fixture. The Browser panel must show
-the fixture title, URL and actual picture. `browser-observation`, `browser_tabs list`
+the fixture title, URL and actual picture with **Connected** status. If the existing
+viewer offers **Reconnect** after navigation, use it and record that action before
+inspecting the stable frame. A stale error banner is not a passing visible state. `browser-observation`, `browser_tabs list`
 and `browser_observe` must agree on that Bot's current tab and fixture content.
 
 Click **Stop** in the panel. Observation must show stopped, no tabs, no focused tab and
@@ -78,6 +80,7 @@ recipe; agent screenshot inspection is recorded separately from Human QA.
 
 - The default local target is required. Missing Browser prerequisites or a launch error
   must retain diagnostics, never switch targets or silently enable Browser Access.
+- Disabled Browser Access is omitted by the canonical registry (or false); true is enabled.
 - Access-off and stopped/no-tab currently use `host-refused` with distinct existing
   messages. Transport failure is not an acceptable substitute for either refusal.
 - Opening the Browser enters fullscreen. Leave fullscreen before inspecting the inline

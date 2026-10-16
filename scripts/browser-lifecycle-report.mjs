@@ -31,6 +31,7 @@ export const requiredEvidence = [
   'cleanup-browser.json',
   'cleanup-observation.json',
   'console.json',
+  'http-errors.json',
   ...phases.flatMap((phase) => [`visible-${phase}.json`, `${phase}.diagnostics.json`]),
   ...visualEvidence,
 ];
@@ -107,7 +108,11 @@ export function browserProblems(run, read) {
   )
     problems.push('Stopped read refusal missing');
   if (read('cleanup-browser').ok !== true) problems.push('Browser cleanup failed');
-  if (read('bot-final').bot?.slug !== run.botId || read('bot-final').bot.browserAccess !== false)
+  if (
+    read('bot-final').bot?.slug !== run.botId ||
+    (read('bot-final').bot.browserAccess !== undefined &&
+      read('bot-final').bot.browserAccess !== false)
+  )
     problems.push('Browser Access silently re-enabled or wrong Bot');
   const logs = JSON.stringify(read('lifecycle'));
   if (
@@ -139,7 +144,9 @@ export function browserProblems(run, read) {
       problems.push(`${phase}: missing/incorrect visible Browser state`);
     if (
       phase === 'running' &&
-      (!visible.text.includes(fixture.url) || !visible.viewers?.some((v) => v.visible))
+      (!visible.text.includes(fixture.url) ||
+        !visible.text.includes('Connected') ||
+        !visible.viewers?.some((v) => v.visible))
     )
       problems.push('Running panel viewer or fixture URL missing');
     const d = read(`${phase}.diagnostics`);

@@ -80,6 +80,7 @@ function fixture() {
       entries: [{ detail: 'stop requested (panel) slug=bot' }, { detail: 'direct tool slug=bot' }],
     },
     console: [],
+    'http-errors': [],
   };
   for (const phase of phases) {
     data[`${phase}.diagnostics`] = {
@@ -92,7 +93,7 @@ function fixture() {
       fullscreen: false,
       text:
         phase === 'running'
-          ? sample.title + ' ' + sample.url
+          ? sample.title + ' ' + sample.url + ' Connected'
           : phase === 'stopped'
             ? 'Stopped'
             : "This PersonaBot's sessions may use the browser",
@@ -319,6 +320,13 @@ describe('bounded Browser lifecycle proof', () => {
     const dir = fixture();
     change(dir, name, update);
     expect(coverageRow(dir, commit).status).toBe('needs-revalidation');
+  });
+  it('accepts the canonical omitted false Access field', () => {
+    const dir = fixture();
+    change(dir, 'bot-final', (v) => {
+      delete v.bot.browserAccess;
+    });
+    expect(coverageRow(dir, commit).status).toBe('pass');
   });
   it('invalidates source changes and changed evidence', () => {
     const dir = fixture();

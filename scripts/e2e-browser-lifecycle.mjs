@@ -59,6 +59,7 @@ const fixture = {
 };
 let stage = 'preconditions';
 const errors = [];
+const httpErrors = [];
 const redact = (text) => {
   let value = String(text);
   for (const secret of [
@@ -140,6 +141,7 @@ const capturePage = async (phase = 'failure') => {
       save(`${phase}.aria.json`, await page.accessibility.snapshot({ interestingOnly: false })))(),
     (async () => save(`${phase}.diagnostics.json`, await captureDiagnostics()))(),
     (async () => save('console.json', errors))(),
+    (async () => save('http-errors.json', httpErrors))(),
   ]);
 };
 const click = async (label) => {
@@ -234,11 +236,20 @@ try {
   stage = 'open-Web-Client';
   page = await browser.newPage();
   page.on('pageerror', (error) =>
-    errors.push({ source: 'pageerror', message: redact(error.message) }),
+    errors.push({ source: 'pageerror', stage, message: redact(error.message) }),
   );
   page.on('console', (message) => {
     if (message.type() === 'error')
-      errors.push({ source: 'console', message: redact(message.text()) });
+      errors.push({
+        source: 'console',
+        stage,
+        url: redact(message.location().url ?? ''),
+        message: redact(message.text()),
+      });
+  });
+  page.on('response', (response) => {
+    if (response.status() >= 400)
+      httpErrors.push({ stage, status: response.status(), url: redact(response.url()) });
   });
   const session = await page.createCDPSession();
   await session.send('Emulation.setUserAgentOverride', {
@@ -363,6 +374,15 @@ try {
   );
   save('direct-read.json', command(['browser-tool', run.botId, 'browser_observe']));
   stage = 'observe-running-panel';
+  const reconnect = await page.$('::-p-aria([name="Reconnect"][role="button"])');
+  if (reconnect && (await reconnect.isVisible())) await click('Reconnect');
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll('.bh-browser-body')].some((el) =>
+        el.innerText.includes('Connected'),
+      ),
+    { timeout: 30000 },
+  );
   await page.waitForFunction(
     () =>
       [...document.querySelectorAll('.bh-browser-body iframe')].some((el) => {
