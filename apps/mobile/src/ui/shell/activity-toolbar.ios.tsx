@@ -58,6 +58,7 @@ export function ActivityToolbar({
         placement="integratedButton"
         allowToolbarIntegration={false}
         hideWhenScrolling={false}
+        hideNavigationBar={false}
         obscureBackground={false}
         onFocus={() => {
           searching.current = true;
