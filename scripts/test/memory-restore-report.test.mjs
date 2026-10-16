@@ -32,7 +32,7 @@ function fixture() {
   const checkpoint = { id: 'saved', head: v2, botSlug: 'bot' };
   const data = {
     identity: { identity: { kind: 'development', source: { revision: commit, dirty: false } } },
-    created: { bot: { id: 'bot' }, dm: { id: 'dm-bot' } },
+    created: { bot: { id: 'bot' }, dm: { channelId: 'dm-bot' } },
     fixture: sample,
     initial: { snapshot: { head: '0'.repeat(40) } },
     'saved-v1': { commit: { sha: v1 } },

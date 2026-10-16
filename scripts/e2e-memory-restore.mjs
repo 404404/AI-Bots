@@ -287,7 +287,12 @@ try {
   };
   await selectBot();
   const openFile = async () => {
-    await click('Memory files');
+    for (const label of ['Close Sessions', 'Close Bot Inbox']) {
+      const close = await page.$(`::-p-aria([name=${JSON.stringify(label)}][role="button"])`);
+      if (close && (await close.isVisible())) await click(label);
+    }
+    const file = await page.$('::-p-aria([name="AX-1975.md"][role="treeitem"])');
+    if (!file || !(await file.isVisible())) await click('Memory files');
     await page.locator('::-p-aria([name="AX-1975.md"][role="treeitem"])').click();
     run.actions.push({ click: fixture.path, role: 'treeitem' });
   };
@@ -329,17 +334,8 @@ try {
   stage = 'read-historical-Web-Memory';
   await click('Memory evolution');
   await page.waitForSelector(`.bh-memory-graph-row[title="${v1.file.head}"]`, { visible: true });
-  const tree = await page.accessibility.snapshot({ interestingOnly: false });
-  const findCommit = (node) => {
-    if (node.role === 'button' && node.name.includes(v1.file.head.slice(0, 7))) return node.name;
-    for (const child of node.children ?? []) {
-      const label = findCommit(child);
-      if (label) return label;
-    }
-  };
-  const commitLabel = findCommit(tree);
-  if (!commitLabel) throw new Error('historical-commit-accessible-name-missing');
-  await click(commitLabel);
+  await page.locator(`::-p-aria([name="${v1.file.head}"][role="listitem"])`).click();
+  run.actions.push({ click: v1.file.head, role: 'listitem' });
   await observe('history', fixture.v1);
   stage = 'restore-through-Memory-owner';
   const restored = command([

@@ -108,9 +108,9 @@ export function memoryProblems(run, read) {
     if (
       visible.rendered !== true ||
       !visible.text?.includes(body.trim()) ||
-      !read('created').dm?.id ||
+      !read('created').dm?.channelId ||
       visible.selectedChannels?.length !== 1 ||
-      visible.selectedChannels[0] !== read('created').dm.id ||
+      visible.selectedChannels[0] !== read('created').dm.channelId ||
       (phase === 'history' && !visible.text?.includes(v1?.head?.slice(0, 7)))
     )
       problems.push(`${phase}: missing/incorrect visible Memory state`);

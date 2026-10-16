@@ -13,7 +13,7 @@
 
 Bot mode → select the newly created **AX Memory …** PersonaBot → **Memory files** toolbar button →
 Memory file list → **AX-1975.md**. Version two is visible. Open the **Memory evolution** toolbar button, then
-select version one's commit by its short SHA; the historical diff shows version one.
+select version one's commit (its accessible listitem name is the full SHA); the historical diff shows version one.
 The existing `memory-restore-commit` CLI then restores version one through the same
 Memory owner. Reload, reselect that Bot and open the file: version one is visible.
 
