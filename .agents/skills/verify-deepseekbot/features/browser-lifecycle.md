@@ -18,9 +18,9 @@ Browser shows the **Stopped** card; do not accept a transient card before Access
 Enable **Browser Access**, click **Open Bot Browser**, click **Leave fullscreen**, then use the existing direct
 `browser_open` tool to navigate the same tab to the fixture. The Browser panel must show
 the fixture title, URL and actual picture with its **Open fullscreen** live-frame action available and no viewer error text.
-If navigation leaves a viewer error, use the existing **Reconnect** button and record
-that action before inspecting the stable frame. Reconnect is always offered in the
-inline footer; its presence alone is not a connection failure. A stale error banner is not a passing visible state. `browser-observation`, `browser_tabs list`
+If navigation leaves a viewer error, preserve the failed run. A separate recovery may use
+the existing **Reconnect** button, but cannot turn the cold-start result into pass.
+Reconnect is always offered in the inline footer; its presence alone is not a connection failure. A stale error banner is not a passing visible state. `browser-observation`, `browser_tabs list`
 and `browser_observe` must agree on that Bot's current tab and fixture content.
 
 Click **Stop** in the panel. Observation must show stopped, no tabs, no focused tab and
@@ -78,6 +78,13 @@ private paths stay local. Human QA can launch another named instance and follow 
 recipe; agent screenshot inspection is recorded separately from Human QA.
 
 ## Gotchas
+
+- Cold-start regression (#2012): a running process is not yet an owned current tab.
+  The local viewer URL stays absent until that tab exists; its first frame has a bounded
+  wait. First-frame failure is `503 frame unavailable`, distinct from stopped/no-tab
+  `404`, and stops automatic viewer retries. Use the existing Reconnect control only
+  as a separate recovery action; the lifecycle runner must pass without it. Keep the
+  initial HTTP/console failure even if a manual reconnect later recovers.
 
 - The default local target is required. Missing Browser prerequisites or a launch error
   must retain diagnostics, never switch targets or silently enable Browser Access.
