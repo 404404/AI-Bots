@@ -7,6 +7,13 @@
 Documentation, build success, merge and a named milestone do not authorize publication.
 This guide supplements the [Release Ledger rules](changelog.md), not a second changelog authority.
 
+**Current workflow gap:** the existing publisher still routes prereleases to `next`, not `beta`.
+Do not use it to distribute a tester Beta until #1982's routing and qualification gates ship and
+migration is explicitly approved. The [older npm guide](../npm-prerelease.md) describes existing
+operator mechanics but contains historical package/version examples; its exclusion of Browser
+and Computer is outdated relative to `scripts/product-artifacts.mjs`. Inspect the actual frozen
+Release Plan and artifacts, not those examples, before any separately authorized publication.
+
 ## Identities and owners
 
 | Identity                          | Rule                                                                                                                                                                    |

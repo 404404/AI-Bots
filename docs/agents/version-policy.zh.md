@@ -1,10 +1,12 @@
 # DeepSeekBot 产品版本规范
 
 [English](version-policy.md) · [决策](../adr/0216-dsb-product-versions-identify-immutable-package-sets.md)
-· [实施任务](https://github.com/BotHarness/DeepSeekBot/issues/1979)
+· [实施跟踪总任务](https://github.com/BotHarness/DeepSeekBot/issues/1979)
 
 **这是已确认的规范，不是全部校验已经实现。** 当前交付状态以任务为准。
 文档、构建成功、合并和里程碑都不授予发布权限；本规范补充[Release Ledger 规则](changelog.md)，不建立第二份更新日志权威。
+
+**当前流程缺口：**既有发布器仍将预发布版本指向 `next`，不是 `beta`。在 #1982 的渠道与资格校验交付、迁移得到明确批准前，不用它向测试用户分发 Beta。[旧 npm 指南](../npm-prerelease.md)记录既有操作机制，但包含历史包范围／版本示例；其中排除 Browser／Computer 的说明相对于 `scripts/product-artifacts.mjs` 已过时。任何另行授权的发布都须核对实际冻结的 Release Plan 与产物，不能只依赖这些示例。
 
 ## 身份与归属
 
