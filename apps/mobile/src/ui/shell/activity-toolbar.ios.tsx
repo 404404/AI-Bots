@@ -18,7 +18,7 @@ export function ActivityToolbar({ search, filtered, onSearch, onFilter }: Activi
           headerLargeTitleEnabled: false,
           headerTransparent: true,
           headerStyle: { backgroundColor: 'transparent' },
-          headerBlurEffect: 'systemChromeMaterial',
+          headerBlurEffect: 'none',
           headerShadowVisible: false,
           headerTintColor: theme.color.fg,
         }}
