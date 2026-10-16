@@ -9,11 +9,13 @@ const FlatList = (props: {
   keyExtractor(row: unknown): string;
   renderItem(info: { item: unknown }): ReactNode;
   ListHeaderComponent?: ReactNode;
+  ListEmptyComponent?: ReactNode;
 }) =>
   createElement(
     'div',
     null,
     props.ListHeaderComponent ?? null,
+    props.data.length === 0 ? (props.ListEmptyComponent ?? null) : null,
     ...props.data.map((row) =>
       createElement(Fragment, { key: props.keyExtractor(row) }, props.renderItem({ item: row })),
     ),

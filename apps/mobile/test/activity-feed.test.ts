@@ -203,6 +203,22 @@ describe('Activity feed rows', () => {
     });
   });
 
+  it('hides empty search sections while keeping matching collapsed sections and pagination reachable', () => {
+    const snapshot: InboxSnapshot = {
+      status: 'ready',
+      sections: { action: [], replies: [reply], unread: [], handled: [] },
+      cursors: { unread: 'next-unread' },
+    };
+    expect(
+      feedRows(snapshot, new Set(), [], undefined, new Set(['replies']), 'budget').map(
+        (row) => row.key,
+      ),
+    ).toEqual(['header-replies', 'header-unread', 'empty-unread', 'more-unread']);
+    expect(
+      feedRows(ready([]), new Set(), [], undefined, undefined, '  ').map((row) => row.key),
+    ).toContain('header-action');
+  });
+
   it('says nothing needs you when the action section is empty', () => {
     expect(feedRows(ready([]), new Set(), []).map((row) => row.kind)).toContain('empty');
   });
@@ -232,6 +248,9 @@ describe('Activity feed', () => {
     });
     await settle();
     expect(queries.at(-1)?.search).toBe('budget');
+    expect(view.textContent).not.toContain(t.inboxSections.action);
+    expect(view.textContent).not.toContain(t.inboxSections.unread);
+    expect(view.textContent).toContain(t.inboxSections.replies);
     expect(view.querySelector(`button[aria-label="${t.close}"]`)).toBeNull();
     await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
     expect(queries.at(-1)?.search).toBe('budget');
@@ -245,6 +264,30 @@ describe('Activity feed', () => {
     await press(button(view, t.activityClearSearch));
     expect(view.querySelector('textarea')?.value).toBe('');
     expect(queries.at(-1)?.search).toBeUndefined();
+    expect(view.textContent).toContain(t.inboxSections.action);
+    expect(view.textContent).toContain(t.inboxSections.unread);
+  });
+
+  it('shows one no-results message instead of empty sections for an unmatched search', async () => {
+    const fake = host();
+    fake.answers.set('humanAttention', () => ({ ok: true, value: { items: [] } }));
+    const view = await feed(fake, ready([]));
+    await press(button(view, t.activitySearch));
+    const field = view.querySelector('textarea')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(
+        field,
+        'no-match',
+      );
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await settle();
+    expect(view.textContent).toContain(t.activityNoResults);
+    for (const section of ['action', 'replies', 'unread'] as const)
+      expect(view.textContent).not.toContain(t.inboxSections[section]);
+    await press(button(view, t.activityClearSearch));
+    expect(view.textContent).not.toContain(t.activityNoResults);
+    expect(view.textContent).toContain(t.inboxSections.action);
   });
 
   it('applies options immediately, keeps them on dismissal and resets without confirmation', async () => {

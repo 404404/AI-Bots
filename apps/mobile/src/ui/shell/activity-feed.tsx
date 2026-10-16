@@ -122,6 +122,7 @@ export function feedRows(
   held: readonly HumanAttentionItem[],
   filter: ActivityFilter = ALL_ACTIVITY,
   collapsed: ReadonlySet<string> = new Set(),
+  search = '',
 ): FeedRow[] {
   if (snapshot.status !== 'ready') return [];
   const rows: FeedRow[] = [];
@@ -129,6 +130,7 @@ export function feedRows(
     if (filter.section === 'all' && section === 'handled') continue;
     if (filter.section !== 'all' && filter.section !== section) continue;
     const items = sectionItems(snapshot, section, gone, held, filter.bot);
+    if (search.trim() && items.length === 0 && !snapshot.cursors?.[section]) continue;
     const count = sectionCount(section, items);
     const attention =
       section === 'replies'
@@ -383,7 +385,7 @@ export function ActivityFeed({
   const visible = scoped === undefined ? snapshot : scopedSnapshot;
   const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
   const collapsed = useSyncExternalStore(collapse.subscribe, () => collapse.collapsed(hostId));
-  const rows = feedRows(visible, gone, held, filter, collapsed);
+  const rows = feedRows(visible, gone, held, filter, collapsed, search);
   const slugsWithSelection =
     filter.bot !== undefined && !botSlugs.includes(filter.bot)
       ? [...botSlugs, filter.bot]
@@ -415,6 +417,13 @@ export function ActivityFeed({
         keyExtractor={(row) => row.key}
         itemLayoutAnimation={LinearTransition}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListEmptyComponent={
+          visible.status === 'ready' && search.trim() ? (
+            <Text tone="muted" style={{ padding: space.x5 }}>
+              {t.activityNoResults}
+            </Text>
+          ) : null
+        }
         ListFooterComponentStyle={{ flexGrow: 1 }}
         ListFooterComponent={
           <Pressable
