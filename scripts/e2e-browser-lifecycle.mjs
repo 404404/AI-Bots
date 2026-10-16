@@ -369,11 +369,6 @@ try {
   );
   save('direct-read.json', command(['browser-tool', run.botId, 'browser_observe']));
   stage = 'observe-running-panel';
-  const viewerError = await page.$eval(
-    '.bh-browser-body iframe',
-    (el) => el.contentDocument?.querySelector('#status')?.textContent ?? '',
-  );
-  if (viewerError) await click('Reconnect');
   await page.waitForSelector('.bh-browser-body [role="button"][aria-label="Open fullscreen"]', {
     timeout: 30000,
   });
@@ -386,6 +381,11 @@ try {
     { timeout: 30000 },
   );
   await new Promise((done) => setTimeout(done, 1000));
+  const viewerStatus = await page.$eval(
+    '.bh-browser-body iframe',
+    (el) => el.contentDocument?.querySelector('#status')?.textContent ?? '',
+  );
+  if (viewerStatus) throw new Error(`Browser-viewer-not-ready: ${viewerStatus}`);
   await observe('running', fixture.title);
   stage = 'stop-from-panel';
   await click('Stop');

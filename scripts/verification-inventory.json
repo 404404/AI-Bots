@@ -769,9 +769,9 @@
       "path": "scripts/e2e-browser-lifecycle.mjs",
       "category": "mapped",
       "behaviors": ["desktop.browser.open-observe-stop"],
-      "task": 1976,
-      "reason": "One disposable Bot on an isolated Host; deterministic loopback fixture; real panel lifecycle and same-owner CLI/direct tools; no model.",
-      "sha256": "aa263ba4e6ff527725b627ee877e90ab0d1e0045435466dc6289801d758f173a"
+      "task": 2012,
+      "reason": "One disposable Bot on an isolated Host; deterministic loopback fixture; real panel lifecycle and same-owner CLI/direct tools; cold start must pass without reconnect; no model.",
+      "sha256": "f2ecf326adba03de7c862189de7ac24e751b760319168de1ebb02fc6fa5b5e7c"
     },
     {
       "path": "scripts/e2e-browser-multitab.mjs",
