@@ -18,7 +18,6 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Routines on the phone                                                                              | no                         | `scripts/e2e-mobile-routines-web.mjs`                                                                | [phone-routines.md](phone-routines.md)               |
 | Approval Templates, the Approval Reviewer and its self-escalation guard                            | for the reviewer and guard | none                                                                                                 | [approval-templates.md](approval-templates.md)       |
 | Native activity rows and explicit menu navigation | no (existing QA records) | none (shared-device manual path) | [phone-activity.md](phone-activity.md) |
-
 | About and running product identity | no (source-only observation; packaged/restart pending) | none (manual path) | [release-identity.md](release-identity.md) |
 
 ## Coverage and maintenance
