@@ -6,14 +6,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { usePushRouting } from '../src/host/push-routing';
 import { t } from '../src/ui/strings';
-import { useDesignTheme } from '../src/ui/design/theme';
 import { useTheme } from '../src/ui/theme';
 
 export const unstable_settings = { initialRouteName: '(tabs)' };
 
 export default function RootLayout() {
   const theme = useTheme();
-  const design = useDesignTheme();
   const routing = usePushRouting();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -21,12 +19,6 @@ export default function RootLayout() {
         <View ref={routing} style={{ flex: 1 }}>
           <StatusBar style="auto" />
           <Stack
-            screenListeners={({ navigation }) => ({
-              transitionEnd: (event) => {
-                if (!event.data.closing && navigation.isFocused())
-                  StatusBar.setStyle(design.scheme === 'dark' ? 'light' : 'dark');
-              },
-            })}
             screenOptions={{
               headerStyle: { backgroundColor: theme.background },
               headerTintColor: theme.ink,
