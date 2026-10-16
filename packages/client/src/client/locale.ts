@@ -1376,8 +1376,7 @@ export const zh = {
   'message.draftInterrupted': '回复已中断，未发送。',
   'message.draftExpired': '回复草稿未发送。',
   'message.sending': '发送中',
-  'message.perf.exact': '{tps} tok/s',
-  'message.perf.estimated': '≈ {tps} tok/s · 估算',
+  'message.perf.speed': '{tps} tps',
   'footer.usage': 'Token 用量',
   'footer.speed': '生成速度',
   'footer.layout': '调整布局',
@@ -1388,7 +1387,6 @@ export const zh = {
   'footer.customizeHint': '右键自定义底部栏',
   'footer.moveHint': '拖动调整顺序；← → 移动，Ctrl/⌘ + ← → 切换左右，Esc 完成',
 
-  'composerContext.avgPerf': '平均 {tps} tok/s',
   'composerContext.avgPerf.title':
     '本频道最近 200 条消息中，最近 {count} 条 Bot 回复的平均输出速度',
   'message.mention.openDm': '打开与 {bot} 的私聊',
@@ -5034,8 +5032,7 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'message.draftInterrupted': 'Reply interrupted and not sent.',
   'message.draftExpired': 'Draft reply was not sent.',
   'message.sending': 'Sending',
-  'message.perf.exact': '{tps} tok/s',
-  'message.perf.estimated': '≈ {tps} tok/s · estimated',
+  'message.perf.speed': '{tps} tps',
   'footer.usage': 'Token usage',
   'footer.speed': 'Generation speed',
   'footer.layout': 'Arrange footer',
@@ -5046,7 +5043,6 @@ My relationship with you, established lore and topics to avoid: [fill in].
   'footer.customizeHint': 'Right-click to customize footer',
   'footer.moveHint': 'Drag to reorder; ← → to move, Ctrl/⌘ + ← → to change side, Esc to finish',
 
-  'composerContext.avgPerf': 'avg {tps} tok/s',
   'composerContext.avgPerf.title':
     "Average output speed of the last {count} Bot replies among this chat's latest 200 messages",
   'main.group.note':

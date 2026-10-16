@@ -7,7 +7,7 @@
 - Arrange mode supports pointer dragging with an insertion marker. Arrow keys reorder the focused item; Ctrl/Command + arrows move it left/right. Escape or an outside click finishes.
 - Preferences persist in this browser's localStorage and synchronize between same-origin tabs. They do not change Host permissions or other devices.
 - The footer stays on one line with ellipsis on long labels. Phone-width Web retains the compact model-only DM footer; group footers remain hidden.
-- Optional speed labels use a completed model step. Estimated counts are labeled. The average is bounded to 20 measured replies within 200 messages and at most four pages. No timer, per-token query or hidden history scan is used.
+- Optional speed labels use a completed model step. Reply and footer labels both show only a number followed by `tps` (for example `36 tps`), with no average or approximation prefix. The average is bounded to 20 measured replies within 200 messages and at most four pages. No timer, per-token query or hidden history scan is used.
 
 ## How to get to it (user POV)
 

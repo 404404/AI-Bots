@@ -223,7 +223,7 @@ export function GroupComposerContextView({
           <ChipButton
             data-composer-chip="avg-perf"
             icon={<ChannelSidebarIcon name="gauge" size={14} />}
-            label={`${avgPerf.estimated ? '≈ ' : ''}${t('composerContext.avgPerf', { tps: avgPerf.tokensPerSecond })}`}
+            label={t('message.perf.speed', { tps: avgPerf.tokensPerSecond })}
             title={t('composerContext.avgPerf.title', { count: avgPerf.count })}
             tabIndex={-1}
             disabled

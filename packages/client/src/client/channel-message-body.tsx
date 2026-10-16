@@ -679,9 +679,7 @@ export function ChannelMessageBody({
       ) : null}
       {perf === undefined ? null : (
         <div className="bh-message-perf">
-          {perf.estimated
-            ? t('message.perf.estimated', { tps: perf.tokensPerSecond })
-            : t('message.perf.exact', { tps: perf.tokensPerSecond })}
+          {t('message.perf.speed', { tps: perf.tokensPerSecond })}
         </div>
       )}
     </div>
