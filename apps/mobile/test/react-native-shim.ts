@@ -61,7 +61,6 @@ export const SectionList = (props: {
   renderSectionFooter?(info: { section: Section }): ReactNode;
   ListHeaderComponent?: ReactNode;
   ListFooterComponent?: ReactNode;
-  ListFooterComponent?: ReactNode;
   ref?: unknown;
 }) =>
   createElement(
