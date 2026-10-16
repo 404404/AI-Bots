@@ -62,6 +62,7 @@ const styles = stylex.create({
     paddingInline: space.x4,
     paddingBottom: space.x4,
   },
+  flushBody: { paddingTop: 0, paddingBottom: 0, paddingInline: 0 },
   workspaceBody: { paddingTop: space.x1, paddingBottom: space.x1, paddingInline: space.x1 },
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
@@ -138,6 +139,7 @@ function useEntryProps(entryId: string): ChannelSidebarEntryProps | undefined {
   if (dock.entryProps === undefined) return undefined;
   return {
     ...dock.entryProps,
+    flush: entryId === 'bot-inbox',
     refreshRevision: runtime.refreshRevision,
     requestRefresh: () =>
       dock.setRuntime(entryId, { refreshRevision: dock.runtime(entryId).refreshRevision + 1 }),
@@ -246,7 +248,11 @@ function ChannelEntryContent({ entryId }: { entryId: string }): ReactElement {
         props.expanded ? (
           <div
             data-sidebar-entry-body=""
-            {...stylex.props(styles.body, !!dock.rail && styles.workspaceBody)}
+            {...stylex.props(
+              styles.body,
+              !!dock.rail && styles.workspaceBody,
+              props.flush && styles.flushBody,
+            )}
           >
             <entry.component {...props} />
           </div>

@@ -41,6 +41,7 @@ export function resolveChannelSidebarContext(state: ClientState):
 }
 
 export interface ChannelSidebarEntryProps {
+  flush?: boolean;
   scope: ChannelSidebarScope;
   channelId: string;
   conversationRevision?: number;

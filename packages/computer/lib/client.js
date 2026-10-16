@@ -1648,9 +1648,10 @@ window.__ModuleLoader__.load({
 		}
 		//#endregion
 		//#region packages/client/src/client/sidebar-card.tsx
-		function SidebarCardList({ label, className, listRef, children }) {
+		function SidebarCardList({ label, className, listRef, flush = false, children }) {
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
 				ref: listRef,
+				"data-flush": flush || void 0,
 				className: className === void 0 ? "bh-card-list" : "bh-card-list " + className,
 				"aria-label": label,
 				children
