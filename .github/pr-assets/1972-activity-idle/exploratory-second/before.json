@@ -1,0 +1,36 @@
+{
+  "activity": {
+    "generation": "d24a33f6-e809-4001-b2bb-a97a079f8d93",
+    "revision": 0,
+    "bot": {
+      "slug": "bot-18a0782a3d4a4f81b5057a97618ded3e",
+      "state": "idle"
+    }
+  },
+  "attention": {
+    "items": []
+  },
+  "overview": {
+    "actionCount": 0,
+    "bots": [
+      {
+        "slug": "bot-18a0782a3d4a4f81b5057a97618ded3e",
+        "displayName": "AX idle 1792149537913",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      },
+      {
+        "slug": "bot-8aedd48cebbf40f3b1ce81c147160f87",
+        "displayName": "AX idle 1792149394933",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      }
+    ]
+  }
+}

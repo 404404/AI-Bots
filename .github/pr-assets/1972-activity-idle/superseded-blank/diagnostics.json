@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-16T11:25:29.822Z",
+  "state": "incomplete",
+  "exitCode": 2,
+  "host": {
+    "pidAlive": true,
+    "worktree": true,
+    "dshVersion": "0.2.0-rc.2",
+    "dshVersionMatches": true,
+    "authenticatedApi": true,
+    "botCount": 3,
+    "ok": true
+  },
+  "client": {
+    "state": "unobserved",
+    "exitCode": 2,
+    "attempt": null,
+    "browserVerification": "Read real CUA console and DOM before accepting UI readiness",
+    "earlierFailures": [],
+    "report": {
+      "version": 1,
+      "evidence": "browser-reported",
+      "readiness": "inspect-attempts",
+      "persistence": "available",
+      "evictedAttempts": 0,
+      "attempts": []
+    }
+  },
+  "verification": "unverified: drive the feature, inspect visible evidence and canonical state",
+  "page": null
+}

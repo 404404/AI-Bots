@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "behavior": "desktop.activity-center.idle-personabot",
+  "commit": "1ab9f563cff2da3e0139a76adaa94ab9f7e7ce31",
+  "base": "94d08913d214063512605a31db674c334afbfabd",
+  "dirty": false,
+  "startedAt": "2026-10-16T11:28:49.626Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "The created PersonaBot is visibly Idle with no sessions/actions; the same ID has idle activity and empty attention in the Host CLI.",
+  "evidence": {
+    "doctor.json": "60e979bb4fd5eedf159ae4b281d8ca23fc942e8635e12f10114f4b9d7b4e69ab",
+    "identity.json": "df1e5d573d5348634262a5b31f28cf227675ba0942ac8245db6480b0922ada68",
+    "created.json": "f75d36306de9735188a9e4848ba25ef7b96c7c1fc9ab0c89acbdf0df93f987eb",
+    "before.json": "b339708c1be49aec0250f67d0a4d50c0d1d68c49a3065a663290d9fdc1594052",
+    "visible-before.json": "25f3573df7dbb76fdc836ed7f25840305fd65a34242a967700d94c247a6aed3e",
+    "after.json": "b339708c1be49aec0250f67d0a4d50c0d1d68c49a3065a663290d9fdc1594052",
+    "console.json": "02967c544244fd496ab145c3769d5e361ba1aded94884c8a533d3f34498215d5",
+    "aria.json": "4d9a94b93ab9a3cffb1f4b651521260e01eefddcfd57103b1b897f9a6760f1b5",
+    "activity.png": "10a94498e8bbace212df7ae6457e290c036723bbebb206a4cc22790d3a540d6e",
+    "diagnostics.json": "6c09324e3293e8ce79ba5af043f7ba885687466250d89cb24d152daf5dda0661",
+    "visible.json": "25f3573df7dbb76fdc836ed7f25840305fd65a34242a967700d94c247a6aed3e",
+    "failure.json": "75da626cd7e8991cb2f73ee03f60e0d2d44c4f3b600105f306f54a2aa96eb09f"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T11:28:49.896Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX idle 1792150131128",
+        "--persona",
+        "Isolated Activity Center verification. No messages or schedules are submitted."
+      ],
+      "at": "2026-10-16T11:28:51.473Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-activity",
+        "bot-e45cf510f9c14d718de591897716969d",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:28:51.601Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-attention",
+        "bot-e45cf510f9c14d718de591897716969d",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:28:51.759Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "activity-overview"
+      ],
+      "at": "2026-10-16T11:28:51.886Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T11:28:55.307Z"
+    },
+    {
+      "click": "Activity Center",
+      "at": "2026-10-16T11:28:55.423Z"
+    },
+    {
+      "click": "Show idle Bots",
+      "at": "2026-10-16T11:28:55.541Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-activity",
+        "bot-e45cf510f9c14d718de591897716969d",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:28:56.174Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-attention",
+        "bot-e45cf510f9c14d718de591897716969d",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:28:56.369Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "activity-overview"
+      ],
+      "at": "2026-10-16T11:28:58.050Z"
+    }
+  ],
+  "botId": "bot-e45cf510f9c14d718de591897716969d",
+  "probe": "Controlled fault: browser request interception blocks Client diagnostic transport; product code unchanged.",
+  "reason": "confirm-authoritative-state: diagnostics: Host or Client observation unavailable/failed; console: errors or missing observation",
+  "actual": "confirm-authoritative-state: diagnostics: Host or Client observation unavailable/failed; console: errors or missing observation",
+  "finishedAt": "2026-10-16T11:29:05.319Z"
+}

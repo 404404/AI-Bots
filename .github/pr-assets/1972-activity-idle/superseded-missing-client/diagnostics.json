@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-16T11:24:18.321Z",
+  "state": "incomplete",
+  "exitCode": 2,
+  "host": {
+    "pidAlive": true,
+    "worktree": true,
+    "dshVersion": "0.2.0-rc.2",
+    "dshVersionMatches": true,
+    "authenticatedApi": true,
+    "botCount": 2,
+    "ok": true
+  },
+  "client": {
+    "state": "unobserved",
+    "exitCode": 2,
+    "attempt": null,
+    "browserVerification": "Read real CUA console and DOM before accepting UI readiness",
+    "earlierFailures": [],
+    "report": {
+      "version": 1,
+      "evidence": "browser-reported",
+      "readiness": "inspect-attempts",
+      "persistence": "available",
+      "evictedAttempts": 0,
+      "attempts": []
+    }
+  },
+  "verification": "unverified: drive the feature, inspect visible evidence and canonical state",
+  "page": {
+    "version": 1,
+    "attempt": "5422fc7c-da7b-4e11-a9d1-0d128d1bac5b",
+    "startedAt": 1792149852437,
+    "state": "shell-ready",
+    "events": [
+      {
+        "seq": 1,
+        "elapsedMs": 1,
+        "source": "lifecycle",
+        "code": "observer-installed"
+      },
+      {
+        "seq": 2,
+        "elapsedMs": 626,
+        "source": "lifecycle",
+        "code": "shell-mounted"
+      }
+    ],
+    "dropped": 0,
+    "delivery": "failed",
+    "shellMounted": {
+      "seq": 2,
+      "elapsedMs": 626,
+      "source": "lifecycle",
+      "code": "shell-mounted"
+    }
+  }
+}

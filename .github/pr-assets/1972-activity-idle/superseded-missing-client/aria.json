@@ -1,0 +1,2490 @@
+{
+  "role": "RootWebArea",
+  "backendNodeId": 2,
+  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+  "name": "DeepSeek Harness",
+  "url": "[redacted]",
+  "children": [
+    {
+      "role": "none",
+      "backendNodeId": 22,
+      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+      "children": [
+        {
+          "role": "none",
+          "backendNodeId": 190,
+          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+          "children": [
+            {
+              "role": "generic",
+              "backendNodeId": 193,
+              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+              "name": "",
+              "children": [
+                {
+                  "role": "generic",
+                  "backendNodeId": 195,
+                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                  "name": "",
+                  "children": [
+                    {
+                      "role": "none",
+                      "backendNodeId": 196,
+                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                      "children": [
+                        {
+                          "role": "navigation",
+                          "backendNodeId": 1364,
+                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                          "name": "Bot mode",
+                          "children": [
+                            {
+                              "role": "none",
+                              "backendNodeId": 1358,
+                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                              "children": [
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 544,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Exit Bot mode",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 539,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 545,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "children": [
+                                    {
+                                      "role": "StaticText",
+                                      "backendNodeId": 1368,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "DeepSeekBot",
+                                      "children": [
+                                        {
+                                          "role": "InlineTextBox",
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "DeepSeekBot"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 546,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Collapse sidebar"
+                                }
+                              ]
+                            },
+                            {
+                              "role": "group",
+                              "backendNodeId": 1359,
+                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                              "name": "Panels",
+                              "children": [
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 594,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Activity Center",
+                                  "pressed": true
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 595,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Bot files · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 596,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Work · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 597,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Memory files · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 598,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Memory evolution · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 599,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Members · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 600,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Sessions · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 601,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Bot Inbox · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 602,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Schedules · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 603,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Computer · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                },
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 604,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Browser · Open a Channel to use it",
+                                  "disabled": true,
+                                  "pressed": false
+                                }
+                              ]
+                            },
+                            {
+                              "role": "none",
+                              "backendNodeId": 1360,
+                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                              "children": [
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 1351,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 1346,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "children": [
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 622,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 1374,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Messages",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Messages"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 623,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "children": [
+                                            {
+                                              "role": "generic",
+                                              "backendNodeId": 610,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 608,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Search",
+                                                  "expanded": false
+                                                },
+                                                {
+                                                  "role": "textbox",
+                                                  "backendNodeId": 609,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Search Bots or channels",
+                                                  "multiline": false,
+                                                  "readonly": false,
+                                                  "required": false,
+                                                  "children": [
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1366,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                    },
+                                                    {
+                                                      "role": "generic",
+                                                      "backendNodeId": 1365,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": ""
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 624,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "children": [
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 620,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 615,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "More"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 621,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 619,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "New"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "button",
+                                          "backendNodeId": 1381,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Getting started · 0/7 done",
+                                          "description": "Getting started · 0/7 done",
+                                          "expanded": false,
+                                          "haspopup": "dialog"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 1349,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "children": [
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 1344,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "children": [
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1343,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 1341,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "AX idle 1792149851723: Idle AX idle 1792149851723 No messages yet",
+                                                  "description": "Alt+1 to open channel",
+                                                  "keyshortcuts": "Alt+1",
+                                                  "pressed": false,
+                                                  "children": [
+                                                    {
+                                                      "role": "image",
+                                                      "backendNodeId": 957,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "AX idle 1792149851723: Idle",
+                                                      "description": "AX idle 1792149851723 · Idle",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 952,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 958,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 955,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 953,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 1369,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "AX idle 1792149851723",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                      "name": "AX idle 1792149851723"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 956,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 954,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 1370,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "No messages yet",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                      "name": "No messages yet"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 1342,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "AX idle 1792149767763: Idle AX idle 1792149767763 20:22 Welcome to DeepSeek Bot",
+                                                  "description": "Alt+2 to open channel",
+                                                  "keyshortcuts": "Alt+2",
+                                                  "pressed": false,
+                                                  "children": [
+                                                    {
+                                                      "role": "image",
+                                                      "backendNodeId": 1339,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "AX idle 1792149767763: Idle",
+                                                      "description": "AX idle 1792149767763 · Idle",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 1333,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1340,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 1337,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 1334,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 1371,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "AX idle 1792149767763",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                      "name": "AX idle 1792149767763"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "role": "time",
+                                                              "backendNodeId": 1335,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "",
+                                                              "description": "2026/10/16 20:22:56",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 1372,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "20:22",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                      "name": "20:22"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 1338,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 1336,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "children": [
+                                                                {
+                                                                  "role": "StaticText",
+                                                                  "backendNodeId": 1373,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "Welcome to DeepSeek Bot",
+                                                                  "children": [
+                                                                    {
+                                                                      "role": "InlineTextBox",
+                                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                      "name": "Welcome to DeepSeek Bot"
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "role": "none",
+                              "backendNodeId": 1361,
+                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                              "children": [
+                                {
+                                  "role": "button",
+                                  "backendNodeId": 1357,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Bot settings",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 1355,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                    },
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 1356,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1367,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Bot settings",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Bot settings"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "role": "none",
+                      "backendNodeId": 349,
+                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                      "children": [
+                        {
+                          "role": "none",
+                          "backendNodeId": 1448,
+                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                          "children": [
+                            {
+                              "role": "banner",
+                              "backendNodeId": 1446,
+                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                              "name": "",
+                              "children": [
+                                {
+                                  "role": "heading",
+                                  "backendNodeId": 1384,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Activity Center",
+                                  "level": 1,
+                                  "children": [
+                                    {
+                                      "role": "StaticText",
+                                      "backendNodeId": 1449,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Activity Center",
+                                      "children": [
+                                        {
+                                          "role": "InlineTextBox",
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Activity Center"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "tablist",
+                                  "backendNodeId": 1385,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Activity Center",
+                                  "multiselectable": false,
+                                  "orientation": "horizontal",
+                                  "children": [
+                                    {
+                                      "role": "tab",
+                                      "backendNodeId": 1382,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Overview",
+                                      "selected": true,
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1450,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Overview",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Overview"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "tab",
+                                      "backendNodeId": 1383,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Inbox",
+                                      "selected": false,
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1451,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Inbox",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Inbox"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "role": "region",
+                              "backendNodeId": 1447,
+                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                              "name": "Overview",
+                              "children": [
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 1439,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "children": [
+                                    {
+                                      "role": "button",
+                                      "backendNodeId": 1481,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Actions waiting 0",
+                                      "children": [
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 1479,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 1483,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Actions waiting",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Actions waiting"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "strong",
+                                          "backendNodeId": 1480,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 1484,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "0",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "0"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "button",
+                                      "backendNodeId": 1394,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Show idle Bots",
+                                      "focused": true,
+                                      "pressed": true,
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1452,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Hide idle Bots",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Hide idle Bots"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "button",
+                                      "backendNodeId": 1395,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Refresh",
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1453,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Refresh",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Refresh"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 1440,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "children": [
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 1400,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "children": [
+                                        {
+                                          "role": "strong",
+                                          "backendNodeId": 1396,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 1454,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "0",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "0"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1455,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": " ",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": " "
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1456,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "unread messages",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "unread messages"
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "paragraph",
+                                          "backendNodeId": 1397,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 1457,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Reading messages does not answer or remove pending requests.",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Reading messages does not answer or remove pending requests."
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "button",
+                                      "backendNodeId": 1401,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Mark all read",
+                                      "disabled": true,
+                                      "children": [
+                                        {
+                                          "role": "StaticText",
+                                          "backendNodeId": 1458,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Mark all read",
+                                          "children": [
+                                            {
+                                              "role": "InlineTextBox",
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Mark all read"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "heading",
+                                  "backendNodeId": 1441,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Needs you and working now",
+                                  "level": 2,
+                                  "children": [
+                                    {
+                                      "role": "StaticText",
+                                      "backendNodeId": 1459,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "Needs you and working now",
+                                      "children": [
+                                        {
+                                          "role": "InlineTextBox",
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Needs you and working now"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "none",
+                                  "backendNodeId": 1443,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "children": [
+                                    {
+                                      "role": "article",
+                                      "backendNodeId": 2465,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "",
+                                      "children": [
+                                        {
+                                          "role": "button",
+                                          "backendNodeId": 2132,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "AX idle 1792149767763: Idle AX idle 1792149767763 Idle",
+                                          "children": [
+                                            {
+                                              "role": "image",
+                                              "backendNodeId": 2129,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "AX idle 1792149767763: Idle",
+                                              "description": "AX idle 1792149767763 · Idle",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 2128,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 2130,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 2467,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "AX idle 1792149767763",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "AX idle 1792149767763"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 2131,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 2468,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Idle",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Idle"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "paragraph",
+                                          "backendNodeId": 2133,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 2469,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "No Session is executing",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "No Session is executing"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "article",
+                                      "backendNodeId": 2466,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "",
+                                      "children": [
+                                        {
+                                          "role": "button",
+                                          "backendNodeId": 2463,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "AX idle 1792149851723: Idle AX idle 1792149851723 Idle",
+                                          "children": [
+                                            {
+                                              "role": "image",
+                                              "backendNodeId": 2460,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "AX idle 1792149851723: Idle",
+                                              "description": "AX idle 1792149851723 · Idle",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 2459,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 2461,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 2470,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "AX idle 1792149851723",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "AX idle 1792149851723"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 2462,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 2471,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Idle",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Idle"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "paragraph",
+                                          "backendNodeId": 2464,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "StaticText",
+                                              "backendNodeId": 2472,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "No Session is executing",
+                                              "children": [
+                                                {
+                                                  "role": "InlineTextBox",
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "No Session is executing"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "role": "region",
+                                  "backendNodeId": 1444,
+                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                  "name": "Today’s Channel activity",
+                                  "children": [
+                                    {
+                                      "role": "sectionheader",
+                                      "backendNodeId": 1437,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "name": "",
+                                      "children": [
+                                        {
+                                          "role": "heading",
+                                          "backendNodeId": 1405,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Expand or collapse statistics",
+                                          "level": 2,
+                                          "children": [
+                                            {
+                                              "role": "button",
+                                              "backendNodeId": 1404,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Expand or collapse statistics",
+                                              "expanded": true,
+                                              "children": [
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 1461,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Statistics",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Statistics"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "role": "none",
+                                      "backendNodeId": 1438,
+                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                      "children": [
+                                        {
+                                          "role": "region",
+                                          "backendNodeId": 1433,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Token usage",
+                                          "children": [
+                                            {
+                                              "role": "sectionheader",
+                                              "backendNodeId": 1418,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "heading",
+                                                  "backendNodeId": 1415,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Token usage",
+                                                  "level": 3,
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1462,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Token usage",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Token usage"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1416,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "group",
+                                                      "backendNodeId": 1413,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Usage range",
+                                                      "children": [
+                                                        {
+                                                          "role": "button",
+                                                          "backendNodeId": 1406,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Today",
+                                                          "pressed": true,
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1463,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "Today",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "Today"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "button",
+                                                          "backendNodeId": 1407,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "7 days",
+                                                          "pressed": false,
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1464,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "7 days",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "7 days"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "button",
+                                                          "backendNodeId": 1408,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "4 weeks",
+                                                          "pressed": false,
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1465,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "4 weeks",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "4 weeks"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "button",
+                                                          "backendNodeId": 1409,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "12 weeks",
+                                                          "pressed": false,
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1466,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "12 weeks",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "12 weeks"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1414,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Refresh usage",
+                                                      "description": "Refresh usage"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1419,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1516,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1521,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "2026-10-16",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2026-10-16"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1522,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " – ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " – "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1523,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "2026-10-16",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2026-10-16"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1524,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " · ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " · "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1525,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Asia/Tokyo",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Asia/Tokyo"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "strong",
+                                                  "backendNodeId": 1517,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "",
+                                                  "atomic": false,
+                                                  "live": "polite",
+                                                  "relevant": "additions text",
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1526,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Overall usage",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Overall usage"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1527,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": ":",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": ":"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1528,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1529,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "0",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "0"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1530,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1531,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "tokens",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "tokens"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1518,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1488,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "strong",
+                                                          "backendNodeId": 1487,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "",
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1532,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "By Bot",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "By Bot"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "paragraph",
+                                                      "backendNodeId": 1489,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1533,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "No recorded calls in this period",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "No recorded calls in this period"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "group",
+                                                  "backendNodeId": 1519,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "",
+                                                  "children": [
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1511,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "DisclosureTriangle",
+                                                          "backendNodeId": 1514,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Details",
+                                                          "expanded": false,
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "backendNodeId": 1520,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "children": [
+                                                                {
+                                                                  "role": "none",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                                }
+                                                              ]
+                                                            },
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1534,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "Details",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "Details"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1512,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "region",
+                                          "backendNodeId": 1434,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "Memory activity",
+                                          "children": [
+                                            {
+                                              "role": "sectionheader",
+                                              "backendNodeId": 1425,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "heading",
+                                                  "backendNodeId": 1423,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Memory activity · Last 7 days",
+                                                  "level": 3,
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1468,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Memory activity",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Memory activity"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1469,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " · ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " · "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1470,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Last 7 days",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Last 7 days"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "button",
+                                                  "backendNodeId": 1424,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Refresh Memory activity",
+                                                  "description": "Refresh Memory activity"
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1713,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1649,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1717,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "2026-10-10",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2026-10-10"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1718,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " — ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " — "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1719,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "2026-10-16",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2026-10-16"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1650,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1720,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Asia/Tokyo",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Asia/Tokyo"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "list",
+                                              "backendNodeId": 1714,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "listitem",
+                                                  "backendNodeId": 1673,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "",
+                                                  "level": 1,
+                                                  "children": [
+                                                    {
+                                                      "role": "generic",
+                                                      "backendNodeId": 1657,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1721,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "AX idle 1792149767763",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "AX idle 1792149767763"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "strong",
+                                                      "backendNodeId": 1658,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1722,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "2"
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1723,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " ",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": " "
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1724,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "commits",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "commits"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1659,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "generic",
+                                                          "backendNodeId": 1653,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "",
+                                                          "children": [
+                                                            {
+                                                              "role": "generic",
+                                                              "backendNodeId": 1652,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "",
+                                                              "children": [
+                                                                {
+                                                                  "role": "image",
+                                                                  "backendNodeId": 1732,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "AX idle 1792149767763: Daily Memory commits",
+                                                                  "roledescription": "chart"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1660,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1725,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "No uncommitted changes",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "No uncommitted changes"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1661,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "View details: AX idle 1792149767763",
+                                                      "description": "View details: AX idle 1792149767763"
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "listitem",
+                                                  "backendNodeId": 1674,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "",
+                                                  "level": 1,
+                                                  "children": [
+                                                    {
+                                                      "role": "generic",
+                                                      "backendNodeId": 1668,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1726,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "AX idle 1792149851723",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "AX idle 1792149851723"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "strong",
+                                                      "backendNodeId": 1669,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1727,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "2"
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1728,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " ",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": " "
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1729,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "commits",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "commits"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1670,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "generic",
+                                                          "backendNodeId": 1664,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "",
+                                                          "children": [
+                                                            {
+                                                              "role": "generic",
+                                                              "backendNodeId": 1663,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "",
+                                                              "children": [
+                                                                {
+                                                                  "role": "image",
+                                                                  "backendNodeId": 1743,
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "AX idle 1792149851723: Daily Memory commits",
+                                                                  "roledescription": "chart"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "none",
+                                                      "backendNodeId": 1671,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1730,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "No uncommitted changes",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "No uncommitted changes"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1672,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "View details: AX idle 1792149851723",
+                                                      "description": "View details: AX idle 1792149851723"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "group",
+                                              "backendNodeId": 1715,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1707,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "DisclosureTriangle",
+                                                      "backendNodeId": 1710,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Details",
+                                                      "expanded": false,
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 1716,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "none",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1731,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Details",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "Details"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1708,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "sectionheader",
+                                          "backendNodeId": 1435,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1431,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "heading",
+                                                  "backendNodeId": 1427,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Today’s Channel activity",
+                                                  "level": 3,
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1472,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Today’s Channel activity",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Today’s Channel activity"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "role": "paragraph",
+                                                  "backendNodeId": 1565,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "",
+                                                  "children": [
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1571,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "2026-10-16",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "2026-10-16"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1572,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " · ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " · "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1573,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Asia/Tokyo",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "Asia/Tokyo"
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1574,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " · ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " · "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "strong",
+                                                      "backendNodeId": 1535,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "",
+                                                      "children": [
+                                                        {
+                                                          "role": "StaticText",
+                                                          "backendNodeId": 1575,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "1",
+                                                          "children": [
+                                                            {
+                                                              "role": "InlineTextBox",
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "1"
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1576,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": " ",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": " "
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "StaticText",
+                                                      "backendNodeId": 1577,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "messages",
+                                                      "children": [
+                                                        {
+                                                          "role": "InlineTextBox",
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "messages"
+                                                        }
+                                                      ]
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "button",
+                                              "backendNodeId": 1432,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "Refresh activity",
+                                              "children": [
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 1473,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Refresh activity",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Refresh activity"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "none",
+                                          "backendNodeId": 1566,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "children": [
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1539,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1536,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                },
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 1578,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "You",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "You"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1540,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1537,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                },
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 1579,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Bot",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Bot"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "none",
+                                              "backendNodeId": 1541,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1538,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF"
+                                                },
+                                                {
+                                                  "role": "StaticText",
+                                                  "backendNodeId": 1580,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Other",
+                                                  "children": [
+                                                    {
+                                                      "role": "InlineTextBox",
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Other"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "generic",
+                                          "backendNodeId": 1567,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "generic",
+                                              "backendNodeId": 1542,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "children": [
+                                                {
+                                                  "role": "image",
+                                                  "backendNodeId": 1585,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "name": "Today’s Channel activity",
+                                                  "roledescription": "chart"
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "role": "list",
+                                          "backendNodeId": 1568,
+                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                          "name": "",
+                                          "children": [
+                                            {
+                                              "role": "listitem",
+                                              "backendNodeId": 1563,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "level": 1,
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1552,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1550,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "AX idle 1792149767763: 1 messages",
+                                                      "expanded": false,
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 1545,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1581,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "AX idle 1792149767763",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "AX idle 1792149767763"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "strong",
+                                                          "backendNodeId": 1546,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "",
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1582,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "1",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "1"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1551,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Open Channel: AX idle 1792149767763"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "role": "listitem",
+                                              "backendNodeId": 1564,
+                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                              "name": "",
+                                              "level": 1,
+                                              "children": [
+                                                {
+                                                  "role": "none",
+                                                  "backendNodeId": 1562,
+                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                  "children": [
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1560,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "AX idle 1792149851723: 0 messages",
+                                                      "expanded": false,
+                                                      "children": [
+                                                        {
+                                                          "role": "none",
+                                                          "backendNodeId": 1555,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1583,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "AX idle 1792149851723",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "AX idle 1792149851723"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        },
+                                                        {
+                                                          "role": "strong",
+                                                          "backendNodeId": 1556,
+                                                          "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                          "name": "",
+                                                          "children": [
+                                                            {
+                                                              "role": "StaticText",
+                                                              "backendNodeId": 1584,
+                                                              "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                              "name": "0",
+                                                              "children": [
+                                                                {
+                                                                  "role": "InlineTextBox",
+                                                                  "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                                  "name": "0"
+                                                                }
+                                                              ]
+                                                            }
+                                                          ]
+                                                        }
+                                                      ]
+                                                    },
+                                                    {
+                                                      "role": "button",
+                                                      "backendNodeId": 1561,
+                                                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                                                      "name": "Open Channel: AX idle 1792149851723"
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "role": "generic",
+                      "backendNodeId": 455,
+                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                      "name": ""
+                    },
+                    {
+                      "role": "generic",
+                      "backendNodeId": 487,
+                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                      "name": ""
+                    },
+                    {
+                      "role": "generic",
+                      "backendNodeId": 490,
+                      "loaderId": "0D8B31DF895FCA94D4A90262426D47CF",
+                      "name": ""
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "behavior": "desktop.activity-center.idle-personabot",
+  "commit": "94d08913d214063512605a31db674c334afbfabd",
+  "base": "94d08913d214063512605a31db674c334afbfabd",
+  "dirty": true,
+  "startedAt": "2026-10-16T11:18:56.811Z",
+  "status": "pass",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "The created PersonaBot is visibly Idle with no sessions/actions; the same ID has idle activity and empty attention in the Host CLI.",
+  "evidence": {
+    "doctor.json": "60e979bb4fd5eedf159ae4b281d8ca23fc942e8635e12f10114f4b9d7b4e69ab",
+    "identity.json": "a74a06958408c3318fed46f2a5f127ecd1d437b86199b2da0c029c0cdf68538f",
+    "created.json": "b641e2e743094dcc0d82f987136e92668ae7221e132a0b202f632e3711ba8dab",
+    "before.json": "ab085a35b5dab83102cd7b13784859a968514116ec1a1cbfc76c7122f06f9282",
+    "visible.json": "16440c09abdbe24cf6aaf31f850f0761ae01d54ec2093df3569fc892eb30125d",
+    "after.json": "ab085a35b5dab83102cd7b13784859a968514116ec1a1cbfc76c7122f06f9282",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "aria.json": "ac00aa4b85bd977ba2646276cc4880796bb485fc7270cdf0ace33fcf64e6d919",
+    "diagnostics.json": "d52a97d5b796455290b09f52175de9acfd62ade6a7d753db62f08fc545256e4e",
+    "activity.png": "ab73146a6e056b1b58f03c87d48afad39c11572d0db8d31ad39127df6a8e7f30"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T11:18:56.993Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX idle 1792149537913",
+        "--persona",
+        "Isolated Activity Center verification. No messages or schedules are submitted."
+      ],
+      "at": "2026-10-16T11:18:58.171Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-activity",
+        "bot-18a0782a3d4a4f81b5057a97618ded3e",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:18:58.290Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-attention",
+        "bot-18a0782a3d4a4f81b5057a97618ded3e",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:18:58.406Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "activity-overview"
+      ],
+      "at": "2026-10-16T11:18:58.523Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T11:19:06.637Z"
+    },
+    {
+      "click": "Activity Center",
+      "at": "2026-10-16T11:19:06.756Z"
+    },
+    {
+      "click": "Show idle Bots",
+      "at": "2026-10-16T11:19:06.893Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-activity",
+        "bot-18a0782a3d4a4f81b5057a97618ded3e",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:19:07.546Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "bot-attention",
+        "bot-18a0782a3d4a4f81b5057a97618ded3e",
+        "--limit",
+        "20"
+      ],
+      "at": "2026-10-16T11:19:07.672Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "activity-overview"
+      ],
+      "at": "2026-10-16T11:19:07.801Z"
+    }
+  ],
+  "botId": "bot-18a0782a3d4a4f81b5057a97618ded3e",
+  "actual": "bot-18a0782a3d4a4f81b5057a97618ded3e: visible Idle, CLI idle, zero attention, sessions and actions.",
+  "finishedAt": "2026-10-16T11:19:09.636Z"
+}

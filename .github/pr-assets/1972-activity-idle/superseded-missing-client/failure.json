@@ -1,0 +1,5 @@
+{
+  "stage": "confirm-authoritative-state",
+  "reason": "confirm-authoritative-state: diagnostics: Host or Client observation unavailable/failed; console: errors or missing observation",
+  "botId": "bot-9980998fefda48eab7bd7d887773d380"
+}

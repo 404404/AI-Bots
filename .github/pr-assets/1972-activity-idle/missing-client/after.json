@@ -1,0 +1,36 @@
+{
+  "activity": {
+    "generation": "2115e098-0150-4f20-b590-b244bad80486",
+    "revision": 0,
+    "bot": {
+      "slug": "bot-e45cf510f9c14d718de591897716969d",
+      "state": "idle"
+    }
+  },
+  "attention": {
+    "items": []
+  },
+  "overview": {
+    "actionCount": 0,
+    "bots": [
+      {
+        "slug": "bot-442ec0443f434bdd82230be9a9c03738",
+        "displayName": "AX idle 1792150053012",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      },
+      {
+        "slug": "bot-e45cf510f9c14d718de591897716969d",
+        "displayName": "AX idle 1792150131128",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "role": "RootWebArea",
+  "backendNodeId": 1,
+  "loaderId": "128A6D2E56020BB860AE52432212793A",
+  "name": "",
+  "url": "about:blank",
+  "children": [
+    {
+      "role": "none",
+      "backendNodeId": 2,
+      "loaderId": "128A6D2E56020BB860AE52432212793A",
+      "children": [
+        {
+          "role": "none",
+          "backendNodeId": 4,
+          "loaderId": "128A6D2E56020BB860AE52432212793A"
+        }
+      ]
+    }
+  ]
+}

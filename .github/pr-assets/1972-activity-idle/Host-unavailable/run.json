@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "behavior": "desktop.activity-center.idle-personabot",
+  "commit": "1ab9f563cff2da3e0139a76adaa94ab9f7e7ce31",
+  "base": "94d08913d214063512605a31db674c334afbfabd",
+  "dirty": false,
+  "startedAt": "2026-10-16T11:29:23.253Z",
+  "status": "blocked",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark"
+  },
+  "expected": "The created PersonaBot is visibly Idle with no sessions/actions; the same ID has idle activity and empty attention in the Host CLI.",
+  "evidence": {
+    "failure.json": "7dfd0f51e4e3fd9ff200aaa86ee8ba9339c55869f70264fd3f012fb146d608be",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "diagnostics.json": "bd1ec8cc6f56c8cc8c070ec457a1ec76c42f74d536c7d02170928a8d796919c6"
+  },
+  "actions": [],
+  "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1972-shared-01a1444a/instance.json'",
+  "actual": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1972-shared-01a1444a/instance.json'",
+  "finishedAt": "2026-10-16T11:29:23.357Z"
+}

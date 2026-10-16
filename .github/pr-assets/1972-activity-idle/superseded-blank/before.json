@@ -1,0 +1,45 @@
+{
+  "activity": {
+    "generation": "7f1c3f20-41f1-49c9-aee2-8ee186b24639",
+    "revision": 0,
+    "bot": {
+      "slug": "bot-9a19d9203f14405eb4aa5b6dc75a9ab7",
+      "state": "idle"
+    }
+  },
+  "attention": {
+    "items": []
+  },
+  "overview": {
+    "actionCount": 0,
+    "bots": [
+      {
+        "slug": "bot-48fe9587d1e14c6bba26fe8e6480d32a",
+        "displayName": "AX idle 1792149767763",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      },
+      {
+        "slug": "bot-9980998fefda48eab7bd7d887773d380",
+        "displayName": "AX idle 1792149851723",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      },
+      {
+        "slug": "bot-9a19d9203f14405eb4aa5b6dc75a9ab7",
+        "displayName": "AX idle 1792149918069",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      }
+    ]
+  }
+}

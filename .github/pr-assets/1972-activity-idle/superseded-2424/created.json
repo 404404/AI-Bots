@@ -1,0 +1,25 @@
+{
+  "bot": {
+    "id": "bot-48fe9587d1e14c6bba26fe8e6480d32a",
+    "name": "AX idle 1792149767763"
+  },
+  "steps": [
+    {
+      "name": "validate",
+      "status": "ok"
+    },
+    {
+      "name": "create-bot",
+      "status": "ok"
+    },
+    {
+      "name": "model",
+      "status": "deferred",
+      "code": "no-model-yet"
+    },
+    {
+      "name": "dm",
+      "status": "ok"
+    }
+  ]
+}

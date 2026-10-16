@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-16T11:24:18.566Z",
+  "state": "failed",
+  "exitCode": 1,
+  "host": {
+    "ok": false,
+    "reason": "doctor-unavailable"
+  },
+  "client": {
+    "state": "unavailable",
+    "exitCode": 2,
+    "reason": "client-diagnostics-unavailable"
+  },
+  "verification": "unverified: drive the feature, inspect visible evidence and canonical state",
+  "page": null
+}
