@@ -65,7 +65,9 @@ export function ActivityToolbar({
           searching.current = true;
           onSearchFocus(true);
           searchBar.current?.setText(search);
-          searchBar.current?.toggleCancelButton(false);
+          requestAnimationFrame(() => {
+            if (searching.current) searchBar.current?.toggleCancelButton(false);
+          });
         }}
         onBlur={dismissSearch}
         onChangeText={(event) => {
@@ -73,6 +75,7 @@ export function ActivityToolbar({
           const value = event.nativeEvent.text.slice(0, 200);
           if (value !== event.nativeEvent.text) searchBar.current?.setText(value);
           onSearch(value);
+          searchBar.current?.toggleCancelButton(false);
         }}
         onCancelButtonPress={() => {
           searching.current = false;
