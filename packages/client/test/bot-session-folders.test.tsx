@@ -11,6 +11,10 @@ import {
 } from '../src/client/bot-session-folders.js';
 import { zhTranslate } from '../src/client/locale.js';
 
+vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
+  IconChevronDownOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
+}));
+
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 function stub<T>(value: Partial<T>): T {
   return value as T;
@@ -40,7 +44,7 @@ describe('native Bot Session folders', () => {
     const openSession = vi.fn();
     const values = new Map<string, string>();
     const list = {
-      ids: ['orchestrator', 'assignment', 'ordinary'],
+      ids: ['orchestrator', 'assignment', 'ordinary', 'review'],
       byId: {
         orchestrator: {
           displayTitle: 'Coordinate',
@@ -50,10 +54,12 @@ describe('native Bot Session folders', () => {
         },
         assignment: { displayTitle: 'Build', cwd: '/project', retainedBy: {}, running: true },
         ordinary: { displayTitle: 'Ordinary', cwd: '/project', retainedBy: {} },
+        review: { displayTitle: 'Review', cwd: '/another-project', retainedBy: {} },
       },
     };
     const groups = [
       { botSlug: 'ada', displayName: 'Ada', sessionIds: ['orchestrator', 'assignment', 'missing'] },
+      { botSlug: 'lin', displayName: 'Lin', sessionIds: ['review'] },
     ];
     const source = <T,>(value: T) => ({ getSnapshot: () => value, subscribe: () => () => {} });
     let folderHost: HTMLElement | null = null;
@@ -67,14 +73,7 @@ describe('native Bot Session folders', () => {
       },
     });
     const props = stub<BotSessionFoldersProps>({
-      useBotFolderGroups: (select) =>
-        select([
-          {
-            botSlug: 'ada',
-            displayName: 'Ada',
-            sessionIds: ['orchestrator', 'assignment', 'missing'],
-          },
-        ]),
+      useBotFolderGroups: (select) => select(groups),
       useBotFolderPrefs: (select) => select({ showBotSessions: true }),
       useBotFolderHost: (select) => select(folderHost),
       setMounted: (node) => projection.setMounted(node),
@@ -91,8 +90,12 @@ describe('native Bot Session folders', () => {
     });
     try {
       await act(async () => root.render(createElement(BotSessionFolders, props)));
-      expect(tree.querySelectorAll('[data-bot-folder]')).toHaveLength(1);
-      expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(2);
+      const rootHeader = () =>
+        tree.querySelector<HTMLButtonElement>('[data-bot-folder-root] > div > [data-panel-head]')!;
+      expect(rootHeader().textContent).toBe('DeepSeekBot2');
+      expect(tree.querySelectorAll('[data-bot-folder]')).toHaveLength(2);
+      expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(3);
+      expect(tree.querySelector('[data-bot-folder="lin"]')?.textContent).toContain('Review');
       expect(tree.querySelector('[data-row-key="session:assignment"]')).toBe(originalRow);
       expect(list.byId.assignment.cwd).toBe('/project');
       await act(async () =>
@@ -100,15 +103,20 @@ describe('native Bot Session folders', () => {
       );
       expect(openSession).toHaveBeenCalledExactlyOnceWith('assignment');
       await act(async () =>
-        tree.querySelector<HTMLButtonElement>('[data-bot-folder="ada"] > button')!.click(),
+        tree.querySelector<HTMLButtonElement>('[data-bot-folder="ada"] [data-panel-head]')!.click(),
       );
-      expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(0);
+      expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(1);
+      await act(async () => rootHeader().click());
+      expect(tree.querySelectorAll('[data-bot-folder]')).toHaveLength(0);
+      expect(tree.hasAttribute('data-botharness-folder-tree')).toBe(true);
       await act(async () => root.render(null));
       await act(async () => root.render(createElement(BotSessionFolders, props)));
+      expect(rootHeader().getAttribute('aria-expanded')).toBe('false');
+      await act(async () => rootHeader().click());
       expect(tree.querySelector('[data-bot-folder="ada"]')?.getAttribute('aria-expanded')).toBe(
         'false',
       );
-      expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(0);
+      expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(1);
     } finally {
       await act(async () => root.unmount());
       projection.dispose();

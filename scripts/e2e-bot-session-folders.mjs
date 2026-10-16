@@ -74,9 +74,18 @@ try {
     await page.click('button[aria-label="Exit Bot mode"]');
   await page.evaluate(() => document.body.removeAttribute('data-ds-dark-theme'));
   step('group-visible');
+  const rootFolder = '[data-bot-folder-root]';
+  const rootHeader = `${rootFolder} > div > [data-panel-head]`;
+  await page.waitForSelector(rootFolder, { visible: true, timeout: 60_000 });
+  if (await page.$(`${rootFolder}[aria-expanded="false"]`)) await page.click(rootHeader);
+  assert.equal(
+    await page.$eval(`${rootHeader} [data-panel-label]`, (node) => node.textContent),
+    'DeepSeekBot',
+  );
   const folder = `[data-bot-folder="${group.botSlug}"]`;
+  const folderHeader = `${folder} [data-panel-head]`;
   await page.waitForSelector(folder, { visible: true, timeout: 60_000 });
-  if (await page.$(`${folder}[aria-expanded="false"]`)) await page.click(`${folder} > button`);
+  if (await page.$(`${folder}[aria-expanded="false"]`)) await page.click(folderHeader);
   await page.waitForFunction(
     (selector) => document.querySelectorAll(`${selector} [data-bot-folder-session]`).length >= 2,
     { timeout: 20_000 },
@@ -92,12 +101,19 @@ try {
   assert.ok(group.sessionIds.every((id) => !duplicates.includes(`session:${id}`)));
   await page.screenshot({ path: join(directory, 'expanded-light.png'), waitForFonts: false });
   step('fold');
-  await page.click(`${folder} > button`);
+  await page.click(folderHeader);
   await page.waitForSelector(`${folder}[aria-expanded="false"]`);
   await page.screenshot({ path: join(directory, 'collapsed-light.png'), waitForFonts: false });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForSelector(`${folder}[aria-expanded="false"]`, { timeout: 60_000 });
   step('reload-preserves-collapse');
+  await page.click(rootHeader);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(`${rootFolder}[aria-expanded="false"]`, { timeout: 60_000 });
+  assert.equal(await page.$(folder), null);
+  await page.click(rootHeader);
+  await page.waitForSelector(`${folder}[aria-expanded="false"]`);
+  step('nested-collapse-preserved');
   if (process.env.BH_E2E_RESTART === '1') {
     step('restart-owned-host');
     process.kill(instance.pid);
@@ -120,7 +136,7 @@ try {
     await page.waitForSelector(`${folder}[aria-expanded="false"]`, { timeout: 60_000 });
     step('host-restart-preserves-group-and-collapse');
   }
-  await page.click(`${folder} > button`);
+  await page.click(folderHeader);
   const target = group.sessionIds.find(
     (id) => owned.sessions.find((item) => item.sessionId === id)?.role === 'assignment',
   );

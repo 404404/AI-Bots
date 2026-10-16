@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import * as stylex from '@stylexjs/stylex';
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 
 import { color, radius, size, space, text } from './ds/tokens.stylex.js';
+import { PanelHeader } from './ds/panel-header.js';
 import type { ConfigStorage } from './roster-config.js';
 import type { LOCALE_NS } from './locale.js';
 import type {
@@ -20,6 +21,7 @@ export interface BotSessionGroup {
 }
 
 export const BOT_FOLDER_PREFERENCES_KEY = 'botharness/native-bot-folders.v1';
+export const BOT_FOLDER_ROOT_KEY = 'section:deepseekbot';
 
 export function readCollapsedBotFolders(storage: ConfigStorage | undefined): string[] {
   try {
@@ -158,6 +160,7 @@ export function mountBotFolderProjection(
 
 const styles = stylex.create({
   folders: { display: 'flex', flexDirection: 'column', gap: space.x1 },
+  bots: { paddingInlineStart: space.x4 },
   button: {
     appearance: 'none',
     borderWidth: 0,
@@ -216,7 +219,9 @@ export function BotSessionFolders({
   const workspace = useWorkspaces((value) => value);
   const host = useBotFolderHost((value) => value);
   const [collapsed, setCollapsed] = useState(() => readCollapsedBotFolders(storage));
+  const bodyId = useId();
   const shown = visible ? visibleBotFolderGroups(groups, list, workspace) : [];
+  const rootExpanded = !collapsed.includes(BOT_FOLDER_ROOT_KEY);
 
   if (host === null || shown.length === 0) return null;
   const toggle = (slug: string): void => {
@@ -231,6 +236,10 @@ export function BotSessionFolders({
   return createPortal(
     <div
       ref={setMounted}
+      data-bot-folder-root=""
+      role="treeitem"
+      aria-level={1}
+      aria-expanded={rootExpanded}
       {...stylex.props(styles.folders)}
       onKeyDown={(event) => {
         if (
@@ -248,50 +257,73 @@ export function BotSessionFolders({
         next.focus();
       }}
     >
-      {shown.map((group) => {
-        const expanded = !collapsed.includes(group.botSlug);
-        return (
-          <div
-            key={group.botSlug}
-            data-bot-folder={group.botSlug}
-            role="treeitem"
-            aria-expanded={expanded}
-          >
-            <button
-              type="button"
-              {...stylex.props(styles.button)}
-              aria-expanded={expanded}
-              onClick={() => toggle(group.botSlug)}
-            >
-              <span aria-hidden="true">{expanded ? '▾' : '▸'}</span>
-              <span {...stylex.props(styles.title)}>{group.displayName}</span>
-              <span {...stylex.props(styles.count)}>{group.sessionIds.length}</span>
-            </button>
-            {expanded && (
-              <div role="group" {...stylex.props(styles.children)}>
-                {group.sessionIds.map((id) => {
-                  const row = list.byId[id as SessionId]!;
-                  const selected = (row.retainedBy['mainView'] ?? 0) > 0;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      data-bot-folder-session={id}
-                      role="treeitem"
-                      aria-selected={selected}
-                      {...stylex.props(styles.button, styles.child, selected && styles.selected)}
-                      onClick={() => openSession(id)}
-                    >
-                      <span {...stylex.props(styles.title)}>{row.displayTitle || id}</span>
-                      {row.running && <span aria-label={t('sessions.status.running')}>●</span>}
-                    </button>
-                  );
-                })}
+      <PanelHeader
+        label="DeepSeekBot"
+        badge={<span {...stylex.props(styles.count)}>{shown.length}</span>}
+        disclosure={{
+          expanded: rootExpanded,
+          controls: bodyId,
+          disabled: false,
+          chevron: true,
+          onToggle: () => toggle(BOT_FOLDER_ROOT_KEY),
+        }}
+      />
+      {rootExpanded && (
+        <div id={bodyId} role="group" {...stylex.props(styles.bots)}>
+          {shown.map((group) => {
+            const expanded = !collapsed.includes(group.botSlug);
+            const groupBodyId = `${bodyId}-${group.botSlug}`;
+            return (
+              <div
+                key={group.botSlug}
+                data-bot-folder={group.botSlug}
+                role="treeitem"
+                aria-level={2}
+                aria-expanded={expanded}
+              >
+                <PanelHeader
+                  label={group.displayName}
+                  badge={<span {...stylex.props(styles.count)}>{group.sessionIds.length}</span>}
+                  disclosure={{
+                    expanded,
+                    controls: groupBodyId,
+                    disabled: false,
+                    chevron: true,
+                    onToggle: () => toggle(group.botSlug),
+                  }}
+                />
+                {expanded && (
+                  <div id={groupBodyId} role="group" {...stylex.props(styles.children)}>
+                    {group.sessionIds.map((id) => {
+                      const row = list.byId[id as SessionId]!;
+                      const selected = (row.retainedBy['mainView'] ?? 0) > 0;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          data-bot-folder-session={id}
+                          role="treeitem"
+                          aria-level={3}
+                          aria-selected={selected}
+                          {...stylex.props(
+                            styles.button,
+                            styles.child,
+                            selected && styles.selected,
+                          )}
+                          onClick={() => openSession(id)}
+                        >
+                          <span {...stylex.props(styles.title)}>{row.displayTitle || id}</span>
+                          {row.running && <span aria-label={t('sessions.status.running')}>●</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>,
     host,
   );
