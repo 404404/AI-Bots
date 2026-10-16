@@ -289,22 +289,29 @@ try {
   };
   await selectBot();
   await click('Browser');
-  await page.waitForSelector('.bh-browser-body', { visible: true });
   const observe = async (phase, text) => {
+    const accessOff = ['off', 'disabled'].includes(phase);
+    const selector = accessOff ? '.bh-browser-note' : '.bh-browser-body';
+    await page.waitForSelector(
+      `button[aria-label="${accessOff ? 'Enable' : 'Disable'} Browser Access"][aria-pressed="${!accessOff}"]`,
+      { timeout: 15000 },
+    );
     await page.waitForFunction(
-      (expected) =>
-        [...document.querySelectorAll('.bh-browser-body')].some(
+      (selector, expected) =>
+        [...document.querySelectorAll(selector)].some(
           (el) => el.checkVisibility() && el.innerText.includes(expected),
         ),
       {},
+      selector,
       text,
     );
     save(`visible-${phase}.json`, {
-      ...(await page.$eval('.bh-browser-body', (el) => ({
+      ...(await page.$eval(selector, (el) => ({
         rendered: el.checkVisibility(),
         fullscreen: !!document.querySelector('[data-bh-remote-viewer-fullscreen]'),
         text: el.innerText,
       }))),
+      accessLabel: accessOff ? 'Enable Browser Access' : 'Disable Browser Access',
       selectedChannels: await page.$$eval('.bh-selected[data-channel-id]', (nodes) => [
         ...new Set(
           nodes
@@ -319,7 +326,7 @@ try {
     await capturePage(phase);
   };
   stage = 'observe-Access-off';
-  await observe('off', 'Stopped');
+  await observe('off', "This PersonaBot's sessions may use the browser");
   stage = 'enable-Access';
   await click('Enable Browser Access');
   await page.waitForSelector('button[aria-label="Disable Browser Access"]', { timeout: 15000 });
@@ -385,8 +392,7 @@ try {
     bot: (await rpc(instance, 'botharness/list')).bots.find((bot) => bot.slug === run.botId),
   });
   await click('Browser');
-  await page.waitForSelector('.bh-browser-body', { visible: true });
-  await observe('disabled', 'Stopped');
+  await observe('disabled', "This PersonaBot's sessions may use the browser");
   save('lifecycle.json', command(['computer-logs', '--plugin', 'browser', '--limit', '100']));
   run.status = 'pass';
   run.actual = `${run.botId}: one local fixture tab observed through panel and direct tools; panel stop cleared running/tab state; stopped read and Access-off open refused distinctly.`;

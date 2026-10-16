@@ -124,7 +124,17 @@ export function browserProblems(run, read) {
       visible.selectedChannels?.length !== 1 ||
       !read('created').dm?.channelId ||
       visible.selectedChannels[0] !== read('created').dm.channelId ||
-      !visible.text?.includes(phase === 'running' ? fixture.title : 'Stopped')
+      visible.accessLabel !==
+        (['off', 'disabled'].includes(phase)
+          ? 'Enable Browser Access'
+          : 'Disable Browser Access') ||
+      !visible.text?.includes(
+        phase === 'running'
+          ? fixture.title
+          : phase === 'stopped'
+            ? 'Stopped'
+            : "This PersonaBot's sessions may use the browser",
+      )
     )
       problems.push(`${phase}: missing/incorrect visible Browser state`);
     if (

@@ -90,7 +90,15 @@ function fixture() {
     data[`visible-${phase}`] = {
       rendered: true,
       fullscreen: false,
-      text: phase === 'running' ? sample.title + ' ' + sample.url : 'Stopped',
+      text:
+        phase === 'running'
+          ? sample.title + ' ' + sample.url
+          : phase === 'stopped'
+            ? 'Stopped'
+            : "This PersonaBot's sessions may use the browser",
+      accessLabel: ['off', 'disabled'].includes(phase)
+        ? 'Enable Browser Access'
+        : 'Disable Browser Access',
       selectedChannels: ['dm'],
       viewers: phase === 'running' ? [{ visible: true }] : [],
     };
@@ -269,6 +277,18 @@ describe('bounded Browser lifecycle proof', () => {
       'visible-running',
       (v) => {
         v.fullscreen = true;
+      },
+    ],
+    [
+      'visible-off',
+      (v) => {
+        v.text = 'Stopped';
+      },
+    ],
+    [
+      'visible-disabled',
+      (v) => {
+        v.accessLabel = 'Disable Browser Access';
       },
     ],
     [

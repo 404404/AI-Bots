@@ -11,7 +11,9 @@ profile reset/isolation, takeover/resume and alternate Computer targets remain s
 ## How to get to it (user POV)
 
 Bot mode → select the newly created **AX Browser …** Bot → **Browser**.
-With Browser Access off, the existing direct open tool must refuse without starting it.
+With Browser Access off, the panel shows its access description and **Enable Browser Access**.
+The existing direct open tool must refuse without starting it. Only the enabled, stopped
+Browser shows the **Stopped** card; do not accept a transient card before Access loads.
 Enable **Browser Access**, click **Open Bot Browser**, click **Leave fullscreen**, then use the existing direct
 `browser_open` tool to navigate the same tab to the fixture. The Browser panel must show
 the fixture title, URL and actual picture. `browser-observation`, `browser_tabs list`
