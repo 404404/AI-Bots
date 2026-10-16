@@ -3,6 +3,14 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots';
 export const LOCALE_NS = 'botharness';
 
 export const zh = {
+  'activityInbox.submitting': '提交中…',
+  'activityInbox.unavailable': '暂时无法加载审批请求，请重试或查看来源。',
+  'activityInbox.needsYou': '需要你处理',
+  'activityInbox.context': '查看上下文',
+  'activityInbox.hideContext': '收起上下文',
+  'activityInbox.select': '选择',
+  'activityInbox.filters': '筛选与历史',
+
   'mobile.back': '返回会话列表',
   'mobile.conversations': '会话',
   'mobile.host': '退出 Bot 模式',
@@ -3596,6 +3604,14 @@ export function zhTranslate(key: BotHarnessKey | string, params?: Record<string,
 }
 
 export const en = {
+  'activityInbox.submitting': 'Submitting…',
+  'activityInbox.unavailable': 'Could not load this request. Retry or open its source.',
+  'activityInbox.needsYou': 'Needs you',
+  'activityInbox.context': 'View context',
+  'activityInbox.hideContext': 'Hide context',
+  'activityInbox.select': 'Select',
+  'activityInbox.filters': 'Filters and history',
+
   'mobile.back': 'Back to conversations',
   'mobile.conversations': 'Conversations',
   'mobile.host': 'Exit Bot mode',

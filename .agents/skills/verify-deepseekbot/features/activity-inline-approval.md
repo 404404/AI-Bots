@@ -1,0 +1,67 @@
+# Activity Center inline Tool approvals
+
+## Sub-features
+
+- Full page and Dock open Human Inbox directly, without Overview or statistics.
+- Tool approval preview, single decision, below-card context and source navigation.
+- A failed submission remains pending and retryable; success removes the inert card with
+  a 220ms exit. Removing a focused card cannot approve the next item.
+- Dock decides the card's own Channel request while another Channel remains selected.
+- Batch controls appear only in explicit Select mode. Full three-section composition is
+  subsequent #2026 work, not part of this first slice.
+
+## How to get to it (user POV)
+
+Enter Bot mode and open the Activity Center pinned card. With a Channel open on desktop
+this opens Dock. With no Dock layout mounted, the same entry opens the full page. The
+narrow Web shell also exposes Activity Center in its Bot mode navigation; opening it and
+then widening the window preserves the full page. Close other Dock panels for a tall list.
+Expand **View context** below an approval, then collapse it and choose **Allow once** or
+**Reject** directly. **Open source** opens the exact Channel message. Select reveals the
+existing checkboxes/batch controls; Filters and history retains the existing category filters.
+
+## Driving it with verify-app
+
+Use a task-local `verify-app` instance and run `doctor` first. The journey requires two
+real pending bash requests in distinct disposable QA Bot DMs; it never fabricates approval
+state or creates a test-only Host endpoint. Seed them through public `create`, `channelDm`
+and `channelSend` calls, using a working model. Both commands use the default authorized
+workspace and write only into this worktree's ignored `.humanlayer/tasks/2026-inline-approval/`.
+The allow command must be `printf ACTIVITY_2026_APPROVED > <absolute-QA-directory>/approved-by-ui.txt`;
+the reject command must be `printf ACTIVITY_2026_UI_PROOF > <absolute-QA-directory>/rejected-by-ui.txt`.
+The files must not already exist. Let native bash first report its sandbox denial, then
+request its sanctioned one-shot wider-mode retry; never change standing permissions.
+
+```bash
+BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json \
+BH_APPROVAL_ALLOW_CHANNEL=<allow-QA-DM-id> \
+BH_APPROVAL_REJECT_CHANNEL=<reject-QA-DM-id> \
+node scripts/e2e-inbox-tool-approval.mjs
+```
+
+The script validates the exact safe commands before clicking. It captures both surfaces,
+light/dark and context, injects one failed decision response at the browser boundary,
+asserts no canonical decision/file effect, retries through the real Host, and verifies
+one canonical allowed-once decision plus the native file effect. It then rejects the other
+request in Dock and verifies its canonical rejected decision and absent file. It saves
+screenshots, ARIA, console, request/audit/trace evidence, and preserves failures separately.
+Inspect screenshots yourself. A successful simulated failure is not evidence of a real
+network outage. Model text alone is not execution proof.
+
+Also verify source navigation and Select/Cancel manually. Unit coverage tests remote expiry
+before submission; multi-window stale-request UI and all non-Tool request kinds need their
+own runtime checks before claiming them. Human QA remains a separate gate.
+
+## Gotchas
+
+- Use the actual accessible Activity Center label; it includes changing unread/action text.
+- Wait for the responsive navigation and Dock panels to mount before inspecting controls.
+- The script uses Chinese accessible names on this machine. Locale changes require matching
+  names, not silently switching to CSS clicks.
+- A default provider may have exhausted its quota. Inspect the actual model/tool trace;
+  configure only the task's QA Bot to an already available route before retrying.
+- Passing the current sandbox mode again does not request approval. Respect the native
+  denial and documented escalation modes. An unauthorized `workdir` is a different refusal;
+  this fixture uses the existing default workspace and an explicit output path.
+- The retired Overview idle journey is recorded in [activity-center-idle.md](activity-center-idle.md).
+  It must not be treated as current Activity Center verification.

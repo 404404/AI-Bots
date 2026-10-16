@@ -24,11 +24,13 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Approval Templates, the Approval Reviewer and its self-escalation guard                            | for the reviewer and guard | none                                                                                                 | [approval-templates.md](approval-templates.md)       |
 | Native activity rows and explicit menu navigation | no (existing QA records) | none (shared-device manual path) | [phone-activity.md](phone-activity.md) |
 | About and running product identity | no (source-only observation; packaged/restart pending) | none (manual path) | [release-identity.md](release-identity.md) |
-| Desktop Activity Center: one idle PersonaBot | no | `scripts/e2e-activity-idle.mjs` | [activity-center-idle.md](activity-center-idle.md) |
+| Historical Overview: idle PersonaBot (retired by #2026) | no | `scripts/e2e-activity-idle.mjs` | [activity-center-idle.md](activity-center-idle.md) |
 | Temporary Workspace Grant authorization, read and revocation | no | `scripts/e2e-workspace-grant.mjs` | [workspace-grant.md](workspace-grant.md) |
 | Default Bot Browser open, observe, stop and Access refusal | no | `scripts/e2e-browser-lifecycle.mjs` | [browser-lifecycle.md](browser-lifecycle.md) |
 | Composer footer customization and optional reply speed | yes for a speed sample | none (Web interaction path) | [composer-footer.md](composer-footer.md) |
 | Disposable Memory history, restore and stale-head refusal | no | `scripts/e2e-memory-restore.mjs` | [memory-restore.md](memory-restore.md) |
+
+| Activity Center inline Tool approvals: page and Dock | yes (real pending requests) | `scripts/e2e-inbox-tool-approval.mjs` | [activity-inline-approval.md](activity-inline-approval.md) |
 
 ## Coverage and maintenance
 

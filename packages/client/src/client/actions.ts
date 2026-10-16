@@ -62,11 +62,7 @@ import type {
 } from '../../../core/src/messaging/identity.js';
 import type { ChannelActivityToday } from '../../../core/src/channels/activity-today.js';
 import type { HumanAttentionPage, HumanInboxState } from './store.js';
-import {
-  readActivityCenterTab,
-  writeActivityCenterTab,
-  type ActivityCenterTab,
-} from './last-view.js';
+import { writeActivityCenterTab, type ActivityCenterTab } from './last-view.js';
 import { defaultStorage, type ConfigStorage } from './roster-config.js';
 import type { GroupReceptionInput } from '../../../core/src/messaging/group-policy.js';
 import type { MessagingConversationInput } from '../../../core/src/messaging/conversations.js';
@@ -934,9 +930,7 @@ export function createActions(
   navigationStorage: ConfigStorage | undefined = defaultStorage(),
 ): BridgeActions {
   clientStore.setComposerIdentity(undefined);
-  let activityTab = readActivityCenterTab(navigationStorage) ?? 'overview';
   const rememberActivityTab = (view: ActivityCenterTab): void => {
-    activityTab = view;
     writeActivityCenterTab(navigationStorage, view);
   };
   let openingFile = false;
@@ -1891,13 +1885,8 @@ export function createActions(
         return Promise.resolve();
       return loadBotInboxFor(slug, selection, cursor);
     },
-    openActivityCenter(view) {
-      const tab = view ?? activityTab;
-      if (tab === 'inbox') return actions.openHumanInbox();
-      rememberActivityTab('overview');
-      clientStore.select({ kind: 'inbox', view: 'overview' });
-      void refreshHumanInboxStatus();
-      return refreshOverview();
+    openActivityCenter() {
+      return actions.openHumanInbox();
     },
     attachActivityCenterPanel() {
       const scope = {};

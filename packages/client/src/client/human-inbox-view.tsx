@@ -1,3 +1,4 @@
+import { ActivityApproval, useActivityRows } from './activity-approval.js';
 import { useCallback, useId, useRef, useState, type ReactElement } from 'react';
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import {
@@ -58,10 +59,12 @@ export function HumanInboxView({
   actionBotSlug,
   t = zhTranslate,
   embedded = false,
+  activity = false,
 }: {
   actions: BridgeActions;
   actionBotSlug?: string;
   embedded?: boolean;
+  activity?: boolean;
   t?: BotHarnessTranslate | undefined;
 }): ReactElement {
   const state = useClientState();
@@ -78,6 +81,13 @@ export function HumanInboxView({
           channelId: undefined,
           sort: 'oldest' as const,
         };
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const retained = useActivityRows(
+    inbox.items,
+    JSON.stringify([inbox.category, inbox.botSlug, inbox.channelId, inbox.sort, inbox.snoozed]),
+    activity && !selectionMode,
+  );
   const detailId = useId();
   const [busyId, setBusyId] = useState<string>();
   const [actionError, setActionError] = useState<string>();
@@ -89,7 +99,7 @@ export function HumanInboxView({
   const [batchBusy, setBatchBusy] = useState(false);
   const root = useRef<HTMLDivElement | null>(null);
   const keyHandler = useRef<(event: KeyboardEvent) => void>(() => undefined);
-  const selectable = actionBotSlug === undefined;
+  const selectable = actionBotSlug === undefined && (!activity || selectionMode);
   const selectedItems = inbox.items.filter((item) => selected.has(itemKey(item)));
 
   const openAction = (item: HumanAttentionItem): void => {
@@ -243,7 +253,9 @@ export function HumanInboxView({
     const item = inbox.items[index];
     if (item === undefined) return;
     setCursor(itemKey(item));
-    const row = root.current?.querySelectorAll<HTMLElement>('.bh-human-inbox-row-open')[index];
+    const row = root.current?.querySelectorAll<HTMLElement>(
+      '.bh-human-inbox-row-open, .bh-activity-context-toggle',
+    )[index];
     row?.focus();
     row?.scrollIntoView?.({ block: 'nearest' });
   };
@@ -261,6 +273,12 @@ export function HumanInboxView({
   };
 
   keyHandler.current = (event) => {
+    if (
+      activity &&
+      event.target instanceof Element &&
+      event.target.closest('.bh-tool-approval-card, .bh-human-inbox-reply')
+    )
+      return;
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.isComposing || webModalOpen(document)) return;
     const container = root.current;
@@ -284,7 +302,7 @@ export function HumanInboxView({
     else if (key === 'Enter' && onRow && current !== undefined)
       void openSource(current).catch(() => setActionError(t('humanInbox.failed')));
     else if (key === 'o' && current !== undefined) toggleDetail(current);
-    else if (key === 'e' && current !== undefined && current.category !== 'handled')
+    else if (!activity && key === 'e' && current !== undefined && current.category !== 'handled')
       void settleOne(current);
     else if (key === 'x' && selectable && current !== undefined && current.category !== 'handled')
       toggleSelected(current);
@@ -439,24 +457,59 @@ export function HumanInboxView({
     >
       <main
         className={
-          'bh-human-inbox-inner' + (replySource === undefined ? '' : ' bh-human-inbox-with-context')
+          'bh-human-inbox-inner' +
+          (activity ? ' bh-activity-inbox' : '') +
+          (replySource === undefined || activity ? '' : ' bh-human-inbox-with-context')
         }
       >
         {embedded ? null : <h1>{t('humanInbox.title')}</h1>}
-        {actionBotSlug !== undefined ? null : (
+        {activity ? (
+          <div className="bh-activity-toolbar">
+            <h2>
+              {t(
+                inbox.category === 'action'
+                  ? 'activityInbox.needsYou'
+                  : categoryCopy[inbox.category].title,
+              )}
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={selectionMode}
+              disabled={batchBusy}
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                setSelected(new Set());
+              }}
+            >
+              {t(selectionMode ? 'common.cancel' : 'activityInbox.select')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen(!filtersOpen)}
+            >
+              {t('activityInbox.filters')}
+            </Button>
+          </div>
+        ) : null}
+        {actionBotSlug !== undefined || (activity && !filtersOpen) ? null : (
           <>
             <div className="bh-human-inbox-tabs" role="tablist" aria-label={t('humanInbox.title')}>
-              {(['unread', 'replies', 'action', 'info', 'handled'] as const).map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  role="tab"
-                  aria-selected={inbox.category === category}
-                  onClick={() => changeCategory(category)}
-                >
-                  {t(categoryCopy[category].title)}
-                </button>
-              ))}
+              {(['unread', 'replies', 'action', 'info', 'handled'] as const)
+                .filter((category) => !activity || category !== 'info')
+                .map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    role="tab"
+                    aria-selected={inbox.category === category}
+                    onClick={() => changeCategory(category)}
+                  >
+                    {t(categoryCopy[category].title)}
+                  </button>
+                ))}
             </div>
             {inbox.items.length <= 150 ? null : (
               <div role="status">
@@ -644,267 +697,292 @@ export function HumanInboxView({
           </div>
         ) : null}
         <div className="bh-human-inbox-workspace">
-          <div role="list" className="bh-human-inbox-list">
-            {inbox.items.map((item) => (
-              <article
-                key={item.id}
-                role="listitem"
-                data-attention-id={item.id}
-                className={
-                  'bh-human-inbox-row' +
-                  (item.kind === 'channel-reply' || item.kind === 'channel-mention'
-                    ? ' bh-human-inbox-personal-row'
-                    : '')
-                }
-                data-selected={replySource?.id === item.id ? 'true' : undefined}
-                data-checked={selected.has(itemKey(item)) || undefined}
-                data-cursor={cursor === itemKey(item) || undefined}
-              >
-                <button
-                  type="button"
-                  className="bh-human-inbox-row-open"
-                  aria-label={t('humanInbox.details', { title: itemTitle(item) })}
-                  aria-expanded={replySource?.id === item.id}
-                  aria-controls={replySource?.id === item.id ? detailId : undefined}
+          <div ref={retained.mount} role="list" tabIndex={-1} className="bh-human-inbox-list">
+            {(activity && !selectionMode
+              ? retained.rows
+              : inbox.items.map((item) => ({ item, leaving: false }))
+            ).map(({ item, leaving }) =>
+              activity &&
+              item.kind === 'tool-approval' &&
+              item.category === 'action' &&
+              item.channelId &&
+              item.messageId &&
+              !selectionMode ? (
+                <ActivityApproval
+                  key={item.id}
+                  source={item}
+                  actions={actions}
+                  bots={state.bots}
+                  t={t}
+                  leaving={leaving}
                   onFocus={() => setCursor(itemKey(item))}
-                  onClick={() => toggleDetail(item)}
                 />
+              ) : (
+                <article
+                  key={item.id}
+                  role="listitem"
+                  data-attention-id={item.id}
+                  className={
+                    'bh-human-inbox-row' +
+                    (item.kind === 'channel-reply' || item.kind === 'channel-mention'
+                      ? ' bh-human-inbox-personal-row'
+                      : '')
+                  }
+                  data-selected={replySource?.id === item.id ? 'true' : undefined}
+                  data-checked={selected.has(itemKey(item)) || undefined}
+                  data-cursor={cursor === itemKey(item) || undefined}
+                >
+                  <button
+                    type="button"
+                    className="bh-human-inbox-row-open"
+                    aria-label={t('humanInbox.details', { title: itemTitle(item) })}
+                    aria-expanded={replySource?.id === item.id}
+                    aria-controls={replySource?.id === item.id ? detailId : undefined}
+                    onFocus={() => setCursor(itemKey(item))}
+                    onClick={() => toggleDetail(item)}
+                  />
 
-                <div className="bh-human-inbox-row-title">
-                  {selectable && item.category !== 'handled' ? (
-                    <input
-                      type="checkbox"
-                      className="bh-human-inbox-row-check"
-                      aria-label={t('humanInbox.batch.select', { title: itemTitle(item) })}
-                      checked={selected.has(itemKey(item))}
-                      disabled={batchBusy}
-                      onChange={() => toggleSelected(item)}
-                    />
-                  ) : null}
-                  {itemTitle(item)}
-                </div>
-                <div className="bh-human-inbox-row-main">
-                  {item.kind === 'channel-reply' || item.kind === 'channel-mention' ? (
-                    <div className="bh-human-inbox-unread-meta">
-                      <span>{item.channelName}</span>
-                      {item.kind === 'channel-mention' ? (
-                        <>
-                          {' · '}
-                          <span className="bh-inline-mention">{t('humanInbox.mention')}</span>
-                        </>
-                      ) : null}
-                      {' · '}
-                      <time dateTime={item.createdAt}>
+                  <div className="bh-human-inbox-row-title">
+                    {selectable && item.category !== 'handled' ? (
+                      <input
+                        type="checkbox"
+                        className="bh-human-inbox-row-check"
+                        aria-label={t('humanInbox.batch.select', { title: itemTitle(item) })}
+                        checked={selected.has(itemKey(item))}
+                        disabled={batchBusy}
+                        onChange={() => toggleSelected(item)}
+                      />
+                    ) : null}
+                    {itemTitle(item)}
+                  </div>
+                  <div className="bh-human-inbox-row-main">
+                    {item.kind === 'channel-reply' || item.kind === 'channel-mention' ? (
+                      <div className="bh-human-inbox-unread-meta">
+                        <span>{item.channelName}</span>
+                        {item.kind === 'channel-mention' ? (
+                          <>
+                            {' · '}
+                            <span className="bh-inline-mention">{t('humanInbox.mention')}</span>
+                          </>
+                        ) : null}
+                        {' · '}
+                        <time dateTime={item.createdAt}>
+                          {new Date(item.createdAt).toLocaleString()}
+                        </time>
+                        {item.isUnread ? (
+                          <span className="bh-human-inbox-message-target">
+                            {t('humanInbox.reply.unread')}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {item.category === 'handled' ? (
+                      <div className="bh-human-inbox-unread-meta">
+                        {item.channelName}
+                        {' · '}
+                        <time dateTime={item.createdAt}>
+                          {new Date(item.createdAt).toLocaleString()}
+                        </time>
+                      </div>
+                    ) : null}
+                    {item.kind === 'channel-unread' ? (
+                      <div className="bh-human-inbox-unread-meta">
+                        {t('humanInbox.unreadCount', { count: String(item.unreadCount ?? 0) })}
+                        {' · '}
                         {new Date(item.createdAt).toLocaleString()}
-                      </time>
-                      {item.isUnread ? (
-                        <span className="bh-human-inbox-message-target">
-                          {t('humanInbox.reply.unread')}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {item.category === 'handled' ? (
-                    <div className="bh-human-inbox-unread-meta">
-                      {item.channelName}
-                      {' · '}
-                      <time dateTime={item.createdAt}>
-                        {new Date(item.createdAt).toLocaleString()}
-                      </time>
-                    </div>
-                  ) : null}
-                  {item.kind === 'channel-unread' ? (
-                    <div className="bh-human-inbox-unread-meta">
-                      {t('humanInbox.unreadCount', { count: String(item.unreadCount ?? 0) })}
-                      {' · '}
-                      {new Date(item.createdAt).toLocaleString()}
-                      <p className="bh-human-inbox-row-summary">{item.summary}</p>
-                    </div>
-                  ) : null}
-                  {item.kind === 'channel-reply' ||
-                  item.kind === 'channel-mention' ||
-                  item.kind === 'bot-dm-message' ||
-                  item.kind === 'user-question' ||
-                  item.kind === 'private-input' ||
-                  item.kind === 'tool-approval' ||
-                  item.kind === 'workspace-grant-request' ||
-                  item.kind === 'assignment-waiting-human' ||
-                  item.kind === 'assignment-blocked' ||
-                  item.kind === 'assignment-report' ||
-                  item.kind === 'bot-message-needs-repair' ? (
-                    <div className="bh-human-inbox-row-summary" title={item.summary}>
-                      {item.summary}
-                    </div>
-                  ) : null}
-                  {item.kind === 'auto-rejection' ? (
-                    <div
-                      className="bh-human-inbox-row-summary"
-                      title={
-                        autoRejectionMeta(item, t) +
-                        ' · ' +
-                        (item.autoRejection?.reason ?? item.summary)
-                      }
-                    >
-                      {autoRejectionMeta(item, t) +
-                        ' · ' +
-                        (item.autoRejection?.reason ?? item.summary)}
-                    </div>
-                  ) : null}
-                  {item.snoozedUntil === undefined ? null : (
-                    <div className="bh-human-inbox-unread-meta">
-                      <time dateTime={item.snoozedUntil}>
-                        {t('humanInbox.snooze.until', {
-                          time: new Date(item.snoozedUntil).toLocaleString(undefined, {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          }),
-                        })}
-                      </time>
-                    </div>
-                  )}
-                  {item.kind === 'bot-message-needs-repair' &&
-                  (!item.channelName || !item.messageId) ? (
-                    <div className="bh-human-inbox-row-summary">
-                      {t(
-                        item.channelId && item.channelName
-                          ? 'humanInbox.messageUnavailable'
-                          : 'humanInbox.sourceUnavailable',
-                      )}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="bh-human-inbox-row-actions">
-                  {item.kind === 'channel-unread' ||
-                  item.kind === 'channel-reply' ||
-                  item.kind === 'channel-mention' ||
-                  item.kind === 'tool-approval' ||
-                  item.kind === 'user-question' ||
-                  item.kind === 'private-input' ||
-                  item.kind === 'workspace-grant-request' ||
-                  item.kind === 'assignment-waiting-human' ||
-                  item.kind === 'assignment-blocked' ? (
-                    item.kind === 'workspace-grant-request' && item.category !== 'handled' ? (
-                      <HumanInboxWorkspaceAction source={item} actions={actions} t={t} />
-                    ) : (
+                        <p className="bh-human-inbox-row-summary">{item.summary}</p>
+                      </div>
+                    ) : null}
+                    {item.kind === 'channel-reply' ||
+                    item.kind === 'channel-mention' ||
+                    item.kind === 'bot-dm-message' ||
+                    item.kind === 'user-question' ||
+                    item.kind === 'private-input' ||
+                    item.kind === 'tool-approval' ||
+                    item.kind === 'workspace-grant-request' ||
+                    item.kind === 'assignment-waiting-human' ||
+                    item.kind === 'assignment-blocked' ||
+                    item.kind === 'assignment-report' ||
+                    item.kind === 'bot-message-needs-repair' ? (
+                      <div className="bh-human-inbox-row-summary" title={item.summary}>
+                        {item.summary}
+                      </div>
+                    ) : null}
+                    {item.kind === 'auto-rejection' ? (
+                      <div
+                        className="bh-human-inbox-row-summary"
+                        title={
+                          autoRejectionMeta(item, t) +
+                          ' · ' +
+                          (item.autoRejection?.reason ?? item.summary)
+                        }
+                      >
+                        {autoRejectionMeta(item, t) +
+                          ' · ' +
+                          (item.autoRejection?.reason ?? item.summary)}
+                      </div>
+                    ) : null}
+                    {item.snoozedUntil === undefined ? null : (
+                      <div className="bh-human-inbox-unread-meta">
+                        <time dateTime={item.snoozedUntil}>
+                          {t('humanInbox.snooze.until', {
+                            time: new Date(item.snoozedUntil).toLocaleString(undefined, {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            }),
+                          })}
+                        </time>
+                      </div>
+                    )}
+                    {item.kind === 'bot-message-needs-repair' &&
+                    (!item.channelName || !item.messageId) ? (
+                      <div className="bh-human-inbox-row-summary">
+                        {t(
+                          item.channelId && item.channelName
+                            ? 'humanInbox.messageUnavailable'
+                            : 'humanInbox.sourceUnavailable',
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="bh-human-inbox-row-actions">
+                    {item.kind === 'channel-unread' ||
+                    item.kind === 'channel-reply' ||
+                    item.kind === 'channel-mention' ||
+                    item.kind === 'tool-approval' ||
+                    item.kind === 'user-question' ||
+                    item.kind === 'private-input' ||
+                    item.kind === 'workspace-grant-request' ||
+                    item.kind === 'assignment-waiting-human' ||
+                    item.kind === 'assignment-blocked' ? (
+                      item.kind === 'workspace-grant-request' && item.category !== 'handled' ? (
+                        <HumanInboxWorkspaceAction source={item} actions={actions} t={t} />
+                      ) : (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          type="button"
+                          onClick={() => openAction(item)}
+                        >
+                          {t(
+                            item.category === 'handled'
+                              ? 'humanInbox.handled.context'
+                              : item.kind === 'tool-approval'
+                                ? 'humanInbox.approval.handle'
+                                : item.kind === 'private-input'
+                                  ? 'humanInbox.privateInput.handle'
+                                  : item.kind === 'user-question'
+                                    ? 'humanInbox.question.handle'
+                                    : item.kind === 'workspace-grant-request'
+                                      ? 'humanInbox.grant.handle'
+                                      : item.kind === 'assignment-waiting-human' ||
+                                          item.kind === 'assignment-blocked'
+                                        ? 'humanInbox.assignment.handle'
+                                        : 'humanInbox.reply',
+                          )}
+                        </Button>
+                      )
+                    ) : null}
+                    {item.category === 'handled' ? (
                       <Button
                         variant="primary"
                         size="sm"
                         type="button"
-                        onClick={() => openAction(item)}
+                        onClick={() =>
+                          void actions
+                            .openChannelAtMessage(item.channelId!, item.responseMessageId!)
+                            .catch(() => setActionError(t('humanInbox.failed')))
+                        }
+                      >
+                        {t('humanInbox.handled.response')}
+                      </Button>
+                    ) : null}
+                    {item.kind === 'auto-rejection' ? (
+                      <AllowAutoRejectionButton
+                        item={item}
+                        actions={actions}
+                        t={t}
+                        onDone={() => {
+                          if (replySource !== undefined && itemKey(replySource) === itemKey(item))
+                            setReplySource(undefined);
+                        }}
+                        onError={() => setActionError(t('humanInbox.failed'))}
+                      />
+                    ) : null}
+                    {item.kind === 'group-join-request' ? (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => void decide(item, true)}
+                        >
+                          {t('humanInbox.accept')}
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          type="button"
+                          disabled={busyId === item.id}
+                          onClick={() => void decide(item, false)}
+                        >
+                          {t('humanInbox.decline')}
+                        </Button>
+                      </>
+                    ) : item.kind === 'bot-dm-message' ||
+                      item.kind === 'assignment-report' ||
+                      item.kind === 'channel-unread' ||
+                      ((item.kind === 'channel-reply' || item.kind === 'channel-mention') &&
+                        item.isUnread) ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        type="button"
+                        disabled={busyId === item.id}
+                        onClick={() => void acknowledge(item)}
                       >
                         {t(
-                          item.category === 'handled'
-                            ? 'humanInbox.handled.context'
-                            : item.kind === 'tool-approval'
-                              ? 'humanInbox.approval.handle'
-                              : item.kind === 'private-input'
-                                ? 'humanInbox.privateInput.handle'
-                                : item.kind === 'user-question'
-                                  ? 'humanInbox.question.handle'
-                                  : item.kind === 'workspace-grant-request'
-                                    ? 'humanInbox.grant.handle'
-                                    : item.kind === 'assignment-waiting-human' ||
-                                        item.kind === 'assignment-blocked'
-                                      ? 'humanInbox.assignment.handle'
-                                      : 'humanInbox.reply',
+                          item.kind === 'assignment-report'
+                            ? 'humanInbox.ignore'
+                            : item.kind === 'channel-unread' ||
+                                item.kind === 'channel-reply' ||
+                                item.kind === 'channel-mention'
+                              ? 'humanInbox.markRead'
+                              : 'humanInbox.acknowledge',
                         )}
                       </Button>
-                    )
-                  ) : null}
-                  {item.category === 'handled' ? (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      type="button"
+                    ) : null}
+                    {selectable && canSnoozeHumanInboxItem(item) ? (
+                      <HumanInboxSnoozeButton
+                        item={item}
+                        t={t}
+                        open={snoozeMenu === itemKey(item)}
+                        disabled={busyId === item.id || batchBusy}
+                        onOpenChange={(open) => setSnoozeMenu(open ? itemKey(item) : undefined)}
+                        onSnooze={(until) => void snooze(item, until)}
+                      />
+                    ) : null}
+                    <HumanInboxSourceButton
+                      item={item}
+                      bots={state.bots}
+                      channels={state.channels}
+                      t={t}
                       onClick={() =>
-                        void actions
-                          .openChannelAtMessage(item.channelId!, item.responseMessageId!)
-                          .catch(() => setActionError(t('humanInbox.failed')))
+                        void openSource(item).catch(() => setActionError(t('humanInbox.failed')))
                       }
-                    >
-                      {t('humanInbox.handled.response')}
-                    </Button>
-                  ) : null}
-                  {item.kind === 'auto-rejection' ? (
-                    <AllowAutoRejectionButton
-                      item={item}
-                      actions={actions}
-                      t={t}
-                      onDone={() => {
-                        if (replySource !== undefined && itemKey(replySource) === itemKey(item))
-                          setReplySource(undefined);
-                      }}
-                      onError={() => setActionError(t('humanInbox.failed'))}
                     />
+                  </div>
+                  {activity && replySource?.id === item.id ? (
+                    <div id={detailId} className="bh-human-inbox-detail">
+                      {renderSource(item, () => setReplySource(undefined))}
+                    </div>
                   ) : null}
-                  {item.kind === 'group-join-request' ? (
-                    <>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        type="button"
-                        disabled={busyId === item.id}
-                        onClick={() => void decide(item, true)}
-                      >
-                        {t('humanInbox.accept')}
-                      </Button>
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        type="button"
-                        disabled={busyId === item.id}
-                        onClick={() => void decide(item, false)}
-                      >
-                        {t('humanInbox.decline')}
-                      </Button>
-                    </>
-                  ) : item.kind === 'bot-dm-message' ||
-                    item.kind === 'assignment-report' ||
-                    item.kind === 'channel-unread' ||
-                    ((item.kind === 'channel-reply' || item.kind === 'channel-mention') &&
-                      item.isUnread) ? (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      type="button"
-                      disabled={busyId === item.id}
-                      onClick={() => void acknowledge(item)}
-                    >
-                      {t(
-                        item.kind === 'assignment-report'
-                          ? 'humanInbox.ignore'
-                          : item.kind === 'channel-unread' ||
-                              item.kind === 'channel-reply' ||
-                              item.kind === 'channel-mention'
-                            ? 'humanInbox.markRead'
-                            : 'humanInbox.acknowledge',
-                      )}
-                    </Button>
-                  ) : null}
-                  {selectable && canSnoozeHumanInboxItem(item) ? (
-                    <HumanInboxSnoozeButton
-                      item={item}
-                      t={t}
-                      open={snoozeMenu === itemKey(item)}
-                      disabled={busyId === item.id || batchBusy}
-                      onOpenChange={(open) => setSnoozeMenu(open ? itemKey(item) : undefined)}
-                      onSnooze={(until) => void snooze(item, until)}
-                    />
-                  ) : null}
-                  <HumanInboxSourceButton
-                    item={item}
-                    bots={state.bots}
-                    channels={state.channels}
-                    t={t}
-                    onClick={() =>
-                      void openSource(item).catch(() => setActionError(t('humanInbox.failed')))
-                    }
-                  />
-                </div>
-              </article>
-            ))}
+                </article>
+              ),
+            )}
           </div>
-          {replySource === undefined ? null : (
+          {replySource === undefined || activity ? null : (
             <div id={detailId} className="bh-human-inbox-detail">
               {renderSource(replySource, () => setReplySource(undefined))}
             </div>
