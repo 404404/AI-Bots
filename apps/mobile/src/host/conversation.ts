@@ -1,4 +1,5 @@
 import type { HostClient, RemoteSource } from './client';
+import { activityOf, type ChannelActivity } from './channel-activity';
 import type {
   AttachmentRef,
   WireAllBotMention,
@@ -89,7 +90,8 @@ export function reactable(message: ConversationMessage): boolean {
     message.author !== 'system' &&
     message.revision !== undefined &&
     message.delivery === 'committed' &&
-    message.card === undefined
+    message.card === undefined &&
+    message.activity === undefined
   );
 }
 
@@ -102,6 +104,7 @@ export function shownInChat(message: ConversationMessage): boolean {
     return false;
   if (message.welcome === true) return false;
   return (
+    message.activity !== undefined ||
     message.body.trim() !== '' ||
     message.attachments.length > 0 ||
     message.card !== undefined ||
@@ -123,6 +126,7 @@ export interface ConversationMessage {
   delivery: DeliveryState;
   error?: string;
   welcome?: true;
+  activity?: ChannelActivity;
 }
 
 export interface ConversationDraft {
@@ -327,6 +331,7 @@ function present(
   const kind = message.author.kind;
   const card = cardOf(entry.channelId, message);
   const resolves = resolvesOf(message);
+  const activity = activityOf(message);
   return {
     id: message.id,
     revision: entry.revision,
@@ -337,6 +342,7 @@ function present(
     attachments: attachmentsOf(entry, resolve, picked),
     ...(card === undefined ? {} : { card }),
     ...(resolves === undefined ? {} : { resolves }),
+    ...(activity === undefined ? {} : { activity }),
     ...(message.reactions === undefined || message.reactions.length === 0
       ? {}
       : { reactions: message.reactions }),

@@ -83,6 +83,7 @@ export interface RosterArrangement {
 export interface RosterView {
   bots: RosterBot[];
   channels: RosterChannel[];
+  activityChannels?: ChannelListItem[];
   arrangement?: RosterArrangement;
 }
 
@@ -327,6 +328,7 @@ export function createHostClient(options: HostClientOptions): HostClient {
           };
         }),
       channels: groups,
+      activityChannels: [...channels.values()].filter((channel) => channel.deletedAt === undefined),
       ...(arrangement === undefined ? {} : { arrangement }),
     };
   };
