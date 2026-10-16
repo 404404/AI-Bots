@@ -87,6 +87,13 @@ export const CHANNEL_DOCK_CSS =
   min-height: 0;
 }
 .bh-dock-body > .bh-chat-pane { flex: 1 1 0; }
+.bh-dock :is([data-sidebar-entry-body], [data-dock-panel-body]):has([data-panel-empty]),
+.bh-dock :is([data-sidebar-entry-body], [data-dock-panel-body]) :has([data-panel-empty]) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .bh-dock-menu {
   display: none;
   position: absolute;

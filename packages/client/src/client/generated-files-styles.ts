@@ -2,7 +2,7 @@ import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 
 export const GENERATED_FILES_CSS = `
 .bh-generated-files { box-sizing: border-box; display: flex; flex-direction: column; gap: ${space.x2}; min-height: 0; height: 100%; overflow: auto; }
-.bh-generated-files-empty { margin: 0; padding: ${space.x4} ${space.x2}; color: var(--dsw-alias-label-secondary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; }
+.bh-generated-files-list:empty { display:none; }
 .bh-generated-files-list { display: flex; flex-direction: column; gap: ${space.x1}; margin: 0; padding: 0; list-style: none; }
 .bh-generated-file { display: flex; flex-direction: column; align-items: stretch; gap: ${space.x1}; padding: ${space.x1} ${space.x2}; border-radius: ${radius.sm}; background: ${color.base}; }
 .bh-generated-file:hover { background: ${color.hover}; }

@@ -17,6 +17,10 @@ export interface PinnedPanelBadge {
 export interface PinnedPanelCardsProps {
   registry: DockPanelRegistry;
   collapsed: boolean;
+  order?: readonly string[] | undefined;
+  shortcut?: ((id: string) => string | undefined) | undefined;
+  onOrderChange?: ((ids: readonly string[]) => void) | undefined;
+  hiddenIds?: readonly string[] | undefined;
   current?: string | undefined;
   badge?: ((id: string) => PinnedPanelBadge | undefined) | undefined;
   fallback?: ((id: string) => (() => void) | undefined) | undefined;
@@ -27,6 +31,10 @@ export interface PinnedPanelCardsProps {
 export function PinnedPanelCards({
   registry,
   collapsed,
+  order,
+  shortcut,
+  onOrderChange,
+  hiddenIds,
   current,
   badge,
   fallback,
@@ -44,19 +52,29 @@ export function PinnedPanelCards({
     registry.available,
     registry.available,
   );
-  if (panels.length === 0) return null;
+  const visible = panels.filter((panel) => !hiddenIds?.includes(panel.id));
+  const ids = [...new Set([...(order ?? []), ...visible.map((panel) => panel.id)])];
+  const sorted = [...visible].sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+  const move = (id: string, before: string): void => {
+    if (id === before || !ids.includes(id)) return;
+    const next = ids.filter((item) => item !== id);
+    next.splice(next.indexOf(before), 0, id);
+    onOrderChange?.(next);
+  };
+  if (sorted.length === 0) return null;
   return (
     <div
       {...hooked('bh-pinned-panels', styles.grid, collapsed && styles.rail)}
       role="group"
       aria-label={t('dock.panels')}
     >
-      {panels.map((panel) => {
+      {sorted.map((panel, index) => {
         const open = openIds.includes(panel.id) || current === panel.id;
         const run = available ? () => registry.toggle(panel.id) : fallback?.(panel.id);
         const mark = badge?.(panel.id);
         const label = [
           panel.title,
+          ...(shortcut?.(panel.id) ? [shortcut(panel.id)!] : []),
           ...(mark?.label === undefined ? [] : [mark.label]),
           ...(run === undefined ? [t('dock.cardUnavailable')] : []),
         ].join(' · ');
@@ -69,6 +87,7 @@ export function PinnedPanelCards({
                 styles.card,
                 collapsed && styles.railCard,
                 open && styles.open,
+                collapsed && open && styles.railOpen,
                 run === undefined && styles.disabled,
               )}
               data-pinned-panel={panel.id}
@@ -78,6 +97,42 @@ export function PinnedPanelCards({
               aria-pressed={open}
               aria-disabled={run === undefined ? true : undefined}
               onClick={run}
+              draggable={onOrderChange !== undefined}
+              aria-description={onOrderChange ? t('workspace.reorderHint') : undefined}
+              onDragStart={(event) => {
+                if (!onOrderChange) return;
+                event.dataTransfer.setData('application/x-bh-panel-order', panel.id);
+                event.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(event) => {
+                if (
+                  onOrderChange &&
+                  event.dataTransfer.types.includes('application/x-bh-panel-order')
+                )
+                  event.preventDefault();
+              }}
+              onDrop={(event) => {
+                if (
+                  !onOrderChange ||
+                  !event.dataTransfer.types.includes('application/x-bh-panel-order')
+                )
+                  return;
+                event.preventDefault();
+                event.stopPropagation();
+                move(event.dataTransfer.getData('application/x-bh-panel-order'), panel.id);
+              }}
+              onKeyDown={(event) => {
+                if (
+                  !onOrderChange ||
+                  !event.altKey ||
+                  !['ArrowUp', 'ArrowDown'].includes(event.key)
+                )
+                  return;
+                event.preventDefault();
+                if (event.key === 'ArrowUp' && index > 0) move(panel.id, sorted[index - 1]!.id);
+                if (event.key === 'ArrowDown' && index < sorted.length - 1)
+                  move(sorted[index + 1]!.id, panel.id);
+              }}
             >
               <ChannelSidebarIcon name={panel.icon} size={collapsed ? 18 : 16} />
               {mark === undefined ? null : mark.count > 0 && !collapsed ? (
@@ -151,6 +206,9 @@ const styles = stylex.create({
       default: color.accentTint,
       ':hover': color.accentTint,
     },
+  },
+  railOpen: {
+    borderColor: 'transparent',
   },
   disabled: {
     opacity: 0.45,

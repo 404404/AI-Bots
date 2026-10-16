@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import {
   Fragment,
   useRef,
@@ -610,7 +611,7 @@ function MemoryEntryForScope({
           )}
           {showFiles &&
             (snapshot.files.length === 0 ? (
-              <div className="bh-note">{t('memory.empty')}</div>
+              <PanelEmptyState icon="brain">{t('memory.empty')}</PanelEmptyState>
             ) : (
               <div className="bh-memory-files">
                 {snapshot.files.map((item) => (
@@ -765,7 +766,7 @@ function MemoryEntryForScope({
                 aria-label={t('memory.view.branches')}
               >
                 {graph.branches.length === 0 ? (
-                  <div className="bh-note">{t('memory.branches.empty')}</div>
+                  <PanelEmptyState icon="git-branch">{t('memory.branches.empty')}</PanelEmptyState>
                 ) : (
                   graph.branches.map((branch) => {
                     const open = openBranch === branch;
@@ -844,7 +845,7 @@ function MemoryEntryForScope({
                     <LoadingSkeleton kind="sidebar" label={t('memory.loading')} />
                   ) : null
                 ) : versions.length === 0 ? (
-                  <div className="bh-note">{t('memory.versions.empty')}</div>
+                  <PanelEmptyState icon="git-branch">{t('memory.versions.empty')}</PanelEmptyState>
                 ) : (
                   versions.map((version) => {
                     const open = openVersion === version.tag;

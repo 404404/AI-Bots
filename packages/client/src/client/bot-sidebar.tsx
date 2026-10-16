@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
 import { attachmentReferenceLabels } from './attachment-refs.js';
 import {
@@ -388,6 +389,8 @@ export function createBotPanelEntry(
 
 interface SidebarProps {
   headerEnd?: ReactNode;
+  headerTarget?: HTMLElement | null;
+  onViewProfile?: ((slug: string) => void) | undefined;
   companion?: WindowCompanions | undefined;
   wide: boolean;
   actions: BridgeActions;
@@ -932,6 +935,8 @@ type FlatBlockView =
 
 export function BotSidebar({
   headerEnd,
+  headerTarget,
+  onViewProfile,
   companion,
   wide,
   actions,
@@ -1964,6 +1969,132 @@ export function BotSidebar({
     return null;
   };
 
+  const header = (
+    <div className="bh-header">
+      {!headerTarget && (
+        <span className={`bh-header-label${searchOpen ? ' bh-header-label-hidden' : ''}`}>
+          {t('roster.messages')}
+        </span>
+      )}
+      <div className={`bh-search-slot${searchOpen ? ' bh-search-slot-open' : ''}`}>
+        <div
+          ref={searchMount}
+          className={`bh-search${searchOpen ? ' bh-search-open' : ''}`}
+          onClick={() => {
+            setMenuOpen(false);
+            setSortMenuOpen(false);
+            setSearchOpen(true);
+            searchInput.current?.focus();
+          }}
+        >
+          <Tooltip
+            label={t('roster.search.label')}
+            side="bottom"
+            delayMs={500}
+            disabled={searchOpen}
+          >
+            <button
+              type="button"
+              className="bh-search-btn"
+              aria-label={t('roster.search.label')}
+              aria-expanded={searchOpen}
+              onClick={() => {
+                setMenuOpen(false);
+                setSortMenuOpen(false);
+                setSearchOpen(true);
+              }}
+            >
+              <IconSearchOutlineRegular size={searchOpen ? 11 : 14} />
+            </button>
+          </Tooltip>
+          <input
+            ref={searchInput}
+            className="bh-search-input"
+            type="text"
+            placeholder={t('roster.search.placeholder')}
+            value={state.query}
+            tabIndex={searchOpen ? 0 : -1}
+            onChange={(event) => store.setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return;
+              store.setQuery('');
+              setSearchOpen(false);
+            }}
+          />
+          {searchOpen ? (
+            <button
+              type="button"
+              className="bh-clear-btn"
+              aria-label={t('roster.search.clear')}
+              onClick={(event) => {
+                event.stopPropagation();
+                store.setQuery('');
+                setSearchOpen(false);
+              }}
+            >
+              <IconCloseFillRegular />
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className={`bh-header-actions${searchOpen ? ' bh-header-actions-hidden' : ''}`}>
+        <Menu
+          open={sortMenuOpen}
+          portal
+          dense
+          align="end"
+          anchor={
+            <Tooltip label={t('roster.menu.label')} side="bottom" delayMs={500}>
+              <button
+                type="button"
+                className="bh-icon-btn"
+                aria-label={t('roster.menu.label')}
+                onClick={() => {
+                  setSortMenuOpen((value) => !value);
+                }}
+              >
+                <IconEllipsisOutlineRegular size={16} />
+              </button>
+            </Tooltip>
+          }
+          items={globalSortMenuItems(t, {
+            hasUnread: Object.keys(channelUnread).length > 0,
+          })}
+          selectedId={prefs.sortMode}
+          onSelect={selectSortMenu}
+          onClose={() => {
+            setSortMenuOpen(false);
+          }}
+        />
+        <Menu
+          open={menuOpen}
+          portal
+          dense
+          align="end"
+          anchor={
+            <Tooltip label={t('roster.new.label')} side="bottom" delayMs={500}>
+              <button
+                type="button"
+                className="bh-icon-btn"
+                aria-label={t('roster.new.label')}
+                onClick={() => {
+                  setMenuOpen((value) => !value);
+                }}
+              >
+                <IconPlusOutlineRegular size={16} />
+              </button>
+            </Tooltip>
+          }
+          items={menuItems(t, gitReady(state.git))}
+          onSelect={selectMenu}
+          onClose={() => {
+            setMenuOpen(false);
+          }}
+        />
+      </div>
+      {headerEnd}
+    </div>
+  );
   return (
     <div
       ref={rosterMount}
@@ -2008,128 +2139,7 @@ export function BotSidebar({
         }}
         t={t}
       />
-      <div className="bh-header">
-        <span className={`bh-header-label${searchOpen ? ' bh-header-label-hidden' : ''}`}>
-          {t('roster.messages')}
-        </span>
-        <div className={`bh-search-slot${searchOpen ? ' bh-search-slot-open' : ''}`}>
-          <div
-            ref={searchMount}
-            className={`bh-search${searchOpen ? ' bh-search-open' : ''}`}
-            onClick={() => {
-              setMenuOpen(false);
-              setSortMenuOpen(false);
-              setSearchOpen(true);
-              searchInput.current?.focus();
-            }}
-          >
-            <Tooltip
-              label={t('roster.search.label')}
-              side="bottom"
-              delayMs={500}
-              disabled={searchOpen}
-            >
-              <button
-                type="button"
-                className="bh-search-btn"
-                aria-label={t('roster.search.label')}
-                aria-expanded={searchOpen}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setSortMenuOpen(false);
-                  setSearchOpen(true);
-                }}
-              >
-                <IconSearchOutlineRegular size={searchOpen ? 11 : 14} />
-              </button>
-            </Tooltip>
-            <input
-              ref={searchInput}
-              className="bh-search-input"
-              type="text"
-              placeholder={t('roster.search.placeholder')}
-              value={state.query}
-              tabIndex={searchOpen ? 0 : -1}
-              onChange={(event) => store.setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== 'Escape') return;
-                store.setQuery('');
-                setSearchOpen(false);
-              }}
-            />
-            {searchOpen ? (
-              <button
-                type="button"
-                className="bh-clear-btn"
-                aria-label={t('roster.search.clear')}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  store.setQuery('');
-                  setSearchOpen(false);
-                }}
-              >
-                <IconCloseFillRegular />
-              </button>
-            ) : null}
-          </div>
-        </div>
-        <div className={`bh-header-actions${searchOpen ? ' bh-header-actions-hidden' : ''}`}>
-          <Menu
-            open={sortMenuOpen}
-            portal
-            dense
-            align="end"
-            anchor={
-              <Tooltip label={t('roster.menu.label')} side="bottom" delayMs={500}>
-                <button
-                  type="button"
-                  className="bh-icon-btn"
-                  aria-label={t('roster.menu.label')}
-                  onClick={() => {
-                    setSortMenuOpen((value) => !value);
-                  }}
-                >
-                  <IconEllipsisOutlineRegular size={16} />
-                </button>
-              </Tooltip>
-            }
-            items={globalSortMenuItems(t, {
-              hasUnread: Object.keys(channelUnread).length > 0,
-            })}
-            selectedId={prefs.sortMode}
-            onSelect={selectSortMenu}
-            onClose={() => {
-              setSortMenuOpen(false);
-            }}
-          />
-          <Menu
-            open={menuOpen}
-            portal
-            dense
-            align="end"
-            anchor={
-              <Tooltip label={t('roster.new.label')} side="bottom" delayMs={500}>
-                <button
-                  type="button"
-                  className="bh-icon-btn"
-                  aria-label={t('roster.new.label')}
-                  onClick={() => {
-                    setMenuOpen((value) => !value);
-                  }}
-                >
-                  <IconPlusOutlineRegular size={16} />
-                </button>
-              </Tooltip>
-            }
-            items={menuItems(t, gitReady(state.git))}
-            onSelect={selectMenu}
-            onClose={() => {
-              setMenuOpen(false);
-            }}
-          />
-        </div>
-        {headerEnd}
-      </div>
+      {headerTarget ? createPortal(header, headerTarget) : header}
       {state.status === 'loading' && state.bots.length === 0 ? (
         <LoadingSkeleton kind="roster" label={t('roster.loading')} />
       ) : null}
@@ -2138,22 +2148,26 @@ export function BotSidebar({
       ) : null}
       {state.roster.readOnly ? <div className="bh-note">{t('roster.readOnly')}</div> : null}
       {state.status === 'ready' && state.bots.length === 0 ? (
-        <div className="bh-empty-create">
-          <span>{t('roster.empty')}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!gitReady(state.git)}
-            onClick={() => setCreateRequest({ kind: 'bot', source: 'empty' })}
-          >
-            {t('roster.empty.create')}
-          </Button>
-        </div>
+        <PanelEmptyState
+          icon="users"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!gitReady(state.git)}
+              onClick={() => setCreateRequest({ kind: 'bot', source: 'empty' })}
+            >
+              {t('roster.empty.create')}
+            </Button>
+          }
+        >
+          {t('roster.empty')}
+        </PanelEmptyState>
       ) : null}
       {visibleCount === 0 && (state.bots.length > 0 || state.channels.length > 0) ? (
-        <div className="bh-note">
+        <PanelEmptyState icon="users">
           {query.length === 0 && hiddenItems.length > 0 ? t('hidden.all') : t('roster.noMatch')}
-        </div>
+        </PanelEmptyState>
       ) : null}
       {batchError !== undefined ? (
         <div className="bh-error">
@@ -2905,6 +2919,15 @@ export function BotSidebar({
               },
             };
           })()}
+          profileAction={
+            menuBotSlug === undefined
+              ? undefined
+              : () => {
+                  setChannelMenu(undefined);
+                  if (onViewProfile) onViewProfile(menuBotSlug);
+                  else void actions.openBot(menuBotSlug, 'profile');
+                }
+          }
           settingsAction={(() => {
             const channel = state.channels.find(
               (candidate) => candidate.id === channelMenu.channelId,
@@ -3120,7 +3143,7 @@ export function SectionContextMenu({
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
+        getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
         items={sectionMenuItems(t, {
           canMoveUp: index > 0,
           canMoveDown: index >= 0 && index < count - 1,
@@ -3199,7 +3222,7 @@ export function BulkChannelMenu({
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
+        getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
         items={items}
         onSelect={(id) => {
           if (id === 'pin' || id === 'unpin') onPin(id === 'pin');
@@ -3316,6 +3339,7 @@ export function ChannelMoveMenu({
   shareAction,
   deleteAction,
   settingsAction,
+  profileAction,
   nicknameAction,
   dmActions,
   modelAction,
@@ -3337,6 +3361,7 @@ export function ChannelMoveMenu({
   shareAction?: { label: string; run(): void } | undefined;
   deleteAction?: { label: string; run(): void } | undefined;
   settingsAction?: { attention: boolean; run(): void } | undefined;
+  profileAction?: (() => void) | undefined;
   nicknameAction?: (() => void) | undefined;
   dmActions?: { hidden: readonly DmActionKind[]; toggle(kind: DmActionKind): void } | undefined;
   modelAction?:
@@ -3373,6 +3398,15 @@ export function ChannelMoveMenu({
     };
   }, []);
   const items: readonly MenuEntry[] = [
+    ...(profileAction
+      ? [
+          {
+            id: 'profile',
+            label: t('profile.view'),
+            icon: <ChannelSidebarIcon name="id-card" size={16} />,
+          },
+        ]
+      : []),
     ...(settingsAction === undefined
       ? []
       : [
@@ -3474,9 +3508,13 @@ export function ChannelMoveMenu({
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
+        getAnchorRect={() => new DOMRect(menu.x, menu.y, 0, 0)}
         items={items}
         onSelect={(id) => {
+          if (id === 'profile') {
+            profileAction?.();
+            return;
+          }
           if (id === 'mark-read') {
             readAction?.run();
             return;

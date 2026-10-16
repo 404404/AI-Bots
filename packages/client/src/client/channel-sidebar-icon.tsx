@@ -25,6 +25,29 @@
 import { createElement, type ReactElement } from 'react';
 
 const glyphs: Record<string, readonly [string, Record<string, string | number>][]> = {
+  brain: [
+    ['path', { d: 'M12 18V5' }],
+    ['path', { d: 'M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4' }],
+    ['path', { d: 'M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5' }],
+    ['path', { d: 'M17.997 5.125a4 4 0 0 1 2.526 5.77' }],
+    ['path', { d: 'M18 18a4 4 0 0 0 2-7.464' }],
+    ['path', { d: 'M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517' }],
+    ['path', { d: 'M6 18a4 4 0 0 1-2-7.464' }],
+    ['path', { d: 'M6.003 5.125a4 4 0 0 0-2.526 5.77' }],
+  ],
+  file: [
+    [
+      'path',
+      {
+        d: 'M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z',
+      },
+    ],
+    ['path', { d: 'M14 2v5a1 1 0 0 0 1 1h5' }],
+  ],
+  terminal: [
+    ['path', { d: 'M12 19h8' }],
+    ['path', { d: 'm4 17 6-6-6-6' }],
+  ],
   archive: [
     ['rect', { width: '20', height: '5', x: '2', y: '3', rx: '1' }],
     ['path', { d: 'M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8' }],
@@ -508,7 +531,7 @@ export function ChannelSidebarIcon({
   size = 16,
 }: {
   name?: string | undefined;
-  size?: number;
+  size?: number | string;
 }): ReactElement {
   const nodes = Object.hasOwn(glyphs, name) ? glyphs[name]! : glyphs['panels-top-left']!;
   return (
