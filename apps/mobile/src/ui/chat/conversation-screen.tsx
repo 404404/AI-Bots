@@ -591,47 +591,50 @@ function ChatConversation({
         backgroundColor={theme.color.base}
         onComposerLayout={(event) => setComposerHeight(event.nativeEvent.layout.height)}
         composer={
-          botDm ? (
-            <View style={{ padding: space.x5, alignItems: 'center' }}>
-              <Text variant="meta" tone="muted">
-                {t.activityRow.botDm}
-              </Text>
-            </View>
-          ) : (
-            <Composer
-              value={draft}
-              placeholder={
-                bot !== undefined
-                  ? t.messageBot(bot.displayName)
-                  : channel !== undefined
-                    ? t.messageBot(`#${channel.name}`)
-                    : t.messagePlaceholder
-              }
-              disabled={conversation === undefined}
-              files={files}
-              canAttach={files.length < MAX_PICKED}
-              dictation={dictation.state.status}
-              canDictate={conversation !== undefined}
-              onChange={edit}
-              selection={selection}
-              onSelection={(next) => {
-                setSelection(undefined);
-                setCaret(next);
-              }}
-              {...(candidates.length === 0
-                ? {}
-                : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
-              onSend={send}
-              onPick={pick}
-              onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
-              onDictate={() => {
-                setAttachError(false);
-                dictation.start();
-              }}
-              onStopDictation={dictation.stop}
-              onCancelDictation={dictation.cancel}
-            />
-          )
+          <View>
+            <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
+            {botDm ? (
+              <View style={{ padding: space.x5, alignItems: 'center' }}>
+                <Text variant="meta" tone="muted">
+                  {t.activityRow.botDm}
+                </Text>
+              </View>
+            ) : (
+              <Composer
+                value={draft}
+                placeholder={
+                  bot !== undefined
+                    ? t.messageBot(bot.displayName)
+                    : channel !== undefined
+                      ? t.messageBot(`#${channel.name}`)
+                      : t.messagePlaceholder
+                }
+                disabled={conversation === undefined}
+                files={files}
+                canAttach={files.length < MAX_PICKED}
+                dictation={dictation.state.status}
+                canDictate={conversation !== undefined}
+                onChange={edit}
+                selection={selection}
+                onSelection={(next) => {
+                  setSelection(undefined);
+                  setCaret(next);
+                }}
+                {...(candidates.length === 0
+                  ? {}
+                  : { above: <MentionSuggestions candidates={candidates} onChoose={mention} /> })}
+                onSend={send}
+                onPick={pick}
+                onRemove={(id) => setFiles((current) => current.filter((file) => file.id !== id))}
+                onDictate={() => {
+                  setAttachError(false);
+                  dictation.start();
+                }}
+                onStopDictation={dictation.stop}
+                onCancelDictation={dictation.cancel}
+              />
+            )}
+          </View>
         }
       >
         {notice === undefined ? null : (
@@ -753,7 +756,6 @@ function ChatConversation({
               }
             />
           </SpeakerStageContext.Provider>
-          <EdgeFade edge="bottom" height={composerHeight + edgeFade.bottom} />
           {latest.away ? (
             <View
               pointerEvents="box-none"

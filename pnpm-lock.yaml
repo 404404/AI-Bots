@@ -333,6 +333,9 @@ importers:
       '@expo/metro-runtime':
         specifier: ~57.0.17
         version: 57.0.17(@expo/log-box@57.0.4)(expo@57.0.30)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@10.2.2))(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.3)(supports-color@10.2.2))(react@19.2.3)
+      '@tanstack/react-query':
+        specifier: ^5.104.3
+        version: 5.104.3(react@19.2.3)
       expo:
         specifier: 57.0.30
         version: 57.0.30(37a591b78bf40fa21c849bfea2c76597)
@@ -6696,11 +6699,19 @@ packages:
       vue:
         optional: true
 
+  '@tanstack/query-core@5.104.3':
+    resolution: {integrity: sha512-DZY9TuJAOgU3UyHUhXb4CcTYEHNZszlwkPg4VViIwTxOKzLprPUU+rbaPZQd3srqkGOtpaDdKpW972UV/LKlcg==}
+
   '@tanstack/react-charts@0.18.0':
     resolution: {integrity: sha512-iYgpowogoZ4NXRC/lClRMBjjh/yoQ1ZQer1Z/GtuL/As13EgVoH+JIDRkT+oR9qfKXbhsgFLT9Wspkce0c4Xgw==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
+
+  '@tanstack/react-query@5.104.3':
+    resolution: {integrity: sha512-5Ts1ImwJKqoJgPkLxl9WrPQy1JEoEmti3MaaODCfBamHUGFk57IFrc+AIksPq+BAm10EsroX56qm398Z42LG7w==}
+    peerDependencies:
+      react: ^18 || ^19
 
   '@tanstack/react-table@8.21.3':
     resolution: {integrity: sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==}
@@ -19315,6 +19326,8 @@ snapshots:
       react-native: 0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
       react-native-svg: 15.15.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2))(react@19.3.0)
 
+  '@tanstack/query-core@5.104.3': {}
+
   '@tanstack/react-charts@0.18.0(react-dom@18.3.1(react@18.3.1))(react-native-svg@15.15.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@18.3.31)(react@18.3.1)(supports-color@10.2.2))(react@18.3.1))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@18.3.31)(react@18.3.1)(supports-color@10.2.2))(react@18.3.1)':
     dependencies:
       '@tanstack/charts': 0.18.0(react-dom@18.3.1(react@18.3.1))(react-native-svg@15.15.4(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@18.3.31)(react@18.3.1)(supports-color@10.2.2))(react@18.3.1))(react-native@0.86.3(@babel/core@7.29.7(supports-color@10.2.2))(@types/react@18.3.31)(react@18.3.1)(supports-color@10.2.2))(react@18.3.1)
@@ -19332,6 +19345,11 @@ snapshots:
       - solid-js
       - svelte
       - vue
+
+  '@tanstack/react-query@5.104.3(react@19.2.3)':
+    dependencies:
+      '@tanstack/query-core': 5.104.3
+      react: 19.2.3
 
   '@tanstack/react-table@8.21.3(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:

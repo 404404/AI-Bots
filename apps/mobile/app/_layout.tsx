@@ -42,7 +42,7 @@ export default function RootLayout() {
                   headerShown: false,
                   presentation: 'formSheet',
                   sheetAllowedDetents: [0.75, 1],
-                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.lg } : {}),
+                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.xl } : {}),
                   sheetGrabberVisible: true,
                 }}
               />
@@ -53,7 +53,7 @@ export default function RootLayout() {
                   headerShown: false,
                   presentation: 'formSheet',
                   sheetAllowedDetents: [0.75, 1],
-                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.lg } : {}),
+                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.xl } : {}),
                   sheetGrabberVisible: true,
                 }}
               />
@@ -64,6 +64,7 @@ export default function RootLayout() {
                   headerShown: false,
                   presentation: 'formSheet',
                   sheetAllowedDetents: [1],
+                  ...(Platform.OS === 'android' ? { sheetCornerRadius: radius.xl } : {}),
                   sheetGrabberVisible: true,
                 }}
               />

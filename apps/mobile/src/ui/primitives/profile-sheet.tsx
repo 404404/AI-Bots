@@ -5,13 +5,25 @@ import { Platform, Pressable, View } from 'react-native';
 import { useDesignTheme } from '../design/theme';
 import { radius, sheetHandle, space } from '../design/tokens';
 import { t } from '../strings';
+import type { RefCallback } from 'react';
 
-export function ProfileSheet({ children }: { children: ReactNode }) {
+export function ProfileSheet({
+  children,
+  onMount,
+}: {
+  children: ReactNode;
+  onMount?: RefCallback<View>;
+}) {
   const theme = useDesignTheme();
   const router = useRouter();
-  if (Platform.OS !== 'android') return children;
+  if (Platform.OS !== 'android')
+    return (
+      <View ref={onMount} style={{ flex: 1 }}>
+        {children}
+      </View>
+    );
   return (
-    <View style={{ flex: 1, backgroundColor: theme.color.surface }}>
+    <View ref={onMount} style={{ flex: 1, backgroundColor: theme.color.surface }}>
       <Pressable
         testID="profile-sheet-handle"
         accessibilityRole="button"
