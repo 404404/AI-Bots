@@ -582,7 +582,14 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
     } catch {
       detail = { error: new TextDecoder().decode(bytes).slice(0, 200) };
     }
-    if ((status === 401 || status === 403) && typeof detail['code'] !== 'string')
+    const nested = record(detail['error']);
+    const code =
+      typeof detail['code'] === 'string'
+        ? detail['code']
+        : typeof nested['code'] === 'string'
+          ? nested['code']
+          : undefined;
+    if ((status === 401 || status === 403) && code === undefined)
       throw new CliLiveError(
         'host-unauthorized',
         'Host login was refused; refresh its launch token.',
@@ -591,11 +598,13 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
       ? detail['packages'].filter((name): name is string => typeof name === 'string')
       : [];
     throw new CliLiveError(
-      typeof detail['code'] === 'string' ? scrub(detail['code']) : 'host-refused',
+      code === undefined ? 'host-refused' : scrub(code),
       scrub(
         (typeof detail['error'] === 'string' && detail['error'] !== ''
           ? detail['error']
-          : `The Host refused ${path} with HTTP ${String(status)}.`) +
+          : typeof nested['message'] === 'string'
+            ? nested['message']
+            : `The Host refused ${path} with HTTP ${String(status)}.`) +
           (packages.length === 0 ? '' : ` Packages: ${packages.join(' ')}.`),
       ),
     );

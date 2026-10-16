@@ -269,3 +269,14 @@ after Channel metadata loads. Select the existing `.bh-composer-input`, click it
 the browser; verify the actual send response. A cached textarea selector can disappear during
 that transition. Retain the first failure and current DOM/console, then use the established
 composer interaction path rather than bypassing it through RPC.
+
+## Standalone product CLI must not load the Host entry
+
+A raw Node invocation of the installed CLI does not use the DSH Host's module resolver.
+Importing the Core Host entry can therefore fail on a native peer such as `dsh-scope`
+before the command emits JSON, even while the installed Host and Web Client are healthy.
+Use the dedicated Core CLI export and its separately built dependency graph; retain native
+binary dependencies as declared packages rather than embedding one build machine's binary.
+Qualify the shipped CLI entry from an isolated directory without Host-only packages and
+then execute the actual installed command against the authenticated Host. A workspace
+import alone does not establish installed CLI usability. Observed in #1022 on RC2.

@@ -224,6 +224,13 @@ describe('Host client', () => {
     );
   });
 
+  it('retains Bot DM metadata for activity links without listing it as a group', async () => {
+    const host = new FakeHost();
+    host.methods.set('channels', () => ({ channels: wire.activityJournal.channels }));
+    const snapshot = await until(connect(host), (state) => state.connection.status === 'connected');
+    expect(snapshot.roster?.activityChannels).toEqual(wire.activityJournal.channels);
+    expect(snapshot.roster?.channels.map((channel) => channel.id)).toEqual(['group-research']);
+  });
   it('calls the device gateway with its credential and renders the recorded Roster', async () => {
     const host = new FakeHost();
     const target = connect(host);

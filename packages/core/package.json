@@ -4,12 +4,14 @@
   "private": true,
   "description": "BotHarness core: PersonaBot registry, memory, and state",
   "files": [
-    "dist"
+    "dist",
+    "cli"
   ],
   "type": "module",
   "main": "./dist/index.mjs",
   "exports": {
     ".": "./dist/index.mjs",
+    "./cli": "./cli/index.mjs",
     "./package.json": "./package.json"
   },
   "dependencies": {

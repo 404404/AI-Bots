@@ -425,6 +425,7 @@ export function ChannelMessageBody({
       ) : item?.kind === 'file' ? (
         <BridgeFile
           key={index}
+          actions={actions}
           channelId={channelId}
           sourceEventId={message.bridgeOrigin!.sourceEventId}
           attachmentId={id}
