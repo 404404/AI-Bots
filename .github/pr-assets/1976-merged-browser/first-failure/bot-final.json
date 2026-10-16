@@ -1,0 +1,21 @@
+{
+  "bot": {
+    "slug": "bot-2d2d8bc95c9d44a9be3396dc4e941e4a",
+    "displayName": "AX Browser 1792169244596",
+    "aggregateState": "idle",
+    "workspaces": [],
+    "createdAt": "2026-10-16T16:47:24.685Z",
+    "roles": [],
+    "standingLimits": {
+      "soul": 5000,
+      "coreMemory": 3000
+    },
+    "banner": {
+      "recipe": {
+        "scene": "winter",
+        "seed": 3247239782
+      }
+    },
+    "avatarSeed": 2
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-16T16:49:39.139Z",
+  "state": "shell-observed",
+  "exitCode": 0,
+  "host": {
+    "pidAlive": true,
+    "worktree": true,
+    "dshVersion": "0.2.0-rc.2",
+    "dshVersionMatches": true,
+    "authenticatedApi": true,
+    "botCount": 2,
+    "ok": true
+  },
+  "client": {
+    "state": "shell-ready",
+    "exitCode": 0,
+    "attempt": "110d5429-0f0e-466f-bda6-aea819592115",
+    "browserVerification": "Read real CUA console and DOM before accepting UI readiness",
+    "earlierFailures": [],
+    "report": {
+      "version": 1,
+      "evidence": "browser-reported",
+      "readiness": "inspect-attempts",
+      "persistence": "available",
+      "evictedAttempts": 0,
+      "attempts": [
+        {
+          "attempt": "110d5429-0f0e-466f-bda6-aea819592115",
+          "startedAt": 1792169361673,
+          "receivedAt": 1792169371914,
+          "events": [
+            {
+              "seq": 1,
+              "elapsedMs": 0,
+              "source": "lifecycle",
+              "code": "observer-installed"
+            },
+            {
+              "seq": 2,
+              "elapsedMs": 508,
+              "source": "lifecycle",
+              "code": "shell-mounted"
+            }
+          ],
+          "dropped": 0,
+          "lastSeq": 2,
+          "shellMounted": {
+            "seq": 2,
+            "elapsedMs": 508,
+            "source": "lifecycle",
+            "code": "shell-mounted"
+          },
+          "state": "shell-ready"
+        }
+      ]
+    }
+  },
+  "verification": "unverified: drive the feature, inspect visible evidence and canonical state",
+  "page": {
+    "version": 1,
+    "attempt": "110d5429-0f0e-466f-bda6-aea819592115",
+    "startedAt": 1792169361673,
+    "state": "shell-ready",
+    "events": [
+      {
+        "seq": 1,
+        "elapsedMs": 0,
+        "source": "lifecycle",
+        "code": "observer-installed"
+      },
+      {
+        "seq": 2,
+        "elapsedMs": 508,
+        "source": "lifecycle",
+        "code": "shell-mounted"
+      }
+    ],
+    "dropped": 0,
+    "delivery": "delivered",
+    "shellMounted": {
+      "seq": 2,
+      "elapsedMs": 508,
+      "source": "lifecycle",
+      "code": "shell-mounted"
+    }
+  }
+}

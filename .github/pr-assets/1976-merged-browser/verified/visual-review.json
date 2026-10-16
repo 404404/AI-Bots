@@ -1,0 +1,18 @@
+{
+  "commit": "4116e181cfeba38938c698f55f1260994f9fa1f7",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected four Web screenshots/full Browser ARIA and authority frame. Same Bot/tab/URL/content; Stop clears frame/tabs; Access-off refuses. Console/HTTP clean in this retry. Earlier same-source attempt remains FAIL due startup frame 404 and Reconnect; this pass does not erase that intermittent finding.",
+  "reviewedAt": "2026-10-16T16:50:27.732Z",
+  "evidence": {
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "off.png": "53b3e52a19b984b417573351d695e5b39f5c2dbafbf85574d7d8394c0d4092de",
+    "off.aria.json": "d71a3e4004619ab736a26cd4df353435b6113764cfbb9bda2d7ebe8fba204533",
+    "running.png": "7e26d8071dd83d9f7bee7f91d662f30d042aca0a80c0958f3870110c5df358c0",
+    "running.aria.json": "d57b0afc06e80ee6144572bf04f61b8902edd039466576cedf2a992f4bf88e0c",
+    "stopped.png": "efb2445cff2dbddd45240449df5cd09de647b42afdc1823303c3bbd3429d64af",
+    "stopped.aria.json": "53aae38f4d72fb797239c72e3b339d7791afaa0ff0836015d3478e77750047ae",
+    "disabled.png": "9c5a6f86530d1fdea360ca17a18dadd584f00192bfcbc9eccaa963453a0f5c72",
+    "disabled.aria.json": "89e6ca6b437347ca00174be66c9440b69d9b1f42c62161867c87da2da26627e9"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "content": [
+    {
+      "type": "text",
+      "text": "Opened http://127.0.0.1:58486/ — AX Browser lifecycle 1976. Call browser_observe to read the page."
+    }
+  ]
+}

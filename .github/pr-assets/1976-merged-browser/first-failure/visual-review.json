@@ -1,0 +1,18 @@
+{
+  "commit": "4116e181cfeba38938c698f55f1260994f9fa1f7",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected all saved screenshot states, Browser ARIA and authority frame. Running screenshot was captured AFTER existing Reconnect recovered the viewer. This visual receipt does not qualify the run: startup frame HTTP 404 and console error remain, so overall status is FAIL.",
+  "reviewedAt": "2026-10-16T16:52:11.972Z",
+  "evidence": {
+    "frame.jpg": "5f75bbf3e231b8f2b016cee6b65ba230f4e24ddaa0007e0fd03a87d5e2b9b5fc",
+    "off.png": "78c26c58dbc46376c407aee53c76bb31996ebe1513c4b80f0083ea234163ed9d",
+    "off.aria.json": "3cfabc4e6e7196bdbd93b0a6fbe59057108275df6e4d80c00758f7e4d33953fd",
+    "running.png": "cb10c83cf60975ac399ab3f2ab0c619178bd13ec2f59bb23748e29eb75d572b7",
+    "running.aria.json": "80519595da46219e714ffaf96675c164ea106eb75275e642ce034f1805e3e2c8",
+    "stopped.png": "31a56cfa0a3c9731fda34f594d92913867b981c4d28d7240a0707ba19ba1a702",
+    "stopped.aria.json": "943a9f3d1a5b2f86684ec496859d81b5fb32bdfed004e28c011567d2f6c36d11",
+    "disabled.png": "ff627807352dbb0672f607430abc5bf56f56a012cbcf452458a047fafcc4e249",
+    "disabled.aria.json": "c3195104537de0545a9e0bab3e92a53f3298085ea6785eb0e151d25fec5c7793"
+  }
+}
