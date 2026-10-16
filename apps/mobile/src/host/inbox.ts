@@ -1,20 +1,21 @@
 import type { HostClient } from './client';
 import type { HumanAttentionItem, HumanAttentionPage } from './wire';
 
-export const INBOX_SECTIONS = ['action', 'replies', 'handled'] as const;
+export const INBOX_SECTIONS = ['action', 'replies', 'unread', 'handled'] as const;
 export type InboxSection = (typeof INBOX_SECTIONS)[number];
 
 interface UnreadCounts {
   channels: Array<{ channelId: string; unreadCount: number }>;
 }
 
-const LIMITS: Record<InboxSection, number> = { action: 100, replies: 30, handled: 30 };
+const LIMITS: Record<InboxSection, number> = { action: 100, replies: 30, unread: 30, handled: 30 };
 
 export type InboxSnapshot =
   | { status: 'idle' }
   | { status: 'loading' }
   | {
       status: 'ready';
+      botSlug?: string;
       sections: Record<InboxSection, HumanAttentionItem[]>;
       unread?: Readonly<Record<string, number>>;
       stale?: string;
@@ -29,7 +30,7 @@ export interface Inbox {
   stop(): void;
 }
 
-export function createInbox(client: HostClient): Inbox {
+export function createInbox(client: HostClient, options: { botSlug?: string } = {}): Inbox {
   const listeners = new Set<() => void>();
   let snapshot: InboxSnapshot = { status: 'idle' };
   let reading: Promise<void> | undefined;
@@ -45,7 +46,11 @@ export function createInbox(client: HostClient): Inbox {
     const [pages, counts] = await Promise.all([
       Promise.all(
         INBOX_SECTIONS.map((category) =>
-          client.call<HumanAttentionPage>('humanAttention', { category, limit: LIMITS[category] }),
+          client.call<HumanAttentionPage>('humanAttention', {
+            category,
+            limit: LIMITS[category],
+            ...options,
+          }),
         ),
       ),
       client.call<UnreadCounts>('channelUnreadCounts').catch(() => ({ channels: [] })),
@@ -54,12 +59,18 @@ export function createInbox(client: HostClient): Inbox {
       counts.channels.map((entry) => [entry.channelId, entry.unreadCount]),
     );
     if (stopped) return;
-    const [action, replies, handled] = pages.map((page) => page.items) as [
+    const [action, replies, otherUnread, handled] = pages.map((page) => page.items) as [
+      HumanAttentionItem[],
       HumanAttentionItem[],
       HumanAttentionItem[],
       HumanAttentionItem[],
     ];
-    publish({ status: 'ready', sections: { action, replies, handled }, unread });
+    publish({
+      status: 'ready',
+      ...options,
+      sections: { action, replies, unread: otherUnread, handled },
+      unread,
+    });
   };
 
   const refresh = (): Promise<void> => {
@@ -128,4 +139,26 @@ export function createInbox(client: HostClient): Inbox {
 
 export function actionCount(snapshot: InboxSnapshot): number {
   return snapshot.status === 'ready' ? snapshot.sections.action.length : 0;
+}
+
+export function observeInbox(client: HostClient, botSlug: string) {
+  const loading: InboxSnapshot = { status: 'loading' };
+  let inbox: Inbox | undefined;
+  let watchers = 0;
+  return {
+    getSnapshot: () => inbox?.getSnapshot() ?? loading,
+    getInbox: () => inbox,
+    subscribe(listener: () => void) {
+      inbox ??= createInbox(client, { botSlug });
+      watchers += 1;
+      const off = inbox.subscribe(listener);
+      return () => {
+        off();
+        watchers -= 1;
+        if (watchers !== 0) return;
+        inbox?.stop();
+        inbox = undefined;
+      };
+    },
+  };
 }

@@ -52,13 +52,14 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 - **Search** finds a PersonaBot or Channel on the current Host:
   - Typing in the Chats search field filters the list in place, as chat apps do; there is no separate search tab.
   - It matches PersonaBot display names and Channel titles on the device, ignoring case and full-width forms, with names that start with the query first. Hidden Channels stay out. A DM result opens its chat, and a Channel result opens that Channel's chat. When nothing matches it says so. Message full-text search is not part of it.
-- **Activity** is the Human Inbox across all Hosts:
-  - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
-  - Section headers stick to the top while their items scroll and show the section's count.
-  - Every item carries its Host and can be decided in place, on the same cards as the chat.
+- **Activity** is the Human Inbox across Bots on the currently selected Host:
+  - Default sections are Needs my action / For you / Other unread. Handled history appears only when its filter is selected. Other unread uses the Host's Channel summaries; Bot filtering is also calculated by the Host, not by the summary's last author.
+  - Section headers stick to the top and toggle collapse. All start expanded; collapse is stored separately from Chats, per device and Host. Arrivals do not reopen a collapsed section. Collapsed action counts use yellow; unread counts use blue. The unread section counts messages, not conversation rows.
+  - Approvals and questions can be decided in place, on the same cards as chat. Private input retains its existing full-client route.
   - Posts and rows are separated by space and layer fills, not divider lines.
   - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
-  - Opening an item jumps to the card in its chat.
+  - Opening an item jumps to the card in its chat; an unread conversation opens its DM or group chat.
+  - The first triage slice retains the existing filter chips and first-page queries. The floating header with filter/search/sort controls, full pagination and complete tab totals are subsequent slices of [#1954](https://github.com/BotHarness/DeepSeekBot/issues/1954); do not treat loaded counts as full-Host totals.
 - **Settings** is a form sheet with a large detent, opened from the avatar, and closed by swiping down or the close button. It reuses the settings row and section components, in groups:
   - **Usage** comes first, as one card for the current Host, like a fitness app's week: "Usage", "Last 7 days" and a chevron, the 7-day token total in `display`, and a bar per day (`DayBars`). An idle Host shows a quiet week of stubs, and a failed read shows a danger line with Try again under the card. Tapping it pushes the **Usage** screen:
     - A Today / 7 days / 4 weeks / 12 weeks `Segmented` switch; switching reads the Host again. A background 4-week read checks support on entry; until it succeeds, and on older Hosts, only Today and 7 days appear. An `invalid-input` refusal of a longer period returns to 7 days without showing an error. The Settings card does not probe or change its 7-day range.

@@ -1,7 +1,8 @@
 import { Stack, useRouter } from 'expo-router';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
-import { cardHref } from '../../../src/host/push';
+import { cardHref, unreadHref } from '../../../src/host/push';
+import { activityCollapse } from '../../../src/host/native-section-collapse';
 import type { HumanAttentionItem } from '../../../src/host/wire';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
 import { ActivityFeed } from '../../../src/ui/shell/activity-feed';
@@ -10,13 +11,19 @@ import { t } from '../../../src/ui/strings';
 
 export default function ActivityScreen() {
   const router = useRouter();
-  const { client, inbox } = useHostSession();
+  const { saved, client, inbox } = useHostSession();
   const snapshot = useHostSnapshot(client);
   const list = useInbox(inbox);
   const bots = snapshot.roster?.bots ?? [];
   const channels = snapshot.roster?.channels ?? [];
 
   const open = (item: HumanAttentionItem) => {
+    const unread = unreadHref(
+      item,
+      (slug) => bots.find((bot) => bot.slug === slug)?.dmChannelId,
+      (channelId) => channels.some((channel) => channel.id === channelId),
+    );
+    if (unread !== undefined) return router.push(unread);
     const card = cardHref(
       item,
       (slug) => bots.find((bot) => bot.slug === slug)?.dmChannelId,
@@ -41,6 +48,9 @@ export default function ActivityScreen() {
       <Stack.Screen options={{ title: t.activity }} />
       <HostDrawerEdge>
         <ActivityFeed
+          key={saved?.hostId ?? 'no-host'}
+          hostId={saved?.hostId ?? ''}
+          collapse={activityCollapse}
           client={client}
           inbox={inbox}
           snapshot={list}

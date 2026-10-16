@@ -17,6 +17,7 @@ import {
 } from '../src/host/requests';
 import type { HumanAttentionItem, QuestionItem } from '../src/host/wire';
 import { FakeHost } from './fake-host';
+import { unreadHref } from '../src/host/push';
 import hostWire from './fixtures/host-wire.json';
 import inboxWire from './fixtures/inbox-wire.json';
 
@@ -92,7 +93,70 @@ const ready = (target: Inbox) =>
   });
 
 describe('Human Inbox', () => {
-  it('lists unresolved actions, then mentions and replies, then handled history', async () => {
+  it('asks the Host to filter a mixed conversation before calculating its unread summary', async () => {
+    const fake = host();
+    fake.answers.set('humanAttention', (args) => ({
+      ok: true,
+      value: {
+        items:
+          args['category'] === 'unread' && args['botSlug'] === 'ada'
+            ? [
+                {
+                  ...approvalItem,
+                  category: 'unread',
+                  kind: 'channel-unread',
+                  id: 'unread:team',
+                  unreadCount: 2,
+                },
+              ]
+            : [],
+      },
+    }));
+    inbox = createInbox(connect(fake), { botSlug: 'ada' });
+    expect((await ready(inbox)).sections.unread).toMatchObject([
+      { id: 'unread:team', unreadCount: 2 },
+    ]);
+  });
+  it('opens an unread summary in its known DM or Group instead of a generic detail page', () => {
+    const item = { kind: 'channel-unread', botSlug: 'ada', channelId: 'dm-ada' };
+    expect(unreadHref(item, () => 'dm-ada')).toEqual({
+      pathname: '/dm/[slug]',
+      params: { slug: 'ada' },
+    });
+    expect(
+      unreadHref(
+        { ...item, channelId: 'team' },
+        () => 'dm-ada',
+        (id) => id === 'team',
+      ),
+    ).toEqual({ pathname: '/channel/[id]', params: { id: 'team' } });
+    expect(unreadHref({ ...item, channelId: 'removed' }, () => 'dm-ada')).toBeUndefined();
+  });
+  it('loads other unread conversations from the owning attention projection', async () => {
+    const fake = host();
+    const unread = {
+      ...approvalItem,
+      id: 'unread:group-team',
+      category: 'unread',
+      kind: 'channel-unread',
+      channelId: 'group-team',
+      channelName: 'Team',
+      summary: 'The remaining conversation',
+      unreadCount: 10,
+    };
+    fake.answers.set('humanAttention', (args) =>
+      args['category'] === 'unread'
+        ? { ok: true, value: { items: [unread] } }
+        : recorded(
+            args['category'] === 'action' ? 'humanAttention.action' : 'humanAttention.replies',
+          ),
+    );
+    inbox = createInbox(connect(fake));
+    expect((await ready(inbox)).sections.unread).toEqual([unread]);
+    expect(inbox.find(unread.id)).toEqual(unread);
+  });
+
+  it('loads action, personal-message, unread and history categories', async () => {
     const fake = host();
     inbox = createInbox(connect(fake));
     const snapshot = await ready(inbox);
@@ -101,8 +165,7 @@ describe('Human Inbox', () => {
     expect(snapshot.sections.handled.length).toBeGreaterThan(0);
     expect(snapshot.sections.handled.every((item) => item.category === 'handled')).toBe(true);
     expect(actionCount(snapshot)).toBe(1);
-    const asked = fake.requests.filter((line) => line.endsWith('/humanAttention'));
-    expect(asked).toHaveLength(3);
+    expect(snapshot.sections.unread).toEqual([]);
   });
 
   it('drops an item resolved elsewhere when the live stream reports the change', async () => {

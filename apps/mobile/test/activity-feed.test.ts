@@ -15,6 +15,7 @@ vi.mock('../src/ui/bot-avatar', () => ({
 
 import { createHostClient, type HostClient } from '../src/host/client';
 import type { InboxSnapshot } from '../src/host/inbox';
+import { createSectionCollapse, type SectionCollapse } from '../src/host/section-collapse';
 import type { HumanAttentionItem } from '../src/host/wire';
 import {
   ActivityFeed,
@@ -45,7 +46,7 @@ const reply: HumanAttentionItem = {
 
 const ready = (action: HumanAttentionItem[]): InboxSnapshot => ({
   status: 'ready',
-  sections: { action, replies: [reply], handled: [] },
+  sections: { action, replies: [reply], unread: [], handled: [] },
 });
 
 let client: HostClient | undefined;
@@ -71,7 +72,15 @@ async function settle(): Promise<void> {
     await act(async () => new Promise((resolve) => setTimeout(resolve, 5)));
 }
 
-async function feed(fake: FakeHost, snapshot: InboxSnapshot): Promise<HTMLElement> {
+async function feed(
+  fake: FakeHost,
+  snapshot: InboxSnapshot,
+  collapse = createSectionCollapse({ read: async () => undefined, write() {} }),
+  hostId = 'host-one',
+): Promise<HTMLElement> {
+  act(() => root?.unmount());
+  container?.remove();
+  client?.stop();
   client = createHostClient({
     routes: ['https://studio.tailnet-example.ts.net'],
     credential: fake.credential,
@@ -86,6 +95,8 @@ async function feed(fake: FakeHost, snapshot: InboxSnapshot): Promise<HTMLElemen
   await act(async () =>
     root!.render(
       createElement(ActivityFeed, {
+        hostId,
+        collapse,
         client,
         inbox: undefined,
         snapshot,
@@ -122,6 +133,8 @@ describe('Activity feed rows', () => {
       'row:private-1',
       'header:header-replies',
       'row:reply-1',
+      'header:header-unread',
+      'empty:empty-unread',
     ]);
   });
 
@@ -130,7 +143,7 @@ describe('Activity feed rows', () => {
     expect(answered.some((row) => row.key === question.id)).toBe(false);
     const kept = feedRows(ready([]), new Set(), [approval]);
     expect(kept.map((row) => row.key)).toContain(approval.id);
-    expect(kept.some((row) => row.kind === 'empty')).toBe(false);
+    expect(kept.some((row) => row.key === 'empty-action')).toBe(false);
   });
 
   it('filters to one section and keeps its header when it is empty', () => {
@@ -154,11 +167,19 @@ describe('Activity feed rows', () => {
       ...new Set([question.botSlug, 'other-bot', reply.botSlug]),
     ]);
     const rows = feedRows(snapshot, new Set(), [], { section: 'all', bot: 'other-bot' });
-    expect(rows.map((row) => row.key)).toEqual(['header-action', 'other-1']);
+    expect(rows.map((row) => row.key)).toEqual([
+      'header-action',
+      'other-1',
+      'header-replies',
+      'empty-replies',
+      'header-unread',
+      'empty-unread',
+    ]);
     expect(activityCounts(snapshot, new Set([question.id]), [], undefined)).toEqual({
       all: 2,
       action: 1,
       replies: 1,
+      unread: 0,
       handled: 0,
     });
   });
@@ -169,6 +190,88 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('restores collapsed sections on reopen without carrying them to another Host', async () => {
+    let saved: Record<string, string[]> = {};
+    const persistence = (): SectionCollapse =>
+      createSectionCollapse({
+        read: async () => saved,
+        write: (next) => {
+          saved = next;
+        },
+      });
+    const view = await feed(host(), ready([question]), persistence());
+    await press(button(view, t.sectionCount(t.inboxSections.action, 1)));
+    expect(post(view, question)).toBeNull();
+    const reopened = await feed(host(), ready([question, approval]), persistence());
+    expect(post(reopened, question)).toBeNull();
+    expect(post(reopened, approval)).toBeNull();
+    expect(button(reopened, t.sectionCount(t.inboxSections.action, 2))).not.toBeNull();
+    const otherHost = await feed(host(), ready([question]), persistence(), 'host-two');
+    expect(post(otherHost, question)).not.toBeNull();
+  });
+
+  it('uses the Host scoped unread summary instead of filtering its last author', async () => {
+    const fake = host();
+    const unread: HumanAttentionItem = {
+      ...reply,
+      id: 'unread:team',
+      category: 'unread',
+      kind: 'channel-unread',
+      botSlug: 'other-bot',
+      channelName: 'Team',
+      summary: 'Team update',
+      unreadCount: 10,
+    };
+    fake.answers.set('humanAttention', (args) => ({
+      ok: true,
+      value: {
+        items:
+          args.category === 'unread' && args.botSlug === question.botSlug
+            ? [{ ...unread, unreadCount: 2 }]
+            : [],
+      },
+    }));
+    fake.answers.set('channelUnreadCounts', () => ({ ok: true, value: { channels: [] } }));
+    const view = await feed(fake, {
+      status: 'ready',
+      sections: { action: [question], replies: [], unread: [unread], handled: [] },
+    });
+    await press(button(view, question.botSlug));
+    expect(button(view, t.sectionCount(t.inboxSections.unread, 2))).not.toBeNull();
+    expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).not.toBeNull();
+    await press(button(view, t.filterAllBots));
+    expect(button(view, t.sectionCount(t.inboxSections.unread, 10))).not.toBeNull();
+  });
+
+  it('shows three collapsible triage sections and keeps handled history behind its filter', async () => {
+    const unread: HumanAttentionItem = {
+      ...reply,
+      id: 'unread:team',
+      category: 'unread',
+      kind: 'channel-unread',
+      channelName: 'Team',
+      summary: 'A new conversation',
+      unreadCount: 10,
+    };
+    const done: HumanAttentionItem = { ...question, id: 'done-1', category: 'handled' };
+    const view = await feed(host(), {
+      status: 'ready',
+      sections: { action: [question], replies: [reply], unread: [unread], handled: [done] },
+    });
+    expect(view.querySelector('[data-testid="inbox-row-done-1"]')).toBeNull();
+    const actions = button(view, t.sectionCount(t.inboxSections.action, 1));
+    await press(actions);
+    expect(post(view, question)).toBeNull();
+    expect(view.querySelector('[data-testid="inbox-row-reply-1"]')).not.toBeNull();
+    await press(button(view, t.sectionCount(t.inboxSections.unread, 10)));
+    expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).toBeNull();
+    await press(actions);
+    expect(post(view, question)).not.toBeNull();
+    await press(button(view, t.filterChip(t.inboxSections.handled, 1)));
+    expect(view.querySelector('[data-testid="inbox-row-done-1"]')).not.toBeNull();
+    expect(post(view, question)).toBeNull();
+  });
+
   it('answers a question in place and the post leaves the feed', async () => {
     const fake = host();
     const sent: Array<Record<string, unknown>> = [];
@@ -191,24 +294,25 @@ describe('Activity feed', () => {
     expect(post(view, question)).not.toBeNull();
     await press(button(view, t.filterChip(t.inboxSections.replies, 1)));
     expect(post(view, question)).toBeNull();
-    expect(view.textContent).toContain(t.sectionCount(t.inboxSections.replies, 1));
+    expect(button(view, t.sectionCount(t.inboxSections.replies, 1))).not.toBeNull();
     await press(button(view, t.filterChip(t.filterAll, 2)));
     expect(post(view, question)).not.toBeNull();
   });
 
-  it('collapses a handled item to one line and keeps a reply to two', async () => {
+  it('shows handled history only when selected and keeps personal messages in the default view', async () => {
     const done: HumanAttentionItem = { ...question, id: 'done-1', category: 'handled' };
     const view = await feed(host(), {
       status: 'ready',
-      sections: { action: [], replies: [reply], handled: [done] },
+      sections: { action: [], replies: [reply], unread: [], handled: [done] },
     });
-    const handled = view.querySelector('[data-testid="inbox-row-done-1"]')!;
     const replied = view.querySelector('[data-testid="inbox-row-reply-1"]')!;
+    expect(replied.textContent).toContain(`${t.kind.reply ?? t.otherKind} · ${reply.botSlug}`);
+    expect(replied.textContent?.split(reply.summary).length).toBe(2);
+    await press(button(view, t.filterChip(t.inboxSections.handled, 1)));
+    const handled = view.querySelector('[data-testid="inbox-row-done-1"]')!;
     expect(handled.textContent).toContain(
       `${t.kind['user-question']} · ${done.botSlug} · ${done.summary}`,
     );
-    expect(replied.textContent).toContain(`${t.kind.reply ?? t.otherKind} · ${reply.botSlug}`);
-    expect(replied.textContent?.split(reply.summary).length).toBe(2);
   });
 
   it('keeps a post that lost to another device and says so', async () => {

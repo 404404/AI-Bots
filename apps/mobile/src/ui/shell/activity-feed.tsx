@@ -1,10 +1,11 @@
-import { useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore, type ReactElement } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
 import {
   INBOX_SECTIONS,
+  observeInbox,
   type Inbox,
   type InboxSection,
   type InboxSnapshot,
@@ -19,12 +20,15 @@ import {
   type RequestRef,
 } from '../../host/requests';
 import type { HumanAttentionItem } from '../../host/wire';
+import type { SectionCollapse } from '../../host/section-collapse';
 import { BotAvatar } from '../bot-avatar';
 import { ApprovalCard } from '../chat/approval-card';
 import { QuestionCard } from '../chat/question-card';
 import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
+import { CountBadge } from '../primitives/count-badge';
+import { ChevronDownIcon, ChevronRightIcon } from './icons';
 import { Loading, Notice } from '../request-parts';
 import { t } from '../strings';
 import {
@@ -35,9 +39,10 @@ import {
 } from './activity-filters';
 
 const AVATAR = 32;
+const LOADING: InboxSnapshot = { status: 'loading' };
 
 type FeedRow =
-  | { kind: 'header'; key: string; section: InboxSection; count: number }
+  | { kind: 'header'; key: string; section: InboxSection; count: number; attention: number }
   | { kind: 'empty'; key: string }
   | { kind: 'post'; key: string; item: HumanAttentionItem; ref: RequestRef }
   | { kind: 'row'; key: string; item: HumanAttentionItem; settled: boolean };
@@ -57,9 +62,24 @@ function sectionItems(
   const listed = snapshot.sections[section].filter((item) => !gone.has(item.id));
   const items =
     section === 'action'
-      ? [...listed, ...held.filter((kept) => !listed.some((item) => item.id === kept.id))]
+      ? [
+          ...listed,
+          ...held.filter(
+            (kept) =>
+              (bot === undefined || kept.botSlug === bot) &&
+              !listed.some((item) => item.id === kept.id),
+          ),
+        ]
       : listed;
-  return bot === undefined ? items : items.filter((item) => item.botSlug === bot);
+  return bot === undefined || snapshot.botSlug === bot
+    ? items
+    : items.filter((item) => item.botSlug === bot);
+}
+
+function sectionCount(section: InboxSection, items: readonly HumanAttentionItem[]): number {
+  return section === 'unread'
+    ? items.reduce((total, item) => total + (item.unreadCount ?? 0), 0)
+    : items.length;
 }
 
 export function activityCounts(
@@ -68,11 +88,17 @@ export function activityCounts(
   held: readonly HumanAttentionItem[],
   bot: string | undefined,
 ): Record<ActivitySection, number> {
-  const counts: Record<ActivitySection, number> = { all: 0, action: 0, replies: 0, handled: 0 };
+  const counts: Record<ActivitySection, number> = {
+    all: 0,
+    action: 0,
+    replies: 0,
+    unread: 0,
+    handled: 0,
+  };
   if (snapshot.status !== 'ready') return counts;
   for (const section of INBOX_SECTIONS) {
-    counts[section] = sectionItems(snapshot, section, gone, held, bot).length;
-    counts.all += counts[section];
+    counts[section] = sectionCount(section, sectionItems(snapshot, section, gone, held, bot));
+    if (section !== 'handled') counts.all += counts[section];
   }
   return counts;
 }
@@ -81,7 +107,9 @@ export function activityBots(snapshot: InboxSnapshot): string[] {
   if (snapshot.status !== 'ready') return [];
   return [
     ...new Set(
-      INBOX_SECTIONS.flatMap((section) => snapshot.sections[section].map((item) => item.botSlug)),
+      INBOX_SECTIONS.flatMap((section) =>
+        snapshot.sections[section].map((item) => item.botSlug),
+      ).filter(Boolean),
     ),
   ];
 }
@@ -91,15 +119,23 @@ export function feedRows(
   gone: ReadonlySet<string>,
   held: readonly HumanAttentionItem[],
   filter: ActivityFilter = ALL_ACTIVITY,
+  collapsed: ReadonlySet<string> = new Set(),
 ): FeedRow[] {
   if (snapshot.status !== 'ready') return [];
   const rows: FeedRow[] = [];
   for (const section of INBOX_SECTIONS) {
+    if (filter.section === 'all' && section === 'handled') continue;
     if (filter.section !== 'all' && filter.section !== section) continue;
     const items = sectionItems(snapshot, section, gone, held, filter.bot);
-    const chosen = filter.section === section;
-    if (items.length === 0 && section !== 'action' && !chosen) continue;
-    rows.push({ kind: 'header', key: `header-${section}`, section, count: items.length });
+    const count = sectionCount(section, items);
+    const attention =
+      section === 'replies'
+        ? items.filter((item) => item.isUnread).length
+        : section === 'handled'
+          ? 0
+          : count;
+    rows.push({ kind: 'header', key: `header-${section}`, section, count, attention });
+    if (collapsed.has(section)) continue;
     if (items.length === 0) rows.push({ kind: 'empty', key: `empty-${section}` });
     for (const item of items) {
       const ref = section === 'action' ? decidable(item) : undefined;
@@ -132,7 +168,10 @@ function Row({
 }) {
   const theme = useDesignTheme();
   const kind = t.kind[item.kind] ?? t.otherKind;
-  const name = bot?.displayName ?? item.botSlug;
+  const name =
+    item.kind === 'channel-unread'
+      ? (item.channelName ?? item.channelId ?? t.otherKind)
+      : (bot?.displayName ?? item.botSlug);
   const size = settled ? theme.type.body.line : AVATAR;
   return (
     <Pressable
@@ -173,6 +212,9 @@ function Row({
           <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
             {t.ago(minutesSince(item.createdAt, now))}
           </Text>
+          {(item.unreadCount ?? 0) > 0 ? (
+            <CountBadge count={item.unreadCount!} tone="unread" />
+          ) : null}
         </View>
         {!settled && item.summary.length > 0 ? (
           <Text tone="muted" numberOfLines={2}>
@@ -279,6 +321,8 @@ function Post({
 }
 
 export function ActivityFeed({
+  hostId,
+  collapse,
   client,
   inbox,
   snapshot,
@@ -287,6 +331,8 @@ export function ActivityFeed({
   header,
   now = Date.now(),
 }: {
+  hostId: string;
+  collapse: SectionCollapse;
   client: HostClient | undefined;
   inbox: Inbox | undefined;
   snapshot: InboxSnapshot;
@@ -300,10 +346,25 @@ export function ActivityFeed({
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
   const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
-  const rows = feedRows(snapshot, gone, held, filter);
-  const sticky = rows.flatMap((row, index) => (row.kind === 'header' ? [index] : []));
+  const scoped = useMemo(
+    () =>
+      client === undefined || filter.bot === undefined
+        ? undefined
+        : observeInbox(client, filter.bot),
+    [client, filter.bot],
+  );
+  const scopedSnapshot = useSyncExternalStore(
+    useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
+    useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
+  );
+  const visible = filter.bot === undefined ? snapshot : scopedSnapshot;
+  const activeInbox = filter.bot === undefined ? inbox : scoped?.getInbox();
+  const collapsed = useSyncExternalStore(collapse.subscribe, () => collapse.collapsed(hostId));
+  const rows = feedRows(visible, gone, held, filter, collapsed);
+  const sticky = rows.flatMap((row, index) => (row.kind === 'header' ? [index + 1] : []));
   const slugs = activityBots(snapshot);
-  const shownBot = filter.bot !== undefined && slugs.includes(filter.bot) ? filter.bot : undefined;
+  const slugsWithSelection =
+    filter.bot !== undefined && !slugs.includes(filter.bot) ? [...slugs, filter.bot] : slugs;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
@@ -311,7 +372,7 @@ export function ActivityFeed({
   const refresh = () => {
     setRefreshing(true);
     setHeld([]);
-    void inbox?.refresh().finally(() => setRefreshing(false));
+    void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
     <Animated.FlatList
@@ -328,46 +389,66 @@ export function ActivityFeed({
       ListHeaderComponent={
         <View style={{ gap: space.x3 }}>
           {header}
-          {snapshot.status === 'ready' && snapshot.stale !== undefined ? (
+          {visible.status === 'ready' && visible.stale !== undefined ? (
             <View style={{ paddingHorizontal: space.x5 }}>
-              <Notice tone="warning">{`${t.inboxStale} ${snapshot.stale}`}</Notice>
+              <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
             </View>
           ) : null}
-          {snapshot.status === 'error' ? (
+          {visible.status === 'error' ? (
             <View style={{ paddingHorizontal: space.x5 }}>
-              <Notice tone="danger">{`${t.inboxFailed} ${snapshot.error}`}</Notice>
+              <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
             </View>
           ) : null}
-          {snapshot.status === 'loading' ? <Loading /> : null}
+          {visible.status === 'loading' ? <Loading /> : null}
           {snapshot.status === 'ready' ? (
             <ActivityFilters
-              counts={activityCounts(snapshot, gone, held, shownBot)}
-              bots={slugs.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
-              filter={{ ...filter, bot: shownBot }}
+              counts={activityCounts(visible, gone, held, filter.bot)}
+              bots={slugsWithSelection.map((slug) => ({
+                slug,
+                name: bot(slug)?.displayName ?? slug,
+              }))}
+              filter={filter}
               onFilter={setFilter}
             />
           ) : null}
         </View>
       }
       renderItem={({ item: row }) => {
-        if (row.kind === 'header')
+        if (row.kind === 'header') {
+          const Chevron = collapsed.has(row.section) ? ChevronRightIcon : ChevronDownIcon;
           return (
-            <Text
-              accessibilityRole="header"
-              variant="meta"
-              tone="muted"
-              strong
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: !collapsed.has(row.section) }}
+              accessibilityLabel={t.sectionCount(t.inboxSections[row.section], row.count)}
+              onPress={() => collapse.toggle(hostId, row.section)}
               style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: space.x3,
+                minHeight: theme.touch,
                 paddingHorizontal: space.x5,
                 paddingTop: space.x6,
                 paddingBottom: space.x2,
-                textTransform: 'uppercase',
                 backgroundColor: theme.layer.canvas.fill,
               }}
             >
-              {t.sectionCount(t.inboxSections[row.section], row.count)}
-            </Text>
+              <Chevron color={theme.color.muted} size={theme.type.meta.line} />
+              <Text variant="meta" tone="muted" strong style={{ flex: 1 }}>
+                {t.inboxSections[row.section]}
+              </Text>
+              <Text variant="meta" tone="subtle">
+                {row.count}
+              </Text>
+              {collapsed.has(row.section) && row.attention > 0 ? (
+                <CountBadge
+                  count={row.attention}
+                  tone={row.section === 'action' ? 'needs-you' : 'unread'}
+                />
+              ) : null}
+            </Pressable>
           );
+        }
         if (row.kind === 'empty')
           return (
             <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
@@ -391,7 +472,7 @@ export function ActivityFeed({
             {client === undefined ? null : (
               <Post
                 client={client}
-                inbox={inbox}
+                inbox={activeInbox}
                 item={row.item}
                 requestRef={row.ref}
                 bot={bot(row.item.botSlug)}

@@ -31,7 +31,7 @@ const items = (count: number) =>
 
 const ready = (action: number): InboxSnapshot => ({
   status: 'ready',
-  sections: { action: items(action), replies: [], handled: [] },
+  sections: { action: items(action), replies: [], unread: [], handled: [] },
 });
 
 const connection = (status: ConnectionState['status']) =>
