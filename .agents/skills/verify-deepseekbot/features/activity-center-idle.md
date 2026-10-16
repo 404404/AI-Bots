@@ -59,7 +59,19 @@ node scripts/activity-idle-report.mjs <printed-attempt-directory>
 node scripts/activity-idle-report.mjs <printed-attempt-directory> --json
 ```
 
-No selected run is **not-run**. Completed matching Web/CLI proof is **pass**; a user-path or
+After inspecting both the image and ARIA, record a visual review (this is not Human QA):
+
+```bash
+node scripts/activity-idle-report.mjs <printed-attempt-directory> --visual-review pass --reviewer Codex --note "Inspected screenshot and ARIA: named Bot is Idle with no sessions or actions."
+```
+
+Use `--visual-review fail` with the observed mismatch instead when the image disagrees.
+The receipt is bound to this commit and both evidence digests and cannot overwrite an earlier
+review. A failed review requires a new run after correcting the cause; it is never relabeled.
+The automated journey exits nonzero while visual inspection is pending. Regenerate `coverage.md`
+from the report command after review, and publish the receipt alongside the original `run.json`.
+
+No selected run is **not-run**. Completed matching Web/CLI proof with an inspected screenshot/ARIA receipt is **pass**; a user-path or
 observation failure is **fail**; unavailable setup is **blocked**. Missing/changed required
 evidence, an incomplete record, dirty source or a different commit is **needs-revalidation**.
 `--commit <full-sha>` inspects a historical record explicitly; it does not qualify current HEAD.
@@ -91,6 +103,7 @@ GitHub evidence links in the review; local paths alone do not deliver shared evi
 - A missing Host before setup is blocked; a lost Host after the journey starts is failed.
   Missing Client observation is failed even when the Host answers HTTP successfully.
   An incomplete or absent screenshot/ARIA cannot keep a passing result.
+- Full-page screenshot capture can resize/remount this view and reset Show idle Bots. This journey captures the fixed viewport and rechecks the card after capture; a changed view fails.
 - The drawer may contain other panels. The script scrolls the named Bot card into view;
   it does not infer Activity Center state from sidebar readiness or unrelated loading regions.
 - On macOS the runner uses the existing sidebar journey's CDP language override so English

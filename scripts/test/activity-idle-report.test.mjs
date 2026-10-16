@@ -61,6 +61,23 @@ function fixture(status = 'pass') {
   };
   const run = {
     behavior,
+    version: 1,
+    base: commit,
+    startedAt: new Date().toISOString(),
+    finishedAt: new Date().toISOString(),
+    expected: 'Idle',
+    actual: 'Idle',
+    actions: [{ click: 'Show idle Bots' }],
+    environment: {
+      platform: 'test',
+      arch: 'test',
+      node: 'test',
+      viewport: 'test',
+      locale: 'test',
+      theme: 'test',
+      dsh: 'test',
+      browser: 'test',
+    },
     status,
     commit,
     dirty: false,
@@ -74,6 +91,18 @@ function fixture(status = 'pass') {
     run.evidence[name] = digest(bytes);
   }
   writeFileSync(join(directory, 'run.json'), JSON.stringify(run));
+  writeFileSync(
+    join(directory, 'visual-review.json'),
+    JSON.stringify({
+      commit,
+      reviewer: 'fixture reviewer',
+      decision: 'pass',
+      note: 'Synthetic fixture, not runtime evidence',
+      reviewedAt: new Date().toISOString(),
+      screenshot: run.evidence['activity.png'],
+      aria: run.evidence['aria.json'],
+    }),
+  );
   return directory;
 }
 describe('one Activity Center idle coverage row', () => {
@@ -97,6 +126,35 @@ describe('one Activity Center idle coverage row', () => {
     const directory = fixture(status);
     rmSync(join(directory, 'activity.png'));
     expect(coverageRow(directory, commit)).toMatchObject({ status, reason: 'retained failure' });
+  });
+  it.each([
+    'version',
+    'base',
+    'startedAt',
+    'finishedAt',
+    'expected',
+    'actual',
+    'environment',
+    'actions',
+  ])('invalidates missing %s metadata', (field) => {
+    const directory = fixture();
+    const path = join(directory, 'run.json');
+    const run = JSON.parse(readFileSync(path, 'utf8'));
+    delete run[field];
+    writeFileSync(path, JSON.stringify(run));
+    expect(coverageRow(directory, commit).status).toBe('needs-revalidation');
+  });
+  it('keeps visual review pending and retains a failed inspection', () => {
+    const directory = fixture();
+    const path = join(directory, 'visual-review.json');
+    const review = JSON.parse(readFileSync(path, 'utf8'));
+    rmSync(path);
+    expect(coverageRow(directory, commit).status).toBe('needs-revalidation');
+    writeFileSync(
+      path,
+      JSON.stringify({ ...review, decision: 'fail', note: 'Idle card missing from screenshot' }),
+    );
+    expect(coverageRow(directory, commit).status).toBe('fail');
   });
   it('never overwrites a first failed attempt with a later success', () => {
     const first = fixture('fail');

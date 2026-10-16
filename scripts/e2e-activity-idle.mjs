@@ -48,6 +48,7 @@ const save = (name, value) => {
   run.evidence[name] = digest(bytes);
 };
 let instance, browser, page;
+let captured = false;
 let stage = 'preconditions';
 const errors = [];
 const redact = (text) => {
@@ -123,13 +124,11 @@ const captureDiagnostics = async () => {
   return { ...observation, page: snapshot ?? null };
 };
 const capturePage = async () => {
+  if (captured) return;
+  captured = true;
   await Promise.allSettled([
     (async () => {
-      if (page)
-        save(
-          'activity.png',
-          Buffer.from(await page.screenshot({ fullPage: true, waitForFonts: false })),
-        );
+      if (page) save('activity.png', Buffer.from(await page.screenshot({ waitForFonts: false })));
     })(),
     (async () => {
       if (page) save('aria.json', await page.accessibility.snapshot({ interestingOnly: false }));
@@ -255,20 +254,22 @@ try {
   const cardSelector = `.bh-overview-bot[data-bot-id="${run.botId}"]`;
   await (await page.$(cardSelector)).scrollIntoView();
   await new Promise((done) => setTimeout(done, 500));
-  const visible = await page.$eval(cardSelector, (element) => ({
-    botId: element.getAttribute('data-bot-id'),
-    name: element.querySelector('.bh-overview-bot-name')?.textContent?.trim(),
-    state: element.querySelector('.bh-overview-bot-state')?.textContent?.trim(),
-    hasActions: element.querySelector('.bh-overview-bot-actions') !== null,
-    sessions: element.querySelectorAll('.bh-overview-session-state').length,
-    rendered:
-      element.checkVisibility() &&
-      element.getBoundingClientRect().width > 0 &&
-      element.getBoundingClientRect().height > 0 &&
-      element.getBoundingClientRect().top >= 0 &&
-      element.getBoundingClientRect().bottom <= innerHeight,
-  }));
-  save('visible.json', visible);
+  const readVisible = () =>
+    page.$eval(cardSelector, (element) => ({
+      botId: element.getAttribute('data-bot-id'),
+      name: element.querySelector('.bh-overview-bot-name')?.textContent?.trim(),
+      state: element.querySelector('.bh-overview-bot-state')?.textContent?.trim(),
+      hasActions: element.querySelector('.bh-overview-bot-actions') !== null,
+      sessions: element.querySelectorAll('.bh-overview-session-state').length,
+      rendered:
+        element.checkVisibility() &&
+        element.getBoundingClientRect().width > 0 &&
+        element.getBoundingClientRect().height > 0 &&
+        element.getBoundingClientRect().top >= 0 &&
+        element.getBoundingClientRect().bottom <= innerHeight,
+    }));
+  const visible = await readVisible();
+  save('visible-before.json', visible);
   stage = 'confirm-authoritative-state';
   const after = authority();
   save('after.json', after);
@@ -278,12 +279,16 @@ try {
   );
   await new Promise((done) => setTimeout(done, 1500));
   await capturePage();
+  if (!(await page.$(`.bh-overview-bot[data-bot-id="${run.botId}"]`)))
+    throw new Error('idle-card-disappeared-during-evidence-capture');
+  const finalVisible = await readVisible();
+  save('visible.json', finalVisible);
   const diagnostics = JSON.parse(readFileSync(resolve(directory, 'diagnostics.json'), 'utf8'));
   const problems = idleProblems({
     botId: run.botId,
     before,
     after,
-    visible,
+    visible: finalVisible,
     diagnostics,
     console: errors,
   });
