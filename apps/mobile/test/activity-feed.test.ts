@@ -242,6 +242,9 @@ describe('Activity feed', () => {
     await press(button(view, t.cancel));
     await press(button(view, t.activitySearch));
     expect(view.querySelector('textarea')?.value).toBe('budget');
+    await press(button(view, t.activityClearSearch));
+    expect(view.querySelector('textarea')?.value).toBe('');
+    expect(queries.at(-1)?.search).toBeUndefined();
   });
 
   it('applies options immediately, keeps them on dismissal and resets without confirmation', async () => {

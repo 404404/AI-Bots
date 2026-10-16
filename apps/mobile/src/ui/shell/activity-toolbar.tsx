@@ -7,7 +7,7 @@ import { radius, space } from '../design/tokens';
 import { SearchField } from '../primitives/search-field';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
-import { ActivityFilterIcon, ActivitySearchIcon } from './icons';
+import { ActivityFilterIcon, ActivitySearchIcon, CloseIcon } from './icons';
 
 export type ActivityToolbarHandle = { dismissSearch(): void };
 
@@ -89,6 +89,23 @@ export function ActivityToolbar({
         </View>
         {searching ? (
           <SearchField
+            trailing={
+              search ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t.activityClearSearch}
+                  onPress={() => onSearch('')}
+                  style={{
+                    width: theme.touch,
+                    minHeight: theme.touch,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <CloseIcon color={theme.color.muted} size={theme.type.title.size} />
+                </Pressable>
+              ) : null
+            }
             autoFocus
             onBlur={() => setSearching(false)}
             value={search}

@@ -1,9 +1,11 @@
-import { TextInput } from 'react-native';
+import type { ReactNode } from 'react';
+import { TextInput, View } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 
 export function SearchField({
+  trailing,
   autoFocus,
   onBlur,
   value,
@@ -11,6 +13,7 @@ export function SearchField({
   placeholder,
   onChangeText,
 }: {
+  trailing?: ReactNode;
   autoFocus?: boolean;
   onBlur?(): void;
   value: string;
@@ -20,30 +23,41 @@ export function SearchField({
 }) {
   const theme = useDesignTheme();
   return (
-    <TextInput
-      autoFocus={autoFocus}
-      onBlur={onBlur}
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={theme.color.subtle}
-      accessibilityLabel={placeholder}
-      accessibilityRole="search"
-      autoCapitalize="none"
-      autoCorrect={false}
-      clearButtonMode="while-editing"
-      returnKeyType="search"
+    <View
       style={{
-        minHeight: theme.touch,
+        flexDirection: 'row',
+        alignItems: 'center',
         marginHorizontal: inset,
         marginTop: inset,
         marginBottom: space.x3,
-        paddingHorizontal: space.x4,
         borderRadius: radius.md,
         backgroundColor: theme.layer.raised.fill,
-        color: theme.color.fg,
-        fontSize: theme.type.body.size,
       }}
-    />
+    >
+      <TextInput
+        autoFocus={autoFocus}
+        onBlur={onBlur}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={theme.color.subtle}
+        accessibilityLabel={placeholder}
+        accessibilityRole="search"
+        autoCapitalize="none"
+        autoCorrect={false}
+        clearButtonMode="while-editing"
+        returnKeyType="search"
+        style={{
+          minHeight: theme.touch,
+          flex: 1,
+          paddingHorizontal: space.x4,
+          borderRadius: radius.md,
+          backgroundColor: theme.layer.raised.fill,
+          color: theme.color.fg,
+          fontSize: theme.type.body.size,
+        }}
+      />
+      {trailing}
+    </View>
   );
 }
