@@ -4,6 +4,16 @@ A DeepSeek Harness plugin layer that gives LLM agents a persistent product ident
 
 ## Language
 
+### Product releases
+
+**Product Release Version**:
+The single release identity of the computer-side DeepSeekBot product and its co-released components. It is distinct from the independently versioned DSH runtime, Provider, tools/skills and mobile app.
+_Avoid_: desktop-only version, npm-only version, unqualified Version
+
+**Development Build Identity**:
+The identity and source state of an unreleased DeepSeekBot build. It is not a Product Release Version or proof that a release artifact has been qualified.
+_Avoid_: installed release, latest version, 0.0.0 release
+
 ### PersonaBots
 
 **PersonaBot**:
