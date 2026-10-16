@@ -55,16 +55,19 @@ export function HeaderCircleButton({
   label,
   onPress,
   children,
+  selected = false,
 }: {
   label: string;
   onPress(): void;
   children: ReactNode;
+  selected?: boolean;
 }) {
   const theme = useDesignTheme();
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ selected }}
       onPress={onPress}
       style={({ pressed }) => ({
         width: theme.touch,

@@ -93,6 +93,73 @@ const ready = (target: Inbox) =>
   });
 
 describe('Human Inbox', () => {
+  it('pages the filtered Activity query and recovers from a continuation failure', async () => {
+    const fake = host();
+    fake.answers.delete('humanAttention');
+    const next = { ...approvalItem, id: 'next' };
+    fake.methods.set('humanAttention', (args) => ({
+      queryVersion: 1,
+      items: args['cursor'] ? [approvalItem, next] : [approvalItem],
+      ...(args['cursor'] ? {} : { nextCursor: 'page-two' }),
+    }));
+    inbox = createInbox(connect(fake), {
+      activity: true,
+      section: 'replies',
+      botSlug: 'ada',
+      channelId: 'team',
+      search: 'budget',
+      unreadOnly: true,
+    });
+    await ready(inbox);
+    expect(fake.calls.find((call) => call.method === 'humanAttention')?.args).toEqual({
+      category: 'replies',
+      limit: 30,
+      botSlug: 'ada',
+      channelId: 'team',
+      search: 'budget',
+      unreadOnly: true,
+      sort: 'mentions-first',
+      queryVersion: 1,
+    });
+    expect(fake.calls.filter((call) => call.method === 'humanAttention')).toHaveLength(1);
+    fake.failing.add('humanAttention');
+    await inbox.loadMore!('replies');
+    expect((await ready(inbox)).stale).toBeTruthy();
+    expect((await ready(inbox)).sections.replies).toHaveLength(1);
+    fake.failing.delete('humanAttention');
+    await inbox.loadMore!('replies');
+    const loaded = await ready(inbox);
+    expect(loaded.sections.replies.map((item) => item.id)).toEqual([approvalItem.id, 'next']);
+    expect(loaded.cursors?.replies).toBeUndefined();
+    expect(loaded.stale).toBeUndefined();
+  });
+
+  it('refuses partial Activity results from an older Host and retries after an update', async () => {
+    const fake = host();
+    inbox = createInbox(connect(fake), { activity: true });
+    const error = await until(() =>
+      inbox!.getSnapshot().status === 'error' ? inbox!.getSnapshot() : undefined,
+    );
+    expect(error).toMatchObject({
+      status: 'error',
+      error: expect.stringContaining('Update this Host'),
+    });
+    fake.answers.set('humanAttention', () => ({ ok: true, value: { queryVersion: 1, items: [] } }));
+    await inbox.refresh();
+    expect((await ready(inbox)).sections.action).toEqual([]);
+  });
+
+  it('lets explicit chronological sorting replace mention priority without fetching history', async () => {
+    const fake = host();
+    fake.answers.delete('humanAttention');
+    fake.methods.set('humanAttention', () => ({ queryVersion: 1, items: [] }));
+    inbox = createInbox(connect(fake), { activity: true, sort: 'oldest' });
+    await ready(inbox);
+    const calls = fake.calls.filter((call) => call.method === 'humanAttention');
+    expect(calls.map((call) => call.args['category'])).toEqual(['action', 'replies', 'unread']);
+    expect(calls.every((call) => call.args['sort'] === 'oldest')).toBe(true);
+  });
+
   it('asks the Host to filter a mixed conversation before calculating its unread summary', async () => {
     const fake = host();
     fake.answers.set('humanAttention', (args) => ({

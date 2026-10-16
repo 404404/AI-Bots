@@ -3,6 +3,18 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 type IconProps = { color: ColorValue; size: number; focused?: boolean };
 
+export function ActivitySearchIcon(props: IconProps) {
+  return <Glyph {...props} d="M16 16l5 5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />;
+}
+
+export function ActivityFilterIcon(props: IconProps) {
+  return <Glyph {...props} d="M4 7h16M7 12h10M10 17h4" />;
+}
+
+export function ActivitySortIcon(props: IconProps) {
+  return <Glyph {...props} d="M8 3v18M4 7l4-4 4 4M16 3v18M12 17l4 4 4-4" />;
+}
+
 function Glyph({ d, color, size, focused = false }: IconProps & { d: string }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

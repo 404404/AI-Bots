@@ -4,7 +4,17 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => import('./react-native-shim'));
-vi.mock('react-native-svg', () => ({ default: () => null, Path: () => null }));
+vi.mock('react-native-svg', () => ({
+  default: () => null,
+  Path: () => null,
+  Defs: () => null,
+  LinearGradient: () => null,
+  Rect: () => null,
+  Stop: () => null,
+}));
+vi.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
 vi.mock('expo-router', () => ({ useRouter: () => ({ push: () => undefined }) }));
@@ -76,6 +86,22 @@ async function feed(
   act(() => root?.unmount());
   container?.remove();
   client?.stop();
+  const answer = fake.answers.get('humanAttention');
+  fake.answers.set('humanAttention', (args) => {
+    const result = answer
+      ? answer(args)
+      : {
+          ok: true,
+          value: {
+            items:
+              snapshot.status === 'ready'
+                ? snapshot.sections[args.category as keyof typeof snapshot.sections]
+                : [],
+          },
+        };
+    const value = result as { ok: boolean; value?: object };
+    return value.ok ? { ...value, value: { ...value.value, queryVersion: 1 } } : value;
+  });
   client = createHostClient({
     routes: ['https://studio.tailnet-example.ts.net'],
     credential: fake.credential,
@@ -183,6 +209,12 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
+  it('keeps filters behind the floating header entry instead of permanent chips', async () => {
+    const view = await feed(host(), ready([question]));
+    expect(view.querySelector(`button[aria-label="${t.filterChip(t.filterAll, 2)}"]`)).toBeNull();
+    await press(button(view, t.filterActivity));
+    expect(button(view, t.inboxSections.handled)).not.toBeNull();
+  });
   it('preserves other sections and Hosts when toggled before preferences finish loading', async () => {
     const original = { 'host-one': ['replies'], 'host-two': ['unread'] };
     let saved: Record<string, string[]> = original;
@@ -242,8 +274,8 @@ describe('Activity feed', () => {
       ok: true,
       value: {
         items:
-          args.category === 'unread' && args.botSlug === question.botSlug
-            ? [{ ...unread, unreadCount: 2 }]
+          args.category === 'unread'
+            ? [{ ...unread, unreadCount: args.botSlug === question.botSlug ? 2 : 10 }]
             : [],
       },
     }));
@@ -252,6 +284,7 @@ describe('Activity feed', () => {
       status: 'ready',
       sections: { action: [], replies: [], unread: [unread], handled: [] },
     });
+    await press(button(view, t.filterActivity));
     await press(button(view, question.botSlug));
     expect(button(view, t.sectionCount(t.inboxSections.unread, 2))).not.toBeNull();
     expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).not.toBeNull();
@@ -283,7 +316,8 @@ describe('Activity feed', () => {
     expect(view.querySelector('[data-testid="inbox-row-unread:team"]')).toBeNull();
     await press(actions);
     expect(post(view, question)).not.toBeNull();
-    await press(button(view, t.filterChip(t.inboxSections.handled, 1)));
+    await press(button(view, t.filterActivity));
+    await press(button(view, t.inboxSections.handled));
     expect(view.querySelector('[data-testid="inbox-row-done-1"]')).not.toBeNull();
     expect(post(view, question)).toBeNull();
   });
@@ -305,13 +339,14 @@ describe('Activity feed', () => {
     expect(view.textContent).toContain(t.inboxEmpty);
   });
 
-  it('filters the feed from the chips above it', async () => {
+  it('filters the feed through its header panel', async () => {
     const view = await feed(host(), ready([question]));
     expect(post(view, question)).not.toBeNull();
-    await press(button(view, t.filterChip(t.inboxSections.replies, 1)));
+    await press(button(view, t.filterActivity));
+    await press(button(view, t.inboxSections.replies));
     expect(post(view, question)).toBeNull();
     expect(button(view, t.sectionCount(t.inboxSections.replies, 1))).not.toBeNull();
-    await press(button(view, t.filterChip(t.filterAll, 2)));
+    await press(button(view, t.filterAll));
     expect(post(view, question)).not.toBeNull();
   });
 
@@ -324,7 +359,8 @@ describe('Activity feed', () => {
     const replied = view.querySelector('[data-testid="inbox-row-reply-1"]')!;
     expect(replied.textContent).toContain(`${t.kind.reply ?? t.otherKind} · ${reply.botSlug}`);
     expect(replied.textContent?.split(reply.summary).length).toBe(2);
-    await press(button(view, t.filterChip(t.inboxSections.handled, 1)));
+    await press(button(view, t.filterActivity));
+    await press(button(view, t.inboxSections.handled));
     const handled = view.querySelector('[data-testid="inbox-row-done-1"]')!;
     expect(handled.textContent).toContain(
       `${t.kind['user-question']} · ${done.botSlug} · ${done.summary}`,

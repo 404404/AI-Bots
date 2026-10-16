@@ -350,6 +350,7 @@ export interface HumanAttentionItem {
 }
 
 export interface HumanAttentionPage {
+  queryVersion?: number;
   items: HumanAttentionItem[];
   nextCursor?: string;
 }

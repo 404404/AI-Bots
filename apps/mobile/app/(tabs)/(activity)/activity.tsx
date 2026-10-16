@@ -45,7 +45,7 @@ export default function ActivityScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: t.activity }} />
+      <Stack.Screen options={{ title: t.activity, headerShown: false }} />
       <HostDrawerEdge>
         <ActivityFeed
           key={saved?.hostId ?? 'no-host'}
@@ -55,6 +55,12 @@ export default function ActivityScreen() {
           inbox={inbox}
           snapshot={list}
           botSlugs={bots.map((bot) => bot.slug)}
+          channels={[
+            ...bots.flatMap((bot) =>
+              bot.dmChannelId ? [{ id: bot.dmChannelId, name: bot.displayName }] : [],
+            ),
+            ...channels.map((channel) => ({ id: channel.id, name: channel.name })),
+          ]}
           bot={(slug) => bots.find((bot) => bot.slug === slug)}
           onOpen={open}
           header={

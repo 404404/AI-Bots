@@ -23,3 +23,19 @@ the shared QA Host. Use only the dedicated QA conversations.
 5. Confirm ordinary bubble reactions/Copy/Share and DM-only activity filters
    still work. Record source and integrated batch SHAs and capture DM/group/menu
    before/after in light/dark; disclose physical-device and Android gaps.
+
+
+## Activity tab triage (#1954)
+
+Use the same shared-device queue. Open Activity on the selected Host with a pending
+question/approval, a Human mention, a reply and ordinary unread group messages.
+Confirm three independently collapsible sections, yellow action and blue unread
+badges, and handled history only through the filter. The floating header contains
+sorting, filtering and Activity search; no permanent chips appear above the feed.
+Open Filters, combine Bot/Channel/unread/category, clear them, and close the sheet.
+Search a safe summary beyond the first page and use Load more. Default ordering
+puts mentions before replies; explicit newest/oldest replaces that priority.
+Scroll under the header with search open and closed; verify light/dark and large
+text. A failed query retains stale content with an error; an unsupported Host
+asks for an update. Capture matched screenshots only after driving these controls.
+Web preview evidence does not qualify native keyboard, safe-area or scrolling.

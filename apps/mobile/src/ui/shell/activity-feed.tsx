@@ -30,12 +30,16 @@ import { Text } from '../primitives/text';
 import { CountBadge } from '../primitives/count-badge';
 import { ChevronDownIcon, ChevronRightIcon } from './icons';
 import { Loading, Notice } from '../request-parts';
+import { EdgeFade, useChatHeaderHeight } from '../chat/header-chrome';
+import { Button } from '../primitives/button';
+import { ActivityToolbar } from './activity-toolbar';
 import { t } from '../strings';
 import {
   ALL_ACTIVITY,
   ActivityFilters,
   type ActivityFilter,
   type ActivitySection,
+  type ActivitySort,
 } from './activity-filters';
 
 const AVATAR = 32;
@@ -44,6 +48,7 @@ const LOADING: InboxSnapshot = { status: 'loading' };
 type FeedRow =
   | { kind: 'header'; key: string; section: InboxSection; count: number; attention: number }
   | { kind: 'empty'; key: string }
+  | { kind: 'more'; key: string; section: InboxSection }
   | { kind: 'post'; key: string; item: HumanAttentionItem; ref: RequestRef }
   | { kind: 'row'; key: string; item: HumanAttentionItem; settled: boolean };
 
@@ -134,6 +139,7 @@ export function feedRows(
           : { kind: 'post', key: item.id, item, ref },
       );
     }
+    if (snapshot.cursors?.[section]) rows.push({ kind: 'more', key: `more-${section}`, section });
   }
   return rows;
 }
@@ -316,6 +322,7 @@ export function ActivityFeed({
   inbox,
   snapshot,
   botSlugs,
+  channels = [],
   bot,
   onOpen,
   header,
@@ -327,6 +334,7 @@ export function ActivityFeed({
   inbox: Inbox | undefined;
   snapshot: InboxSnapshot;
   botSlugs: readonly string[];
+  channels?: ReadonlyArray<{ id: string; name: string }>;
   bot(slug: string): RosterBot | undefined;
   onOpen(item: HumanAttentionItem): void;
   header?: ReactElement | null;
@@ -337,25 +345,38 @@ export function ActivityFeed({
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
   const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<ActivitySort>('default');
+  const [filtering, setFiltering] = useState(false);
+  const initialHeight = useChatHeaderHeight();
+  const [headerHeight, setHeaderHeight] = useState(initialHeight);
   const scoped = useMemo(
     () =>
-      client === undefined || filter.bot === undefined
+      client === undefined
         ? undefined
-        : observeInbox(client, filter.bot),
-    [client, filter.bot],
+        : observeInbox(client, {
+            activity: true,
+            section: filter.section,
+            botSlug: filter.bot,
+            channelId: filter.channel,
+            unreadOnly: filter.unreadOnly,
+            search,
+            sort,
+          }),
+    [client, filter.section, filter.bot, filter.channel, filter.unreadOnly, search, sort],
   );
   const scopedSnapshot = useSyncExternalStore(
     useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
     useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
   );
-  const visible = filter.bot === undefined ? snapshot : scopedSnapshot;
-  const activeInbox = filter.bot === undefined ? inbox : scoped?.getInbox();
+  const visible = scoped === undefined ? snapshot : scopedSnapshot;
+  const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
   const collapsed = useSyncExternalStore(collapse.subscribe, () => collapse.collapsed(hostId));
   const rows = feedRows(visible, gone, held, filter, collapsed);
-  const sticky = rows.flatMap((row, index) => (row.kind === 'header' ? [index + 1] : []));
-  const slugs = botSlugs;
   const slugsWithSelection =
-    filter.bot !== undefined && !slugs.includes(filter.bot) ? [...slugs, filter.bot] : slugs;
+    filter.bot !== undefined && !botSlugs.includes(filter.bot)
+      ? [...botSlugs, filter.bot]
+      : botSlugs;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
@@ -366,115 +387,157 @@ export function ActivityFeed({
     void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
-    <Animated.FlatList
-      contentInsetAdjustmentBehavior="automatic"
-      automaticallyAdjustKeyboardInsets
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      style={{ backgroundColor: theme.color.base }}
-      data={rows}
-      stickyHeaderIndices={sticky}
-      keyExtractor={(row) => row.key}
-      itemLayoutAnimation={LinearTransition}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      ListHeaderComponent={
-        <View style={{ gap: space.x3 }}>
-          {header}
-          {visible.status === 'ready' && visible.stale !== undefined ? (
-            <View style={{ paddingHorizontal: space.x5 }}>
-              <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
-            </View>
-          ) : null}
-          {visible.status === 'error' ? (
-            <View style={{ paddingHorizontal: space.x5 }}>
-              <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
-            </View>
-          ) : null}
-          {visible.status === 'loading' ? <Loading /> : null}
-          {snapshot.status === 'ready' ? (
-            <ActivityFilters
-              counts={activityCounts(visible, gone, held, filter.bot)}
-              bots={slugsWithSelection.map((slug) => ({
-                slug,
-                name: bot(slug)?.displayName ?? slug,
-              }))}
-              filter={filter}
-              onFilter={setFilter}
-            />
-          ) : null}
-        </View>
-      }
-      renderItem={({ item: row }) => {
-        if (row.kind === 'header') {
-          const Chevron = collapsed.has(row.section) ? ChevronRightIcon : ChevronDownIcon;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ expanded: !collapsed.has(row.section) }}
-              accessibilityLabel={t.sectionCount(t.inboxSections[row.section], row.count)}
-              onPress={() => collapse.toggle(hostId, row.section)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: space.x3,
-                minHeight: theme.touch,
-                paddingHorizontal: space.x5,
-                paddingTop: space.x6,
-                paddingBottom: space.x2,
-                backgroundColor: theme.layer.canvas.fill,
-              }}
-            >
-              <Chevron color={theme.color.muted} size={theme.type.meta.line} />
-              <Text variant="meta" tone="muted" strong style={{ flex: 1 }}>
-                {t.inboxSections[row.section]}
+    <View style={{ flex: 1 }}>
+      <Animated.FlatList
+        contentInsetAdjustmentBehavior="never"
+        contentContainerStyle={{ paddingTop: headerHeight, paddingBottom: space.x6 }}
+        scrollIndicatorInsets={{ top: headerHeight }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        style={{ backgroundColor: theme.color.base }}
+        data={rows}
+        keyExtractor={(row) => row.key}
+        itemLayoutAnimation={LinearTransition}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListHeaderComponent={
+          <View style={{ gap: space.x3 }}>
+            {header}
+            {visible.status === 'ready' && visible.stale !== undefined ? (
+              <View style={{ paddingHorizontal: space.x5 }}>
+                <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
+              </View>
+            ) : null}
+            {visible.status === 'error' ? (
+              <View style={{ paddingHorizontal: space.x5 }}>
+                <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
+              </View>
+            ) : null}
+            {visible.status === 'loading' ? <Loading /> : null}
+            {visible.status === 'ready' && Object.values(visible.cursors ?? {}).some(Boolean) ? (
+              <Text variant="meta" tone="muted" style={{ paddingHorizontal: space.x5 }}>
+                {t.activityLoaded}
               </Text>
-              <Text variant="meta" tone="subtle">
-                {row.count}
-              </Text>
-              {collapsed.has(row.section) && row.attention > 0 ? (
-                <CountBadge
-                  count={row.attention}
-                  tone={row.section === 'action' ? 'needs-you' : 'unread'}
-                />
-              ) : null}
-            </Pressable>
-          );
+            ) : null}
+          </View>
         }
-        if (row.kind === 'empty')
-          return (
-            <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
-              {row.key === 'empty-action' && filter.bot === undefined
-                ? t.inboxEmpty
-                : t.filterEmpty}
-            </Text>
-          );
-        if (row.kind === 'row')
-          return (
-            <Row
-              item={row.item}
-              settled={row.settled}
-              bot={bot(row.item.botSlug)}
-              onOpen={onOpen}
-              now={now}
-            />
-          );
-        return (
-          <Animated.View exiting={FadeOut.duration(220)}>
-            {client === undefined ? null : (
-              <Post
-                client={client}
-                inbox={activeInbox}
+        renderItem={({ item: row }) => {
+          if (row.kind === 'header') {
+            const Chevron = collapsed.has(row.section) ? ChevronRightIcon : ChevronDownIcon;
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: !collapsed.has(row.section) }}
+                accessibilityLabel={t.sectionCount(t.inboxSections[row.section], row.count)}
+                onPress={() => collapse.toggle(hostId, row.section)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: space.x3,
+                  minHeight: theme.touch,
+                  paddingHorizontal: space.x5,
+                  paddingTop: space.x6,
+                  paddingBottom: space.x2,
+                  backgroundColor: theme.layer.canvas.fill,
+                }}
+              >
+                <Chevron color={theme.color.muted} size={theme.type.meta.line} />
+                <Text variant="meta" tone="muted" strong style={{ flex: 1 }}>
+                  {t.inboxSections[row.section]}
+                </Text>
+                <Text variant="meta" tone="subtle">
+                  {row.count}
+                </Text>
+                {collapsed.has(row.section) && row.attention > 0 ? (
+                  <CountBadge
+                    count={row.attention}
+                    tone={row.section === 'action' ? 'needs-you' : 'unread'}
+                  />
+                ) : null}
+              </Pressable>
+            );
+          }
+          if (row.kind === 'more')
+            return (
+              <View style={{ padding: space.x5 }}>
+                <Button
+                  label={t.activityLoadMore}
+                  disabled={
+                    visible.status === 'ready' &&
+                    visible.loadingMore?.includes(row.section) === true
+                  }
+                  onPress={() => void activeInbox?.loadMore?.(row.section)}
+                />
+              </View>
+            );
+          if (row.kind === 'empty')
+            return (
+              <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
+                {row.key === 'empty-action' && filter.bot === undefined
+                  ? t.inboxEmpty
+                  : t.filterEmpty}
+              </Text>
+            );
+          if (row.kind === 'row')
+            return (
+              <Row
                 item={row.item}
-                requestRef={row.ref}
+                settled={row.settled}
                 bot={bot(row.item.botSlug)}
-                now={now}
                 onOpen={onOpen}
-                onSettled={settled}
+                now={now}
               />
-            )}
-          </Animated.View>
-        );
-      }}
-    />
+            );
+          return (
+            <Animated.View exiting={FadeOut.duration(220)}>
+              {client === undefined ? null : (
+                <Post
+                  client={client}
+                  inbox={activeInbox}
+                  item={row.item}
+                  requestRef={row.ref}
+                  bot={bot(row.item.botSlug)}
+                  now={now}
+                  onOpen={onOpen}
+                  onSettled={settled}
+                />
+              )}
+            </Animated.View>
+          );
+        }}
+      />
+      <EdgeFade edge="top" height={headerHeight + space.x6} />
+      <ActivityToolbar
+        search={search}
+        sort={sort}
+        filtered={
+          filter.section !== 'all' ||
+          filter.bot !== undefined ||
+          filter.channel !== undefined ||
+          filter.unreadOnly === true
+        }
+        onSearch={(value) => {
+          setHeld([]);
+          setSearch(value);
+        }}
+        onSort={(value) => {
+          setHeld([]);
+          setSort(value);
+        }}
+        onFilter={() => setFiltering(true)}
+        onHeight={setHeaderHeight}
+      />
+      <ActivityFilters
+        visible={filtering}
+        filter={filter}
+        channels={channels}
+        bots={slugsWithSelection.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
+        onFilter={(value) => {
+          setHeld([]);
+          setFilter(value);
+        }}
+        onClose={() => setFiltering(false)}
+      />
+    </View>
   );
 }
