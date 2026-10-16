@@ -6,11 +6,11 @@ export function TabStack({ onAppear }: { onAppear?(): void } = {}) {
   const theme = useDesignTheme();
   return (
     <Stack
-      screenListeners={{
+      screenListeners={({ navigation }) => ({
         transitionEnd: (event) => {
-          if (!event.data.closing) onAppear?.();
+          if (!event.data.closing && navigation.isFocused()) onAppear?.();
         },
-      }}
+      })}
       screenOptions={{
         headerLargeTitleEnabled: true,
         headerShadowVisible: false,

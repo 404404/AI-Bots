@@ -43,6 +43,7 @@ export const TextInput = (props: Props) =>
     ...a11y(props),
     value: props['value'] as string,
     placeholder: props['placeholder'] as string,
+    onBlur: props['onBlur'] as (() => void) | undefined,
     disabled: props['editable'] === false,
     onChange: (event: { target: { value: string } }) =>
       (props['onChangeText'] as ((text: string) => void) | undefined)?.(event.target.value),

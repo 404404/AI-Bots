@@ -209,7 +209,7 @@ describe('Activity feed rows', () => {
 });
 
 describe('Activity feed', () => {
-  it('sends header sort and search choices to the Host and clears search on close', async () => {
+  it('preserves the search when editing ends and options reset', async () => {
     const fake = host();
     const queries: Record<string, unknown>[] = [];
     fake.answers.set('humanAttention', (args) => {
@@ -232,8 +232,16 @@ describe('Activity feed', () => {
     });
     await settle();
     expect(queries.at(-1)?.search).toBe('budget');
-    await press(button(view, t.close));
-    expect(queries.at(-1)?.search).toBeUndefined();
+    expect(view.querySelector(`button[aria-label="${t.close}"]`)).toBeNull();
+    await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })));
+    expect(queries.at(-1)?.search).toBe('budget');
+    await press(button(view, t.activityOptions));
+    await press(button(view, t.activityReset));
+    expect(queries.at(-1)?.sort).toBeUndefined();
+    expect(queries.at(-1)?.search).toBe('budget');
+    await press(button(view, t.cancel));
+    await press(button(view, t.activitySearch));
+    expect(view.querySelector('textarea')?.value).toBe('budget');
   });
 
   it('applies options immediately, keeps them on dismissal and resets without confirmation', async () => {

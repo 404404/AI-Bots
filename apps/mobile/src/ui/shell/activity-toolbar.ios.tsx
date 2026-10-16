@@ -15,12 +15,16 @@ export function ActivityToolbar({
 }: ActivityToolbarProps) {
   const theme = useDesignTheme();
   const searchBar = useRef<SearchBarCommands>(null);
+  const searching = useRef(false);
+  function dismissSearch() {
+    if (!searching.current) return;
+    searching.current = false;
+    searchBar.current?.cancelSearch();
+  }
   useImperativeHandle(
     ref,
     () => ({
-      dismissSearch() {
-        searchBar.current?.cancelSearch();
-      },
+      dismissSearch,
     }),
     [],
   );
@@ -56,18 +60,19 @@ export function ActivityToolbar({
         hideWhenScrolling={false}
         obscureBackground={false}
         onFocus={() => {
+          searching.current = true;
           searchBar.current?.setText(search);
           searchBar.current?.toggleCancelButton(false);
         }}
-        onBlur={() => searchBar.current?.cancelSearch()}
+        onBlur={dismissSearch}
         onChangeText={(event) => {
+          if (!searching.current) return;
           const value = event.nativeEvent.text.slice(0, 200);
           if (value !== event.nativeEvent.text) searchBar.current?.setText(value);
           onSearch(value);
         }}
         onCancelButtonPress={() => {
-          searchBar.current?.clearText();
-          onSearch('');
+          searching.current = false;
         }}
       />
     </>

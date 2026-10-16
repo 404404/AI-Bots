@@ -4,11 +4,15 @@ import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 
 export function SearchField({
+  autoFocus,
+  onBlur,
   value,
   inset,
   placeholder,
   onChangeText,
 }: {
+  autoFocus?: boolean;
+  onBlur?(): void;
   value: string;
   inset: number;
   placeholder: string;
@@ -17,6 +21,8 @@ export function SearchField({
   const theme = useDesignTheme();
   return (
     <TextInput
+      autoFocus={autoFocus}
+      onBlur={onBlur}
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}

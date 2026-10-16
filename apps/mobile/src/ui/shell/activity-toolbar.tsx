@@ -1,5 +1,5 @@
 import { useImperativeHandle, useState, type ReactNode, type Ref } from 'react';
-import { Pressable, View } from 'react-native';
+import { Keyboard, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useDesignTheme } from '../design/theme';
@@ -7,7 +7,7 @@ import { radius, space } from '../design/tokens';
 import { SearchField } from '../primitives/search-field';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
-import { ActivityFilterIcon, ActivitySearchIcon, CloseIcon } from './icons';
+import { ActivityFilterIcon, ActivitySearchIcon } from './icons';
 
 export type ActivityToolbarHandle = { dismissSearch(): void };
 
@@ -36,10 +36,10 @@ export function ActivityToolbar({
     () => ({
       dismissSearch() {
         setSearching(false);
-        onSearch('');
+        Keyboard.dismiss();
       },
     }),
-    [onSearch],
+    [],
   );
   return (
     <>
@@ -78,25 +78,19 @@ export function ActivityToolbar({
               size={theme.type.title.size}
             />
           </ActivityIconButton>
-          <ActivityIconButton
-            label={searching ? t.close : t.activitySearch}
-            onPress={() => {
-              setSearching(!searching);
-              if (searching) onSearch('');
-            }}
-          >
-            {searching ? (
-              <CloseIcon color={theme.color.fg} size={theme.type.title.size} />
-            ) : (
+          {!searching ? (
+            <ActivityIconButton label={t.activitySearch} onPress={() => setSearching(true)}>
               <ActivitySearchIcon
                 color={search ? theme.color.accent : theme.color.fg}
                 size={theme.type.title.size}
               />
-            )}
-          </ActivityIconButton>
+            </ActivityIconButton>
+          ) : null}
         </View>
         {searching ? (
           <SearchField
+            autoFocus
+            onBlur={() => setSearching(false)}
             value={search}
             inset={space.x4}
             placeholder={t.activitySearch}
