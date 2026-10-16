@@ -2,7 +2,16 @@
 
 Candidate journey for #1980; packaged/restart qualification is still pending.
 
-## User path
+## Sub-features
+
+- Source-build identity in About and the authenticated release-info readers.
+- Loaded component composition, installed identity and staged restart qualification; these remain pending.
+
+## How to get to it (user POV)
+
+Enter Bot mode, choose Bot settings, then About.
+
+## Driving it with verify-app
 
 1. Launch an isolated Host with `verify-app launch --name <name>` and run `doctor`.
 2. Enter Bot mode, dismiss the tutorial, choose Bot settings, then About.
