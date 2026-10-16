@@ -12,6 +12,35 @@ function toolGroup(tool: string): ToolGroup {
 }
 
 const en = {
+  activityRow: {
+    dm: (recipient: string) => `sent a direct message to ${recipient}`,
+    actions: 'Activity details',
+    actionsHint: 'Long-press for full details and navigation.',
+    openMemory: 'Open memory',
+    openChat: 'Open conversation',
+    openBot: 'Open new Bot',
+    created: (recipient: string) => `created a new Bot, ${recipient}`,
+    posted: (place: string, count: number) =>
+      count === 1 ? `posted in ${place}:` : `posted ${count} messages in ${place}, latest:`,
+    messaged: (name: string, count: number) =>
+      count === 1 ? `messaged ${name}:` : `sent ${name} ${count} messages, latest:`,
+    memory: 'updated memory',
+    memoryIn: (place: string) => `updated memory in ${place}`,
+    memoryMessaging: (name: string) => `updated memory while messaging ${name}`,
+    moreFiles: (count: number) => `and ${count} more ${count === 1 ? 'file' : 'files'}`,
+    unavailable: 'Original message unavailable',
+    unavailablePlace: 'an unavailable Channel',
+    unavailableBot: 'Unavailable Bot',
+    left: 'left the Channel',
+    removed: 'was removed from the Channel',
+    stopped: (name: string) => `stopped ${name}`,
+    human: 'You',
+    show: 'Show in this chat',
+    posts: 'Posts in groups and Bot DMs',
+    updates: 'Memory updates',
+    footnote: (name: string) => `Shows what ${name} did elsewhere.`,
+    botDm: 'Bot-to-Bot DM · read-only',
+  },
   roster: 'DeepSeekBot',
   bots: 'PersonaBots',
   channels: 'Channels',
@@ -633,6 +662,35 @@ const en = {
 };
 
 const zh: typeof en = {
+  activityRow: {
+    dm: (recipient: string) => `向 ${recipient} 发送了私聊消息`,
+    actions: '活动详情',
+    actionsHint: '长按查看完整内容和跳转操作。',
+    openMemory: '打开记忆',
+    openChat: '打开会话',
+    openBot: '打开新 Bot',
+    created: (recipient: string) => `创建了新 Bot ${recipient}`,
+    posted: (place: string, count: number) =>
+      count === 1 ? `在 ${place} 发言：` : `在 ${place} 发言 ${count} 条，最新：`,
+    messaged: (name: string, count: number) =>
+      count === 1 ? `私信 ${name}：` : `私信 ${name} ${count} 条，最新：`,
+    memory: '更新了记忆',
+    memoryIn: (place: string) => `在 ${place} 更新了记忆`,
+    memoryMessaging: (name: string) => `和 ${name} 私信时更新了记忆`,
+    moreFiles: (count: number) => `另有 ${count} 个文件`,
+    unavailable: '原消息已不可用',
+    unavailablePlace: '已不可用的会话',
+    unavailableBot: '已不可用的 Bot',
+    left: '退出了频道',
+    removed: '被移出了频道',
+    stopped: (name: string) => `停止了 ${name}`,
+    human: '你',
+    show: '在此聊天中显示',
+    posts: '群聊和 Bot 私信中的发言',
+    updates: '记忆更新',
+    footnote: (name: string) => `显示 ${name} 在别处的动作。`,
+    botDm: 'Bot 之间的私聊 · 仅供查看',
+  },
   roster: 'DeepSeekBot',
   bots: 'PersonaBot',
   channels: '频道',
@@ -1243,3 +1301,4 @@ export const locale: 'zh' | 'en' = Intl.DateTimeFormat()
   : 'en';
 
 export const t = locale === 'zh' ? zh : en;
+export const activityStrings = { en: en.activityRow, zh: zh.activityRow };
