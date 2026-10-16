@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import { useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import {
   Button,
@@ -210,7 +211,9 @@ export function ActivityCenterView({
             <p role="alert">{t('activityCenter.error')}</p>
           ) : null}
           {value === undefined || bots.length > 0 ? null : (
-            <p>{t(value.bots.length === 0 ? 'activityCenter.empty' : 'activityCenter.allIdle')}</p>
+            <PanelEmptyState icon="bell">
+              {t(value.bots.length === 0 ? 'activityCenter.empty' : 'activityCenter.allIdle')}
+            </PanelEmptyState>
           )}
           <div className="bh-overview-bots">
             {bots.map((bot) => (

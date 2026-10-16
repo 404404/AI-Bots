@@ -13,6 +13,7 @@ At 961px and wider on a qualified rc.2 Web/macOS shell, the workspace contains a
 - `messages`: close/reopen and refresh preserve visibility; group header opens Members as an internal resizable split, absent in DMs.
 - `switch-order`: drag switches or use Alt+Up/Down; order survives refresh.
 - `live-content`: moving rail/panels or dragging the companion preserves mounted content and unsent drafts.
+- `empty-states`: Sessions, Inbox, Channels search, files, schedules, group work and Messages use a centered panel icon above their description; loading/errors stay distinct. Workspace content has 2px on each side, with no doubled native-sidebar inset. Check empty → populated and window resizing.
 - `global-panels`: Activity Center opens before or after selecting a Channel. Channel-scoped panels without a Channel show an empty state.
 - `macos-chrome`: only the traffic-light corner gets clearance; other panels start at the top. Move the rail to every column and verify native window dragging, fullscreen and restored native layout.
 - `fallback`: below 961px retain the responsive UI without overwriting the saved workspace.

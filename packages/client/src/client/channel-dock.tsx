@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import { workspaceColumns, moveWorkspaceRail, isFullHeightRail } from './workspace-layout.js';
 import { WorkspaceContext, WORKSPACE_RAIL, WORKSPACE_CHANNELS } from './workspace-context.js';
 import {
@@ -44,7 +45,6 @@ import {
 import { NARROW_CHANNEL_SIDEBAR_QUERY } from './channel-sidebar-layout.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { clampChannelSidebarWidth, channelSidebarPrefs } from './channel-sidebar-prefs.js';
-import { sidebarStyles } from './channel-sidebar-styles.js';
 import type { BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
 import { IconButton } from './ds/icon-button.js';
@@ -62,6 +62,7 @@ const styles = stylex.create({
     paddingInline: space.x4,
     paddingBottom: space.x4,
   },
+  workspaceBody: { paddingTop: space.x1, paddingBottom: space.x1, paddingInline: space.x1 },
   panel: { display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 },
   actions: { display: 'inline-flex', alignItems: 'center', gap: space.x1 },
 });
@@ -215,13 +216,14 @@ function DockPanelBody({ panel }: { panel: DockPanelRegistration }): ReactElemen
   return (
     <section data-dock-panel={panel.id} {...stylex.props(styles.panel)}>
       {panel.scope === 'global' || channel !== undefined ? (
-        <div data-dock-panel-body="" {...stylex.props(styles.body)}>
+        <div
+          data-dock-panel-body=""
+          {...stylex.props(styles.body, !!dock.rail && styles.workspaceBody)}
+        >
           <panel.component channel={channel} />
         </div>
       ) : (
-        <p data-dock-empty="" {...stylex.props(sidebarStyles.empty)}>
-          {dock.t('dock.empty')}
-        </p>
+        <PanelEmptyState icon={panel?.icon}>{dock.t('dock.empty')}</PanelEmptyState>
       )}
     </section>
   );
@@ -242,14 +244,15 @@ function ChannelEntryContent({ entryId }: { entryId: string }): ReactElement {
     <section data-sidebar-entry={entryId} {...stylex.props(styles.panel)}>
       {shown ? (
         props.expanded ? (
-          <div data-sidebar-entry-body="" {...stylex.props(styles.body)}>
+          <div
+            data-sidebar-entry-body=""
+            {...stylex.props(styles.body, !!dock.rail && styles.workspaceBody)}
+          >
             <entry.component {...props} />
           </div>
         ) : null
       ) : (
-        <p data-dock-empty="" {...stylex.props(sidebarStyles.empty)}>
-          {dock.t('dock.empty')}
-        </p>
+        <PanelEmptyState icon={panel?.icon}>{dock.t('dock.empty')}</PanelEmptyState>
       )}
     </section>
   );

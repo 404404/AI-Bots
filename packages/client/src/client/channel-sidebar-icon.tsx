@@ -531,7 +531,7 @@ export function ChannelSidebarIcon({
   size = 16,
 }: {
   name?: string | undefined;
-  size?: number;
+  size?: number | string;
 }): ReactElement {
   const nodes = Object.hasOwn(glyphs, name) ? glyphs[name]! : glyphs['panels-top-left']!;
   return (

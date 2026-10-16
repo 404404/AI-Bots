@@ -167,7 +167,7 @@ describe('desktop Bot mode dock', () => {
   it('shows an empty state for a panel the active Channel has nothing for', async () => {
     await render(builtins, 'channel');
     expect(host.querySelector('[data-body="sessions"]')).toBeNull();
-    expect(host.querySelectorAll('[data-dock-empty]')).toHaveLength(2);
+    expect(host.querySelectorAll('[data-panel-empty]')).toHaveLength(2);
   });
 
   it('restores the saved layout after a reload', async () => {
@@ -314,7 +314,7 @@ describe('dockPanels Service in the dock', () => {
     await settle();
     expect(host.querySelector('[data-notes]')).toBeNull();
     expect(
-      host.querySelector('[data-dock-panel="example:notes"] [data-dock-empty]'),
+      host.querySelector('[data-dock-panel="example:notes"] [data-panel-empty]'),
     ).not.toBeNull();
   });
 

@@ -9,3 +9,7 @@
 Runtime checks: native sidebar allocation and restoration; rail left/middle/right; switch drag ordering; panel drag node identity; continuous 0/16/12px spacing; Messages close/reopen and refresh; Web proportional resize; narrow fallback; all panels closed with a 56px rail; companion drag retaining the message node; group-member split persistence; native custom shortcut after reload/reset; native fullscreen clearance and window drag. Light-theme Web was also inspected.
 
 The complete platform matrix, Windows/Linux Desktop, embedded Browser/Computer state during movement, and final Human QA remain separate. This PR does not merge or deploy the workspace.
+
+## Empty-state refinement
+
+`empty-before.png` is the real Web Client at parent `d27982b7df9e4ee40fad4247a5bccf199bac5fa4`, before this feedback. The refreshed `after-web.png` shows the same default welcome and empty Sessions/Inbox after the change: 40px panel glyph above a description, centered in the body. Channels has 2px outer insets on all sides. `empty-group.png` uses the synthetic, zero-message “Panel empty-state QA” group to show Messages and Work empty states. No model calls or real messages were sent. Native `after-macos.png` closes Inbox so the capture excludes private runtime events; the full-height Sessions empty state is visible. This refresh was also inspected in light Web and at 1100 × 700.

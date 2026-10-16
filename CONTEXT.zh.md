@@ -820,8 +820,8 @@ _避免使用_：view、page、rail item
 桌面端 Bot mode（宽度 961 px 及以上）的可停靠工作区，Human 可以拖动、停靠、调整大小、关闭和重新打开 Dock panel。符合条件的 Web/macOS shell 释放原生侧栏占位，显示 Workspace Control Rail 和独立 Channel 列表。面板不组成标签页；至多一个消息面板呈现当前 Channel body。几何、开关排序和间距保存在浏览器本地，重置位于 Bot Settings（ADR-0203）。窄屏及不符合条件的 shell 保留响应式回退。
 _避免使用_：workbench、panel layout、dock
 
-**Workspace Control Rail（工作区控制列）**：
-Bot mode layout 中唯一、不可关闭、占据整列高度的控制区域。顶部为 DSB 模式退出入口，中间是可排序的 Dock panel 开关，底部是 Bot Settings。设置上方的拖拽把手在悬停或键盘聚焦时显示，用于把整列移动到各根列之间。它只控制呈现，不持有 Channel 或 Session 选择；Channel 列表是独立 Dock panel。控制列与其他面板使用一致的小圆角。布局偏好放在 Bot Settings，不另设控制列弹窗。
+**Workspace Control Rail**：
+工作区控制列。Bot mode layout 中唯一、不可关闭、占据整列高度的控制区域。顶部为 DSB 模式退出入口，中间是可排序的 Dock panel 开关，底部是 Bot Settings。设置上方的拖拽把手在悬停或键盘聚焦时显示，用于把整列移动到各根列之间。它只控制呈现，不持有 Channel 或 Session 选择；Channel 列表是独立 Dock panel。控制列与其他面板使用一致的小圆角。布局偏好放在 Bot Settings，不另设控制列弹窗。
 _避免使用_：panel control、panel control sidebar、App Sidebar、Channel 列表
 
 **Dock panel**：

@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
 import { attachmentReferenceLabels } from './attachment-refs.js';
 import {
@@ -2147,22 +2148,26 @@ export function BotSidebar({
       ) : null}
       {state.roster.readOnly ? <div className="bh-note">{t('roster.readOnly')}</div> : null}
       {state.status === 'ready' && state.bots.length === 0 ? (
-        <div className="bh-empty-create">
-          <span>{t('roster.empty')}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!gitReady(state.git)}
-            onClick={() => setCreateRequest({ kind: 'bot', source: 'empty' })}
-          >
-            {t('roster.empty.create')}
-          </Button>
-        </div>
+        <PanelEmptyState
+          icon="users"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!gitReady(state.git)}
+              onClick={() => setCreateRequest({ kind: 'bot', source: 'empty' })}
+            >
+              {t('roster.empty.create')}
+            </Button>
+          }
+        >
+          {t('roster.empty')}
+        </PanelEmptyState>
       ) : null}
       {visibleCount === 0 && (state.bots.length > 0 || state.channels.length > 0) ? (
-        <div className="bh-note">
+        <PanelEmptyState icon="users">
           {query.length === 0 && hiddenItems.length > 0 ? t('hidden.all') : t('roster.noMatch')}
-        </div>
+        </PanelEmptyState>
       ) : null}
       {batchError !== undefined ? (
         <div className="bh-error">

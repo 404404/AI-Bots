@@ -1,3 +1,4 @@
+import { PanelEmptyState } from './ds/empty-state.js';
 import { Workspace, type WorkspaceOptions } from './workspace.js';
 import { WorkspaceContext } from './workspace-context.js';
 import { OnboardingMemoryNavigation } from './onboarding-memory.js';
@@ -31,7 +32,6 @@ import {
 } from 'react';
 
 import {
-  IconAgentPresetOutlineRegular,
   IconCheckOutlineRegular,
   IconChecklistOutlineRegular,
   IconCopyOutlineRegular,
@@ -274,6 +274,7 @@ function fullTime(at: string, t: BotHarnessTranslate): string {
 }
 
 const messageStyles = stylex.create({
+  emptyContainer: { display: 'flex', flexDirection: 'column', flexGrow: 1 },
   metaTime: {
     color: color.subtle,
     fontSize: text.metaSize,
@@ -287,13 +288,10 @@ const messageStyles = stylex.create({
 function Welcome({ state, t }: { state: ClientState; t: BotHarnessTranslate }): ReactElement {
   return (
     <div className="bh-root bh-main">
-      <div className="bh-content">
-        <div className="bh-placeholder">
-          <IconAgentPresetOutlineRegular size={32} />
-          <div className="bh-big">{t('main.welcome.title')}</div>
-          <div>{t('main.welcome.hint')}</div>
-          {state.bots.length === 0 ? <div className="bh-dim">{t('main.welcome.empty')}</div> : null}
-        </div>
+      <div className="bh-content" {...stylex.props(messageStyles.emptyContainer)}>
+        <PanelEmptyState icon="messages-square">
+          {t(state.bots.length === 0 ? 'main.welcome.empty' : 'main.welcome.hint')}
+        </PanelEmptyState>
       </div>
     </div>
   );
@@ -983,41 +981,13 @@ function EmptyConversation({
   bot: BotSummary | undefined;
   t: BotHarnessTranslate;
 }): ReactElement {
-  if (channel?.type === 'group') {
-    return (
-      <div className="bh-placeholder bh-chat-empty">
-        <span className="bh-channel-mark" aria-hidden="true">
-          {channel.avatar ? (
-            <img className="bh-group-avatar-image" src={channel.avatar} alt="" />
-          ) : (
-            '#'
-          )}
-        </span>
-        <div className="bh-big">{channel.name}</div>
-        <div>{t('main.group.note')}</div>
-      </div>
-    );
-  }
   return (
-    <div className="bh-placeholder bh-chat-empty">
-      {bot !== undefined ? (
-        <PersonaBotAvatar
-          t={t}
-          personaBotId={bot.slug}
-          name={bot.displayName}
-          src={bot.avatar}
-          appearance={bot.appearance}
-          avatarSeed={bot.avatarSeed}
-          size={56}
-          indicator={false}
-        />
-      ) : null}
-      <div className="bh-big">
-        {bot === undefined
-          ? t('main.localChat')
-          : t('main.localChat.with', { name: bot.displayName })}
-      </div>
-      <div>{t('main.localChat.hint')}</div>
+    <div className="bh-chat-empty" {...stylex.props(messageStyles.emptyContainer)}>
+      <PanelEmptyState icon="messages-square">
+        {channel?.type === 'group'
+          ? `${channel.name} · ${t('main.group.note')}`
+          : `${bot === undefined ? t('main.localChat') : t('main.localChat.with', { name: bot.displayName })} · ${t('main.localChat.hint')}`}
+      </PanelEmptyState>
     </div>
   );
 }

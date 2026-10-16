@@ -1483,7 +1483,7 @@ export const zh = {
   'dock.panels': '面板',
   'dock.reset': '重置布局',
   'dock.close': '关闭 {label}',
-  'dock.empty': '当前 Channel 没有可显示的内容。',
+  'dock.empty': '当前频道没有可显示的内容。',
   'dock.cardUnavailable': '打开一个 Channel 后可用',
   'im.localTarget': '本地收件位置',
   'im.inboxTarget': '仅此 Bot 的 Inbox',
