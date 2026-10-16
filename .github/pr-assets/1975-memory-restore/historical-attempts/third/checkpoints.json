@@ -1,0 +1,60 @@
+{
+  "checkpoints": [
+    {
+      "id": "ed81f492-f00e-4384-bbe8-4b889153a0db",
+      "botSlug": "bot-005f5b279cf54cd4a71ddc05ececc099",
+      "branch": "main",
+      "head": "85f888a7ef238b04a594486d4131c14ff7e6e410",
+      "indexTree": "69333984fdf56909644f419efeac32d8f4977d1b",
+      "workingTree": "69333984fdf56909644f419efeac32d8f4977d1b",
+      "ref": "refs/botharness/recovery/ed81f492-f00e-4384-bbe8-4b889153a0db",
+      "origin": "human-command",
+      "originId": "local-human",
+      "causeKind": "human-edit",
+      "causeId": "1309ab34-e9e9-48ed-893c-634966002dd4",
+      "capturedAt": "2026-10-16T15:08:26.304Z"
+    },
+    {
+      "id": "13613da7-74a6-4c1f-a88b-476ffa13d88d",
+      "botSlug": "bot-005f5b279cf54cd4a71ddc05ececc099",
+      "branch": "main",
+      "head": "bd42f7e621b133e4d81585c967686af113e52420",
+      "indexTree": "317be8eb0d07632ce9ae42a9b1440d387c331eef",
+      "workingTree": "317be8eb0d07632ce9ae42a9b1440d387c331eef",
+      "ref": "refs/botharness/recovery/13613da7-74a6-4c1f-a88b-476ffa13d88d",
+      "origin": "human-command",
+      "originId": "local-human",
+      "causeKind": "human-edit",
+      "causeId": "1309ab34-e9e9-48ed-893c-634966002dd4",
+      "capturedAt": "2026-10-16T15:08:26.071Z"
+    },
+    {
+      "id": "65b71750-f70c-401c-af31-7ad3fc62a1ee",
+      "botSlug": "bot-005f5b279cf54cd4a71ddc05ececc099",
+      "branch": "main",
+      "head": "bd42f7e621b133e4d81585c967686af113e52420",
+      "indexTree": "317be8eb0d07632ce9ae42a9b1440d387c331eef",
+      "workingTree": "317be8eb0d07632ce9ae42a9b1440d387c331eef",
+      "ref": "refs/botharness/recovery/65b71750-f70c-401c-af31-7ad3fc62a1ee",
+      "origin": "human-command",
+      "originId": "local-human",
+      "causeKind": "human-edit",
+      "causeId": "0f6963d5-a71e-48bb-ab9e-01e966b6923b",
+      "capturedAt": "2026-10-16T15:08:13.582Z"
+    },
+    {
+      "id": "697d768c-10d7-4397-8ce5-fc6abcb3b418",
+      "botSlug": "bot-005f5b279cf54cd4a71ddc05ececc099",
+      "branch": "main",
+      "head": "773a460d3ac7f6c6408d579bfef14e842b77b544",
+      "indexTree": "69333984fdf56909644f419efeac32d8f4977d1b",
+      "workingTree": "69333984fdf56909644f419efeac32d8f4977d1b",
+      "ref": "refs/botharness/recovery/697d768c-10d7-4397-8ce5-fc6abcb3b418",
+      "origin": "human-command",
+      "originId": "local-human",
+      "causeKind": "human-edit",
+      "causeId": "8372f9a1-c1d0-4ec1-880e-111063ad500f",
+      "capturedAt": "2026-10-16T15:08:13.196Z"
+    }
+  ]
+}

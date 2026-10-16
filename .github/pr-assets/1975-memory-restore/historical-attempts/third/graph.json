@@ -1,0 +1,66 @@
+{
+  "head": "85f888a7ef238b04a594486d4131c14ff7e6e410",
+  "currentBranch": "main",
+  "branches": [
+    "main"
+  ],
+  "dirty": false,
+  "commits": [
+    {
+      "sha": "85f888a7ef238b04a594486d4131c14ff7e6e410",
+      "parents": [
+        "bd42f7e621b133e4d81585c967686af113e52420"
+      ],
+      "subject": "Restore Memory to 773a460: Human Memory edit: AX-1975.md",
+      "authoredAt": "2026-10-17T00:08:26+09:00",
+      "branches": [
+        "main"
+      ],
+      "versions": [],
+      "status": "accepted"
+    },
+    {
+      "sha": "bd42f7e621b133e4d81585c967686af113e52420",
+      "parents": [
+        "773a460d3ac7f6c6408d579bfef14e842b77b544"
+      ],
+      "subject": "Human Memory edit: AX-1975.md",
+      "authoredAt": "2026-10-17T00:08:13+09:00",
+      "branches": [],
+      "versions": [],
+      "status": "accepted"
+    },
+    {
+      "sha": "773a460d3ac7f6c6408d579bfef14e842b77b544",
+      "parents": [
+        "5b777f26809abd662c151d719f8f98b8c3a3e885"
+      ],
+      "subject": "Human Memory edit: AX-1975.md",
+      "authoredAt": "2026-10-17T00:08:13+09:00",
+      "branches": [],
+      "versions": [],
+      "status": "accepted"
+    },
+    {
+      "sha": "5b777f26809abd662c151d719f8f98b8c3a3e885",
+      "parents": [
+        "5a4d6a50fa5d401cb0bb7785a5746fa5e1fcba31"
+      ],
+      "subject": "Update Bot profile in .botharness/bot.json",
+      "authoredAt": "2026-10-17T00:08:12+09:00",
+      "branches": [],
+      "versions": [],
+      "status": "pending"
+    },
+    {
+      "sha": "5a4d6a50fa5d401cb0bb7785a5746fa5e1fcba31",
+      "parents": [],
+      "subject": "Initialize memory repository",
+      "authoredAt": "2026-10-17T00:08:12+09:00",
+      "branches": [],
+      "versions": [],
+      "status": "pending"
+    }
+  ],
+  "hasMore": false
+}

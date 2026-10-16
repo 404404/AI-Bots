@@ -1,0 +1,17 @@
+{
+  "commit": "9636c460b556e98f0155a4c021d03cbdbf39daf2",
+  "decision": "pass",
+  "reviewer": "Codex",
+  "note": "Inspected all four screenshots and full ARIA: version two current file, version one historical diff with target SHA, restored version one plus new HEAD, and unchanged version one/HEAD after refusal and fresh reload. Actual selected DM matches the owner-created Bot. No private paths or unrelated conversations visible.",
+  "reviewedAt": "2026-10-16T15:11:19.803Z",
+  "evidence": {
+    "before.png": "2ae47604eb985efbcfd3ebf538ea2e757bba1f0abdf09f5ff8885fa015ac44e6",
+    "before.aria.json": "d9efa2d8f2aaec31ffce50f130782d6c48a5fbe05dc1304e38c30310d7bd0d01",
+    "history.png": "5206f3c18c7164cf95d16613b8897ec46dae2488c73b9d7fc3d855dd44467734",
+    "history.aria.json": "562e4583dfd446ceff216de57176cbc43489434a07a5a8335fa3a4734c072694",
+    "after.png": "59ef36a3979ffa22fa41116d4892caa178d77bfaae3c08fd047418247d9666d6",
+    "after.aria.json": "c2cd784ad4afa61b9e8bf74867cc7e86d82c48a72c273550aebc31a3b21e2991",
+    "refused.png": "59ef36a3979ffa22fa41116d4892caa178d77bfaae3c08fd047418247d9666d6",
+    "refused.aria.json": "9747848274849a6094a10866367bcdc31dd30286a8f2ab8ed36a44647f6c2c73"
+  }
+}

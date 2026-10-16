@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "behavior": "desktop.memory.read-restore",
+  "commit": "9636c460b556e98f0155a4c021d03cbdbf39daf2",
+  "base": "53b98377154eef2878bfbac975f9da9225222657",
+  "dirty": false,
+  "startedAt": "2026-10-16T15:11:43.861Z",
+  "status": "blocked",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark"
+  },
+  "expected": "Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees.",
+  "evidence": {
+    "doctor.json": "e5e9fa74f0a595e8635df35bae16c6920ff04484badd359ce5382f7ef78ea233",
+    "failure.json": "c560b4c42a6e51bafa141b0ebfa38c34206694721475eb68b4fd08b7237c3e9a"
+  },
+  "actions": [],
+  "reason": "preconditions: Host-unavailable",
+  "actual": "preconditions: Host-unavailable",
+  "finishedAt": "2026-10-16T15:11:43.923Z"
+}

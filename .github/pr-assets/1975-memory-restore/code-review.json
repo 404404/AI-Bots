@@ -1,0 +1,12 @@
+{
+  "source": "9636c460b556e98f0155a4c021d03cbdbf39daf2",
+  "standards": {
+    "finding": "UI Bot identity was self-reported",
+    "resolution": "Actual visible selected DM is read from existing DOM and compared with public create.dm.channelId; wrong-channel regression added.",
+    "status": "resolved"
+  },
+  "spec": {
+    "status": "no actionable findings"
+  },
+  "nonblocking": "Duplicated validator scaffolding can be consolidated later; bounded Memory semantics remain local."
+}

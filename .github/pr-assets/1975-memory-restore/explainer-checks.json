@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "label": "desktop",
+      "width": 1440,
+      "overflow": false,
+      "title": "Memory 读取与安全恢复验证",
+      "panels": 5
+    },
+    {
+      "label": "narrow",
+      "width": 390,
+      "overflow": false,
+      "title": "Memory 读取与安全恢复验证",
+      "panels": 5
+    }
+  ],
+  "errors": []
+}

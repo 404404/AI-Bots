@@ -1,0 +1,27 @@
+{
+  "snapshot": {
+    "head": "dcdf9623c38bf2e589c7d0e7a45b306f9d064c74",
+    "files": [
+      ".botharness/banner.png",
+      ".botharness/bot.json",
+      ".gitattributes",
+      "MEMORY.md",
+      "SOUL.md"
+    ],
+    "provisional": false,
+    "standing": [
+      {
+        "path": "SOUL.md",
+        "role": "soul",
+        "chars": 89,
+        "limit": 5000
+      },
+      {
+        "path": "MEMORY.md",
+        "role": "coreMemory",
+        "chars": 394,
+        "limit": 3000
+      }
+    ]
+  }
+}

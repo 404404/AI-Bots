@@ -1,0 +1,19 @@
+{
+  "head": "85f888a7ef238b04a594486d4131c14ff7e6e410",
+  "backup": null,
+  "version": null,
+  "saved": {
+    "id": "13613da7-74a6-4c1f-a88b-476ffa13d88d",
+    "botSlug": "bot-005f5b279cf54cd4a71ddc05ececc099",
+    "branch": "main",
+    "head": "bd42f7e621b133e4d81585c967686af113e52420",
+    "indexTree": "317be8eb0d07632ce9ae42a9b1440d387c331eef",
+    "workingTree": "317be8eb0d07632ce9ae42a9b1440d387c331eef",
+    "ref": "refs/botharness/recovery/13613da7-74a6-4c1f-a88b-476ffa13d88d",
+    "origin": "human-command",
+    "originId": "local-human",
+    "causeKind": "human-edit",
+    "causeId": "1309ab34-e9e9-48ed-893c-634966002dd4",
+    "capturedAt": "2026-10-16T15:08:26.071Z"
+  }
+}

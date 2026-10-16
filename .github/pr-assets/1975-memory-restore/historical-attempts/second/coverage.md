@@ -1,0 +1,7 @@
+| Behavior | Platform | Status | Commit | Expected / actual | Evidence | Human QA |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop.memory.read-restore | desktop Web + CLI | fail | 4f2a4a31ec3ff307af08a54d8f44526f07b0139b | Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees. / read-historical-Web-Memory: historical-commit-accessible-name-missing | [doctor.json](./doctor.json), [identity.json](./identity.json), [fixture.json](./fixture.json), [created.json](./created.json), [initial.json](./initial.json), [saved-v1.json](./saved-v1.json), [v1.json](./v1.json), [saved-v2.json](./saved-v2.json), [before.json](./before.json), [history.json](./history.json), [visible-before.json](./visible-before.json), [console.json](./console.json), [before.aria.json](./before.aria.json), [before.diagnostics.json](./before.diagnostics.json), [before.png](./before.png), [failure.json](./failure.json), [failure.aria.json](./failure.aria.json), [failure.png](./failure.png), [failure.diagnostics.json](./failure.diagnostics.json) | not-run |
+
+Reason: read-historical-Web-Memory: historical-commit-accessible-name-missing
+
+Model, native-device and IM checks: not run. Only disposable Memory history/read/commit restore and stale-head guard are qualified; no remote push, credentials, branch switch or complete Self-Record qualification.

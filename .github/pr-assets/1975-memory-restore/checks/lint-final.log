@@ -1,0 +1,264 @@
+$ oxlint && node scripts/check-source-policy.mjs && pnpm changelog:check && node scripts/check-adr-numbers.mjs && node scripts/check-cli-parity.mjs && node scripts/check-feature-map.mjs && node scripts/sync-bot-preset.mjs --check && node scripts/ci-plan.mjs --check && pnpm install:check
+packages/core/test/bridge-rpc.test.ts:332:37: warning eslint(no-unused-vars): Parameter 'alpha' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/core/test/bridge-rpc.test.ts:332:52: warning eslint(no-unused-vars): Parameter 'beta' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/core/test/bridge-rpc.test.ts:333:46: warning eslint(no-unused-vars): Parameter 'rest' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/core/test/bridge-rpc.test.ts:334:37: warning eslint(no-unused-vars): Parameter 'alpha' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/core/test/bridge-rpc.test.ts:334:48: warning eslint(no-unused-vars): Parameter 'beta' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/core/test/plugin.test.ts:14:8: warning eslint(no-unused-vars): Type 'PersonaBotRegistry' is imported but never used. help: Consider removing this import.
+packages/client/src/client/avatar-appearance-editor.tsx:246:3: warning eslint(no-unused-vars): Parameter 'library' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/client/src/client/companion-sound.ts:168:26: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/companion-sound.ts:174:26: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/channel-dock.tsx:369:26: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/computer/lib/client.js:35:19: warning unicorn(no-new-array): Do not use `new Array(singleArgument)`. help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+apps/mobile/test/design-tokens.test.ts:185:25: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `hex.slice` returns a new array. Spreading it into an array expression to create a new array is redundant.
+docs/evidence/issue-757/harness/measure.mjs:48:50: warning eslint(no-unused-vars): Parameter 'hidden' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+docs/evidence/issue-757/harness/measure.mjs:52:5: warning eslint(no-unused-expressions): Expected expression to be used help: Consider using this expression or removing it
+docs/evidence/issue-757/harness/measure.mjs:57:5: warning eslint(no-unused-expressions): Expected expression to be used help: Consider using this expression or removing it
+packages/client/src/client/attachment-refs.ts:45:68: warning eslint(no-useless-escape): Unnecessary escape character '[' help: Replace `\[` with `[`.
+packages/market/src/readme.ts:79:15: warning eslint(no-control-regex): Unexpected control character help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/market/src/readme.ts:80:15: warning eslint(no-control-regex): Unexpected control character help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+apps/mobile/src/host/share-attachment.ts:11:34: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/client/src/client/line-morph.ts:70:23: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/channel-live.ts:174:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/bot-session-visibility.ts:54:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/browser/src/borrow.ts:183:28: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/browser/src/borrow.ts:256:28: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/browser/src/borrow.ts:308:28: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/test/private-inputs.test.ts:494:9: warning unicorn(prefer-string-starts-ends-with): Prefer String#startsWith over a regex with a caret. help: Replace `/^botharness-private\/grant-/.test(entry.key)` with `entry.key.startsWith('botharness-private/grant-')`.
+packages/browser/src/daily.ts:239:27: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/browser/src/daily-document.ts:65:45: warning unicorn(no-useless-spread): `Promise.allSettled` accepts an iterable, so it's unnecessary to convert the iterable to an array. help: Consider removing the spread operator.
+packages/client/src/client/messaging-defaults-live.ts:39:27: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:47:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:51:27: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:185:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:191:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:217:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:221:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:237:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/messaging-defaults-live.ts:283:27: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/src/client/permission-group-settings.tsx:576:158: warning unicorn(prefer-set-size): Use `Set#size` instead of converting a `Set` to an array and using its `length` property. help: Replace array conversion with direct `Set.size` access
+packages/core/test/assignment-wait-runtime.test.ts:2:10: warning eslint(no-unused-vars): Identifier 'attachOperationalModule' is imported but never used. help: Consider removing this import.
+scripts/e2e-activity-overview.mjs:120:7: warning eslint(no-unused-vars): Variable 'openDM' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+scripts/e2e-workspace-grant.mjs:410:28: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.
+packages/core/test/bot-schedules.test.ts:215:20: warning eslint(no-unused-vars): Variable 'owner' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+scripts/e2e-memory-restore.mjs:400:28: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.
+packages/core/test/bot-memory-cli.test.ts:1:10: warning eslint(no-unused-vars): Identifier 'mkdtempSync' is imported but never used. help: Consider removing this import.
+packages/core/test/bot-memory-cli.test.ts:1:23: warning eslint(no-unused-vars): Identifier 'readFileSync' is imported but never used. help: Consider removing this import.
+packages/core/test/bot-memory-cli.test.ts:3:10: warning eslint(no-unused-vars): Identifier 'tmpdir' is imported but never used. help: Consider removing this import.
+packages/core/test/bot-memory-cli.test.ts:4:10: warning eslint(no-unused-vars): Identifier 'join' is imported but never used. help: Consider removing this import.
+packages/client/src/client/human-channel-name.tsx:50:43: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+scripts/ci-plan.mjs:200:7: warning unicorn(prefer-string-starts-ends-with): Prefer String#endsWith over a regex with a dollar sign. help: Replace `/\.js$/.test(target)` with `target.endsWith('.js')`.
+packages/browser/lib/client.js:1605:19: warning unicorn(no-new-array): Do not use `new Array(singleArgument)`. help: It's not clear whether the argument is meant to be the length of the array or the only element. If the argument is the array's length, consider using `Array.from({ length: n })`. If the argument is the only element, use `[element]`.
+packages/client/src/client/bridge.ts:627:5: warning unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+packages/client/src/client/bridge.ts:632:5: warning unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+packages/client/src/client/bridge.ts:849:10: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/client/src/client/bridge.ts:4285:56: warning unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+packages/client/src/client/bridge.ts:5154:16: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+apps/mobile/src/ui/chat/conversation-screen.tsx:13:27: warning eslint(no-unused-vars): Type 'RosterBot' is imported but never used. help: Consider removing this import.
+packages/browser/src/tool/provider.ts:1196:32: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/browser/src/tool/provider.ts:1257:32: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/browser/src/tool/provider.ts:1263:26: warning unicorn(no-useless-spread): `Promise.all` accepts an iterable, so it's unnecessary to convert the iterable to an array. help: Consider removing the spread operator.
+packages/client/src/client/messaging-store.ts:25:27: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/src/credentials/protected-execution.ts:166:30: warning eslint(no-useless-escape): Unnecessary escape character '`' help: Replace `\`` with ```.
+packages/core/src/credentials/account-bindings.ts:128:24: warning unicorn(no-useless-spread): `Promise.all` accepts an iterable, so it's unnecessary to convert the iterable to an array. help: Consider removing the spread operator.
+packages/core/test/operational-database.test.ts:16:3: warning eslint(no-unused-vars): Identifier 'LEGACY_FORWARD_MIGRATION_PLAN' is imported but never used. help: Consider removing this import.
+packages/core/src/channels/sqlite-store.ts:535:59: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/devices/pairing.ts:88:16: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/client/test/bot-mode-setting-rows.test.ts:39:10: warning eslint(no-unused-vars): Identifier 'zh' is imported but never used. help: Consider removing this import.
+packages/client/test/bot-mode-setting-rows.test.ts:39:32: warning eslint(no-unused-vars): Type 'BotHarnessKey' is imported but never used. help: Consider removing this import.
+packages/client/test/bot-mode-setting-rows.test.ts:116:10: warning eslint(no-unused-vars): Function 'iconMenu' is declared but never used. help: Consider removing this declaration.
+packages/client/test/bot-mode-setting-rows.test.ts:134:6: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+scripts/dev-qq-test-clients.mjs:26:55: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/client/test/messaging-defaults-settings.test.ts:98:5: warning typescript(no-this-alias): Unexpected aliasing of 'this' to local variable. help: Assigning a variable to this instead of properly using arrow lambdas may be a symptom of pre-ES2015 practices or not managing scope well.
+packages/client/test/window-companions-view.test.ts:214:31: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/test/window-companions-view.test.ts:248:31: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/test/window-companions-view.test.ts:266:31: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/test/window-companions-view.test.ts:298:33: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/client/test/window-companions-view.test.ts:339:31: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/test/secret-cli-approval-rule.test.ts:5:15: warning eslint(no-unused-vars): Type 'ToolExecution' is imported but never used. help: Consider removing this import.
+scripts/e2e-activity-recovery.mjs:238:238: warning eslint(no-useless-escape): Unnecessary escape character '"' help: Replace `\"` with `"`.
+scripts/e2e-activity-recovery.mjs:238:266: warning eslint(no-useless-escape): Unnecessary escape character '"' help: Replace `\"` with `"`.
+packages/core/src/runtime/assignment-approval-capacity.ts:156:28: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/src/runtime/assignment-approval-capacity.ts:182:28: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/src/runtime/assignment-approval-capacity.ts:193:30: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/test/bot-management-cli.test.ts:285:30: warning eslint(no-unused-vars): Parameter 'method' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+scripts/e2e-assignment-wait.mjs:217:16: warning eslint(no-useless-escape): Unnecessary escape character '"' help: Replace `\"` with `"`.
+scripts/e2e-assignment-wait.mjs:217:45: warning eslint(no-useless-escape): Unnecessary escape character '"' help: Replace `\"` with `"`.
+packages/core/test/profile-backup.test.ts:591:7: warning unicorn(no-useless-spread): Using a spread operator here creates a new object unnecessarily. help: This expression returns a new object. Spreading it into an object expression to create a new object is redundant.
+scripts/e2e-harvest.mjs:2:10: warning eslint(no-unused-vars): Identifier 'mkdirSync' is imported but never used. help: Consider removing this import.
+scripts/e2e-message-inline-actions.mjs:158:9: warning eslint(no-unused-vars): Variable 'first' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+packages/core/src/memory/clone.ts:37:9: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/memory/clone.ts:42:7: warning eslint(no-control-regex): Unexpected control character help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/plugin.ts:757:31: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/src/attachments/store.ts:68:16: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/attachments/store.ts:99:12: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/attachments/real-files.ts:34:16: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/attachments/ref.ts:36:11: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+scripts/e2e-hidden-channel-search.mjs:158:5: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.
+packages/client/test/bot-sidebar.test.ts:1140:8: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+scripts/e2e-dm-activity.mjs:141:238: warning eslint(no-useless-escape): Unnecessary escape character '"' help: Replace `\"` with `"`.
+scripts/e2e-dm-activity.mjs:141:266: warning eslint(no-useless-escape): Unnecessary escape character '"' help: Replace `\"` with `"`.
+scripts/e2e-group-management.mjs:227:9: warning eslint(no-unused-vars): Variable 'memberIndex' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+packages/core/src/portability/package.ts:172:10: warning unicorn(prefer-string-starts-ends-with): Prefer String#startsWith over a regex with a caret. help: Replace `/^recovery-git\//u.test(file.path)` with `file.path.startsWith('recovery-git/')`.
+packages/core/src/portability/package.ts:182:9: warning unicorn(prefer-string-starts-ends-with): Prefer String#startsWith over a regex with a caret. help: Replace `/^attachments\/objects\//u.test(file.path)` with `file.path.startsWith('attachments/objects/')`.
+packages/core/src/portability/files.ts:36:11: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/client/test/client-read-lifecycle.test.ts:60:10: warning eslint(no-unused-vars): Identifier 'ProfileView' is imported but never used. help: Consider removing this import.
+packages/client/test/client-read-lifecycle.test.ts:64:15: warning eslint(no-unused-vars): Type 'ProfileCardRegistry' is imported but never used. help: Consider removing this import.
+packages/client/test/client-read-lifecycle.test.ts:69:15: warning eslint(no-unused-vars): Type 'BotSummary' is imported but never used. help: Consider removing this import.
+packages/client/test/client-read-lifecycle.test.ts:69:27: warning eslint(no-unused-vars): Type 'ChannelSummary' is imported but never used. help: Consider removing this import.
+scripts/dev-im-test-apps.mjs:107:27: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/diagnostics/client-observer.ts:78:21: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.
+packages/core/src/memory/accepted.ts:348:46: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/core/src/http/selkies-webrtc.ts:139:26: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/src/http/selkies-webrtc.ts:396:29: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/core/test/overview-usage.test.ts:301:53: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `month.days.map` returns a new array. Spreading it into an array expression to create a new array is redundant.
+scripts/dev-qq-native.mjs:42:57: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+packages/client/test/apply.test.ts:353:29: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+packages/client/test/apply.test.ts:357:6: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+packages/client/test/apply.test.ts:362:6: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+packages/client/test/apply.test.ts:368:7: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+packages/client/test/apply.test.ts:374:6: warning eslint(no-unsafe-optional-chaining): Unsafe usage of optional chaining help: If this short-circuits with 'undefined' the evaluation will throw TypeError
+packages/client/test/avatar-appearance-editor.test.ts:32:22: warning eslint(no-unused-vars): Identifier 'LINE_PRESETS' is imported but never used. help: Consider removing this import.
+packages/client/test/section-management.test.ts:20:10: warning eslint(no-unused-vars): Identifier 'zh' is imported but never used. help: Consider removing this import.
+packages/client/test/section-management.test.ts:20:32: warning eslint(no-unused-vars): Type 'BotHarnessKey' is imported but never used. help: Consider removing this import.
+packages/browser/src/index.ts:692:64: warning unicorn(no-useless-fallback-in-spread): Empty fallbacks in spreads are unnecessary help: Spreading falsy values in object literals won't add any unexpected properties, so it's unnecessary to add an empty object as fallback.
+packages/computer/src/tool/provider.ts:352:5: warning eslint(no-unused-vars): Parameter 'slug' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+packages/computer/src/tool/provider.ts:173:27: warning unicorn(no-useless-spread): `Promise.allSettled` accepts an iterable, so it's unnecessary to convert the iterable to an array. help: Consider removing the spread operator.
+packages/computer/src/tool/provider.ts:207:50: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+packages/computer/src/tool/provider.ts:502:32: warning unicorn(no-useless-spread): Using a spread operator here creates a new array unnecessarily. help: `for…of` can iterate over iterable, it's unnecessary to convert to an array.
+source policy: no code comments or React useEffect calls
+$ node scripts/check-release-ledger.mjs && node scripts/check-dsh-skill-release-ledger.mjs
+DeepSeekBot Release Ledger is valid (136 Unreleased change fragments).
+DSH Skill Release Ledger is valid.
+ADR numbers are unique (216 records).
+CLI parity holds: 292 of 319 UI and Bot surfaces have a deepseekbot command; 27 recorded in scripts/cli-parity-baseline.json.
+{
+  "ok": true,
+  "features": 19,
+  "mappedJourneys": 13,
+  "unmappedJourneys": [
+    "scripts/e2e-activity-entry.mjs",
+    "scripts/e2e-activity-overview.mjs",
+    "scripts/e2e-activity-recovery.mjs",
+    "scripts/e2e-all-bot-mention.mjs",
+    "scripts/e2e-approval-capacity-proof.mjs",
+    "scripts/e2e-approval-capacity.mjs",
+    "scripts/e2e-assignment-active-crash.mjs",
+    "scripts/e2e-assignment-attention.mjs",
+    "scripts/e2e-assignment-escalation.mjs",
+    "scripts/e2e-assignment-failed-report.mjs",
+    "scripts/e2e-assignment-harvest-proof.mjs",
+    "scripts/e2e-assignment-model-switch.mjs",
+    "scripts/e2e-assignment-native-cancel.mjs",
+    "scripts/e2e-assignment-native-error.mjs",
+    "scripts/e2e-assignment-observed-restart.mjs",
+    "scripts/e2e-assignment-probe.mjs",
+    "scripts/e2e-assignment-recovery-notice.mjs",
+    "scripts/e2e-assignment-repair-severity.mjs",
+    "scripts/e2e-assignment-report-harvest.mjs",
+    "scripts/e2e-assignment-report-proof.mjs",
+    "scripts/e2e-assignment-report-restart.mjs",
+    "scripts/e2e-assignment-restart-proof.mjs",
+    "scripts/e2e-assignment-stop-recovery.mjs",
+    "scripts/e2e-assignment-terminal-notice.mjs",
+    "scripts/e2e-assignment-wait.mjs",
+    "scripts/e2e-attention-presets.mjs",
+    "scripts/e2e-bot-last-view.mjs",
+    "scripts/e2e-browser-access.mjs",
+    "scripts/e2e-browser-closed-tab.mjs",
+    "scripts/e2e-browser-container.mjs",
+    "scripts/e2e-browser-editability.mjs",
+    "scripts/e2e-browser-entry.mjs",
+    "scripts/e2e-browser-interaction.mjs",
+    "scripts/e2e-browser-keyboard.mjs",
+    "scripts/e2e-browser-multitab.mjs",
+    "scripts/e2e-browser-navigation.mjs",
+    "scripts/e2e-browser-observation.mjs",
+    "scripts/e2e-browser-profile-names.mjs",
+    "scripts/e2e-browser-profile-reset.mjs",
+    "scripts/e2e-browser-profiles.mjs",
+    "scripts/e2e-browser-refusal-audit.mjs",
+    "scripts/e2e-browser-resume-observation.mjs",
+    "scripts/e2e-browser-screenshot-upload.mjs",
+    "scripts/e2e-browser-scroll.mjs",
+    "scripts/e2e-browser-upload-target.mjs",
+    "scripts/e2e-browser-upload.mjs",
+    "scripts/e2e-channel-activity.mjs",
+    "scripts/e2e-channel-image-read.mjs",
+    "scripts/e2e-channel-multiselect.mjs",
+    "scripts/e2e-channel-purge-completion.mjs",
+    "scripts/e2e-channel-purge.mjs",
+    "scripts/e2e-channel-reply.mjs",
+    "scripts/e2e-channel-send-failure.mjs",
+    "scripts/e2e-channel-session-return.mjs",
+    "scripts/e2e-cli-live.mjs",
+    "scripts/e2e-client-interactions.mjs",
+    "scripts/e2e-client-reads.mjs",
+    "scripts/e2e-composer-regression.mjs",
+    "scripts/e2e-computer-header.mjs",
+    "scripts/e2e-computer-settings.mjs",
+    "scripts/e2e-concurrent-activity.mjs",
+    "scripts/e2e-daily-control.mjs",
+    "scripts/e2e-device-full-client.mjs",
+    "scripts/e2e-device-viewers.mjs",
+    "scripts/e2e-dm-activity.mjs",
+    "scripts/e2e-dm-scroll.mjs",
+    "scripts/e2e-filtered-usage.mjs",
+    "scripts/e2e-fresh-profile-install.mjs",
+    "scripts/e2e-grant-attention.mjs",
+    "scripts/e2e-group-activity.mjs",
+    "scripts/e2e-group-assignment-activity.mjs",
+    "scripts/e2e-group-assignment-proof.mjs",
+    "scripts/e2e-group-attention-tools.mjs",
+    "scripts/e2e-group-backlog.mjs",
+    "scripts/e2e-group-context.mjs",
+    "scripts/e2e-group-header-activity.mjs",
+    "scripts/e2e-group-management.mjs",
+    "scripts/e2e-group-motion-matrix.mjs",
+    "scripts/e2e-group-motion-proof.mjs",
+    "scripts/e2e-group-profile.mjs",
+    "scripts/e2e-group-shell-proof.mjs",
+    "scripts/e2e-group-shell.mjs",
+    "scripts/e2e-harvest.mjs",
+    "scripts/e2e-hidden-channel-search.mjs",
+    "scripts/e2e-human-channel-names.mjs",
+    "scripts/e2e-human-inbox-list.mjs",
+    "scripts/e2e-human-inbox-reply.mjs",
+    "scripts/e2e-human-mentions.mjs",
+    "scripts/e2e-human-names.mjs",
+    "scripts/e2e-human-personal-replies.mjs",
+    "scripts/e2e-inbox-grant-assignment.mjs",
+    "scripts/e2e-inbox-tool-approval.mjs",
+    "scripts/e2e-informational-attention.mjs",
+    "scripts/e2e-lark-provider-contract.mjs",
+    "scripts/e2e-local-computer-idle.mjs",
+    "scripts/e2e-local-computer-screenshot.mjs",
+    "scripts/e2e-message-inline-actions.mjs",
+    "scripts/e2e-mobile-follow-latest-web.mjs",
+    "scripts/e2e-mobile-group-info-web.mjs",
+    "scripts/e2e-mobile-reactions-web.mjs",
+    "scripts/e2e-mobile-working-web.mjs",
+    "scripts/e2e-model-usage.mjs",
+    "scripts/e2e-orchestrator-activity.mjs",
+    "scripts/e2e-orchestrator-reply-delivery.mjs",
+    "scripts/e2e-output-committed.mjs",
+    "scripts/e2e-overview-memory.mjs",
+    "scripts/e2e-overview-priority.mjs",
+    "scripts/e2e-overview-usage.mjs",
+    "scripts/e2e-profile-heatmap-tooltip.mjs",
+    "scripts/e2e-question-attention.mjs",
+    "scripts/e2e-rail-avatar-badge.mjs",
+    "scripts/e2e-real-attachment-files.mjs",
+    "scripts/e2e-retained-usage.mjs",
+    "scripts/e2e-roster-live.mjs",
+    "scripts/e2e-safe-tool-activity.mjs",
+    "scripts/e2e-sidebar-preview.mjs",
+    "scripts/e2e-silent-channel-read.mjs",
+    "scripts/e2e-subagent-routing.mjs",
+    "scripts/e2e-tool-detail-capability.mjs",
+    "scripts/e2e-workspace-file-actions.mjs"
+  ],
+  "errors": []
+}
+The PersonaBot agent preset matches the DSH standard preset.
+$ node scripts/sync-install-guidance.mjs --check

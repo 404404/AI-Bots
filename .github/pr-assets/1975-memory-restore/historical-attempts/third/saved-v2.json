@@ -1,0 +1,13 @@
+{
+  "commit": {
+    "botSlug": "bot-005f5b279cf54cd4a71ddc05ececc099",
+    "sha": "bd42f7e621b133e4d81585c967686af113e52420",
+    "parentSha": "773a460d3ac7f6c6408d579bfef14e842b77b544",
+    "actorKind": "human",
+    "actorId": "local-human",
+    "causeKind": "human-edit",
+    "causeId": "0f6963d5-a71e-48bb-ab9e-01e966b6923b",
+    "validationResult": "{\"gitTree\":\"317be8eb0d07632ce9ae42a9b1440d387c331eef\"}",
+    "acceptedAt": "2026-10-16T15:08:13.524Z"
+  }
+}

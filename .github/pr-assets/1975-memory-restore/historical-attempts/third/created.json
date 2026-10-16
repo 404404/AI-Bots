@@ -1,0 +1,28 @@
+{
+  "bot": {
+    "id": "bot-005f5b279cf54cd4a71ddc05ececc099",
+    "name": "AX Memory 1792163292530"
+  },
+  "dm": {
+    "channelId": "dm-bot-005f5b279cf54cd4a71ddc05ececc099"
+  },
+  "steps": [
+    {
+      "name": "validate",
+      "status": "ok"
+    },
+    {
+      "name": "create-bot",
+      "status": "ok"
+    },
+    {
+      "name": "model",
+      "status": "deferred",
+      "code": "no-model-yet"
+    },
+    {
+      "name": "dm",
+      "status": "ok"
+    }
+  ]
+}

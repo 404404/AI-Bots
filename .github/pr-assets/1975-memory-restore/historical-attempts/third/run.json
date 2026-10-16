@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "behavior": "desktop.memory.read-restore",
+  "commit": "448528b143b4ba53f4ca9a49a493f48924b817c5",
+  "base": "53b98377154eef2878bfbac975f9da9225222657",
+  "dirty": false,
+  "startedAt": "2026-10-16T15:08:11.355Z",
+  "status": "pass",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "Two owner-saved Memory versions; historical version one is readable, restoring it creates a descendant commit, and a stale expected-head restore is refused without changing content or HEAD; Web agrees.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "a6ab5b464935c2aa33b4ce8097c7d513617315f004b434f315bba382f2f51314",
+    "fixture.json": "07a78706ecc2a529d8c596069a4119f4b2279f5e9ad467c7d9e450b768b12ae1",
+    "created.json": "a1d46c5d6f4e713f03fe9795d79f8314cddc26d61778083af48bc07ce4ba73b7",
+    "initial.json": "2567f4b78a5e3dbac949e890eedd07b9ec0019d2455904f30ec50e696155e659",
+    "saved-v1.json": "c37414a7adc91e0eb2509b9760c1fa6aa1e4944c640b4ec8791d8ebd2a803217",
+    "v1.json": "358d37b1472343fb69a19f39e886ad91ae332275b5939787a1256ca16b879635",
+    "saved-v2.json": "79a5a8abcb941538473751f80e9f7cb5561b3927548ecf8fcc11505d4659566b",
+    "before.json": "fdd4bbe87f0e0fe0bfa775882ac89a3b77f2f64959a74d3a5c083141fa47ecb4",
+    "history.json": "24a611b18d300243923c343ce0d471b6402ca2b3ba196564604d404f9428eb6a",
+    "visible-before.json": "1f5874c860d7db660c187874dbc412a92796f498e1579223d895f1420128fad2",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "before.aria.json": "7dc3f3acaef61fcebdc688bd89dc166d3be397e945e32bb99ed9c4eaabec6360",
+    "before.png": "eb08843eae14757ce9ddba5e5e28d66525063ea193de69b22c33f26fa228d336",
+    "before.diagnostics.json": "068cf98cf1a5d2b251bbabfc7c18db942d86da74774c5e247105e9a2dcf997c8",
+    "visible-history.json": "e7e60e0aeed1ebeb63b655b82d26f63c47aa0990c600867cd75ea7083a9ef08b",
+    "history.aria.json": "d32c24b49c9e61058ceaea7d4865979e39e1ba111d50e31caa3d96633f4a2a4c",
+    "history.png": "9c73b0739d91cf3d98586c5e5899ea8a585eba07fe6b531e2987c002f239c941",
+    "history.diagnostics.json": "72239578be12af296326a874edb7ea8b7f3ad5d05a5b2acf9a94e86493ad401f",
+    "restored.json": "abcc25a4d689a1818fd1d11c645ab88c3ccf337028fd047e4047430d5fae99e8",
+    "after.json": "2dc714a5a6d3e6d1376516b8936bb17b982b3ec1fe55561f592f3fad92e59abc",
+    "graph.json": "f7c299711f89e1cb73a79b753d163083a56cdd110732817dfae1fc9fae2a41f9",
+    "checkpoints.json": "0e4b270dd880e8e370a70ab998127624be604934ea84c8c123282ca1c9807760",
+    "visible-after.json": "daa32625b26cd2d239f6263794d7b5dcc78762ced845cbc9ec6537a0c98550b5",
+    "after.aria.json": "229589b806d3571cd6e8940852951592ff45ea0aca6272abd831017c4754d608",
+    "after.png": "959ca79a10af4f1f7a8eecf9eb459e0b9b92ef6360322a958ae2b0fbc038fcd4",
+    "after.diagnostics.json": "f94fdf1cb392585a700fbcf121ae1c4e05d8de0f4179b84e470485a25500fe2f",
+    "refusal.json": "3e053f32a67744deb5defe05bbf928ff383d80077cb5d54dda7a470f76c78626",
+    "refused.json": "2dc714a5a6d3e6d1376516b8936bb17b982b3ec1fe55561f592f3fad92e59abc",
+    "visible-refused.json": "daa32625b26cd2d239f6263794d7b5dcc78762ced845cbc9ec6537a0c98550b5",
+    "refused.aria.json": "bc269dda6d5b050a051ac9ebe38bb42bd6b9d08ab15b9d52bfd1aba645f2b4a5",
+    "refused.png": "6cf5742baabefb85a14d7e0bbfba2f277c1108f06b46a61a2b3698af3cfda618",
+    "refused.diagnostics.json": "c7ece53b8cc5e3e9153c9c1b1f1055b0fe8422af115d64b04a38e31588e75980"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T15:08:11.542Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Memory 1792163292530",
+        "--persona",
+        "Isolated Memory read and restore verification. No messages, models or schedules are used."
+      ],
+      "at": "2026-10-16T15:08:12.815Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-snapshot",
+        "bot-005f5b279cf54cd4a71ddc05ececc099"
+      ],
+      "at": "2026-10-16T15:08:12.966Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-save",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--path",
+        "AX-1975.md",
+        "--body-stdin",
+        "--expected-head",
+        "5b777f26809abd662c151d719f8f98b8c3a3e885"
+      ],
+      "at": "2026-10-16T15:08:13.225Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-file",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--path",
+        "AX-1975.md"
+      ],
+      "at": "2026-10-16T15:08:13.359Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-save",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--path",
+        "AX-1975.md",
+        "--body-stdin",
+        "--expected-head",
+        "773a460d3ac7f6c6408d579bfef14e842b77b544"
+      ],
+      "at": "2026-10-16T15:08:13.611Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-file",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--path",
+        "AX-1975.md"
+      ],
+      "at": "2026-10-16T15:08:13.748Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-commit-diff",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--sha",
+        "773a460d3ac7f6c6408d579bfef14e842b77b544"
+      ],
+      "at": "2026-10-16T15:08:13.913Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T15:08:21.793Z"
+    },
+    {
+      "click": "AX Memory 1792163292530: Idle AX Memory 1792163292530 No messages yet",
+      "at": "2026-10-16T15:08:22.011Z"
+    },
+    {
+      "click": "Close Sessions",
+      "at": "2026-10-16T15:08:23.989Z"
+    },
+    {
+      "click": "Close Bot Inbox",
+      "at": "2026-10-16T15:08:24.071Z"
+    },
+    {
+      "click": "Memory files",
+      "at": "2026-10-16T15:08:24.162Z"
+    },
+    {
+      "click": "AX-1975.md",
+      "role": "treeitem"
+    },
+    {
+      "click": "Memory evolution",
+      "at": "2026-10-16T15:08:24.932Z"
+    },
+    {
+      "click": "773a460d3ac7f6c6408d579bfef14e842b77b544",
+      "role": "listitem"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-restore-commit",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--sha",
+        "773a460d3ac7f6c6408d579bfef14e842b77b544",
+        "--expected-head",
+        "bd42f7e621b133e4d81585c967686af113e52420"
+      ],
+      "at": "2026-10-16T15:08:26.424Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-file",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--path",
+        "AX-1975.md"
+      ],
+      "at": "2026-10-16T15:08:26.754Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-graph",
+        "bot-005f5b279cf54cd4a71ddc05ececc099"
+      ],
+      "at": "2026-10-16T15:08:27.190Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-checkpoints",
+        "bot-005f5b279cf54cd4a71ddc05ececc099"
+      ],
+      "at": "2026-10-16T15:08:27.569Z"
+    },
+    {
+      "click": "AX Memory 1792163292530: Idle AX Memory 1792163292530 00:08 Welcome to DeepSeek Bot",
+      "at": "2026-10-16T15:08:33.816Z"
+    },
+    {
+      "click": "AX-1975.md",
+      "role": "treeitem"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-restore-commit",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--sha",
+        "bd42f7e621b133e4d81585c967686af113e52420",
+        "--expected-head",
+        "bd42f7e621b133e4d81585c967686af113e52420"
+      ],
+      "at": "2026-10-16T15:08:36.014Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "memory-file",
+        "bot-005f5b279cf54cd4a71ddc05ececc099",
+        "--path",
+        "AX-1975.md"
+      ],
+      "at": "2026-10-16T15:08:36.153Z"
+    },
+    {
+      "click": "Refresh",
+      "surface": "Memory files"
+    }
+  ],
+  "botId": "bot-005f5b279cf54cd4a71ddc05ececc099",
+  "actual": "bot-005f5b279cf54cd4a71ddc05ececc099: v1 773a460d3ac7f6c6408d579bfef14e842b77b544, v2 bd42f7e621b133e4d81585c967686af113e52420, restored 85f888a7ef238b04a594486d4131c14ff7e6e410; old expected-head refused, current content/HEAD unchanged.",
+  "finishedAt": "2026-10-16T15:08:36.369Z"
+}

@@ -1,0 +1,8 @@
+{
+  "complete": "pass",
+  "missingScreenshot": "needs-revalidation",
+  "staleSource": "needs-revalidation",
+  "dirtySource": "needs-revalidation",
+  "unselected": "not-run",
+  "stoppedHost": "blocked"
+}
