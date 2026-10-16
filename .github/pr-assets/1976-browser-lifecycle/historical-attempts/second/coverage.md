@@ -1,0 +1,7 @@
+| Behavior | Platform | Status | Commit | Expected / actual | Evidence | Human QA |
+| --- | --- | --- | --- | --- | --- | --- |
+| desktop.browser.open-observe-stop | desktop Web + CLI | fail | 17d181f694eef40fd377a6f99d4ebff707c84ee9 | Default local Browser opens one deterministic fixture; panel, observation and direct tools agree on its tab; stop removes the tab; Access-off refusal remains distinct from stopped state. / observe-Access-off: Waiting failed: 30000ms exceeded | [doctor.json](./doctor.json), [identity.json](./identity.json), [fixture.json](./fixture.json), [created.json](./created.json), [off.json](./off.json), [off-refusal.json](./off-refusal.json), [failure.json](./failure.json), [failure-browser.json](./failure-browser.json), [failure-lifecycle.json](./failure-lifecycle.json), [console.json](./console.json), [failure.aria.json](./failure.aria.json), [failure.png](./failure.png), [failure.diagnostics.json](./failure.diagnostics.json), [cleanup-browser.json](./cleanup-browser.json), [cleanup-observation.json](./cleanup-observation.json) | not-run |
+
+Reason: observe-Access-off: Waiting failed: 30000ms exceeded
+
+Model, native-device and IM checks: not run. Only default local Browser open/observe/stop and Access refusal are qualified; multi-tab, upload, profile reset, takeover, model and other Computer targets remain gaps.

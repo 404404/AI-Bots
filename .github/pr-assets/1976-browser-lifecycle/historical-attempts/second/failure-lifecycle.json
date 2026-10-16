@@ -1,0 +1,29 @@
+{
+  "ok": true,
+  "entries": [
+    {
+      "id": 3,
+      "ts": 1792166515840,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-faa0eb54cfdf4e7a95e856a3297568cc session=direct role=unknown browser_open url=http://127.0.0.1:52107/ -> error: Browser Access is off for this PersonaBot (1ms)"
+    },
+    {
+      "id": 2,
+      "ts": 1792166515839,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-faa0eb54cfdf4e7a95e856a3297568cc tool=browser_open"
+    },
+    {
+      "id": 1,
+      "ts": 1792166512376,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "local viewer ready prefix=/botharness-browser/viewer/local"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "running": true,
+  "frame": {
+    "mimeType": "image/jpeg",
+    "bytes": 16670
+  },
+  "focused": "DACC38DDB39926E61525F9C8DDCDBDDF",
+  "takeover": false,
+  "handoffPending": false,
+  "tabs": [
+    {
+      "targetId": "DACC38DDB39926E61525F9C8DDCDBDDF",
+      "url": "http://127.0.0.1:53843/",
+      "title": "AX Browser lifecycle 1976",
+      "current": true
+    }
+  ],
+  "profiles": [],
+  "target": "local",
+  "viewerUrl": "/botharness-browser/viewer/local/?slug=bot-1fcd182a45a3450a9efcc841b2c10471",
+  "provisioning": null
+}

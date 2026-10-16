@@ -1,0 +1,109 @@
+{
+  "ok": true,
+  "entries": [
+    {
+      "id": 15,
+      "ts": 1792167210142,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-1fcd182a45a3450a9efcc841b2c10471 session=direct role=unknown browser_observe observe -> ok (3ms)"
+    },
+    {
+      "id": 14,
+      "ts": 1792167210139,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-1fcd182a45a3450a9efcc841b2c10471 tool=browser_observe"
+    },
+    {
+      "id": 13,
+      "ts": 1792167210012,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-1fcd182a45a3450a9efcc841b2c10471 session=direct role=unknown browser_tabs list -> ok (1ms)"
+    },
+    {
+      "id": 12,
+      "ts": 1792167210011,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-1fcd182a45a3450a9efcc841b2c10471 tool=browser_tabs"
+    },
+    {
+      "id": 11,
+      "ts": 1792167209725,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-1fcd182a45a3450a9efcc841b2c10471 session=direct role=unknown browser_open url=http://127.0.0.1:53843/ -> ok (224ms)"
+    },
+    {
+      "id": 10,
+      "ts": 1792167209500,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-1fcd182a45a3450a9efcc841b2c10471 tool=browser_open"
+    },
+    {
+      "id": 9,
+      "ts": 1792167209114,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "human window created slug=bot-1fcd182a45a3450a9efcc841b2c10471 durationMs=1228"
+    },
+    {
+      "id": 8,
+      "ts": 1792167208823,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "[default] ready"
+    },
+    {
+      "id": 7,
+      "ts": 1792167207887,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "[default] launch /Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    },
+    {
+      "id": 6,
+      "ts": 1792167207886,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "open requested (panel) slug=bot-1fcd182a45a3450a9efcc841b2c10471"
+    },
+    {
+      "id": 3,
+      "ts": 1792167195433,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "browser-action",
+      "detail": "bot=bot-1fcd182a45a3450a9efcc841b2c10471 session=direct role=unknown browser_open url=http://127.0.0.1:53843/ -> error: Browser Access is off for this PersonaBot (0ms)"
+    },
+    {
+      "id": 2,
+      "ts": 1792167195432,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "direct tool slug=bot-1fcd182a45a3450a9efcc841b2c10471 tool=browser_open"
+    },
+    {
+      "id": 1,
+      "ts": 1792167193474,
+      "plugin": "browser",
+      "owner": "profile-shared",
+      "kind": "lifecycle",
+      "detail": "local viewer ready prefix=/botharness-browser/viewer/local"
+    }
+  ]
+}

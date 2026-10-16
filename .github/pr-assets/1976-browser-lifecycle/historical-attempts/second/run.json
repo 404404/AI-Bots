@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "behavior": "desktop.browser.open-observe-stop",
+  "commit": "17d181f694eef40fd377a6f99d4ebff707c84ee9",
+  "base": "8ebf2781548530291ff49a05a456ad6025aea4af",
+  "dirty": false,
+  "startedAt": "2026-10-16T16:01:52.828Z",
+  "status": "fail",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v24.21.0",
+    "viewport": "1440x1100",
+    "locale": "en-US",
+    "theme": "dark",
+    "dsh": "0.2.0-rc.2",
+    "browser": "Chrome/153.0.8010.36"
+  },
+  "expected": "Default local Browser opens one deterministic fixture; panel, observation and direct tools agree on its tab; stop removes the tab; Access-off refusal remains distinct from stopped state.",
+  "evidence": {
+    "doctor.json": "8085b285c442dd33a39149d376750c18d1807276b8269a8a60476c4d84dff5c9",
+    "identity.json": "73e8f54c012c8f62766776ec6df20c147de1634b9a882352887e3c3940002937",
+    "fixture.json": "1c3c2ef7b41094f052fd790c00abf6bf42964d6de4189ea9acf57eadb188f407",
+    "created.json": "f96fdf30249e159e00821636b5eddc5feba285efecb508c5c933d195c32e51a7",
+    "off.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "off-refusal.json": "71dd70f3a3d3e1dfe3238e07b92f917520916d90b04ab333a8d3b4a5a2807798",
+    "failure.json": "d21df49fddb87d9e50fdc45f81d909bbdd76b9465e9dd886a3d05b58cfdbc461",
+    "failure-browser.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606",
+    "failure-lifecycle.json": "db0c91a50feb55925f7f3e67675fa7b0e2401db02eee04449748e80bc0bbb6af",
+    "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "failure.aria.json": "dd644d54a7bc86f38b5d01441a225b18cf60732c7a38bc280f84e40bebb3a2cf",
+    "failure.png": "54b2b5eecbe23b3bb02df7bb575b4310dff4fbd502fb831de13e799ca3660da9",
+    "failure.diagnostics.json": "866e8433f6b83f86a361184c69229718da80116d56181c70913d2f369cbdc250",
+    "cleanup-browser.json": "12b34da73b0c67a0319e6eddbd3582af66e3b558b4d44e4a6860e0cec20d726f",
+    "cleanup-observation.json": "a5d2cefc2f8417649a822d5aa849b3ade43ec614364d75e6287cf8f0a1e93606"
+  },
+  "actions": [
+    {
+      "command": [
+        "deepseekbot",
+        "release-info"
+      ],
+      "at": "2026-10-16T16:01:53.474Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "create",
+        "--name",
+        "AX Browser 1792166514790",
+        "--persona",
+        "Disposable Browser lifecycle verification. No model or messages."
+      ],
+      "at": "2026-10-16T16:01:55.396Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-faa0eb54cfdf4e7a95e856a3297568cc"
+      ],
+      "at": "2026-10-16T16:01:55.657Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-tool",
+        "bot-faa0eb54cfdf4e7a95e856a3297568cc",
+        "browser_open",
+        "--args-stdin"
+      ],
+      "at": "2026-10-16T16:01:55.891Z"
+    },
+    {
+      "click": "Bot mode",
+      "at": "2026-10-16T16:02:04.828Z"
+    },
+    {
+      "click": "AX Browser 1792166514790: Idle AX Browser 1792166514790 01:02 Welcome to DeepSeek Bot",
+      "channelId": "dm-bot-faa0eb54cfdf4e7a95e856a3297568cc",
+      "at": "2026-10-16T16:02:06.857Z"
+    },
+    {
+      "click": "Browser",
+      "at": "2026-10-16T16:02:08.721Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-faa0eb54cfdf4e7a95e856a3297568cc"
+      ],
+      "at": "2026-10-16T16:02:38.914Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "computer-logs",
+        "--plugin",
+        "browser",
+        "--limit",
+        "100"
+      ],
+      "at": "2026-10-16T16:02:39.117Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-stop",
+        "bot-faa0eb54cfdf4e7a95e856a3297568cc"
+      ],
+      "at": "2026-10-16T16:02:39.588Z"
+    },
+    {
+      "command": [
+        "deepseekbot",
+        "browser-observation",
+        "bot-faa0eb54cfdf4e7a95e856a3297568cc"
+      ],
+      "at": "2026-10-16T16:02:39.941Z"
+    }
+  ],
+  "botId": "bot-faa0eb54cfdf4e7a95e856a3297568cc",
+  "reason": "observe-Access-off: Waiting failed: 30000ms exceeded",
+  "actual": "observe-Access-off: Waiting failed: 30000ms exceeded",
+  "finishedAt": "2026-10-16T16:02:40.139Z"
+}
