@@ -87,6 +87,8 @@ try {
   const folder = `[data-bot-folder="${group.botSlug}"]`;
   const folderHeader = `${folder} [data-panel-head]`;
   await page.waitForSelector(folder, { visible: true, timeout: 60_000 });
+  assert.ok(await page.$(`${folderHeader} .bh-persona-avatar`));
+  assert.equal(await page.$(`${folderHeader} [data-panel-chevron]`), null);
   if (await page.$(`${folder}[aria-expanded="false"]`)) await page.click(folderHeader);
   await page.waitForFunction(
     (selector) => document.querySelectorAll(`${selector} [data-bot-folder-session]`).length >= 2,
@@ -148,7 +150,10 @@ try {
     `${folder} [data-bot-folder-session="${target}"][aria-selected="true"]`,
     { timeout: 30_000 },
   );
-  await page.waitForSelector('.conversation, header', { timeout: 30_000 });
+  await page.waitForSelector('.bh-session-return-action', { timeout: 30_000 });
+  await page.waitForFunction(() => !document.body.innerText.includes('Loading history...'), {
+    timeout: 30_000,
+  });
   step('native-session-opened');
   await page.screenshot({ path: join(directory, 'opened-light.png'), waitForFonts: false });
   await page.click(folderHeader);

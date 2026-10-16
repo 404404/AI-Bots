@@ -274,6 +274,7 @@ export function apply(ctx: ClientContext): void {
         inject: () => ({
           storage,
           openSession: (id: string) => ctx.uiWorkspace.openSession(id as SessionId),
+          roster: store,
           hooks: { botFolderGroups, botFolderPrefs: prefs.source, botFolderHost },
           setMounted: (node: HTMLElement | null) => botFolderMount?.setMounted(node),
         }),

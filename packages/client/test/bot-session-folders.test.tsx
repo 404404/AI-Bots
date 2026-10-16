@@ -11,6 +11,7 @@ import {
 } from '../src/client/bot-session-folders.js';
 import { zhTranslate } from '../src/client/locale.js';
 import type { BotModeIcon } from '../src/bot-mode-settings.js';
+import { createStore, type BotSummary } from '../src/client/store.js';
 
 vi.mock('@deepseek-ai/dsh-client-ui-primitives', () => ({
   IconChevronDownOutlineRegular: () => createElement('svg', { 'aria-hidden': true }),
@@ -43,6 +44,17 @@ describe('native Bot Session folders', () => {
     document.body.append(rootNode);
     const root = createRoot(rootNode);
     const openSession = vi.fn();
+    const roster = createStore();
+    const ada: BotSummary = {
+      slug: 'ada',
+      displayName: 'Ada',
+      avatar: '/avatars/ada.png',
+      roles: [],
+      aggregateState: 'idle',
+      workspaces: [],
+      createdAt: '2026-10-17T00:00:00.000Z',
+    };
+    roster.setRoster([ada], []);
     let icon: BotModeIcon = 'mascot';
     const values = new Map<string, string>();
     const list = {
@@ -75,6 +87,7 @@ describe('native Bot Session folders', () => {
       },
     });
     const props = stub<BotSessionFoldersProps>({
+      roster,
       useBotFolderGroups: (select) => select(groups),
       useBotFolderPrefs: (select) => select({ showBotSessions: true, botIcon: icon }),
       useBotFolderHost: (select) => select(folderHost),
@@ -101,6 +114,19 @@ describe('native Bot Session folders', () => {
       await act(async () => root.render(createElement(BotSessionFolders, props)));
       expect(rootHeader().querySelector('.bh-bot-icon img')).toBeNull();
       expect(rootHeader().querySelector('.bh-bot-icon svg')).not.toBeNull();
+      const botHeader = () =>
+        tree.querySelector<HTMLButtonElement>('[data-bot-folder="ada"] [data-panel-head]')!;
+      expect(botHeader().querySelector('[data-panel-chevron]')).toBeNull();
+      expect(botHeader().querySelector('.bh-persona-avatar img')?.getAttribute('src')).toBe(
+        '/avatars/ada.png',
+      );
+      expect(
+        tree.querySelector('[data-bot-folder="lin"] .bh-persona-avatar[data-media="seeded"]'),
+      ).not.toBeNull();
+      await act(async () => roster.upsertBot({ ...ada, avatar: '/avatars/ada-updated.png' }));
+      expect(botHeader().querySelector('.bh-persona-avatar img')?.getAttribute('src')).toBe(
+        '/avatars/ada-updated.png',
+      );
       expect(tree.querySelectorAll('[data-bot-folder]')).toHaveLength(2);
       expect(tree.querySelectorAll('[data-bot-folder-session]')).toHaveLength(3);
       expect(tree.querySelector('[data-bot-folder="lin"]')?.textContent).toContain('Review');

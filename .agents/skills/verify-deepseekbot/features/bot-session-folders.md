@@ -4,7 +4,7 @@
 
 - `folders` adds one DeepSeekBot product section, with Bot/persona subgroups containing explicitly owned Orchestrator and Assignment root Sessions across different cwd values.
 - `collapse` independently folds the product section and Bot subgroups and preserves both choices in Client preferences. Headers reuse the Channel sidebar PanelHeader.
-- `icon` uses the existing user-configured Bot icon in place of the outer section's chevron; Bot subgroups retain their chevrons.
+- `icon` uses the existing user-configured Bot icon in place of the outer section's chevron. Each Bot subgroup uses its own PersonaBot avatar instead of a chevron, reading the same live roster and avatar renderer as the existing Session owner mark.
 - `open` opens the exact native Session through UiWorkspace.
 - `coexistence` keeps native Workspace membership and ordinary Sessions intact; Bot visibility settings still apply.
 
@@ -21,6 +21,7 @@ Use a task-owned isolated instance that passes doctor. A model is needed to crea
 - Run shot with --bot-mode, --click "Exit Bot mode" and --wait Plugins. Inspect the folder and save the screenshot. Choose a Session and confirm its native header opens for the same id.
 - Fold a Bot subgroup, then the DeepSeekBot section. Refresh and unfold the section: the Bot subgroup stays folded. Unfold it and repeat after a Host restart with the same isolated home.
 - Open Settings, then Bot settings, and change Bot icon. Confirm the outer DeepSeekBot header follows the selected mark, survives reload and still folds when clicked. Restore the previous icon after the check.
+- Confirm each Bot subgroup has its own avatar, with no disclosure chevron. Clicking the avatar or header still folds the subgroup. An avatar update follows the live roster without a second settings store.
 - Read botSessionIds for explicit group membership. Check the native Workspace snapshot before and after: display grouping does not attach or detach Sessions.
 - Run BH_E2E_INSTANCE=.humanlayer/verify/your-name/instance.json node scripts/e2e-bot-session-folders.mjs against the prepared instance. It checks the two roles, groups the visible roots, opens the Assignment and saves light/dark screenshots, collapse and canonical cwd evidence. BH_E2E_RESTART=1 also restarts only that recorded task-owned Host and checks the same browser's saved collapse state.
 

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import * as stylex from '@stylexjs/stylex';
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots';
@@ -7,6 +7,8 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import { color, radius, size, space, text } from './ds/tokens.stylex.js';
 import { PanelHeader } from './ds/panel-header.js';
 import { BotIcon } from './bot-icon.js';
+import { PersonaBotAvatar } from './avatar.js';
+import type { ClientStore } from './store.js';
 import type { BotModePrefsSnapshot } from './bot-mode-prefs.js';
 import type { ConfigStorage } from './roster-config.js';
 import type { LOCALE_NS } from './locale.js';
@@ -204,6 +206,7 @@ export type BotSessionFoldersProps = PropsRuntime<'shell.overlay'> &
     setMounted(node: HTMLElement | null): void;
     openSession(sessionId: string): void;
     storage: ConfigStorage | undefined;
+    roster: Pick<ClientStore, 'getSnapshot' | 'subscribe'>;
   };
 
 export function BotSessionFolders({
@@ -215,9 +218,11 @@ export function BotSessionFolders({
   useWorkspaces,
   openSession,
   storage,
+  roster,
   t,
 }: BotSessionFoldersProps) {
   const groups = useBotFolderGroups((value) => value);
+  const bots = useSyncExternalStore(roster.subscribe, roster.getSnapshot, roster.getSnapshot).bots;
   const visible = useBotFolderPrefs((value) => value.showBotSessions);
   const icon = useBotFolderPrefs((value) => value.botIcon);
   const list = useSessions((value) => value);
@@ -279,6 +284,7 @@ export function BotSessionFolders({
           {shown.map((group) => {
             const expanded = !collapsed.includes(group.botSlug);
             const groupBodyId = `${bodyId}-${group.botSlug}`;
+            const bot = bots.find((item) => item.slug === group.botSlug);
             return (
               <div
                 key={group.botSlug}
@@ -288,13 +294,25 @@ export function BotSessionFolders({
                 aria-expanded={expanded}
               >
                 <PanelHeader
+                  icon={
+                    <PersonaBotAvatar
+                      personaBotId={group.botSlug}
+                      name={bot?.displayName ?? group.displayName}
+                      src={bot?.avatar}
+                      appearance={bot?.appearance}
+                      avatarSeed={bot?.avatarSeed}
+                      size={16}
+                      indicator={false}
+                      t={t}
+                    />
+                  }
                   label={group.displayName}
                   badge={<span {...stylex.props(styles.count)}>{group.sessionIds.length}</span>}
                   disclosure={{
                     expanded,
                     controls: groupBodyId,
                     disabled: false,
-                    chevron: true,
+                    chevron: false,
                     onToggle: () => toggle(group.botSlug),
                   }}
                 />
