@@ -563,6 +563,7 @@ export function Composer({
         </View>
         {compactWidth > 0 ? (
           <Text
+            key={theme.fontScale}
             variant="body"
             accessibilityElementsHidden
             importantForAccessibility="no-hide-descendants"
