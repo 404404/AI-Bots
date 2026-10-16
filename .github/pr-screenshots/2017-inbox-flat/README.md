@@ -15,3 +15,7 @@
 5. Repeat in dark/light themes and resize to 1000 × 850.
 
 `measurements.json` records the after-render geometry: body padding, list border/radius/margin and group spacing are zero; all list edges match the body; row inner padding is retained; no horizontal overflow. No page errors were observed. This evidence qualifies Web rendering only; native Desktop was not rerun for this CSS follow-up.
+
+## Light-theme refinement
+
+`before-light-separation.png` is the already-flat Inbox at `e8286248d94653187e11daf98068788d51a73a43`; compare with `after-light-time.png` to isolate the workspace color change. All after images were refreshed for the light-theme refinement. `theme-colors.json` confirms that only the light canvas changes to DSH’s module surface, while Panel colors and both dark colors stay unchanged.
