@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "auditedBase": "3dc01bd75443810f7cccc5dc942117dee6e98bc6",
+  "auditedBase": "fd337d929a5dbd794af69aa96d40041c4287c899",
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "behaviors": [
     {
@@ -426,6 +426,14 @@
       "guide": null,
       "task": 1978,
       "gap": "No maintained feature-map recipe binds this behavior to setup, user actions, authoritative read, cleanup and failure observation. Historical scripts below are candidates, not qualified paths."
+    },
+    {
+      "id": "im.conversation.mirroring",
+      "label": "Independently opt in to IM conversation mirroring and local DM forwarding on the exact Binding",
+      "source": "packages/core/src/messaging/dm-controls.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/im-conversation-mirroring.md",
+      "task": 1983,
+      "gap": null
     }
   ],
   "scripts": [
