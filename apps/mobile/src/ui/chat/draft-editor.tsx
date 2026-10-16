@@ -34,7 +34,12 @@ export function DraftEditor({
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible
+      presentationStyle="overFullScreen"
+      animationType="slide"
+      onRequestClose={onClose}
+    >
       <KeyboardAvoidingView
         accessibilityViewIsModal
         onAccessibilityEscape={onClose}
