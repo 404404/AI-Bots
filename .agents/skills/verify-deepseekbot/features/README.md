@@ -20,6 +20,8 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 
 ## Not mapped yet
 
+About and running product identity: [release-identity.md](release-identity.md). Source Host/CLI and About DOM have been observed; exact packaged composition, staged restart and matched screenshots remain pending.
+
 Native activity layout and explicit menu navigation: [phone-activity.md](phone-activity.md).
 The shared-Simulator manual path uses existing QA records; it is not a fresh-Host scripted journey.
 

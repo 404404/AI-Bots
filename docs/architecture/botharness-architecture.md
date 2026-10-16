@@ -729,7 +729,9 @@ Registry 在 Generation 66 持久化不可恢复的身份关闭状态和确认�
 
 ### 产品发布身份（已接受设计，执行门禁待交付）
 
-[ADR-0216](../adr/0216-dsb-product-versions-identify-immutable-package-sets.md) 将电脑端 DSB 软件身份与 npm 产品包身份统一；Core／UI／Browser／Computer 同号，DSH／独立 Provider／手机保持各自版本。既有准备流程的冻结 Release Plan 绑定源码与完整产物，而不是新增版本服务。交付 QA 后版本与字节不可替换；Beta 转正式须验证新的正式包集合。Host 的现有 Release Service 投影实际运行身份和独立的待生效版本，经既有认证 bridge 同时提供 CLI／Web；缺失发布元数据不能伪装源码构建。发布按依赖核验后推进产品入口，失败恢复同一计划／字节，不宣称多包原子性。规则详见[版本规范](../agents/version-policy.zh.md)，实施由 [#1979](https://github.com/BotHarness/DeepSeekBot/issues/1979) 的三个切片负责；本节不表示运行校验已实现，也不授予标签迁移、发布或共享设备使用权限。
+[ADR-0216](../adr/0216-dsb-product-versions-identify-immutable-package-sets.md) 将电脑端 DSB 软件身份与 npm 产品包身份统一；Core／UI／Browser／Computer 同号，DSH／独立 Provider／手机保持各自版本。既有准备流程的冻结 Release Plan 绑定源码与完整产物，而不是新增版本服务。交付 QA 后版本与字节不可替换；Beta 转正式须验证新的正式包集合。Host 的现有 Release Service 投影实际运行身份和独立的待生效版本，经既有认证 bridge 同时提供 CLI／Web；缺失发布元数据不能伪装源码构建。发布按依赖核验后推进产品入口，失败恢复同一计划／字节，不宣称多包原子性。规则详见[版本规范](../agents/version-policy.zh.md)，实施由 [#1979](https://github.com/BotHarness/DeepSeekBot/issues/1979) 的三个切片负责；本节不表示全部发布门禁已实现，也不授予标签迁移、发布或共享设备使用权限。
+
+#1980 的运行身份沿用 Release Service：四个第一方 Plugin 在模块加载时将不可变包名、版本与真实目录快照附在各自 callback 上。Core 捕获产品依赖组合，随后从原生 Registry 的 ACTIVE Fiber 读取实际 callback 快照并比对；等待组件启动时返回 `composition-unverified`，关于页面允许重新读取身份，不能只凭已安装清单宣布发布身份。运行版本和待生效状态在当前 Service 内保留；后续请求继续校验实际 callback，组件被替换后身份可失效，但不提前宣布新版本。配置重新应用复用同一 Core 模块捕获的组合；磁盘安装不能提前改变运行版本。该快照是应用定义的进程诊断，不是新持久化版本库，也不是对任意可执行 Plugin 的安全认证。源码构建使用编译时 Git／dirty 身份；具体安装、重启与 Human QA 证据仍由 issue／PR 记录。
 
 ## 8 · 实现顺序与可并发范围
 
