@@ -22,6 +22,8 @@ One file per user-facing feature. Each file has four sections: `Sub-features`, `
 | Desktop Activity Center: one idle PersonaBot | no | `scripts/e2e-activity-idle.mjs` | [activity-center-idle.md](activity-center-idle.md) |
 | Temporary Workspace Grant authorization, read and revocation | no | `scripts/e2e-workspace-grant.mjs` | [workspace-grant.md](workspace-grant.md) |
 
+| Disposable Memory history, restore and stale-head refusal | no | `scripts/e2e-memory-restore.mjs` | [memory-restore.md](memory-restore.md) |
+
 ## Coverage and maintenance
 
 The index routes verification; it is not a list of features proven on the current commit.
@@ -47,8 +49,8 @@ present under `scripts/` does not make a journey current or safe to run indiscri
 Prioritize gaps touched by the current PR; add a map entry after its path works against an
 isolated instance, with the visible result and canonical read described.
 
-Known gaps include standalone Activity Center/Inbox workflows, Memory
-read/restore, desktop Browser/Computer lifecycle and IM connection/delivery. Some have partial
+Known gaps include standalone Activity Center/Inbox workflows, broader Memory recovery,
+desktop Browser/Computer lifecycle and IM connection/delivery. Some have partial
 coverage inside other feature files and CLI commands, but no complete feature-map entry.
 The unmapped inventory is a discovery list, not a claim that each script is broken.
 
