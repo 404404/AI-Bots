@@ -513,6 +513,10 @@ export function createCore(
     attachOperationalModule(operationalDatabase, 'bot-inbox'),
   );
   const externalMessaging = createOutboundMessaging({
+    channels: {
+      get: (id) => channels.get(id),
+      getOrCreateDm: (slug) => channels.getOrCreateDm(slug),
+    },
     ownsFailure: (slug, sessionId, role) => {
       const owner = ownership.resolve(sessionId);
       return owner?.botSlug === slug && owner.rootRole === role;
@@ -579,6 +583,7 @@ export function createCore(
       } catch {
         publicationFailed = true;
       }
+      void externalMessaging.forwardWebDm(commit);
       if (commit.message.memberDeparture !== undefined) {
         try {
           runtime?.admitGroupMessage(commit.channelId, commit.message.id);

@@ -1,9 +1,9 @@
 {
-  "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+  "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
   "decision": "pass",
   "reviewer": "Codex",
-  "note": "Inspected the 1440x1100 screenshot and full ARIA: AX idle 1792156227846 is visible in Activity Center, Idle, No Session is executing, Actions waiting 0. Authoritative CLI reads use the same Bot ID.",
-  "reviewedAt": "2026-10-16T13:11:17.130Z",
-  "screenshot": "ee719a934b7a4b8c9dab33a70f4056836e8b943f27057172903ed834e29d7d17",
-  "aria": "5b5ba79767da7ce6e9fcd150b541727fabb0f252d3ffa52227bd0eb3d0f95087"
+  "note": "Inspected screenshot and ARIA: AX idle 1792157405603 is visibly Idle, no Session is executing, Actions waiting is 0. The same PersonaBot bot-849ecc682e7649cca6b9105ea4203dbb is idle with empty attention and sessions in CLI reads; console has no errors.",
+  "reviewedAt": "2026-10-16T13:30:56.208Z",
+  "screenshot": "f78b0677f6fb38bd5edb645068ec83142822d8e22f73254f66a6ea18a825316d",
+  "aria": "91a422ea75250391e404cbb98d5b0c16d00b1422bf1594ad4d8fdc1094e1d305"
 }

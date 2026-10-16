@@ -1,10 +1,10 @@
 {
   "version": 1,
   "behavior": "desktop.activity-center.idle-personabot",
-  "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
-  "base": "3dc01bd75443810f7cccc5dc942117dee6e98bc6",
+  "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
+  "base": "fd337d929a5dbd794af69aa96d40041c4287c899",
   "dirty": false,
-  "startedAt": "2026-10-16T13:11:56.436Z",
+  "startedAt": "2026-10-16T13:30:58.518Z",
   "status": "blocked",
   "environment": {
     "platform": "darwin",
@@ -16,12 +16,12 @@
   },
   "expected": "The created PersonaBot is visibly Idle with no sessions/actions; the same ID has idle activity and empty attention in the Host CLI.",
   "evidence": {
-    "failure.json": "13de0f4372af1c120a59e6d67151e830d6b4fdab65b3d2a49ee03f5693689c1f",
+    "failure.json": "0535e0d7470d65bab574cce113968e9eff2a6089a8db74159d4aba1b14759c51",
     "console.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
-    "diagnostics.json": "70f08cf54ea18753ef6d648b4d8b9a2c5d801947375ed57e43c99ede0d731fdc"
+    "diagnostics.json": "19a51e2cf64f969402deb7354198fa34a944602d535583e93c5fcdfce99fcf3c"
   },
   "actions": [],
-  "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1973-01a1444a/instance.json'",
-  "actual": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1973-01a1444a/instance.json'",
-  "finishedAt": "2026-10-16T13:11:56.469Z"
+  "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1973-mergedbase/instance.json'",
+  "actual": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1973-mergedbase/instance.json'",
+  "finishedAt": "2026-10-16T13:30:58.548Z"
 }

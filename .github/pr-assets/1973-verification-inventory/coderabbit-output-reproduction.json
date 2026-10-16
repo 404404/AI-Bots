@@ -1,0 +1,12 @@
+{
+  "direct-output": {
+    "dirty": true,
+    "status": "needs-revalidation",
+    "reason": "Behavior/commit mismatch or uncommitted source"
+  },
+  "external-temp": {
+    "dirty": false,
+    "status": "pass",
+    "reason": "Same idle PersonaBot observed through Web and CLI; no activity is normal"
+  }
+}

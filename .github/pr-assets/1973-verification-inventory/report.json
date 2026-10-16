@@ -1,12 +1,12 @@
 {
   "version": 1,
   "ok": true,
-  "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+  "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
   "dirty": false,
-  "auditedBase": "3dc01bd75443810f7cccc5dc942117dee6e98bc6",
+  "auditedBase": "fd337d929a5dbd794af69aa96d40041c4287c899",
   "boundary": "All scripts/e2e-*.mjs files and all current feature-map documents, augmented by implemented Client/CLI/mobile source entry points. Behavior rows group related acceptance paths; they are not an exhaustive product behavior denominator. Planned unmerged #1954 work and packaged/restart identity promises are excluded.",
   "metrics": {
-    "featureDocuments": 16,
+    "featureDocuments": 17,
     "scripts": {
       "total": 131,
       "mapped": 11,
@@ -23,17 +23,17 @@
       "total": null,
       "coverageRate": null,
       "reason": "Product behavior denominator incomplete; catalogue groups acceptance paths and is not exhaustive",
-      "inventoried": 53,
+      "inventoried": 54,
       "scripted": 11,
-      "manual": 8,
+      "manual": 9,
       "gaps": 34
     },
     "verifiedBehaviors": {
       "total": null,
       "rate": null,
       "passed": 1,
-      "inventoried": 53,
-      "catalogueRate": 0.018867924528301886
+      "inventoried": 54,
+      "catalogueRate": 0.018518518518518517
     }
   },
   "native": [
@@ -72,7 +72,7 @@
         "behavior": "desktop.activity-center.idle-personabot",
         "platform": "desktop Web + CLI",
         "status": "pass",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "Same idle PersonaBot observed through Web and CLI; no activity is normal",
         "evidence": [
           "doctor.json",
@@ -93,8 +93,8 @@
         "native": "not-run",
         "im": "not-run",
         "recordedStatus": "pass",
-        "recordedCommit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
-        "observedAt": "2026-10-16T13:10:39.387Z",
+        "recordedCommit": "8d619fd5be12f8b4780994057d826e1714635e73",
+        "observedAt": "2026-10-16T13:30:18.226Z",
         "environment": {
           "platform": "darwin",
           "arch": "arm64",
@@ -106,8 +106,8 @@
           "browser": "Chrome/153.0.8010.36"
         },
         "expected": "The created PersonaBot is visibly Idle with no sessions/actions; the same ID has idle activity and empty attention in the Host CLI.",
-        "actual": "bot-8ec110bd68d5431c85477c8047c1c3e4: visible Idle, CLI idle, zero attention, sessions and actions.",
-        "botId": "bot-8ec110bd68d5431c85477c8047c1c3e4"
+        "actual": "bot-849ecc682e7649cca6b9105ea4203dbb: visible Idle, CLI idle, zero attention, sessions and actions.",
+        "botId": "bot-849ecc682e7649cca6b9105ea4203dbb"
       }
     },
     {
@@ -123,7 +123,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -143,7 +143,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -165,7 +165,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -190,7 +190,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -213,7 +213,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -235,7 +235,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -257,7 +257,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -279,7 +279,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -299,7 +299,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -319,7 +319,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -341,7 +341,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -361,7 +361,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -381,7 +381,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -405,7 +405,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -427,7 +427,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -449,7 +449,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -471,7 +471,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -493,7 +493,7 @@
       "pathKind": "scripted",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -513,7 +513,7 @@
       "pathKind": "manual",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -533,7 +533,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -556,7 +556,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -587,7 +587,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -610,7 +610,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -635,7 +635,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -662,7 +662,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -686,7 +686,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -709,7 +709,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -732,7 +732,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -774,7 +774,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -798,7 +798,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -824,7 +824,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -851,7 +851,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -876,7 +876,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -905,7 +905,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -931,7 +931,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -955,7 +955,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -978,7 +978,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1001,7 +1001,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1024,7 +1024,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1046,7 +1046,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1069,7 +1069,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1099,7 +1099,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1131,7 +1131,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1154,7 +1154,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1177,7 +1177,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1199,7 +1199,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1221,7 +1221,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1245,7 +1245,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1267,7 +1267,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1289,7 +1289,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1311,7 +1311,7 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",
@@ -1333,7 +1333,27 @@
       "pathKind": "gap",
       "result": {
         "status": "not-run",
-        "commit": "1df01443f31a114210a2fc7846fd95e07f5aaeba",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
+        "reason": "No current run selected; instructions and script assertions are not execution evidence",
+        "evidence": [],
+        "humanQA": "not-run",
+        "model": "not-run",
+        "native": "not-run",
+        "im": "not-run"
+      }
+    },
+    {
+      "id": "im.conversation.mirroring",
+      "label": "Independently opt in to IM conversation mirroring and local DM forwarding on the exact Binding",
+      "source": "packages/core/src/messaging/dm-controls.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/im-conversation-mirroring.md",
+      "task": 1983,
+      "gap": null,
+      "scripts": [],
+      "pathKind": "manual",
+      "result": {
+        "status": "not-run",
+        "commit": "8d619fd5be12f8b4780994057d826e1714635e73",
         "reason": "No current run selected; instructions and script assertions are not execution evidence",
         "evidence": [],
         "humanQA": "not-run",

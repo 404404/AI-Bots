@@ -1,5 +1,5 @@
 {
   "stage": "preconditions",
-  "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1973-01a1444a/instance.json'",
+  "reason": "preconditions: ENOENT: no such file or directory, open '[redacted]/.humanlayer/verify/ax1973-mergedbase/instance.json'",
   "botId": null
 }

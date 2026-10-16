@@ -37,6 +37,8 @@ The check fails for a missing feature row, required section, local link or scrip
 an index row's scripted journeys disagree with its feature file. It runs in lint. Passing
 checks only reference integrity: update and run the affected paths when the product changes.
 
+| IM conversation mirroring and forwarding settings | no for settings; yes for a model-generated reply | `verify-app` settings path; real IM destination required for delivery | [im-conversation-mirroring.md](im-conversation-mirroring.md) |
+
 ## Not mapped yet
 
 Legacy issue-era journeys often expect a prepared Host, fixed port or seeded fixture. Being

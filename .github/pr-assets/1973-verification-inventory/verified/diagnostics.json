@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "observedAt": "2026-10-16T13:10:39.258Z",
+  "observedAt": "2026-10-16T13:30:18.081Z",
   "state": "shell-observed",
   "exitCode": 0,
   "host": {
@@ -15,7 +15,7 @@
   "client": {
     "state": "shell-ready",
     "exitCode": 0,
-    "attempt": "af4535ec-b2c5-45ff-b24e-b886261d803e",
+    "attempt": "b13afb27-c023-46d0-8cd4-492cde54090d",
     "browserVerification": "Read real CUA console and DOM before accepting UI readiness",
     "earlierFailures": [],
     "report": {
@@ -26,19 +26,19 @@
       "evictedAttempts": 0,
       "attempts": [
         {
-          "attempt": "af4535ec-b2c5-45ff-b24e-b886261d803e",
-          "startedAt": 1792156228559,
-          "receivedAt": 1792156238817,
+          "attempt": "b13afb27-c023-46d0-8cd4-492cde54090d",
+          "startedAt": 1792157406291,
+          "receivedAt": 1792157416546,
           "events": [
             {
               "seq": 1,
-              "elapsedMs": 0,
+              "elapsedMs": 1,
               "source": "lifecycle",
               "code": "observer-installed"
             },
             {
               "seq": 2,
-              "elapsedMs": 608,
+              "elapsedMs": 605,
               "source": "lifecycle",
               "code": "shell-mounted"
             }
@@ -47,7 +47,7 @@
           "lastSeq": 2,
           "shellMounted": {
             "seq": 2,
-            "elapsedMs": 608,
+            "elapsedMs": 605,
             "source": "lifecycle",
             "code": "shell-mounted"
           },
@@ -59,19 +59,19 @@
   "verification": "unverified: drive the feature, inspect visible evidence and canonical state",
   "page": {
     "version": 1,
-    "attempt": "af4535ec-b2c5-45ff-b24e-b886261d803e",
-    "startedAt": 1792156228559,
+    "attempt": "b13afb27-c023-46d0-8cd4-492cde54090d",
+    "startedAt": 1792157406291,
     "state": "shell-ready",
     "events": [
       {
         "seq": 1,
-        "elapsedMs": 0,
+        "elapsedMs": 1,
         "source": "lifecycle",
         "code": "observer-installed"
       },
       {
         "seq": 2,
-        "elapsedMs": 608,
+        "elapsedMs": 605,
         "source": "lifecycle",
         "code": "shell-mounted"
       }
@@ -80,7 +80,7 @@
     "delivery": "delivered",
     "shellMounted": {
       "seq": 2,
-      "elapsedMs": 608,
+      "elapsedMs": 605,
       "source": "lifecycle",
       "code": "shell-mounted"
     }

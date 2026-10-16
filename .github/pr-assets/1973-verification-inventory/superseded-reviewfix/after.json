@@ -1,0 +1,27 @@
+{
+  "activity": {
+    "generation": "6d242247-5e7b-466e-8c0f-db7f0d8746dd",
+    "revision": 0,
+    "bot": {
+      "slug": "bot-f8fbd60f595d409fa1dd1d5cd2953c58",
+      "state": "idle"
+    }
+  },
+  "attention": {
+    "items": []
+  },
+  "overview": {
+    "actionCount": 0,
+    "bots": [
+      {
+        "slug": "bot-f8fbd60f595d409fa1dd1d5cd2953c58",
+        "displayName": "AX idle 1792157068717",
+        "avatarSeed": 2,
+        "paused": false,
+        "state": "idle",
+        "hasAction": false,
+        "sessions": []
+      }
+    ]
+  }
+}

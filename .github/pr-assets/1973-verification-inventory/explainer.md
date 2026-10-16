@@ -3,8 +3,8 @@ lang: zh
 template: doc
 title: 验证覆盖表如何避免虚假通过
 subtitle: PR 1998 · Issue 1973 · 2026-10-16
-source: 1df01443f31a114210a2fc7846fd95e07f5aaeba
-base: 3dc01bd75443810f7cccc5dc942117dee6e98bc6
+source: 8d619fd5be12f8b4780994057d826e1714635e73
+base: fd337d929a5dbd794af69aa96d40041c4287c899
 ---
 
 ## A 报告回答什么
@@ -13,10 +13,10 @@ base: 3dc01bd75443810f7cccc5dc942117dee6e98bc6
 
 | 项目 | 本提交结果 |
 | --- | --- |
-| feature 文档 | 16 |
+| feature 文档 | 17 |
 | E2E 文件 | 131，全数保留 |
 | 地图引用 | 11，映射率 8.4% |
-| 行为清单 | 53 组，分母尚不完整 |
+| 行为清单 | 54 组，分母尚不完整 |
 | 全产品功能覆盖率 | 未知 |
 
 脚本映射率不是功能覆盖率。清单把相关验收路径分组，不声称枚举全部产品行为。
@@ -33,6 +33,10 @@ base: 3dc01bd75443810f7cccc5dc942117dee6e98bc6
 清单校验检查地图、脚本链接和文件摘要。它向报告提供路径与缺口，不产生运行通过。
 
 复用 #1972 的校验器。报告不创建第二套产品状态。
+
+报告先写入仓库外的临时文件，整个证据包放在仓库外或已忽略目录。这样生成报告不会因自身输出而误报源码变脏。
+
+最新 main 新增的 IM 会话镜像地图已纳入清单，保持未运行。
 
 ## C 旧证据何时失效
 
@@ -56,4 +60,4 @@ base: 3dc01bd75443810f7cccc5dc942117dee6e98bc6
 
 Human 可按贡献指引运行报告，再重跑 Idle Bot 路径。检查该行与未运行行是否清楚区分。
 
-[查看本提交代码](https://github.com/BotHarness/DeepSeekBot/tree/1df01443f31a114210a2fc7846fd95e07f5aaeba)
+[查看本提交代码](https://github.com/BotHarness/DeepSeekBot/tree/8d619fd5be12f8b4780994057d826e1714635e73)
