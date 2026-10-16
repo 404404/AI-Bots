@@ -40,12 +40,15 @@ const styles = stylex.create({
     display: 'flex',
     flexWrap: 'nowrap',
     gap: space.x2,
-    minWidth: 0,
+    minWidth: { default: 0, '@container composer-footer (max-width: 480px)': 'min-content' },
     flexShrink: 1,
     alignItems: 'center',
   },
   leading: { flexGrow: 1, flexBasis: '0%' },
-  trailing: { justifyContent: 'flex-end', maxWidth: '55%' },
+  trailing: {
+    justifyContent: 'flex-end',
+    maxWidth: { default: '55%', '@container composer-footer (max-width: 480px)': '100%' },
+  },
   item: { display: 'flex', flexShrink: 1, minWidth: 0, maxWidth: '100%', position: 'relative' },
   editing: {
     outline: `${border.hairline} dashed ${color.borderStrong}`,
@@ -57,7 +60,7 @@ const styles = stylex.create({
   drop: { boxShadow: `inset ${border.focus} 0 ${color.accent}` },
   editingSide: {
     minHeight: size.row,
-    minWidth: size.row,
+    minWidth: { default: size.row, '@container composer-footer (max-width: 480px)': 'min-content' },
     flexGrow: 1,
     flexBasis: '0%',
     outline: `${border.hairline} dashed ${color.border}`,
@@ -83,7 +86,6 @@ export function ComposerContextBar({
   trailing,
   children,
   t,
-  compact = false,
   available = FOOTER_ITEMS,
 }: {
   readonly label: string;
@@ -91,7 +93,6 @@ export function ComposerContextBar({
   readonly trailing?: ReactNode;
   readonly children: ReactNode;
   readonly t?: BotHarnessTranslate;
-  readonly compact?: boolean;
   readonly available?: readonly FooterItem[];
 }): ReactElement {
   const preferences = useFooterPreferences();
@@ -101,7 +102,7 @@ export function ComposerContextBar({
   const drag = useRef<FooterItem | undefined>(undefined);
   const [drop, setDrop] = useState<{ side: FooterSide; before?: FooterItem }>();
   const dropRef = useRef<typeof drop>(undefined);
-  const configurable = t !== undefined && !compact;
+  const configurable = t !== undefined;
   const editMount = useMountedResource<HTMLSpanElement>(() => {
     if (!editing) return;
     const end = () => {

@@ -19,7 +19,6 @@ import {
 } from './workspace-grants-entry.js';
 import { subscribeWorkspaceGrantChanges } from './workspace-grant-events.js';
 import { authorizeGroupMembers, type GroupGrantResult } from './group-workspace-authorization.js';
-import { useMobileBotViewport } from './mobile-viewport.js';
 import { ComposerContextBar } from './composer-context-bar.js';
 import { ChipButton } from './ds/chip-button.js';
 import type { AveragePerfView } from './message-perf.js';
@@ -92,7 +91,6 @@ export function GroupComposerContextView({
   avgPerf?: AveragePerfView | undefined;
   onClose(): void;
 }): ReactElement {
-  const mobile = useMobileBotViewport();
   const [selected, setSelected] = useState<string[]>();
   const [facts, setFacts] = useState<Record<string, WorkspaceGrantView[] | null | undefined>>({});
   const [workspaces, setWorkspaces] = useState<WorkspaceOption[]>([]);
@@ -210,9 +208,9 @@ export function GroupComposerContextView({
         available={['workspace', 'avg-perf']}
         t={t}
         label={t('composerContext.label')}
-        hidden={mobile}
       >
         <ChipButton
+          touchTarget
           ref={factMount}
           data-composer-chip="workspace"
           collapseLabel
@@ -223,6 +221,7 @@ export function GroupComposerContextView({
         />
         {avgPerf === undefined ? null : (
           <ChipButton
+            touchTarget
             data-composer-chip="avg-perf"
             icon={<ChannelSidebarIcon name="gauge" size={14} />}
             label={t('message.perf.speed', { tps: avgPerf.tokensPerSecond })}

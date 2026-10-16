@@ -51,7 +51,7 @@ const grant: WorkspaceGrantView = {
   orchestratorWrite: false,
 };
 
-it('hides the Group workspace footer on mobile and restores its facts and action on desktop', async () => {
+it('keeps the Group workspace footer and its action available on mobile and desktop', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   let mobile = true;
   const listeners = new Set<() => void>();
@@ -84,7 +84,11 @@ it('hides the Group workspace footer on mobile and restores its facts and action
         }),
       ),
     );
-    expect(container.querySelector<HTMLElement>('[data-composer-context]')!.hidden).toBe(true);
+    expect(container.querySelector<HTMLElement>('[data-composer-context]')!.hidden).toBe(false);
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[data-composer-chip="workspace"]')!.click(),
+    );
+    expect(onOpen).toHaveBeenCalledOnce();
     await act(async () => {
       mobile = false;
       for (const listener of listeners) listener();
@@ -94,7 +98,7 @@ it('hides the Group workspace footer on mobile and restores its facts and action
     await act(async () =>
       container.querySelector<HTMLButtonElement>('[data-composer-context] button')!.click(),
     );
-    expect(onOpen).toHaveBeenCalledOnce();
+    expect(onOpen).toHaveBeenCalledTimes(2);
   } finally {
     await act(async () => root.unmount());
     container.remove();

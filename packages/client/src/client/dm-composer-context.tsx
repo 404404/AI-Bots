@@ -24,7 +24,6 @@ import type { AveragePerfView } from './message-perf.js';
 import { PROFILE_ACTIVITY_WEEKS } from './profile-cards-builtins.js';
 import { ChannelSidebarIcon } from './channel-sidebar-icon.js';
 import { DmComposerUsagePopover } from './dm-composer-usage.js';
-import { useMobileBotViewport } from './mobile-viewport.js';
 import { ComposerContextBar } from './composer-context-bar.js';
 import { ChipButton } from './ds/chip-button.js';
 
@@ -135,7 +134,6 @@ function DmComposerContextView({
   panel: 'model' | 'workspace' | undefined;
   onClose(): void;
 }): ReactElement {
-  const mobile = useMobileBotViewport();
   const plan = useSyncExternalStore(
     subscribeModelPlans,
     () => modelPlanOf(bot.slug),
@@ -266,24 +264,23 @@ function DmComposerContextView({
     <>
       <ComposerContextBar
         t={t}
-        compact={mobile}
         label={t('composerContext.label')}
         trailing={
-          mobile ? null : (
-            <ChipButton
-              ref={usageMount}
-              data-composer-chip="usage"
-              icon={<ChannelSidebarIcon name="ruler" size={14} />}
-              label={compactUsage}
-              onClick={() => setUsageOpen((open) => !open)}
-              aria-label={usageLabel}
-              aria-haspopup="dialog"
-              aria-expanded={usageOpen}
-            />
-          )
+          <ChipButton
+            touchTarget
+            ref={usageMount}
+            data-composer-chip="usage"
+            icon={<ChannelSidebarIcon name="ruler" size={14} />}
+            label={compactUsage}
+            onClick={() => setUsageOpen((open) => !open)}
+            aria-label={usageLabel}
+            aria-haspopup="dialog"
+            aria-expanded={usageOpen}
+          />
         }
       >
         <ChipButton
+          touchTarget
           ref={modelMount}
           data-composer-chip="model"
           collapseLabel
@@ -293,8 +290,9 @@ function DmComposerContextView({
           onClick={() => onOpen('model')}
           aria-label={`${t('entry.model')} · ${bot.displayName} · ${modelLabel}`}
         />
-        {mobile || avgPerf === undefined ? null : (
+        {avgPerf === undefined ? null : (
           <ChipButton
+            touchTarget
             data-composer-chip="avg-perf"
             icon={<ChannelSidebarIcon name="gauge" size={14} />}
             label={t('message.perf.speed', { tps: avgPerf.tokensPerSecond })}
@@ -303,19 +301,18 @@ function DmComposerContextView({
             disabled
           />
         )}
-        {mobile ? null : (
-          <ChipButton
-            ref={grantMount}
-            data-composer-chip="workspace"
-            collapseLabel
-            icon={<ChannelSidebarIcon name="folder-key" size={14} />}
-            label={workspaceLabel}
-            onClick={() => onOpen('workspace')}
-            aria-label={`${t('entry.workspaceGrants')} · ${bot.displayName} · ${workspaceLabel}`}
-          />
-        )}
+        <ChipButton
+          touchTarget
+          ref={grantMount}
+          data-composer-chip="workspace"
+          collapseLabel
+          icon={<ChannelSidebarIcon name="folder-key" size={14} />}
+          label={workspaceLabel}
+          onClick={() => onOpen('workspace')}
+          aria-label={`${t('entry.workspaceGrants')} · ${bot.displayName} · ${workspaceLabel}`}
+        />
       </ComposerContextBar>
-      {!mobile && usageOpen ? (
+      {usageOpen ? (
         <DmComposerUsagePopover
           bot={bot}
           channelId={channelId}
