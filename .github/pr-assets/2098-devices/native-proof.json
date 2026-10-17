@@ -1,41 +1,44 @@
 {
-  "version": 1,
-  "qualification": "completed-product-steps-reconciled-offline; original-driver-exit-failed",
+  "version": 2,
+  "qualification": "passed complete macOS Native synthetic-client journey; driver exit 0",
   "testedProductSource": "f69a80a9d7148d4f6e8d80cc562590997ef19c6d",
-  "verifierHead": "261388e69cab430ebde6f981db32cdf5037e4975",
-  "scope": "macOS Native offer/status and existing Human Devices handoff only",
-  "productSteps": {
-    "resumeOfferOnly": true,
+  "verifierHead": "d34a507cbb27c3daf87e77b4f9306f476ffb72aa",
+  "scope": "fresh synthetic pairing, official-model reviewed revoke, stream closure, denied access, second-Human safe offer/status and same-receipt Human dialog handoff",
+  "checks": {
     "modelShell": true,
+    "revokedAccessDenied": true,
+    "streamClosed": true,
     "modelOfferHumanHandoff": true,
     "syntheticClientOnly": true,
     "nativeDesktop": true,
-    "noPageErrors": true
+    "noPageErrors": true,
+    "noSecretInEvidenceOrHostLog": true
   },
   "canonicalReadback": {
-    "persistedHumanRequest": true,
-    "persistedHumanApproval": true,
-    "persistedBotReply": true,
+    "freshDeviceCreated": true,
+    "newDeviceDurablyRevoked": true,
+    "allSyntheticDevicesRemainRevoked": true,
+    "persistedMessagesAndApprovals": 9,
     "sourcePlacementsPresent": true,
-    "nativeSessionToolCallsAndResultsPresent": true,
-    "nativeSessionEnded": true,
-    "allSyntheticDevicesRemainRevoked": true
+    "nativeSessionCallsAndResultsPresent": true,
+    "nativeSessionEnded": true
+  },
+  "observedProtocol": {
+    "streamCloseCode": 1006,
+    "postRevokeHTTP": 401,
+    "postRevokeCode": "device-revoked"
+  },
+  "secretCheck": "exact runtime comparisons against all generated pairing links/offers/device credentials and operator-token ordinary-evidence check passed before candidate stop; current launch Host log offset used",
+  "lifecycle": {
+    "sameAbsoluteHome": true,
+    "rootCandidateStopped": true,
+    "rootMainRestored": true,
+    "noSourceChangeOrRebuild": true
   },
   "limits": [
-    "original driver exited nonzero at final Host-log read because native manifest lacked log path; first failure retained",
-    "no full f69 native pair/revoke rerun",
-    "no exact mixed-Triage native claim; separate real Web regression passed",
-    "no pending receipt reuse after process restart",
-    "physical phone and Human QA unverified"
+    "synthetic protocol client; no physical phone camera/Keychain/Keystore/network qualification",
+    "exact Memory-triage steering proved separately by Web; not rerun in Native",
+    "Human QA and Windows private-file ACL remain unqualified"
   ],
-  "hostLogReview": {
-    "structuralScan": {
-      "pairingLinkAbsent": true,
-      "encodedPairingPayloadAbsent": true,
-      "rawOfferFieldAbsent": true,
-      "deviceCredentialAbsent": true,
-      "noCandidateHostFatal": true
-    },
-    "exactPairingSecretComparison": "not recoverable after candidate stop; ordinary-evidence exact checks had passed before driver bookkeeping failure"
-  }
+  "historicalFailures": "earlier source authority failure, renderer readiness failure and offer-only final-log failure remain retained; earlier offer-only reconciliation is historical, not this run"
 }

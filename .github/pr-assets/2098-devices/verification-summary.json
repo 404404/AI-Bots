@@ -54,14 +54,14 @@
     "authorityBuild": "passed"
   },
   "gates": {
-    "CI": "261388e69 full CI passed; next verifier/evidence head awaits CI",
-    "nativeDesktop": "bounded offer/status + Human handoff completed; offline reconciliation; driver exit remains failed",
+    "CI": "exact d34 full CI passed; next evidence-only head awaits own CI",
+    "nativeDesktop": "passed complete f69 synthetic pair/model-reviewed revoke/401/stream1006/second-Human offer/status/dialog handoff; exit0",
     "physicalPhone": "unverified",
     "HumanQA": "pending",
     "merge": "not-authorized",
     "deployment": "not-authorized"
   },
-  "publicationCheck": "Frozen product f69 has 79 focused checks, types/build, full real Web journey, exact Memory-triage Web regression and bounded macOS Native offer/status + Human handoff. Original raw screenshots remain source8bde/capturee734; separate Native captures are sourcef69/verifier261. Driver bookkeeping failure retained.",
+  "publicationCheck": "Product f69:79 focused/types/build, full real Web, exact Memory-triage Web and complete macOS Native synthetic-client journey passed. Native driver exit0 and exact runtime secret checks passed. Prior failures retained. No physical-phone/Human-QA qualification.",
   "previousTestedProductSource": "8bde3340afb8ba4a23f3f715851f83da188168d2",
   "exactMemoryTriageSteer": "passed: real Memory change, actual automatic Triage turn, fresh Human next-step splice and successful device-offer/status in that same turn; synthetic timing fixture",
   "retainedNativeFailures": [
@@ -125,6 +125,51 @@
         "noCandidateHostFatal": true
       },
       "exactPairingSecretComparison": "not recoverable after candidate stop; ordinary-evidence exact checks had passed before driver bookkeeping failure"
-    }
+    },
+    "historical": true
+  },
+  "nativeFullJourney": {
+    "version": 2,
+    "qualification": "passed complete macOS Native synthetic-client journey; driver exit 0",
+    "testedProductSource": "f69a80a9d7148d4f6e8d80cc562590997ef19c6d",
+    "verifierHead": "d34a507cbb27c3daf87e77b4f9306f476ffb72aa",
+    "scope": "fresh synthetic pairing, official-model reviewed revoke, stream closure, denied access, second-Human safe offer/status and same-receipt Human dialog handoff",
+    "checks": {
+      "modelShell": true,
+      "revokedAccessDenied": true,
+      "streamClosed": true,
+      "modelOfferHumanHandoff": true,
+      "syntheticClientOnly": true,
+      "nativeDesktop": true,
+      "noPageErrors": true,
+      "noSecretInEvidenceOrHostLog": true
+    },
+    "canonicalReadback": {
+      "freshDeviceCreated": true,
+      "newDeviceDurablyRevoked": true,
+      "allSyntheticDevicesRemainRevoked": true,
+      "persistedMessagesAndApprovals": 9,
+      "sourcePlacementsPresent": true,
+      "nativeSessionCallsAndResultsPresent": true,
+      "nativeSessionEnded": true
+    },
+    "observedProtocol": {
+      "streamCloseCode": 1006,
+      "postRevokeHTTP": 401,
+      "postRevokeCode": "device-revoked"
+    },
+    "secretCheck": "exact runtime comparisons against all generated pairing links/offers/device credentials and operator-token ordinary-evidence check passed before candidate stop; current launch Host log offset used",
+    "lifecycle": {
+      "sameAbsoluteHome": true,
+      "rootCandidateStopped": true,
+      "rootMainRestored": true,
+      "noSourceChangeOrRebuild": true
+    },
+    "limits": [
+      "synthetic protocol client; no physical phone camera/Keychain/Keystore/network qualification",
+      "exact Memory-triage steering proved separately by Web; not rerun in Native",
+      "Human QA and Windows private-file ACL remain unqualified"
+    ],
+    "historicalFailures": "earlier source authority failure, renderer readiness failure and offer-only final-log failure remain retained; earlier offer-only reconciliation is historical, not this run"
   }
 }
