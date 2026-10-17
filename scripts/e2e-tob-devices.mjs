@@ -59,7 +59,12 @@ async function rpc(method, args = {}) {
     }),
   });
   const result = (await response.json()).result;
-  assert.equal(result?.ok, true, 'RPC refused: ' + method);
+  if (result?.ok !== true) {
+    const error = new Error('RPC refused: ' + method + ': ' + result?.error?.code);
+    error.code = result?.error?.code;
+    error.detail = result?.error?.message;
+    throw error;
+  }
   return result.value;
 }
 const store = resolve('node_modules/.pnpm');
@@ -119,11 +124,25 @@ async function model(prompt, commands) {
     await page.click('.bh-workspace-rail [data-pinned-panel="bh:home"]');
   const input = await page.waitForSelector('[data-home-panel] textarea');
   const started = Date.now();
-  const prior = new Set(
-    (await rpc('botToolTrace', { slug: home.botSlug, turns: 20 })).turns
-      .flatMap((t) => t.calls)
-      .map((c) => c.callId),
-  );
+  const traceSnapshot = async () => {
+    try {
+      return await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+    } catch (error) {
+      if (
+        error.code === 'invalid-input' &&
+        error.detail === 'The Session does not belong to this PersonaBot'
+      )
+        return { turns: [] };
+      if (
+        error.code === 'gateway/internal' &&
+        /^session "botharness-[a-z0-9-]+" not found$/u.test(error.detail ?? '') &&
+        Date.now() - started < 30000
+      )
+        return { turns: [] };
+      throw error;
+    }
+  };
+  const prior = new Set((await traceSnapshot()).turns.flatMap((t) => t.calls).map((c) => c.callId));
   await input.type(prompt);
   await page.keyboard.press('Enter');
   let trace;
@@ -137,7 +156,10 @@ async function model(prompt, commands) {
       )
         await button.click();
     }
-    trace = await rpc('botToolTrace', { slug: home.botSlug, turns: 20 });
+    const currentMessages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const failure = currentMessages.find((m) => Date.parse(m.at) >= started && m.sessionFailure);
+    if (failure) throw Error('model Session failure: ' + failure.sessionFailure.code);
+    trace = await traceSnapshot();
     const calls = trace.turns.flatMap((t) => t.calls).filter((c) => !prior.has(c.callId));
     if (
       commands.every((command) =>
@@ -282,7 +304,7 @@ try {
   const closed = new Promise((done) => socket.addEventListener('close', (e) => done(e.code)));
   if (process.argv.includes('--model')) {
     await model(
-      'This is the authorized isolated device QA. Discover CLI capabilities, run deepseekbot devices and deepseekbot device-routes, then revoke only the device named CLI QA test client using its observed identity and --confirm. Use native Shell, no other changes. Approval is provided for this test. End with DEVICES-QA-DONE.',
+      'This is the authorized isolated device QA. Discover CLI capabilities, run deepseekbot devices and deepseekbot device-routes, then revoke only the currently unrevoked device named CLI QA test client using its observed identity and --confirm. Use native Shell, no other changes. Approval is provided for this test. End with DEVICES-QA-DONE.',
       ['devices', 'device-routes', 'device-revoke'],
     );
   } else await cli('device-revoke', active.id, '--expected-device', active.identity, '--confirm');
