@@ -1,7 +1,9 @@
 {
   "runtimeSource": "6eea6b76828c94c7a4dbcab00ff101a2cde16ca1",
-  "reviewSource": "ee1e80212b0d4c461794312900935c475d3e9c39",
+  "reviewSource": "90df9fd8d3082769cded808f39d983f7a65deaca",
   "checkedPaths": ["packages", "scripts", "docs", "changes", ".agents"],
   "differences": [],
-  "laterCommits": "evidence and review artifacts only"
+  "laterCommits": "evidence and review artifacts only",
+  "layoutReviewSource": "35dcde43749bfe45c3ebd3805bc66ed9e95c2561",
+  "dependencyHead": "757dad603e814349aac2cd1a2aea115ea200a2da"
 }

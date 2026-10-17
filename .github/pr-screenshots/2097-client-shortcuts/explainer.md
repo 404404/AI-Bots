@@ -13,10 +13,10 @@ theme: paper
 | 项目                 | 固定版本                                                     |
 | -------------------- | ------------------------------------------------------------ |
 | 布局 PR              | [#2135](https://github.com/BotHarness/DeepSeekBot/pull/2135) |
-| 布局依赖源码         | `5b4cc293fa2ab661543b0a464a1ada38268d3115`                   |
-| 布局审阅源码及证据   | `953c2e4e4d260e0e98f22de363e3c0469b981c8e`                   |
+| 布局依赖源码         | `757dad603e814349aac2cd1a2aea115ea200a2da`                   |
+| 布局审阅源码及证据   | `35dcde43749bfe45c3ebd3805bc66ed9e95c2561`                   |
 | 快捷键 PR            | [#2136](https://github.com/BotHarness/DeepSeekBot/pull/2136) |
-| 快捷键审阅源码及证据 | `ee1e80212b0d4c461794312900935c475d3e9c39`                   |
+| 快捷键审阅源码及证据 | `90df9fd8d3082769cded808f39d983f7a65deaca`                   |
 | 实际构建与 Web 验证  | `6eea6b76828c94c7a4dbcab00ff101a2cde16ca1`                   |
 
 构建后只添加了证据并重排提交。产品源码与验证版本相同。
@@ -49,7 +49,7 @@ ClientTarget 包含实时 Client 身份与 generation。
 | 旧布局升级           | 复用原迁移与备份规则         |
 | 保存结果不明         | 返回 uncertain，先读回再决定 |
 
-[布局操作实现](https://github.com/BotHarness/DeepSeekBot/blob/953c2e4e4d260e0e98f22de363e3c0469b981c8e/packages/client/src/client/client-layout-control.ts)
+[布局操作实现](https://github.com/BotHarness/DeepSeekBot/blob/35dcde43749bfe45c3ebd3805bc66ed9e95c2561/packages/client/src/client/client-layout-control.ts)
 
 ## D 快捷键怎样保存
 
@@ -67,7 +67,7 @@ SerialQueue -> AtomicStorage: 写入被接受的配置
 Web 实测发现默认 Command+K 被误拒绝，现已修复。
 原生面板仍拒绝不支持的浏览器组合。
 
-[快捷键处理实现](https://github.com/BotHarness/DeepSeekBot/blob/ee1e80212b0d4c461794312900935c475d3e9c39/packages/client/src/client/client-shortcut-control.ts)
+[快捷键处理实现](https://github.com/BotHarness/DeepSeekBot/blob/90df9fd8d3082769cded808f39d983f7a65deaca/packages/client/src/client/client-shortcut-control.ts)
 
 ## E 原生保存的取消边界
 
@@ -85,22 +85,33 @@ Web 实测发现默认 Command+K 被误拒绝，现已修复。
 
 ## F 已有证据与剩余门槛
 
-主任务执行了两轮独占原生运行，并恢复主应用。
+主任务完成独占原生运行和重启，并逐次恢复主应用。
 Electron 按键事件真正打开 Home。此结果不等于物理键盘验证。
-原生布局只覆盖间距保存与重启，不涵盖嵌套面板。
+原生布局验证了移动、比例、隐藏恢复、切换频道及重启持久化。
+两次原生脚本选择器失败均保留；它们未验证任何嵌套修改。
+布局尺寸证据来自实际所有者读回，不代表物理拖拽或像素适配审查。
 
-| 证据类别                        | 状态                            |
-| ------------------------------- | ------------------------------- |
-| 19 文件定向覆盖                 | 修复初始失败后覆盖 165 个用例   |
-| 最新快捷键回归                  | 7 / 7 通过                      |
-| TypeScript、lint、format、build | 通过                            |
-| Web 双 Client 隔离与布局迁移    | 通过                            |
-| Web 真正按键、禁用、恢复与刷新  | 通过                            |
-| 原生单 Client 运行与重启        | 间距、Home 按键及禁用持久化通过 |
-| 物理键盘、IME 与模态边界        | 未验证                          |
-| 模型驱动的 Tob 批准流程         | 未验证                          |
-| Human QA 与合并                 | 未批准                          |
+| 证据类别                        | 状态                                       |
+| ------------------------------- | ------------------------------------------ |
+| 19 文件定向覆盖                 | 修复初始失败后覆盖 165 个用例              |
+| 最新快捷键回归                  | 7 / 7 通过                                 |
+| TypeScript、lint、format、build | 通过                                       |
+| Web 双 Client 隔离与布局迁移    | 通过                                       |
+| Web 真正按键、禁用、恢复与刷新  | 通过                                       |
+| 原生单 Client 运行与重启        | 嵌套树、比例、间距及快捷键持久化通过       |
+| 物理键盘、IME 与模态边界        | 未验证                                     |
+| Web Tob 模型审批与读回          | 布局与快捷键通过；拒绝和过期保留原状态     |
+| 完整远端 CI                     | 产品等同版本通过三个测试分片及所有必需检查 |
+| 原生 Tob 模型审批               | 未验证                                     |
+| Human QA 与合并                 | 未批准                                     |
 
-[布局截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/953c2e4e4d260e0e98f22de363e3c0469b981c8e/.github/pr-screenshots/2096-client-layout/evidence.md)
+[布局截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/35dcde43749bfe45c3ebd3805bc66ed9e95c2561/.github/pr-screenshots/2096-client-layout/evidence.md)
 
-[快捷键截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/ee1e80212b0d4c461794312900935c475d3e9c39/.github/pr-screenshots/2097-client-shortcuts/evidence.md)
+[快捷键截图与验证范围](https://github.com/BotHarness/DeepSeekBot/blob/90df9fd8d3082769cded808f39d983f7a65deaca/.github/pr-screenshots/2097-client-shortcuts/evidence.md)
+
+自然语言请求经 Home 进入现有审批卡片。四个模型回合均完成，消息均已处理。
+独立第二个 Client 的布局与快捷键指纹保持不变。
+
+[实际 Tob 审批记录](https://github.com/BotHarness/DeepSeekBot/blob/90df9fd8d3082769cded808f39d983f7a65deaca/.github/pr-screenshots/2097-client-shortcuts/natural-tob-verification.json)
+
+[原生嵌套树与重启记录](https://github.com/BotHarness/DeepSeekBot/blob/35dcde43749bfe45c3ebd3805bc66ed9e95c2561/.github/pr-screenshots/2096-client-layout/native-verification.json)
