@@ -171,7 +171,6 @@
     {
       "scheme": "light",
       "scale": 1,
-      "done": false,
       "handle": true,
       "switch": [
         {
@@ -184,7 +183,6 @@
     {
       "scheme": "light",
       "scale": 1.3,
-      "done": false,
       "handle": true,
       "switch": [
         {
@@ -197,7 +195,6 @@
     {
       "scheme": "light",
       "scale": 2,
-      "done": false,
       "handle": true,
       "switch": [
         {
@@ -210,7 +207,6 @@
     {
       "scheme": "dark",
       "scale": 1,
-      "done": false,
       "handle": true,
       "switch": [
         {
@@ -223,7 +219,6 @@
     {
       "scheme": "dark",
       "scale": 1.3,
-      "done": false,
       "handle": true,
       "switch": [
         {
@@ -236,7 +231,6 @@
     {
       "scheme": "dark",
       "scale": 2,
-      "done": false,
       "handle": true,
       "switch": [
         {
@@ -264,7 +258,22 @@
     "types": "pass",
     "lint": "pass",
     "format": "pass",
-    "ci": "all required checks green"
+    "ci": "all required checks green",
+    "nestedSheet": {
+      "result": "pass",
+      "mode": "settings",
+      "proof": [
+        {
+          "step": "scroll-before-sheet",
+          "top": 377,
+          "after": 377
+        },
+        {
+          "step": "handle-drag-close",
+          "closed": true
+        }
+      ]
+    }
   },
   "limits": [
     "Manual TalkBack gestures are not qualified; native XML role/checked/enabled/target and adapter activation regression are checked.",
