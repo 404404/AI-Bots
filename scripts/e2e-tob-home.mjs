@@ -498,6 +498,64 @@ try {
       'four owner-backed cards; exact 24h/7d/30d; explicit refresh; no generated Tob report; recent Channel opens alongside mounted Home',
     );
   }
+  if (phase === 'creation') {
+    const marker = Date.now().toString(36);
+    const sectionName = 'Home QA ' + marker;
+    const displayName = 'Home Bot ' + marker;
+    const before = new Set((await rpc('list')).bots.map((bot) => bot.slug));
+    const section = (await rpc('sectionCreate', { name: sectionName })).section;
+    await page.waitForSelector('[data-section-id="' + section.id + '"]');
+    await page.locator('::-p-aria(' + JSON.stringify(sectionName + ' 0') + ')').hover();
+    await click('在「' + sectionName + '」中新建');
+    await shot('section-create-menu');
+    await page.locator('[role="menu"] ::-p-aria(创建 Bot)').hover();
+    await click('从零创建');
+    await page.waitForSelector('[data-home-creation]');
+    assert.equal(await page.$('[role="dialog"]'), null, 'creation must be embedded');
+    await page.locator('[data-home-creation] ::-p-aria(名称)').fill(displayName);
+    assert.equal(await page.$eval('[data-create-advanced]', (el) => el.open), false);
+    await click('从 GitHub 导入 Bot');
+    assert.ok(
+      await page.evaluate(
+        (name) => document.querySelector('[data-home-creation]').textContent.includes(name),
+        sectionName,
+      ),
+    );
+    await page.locator('[data-home-creation] ::-p-aria(名称)').fill('Home Git Draft');
+    await click('从 zip 导入 Bot');
+    assert.ok(
+      await page.evaluate(
+        (name) => document.querySelector('[data-home-creation]').textContent.includes(name),
+        sectionName,
+      ),
+    );
+    await shot('section-zip-embedded');
+    await click('创建 Bot');
+    assert.equal(
+      await page.$eval('[data-home-creation] input[data-modal-autofocus]', (el) => el.value),
+      displayName,
+    );
+    await shot('section-empty-restored');
+    await page.locator('[data-home-creation] ::-p-aria(创建)').click();
+    await page.waitForFunction(() => !document.querySelector('[data-home-creation]'));
+    const bots = (await rpc('list')).bots;
+    const created = bots.find((bot) => bot.displayName === displayName);
+    assert.ok(created, 'canonical Bot persisted');
+    const roster = await rpc('rosterGet');
+    const target = roster.sections.find((item) => item.id === section.id);
+    assert.ok(
+      target.channelIds.includes('dm-' + created.slug),
+      'created Bot DM retained target section',
+    );
+    writeFileSync(
+      resolve(out, 'creation-readback.json'),
+      JSON.stringify({ created, roster }, null, 2),
+    );
+    await shot('section-created-readback');
+    steps.push(
+      'section plus opens embedded form; Git/ZIP switches preserve target; blank draft restored; actual create persisted into same section',
+    );
+  }
   if (phase === 'configure') {
     const desc = await rpc('describe', {}, 'settings');
     const d = desc.namespaces.find((x) => x.ns === 'agent-default-model');
