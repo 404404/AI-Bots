@@ -3386,6 +3386,35 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (name === undefined) return invalidInput('name is required');
       const existing = deps.channels.get(channelId);
       if (existing === undefined) return unknownChannel(channelId);
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (expectedChannel !== undefined && existing.type !== 'group')
+        return {
+          ok: false,
+          error: {
+            code: 'not-group-channel',
+            message: 'Group Channel required for reviewed rename',
+          },
+        };
+      if (existing.type === 'group' && deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.rename({
+            channelId,
+            name,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       if (existing.type === 'dm' && existing.botSlug === undefined)
         return invalidInput('Bot-to-Bot DMs are read-only for Human');
 
@@ -3409,6 +3438,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const avatar = source['avatar'];
       if (channelId === undefined || (avatar !== null && !isGroupAvatar(avatar)))
         return invalidInput('valid channelId and Group avatar are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.setAvatar({
+            channelId,
+            avatar,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       try {
         return {
           ok: true,
@@ -3541,6 +3591,27 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const botSlug = asNonBlank(source, 'botSlug');
       if (channelId === undefined || botSlug === undefined || !isValidSlug(botSlug))
         return invalidInput('valid channelId and botSlug are required');
+      const expectedChannel = source['expectedChannel'];
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedChannel))
+      )
+        return invalidInput('expectedChannel must be an observed Channel fingerprint');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.removeMember({
+            channelId,
+            botSlug,
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       try {
         return {
           ok: true,
@@ -3567,7 +3638,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       )
         return invalidInput('A local Group with the current Human is required');
       const review = deps.runtime?.groupSendReview;
-      if (!review) return unavailable();
+      if (!review)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Group send review is unavailable on this Host' },
+        };
       if (enabled !== undefined) review.configure(channelId, enabled);
       return { ok: true, value: { enabled: review.enabled(channelId) } };
     },
@@ -3635,10 +3710,34 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
           count: z.number().int().min(1).max(100),
           intervalSeconds: z.number().int().min(1).max(3600),
           inherit: z.boolean().optional(),
+          expectedChannel: z
+            .string()
+            .regex(/^[a-f0-9]{64}$/u)
+            .optional(),
         })
         .safeParse(asObject(payload));
       if (!parsed.success) return invalidInput('invalid Group wake policy');
-      const { channelId, botSlug, mode, count, intervalSeconds, inherit } = parsed.data;
+      const { channelId, botSlug, mode, count, intervalSeconds, inherit, expectedChannel } =
+        parsed.data;
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.setWake({
+            channelId,
+            botSlug,
+            mode,
+            count,
+            intervalSeconds,
+            ...(inherit === undefined ? {} : { inherit }),
+            ...(expectedChannel === undefined ? {} : { expectedChannel }),
+          });
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (expectedChannel !== undefined) return unavailable();
       const bot = deps.registry.get(botSlug);
       if (bot === undefined || bot.paused === true) return unknownBot(botSlug);
       try {

@@ -1,3 +1,6 @@
+import { createHash } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { createCore } from '../src/plugin.js';
@@ -212,6 +215,71 @@ async function fixture(
 }
 
 describe('Group send review through the same direct model tools', () => {
+  it('compares migrated attachments with the observed projection and still holds later file changes', async () => {
+    await fixture(async ({ core, channelId, tool }) => {
+      const bytes = Buffer.from('Original agenda');
+      const hash = 'sha256:' + createHash('sha256').update(bytes).digest('hex');
+      const objects = join(core.attachments.rootDir, 'objects', hash.slice(7, 9));
+      mkdirSync(objects, { recursive: true });
+      writeFileSync(join(objects, hash.slice(7)), bytes);
+      const original = {
+        id: 'attachment-request',
+        at: new Date().toISOString(),
+        author: { kind: 'human' },
+        attachments: [{ hash, name: 'agenda.txt', mime: 'text/plain', size: bytes.length }],
+      };
+      const database = attachOperationalModule(core.operationalDatabase, 'review-attachment-test');
+      database.transaction((db) => {
+        db.prepare(`INSERT INTO source_events
+          (source_event_id, source_kind, channel_id, message_id, body, created_at, payload_json)
+          VALUES (?, 'human-message', ?, ?, ?, ?, ?)`).run(
+          'attachment-source',
+          channelId,
+          original.id,
+          'Read this agenda',
+          original.at,
+          JSON.stringify(original),
+        );
+        db.prepare(`INSERT INTO channel_placements (channel_id, revision, source_event_id, message_id)
+          VALUES (?, 1, ?, ?)`).run(channelId, 'attachment-source', original.id);
+      });
+      await core.channels.migrateAttachments!();
+      const ref = core.channels.message(channelId, original.id)!.attachments![0]!;
+      expect(ref.fileId).toMatch(/^file:/);
+      const read = await tool('channel_read', {});
+      const sent = await tool('channel_send', {
+        body: 'Agenda received',
+        observation_id: read.observationIds[channelId],
+      });
+      expect(sent.status).toBe('committed');
+      const beforeEdit = await tool('channel_read', {});
+      writeFileSync(
+        core.attachments.fileTarget(ref.fileId!).path,
+        'Revised agenda with additional details',
+      );
+      const held = await tool('channel_send', {
+        body: 'Old agenda summary',
+        observation_id: beforeEdit.observationIds[channelId],
+      });
+      expect(held.status).toBe('held');
+      expect(held.changedMessageIds).toEqual([original.id]);
+      const recheck = await tool('channel_send', {
+        body: 'Revised agenda received',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(recheck.status).toBe('committed');
+      expect(
+        database.read(
+          (db) =>
+            db
+              .prepare('SELECT payload_json FROM source_events WHERE source_event_id = ?')
+              .get('attachment-source')?.payload_json,
+        ),
+      ).toBe(JSON.stringify(original));
+    });
+  });
+
   it('offers the latest context without a prior observation and permits a corrected recheck in a long Group', async () => {
     await fixture(async ({ core, channelId, human, tool }) => {
       for (let i = 0; i < 40; i++) await human(`history-${i}`, `Earlier message ${i}`);

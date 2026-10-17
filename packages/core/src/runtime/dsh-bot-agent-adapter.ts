@@ -3641,9 +3641,10 @@ class DshBotAgentAdapter implements BotAgentAdapter {
                 : { mentionHumanIds: args.mention_human_ids }),
             });
           } catch (error) {
-            const failedChannelId = args.channel_id ?? run.inboundChannelId;
-            if (failedChannelId !== undefined) this.#drafts.discard(run.sessionId, failedChannelId);
-            if (error instanceof GroupReplySourceRevoked)
+            if (error instanceof GroupReplySourceRevoked) {
+              const failedChannelId = args.channel_id ?? run.inboundChannelId;
+              if (failedChannelId !== undefined)
+                this.#drafts.discard(run.sessionId, failedChannelId);
               return JSON.stringify({
                 status: 'refused',
                 reason: error.code,
@@ -3651,6 +3652,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
                 instruction:
                   'Stop this task. Do not send its draft or an explanation in another Channel. Explicitly resolve only work that is finished.',
               });
+            }
             if (!(error instanceof SendReviewRequired)) throw error;
             this.#drafts.discard(run.sessionId, error.outcome.channelId);
             return JSON.stringify(error.outcome);

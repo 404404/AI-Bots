@@ -297,6 +297,7 @@ export interface ChannelStore {
 
   referencedAttachmentHashes(): ReadonlySet<string>;
   migrateAttachments?(signal?: AbortSignal): Promise<AttachmentMigrationResult>;
+  projectMessageAttachments?(sourceEventId: string, message: ChannelMessage): ChannelMessage;
   attachmentReference?(
     channelId: string,
     messageId: string,

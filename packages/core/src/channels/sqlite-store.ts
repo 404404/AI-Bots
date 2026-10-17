@@ -559,6 +559,15 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     return recipients.length === 0 ? undefined : recipients;
   };
 
+  const projectMessageAttachments = (
+    sourceEventId: string,
+    message: ChannelMessage,
+  ): ChannelMessage =>
+    projectAttachmentFiles(
+      attachmentMigration.project(sourceEventId, message),
+      options.attachments,
+    );
+
   const allMessages = (id: string): ChannelMessage[] => {
     if (!isValidChannelId(id)) return [];
     const rows = database.read((db) =>
@@ -1806,9 +1815,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
         throw new Error('Group member not found');
       const policy =
         channel.wakePolicies?.[botSlug] ??
-        database.transaction((db) =>
-          defaultGroupWakePolicy(sourcePolicy.resolveIn(db, botSlug, 'group-ordinary')),
-        );
+        defaultGroupWakePolicy(sourcePolicy.readGroupOrdinary(botSlug));
       const audit = database.read((db) =>
         db
           .prepare(`
@@ -2392,6 +2399,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     },
     assertAttachmentRefs,
     migrateAttachments: (signal) => attachmentMigration.migrate(signal),
+    projectMessageAttachments,
     attachmentReference(channelId, messageId, identity) {
       if (readRecord(channelId) === undefined) return undefined;
       const row = database.read((db) =>
