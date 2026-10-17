@@ -1,0 +1,97 @@
+{
+  "source": "1a625ba281015a6aa313b3cf97805573b3ec5935",
+  "integration": "fcf5efd295fc0a2e2158c555ccc81683e05aecb0",
+  "native": "Existing SDK58 client, RN0.88,pager9.0.7/tab-view4.3.4; Redmi Note14Pro Android16 arm64; no native input/build change in follow-up",
+  "baseline": {
+    "activity": "21870071cfbe2d157c7bf9ed4eb1f8f0204d6aa4",
+    "chats": "fcf5efd SDK58 runtime with ONLY Home component restored from21870071; restored exact final Home afterward",
+    "fixtureVisibility": "53 already-existing task-owned AX conversations temporarily shown for long Chats proof, exact original hidden preferences restored; no model/message/answer mutation"
+  },
+  "checks": {
+    "sourceMobilePassed": 447,
+    "skipped": 8,
+    "sdk58FocusedPassed": 27,
+    "types": true,
+    "lint": true,
+    "format": true,
+    "hermesIOS": true,
+    "hermesAndroid": true,
+    "ci": "https://github.com/BotHarness/DeepSeekBot/actions/runs/39030247709"
+  },
+  "matrix": [
+    {
+      "label": "activity-scroll-chrome-dark-1",
+      "theme": "dark",
+      "font": "1"
+    },
+    {
+      "label": "activity-scroll-chrome-dark-1-collapsed",
+      "theme": "dark",
+      "font": "1",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-dark-1.3",
+      "theme": "dark",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-scroll-chrome-dark-1.3-collapsed",
+      "theme": "dark",
+      "font": "1.3",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-dark-2",
+      "theme": "dark",
+      "font": "2"
+    },
+    {
+      "label": "activity-scroll-chrome-dark-2-collapsed",
+      "theme": "dark",
+      "font": "2",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-light-1",
+      "theme": "light",
+      "font": "1"
+    },
+    {
+      "label": "activity-scroll-chrome-light-1-collapsed",
+      "theme": "light",
+      "font": "1",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-light-1.3",
+      "theme": "light",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-scroll-chrome-light-1.3-collapsed",
+      "theme": "light",
+      "font": "1.3",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-light-2",
+      "theme": "light",
+      "font": "2"
+    },
+    {
+      "label": "activity-scroll-chrome-light-2-collapsed",
+      "theme": "light",
+      "font": "2",
+      "collapsed": true
+    }
+  ],
+  "video": "Reviewed first25s of native Activity capture, original speed, no synthetic UI/time remapping; full raw recording stays private",
+  "limits": [
+    "No sustained120FPS/Release qualification; native HWUI p95 remains above8.33ms.",
+    "No iOS native,Human acceptance,live theme/font lifecycle or reduced-motion runtime qualification.",
+    "Initial intermediate-font drag preceded row readiness; replaced after explicit native readiness.",
+    "Short Chats originally made harness fail because it expected hiding; observed stability was correct and long Chats verified separately."
+  ],
+  "date": "2026-10-17"
+}

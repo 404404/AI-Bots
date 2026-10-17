@@ -1,0 +1,174 @@
+{
+  "matrix": [
+    {
+      "label": "activity-scroll-chrome-dark-1",
+      "theme": "dark",
+      "font": "1"
+    },
+    {
+      "label": "activity-scroll-chrome-dark-1-collapsed",
+      "theme": "dark",
+      "font": "1",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-dark-1.3",
+      "theme": "dark",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-scroll-chrome-dark-1.3-collapsed",
+      "theme": "dark",
+      "font": "1.3",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-dark-2",
+      "theme": "dark",
+      "font": "2"
+    },
+    {
+      "label": "activity-scroll-chrome-dark-2-collapsed",
+      "theme": "dark",
+      "font": "2",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-light-1",
+      "theme": "light",
+      "font": "1"
+    },
+    {
+      "label": "activity-scroll-chrome-light-1-collapsed",
+      "theme": "light",
+      "font": "1",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-light-1.3",
+      "theme": "light",
+      "font": "1.3"
+    },
+    {
+      "label": "activity-scroll-chrome-light-1.3-collapsed",
+      "theme": "light",
+      "font": "1.3",
+      "collapsed": true
+    },
+    {
+      "label": "activity-scroll-chrome-light-2",
+      "theme": "light",
+      "font": "2"
+    },
+    {
+      "label": "activity-scroll-chrome-light-2-collapsed",
+      "theme": "light",
+      "font": "2",
+      "collapsed": true
+    }
+  ],
+  "chats": [
+    {
+      "label": "chrome-chats-long-expanded",
+      "navVisible": true
+    },
+    {
+      "label": "chrome-chats-long-collapsed",
+      "navVisible": false
+    },
+    {
+      "label": "chrome-chats-long-restored",
+      "navVisible": true
+    }
+  ],
+  "activity": [
+    {
+      "label": "chrome-expanded",
+      "hidden": false,
+      "activity": true,
+      "hasNav": true,
+      "hasToolbar": true,
+      "tabBounds": [
+        "[0,312][407,468]",
+        "[407,312][813,468]",
+        "[813,312][1220,468]"
+      ]
+    },
+    {
+      "label": "chrome-collapsed",
+      "hidden": true,
+      "activity": true,
+      "hasNav": false,
+      "hasToolbar": false,
+      "tabBounds": [
+        "[0,130][407,286]",
+        "[407,130][813,286]",
+        "[813,130][1220,286]"
+      ]
+    },
+    {
+      "label": "chrome-restored",
+      "hidden": false,
+      "activity": true,
+      "hasNav": true,
+      "hasToolbar": true,
+      "tabBounds": [
+        "[0,312][407,468]",
+        "[407,312][813,468]",
+        "[813,312][1220,468]"
+      ]
+    },
+    {
+      "label": "chrome-collapse-again",
+      "hidden": true,
+      "activity": true,
+      "hasNav": false,
+      "hasToolbar": false,
+      "tabBounds": [
+        "[0,130][407,286]",
+        "[407,130][813,286]",
+        "[813,130][1220,286]"
+      ]
+    },
+    {
+      "label": "chrome-empty-page",
+      "hidden": false,
+      "activity": true,
+      "hasNav": true,
+      "hasToolbar": true,
+      "tabBounds": [
+        "[0,312][407,468]",
+        "[407,312][813,468]",
+        "[813,312][1220,468]"
+      ]
+    },
+    {
+      "label": "chrome-page-returned",
+      "hidden": false,
+      "activity": true,
+      "hasNav": true,
+      "hasToolbar": true,
+      "tabBounds": [
+        "[0,312][407,468]",
+        "[407,312][813,468]",
+        "[813,312][1220,468]"
+      ]
+    },
+    {
+      "label": "chrome-search-pinned",
+      "hidden": false,
+      "activity": true,
+      "hasNav": true,
+      "hasToolbar": true,
+      "tabBounds": [
+        "[0,546][407,702]",
+        "[407,546][813,702]",
+        "[813,546][1220,702]"
+      ]
+    }
+  ],
+  "limits": [
+    "Short chat-list harness initially expected hiding incorrectly; the observed short list correctly retained navigation. Long-list proof shown separately.",
+    "Full recording stays private; only reviewed first25s Activity excerpt is published."
+  ]
+}

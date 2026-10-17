@@ -1,0 +1,135 @@
+{
+  "source": "1a625ba281015a6aa313b3cf97805573b3ec5935",
+  "integration": "fcf5efd295fc0a2e2158c555ccc81683e05aecb0",
+  "baselineSource": "895583ed97be15fa6551b7e950087ec2dd7ad896",
+  "baselineIntegration": "21870071cfbe2d157c7bf9ed4eb1f8f0204d6aa4",
+  "scenario": "Eight asserted whole-page swipes per pass; existing paired Host/data; Redmi Note14Pro Android16, SDK58 development client,120Hz supported; font1.0; scrcpy remains running; no screenrecord during profiles",
+  "before": [
+    {
+      "run": 1,
+      "seconds": 16.7,
+      "reactRenderMs": 4978.5,
+      "reactCommits": 28,
+      "pageRenders": 48,
+      "rowRenders": 256,
+      "cpuBusyMs": 6910,
+      "jsSampler": {
+        "jsFps": 57.8,
+        "droppedFrames": 338,
+        "droppedPct": 32.7,
+        "longestFrameMs": 812.8,
+        "framesOver50ms": 8
+      }
+    },
+    {
+      "run": 2,
+      "seconds": 16.8,
+      "reactRenderMs": 5109.8,
+      "reactCommits": 28,
+      "pageRenders": 48,
+      "rowRenders": 256,
+      "cpuBusyMs": 6909,
+      "jsSampler": {
+        "jsFps": 57.4,
+        "droppedFrames": 343,
+        "droppedPct": 33,
+        "longestFrameMs": 840.7,
+        "framesOver50ms": 8
+      }
+    },
+    {
+      "run": 3,
+      "seconds": 16.5,
+      "reactRenderMs": 5062.3,
+      "reactCommits": 28,
+      "pageRenders": 48,
+      "rowRenders": 256,
+      "cpuBusyMs": 6944,
+      "jsSampler": {
+        "jsFps": 58,
+        "droppedFrames": 343,
+        "droppedPct": 33,
+        "longestFrameMs": 812.8,
+        "framesOver50ms": 8
+      }
+    }
+  ],
+  "after": [
+    {
+      "run": 1,
+      "seconds": 14,
+      "reactRenderMs": 1554.9,
+      "reactCommits": 29,
+      "pageRenders": 16,
+      "rowRenders": 15,
+      "cpuBusyMs": 2976,
+      "jsSampler": {
+        "jsFps": 81.4,
+        "droppedFrames": 123,
+        "droppedPct": 15.3,
+        "longestFrameMs": 474.8,
+        "framesOver50ms": 9
+      }
+    },
+    {
+      "run": 2,
+      "seconds": 12.3,
+      "reactRenderMs": 1362.5,
+      "reactCommits": 29,
+      "pageRenders": 16,
+      "rowRenders": 0,
+      "cpuBusyMs": 2370,
+      "jsSampler": {
+        "jsFps": 84.7,
+        "droppedFrames": 103,
+        "droppedPct": 13.1,
+        "longestFrameMs": 381.3,
+        "framesOver50ms": 8
+      }
+    },
+    {
+      "run": 3,
+      "seconds": 12.5,
+      "reactRenderMs": 1259.1,
+      "reactCommits": 30,
+      "pageRenders": 16,
+      "rowRenders": 0,
+      "cpuBusyMs": 2539,
+      "jsSampler": {
+        "jsFps": 88.9,
+        "droppedFrames": 93,
+        "droppedPct": 11.6,
+        "longestFrameMs": 230.4,
+        "framesOver50ms": 8
+      }
+    }
+  ],
+  "median": {
+    "renderMsBefore": 5062.3,
+    "renderMsAfter": 1362.5,
+    "reductionPercent": 73.1,
+    "rowsBefore": 256,
+    "rowsAfter": 0
+  },
+  "native": {
+    "before": {
+      "frames": 1440,
+      "jankyFrames": 13,
+      "p95Ms": 24,
+      "p99Ms": 40
+    },
+    "after": {
+      "frames": 1118,
+      "jankyFrames": 6,
+      "p95Ms": 26,
+      "p99Ms": 44
+    }
+  },
+  "limits": [
+    "Sequential baseline/after cohorts, not alternating ABBA; development observations, not a Release performance benchmark.",
+    "One after pass crossed the minute boundary, correctly updating15 timestamp rows; other passes render no unchanged rows.",
+    "JS sampler FPS is not displayed UI FPS; its dropped-frame formula assumes60Hz and is not a120Hz qualification.",
+    "HWUI pipeline durations/deadline counts are not sustained compositor FPS.",
+    "iOS, Release and sustained120FPS remain unqualified."
+  ]
+}
