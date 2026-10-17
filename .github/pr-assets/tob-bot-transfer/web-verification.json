@@ -1,0 +1,151 @@
+{
+  "sourceHead": "3095104181d3c6e92ae74ead4c2bbfba6d76f400",
+  "selectedZip": {
+    "entries": [".botharness/banner.png", ".botharness/bot.json", "SOUL.md"],
+    "importedId": "bot-df98aa04af104fd1ad50d0d0546f03e6",
+    "soulPreserved": true,
+    "excludedMemoryMarkerAbsent": true,
+    "downloadBytes": 7780,
+    "downloadSha256": "a364baf161d7c38e00242f321c068a48778f9169190a319c2f5dd3998acbc253",
+    "outputMode": "0o600"
+  },
+  "tobImport": {
+    "originalProtectedId": "bot-1181d61372484fd797da071aa1bdc7b2",
+    "importedOrdinaryId": "bot-edb405c93cae4f7989f1b2f661ccf043",
+    "newIdentity": true,
+    "originalTobUnchanged": true,
+    "ordinaryDeletePreviewSucceeds": true,
+    "privilegedRuntimeStateTransferred": false
+  },
+  "reviewedTobExport": {
+    "target": "bot-91d00701296b48f5a96cae0811848826",
+    "files": [".botharness/banner.png", ".botharness/bot.json", "SOUL.md"],
+    "history": false,
+    "download": {
+      "bytes": 7780,
+      "sha256": "a364baf161d7c38e00242f321c068a48778f9169190a319c2f5dd3998acbc253"
+    },
+    "sourceUnchanged": true
+  },
+  "nativeApprovalSemantics": {
+    "outerShell": "one-time approval of exact inspected synthetic command, no policy changes",
+    "innerManagement": "reviewed target, selected/required files, history and captured state",
+    "staleFollowup": "old review refused stale-bot-files; model read current fingerprint and proposed fresh outer execution; Human denied it"
+  },
+  "canonicalCompletedHumanTurns": [
+    {
+      "phase": "web-1792278087020",
+      "turn": 1,
+      "endReason": "completed",
+      "delivery": "handled",
+      "source": {
+        "source_event_id": "09758637-cd56-43ab-a6a4-d4d701108fa0",
+        "source_kind": "human-message",
+        "bot_slug": "bot-1181d61372484fd797da071aa1bdc7b2",
+        "channel_id": "dm-bot-1181d61372484fd797da071aa1bdc7b2",
+        "message_id": "human-debf4647-ce54-4c3e-ba0f-ed6576d1bc66",
+        "attempt_state": "handled",
+        "handled_at": "2026-10-17T23:04:02.786Z",
+        "reason": "human-dm",
+        "admission_state": "handled",
+        "last_error": null
+      }
+    },
+    {
+      "phase": "web-1792278087020",
+      "turn": 2,
+      "endReason": "completed",
+      "delivery": "handled",
+      "source": {
+        "source_event_id": "3b51a1db-aa5f-4226-ba84-5db2c386b43a",
+        "source_kind": "human-message",
+        "bot_slug": "bot-1181d61372484fd797da071aa1bdc7b2",
+        "channel_id": "dm-bot-1181d61372484fd797da071aa1bdc7b2",
+        "message_id": "human-3f554a01-2e43-42f8-890e-5dadae0778a4",
+        "attempt_state": "handled",
+        "handled_at": "2026-10-17T23:04:59.860Z",
+        "reason": "human-dm",
+        "admission_state": "handled",
+        "last_error": null
+      }
+    },
+    {
+      "phase": "web-1792278087020",
+      "turn": 3,
+      "endReason": "completed",
+      "delivery": "handled",
+      "source": {
+        "source_event_id": "047e9e2d-3343-4db5-a82a-f5f47d3ff078",
+        "source_kind": "human-message",
+        "bot_slug": "bot-1181d61372484fd797da071aa1bdc7b2",
+        "channel_id": "dm-bot-1181d61372484fd797da071aa1bdc7b2",
+        "message_id": "human-3d853480-c1ee-4618-b8a8-f95f96d2d7b4",
+        "attempt_state": "handled",
+        "handled_at": "2026-10-17T23:07:01.770Z",
+        "reason": "human-dm",
+        "admission_state": "handled",
+        "last_error": null
+      }
+    },
+    {
+      "phase": "web-1792278651961",
+      "turn": 4,
+      "endReason": "completed",
+      "delivery": "handled",
+      "source": {
+        "source_event_id": "35f68cd7-c570-44af-ac11-d12a5467c04b",
+        "source_kind": "human-message",
+        "bot_slug": "bot-1181d61372484fd797da071aa1bdc7b2",
+        "channel_id": "dm-bot-1181d61372484fd797da071aa1bdc7b2",
+        "message_id": "human-4ec3af4b-d1db-4d69-8f15-d8fff7293f8f",
+        "attempt_state": "handled",
+        "handled_at": "2026-10-17T23:11:14.321Z",
+        "reason": "human-dm",
+        "admission_state": "handled",
+        "last_error": null
+      }
+    }
+  ],
+  "soleProtectedTob": {
+    "botSlug": "bot-1181d61372484fd797da071aa1bdc7b2"
+  },
+  "runtime": "isolated Web only",
+  "sourceChecks": {
+    "focusedPassed": 233,
+    "files": 10,
+    "typecheck": "passed",
+    "build": "passed",
+    "executedBy": "source owner; logs inspected, not rerun in this runtime session"
+  },
+  "retry": {
+    "exactOriginalHumanMessageId": "human-4ec3af4b-d1db-4d69-8f15-d8fff7293f8f",
+    "sameTurn": 4,
+    "completedAndHandled": true,
+    "newModelPromptOnResume": false,
+    "nativeExecutionApprovalOnce": true,
+    "creationMutationReview": false,
+    "exactIdentitySetUnchanged": true
+  },
+  "remaining": [
+    "native macOS",
+    "new integrated-stack runtime",
+    "Human QA",
+    "CI",
+    "merge",
+    "deployment"
+  ],
+  "sameProfileRestart": {
+    "passed": true,
+    "newModelRequest": false,
+    "copiedProfileOrSessions": false
+  },
+  "pageErrors": [],
+  "browserConsole": "not collected in initial model journeys",
+  "driverFailuresPreserved": [
+    "delayed preview dialog before Bot-mode entry",
+    "receipt native execution approval exceeded original120s bound",
+    "native Shell card text mistaken for CLI JSON on first resume",
+    "capture duplicate contact locator",
+    "settled approval correctly hides its former input; retained pending screenshot and canonical proposal instead"
+  ]
+}
