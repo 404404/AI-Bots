@@ -40,7 +40,7 @@ const prefix = join(out, label);
 const call = (...command) =>
   execFileSync(adb, ['-s', serial, ...command], {
     encoding: 'utf8',
-    timeout: 15000,
+    timeout: 35000,
     maxBuffer: 16 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

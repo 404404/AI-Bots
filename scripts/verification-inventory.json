@@ -1386,7 +1386,7 @@
       "behaviors": ["phone.android-interactions"],
       "reason": "Matching Windows Android lease only: profile/settings content-first scroll and handle gestures, dark-theme 30fps composer motion, and focused form/input action clearance against a real soft IME. Form mode accepts prepared sheets and refuses hidden/floating keyboards; it does not submit drafts. Scroll selection excludes the dimmed chat. Prepared QA surface and native build required; FFmpeg for motion only; no model or iOS claim.",
       "task": 2028,
-      "sha256": "568ff7a59c20bf761d5fa8558d9b1fa2003132924e196fcb7675314ce1c7afc8"
+      "sha256": "0036c134a66e0167e4b082017ae44237e29409b24ff38c76b2281e6b9a07826d"
     },
     {
       "path": "scripts/e2e-mobile-pair-android.mjs",
