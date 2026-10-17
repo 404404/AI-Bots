@@ -79,6 +79,25 @@ async function invoke(argv: string[], url?: string, stdin = '', token = 'private
 }
 
 describe('live CLI over the authenticated DSH carrier', () => {
+  it.each([
+    ['channel-content', 'tobChannelContent'],
+    ['bot-progress', 'tobBotProgress'],
+  ])('runs %s against the bounded Human read owner', async (command, method) => {
+    const live = await host((called, args) => {
+      expect(called).toBe(method);
+      expect(args).toEqual({ target: 'selected-id', limit: 2, expectedTarget: 'a'.repeat(64) });
+      return { ok: true, value: { readOnly: true, contentRole: 'data', entries: [] } };
+    });
+    expect(
+      (
+        await invoke(
+          [command, 'selected-id', '--limit', '2', '--expected-target', 'a'.repeat(64)],
+          live.url,
+        )
+      ).json,
+    ).toMatchObject({ ok: true, value: { readOnly: true, contentRole: 'data' } });
+  });
+
   it('classifies an interrupted response body as a transport failure', async () => {
     const live = await host(() => ({}), true);
     const result = await invoke(['release-info', '--timeout', '0.1'], live.url);

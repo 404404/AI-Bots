@@ -28,6 +28,7 @@ import {
   runBotTransfer,
   type BotTransferValues,
 } from './cli-bot-transfer.js';
+import { parseAgentContent, TOB_CONTENT_COMMAND_USAGE } from './cli-agent-content.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -129,6 +130,8 @@ export const LIVE_OPTIONS = {
   ...PAIRED_DEVICE_OPTIONS,
   ...BACKUP_OPTIONS,
   ...BOT_TRANSFER_OPTIONS,
+  'expected-target': { type: 'string' },
+  message: { type: 'string' },
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -222,6 +225,10 @@ export const LIVE_COMMANDS = [
   ...BACKUP_COMMANDS,
   ...BOT_TRANSFER_COMMANDS,
   ...BOT_IMPORT_PREVIEW_COMMANDS,
+  ...Object.entries(TOB_CONTENT_COMMAND_USAGE).map(([command, description]) => ({
+    command,
+    description,
+  })),
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -399,6 +406,8 @@ interface LiveValues
     BotImportPreviewValues {
   host?: string;
   'token-file'?: string;
+  'expected-target'?: string;
+  message?: string;
   timeout?: string;
   'message-id'?: string;
   body?: string;
@@ -761,6 +770,14 @@ export async function runLiveCli(
         });
       throw error;
     }
+  }
+  if (Object.hasOwn(TOB_CONTENT_COMMAND_USAGE, command)) {
+    const { host: _host, 'token-file': _tokenFile, ...options } = values;
+    const operation = parseAgentContent(command, rest, options)!;
+    return (await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)))).rpc(
+      command === 'channel-content' ? 'tobChannelContent' : 'tobBotProgress',
+      operation.args,
+    );
   }
   if (MEMORY_COMMANDS.has(command)) return runMemoryCommand(command, rest, values, io);
   if (isModelsUsageCommand(command))
