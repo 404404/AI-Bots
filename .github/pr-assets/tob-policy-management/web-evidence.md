@@ -17,17 +17,17 @@ Later evidence-only descendants do not change the qualified product.
 
 One task-owned Profile and the current worktree's compiled core CLI were used throughout. Pinned DSH: `0.2.0-rc.2`. Native IM Provider: `@xmanrui/dsh-im@4.32.0`, qualified source `beaed4a6dabb583654d28fb09298716267039b4a`. Real Tob turns used the official `deepseek-official/deepseek-flash` route. Every named model journey completed its native turn and marked the Human delivery handled. No dedicated Tob management model tool was called.
 
-| Journey | Actual result |
-| --- | --- |
-| Capability introduction | Native Shell ran `deepseekbot capabilities`; no mutation. |
-| Read-only Workspace grant | Fresh scoped Human review; canonical grant saved with `orchestratorWrite=false`. |
-| Approval-template refusal | Human denied the scoped card; CLI returned `approval-denied`; template stayed unset; no retry. |
-| Approval-template change | Fresh Human review selected `cautious`; independent CLI readback confirmed it. |
-| Concurrent connector change | Independent Human CLI changed failure alerts while review was pending; approving the old proposal returned `stale-policy`, preserving the newer value. |
-| Connector policy edit | Fresh Human review disabled failure alerts; canonical revision became 4. Route availability stayed false; no delivery was attempted. |
-| Workspace revoke | Fresh Human review; original grant gained `revokedAt`; active grant list became empty. |
-| Same-Profile restart | Existing Workspace UI showed zero workspaces and cautious template. CLI retained disabled alerts revision 4 and the revoked grant. |
-| Final reporting check | A simple natural request created a new read-only grant after Human approval. Tob explicitly reported approval and successful readback; the old grant stayed revoked. |
+| Journey                     | Actual result                                                                                                                                                        |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Capability introduction     | Native Shell ran `deepseekbot capabilities`; no mutation.                                                                                                            |
+| Read-only Workspace grant   | Fresh scoped Human review; canonical grant saved with `orchestratorWrite=false`.                                                                                     |
+| Approval-template refusal   | Human denied the scoped card; CLI returned `approval-denied`; template stayed unset; no retry.                                                                       |
+| Approval-template change    | Fresh Human review selected `cautious`; independent CLI readback confirmed it.                                                                                       |
+| Concurrent connector change | Independent Human CLI changed failure alerts while review was pending; approving the old proposal returned `stale-policy`, preserving the newer value.               |
+| Connector policy edit       | Fresh Human review disabled failure alerts; canonical revision became 4. Route availability stayed false; no delivery was attempted.                                 |
+| Workspace revoke            | Fresh Human review; original grant gained `revokedAt`; active grant list became empty.                                                                               |
+| Same-Profile restart        | Existing Workspace UI showed zero workspaces and cautious template. CLI retained disabled alerts revision 4 and the revoked grant.                                   |
+| Final reporting check       | A simple natural request created a new read-only grant after Human approval. Tob explicitly reported approval and successful readback; the old grant stayed revoked. |
 
 The first grant reply incorrectly claimed direct application without waiting, despite an actual Human approval card. This was a reporting discrepancy, not a bypass. The final system/catalog instruction and deterministic contracts address it. The fresh final reply said: “你批准了这次请求，改动已实际生效”. This one run supports the corrected path; it does not guarantee all future model wording.
 
