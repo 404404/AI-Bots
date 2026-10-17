@@ -16,6 +16,7 @@ vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }));
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
+vi.mock('react-native-tab-view', () => import('./tab-view-shim'));
 vi.mock('expo-haptics', () => import('./expo-haptics-shim'));
 vi.mock('expo-router', () => ({ useRouter: () => ({ push: () => undefined }) }));
 vi.mock('../src/ui/bot-avatar', () => ({
@@ -427,7 +428,7 @@ describe('Activity feed', () => {
     );
   });
 
-  it.each(['search', 'channel', 'tab'] as const)(
+  it.each(['search', 'channel', 'tab', 'swipe'] as const)(
     'does not restore a late refused question after the %s changes',
     async (change) => {
       const fake = host();
@@ -465,6 +466,8 @@ describe('Activity feed', () => {
         });
       } else if (change === 'tab') {
         await press(button(view, t.inboxSections.replies));
+      } else if (change === 'swipe') {
+        await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
       } else {
         await press(button(view, t.activityOptions));
         await press(button(view, 'Other Channel'));
@@ -480,6 +483,39 @@ describe('Activity feed', () => {
       if (change === 'search') expect(view.textContent).toContain(t.activityNoResults);
     },
   );
+
+  it('applies a pager selection to the Host query while retaining other filters in both directions', async () => {
+    const fake = host();
+    const queries: Record<string, unknown>[] = [];
+    fake.answers.set('humanAttention', (args) => {
+      queries.push(args);
+      return { ok: true, value: { items: [] } };
+    });
+    const view = await feed(fake, ready([]));
+    await press(button(view, t.activityOptions));
+    await press(button(view, t.activitySortOldest));
+    await press(button(view, 'Other Channel'));
+    await press(button(view, t.cancel));
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(queries.at(-1)).toMatchObject({
+      category: 'replies',
+      sort: 'oldest',
+      channelId: 'other-channel',
+    });
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-next"]')!);
+    expect(queries.at(-1)).toMatchObject({
+      category: 'unread',
+      sort: 'oldest',
+      channelId: 'other-channel',
+    });
+    await press(view.querySelector<HTMLElement>('[data-testid="pager-previous"]')!);
+    expect(queries.at(-1)).toMatchObject({
+      category: 'replies',
+      sort: 'oldest',
+      channelId: 'other-channel',
+    });
+    expect(button(view, t.inboxSections.replies).getAttribute('aria-selected')).toBe('true');
+  });
 
   it('keeps a post that lost to another device and says so', async () => {
     const fake = host();

@@ -8,8 +8,16 @@ import {
   useSyncExternalStore,
   type ReactElement,
 } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, View } from 'react-native';
-import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  RefreshControl,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import { TabView } from 'react-native-tab-view';
+import Animated, { FadeOut, LinearTransition, useReducedMotion } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
 import {
@@ -40,7 +48,7 @@ import { Loading, Notice } from '../request-parts';
 import { EdgeFade, useChatHeaderHeight } from '../chat/header-chrome';
 import { Button } from '../primitives/button';
 import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
-import { ActivityTabs } from './activity-tabs';
+import { ActivityTabs, ACTIVITY_TABS, type ActivityTab } from './activity-tabs';
 import { useFloatingTabInset } from './floating-tab-inset';
 import { t } from '../strings';
 import {
@@ -52,6 +60,7 @@ import {
 
 const AVATAR = 32;
 const LOADING: InboxSnapshot = { status: 'loading' };
+const ACTIVITY_ROUTES = [...ACTIVITY_TABS];
 
 type FeedRow =
   | { kind: 'empty'; key: string }
@@ -327,18 +336,7 @@ function Post({
   );
 }
 
-export function ActivityFeed({
-  hostId,
-  client,
-  inbox,
-  snapshot,
-  botSlugs,
-  channels = [],
-  bot,
-  onOpen,
-  header,
-  now = Date.now(),
-}: {
+type ActivityFeedProps = {
   hostId: string;
   client: HostClient | undefined;
   inbox: Inbox | undefined;
@@ -349,22 +347,123 @@ export function ActivityFeed({
   onOpen(item: HumanAttentionItem): void;
   header?: ReactElement | null;
   now?: number;
-}) {
+};
+
+export function ActivityFeed(props: ActivityFeedProps) {
+  const { botSlugs, channels = [], bot } = props;
   const theme = useDesignTheme();
-  const bottom = useFloatingTabInset();
   const toolbar = useRef<ActivityToolbarHandle>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
-  const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
   const [filter, setFilter] = useState<ActivityFilter>(DEFAULT_ACTIVITY);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [sort, setSort] = useState<ActivitySort>('default');
   const [filtering, setFiltering] = useState(false);
+  const [lastTab, setLastTab] = useState(0);
   const initialHeight = useChatHeaderHeight();
   const insets = useSafeAreaInsets();
-  const [tabsHeight, setTabsHeight] = useState(theme.touch);
   const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
+  const width = useWindowDimensions().width;
+  const reducedMotion = useReducedMotion();
+  const selectedIndex = ACTIVITY_TABS.findIndex((tab) => tab.key === filter.section);
+  const index = selectedIndex < 0 ? lastTab : selectedIndex;
+  const slugsWithSelection =
+    filter.bot !== undefined && !botSlugs.includes(filter.bot)
+      ? [...botSlugs, filter.bot]
+      : botSlugs;
+  const selectIndex = (next: number) => {
+    const tab = ACTIVITY_TABS[next];
+    if (!tab) return;
+    setLastTab(next);
+    setFilter((current) => ({ ...current, section: tab.key }));
+  };
+  const top =
+    Platform.OS === 'ios' ? Math.max(headerHeight, initialHeight - insets.top) : headerHeight;
+  return (
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={searchFocused} behavior="padding">
+      <TabView
+        style={{ marginTop: top, backgroundColor: theme.color.base }}
+        navigationState={{ index, routes: ACTIVITY_ROUTES }}
+        initialLayout={{ width }}
+        onIndexChange={selectIndex}
+        animationEnabled={!reducedMotion}
+        lazy
+        renderLazyPlaceholder={() => <Loading />}
+        renderTabBar={({ position, jumpTo }) => (
+          <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
+        )}
+        renderScene={({ route }: { route: ActivityTab }) => (
+          <ActivityPage
+            {...props}
+            filter={
+              route.key === ACTIVITY_TABS[index]?.key ? filter : { ...filter, section: route.key }
+            }
+            search={search}
+            sort={sort}
+            active={route.key === ACTIVITY_TABS[index]?.key}
+            searchFocused={searchFocused}
+            dismissSearch={() => toolbar.current?.dismissSearch()}
+          />
+        )}
+      />
+      <ActivityToolbar
+        ref={toolbar}
+        search={search}
+        onSearchFocus={setSearchFocused}
+        filtered={
+          sort !== 'default' ||
+          filter.section === 'all' ||
+          filter.section === 'handled' ||
+          filter.bot !== undefined ||
+          filter.channel !== undefined ||
+          filter.unreadOnly === true
+        }
+        onSearch={setSearch}
+        onFilter={() => setFiltering(true)}
+        onHeight={setHeaderHeight}
+      />
+      <ActivityFilters
+        visible={filtering}
+        sort={sort}
+        onSort={setSort}
+        filter={filter}
+        channels={channels}
+        bots={slugsWithSelection.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
+        onFilter={setFilter}
+        onClose={() => setFiltering(false)}
+      />
+    </KeyboardAvoidingView>
+  );
+}
+
+function ActivityPage({
+  hostId,
+  client,
+  inbox,
+  snapshot,
+  bot,
+  onOpen,
+  header,
+  now = Date.now(),
+  filter,
+  search,
+  sort,
+  active,
+  searchFocused,
+  dismissSearch,
+}: ActivityFeedProps & {
+  filter: ActivityFilter;
+  search: string;
+  sort: ActivitySort;
+  active: boolean;
+  searchFocused: boolean;
+  dismissSearch(): void;
+}) {
+  const theme = useDesignTheme();
+  const bottom = useFloatingTabInset();
+  const [refreshing, setRefreshing] = useState(false);
+  const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
+  const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
+  useLayoutEffect(() => setHeld([]), [filter, search, sort]);
   const scoped = useMemo(
     () =>
       client === undefined
@@ -380,14 +479,14 @@ export function ActivityFeed({
           }),
     [client, filter.section, filter.bot, filter.channel, filter.unreadOnly, search, sort],
   );
-  const settlementScope = useMemo(() => ({}), [hostId, scoped, filter, search, sort]);
+  const settlementScope = useMemo(() => ({}), [hostId, scoped, filter, search, sort, active]);
   const activeSettlementScope = useRef<object | undefined>(undefined);
   useLayoutEffect(() => {
-    activeSettlementScope.current = settlementScope;
+    activeSettlementScope.current = active ? settlementScope : undefined;
     return () => {
       activeSettlementScope.current = undefined;
     };
-  }, [settlementScope]);
+  }, [settlementScope, active]);
   const scopedSnapshot = useSyncExternalStore(
     useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
     useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
@@ -395,10 +494,6 @@ export function ActivityFeed({
   const visible = scoped === undefined ? snapshot : scopedSnapshot;
   const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
   const rows = feedRows(visible, gone, held, filter, search);
-  const slugsWithSelection =
-    filter.bot !== undefined && !botSlugs.includes(filter.bot)
-      ? [...botSlugs, filter.bot]
-      : botSlugs;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
     if (activeSettlementScope.current !== settlementScope) return;
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
@@ -410,22 +505,22 @@ export function ActivityFeed({
     void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} enabled={searchFocused} behavior="padding">
+    <View
+      style={{ flex: 1 }}
+      accessibilityElementsHidden={!active}
+      importantForAccessibility={active ? 'auto' : 'no-hide-descendants'}
+    >
       <Animated.FlatList
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         contentContainerStyle={{
           flexGrow: 1,
-          paddingTop: Platform.OS === 'ios' ? Math.max(0, headerHeight - insets.top) : 0,
           paddingBottom: bottom + space.x6,
         }}
-        scrollIndicatorInsets={{ top: tabsHeight }}
-        stickyHeaderIndices={[0]}
         automaticallyAdjustKeyboardInsets={!searchFocused}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         style={{
           backgroundColor: theme.color.base,
-          marginTop: Platform.OS === 'ios' ? 0 : headerHeight,
         }}
         data={[{ kind: 'status', key: 'status' } as const, ...rows]}
         keyExtractor={(row) => row.key}
@@ -433,23 +528,7 @@ export function ActivityFeed({
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         ListFooterComponentStyle={{ flexGrow: 1 }}
         ListFooterComponent={
-          <Pressable
-            accessible={false}
-            onPress={() => toolbar.current?.dismissSearch()}
-            style={{ flex: 1 }}
-          />
-        }
-        ListHeaderComponent={
-          <View onLayout={(event) => setTabsHeight(event.nativeEvent.layout.height)}>
-            <ActivityTabs
-              selected={filter.section}
-              onSelect={(section) => {
-                if (section === filter.section) return;
-                setHeld([]);
-                setFilter((current) => ({ ...current, section }));
-              }}
-            />
-          </View>
+          <Pressable accessible={false} onPress={() => dismissSearch()} style={{ flex: 1 }} />
         }
         renderItem={({ item: row }) => {
           if (row.kind === 'status')
@@ -533,55 +612,12 @@ export function ActivityFeed({
           );
         }}
       />
-      {Platform.OS === 'ios' ? null : (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: headerHeight + tabsHeight,
-            left: 0,
-            right: 0,
-            height: space.x6,
-          }}
-        >
-          <EdgeFade edge="top" height={space.x6} />
-        </View>
-      )}
-      <ActivityToolbar
-        ref={toolbar}
-        search={search}
-        onSearchFocus={setSearchFocused}
-        filtered={
-          sort !== 'default' ||
-          filter.section === 'all' ||
-          filter.section === 'handled' ||
-          filter.bot !== undefined ||
-          filter.channel !== undefined ||
-          filter.unreadOnly === true
-        }
-        onSearch={(value) => {
-          setHeld([]);
-          setSearch(value);
-        }}
-        onFilter={() => setFiltering(true)}
-        onHeight={setHeaderHeight}
-      />
-      <ActivityFilters
-        visible={filtering}
-        sort={sort}
-        onSort={(value) => {
-          setHeld([]);
-          setSort(value);
-        }}
-        filter={filter}
-        channels={channels}
-        bots={slugsWithSelection.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
-        onFilter={(value) => {
-          setHeld([]);
-          setFilter(value);
-        }}
-        onClose={() => setFiltering(false)}
-      />
-    </KeyboardAvoidingView>
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: space.x6 }}
+      >
+        <EdgeFade edge="top" height={space.x6} />
+      </View>
+    </View>
   );
 }

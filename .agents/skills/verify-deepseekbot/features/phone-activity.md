@@ -1,15 +1,5 @@
 # Native activity rows
 
-## Sub-features
-
-DM/group activity layout, full details, explicit navigation and device-local DM visibility switches.
-
-## How to get to it (user POV)
-
-Open the dedicated QA DM or group in the paired phone app. Activity rows appear in its conversation timeline; long-press a row for details and explicit destinations.
-
-## Driving it with verify-app
-
 Use the shared device queue; reuse its sole assigned Simulator and existing dev
 client for this JavaScript-only change. Do not run a second Simulator or restart
 the shared QA Host. Use only the dedicated QA conversations.
@@ -34,10 +24,6 @@ the shared QA Host. Use only the dedicated QA conversations.
    still work. Record source and integrated batch SHAs and capture DM/group/menu
    before/after in light/dark; disclose physical-device and Android gaps.
 
-## Gotchas
-
-This is a shared-Simulator manual path using existing QA records, not a fresh-Host scripted journey. Follow [shared device QA](../../../../docs/agents/device-qa.md). The recorded evidence in [PR #1928](https://github.com/BotHarness/DeepSeekBot/pull/1928) has its own commit and limitations; this map update does not requalify touch timing, overflow scrolling, Android or a physical phone.
-
 
 ## Activity tab triage (#1954)
 
@@ -47,13 +33,19 @@ Confirm exactly three pinned, underlined tabs: Needs you (default), For you and
 Other unread. Needs you retains approvals, formal questions and private input.
 Switch all three tabs; only their own rows appear, without collapsible section
 headings. The selected tab shows its leading icon and underline together; inactive
-tabs show only their labels. Labels and tab bounds stay in place as selection changes.
+tabs show only their labels. All three blocks have equal width; the selected icon and
+label are centered together and its underline fills the entire block without gutters.
+Swipe left/right from the page content (including empty/loading states), not just the
+tab strip, to switch pages. The underline tracks the gesture; short/cancelled drags
+return to the same page. Scroll a populated page vertically, switch away and back,
+and confirm its scroll position is retained. Vertical scrolling and pull-to-refresh
+must not switch pages. Check repeated fast direction changes and tap-to-third-tab.
 All and handled history remain available through the filter. The header contains
 sorting, filtering and Activity search; no permanent chips appear above the feed.
 Open Filters, combine Bot/Channel/unread/category, switch tabs and confirm those
 other filters survive. Reset returns to Needs you and default filters, preserving
 the search. Close the sheet. While a question submission is pending, switch tabs;
-a late refusal must not restore its post in the new tab.
+a late refusal must not restore its post in the new tab. Repeat with a page swipe.
 Search a safe summary beyond the first page and use Load more. Default ordering
 puts mentions before replies; explicit newest/oldest replaces that priority.
 Scroll under the header with search open and closed; verify light/dark and large
