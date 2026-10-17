@@ -37,7 +37,11 @@ async function rpc(method, args = {}, ns = 'botharness') {
       },
       { method, args, ns },
     );
-    assert.equal(result?.ok, true, JSON.stringify(result?.error));
+    assert.equal(
+      result?.ok,
+      true,
+      `${ns}/${method}: ${result?.error?.code}: ${result?.error?.message}`,
+    );
     return result.value;
   }
   const response = await fetch(`${origin}/api/${ns}/${method}`, {
@@ -259,8 +263,15 @@ async function modelUi(route) {
   mark('model-ui-verified');
 }
 
-async function newToolCalls(slug, previousIds) {
-  const trace = await rpc('botToolTrace', { slug, turns: 20 });
+async function newToolCalls(slug, previousIds, sessionId) {
+  const trace = await rpc('botToolTrace', {
+    slug,
+    turns: 20,
+    ...(sessionId ? { sessionId } : {}),
+  }).catch((error) => {
+    if (/gateway\/internal: session "[^"\n]+" not found/u.test(error.message)) return { turns: [] };
+    throw error;
+  });
   const calls = trace.turns
     .flatMap((turn) => turn.calls)
     .filter((call) => !previousIds.has(call.callId));
@@ -270,6 +281,66 @@ async function newToolCalls(slug, previousIds) {
     'legacy dedicated Tob management tool was invoked',
   );
   return { trace, calls };
+}
+
+async function waitForIntroCompletion(home, prompt, previousMessageIds, previousCalls, started) {
+  let sessionId, turnNumber, messageId;
+  for (let i = 0; i < 120; i++) {
+    const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const fresh = messages.filter((message) => !previousMessageIds.has(message.id));
+    assert.ok(
+      !fresh.some((message) => message.toolApprovalRequest),
+      'introduction proposed approval',
+    );
+    assert.ok(!fresh.some((message) => message.sessionFailure), 'introduction Session failed');
+    const submitted = fresh.find(
+      (message) => message.author.kind === 'human' && message.body === prompt,
+    );
+    if (submitted) messageId ??= submitted.id;
+    const evidence = await newToolCalls(home.botSlug, previousCalls, sessionId);
+    if (turnNumber === undefined) {
+      const turn = evidence.trace.turns.find(
+        (entry) =>
+          Date.parse(entry.startedAt) >= started &&
+          entry.calls.some(
+            (call) =>
+              !previousCalls.has(call.callId) &&
+              ['bash', 'pwsh'].includes(call.name) &&
+              JSON.stringify(call.args).includes('deepseekbot capabilities'),
+          ),
+      );
+      if (turn) {
+        sessionId = evidence.trace.sessionId;
+        turnNumber = turn.turn;
+      }
+    }
+    const turn = evidence.trace.turns.find((entry) => entry.turn === turnNumber);
+    if (turn?.endReason !== undefined)
+      assert.equal(turn.endReason, 'completed', 'introduction turn did not complete successfully');
+    const delivery = messages
+      .find((message) => message.id === messageId)
+      ?.deliveries?.find((entry) => entry.botSlug === home.botSlug);
+    assert.ok(
+      !['retryable', 'needs-repair', 'ignored'].includes(delivery?.state),
+      'submitted introduction was not handled successfully',
+    );
+    if (messageId && turn?.endReason === 'completed' && delivery?.state === 'handled') {
+      const completion = {
+        messageId,
+        sessionId,
+        turn: turnNumber,
+        endReason: turn.endReason,
+        delivery: delivery.state,
+      };
+      writeFileSync(
+        resolve(out, 'intro-turn-completion.json'),
+        JSON.stringify(completion, null, 2),
+      );
+      return completion;
+    }
+    await pause(1000);
+  }
+  throw Error('submitted introduction did not reach a completed native turn and handled delivery');
 }
 
 async function verifyCliTrace(slug, previousIds, commands, refusal) {
@@ -468,6 +539,7 @@ try {
 
   assert.ok(
     [
+      'intro',
       'discovery',
       'maintenance-refusals',
       'runtime-approve',
@@ -502,16 +574,20 @@ try {
     const previousCalls = new Set(
       trace.turns.flatMap((turn) => turn.calls).map((call) => call.callId),
     );
+    const previousMessages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+    const previousMessageIds = new Set(previousMessages.map((message) => message.id));
     const previousIds = new Set(
-      (await rpc('channelMessages', { channelId: home.channelId })).messages
-        .filter((m) => m.toolApprovalRequest)
-        .map((m) => m.id),
+      previousMessages
+        .filter((message) => message.toolApprovalRequest)
+        .map((message) => message.id),
     );
     const beforePlan = await rpc('modelPlan', { slug: target });
     const previousDeveloper = initial.value.developerMode === true;
     const desiredDeveloper = !previousDeveloper;
     let command, prompt, route, maintenanceBefore;
-    if (phase === 'discovery') {
+    if (phase === 'intro') {
+      prompt = process.env.BH_E2E_SIMPLE_PROMPT || '你能做什么？';
+    } else if (phase === 'discovery') {
       const direct = {};
       for (const [name, args] of [
         ['model-catalog', []],
@@ -565,6 +641,8 @@ try {
       command = 'settings-set';
       prompt = `Use native bash to run deepseekbot settings botharness-client. Request approval to change only developerMode to ${desiredDeveloper} through deepseekbot settings-set botharness-client --patch-stdin --expected-revision REVISION --previous-value with the exact previous developerMode JSON. Pipe the patch JSON to stdin. Use separate short read/write commands. After approval read it back. If denied or stale, report the exact refusal code and stop without retrying. Do not delegate, change the model or credentials, or edit config files.`;
     }
+    if (phase === 'runtime-approve' && process.env.BH_E2E_NATURAL_CHANGE === '1')
+      prompt = desiredDeveloper ? '帮我开启开发者模式。' : '帮我关闭开发者模式。';
     mark('prompt-submit');
     const started = Date.now();
     const input = await page.waitForSelector('[data-home-panel] textarea');
@@ -572,7 +650,91 @@ try {
     await input.press('Enter');
     await page.waitForSelector('[data-dock-header="bh:channel-body"]');
     mark('prompt-submitted');
-    if (phase === 'discovery') {
+    if (phase === 'intro') {
+      await verifyCliTrace(home.botSlug, previousCalls, ['capabilities']);
+      const completion = await waitForIntroCompletion(
+        home,
+        prompt,
+        previousMessageIds,
+        previousCalls,
+        started,
+      );
+      mark('intro-turn-completed');
+      let reply;
+      for (let i = 0; i < 120; i++) {
+        const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+        reply = messages.find(
+          (m) =>
+            m.author.kind === 'bot' &&
+            !m.toolApprovalRequest &&
+            !m.onboardingWelcome &&
+            !m.sessionFailure &&
+            Date.parse(m.at) >= started &&
+            m.body,
+        );
+        if (reply) break;
+        await pause(1000);
+      }
+      assert.ok(reply, 'natural capability reply missing');
+      const calls = (await newToolCalls(home.botSlug, previousCalls, completion.sessionId)).calls;
+      const capabilityCall = calls.find(
+        (call) =>
+          ['bash', 'pwsh'].includes(call.name) &&
+          JSON.stringify(call.args).includes('deepseekbot capabilities'),
+      );
+      assert.equal(capabilityCall?.outcome, 'ok', 'capability discovery failed');
+      assert.ok(
+        capabilityCall?.result.includes('assignmentConcurrencyLimit'),
+        'capability result missing',
+      );
+      assert.match(reply.body, /模型|model/iu, 'reply should explain current model capability');
+      assert.match(reply.body, /[？?]/u, 'reply should invite a concrete next step');
+      assert.ok(
+        !calls.some((call) =>
+          /deepseekbot (?:settings-set|home-model-set|model-plan-(?:set|customize|inherit|assignments-set)|model-preset-(?:create|update|apply)|telemetry-set|git-install|release-(?:install|restart))\b/u.test(
+            JSON.stringify(call.args),
+          ),
+        ),
+        'capability question must not propose a write',
+      );
+      const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages;
+      assert.equal(
+        messages.filter((m) => m.toolApprovalRequest && !previousIds.has(m.id)).length,
+        0,
+      );
+      const current = await settings();
+      assert.deepEqual(current.value, initial.value, 'introduction changed global settings');
+      assert.equal(current.revision, initial.revision, 'introduction changed settings revision');
+      assert.deepEqual(
+        await rpc('modelPlan', { slug: target }),
+        beforePlan,
+        'introduction changed Bot model',
+      );
+      await page.waitForFunction(
+        (id) => !!document.querySelector(`[data-message-id="${id}"]`),
+        {},
+        reply.id,
+      );
+      await dismissBubble();
+      if (await page.$('[data-home-panel]')) {
+        await page.locator('.bh-workspace-rail [data-pinned-panel="bh:home"]').click();
+        await page.waitForFunction(() => !document.querySelector('[data-home-panel]'));
+      }
+      const replySelector = `[data-message-id="${reply.id}"]`;
+      for (const label of ['展开全部', 'Expand all']) {
+        const button = await page.$(`${replySelector} ::-p-aria(${JSON.stringify(label)})`);
+        if (button && (await button.isVisible())) await button.click();
+      }
+      await page.$eval(replySelector, (node) => node.scrollIntoView({ block: 'start' }));
+      await pause(500);
+      writeFileSync(
+        resolve(out, 'natural-intro.json'),
+        JSON.stringify({ prompt, completion, reply: reply.body, calls }, null, 2),
+      );
+      steps.push(
+        'short natural question discovers installed CLI capabilities, explains models and asks a next step; no approval or mutation',
+      );
+    } else if (phase === 'discovery') {
       await verifyCliTrace(home.botSlug, previousCalls, [
         'capabilities',
         'model-catalog',

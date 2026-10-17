@@ -646,6 +646,10 @@ The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist
 
 Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
 
+Tob's Host-supplied system guidance is bundled with the plugin and is installed only for the protected Tob Orchestrator; upgrades do not overwrite the Human's editable personality or Memory. A simple question such as “What can you do?” first discovers the installed CLI capabilities, then describes practical outcomes in the Human's language and offers a concrete next step. Capability questions are read-only: they do not propose a mutation or approval. A later specific change request still goes through the existing authority and approval checks.
+
+The npm Bundle ships the core CLI module and product CLI entry. Tob uses a managed executable injected into its eligible Shell environment; it does not depend on a global `deepseekbot`, a source checkout, or manually copied skill files. Missing packaged CLI entries fail release verification; an unavailable runtime CLI is reported rather than replaced with an administrative fallback.
+
 Inside an eligible Tob Shell execution:
 
 ```bash
