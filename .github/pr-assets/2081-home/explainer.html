@@ -2444,10 +2444,19 @@
                     </thead>
                     <tbody>
                       <tr>
-                        <td>相关209项测试、类型、策略与构建</td>
+                        <td>初始dca的209项测试、类型、策略与构建</td>
                         <td>
                           <span class="am-status am-status--ok"
                             ><span class="am-status-icon" aria-hidden="true">✓</span>通过</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>当前62的顺序7项、桥接17项、类型与构建</td>
+                        <td>
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span>通过，其他51项
+                            owner 回归通过</span
                           >
                         </td>
                       </tr>
@@ -2487,9 +2496,9 @@
                       <tr>
                         <td>新审批/提问桥接 macOS</td>
                         <td>
-                          <span class="am-status am-status--warn"
-                            ><span class="am-status-icon" aria-hidden="true">!</span
-                            >重新验证排队中</span
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span
+                            >真实来源、回答/拒绝与完整 Turn</span
                           >
                         </td>
                       </tr>
@@ -2503,11 +2512,11 @@
                         </td>
                       </tr>
                       <tr>
-                        <td>真实 Git/ZIP 导入、降级用量状态</td>
+                        <td>Git/ZIP 执行及降级用量状态</td>
                         <td>
                           <span class="am-status am-status--warn"
-                            ><span class="am-status-icon" aria-hidden="true">!</span
-                            >仍需运行验证</span
+                            ><span class="am-status-icon" aria-hidden="true">!</span>既有导入 owner
+                            的门；用量运行态另验</span
                           >
                         </td>
                       </tr>
@@ -2617,7 +2626,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 08:09 ·
+      0.5.0 · 2026-10-18 08:12 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2697,14 +2706,15 @@ Home 不启动轮询或模型报告。
 
 | 检查 | 状态 |
 |---|---|
-| 相关209项测试、类型、策略与构建 | ok 通过 |
+| 初始dca的209项测试、类型、策略与构建 | ok 通过 |
+| 当前62的顺序7项、桥接17项、类型与构建 | ok 通过，其他51项 owner 回归通过 |
 | 构建后的 Client 包契约7项 | ok 通过 |
 | Web 四卡片、精确范围和来源跳转 | ok 通过 |
 | Web 简单真实对话、完成投递与正数用量 | ok 通过 |
 | macOS 四卡片、真实对话、创建与重启 | ok 原产品dca独立验证 |
-| 新审批/提问桥接 macOS | warn 重新验证排队中 |
+| 新审批/提问桥接 macOS | ok 真实来源、回答/拒绝与完整 Turn |
 | Web 缺少模型创建、真实提问与审批 | ok 真实来源、回答/拒绝及完成回读 |
-| 真实 Git/ZIP 导入、降级用量状态 | warn 仍需运行验证 |
+| Git/ZIP 执行及降级用量状态 | warn 既有导入 owner 的门；用量运行态另验 |
 | Human QA、完整 CI、整合栈 | warn 独立检查，尚未通过 |
 
 早先提问和审批被通用 Remote 等待截获。

@@ -1,0 +1,53 @@
+{
+  "issue": 2081,
+  "driverSource": "ffb727860e1fa2ea3423e30ec0d74775d047b481",
+  "productBuild": "62e9b9981e138219c8ec2cfe01d435e8510d3221",
+  "platform": "macOS Desktop",
+  "pixelSize": [2522, 1640],
+  "theme": "dark",
+  "locale": "zh",
+  "profile": "same absolute task home; no Session copy",
+  "nativeQuestion": {
+    "result": "passed",
+    "pageErrors": [],
+    "actionCount": 1,
+    "canonicalAnswer": "answered",
+    "turn": "completed"
+  },
+  "nativeApproval": {
+    "result": "passed",
+    "pageErrors": [],
+    "actionBefore": 1,
+    "actionAfter": 0,
+    "outcome": "approval-denied",
+    "before": {
+      "assignmentConcurrencyLimit": 8,
+      "revision": 0
+    },
+    "after": {
+      "assignmentConcurrencyLimit": 8,
+      "revision": 0
+    },
+    "turn": "completed"
+  },
+  "artifactSha256": [
+    {
+      "path": "packages/core/dist/index.mjs",
+      "sha256": "9a7e12e625876239a27cbb1bce2022ac38389b0d7dbeb6f4f6a6117184b50757"
+    },
+    {
+      "path": "packages/client/dist/index.mjs",
+      "sha256": "595b90bc8ff67c4c2891f3991706a1224a150fe864492cf159ee53310a41885c"
+    },
+    {
+      "path": "packages/client/lib/client.js",
+      "sha256": "caf702e3878377ed6b64da85f62ca2f9631ca1b8f45ec3bb4a8012141ee13a51"
+    }
+  ],
+  "limits": [
+    "Initial four native baseline journeys used product dca95340aa978aedfb82b09feef878bf7ab401b9",
+    "Missing-model setup/cancel and missing-model section creation qualified on Web",
+    "Import execution qualified by its existing owners, not by form switching",
+    "Degraded usage runtime and Human QA remain separate gates"
+  ]
+}
