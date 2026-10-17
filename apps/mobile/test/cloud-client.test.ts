@@ -242,3 +242,139 @@ describe('mobile cloud session boundary', () => {
     expect(f.calls.some((c) => c.url === config.auth.tokenEndpoint)).toBe(false);
   });
 });
+
+describe('cloud organizations', () => {
+  function organizationsFixture() {
+    const f = fixture();
+    const original = f.rt.request;
+    const state = {
+      selected: '',
+      role: 'owner',
+      version: 1,
+      description: '',
+      loseCreate: false,
+      denied: false,
+      mismatch: false,
+    };
+    const operations: string[] = [];
+    f.rt.request = async (url, init) => {
+      if (url === config.auth.tokenEndpoint) {
+        const id = new URLSearchParams(String(init?.body)).get('organization_id');
+        if (id) state.selected = id;
+      }
+      if (!url.includes('/api/organizations')) return original(url, init);
+      if (state.denied)
+        return Response.json({ error: { code: 'ORGANIZATION_ACCESS_DENIED' } }, { status: 403 });
+      const org = {
+        organizationId: state.mismatch ? 'org_wrong' : 'org_a',
+        name: 'Mobile project',
+        description: state.description,
+        version: state.version,
+        role: state.role,
+      };
+      if (url.endsWith('/access'))
+        return Response.json({ organizationId: 'org_a', role: state.role });
+      if (init?.method === 'POST') {
+        operations.push(new Headers(init.headers).get('Idempotency-Key')!);
+        if (state.loseCreate) {
+          state.loseCreate = false;
+          throw new Error('response lost');
+        }
+        return Response.json({ created: true, organizationId: 'org_a' });
+      }
+      if (url.endsWith('/org_a')) {
+        if (state.selected !== 'org_a')
+          return Response.json({ error: { code: 'ORGANIZATION_TOKEN_REQUIRED' } }, { status: 403 });
+        if (init?.method === 'PATCH') {
+          if (state.role !== 'owner')
+            return Response.json(
+              { error: { code: 'ORGANIZATION_OWNER_REQUIRED' } },
+              { status: 403 },
+            );
+          const body = JSON.parse(String(init.body));
+          if (body.version !== state.version)
+            return Response.json(
+              { error: { code: 'ORGANIZATION_VERSION_CONFLICT' } },
+              { status: 409 },
+            );
+          state.description = body.description;
+          state.version++;
+          org.description = state.description;
+          org.version = state.version;
+        }
+        return Response.json(org);
+      }
+      return Response.json({ organizations: [org], nextCursor: null });
+    };
+    return { ...f, state, operations };
+  }
+  it('creates, selects through WorkOS refresh, updates, and revalidates the same organization after restart', async () => {
+    const f = organizationsFixture();
+    const client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    expect(await client.createOrganization(config.instanceId, 'Mobile project')).toBe('org_a');
+    expect((await client.listOrganizations(config.instanceId)).organizations[0].role).toBe('owner');
+    await client.useOrganization(config.instanceId, 'org_a');
+    expect(f.state.selected).toBe('org_a');
+    await client.updateOrganization(config.instanceId, 'Shared note', 1);
+    await expect(client.updateOrganization(config.instanceId, 'Stale', 1)).rejects.toMatchObject({
+      code: 'ORGANIZATION_VERSION_CONFLICT',
+    });
+    const restarted = new CloudClient(f.rt);
+    await restarted.load();
+    expect(restarted.getSnapshot().rows[0].organization).toBeUndefined();
+    await restarted.whoami(config.instanceId);
+    expect(restarted.getSnapshot().rows[0].organization).toMatchObject({
+      organizationId: 'org_a',
+      description: 'Shared note',
+      version: 2,
+    });
+    await restarted.logout(config.instanceId);
+    expect(restarted.getSnapshot().rows[0].organization).toBeUndefined();
+  });
+  it('retains the original creation operation across response loss and app restart', async () => {
+    const f = organizationsFixture();
+    const client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    f.state.loseCreate = true;
+    await expect(
+      client.createOrganization(config.instanceId, 'Mobile project'),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    const restarted = new CloudClient(f.rt);
+    await restarted.load();
+    expect(restarted.getSnapshot().rows[0].pendingCreate?.name).toBe('Mobile project');
+    await expect(restarted.createOrganization(config.instanceId, 'Other')).rejects.toMatchObject({
+      code: 'PENDING_ORGANIZATION_CREATE',
+    });
+    await restarted.createOrganization(config.instanceId, 'Mobile project');
+    expect(f.operations).toHaveLength(2);
+    expect(f.operations[0]).toBe(f.operations[1]);
+    expect(restarted.getSnapshot().rows[0].pendingCreate).toBeUndefined();
+  });
+  it('never treats stale owner UI or a mismatched selection response as organization authorization', async () => {
+    const f = organizationsFixture();
+    const client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    f.state.role = 'member';
+    await expect(client.updateOrganization(config.instanceId, 'Denied', 1)).rejects.toMatchObject({
+      code: 'ORGANIZATION_OWNER_REQUIRED',
+    });
+    expect(f.state.description).toBe('');
+    await client.whoami(config.instanceId);
+    expect(client.getSnapshot().rows[0].organization?.role).toBe('member');
+    f.state.denied = true;
+    await expect(client.useOrganization(config.instanceId, 'org_a')).rejects.toMatchObject({
+      code: 'ORGANIZATION_ACCESS_DENIED',
+    });
+    expect(client.getSnapshot().rows[0].organization).toBeUndefined();
+    f.state.denied = false;
+    f.state.mismatch = true;
+    await expect(client.useOrganization(config.instanceId, 'org_a')).rejects.toMatchObject({
+      code: 'ORGANIZATION_TOKEN_MISMATCH',
+    });
+  });
+});

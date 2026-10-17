@@ -1,5 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Keyboard, Linking, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -248,6 +248,18 @@ export function CloudServicesScreen() {
                 ? t.cloud.savedSession
                 : t.cloud.signedOut}
           </Text>
+          {!!item.identity && (
+            <Button
+              label={t.cloudOrganizations.title}
+              disabled={snapshot.busy}
+              onPress={() =>
+                router.push({
+                  pathname: '/cloud-organizations',
+                  params: { instanceId: item.config.instanceId },
+                })
+              }
+            />
+          )}
           {item.hasSession ? (
             <>
               <Button

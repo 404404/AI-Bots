@@ -7,13 +7,31 @@ import {
 } from './instance-contract';
 
 export type Identity = { userId: string; instanceId: string; instanceRole: 'admin' };
-type Session = { accessToken: string; refreshToken: string; userId?: string | undefined };
-type Entry = { config: InstanceConfig; session?: Session };
+type Session = {
+  accessToken: string;
+  refreshToken: string;
+  userId?: string | undefined;
+  organizationId?: string | undefined;
+};
+export type Organization = {
+  organizationId: string;
+  name: string;
+  description: string;
+  version: number;
+  role: 'owner' | 'member';
+};
+type Entry = {
+  config: InstanceConfig;
+  session?: Session;
+  pendingCreate?: { name: string; operation: string } | undefined;
+};
 type Vault = { version: 1; entries: Entry[] };
 export type CloudRow = {
   config: InstanceConfig;
   hasSession: boolean;
   identity?: Identity | undefined;
+  organization?: Organization | undefined;
+  pendingCreate?: { name: string; operation: string } | undefined;
 };
 export type CloudSnapshot = {
   ready: boolean;
@@ -112,6 +130,7 @@ function nearExpiry(token: string, now: number): boolean {
 export class CloudClient {
   private vault: Vault = { version: 1, entries: [] };
   private identities = new Map<string, Identity>();
+  private organizations = new Map<string, Organization>();
   private listeners = new Set<() => void>();
   private snapshot: CloudSnapshot = { ready: false, busy: false, rows: [] };
   private loadPromise?: Promise<void>;
@@ -130,7 +149,9 @@ export class CloudClient {
       rows: this.vault.entries.map((e) => ({
         config: e.config,
         hasSession: !!e.session,
+        pendingCreate: e.pendingCreate,
         identity: this.identities.get(e.config.instanceId),
+        organization: this.organizations.get(e.config.instanceId),
       })),
     };
     for (const listener of this.listeners) listener();
@@ -146,7 +167,22 @@ export class CloudClient {
           const entries = (v.entries as unknown[]).map((value) => {
             const e = record(value),
               config = parseInstance(e.config);
-            if (e.session === undefined) return { config };
+            let pendingCreate: Entry['pendingCreate'];
+            if (e.pendingCreate !== undefined) {
+              const pending = record(e.pendingCreate);
+              if (
+                typeof pending.name !== 'string' ||
+                pending.name.length > 80 ||
+                typeof pending.operation !== 'string' ||
+                !/^[A-Za-z0-9_-]{16,100}$/.test(pending.operation)
+              )
+                fail('INVALID_LOCAL_STATE');
+              pendingCreate = {
+                name: pending.name as string,
+                operation: pending.operation as string,
+              };
+            }
+            if (e.session === undefined) return { config, pendingCreate };
             const saved = record(e.session);
             const session = tokenPair({
               access_token: saved.accessToken,
@@ -157,7 +193,21 @@ export class CloudClient {
               (typeof saved.userId !== 'string' || !saved.userId.startsWith('user_'))
             )
               fail('INVALID_LOCAL_STATE');
-            return { config, session: { ...session, userId: saved.userId as string | undefined } };
+            if (
+              saved.organizationId !== undefined &&
+              (typeof saved.organizationId !== 'string' ||
+                !/^org_[A-Za-z0-9]+$/.test(saved.organizationId))
+            )
+              fail('INVALID_LOCAL_STATE');
+            return {
+              config,
+              pendingCreate,
+              session: {
+                ...session,
+                userId: saved.userId as string | undefined,
+                organizationId: saved.organizationId as string | undefined,
+              },
+            };
           });
           if (
             new Set(entries.map((e) => e.config.instanceId)).size !== entries.length ||
@@ -269,16 +319,23 @@ export class CloudClient {
         fail('SERVER_ALREADY_IMPORTED');
       if (!old && this.vault.entries.length >= 20) fail('INSTANCE_LIMIT');
       await this.discovery(config);
-      if (changed) this.identities.delete(config.instanceId);
+      if (changed) {
+        this.identities.delete(config.instanceId);
+        this.organizations.delete(config.instanceId);
+      }
       await this.save({ config, ...(!changed && old?.session ? { session: old.session } : {}) });
       return config;
     });
-  private async acceptTokens(entry: Entry, value: unknown) {
-    const session = { ...tokenPair(value), userId: entry.session?.userId };
-    await this.save({ config: entry.config, session });
+  private async acceptTokens(
+    entry: Entry,
+    value: unknown,
+    organizationId = entry.session?.organizationId,
+  ) {
+    const session = { ...tokenPair(value), userId: entry.session?.userId, organizationId };
+    await this.save({ ...entry, session });
     return this.entry(entry.config.instanceId);
   }
-  private async rotate(entry: Entry) {
+  private async rotate(entry: Entry, organizationId = entry.session?.organizationId) {
     if (!entry.session) return fail('NOT_LOGGED_IN');
     await this.discovery(entry.config);
     const r = await this.json(entry.config.auth.tokenEndpoint, {
@@ -288,17 +345,19 @@ export class CloudClient {
         client_id: entry.config.auth.clientId,
         grant_type: 'refresh_token',
         refresh_token: entry.session.refreshToken,
+        ...(organizationId ? { organization_id: organizationId } : {}),
       }).toString(),
     });
     if (!r.ok) {
       if (r.status === 400 && r.value.error === 'invalid_grant') {
         this.identities.delete(entry.config.instanceId);
+        this.organizations.delete(entry.config.instanceId);
         await this.save({ config: entry.config });
         return fail('LOGIN_REQUIRED');
       }
       return fail('AUTH_RETRY_REQUIRED');
     }
-    return this.acceptTokens(entry, r.value);
+    return this.acceptTokens(entry, r.value, organizationId);
   }
   private async current(entry: Entry) {
     if (!entry.session) return fail('NOT_LOGGED_IN');
@@ -306,6 +365,7 @@ export class CloudClient {
   }
   private async me(entry: Entry): Promise<Identity> {
     this.identities.delete(entry.config.instanceId);
+    this.organizations.delete(entry.config.instanceId);
     this.publish();
     if (!entry.session) return fail('NOT_LOGGED_IN');
     await this.discovery(entry.config);
@@ -337,13 +397,126 @@ export class CloudClient {
       instanceRole: 'admin',
     };
     await this.save({
-      config: entry.config,
+      ...entry,
       session: { ...entry.session, userId: identity.userId },
     });
+    if (entry.session.organizationId) {
+      const organization = this.parseOrganization(
+        await this.orgRequest(
+          this.entry(entry.config.instanceId),
+          '/' + entry.session.organizationId,
+        ),
+      );
+      if (organization.organizationId !== entry.session.organizationId)
+        fail('ORGANIZATION_TOKEN_MISMATCH');
+      this.organizations.set(entry.config.instanceId, organization);
+    }
     this.identities.set(entry.config.instanceId, identity);
     this.publish();
     return identity;
   }
+  private parseOrganization(value: unknown): Organization {
+    const v = record(value);
+    if (
+      typeof v.organizationId !== 'string' ||
+      !/^org_[A-Za-z0-9]+$/.test(v.organizationId) ||
+      typeof v.name !== 'string' ||
+      typeof v.description !== 'string' ||
+      !Number.isSafeInteger(v.version) ||
+      (v.role !== 'owner' && v.role !== 'member')
+    )
+      fail('INVALID_RESPONSE');
+    return v as Organization;
+  }
+  private async orgRequest(entry: Entry, path: string, init: RequestInit = {}) {
+    await this.discovery(entry.config);
+    if (!entry.session) return fail('NOT_LOGGED_IN');
+    const r = await this.json(entry.config.server + '/api/organizations' + path, {
+      ...init,
+      headers: { ...init.headers, Authorization: 'Bearer ' + entry.session.accessToken },
+    });
+    if (!r.ok) {
+      this.organizations.delete(entry.config.instanceId);
+      this.publish();
+      const code = record(r.value.error).code;
+      return fail(
+        typeof code === 'string' && /^[A-Z_]{1,80}$/.test(code) ? code : 'ORGANIZATION_UNAVAILABLE',
+      );
+    }
+    return r.value;
+  }
+  listOrganizations = (id: string, after?: string) =>
+    this.lock(async () => {
+      const entry = await this.current(this.entry(id));
+      const result = await this.orgRequest(
+        entry,
+        after ? '?after=' + encodeURIComponent(after) : '',
+      );
+      if (
+        !Array.isArray(result.organizations) ||
+        (result.nextCursor !== null &&
+          (typeof result.nextCursor !== 'string' || !/^om_[A-Za-z0-9]+$/.test(result.nextCursor)))
+      )
+        fail('INVALID_RESPONSE');
+      return {
+        organizations: (result.organizations as unknown[]).map((v) => this.parseOrganization(v)),
+        nextCursor: result.nextCursor as string | null,
+      };
+    });
+  createOrganization = (id: string, name: string) =>
+    this.lock(async () => {
+      name = name.trim();
+      if (!name || name.length > 80 || /[\u0000-\u001f]/.test(name))
+        fail('INVALID_ORGANIZATION_INPUT');
+      let entry = await this.current(this.entry(id));
+      if (entry.pendingCreate && entry.pendingCreate.name !== name)
+        fail('PENDING_ORGANIZATION_CREATE');
+      const pendingCreate = entry.pendingCreate ?? { name, operation: this.rt.random() };
+      await this.save({ ...entry, pendingCreate });
+      entry = this.entry(id);
+      const operation = pendingCreate.operation;
+      const result = await this.orgRequest(entry, '', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': operation },
+        body: JSON.stringify({ name }),
+      });
+      if (
+        result.created !== true ||
+        typeof result.organizationId !== 'string' ||
+        !/^org_[A-Za-z0-9]+$/.test(result.organizationId)
+      )
+        fail('INVALID_RESPONSE');
+      await this.save({ ...entry, pendingCreate: undefined });
+      return result.organizationId as string;
+    });
+  useOrganization = (id: string, organizationId: string) =>
+    this.lock(async () => {
+      if (!/^org_[A-Za-z0-9]+$/.test(organizationId)) fail('INVALID_ORGANIZATION');
+      let entry = await this.current(this.entry(id));
+      await this.orgRequest(entry, '/' + organizationId + '/access');
+      this.organizations.delete(id);
+      this.publish();
+      entry = await this.rotate(entry, organizationId);
+      await this.me(entry);
+      return this.organizations.get(id)!;
+    });
+  updateOrganization = (id: string, description: string, version: number) =>
+    this.lock(async () => {
+      const entry = await this.current(this.entry(id));
+      if (!entry.session?.organizationId) return fail('ORGANIZATION_NOT_SELECTED');
+      const result = this.parseOrganization(
+        await this.orgRequest(entry, '/' + entry.session.organizationId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description, version }),
+        }),
+      );
+      if (result.organizationId !== entry.session.organizationId)
+        fail('ORGANIZATION_TOKEN_MISMATCH');
+      this.organizations.set(id, result);
+      this.publish();
+      return result;
+    });
   login = (id: string) =>
     this.lock(async () => {
       let entry = this.entry(id);
@@ -406,6 +579,7 @@ export class CloudClient {
         }
       } catch {}
       this.identities.delete(id);
+      this.organizations.delete(id);
       await this.save({ config: entry.config });
       return { localLoggedOut: true, remoteRevoked };
     });
