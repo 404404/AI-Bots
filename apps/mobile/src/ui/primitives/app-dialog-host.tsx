@@ -112,16 +112,16 @@ export function AppDialogHost() {
               <View style={{ gap: space.x3 }}>
                 {choices.map(({ action, index }) => {
                   const Icon = action.icon === undefined ? undefined : ACTION_ICONS[action.icon];
-                  const color =
-                    action.style === 'destructive'
-                      ? theme.color.danger
-                      : buttonColors(theme, 'tonal', 'sheet').label;
+                  const color = buttonColors(
+                    theme,
+                    action.style === 'destructive' ? 'danger' : 'tonal',
+                    'sheet',
+                  ).label;
                   return (
                     <Button
                       key={index}
                       label={action.text}
                       tone={action.style === 'destructive' ? 'danger' : 'tonal'}
-                      variant={action.style === 'destructive' ? 'outlined' : 'filled'}
                       on="sheet"
                       icon={
                         Icon === undefined ? undefined : (
@@ -138,42 +138,44 @@ export function AppDialogHost() {
                 })}
               </View>
             ) : null}
-            <View
-              testID="app-dialog-actions"
-              style={{ flexDirection: stacked ? 'column' : 'row', gap: space.x3 }}
-            >
-              {cancel === undefined ? null : (
-                <View testID="app-dialog-cancel-cell" style={actionStyle}>
-                  <Button
-                    label={cancel.text}
-                    onPress={dismiss}
-                    on="sheet"
-                    variant="text"
-                    disabled={shown.busy !== undefined}
-                  />
-                </View>
-              )}
-              {menu
-                ? null
-                : choices.map(({ action, index }) => (
-                    <View
-                      key={index}
-                      testID={`app-dialog-action-cell-${index}`}
-                      style={actionStyle}
-                    >
-                      <Button
-                        label={action.text}
-                        tone={action.style === 'destructive' ? 'danger' : 'primary'}
-                        on="sheet"
-                        disabled={shown.busy !== undefined}
-                        busy={shown.busy === index}
-                        onPress={() => {
-                          void appDialogs.choose(index);
-                        }}
-                      />
-                    </View>
-                  ))}
-            </View>
+            {menu ? null : (
+              <View
+                testID="app-dialog-actions"
+                style={{ flexDirection: stacked ? 'column' : 'row', gap: space.x3 }}
+              >
+                {cancel === undefined || menu ? null : (
+                  <View testID="app-dialog-cancel-cell" style={actionStyle}>
+                    <Button
+                      label={cancel.text}
+                      onPress={dismiss}
+                      on="sheet"
+                      variant="text"
+                      disabled={shown.busy !== undefined}
+                    />
+                  </View>
+                )}
+                {menu
+                  ? null
+                  : choices.map(({ action, index }) => (
+                      <View
+                        key={index}
+                        testID={`app-dialog-action-cell-${index}`}
+                        style={actionStyle}
+                      >
+                        <Button
+                          label={action.text}
+                          tone={action.style === 'destructive' ? 'danger' : 'primary'}
+                          on="sheet"
+                          disabled={shown.busy !== undefined}
+                          busy={shown.busy === index}
+                          onPress={() => {
+                            void appDialogs.choose(index);
+                          }}
+                        />
+                      </View>
+                    ))}
+              </View>
+            )}
           </ScrollView>
         </View>
       </View>

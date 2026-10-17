@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { buttonColors, type ButtonTone } from '../design/controls';
 import type { LayerName } from '../design/layers';
 import { pressTint, useDesignTheme } from '../design/theme';
-import { edge, radius, space } from '../design/tokens';
+import { radius, space } from '../design/tokens';
 import { Text } from './text';
 
 export type { ButtonTone } from '../design/controls';
@@ -25,12 +25,11 @@ export function Button({
   disabled?: boolean;
   busy?: boolean;
   on?: LayerName;
-  variant?: 'filled' | 'outlined' | 'text';
+  variant?: 'filled' | 'text';
   icon?: ReactNode;
 }) {
   const theme = useDesignTheme();
   const colors = buttonColors(theme, tone, on);
-  const outlined = variant === 'outlined';
   const filled = variant === 'filled';
   const labelColor = filled
     ? colors.label
@@ -55,8 +54,6 @@ export function Button({
         paddingHorizontal: space.x5,
         paddingVertical: space.x3,
         borderRadius: radius.round,
-        borderWidth: outlined ? edge.hairline : 0,
-        borderColor: tone === 'danger' ? theme.color.danger : theme.layer[on].edge,
         backgroundColor: pressed ? colors.pressed : filled ? colors.fill : undefined,
         overflow: 'hidden',
         opacity: disabled ? 0.45 : 1,
