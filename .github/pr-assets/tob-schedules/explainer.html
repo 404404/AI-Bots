@@ -761,7 +761,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <button class="am-btn" type="button" data-am="copy" data-done="已复制 ✓">复制源稿</button>
 </div>
 <main class="am-sheet">
-<header class="am-head"><h1>Tob 如何管理 Bot 的定时工作</h1><p class="am-sub">复用既有调度 owner，审核后写入，并核对真实执行</p><div class="am-head-meta"><span><b>pr</b>Draft 2123，关联 Issue 2093</span><span><b>base</b>a3e2c4e64d131191e686e33cb207d3db9b3a0937</span><span><b>product-head</b>fb6cf4ff011594bcc80bdaa28e4b03136306dc94</span><span><b>generated</b>2026-10-18 JST</span></div><div class="am-intro am-md"><div class="am-md"><p>Lead: Tob 可为选定 Bot 创建、修改和暂停定时任务。执行与历史仍由原 Schedule owner 负责。</p>
+<header class="am-head"><h1>Tob 如何管理 Bot 的定时工作</h1><p class="am-sub">复用既有调度 owner，审核后写入，并核对真实执行</p><div class="am-head-meta"><span><b>pr</b>Draft 2123，关联 Issue 2093</span><span><b>base</b>a3e2c4e64d131191e686e33cb207d3db9b3a0937</span><span><b>product-head</b>5ae3ed1f8dd966a64756bfb93dede338ad668cf1</span><span><b>generated</b>2026-10-18 JST</span></div><div class="am-intro am-md"><div class="am-md"><p>Lead: Tob 可为选定 Bot 创建、修改和暂停定时任务。执行与历史仍由原 Schedule owner 负责。</p>
 </div></div></header>
 <div class="am-frame">
 <div class="am-ruler am-ruler--top" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--bottom" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span></div><div class="am-ruler am-ruler--left" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div><div class="am-ruler am-ruler--right" aria-hidden="true"><span>A</span><span>B</span><span>C</span><span>D</span></div>
@@ -810,7 +810,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <header class="am-panel-head"><span class="am-panel-id">C</span><h2>创建如何避免重复</h2></header>
 <div class="am-panel-body"><figure class="am-diagram am-seq"><svg viewBox="0 0 603 354" width="603" height="354" role="img" aria-label="时序图：CLI、broker、ScheduleOwner、数据库" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><line class="am-lifeline" x1="54" y1="42" x2="54" y2="350"/><g data-key="CLI"><rect class="am-actor" x="12" y="8" width="84" height="34" rx="2"/><text x="54" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">CLI</text></g><line class="am-lifeline" x1="231" y1="42" x2="231" y2="350"/><g data-key="broker"><rect class="am-actor" x="189" y="8" width="84" height="34" rx="2"/><text x="231" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">broker</text></g><line class="am-lifeline" x1="382" y1="42" x2="382" y2="350"/><g data-key="ScheduleOwner"><rect class="am-actor" x="319.1" y="8" width="125.8" height="34" rx="2"/><text x="382" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">ScheduleOwner</text></g><line class="am-lifeline" x1="548.3" y1="42" x2="548.3" y2="350"/><g data-key="数据库"><rect class="am-actor" x="506.3" y="8" width="84" height="34" rx="2"/><text x="548.3" y="25" text-anchor="middle" dominant-baseline="central" font-weight="600">数据库</text></g><g data-step="0"><text x="142.5" y="70" text-anchor="middle">稳定操作标识与完整输入</text><path class="am-edge" d="M54,80 L229,80" marker-end="url(#am2-arrow)"/><text class="am-step" x="60" y="74" text-anchor="start">1</text></g><g data-step="1"><text x="306.5" y="110" text-anchor="middle">查找已有回执</text><path class="am-edge" d="M231,120 L380,120" marker-end="url(#am2-arrow)"/><text class="am-step" x="237" y="114" text-anchor="start">2</text></g><g data-step="2"><text x="465.2" y="150" text-anchor="middle">核对输入指纹和任务ID</text><path class="am-edge" d="M382,160 L546.3,160" marker-end="url(#am2-arrow)"/><text class="am-step" x="388" y="154" text-anchor="start">3</text></g><g data-step="3"><text x="389.7" y="190" text-anchor="middle">原任务或明确拒绝</text><path class="am-edge am-edge--dashed" d="M548.3,200 L233,200" marker-end="url(#am2-arrow)"/><text class="am-step" x="542.3" y="194" text-anchor="end">4</text></g><g data-step="4"><rect class="am-note" x="143" y="224" width="176" height="28" rx="2"/><text x="231" y="238" text-anchor="middle" dominant-baseline="central" font-size="12">已有回执只读回，不再次创建</text></g><g data-step="5"><text x="306.5" y="274" text-anchor="middle">新请求经审核后提交</text><path class="am-edge" d="M231,284 L380,284" marker-end="url(#am2-arrow)"/><text class="am-step" x="237" y="278" text-anchor="start">5</text></g><g data-step="6"><text x="465.2" y="314" text-anchor="middle">同事务写入任务与回执</text><path class="am-edge" d="M382,324 L546.3,324" marker-end="url(#am2-arrow)"/><text class="am-step" x="388" y="318" text-anchor="start">6</text></g></svg></figure>
 <div class="am-md"><p>原任务删除后保留回执，重放会拒绝。一次性任务过期后仍先核对原回执，再验证新建时刻。</p>
-<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/fb6cf4ff011594bcc80bdaa28e4b03136306dc94/packages/core/src/tob/cli-schedule-operations.ts#L239-L262">查看准确版本的重放分支</a>。</p>
+<p><a href="https://github.com/BotHarness/DeepSeekBot/blob/5ae3ed1f8dd966a64756bfb93dede338ad668cf1/packages/core/src/tob/cli-schedule-operations.ts#L239-L262">查看准确版本的重放分支</a>。</p>
 </div></div>
 </section>
 <section class="am-panel" id="panel-D">
@@ -832,9 +832,14 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 </tr>
 </thead>
 <tbody><tr>
-<td>48 个管理回归及 2 个启动回归</td>
-<td><span class="am-status am-status--ok"><span class="am-status-icon" aria-hidden="true">✓</span>通过</span></td>
-<td>管理回归在原产品版本；启动回归在当前版本</td>
+<td>原管理回归</td>
+<td><span class="am-status am-status--ok"><span class="am-status-icon" aria-hidden="true">✓</span>48 项</span></td>
+<td>原产品版本</td>
+</tr>
+<tr>
+<td>启动、恢复与既有调度</td>
+<td><span class="am-status am-status--ok"><span class="am-status-icon" aria-hidden="true">✓</span>30 项</span></td>
+<td>当前版本，含 3 项新增回归</td>
 </tr>
 <tr>
 <td>根类型检查与构建</td>
@@ -875,7 +880,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-panel-body"><div class="am-md"><p>原生前两次定时工作完成。重启补跑却早于凭据服务就绪，留下无 Session、无副作用的 retryable Source Event。失败历史与画面保留。</p>
 </div>
 <figure class="am-diagram am-flow"><svg viewBox="0 0 1112 63" width="1112" height="63" role="img" aria-label="流程图：真实凭据Service就绪、CorePlugin、RuntimeRecovery、ScheduleOwner、模型路由检查" xmlns="http://www.w3.org/2000/svg"><defs><marker id="am3-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="am-arrow" d="M0,0 L10,5 L0,10 z"/></marker></defs><g></g><g><g data-step="0"><path class="am-edge" d="M166.3,31.5 L200.9,31.5 Q235.5,31.5 270.2,31.5 L304.8,31.5" marker-end="url(#am3-arrow)"/><g class="am-edge-label"><rect x="190.3" y="22.5" width="90.5" height="18" rx="3"/><text x="235.5" y="31.5" text-anchor="middle" dominant-baseline="central">Cordis必需依赖</text></g></g><g data-step="1"><path class="am-edge" d="M399.3,31.5 L425.3,31.5 Q451.3,31.5 477.3,31.5 L503.3,31.5" marker-end="url(#am3-arrow)"/><g class="am-edge-label"><rect x="423.3" y="22.5" width="56" height="18" rx="3"/><text x="451.3" y="31.5" text-anchor="middle" dominant-baseline="central">既有恢复</text></g></g><g data-step="2"><path class="am-edge" d="M638.2,31.5 L664.2,31.5 Q690.2,31.5 716.2,31.5 L742.2,31.5" marker-end="url(#am3-arrow)"/><g class="am-edge-label"><rect x="662.2" y="22.5" width="56" height="18" rx="3"/><text x="690.2" y="31.5" text-anchor="middle" dominant-baseline="central">既有补跑</text></g></g><g data-step="3"><path class="am-edge" d="M868,31.5 L898.8,31.5 Q929.6,31.5 960.5,31.5 L991.3,31.5" marker-end="url(#am3-arrow)"/><g class="am-edge-label"><rect x="892" y="22.5" width="75.3" height="18" rx="3"/><text x="929.6" y="31.5" text-anchor="middle" dominant-baseline="central">缺key仍拒绝</text></g></g></g><g><g class="am-node am-node--rect" data-key="真实凭据Service就绪" data-step="0"><rect class="am-node-shape" x="14" y="14" width="152.3" height="35" rx="3"/><text x="90.1" y="31.5" text-anchor="middle" dominant-baseline="central">真实凭据Service就绪</text></g><g class="am-node am-node--rect" data-key="CorePlugin" data-step="0"><rect class="am-node-shape" x="304.8" y="14" width="94.6" height="35" rx="3"/><text x="352.1" y="31.5" text-anchor="middle" dominant-baseline="central">CorePlugin</text></g><g class="am-node am-node--rect" data-key="RuntimeRecovery" data-step="1"><rect class="am-node-shape" x="503.3" y="14" width="134.9" height="35" rx="3"/><text x="570.8" y="31.5" text-anchor="middle" dominant-baseline="central">RuntimeRecovery</text></g><g class="am-node am-node--rect" data-key="ScheduleOwner" data-step="2"><rect class="am-node-shape" x="742.2" y="14" width="125.8" height="35" rx="3"/><text x="805.1" y="31.5" text-anchor="middle" dominant-baseline="central">ScheduleOwner</text></g><g class="am-node am-node--rect" data-key="模型路由检查" data-step="3"><rect class="am-node-shape" x="991.3" y="14" width="106" height="35" rx="3"/><text x="1044.3" y="31.5" text-anchor="middle" dominant-baseline="central">模型路由检查</text></g></g></svg></figure>
-<div class="am-md"><p>源码回归已验证延迟初始化与缺 key 两条路径。新的原生补跑仍待父任务验证。</p>
+<div class="am-md"><p>源码回归覆盖延迟初始化、缺 key、安全旧事件恢复及再次重启去重。恢复与收集共用检查，拒绝有副作用、不确定、已删、已解决、暂缓及已暂停 Bot 的任务。新的原生补跑仍待父任务验证。</p>
 </div></div>
 </section>
 <section class="am-panel am-span-wide" id="panel-G" style="grid-column: span 2">
@@ -903,7 +908,7 @@ html[data-theme="paper"] .am-md table { font-family: var(--font-sans); }
 <div class="am-lightbox-canvas am-diagram"></div>
 </div>
 </div>
-<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-18 06:54 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
+<footer class="am-colophon">Generated by <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">Answer me with HTML</a> 0.5.0 · 2026-10-18 07:05 · <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener">★ Star on GitHub</a></footer>
 <textarea id="am-source" hidden readonly aria-hidden="true">---
 title: Tob 如何管理 Bot 的定时工作
 subtitle: 复用既有调度 owner，审核后写入，并核对真实执行
@@ -913,7 +918,7 @@ theme: blueprint
 cols: 2
 pr: Draft 2123，关联 Issue 2093
 base: a3e2c4e64d131191e686e33cb207d3db9b3a0937
-product-head: fb6cf4ff011594bcc80bdaa28e4b03136306dc94
+product-head: 5ae3ed1f8dd966a64756bfb93dede338ad668cf1
 generated: 2026-10-18 JST
 ---
 
@@ -958,7 +963,7 @@ ScheduleOwner -&gt; 数据库: 同事务写入任务与回执
 
 原任务删除后保留回执，重放会拒绝。一次性任务过期后仍先核对原回执，再验证新建时刻。
 
-[查看准确版本的重放分支](https://github.com/BotHarness/DeepSeekBot/blob/fb6cf4ff011594bcc80bdaa28e4b03136306dc94/packages/core/src/tob/cli-schedule-operations.ts#L239-L262)。
+[查看准确版本的重放分支](https://github.com/BotHarness/DeepSeekBot/blob/5ae3ed1f8dd966a64756bfb93dede338ad668cf1/packages/core/src/tob/cli-schedule-operations.ts#L239-L262)。
 
 ## D Schema 100 与恢复边界
 
@@ -976,7 +981,8 @@ ScheduleOwner -&gt; 数据库: 同事务写入任务与回执
 
 | 证据                      | 状态              | 边界                                      |
 | ------------------------- | ----------------- | ----------------------------------------- |
-| 48 个管理回归及 2 个启动回归 | ok 通过 | 管理回归在原产品版本；启动回归在当前版本 |
+| 原管理回归 | ok 48 项 | 原产品版本 |
+| 启动、恢复与既有调度 | ok 30 项 | 当前版本，含 3 项新增回归 |
 | 根类型检查与构建          | ok 通过           | 最终代码                                  |
 | 自然 Tob 创建、改名、暂停 | ok 通过           | 早于最后的过期重放修正                    |
 | 真实 planned firing       | ok 通过           | Source Event、Session、发送与消息 ID 对应 |
@@ -997,7 +1003,7 @@ RuntimeRecovery -&gt; ScheduleOwner: 既有补跑
 ScheduleOwner -&gt; 模型路由检查: 缺key仍拒绝
 ```
 
-源码回归已验证延迟初始化与缺 key 两条路径。新的原生补跑仍待父任务验证。
+源码回归覆盖延迟初始化、缺 key、安全旧事件恢复及再次重启去重。恢复与收集共用检查，拒绝有副作用、不确定、已删、已解决、暂缓及已暂停 Bot 的任务。新的原生补跑仍待父任务验证。
 
 ## G 交互截图与后续审核
 
