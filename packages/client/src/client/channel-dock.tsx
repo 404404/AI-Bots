@@ -1407,6 +1407,8 @@ export function ChannelDock({
       onReset={() => {
         if (api === undefined) return;
         clearChannelDock(storage);
+        // A Human reset deliberately clears this owner's accepted storage.
+        persistedRaw.current = null;
         parked.current = {};
         buildDefaultLayout(
           api,
