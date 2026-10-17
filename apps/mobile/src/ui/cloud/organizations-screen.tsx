@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cloudError, type Organization } from '../../cloud/client';
@@ -20,15 +20,14 @@ export function CloudOrganizationsScreen() {
   const [items, setItems] = useState<Organization[]>();
   const [cursor, setCursor] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [draft, setDraft] = useState<{ key: string; text: string }>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [working, setWorking] = useState(false);
   const busy = snapshot.busy || working;
   const selected = row?.organization;
-  useEffect(() => {
-    setDescription(selected?.description ?? '');
-  }, [selected?.organizationId, selected?.version, selected?.description]);
+  const selectionKey = selected ? selected.organizationId + ':' + selected.version : '';
+  const description = draft?.key === selectionKey ? draft.text : (selected?.description ?? '');
   const run = async (action: () => Promise<void>) => {
     if (working) return;
     setWorking(true);
@@ -137,7 +136,7 @@ export function CloudOrganizationsScreen() {
                     accessibilityLabel={t.cloudOrganizations.description}
                     placeholder={t.cloudOrganizations.description}
                     value={description}
-                    onChangeText={setDescription}
+                    onChangeText={(text) => setDraft({ key: selectionKey, text })}
                     editable={!busy && selected.role === 'owner'}
                     multiline
                     maxLength={500}
