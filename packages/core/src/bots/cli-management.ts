@@ -1,3 +1,5 @@
+import { parseAgentBots } from './cli-agent-bots.js';
+import { validBotCreationKey, type BotCreationReceipt } from './creation.js';
 import { dmChannelId } from '../channels/channel.js';
 import type { PersonaBotDetail } from '../bridge/methods.js';
 import {
@@ -22,6 +24,7 @@ export const ONLINE_MANAGEMENT_COMMANDS = [
   'create',
   'list',
   'show',
+  'update',
   'model-presets',
   'model-preset-create',
   'model-preset-apply',
@@ -47,8 +50,12 @@ export const LIFECYCLE_COMMANDS = [
     description: 'inspect the current PersonaBot deletion scope and confirmation token',
   },
   {
+    command: 'bot-delete-memory-folder',
+    description: 'inspect the owner-validated Memory folder before deleting a Bot',
+  },
+  {
     command: 'bot-delete-confirm',
-    description: 'confirm PersonaBot deletion with stdin scope token; retain Memory',
+    description: 'confirm reviewed deletion; retain Memory unless --erase-memory is explicit',
   },
   {
     command: 'bot-delete-retry',
@@ -77,6 +84,18 @@ export async function runOnlineManagement(
   bundle?: { archive: Uint8Array; name?: string; historySkipped: boolean },
 ): Promise<unknown> {
   if (values.home !== undefined) usage('Do not combine --home and an online Host target.');
+  const operationKey = values['operation-key'];
+  if (
+    operationKey !== undefined &&
+    (command !== 'create' ||
+      !validBotCreationKey(operationKey) ||
+      create?.source.kind !== 'blank' ||
+      create.presetId !== undefined ||
+      create.memoryLocation !== undefined)
+  )
+    usage(
+      '--operation-key requires blank online creation with a valid 8–128 character key, no preset and the managed Memory location.',
+    );
   const noTarget = ['create', 'list', 'model-presets', 'model-preset-create', 'channels'].includes(
     command,
   );
@@ -125,6 +144,19 @@ export async function runOnlineManagement(
     }
   }
   if (command === 'model-preset-apply' && !values.preset?.trim()) usage('--preset is required.');
+  if (command.startsWith('bot-delete-')) {
+    if (values.path !== undefined || values['memory-location'] !== undefined)
+      usage(
+        'Deletion uses the owner-reviewed Memory folder; a caller-selected path is not accepted.',
+      );
+    if (values['erase-memory'] && command !== 'bot-delete-confirm')
+      usage('--erase-memory is only valid when confirming a reviewed deletion.');
+    if (
+      (command === 'bot-delete-confirm' || command === 'bot-delete-retry') &&
+      values.confirm !== true
+    )
+      usage(`${command} requires --confirm.`);
+  }
   let confirmation: string | undefined;
   if (command === 'bot-delete-confirm') {
     if (!values['confirmation-stdin']) usage('bot-delete-confirm requires --confirmation-stdin.');
@@ -144,10 +176,21 @@ export async function runOnlineManagement(
       Object.keys(input).some((key) => key !== 'token')
     )
       usage(
-        'Confirmation stdin must contain only a nonempty token string; this command retains Memory.',
+        'Confirmation stdin must contain only a nonempty token string; use --erase-memory for explicit erasure.',
       );
     confirmation = input.token;
   }
+  const update =
+    command === 'update'
+      ? await parseAgentBots(
+          command,
+          rest,
+          Object.fromEntries(
+            Object.entries(values).filter(([key]) => !['host', 'token-file'].includes(key)),
+          ),
+          io,
+        )
+      : undefined;
   const { rpc, importBotZip } = await connectLiveHost(
     values,
     io,
@@ -155,6 +198,7 @@ export async function runOnlineManagement(
   );
   if (command === 'list') return rpc('list', {});
   if (command === 'show') return rpc('get', { slug });
+  if (update) return rpc('update', update.args);
   if (command === 'channels') return rpc('channels', {});
   if (command === 'model-presets') return rpc('modelPresets', {});
   if (command === 'model-preset-create') return rpc('modelPresetCreate', presetInput!);
@@ -174,12 +218,17 @@ export async function runOnlineManagement(
   }
   if (command === 'model-plan') return rpc('modelPlan', { slug });
   if (command === 'bot-delete-preview') return rpc('deletionPreview', { slug });
+  if (command === 'bot-delete-memory-folder') return rpc('deletionMemoryFolder', { slug });
   if (command === 'bot-delete-confirm')
-    return rpc('deletionConfirm', { slug, token: confirmation, eraseMemory: false });
+    return rpc('deletionConfirm', {
+      slug,
+      token: confirmation,
+      eraseMemory: values['erase-memory'] === true,
+    });
   if (command === 'bot-delete-retry') {
     const result = await rpc<{ preview: PersonaBotDeletionPreview }>('deletionPreview', { slug });
-    if (result.preview.deletion?.eraseMemory !== false)
-      usage('Retry requires an accepted deletion that retains Memory.');
+    if (typeof result.preview.deletion?.eraseMemory !== 'boolean')
+      usage('Retry requires an existing accepted deletion and preserves its Memory choice.');
     return rpc('deletionRetry', { slug });
   }
   if (command === 'bot-attention')
@@ -216,6 +265,7 @@ export async function runOnlineManagement(
   const steps: BotCreateStep[] = [{ name: 'validate', status: 'ok' }];
   let bot: { id: string; name: string } | undefined;
   let submitted = false;
+  let operationConfirmed = false;
   try {
     if (create.presetId !== undefined) {
       const result = await rpc<{ presets: ModelPreset[] }>('modelPresets', {});
@@ -237,30 +287,44 @@ export async function runOnlineManagement(
       create.source.kind === 'zip' || create.source.kind === 'dir'
         ? await importBotZip<{
             bot: PersonaBotDetail;
+            receipt?: BotCreationReceipt;
             httpsFallback?: BotCreateResult['httpsFallback'];
           }>(bundle!.archive, {
             ...metadata,
             ...(bundle!.name === undefined ? {} : { name: bundle!.name }),
           })
-        : await rpc<{ bot: PersonaBotDetail; httpsFallback?: BotCreateResult['httpsFallback'] }>(
-            create.source.kind === 'git' ? 'createFromGit' : 'create',
-            {
-              ...metadata,
-              ...(create.source.kind === 'git'
-                ? { gitUrl: create.source.gitUrl }
-                : {
-                    ...(create.persona === undefined ? {} : { persona: create.persona }),
-                    ...(create.coreMemory === undefined ? {} : { coreMemory: create.coreMemory }),
-                    ...(create.avatar === undefined ? {} : { avatar: create.avatar }),
-                  }),
-              ...(create.memoryLocation === undefined
-                ? {}
-                : { memoryLocation: create.memoryLocation }),
-            },
-          );
+        : await rpc<{
+            bot: PersonaBotDetail;
+            receipt?: BotCreationReceipt;
+            httpsFallback?: BotCreateResult['httpsFallback'];
+          }>(create.source.kind === 'git' ? 'createFromGit' : 'create', {
+            ...metadata,
+            ...(operationKey === undefined ? {} : { operationKey }),
+            ...(create.source.kind === 'git'
+              ? { gitUrl: create.source.gitUrl }
+              : {
+                  ...(create.persona === undefined ? {} : { persona: create.persona }),
+                  ...(create.coreMemory === undefined ? {} : { coreMemory: create.coreMemory }),
+                  ...(create.avatar === undefined ? {} : { avatar: create.avatar }),
+                }),
+            ...(create.memoryLocation === undefined
+              ? {}
+              : { memoryLocation: create.memoryLocation }),
+          });
     if (!result.bot?.slug || !result.bot.displayName)
       throw new CliLiveError('host-protocol-error', 'The Host returned no created Bot identity.');
     bot = { id: result.bot.slug, name: result.bot.displayName };
+    if (
+      operationKey !== undefined &&
+      (result.receipt?.operationKey !== operationKey ||
+        result.receipt.botSlug !== bot.id ||
+        result.receipt.status !== 'created')
+    )
+      throw new CliLiveError(
+        'host-protocol-error',
+        'The Host did not confirm the stable creation receipt; inspect the returned Bot identity before retrying.',
+      );
+    operationConfirmed = operationKey !== undefined;
     if (create.source.kind === 'git') steps.push({ name: 'clone', status: 'ok' });
     if (bundle !== undefined)
       steps.push({
@@ -285,6 +349,7 @@ export async function runOnlineManagement(
     steps.push({ name: 'dm', status: 'ok' });
     const output: BotCreateResult = {
       bot,
+      ...(result.receipt === undefined ? {} : { operation: result.receipt }),
       dm: { channelId },
       dataDir: detail.bot.memoryDir,
       steps,
@@ -305,6 +370,19 @@ export async function runOnlineManagement(
       }
       throw new CliLiveError(error.code, error.message, undefined, undefined, {
         ...(bot === undefined ? {} : { bot }),
+        ...(operationKey === undefined
+          ? {}
+          : {
+              operation: {
+                operationKey,
+                status: operationConfirmed
+                  ? ('created' as const)
+                  : submitted
+                    ? ('unknown' as const)
+                    : ('not-created' as const),
+                ...(bot === undefined ? {} : { botSlug: bot.id }),
+              },
+            }),
         steps,
         outcome: bot !== undefined ? 'created' : submitted ? 'unknown' : 'not-created',
       });

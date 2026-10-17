@@ -29,7 +29,7 @@ describe('scoped management CLI arguments', () => {
   it('only recognizes the scoped management surface', async () => {
     const { parse } = parser();
     expect(await parse('settings')).toBeUndefined();
-    expect(await parse('create')).toBeUndefined();
+    expect(await parse('channel-create')).toBeUndefined();
     expect(await parse('model-preset-delete')).toBeUndefined();
   });
 

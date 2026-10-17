@@ -65,6 +65,64 @@ function parameterNames(method: (...args: never[]) => unknown): string[] {
 }
 
 describe('bridge typert service', () => {
+  it('forwards Bot creation identity and Core Memory through the named RPC facade', () => {
+    const { service, methods } = setup();
+    const bot = service.create('Ada').bot;
+    const receipt = {
+      operationKey: 'create-ada-1',
+      botSlug: bot.slug,
+      status: 'created' as const,
+      channelId: 'dm-ada',
+    };
+    const create = vi
+      .spyOn(methods, 'create')
+      .mockReturnValue({ ok: true, value: { bot, receipt, channelId: 'dm-ada' } });
+    const result = service.create(
+      'Ada',
+      ['research'],
+      'Soul',
+      'Bio',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'Remember this',
+      'create-ada-1',
+    );
+    expect(create).toHaveBeenCalledWith({
+      displayName: 'Ada',
+      roles: ['research'],
+      persona: 'Soul',
+      description: 'Bio',
+      model: undefined,
+      preset: undefined,
+      workspaces: undefined,
+      avatar: undefined,
+      memoryLocation: undefined,
+      coreMemory: 'Remember this',
+      operationKey: 'create-ada-1',
+    });
+    expect(result.receipt).toEqual(receipt);
+    expect(result.channelId).toBe('dm-ada');
+  });
+
+  it('round-trips profile fingerprint and preserves stale profile refusal through the RPC facade', () => {
+    const { service } = setup();
+    service.create('Ada');
+    const fingerprint = service.get('ada').profileFingerprint;
+    expect(fingerprint).toMatch(/^[a-f0-9]{64}$/u);
+    service.update('ada', { displayName: 'Updated' }, fingerprint);
+    expect(() => service.update('ada', { displayName: 'Stale' }, fingerprint)).toThrow(
+      expect.objectContaining({ code: 'stale-profile' }),
+    );
+    expect(service.get('ada').bot.displayName).toBe('Updated');
+    expect(service.get('ada').profileFingerprint).not.toBe(fingerprint);
+    expect(service.update('ada', { description: 'Existing UI' }).bot.description).toBe(
+      'Existing UI',
+    );
+  });
+
   it('exposes and forwards complete Assignment choices through preset creation and updates', async () => {
     const { service, methods } = setup();
     const route = { provider: 'test', model: 'model' };
@@ -511,8 +569,10 @@ describe('bridge typert service', () => {
       'workspaces',
       'avatar',
       'memoryLocation',
+      'coreMemory',
+      'operationKey',
     ]);
-    expect(parameterNames(service.update)).toEqual(['slug', 'patch']);
+    expect(parameterNames(service.update)).toEqual(['slug', 'patch', 'expectedProfile']);
     expect(parameterNames(service.pause)).toEqual(['slug']);
     expect(parameterNames(service.resume)).toEqual(['slug']);
     expect(parameterNames(service.createFromGit)).toEqual([

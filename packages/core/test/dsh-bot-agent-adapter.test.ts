@@ -1,6 +1,9 @@
-import type { AssistantStreamFrame } from '@deepseek-ai/dsh-agent';
+import { Context } from '@deepseek-ai/cordis';
+import type { Agent, AssistantStreamFrame } from '@deepseek-ai/dsh-agent';
+import { ToolCallId } from '@deepseek-ai/dsh-llm';
+import { createScope } from '@deepseek-ai/dsh-scope';
 import { SessionId, type TurnEndCancelCause } from '@deepseek-ai/dsh-session';
-import type { ToolRunContext } from '@deepseek-ai/dsh-tools';
+import { ToolRuntime, defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools';
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -103,10 +106,21 @@ describe('DSH Bot Agent adapter', () => {
       try {
         await adapter.runOrchestrator({ ...reportRun, tobCli });
         const scope = host.scopes.get(reportRun.sessionId)!;
+        const rolePrompt = scope.sections.find(
+          (section) => section.name === 'botharness:orchestrator-role',
+        )?.text;
         const prompt = scope.sections.find(
           (section) => section.name === 'botharness:tob-cli',
         )?.text;
         if (tobCli) {
+          expect(rolePrompt).toContain('scoped deepseekbot CLI');
+          expect(rolePrompt).not.toContain('Create a new PersonaBot with bot_create');
+          expect(scope.tools.map((tool) => tool.name)).not.toContain('bot_create');
+          expect(
+            scope.guards.some((guard) =>
+              guard({ name: 'bot_create' })?.includes('scoped deepseekbot CLI'),
+            ),
+          ).toBe(true);
           expect(prompt).toContain('deepseekbot capabilities');
           expect(prompt).toContain('deepseekbot settings botharness-client');
           expect(prompt).toContain('--patch-stdin --expected-revision');
@@ -117,7 +131,16 @@ describe('DSH Bot Agent adapter', () => {
           expect(prompt).not.toContain('only assignmentConcurrencyLimit');
           expect(prompt).toContain('private steward and secretary');
           expect(prompt).toContain('never replace a required Human decision with your own');
-        } else expect(prompt).toBeUndefined();
+        } else {
+          expect(prompt).toBeUndefined();
+          expect(rolePrompt).toContain('Create a new PersonaBot with bot_create');
+          expect(scope.tools.map((tool) => tool.name)).toContain('bot_create');
+          expect(
+            scope.guards.some((guard) =>
+              guard({ name: 'bot_create' })?.includes('scoped deepseekbot CLI'),
+            ),
+          ).toBe(false);
+        }
         expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_read');
         expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_set');
         expect(scope.tools.map((tool) => tool.name)).toContain('create_assignment');
@@ -126,6 +149,124 @@ describe('DSH Bot Agent adapter', () => {
       }
     },
   );
+
+  it('rejects a retained ordinary Bot creation callback during a Tob run', async () => {
+    let invokeLegacy: (() => Promise<unknown>) | undefined;
+    let turn = 0;
+    const createBot = vi.fn(() => ({
+      botId: 'created',
+      displayName: 'Created',
+      dmChannelId: 'dm-created',
+      memoryDir: '/memory/created',
+      model: 'host-default' as const,
+    }));
+    const host = new FakeAgentHost(
+      { kind: 'completed' },
+      {
+        onTurn: async (_session, tools) => {
+          if (turn++ === 0) {
+            const tool = tools.find((candidate) => candidate.name === 'bot_create')!;
+            invokeLegacy = async () =>
+              tool.execute({ display_name: 'Created' }, {} as ToolRunContext);
+            await invokeLegacy();
+          } else {
+            await expect(invokeLegacy!()).rejects.toThrow(
+              'Tob must use the scoped deepseekbot CLI',
+            );
+          }
+        },
+      },
+    );
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    const run = { ...reportRun, channels: { ...reportRun.channels, createBot } };
+    try {
+      await adapter.runOrchestrator({ ...run, tobCli: false });
+      await adapter.runOrchestrator({ ...run, resume: true, tobCli: true });
+      expect(createBot).toHaveBeenCalledOnce();
+    } finally {
+      await adapter.close();
+    }
+  });
+
+  it('uses the pinned ToolRuntime guard for local-only creation without global restriction lookup', async () => {
+    const host = new FakeAgentHost({ kind: 'completed' }, { onTurn: async () => undefined });
+    const adapter = createDshBotAgentAdapter({
+      agents: host,
+      defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+      orchestratorCwd: () => '/memory/ada',
+      ensureWorkspace: () => undefined,
+    });
+    await adapter.runOrchestrator({ ...reportRun, tobCli: true });
+    const fence = host.scopes
+      .get(reportRun.sessionId)!
+      .guards.find((guard) => guard({ name: 'bot_create' })?.includes('scoped deepseekbot CLI'))!;
+    const ctx = new Context();
+    const providers = ctx.plugin({
+      name: 'test-tob-creation-native-tools',
+      apply(c: Context) {
+        c.provide('systemPrompt', {
+          tools: () => () => undefined,
+          section: () => () => undefined,
+          getSectionOrder: () => 1,
+        });
+      },
+    });
+    await providers.await();
+    const runtime = ctx.plugin(ToolRuntime, {});
+    await runtime.await();
+    const tob = { session: { id: 'tob-creation', header: { cwd: '/memory/tob' } } } as Agent;
+    const ordinary = {
+      session: { id: 'ordinary-creation', header: { cwd: '/memory/ordinary' } },
+    } as Agent;
+    const tobScope = createScope(ctx, tob);
+    const ordinaryScope = createScope(ctx, ordinary);
+    Object.assign(tob, { ctx: tobScope.ctx });
+    Object.assign(ordinary, { ctx: ordinaryScope.ctx });
+    const effects = vi.fn(async () => 'created');
+    const tool = defineTool({
+      name: 'bot_create',
+      description: 'Local-only creation',
+      parameters: {},
+      output: {
+        schema: { type: 'string' },
+        render: (_args, value) => [{ type: 'text', text: value }],
+      },
+      execute: effects,
+    });
+    tobScope.ctx.get('tools')!.register(tool);
+    ordinaryScope.ctx.get('tools')!.register(tool);
+    tobScope.ctx.get('tools')!.presentAs('native');
+    ordinaryScope.ctx.get('tools')!.presentAs('native');
+    try {
+      expect(() => tobScope.ctx.get('tools')!.restrict({ deny: ['bot_create'] })).toThrow(
+        'unknown global tool',
+      );
+      expect(() => tobScope.ctx.get('tools')!.guard(fence)).not.toThrow();
+      const execute = (agent: Agent) =>
+        ctx.get('tools')!.execute({
+          agent,
+          callId: ToolCallId(agent.session.id),
+          name: 'bot_create',
+          arguments: {},
+          signal: new AbortController().signal,
+        });
+      expect((await execute(tob)).isError).toBe(true);
+      expect(effects).not.toHaveBeenCalled();
+      expect((await execute(ordinary)).isError).not.toBe(true);
+      expect(effects).toHaveBeenCalledOnce();
+    } finally {
+      await tobScope.dispose();
+      await ordinaryScope.dispose();
+      await runtime.dispose();
+      await providers.dispose();
+      await adapter.close();
+    }
+  });
 
   it.each<TurnEndCancelCause>([
     { kind: 'user' },

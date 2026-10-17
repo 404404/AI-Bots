@@ -1,3 +1,12 @@
+import { createBotCreation, type BotCreationService } from './bots/creation.js';
+import {
+  createTobBotCreationOperations,
+  TOB_BOT_CREATE_CAPABILITIES,
+} from './tob/cli-bot-create.js';
+import {
+  createTobBotProfileOperations,
+  TOB_BOT_PROFILE_CAPABILITIES,
+} from './tob/cli-bot-profile-operations.js';
 import { followCompanion } from './companions/live.js';
 import {
   createTobService,
@@ -314,6 +323,7 @@ export interface BotHarnessCore {
   rootDir: string;
   onboarding: BotOnboarding;
   tob: TobService;
+  creations: BotCreationService;
   partLibrary: PartLibrary;
   operationalDatabase: OperationalDatabaseOwner;
   registry: PersonaBotRegistry;
@@ -769,6 +779,11 @@ export function createCore(
     ...(options.ensureTobWorkspace ? { ensureWorkspace: options.ensureTobWorkspace } : {}),
     ...(options.tobSettings ? { settings: options.tobSettings } : {}),
   });
+  const creations = createBotCreation({
+    database: attachOperationalModule(operationalDatabase, 'bot-creation'),
+    registry,
+    channels,
+  });
   const profileRecovery = createProfileRecovery(operationalDatabase, registry, ownership);
   const orchestratorCwd = (bot: { slug: string }): string | undefined =>
     registry.memoryDirFor(bot.slug);
@@ -904,6 +919,7 @@ export function createCore(
     contentPurge,
     onboarding,
     tob,
+    creations,
     partLibrary,
     rootDir,
     operationalDatabase,
@@ -1118,8 +1134,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 authorize,
                 prepareOperation: async (command, args) =>
                   (await tobModelOperations(command, args)) ??
-                  (await tobMaintenanceOperations(command, args)),
-                capabilities: [...TOB_MODEL_CAPABILITIES, ...TOB_MAINTENANCE_CAPABILITIES],
+                  (await tobMaintenanceOperations(command, args)) ??
+                  (await tobBotCreationOperations(command, args)) ??
+                  (await tobBotProfileOperations(command, args)),
+                capabilities: [
+                  ...TOB_MODEL_CAPABILITIES,
+                  ...TOB_MAINTENANCE_CAPABILITIES,
+                  ...TOB_BOT_CREATE_CAPABILITIES,
+                  ...TOB_BOT_PROFILE_CAPABILITIES,
+                ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
                 writeSetting: (value, revision, guard) =>
@@ -1938,6 +1961,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     modelReadiness,
     onboarding: core.onboarding,
     tob: core.tob,
+    creations: core.creations,
     partLibrary: core.partLibrary,
     onboardingNews: (slug) =>
       onboardingNewsAvailable(
@@ -2030,6 +2054,16 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         provider?.resetBot?.(slug);
       },
     },
+  });
+  const tobBotCreationOperations = createTobBotCreationOperations({
+    registry: core.registry,
+    creations: core.creations,
+    bridge: bridgeMethods,
+  });
+  const tobBotProfileOperations = createTobBotProfileOperations({
+    registry: core.registry,
+    bridge: () => bridgeMethods,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
   });
   registerBridge(ctx, bridgeMethods, privateInputs, {
     followRoster: (signal) => core.live.followRoster(signal),

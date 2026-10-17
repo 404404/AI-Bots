@@ -45,6 +45,18 @@ Treat this as an additional user journey, not a claim that the Assignment-limit 
 
 Keep direct CLI tests, real native Shell tool traces, rendered Web evidence, native Desktop evidence and restart persistence separate. The map defines required observations; it does not mark these new branches passed.
 
+## Bot creation and profile management acceptance (#2089)
+
+`scripts/e2e-tob-bot-management.mjs` uses the same isolated Web/Desktop connection contract as the model/runtime journey: `BH_E2E_INSTANCE` for Web, or `BH_DESKTOP_CDP` plus `BH_E2E_HUMAN_INSTANCE` for the actual candidate Desktop. Build the candidate first. `BH_E2E_EVIDENCE` selects a private output directory; never publish its authentication manifest. Fresh manual-approval defaults are required.
+
+The default `journey` phase submits a natural Home request to create a uniquely named Bot with explicit initial `SOUL.md` and `MEMORY.md` text. It reviews the actual CLI proposal in the rendered approval card, accepts it, waits for both a completed native turn and handled Human delivery, reads the canonical identity/DM/Memory, retries the exact creation key and payload through the Human CLI, and opens the new DM in the real UI. It then requests a name change naturally, checks its reviewed profile fingerprint and rendered result, denies a subsequent change, and verifies the protected Tob deletion preview refuses before approval. Each stage captures screenshots, accessibility trees, coded results and native Shell traces; model replies and pending approval cards alone do not prove a write.
+
+The same script exposes bounded `create`, `update`, `deny`, `protected`, `direct`, `model` and `restart-read` phases. `create` emits `bot-fixture.json`; pass its absolute path as `BH_E2E_BOT_FIXTURE` to later phases. `direct` independently checks Human CLI creation replay, conflicting payload refusal, stale profile refusal and protected Tob deletion without a model. After actually restarting the same isolated Profile, `restart-read` checks the persisted identity, DM, initial Memory and stable operation replay, then opens the DM. It does not restart a Host itself. Run the same real journey on macOS Desktop and retain separate evidence, then restore the Human's prior Desktop.
+
+The optional `model` phase targets the created Bot fixture and submits a natural request to set its Orchestrator model to the already available DeepSeek official Flash model, without supplying CLI syntax. The pending review must match that Bot, the observed plan revision and the requested route before acceptance. Require a completed native turn, canonical route readback, an unchanged Tob model plan and the created DM’s visible model chip. This phase reuses the existing local provider credential; it does not configure or send a credential. Run it separately on Web and Desktop after creation.
+
+Creation retries must keep the reviewed operation key and exact payload. A retry must not allocate another Bot or replace later profile/Memory changes. Unknown interrupted Memory folders fail closed; source regression tests cover that recovery refusal and post-write response loss, while the live journey covers normal replay and restart. Run separate approval-staleness, grants and deletion-retention branches from the #2089 acceptance inventory; this journey does not claim those unexecuted branches passed.
+
 ## Gotchas
 
 - AX launch model overrides intentionally make native default-model settings read-only. Model-setup QA must use an isolated launch without that command-line override; never edit shared credentials to make the test pass.

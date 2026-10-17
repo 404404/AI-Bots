@@ -1,3 +1,9 @@
+import { botProfileFingerprint } from '../bots/profile-snapshot.js';
+import {
+  BotCreationError,
+  type BotCreationService,
+  type BotCreationReceipt,
+} from '../bots/creation.js';
 import { TobError, type TobService, type TobHome } from '../tob/service.js';
 import { directToolTrace, summarizeToolTrace, type TurnTrace } from '../bots/tool-trace.js';
 import type { BotOnboarding, OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
@@ -522,8 +528,10 @@ export interface BridgeMethods {
   modelPlanSet(payload: unknown): Promise<BridgeResult<{ plan: PersonaBotModelPlan }>>;
   list(payload: unknown): BridgeResult<{ bots: PersonaBotSummary[] }>;
   activitySnapshot(payload: unknown): BridgeResult<PersonaBotActivitySnapshot>;
-  get(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
-  create(payload: unknown): BridgeResult<{ bot: PersonaBotDetail }>;
+  get(payload: unknown): BridgeResult<{ bot: PersonaBotDetail; profileFingerprint: string }>;
+  create(
+    payload: unknown,
+  ): BridgeResult<{ bot: PersonaBotDetail; channelId?: string; receipt?: BotCreationReceipt }>;
   createFromGit(
     payload: unknown,
   ): Promise<BridgeResult<{ bot: PersonaBotDetail; httpsFallback?: HttpsFallback }>>;
@@ -750,6 +758,7 @@ export interface BridgeMethodsDeps {
   composerIdentity?: () => ComposerRecoveryIdentity;
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
+  creations?: BotCreationService;
   approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
@@ -2514,7 +2523,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const memoryDir = deps.registry.memoryDirFor(slug);
       return {
         ok: true,
-        value: { bot: { ...bot, ...(memoryDir === undefined ? {} : { memoryDir }) } },
+        value: {
+          bot: { ...bot, ...(memoryDir === undefined ? {} : { memoryDir }) },
+          profileFingerprint: botProfileFingerprint(record),
+        },
       };
     },
     create(payload) {
@@ -2545,9 +2557,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       ) {
         return invalidInput('invalid create payload');
       }
-      const slug = createBotId();
-      const result = deps.registry.create({
-        slug,
+      const operationKey = source['operationKey'];
+      if (operationKey !== undefined && typeof operationKey !== 'string')
+        return invalidInput('operationKey must be a string');
+      const input = {
         displayName,
         ...(persona.value === undefined ? {} : { persona: persona.value }),
         ...(coreMemory.value === undefined ? {} : { coreMemory: coreMemory.value }),
@@ -2558,7 +2571,34 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         ...(workspaces.value === undefined ? {} : { workspaces: workspaces.value }),
         ...(avatar.value === undefined ? {} : { avatar: avatar.value }),
         ...(memoryLocation.value === undefined ? {} : { memoryLocation: memoryLocation.value }),
-      });
+      };
+      if (deps.creations !== undefined) {
+        try {
+          const created = deps.creations.create(input, operationKey);
+          return {
+            ok: true,
+            value: {
+              ...detailOf(created.record),
+              channelId: created.channelId,
+              ...(created.receipt === undefined ? {} : { receipt: created.receipt }),
+            },
+          };
+        } catch (error) {
+          if (error instanceof BotCreationError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (operationKey !== undefined)
+        return {
+          ok: false,
+          error: {
+            code: 'creation-unavailable',
+            message: 'Idempotent creation is unavailable on this Host.',
+          },
+        };
+      const slug = createBotId();
+      const result = deps.registry.create({ ...input, slug });
       if (!result.ok) return createFailure(slug, result);
       return { ok: true, value: detailOf(result.record) };
     },
@@ -2744,6 +2784,21 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         ...(workspaces.value === undefined ? {} : { workspaces: workspaces.value }),
         ...(avatar.value === undefined ? {} : { avatar: avatar.value }),
       };
+      const expectedProfile = asObject(payload)['expectedProfile'];
+      if (expectedProfile !== undefined) {
+        if (typeof expectedProfile !== 'string' || !/^[a-f0-9]{64}$/u.test(expectedProfile))
+          return invalidInput('expectedProfile must be an observed profile fingerprint');
+        const current = deps.registry.get(slug);
+        if (!current) return unknownBot(slug);
+        if (botProfileFingerprint(current) !== expectedProfile)
+          return {
+            ok: false,
+            error: {
+              code: 'stale-profile',
+              message: 'The Bot profile changed. Read it again before applying this update.',
+            },
+          };
+      }
       const result = deps.registry.update(slug, patch);
       if (!result.ok) {
         return result.reason === 'not-found'
