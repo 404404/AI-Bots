@@ -151,7 +151,7 @@ describe('compact Human Inbox interactions', () => {
       await act(async () =>
         rowActions.querySelector<HTMLButtonElement>('.bh-human-inbox-source-link')!.click(),
       );
-      expect(view.actions.openBot).toHaveBeenCalledWith('ada');
+      expect(view.actions.openBot).toHaveBeenCalledWith('ada', 'inbox');
       view.actions.openBot.mockClear();
       expect(view.host.querySelector('.bh-human-inbox-detail')).toBeNull();
       await act(async () =>
@@ -162,13 +162,13 @@ describe('compact Human Inbox interactions', () => {
       ].find((button) => button.textContent === '查看 Bot 收件箱')!;
       expect(maintenance).toBeDefined();
       await act(async () => maintenance.click());
-      expect(view.actions.openBot).toHaveBeenCalledWith('ada');
+      expect(view.actions.openBot).toHaveBeenCalledWith('ada', 'inbox');
       await act(async () => store.setHumanInbox({ items: [{ ...repair, channelName: '' }] }));
       view.actions.openBot.mockClear();
       await act(async () =>
         rowActions.querySelector<HTMLButtonElement>('.bh-human-inbox-source-link')!.click(),
       );
-      expect(view.actions.openBot).toHaveBeenCalledWith('ada');
+      expect(view.actions.openBot).toHaveBeenCalledWith('ada', 'inbox');
     } finally {
       await view.close();
     }

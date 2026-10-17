@@ -1009,7 +1009,14 @@ function ConversationView({
   const sidebar = useChannelSidebar(state);
   const docked = useChannelDockActive();
   const workspaceEnabled = useContext(WorkspaceContext) !== undefined;
-  const [filesOpen, setFilesOpen] = useScopedState(scopeKey, false);
+  const [detail, setDetail] = useScopedState<'files' | 'inbox' | undefined>(
+    scopeKey,
+    state.selection?.kind === 'bot' && state.selection.inbox ? 'inbox' : undefined,
+  );
+  const filesOpen = detail === 'files';
+  const inboxOpen = detail === 'inbox';
+  const setFilesOpen = (open: boolean) => setDetail(open ? 'files' : undefined);
+  const setInboxOpen = (open: boolean) => setDetail(open ? 'inbox' : undefined);
   const dockBotEntries = useSyncExternalStore(
     channelSidebar.subscribe,
     () => channelSidebar.entries('personabot'),
@@ -1050,10 +1057,11 @@ function ConversationView({
   );
   const dockBotSlug = dockChannelContext?.botSlug;
   const dockInboxMount = useMountedResource<HTMLSpanElement>(() => {
-    if (!docked || dockBotSlug === undefined) return;
+    if (!inboxOpen || dockBotSlug === undefined) return;
+    void actions.refreshBotInbox(dockBotSlug);
     const timer = window.setInterval(() => void actions.refreshBotInbox(dockBotSlug), 10_000);
     return () => window.clearInterval(timer);
-  }, [docked, dockBotSlug, actions]);
+  }, [inboxOpen, dockBotSlug, actions]);
   const sendKey = useContext(ComposerSendKeyContext);
   const settingsScope = resolveChannelSidebarContext(state)?.scope ?? 'channel';
   const settingsEntries = useSyncExternalStore(
@@ -2282,6 +2290,9 @@ function ConversationView({
           onMemoryFileSelect: (path) => openMemoryView({ kind: 'file', path }),
           onMemoryWorkingSelect: (change) => openMemoryView({ kind: 'working', change }),
         };
+  const inboxEntry = dockBotEntries.find((entry) => entry.id === 'bot-inbox');
+  const inboxAvailable =
+    dockBotSlug !== undefined && dockEntryProps !== undefined && inboxEntry !== undefined;
   const conversationPane = (
     <section
       className="bh-chat-pane"
@@ -2313,6 +2324,8 @@ function ConversationView({
             onSettings={sidebar.toggle}
             onFiles={channelId === undefined ? undefined : () => setFilesOpen(!filesOpen)}
             filesOpen={filesOpen}
+            onInbox={inboxAvailable ? () => setInboxOpen(!inboxOpen) : undefined}
+            inboxOpen={inboxOpen}
             settingsOpen={sidebar.mode !== 'hidden'}
             t={t}
           />
@@ -2437,6 +2450,17 @@ function ConversationView({
               onClick={() => setFilesOpen(!filesOpen)}
             >
               <ChannelSidebarIcon name="file" />
+            </IconButton>
+          </span>
+        )}
+        {!workspaceEnabled && onMobileBack === undefined && inboxAvailable && (
+          <span className="bh-channel-island-wrap">
+            <IconButton
+              aria-label={t('entry.botInbox')}
+              aria-expanded={inboxOpen}
+              onClick={() => setInboxOpen(!inboxOpen)}
+            >
+              <ChannelSidebarIcon name="inbox" />
             </IconButton>
           </span>
         )}
@@ -3149,7 +3173,11 @@ function ConversationView({
                     }
                   : undefined
               }
-              revealBody={state.selection?.kind === 'bot' && state.selection.profile === true}
+              inbox={inboxAvailable ? { open: inboxOpen, setOpen: setInboxOpen } : undefined}
+              revealBody={
+                state.selection?.kind === 'bot' &&
+                (state.selection.profile === true || state.selection.inbox === true)
+              }
               panels={dockPanelList}
               channel={dockChannel}
               registry={dockPanels}
@@ -3168,6 +3196,17 @@ function ConversationView({
               scroll
             >
               <ChannelFiles key={channelId} channelId={channelId} actions={actions} t={t} />
+            </PanelDialog>
+          )}
+          {!workspaceEnabled && inboxOpen && inboxAvailable && (
+            <PanelDialog
+              title={t('entry.botInbox')}
+              closeLabel={t('dock.close', { label: t('entry.botInbox') })}
+              onClose={() => setInboxOpen(false)}
+              scroll
+              secondary={inboxEntry.headerAction && <inboxEntry.headerAction {...dockEntryProps} />}
+            >
+              <inboxEntry.component {...dockEntryProps} flush />
             </PanelDialog>
           )}
         </GeneratedFilesContext.Provider>
@@ -3242,7 +3281,7 @@ function BotMainContent({
       : state.selection.kind === 'inbox'
         ? 'inbox'
         : state.selection.kind === 'bot'
-          ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : 'chat'}`
+          ? `bot:${state.selection.slug}:${state.selection.profile ? 'profile' : state.selection.inbox ? 'inbox' : 'chat'}`
           : `channel:${state.selection.channelId}`;
   return (
     <ConversationView

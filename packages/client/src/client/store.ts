@@ -348,7 +348,7 @@ export interface HumanInboxState {
   error: string | undefined;
 }
 export type ConversationSelection =
-  | { kind: 'bot'; slug: string; profile?: true }
+  | { kind: 'bot'; slug: string; profile?: true; inbox?: true }
   | { kind: 'channel'; channelId: string }
   | { kind: 'inbox' };
 
@@ -597,7 +597,7 @@ function sameSelection(
   if (left === undefined || right === undefined) return false;
   if (left.kind === 'inbox' && right.kind === 'inbox') return true;
   if (left.kind === 'bot' && right.kind === 'bot')
-    return left.slug === right.slug && left.profile === right.profile;
+    return left.slug === right.slug && left.profile === right.profile && left.inbox === right.inbox;
   if (left.kind === 'channel' && right.kind === 'channel')
     return left.channelId === right.channelId;
   return false;
