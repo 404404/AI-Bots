@@ -1,4 +1,4 @@
-# ADR-0224: Mobile cloud sessions are independent of Host pairing
+# ADR-0225: Mobile cloud sessions are independent of Host pairing
 
 - Status: Accepted for the T1 UAT slice; native qualification pending
 - Date: 2026-10-18
