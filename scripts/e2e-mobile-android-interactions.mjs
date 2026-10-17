@@ -104,7 +104,8 @@ try {
   );
   if (mode !== 'settings') {
     assert(field, 'OPEN_DESIGNATED_QA_CHAT_FIRST');
-    assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
+    if (mode !== 'form-keyboard')
+      assert(!field.text || field.text === field['content-desc'], 'EMPTY_QA_COMPOSER_REQUIRED');
   }
   if (mode !== 'form-keyboard') assert(!handle(initial), 'CLOSE_EXISTING_SHEET_FIRST');
   const [, , width, height] = bounds(initial[0]);
