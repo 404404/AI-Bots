@@ -1,4 +1,4 @@
-import { useId, useState, type ReactElement } from 'react';
+import { useId, useRef, useState, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
 
 import { Button, Input, SegmentedControl } from '@deepseek-ai/dsh-client-ui-primitives';
@@ -115,9 +115,28 @@ export function isAbsoluteHostPath(path: string): boolean {
   return /^(?:\/|[A-Za-z]:[\\/]|\\\\)/.test(path);
 }
 
+export interface BotCreationDraft {
+  displayName: string;
+  personaPreset: 'blank' | 'colleague' | 'roleplay';
+  personaDrafts: Record<'blank' | 'colleague' | 'roleplay', string>;
+  gitUrl: string;
+  roleDraft: string;
+  description: string;
+  roles: string[];
+  memoryLocation: string;
+}
+
+export interface BotCreationDraftCache {
+  read(): BotCreationDraft | undefined;
+  write(draft: BotCreationDraft): void;
+}
+
 export function CreatePersonaBotModal({
   actions,
   source = 'empty',
+  presentation = 'dialog',
+  draftCache,
+  onBusy,
   sectionId,
   sectionName,
   t = zhTranslate,
@@ -126,6 +145,9 @@ export function CreatePersonaBotModal({
 }: {
   actions: BridgeActions;
   source?: 'empty' | 'git';
+  presentation?: 'dialog' | 'embedded';
+  draftCache?: BotCreationDraftCache;
+  onBusy?: (busy: boolean) => void;
   sectionId?: string;
   sectionName?: string;
   t?: BotHarnessTranslate | undefined;
@@ -133,18 +155,48 @@ export function CreatePersonaBotModal({
   onCreated: () => void;
 }): ReactElement {
   const personaPresetId = useId();
-  const [displayName, setDisplayName] = useState('');
-  const [personaPreset, setPersonaPreset] = useState<'blank' | 'colleague' | 'roleplay'>('blank');
-  const [personaDrafts, setPersonaDrafts] = useState(() => ({
-    blank: '',
-    colleague: t('bot.create.persona.colleague.seed'),
-    roleplay: t('bot.create.persona.roleplay.seed'),
-  }));
-  const [gitUrl, setGitUrl] = useState('');
-  const [roleDraft, setRoleDraft] = useState('');
-  const [description, setDescription] = useState('');
-  const [roles, setRoles] = useState<string[]>([]);
-  const [memoryLocation, setMemoryLocation] = useState('');
+  const [form, setForm] = useState<BotCreationDraft>(
+    () =>
+      draftCache?.read() ?? {
+        displayName: '',
+        personaPreset: 'blank',
+        personaDrafts: {
+          blank: '',
+          colleague: t('bot.create.persona.colleague.seed'),
+          roleplay: t('bot.create.persona.roleplay.seed'),
+        },
+        gitUrl: '',
+        roleDraft: '',
+        description: '',
+        roles: [],
+        memoryLocation: '',
+      },
+  );
+  const currentForm = useRef(form);
+  const change = <K extends keyof BotCreationDraft>(key: K, value: BotCreationDraft[K]): void => {
+    const next = { ...currentForm.current, [key]: value };
+    currentForm.current = next;
+    draftCache?.write(next);
+    setForm(next);
+  };
+  const {
+    displayName,
+    personaPreset,
+    personaDrafts,
+    gitUrl,
+    roleDraft,
+    description,
+    roles,
+    memoryLocation,
+  } = form;
+  const setDisplayName = (value: string) => change('displayName', value);
+  const setPersonaPreset = (value: BotCreationDraft['personaPreset']) =>
+    change('personaPreset', value);
+  const setGitUrl = (value: string) => change('gitUrl', value);
+  const setRoleDraft = (value: string) => change('roleDraft', value);
+  const setDescription = (value: string) => change('description', value);
+  const setRoles = (value: string[]) => change('roles', value);
+  const setMemoryLocation = (value: string) => change('memoryLocation', value);
   const [pickingFolder, setPickingFolder] = useState(false);
   const [creating, setCreating] = useState(false);
   const [cause, setCause] = useState<unknown | undefined>(undefined);
@@ -178,6 +230,7 @@ export function CreatePersonaBotModal({
     const submittedDescription = description.trim();
     setRoles(submittedRoles);
     setRoleDraft('');
+    onBusy?.(true);
     setCreating(true);
     setCause(undefined);
     void actions
@@ -197,12 +250,14 @@ export function CreatePersonaBotModal({
       )
       .then(
         (created) => {
+          onBusy?.(false);
           setCreating(false);
           if (created.httpsFallback === undefined) onCreated();
           else setFallback(created);
         },
         (rejection: unknown) => {
           setCause(rejection);
+          onBusy?.(false);
           setCreating(false);
         },
       );
@@ -215,8 +270,12 @@ export function CreatePersonaBotModal({
     };
     return (
       <FormDialog
+        presentation={presentation}
         title={t('bot.create.httpsFallback.title')}
-        labels={{ close: t('common.close'), cancel: t('common.cancel') }}
+        labels={{
+          close: t('common.close'),
+          cancel: t(presentation === 'embedded' ? 'home.back' : 'common.cancel'),
+        }}
         submitLabel={t('bot.create.httpsFallback.done')}
         submitData={{ 'data-https-fallback-done': '' }}
         showCancel={false}
@@ -247,6 +306,7 @@ export function CreatePersonaBotModal({
 
   return (
     <FormDialog
+      presentation={presentation}
       title={
         sectionName === undefined
           ? t(source === 'git' ? 'bot.create.gitTitle' : 'bot.create.title')
@@ -255,7 +315,10 @@ export function CreatePersonaBotModal({
             })
       }
       description={t('bot.create.description')}
-      labels={{ close: t('common.close'), cancel: t('common.cancel') }}
+      labels={{
+        close: t('common.close'),
+        cancel: t(presentation === 'embedded' ? 'home.back' : 'common.cancel'),
+      }}
       submitLabel={
         creating
           ? t(source === 'git' ? 'bot.create.importing' : 'bot.create.creating')
@@ -312,65 +375,65 @@ export function CreatePersonaBotModal({
           </div>
         )}
       </Field>
-      <Field label={t('bot.create.roles.label')} hint={t('bot.create.roles.hint')}>
-        {(control) => (
-          <TagEditor
-            id={control.id}
-            tags={roles}
-            draft={roleDraft}
-            disabled={creating}
-            t={t}
-            onTags={setRoles}
-            onDraft={setRoleDraft}
-          />
-        )}
-      </Field>
-      <TextField
-        label={t('bot.create.about.label')}
-        hint={t('bot.create.about.hint')}
-        value={description}
-        disabled={creating}
-        placeholder={t('bot.create.about.placeholder')}
-        onChange={setDescription}
-      />
-      {source === 'empty' ? (
-        <>
-          <Field label={t('bot.create.persona.preset')} group>
-            {() => (
-              <SegmentedControl
-                id={personaPresetId}
-                label={t('bot.create.persona.preset')}
-                value={personaPreset}
-                options={[
-                  { value: 'blank', label: t('bot.create.persona.blank') },
-                  {
-                    value: 'colleague',
-                    label: t('bot.create.persona.colleague'),
-                  },
-                  {
-                    value: 'roleplay',
-                    label: t('bot.create.persona.roleplay'),
-                  },
-                ]}
+      <details data-create-advanced="" {...stylex.props(styles.advanced)}>
+        <summary {...stylex.props(styles.advancedSummary)}>{t('bot.create.advanced')}</summary>
+        <div {...stylex.props(styles.advancedBody)}>
+          <Field label={t('bot.create.roles.label')} hint={t('bot.create.roles.hint')}>
+            {(control) => (
+              <TagEditor
+                id={control.id}
+                tags={roles}
+                draft={roleDraft}
                 disabled={creating}
-                onChange={setPersonaPreset}
+                t={t}
+                onTags={setRoles}
+                onDraft={setRoleDraft}
               />
             )}
           </Field>
-          <TextAreaField
-            label={t('bot.create.persona.label')}
-            hint={t('bot.create.persona.hint')}
-            rows={6}
-            value={personaDrafts[personaPreset]}
+          <TextField
+            label={t('bot.create.about.label')}
+            hint={t('bot.create.about.hint')}
+            value={description}
             disabled={creating}
-            placeholder={t('bot.create.persona.placeholder')}
-            onChange={(value) =>
-              setPersonaDrafts((current) => ({ ...current, [personaPreset]: value }))
-            }
+            placeholder={t('bot.create.about.placeholder')}
+            onChange={setDescription}
           />
-          <details data-create-advanced="" {...stylex.props(styles.advanced)}>
-            <summary {...stylex.props(styles.advancedSummary)}>{t('bot.create.advanced')}</summary>
-            <div {...stylex.props(styles.advancedBody)}>
+          {source === 'empty' ? (
+            <>
+              <Field label={t('bot.create.persona.preset')} group>
+                {() => (
+                  <SegmentedControl
+                    id={personaPresetId}
+                    label={t('bot.create.persona.preset')}
+                    value={personaPreset}
+                    options={[
+                      { value: 'blank', label: t('bot.create.persona.blank') },
+                      {
+                        value: 'colleague',
+                        label: t('bot.create.persona.colleague'),
+                      },
+                      {
+                        value: 'roleplay',
+                        label: t('bot.create.persona.roleplay'),
+                      },
+                    ]}
+                    disabled={creating}
+                    onChange={setPersonaPreset}
+                  />
+                )}
+              </Field>
+              <TextAreaField
+                label={t('bot.create.persona.label')}
+                hint={t('bot.create.persona.hint')}
+                rows={6}
+                value={personaDrafts[personaPreset]}
+                disabled={creating}
+                placeholder={t('bot.create.persona.placeholder')}
+                onChange={(value) =>
+                  change('personaDrafts', { ...personaDrafts, [personaPreset]: value })
+                }
+              />
               <Field
                 label={t('bot.create.memoryLocation.label')}
                 hint={t('bot.create.memoryLocation.hint')}
@@ -399,10 +462,10 @@ export function CreatePersonaBotModal({
                   </div>
                 )}
               </Field>
-            </div>
-          </details>
-        </>
-      ) : null}
+            </>
+          ) : null}
+        </div>
+      </details>
     </FormDialog>
   );
 }

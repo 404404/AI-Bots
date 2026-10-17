@@ -151,6 +151,10 @@ export function botZipError(error: unknown, t: BotHarnessTranslate): string {
 
 export function ImportBotZipModal({
   actions,
+  presentation = 'dialog',
+  initialFile,
+  onFileChange,
+  onBusy,
   sectionId,
   sectionName,
   t,
@@ -158,6 +162,10 @@ export function ImportBotZipModal({
   onImported,
 }: {
   actions: BridgeActions;
+  presentation?: 'dialog' | 'embedded';
+  initialFile?: File;
+  onFileChange?: (file: File | undefined) => void;
+  onBusy?: (busy: boolean) => void;
   sectionId?: string;
   sectionName?: string;
   t: BotHarnessTranslate;
@@ -165,20 +173,27 @@ export function ImportBotZipModal({
   onImported: () => void;
 }): ReactElement {
   const input = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File>();
+  const [file, updateFile] = useState<File | undefined>(initialFile);
+  const setFile = (next: File | undefined) => {
+    onFileChange?.(next);
+    updateFile(next);
+  };
   const [importing, setImporting] = useState(false);
   const [cause, setCause] = useState<unknown>();
 
   const submit = (): void => {
     if (file === undefined || importing) return;
+    onBusy?.(true);
     setImporting(true);
     setCause(undefined);
     void actions.importBotZip(file, sectionId).then(
       () => {
+        onBusy?.(false);
         setImporting(false);
         onImported();
       },
       (rejection: unknown) => {
+        onBusy?.(false);
         setImporting(false);
         setCause(rejection);
       },
@@ -187,13 +202,17 @@ export function ImportBotZipModal({
 
   return (
     <FormDialog
+      presentation={presentation}
       title={
         sectionName === undefined
           ? t('botZip.import.title')
           : t('botZip.import.inSection', { name: sectionName })
       }
       description={t('botZip.import.description')}
-      labels={{ close: t('common.close'), cancel: t('common.cancel') }}
+      labels={{
+        close: t('common.close'),
+        cancel: t(presentation === 'embedded' ? 'home.back' : 'common.cancel'),
+      }}
       submitLabel={importing ? t('botZip.import.importing') : t('botZip.import.submit')}
       submitDisabled={file === undefined}
       busy={importing}
