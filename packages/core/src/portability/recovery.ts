@@ -1,3 +1,4 @@
+import type { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { attachOperationalModule, type OperationalDatabaseOwner } from '../database/owner.js';
 import type { PersonaBotRegistry } from '../bots/registry.js';
@@ -52,6 +53,31 @@ export function createProfileRecovery(
         'plan-changed',
         'Reviewed Model Plan or recovery state changed; review again',
       );
+  };
+  const checkedCommit = <T>(
+    slug: string,
+    expected: ProfileRecoveryExpectation,
+    authorize: (() => void) | undefined,
+    write: (db: DatabaseSync) => T,
+  ): T => {
+    let refusal: unknown;
+    try {
+      return port.transaction((db) => {
+        try {
+          authorize?.();
+          assertExpected(slug, expected);
+        } catch (error) {
+          refusal = error;
+          throw error;
+        }
+        return write(db);
+      });
+    } catch (error) {
+      // Preserve the domain refusal only after the database confirms rollback.
+      // A failed rollback/recovery transition remains the database owner's error.
+      if (refusal !== undefined && database.mode === 'ready') throw refusal;
+      throw error;
+    }
   };
   return {
     receipt,
@@ -144,9 +170,7 @@ export function createProfileRecovery(
       await catalog.validate(plan.orchestrator);
       if (registry.get(slug)?.modelPlan?.revision !== plan.revision)
         throw new ProfileBackupError('plan-changed', 'Model Plan changed; review again');
-      port.transaction((db) => {
-        authorize?.();
-        assertExpected(slug, { ...expected, planRevision: plan.revision });
+      checkedCommit(slug, { ...expected, planRevision: plan.revision }, authorize, (db) => {
         db.prepare(
           'UPDATE profile_recovery_bots SET authorized_plan_revision = ? WHERE bot_slug = ?',
         ).run(plan.revision, slug);
@@ -181,9 +205,7 @@ export function createProfileRecovery(
       }
       const sessionId = 'botharness-' + randomUUID();
       const cwdReference = registry.memoryDirFor(slug);
-      port.transaction((db) => {
-        authorize?.();
-        assertExpected(slug, expected);
+      checkedCommit(slug, expected, authorize, (db) => {
         ownership.claimWithin(db, {
           botSlug: slug,
           sessionId,
