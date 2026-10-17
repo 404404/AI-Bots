@@ -292,7 +292,7 @@ describe('scoped Marketplace reads and chosen import', () => {
   });
   it('allows uploads only for exact import commands and enforces the limit before buffering', async () => {
     const f = await brokerFixture();
-    const response = await fetch(f.broker.endpoint + 'invoke-upload', {
+    const response = await fetch(new URL('invoke-upload', f.broker.endpoint), {
       method: 'POST',
       headers: {
         authorization: 'Bearer ' + f.broker.token,
