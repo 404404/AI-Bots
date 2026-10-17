@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "qualification": "completed-product-steps-reconciled-offline; original-driver-exit-failed",
+  "testedProductSource": "f69a80a9d7148d4f6e8d80cc562590997ef19c6d",
+  "verifierHead": "261388e69cab430ebde6f981db32cdf5037e4975",
+  "scope": "macOS Native offer/status and existing Human Devices handoff only",
+  "productSteps": {
+    "resumeOfferOnly": true,
+    "modelShell": true,
+    "modelOfferHumanHandoff": true,
+    "syntheticClientOnly": true,
+    "nativeDesktop": true,
+    "noPageErrors": true
+  },
+  "canonicalReadback": {
+    "persistedHumanRequest": true,
+    "persistedHumanApproval": true,
+    "persistedBotReply": true,
+    "sourcePlacementsPresent": true,
+    "nativeSessionToolCallsAndResultsPresent": true,
+    "nativeSessionEnded": true,
+    "allSyntheticDevicesRemainRevoked": true
+  },
+  "limits": [
+    "original driver exited nonzero at final Host-log read because native manifest lacked log path; first failure retained",
+    "no full f69 native pair/revoke rerun",
+    "no exact mixed-Triage native claim; separate real Web regression passed",
+    "no pending receipt reuse after process restart",
+    "physical phone and Human QA unverified"
+  ],
+  "hostLogReview": {
+    "structuralScan": {
+      "pairingLinkAbsent": true,
+      "encodedPairingPayloadAbsent": true,
+      "rawOfferFieldAbsent": true,
+      "deviceCredentialAbsent": true,
+      "noCandidateHostFatal": true
+    },
+    "exactPairingSecretComparison": "not recoverable after candidate stop; ordinary-evidence exact checks had passed before driver bookkeeping failure"
+  }
+}

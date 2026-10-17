@@ -2362,9 +2362,9 @@
                       <tr>
                         <td>macOS Desktop</td>
                         <td>
-                          <span class="am-status am-status--warn"
-                            ><span class="am-status-icon" aria-hidden="true">!</span
-                            >旧源码第二条指令失败；修复后待父任务重跑</span
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span
+                            >新源码回执与交接完成；驱动收尾失败另存核对</span
                           >
                         </td>
                       </tr>
@@ -2399,8 +2399,13 @@
                 <p>测试客户端只能证明协议与网关行为。 它不能证明手机相机、Keychain 或原生网络。</p>
                 <p>
                   产品源码绑定 runtime 所示提交。 旧截图绑定 capture 所示提交与原始 8bde 源码。
-                  首次原生失败保留，不能当作新源码通过。 新源码完整 Web 旅程已通过。 新 Human
-                  指令进入实际 Memory 整理回合的 Web 验证也已通过。
+                  首次原生失败保留。 新源码的 macOS 安全回执、状态与 Human 交接已完成。
+                  驱动最后读日志失败，另存离线核对结果。
+                </p>
+                <p>
+                  日志只补做结构扫描，不能恢复临时配对密钥。 完整原生配对、撤销与实体手机仍未验证。
+                  新源码完整 Web 旅程已通过。 新 Human 指令进入实际 Memory 整理回合的 Web
+                  验证也已通过。
                 </p>
                 <p>
                   <a href="https://github.com/BotHarness/DeepSeekBot/pull/2129">Draft PR 2129</a>
@@ -2454,7 +2459,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 07:57 ·
+      0.5.0 · 2026-10-18 08:06 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2536,7 +2541,7 @@ Memory 整理可以接收一条新的人类指令。
 | 来源策略、CLI 覆盖、变更记录 | ok 通过 |
 | 独立 CLI 与 Web 路径 | ok 完整通过；连接关闭码为现有 1006 |
 | 类型检查、构建与官方模型 Tob 旅程 | ok 通过；配对交接与撤销均已核对 |
-| macOS Desktop | warn 旧源码第二条指令失败；修复后待父任务重跑 |
+| macOS Desktop | ok 新源码回执与交接完成；驱动收尾失败另存核对 |
 | 物理手机 | warn 尚未验证 |
 | Draft PR | ok 已创建 2129；新提交需重新核对 CI |
 | 合并、部署 | warn 尚未执行 |
@@ -2546,7 +2551,12 @@ Memory 整理可以接收一条新的人类指令。
 
 产品源码绑定 runtime 所示提交。
 旧截图绑定 capture 所示提交与原始 8bde 源码。
-首次原生失败保留，不能当作新源码通过。
+首次原生失败保留。
+新源码的 macOS 安全回执、状态与 Human 交接已完成。
+驱动最后读日志失败，另存离线核对结果。
+
+日志只补做结构扫描，不能恢复临时配对密钥。
+完整原生配对、撤销与实体手机仍未验证。
 新源码完整 Web 旅程已通过。
 新 Human 指令进入实际 Memory 整理回合的 Web 验证也已通过。
 

@@ -54,14 +54,14 @@
     "authorityBuild": "passed"
   },
   "gates": {
-    "CI": "new-head-awaits-ci:full",
-    "nativeDesktop": "old-source-second-Human-refusal-retained; fixed-source-retry-pending",
+    "CI": "261388e69 full CI passed; next verifier/evidence head awaits CI",
+    "nativeDesktop": "bounded offer/status + Human handoff completed; offline reconciliation; driver exit remains failed",
     "physicalPhone": "unverified",
     "HumanQA": "pending",
     "merge": "not-authorized",
     "deployment": "not-authorized"
   },
-  "publicationCheck": "New source f69 has focused tests, types, build and real continuous-DM Web proof. Original screenshots remain tied to source 8bde/capture e734. No physical-phone or final-native claim.",
+  "publicationCheck": "Frozen product f69 has 79 focused checks, types/build, full real Web journey, exact Memory-triage Web regression and bounded macOS Native offer/status + Human handoff. Original raw screenshots remain source8bde/capturee734; separate Native captures are sourcef69/verifier261. Driver bookkeeping failure retained.",
   "previousTestedProductSource": "8bde3340afb8ba4a23f3f715851f83da188168d2",
   "exactMemoryTriageSteer": "passed: real Memory change, actual automatic Triage turn, fresh Human next-step splice and successful device-offer/status in that same turn; synthetic timing fixture",
   "retainedNativeFailures": [
@@ -79,6 +79,52 @@
       "source": "f69a80a9d",
       "stage": "initial renderer readiness",
       "reason": "verifier checked rail once before hydration and searched absent mode button; bounded visible-renderer polling added; model phase not reached"
+    },
+    {
+      "source": "f69a80a9d",
+      "stage": "after completed offer/status and Human handoff",
+      "reason": "native manifest omitted Host log path; driver final bookkeeping failed; offline canonical/log/screenshot reconciliation recorded separately"
     }
-  ]
+  ],
+  "nativeReconciliation": {
+    "version": 1,
+    "qualification": "completed-product-steps-reconciled-offline; original-driver-exit-failed",
+    "testedProductSource": "f69a80a9d7148d4f6e8d80cc562590997ef19c6d",
+    "verifierHead": "261388e69cab430ebde6f981db32cdf5037e4975",
+    "scope": "macOS Native offer/status and existing Human Devices handoff only",
+    "productSteps": {
+      "resumeOfferOnly": true,
+      "modelShell": true,
+      "modelOfferHumanHandoff": true,
+      "syntheticClientOnly": true,
+      "nativeDesktop": true,
+      "noPageErrors": true
+    },
+    "canonicalReadback": {
+      "persistedHumanRequest": true,
+      "persistedHumanApproval": true,
+      "persistedBotReply": true,
+      "sourcePlacementsPresent": true,
+      "nativeSessionToolCallsAndResultsPresent": true,
+      "nativeSessionEnded": true,
+      "allSyntheticDevicesRemainRevoked": true
+    },
+    "limits": [
+      "original driver exited nonzero at final Host-log read because native manifest lacked log path; first failure retained",
+      "no full f69 native pair/revoke rerun",
+      "no exact mixed-Triage native claim; separate real Web regression passed",
+      "no pending receipt reuse after process restart",
+      "physical phone and Human QA unverified"
+    ],
+    "hostLogReview": {
+      "structuralScan": {
+        "pairingLinkAbsent": true,
+        "encodedPairingPayloadAbsent": true,
+        "rawOfferFieldAbsent": true,
+        "deviceCredentialAbsent": true,
+        "noCandidateHostFatal": true
+      },
+      "exactPairingSecretComparison": "not recoverable after candidate stop; ordinary-evidence exact checks had passed before driver bookkeeping failure"
+    }
+  }
 }
