@@ -28,6 +28,9 @@ function fixture(
   run: (input: OrchestratorAgentRun) => Promise<void> = async () => {},
   extra: Partial<Parameters<typeof createCore>[0]> = {},
   steerOrchestrator?: () => boolean,
+  runAssignment: NonNullable<
+    Parameters<typeof createCore>[0]['agents']
+  >['runAssignment'] = async () => {},
 ) {
   const native = settings();
   const home = createTempRoot('tob-');
@@ -39,7 +42,7 @@ function fixture(
       agents: {
         runOrchestrator: run,
         ...(steerOrchestrator ? { steerOrchestrator } : {}),
-        async runAssignment() {},
+        runAssignment,
         requestAssignment() {
           throw new Error('unexpected');
         },
@@ -388,6 +391,10 @@ describe('Tob canonical identity and settings', () => {
     const released = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let releaseAssignment!: () => void;
+    const assignmentDone = new Promise<void>((resolve) => {
+      releaseAssignment = resolve;
+    });
     let triage!: OrchestratorAgentRun;
     let automationQuestion: ReturnType<
       NonNullable<ReturnType<typeof fixture>['core']['runtime']['bindNativeQuestionInput']>
@@ -442,6 +449,9 @@ describe('Tob canonical identity and settings', () => {
         }),
       },
       steer,
+      async () => {
+        await assignmentDone;
+      },
     );
     try {
       const home = await f.core.tob.ensure();
@@ -566,6 +576,7 @@ describe('Tob canonical identity and settings', () => {
         outcome: 'done',
       });
       release();
+      releaseAssignment();
       await f.core.runtime.whenIdle();
       expect(await automationQuestion!(() => true)).toBe(true);
       await f.core.runtime.whenIdle();
@@ -576,6 +587,7 @@ describe('Tob canonical identity and settings', () => {
         if (remaining.length > 0) triage.triage!.resolve({ ids: remaining, outcome: 'done' });
       }
       release();
+      releaseAssignment();
       await f.core.runtime.whenIdle();
       clients.dispose();
       await f.close();
