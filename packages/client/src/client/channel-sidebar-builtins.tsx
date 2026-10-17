@@ -1,3 +1,4 @@
+import { ChannelNicknameEntry, ChannelTraceEntry } from './channel-personal-settings.js';
 import type { ExternalSource } from '../../../core/src/messaging/inbound.js';
 import { useCallback, useRef, useState, useSyncExternalStore, type ReactElement } from 'react';
 import * as stylex from '@stylexjs/stylex';
@@ -51,7 +52,7 @@ import { ExternalSourceContent } from './external-source-content.js';
 import { externalPlatformLabel, externalSenderLabel } from './bridge-source-label.js';
 import { DisbandGroupDialog, GroupManagementSettings } from './group-management-settings.js';
 import { MembersEntry, MembersHeaderAction } from './group-member-controls.js';
-import { GroupWorkEntry } from './group-work-entry.js';
+import { setSessionTarget, useSessionTarget } from './session-target.js';
 import { PrivateAccountsSection } from './private-accounts-section.js';
 import { BotSchedulesEntry, BotSchedulesHeaderAction, ScheduleDialog } from './schedules-entry.js';
 import { SidebarCardList, SidebarCardRow } from './sidebar-card.js';
@@ -71,12 +72,22 @@ import {
   type InboxSection,
 } from './inbox-sections.js';
 import type { BotHarnessTranslate } from './locale.js';
-import type { BotAttentionItem } from './store.js';
+import type { BotAttentionItem, ClientState } from './store.js';
 import { IconButton } from './ds/icon-button.js';
 import { GroupHeading } from './ds/group-heading.js';
 import { border, color, radius, space, text } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
+  sessionTarget: {
+    minWidth: 0,
+    flexShrink: 1,
+    maxWidth: '160px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    color: color.muted,
+    fontSize: text.metaSize,
+  },
   flushInboxGroup: {
     paddingBlock: 0,
     marginTop: 0,
@@ -1052,8 +1063,14 @@ function AssignmentLimitDialog({
 
 function SessionsHeaderWithSettings({
   prefs,
+  targetItems,
+  targetId,
   ...props
-}: ChannelSidebarEntryProps & { prefs: BotModePrefs | undefined }): ReactElement {
+}: ChannelSidebarEntryProps & {
+  prefs: BotModePrefs | undefined;
+  targetItems: readonly MenuEntry[];
+  targetId: string | undefined;
+}): ReactElement {
   const { botSlug, actions, t } = props;
   const [plan, mount] = useModelPlan(botSlug, actions);
   const readLimit = () => prefs?.source.getSnapshot().assignmentConcurrencyLimit;
@@ -1064,7 +1081,8 @@ function SessionsHeaderWithSettings({
   );
   const [limitOpen, setLimitOpen] = useState(false);
   const extraItems: MenuEntry[] = [
-    ...(botSlug === undefined
+    ...targetItems,
+    ...(botSlug === undefined || props.scope === 'channel'
       ? []
       : [
           { type: 'separator' as const, id: 'model-separator' },
@@ -1091,8 +1109,14 @@ function SessionsHeaderWithSettings({
       <SessionsHeaderAction
         {...props}
         extraItems={extraItems}
+        extraSelectedIds={targetId ? [targetId] : []}
         onExtraSelect={(id) => {
-          if (id === 'limit:edit') setLimitOpen(true);
+          if (id.startsWith('target:'))
+            setSessionTarget(
+              props.channelId,
+              id === 'target:channel' ? '' : id.slice('target:bot:'.length),
+            );
+          else if (id === 'limit:edit') setLimitOpen(true);
           else channelSettings.open('model');
         }}
       />
@@ -1147,7 +1171,51 @@ export function createChannelSidebarBuiltins(
     return <WorkspaceGrantsEntry {...props} developerMode={developerMode} />;
   }
   function SessionsHeader(props: ChannelSidebarEntryProps): ReactElement {
-    return <SessionsHeaderWithSettings {...props} prefs={prefs} />;
+    const target = useSessionTarget(props);
+    const state = useClientState();
+    const group = props.botSlug === undefined;
+    const channel =
+      state.conversation.channel?.id === props.channelId
+        ? state.conversation.channel
+        : state.channels.find((channel) => channel.id === props.channelId);
+    const bots = state.bots.filter((bot) => channel?.members.includes(bot.slug));
+    const selected =
+      target.kind === 'bot' ? state.bots.find((bot) => bot.slug === target.slug) : undefined;
+    const targetId = group
+      ? target.kind === 'channel'
+        ? 'target:channel'
+        : `target:bot:${target.slug}`
+      : undefined;
+    const targetItems: MenuEntry[] = group
+      ? [
+          { type: 'label', id: 'target-label', text: props.t('sessions.target.label') },
+          { id: 'target:channel', label: props.t('sessions.target.channel') },
+          ...bots.map((bot) => ({
+            id: `target:bot:${bot.slug}`,
+            label: props.t('sessions.target.bot', { name: bot.displayName }),
+          })),
+        ]
+      : [];
+    return (
+      <>
+        {group && selected ? (
+          <span
+            data-session-target=""
+            title={selected.displayName}
+            {...stylex.props(styles.sessionTarget)}
+          >
+            {props.t('sessions.target.bot', { name: selected.displayName })}
+          </span>
+        ) : null}
+        <SessionsHeaderWithSettings
+          {...props}
+          botSlug={target.kind === 'bot' ? target.slug : undefined}
+          prefs={group ? undefined : prefs}
+          targetItems={targetItems}
+          targetId={targetId}
+        />
+      </>
+    );
   }
   function MemoryEvolutionEntry(props: ChannelSidebarEntryProps): ReactElement {
     return <MemoryEntry {...props} showFiles={false} />;
@@ -1176,11 +1244,10 @@ export function createChannelSidebarBuiltins(
     },
     {
       id: 'sessions',
-      tab: 'conversation',
       icon: 'text-quote',
       label: t('entry.sessions'),
       order: 10,
-      scope: 'personabot',
+      scope: 'both',
       component: SessionsWithNative,
       headerAction: SessionsHeader,
     },
@@ -1204,6 +1271,25 @@ export function createChannelSidebarBuiltins(
       scope: 'personabot',
       component: BotSchedulesEntry,
       headerAction: BotSchedulesHeaderAction,
+    },
+    ...(['personabot', 'channel'] as const).map((scope) => ({
+      id: scope === 'personabot' ? 'human-nickname' : 'group-human-nickname',
+      surface: 'settings' as const,
+      icon: 'user',
+      label: t('humanNickname.title'),
+      order: 1,
+      scope,
+      component: ChannelNicknameEntry,
+      visible: (state: ClientState) => state.conversation.channel?.humanNickname !== undefined,
+    })),
+    {
+      id: 'dm-trace',
+      surface: 'settings',
+      icon: 'eye',
+      label: t('dmTrace.menu'),
+      order: 2,
+      scope: 'personabot',
+      component: ChannelTraceEntry,
     },
     {
       id: 'workspace-grants',
@@ -1271,14 +1357,6 @@ export function createChannelSidebarBuiltins(
       order: 29,
       scope: 'personabot',
       component: PrivateAccountsSection,
-    },
-    {
-      id: 'group-work',
-      icon: 'list-checks',
-      label: t('entry.groupWork'),
-      order: 5,
-      scope: 'channel',
-      component: GroupWorkEntry,
     },
     {
       id: 'members',

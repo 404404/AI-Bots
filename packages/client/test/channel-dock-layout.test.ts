@@ -2,6 +2,7 @@ import type { SerializedDockview } from 'dockview-react';
 import { describe, expect, it } from 'vitest';
 
 import {
+  migrateWorkPanel,
   allowsDockDrop,
   CHANNEL_BODY_PANEL,
   CHANNEL_DOCK_STORAGE_KEY,
@@ -53,9 +54,9 @@ describe('Bot mode layout persistence', () => {
   it('round-trips a versioned dockview serialization', () => {
     const storage = memoryStorage();
     writeChannelDock({ layout, parked: { schedules: { direction: 'below' } } }, storage);
-    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(2);
+    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(3);
     expect(readChannelDock(storage)).toEqual({
-      version: 2,
+      version: 3,
       gap: 4,
       order: [],
       hiddenControls: [],
@@ -148,5 +149,61 @@ describe('drops never tab two panels together', () => {
     expect(allowsDockDrop('header_space', 'center')).toBe(false);
     expect(allowsDockDrop('content', 'left')).toBe(true);
     expect(allowsDockDrop('edge', 'right')).toBe(true);
+  });
+});
+
+describe('Work → Sessions upgrade', () => {
+  const stored = (views: string[]) => ({
+    version: 3 as const,
+    layout: {
+      ...layout,
+      grid: {
+        ...layout.grid,
+        root: {
+          type: 'branch' as const,
+          data: [leaf('main', CHANNEL_BODY_PANEL), ...views.map((id) => leaf(id, id))],
+        },
+      },
+      panels: Object.fromEntries(
+        [CHANNEL_BODY_PANEL, ...views].map((id) => [id, { id, params: { entryId: id } }]),
+      ),
+    },
+    order: ['group-work', 'memory-files', ...views.filter((id) => id !== 'group-work')],
+    hiddenControls: ['sessions'],
+    gap: 7,
+    parked: { schedules: { neighbor: 'group-work', direction: 'below' as const } },
+  });
+  it('replaces Work in place and keeps its switch recoverable', () => {
+    const original = stored(['group-work', 'bot-inbox']);
+    const result = migrateWorkPanel(original);
+    expect(Object.keys(result.layout.panels)).toEqual([
+      CHANNEL_BODY_PANEL,
+      'sessions',
+      'bot-inbox',
+    ]);
+    expect(result.layout.panels.sessions?.params?.entryId).toBe('sessions');
+    expect((result.layout.grid.root.data as unknown[])[1]).toEqual(leaf('group-work', 'sessions'));
+    expect(result.hiddenControls).not.toContain('sessions');
+    expect(result.parked.schedules?.neighbor).toBe('sessions');
+    expect(result.gap).toBe(7);
+    expect(migrateWorkPanel(result)).toEqual(result);
+    expect(original.layout.panels['group-work']).toBeDefined();
+  });
+  it('keeps the existing Sessions geometry/order and removes the duplicate Work leaf', () => {
+    const original = stored(['group-work', 'sessions', 'bot-inbox']);
+    const result = migrateWorkPanel(original);
+    expect(result.layout.grid.root.data).toEqual([
+      leaf('main', CHANNEL_BODY_PANEL),
+      leaf('sessions', 'sessions'),
+      leaf('bot-inbox', 'bot-inbox'),
+    ]);
+    expect(result.order).toEqual(['memory-files', 'sessions', 'bot-inbox']);
+    expect(result.hiddenControls).toContain('sessions');
+    expect(migrateWorkPanel(result)).toEqual(result);
+  });
+  it('does not reopen either closed panel and rewrites parked neighbors', () => {
+    const result = migrateWorkPanel(stored(['bot-inbox']));
+    expect(result.layout.panels.sessions).toBeUndefined();
+    expect(result.parked.schedules?.neighbor).toBe('sessions');
   });
 });

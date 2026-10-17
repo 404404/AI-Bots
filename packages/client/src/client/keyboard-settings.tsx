@@ -8,6 +8,20 @@ import { ShortcutHelpList } from './shortcut-help.js';
 import { SettingsRow, SettingsSection } from './ds/settings-row.js';
 import { useMountedResource } from './mounted-resource.js';
 
+let workShortcutNotice = false;
+const noticeListeners = new Set<() => void>();
+const subscribeNotice = (listener: () => void) => {
+  noticeListeners.add(listener);
+  return () => {
+    noticeListeners.delete(listener);
+  };
+};
+const noticeSnapshot = () => workShortcutNotice;
+export function setWorkShortcutNotice(value: boolean): void {
+  workShortcutNotice = value;
+  noticeListeners.forEach((listener) => listener());
+}
+
 export function KeyboardSettings({
   t,
   useBotModePrefs,
@@ -17,6 +31,7 @@ export function KeyboardSettings({
   InjectFace<
     BotModePrefsFace & { shortcutBindings: ShortcutBindings; shortcuts: Shortcuts }
   >): ReactElement {
+  const migrationNotice = useSyncExternalStore(subscribeNotice, noticeSnapshot, noticeSnapshot);
   const [query, setQuery] = useState('');
   const [recording, setRecording] = useState<ShortcutCommandId>();
   const [ready, setReady] = useState(false);
@@ -106,6 +121,12 @@ export function KeyboardSettings({
   );
   return (
     <div ref={mount} className="bh-keyboard-settings">
+      {migrationNotice ? (
+        <p role="status">
+          {t('sessions.shortcut.migration')}{' '}
+          <Button onClick={() => setWorkShortcutNotice(false)}>{t('common.close')}</Button>
+        </p>
+      ) : null}
       <Input
         className="bh-settings-search-input"
         type="search"
