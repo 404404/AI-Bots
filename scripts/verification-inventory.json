@@ -1618,7 +1618,7 @@
       "behaviors": ["desktop.sessions.unified", "desktop.bot-mode.dock"],
       "reason": "Runs actual macOS Desktop default and custom shortcut dispatch, persistence, automatic Channel scope and explicit Bot scope.",
       "task": 2034,
-      "sha256": "a20ad4186fef3b7862b34a395a0b8b30ddbcf8716d5931dd1a5f53f32b50fa35"
+      "sha256": "8c0887eb84b21d0a6b1f2ad725555ce409c5bd0c940630a4bdaa17d7c69efc90"
     }
   ],
   "native": [

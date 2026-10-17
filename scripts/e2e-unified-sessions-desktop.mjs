@@ -28,6 +28,7 @@ const rail = '.bh-workspace-rail';
 const header = '[data-dock-header="sessions"]';
 const toggle = `${rail} [data-pinned-panel="sessions"]`;
 async function settledSessions() {
+  await page.bringToFront();
   await page.waitForSelector(header, { visible: true });
   await page.waitForFunction(() => {
     const body = document.querySelector('[data-sidebar-entry="sessions"]');
@@ -179,11 +180,17 @@ try {
   await settledSessions();
   assert.ok(
     await page.$eval(header, (node) => {
-      const bounds = node.getBoundingClientRect();
+      const bounds = node.closest('.dv-groupview').getBoundingClientRect();
+      const heading = node.querySelector('[data-panel-label]').getBoundingClientRect();
       const action = node
         .querySelector('button[aria-label="会话视图选项"]')
         ?.getBoundingClientRect();
-      return action && action.right <= bounds.right && action.left >= bounds.left;
+      return (
+        action &&
+        action.right <= bounds.right &&
+        action.left >= bounds.left &&
+        heading.left >= bounds.left
+      );
     }),
     'The view-options button remains inside the narrow panel header',
   );
