@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,6 +18,7 @@ export default function RootLayout() {
   const theme = useTheme();
   const design = useDesignTheme();
   const routing = usePushRouting();
+  const editingBackground = useSegments().at(-1) === 'chat-background';
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardRoot>
@@ -41,14 +42,14 @@ export default function RootLayout() {
                 name="bot/[slug]"
                 options={{
                   title: t.profile,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, editingBackground),
                 }}
               />
               <Stack.Screen
                 name="group/[id]"
                 options={{
                   title: t.groupInfo,
-                  ...sheetScreenOptions(design),
+                  ...sheetScreenOptions(design, editingBackground),
                 }}
               />
               <Stack.Screen

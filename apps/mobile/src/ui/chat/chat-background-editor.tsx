@@ -56,6 +56,7 @@ export function ChatBackgroundEditor({
   return (
     <View style={{ flex: 1, backgroundColor: theme.overlay.fill }}>
       <ScrollView
+        style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: space.x5, gap: space.x5 }}
       >
