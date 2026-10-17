@@ -252,21 +252,22 @@ function Post({
     item.channelName !== undefined && !item.channelId?.startsWith('dm-')
       ? ` · ${t.inChannel(item.channelName)}`
       : '';
-  const ports = useMemo(
-    () => ({
+  const { channelId, messageId, botSlug } = ref;
+  const ports = useMemo(() => {
+    const stableRef = { channelId, messageId, botSlug };
+    return {
       approval: {
-        load: () => loadApproval(client, ref),
+        load: () => loadApproval(client, stableRef),
         decide: (outcome: Parameters<typeof decideApproval>[2]) =>
-          decideApproval(client, ref, outcome),
+          decideApproval(client, stableRef, outcome),
       },
       question: {
-        load: () => loadQuestion(client, ref),
+        load: () => loadQuestion(client, stableRef),
         answer: (answer: Parameters<typeof answerQuestion>[2]) =>
-          answerQuestion(client, ref, answer),
+          answerQuestion(client, stableRef, answer),
       },
-    }),
-    [client, ref],
-  );
+    };
+  }, [client, channelId, messageId, botSlug]);
   const settled = (result: DecisionResult) => {
     onSettled(item, result);
     void inbox?.refresh();

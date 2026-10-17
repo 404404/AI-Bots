@@ -1,4 +1,4 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement, useRef, type ReactNode } from 'react';
 
 type Route = { key: string };
 export function TabView({
@@ -13,6 +13,8 @@ export function TabView({
   renderScene(props: { route: Route }): ReactNode;
 }) {
   const { routes, index } = navigationState;
+  const visited = useRef(new Set<string>());
+  visited.current.add(routes[index]!.key);
   return createElement(
     'div',
     null,
@@ -28,6 +30,14 @@ export function TabView({
       'data-testid': 'pager-previous',
       onClick: () => onIndexChange(Math.max(index - 1, 0)),
     }),
-    renderScene({ route: routes[index]! }),
+    ...routes
+      .filter((route) => visited.current.has(route.key))
+      .map((route) =>
+        createElement(
+          'div',
+          { key: route.key, hidden: route.key !== routes[index]?.key },
+          renderScene({ route }),
+        ),
+      ),
   );
 }
