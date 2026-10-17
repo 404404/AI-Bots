@@ -466,8 +466,12 @@ try {
   await page.keyboard.press('Escape');
 
   step = 'header-profile-details';
-  await page.click('.bh-topbar .bh-channel-island');
-  await page.locator(`::-p-aria(${chinese ? '查看资料' : 'View profile'})`).click();
+  assert.equal(await page.$('.bh-topbar .bh-channel-island'), null, 'no floating profile chip');
+  await page
+    .locator(
+      `[data-dock-header="bh:channel-body"] button[aria-label="${chinese ? '查看资料' : 'View profile'}"]`,
+    )
+    .click();
   await page.waitForSelector('.bh-profile-view');
   assert.equal(await page.$('.bh-profile-popover'), null, 'profile opens without a popover');
   assert.equal(

@@ -109,6 +109,7 @@ import {
   type ChannelSidebarEntryProps,
   type ChannelSidebarRegistry,
 } from './channel-sidebar.js';
+import { ChannelAttentionDot } from './channel-options.js';
 import { ChannelSettingsAttention, ChannelSettingsDialog } from './channel-settings.js';
 import {
   channelSettings,
@@ -2309,6 +2310,8 @@ function ConversationView({
       ) : null}
       <div
         ref={profileMount}
+        hidden={workspaceEnabled}
+        style={workspaceEnabled ? { display: 'none' } : undefined}
         className="bh-topbar"
         data-window-drag
         data-bh-tour="topbar"
@@ -2319,152 +2322,161 @@ function ConversationView({
             : undefined
         }
       >
-        {onMobileBack !== undefined ? (
-          <MobileConversationHeader
-            title={title}
-            onBack={onMobileBack}
-            onSettings={sidebar.toggle}
-            onFiles={channelId === undefined ? undefined : () => setFilesOpen(!filesOpen)}
-            filesOpen={filesOpen}
-            onInbox={inboxAvailable ? () => setInboxOpen(!inboxOpen) : undefined}
-            inboxOpen={inboxOpen}
-            settingsOpen={sidebar.mode !== 'hidden'}
-            t={t}
-          />
-        ) : channel?.type === 'group' ? (
-          <span className="bh-channel-island-wrap">
-            {channelHeaderMenu(
-              {
-                label: t('groupProfile.label'),
-                icon: <ChannelSidebarIcon name="id-card" size={16} />,
-                run: openProfileView,
-              },
-              (menu) => (
-                <GroupChannelHeader
-                  channel={channel}
-                  title={title}
-                  members={channelFacepile}
-                  expanded={profileViewOpen}
-                  menu={menu}
-                  t={t}
-                  onOpenActivity={openProfileView}
-                  onToggleProfile={openProfileView}
-                />
-              ),
-            )}
-          </span>
-        ) : profileBot === undefined ? (
-          <span className="bh-companion-chip">
-            {channelHeaderMenu(
-              {
-                label: t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse'),
-                icon: <ChannelSidebarIcon name="panels-top-left" size={16} />,
-                run: sidebar.toggle,
-              },
-              (menu) => (
-                <button
-                  type="button"
-                  className="bh-channel-island"
-                  {...(menu === undefined
-                    ? {
-                        'aria-label': `${title} — ${t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse')}`,
-                        'aria-controls': 'bh-channel-sidebar',
-                        'aria-expanded': sidebar.mode !== 'hidden',
-                        onClick: sidebar.toggle,
-                      }
-                    : {
-                        'aria-label': channelMenuLabel(menu),
-                        'aria-haspopup': 'menu' as const,
-                        'aria-expanded': menu.open,
-                        onClick: menu.toggle,
-                      })}
-                >
-                  {bot !== undefined ? (
-                    <PersonaBotAvatar
+        {!workspaceEnabled && (
+          <>
+            {onMobileBack !== undefined ? (
+              <MobileConversationHeader
+                title={title}
+                onBack={onMobileBack}
+                onSettings={sidebar.toggle}
+                onFiles={channelId === undefined ? undefined : () => setFilesOpen(!filesOpen)}
+                filesOpen={filesOpen}
+                onInbox={inboxAvailable ? () => setInboxOpen(!inboxOpen) : undefined}
+                inboxOpen={inboxOpen}
+                settingsOpen={sidebar.mode !== 'hidden'}
+                t={t}
+              />
+            ) : channel?.type === 'group' ? (
+              <span className="bh-channel-island-wrap">
+                {channelHeaderMenu(
+                  {
+                    label: t('groupProfile.label'),
+                    icon: <ChannelSidebarIcon name="id-card" size={16} />,
+                    run: openProfileView,
+                  },
+                  (menu) => (
+                    <GroupChannelHeader
+                      channel={channel}
+                      title={title}
+                      members={channelFacepile}
+                      expanded={profileViewOpen}
+                      menu={menu}
                       t={t}
-                      personaBotId={bot.slug}
-                      name={bot.displayName}
-                      src={bot.avatar}
-                      appearance={bot.appearance}
-                      avatarSeed={bot.avatarSeed}
-                      state={botActivity}
-                      size={22}
-                      indicator={false}
+                      onOpenActivity={openProfileView}
+                      onToggleProfile={openProfileView}
                     />
-                  ) : channelFacepile.length > 0 ? (
-                    <PersonaBotFacepile items={channelFacepile} size={22} indicator={false} t={t} />
-                  ) : (
-                    <ChannelMark />
-                  )}
-                  <ConversationTitle>{title}</ConversationTitle>
-                  {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
-                </button>
-              ),
+                  ),
+                )}
+              </span>
+            ) : profileBot === undefined ? (
+              <span className="bh-companion-chip">
+                {channelHeaderMenu(
+                  {
+                    label: t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse'),
+                    icon: <ChannelSidebarIcon name="panels-top-left" size={16} />,
+                    run: sidebar.toggle,
+                  },
+                  (menu) => (
+                    <button
+                      type="button"
+                      className="bh-channel-island"
+                      {...(menu === undefined
+                        ? {
+                            'aria-label': `${title} — ${t(sidebar.mode === 'hidden' ? 'sidebar.expand' : 'sidebar.collapse')}`,
+                            'aria-controls': 'bh-channel-sidebar',
+                            'aria-expanded': sidebar.mode !== 'hidden',
+                            onClick: sidebar.toggle,
+                          }
+                        : {
+                            'aria-label': channelMenuLabel(menu),
+                            'aria-haspopup': 'menu' as const,
+                            'aria-expanded': menu.open,
+                            onClick: menu.toggle,
+                          })}
+                    >
+                      {bot !== undefined ? (
+                        <PersonaBotAvatar
+                          t={t}
+                          personaBotId={bot.slug}
+                          name={bot.displayName}
+                          src={bot.avatar}
+                          appearance={bot.appearance}
+                          avatarSeed={bot.avatarSeed}
+                          state={botActivity}
+                          size={22}
+                          indicator={false}
+                        />
+                      ) : channelFacepile.length > 0 ? (
+                        <PersonaBotFacepile
+                          items={channelFacepile}
+                          size={22}
+                          indicator={false}
+                          t={t}
+                        />
+                      ) : (
+                        <ChannelMark />
+                      )}
+                      <ConversationTitle>{title}</ConversationTitle>
+                      {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
+                    </button>
+                  ),
+                )}
+              </span>
+            ) : (
+              <span className="bh-channel-island-wrap">
+                {channelHeaderMenu(
+                  {
+                    label: t('profile.view'),
+                    icon: <ChannelSidebarIcon name="id-card" size={16} />,
+                    run: openProfileView,
+                  },
+                  (menu) => (
+                    <button
+                      type="button"
+                      className="bh-channel-island"
+                      {...(menu === undefined
+                        ? {
+                            'aria-label': t('profile.openAvatar', { name: profileBot.displayName }),
+                            onClick: openProfileView,
+                          }
+                        : {
+                            'aria-haspopup': 'menu' as const,
+                            'aria-expanded': menu.open,
+                            'aria-label': channelMenuLabel(menu),
+                            onClick: menu.toggle,
+                          })}
+                    >
+                      <PersonaBotAvatar
+                        t={t}
+                        personaBotId={profileBot.slug}
+                        name={profileBot.displayName}
+                        src={profileBot.avatar}
+                        appearance={profileBot.appearance}
+                        avatarSeed={profileBot.avatarSeed}
+                        state={profileBotActivity}
+                        size={22}
+                        indicator={false}
+                      />
+                      <ConversationTitle>{title}</ConversationTitle>
+                      {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
+                    </button>
+                  ),
+                )}
+              </span>
             )}
-          </span>
-        ) : (
-          <span className="bh-channel-island-wrap">
-            {channelHeaderMenu(
-              {
-                label: t('profile.view'),
-                icon: <ChannelSidebarIcon name="id-card" size={16} />,
-                run: openProfileView,
-              },
-              (menu) => (
-                <button
-                  type="button"
-                  className="bh-channel-island"
-                  {...(menu === undefined
-                    ? {
-                        'aria-label': t('profile.openAvatar', { name: profileBot.displayName }),
-                        onClick: openProfileView,
-                      }
-                    : {
-                        'aria-haspopup': 'menu' as const,
-                        'aria-expanded': menu.open,
-                        'aria-label': channelMenuLabel(menu),
-                        onClick: menu.toggle,
-                      })}
+            {!workspaceEnabled && onMobileBack === undefined && channelId !== undefined && (
+              <span className="bh-channel-island-wrap">
+                <IconButton
+                  aria-label={t('generatedFiles.title')}
+                  aria-expanded={filesOpen}
+                  onClick={() => setFilesOpen(!filesOpen)}
                 >
-                  <PersonaBotAvatar
-                    t={t}
-                    personaBotId={profileBot.slug}
-                    name={profileBot.displayName}
-                    src={profileBot.avatar}
-                    appearance={profileBot.appearance}
-                    avatarSeed={profileBot.avatarSeed}
-                    state={profileBotActivity}
-                    size={22}
-                    indicator={false}
-                  />
-                  <ConversationTitle>{title}</ConversationTitle>
-                  {menu === undefined ? null : <ChannelMenuCaret attention={menu.attention} />}
-                </button>
-              ),
+                  <ChannelSidebarIcon name="file" />
+                </IconButton>
+              </span>
             )}
-          </span>
-        )}
-        {!workspaceEnabled && onMobileBack === undefined && channelId !== undefined && (
-          <span className="bh-channel-island-wrap">
-            <IconButton
-              aria-label={t('generatedFiles.title')}
-              aria-expanded={filesOpen}
-              onClick={() => setFilesOpen(!filesOpen)}
-            >
-              <ChannelSidebarIcon name="file" />
-            </IconButton>
-          </span>
-        )}
-        {!workspaceEnabled && onMobileBack === undefined && inboxAvailable && (
-          <span className="bh-channel-island-wrap">
-            <IconButton
-              aria-label={t('entry.botInbox')}
-              aria-expanded={inboxOpen}
-              onClick={() => setInboxOpen(!inboxOpen)}
-            >
-              <ChannelSidebarIcon name="inbox" />
-            </IconButton>
-          </span>
+            {!workspaceEnabled && onMobileBack === undefined && inboxAvailable && (
+              <span className="bh-channel-island-wrap">
+                <IconButton
+                  aria-label={t('entry.botInbox')}
+                  aria-expanded={inboxOpen}
+                  onClick={() => setInboxOpen(!inboxOpen)}
+                >
+                  <ChannelSidebarIcon name="inbox" />
+                </IconButton>
+              </span>
+            )}
+          </>
         )}
       </div>
       <div
@@ -3159,6 +3171,51 @@ function ConversationView({
           {docked ? (
             <ChannelDock
               body={chatPane}
+              header={
+                workspaceEnabled && channel !== undefined
+                  ? {
+                      title,
+                      actions: (
+                        <>
+                          {(profileBot !== undefined || channel.type === 'group') && (
+                            <Tooltip
+                              label={t(
+                                channel.type === 'group' ? 'groupProfile.label' : 'profile.view',
+                              )}
+                              side="bottom"
+                              delayMs={500}
+                            >
+                              <IconButton
+                                aria-label={t(
+                                  channel.type === 'group' ? 'groupProfile.label' : 'profile.view',
+                                )}
+                                aria-pressed={profileViewOpen}
+                                onClick={openProfileView}
+                              >
+                                <ChannelSidebarIcon name="id-card" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                          {hasChannelSettings && (
+                            <Tooltip label={t('channelSettings.open')} side="bottom" delayMs={500}>
+                              <IconButton
+                                aria-label={t('channelSettings.open')}
+                                onClick={() => channelSettings.open(settingsAttention[0]?.id)}
+                              >
+                                <ChannelSidebarIcon name="settings" />
+                                {settingsAttention.length > 0 && (
+                                  <ChannelAttentionDot
+                                    label={t('channelSettings.needsAttention')}
+                                  />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </>
+                      ),
+                    }
+                  : undefined
+              }
               files={
                 workspaceEnabled && channelId !== undefined
                   ? {

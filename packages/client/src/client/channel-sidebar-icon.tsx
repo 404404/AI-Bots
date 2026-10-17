@@ -25,6 +25,7 @@
 import { createElement, type ReactElement } from 'react';
 
 const glyphs: Record<string, readonly [string, Record<string, string | number>][]> = {
+  'chevron-right': [['path', { d: 'm9 18 6-6-6-6' }]],
   hash: [
     ['line', { x1: '4', x2: '20', y1: '9', y2: '9' }],
     ['line', { x1: '4', x2: '20', y1: '15', y2: '15' }],
