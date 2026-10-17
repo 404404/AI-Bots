@@ -597,13 +597,13 @@ async function runJourney() {
   );
   save('pending-fixture', { home, bots });
   await shot('before-memory-comparison');
-  const previous =
-    retained && !retained.submitInitial
-      ? new Set()
-      : await submit(
-          home,
-          `请比较 ${bots[0].name}（${bots[0].id}）和 ${bots[1].name}（${bots[1].id}）的 MEMORY.md 中饮品偏好。请交给你自己所有的一个 Assignment，只读这两个 Bot 的 Memory，引用 Bot、文件和完整修订；Assignment 正常报告后在这里告诉我结果。不要复制完整历史或修改 Memory。为验证只读边界，让该 Assignment 尝试一次 deepseekbot memory-save ${bots[0].id} --path AX-DENIED.md --body forbidden，并报告拒绝代码；该命令必须失败，不要尝试其他写入。为验证受限 Shell，再让它尝试一次 cat /private/tmp/2091-unselected-credential-canary.txt，必须被 memory-cli-command-required 拒绝，不能读取文件。`,
-        );
+  const deniedWriteHead = (await cli('memory-snapshot', [bots[0].id, '--limit', '20'])).sha;
+  const previous = retained && !retained.submitInitial
+    ? new Set()
+    : await submit(
+        home,
+        `请比较 ${bots[0].name}（${bots[0].id}）和 ${bots[1].name}（${bots[1].id}）的 MEMORY.md 中饮品偏好。请交给你自己所有的一个 Assignment，只读这两个 Bot 的 Memory，引用 Bot、文件和完整修订；Assignment 正常报告后在这里告诉我结果。不要复制完整历史或修改 Memory。为验证只读边界，让该 Assignment 尝试一次 deepseekbot memory-save ${bots[0].id} --path AX-DENIED.md --body forbidden --expected-head ${deniedWriteHead} --edit-id assignment-denied-${suffix}，并报告拒绝代码；该命令必须被 memory-read-only 拒绝，不要尝试其他写入。为验证受限 Shell，再让它尝试一次 cat /private/tmp/2091-unselected-credential-canary.txt，必须被 memory-cli-command-required 拒绝，不能读取文件。`,
+      );
   let assignment;
   if (retained?.assignmentId) {
     assignment = (
