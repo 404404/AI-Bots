@@ -1714,9 +1714,9 @@
       "path": "scripts/e2e-tob-channel-management.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Natural Tob Group creation and invitation through rendered approval, actual invitee decision and visible Members, denial, protected identity and receipt replay/conflict, plus separate same-Profile restart on Web/macOS.",
+      "reason": "Natural Tob Group creation and invitation through rendered approval, default automatic acceptance and visible Members; optional invitee-decision opt-out, denial, protected identity and receipt replay/conflict, plus separate same-Profile restart on Web/macOS.",
       "task": 2090,
-      "sha256": "fcdec3c6a7b17f5f84ccc0afca4d31f3547f0ff6e0499b5515b5259c4745aebf"
+      "sha256": "c66d403b91eb022ff9913158597b701f9bb830bcab9412cf848d8bbb03e29632"
     }
   ],
   "native": [

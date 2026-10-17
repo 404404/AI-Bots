@@ -699,7 +699,7 @@ deepseekbot bot-delete-retry <bot-id> --confirm
 
 ### Tob 建群与邀请
 
-[#2090](https://github.com/BotHarness/DeepSeekBot/issues/2090) 的首个切片允许 Tob 从已准入的 Human DM 发起建群和邀请。受限 CLI 复用现有 Channel owner，不新增模型 Tool。Tob 管理其他 Bot，自身不能作为初始成员或邀请目标。
+[#2090](https://github.com/BotHarness/DeepSeekBot/issues/2090) 的首个切片允许 Tob 从已准入的 Human DM 建群并加入现有 Bot。管理操作审批通过后，受邀 Bot 按既有默认值 `autoAcceptGroupInvites=true` 立即入群，无需另作邀请决定。受限 CLI 复用现有 Channel owner，不新增模型 Tool。Tob 管理其他 Bot，自身不能作为初始成员或邀请目标。
 
 ```bash
 deepseekbot channels --limit 25
@@ -711,7 +711,7 @@ deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-resea
 
 受限 `channels` 返回有界频道元数据，不返回消息正文；`--limit` 为 1–100，默认 50，将返回的 `nextCursor` 传入 `--cursor` 继续读取。`channel <group-channel-id>` 返回 `{channel, channelFingerprint, invitationPolicy:{autoAccept}}`，拒绝非群频道。受限投影最多保留 100 个成员及最近 100 条邀请，并报告被省略的数量。这些读取不会让 Tob 加入群聊，也不把群消息变成管理指令来源。
 
-`group-create` 支持空群，或用重复的 `--member` 指定现有可用 Bot。明确指定的初始成员直接加入，与现有 Human／UI 创建行为一致。之后的 `group-invite` 通过原 owner 创建邀请：除非 Human 已配置的策略接受，否则保持待处理。Tob 应报告返回的实际邀请和成员状态；发出邀请本身不证明 Bot 已入群，本切片也不允许 Tob 强制接受。
+`group-create` 支持空群，或用重复的 `--member` 指定现有可用 Bot。明确指定的初始成员直接加入，与现有 Human／UI 创建行为一致。之后的 `group-invite` 复用现有邀请 owner。默认 `autoAcceptGroupInvites=true` 时，同一事务记录已接受邀请（`respondedBy: "profile-policy"`）和成员关系，不唤醒受邀 Bot 单独决定。本片不新增设置或 UI 开关。仅当 Human 已主动关闭自动接受时，才沿用待处理邀请的原有决定流程；Tob 保留这一选择并报告实际状态。
 
 受限写入必须提供稳定的 `--operation-key`：长度 8–128，以字母或数字开头，只含字母、数字、点、下划线、冒号或连字符；邀请还必须传入前一次读取的 `--expected-channel` 指纹。审核快照绑定当前频道元数据、成员、邀请策略及目标 Bot 身份；消息到达和未读计数不会使其过期。审批和执行重新检查已准入 Human DM 与当前目标状态。审核期间相关设置发生变化时，应重新读取并提案，不能悄悄刷新已批准的快照。
 

@@ -6,6 +6,11 @@ import { resolve, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const native = !!process.env.BH_DESKTOP_CDP;
+assert.ok(
+  [undefined, '0', '1'].includes(process.env.BH_E2E_GROUP_AUTO_ACCEPT),
+  'BH_E2E_GROUP_AUTO_ACCEPT must be 0 or 1',
+);
+const autoAccept = process.env.BH_E2E_GROUP_AUTO_ACCEPT !== '0';
 const instance = native ? undefined : JSON.parse(readFileSync(process.env.BH_E2E_INSTANCE));
 const out = resolve(
   process.env.BH_E2E_EVIDENCE || '.humanlayer/verify/tob-channel-management/journey',
@@ -130,6 +135,40 @@ const shot = async (name) => {
     JSON.stringify(await page.accessibility.snapshot(), null, 2),
   );
 };
+
+async function visibleElement(selector) {
+  const handle = await page.waitForFunction(
+    (selector) =>
+      [...document.querySelectorAll(selector)].find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(node).visibility !== 'hidden';
+      }),
+    {},
+    selector,
+  );
+  const element = handle.asElement();
+  assert.ok(element, 'visible element missing: ' + selector);
+  return element;
+}
+async function setHomeVisible(open) {
+  const showing = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-home-panel]')].some((node) => {
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && getComputedStyle(node).visibility !== 'hidden';
+    }),
+  );
+  if (showing !== open)
+    await (await visibleElement('.bh-workspace-rail [data-pinned-panel="bh:home"]')).click();
+  await page.waitForFunction(
+    (open) =>
+      [...document.querySelectorAll('[data-home-panel]')].some((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(node).visibility !== 'hidden';
+      }) === open,
+    {},
+    open,
+  );
+}
 
 async function humanCli(command, args = [], input, expectedFailure = false) {
   const manifest = process.env.BH_E2E_HUMAN_INSTANCE
@@ -280,10 +319,7 @@ async function verifyCliTrace(slug, previousIds, commands, refusal) {
 
 async function showApproval(message) {
   await dismissBubble();
-  if (await page.$('[data-home-panel]')) {
-    await page.click('.bh-workspace-rail [data-pinned-panel="bh:home"]');
-    await page.waitForFunction(() => !document.querySelector('[data-home-panel]'));
-  }
+  await setHomeVisible(false);
   mark('approval-current-card');
   const latest = '.bh-timeline-new';
   if (await page.$(latest)) await page.locator(latest).setTimeout(5000).click();
@@ -378,9 +414,8 @@ async function beginPrompt(home, prompt) {
     previousMessages: new Set(messages.map((message) => message.id)),
     previousCalls: new Set(trace.turns.flatMap((turn) => turn.calls).map((call) => call.callId)),
   };
-  if (!(await page.$('[data-home-panel]')))
-    await page.locator('.bh-workspace-rail [data-pinned-panel="bh:home"]').click();
-  const input = await page.waitForSelector('[data-home-panel] textarea', { visible: true });
+  await setHomeVisible(true);
+  const input = await visibleElement('[data-home-panel] textarea');
   await input.type(prompt);
   await input.press('Enter');
   await page.waitForSelector('[data-dock-header="bh:channel-body"]');
@@ -483,19 +518,21 @@ async function snapshot(channelId) {
 }
 async function openGroup(fixture, expectedMembers) {
   await dismissBubble();
-  if (await page.$('[data-home-panel]'))
-    await page.locator('.bh-workspace-rail [data-pinned-panel="bh:home"]').click();
+  await setHomeVisible(false);
   const selector = `[data-dock-panel="bh:channels"] [data-channel-id=${JSON.stringify(fixture.channelId)}]`;
-  await page.waitForSelector(selector, { visible: true });
-  await page.locator(selector).click();
+  await (await visibleElement(selector)).click();
   await page.waitForFunction(
     (name) =>
-      document.querySelector('[data-dock-header="bh:channel-body"]')?.textContent?.includes(name),
+      [...document.querySelectorAll('[data-dock-header="bh:channel-body"]')].some(
+        (node) => node.getBoundingClientRect().width > 0 && node.textContent?.includes(name),
+      ),
     {},
     fixture.input.name,
   );
   const header = '[data-dock-header="bh:channel-body"]';
-  const expanded = await page.$eval(header, (node) =>
+  const expanded = await (
+    await visibleElement(header)
+  ).evaluate((node) =>
     [...node.querySelectorAll('button')]
       .find((button) => ['Members', '成员'].includes(button.getAttribute('aria-label')))
       ?.getAttribute('aria-pressed'),
@@ -543,6 +580,20 @@ async function waitForInviteDecision(fixture, previousCalls) {
       (item) => item.id === fixture.invite.invitationId,
     );
     assert.ok(invitation, 'canonical invitation missing');
+    if (fixture.autoAccept === true) {
+      assert.equal(invitation.status, 'accepted', 'default policy must accept immediately');
+      assert.equal(invitation.respondedBy, 'profile-policy');
+      assert.ok(state.channel.members.includes(fixture.bots[1].slug));
+      writeFileSync(
+        resolve(out, 'invitation-decision.json'),
+        JSON.stringify(
+          { invitation, members: state.channel.members, acceptance: 'profile-policy' },
+          null,
+          2,
+        ),
+      );
+      return state;
+    }
     assert.notEqual(
       invitation.respondedBy,
       'profile-policy',
@@ -605,10 +656,11 @@ async function seedBots() {
     bots.push({ slug, displayName });
   }
   await humanCli('settings-set', ['botharness-client', '--patch-stdin'], {
-    autoAcceptGroupInvites: false,
+    autoAcceptGroupInvites: autoAccept,
   });
   steps.push(
-    'Human CLI preconditions only: three existing Bots, available official model and invitation auto-accept disabled',
+    'Human CLI preconditions only: three existing Bots, available official model and invitation auto-accept ' +
+      (autoAccept ? 'enabled (product default)' : 'explicitly disabled'),
   );
   return bots;
 }
@@ -628,7 +680,9 @@ try {
   while (Date.now() < entryDeadline) {
     const state = await page.evaluate(() => {
       const visible = (node) =>
-        node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+        node.getBoundingClientRect().width > 0 &&
+        node.getBoundingClientRect().height > 0 &&
+        getComputedStyle(node).visibility !== 'hidden';
       const controls = [...document.querySelectorAll('button, [role="button"]')].filter(visible);
       const overlay = controls.find((node) =>
         ['Continue', '继续', 'Configure later', '稍后配置', 'Skip tutorial', '跳过教程'].includes(
@@ -636,8 +690,10 @@ try {
         ),
       );
       if (overlay) return { overlay: overlay.textContent.trim() };
-      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return {};
-      if (document.querySelector('.bh-workspace-rail')) return { ready: true };
+      if ([...document.querySelectorAll('[role="dialog"][aria-modal="true"]')].some(visible))
+        return {};
+      if ([...document.querySelectorAll('.bh-workspace-rail')].some(visible))
+        return { ready: true };
       const entry = controls.find((node) =>
         /^(?:Bot mode|Bot 模式)/u.test(
           node.getAttribute('aria-label') || node.textContent?.trim() || '',
@@ -656,11 +712,9 @@ try {
     await pause(300);
   }
   assert.ok(entered, 'Client did not expose Bot mode workspace after onboarding');
-  await page.waitForSelector('.bh-workspace-rail', { visible: true });
+  await visibleElement('.bh-workspace-rail');
   mark('entry-home');
-  if (!(await page.$('[data-home-panel]')))
-    await page.locator('.bh-workspace-rail [data-pinned-panel="bh:home"]').click();
-  await page.waitForSelector('[data-home-panel]');
+  await setHomeVisible(true);
   await pause(1200);
   mark('entry-home-ready');
   const home = await rpc('tobHome');
@@ -701,7 +755,13 @@ try {
     await completeTurn(home, context, 'group-create');
     const input = { name, members: [bots[0].slug] };
     const receipt = await humanCli('group-create', groupArguments(input, proposal.target));
-    fixture = { bots, input, operationKey: proposal.target, channelId: receipt.channel.id };
+    fixture = {
+      bots,
+      input,
+      operationKey: proposal.target,
+      channelId: receipt.channel.id,
+      autoAccept,
+    };
     saveFixture();
     assert.equal(receipt.receipt.status, 'completed');
     assert.deepEqual(receipt.channel.members, input.members);
@@ -711,7 +771,7 @@ try {
       count + 1,
     );
     const state = await verifyReplay(fixture);
-    assert.equal(state.invitationPolicy.autoAccept, false);
+    assert.equal(state.invitationPolicy.autoAccept, fixture.autoAccept === true);
     await openGroup(fixture, [bots[0]]);
     steps.push(
       'natural Home Group creation, reviewed initial membership, completed Shell turn, one canonical Human-owned Group and rendered member',
@@ -720,7 +780,7 @@ try {
   if (phase === 'journey' || phase === 'invite') {
     assert.ok(fixture, 'BH_E2E_CHANNEL_FIXTURE required');
     const before = await snapshot(fixture.channelId);
-    assert.equal(before.invitationPolicy.autoAccept, false);
+    assert.equal(before.invitationPolicy.autoAccept, fixture.autoAccept === true);
     assert.ok(!before.channel.members.includes(fixture.bots[1].slug));
     const trace = await rpc('botToolTrace', { slug: fixture.bots[1].slug, turns: 20 }).catch(
       () => ({ turns: [] }),
@@ -740,7 +800,7 @@ try {
         value.target === fixture.channelId && value.patch?.invite?.slug === fixture.bots[1].slug,
     );
     assert.equal(proposal.patch.expectedChannel, before.channelFingerprint);
-    assert.equal(proposal.patch.invitationPolicy.autoAccept, false);
+    assert.equal(proposal.patch.invitationPolicy.autoAccept, fixture.autoAccept === true);
     await completeTurn(home, context, 'group-invite');
     const input = {
       channelId: fixture.channelId,
@@ -761,7 +821,9 @@ try {
     await verifyReplay(fixture);
     await openGroup(fixture, fixture.bots.slice(0, 2));
     steps.push(
-      'natural invite approval, actual invitee tool decision, accepted canonical membership and both Bots visible in Members',
+      fixture.autoAccept === true
+        ? 'natural invite approval, immediate default policy acceptance, canonical membership and both Bots visible in Members'
+        : 'natural invite approval, explicit opt-out policy, actual invitee tool decision, accepted canonical membership and both Bots visible in Members',
     );
   }
   if (phase === 'journey' || phase === 'deny') {
@@ -791,7 +853,7 @@ try {
       const input = { name: 'CLI水果讨论-' + Date.now().toString(36), members: [bots[0].slug] };
       const operationKey = 'direct-group-' + Date.now();
       const receipt = await humanCli('group-create', groupArguments(input, operationKey));
-      fixture = { bots, input, operationKey, channelId: receipt.channel.id };
+      fixture = { bots, input, operationKey, channelId: receipt.channel.id, autoAccept };
       saveFixture();
     }
     const before = await verifyReplay(fixture);
@@ -842,7 +904,7 @@ try {
       (item) => item.id === fixture.invite.invitationId,
     );
     assert.equal(invitation.status, 'accepted');
-    assert.equal(invitation.respondedBy, 'bot');
+    assert.equal(invitation.respondedBy, fixture.autoAccept === true ? 'profile-policy' : 'bot');
     assert.deepEqual(
       [...state.channel.members].sort(),
       fixture.bots
@@ -852,7 +914,7 @@ try {
     );
     await openGroup(fixture, fixture.bots.slice(0, 2));
     steps.push(
-      'same Profile restart preserves Group, invitation decision, membership and exact receipt replay',
+      'same Profile restart preserves Group, recorded acceptance source, membership and exact receipt replay',
     );
   }
   saveFixture();

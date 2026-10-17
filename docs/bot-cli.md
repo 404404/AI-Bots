@@ -704,7 +704,7 @@ See [ADR-0225](adr/0225-bot-creation-receipts-and-reviewed-profile-lifecycle.md)
 
 ### Tob group creation and invitations
 
-The first [#2090](https://github.com/BotHarness/DeepSeekBot/issues/2090) slice exposes group creation and invitations from Tob's accepted Human DM. It uses the existing Channel owner through the scoped CLI, without a new model Tool. Tob manages other Bots and cannot be an initial member or invitation target.
+The first [#2090](https://github.com/BotHarness/DeepSeekBot/issues/2090) slice lets Tob create groups and add existing Bots from its accepted Human DM. After the management operation is approved, invited Bots join immediately under the existing default `autoAcceptGroupInvites=true`; no separate invitation decision is needed. It uses the existing Channel owner through the scoped CLI, without a new model Tool. Tob manages other Bots and cannot be an initial member or invitation target.
 
 ```bash
 deepseekbot channels --limit 25
@@ -716,7 +716,7 @@ deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-resea
 
 Scoped `channels` returns bounded Channel metadata, not message bodies; use `--limit` from 1 to 100 (default 50) and the returned `nextCursor` with `--cursor`. `channel <group-channel-id>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}}` and refuses a non-group target. The scoped projection keeps at most 100 members and the last 100 invitations, with counts for omitted entries. These reads do not admit Tob as a member or authorize group messages as management instructions.
 
-`group-create` supports an empty group or repeated `--member` values for existing eligible Bots. Explicit initial members join directly, matching the existing Human/UI creation behavior. A later `group-invite` creates an invitation through the existing owner: it is pending unless the existing Human-configured policy accepts it. Report the returned invitation and membership state; issuing an invitation alone is not evidence that the Bot joined. Tob cannot force acceptance through this slice.
+`group-create` supports an empty group or repeated `--member` values for existing eligible Bots. Explicit initial members join directly, matching the existing Human/UI creation behavior. A later `group-invite` uses the existing invitation owner. With the default `autoAcceptGroupInvites=true`, it records an accepted invitation (`respondedBy: "profile-policy"`) and membership together, without waking the invited Bot for a separate decision. This adds no setting or UI toggle. Only if the Human has already disabled auto-accept does the existing pending-invitation decision flow apply. Tob preserves that choice and reports the returned state.
 
 Scoped writes require a stable `--operation-key` of 8–128 letters, digits, dots, underscores, colons or hyphens, starting with a letter or digit; invitation also requires the `--expected-channel` fingerprint from the preceding read. The reviewed snapshot binds current Channel metadata, membership and invitation policy, plus the target Bot identity. Message arrivals and unread counters do not invalidate that snapshot. Approval and execution recheck the accepted Human DM and current target state. If a relevant setting changes while review is pending, read it again and submit a new proposal rather than refreshing the approved snapshot silently.
 
