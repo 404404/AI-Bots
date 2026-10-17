@@ -1191,10 +1191,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               let source: (() => void) & {
                 markSideEffect?: () => void;
                 currentClientTarget?: () => import('./client-control/contracts.js').ClientTarget;
-                reviewContext?: {
-                  readonly sessionId: string;
-                  readonly sourceEventIds: readonly string[];
-                };
+                readonly humanSourceEventIds?: readonly string[];
+                readonly acceptedSourceEventIds?: readonly string[];
               };
               try {
                 source =
@@ -1226,8 +1224,13 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobBackupOperations(
                     command,
                     args,
-                    source.reviewContext
-                      ? { ...source.reviewContext, callIds: [execution.callId] }
+                    source.humanSourceEventIds && source.acceptedSourceEventIds
+                      ? {
+                          sessionId: actor.session.id,
+                          sourceEventIds: source.acceptedSourceEventIds,
+                          humanSourceEventIds: source.humanSourceEventIds,
+                          callIds: [execution.callId],
+                        }
                       : undefined,
                   )) ??
                   (await tobModelOperations(command, args)) ??

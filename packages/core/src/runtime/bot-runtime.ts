@@ -685,10 +685,6 @@ export interface TobCliAuthority {
   (): void;
   readonly humanSourceEventIds: readonly string[];
   readonly acceptedSourceEventIds: readonly string[];
-  readonly reviewContext: {
-    readonly sessionId: string;
-    readonly sourceEventIds: readonly string[];
-  };
 
   markSideEffect(): void;
   currentClientTarget?(): import('../client-control/contracts.js').ClientTarget;
@@ -3665,7 +3661,6 @@ class BotRuntimeImplementation implements BotRuntime {
           throw new TobError('ambiguous-client-target');
         return { ...first };
       },
-      reviewContext: Object.freeze({ sessionId, sourceEventIds: Object.freeze([...accepted]) }),
       markSideEffect: () => {
         authorize();
         this.#markAdmissionsSideEffect(owner.botSlug, [...accepted]);
