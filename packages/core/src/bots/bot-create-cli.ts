@@ -319,6 +319,8 @@ Usage:
   deepseekbot private-mcp-set <id> --server <name> (--enabled | --disabled)
   deepseekbot private-mcp-remove <id> --server <name> --confirm
   deepseekbot bot-delete-preview <id>
+  deepseekbot bot-zip-files <id> --host <url>
+  deepseekbot bot-zip-export <id> --out <new-path> (--all | --include <path> ...) [--history] --expected-state <fingerprint> --host <url>
   deepseekbot bot-delete-memory-folder <id>
   deepseekbot bot-delete-confirm <id> --confirmation-stdin --confirm [--erase-memory]
   deepseekbot bot-delete-retry <id> --confirm
@@ -2620,6 +2622,7 @@ export async function runBotCreateCli(
           'channel-hide',
           'channel-mute',
           'channel-human-name-set',
+          'bot-zip-export',
           'profile-recovery-authorize',
           'profile-recovery-activate',
           'client-preferences-set',
@@ -2628,7 +2631,7 @@ export async function runBotCreateCli(
         ].includes(command))
     )
       throw usageError(
-        '--expected-state is supported only for online Channel, Client preference or Profile recovery changes.',
+        '--expected-state is supported only for online Channel/Client preference, Profile recovery or Bot ZIP export changes.',
       );
     if (
       values['operation-key'] !== undefined &&

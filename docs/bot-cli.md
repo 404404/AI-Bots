@@ -724,6 +724,20 @@ Authenticated Human `settings-set` keeps its existing behavior. It additionally 
 
 The [UI/CLI coverage inventory](agents/cli-ui-coverage.md) distinguishes existing Human commands from scoped Tob access and tracks the remaining coverage work. See [ADR-0224](adr/0224-tob-management-uses-scoped-native-shell-cli.md) for authority and lifecycle boundaries.
 
+### Bot ZIP file listing and export
+
+```bash
+deepseekbot bot-zip-files <bot-id> --host <url>
+deepseekbot bot-zip-export <bot-id> --include SOUL.md --out ./selected.zip --expected-state <stateFingerprint> --host <url>
+deepseekbot bot-zip-export <bot-id> --all --history --out ./full.zip --expected-state <stateFingerprint> --host <url>
+```
+
+These online commands reuse the existing Bot ZIP owner. Listing returns Git-eligible relative paths, sizes, required descriptor/presentation files and a content snapshot fingerprint, without file bodies or the Host's absolute Memory path. The fingerprint binds actual file bytes, Bot profile identity and exportable Git refs; the owner checks again before export and after archive construction. Repeat `--include` for exact paths from that listing; required descriptor/avatar files remain included. `--all` selects every eligible file and is required for `--history`. Git ignore rules, symlink exclusion and the existing archive size/entry limits remain authoritative. History includes content from earlier commits.
+
+`--out` must name a new file. The CLI creates it exclusively with mode `0600`; an existing path refuses `output-exists` without overwrite. Stdout contains only download path, byte count, SHA-256 and related metadata; binary archive data and file bodies never enter the conversation result. A changed content/identity snapshot refuses `stale-bot-files`; read again and review the exact new scope instead of blindly replaying.
+
+Tob invokes the same commands through native Shell from its authenticated Human DM, without a Human Host token, arbitrary Host override or offline directory fallback. Export follows the existing approval policy, showing the target Bot, exact selected/required files and history choice. Denial or revoked authority prevents archive delivery. Exporting Tob personality/Memory does not transfer its protected local identity: existing ZIP import still creates an ordinary Bot. This grants no Marketplace import or cross-Bot Memory editing authority.
+
 ### Tob Bot creation, profiles and lifecycle
 
 `create` in scoped Tob execution makes a blank Bot in managed Memory storage. A name is the only required user choice; Tob supplies a stable `--operation-key` for the operation. Optional `--description`, repeated `--role` tags, `--avatar-file`, `--persona` / `--persona-stdin`, and `--core-memory` / `--core-memory-stdin` reuse the existing creation validation. Only one content option may consume stdin. Initial personality and Memory become `SOUL.md` and `MEMORY.md`; no unrelated Workspace Grants or credentials are copied.

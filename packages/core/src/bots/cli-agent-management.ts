@@ -8,6 +8,7 @@ import {
 } from './cli-client-preferences.js';
 import { parseAgentDevices, TOB_AGENT_DEVICE_COMMAND_USAGE } from './cli-agent-devices.js';
 import { parseAgentBackup, TOB_AGENT_BACKUP_USAGE } from './cli-agent-backup.js';
+import { parseBotTransfer, BOT_TRANSFER_USAGE } from './cli-bot-transfer.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
 import { parseAgentPolicies, TOB_AGENT_POLICY_COMMAND_USAGE } from './cli-agent-policies.js';
@@ -40,6 +41,7 @@ export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
     'deepseekbot messaging-defaults <feishu|slack|discord|weixin>; Host/Profile scope',
   'messaging-defaults-set':
     'deepseekbot messaging-defaults-set <platform> --input-stdin; same schema and expectedRevision as existing Human CLI',
+  ...BOT_TRANSFER_USAGE,
   ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
   ...TOB_AGENT_POLICY_COMMAND_USAGE,
   ...TOB_IM_SETUP_USAGE,
@@ -247,6 +249,8 @@ export async function parseAgentManagement(
   if (device) return device;
   const backup = parseAgentBackup(command, rest, values);
   if (backup) return backup;
+  const transfer = parseBotTransfer(command, rest, values, true);
+  if (transfer) return transfer;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
   const bot = await parseAgentBots(command, rest, values, io);
