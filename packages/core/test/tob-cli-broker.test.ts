@@ -1,3 +1,4 @@
+import { request as httpRequest } from 'node:http';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   startTobCliBroker,
@@ -60,6 +61,53 @@ const update = () => ({
 });
 
 describe('Tob scoped CLI broker', () => {
+  it('refuses read-only Assignment binary import before consuming its declared body', async () => {
+    const prepareOperation = vi.fn();
+    const f = await fixture({ scope: 'assignment-memory-read', prepareOperation });
+    const result = await new Promise<{ error: { code: string } }>((resolve, reject) => {
+      const request = httpRequest(
+        new URL('/invoke-upload', f.broker.endpoint),
+        {
+          method: 'POST',
+          headers: {
+            authorization: 'Bearer ' + f.broker.token,
+            'content-type': 'application/zip',
+            'content-length': '1024',
+            'x-botharness-invocation': Buffer.from(
+              JSON.stringify({
+                command: 'create',
+                args: { sourceKind: 'archive' },
+              }),
+            ).toString('base64url'),
+          },
+        },
+        (response) => {
+          const chunks: Buffer[] = [];
+          response.on('data', (chunk) => chunks.push(chunk));
+          response.on('end', () => {
+            try {
+              resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));
+            } catch (error) {
+              reject(error);
+            } finally {
+              request.destroy();
+            }
+          });
+          response.on('error', reject);
+        },
+      );
+      request.on('error', reject);
+      request.setTimeout(5000, () =>
+        request.destroy(new Error('Read-only upload waited for a body')),
+      );
+      request.end();
+    });
+    expect(result).toMatchObject({ error: { code: 'memory-read-only' } });
+    expect(prepareOperation).not.toHaveBeenCalled();
+    expect(f.approve).not.toHaveBeenCalled();
+    expect(f.writeSetting).not.toHaveBeenCalled();
+  });
+
   it.each([
     'operation-key-conflict',
     'stale-channel',
