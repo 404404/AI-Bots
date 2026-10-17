@@ -70,7 +70,9 @@ function sectionItems(
   held: readonly HumanAttentionItem[],
   bot: string | undefined,
 ): HumanAttentionItem[] {
-  const listed = snapshot.sections[section].filter((item) => !gone.has(item.id));
+  const listed = snapshot.sections[section].filter(
+    (item) => section !== 'action' || !gone.has(item.id),
+  );
   const items =
     section === 'action'
       ? [
@@ -495,7 +497,7 @@ export function ActivityFeed({
             );
           if (row.kind === 'empty')
             return (
-              <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
+              <Text tone="muted" style={{ paddingHorizontal: space.x5, paddingTop: space.x6 }}>
                 {row.key === 'empty-action' && filter.bot === undefined
                   ? t.inboxEmpty
                   : t.filterEmpty}
