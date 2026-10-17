@@ -1708,7 +1708,7 @@
       "behaviors": ["desktop.group.send-review"],
       "reason": "Task-owned isolated paired pilot with whole Group/DM history, silent cancellation, revoked-source continuation check, explicit Inbox completion, versioned multi-turn ingest supplement and complete usage; Human acceptance remains separate.",
       "task": 2053,
-      "sha256": "8b3471f16cefdfc4751926c4bd841b18f288dbaa8c71290c3a0bb57b11198794"
+      "sha256": "67c155764229bafca82518fa77d2fc314b5ca98197fd30efdd095f90400e8562"
     },
     {
       "path": "scripts/e2e-group-peer-review.mjs",
@@ -1716,7 +1716,7 @@
       "behaviors": ["desktop.group.send-review"],
       "reason": "Real two-Bot peer-answer triplets with accepted Bi and original B0, full histories and all-Bot usage; missed race windows and Human acceptance remain explicit.",
       "task": 2054,
-      "sha256": "bf6dec84c9e5f19b8170cbceb0c8e2621aa5610ff14c5b1a7ff2845ea8a45990"
+      "sha256": "f39b2cdc6af7be38ee79867702c22a3947bb961a38346afdaf9ed3167f4719d7"
     }
   ],
   "native": [

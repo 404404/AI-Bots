@@ -146,6 +146,8 @@ describe('send review evaluation evidence', () => {
       const header = { type: 'session', id: 's', cwd: '/bots/ada/memory' };
       const events = [
         header,
+        { type: 'step/start', seq: 10, time: 10, data: { turn: 1, step: 1 } },
+        { type: 'step/start', seq: 20, time: 20, data: { turn: 2, step: 1 } },
         ...[1, 2].map((seq) => ({
           type: 'assistant/message',
           seq,
@@ -168,6 +170,10 @@ describe('send review evaluation evidence', () => {
       );
       const output = providerUsage(home, ['ada']);
       expect(output[0].attempts).toHaveLength(2);
+      expect(output[0].modelSteps).toEqual([
+        { seq: 10, at: 10, turn: 1, step: 1 },
+        { seq: 20, at: 20, turn: 2, step: 1 },
+      ]);
       expect(output[0].attempts.map((attempt) => attempt.usage.totalTokens)).toEqual([3, 4]);
       expect(JSON.stringify(output)).not.toContain('DO NOT EXPORT');
     } finally {

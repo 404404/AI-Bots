@@ -102,7 +102,7 @@ export function providerUsage(home, slugs) {
     const attempts = [];
     const auxiliary = [];
     const toolCalls = [];
-    const modelRequests = [];
+    const modelSteps = [];
     let route;
     for (const event of events) {
       if (event.type === 'tool/call') {
@@ -135,8 +135,14 @@ export function providerUsage(home, slugs) {
               .join('\n');
         }
       }
+      if (event.type === 'step/start')
+        modelSteps.push({
+          seq: event.seq,
+          at: event.time,
+          turn: event.data?.turn,
+          step: event.data?.step,
+        });
       if (event.type === 'request/header') {
-        modelRequests.push({ seq: event.seq, at: event.time });
         const config = event.data?.header?.config;
         route = {
           provider: config?.provider,
@@ -184,7 +190,7 @@ export function providerUsage(home, slugs) {
       attempts,
       auxiliary,
       toolCalls,
-      modelRequests,
+      modelSteps,
       providerRetryCoverage:
         'Session events expose completed model responses; unreported provider retries remain unknown',
     });

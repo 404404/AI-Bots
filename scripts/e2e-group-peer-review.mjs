@@ -18,6 +18,8 @@ import {
 export const PEER_PROTOCOL = {
   ...PROTOCOL,
   version: '2054-peer-v1',
+  revisionOf: null,
+  priorCandidate: 'f103902165d0b682b089174d3139b927fb1efadb',
   issue: 2054,
   baseline: 'f103902165d0b682b089174d3139b927fb1efadb',
   originalBaseline: PROTOCOL.baseline,
@@ -28,7 +30,7 @@ export const PEER_PROTOCOL = {
   context:
     'Each Bot receives a real DM preparatory exchange. A has fixture-verifiable extra evidence only in independent; public request authorizes sharing. Both models run on the final Group request. Natural branches and missed race windows retained.',
   barrier:
-    'Peer B commits after A starts a model request and before A sends; record draft timing separately. New direct question follows B commit. FYI then same-length explicit-request control in the same episode.',
+    'Peer B commits after A starts a native model Step and before A sends; record draft timing separately. New direct question follows B commit. FYI then same-length explicit-request control in the same episode.',
   oracle:
     'All-Bot/all-Channel history. Redundancy is diagnostic; necessary coverage is not silence alone. Independent evidence QA-317 and rollback R2 must be contributed by A; new question requires 18:00 JST; FYI control requires A confirmation.',
   latency:
@@ -47,6 +49,7 @@ export const PEER_PROTOCOL = {
   bootstrap: { seed: 2054, resamples: 10000 },
   comparisons:
     'Forty matched triplets: candidate vs accepted Bi and same candidate vs original B0; no replacement runs. Two pairwise reports share candidate episodes and must not double-count their costs.',
+  end: 'Peer reply plus both Bots idle and usage unchanged for 12 seconds, followed by explicit-request control for FYI; otherwise censored at the 240-second whole-episode deadline.',
 };
 const call = (instance, method, args = {}) => rpc(instance, `botharness/${method}`, args);
 const sha = (value) => createHash('sha256').update(value).digest('hex');
@@ -265,9 +268,8 @@ async function episode(instance, preset, family, index, variant, register, save)
       }
     }
     const requests =
-      log.providerUsage
-        ?.filter((s) => s.botSlug === log.bots?.aura)
-        .flatMap((s) => s.modelRequests) ?? [];
+      log.providerUsage?.filter((s) => s.botSlug === log.bots?.aura).flatMap((s) => s.modelSteps) ??
+      [];
     const generationBeforePeer = requests.some(
       (r) =>
         timestamp(r.at) >= timestamp(log.sourceStartedAt) &&
