@@ -22,6 +22,10 @@ export const MODELS_USAGE_OPTIONS = {
 
 export const MODELS_USAGE_COMMANDS = [
   {
+    command: 'home-model-set',
+    description: 'set the Host default model for Home and inheriting Bots (--provider, --model)',
+  },
+  {
     command: 'model-catalog',
     description: 'list the models the Host can run, with the default',
   },
@@ -101,6 +105,7 @@ export interface ModelsUsageValues {
 }
 
 const NO_TARGET = new Set([
+  'home-model-set',
   'model-catalog',
   'overview-usage',
   'overview-memory',
@@ -199,6 +204,14 @@ export async function runModelsUsage(
   if (!noTarget && !target) usage(`${command} requires a nonempty target id.`);
   const expected = revision(values['expected-revision']);
 
+  if (command === 'home-model-set') {
+    if (!values.provider || !values.model) usage('home-model-set requires --provider and --model.');
+    return (await connect())('onboardingModel', {
+      expectedRevision: 0,
+      route: { provider: values.provider, model: values.model },
+      globalDefault: true,
+    });
+  }
   if (command === 'model-catalog') return (await connect())('modelCatalog', {});
   if (command === 'activity-overview') return (await connect())('activityOverview', {});
   if (command === 'channel-activity-today') return (await connect())('channelActivityToday', {});

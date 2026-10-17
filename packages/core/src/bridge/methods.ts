@@ -1,3 +1,4 @@
+import { TobError, type TobService, type TobHome } from '../tob/service.js';
 import { directToolTrace, summarizeToolTrace, type TurnTrace } from '../bots/tool-trace.js';
 import type { BotOnboarding, OnboardingSnapshot, TutorialAction } from '../onboarding/service.js';
 import type { HttpsFallback } from '../memory/clone.js';
@@ -446,6 +447,9 @@ export interface MessagingAppsView {
 }
 
 export interface BridgeMethods {
+  tobHome(
+    payload: unknown,
+  ): Promise<BridgeResult<TobHome & { attention?: { unreadCount: number; hasAction: boolean } }>>;
   onboarding(payload: unknown): Promise<BridgeResult<OnboardingSnapshot>>;
   modelPlanInherit(payload: unknown): BridgeResult<{ revision: number }>;
   onboardingModel(payload: unknown): Promise<BridgeResult<{ revision: number }>>;
@@ -752,6 +756,7 @@ export interface BridgeMethodsDeps {
   modelCatalog?: ModelCatalog;
   modelReadiness?: ModelRouteReadiness;
   onboarding?: BotOnboarding;
+  tob?: TobService;
   partLibrary?: PartLibrary;
   onboardingNews?: (slug?: string) => Promise<boolean>;
   defaultModel?: {
@@ -1295,6 +1300,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
   ): BridgeResult<{ bot: PersonaBotDetail }> => {
     const slug = asSlug(payload);
     if (slug === undefined) return invalidInput('slug is required');
+    if (paused && deps.tob?.isTob(slug))
+      return { ok: false, error: { code: 'protected-bot', message: 'Tob cannot be archived' } };
     const result = deps.registry.setPaused(slug, paused);
     if (!result.ok) return unknownBot(slug);
     if (paused) deps.channels.cancelInvitationsForBot(slug);
@@ -1807,6 +1814,22 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         };
       });
     },
+    async tobHome() {
+      if (!deps.tob) return unavailable();
+      try {
+        const home = await deps.tob.ensure();
+        const attention = deps.humanAttention?.status();
+        return { ok: true, value: { ...home, ...(attention ? { attention } : {}) } };
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: error instanceof Error ? error.message : 'tob-unavailable',
+            message: error instanceof Error ? error.message : 'Tob unavailable',
+          },
+        };
+      }
+    },
     async onboarding(payload) {
       if (deps.onboarding === undefined) return unavailable();
       const source = asObject(payload);
@@ -2188,6 +2211,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (slug === undefined) return invalidInput('slug is required');
       if (deps.deletions === undefined) return unavailable();
       try {
+        if (deps.tob?.isTob(slug))
+          return { ok: false, error: { code: 'protected-bot', message: 'Tob cannot be deleted' } };
         return { ok: true, value: { preview: deps.deletions.preview(slug) } };
       } catch (error) {
         return invalidInput(
@@ -2206,6 +2231,8 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('Explicit deletion scope is required');
       if (deps.deletions === undefined) return unavailable();
       try {
+        if (deps.tob?.isTob(slug))
+          return { ok: false, error: { code: 'protected-bot', message: 'Tob cannot be deleted' } };
         const result = deps.deletions.confirm(slug, source['token'], source['eraseMemory']);
         deps.computerAccess?.changed(slug);
         deps.browserAccess?.changed(slug);
@@ -5039,7 +5066,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return {
           ok: false,
           error: {
-            code: error instanceof DirectBotToolError ? error.code : 'tool-failed',
+            code:
+              error instanceof DirectBotToolError || error instanceof TobError
+                ? error.code
+                : 'tool-failed',
             message: error instanceof Error ? error.message : String(error),
           },
         };

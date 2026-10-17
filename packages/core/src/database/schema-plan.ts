@@ -2293,6 +2293,17 @@ const SECRET_CLI_TOOL_RULE_MIGRATION: SchemaMigration = {
   },
 };
 
+const TOB_IDENTITY_MIGRATION: SchemaMigration = {
+  generation: 96,
+  module: 'tob',
+  description: 'Reserve the protected local Tob identity',
+  migrate(database) {
+    database.exec(`CREATE TABLE tob_identity (
+      singleton INTEGER PRIMARY KEY CHECK (singleton = 1), bot_slug TEXT NOT NULL UNIQUE
+    );`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2388,4 +2399,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   HUMAN_INBOX_SNOOZE_MIGRATION,
   CHANNEL_REACTION_MIGRATION,
   SECRET_CLI_TOOL_RULE_MIGRATION,
+  TOB_IDENTITY_MIGRATION,
 ]);

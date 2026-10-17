@@ -581,6 +581,40 @@ describe('bridge actions', () => {
     return { clientStore, actions: createActions(call, clientStore) };
   }
 
+  it('sends Home attachments with the stable request ID and selects the canonical DM', async () => {
+    const attachment = {
+      hash: 'sha256:' + 'a'.repeat(64),
+      name: 'note.txt',
+      mime: 'text/plain',
+      size: 4,
+    };
+    const send = vi.fn((payload: Record<string, unknown>) => ({
+      message: {
+        id: payload.messageId,
+        body: payload.body,
+        attachments: payload.attachments,
+        author: { kind: 'human' },
+        at: BOT.createdAt,
+      },
+    }));
+    const { actions, clientStore } = setup({
+      channelSend: send,
+      gitStatus: () => ({ installed: true, autoInstall: false }),
+    });
+    await actions.load();
+    await actions.openChannel(GROUP.id);
+    await actions.sendHome(DM.id, 'Home request', 'human-stable-home', [attachment]);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channelId: DM.id,
+        body: 'Home request',
+        messageId: 'human-stable-home',
+        attachments: [attachment],
+      }),
+    );
+    expect(clientStore.getSnapshot().conversation.channel?.id).toBe(DM.id);
+  });
+
   it('keeps Session rows visible and ignores an older refresh response', async () => {
     const initial = { sessionId: 'initial', role: 'orchestrator', createdAt: BOT.createdAt };
     const latest = { sessionId: 'latest', role: 'orchestrator', createdAt: BOT.createdAt };

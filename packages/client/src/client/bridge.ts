@@ -1529,7 +1529,14 @@ export function parseChannelMessage(value: unknown): ChannelMessage | undefined 
     author,
     body,
     ...(asRecord(record['onboardingWelcome'])?.['version'] === 1 && author.kind === 'system'
-      ? { onboardingWelcome: { version: 1 as const } }
+      ? {
+          onboardingWelcome: {
+            version: 1 as const,
+            ...(asRecord(record['onboardingWelcome'])?.['kind'] === 'tob'
+              ? { kind: 'tob' as const }
+              : {}),
+          },
+        }
       : {}),
     ...(body === '' && asRecord(record['contentPurge'])?.['actor'] === 'local-human'
       ? { contentPurged: true as const }

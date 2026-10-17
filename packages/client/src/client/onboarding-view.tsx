@@ -32,6 +32,7 @@ export function OnboardingModelDialog({
   onConfirm,
   t,
   globalOnly = false,
+  onProviderSettings,
   request,
 }: {
   actions: BridgeActions;
@@ -41,6 +42,7 @@ export function OnboardingModelDialog({
   onConfirm(route: ModelRouteView, globalDefault: boolean, revision: number): Promise<void>;
   t: BotHarnessTranslate;
   globalOnly?: boolean;
+  onProviderSettings?: () => void;
   request?: string | undefined;
 }): ReactElement {
   const [models, setModels] = useState<ModelCatalogEntryView[]>([]);
@@ -149,8 +151,11 @@ export function OnboardingModelDialog({
             }
             disabled={busy}
             onClick={() => {
-              onClose();
-              openModelsSettings();
+              if (onProviderSettings) onProviderSettings();
+              else {
+                onClose();
+                openModelsSettings();
+              }
             }}
           />
         </SidebarCardList>

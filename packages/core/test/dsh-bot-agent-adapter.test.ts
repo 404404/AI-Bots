@@ -1415,6 +1415,8 @@ describe('DSH Bot Agent adapter', () => {
       'channel_read_image',
       'list_bot_contacts',
       'group_create',
+      'tob_assignment_limit_read',
+      'tob_assignment_limit_set',
       'bot_create',
       'group_invite_bot',
       'group_invite_respond',

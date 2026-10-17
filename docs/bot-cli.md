@@ -633,3 +633,9 @@ deepseekbot memory-move <bot-id> --default-location
 ```
 
 The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist and must not already hold that Bot. The Bot's main session is archived first, so its next turn starts a new main session in the new folder; history, Memory commits and assignments stay. The move is refused with `bot-busy` while the Bot is working, `invalid-memory-dir` for a missing or occupied folder, and `memory-conflict` while a Memory repair is unfinished. Across drives the files are copied, checked against the original HEAD, then the old folder is removed; a `leftover` path in the result names an old folder that could not be removed.
+
+## Home and Tob
+
+`deepseekbot tob-home` prepares/reuses the protected local Tob identity, Memory, managed Workspace and DM, returning their IDs and the canonical attention summary. It does not send a message. `deepseekbot home-model-set --provider <id> --model <id>` updates the native Host default; independent Bot plans remain unchanged.
+
+`deepseekbot bot-tool <tob-id> tob_assignment_limit_read` uses the same registered management read tool without a model. `tob_assignment_limit_set` accepts `value`, `previous_value` and `expected_revision`, but direct execution refuses `tob-authority-required`/`human-dm-required`: CLI callers cannot impersonate an accepted Human DM. Use the real Tob DM approval journey for that tool, or the existing authenticated Human settings command for administration. Invalid values refuse, stale proposals do not overwrite, and uncertain writes require read-back before retry. Tob delete/archive commands return `protected-bot`.

@@ -43,17 +43,30 @@ describe('Bot onboarding through the public Host bridge', () => {
       if (!first.ok) throw new Error(first.error.message);
       const bot = core.registry.list()[0]!;
       expect(core.registry.list()).toHaveLength(1);
-      expect(bot.displayName).toBe('DeepSeek Bot');
+      expect(bot.displayName).toBe('Tob');
       expect(bot.appearance?.recipe).toEqual(DEEPSEEKBOT_RECIPE);
       expect(core.registry.memoryDirFor(bot.slug)).toBeTruthy();
       expect(core.channels.readMessages(first.value.channelId!)).toMatchObject([
-        { author: { kind: 'system' }, onboardingWelcome: { version: 1 } },
+        { author: { kind: 'system' }, id: 'tob-welcome-v1' },
       ]);
       expect(first.value.completed).toBe(false);
       core.registry.update(bot.slug, { displayName: 'Renamed' });
       await bridge.onboarding({ action: 'restart' });
       expect(core.registry.get(bot.slug)?.appearance?.recipe).toEqual(DEEPSEEKBOT_RECIPE);
       expect(core.channels.readMessages(first.value.channelId!)).toHaveLength(1);
+    });
+  });
+  it('continues first-run onboarding after Home already provisioned Tob', async () => {
+    await withCore(async (core) => {
+      const home = await core.tob.ensure();
+      const first = await core.onboarding.enter();
+      expect(first).toMatchObject({
+        defaultBotSlug: home.botSlug,
+        channelId: home.channelId,
+        completed: false,
+      });
+      expect(core.registry.list()).toHaveLength(1);
+      expect(core.channels.readMessages(home.channelId)).toHaveLength(1);
     });
   });
   it('reuses existing Bots, lets the Human select among several, and never resurrects the default Bot', async () => {
@@ -75,10 +88,9 @@ describe('Bot onboarding through the public Host bridge', () => {
     });
     await withCore(async (core) => {
       const first = await core.onboarding.enter();
-      const preview = core.deletions.preview(first.defaultBotSlug!);
-      await core.deletions.confirm(first.defaultBotSlug!, preview.token, false);
+      expect(() => core.deletions.preview(first.defaultBotSlug!)).toThrow('protected-bot');
       await core.onboarding.enter();
-      expect(core.registry.list()).toHaveLength(0);
+      expect(core.registry.list()).toHaveLength(1);
     });
   });
   it('keeps skip/pause independent from real-reply completion and recovers completion after a Host restart', async () => {
@@ -125,7 +137,9 @@ describe('Bot onboarding through the public Host bridge', () => {
       });
       expect(restored.registry.list()).toHaveLength(1);
       expect(
-        restored.channels.readMessages(channelId!).filter((message) => message.onboardingWelcome),
+        restored.channels
+          .readMessages(channelId!)
+          .filter((message) => message.id === 'tob-welcome-v1'),
       ).toHaveLength(1);
     } finally {
       await restored.runtime.close();

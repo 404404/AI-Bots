@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ShortcutCommand } from '@deepseek-ai/dsh-client-shortcuts/client';
 import {
+  effectiveShortcuts,
   normalizeBinding,
   isWebBindingAllowed,
   bindingIssue,
@@ -35,6 +36,7 @@ describe('workspace shortcut ownership', () => {
     };
     const registry = createDockPanelRegistry();
     for (const id of [
+      'bh:home',
       'botharness-browser',
       'botharness-computer',
       'memory-files',
@@ -51,6 +53,7 @@ describe('workspace shortcut ownership', () => {
       commands.get(workspaceShortcutId('botharness-computer'))?.defaults['desktop:macos']?.code,
     ).toBe('Digit0');
     for (const [id, code] of [
+      ['bh:home', 'KeyH'],
       ['memory-files', 'Digit6'],
       ['memory-evolution', 'KeyE'],
       ['schedules', 'Digit9'],
@@ -87,6 +90,51 @@ describe('workspace shortcut ownership', () => {
     expect(commands.has(workspaceShortcutId('bh:channels'))).toBe(true);
     dispose();
     expect(commands.size).toBe(0);
+  });
+});
+
+describe('Home native shortcut preferences', () => {
+  it('preserves custom bindings, explicit unbinding and conflicts without renumbering panels', () => {
+    const commands: ShortcutCommand[] = [];
+    const registry = createDockPanelRegistry();
+    registry.register({ id: 'bh:home', title: 'Home', scope: 'global', component: () => null });
+    const dispose = registerWorkspaceShortcuts(
+      {
+        register: (command) => {
+          commands.push(command);
+          return () => {};
+        },
+      },
+      registry,
+      () => true,
+      zhTranslate,
+    );
+    const homeId = workspaceShortcutId('bh:home');
+    const messagesId = workspaceShortcutId('bh:channel-body');
+    const binding = { code: 'KeyJ', modifiers: ['meta', 'alt', 'shift'] as const };
+    const resolve = (overrides: Record<string, typeof binding | null>) =>
+      effectiveShortcuts(
+        commands,
+        { schemaVersion: 2, profiles: { 'desktop:macos': overrides } },
+        'desktop',
+        'macos',
+      );
+    expect(resolve({ [homeId]: binding }).find((x) => x.id === homeId)).toMatchObject({
+      modified: true,
+      binding: { code: 'KeyJ' },
+      conflicts: [],
+    });
+    expect(resolve({ [homeId]: null }).find((x) => x.id === homeId)).toMatchObject({
+      binding: null,
+      modified: true,
+    });
+    const conflicts = resolve({ [homeId]: binding, [messagesId]: binding });
+    expect(conflicts.find((x) => x.id === homeId)?.conflicts).toContain(messagesId);
+    expect(conflicts.find((x) => x.id === messagesId)?.conflicts).toContain(homeId);
+    expect(commands.find((x) => x.id === messagesId)?.defaults['desktop:macos']?.code).toBe(
+      'Digit2',
+    );
+    dispose();
   });
 });
 

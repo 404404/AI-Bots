@@ -569,3 +569,14 @@ describe('Workspace Grant execution boundary', () => {
     );
   });
 });
+
+it('keeps Tob reads internal and puts management writes through existing approval', () => {
+  expect(requiresHumanToolApproval('tob_assignment_limit_read', {})).toBe(false);
+  expect(
+    requiresHumanToolApproval('tob_assignment_limit_set', {
+      value: 3,
+      previous_value: 8,
+      expected_revision: 0,
+    }),
+  ).toBe(true);
+});

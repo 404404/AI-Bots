@@ -3,6 +3,16 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots';
 export const LOCALE_NS = 'botharness';
 
 export const zh = {
+  'workspace.home': '首页',
+  'workspace.storageFailed': '布局未能保存，已保留原来的布局。你仍可继续使用当前界面。',
+  'home.greeting': '你好，我是 Tob',
+  'home.description': '你的本地总管。了解 Bot 的状态，或告诉我你想调整什么。',
+  'home.configure': '配置模型，开始与 Tob 对话',
+  'home.input': '有什么可以帮你？',
+  'home.attention': '{count} 条未读通知',
+  'home.unavailable': '状态暂不可用',
+  'home.activity': '查看活动',
+
   'botSettings.section.appearance': '界面设置',
   'botSettings.section.notifications': '通知',
   'settings.search': '搜索设置',
@@ -3645,6 +3655,18 @@ export function zhTranslate(key: BotHarnessKey | string, params?: Record<string,
 }
 
 export const en = {
+  'workspace.home': 'Home',
+  'workspace.storageFailed':
+    'Layout could not be saved. Your previous layout is retained; this session remains usable.',
+  'home.greeting': 'Hello, I’m Tob',
+  'home.description':
+    'Your local steward. Check on your Bots or tell me what you’d like to change.',
+  'home.configure': 'Configure a model to talk to Tob',
+  'home.input': 'What can I help you with?',
+  'home.attention': '{count} unread notifications',
+  'home.unavailable': 'Status unavailable',
+  'home.activity': 'View activity',
+
   'botSettings.section.appearance': 'Appearance',
   'botSettings.section.notifications': 'Notifications',
   'settings.search': 'Search settings',

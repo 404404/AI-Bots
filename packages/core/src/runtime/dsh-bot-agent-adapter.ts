@@ -2653,6 +2653,60 @@ class DshBotAgentAdapter implements BotAgentAdapter {
     );
     registerTool(
       defineTool({
+        name: 'tob_assignment_limit_read',
+        description:
+          'Tob only: read the current global Assignment concurrency limit and revision. Call before proposing a change. Other Bots and non-Human-DM sources cannot manage it.',
+        parameters: {},
+        output: {
+          schema: { type: 'string' },
+          render: (_args, value) => [{ type: 'text', text: value }],
+        },
+        execute: async () => {
+          const active = this.#runs.get(run.sessionId);
+          if (active?.role !== 'orchestrator' || !active.run.channels.tobSetting)
+            throw new Error('tob-authority-required');
+          return JSON.stringify(await active.run.channels.tobSetting());
+        },
+      }),
+    );
+    registerTool(
+      defineTool({
+        name: 'tob_assignment_limit_set',
+        description:
+          'Tob only, at the Human’s explicit request in your private DM: change the GLOBAL Assignment concurrency limit, 1–32. Read first; submit the exact old value and revision for existing Human approval. Lowering it leaves running Assignments alive. Stale proposals must be read and prepared again. On uncertain outcome, read before retry. Never claim success without verified read-back.',
+        parameters: {
+          value: { type: 'integer', required: true, description: 'Requested global limit, 1–32.' },
+          previous_value: {
+            type: 'integer',
+            required: true,
+            description: 'Canonical current value from the read tool.',
+          },
+          expected_revision: {
+            type: 'integer',
+            required: true,
+            description: 'Exact revision from the read tool, bound to this approval.',
+          },
+        },
+        output: {
+          schema: { type: 'string' },
+          render: (_args, value) => [{ type: 'text', text: value }],
+        },
+        execute: async (args) => {
+          const active = this.#runs.get(run.sessionId);
+          if (active?.role !== 'orchestrator' || !active.run.channels.tobSetting)
+            throw new Error('tob-authority-required');
+          return JSON.stringify(
+            await active.run.channels.tobSetting({
+              value: args.value,
+              previousValue: args.previous_value,
+              expectedRevision: args.expected_revision,
+            }),
+          );
+        },
+      }),
+    );
+    registerTool(
+      defineTool({
         name: 'bot_create',
         description:
           'Create a new PersonaBot when the Human asks for one. Fill fields from the conversation; only display_name is required. Requires Human tool approval unless a saved rule or full access allows it. The new Bot is an independent peer with no Model Plan, grants, accesses or secrets copied from you. Report only from this result; on success it returns bot_id, display_name, dm_channel_id, memory_dir and model (host-default means it answers on the Host default model until a Model Plan is set; it can reply now).',
