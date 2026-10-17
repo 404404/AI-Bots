@@ -1,8 +1,9 @@
-import { writeFileSync } from 'node:fs';
+import { readdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
-import { createHash } from 'node:crypto';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createHash, randomUUID } from 'node:crypto';
 import { argsOf, privateFile } from './tob-uat-session.mjs';
 
 export function fixtureExpression(mode, state) {
@@ -24,7 +25,10 @@ export function fixtureExpression(mode, state) {
     if (entries.length !== 1 || JSON.stringify(stable(entries[0].config)) !== JSON.stringify(stable(expected.config))) throw Error('TRUSTED_IMPORT_REQUIRED');
     const entry = entries[0];
     if (${JSON.stringify(mode)} === 'inject') {
-      if (entry.session) throw Error('EXISTING_SESSION_REFUSED');
+      if (entry.session) {
+        if (entry.session.accessToken === expected.accessToken && entry.session.refreshToken === expected.refreshToken && entry.session.userId === expected.userId) return { injected: true, alreadyPrepared: true, restartRequired: true };
+        throw Error('EXISTING_SESSION_REFUSED');
+      }
       entry.session = { accessToken: expected.accessToken, refreshToken: expected.refreshToken, userId: expected.userId };
       await client.rt.write(JSON.stringify(vault));
       return { injected: true, restartRequired: true };
@@ -38,13 +42,13 @@ export function fixtureExpression(mode, state) {
     return { accessToken: entry.session.accessToken, refreshToken: entry.session.refreshToken };
   })()`;
 }
-async function connect(port, targetId) {
-  if (!Number.isInteger(port) || port < 1024 || port > 65535) throw Error('INVALID_METRO_PORT');
-  const targets = await (
-    await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5000) })
-  ).json();
-  const target = targets.find((t) => t.id === targetId);
-  if (!target) throw Error('EXPLICIT_INSPECTOR_TARGET_REQUIRED');
+export function targetSocket(target, port, simulatorName) {
+  if (
+    !target ||
+    target.deviceName !== simulatorName ||
+    target.appId !== 'ai.botharness.deepseekbot.dev'
+  )
+    throw Error('EXPLICIT_SIMULATOR_APP_TARGET_REQUIRED');
   const url = new URL(target.webSocketDebuggerUrl);
   if (
     !['127.0.0.1', 'localhost'].includes(url.hostname) ||
@@ -53,7 +57,23 @@ async function connect(port, targetId) {
   )
     throw Error('LOOPBACK_DEBUGGER_REQUIRED');
   url.hostname = '127.0.0.1';
-  const WebSocket = createRequire(import.meta.url)('ws');
+  return url;
+}
+async function connect(port, targetId, simulatorName) {
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) throw Error('INVALID_METRO_PORT');
+  const targets = await (
+    await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5000) })
+  ).json();
+  const target = targets.find((t) => t.id === targetId);
+  const url = targetSocket(target, port, simulatorName);
+  const root = fileURLToPath(new URL('../../../', import.meta.url));
+  const store = join(root, 'node_modules/.pnpm');
+  const dependency = readdirSync(store)
+    .filter((name) => name.startsWith('ws@8.'))
+    .sort()
+    .pop();
+  if (!dependency) throw Error('DEBUG_WEBSOCKET_DEPENDENCY_MISSING');
+  const WebSocket = createRequire(join(store, dependency, 'node_modules/ws/package.json'))('ws');
   const ws = new WebSocket(url, { origin: `http://127.0.0.1:${port}` });
   await new Promise((resolve, reject) => {
     ws.once('open', resolve);
@@ -108,20 +128,40 @@ export async function main(mode, args) {
   const sims = JSON.parse(
     execFileSync('xcrun', ['simctl', 'list', 'devices', 'booted', '-j'], { encoding: 'utf8' }),
   );
-  if (
-    !Object.values(sims.devices)
-      .flat()
-      .some((d) => d.udid === args.simulator && d.state === 'Booted')
-  )
-    throw Error('ASSIGNED_SIMULATOR_REQUIRED');
-  const c = await connect(Number(args.metro), args.target);
+  const simulator = Object.values(sims.devices)
+    .flat()
+    .find((d) => d.udid === args.simulator && d.state === 'Booted');
+  if (!simulator) throw Error('ASSIGNED_SIMULATOR_REQUIRED');
+  const c = await connect(Number(args.metro), args.target, simulator.name);
   try {
-    const r = await c.send('Runtime.evaluate', {
-      expression: fixtureExpression(mode, state),
-      awaitPromise: true,
-      returnByValue: true,
-    });
-    const result = r.result.value;
+    const key = '__tobNativeFixture_' + randomUUID().replaceAll('-', '');
+    let result;
+    try {
+      await c.send('Runtime.evaluate', {
+        expression: `globalThis[${JSON.stringify(key)}] = { done: false }; void (${fixtureExpression(mode, state)}).then(value => { if (globalThis[${JSON.stringify(key)}]) globalThis[${JSON.stringify(key)}] = { done: true, value }; }, error => { if (globalThis[${JSON.stringify(key)}]) globalThis[${JSON.stringify(key)}] = { done: true, error: /^[A-Z_]+$/.test(error.message) ? error.message : 'NATIVE_CHECK_FAILED' }; })`,
+        returnByValue: true,
+      });
+      const deadline = Date.now() + 20000;
+      while (Date.now() < deadline) {
+        const poll = await c.send('Runtime.evaluate', {
+          expression: `globalThis[${JSON.stringify(key)}]`,
+          returnByValue: true,
+        });
+        const envelope = poll.result.value;
+        if (envelope?.done) {
+          if (envelope.error) throw Error(envelope.error);
+          result = envelope.value;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      if (!result) throw Error('NATIVE_RESULT_TIMEOUT');
+    } finally {
+      await c.send('Runtime.evaluate', {
+        expression: `delete globalThis[${JSON.stringify(key)}]`,
+        returnByValue: true,
+      });
+    }
     if (mode === 'checkpoint') {
       if (!result?.accessToken || !result.refreshToken) throw Error('NATIVE_SESSION_REQUIRED');
       const sid = JSON.parse(Buffer.from(result.accessToken.split('.')[1], 'base64url')).sid;

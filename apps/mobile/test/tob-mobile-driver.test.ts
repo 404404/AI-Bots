@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { runInNewContext } from 'node:vm';
-import { fixtureExpression } from '../scripts/tob-mobile-driver.mjs';
+import { fixtureExpression, targetSocket } from '../scripts/tob-mobile-driver.mjs';
 import { publicInstance, MOBILE_REDIRECT_URI } from '../src/cloud/instance-contract';
 const config = publicInstance({
   instanceId: 'test-uat',
@@ -79,6 +79,28 @@ describe('local native UAT fixture driver', () => {
     expect(rt.read().entries[1]).toEqual(other);
     expect(rt.read().entries[0].session.userId).toBe('user_test');
     expect(JSON.stringify(result)).not.toContain('private');
+  });
+  it('safely resumes only the identical prepared fixture after a lost debugger response', async () => {
+    const rt = runtime();
+    await runInNewContext(fixtureExpression('inject', fixture), rt.context);
+    const again = await runInNewContext(fixtureExpression('inject', fixture), rt.context);
+    expect(again).toEqual({ injected: true, alreadyPrepared: true, restartRequired: true });
+    expect(rt.writes()).toBe(1);
+  });
+  it('rejects the phone, another app and a non-loopback debugger on the same Metro', () => {
+    const target = {
+      deviceName: 'QA Simulator',
+      appId: 'ai.botharness.deepseekbot.dev',
+      webSocketDebuggerUrl: 'ws://127.0.0.1:8091/inspector/debug',
+    };
+    expect(targetSocket(target, 8091, 'QA Simulator').hostname).toBe('127.0.0.1');
+    for (const changed of [
+      { deviceName: 'iPhone' },
+      { appId: 'other.app' },
+      { webSocketDebuggerUrl: 'ws://external.example:8091/debug' },
+    ]) {
+      expect(() => targetSocket({ ...target, ...changed }, 8091, 'QA Simulator')).toThrow();
+    }
   });
   it('does not accept seeded storage alone as verified native login', async () => {
     const rt = runtime({ signedIn: true });
