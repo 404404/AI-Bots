@@ -41,8 +41,8 @@ export function HomeHeader({
       header={
         <View
           style={{
-            flexDirection: theme.largeText ? 'column' : 'row',
-            alignItems: theme.largeText ? 'stretch' : 'center',
+            flexDirection: 'row',
+            alignItems: 'center',
             gap: space.x3,
             paddingTop: insets.top + space.x4,
             paddingBottom: space.x5,
@@ -57,17 +57,21 @@ export function HomeHeader({
             accessibilityLabel={t.switchComputer(hostName)}
             accessibilityState={{ expanded: drawerOpen }}
             style={({ pressed }) => ({
-              ...(theme.largeText ? {} : { flex: 1 }),
+              flex: 1,
+              minWidth: 0,
+              minHeight: theme.touch,
               flexDirection: 'row',
               alignItems: 'center',
               gap: space.x4,
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <HostChipFace hostName={hostName} avatar={look.avatar} band={band} />
+            <HostChipFace hostName={hostName} avatar={look.avatar} band={band} singleLine />
           </Pressable>
           {actions === undefined ? null : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x2 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 0, gap: space.x2 }}
+            >
               {actions}
             </View>
           )}

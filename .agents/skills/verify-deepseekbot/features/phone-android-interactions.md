@@ -24,6 +24,7 @@ The Android development app uses native form sheets for Bot and group profiles, 
 - Open a Bot DM or group Channel from Chats, then tap its title to open the profile. Expand the sheet, scroll its content, and drag down within the list. Drag the fixed top handle to close.
 - Open the chat again and focus the message input. Watch its movement while the keyboard opens and closes.
 - From Chats, tap the Settings gear. Expand and scroll the settings list, drag down within the content, then use the fixed handle. Open the Host picker repeatedly and choose Chats and Activity from the floating navigation; check the final row and fades.
+- In Chats at system font scales1/1.3/2 × light/dark, keep the Host chip and Settings gear on one horizontal row. A long Host name stays on one line and ends in an ellipsis; its accessible name remains complete. Capture native bounds: centers align within3dp, the Settings target follows the Host target without overlap, and both targets meet48dp on Android. Open the Host drawer and Settings from those targets at maximum text size, then restore the original font/theme. iOS needs its own native qualification.
 - In Settings → Message display choose Complete bubbles, then open a prepared QA chat and receive a reply. Switch back to Streaming during another reply. Restart the app and check the selected setting. Verify canonical messages through the Host CLI; changing display must not change message bodies or create a second message.
 
 ## Driving it with verify-app
