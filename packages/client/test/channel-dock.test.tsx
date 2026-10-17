@@ -838,7 +838,9 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(host.querySelector('[data-message-draft]')).toBe(draft);
   expect(host.querySelector('[data-body="sessions"]')).toBe(session);
-  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  expect(readChannelDock(storage)?.channelSplits?.ada).toMatchObject({
+    ratio: expect.closeTo(0.68),
+  });
   act(() => registry.close(CHANNEL_BODY_PANEL));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
@@ -846,7 +848,9 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
   expect(registry.isOpen('sessions')).toBe(true);
-  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  expect(readChannelDock(storage)?.channelSplits?.ada).toMatchObject({
+    ratio: expect.closeTo(0.68),
+  });
   act(() => registry.toggle('sessions'));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
@@ -872,7 +876,9 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   act(() => root.render(view('ada')));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
-  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  expect(readChannelDock(storage)?.channelSplits?.ada).toMatchObject({
+    ratio: expect.closeTo(0.68),
+  });
   act(() => registry.close(CHANNEL_BODY_PANEL));
   await settle();
   act(() => root.render(null));
@@ -925,13 +931,17 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     ).not.toBeNull();
     expect(readChannelDock(storage)?.layout.panels[id]).toBeUndefined();
     const body = host.querySelector(`[data-body="${id}"]`);
-    const divider = host.querySelector(`[data-workspace-split="${id}"] > [role="separator"]`)!;
+    const divider = host
+      .querySelector(`[data-channel-leaf="${id}"]`)!
+      .closest('.bh-channel-branch')!
+      .parentElement!.querySelector(':scope > [role="separator"]')!;
     act(() =>
       divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })),
     );
     await settle();
     expect(host.querySelector(`[data-body="${id}"]`)).toBe(body);
-    expect(readChannelDock(storage)?.botWorkspaces?.ada?.[id]?.ratio).toBeCloseTo(0.32);
+    const savedTree = readChannelDock(storage)?.channelSplits?.ada;
+    expect(divider.getAttribute('aria-valuenow')).toBe('68');
     act(() => registry.close(CHANNEL_BODY_PANEL));
     await settle();
     act(() => registry.toggle(id));
@@ -941,14 +951,16 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     act(() => registry.toggle(id));
     await settle();
     expect(registry.isOpen(id)).toBe(false);
-    expect(readChannelDock(storage)?.botWorkspaces?.ada?.[id]?.ratio).toBeCloseTo(0.32);
+    expect(readChannelDock(storage)?.channelSplits?.ada).toEqual(savedTree);
     act(() => registry.open(id));
     await settle();
     expect(
       host
-        .querySelector(`[data-workspace-split="${id}"] > [role="separator"]`)
+        .querySelector(`[data-channel-leaf="${id}"]`)!
+        .closest('.bh-channel-branch')!
+        .parentElement!.querySelector(':scope > [role="separator"]')
         ?.getAttribute('aria-valuenow'),
-    ).toBe('32');
+    ).toBe('68');
     act(() => registry.close(id));
     await settle();
   }

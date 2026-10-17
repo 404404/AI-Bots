@@ -55,9 +55,10 @@ describe('Bot mode layout persistence', () => {
   it('round-trips a versioned dockview serialization', () => {
     const storage = memoryStorage();
     writeChannelDock({ layout, parked: { schedules: { direction: 'below' } } }, storage);
-    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(6);
+    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(7);
     expect(readChannelDock(storage)).toEqual({
-      version: 6,
+      version: 7,
+      channelSplits: {},
       gap: 4,
       order: [],
       hiddenControls: [],
@@ -160,7 +161,7 @@ describe('drops never tab two panels together', () => {
 
 describe('Work → Sessions upgrade', () => {
   const stored = (views: string[]) => ({
-    version: 6 as const,
+    version: 7 as const,
     layout: {
       ...layout,
       grid: {
@@ -314,8 +315,8 @@ it('recovers malformed storage without discarding the original backup', () => {
   storage.setItem(CHANNEL_DOCK_STORAGE_KEY, '{broken');
   expect(readChannelDock(storage)).toBeUndefined();
   writeChannelDock({ layout, parked: {} }, storage);
-  expect(readChannelDock(storage)?.version).toBe(6);
-  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v6`)).toBe('{broken');
+  expect(readChannelDock(storage)?.version).toBe(7);
+  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-channel-splits-v7`)).toBe('{broken');
 });
 
 it('retains hidden Work intent when every legacy panel is closed', () => {
@@ -384,7 +385,7 @@ describe('Bot subpanel migration', () => {
       const raw = JSON.stringify(previous);
       storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
       const migrated = readChannelDock(storage)!;
-      expect(migrated.version).toBe(6);
+      expect(migrated.version).toBe(7);
       expect(migrated.layout.panels['memory-files']).toBeUndefined();
       expect(migrated.layout.panels['plugin-x']).toEqual({ id: 'plugin-x' });
       expect(migrated.layout.grid.root.data).toEqual([
@@ -471,7 +472,7 @@ it('upgrades v5 Browser/Computer without rewriting existing Channel workspaces o
   storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
   storage.setItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`, 'original-v4');
   const next = readChannelDock(storage)!;
-  expect(next.version).toBe(6);
+  expect(next.version).toBe(7);
   expect(next.layout.panels['botharness-browser']).toBeUndefined();
   expect(next.layout.grid.root.data).toEqual([
     { ...leaf('message', CHANNEL_BODY_PANEL), size: 800 },
