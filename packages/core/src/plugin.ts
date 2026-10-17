@@ -1,10 +1,10 @@
-import { mountChannelInteractionOwners } from './channels/interaction-owners.js';
 import { createTobDeviceOperations, TOB_DEVICE_CAPABILITIES } from './tob/cli-device-operations.js';
 import type { PrepareTobOperation } from './tob/cli-operations.js';
 import {
   createTobContentOperations,
   TOB_CONTENT_CAPABILITIES,
 } from './tob/cli-content-operations.js';
+import { mountChannelInteractionOwners } from './channels/interaction-owners.js';
 import {
   createTobScheduleOperations,
   TOB_SCHEDULE_CAPABILITIES,
