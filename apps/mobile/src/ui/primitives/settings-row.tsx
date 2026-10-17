@@ -1,5 +1,5 @@
 import { Children, isValidElement, type ReactNode } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { Platform, Pressable, View, type PressableProps } from 'react-native';
 
 import type { LayerName } from '../design/layers';
 import type { ColorRole } from '../design/resolve-theme';
@@ -8,6 +8,25 @@ import { androidSettings, edge, radius, space } from '../design/tokens';
 import { pressTint, useDesignTheme } from '../design/theme';
 import { ChevronRightIcon } from '../shell/icons';
 import { Text } from './text';
+
+function SettingsFrame({
+  onPress,
+  style,
+  children,
+  ...props
+}: Omit<PressableProps, 'children'> & { children: ReactNode }) {
+  if (Platform.OS === 'android' && onPress === undefined)
+    return (
+      <View style={typeof style === 'function' ? style({ pressed: false }) : style}>
+        {children}
+      </View>
+    );
+  return (
+    <Pressable {...props} onPress={onPress} style={style}>
+      {children}
+    </Pressable>
+  );
+}
 
 export function SettingsRow({
   title,
@@ -41,7 +60,7 @@ export function SettingsRow({
   const android = Platform.OS === 'android';
   const colors = settingsColors(theme, on);
   return (
-    <Pressable
+    <SettingsFrame
       onPress={onPress}
       disabled={onPress === undefined}
       accessible={android && onPress === undefined ? false : undefined}
@@ -90,7 +109,7 @@ export function SettingsRow({
         (android && disclosure ? (
           <ChevronRightIcon size={space.x6} color={theme.color.muted} />
         ) : null)}
-    </Pressable>
+    </SettingsFrame>
   );
 }
 

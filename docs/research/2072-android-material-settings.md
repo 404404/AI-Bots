@@ -30,6 +30,8 @@ Define Android settings tokens for group shape, row inset/spacing, section-headi
 
 Maintain one owner for value and persistence. Forward one native change to the existing setting action; derive `value` from the existing state. An RN row and its native switch must not both toggle from one tap. Keep a localized accessible name, checked state, and disabled state observable across the RN/Compose boundary. Decorative chevrons/dividers must not become separate focus stops.
 
+The first physical-phone integration exposed an interop limitation: the nested Compose control rendered correctly but the Android XML tree omitted its checked role, while the old disabled RN Pressable row appeared as a disabled button. The adapter therefore renders non-actionable Android rows as plain Views and exposes one RN semantic switch around the native control, forwarding accessibility activation to the same existing owner. Its Compose child remains the real pointer/drag control and is hidden only from duplicate accessibility discovery. This is an observed integration workaround for this app/build, not a claim that every Expo Compose switch needs a wrapper. The native XML check changed from zero checkable switches to one labeled, checked switch with a 52×48dp target; manual TalkBack exploration is a separate acceptance step.
+
 ## Acceptance criteria
 
 - Dark and light: groups separate visibly from the drawer canvas; title, supporting text, divider, selected state, and disabled state remain distinct. Header and drawer body continue to use their shared surface contract.
