@@ -191,13 +191,13 @@ export function ChatBackgroundEditor({
             </Text>
           </View>
         )}
+      </ScrollView>
+      <View style={{ padding: space.x5, gap: space.x3 }}>
         {state.error || pickError ? (
           <Text accessibilityRole="alert" tone="danger">
             {t.chatBackground.failed}
           </Text>
         ) : null}
-      </ScrollView>
-      <View style={{ padding: space.x5, gap: space.x3 }}>
         <Button
           label={t.done}
           tone="primary"
