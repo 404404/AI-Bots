@@ -71,7 +71,7 @@ const en = {
     open: 'Open channel',
     back: 'All channels',
     message: 'Message',
-    send: 'Send message',
+    send: 'Send',
     retrySend: 'Retry message',
     reloadMessages: 'Reload messages',
     noMessages: 'No messages yet. Send the first message above.',
