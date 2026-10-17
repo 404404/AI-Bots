@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
 import { cardHref, unreadHref } from '../../../src/host/push';
+import { activityCollapse } from '../../../src/host/native-section-collapse';
 import type { HumanAttentionItem } from '../../../src/host/wire';
 import { useDesignTheme } from '../../../src/ui/design/theme';
 import { ConnectionBanner } from '../../../src/ui/connection-banner';
@@ -54,6 +55,7 @@ export default function ActivityScreen() {
         <ActivityFeed
           key={saved?.hostId ?? 'no-host'}
           hostId={saved?.hostId ?? ''}
+          collapse={activityCollapse}
           client={client}
           inbox={inbox}
           snapshot={list}
