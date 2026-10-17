@@ -83,14 +83,14 @@ Survey: latest 70 PRs by creation order on 2026-10-18; eight relevant PR bodies/
 Source audit at PR #2112's base `2202bef4d` plus its Settings patch:
 
 - `src/ui/primitives/sheet-screen.tsx` owns native form-sheet options and an Android handle; `sheet-stack.tsx` owns nested headers. Keep these as the shared integration points, not new per-screen wrappers.
-- `src/ui/settings-view.tsx` currently puts its title and Done inside the scrolling body. This fails the target fixed-header/immediate-setting contract.
+- At the initial audit, `src/ui/settings-view.tsx` put its title and Done inside the scrolling body. #2112 moves the root title and accessible Close icon into the fixed navigation header and removes Done.
 - `src/ui/chat/sheet.tsx` always supplies a custom grabber and trailing Close for titled fallback modals. Its painted handle does not by itself prove drag support; classify each caller before migration.
-- The #2112 iOS `modal` workaround renders Settings, but currently lacks the required visible handle. Existing `sheetGrabberVisible` options do not prove that this presentation displays it. Do not accept a fake bar as the fix.
+- The initial #2112 iOS `modal` workaround rendered Settings without a handle: `sheetGrabberVisible` is applied by the pinned native library only for `formSheet`. Settings now opts into the shared frame handle within the native modal swipe region. Its gesture behavior, rather than the presence of a painted bar, is part of native acceptance.
 - Model picker selections, model preset edits, routine edits and expanded message drafts have different commit boundaries. Keep them distinct when reusing the same header/frame.
 
 ## Delivery and acceptance
 
-First slice: Settings root → Notifications → Back → Close/swipe, with one handle/header/body, retained preferences and no blank sheet. Select a supported presentation mechanism only after proving nested content, real drag behavior and accessibility on SDK 58. A blank-screen workaround is diagnostic progress, not final conformance. #2112 remains Draft until that slice is qualified; this document does not claim its UI already implements the standard.
+First slice: #2112 implements Settings root → Notifications → Back → Close/swipe, with one handle/header/body, immediate preferences and a Close icon that fits the native toolbar at maximum text size. Native runtime results and remaining platform/accessibility/Human gates are recorded in its evidence report. Keep the PR unmerged until the Human authorizes it; this slice does not certify every overlay or platform.
 
 Then adapt one representative immediate picker and one transactional editor through the shared primitives, before migrating remaining callers. Coordinate Android dialog work with #2109. No Host schema change, model-policy change, native dependency addition or wholesale redesign is implied by this standard.
 

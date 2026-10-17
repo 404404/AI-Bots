@@ -49,7 +49,7 @@ Android 对照：[Bottom sheets](https://developer.android.com/develop/ui/compos
 
 已筛查最近 70 个 PR，并重点检查 #2025、#2031、#2040、#2073、#2078、#2007、#1966、#2109。前七项已合并，#2109 在本次审计时仍开放。历史 Android 证据不能替代 iOS 回归。
 
-当前差异：Settings 标题和 Done 在滚动内容中；通用 Sheet 固定附加关闭按钮与装饰 handle；#2112 的 iOS modal 兼容方案显示了内容，但缺少 handle。因此 #2112 继续 Draft，不能把“空白消失”算成完整交互验收。
+初审发现 Settings 标题和 Done 在滚动内容中，iOS modal 兼容方案也缺少 handle。#2112 已把标题和带可访问名称的 Close 图标移到固定导航栏，并在原生下拉区域加入一个 handle；最大字号下的文字 Close 裁切已改为标准 X 图标。通用 Sheet 等其余弹层仍按后续切片迁移。原生结果和未测项见 PR 证据，不把单页通过等同于所有弹层达标。
 
 首个落地切片：Settings → Notifications → 返回 → 关闭/下滑，验证一个 handle、一个标题区、独立滚动、设置保留和无空白。随后选一个即时选择器和一个显式保存编辑器，通过共用组件验证，再迁移其余页面；Android 对话框与 #2109 协调。
 

@@ -19,9 +19,7 @@ appId: ai.botharness.deepseekbot.dev
     visible: 'Get a notification when a PersonaBot needs you or replies to you.*'
     timeout: 10000
 - tapOn: 'Settings'
-- scrollUntilVisible:
-    element: 'Close'
-    direction: UP
+- assertVisible: 'Close'
 - tapOn: 'Close'
 - assertVisible: 'Chats'
 - assertNotVisible: 'Computers.*'
@@ -31,6 +29,7 @@ appId: ai.botharness.deepseekbot.dev
     element: 'Computers.*'
     direction: DOWN
 - scrollUntilVisible:
-    element: 'Close'
-    direction: UP
+    element: 'About anonymous statistics'
+    direction: DOWN
+- assertVisible: 'Close'
 - tapOn: 'Close'
