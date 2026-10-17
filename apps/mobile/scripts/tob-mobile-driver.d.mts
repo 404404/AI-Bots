@@ -18,3 +18,9 @@ export function targetSocket(
   port: number,
   simulatorName: string,
 ): URL;
+
+export function connect(
+  port: number,
+  targetId: string,
+  simulatorName: string,
+): Promise<{ send(method: string, params: Record<string, unknown>): Promise<any>; close(): void }>;

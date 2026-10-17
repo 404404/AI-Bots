@@ -59,7 +59,7 @@ export function targetSocket(target, port, simulatorName) {
   url.hostname = '127.0.0.1';
   return url;
 }
-async function connect(port, targetId, simulatorName) {
+export async function connect(port, targetId, simulatorName) {
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw Error('INVALID_METRO_PORT');
   const targets = await (
     await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5000) })
