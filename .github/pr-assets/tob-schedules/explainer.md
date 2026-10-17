@@ -5,9 +5,9 @@ lang: zh
 template: sheet
 theme: blueprint
 cols: 2
-pr: 待创建，关联 Issue 2093
+pr: Draft 2123，关联 Issue 2093
 base: a3e2c4e64d131191e686e33cb207d3db9b3a0937
-product-head: cc4f14d6db734830cba46dc8a5df2da5c014f5ba
+product-head: fb6cf4ff011594bcc80bdaa28e4b03136306dc94
 generated: 2026-10-18 JST
 ---
 
@@ -52,7 +52,7 @@ ScheduleOwner -> 数据库: 同事务写入任务与回执
 
 原任务删除后保留回执，重放会拒绝。一次性任务过期后仍先核对原回执，再验证新建时刻。
 
-[查看准确版本的重放分支](https://github.com/BotHarness/DeepSeekBot/blob/cc4f14d6db734830cba46dc8a5df2da5c014f5ba/packages/core/src/tob/cli-schedule-operations.ts#L239-L262)。
+[查看准确版本的重放分支](https://github.com/BotHarness/DeepSeekBot/blob/fb6cf4ff011594bcc80bdaa28e4b03136306dc94/packages/core/src/tob/cli-schedule-operations.ts#L239-L262)。
 
 ## D Schema 100 与恢复边界
 
@@ -70,19 +70,33 @@ ScheduleOwner -> 数据库: 同事务写入任务与回执
 
 | 证据                      | 状态              | 边界                                      |
 | ------------------------- | ----------------- | ----------------------------------------- |
-| 48 个针对性测试           | ok 通过           | 最终代码，单 worker                       |
+| 48 个管理回归及 2 个启动回归 | ok 通过 | 管理回归在原产品版本；启动回归在当前版本 |
 | 根类型检查与构建          | ok 通过           | 最终代码                                  |
 | 自然 Tob 创建、改名、暂停 | ok 通过           | 早于最后的过期重放修正                    |
 | 真实 planned firing       | ok 通过           | Source Event、Session、发送与消息 ID 对应 |
 | 同 Profile 重启读回       | ok 通过           | 已提交产品版本，停用状态与历史保留        |
-| macOS、Human QA、CI       | warn 待父任务验证 | Web 不代表原生通过                        |
+| 原生启动补跑 | warn 修复待复验 | 旧截图保留失败，不能写全通过 |
+| Human QA、CI | warn 待父任务验证 | 本地测试不代替验收 |
 
 本地全套测试因共享资源压力中止，不能算通过。首次模型配额错误与证据脚本修正分别保留。
 
-## F 交互截图与后续审核
+## F 原生启动发现了什么
+
+原生前两次定时工作完成。重启补跑却早于凭据服务就绪，留下无 Session、无副作用的 retryable Source Event。失败历史与画面保留。
+
+```flow LR
+真实凭据Service就绪 -> CorePlugin: Cordis必需依赖
+CorePlugin -> RuntimeRecovery: 既有恢复
+RuntimeRecovery -> ScheduleOwner: 既有补跑
+ScheduleOwner -> 模型路由检查: 缺key仍拒绝
+```
+
+源码回归已验证延迟初始化与缺 key 两条路径。新的原生补跑仍待父任务验证。
+
+## G 交互截图与后续审核
 
 截图来自合成 Bot 与任务，展示启用、执行历史和重启后的暂停状态。它们不是 UI 改版对照。
 
 [截图与双语验证记录](https://github.com/BotHarness/DeepSeekBot/tree/codex/2093-tob-schedules/.github/pr-screenshots/tob-schedules)。
 
-本页是审核说明，不是运行证据或发布授权。PR 尚未创建，公开分支链接需父任务推送后核验。
+本页是审核说明，不是运行证据或发布授权。Draft PR 为 #2123。修复版本需父任务推送后核验。
