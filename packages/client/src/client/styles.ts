@@ -3270,6 +3270,7 @@ html[data-botharness-motion='reduce'] .bh-timeline-working-ellipsis i { animatio
   margin-top: ${space.x1};
 }
 .bh-bubble {
+  text-align: left;
   width: fit-content;
   max-width: 100%;
   border-radius: ${radius.lg};
@@ -3381,7 +3382,8 @@ body[data-ds-dark-theme] .bh-message-group-me {
 .bh-bubble-content { min-width: 0; }
 .bh-message-attachment { position: relative; min-width: 0; }
 .bh-message-file-more { flex: none; color: inherit; }
-.bh-message-attachments { display: grid; gap: ${space.x3}; margin-top: ${space.x3}; }
+/* Bound intrinsic attachment width too, so long filenames do not widen the bubble. */
+.bh-message-attachments { display: grid; max-width: 320px; gap: ${space.x3}; margin-top: ${space.x3}; }
 .bh-message-perf { margin-top: ${space.x2}; color: var(--dsw-alias-label-tertiary); font-size: ${text.metaSize}; line-height: ${text.metaLine}; font-variant-numeric: tabular-nums; }
 .bh-bridge-media-content { white-space: pre-wrap; }
 .bh-bridge-image { max-width: min(100%, 320px); }
@@ -3395,7 +3397,11 @@ body[data-ds-dark-theme] .bh-message-group-me {
 .bh-message-image { display: block; max-width: 100%; max-height: 320px; border-radius: ${radius.md}; object-fit: contain; }
 /* File and audio pills share one card rhythm: icon, stacked name/size, divider, action. */
 .bh-message-file, .bh-message-audio { display: flex; align-items: center; gap: ${space.x3}; min-width: 0; width: fit-content; max-width: min(100%, 320px); min-height: 52px; padding: ${space.x3} ${space.x3} ${space.x3} ${space.x4}; border: 0; border-radius: ${radius.md}; background: color-mix(in srgb, currentColor 6%, transparent); color: inherit; }
-.bh-message-file-main { display: flex; align-items: center; gap: ${space.x3}; flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: none; }
+/* Wrap by the attachment's available width, including narrow desktop dock panels. */
+.bh-message-file { box-sizing: border-box; flex-wrap: wrap; }
+.bh-message-file-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: ${space.x2}; max-width: 100%; margin-inline-start: auto; }
+.bh-message-file-actions > .bh-message-file-divider { display: none; }
+.bh-message-file-main { display: flex; align-items: center; gap: ${space.x3}; flex: 1 1 16ch; min-width: 0; max-width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; text-decoration: none; }
 button.bh-message-file-main { cursor: pointer; }
 .bh-message-file-main:focus-visible, .bh-message-file-download:focus-visible, .bh-message-audio-play:focus-visible, .bh-message-audio-spectrum:focus-visible { outline: ${border.focus} solid currentColor; outline-offset: 2px; }
 .bh-message-file-icon { display: grid; place-items: center; flex: none; width: 28px; height: 28px; }
@@ -3415,6 +3421,7 @@ a.bh-message-file-download:hover, button.bh-message-file-download:hover { backgr
 .bh-message-audio-bar[data-played] { background: var(--dsw-alias-state-business-primary); }
 .bh-message-audio-element { display: none; }
 .bh-bubble-body {
+  text-wrap: pretty;
   white-space: pre-wrap;
   word-break: break-word;
 }
