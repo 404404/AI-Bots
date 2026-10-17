@@ -46,6 +46,7 @@ import { Composer } from './composer';
 import { ChatHeader, EdgeFade, HeaderBackButton, useChatHeaderHeight } from './header-chrome';
 import { useFollowLatest } from './follow-latest';
 import { useMarkRead } from './mark-read';
+import { useBotNames } from './use-bot-names';
 import { ImageViewer } from './image-viewer';
 import { JumpToLatest } from './jump-to-latest';
 import { MessageActions, type MessageMenuTarget } from './message-actions';
@@ -430,10 +431,7 @@ function ChatConversation({
   );
 
   const roster = host.roster;
-  const botName = useCallback(
-    (id: string): string => roster?.bots.find((entry) => entry.slug === id)?.displayName ?? id,
-    [roster],
-  );
+  const botName = useBotNames(roster?.bots);
 
   const speakerOf = useCallback(
     (id: string, row: { key: string; first: boolean; last: boolean }): Speaker => ({
