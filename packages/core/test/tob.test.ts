@@ -6,7 +6,7 @@ import { createCore } from '../src/plugin.js';
 import { createBridgeMethods } from '../src/bridge/methods.js';
 import { createTempRoot } from './helpers.js';
 import type { TobSettingsProvider } from '../src/tob/service.js';
-import type { OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
+import type { AssignmentAgentRun, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 
 function settings() {
   let value = 8,
