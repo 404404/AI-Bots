@@ -140,11 +140,10 @@ export function createTobMarketplaceOperations(deps: {
       return {
         async run(guard) {
           guard();
-          const result = await owner(() =>
+          const result =
             kind === 'git'
-              ? deps.imports.previewGit(text(args.gitUrl))
-              : deps.imports.previewArchive(archive as Buffer),
-          );
+              ? await owner(() => deps.imports.previewGit(text(args.gitUrl)))
+              : await owner(() => deps.imports.previewArchive(archive as Buffer));
           guard();
           return result;
         },
