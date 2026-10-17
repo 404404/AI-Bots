@@ -291,7 +291,7 @@ function SessionsPanel({
         <div className="bh-error">{t('sessions.error', { error: owned.error })}</div>
       ) : null}
       {owned.status === 'ready' && rows.length === 0 && assignments.length === 0 ? (
-        <PanelEmptyState icon="terminal">{t('sessions.empty')}</PanelEmptyState>
+        <PanelEmptyState icon="text-quote">{t('sessions.empty')}</PanelEmptyState>
       ) : null}
       {archiveError === undefined ? null : (
         <div className="bh-error" role="alert">

@@ -280,7 +280,7 @@ function Welcome({ state, t }: { state: ClientState; t: BotHarnessTranslate }): 
   return (
     <div className="bh-root bh-main">
       <div className="bh-content" {...stylex.props(messageStyles.emptyContainer)}>
-        <PanelEmptyState icon="messages-square">
+        <PanelEmptyState icon="messages-circle">
           {t(state.bots.length === 0 ? 'main.welcome.empty' : 'main.welcome.hint')}
         </PanelEmptyState>
       </div>
@@ -974,7 +974,7 @@ function EmptyConversation({
 }): ReactElement {
   return (
     <div className="bh-chat-empty" {...stylex.props(messageStyles.emptyContainer)}>
-      <PanelEmptyState icon="messages-square">
+      <PanelEmptyState icon="messages-circle">
         {channel?.type === 'group'
           ? `${channel.name} · ${t('main.group.note')}`
           : `${bot === undefined ? t('main.localChat') : t('main.localChat.with', { name: bot.displayName })} · ${t('main.localChat.hint')}`}
@@ -1734,7 +1734,7 @@ function ConversationView({
           {
             id: 'sessions' as const,
             label: t('composerCommand.sessions'),
-            icon: <ChannelSidebarIcon name="messages-square" />,
+            icon: <ChannelSidebarIcon name="text-quote" />,
             run: () => sidebar.openTab('conversation'),
           },
         ]),

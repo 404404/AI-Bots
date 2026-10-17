@@ -2149,7 +2149,7 @@ export function BotSidebar({
       {state.roster.readOnly ? <div className="bh-note">{t('roster.readOnly')}</div> : null}
       {state.status === 'ready' && state.bots.length === 0 ? (
         <PanelEmptyState
-          icon="users"
+          icon="hash"
           action={
             <Button
               variant="outline"
@@ -2165,7 +2165,7 @@ export function BotSidebar({
         </PanelEmptyState>
       ) : null}
       {visibleCount === 0 && (state.bots.length > 0 || state.channels.length > 0) ? (
-        <PanelEmptyState icon="users">
+        <PanelEmptyState icon="hash">
           {query.length === 0 && hiddenItems.length > 0 ? t('hidden.all') : t('roster.noMatch')}
         </PanelEmptyState>
       ) : null}

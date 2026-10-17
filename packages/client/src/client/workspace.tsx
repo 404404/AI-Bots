@@ -66,7 +66,7 @@ export function Workspace({
       const unregister = registry.register({
         id: WORKSPACE_CHANNELS,
         title: t('workspace.channels'),
-        icon: 'user',
+        icon: 'hash',
         scope: 'global',
         order: -1,
         defaultPosition: { zone: 'left' },
@@ -98,7 +98,7 @@ export function Workspace({
       const unregisterMessages = registry.register({
         id: CHANNEL_BODY_PANEL,
         title: t('workspace.messages'),
-        icon: 'messages-square',
+        icon: 'messages-circle',
         scope: 'global',
         order: 0,
         component: () => null,

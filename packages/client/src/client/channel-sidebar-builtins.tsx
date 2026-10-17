@@ -1102,7 +1102,7 @@ export function createChannelSidebarBuiltinTabs(
   return [
     {
       id: 'conversation',
-      icon: 'messages-square',
+      icon: 'messages-circle',
       label: t('tab.conversation'),
       order: 1,
       scope: 'personabot',
@@ -1170,7 +1170,7 @@ export function createChannelSidebarBuiltins(
     {
       id: 'sessions',
       tab: 'conversation',
-      icon: 'terminal',
+      icon: 'text-quote',
       label: t('entry.sessions'),
       order: 10,
       scope: 'personabot',
