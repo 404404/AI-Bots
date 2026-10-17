@@ -87,6 +87,10 @@ export const motion = {
 
 export const lift = 0.96;
 
+export const tabMotion = {
+  inactiveIconScale: 0.72,
+} as const;
+
 export const PRESS_TINT = 0.12;
 
 export const scrim = {
