@@ -1,6 +1,6 @@
 import { renderKeyboardFormScroll } from '../../../src/ui/primitives/keyboard-form';
 import { Redirect, Stack, useFocusEffect, useIsFocused, useRouter } from 'expo-router';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -58,13 +58,15 @@ const HomeContent = memo(function HomeContent({
   list: ReturnType<typeof useInbox>;
 }) {
   const router = useRouter();
+  const prepared = useRef<typeof client>(undefined);
   useFocusEffect(
     useCallback(() => {
+      if (client === undefined || prepared.current === client) return;
       let stop: (() => void) | undefined;
       const idle = requestIdleCallback(() => {
+        prepared.current = client;
         router.prefetch('/activity');
-        if (client !== undefined)
-          stop = prefetchInbox(client, { activity: true, section: 'action' });
+        stop = prefetchInbox(client, { activity: true, section: 'action' });
       });
       return () => {
         cancelIdleCallback(idle);
