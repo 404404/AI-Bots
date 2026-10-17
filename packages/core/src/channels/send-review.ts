@@ -14,6 +14,8 @@ export type SendReviewOutcome = {
   draftId: string;
   reason: string;
   changedMessageIds?: string[];
+  changedMessageCount?: number;
+  review?: { observationId: string; content: string; complete: boolean };
   read?: { channel_id: string; limit: number };
 };
 export class SendReviewRequired extends Error {
@@ -68,7 +70,7 @@ export class GroupSendReview {
       if (value.expires <= now) this.#observations.delete(id);
     const prior = previous === undefined ? undefined : this.#observations.get(previous);
     const seen = new Map<string, Seen>();
-    if (prior?.owner === owner && prior.channelId === channelId)
+    if (prior?.owner === owner && prior.channelId === channelId && prior.expires > now)
       for (const item of prior.seen) seen.set(item.id, item);
     for (const message of messages) {
       if (message.channelRevision === undefined) continue;
@@ -231,6 +233,7 @@ export class GroupSendReview {
             : 'read-new-context-then-revise-or-drop',
         ),
         changedMessageIds: changed.slice(0, 20),
+        changedMessageCount: changed.length,
         read: { channel_id: channelId, limit: 20 },
       };
     }

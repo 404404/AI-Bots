@@ -93,7 +93,11 @@ import { ChannelReplyTargetError, MAX_MESSAGE_PAGE } from '../channels/store.js'
 import type { MessagePerfTracker } from '../usage/message-perf.js';
 import { attachmentIdentity, type ChannelAttachmentRef } from '../attachments/ref.js';
 import type { ChannelMessageQueryOptions, ChannelStore } from '../channels/store.js';
-import { boundModelPage, readModelContent } from './channel-model-read.js';
+import {
+  boundModelPage,
+  readModelContent,
+  CHANNEL_READ_OUTPUT_LIMIT,
+} from './channel-model-read.js';
 import {
   discoverBotContacts,
   type BotContactQuery,
@@ -5947,6 +5951,41 @@ class BotRuntimeImplementation implements BotRuntime {
             mentionBotIds: input.mentionBotIds,
             mentionHumanIds: input.mentionHumanIds,
             deliveryKey: input.deliveryKey,
+          }).catch((error: unknown) => {
+            if (!(error instanceof SendReviewRequired) || error.outcome.status !== 'held')
+              throw error;
+            const changed = error.outcome.changedMessageIds;
+            if (!changed?.length) throw error;
+            const current = resolve(channel.id);
+            const views = changed.flatMap((id) => {
+              const message = this.#channels.message(current.id, id);
+              return message === undefined ? [] : [viewOf(current, message)];
+            });
+            const bounded = boundModelPage(
+              { messages: views },
+              () => undefined,
+              () => 2_000,
+            );
+            if (!bounded.included.length) throw error;
+            const review = {
+              observationId: 'x'.repeat(36),
+              content: bounded.output,
+              complete: bounded.included.length === error.outcome.changedMessageCount,
+            };
+            if (JSON.stringify({ ...error.outcome, review }).length > CHANNEL_READ_OUTPUT_LIMIT)
+              throw error;
+            const observationId = this.groupSendReview.observe(
+              reviewOwner,
+              current.id,
+              bounded.included.map((view) => view.message),
+              input.observationId ?? initialObservations.get(current.id),
+            );
+            observations.set(current.id, observationId);
+            if (observeReads) this.#observeReadMessages(botSlug, bounded.included, readAdmissions);
+            throw new SendReviewRequired({
+              ...error.outcome,
+              review: { ...review, observationId },
+            });
           });
           if (steered?.sessionId === sessionId) steered.spokenChannelIds.add(channel.id);
           return sent;

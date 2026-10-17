@@ -18,6 +18,13 @@ must explicitly carry its returned handle into a subsequent send; concurrently e
 read does not update another send's default basis. A full inbound message present in the actual
 Turn content can supply the initial basis. Metadata and truncated content cannot.
 
+A held result can include a bounded delta of newly changed messages, rendered by the same
+model-read projection and output budget as `channel_read`. Only complete returned messages
+extend its explicit observation handle; missing or oversized content still requires a read.
+This removes an unnecessary model read round without classifying arbitrary Human text as
+irrelevant. The next send remains an explicit Bot choice and repeats the atomic checks. A
+returned handle never silently updates the default basis of an already running send.
+
 A held send persists its identity, owner, original/current draft, basis, expiry and retry count
 in the existing Operational Database. It produces no public message or downstream Admission.
 One explicit revision or unchanged recheck is allowed. Another change stops the attempt with

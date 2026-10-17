@@ -21,6 +21,7 @@ async function fixture(
       messageId: string;
       observationIds: Record<string, string>;
       changedMessageIds?: string[];
+      review?: { observationId: string; content: string; complete: boolean };
     }>;
   }) => Promise<void>,
 ) {
@@ -88,17 +89,96 @@ describe('Group send review through the same direct model tools', () => {
       expect(held.status).toBe('held');
       expect(held.changedMessageIds).toContain('correction');
       expect(core.channels.readMessages(channelId).map((m) => m.id)).toEqual(['correction', 'old']);
-      const current = await tool('channel_read', {});
+      expect(held.review?.complete).toBe(true);
+      expect(
+        JSON.parse(held.review!.content).messages.map(
+          (view: { message: { body: string } }) => view.message.body,
+        ),
+      ).toEqual(['Correction: meet at 11:00']);
       const sent = await tool('channel_send', {
         body: 'Confirmed 11:00',
         draft_id: held.draftId,
-        observation_id: current.observationIds[channelId],
+        observation_id: held.review!.observationId,
       });
       expect(sent.status).toBe('committed');
       expect(core.channels.message(channelId, sent.messageId)?.body).toBe('Confirmed 11:00');
       expect(
         core.channels.readMessages(channelId).filter((m) => m.author.kind === 'bot'),
       ).toHaveLength(1);
+    });
+  });
+
+  it('rechecks an unchanged body from the held delta without a separate read or a silent basis upgrade', async () => {
+    await fixture(async ({ core, channelId, human, tool }) => {
+      await human('question', 'Please answer');
+      const read = await tool('channel_read', {});
+      await human('aside', 'Coffee is ready');
+      const held = await tool('channel_send', {
+        body: 'Answer',
+        observation_id: read.observationIds[channelId],
+      });
+      expect(held.review?.complete).toBe(true);
+      const sent = await tool('channel_send', {
+        body: 'Answer',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(sent.status).toBe('committed');
+      expect(core.channels.message(channelId, sent.messageId)?.body).toBe('Answer');
+      const stale = await tool('channel_send', {
+        body: 'Another answer',
+        observation_id: read.observationIds[channelId],
+      });
+      expect(stale.status).toBe('held');
+    });
+  });
+
+  it('does not let a held delta cover a later correction or another owner', async () => {
+    await fixture(async ({ channelId, human, tool }) => {
+      await human('question', 'Meet at 10');
+      const read = await tool('channel_read', {});
+      await human('aside', 'Coffee');
+      const held = await tool('channel_send', {
+        body: 'Meet at 10',
+        observation_id: read.observationIds[channelId],
+      });
+      await human('correction', 'Instead meet at 11');
+      const recheck = await tool('channel_send', {
+        body: 'Meet at 10',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(recheck.status).toBe('requires-review');
+      expect(recheck.changedMessageIds).toContain('correction');
+      const other = await tool(
+        'channel_send',
+        { body: 'Meet at 10', observation_id: held.review!.observationId },
+        'bob',
+      );
+      expect(other.status).toBe('held');
+    });
+  });
+
+  it('never observes content omitted from a bounded held delta', async () => {
+    await fixture(async ({ channelId, human, tool }) => {
+      await human('question', 'Original');
+      const read = await tool('channel_read', {});
+      await human('small', 'A small change');
+      await human('large', 'x'.repeat(20_000));
+      const held = await tool('channel_send', {
+        body: 'Answer',
+        observation_id: read.observationIds[channelId],
+      });
+      expect(held.review?.complete).toBe(false);
+      expect(held.review!.content.length).toBeLessThan(12_000);
+      expect(held.review!.content).not.toContain('x'.repeat(100));
+      const recheck = await tool('channel_send', {
+        body: 'Answer',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(recheck.status).toBe('requires-review');
+      expect(recheck.changedMessageIds).toContain('large');
     });
   });
 

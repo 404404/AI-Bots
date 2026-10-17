@@ -9,7 +9,11 @@ import { rpc, cookieFor } from './verify-app.mjs';
 import { createContext, presetFor, parseModelRoute } from './e2e-llm-scenarios.mjs';
 
 export const PROTOCOL = {
-  version: '2053-pilot-v1',
+  version: '2053-pilot-v2',
+  revisionOf: '2053-pilot-v1',
+  priorCandidate: '90749c1e13068ed9e8f57ab629146b5bac17468f',
+  interventionChange:
+    'Held result returns bounded observed delta; freshness policy and retry budget unchanged',
   concurrentPairs: 2,
   baseline: '73056fc59dcac42c3fd7e6cb1586f6c1c4e37157',
   families: ['correction', 'quiet', 'unrelated', 'cancel-or-revoke'],

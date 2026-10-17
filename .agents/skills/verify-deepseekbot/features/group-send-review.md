@@ -7,6 +7,8 @@ observed basis. The Human sees only committed replies in canonical history.
 
 - Observe: full inbound content or bounded `channel_read` supplies a Host-issued basis.
 - Hold: changed content returns `held`, clears the preview and creates no formal message.
+  A bounded `review.content` delta supplies full newly observed messages and an explicit
+  `review.observationId`; `review.complete` indicates whether an extra read is needed.
 - Recheck: explicit `draft_id` and `observation_id` allow one revision or unchanged recheck.
 - Drop: `drop: true` abandons the draft independently of Inbox resolution.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
@@ -35,7 +37,9 @@ final answer with `verify-app shot`; inspect console output. Compare `channelMes
 the draft frames and `botToolTrace`: a held draft must have no canonical placement.
 Use `bot-tool <bot> channel_read --args-stdin`, then `channel_send` with the returned
 `observationIds[channel]`; append a Human correction between those CLI calls to deterministically
-exercise the same production guard without the model. Read again before rechecking.
+exercise the same production guard without the model. Recheck directly with `review.observationId` after reading a complete held delta.
+Verify a second intervening correction still stops it; omitted/oversized content must be
+read explicitly, and neither another Bot nor an old concurrent send inherits the handle.
 
 Render the saved pilot with `scripts/group-send-review-report.mjs render` and open the HTML.
 Choose one card: progress advances by one, the choice survives reload, and judge/cost evidence

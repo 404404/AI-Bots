@@ -163,7 +163,9 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 `--off` disables it and no flag reads its state. It does not change wake settings.
 A direct `bot-tool <bot> channel_read --args-stdin` returns `observationIds` for enabled Groups.
 Pass the target's handle as `observation_id` to `channel_send`. A `held` result is not a sent
-message: read the changed content, then pass `draft_id` with the new observation and revised
+message: read `review.content` when present. If `review.complete` is true, pass its
+`review.observationId` as `observation_id` without another `channel_read`; otherwise read the
+missing content first. Then pass `draft_id` with the new observation and revised
 (or unchanged) `body`. Only one recheck is allowed. Send `drop: true`, `draft_id` and an empty
 `body` to abandon the draft without resolving its Inbox item. `expired`, `refused` and
 `requires-review` are terminal for automatic sending. Handles cannot cross Bot owners or Groups.
