@@ -9,7 +9,7 @@ import {
   exportProfileBackup,
   inspectProfileBackup,
   profileBackupPreview,
-  profileBackupReviewSignature,
+  profileBackupReviewScope,
   PROFILE_BACKUP_LIMITS,
   type ProfileBackupSource,
 } from './package.js';
@@ -48,7 +48,12 @@ export function createProfileBackupHttp(
   let exporting = false;
   const plans = new Map<
     string,
-    { signature: string; expires: number; context?: ProfileBackupReviewContext }
+    {
+      signature: string;
+      files: ReturnType<typeof profileBackupReviewScope>['files'];
+      expires: number;
+      context?: ProfileBackupReviewContext;
+    }
   >();
   const preview = () => profileBackupPreview(source);
   return async (
@@ -86,7 +91,7 @@ export function createProfileBackupHttp(
             })
           : undefined;
         plans.set(token, {
-          signature: profileBackupReviewSignature(source, context),
+          ...profileBackupReviewScope(source, context),
           expires: Date.now() + 5 * 60_000,
           ...(context ? { context } : {}),
         });
@@ -174,12 +179,13 @@ export function createProfileBackupHttp(
         context = {
           ...context,
           callIds: [...new Set([...(context.callIds ?? []), ...(reviewContext.callIds ?? [])])],
+          ...(reviewContext.exportPlanId ? { exportPlanId: reviewContext.exportPlanId } : {}),
         };
       }
       if (
         !plan ||
         plan.expires < Date.now() ||
-        plan.signature !== profileBackupReviewSignature(source, context)
+        plan.signature !== profileBackupReviewScope(source, context).signature
       )
         throw new ProfileBackupError(
           'preview-stale',
@@ -192,7 +198,10 @@ export function createProfileBackupHttp(
       try {
         const destination = join(stage, 'environment.botharness-backup');
         checkAuthority();
-        const result = await exportProfileBackup(source, destination, { signal: request.signal });
+        const result = await exportProfileBackup(source, destination, {
+          signal: request.signal,
+          reviewedFiles: plan.files,
+        });
         checkAuthority();
         return new Response(new Uint8Array(readFileSync(destination)), {
           headers: {

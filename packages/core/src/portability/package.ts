@@ -281,7 +281,14 @@ export function profileBackupPreview(source: ProfileBackupSource) {
   };
 }
 
-export function profileBackupReviewSignature(
+interface ProfileBackupReviewedFile {
+  path: string;
+  device: number;
+  inode: number;
+  sha256: string;
+}
+
+export function profileBackupReviewScope(
   source: ProfileBackupSource,
   context?: ProfileBackupReviewContext,
 ) {
@@ -293,9 +300,9 @@ export function profileBackupReviewSignature(
     bytes += fixed.data.length;
     const sha256 = digest(fixed.data);
     fixed.verify();
-    return [file.path, file.local, identity.dev, identity.ino, sha256];
+    return { path: file.path, device: identity.dev, inode: identity.ino, sha256 };
   });
-  return digest(
+  const signature = digest(
     Buffer.from(
       JSON.stringify({
         policy: 'whole-profile-at-execution-barrier/1',
@@ -310,6 +317,7 @@ export function profileBackupReviewSignature(
       }),
     ),
   );
+  return { signature, files: fingerprints };
 }
 
 function space(path: string, required: number, available?: (path: string) => number): void {
@@ -343,6 +351,7 @@ export async function exportProfileBackup(
     availableBytes?: (path: string) => number;
     barrierMilliseconds?: number;
     captured?: () => void;
+    reviewedFiles?: readonly ProfileBackupReviewedFile[];
   } = {},
 ) {
   const parent = physicalDirectory(dirname(resolve(destination)));
@@ -362,6 +371,9 @@ export async function exportProfileBackup(
     log('capture');
     const snapshotPath = join(stage, 'database.sqlite');
     const entries: ZipEntry[] = [];
+    const reviewed = options.reviewedFiles
+      ? new Map(options.reviewedFiles.map((file) => [file.path, file]))
+      : undefined;
     const cutoff = performance.now();
     const manifest = source.purge.withCheckpoint((checkpoint) =>
       withOperationalBackup(source.database, snapshotPath, () => {
@@ -377,6 +389,21 @@ export async function exportProfileBackup(
               'Backup Barrier time bound exceeded; retry',
             );
           const fixed = fixedFile(path, PROFILE_BACKUP_LIMITS.maxTotalBytes - bytes);
+          if (reviewed && local !== 'database.sqlite') {
+            const expected = reviewed.get(path);
+            const actual = lstatSync(path);
+            if (
+              !expected ||
+              expected.device !== actual.dev ||
+              expected.inode !== actual.ino ||
+              expected.sha256 !== digest(fixed.data)
+            )
+              throw new ProfileBackupError(
+                'preview-stale',
+                'Reviewed file content changed at capture',
+              );
+            reviewed.delete(path);
+          }
           if (/\/\.git\/config(?:\.worktree)?$/iu.test(local))
             fixed.data = Buffer.from(
               '[core]\n\trepositoryformatversion = 0\n\tbare = false\n\tlogallrefupdates = true\n',
@@ -412,6 +439,8 @@ export async function exportProfileBackup(
         if (existsSync(quarantine))
           for (const file of treeFiles(quarantine))
             capture(file.path, 'recovery-git/' + file.local);
+        if (reviewed && reviewed.size !== 0)
+          throw new ProfileBackupError('preview-stale', 'Reviewed file closure changed at capture');
         options.captured?.();
         for (const verify of checks) verify();
         if (performance.now() - cutoff > (options.barrierMilliseconds ?? 5000))

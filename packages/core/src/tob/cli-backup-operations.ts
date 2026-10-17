@@ -200,7 +200,12 @@ export function createTobBackupOperations(deps: {
               throw new TobError('too-large');
             beforeEffect?.();
             plans.delete(planId);
-            const response = await request('', { token: plan.token }, guard, context);
+            const response = await request(
+              '',
+              { token: plan.token },
+              guard,
+              context ? { ...context, exportPlanId: planId } : undefined,
+            );
             if (!response.ok) await json(response);
             const archive = Buffer.from(await response.arrayBuffer());
             if (
