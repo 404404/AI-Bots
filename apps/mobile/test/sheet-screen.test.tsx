@@ -69,7 +69,6 @@ describe('iOS modal handle dismissal', () => {
           Settings child
         </SheetScreen>,
       );
-      // Callback wiring only; actual VoiceOver focus and gestures require device acceptance.
       expect(callbacks[action]).toBeTypeOf('function');
       await act(async () => callbacks[action]!());
       expect(closeSheet).toHaveBeenCalledTimes(1);
