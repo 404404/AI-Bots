@@ -253,6 +253,10 @@ export interface DshBotAgentAdapterOptions {
   authorizeBorrow?: (agent: Agent, role: 'orchestrator' | 'assignment') => void;
 
   onOrchestratorFileSetup?: (agentCtx: Context, agent: Agent) => Promise<() => Promise<void>>;
+  onAssignmentFileSetup?: (
+    agentCtx: Context,
+    agent: Agent,
+  ) => Promise<(() => Promise<void>) | undefined>;
 
   onAgentSetup?: (agentCtx: Context, agent: Agent, info: BotAgentSetupInfo) => void;
 
@@ -378,6 +382,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
     | undefined;
   readonly #resolveAgentPresets: (() => DshAgentPresetHost | undefined) | undefined;
   readonly #onOrchestratorFileSetup: DshBotAgentAdapterOptions['onOrchestratorFileSetup'];
+  readonly #onAssignmentFileSetup: DshBotAgentAdapterOptions['onAssignmentFileSetup'];
   readonly #onAgentSetup:
     | ((agentCtx: Context, agent: Agent, info: BotAgentSetupInfo) => void)
     | undefined;
@@ -411,6 +416,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
     this.#authorizeBorrow = options.authorizeBorrow;
     this.#onAgentSetup = options.onAgentSetup;
     this.#onOrchestratorFileSetup = options.onOrchestratorFileSetup;
+    this.#onAssignmentFileSetup = options.onAssignmentFileSetup;
     this.#resolveAgentPresets = options.resolveAgentPresets;
     this.#ensureWorkspace =
       options.ensureWorkspace ?? ((path) => void mkdirSync(path, { recursive: true }));
@@ -3813,6 +3819,8 @@ class DshBotAgentAdapter implements BotAgentAdapter {
         if (!borrowed) {
           await this.#composePreset(agentCtx, run.bot);
         }
+        const disposeFiles = await this.#onAssignmentFileSetup?.(agentCtx, agent);
+        if (borrowed && disposeFiles) borrowedDisposers.push(disposeFiles);
         const disposeSelection = installModelSelection(agentCtx, selection);
         if (borrowed) borrowedDisposers.push(disposeSelection);
         const registerTool = (tool: Parameters<typeof agentCtx.tools.register>[0]) => {

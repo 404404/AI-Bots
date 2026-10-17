@@ -21,6 +21,15 @@ const IMAGE_COMMANDS = new Set([
   'group-avatar-set',
 ]);
 const CODES = new Set([
+  'memory-workspace-denied',
+  'memory-scope-unavailable',
+  'memory-scope-mismatch',
+  'memory-target-denied',
+  'memory-target-unavailable',
+  'memory-read-only',
+  'memory-invalid',
+  'memory-unknown-commit',
+  'memory-conflict',
   'tob-authority-required',
   'human-dm-required',
   'stale-setting',
@@ -105,6 +114,7 @@ export type TobCliWriteProposal = TobCliProposal | TobManagementProposal;
 
 export interface TobCliBrokerOptions {
   signal: AbortSignal;
+  scope?: 'assignment-memory-read';
   log?(phase: string, details: Record<string, string | number>): void;
   authorize(): void;
   readSetting(): TobSetting;
@@ -243,18 +253,21 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
       if (input.command === 'capabilities') {
         keys(args, []);
         value = {
-          scope: 'global',
+          scope: options.scope ?? 'global',
           ns: NAMESPACE,
-          fields: {
-            assignmentConcurrencyLimit: { type: 'integer', minimum: 1, maximum: 32 },
-            ...(options.capabilities
-              ? {
-                  developerMode: { type: 'boolean' },
-                  showBotSessions: { type: 'boolean' },
-                  showApprovalReviewSessions: { type: 'boolean' },
-                }
-              : {}),
-          },
+          fields:
+            options.scope === 'assignment-memory-read'
+              ? {}
+              : {
+                  assignmentConcurrencyLimit: { type: 'integer', minimum: 1, maximum: 32 },
+                  ...(options.capabilities
+                    ? {
+                        developerMode: { type: 'boolean' },
+                        showBotSessions: { type: 'boolean' },
+                        showApprovalReviewSessions: { type: 'boolean' },
+                      }
+                    : {}),
+                },
           commands: options.capabilities
             ? ['capabilities', ...options.capabilities.map((entry) => entry.command)]
             : ['capabilities', 'settings', 'settings-set'],
@@ -270,10 +283,16 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                 })),
               }
             : {}),
-          examples: [
-            'deepseekbot settings botharness-client',
-            'printf \'%s\' "$PATCH_JSON" | deepseekbot settings-set botharness-client --patch-stdin --expected-revision "$REVISION" --previous-value "$PREVIOUS_JSON"',
-          ],
+          examples:
+            options.scope === 'assignment-memory-read'
+              ? [
+                  'deepseekbot memory-snapshot <selected-bot-id> --limit 20',
+                  'deepseekbot memory-file <selected-bot-id> --sha <snapshot-sha> --path MEMORY.md --limit 16000',
+                ]
+              : [
+                  'deepseekbot settings botharness-client',
+                  'printf \'%s\' "$PATCH_JSON" | deepseekbot settings-set botharness-client --patch-stdin --expected-revision "$REVISION" --previous-value "$PREVIOUS_JSON"',
+                ],
           write: {
             ...(options.capabilities
               ? {
@@ -283,10 +302,17 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                 }
               : { required: ['ns', 'patch', 'expectedRevision', 'previousValue'] }),
             approval: 'existing-host-policy',
-            scope: 'current-human-dm-shell',
+            scope: options.scope ?? 'current-human-dm-shell',
           },
           errors: [...CODES],
         };
+      } else if (
+        options.scope === 'assignment-memory-read' &&
+        !['memory-snapshot', 'memory-file', 'memory-history', 'memory-diff'].includes(
+          String(input.command),
+        )
+      ) {
+        refuse('memory-read-only');
       } else if (options.prepareOperation) {
         if (typeof input.command !== 'string') refuse('invalid-request');
         const prepared = await options.prepareOperation(input.command, args);

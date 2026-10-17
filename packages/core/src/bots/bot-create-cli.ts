@@ -519,6 +519,7 @@ const CREATE_OPTIONS = {
   state: { type: 'string' },
   'confirmation-stdin': { type: 'boolean' },
   grant: { type: 'string' },
+  key: { type: 'string' },
   enabled: { type: 'boolean' },
   disabled: { type: 'boolean' },
   locked: { type: 'boolean' },

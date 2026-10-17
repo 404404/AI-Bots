@@ -722,3 +722,15 @@ The application-defined Client diagnostics collector extends the existing ADR-00
 ### Bot folders in the native DSH Session list (#1997)
 
 The first tracer adds one DeepSeekBot product section with Bot/persona subgroups. Orchestrator and Assignment roots are projected by explicit PersonaBot ownership, independently of cwd. Both levels reuse the Channel sidebar PanelHeader and keep independent Client-local collapse preferences. The existing botSessionIds query returns group metadata beside its legacy ID list; native Session facts and UiWorkspace retain titles, execution state and navigation. No Workspace membership, Grant or Session header changes. RC2 lacks an additive group Slot, so a bounded application adapter adds an owned portal host to the native tree and masks duplicate rows only while mounted; missing markup leaves the native list intact. Native search stays independent; native per-row menus inside the added folder rows remain outside this first tracer pending Human feedback.
+
+### Tob-owned Assignment Memory reads (#2091)
+
+A Host-authorized application-defined read scope binds one Tob-owned Assignment Session to its
+original canonical Human-DM Source Event and selected Bot incarnations. The existing scoped Shell
+broker admits only bounded immutable Memory snapshot/file/history/diff queries, with a fresh lease
+per invocation and no administrative Host token. Memory remains the query owner; Assignment Runtime
+retains Session Ownership, its single Tob Workspace Grant, normal Report/Request lifecycle and
+revocation checks. Resuming retains the original targets. Every read rechecks source, Assignment,
+Grant and target lifecycle; retrieved text never expands authority. Results name Bot/file/full SHA,
+revision status and partial/unavailable state. See [ADR-0228](../adr/0228-tob-assignments-read-selected-memory-through-scoped-cli.md)
+and the [CLI guide](../bot-cli.md#tob-assignment-memory-reading).

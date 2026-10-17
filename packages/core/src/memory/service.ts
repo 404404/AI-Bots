@@ -138,6 +138,7 @@ export function createMemoryService(options: MemoryServiceOptions): MemoryServic
     reconcileTurn: (input) => requireAcceptance().reconcileTurn(input),
     abortTurn: (botSlug, sessionId, preserveObservation) =>
       requireAcceptance().abortTurn(botSlug, sessionId, preserveObservation),
+    revisionQuery: (botSlug, query) => requireAcceptance().revisionQuery(botSlug, query),
     snapshot: (botSlug) => requireAcceptance().snapshot(botSlug),
     readAccepted: (botSlug, path) => requireAcceptance().readAccepted(botSlug, path),
     history: (botSlug, limit) => requireAcceptance().history(botSlug, limit),

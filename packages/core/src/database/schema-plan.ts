@@ -2356,6 +2356,19 @@ const BOT_SCHEDULE_CREATION_MIGRATION: SchemaMigration = {
   },
 };
 
+const ASSIGNMENT_MEMORY_READ_MIGRATION: SchemaMigration = {
+  generation: 101,
+  module: 'assignment-memory-read',
+  description: 'Bind revocable Memory read delegation to an owned Assignment and Human source',
+  migrate(database) {
+    database.exec(`CREATE TABLE assignment_memory_read_scopes (
+      session_id TEXT PRIMARY KEY REFERENCES assignments(session_id) ON DELETE CASCADE,
+      source_event_id TEXT NOT NULL, targets_json TEXT NOT NULL,
+      operation_key TEXT NOT NULL UNIQUE, payload_hash TEXT NOT NULL, revoked_at TEXT
+    );`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2456,4 +2469,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   CHANNEL_MANAGEMENT_OPERATION_MIGRATION,
   GROUP_SEND_REVIEW_MIGRATION,
   BOT_SCHEDULE_CREATION_MIGRATION,
+  ASSIGNMENT_MEMORY_READ_MIGRATION,
 ]);
