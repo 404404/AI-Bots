@@ -4786,9 +4786,7 @@ export async function changeExternalSenderAccess(
 }
 export type { MessagingApp } from '../../../core/src/messaging/outbound.js';
 
-export async function loadMessagingApps(
-  call: BridgeCall,
-): Promise<{
+export async function loadMessagingApps(call: BridgeCall): Promise<{
   apps: MessagingApp[];
   setups: NonNullable<MessagingSnapshot['appSetups']>;
   pendingSetups?: import('../../../core/src/tob/cli-im-setup-operations.js').TobImSetupReceipt[];
