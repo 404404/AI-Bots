@@ -7,6 +7,10 @@ export const CLIENT_PREFERENCE_USAGE: Readonly<Record<string, string>> = {
     'deepseekbot client-layout <client-id|current> --generation <generation>; discover live workspace, Channel, stable panel ids and stateFingerprint',
   'client-layout-set':
     'deepseekbot client-layout-set <client-id|current> --generation <generation> --scope browser-origin --expected-state <fingerprint> --patch-stdin; one layout edit, with explicit channelId for Channel children',
+  'client-shortcuts':
+    'deepseekbot client-shortcuts <client-id|current> --generation <generation>; discover stable command ids, effective bindings, native revision and current platform profile',
+  'client-shortcuts-set':
+    'deepseekbot client-shortcuts-set <client-id|current> --generation <generation> --scope client-profile --expected-state <fingerprint> --patch-stdin; {profile,id,type:set|disable|reset,binding?:{code,secondCode?,modifiers}}; no reset-all',
   'human-name': 'deepseekbot human-name; read default Human display name and stateFingerprint',
   'client-targets':
     'deepseekbot client-targets; discover live Client ids and generations; never selects a sole client implicitly',
@@ -83,10 +87,10 @@ export async function parseClientPreferences(
     }
   }
   if (write) {
-    if (values.scope !== 'browser-origin')
+    if (values.scope !== (command === 'client-shortcuts-set' ? 'client-profile' : 'browser-origin'))
       throw new CliLiveError(
         'client-scope-mismatch',
-        'Client notification preferences use --scope browser-origin; Host preferences affect every connected Client.',
+        'Use the selected owner scope: --scope client-profile for shortcuts; --scope browser-origin for notifications or layout.',
       );
     if (
       typeof values['expected-state'] !== 'string' ||
