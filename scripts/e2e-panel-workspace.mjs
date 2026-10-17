@@ -239,25 +239,74 @@ try {
     );
   const orderBefore = await switchOrder();
   await page.setDragInterception(true);
-  const buttonRect = async (id) =>
-    page.$eval(`.bh-workspace-rail [data-pinned-panel="${id}"]`, (node) => {
-      const r = node.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-    });
+  const buttonRect = async (id, fraction = 0.25) =>
+    page.$eval(
+      `.bh-workspace-rail [data-pinned-panel="${id}"]`,
+      (node, fraction) => {
+        const r = node.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height * fraction };
+      },
+      fraction,
+    );
   const reorderFrom = await buttonRect(orderBefore[2]);
   const reorderTo = await buttonRect(orderBefore[0]);
   const reorderDrag = await page.mouse.drag(reorderFrom, reorderTo);
   await page.mouse.dragEnter(reorderTo, reorderDrag);
   await page.mouse.dragOver(reorderTo, reorderDrag);
+  await page.waitForSelector('[data-panel-order-indicator="before"]');
+  assert.equal(
+    await page.$eval(
+      `.bh-workspace-rail [data-pinned-panel="${orderBefore[2]}"]`,
+      (node) => node.dataset.dragging,
+    ),
+    'true',
+  );
+  await proof('01a-switch-insertion');
   await page.mouse.drop(reorderTo, reorderDrag);
   await page.mouse.up();
-  await page.setDragInterception(false);
   await page.waitForFunction(
     (id) =>
       document.querySelector('.bh-workspace-rail [data-pinned-panel]')?.dataset.pinnedPanel === id,
     {},
     orderBefore[2],
   );
+  await assertLive();
+  assert.equal(await page.$$eval('[data-panel-order-indicator]', (nodes) => nodes.length), 0);
+  const lastSwitch = orderBefore.at(-1);
+  const bottom = await buttonRect(lastSwitch, 0.9);
+  const endDrag = await page.mouse.drag(await buttonRect(orderBefore[2]), bottom);
+  await page.mouse.dragEnter(bottom, endDrag);
+  await page.mouse.dragOver(bottom, endDrag);
+  await page.waitForSelector('[data-panel-order-indicator="after"]');
+  await page.mouse.drop(bottom, endDrag);
+  await page.mouse.up();
+  assert.equal((await switchOrder()).at(-1), orderBefore[2], 'drop below last switch appends');
+  assert.equal(await page.$$eval('[data-panel-order-indicator]', (nodes) => nodes.length), 0);
+  const afterDrop = await switchOrder();
+  const cancelTarget = await buttonRect(afterDrop[0]);
+  const cancelled = await page.mouse.drag(await buttonRect(afterDrop[2]), cancelTarget);
+  await page.mouse.dragEnter(cancelTarget, cancelled);
+  await page.mouse.dragOver(cancelTarget, cancelled);
+  await page.waitForSelector('[data-panel-order-indicator]');
+  const outside = { x: cancelTarget.x + 200, y: cancelTarget.y };
+  await page.mouse.dragOver(outside, cancelled);
+  assert.equal(await page.$$eval('[data-panel-order-indicator]', (nodes) => nodes.length), 0);
+  const dragSession = await page.createCDPSession();
+  await dragSession.send('Input.dispatchDragEvent', {
+    type: 'dragCancel',
+    ...outside,
+    data: cancelled,
+  });
+  await dragSession.detach();
+  await page.mouse.up();
+  await page.waitForSelector('[data-dragging="true"]', { hidden: true });
+  assert.deepEqual(await switchOrder(), afterDrop, 'cancel leaves order unchanged');
+  await page.setDragInterception(false);
+  await page.focus(`.bh-workspace-rail [data-pinned-panel="${afterDrop[1]}"]`);
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  assert.equal((await switchOrder())[0], afterDrop[1], 'keyboard reorder remains available');
   await assertLive();
   const reordered = await switchOrder();
   await proof('01b-switch-order');
@@ -357,7 +406,7 @@ try {
   await page.waitForSelector(rail);
   assert.equal(await page.$('.bh-dock-body'), null, 'closed Messages stays closed after refresh');
   step = 'profile-reopens-messages';
-  const profileRow = await page.$(`${channels} [data-channel-id]`);
+  const profileRow = await page.$(`${channels} .bh-contact[data-channel-id]`);
   const expectedProfileName = await profileRow.$eval('.bh-name', (node) => node.textContent);
   await profileRow.click({ button: 'right' });
   await page.locator(`::-p-aria(${chinese ? '查看资料' : 'View profile'})`).click();

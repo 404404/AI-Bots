@@ -30,7 +30,7 @@ Launch a task-owned rc.2 Host and run doctor. Then run:
 BH_E2E_INSTANCE=.humanlayer/verify/<name>/instance.json node scripts/e2e-panel-workspace.mjs
 ```
 
-The script enters Bot mode, presses the sidebar shortcut, moves the rail right and between columns, drags Channels (Web), changes gap to 0/16/12, reorders rail switches, closes and reopens Channels and Messages, opens Activity Center, refreshes, verifies proportional resizing (Web), crosses the narrow threshold and exits. It checks visible geometry, canonical localStorage and restored native sidebar width, and saves screenshots, results and page errors in a unique attempt directory.
+The script enters Bot mode, presses the sidebar shortcut, moves the rail right and between columns, drags Channels (Web), changes gap to 0/16/12, reorders rail switches with a visible insertion line and dimmed dragged switch (including a drop after the last switch), closes and reopens Channels and Messages, opens Activity Center, refreshes, verifies proportional resizing (Web), crosses the narrow threshold and exits. It checks visible geometry, canonical localStorage and restored native sidebar width, and saves screenshots, results and page errors in a unique attempt directory.
 
 For native macOS, install the task Bundle into a separate rc.2 Desktop Profile and connect with `BH_DESKTOP_CDP=http://127.0.0.1:<task-debug-port>` using the same command. This uses the existing `dsh-app:` page; never navigate the native window to a Web URL or fake `data-platform`. Desktop diagnostics availability differs from the Web verification launcher, so native proof uses actual UI, geometry and localStorage. Keep the task Desktop foreground: rc.2 deliberately ignores native shortcuts from an unfocused app. Desktop defaults to ⌘B; macOS Web uses ⌘⌥B. Customized bindings, traffic-light hit targets, fullscreen and window dragging need supplemental native checks. A Web group fixture must open Members from the Messages header, resize the inner split, then reload and verify the saved ratio. Drag the visible Window Companion and confirm the existing message DOM stays connected. rc.2 has no sidebar-toggle menu item; do not claim a nonexistent menu path.
 
@@ -41,3 +41,5 @@ For native macOS, install the task Bundle into a separate rc.2 Desktop Profile a
 - The slider and its SettingsRow share an accessible name; target the slider role/input rather than the group.
 - Human feedback is required after this slice before extending the full panel matrix. Windows and Linux Desktop are not qualified by macOS evidence.
 - Legacy `scripts/e2e-bot-mode-sidebar.mjs` tests the old fallback surface. Use the workspace journey for the qualified wide-shell path.
+
+- When reordering rail switches, check both themes: the blue insertion line tracks the upper/lower half and gaps, clears on leaving or cancelling, and never toggles a Panel. Alt+Up/Down remains available; refresh preserves the resulting order.
