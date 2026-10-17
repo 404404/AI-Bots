@@ -10,6 +10,8 @@ Preparing the next DSH Skill release independently from downstream product relea
 
 ### Documentation
 
+- Recorded installation-first Bundle resolution and task-private pinned CLI isolation for installed-artifact qualification in the [local development guide](../dsh-dev/SKILL.md), verified against rc.2 source, a refused workspace-shadowed composition and the authenticated six-component local-artifact Host; DSH/Cordis Context and Skill behavior remain unchanged ([#2088](https://github.com/BotHarness/DeepSeekBot/issues/2088)).
+
 - Recorded rc.2 shortcut-definition readiness and archived Session navigation qualification in the [local development guide](../dsh-dev/SKILL.md), verified through real Web upgrade and Session navigation; DSH/Cordis Context and Skill behavior remain unchanged ([#2034](https://github.com/BotHarness/DeepSeekBot/issues/2034)).
 
 - Recorded production-factory option forwarding and fresh native receiver qualification in the [local development guide](../dsh-dev/SKILL.md), verified with a DSH `0.2.0-rc.2` Host and the immutable dsh-im ordinary-text candidate; DSH/Cordis Context and Skill behavior remain unchanged ([#1155](https://github.com/BotHarness/DeepSeekBot/issues/1155)).

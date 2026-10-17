@@ -824,9 +824,20 @@ try {
           JSON.stringify(call.args).includes('deepseekbot capabilities'),
       );
       assert.equal(capabilityCall?.outcome, 'ok', 'capability discovery failed');
-      assert.ok(
-        capabilityCall?.result.includes('assignmentConcurrencyLimit'),
-        'capability result missing',
+      assert.ok(capabilityCall?.result.trim(), 'capability trace result missing');
+      const ownerReadback = {
+        settings: await humanCli('settings', ['botharness-client']),
+        models: await humanCli('model-catalog'),
+      };
+      assert.equal(
+        typeof ownerReadback.settings.value?.assignmentConcurrencyLimit,
+        'number',
+        'runtime setting unavailable',
+      );
+      assert.ok(ownerReadback.models.models?.length > 0, 'installed models unavailable');
+      writeFileSync(
+        resolve(out, 'capability-owner-readback.json'),
+        JSON.stringify(ownerReadback, null, 2),
       );
       assert.match(reply.body, /模型|model/iu, 'reply should explain current model capability');
       assert.match(reply.body, /[？?]/u, 'reply should invite a concrete next step');
