@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -118,6 +119,7 @@ export const LIVE_OPTIONS = {
   scope: { type: 'string' },
   'acknowledge-risk': { type: 'boolean' },
   'patch-stdin': { type: 'boolean' },
+  'previous-value': { type: 'string' },
   member: { type: 'string', multiple: true },
   app: { type: 'string' },
   bot: { type: 'string' },
@@ -370,6 +372,7 @@ interface LiveValues
   scope?: string;
   'acknowledge-risk'?: boolean;
   'patch-stdin'?: boolean;
+  'previous-value'?: string;
   member?: string[];
   app?: string;
   bot?: string;
@@ -1055,6 +1058,7 @@ async function runControlCommand(
   if (rest.length !== 1 || !rest[0]?.trim()) usage(`${command} needs exactly one target.`);
   const target = rest[0].trim();
   let patch: Record<string, unknown> | undefined;
+  let reviewed: ReviewedSettings | undefined;
   if (command === 'browser-access-set' || command === 'computer-access-set') {
     if (values.enabled === values.disabled)
       usage(`${command} needs exactly one of --enabled or --disabled.`);
@@ -1079,6 +1083,7 @@ async function runControlCommand(
     } catch {
       usage('--patch-stdin must be a JSON object of settings fields.');
     }
+    reviewed = parseReviewedSettings(values, patch);
   }
   if (command === 'workspace-create' && !target.startsWith('/') && !/^[A-Za-z]:[\\/]/u.test(target))
     usage('workspace-create needs an absolute folder path.');
@@ -1109,8 +1114,25 @@ async function runControlCommand(
     throw new CliLiveError('unknown-settings', `The Host has no settings namespace ${target}.`);
   if (command === 'settings')
     return { ns: target, revision: found['revision'], value: found['value'] };
+  if (reviewed !== undefined) {
+    const current = record(found['value']);
+    if (
+      found['revision'] !== reviewed.expectedRevision ||
+      !Object.entries(reviewed.previousValue).every(([key, value]) =>
+        isDeepStrictEqual(current[key], value),
+      )
+    )
+      throw new CliLiveError(
+        'stale-setting',
+        'The reviewed settings changed; read and review the current value before retrying.',
+      );
+  }
   const updated = record(
-    await rpc('settings/update', { ns: target, patch, expectedRevision: found['revision'] }),
+    await rpc('settings/update', {
+      ns: target,
+      patch,
+      expectedRevision: reviewed?.expectedRevision ?? found['revision'],
+    }),
   );
   return { ns: target, revision: updated['revision'], value: updated['value'] };
 }
@@ -1583,4 +1605,37 @@ async function runMemoryCommand(
   }
   const signal = AbortSignal.timeout(timeoutMs(values.timeout));
   return (await connectLiveHost(values, io, signal)).rpc(method, args);
+}
+
+export interface ReviewedSettings {
+  expectedRevision: number;
+  previousValue: Record<string, unknown>;
+}
+
+export function parseReviewedSettings(
+  values: { 'expected-revision'?: string; 'previous-value'?: string },
+  patch: Record<string, unknown>,
+): ReviewedSettings | undefined {
+  const revision = values['expected-revision'];
+  const previous = values['previous-value'];
+  if (revision === undefined && previous === undefined) return undefined;
+  if (revision === undefined || previous === undefined)
+    usage('--expected-revision and --previous-value must be supplied together.');
+  if (!/^(0|[1-9][0-9]*)$/u.test(revision) || !Number.isSafeInteger(Number(revision)))
+    usage('--expected-revision must be a nonnegative safe integer.');
+  let previousValue: unknown;
+  try {
+    previousValue = JSON.parse(previous);
+  } catch {
+    usage('--previous-value must be a JSON object of the reviewed settings fields.');
+  }
+  if (typeof previousValue !== 'object' || previousValue === null || Array.isArray(previousValue))
+    usage('--previous-value must be a JSON object of the reviewed settings fields.');
+  const keys = Object.keys(patch).sort();
+  if (keys.length === 0 || !isDeepStrictEqual(keys, Object.keys(previousValue).sort()))
+    usage('--previous-value must contain exactly the fields in the nonempty patch.');
+  return {
+    expectedRevision: Number(revision),
+    previousValue: previousValue as Record<string, unknown>,
+  };
 }

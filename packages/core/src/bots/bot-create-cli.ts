@@ -76,6 +76,7 @@ import { createPersonaBotRegistry, type PersonaBotRegistry } from './registry.js
 import { ZipArchiveError, writeZip, type ZipEntry } from './zip-archive.js';
 import { INBOX_HOST_COMMANDS } from './cli-inbox.js';
 import { CliLiveError, LIVE_COMMANDS, LIVE_OPTIONS, runLiveCli } from './cli-live.js';
+import { hasAgentCliContext, runAgentCli } from './cli-agent.js';
 import { PROFILE_ONLINE_COMMANDS } from './cli-profile.js';
 import {
   isScheduleCommand,
@@ -204,7 +205,7 @@ Usage:
   deepseekbot access <id>
   deepseekbot access-set <id> --mode workspace-write|danger-full-access [--scope chat|assignments] [--acknowledge-risk]
   deepseekbot settings <namespace>
-  deepseekbot settings-set <namespace> --patch-stdin
+  deepseekbot settings-set <namespace> --patch-stdin [--expected-revision <n> --previous-value <json>]
   deepseekbot workspace-create <absolute-path>
   deepseekbot group-create <name> --member <bot-id> [--member <bot-id> ...]
   deepseekbot im-app-add <discord|slack|qq|dingtalk|wecom|matrix> --credentials-stdin
@@ -2557,6 +2558,10 @@ export async function runBotCreateCli(
     });
     const [command, ...rest] = positionals;
     compactOutput = values.compact === true;
+    if (hasAgentCliContext(io.env)) {
+      out.stdout(JSON.stringify(await runAgentCli(command, rest, values, io), null, 2));
+      return 0;
+    }
     if (values.help === true || command === undefined || command === 'help') {
       out.stdout(BOT_CREATE_HELP.trimEnd());
       return 0;

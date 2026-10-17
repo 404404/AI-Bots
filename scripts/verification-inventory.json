@@ -1690,9 +1690,9 @@
       "path": "scripts/e2e-tob-home.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Home model configuration, canonical identity, actual reply and approval through the shared Web/native UI.",
-      "task": 2082,
-      "sha256": "7e99a006c12f3fc1b67f07c7a3e7add5f6ec6e7b2dd90648318d0a6980417c5e"
+      "reason": "Home model configuration, canonical identity, native Shell CLI discovery/read/write and structured approval/deny/stale through the shared Web/native UI.",
+      "task": 2087,
+      "sha256": "514e694627ffa1b018ddc0ab3eb236b54978965dcaa260a9e0924ab2c6e11c89"
     }
   ],
   "native": [

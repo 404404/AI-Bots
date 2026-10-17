@@ -90,6 +90,37 @@ const reportRun: OrchestratorAgentRun = {
 };
 
 describe('DSH Bot Agent adapter', () => {
+  it.each([true, false])(
+    'installs trusted CLI guidance only for Host-resolved Tob identity (%s)',
+    async (tobCli) => {
+      const host = new FakeAgentHost({ kind: 'completed' }, { onTurn: async () => undefined });
+      const adapter = createDshBotAgentAdapter({
+        agents: host,
+        defaultModel: { currentSelection: () => ({ provider: 'test', model: 'test' }) },
+        orchestratorCwd: () => '/memory/ada',
+        ensureWorkspace: () => undefined,
+      });
+      try {
+        await adapter.runOrchestrator({ ...reportRun, tobCli });
+        const scope = host.scopes.get(reportRun.sessionId)!;
+        const prompt = scope.sections.find(
+          (section) => section.name === 'botharness:tob-cli',
+        )?.text;
+        if (tobCli) {
+          expect(prompt).toContain('deepseekbot capabilities');
+          expect(prompt).toContain('deepseekbot settings botharness-client');
+          expect(prompt).toContain('--patch-stdin --expected-revision');
+          expect(prompt).toContain('only assignmentConcurrencyLimit');
+        } else expect(prompt).toBeUndefined();
+        expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_read');
+        expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_set');
+        expect(scope.tools.map((tool) => tool.name)).toContain('create_assignment');
+      } finally {
+        await adapter.close();
+      }
+    },
+  );
+
   it.each<TurnEndCancelCause>([
     { kind: 'user' },
     { kind: 'parent' },
@@ -1415,8 +1446,6 @@ describe('DSH Bot Agent adapter', () => {
       'channel_read_image',
       'list_bot_contacts',
       'group_create',
-      'tob_assignment_limit_read',
-      'tob_assignment_limit_set',
       'bot_create',
       'group_invite_bot',
       'group_invite_respond',

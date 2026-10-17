@@ -1,3 +1,4 @@
+import { TOB_CLI_PROMPT } from '../tob/service.js';
 import { AssignmentInboxAcceptanceUncertainError } from './assignment-delivery.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
 import type { Context } from '@deepseek-ai/cordis';
@@ -692,6 +693,14 @@ class DshBotAgentAdapter implements BotAgentAdapter {
         text: ORCHESTRATOR_PROMPT,
       });
       if (borrowed) borrowedDisposers.push(disposeRolePrompt);
+      if (run.tobCli) {
+        const disposeTobPrompt = agentCtx.systemPrompt.section({
+          name: 'botharness:tob-cli',
+          order: ROLE_PROMPT_ORDER + 1,
+          text: TOB_CLI_PROMPT,
+        });
+        if (borrowed) borrowedDisposers.push(disposeTobPrompt);
+      }
       const disposeReplyPrompt = agentCtx.systemPrompt.section({
         name: 'botharness:reply-delivery',
         order: 10_450,
@@ -2647,60 +2656,6 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             throw new Error('group_create: Orchestrator run is unavailable');
           return JSON.stringify(
             groupCommandResult(active.run.channels.createGroup(args.name), 'created'),
-          );
-        },
-      }),
-    );
-    registerTool(
-      defineTool({
-        name: 'tob_assignment_limit_read',
-        description:
-          'Tob only: read the current global Assignment concurrency limit and revision. Call before proposing a change. Other Bots and non-Human-DM sources cannot manage it.',
-        parameters: {},
-        output: {
-          schema: { type: 'string' },
-          render: (_args, value) => [{ type: 'text', text: value }],
-        },
-        execute: async () => {
-          const active = this.#runs.get(run.sessionId);
-          if (active?.role !== 'orchestrator' || !active.run.channels.tobSetting)
-            throw new Error('tob-authority-required');
-          return JSON.stringify(await active.run.channels.tobSetting());
-        },
-      }),
-    );
-    registerTool(
-      defineTool({
-        name: 'tob_assignment_limit_set',
-        description:
-          'Tob only, at the Human’s explicit request in your private DM: change the GLOBAL Assignment concurrency limit, 1–32. Read first; submit the exact old value and revision for existing Human approval. Lowering it leaves running Assignments alive. Stale proposals must be read and prepared again. On uncertain outcome, read before retry. Never claim success without verified read-back.',
-        parameters: {
-          value: { type: 'integer', required: true, description: 'Requested global limit, 1–32.' },
-          previous_value: {
-            type: 'integer',
-            required: true,
-            description: 'Canonical current value from the read tool.',
-          },
-          expected_revision: {
-            type: 'integer',
-            required: true,
-            description: 'Exact revision from the read tool, bound to this approval.',
-          },
-        },
-        output: {
-          schema: { type: 'string' },
-          render: (_args, value) => [{ type: 'text', text: value }],
-        },
-        execute: async (args) => {
-          const active = this.#runs.get(run.sessionId);
-          if (active?.role !== 'orchestrator' || !active.run.channels.tobSetting)
-            throw new Error('tob-authority-required');
-          return JSON.stringify(
-            await active.run.channels.tobSetting({
-              value: args.value,
-              previousValue: args.previous_value,
-              expectedRevision: args.expected_revision,
-            }),
           );
         },
       }),
