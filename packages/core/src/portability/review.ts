@@ -205,7 +205,7 @@ export function profileBackupReviewDatabase(
             'SELECT e.source_event_id, e.message_id, e.payload_json FROM channel_output_origins o JOIN source_events e ON e.source_event_id = o.source_event_id WHERE o.session_id = ? AND o.request_source_event_id = ? AND e.bot_slug = ?',
           )
           .all(context.sessionId, id, String(owner.bot_slug))) {
-          const payload = JSON.parse(String(row.payload_json));
+          const payload = JSON.parse(String(row.payload_json)) ?? {};
           if (!payload.toolApprovalRequest) excluded.add(String(row.source_event_id));
         }
       }
@@ -216,7 +216,7 @@ export function profileBackupReviewDatabase(
       )
       .all();
     for (const row of allSources) {
-      const payload = JSON.parse(String(row.payload_json));
+      const payload = JSON.parse(String(row.payload_json)) ?? {};
       const review = payload.toolApprovalRequest;
       if (
         context &&
@@ -231,7 +231,7 @@ export function profileBackupReviewDatabase(
     }
     const sources = allSources.filter((row) => {
       if (excluded.has(String(row.source_event_id))) return false;
-      const payload = JSON.parse(String(row.payload_json));
+      const payload = JSON.parse(String(row.payload_json)) ?? {};
       if (
         row.source_kind === 'human-message' &&
         row.channel_id === 'dm-' + reviewBot &&
