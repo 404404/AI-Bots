@@ -136,6 +136,7 @@ async function withForm(
     create: ReturnType<typeof vi.fn>,
     onCreated: ReturnType<typeof vi.fn>,
     open: ReturnType<typeof vi.fn>,
+    busy: ReturnType<typeof vi.fn>,
   ) => Promise<void>,
   source: 'empty' | 'git' = 'empty',
   created: Record<string, unknown> = { slug: 'bot', displayName: 'Bot' },
@@ -147,6 +148,7 @@ async function withForm(
   const create = vi.fn(async () => created);
   const onCreated = vi.fn();
   const open = vi.fn(async () => undefined);
+  const busy = vi.fn();
   try {
     await act(async () =>
       root.render(
@@ -159,10 +161,11 @@ async function withForm(
           source,
           onCancel: vi.fn(),
           onCreated,
+          onBusy: busy,
         }),
       ),
     );
-    await test(host, create, onCreated, open);
+    await test(host, create, onCreated, open, busy);
   } finally {
     await act(async () => root.unmount());
     host.remove();
@@ -250,7 +253,7 @@ describe('editable creation starting points', () => {
 
   it('tells the Human when an SSH import switched to HTTPS before closing', async () => {
     await withForm(
-      async (host, _create, onCreated, open) => {
+      async (host, create, onCreated, open, busy) => {
         await typeText(host, 'input[placeholder="例如：小研"]', 'Imported');
         await typeText(
           host,
@@ -260,6 +263,7 @@ describe('editable creation starting points', () => {
         await submit(host);
         expect(onCreated).not.toHaveBeenCalled();
         expect(open).not.toHaveBeenCalled();
+        expect(busy.mock.calls).toEqual([[true]]);
         const notice = host.querySelector('[data-https-fallback]')!;
         expect(host.textContent).toContain('已改用 HTTPS 导入');
         expect(notice.textContent).toContain('git@github.com:owner/repo.git');
@@ -272,7 +276,16 @@ describe('editable creation starting points', () => {
         );
         expect(() => buttonNamed('取消', host)).toThrow();
         expect(host.querySelector('[data-https-fallback-done]')?.textContent).toBe('完成');
+        open.mockRejectedValueOnce(new Error('Channel temporarily unavailable'));
         await act(async () => buttonNamed('完成', host).click());
+        expect(host.querySelector('[role="alert"]')?.textContent).toContain(
+          'Channel temporarily unavailable',
+        );
+        expect(onCreated).not.toHaveBeenCalled();
+        expect(busy.mock.calls).toEqual([[true]]);
+        await act(async () => buttonNamed('完成', host).click());
+        expect(create).toHaveBeenCalledOnce();
+        expect(busy.mock.calls).toEqual([[true], [false]]);
         expect(open).toHaveBeenCalledWith(expect.objectContaining({ slug: 'bot' }), undefined);
         expect(onCreated).toHaveBeenCalledOnce();
       },
@@ -350,7 +363,8 @@ describe('memory location under Advanced settings', () => {
 
   it('is not offered for a GitHub import', async () => {
     await withForm(async (host) => {
-      expect(host.querySelector('[data-create-advanced]')).toBeNull();
+      expect(host.querySelector('input[placeholder="默认位置"]')).toBeNull();
+      expect(host.textContent).not.toContain('记忆仓库位置');
     }, 'git');
   });
 });

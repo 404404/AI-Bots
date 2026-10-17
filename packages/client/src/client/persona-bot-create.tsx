@@ -201,6 +201,7 @@ export function CreatePersonaBotModal({
   const [creating, setCreating] = useState(false);
   const [cause, setCause] = useState<unknown | undefined>(undefined);
   const [fallback, setFallback] = useState<CreatedBot | undefined>(undefined);
+  const openingCreated = useRef(false);
   const chosenLocation = memoryLocation.trim();
   const locationInvalid = chosenLocation.length > 0 && !isAbsoluteHostPath(chosenLocation);
   const invalid =
@@ -250,10 +251,11 @@ export function CreatePersonaBotModal({
       )
       .then(
         (created) => {
-          onBusy?.(false);
           setCreating(false);
-          if (created.httpsFallback === undefined) onCreated();
-          else setFallback(created);
+          if (created.httpsFallback === undefined) {
+            onBusy?.(false);
+            onCreated();
+          } else setFallback(created);
         },
         (rejection: unknown) => {
           setCause(rejection);
@@ -266,7 +268,21 @@ export function CreatePersonaBotModal({
   if (fallback?.httpsFallback !== undefined) {
     const { from, to, reason, detail } = fallback.httpsFallback;
     const done = (): void => {
-      void actions.openCreatedBot(fallback, sectionId).finally(onCreated);
+      if (openingCreated.current) return;
+      openingCreated.current = true;
+      setCreating(true);
+      setCause(undefined);
+      void actions.openCreatedBot(fallback, sectionId).then(
+        () => {
+          onBusy?.(false);
+          onCreated();
+        },
+        (error: unknown) => {
+          openingCreated.current = false;
+          setCreating(false);
+          setCause(error);
+        },
+      );
     };
     return (
       <FormDialog
@@ -278,6 +294,8 @@ export function CreatePersonaBotModal({
         }}
         submitLabel={t('bot.create.httpsFallback.done')}
         submitData={{ 'data-https-fallback-done': '' }}
+        busy={creating}
+        error={cause === undefined ? undefined : errorMessage(cause)}
         showCancel={false}
         onCancel={done}
         onSubmit={done}
