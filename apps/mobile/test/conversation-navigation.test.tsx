@@ -63,8 +63,18 @@ vi.mock('../src/ui/chat/header-chrome', () => ({
       Header back
     </button>
   ),
-  EdgeFade: () => null,
+  EdgeFade: ({ edge, height }: { edge: string; height: number }) => (
+    <span data-edge={edge} data-height={height} />
+  ),
   useChatHeaderHeight: () => 80,
+}));
+vi.mock('../src/ui/primitives/keyboard-frame', () => ({
+  KeyboardChatFrame: ({ children, composer }: { children: ReactNode; composer: ReactNode }) => (
+    <div>
+      <div data-testid="chat-content">{children}</div>
+      <div data-testid="chat-controls">{composer}</div>
+    </div>
+  ),
 }));
 vi.mock('../src/ui/chat/speaker-row', async () => {
   const { createContext } = await import('react');
@@ -101,6 +111,7 @@ vi.mock('../src/ui/open-full-client', () => ({ OpenFullClientButton: () => null 
 
 import { ConversationScreen, type ChatPlace } from '../src/ui/chat/conversation-screen';
 import { t } from '../src/ui/strings';
+import { edgeFade } from '../src/ui/design/tokens';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -115,6 +126,17 @@ beforeEach(() => {
   state.host.roster.bots = [];
   state.active = false;
   state.display = { mode: 'streaming', loaded: true };
+});
+
+it('keeps the bottom fade at the message viewport edge beneath the composer controls', async () => {
+  const view = await render({ kind: 'dm', slug: 'ada' });
+  const content = view.querySelector('[data-testid="chat-content"]')!;
+  const controls = view.querySelector('[data-testid="chat-controls"]')!;
+  const fade = content.querySelector('[data-edge="bottom"]');
+  expect(fade).not.toBeNull();
+  expect(fade?.getAttribute('data-height')).toBe(String(edgeFade.bottom));
+  expect(controls.querySelector('[data-edge]')).toBeNull();
+  expect(fade!.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 });
 
 it('switches a live reply between buffered streaming and complete bubbles without hiding history', async () => {

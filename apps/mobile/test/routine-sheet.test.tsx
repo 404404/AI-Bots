@@ -88,6 +88,51 @@ async function type(view: HTMLElement, label: string, value: string) {
 }
 
 describe('Routine sheet', () => {
+  it('uses an in-drawer page for detail and routes Edit to its child page', async () => {
+    const onEdit = vi.fn();
+    const view = await render(
+      <RoutineSheet
+        page={({ children }) => <main>{children}</main>}
+        botName="Ada"
+        target={{ kind: 'open', routine: digest }}
+        routines={fakeRoutines()}
+        onChanged={vi.fn()}
+        onClose={vi.fn()}
+        onOpenFullClient={vi.fn()}
+        onEdit={onEdit}
+      />,
+    );
+    expect(view.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => button(view, t.routineEdit)!.click());
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(view.textContent).toContain(t.routineRunNow);
+  });
+
+  it('retains a failed edit on its pushed page and returns only after a successful retry', async () => {
+    const routines = fakeRoutines();
+    routines.update.mockRejectedValueOnce(new Error('offline'));
+    const onClose = vi.fn();
+    const view = await render(
+      <RoutineSheet
+        page={({ children }) => <main>{children}</main>}
+        initialMode="edit"
+        botName="Ada"
+        target={{ kind: 'open', routine: digest }}
+        routines={routines}
+        onChanged={vi.fn()}
+        onClose={onClose}
+        onOpenFullClient={vi.fn()}
+      />,
+    );
+    await type(view, t.routineTitleLabel, 'Evening digest');
+    await act(async () => button(view, t.routineSave)!.click());
+    expect(view.textContent).toContain('offline');
+    expect(field(view, t.routineTitleLabel).value).toBe('Evening digest');
+    expect(onClose).not.toHaveBeenCalled();
+    await act(async () => button(view, t.routineSave)!.click());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('shows the trigger, next run and recent runs, and runs the routine now', async () => {
     const routines = fakeRoutines();
     const onChanged = vi.fn();
