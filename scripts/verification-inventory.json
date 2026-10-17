@@ -497,6 +497,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/activity-inline-approval.md",
       "task": 2026,
       "gap": null
+    },
+    {
+      "id": "desktop.group.send-review",
+      "label": "Hold stale Group replies and revise or drop with full paired history review",
+      "source": "packages/core/src/channels/send-review.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/group-send-review.md",
+      "task": 2053,
+      "gap": null
     }
   ],
   "scripts": [
@@ -1296,9 +1304,9 @@
       "path": "scripts/e2e-llm-scenarios.mjs",
       "category": "mapped",
       "behaviors": ["desktop.dm.reply", "desktop.group.mention"],
-      "reason": "verify-app instance/optional owned launch and real model scenarios; DM reply and mention wake, model-specific results only.",
-      "task": 1967,
-      "sha256": "c6627745e3c9595da42c280bcc968686dd545fb8ed9bc901d70012bc41ceebbc"
+      "reason": "Real model DM/mention scenarios; exact committed DM oracle rejects failure cards; retain full histories and unknown usage for paired send-review evaluation.",
+      "task": 2053,
+      "sha256": "4940ba3a8c8e3892b11e01c959efc874a3e12b16527e076db62345f87b4508d6"
     },
     {
       "path": "scripts/e2e-local-computer-idle.mjs",
@@ -1619,6 +1627,14 @@
       "reason": "Runs actual macOS Desktop default and custom shortcut dispatch, persistence, automatic Channel scope and explicit Bot scope.",
       "task": 2034,
       "sha256": "8c0887eb84b21d0a6b1f2ad725555ce409c5bd0c940630a4bdaa17d7c69efc90"
+    },
+    {
+      "path": "scripts/e2e-group-send-review.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.group.send-review"],
+      "reason": "Task-owned isolated baseline/candidate Hosts, live draft intervention and canonical history/usage; paired model pilot, not Human acceptance.",
+      "task": 2053,
+      "sha256": "db30ace7f1f6555cd11498b0ed679c3b5670d65c33f530d55dd9bb65ad560dab"
     }
   ],
   "native": [

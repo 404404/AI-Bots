@@ -925,6 +925,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelGroupMemberRemove({ channelId, botSlug }));
   }
 
+  channelGroupSendReview(channelId: string, enabled?: boolean): { enabled: boolean } {
+    return unwrap(this.methods.channelGroupSendReview({ channelId, enabled }));
+  }
+
   channelGroupWakePolicies(channelId: string): { members: GroupMemberWakePolicy[] } {
     return unwrap(this.methods.channelGroupWakePolicies({ channelId }));
   }
@@ -1737,6 +1741,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'channelGroupInviteCancel',
   'channelGroupMemberRemove',
   'channelGroupJoinDecide',
+  'channelGroupSendReview',
   'channelGroupWakeSet',
   'channelGroupWakePolicies',
   'channelGroupDelete',

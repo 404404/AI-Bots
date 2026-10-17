@@ -1,3 +1,4 @@
+import { SendReviewRequired } from '../channels/send-review.js';
 import { AssignmentInboxAcceptanceUncertainError } from './assignment-delivery.js';
 import { isChannelAttachmentRef } from '../attachments/ref.js';
 import type { Context } from '@deepseek-ai/cordis';
@@ -3402,8 +3403,22 @@ class DshBotAgentAdapter implements BotAgentAdapter {
       defineTool({
         name: 'channel_send',
         description:
-          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: use this Tool even for a short acknowledgment, greeting, clarification or image answer. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
+          'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: use this Tool even for a short acknowledgment, greeting, clarification or image answer. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent: read its Channel, then pass the returned observation_id and draft_id to revise or keep the same body, or drop it. A second change returns requires-review: stop this automatic attempt and keep unfinished Inbox responsibility open. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
         parameters: {
+          observation_id: {
+            type: 'string',
+            description:
+              'Host observationId/observationIds for this Channel from a completed channel_read. Never guess. Required after a held send.',
+          },
+          draft_id: {
+            type: 'string',
+            description:
+              'The held draftId to revise or drop. One explicit recheck is allowed; unchanged body is valid.',
+          },
+          drop: {
+            type: 'boolean',
+            description: 'Drop draft_id without sending. Keep unresolved Inbox work open.',
+          },
           body: {
             type: 'string',
             required: true,
@@ -3480,6 +3495,16 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             throw new Error('channel_send: requires at most 20 mention Bot IDs');
           if (args.react_to !== undefined && args.reaction === undefined)
             throw new Error('channel_send: react_to needs reaction, the emoji to add or take back');
+          if (args.drop === true) {
+            if (!args.draft_id || !args.channel_id || !active.run.channels.dropDraft)
+              throw new Error('channel_send: drop requires draft_id and channel_id');
+            const outcome = active.run.channels.dropDraft({
+              channelId: args.channel_id,
+              draftId: args.draft_id,
+            });
+            this.#drafts.discard(run.sessionId, args.channel_id);
+            return JSON.stringify(outcome);
+          }
           const reacted =
             args.react_to === undefined || args.reaction === undefined
               ? undefined
@@ -3493,23 +3518,37 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             throw new Error('channel_send: reactions are unavailable');
           if (reacted !== undefined && args.body.trim() === '' && args.attachments === undefined)
             return JSON.stringify(reacted);
-          const message = await active.run.channels.send({
-            body: args.body,
-            ...(exec.callId === undefined ? {} : { deliveryKey: String(exec.callId) }),
-            ...(args.attachments === undefined ? {} : { attachments: args.attachments }),
-            ...(args.channel_id === undefined ? {} : { channelId: args.channel_id }),
-            ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
-            ...(args.mention_bot_ids === undefined ? {} : { mentionBotIds: args.mention_bot_ids }),
-            ...(args.mention_human_ids === undefined
-              ? {}
-              : { mentionHumanIds: args.mention_human_ids }),
-          });
+          let message;
+          try {
+            message = await active.run.channels.send({
+              ...(args.observation_id === undefined ? {} : { observationId: args.observation_id }),
+              ...(args.draft_id === undefined ? {} : { draftId: args.draft_id }),
+              body: args.body,
+              ...(exec.callId === undefined ? {} : { deliveryKey: String(exec.callId) }),
+              ...(args.attachments === undefined ? {} : { attachments: args.attachments }),
+              ...(args.channel_id === undefined ? {} : { channelId: args.channel_id }),
+              ...(args.reply_to === undefined ? {} : { replyTo: args.reply_to }),
+              ...(args.mention_bot_ids === undefined
+                ? {}
+                : { mentionBotIds: args.mention_bot_ids }),
+              ...(args.mention_human_ids === undefined
+                ? {}
+                : { mentionHumanIds: args.mention_human_ids }),
+            });
+          } catch (error) {
+            const failedChannelId = args.channel_id ?? run.inboundChannelId;
+            if (failedChannelId !== undefined) this.#drafts.discard(run.sessionId, failedChannelId);
+            if (!(error instanceof SendReviewRequired)) throw error;
+            this.#drafts.discard(run.sessionId, error.outcome.channelId);
+            return JSON.stringify(error.outcome);
+          }
           const draftChannelId = args.channel_id ?? run.inboundChannelId;
           if (draftChannelId !== undefined)
             this.#drafts.settle(run.sessionId, draftChannelId, message.body);
           return JSON.stringify({
             channelId: args.channel_id ?? active.run.inboundChannelId,
             messageId: message.id,
+            status: 'committed',
             ...(reacted === undefined ? {} : { reactions: reacted.reactions }),
           });
         },
