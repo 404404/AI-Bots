@@ -17,7 +17,13 @@ const fixture = {
   accessToken: 'private-access',
   refreshToken: 'private-refresh',
 };
-function runtime({ busy = false, signedIn = false, wrongConfig = false, dev = true } = {}) {
+function runtime({
+  busy = false,
+  signedIn = false,
+  wrongConfig = false,
+  dev = true,
+  verifiedRole = '',
+} = {}) {
   let value = JSON.stringify({
     version: 1,
     entries: [
@@ -31,7 +37,12 @@ function runtime({ busy = false, signedIn = false, wrongConfig = false, dev = tr
   let writes = 0;
   const client = {
     load: async () => {},
-    getSnapshot: () => ({ busy, rows: [] }),
+    getSnapshot: () => ({
+      busy,
+      rows: verifiedRole
+        ? [{ config, identity: { userId: fixture.userId, instanceRole: verifiedRole } }]
+        : [],
+    }),
     rt: {
       read: async () => value,
       write: async (next: string) => {
@@ -118,4 +129,20 @@ describe('local native UAT fixture driver', () => {
       runInNewContext(fixtureExpression('signed-out', fixture), signedOut.context),
     ).resolves.toEqual({ signedOut: true, configRetained: true });
   });
+});
+
+it('ordinary-user checkpoints assert the expected role without accepting administrator elevation', async () => {
+  const ordinary = runtime({ signedIn: true, verifiedRole: 'user' });
+  const result = await runInNewContext(
+    fixtureExpression('checkpoint', { ...fixture, instanceRole: 'user' }),
+    ordinary.context,
+  );
+  expect(result.accessToken).toBe('existing');
+  const elevated = runtime({ signedIn: true, verifiedRole: 'admin' });
+  await expect(
+    runInNewContext(
+      fixtureExpression('checkpoint', { ...fixture, instanceRole: 'user' }),
+      elevated.context,
+    ),
+  ).rejects.toThrow('VERIFIED_NATIVE_IDENTITY_REQUIRED');
 });
