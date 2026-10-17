@@ -6,7 +6,7 @@ import { join } from 'node:path';
 
 import { Context } from '@deepseek-ai/cordis';
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createBridgeMethods, type BridgeMethods } from '../src/bridge/methods.js';
 import { BRIDGE_NAMESPACE, BRIDGE_SERVICE_KEY, registerBridge } from '../src/bridge/rpc.js';
@@ -95,6 +95,83 @@ describe('bridge typert service', () => {
         1,
       ),
     ).toThrow('Activity queries are unavailable');
+  });
+
+  it('exposes and forwards model revision and advanced preset arguments through the gateway façade', async () => {
+    const { service, methods } = setup();
+    expect(parameterNames(service.onboardingModel)).toEqual([
+      'slug',
+      'expectedRevision',
+      'route',
+      'globalDefault',
+      'expectedDefaultRevision',
+    ]);
+    expect(parameterNames(service.modelPresetApply)).toEqual([
+      'slug',
+      'presetId',
+      'expectedRevision',
+      'expectedPresetRevision',
+    ]);
+    expect(parameterNames(service.modelPresetCreate)).toEqual([
+      'name',
+      'orchestrator',
+      'assignmentDefault',
+      'assignmentModels',
+    ]);
+    expect(parameterNames(service.modelPresetUpdate)).toEqual([
+      'id',
+      'expectedRevision',
+      'name',
+      'orchestrator',
+      'assignmentDefault',
+      'assignmentModels',
+    ]);
+    const route = { provider: 'official', model: 'fast', reasoningEffort: 'high' };
+    const assignmentModels = [
+      { provider: 'official', model: 'fast', allowedEfforts: ['high'], defaultEffort: 'high' },
+    ];
+    const refusal = { ok: false as const, error: { code: 'stale-setting', message: 'stale test' } };
+    const defaultCall = vi.spyOn(methods, 'onboardingModel').mockResolvedValue(refusal);
+    const applyCall = vi.spyOn(methods, 'modelPresetApply').mockResolvedValue(refusal);
+    const createCall = vi.spyOn(methods, 'modelPresetCreate').mockResolvedValue(refusal);
+    const updateCall = vi.spyOn(methods, 'modelPresetUpdate').mockResolvedValue(refusal);
+    await expect(service.onboardingModel(undefined, 0, route, true, 7)).rejects.toThrow(
+      'stale test',
+    );
+    expect(defaultCall).toHaveBeenCalledWith({
+      slug: undefined,
+      expectedRevision: 0,
+      route,
+      globalDefault: true,
+      expectedDefaultRevision: 7,
+    });
+    await expect(service.modelPresetApply('one', 'preset', 2, 3)).rejects.toThrow('stale test');
+    expect(applyCall).toHaveBeenCalledWith({
+      slug: 'one',
+      presetId: 'preset',
+      expectedRevision: 2,
+      expectedPresetRevision: 3,
+    });
+    await expect(service.modelPresetCreate('New', route, route, assignmentModels)).rejects.toThrow(
+      'stale test',
+    );
+    expect(createCall).toHaveBeenCalledWith({
+      name: 'New',
+      orchestrator: route,
+      assignmentDefault: route,
+      assignmentModels,
+    });
+    await expect(
+      service.modelPresetUpdate('preset', 3, 'New', route, route, assignmentModels),
+    ).rejects.toThrow('stale test');
+    expect(updateCall).toHaveBeenCalledWith({
+      id: 'preset',
+      expectedRevision: 3,
+      name: 'New',
+      orchestrator: route,
+      assignmentDefault: route,
+      assignmentModels,
+    });
   });
 
   it('registers under the gateway service key with the botharness namespace', () => {

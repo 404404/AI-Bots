@@ -600,9 +600,16 @@ export class BotharnessBridgeService extends TypertRemoteService {
     expectedRevision: number,
     route: ModelRoute,
     globalDefault: boolean,
+    expectedDefaultRevision?: number,
   ): Promise<{ revision: number }> {
     return unwrapAsync(
-      this.methods.onboardingModel({ slug, expectedRevision, route, globalDefault }),
+      this.methods.onboardingModel({
+        slug,
+        expectedRevision,
+        route,
+        globalDefault,
+        expectedDefaultRevision,
+      }),
     );
   }
   modelPlanInherit(slug: string, expectedRevision: number): { revision: number } {
@@ -620,6 +627,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
   modelCatalog(): Promise<{
     models: ModelCatalogEntry[];
     default?: ModelRoute;
+    defaultRevision?: number;
   }> {
     return unwrapAsync(this.methods.modelCatalog({}));
   }
@@ -632,8 +640,11 @@ export class BotharnessBridgeService extends TypertRemoteService {
     name: string,
     orchestrator: ModelRoute,
     assignmentDefault: ModelRoute,
+    assignmentModels?: AssignmentModelOption[],
   ): Promise<{ preset: ModelPreset }> {
-    return unwrapAsync(this.methods.modelPresetCreate({ name, orchestrator, assignmentDefault }));
+    return unwrapAsync(
+      this.methods.modelPresetCreate({ name, orchestrator, assignmentDefault, assignmentModels }),
+    );
   }
 
   modelPresetUpdate(
@@ -642,6 +653,7 @@ export class BotharnessBridgeService extends TypertRemoteService {
     name: string,
     orchestrator: ModelRoute,
     assignmentDefault: ModelRoute,
+    assignmentModels?: AssignmentModelOption[],
   ): Promise<{ preset: ModelPreset }> {
     return unwrapAsync(
       this.methods.modelPresetUpdate({
@@ -650,12 +662,20 @@ export class BotharnessBridgeService extends TypertRemoteService {
         name,
         orchestrator,
         assignmentDefault,
+        assignmentModels,
       }),
     );
   }
 
-  modelPresetApply(slug: string, presetId: string): Promise<{ plan: PersonaBotModelPlan }> {
-    return unwrapAsync(this.methods.modelPresetApply({ slug, presetId }));
+  modelPresetApply(
+    slug: string,
+    presetId: string,
+    expectedRevision?: number,
+    expectedPresetRevision?: number,
+  ): Promise<{ plan: PersonaBotModelPlan }> {
+    return unwrapAsync(
+      this.methods.modelPresetApply({ slug, presetId, expectedRevision, expectedPresetRevision }),
+    );
   }
 
   modelPlan(slug: string): Promise<ModelPlanState> {

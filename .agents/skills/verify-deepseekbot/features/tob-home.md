@@ -6,7 +6,7 @@
 - Tob is one protected local identity with canonical Memory, Workspace and Human DM. Re-entry does not repeat its welcome.
 - Model setup replaces the Home input when unavailable, returns to it after native configuration and never auto-sends.
 - Home sends once through the existing Human DM path; the conversation continues in Messages.
-- Tob uses native Shell to discover and invoke the DSB CLI. The first supported scoped operation reads/changes the global Assignment concurrency limit through existing approval and revision-checked native Settings; the former dedicated management tools are absent.
+- Tob uses native Shell to discover and invoke the DSB CLI. Scoped management covers default and per-Bot models, presets (create/read/update/apply), four native runtime fields, telemetry, Git availability/install and release operations through existing owners and review; the former dedicated management tools are absent.
 - CLI management is authorized only for the protected Tob root Orchestrator and its current accepted Human DM. Shell authority expires when that execution finishes; other Bots, delegation, revoked sources and direct runners cannot borrow it.
 - Old nested layouts and custom/disabled shortcuts remain preserved.
 
@@ -27,6 +27,21 @@ The stale phase uses the Web launch manifest for the separate Human CLI. Native 
 After an approved write, restart the same isolated Host/Profile and read native Settings again to prove durability. Repeat read, approve, deny and stale through the actual macOS Desktop and save its own evidence; a Web renderer result does not qualify Desktop. Verify permission/refusal branches independently (ordinary Bot, Assignment, foreign/revoked Human source, expired execution capability and changed approval inputs); successful happy-path CLI calls do not prove those boundaries.
 
 Compare old v7 layout, v8 backup and reload state. Exercise macOS Command+Option+Shift+H through the actual native key path; custom bindings, modal suppression and no repeat send require independent checks. Evidence must distinguish source tests, Web, native, model and persistence.
+
+## Model, runtime and privacy acceptance (#2088)
+
+`scripts/e2e-tob-model-runtime.mjs` uses `BH_E2E_INSTANCE` for Web or `BH_DESKTOP_CDP` for Desktop, with the candidate Human manifest in `BH_E2E_HUMAN_INSTANCE`. `BH_E2E_TARGET_BOT` selects the Bot and `BH_E2E_EVIDENCE` the output directory. Its phases cover discovery, reviewed model change, runtime accept/deny/stale and restart read-back; inspect the script's supported phases before running. The `maintenance-refusals` phase requires environment-locked disabled telemetry and a development Profile with no installable release or pending restart. It requests one attempt each and checks `telemetry-locked`, `maintenance-unavailable` and `restart-not-pending`, then verifies unchanged canonical state. This proves those refusal branches only, not successful telemetry mutation, release installation or restart. It does not itself prove every preset or successful maintenance branch.
+
+Treat this as an additional user journey, not a claim that the Assignment-limit script covers every command. Use the shared inventory's #2088 table to enumerate each setting and record evidence per command. No additional credentials or administrative token may be passed to Tob.
+
+1. Through the authenticated Human CLI, read `model-catalog`, two Bots' `model-plan`, `model-presets`, `settings botharness-client`, `telemetry-status`, `git-status` and `release-check`. Save redacted baseline values and revisions. Configure model credentials through the native private input beforehand; verify an actual reply.
+2. From Home or Tob's private DM, ask to read/change the Host default and one Bot's Orchestrator/Assignment plan. Review the actual target/old/new values, accept one mutation and deny another. Read back through CLI and the native model/plan UI. A second Bot's independent override must remain unchanged. Exercise inherit and preset create/update/apply; a preset or Bot revision changed while approval is pending must refuse rather than overwrite. An unavailable model must return a coded refusal.
+3. Ask Tob to change each of `assignmentConcurrencyLimit`, `showBotSessions`, `showApprovalReviewSessions` and `developerMode`. Inspect the corresponding UI and native Settings values, then restart the same isolated Profile and read again. Unknown/non-live settings must refuse; no configuration-file workaround qualifies.
+4. Ask Tob to inspect and change usage-statistics preference. Verify the privacy control and effective state; repeat with environment-locked telemetry in a separate isolated launch and confirm no override. Git status/install uses the existing UI owner; distinguish already-installed status, an install attempt and a verified installation. Do not invent a Git identity control.
+5. Exercise release history/check and inspect their actual status. Scoped `release-install`/`release-restart` require an isolated disposable candidate, `--confirm` and a fresh Human decision each time; full access, remembered allow rules and automatic approval cannot replace it. Verify these bypass attempts cannot satisfy the Human gate. `git-install` keeps its existing review policy without a new `--confirm` flag. Never disrupt the Human's active Desktop. Keep development/unavailable or platform refusal evidence as such. If a request disconnects, inspect canonical release state before any further action, and verify no automatic replay. Do not count an approval card as a successful install or restart.
+6. Repeat the model/runtime/privacy UI read-back and restart checks on actual macOS Desktop. Capture its own screenshots, canonical CLI results and native process identity, then restore the prior Desktop. Web results cannot stand in for this gate. Restore test changes only through their owning commands with current revisions.
+
+Keep direct CLI tests, real native Shell tool traces, rendered Web evidence, native Desktop evidence and restart persistence separate. The map defines required observations; it does not mark these new branches passed.
 
 ## Gotchas
 

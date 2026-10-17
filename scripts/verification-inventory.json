@@ -1693,6 +1693,14 @@
       "reason": "Home model configuration, canonical identity, native Shell CLI discovery/read/write and structured approval/deny/stale through the shared Web/native UI.",
       "task": 2087,
       "sha256": "514e694627ffa1b018ddc0ab3eb236b54978965dcaa260a9e0924ab2c6e11c89"
+    },
+    {
+      "path": "scripts/e2e-tob-model-runtime.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Scoped CLI model/runtime discovery and actual Tob approval, denial, stale refusal and settings UI persistence in Web and native Desktop.",
+      "task": 2088,
+      "sha256": "5de233d8b1f2d888a348443c036f9caae67f6ed5258560de01e99899d37f6152"
     }
   ],
   "native": [

@@ -128,8 +128,20 @@ export async function runOnlineManagement(
   if (command === 'channels') return rpc('channels', {});
   if (command === 'model-presets') return rpc('modelPresets', {});
   if (command === 'model-preset-create') return rpc('modelPresetCreate', presetInput!);
-  if (command === 'model-preset-apply')
-    return rpc('modelPresetApply', { slug, presetId: values.preset!.trim() });
+  if (command === 'model-preset-apply') {
+    const revisions: Record<string, number> = {};
+    for (const [flag, field] of [
+      ['expected-revision', 'expectedRevision'],
+      ['preset-revision', 'expectedPresetRevision'],
+    ] as const) {
+      const raw = values[flag];
+      if (raw === undefined) continue;
+      if (!/^\d+$/u.test(raw) || !Number.isSafeInteger(Number(raw)))
+        usage(`--${flag} must be a nonnegative integer.`);
+      revisions[field] = Number(raw);
+    }
+    return rpc('modelPresetApply', { slug, presetId: values.preset!.trim(), ...revisions });
+  }
   if (command === 'model-plan') return rpc('modelPlan', { slug });
   if (command === 'bot-delete-preview') return rpc('deletionPreview', { slug });
   if (command === 'bot-delete-confirm')
