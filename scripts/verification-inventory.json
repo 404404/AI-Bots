@@ -1835,7 +1835,7 @@
       "behaviors": ["desktop.profile.backup-recovery"],
       "reason": "Real Web preview/download/inspection, independent protected CLI export and stale/corrupt refusals; natural reviewed Tob export/inspection and new-Profile cold recovery/one-Bot authorization/activation UI. Host restore and launch remain explicit external steps.",
       "task": 2099,
-      "sha256": "aac7f527733dd227e37d6100c9dd137b42a4dafefc8da0bb6fdb209924e9235a"
+      "sha256": "38f117d558bc3ed2604be252b1010cf2aaddfed788efd30324002a0b010f888d"
     }
   ],
   "native": [
