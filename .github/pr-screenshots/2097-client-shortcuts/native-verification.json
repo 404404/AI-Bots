@@ -58,6 +58,678 @@
   },
   "directPageErrors": [],
   "physicalKeys": false,
-  "coverage": "single desktop:macos Client; not IME/modal/editable edge cases or Tob model approval",
-  "mainDesktopRestored": true
+  "coverage": "single desktop:macos Client: direct CLI and actual Tob approval, real Electron keys, editable/modal/observed trusted IME composition, restart persistence, single-action reset; Web separately covers two-Client and shared deny/stale contract",
+  "mainDesktopRestored": true,
+  "naturalTob": {
+    "runtimeSource": "6eea6b76828c94c7a4dbcab00ff101a2cde16ca1",
+    "profile": "desktop:macos",
+    "review": {
+      "parentShellCallId": "call_00_pT403CwQ2FD1Wm6NdMLf5312",
+      "target": "23a31b3f-24de-4043-983f-1373d42e260c/8d16801f-17bc-404b-9a65-342da4f9d0c6",
+      "command": "client-shortcuts-set",
+      "patch": {
+        "scope": "client-profile",
+        "profile": "desktop:macos",
+        "changes": {
+          "profile": "desktop:macos",
+          "id": "botharness.navigation.quick-switcher",
+          "type": "set",
+          "binding": {
+            "code": "KeyJ",
+            "modifiers": ["primary", "alt"]
+          }
+        }
+      }
+    },
+    "completion": {
+      "endReason": "completed",
+      "delivery": "handled",
+      "reply": "✅ 已生效并读回确认：macOS 桌面客户端上的「快速切换」现在是 **⌘⌥J**。\n\n**过程**\n1. 读取当前状态：`profile = desktop:macos`（当时只有一个在线客户端，kind = desktop），revision `6a2d29c9…`，指纹 `205440db…7b9b6`\n   - 「快速切换」原本是**未绑定**状态（`binding: null`、`keys: \"\"`、`modified: true`），默认值仍为 ⌘K\n2. 提交审阅：只提交一条编辑\n   `{profile:\"desktop:macos\", id:\"botharness.navigation.quick-switcher\", type:\"set\", binding:{code:\"KeyJ\", modifiers:[\"primary\",\"alt\"]}}`\n   作用域 `client-profile`\n3. 结果：`applied`，`changed: true`，`persisted: true`\n4. 读回：\n   - 「快速切换」`binding = KeyJ + [primary, alt]`，显示为 **⌘⌥J**，无冲突、无 issue；\n   - 其余 17 个可自定义命令绑定全部未变（含之前已自定义的「开关 首页 面板」⌥⇧⌘U）；\n   - `fixedCommands`、`profile`、`revision` 均未变；\n   - 平台侧 legacy 镜像只有 quick-switcher 一条同步（null → KeyJ + mod + alt），是同一次修改的镜像。\n\n**一点提醒**：这个动作原来是未绑定的（不是 ⌘K），所以这次是把它重新绑上；⌘⌥J 当前没有和其它命令冲突。\n\n只改了这一个动作和当前平台配置，没有触碰其他客户端；未重试、未查源码、未写记忆。"
+    },
+    "before": {
+      "id": "botharness.navigation.quick-switcher",
+      "owner": "navigation",
+      "customizable": true,
+      "binding": null,
+      "defaults": {
+        "code": "KeyK",
+        "modifiers": ["primary"]
+      },
+      "keys": "",
+      "modified": true
+    },
+    "after": {
+      "id": "botharness.navigation.quick-switcher",
+      "owner": "navigation",
+      "customizable": true,
+      "binding": {
+        "code": "KeyJ",
+        "modifiers": ["primary", "alt"]
+      },
+      "defaults": {
+        "code": "KeyK",
+        "modifiers": ["primary"]
+      },
+      "keys": "⌘⌥J",
+      "modified": true
+    },
+    "otherBindingsUnchanged": true,
+    "actualSwitcherOpened": true,
+    "customHint": {
+      "dialogText": "最近Tob私聊Layout QA B私聊Layout QA A私聊Layout QA Group群聊↑↓选择Enter打开Esc关闭⌘⌥J快速切换"
+    },
+    "editable": {
+      "behavior": "quick-switcher intentionally opens from editable input",
+      "draftPreserved": true
+    },
+    "modal": {
+      "shortcutBlocked": true,
+      "settingsDialogPreserved": true
+    },
+    "imeObservedEvents": [
+      {
+        "type": "compositionstart",
+        "isTrusted": true
+      },
+      {
+        "type": "compositionupdate",
+        "isTrusted": true
+      },
+      {
+        "type": "keydown",
+        "key": "j",
+        "code": "KeyJ",
+        "isComposing": true,
+        "isTrusted": true
+      }
+    ],
+    "resumeProgress": [
+      {
+        "phase": "natural-shortcut-resume",
+        "step": "resume-existing-approved-binding-without-new-model-request",
+        "at": "2026-10-17T23:20:02.539Z"
+      },
+      {
+        "phase": "natural-shortcut-resume",
+        "step": "native-editable-opens-switcher-and-preserves-unsent-draft",
+        "at": "2026-10-17T23:20:05.195Z"
+      },
+      {
+        "phase": "natural-shortcut-resume",
+        "step": "native-modal-blocks-custom-navigation",
+        "at": "2026-10-17T23:20:08.043Z"
+      },
+      {
+        "phase": "natural-shortcut-resume",
+        "step": "native-ime-composition-blocks-custom-navigation",
+        "at": "2026-10-17T23:20:08.950Z"
+      }
+    ],
+    "restartProgress": [
+      {
+        "phase": "natural-shortcut-restart",
+        "step": "native-tob-binding-restart-and-actual-key",
+        "at": "2026-10-17T23:20:54.977Z"
+      }
+    ],
+    "homeResetProgress": [
+      {
+        "phase": "natural-shortcut-reset-home",
+        "step": "native-home-single-action-reset-and-actual-default-key",
+        "at": "2026-10-17T23:23:41.990Z"
+      }
+    ],
+    "restart": {
+      "actual": {
+        "scope": "client-profile",
+        "value": {
+          "profile": "desktop:macos",
+          "revision": "72e9ece7-e9bf-4e70-8dcb-e4fe32a1d9f9",
+          "commands": [
+            {
+              "id": "botharness.panel.p62-68-3a-63-68-61-6e-6e-65-6c-73",
+              "binding": {
+                "code": "Digit1",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 频道列表 面板",
+              "aliases": ["Bot mode", "panel", "bh:channels"],
+              "keys": ["⌥", "⇧", "⌘", "1"],
+              "aria": "Alt+Shift+Meta+1",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p62-68-3a-63-68-61-6e-6e-65-6c-2d-62-6f-64-79",
+              "binding": {
+                "code": "Digit2",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 消息 面板",
+              "aliases": ["Bot mode", "panel", "bh:channel-body"],
+              "keys": ["⌥", "⇧", "⌘", "2"],
+              "aria": "Alt+Shift+Meta+2",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p6d-65-6d-6f-72-79-2d-66-69-6c-65-73",
+              "binding": {
+                "code": "Digit6",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 记忆文件 面板",
+              "aliases": ["Bot mode", "panel", "memory-files"],
+              "keys": ["⌥", "⇧", "⌘", "6"],
+              "aria": "Alt+Shift+Meta+6",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p6d-65-6d-6f-72-79-2d-65-76-6f-6c-75-74-69-6f-6e",
+              "binding": {
+                "code": "KeyE",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 记忆演化 面板",
+              "aliases": ["Bot mode", "panel", "memory-evolution"],
+              "keys": ["⌥", "⇧", "⌘", "E"],
+              "aria": "Alt+Shift+Meta+E",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p73-65-73-73-69-6f-6e-73",
+              "binding": {
+                "code": "Digit7",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 会话 面板",
+              "aliases": ["Bot mode", "panel", "sessions"],
+              "keys": ["⌥", "⇧", "⌘", "7"],
+              "aria": "Alt+Shift+Meta+7",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p62-6f-74-2d-69-6e-62-6f-78",
+              "binding": {
+                "code": "Digit8",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 Bot 收件箱 面板",
+              "aliases": ["Bot mode", "panel", "bot-inbox"],
+              "keys": ["⌥", "⇧", "⌘", "8"],
+              "aria": "Alt+Shift+Meta+8",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p73-63-68-65-64-75-6c-65-73",
+              "binding": {
+                "code": "Digit9",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 定时任务 面板",
+              "aliases": ["Bot mode", "panel", "schedules"],
+              "keys": ["⌥", "⇧", "⌘", "9"],
+              "aria": "Alt+Shift+Meta+9",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p61-63-74-69-76-69-74-79-2d-63-65-6e-74-65-72",
+              "binding": {
+                "code": "Digit3",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 活动中心 面板",
+              "aliases": ["Bot mode", "panel", "activity-center"],
+              "keys": ["⌥", "⇧", "⌘", "3"],
+              "aria": "Alt+Shift+Meta+3",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p62-6f-74-68-61-72-6e-65-73-73-2d-62-72-6f-77-73-65-72",
+              "binding": {
+                "code": "KeyB",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 浏览器 面板",
+              "aliases": ["Bot mode", "panel", "botharness-browser"],
+              "keys": ["⌥", "⇧", "⌘", "B"],
+              "aria": "Alt+Shift+Meta+B",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p62-6f-74-68-61-72-6e-65-73-73-2d-63-6f-6d-70-75-74-65-72",
+              "binding": {
+                "code": "Digit0",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": false,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 电脑 面板",
+              "aliases": ["Bot mode", "panel", "botharness-computer"],
+              "keys": ["⌥", "⇧", "⌘", "0"],
+              "aria": "Alt+Shift+Meta+0",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.panel.p62-68-3a-68-6f-6d-65",
+              "binding": {
+                "code": "KeyU",
+                "modifiers": ["alt", "shift", "meta"]
+              },
+              "modified": true,
+              "issue": null,
+              "conflicts": [],
+              "label": "开关 首页 面板",
+              "aliases": ["Bot mode", "panel", "bh:home"],
+              "keys": ["⌥", "⇧", "⌘", "U"],
+              "aria": "Alt+Shift+Meta+U",
+              "owner": "native",
+              "customizable": true
+            },
+            {
+              "id": "botharness.navigation.bot-mode",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "Backquote",
+                "modifiers": ["alt"]
+              },
+              "defaults": {
+                "code": "Backquote",
+                "modifiers": ["alt"]
+              },
+              "keys": "⌥`",
+              "modified": false
+            },
+            {
+              "id": "botharness.navigation.quick-switcher",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "KeyJ",
+                "modifiers": ["primary", "alt"]
+              },
+              "defaults": {
+                "code": "KeyK",
+                "modifiers": ["primary"]
+              },
+              "keys": "⌘⌥J",
+              "modified": true
+            },
+            {
+              "id": "botharness.navigation.conversation-prev",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "ArrowUp",
+                "modifiers": ["alt"]
+              },
+              "defaults": {
+                "code": "ArrowUp",
+                "modifiers": ["alt"]
+              },
+              "keys": "⌥↑",
+              "modified": false
+            },
+            {
+              "id": "botharness.navigation.conversation-next",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "ArrowDown",
+                "modifiers": ["alt"]
+              },
+              "defaults": {
+                "code": "ArrowDown",
+                "modifiers": ["alt"]
+              },
+              "keys": "⌥↓",
+              "modified": false
+            },
+            {
+              "id": "botharness.navigation.unread-prev",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "ArrowUp",
+                "modifiers": ["alt", "shift"]
+              },
+              "defaults": {
+                "code": "ArrowUp",
+                "modifiers": ["alt", "shift"]
+              },
+              "keys": "⌥⇧↑",
+              "modified": false
+            },
+            {
+              "id": "botharness.navigation.unread-next",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "ArrowDown",
+                "modifiers": ["alt", "shift"]
+              },
+              "defaults": {
+                "code": "ArrowDown",
+                "modifiers": ["alt", "shift"]
+              },
+              "keys": "⌥⇧↓",
+              "modified": false
+            },
+            {
+              "id": "botharness.navigation.help",
+              "owner": "navigation",
+              "customizable": true,
+              "binding": {
+                "code": "Slash",
+                "modifiers": ["primary"]
+              },
+              "defaults": {
+                "code": "Slash",
+                "modifiers": ["primary"]
+              },
+              "keys": "⌘/",
+              "modified": false
+            }
+          ],
+          "fixedCommands": [
+            {
+              "id": "fixed.move",
+              "label": "移动菜单选择",
+              "keys": ["↑", "↓"],
+              "group": "menus",
+              "bindings": [
+                {
+                  "code": "ArrowUp",
+                  "modifiers": []
+                },
+                {
+                  "code": "ArrowDown",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "fixed.select",
+              "label": "选择菜单项",
+              "keys": ["Enter"],
+              "group": "menus",
+              "bindings": [
+                {
+                  "code": "Enter",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "fixed.dismiss",
+              "label": "关闭菜单或顶层弹窗",
+              "keys": ["Esc"],
+              "group": "menus",
+              "bindings": [
+                {
+                  "code": "Escape",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "approval.allow",
+              "label": "允许一次",
+              "keys": ["Enter"],
+              "group": "approval",
+              "bindings": [
+                {
+                  "code": "Enter",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "approval.reject",
+              "label": "拒绝",
+              "keys": ["Esc"],
+              "group": "approval",
+              "bindings": [
+                {
+                  "code": "Escape",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "fixed.send",
+              "label": "发送消息",
+              "keys": ["Enter"],
+              "group": "input",
+              "bindings": [
+                {
+                  "code": "Enter",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "fixed.newline",
+              "label": "换行",
+              "keys": ["⇧", "Enter"],
+              "group": "input",
+              "bindings": [
+                {
+                  "code": "Enter",
+                  "modifiers": ["shift"]
+                }
+              ]
+            },
+            {
+              "id": "fixed.complementary",
+              "label": "使用互补的 Queue／Steer 方式",
+              "keys": ["⌘", "Enter"],
+              "group": "input",
+              "bindings": [
+                {
+                  "code": "Enter",
+                  "modifiers": ["control"]
+                },
+                {
+                  "code": "Enter",
+                  "modifiers": ["meta"]
+                }
+              ]
+            },
+            {
+              "id": "fixed.slash",
+              "label": "打开命令菜单",
+              "keys": ["/"],
+              "group": "input",
+              "bindings": [
+                {
+                  "code": "Slash",
+                  "modifiers": []
+                }
+              ]
+            },
+            {
+              "id": "fixed.mention",
+              "label": "打开引用菜单",
+              "keys": ["@"],
+              "group": "input",
+              "bindings": [
+                {
+                  "code": "Digit2",
+                  "modifiers": ["shift"]
+                }
+              ]
+            },
+            {
+              "id": "response.stop",
+              "label": "停止生成",
+              "keys": ["Esc", "Esc"],
+              "group": "input",
+              "bindings": [
+                {
+                  "code": "Escape",
+                  "modifiers": []
+                }
+              ]
+            }
+          ],
+          "legacy": {
+            "profile": "desktop:macos",
+            "bindings": {
+              "bot-mode": {
+                "code": "Backquote",
+                "mod": false,
+                "alt": true,
+                "shift": false
+              },
+              "quick-switcher": {
+                "code": "KeyJ",
+                "mod": true,
+                "alt": true,
+                "shift": false
+              },
+              "conversation-prev": {
+                "code": "ArrowUp",
+                "mod": false,
+                "alt": true,
+                "shift": false
+              },
+              "conversation-next": {
+                "code": "ArrowDown",
+                "mod": false,
+                "alt": true,
+                "shift": false
+              },
+              "unread-prev": {
+                "code": "ArrowUp",
+                "mod": false,
+                "alt": true,
+                "shift": true
+              },
+              "unread-next": {
+                "code": "ArrowDown",
+                "mod": false,
+                "alt": true,
+                "shift": true
+              },
+              "help": {
+                "code": "Slash",
+                "mod": true,
+                "alt": false,
+                "shift": false
+              }
+            },
+            "storage": "{\"version\":2,\"profiles\":{\"web:macos\":{},\"web:windows\":{},\"web:linux\":{},\"desktop:macos\":{\"quick-switcher\":{\"code\":\"KeyJ\",\"mod\":true,\"alt\":true,\"shift\":false}},\"desktop:windows\":{},\"desktop:linux\":{}}}"
+          }
+        },
+        "stateFingerprint": "040f1d0a8b55dee846fa62a9381938d75e86fecbfb0b8de98b5baa32f35062a1"
+      },
+      "generation": "c15ec2e8-354d-4ece-b234-14aed01ccf2a"
+    },
+    "singleActionReset": {
+      "command": {
+        "id": "botharness.panel.p62-68-3a-68-6f-6d-65",
+        "binding": {
+          "code": "KeyH",
+          "modifiers": ["alt", "shift", "meta"]
+        },
+        "modified": false,
+        "issue": null,
+        "conflicts": [],
+        "label": "开关 首页 面板",
+        "aliases": ["Bot mode", "panel", "bh:home"],
+        "keys": ["⌥", "⇧", "⌘", "H"],
+        "aria": "Alt+Shift+Meta+H",
+        "owner": "native",
+        "customizable": true
+      },
+      "outcome": "applied",
+      "otherBindingsUnchanged": true
+    },
+    "quickSwitcherDefaultReset": {
+      "outcome": "refused",
+      "reason": "conflict",
+      "conflicts": ["session.search"],
+      "bindingAfterRefusal": {
+        "code": "KeyJ",
+        "modifiers": ["primary", "alt"]
+      },
+      "interpretation": "Installed DSH session.search owns desktop Command+K; refusal preserves that owner and the selected KeyJ binding. Web uses a different DSH search default."
+    },
+    "inputCleanupDiagnosis": {
+      "cdpSelectAll": {
+        "value": "Native shortcut QA unsent draft",
+        "start": 31,
+        "end": 31
+      },
+      "electronSelectAll": {
+        "value": "Native shortcut QA unsent draft",
+        "start": 31,
+        "end": 31
+      },
+      "cleanup": {
+        "initial": {
+          "value": "Native shortcut QA unsent draft",
+          "start": 31,
+          "end": 31
+        },
+        "atEnd": {
+          "value": "Native shortcut QA unsent draft",
+          "start": 31,
+          "end": 31
+        },
+        "removedOwnedCharacters": 31,
+        "method": "bounded real ArrowRight and Backspace keys; exact fixture checked before deletion"
+      }
+    },
+    "retainedFailure": {
+      "phase": "first natural-shortcut run",
+      "completedBeforeFailure": [
+        "approved native Tob readback",
+        "actual custom switcher and hint",
+        "editable draft preservation"
+      ],
+      "failure": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Native shortcut QA unsent draf'\n- ''\n",
+      "resumedWithoutResubmittingModelRequest": true
+    },
+    "pageErrors": [],
+    "physicalKeys": false
+  }
 }
