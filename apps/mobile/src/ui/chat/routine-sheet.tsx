@@ -1,9 +1,9 @@
+import { TextInput } from '../primitives/system-text';
 import { useRef, useState, type ComponentType, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Keyboard,
   ScrollView,
-  TextInput,
   View,
   type ScrollViewInstance,
 } from 'react-native';
@@ -26,7 +26,7 @@ import { useMounted } from '../mounted';
 import { Button } from '../primitives/button';
 import { SettingsGroupItem, SettingsRow } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
-import { Chip } from '../shell/activity-filters';
+import { Chip } from '../primitives/chip';
 import { ChevronRightIcon } from '../shell/icons';
 import { t } from '../strings';
 import type { RoutineTarget } from '../../host/routines';

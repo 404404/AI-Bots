@@ -11,6 +11,15 @@ References:
 | Meta Muse | A Bot profile whose identity and memory are visible and editable.                                                                                                                            |
 | Slack     | Workspace switching, a row of shortcut cards on Chats, an Activity feed with filters, and agent steps with a Stop button.                                                                    |
 
+## Activity query controls
+
+- Activity has two header entries: **Filter and sort** and **Search Activity**. Sorting is part of the same options sheet as category, unread-only, Bot and conversation filters.
+- iOS uses native navigation toolbar buttons: the system supplies Liquid Glass on iOS 26 and its supported appearance on earlier versions. Active search uses a native input in a measured floating surface outside the fixed-height navigation bar, so accessibility text can grow without clipping. Android uses opaque Material-style icon actions and its native text input.
+- The iOS options sheet uses system page-sheet presentation with swipe dismissal, inset grouped rows and trailing checkmarks. Android uses the modal bottom-sheet surface, leading radio indicators and system Back dismissal. Unread-only uses a native switch on each platform. Long option lists virtualize and scroll; footer actions remain reachable.
+- Options apply immediately and remain selected after swipe dismissal or Android Back; there are no Cancel/Done actions. Reset all immediately restores default ordering and the Needs you tab, with all Bots/conversations and unread-only off. Search is independent of this reset. The iOS search surface reserves equal outer gutters; iOS search keeps its built-in clear control; tapping blank list space dismisses search without a second close button and preserves the query for reopening. The focused Activity screen owns status-bar contrast for its current appearance.
+
+References: [Apple toolbars](https://developer.apple.com/design/human-interface-guidelines/toolbars), [Apple sheets](https://developer.apple.com/design/human-interface-guidelines/sheets), [Material bottom sheets](https://m3.material.io/components/bottom-sheets/guidelines), [Android radio selection](https://developer.android.com/develop/ui/compose/components/radio-button).
+
 ## Structure
 
 The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-with-settings-and-hosts-in-the-header.md): what the Human does most sits under the thumb, and what they do rarely sits in the header.
@@ -51,14 +60,15 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 - **Search** finds a PersonaBot or Channel on the current Host:
   - Typing in the Chats search field filters the list in place, as chat apps do; there is no separate search tab.
   - It matches PersonaBot display names and Channel titles on the device, ignoring case and full-width forms, with names that start with the query first. Hidden Channels stay out. A DM result opens its chat, and a Channel result opens that Channel's chat. When nothing matches it says so. Message full-text search is not part of it.
-- **Activity** is the Human Inbox across all Hosts:
-  - Filter chips with counts: All / Needs my action / Mentions & replies / Handled, and a Bot row once more than one Bot is listed. They match the Web Client Inbox's categories and Bot filter; a Host filter comes with more than one Host.
-  - Section headers stick to the top while their items scroll and show the section's count.
-  - Every item carries its Host and can be decided in place, on the same cards as the chat.
+- **Activity** is the Human Inbox across Bots on the currently selected Host:
+  - Three pinned, underlined tabs are Needs you / For you / Other unread. Needs you is selected on entry and groups tool approvals, formal questions and private input. All and handled history remain available through the category filter. Other unread uses the Host's Channel summaries; Bot filtering is also calculated by the Host, not by the summary's last author.
+  - The selected tab shows one flat virtualized feed without repeated section headers or collapse controls. Previous Activity collapse preferences do not hide tab content. Tab labels retain native system scaling and scroll horizontally when they need more width. Switching tabs preserves search, sort, Bot and conversation filters. Tabs remain selectable during loading or error.
+  - Approvals and questions can be decided in place, on the same cards as chat. Private input retains its existing full-client route.
   - Posts and rows are separated by space and layer fills, not divider lines.
   - A row's title is `category · Bot`; a reply keeps its text on a second line, and a handled item collapses to one line: `category · Bot · summary`.
-  - Opening an item jumps to the card in its chat.
-- **Settings** is a form sheet with a large detent, opened from the gear, and closed by swiping down or the close button. Android keeps a fixed, accessible handle above its nested scrolling content and uses 28dp top corners. It reuses the settings row and section components, in groups:
+  - Opening an item jumps to the card in its chat; an unread conversation opens its DM or group chat.
+  - A floating header follows the chat chrome: title on the left, sorting, filtering and Activity search on the right. Filters live in a sheet, with category, Bot, Channel, unread-message and clear controls; no permanent filter chips. A nonblank Activity search hides sections with no matches; an entirely empty result shows one no-results message. Clearing the query restores normal empty sections. Sections with another page remain reachable. Search uses safe Activity summaries and Channel/Bot labels on the current Host before pagination. Handled history stays excluded unless selected. Default ordering is oldest action first, mentions before other personal messages, then newest unread conversation; explicit newest/oldest overrides personal-message priority. Each section can load another bounded page. Hosts without query version 1 show an update error. Complete tab totals remain a subsequent slice of [#1954](https://github.com/BotHarness/DeepSeekBot/issues/1954); when another page exists, the screen identifies counts as loaded items.
+- **Settings** is a form sheet with a large detent, opened from the gear, and closed by swiping down or the close button. Android keeps a fixed, accessible handle above nested scrolling content and uses 28dp top corners. It reuses the settings row and section components, in groups:
   - **Usage** comes first, as one card for the current Host, like a fitness app's week: "Usage", "Last 7 days" and a chevron, the 7-day token total in `display`, and a bar per day (`DayBars`). An idle Host shows a quiet week of stubs, and a failed read shows a danger line with Try again under the card. Tapping it pushes the **Usage** screen:
     - A Today / 7 days / 4 weeks / 12 weeks `Segmented` switch; switching reads the Host again. A background 4-week read checks support on entry; until it succeeds, and on older Hosts, only Today and 7 days appear. An `invalid-input` refusal of a longer period returns to 7 days without showing an error. The Settings card does not probe or change its 7-day range.
     - The period's dates, its total, daily bars for 7 and 28 days, and 12 weekly bars for 84 days. Each week starts at the range's first day, not a calendar-week boundary; a selected weekly bar shows its date range and partial-aware total. Longer charts omit cramped weekday labels, retaining their dates in the chart's accessibility label. A muted note explains when some usage could not be counted or is still being counted.
@@ -232,6 +242,10 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
    - `test/style-guard.test.ts` enforces this for `app/` and `src/ui/`.
    - Files written before the rule are listed in it and leave the list once migrated; the test fails if a migrated file stays listed.
 2. **Text goes through `primitives/text`.** Icons will go through `Icon` (`expo-symbols`).
+   - All user-facing text and visible inputs follow the live system text size, without a global maximum or shrink-to-fit. Use `primitives/system-text` for inputs and legacy styled text. Decorative avatar initials may remain unscaled because the containing control exposes the full accessible label; remote Browser/Computer hidden keyboard capture fields remain native.
+   - iOS uses native `dynamicTypeRamp`/UIFontMetrics: body, headline, footnote and title1 for body/title/meta/display. Legacy explicit sizes map to the matching semantic ramp. Android retains native nonlinear scaling; never multiply text metrics by a global font scale. RN 0.86 can reuse stale paragraph measurements after a live size change, so only noneditable root Text nodes renew at a new iOS font scale. This may end text selection during that system change; TextInput nodes never remount. Native TextInput supports the body ramp through its native view attributes even though its TypeScript interface omits the prop. Keep this adapter covered by native resize and subsequent-update checks. Base tokens remain unscaled for icons/layout.
+   - Let controls grow with padding/minimum sizes; wrap essential button/form labels. Use `theme.largeText` to stack crowded metadata and choices. Composer measures its native body line, bounds the field to one fifth of the viewport (at least one complete line), and preserves the input node, draft and selection. Long drafts scroll inside the field and can expand into a full-screen editor that shares the same draft, mention suggestions and send path. Filter headings scroll with choices; large-text Usage summaries keep their amount semantic role and move the chart to the existing detail screen. Native navigation chrome and Markdown keep their platform scaling owners.
+   - Follow the [system text and large-text acceptance contract](#system-text-and-large-text-acceptance) for implementation and native QA; source tests do not qualify native geometry.
    - Markdown bodies are the exception: `MarkdownView` renders them as native text with `react-native-enriched-markdown`, styled from the same tokens in `src/ui/markdown-style.ts`.
 3. **A new visual element is added to `primitives/`, `chat/` or `shell/` first.** The PR says why the existing ones do not fit.
 4. **Interactive elements meet the touch target and carry an `accessibilityLabel`.** The touch target is `theme.touch`: 44pt on iOS, 48dp on Android.
@@ -240,4 +254,51 @@ Each layer has `fill`, `pressed`, `selected` (neutral, such as the current tab),
    - Motion uses Reanimated, only for bubble entry, a held bubble's lift, the message menu, card collapse, the status dot, the Host drawer, the image viewer's gestures and the composer growing line by line (up to five lines, then it scrolls).
    - Haptics fire only on send, approve or deny, submitting a choice, and opening a message's menu.
 7. **Copy lives in `src/ui/strings.ts`.** Internal ids and protocol names stay out of the UI.
-8. **UI PRs show the change.** They include light and dark screenshots from the web export, and a native check on a development build is recorded under Human QA.
+8. **UI PRs show the change.** Follow the [visual evidence rules](../../docs/agents/pr-ui-visual-evidence.md). Font, keyboard, native chrome and native control behavior require native captures and interaction checks; web previews are supplementary. Record source checks, platform-native results and Human QA separately.
+
+## System text and large-text acceptance
+
+This contract applies to new and changed Expo/React Native screens, shared components and text/input adapters. It is a review requirement, not a claim that every existing screen or platform has already passed. The implementation details above remain version-specific; recheck them when React Native or Expo changes.
+
+### Preserve platform ownership
+
+- Use semantic text roles through our shared primitives. iOS follows native Dynamic Type; Android follows native text scaling, including nonlinear scaling on supported versions. Do not impose one JavaScript multiplier on every text style, scale the entire UI, or apply native and manual scaling twice.
+- Do not disable scaling, shrink text to fit, change a title to a smaller semantic role at a breakpoint, or set a global `maxFontSizeMultiplier` to conceal a layout defect. A narrow exception must name the element, explain its purpose and accessible alternative, and carry native evidence in the PR. Existing decorative initials and hidden capture fields do not justify exceptions for visible content.
+- Keep native navigation and Markdown as their own scaling owners. Reuse the documented shared adapter for framework bugs; avoid screen-specific font workarounds. Live setting changes must retain editable fields, drafts, focus and mention metadata. Record any selection limitation rather than claiming complete editing acceptance.
+
+Platform references: [Apple Dynamic Type and adaptive layouts](https://developer.apple.com/videos/play/wwdc2024/10074/) and [Android nonlinear font scaling](https://developer.android.com/about/versions/14/features#non-linear-font-scaling). Follow documentation for the installed SDK/RN versions when choosing concrete APIs.
+
+### Reflow the task, not only the text
+
+- Let rows and controls grow using padding and minimum sizes. Wrap essential titles, action labels, validation and request details. Secondary previews may truncate only when complete content remains reachable; never hide the information needed to make an approval or form decision.
+- Stack crowded metadata and actions; give the conversation, message or decision priority over decorative labels, timestamps and charts. Keep a stable semantic role when moving content. Move secondary detail behind an accessible entry rather than squeezing the primary content.
+- Make sheets and forms scroll to their last option, error and action. Large headings must not consume a fixed part of the viewport. Preserve list virtualization; do not wrap a virtualized list in another scroll container to solve text overflow.
+- Measure floating surfaces and reserve matching content insets. Test status bars, safe areas and keyboard-open states. Primary actions must stay reachable and text must not be hidden beneath chrome. Maintain at least the existing 44pt iOS / 48dp Android touch targets and meaningful accessible names.
+- Bound inline editing so a long draft does not consume the task view. Provide scrolling and, where needed, expanded editing that shares the same draft, selection/mention handling and send path. Test returning, cancelling/dismissing and sending; do not create a second draft authority.
+
+### Native acceptance matrix
+
+For affected screens, check **default, an intermediate enlarged size and the maximum system size, in both light and dark appearance, on iOS and Android**. Use the OS setting, not page zoom or a mocked `fontScale`. Record the actual category/percentage, OS, viewport and installed binary; the platforms' sizes are not numerically equivalent.
+
+| Platform | Default                     | Intermediate enlarged                            | Maximum                                                    |
+| -------- | --------------------------- | ------------------------------------------------ | ---------------------------------------------------------- |
+| iOS      | `large`                     | `accessibility-large`                            | `accessibility-extra-extra-extra-large`                    |
+| Android  | Default system font setting | An available setting between default and maximum | Device maximum; include 200% on Android 14+ when supported |
+
+These iOS names identify the Simulator categories, not labels such as “Medium” in Settings. Also exercise live default → maximum → default changes while the view is open, with a subsequent ordinary update to catch stale measurements. Shared text/input adapter changes additionally cover the smallest setting and a return to default.
+
+| Affected surface                      | Required interaction checks                                                                                                                                                                                 |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lists / Activity / search             | Read primary content; expand/collapse, search, clear and dismiss; retain the query; reach pagination and the last row.                                                                                      |
+| Sheets / settings / forms             | Reach the final option, reset, validation and primary action; apply/cancel/dismiss according to the existing contract.                                                                                      |
+| Chat / composer / editor              | Keep a multiline draft through live resizing; edit with keyboard open, use mentions, return from expanded editing and send through the real Host path. Verify resulting content/metadata, not only the tap. |
+| Approvals / questions / private input | Read the decision context and all choices, reach the actual response controls and verify the owning Host's outcome. A fixture without pending requests cannot pass this row.                                |
+
+For shared primitives, cover representative screens from each row and record gaps explicitly. Check relevant long/localized labels and actual CJK IME composition when editing changes; include VoiceOver/TalkBack and orientation checks when navigation, labels, reading order or responsive layout changes. The three-size matrix is the minimum for the affected flow, not whole-app accessibility certification.
+
+### Evidence and handoff
+
+- Use the [shared device QA queue](../../docs/agents/device-qa.md) before starting a Simulator, Metro, Host or build. Preserve others' pairings and requests, then restore default font size/appearance and stop task-owned resources when finished.
+- Capture matched native before/after states for the three sizes and both appearances on each tested platform. Match viewport, locale, test data and keyboard state; disclose scroll/caret differences. For a new view, label its former entry point or absence as Before. Embed sanitized, commit-pinned images in the PR body and verify they render.
+- Report each platform/case as passed, failed, blocked or unrun, with source/batch/binary identities, actions and observed outcomes. Missing Android tooling or a device is a blocker, not a pass inferred from iOS. Record a runnable next check for every capture blocker.
+- Source tests protect role mapping, nested text, input identity and behavior; they cannot establish native glyphs, keyboard geometry or usability. Screenshots alone cannot establish interaction, persistence, IME or screen-reader behavior. Keep source tests, native checks and Human acceptance distinct; documentation or green CI does not authorize merge.

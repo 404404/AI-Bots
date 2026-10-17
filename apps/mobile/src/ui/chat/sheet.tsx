@@ -126,11 +126,11 @@ export function Sheet({
                 }}
               >
                 <View style={{ flex: 1, gap: space.x1 }}>
-                  <Text variant="title" strong accessibilityRole="header" numberOfLines={1}>
+                  <Text variant="title" strong accessibilityRole="header">
                     {title}
                   </Text>
                   {subtitle === undefined ? null : (
-                    <Text variant="meta" tone="muted" numberOfLines={2}>
+                    <Text variant="meta" tone="muted">
                       {subtitle}
                     </Text>
                   )}

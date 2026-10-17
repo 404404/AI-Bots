@@ -1,3 +1,4 @@
+import { StatusBar } from 'expo-status-bar';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import type { ComponentProps } from 'react';
 import { Platform, View } from 'react-native';
@@ -25,7 +26,12 @@ export default function TabsLayout() {
           />
           <NativeTabs.Trigger.Label>{t.chats}</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="(activity)">
+        <NativeTabs.Trigger
+          name="(activity)"
+          unstable_nativeProps={{
+            onDidAppear: () => StatusBar.setStyle(theme.scheme === 'dark' ? 'light' : 'dark'),
+          }}
+        >
           <NativeTabs.Trigger.Icon
             sf={{ default: 'bell', selected: 'bell.fill' }}
             md="notifications"

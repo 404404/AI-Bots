@@ -1,10 +1,20 @@
-import { useMemo, useState, type ReactElement } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+  type ReactElement,
+} from 'react';
+import { KeyboardAvoidingView, Platform, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
 import {
   INBOX_SECTIONS,
+  observeInbox,
   type Inbox,
   type InboxSection,
   type InboxSnapshot,
@@ -25,21 +35,27 @@ import { QuestionCard } from '../chat/question-card';
 import { useDesignTheme } from '../design/theme';
 import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
+import { CountBadge } from '../primitives/count-badge';
 import { Loading, Notice } from '../request-parts';
-import { t } from '../strings';
+import { EdgeFade, useChatHeaderHeight } from '../chat/header-chrome';
+import { Button } from '../primitives/button';
+import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
+import { ActivityTabs } from './activity-tabs';
 import { useFloatingTabInset } from './floating-tab-inset';
+import { t } from '../strings';
 import {
-  ALL_ACTIVITY,
+  DEFAULT_ACTIVITY,
   ActivityFilters,
   type ActivityFilter,
-  type ActivitySection,
+  type ActivitySort,
 } from './activity-filters';
 
 const AVATAR = 32;
+const LOADING: InboxSnapshot = { status: 'loading' };
 
 type FeedRow =
-  | { kind: 'header'; key: string; section: InboxSection; count: number }
   | { kind: 'empty'; key: string }
+  | { kind: 'more'; key: string; section: InboxSection }
   | { kind: 'post'; key: string; item: HumanAttentionItem; ref: RequestRef }
   | { kind: 'row'; key: string; item: HumanAttentionItem; settled: boolean };
 
@@ -58,50 +74,34 @@ function sectionItems(
   const listed = snapshot.sections[section].filter((item) => !gone.has(item.id));
   const items =
     section === 'action'
-      ? [...listed, ...held.filter((kept) => !listed.some((item) => item.id === kept.id))]
+      ? [
+          ...listed,
+          ...held.filter(
+            (kept) =>
+              (bot === undefined || kept.botSlug === bot) &&
+              !listed.some((item) => item.id === kept.id),
+          ),
+        ]
       : listed;
-  return bot === undefined ? items : items.filter((item) => item.botSlug === bot);
-}
-
-export function activityCounts(
-  snapshot: InboxSnapshot,
-  gone: ReadonlySet<string>,
-  held: readonly HumanAttentionItem[],
-  bot: string | undefined,
-): Record<ActivitySection, number> {
-  const counts: Record<ActivitySection, number> = { all: 0, action: 0, replies: 0, handled: 0 };
-  if (snapshot.status !== 'ready') return counts;
-  for (const section of INBOX_SECTIONS) {
-    counts[section] = sectionItems(snapshot, section, gone, held, bot).length;
-    counts.all += counts[section];
-  }
-  return counts;
-}
-
-export function activityBots(snapshot: InboxSnapshot): string[] {
-  if (snapshot.status !== 'ready') return [];
-  return [
-    ...new Set(
-      INBOX_SECTIONS.flatMap((section) => snapshot.sections[section].map((item) => item.botSlug)),
-    ),
-  ];
+  return bot === undefined || snapshot.botSlug === bot
+    ? items
+    : items.filter((item) => item.botSlug === bot);
 }
 
 export function feedRows(
   snapshot: InboxSnapshot,
   gone: ReadonlySet<string>,
   held: readonly HumanAttentionItem[],
-  filter: ActivityFilter = ALL_ACTIVITY,
+  filter: ActivityFilter = DEFAULT_ACTIVITY,
+  search = '',
 ): FeedRow[] {
   if (snapshot.status !== 'ready') return [];
   const rows: FeedRow[] = [];
   for (const section of INBOX_SECTIONS) {
+    if (filter.section === 'all' && section === 'handled') continue;
     if (filter.section !== 'all' && filter.section !== section) continue;
     const items = sectionItems(snapshot, section, gone, held, filter.bot);
-    const chosen = filter.section === section;
-    if (items.length === 0 && section !== 'action' && !chosen) continue;
-    rows.push({ kind: 'header', key: `header-${section}`, section, count: items.length });
-    if (items.length === 0) rows.push({ kind: 'empty', key: `empty-${section}` });
+    if (search.trim() && items.length === 0 && !snapshot.cursors?.[section]) continue;
     for (const item of items) {
       const ref = section === 'action' ? decidable(item) : undefined;
       rows.push(
@@ -110,7 +110,10 @@ export function feedRows(
           : { kind: 'post', key: item.id, item, ref },
       );
     }
+    if (snapshot.cursors?.[section]) rows.push({ kind: 'more', key: `more-${section}`, section });
   }
+  if (rows.length === 0 && !search.trim())
+    rows.push({ kind: 'empty', key: `empty-${filter.section}` });
   return rows;
 }
 
@@ -133,8 +136,27 @@ function Row({
 }) {
   const theme = useDesignTheme();
   const kind = t.kind[item.kind] ?? t.otherKind;
-  const name = bot?.displayName ?? item.botSlug;
+  const name =
+    item.kind === 'channel-unread'
+      ? (item.channelName ?? t.otherKind)
+      : (bot?.displayName ?? item.botSlug);
   const size = settled ? theme.type.body.line : AVATAR;
+  const metadata = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: space.x3,
+        marginLeft: theme.largeText ? 0 : 'auto',
+      }}
+    >
+      <Text variant="meta" tone="muted">
+        {t.ago(minutesSince(item.createdAt, now))}
+      </Text>
+      {(item.unreadCount ?? 0) > 0 ? <CountBadge count={item.unreadCount!} tone="unread" /> : null}
+    </View>
+  );
   return (
     <Pressable
       accessibilityRole="button"
@@ -164,22 +186,32 @@ function Row({
         <BotAvatar bot={bot} size={size} />
       )}
       <View style={{ flex: 1, gap: space.x1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
-          <Text numberOfLines={1} strong={!settled} style={{ flexShrink: 1 }}>
-            {t.rowTitle(kind, name)}
+        <View
+          style={{
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'flex-start' : 'center',
+            gap: space.x3,
+          }}
+        >
+          <Text
+            variant={theme.largeText ? 'meta' : 'body'}
+            numberOfLines={theme.largeText ? 2 : 1}
+            strong={!settled}
+            style={{ flexShrink: 1 }}
+          >
+            {theme.largeText ? name : t.rowTitle(kind, name)}
             {settled && item.summary.length > 0 ? (
               <Text tone="muted">{` · ${item.summary}`}</Text>
             ) : null}
           </Text>
-          <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
-            {t.ago(minutesSince(item.createdAt, now))}
-          </Text>
+          {theme.largeText ? null : metadata}
         </View>
         {!settled && item.summary.length > 0 ? (
-          <Text tone="muted" numberOfLines={2}>
+          <Text tone={theme.largeText ? 'fg' : 'muted'} numberOfLines={2}>
             {item.summary}
           </Text>
         ) : null}
+        {theme.largeText ? metadata : null}
       </View>
     </Pressable>
   );
@@ -262,13 +294,27 @@ function Post({
         ) : (
           <BotAvatar bot={bot} size={AVATAR} />
         )}
-        <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
-          {name}
-          <Text tone="muted">{where}</Text>
-        </Text>
-        <Text variant="meta" tone="muted" style={{ marginLeft: 'auto' }}>
-          {t.ago(minutesSince(item.createdAt, now))}
-        </Text>
+        <View
+          style={{
+            flex: 1,
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'flex-start' : 'center',
+            gap: space.x2,
+          }}
+        >
+          <Text strong numberOfLines={theme.largeText ? undefined : 1} style={{ flexShrink: 1 }}>
+            {name}
+            {theme.largeText ? null : <Text tone="muted">{where}</Text>}
+          </Text>
+          {theme.largeText && where !== '' ? (
+            <Text variant="meta" tone="muted">
+              {t.inChannel(item.channelName ?? '')}
+            </Text>
+          ) : null}
+          <Text variant="meta" tone="muted" style={{ marginLeft: theme.largeText ? 0 : 'auto' }}>
+            {t.ago(minutesSince(item.createdAt, now))}
+          </Text>
+        </View>
       </Pressable>
       {item.kind === 'tool-approval' ? (
         <ApprovalCard port={ports.approval} wide onSettled={settled} />
@@ -280,17 +326,23 @@ function Post({
 }
 
 export function ActivityFeed({
+  hostId,
   client,
   inbox,
   snapshot,
+  botSlugs,
+  channels = [],
   bot,
   onOpen,
   header,
   now = Date.now(),
 }: {
+  hostId: string;
   client: HostClient | undefined;
   inbox: Inbox | undefined;
   snapshot: InboxSnapshot;
+  botSlugs: readonly string[];
+  channels?: ReadonlyArray<{ id: string; name: string }>;
   bot(slug: string): RosterBot | undefined;
   onOpen(item: HumanAttentionItem): void;
   header?: ReactElement | null;
@@ -298,114 +350,236 @@ export function ActivityFeed({
 }) {
   const theme = useDesignTheme();
   const bottom = useFloatingTabInset();
+  const toolbar = useRef<ActivityToolbarHandle>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
-  const [filter, setFilter] = useState<ActivityFilter>(ALL_ACTIVITY);
-  const rows = feedRows(snapshot, gone, held, filter);
-  const sticky = rows.flatMap((row, index) => (row.kind === 'header' ? [index] : []));
-  const slugs = activityBots(snapshot);
-  const shownBot = filter.bot !== undefined && slugs.includes(filter.bot) ? filter.bot : undefined;
+  const [filter, setFilter] = useState<ActivityFilter>(DEFAULT_ACTIVITY);
+  const [search, setSearch] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [sort, setSort] = useState<ActivitySort>('default');
+  const [filtering, setFiltering] = useState(false);
+  const initialHeight = useChatHeaderHeight();
+  const insets = useSafeAreaInsets();
+  const [tabsHeight, setTabsHeight] = useState(theme.touch);
+  const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
+  const scoped = useMemo(
+    () =>
+      client === undefined
+        ? undefined
+        : observeInbox(client, {
+            activity: true,
+            section: filter.section,
+            botSlug: filter.bot,
+            channelId: filter.channel,
+            unreadOnly: filter.unreadOnly,
+            search,
+            sort,
+          }),
+    [client, filter.section, filter.bot, filter.channel, filter.unreadOnly, search, sort],
+  );
+  const settlementScope = useMemo(() => ({}), [hostId, scoped, filter, search, sort]);
+  const activeSettlementScope = useRef<object | undefined>(undefined);
+  useLayoutEffect(() => {
+    activeSettlementScope.current = settlementScope;
+    return () => {
+      activeSettlementScope.current = undefined;
+    };
+  }, [settlementScope]);
+  const scopedSnapshot = useSyncExternalStore(
+    useCallback((listener: () => void) => scoped?.subscribe(listener) ?? (() => {}), [scoped]),
+    useCallback(() => scoped?.getSnapshot() ?? LOADING, [scoped]),
+  );
+  const visible = scoped === undefined ? snapshot : scopedSnapshot;
+  const activeInbox = scoped === undefined ? inbox : scoped.getInbox();
+  const rows = feedRows(visible, gone, held, filter, search);
+  const slugsWithSelection =
+    filter.bot !== undefined && !botSlugs.includes(filter.bot)
+      ? [...botSlugs, filter.bot]
+      : botSlugs;
   const settled = (item: HumanAttentionItem, result: DecisionResult) => {
+    if (activeSettlementScope.current !== settlementScope) return;
     if (result === 'accepted') setGone((current) => new Set(current).add(item.id));
     else setHeld((current) => [...current.filter((kept) => kept.id !== item.id), item]);
   };
   const refresh = () => {
     setRefreshing(true);
     setHeld([]);
-    void inbox?.refresh().finally(() => setRefreshing(false));
+    void (activeInbox?.refresh() ?? Promise.resolve()).finally(() => setRefreshing(false));
   };
   return (
-    <Animated.FlatList
-      contentInsetAdjustmentBehavior="automatic"
-      automaticallyAdjustKeyboardInsets
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="interactive"
-      style={{ flex: 1, backgroundColor: theme.color.base }}
-      contentContainerStyle={{ paddingBottom: bottom }}
-      data={rows}
-      stickyHeaderIndices={sticky}
-      keyExtractor={(row) => row.key}
-      itemLayoutAnimation={LinearTransition}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      ListHeaderComponent={
-        <View style={{ gap: space.x3 }}>
-          {header}
-          {snapshot.status === 'ready' && snapshot.stale !== undefined ? (
-            <View style={{ paddingHorizontal: space.x5 }}>
-              <Notice tone="warning">{`${t.inboxStale} ${snapshot.stale}`}</Notice>
-            </View>
-          ) : null}
-          {snapshot.status === 'error' ? (
-            <View style={{ paddingHorizontal: space.x5 }}>
-              <Notice tone="danger">{`${t.inboxFailed} ${snapshot.error}`}</Notice>
-            </View>
-          ) : null}
-          {snapshot.status === 'loading' ? <Loading /> : null}
-          {snapshot.status === 'ready' ? (
-            <ActivityFilters
-              counts={activityCounts(snapshot, gone, held, shownBot)}
-              bots={slugs.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
-              filter={{ ...filter, bot: shownBot }}
-              onFilter={setFilter}
-            />
-          ) : null}
-        </View>
-      }
-      renderItem={({ item: row }) => {
-        if (row.kind === 'header')
-          return (
-            <Text
-              accessibilityRole="header"
-              variant="meta"
-              tone="muted"
-              strong
-              style={{
-                paddingHorizontal: space.x5,
-                paddingTop: space.x6,
-                paddingBottom: space.x2,
-                textTransform: 'uppercase',
-                backgroundColor: theme.layer.canvas.fill,
+    <KeyboardAvoidingView style={{ flex: 1 }} enabled={searchFocused} behavior="padding">
+      <Animated.FlatList
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{
+          flexGrow: 1,
+          paddingTop: Platform.OS === 'ios' ? Math.max(0, headerHeight - insets.top) : 0,
+          paddingBottom: bottom + space.x6,
+        }}
+        scrollIndicatorInsets={{ top: tabsHeight }}
+        stickyHeaderIndices={[0]}
+        automaticallyAdjustKeyboardInsets={!searchFocused}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        style={{
+          backgroundColor: theme.color.base,
+          marginTop: Platform.OS === 'ios' ? 0 : headerHeight,
+        }}
+        data={[{ kind: 'status', key: 'status' } as const, ...rows]}
+        keyExtractor={(row) => row.key}
+        itemLayoutAnimation={LinearTransition}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListFooterComponentStyle={{ flexGrow: 1 }}
+        ListFooterComponent={
+          <Pressable
+            accessible={false}
+            onPress={() => toolbar.current?.dismissSearch()}
+            style={{ flex: 1 }}
+          />
+        }
+        ListHeaderComponent={
+          <View onLayout={(event) => setTabsHeight(event.nativeEvent.layout.height)}>
+            <ActivityTabs
+              selected={filter.section}
+              onSelect={(section) => {
+                if (section === filter.section) return;
+                setHeld([]);
+                setFilter((current) => ({ ...current, section }));
               }}
-            >
-              {t.sectionCount(t.inboxSections[row.section], row.count)}
-            </Text>
-          );
-        if (row.kind === 'empty')
-          return (
-            <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
-              {row.key === 'empty-action' && filter.bot === undefined
-                ? t.inboxEmpty
-                : t.filterEmpty}
-            </Text>
-          );
-        if (row.kind === 'row')
-          return (
-            <Row
-              item={row.item}
-              settled={row.settled}
-              bot={bot(row.item.botSlug)}
-              onOpen={onOpen}
-              now={now}
             />
-          );
-        return (
-          <Animated.View exiting={FadeOut.duration(220)}>
-            {client === undefined ? null : (
-              <Post
-                client={client}
-                inbox={inbox}
+          </View>
+        }
+        renderItem={({ item: row }) => {
+          if (row.kind === 'status')
+            return (
+              <>
+                <View style={{ gap: space.x3 }}>
+                  {header}
+                  {visible.status === 'ready' && visible.stale !== undefined ? (
+                    <View style={{ paddingHorizontal: space.x5 }}>
+                      <Notice tone="warning">{`${t.inboxStale} ${visible.stale}`}</Notice>
+                      <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
+                    </View>
+                  ) : null}
+                  {visible.status === 'error' ? (
+                    <View style={{ paddingHorizontal: space.x5 }}>
+                      <Notice tone="danger">{`${t.inboxFailed} ${visible.error}`}</Notice>
+                      <Button label={t.tryAgain} onPress={refresh} disabled={refreshing} />
+                    </View>
+                  ) : null}
+                  {visible.status === 'loading' ? <Loading /> : null}
+                  {visible.status === 'ready' &&
+                  Object.values(visible.cursors ?? {}).some(Boolean) ? (
+                    <Text variant="meta" tone="muted" style={{ paddingHorizontal: space.x5 }}>
+                      {t.activityLoaded}
+                    </Text>
+                  ) : null}
+                </View>
+                {visible.status === 'ready' && rows.length === 0 && search.trim() ? (
+                  <Text tone="muted" style={{ padding: space.x5 }}>
+                    {t.activityNoResults}
+                  </Text>
+                ) : null}
+              </>
+            );
+          if (row.kind === 'more')
+            return (
+              <View style={{ padding: space.x5 }}>
+                <Button
+                  label={t.activityLoadMore}
+                  disabled={
+                    visible.status === 'ready' &&
+                    visible.loadingMore?.includes(row.section) === true
+                  }
+                  onPress={() => void activeInbox?.loadMore?.(row.section)}
+                />
+              </View>
+            );
+          if (row.kind === 'empty')
+            return (
+              <Text tone="muted" style={{ paddingHorizontal: space.x5 }}>
+                {row.key === 'empty-action' && filter.bot === undefined
+                  ? t.inboxEmpty
+                  : t.filterEmpty}
+              </Text>
+            );
+          if (row.kind === 'row')
+            return (
+              <Row
                 item={row.item}
-                requestRef={row.ref}
+                settled={row.settled}
                 bot={bot(row.item.botSlug)}
-                now={now}
                 onOpen={onOpen}
-                onSettled={settled}
+                now={now}
               />
-            )}
-          </Animated.View>
-        );
-      }}
-    />
+            );
+          return (
+            <Animated.View exiting={FadeOut.duration(220)}>
+              {client === undefined ? null : (
+                <Post
+                  client={client}
+                  inbox={activeInbox}
+                  item={row.item}
+                  requestRef={row.ref}
+                  bot={bot(row.item.botSlug)}
+                  now={now}
+                  onOpen={onOpen}
+                  onSettled={settled}
+                />
+              )}
+            </Animated.View>
+          );
+        }}
+      />
+      {Platform.OS === 'ios' ? null : (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: headerHeight + tabsHeight,
+            left: 0,
+            right: 0,
+            height: space.x6,
+          }}
+        >
+          <EdgeFade edge="top" height={space.x6} />
+        </View>
+      )}
+      <ActivityToolbar
+        ref={toolbar}
+        search={search}
+        onSearchFocus={setSearchFocused}
+        filtered={
+          sort !== 'default' ||
+          filter.section === 'all' ||
+          filter.section === 'handled' ||
+          filter.bot !== undefined ||
+          filter.channel !== undefined ||
+          filter.unreadOnly === true
+        }
+        onSearch={(value) => {
+          setHeld([]);
+          setSearch(value);
+        }}
+        onFilter={() => setFiltering(true)}
+        onHeight={setHeaderHeight}
+      />
+      <ActivityFilters
+        visible={filtering}
+        sort={sort}
+        onSort={(value) => {
+          setHeld([]);
+          setSort(value);
+        }}
+        filter={filter}
+        channels={channels}
+        bots={slugsWithSelection.map((slug) => ({ slug, name: bot(slug)?.displayName ?? slug }))}
+        onFilter={(value) => {
+          setHeld([]);
+          setFilter(value);
+        }}
+        onClose={() => setFiltering(false)}
+      />
+    </KeyboardAvoidingView>
   );
 }

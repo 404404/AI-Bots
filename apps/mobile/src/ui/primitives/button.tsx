@@ -38,6 +38,7 @@ export function Button({
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: space.x5,
+        paddingVertical: space.x3,
         borderRadius: radius.round,
         backgroundColor: pressed ? colors.pressed : colors.fill,
         opacity: disabled ? 0.45 : 1,
@@ -46,7 +47,7 @@ export function Button({
       {busy ? (
         <ActivityIndicator color={colors.label} />
       ) : (
-        <Text strong numberOfLines={1} style={{ color: colors.label }}>
+        <Text strong style={{ color: colors.label, textAlign: 'center', flexShrink: 1 }}>
           {label}
         </Text>
       )}

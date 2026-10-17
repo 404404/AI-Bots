@@ -62,12 +62,16 @@ export function SettingsView({
       >
         <View
           style={{
-            flexDirection: 'row',
+            flexDirection: theme.largeText ? 'column' : 'row',
             alignItems: 'center',
             marginRight: -space.x3,
           }}
         >
-          <Text variant="title" accessibilityRole="header" style={{ flex: 1 }}>
+          <Text
+            variant="title"
+            accessibilityRole="header"
+            style={theme.largeText ? undefined : { flex: 1 }}
+          >
             {t.settings}
           </Text>
           <Pressable

@@ -82,11 +82,17 @@ export function ConversationRow({
         </View>
       )}
       <View style={{ flex: 1, gap: space.x1 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x3 }}>
-          <Text strong numberOfLines={1} style={{ flexShrink: 1 }}>
+        <View
+          style={{
+            flexDirection: theme.largeText ? 'column' : 'row',
+            alignItems: theme.largeText ? 'stretch' : 'center',
+            gap: space.x3,
+          }}
+        >
+          <Text strong numberOfLines={theme.largeText ? 2 : 1} style={{ flexShrink: 1 }}>
             {title}
           </Text>
-          <View style={{ flex: 1 }} />
+          {theme.largeText ? null : <View style={{ flex: 1 }} />}
           <Text variant="meta" tone="subtle">
             {shortTime(row.at, now)}
           </Text>
