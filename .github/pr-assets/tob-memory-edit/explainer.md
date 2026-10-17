@@ -25,13 +25,13 @@ Git提交 -> 可见记忆: 读回版本和内容
 
 ## B 审核固定什么
 
-| 固定对象 | 防止的问题 |
-| --- | --- |
-| Bot ID 与创建时间 | 同名或替换目标冒用旧审批 |
-| 原文、完整差异、路径 | 审核后更换写入内容 |
+| 固定对象                    | 防止的问题               |
+| --------------------------- | ------------------------ |
+| Bot ID 与创建时间           | 同名或替换目标冒用旧审批 |
+| 原文、完整差异、路径        | 审核后更换写入内容       |
 | branch、HEAD、accepted HEAD | 覆盖并发提交或未接纳状态 |
-| 仓库身份与干净状态 | 同 HEAD 下覆盖未提交工作 |
-| 原始 Human 来源 | 失效来源继续行使权限 |
+| 仓库身份与干净状态          | 同 HEAD 下覆盖未提交工作 |
+| 原始 Human 来源             | 失效来源继续行使权限     |
 
 代码：[准备与重检](https://github.com/BotHarness/DeepSeekBot/blob/926bdf4fef76a7e935d93a57c97fcdc89fbb70a6/packages/core/src/tob/cli-memory-operations.ts#L58)。
 
@@ -43,13 +43,13 @@ Tob 可以修改自己的记忆，但只能使用当前所属的 Orchestrator fl
 
 代码：[Memory owner 的 flight 校验](https://github.com/BotHarness/DeepSeekBot/blob/926bdf4fef76a7e935d93a57c97fcdc89fbb70a6/packages/core/src/memory/accepted.ts#L1171)。
 
-| 操作 | 约束 |
-| --- | --- |
-| 保存 | expected HEAD 与稳定 edit ID |
-| 精确重试 | 原结果仍是当前提交时，只读取回执 |
-| 支持的恢复 | 单独审核，生成新提交，保留历史 |
+| 操作                      | 约束                                |
+| ------------------------- | ----------------------------------- |
+| 保存                      | expected HEAD 与稳定 edit ID        |
+| 精确重试                  | 原结果仍是当前提交时，只读取回执    |
+| 支持的恢复                | 单独审核，生成新提交，保留历史      |
 | scoped restore 遇到 dirty | 明确拒绝，请 owner 先保存未完成工作 |
-| Assignment | 保留只读命令范围，不能代写 |
+| Assignment                | 保留只读命令范围，不能代写          |
 
 直接 Human 恢复仍保留现有备份能力。
 SOUL.md 和 MEMORY.md 在新 Session 或下次 compaction 生效。
@@ -60,13 +60,13 @@ SOUL.md 和 MEMORY.md 在新 Session 或下次 compaction 生效。
 官方模型通过实际 CLI 提案完成四条路径。
 每条路径检查真实工具调用、完成回合、Human 交付和 canonical 读回。
 
-| 路径 | 结果 |
-| --- | --- |
-| 同意保存 | 文件显示 jasmine tea，产生新 revision |
-| 拒绝保存 | 内容和 HEAD 不变 |
+| 路径                    | 结果                                     |
+| ----------------------- | ---------------------------------------- |
+| 同意保存                | 文件显示 jasmine tea，产生新 revision    |
+| 拒绝保存                | 内容和 HEAD 不变                         |
 | 审核期间 Human 并发保存 | 旧审批返回 memory-conflict，保留并发内容 |
-| 单独审核恢复 | 新提交恢复原文，历史仍保留 |
-| 实际重启同一 Profile | 原文与恢复后的 HEAD 仍一致 |
+| 单独审核恢复            | 新提交恢复原文，历史仍保留               |
+| 实际重启同一 Profile    | 原文与恢复后的 HEAD 仍一致               |
 
 另一个 Bot 始终不变。
 已完成卡片隐藏原输入，因此只补拍一条待审提案，随后拒绝。
@@ -74,14 +74,14 @@ SOUL.md 和 MEMORY.md 在新 Session 或下次 compaction 生效。
 
 ## E 哪些检查已完成
 
-| 层次 | 状态 |
-| --- | --- |
-| focused source | 初次 194/205；修复后 10/10 与 22/22 通过 |
-| TypeScript、针对性 lint、parity 与 inventory | ok 旧 qualified source 已通过 |
-| 产品 build | ok 旧 build 已通过，产品内容与旧 Web 相同 |
-| 独立 Human CLI 与官方模型 Web | ok 已通过，保存首次失败 |
-| 新 base 的启动凭据改动 | warn 已 rebase，仍需集成检查 |
-| 完整 CI、原生 macOS、Human QA | warn 待完成 |
+| 层次                                         | 状态                                      |
+| -------------------------------------------- | ----------------------------------------- |
+| focused source                               | 初次 194/205；修复后 10/10 与 22/22 通过  |
+| TypeScript、针对性 lint、parity 与 inventory | ok 旧 qualified source 已通过             |
+| 产品 build                                   | ok 旧 build 已通过，产品内容与旧 Web 相同 |
+| 独立 Human CLI 与官方模型 Web                | ok 已通过，保存首次失败                   |
+| 新 base 的启动凭据改动                       | warn 已 rebase，仍需集成检查              |
+| 完整 CI、原生 macOS、Human QA                | warn 待完成                               |
 
 当前 source 是新 base 上的代码，旧 Web 证据不证明上游启动修复通过。
 旧 build 为 74c591117，旧 Web source 为 e3ed175cc。
