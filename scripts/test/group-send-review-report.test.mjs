@@ -4,10 +4,35 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zstdCompressSync } from 'node:zlib';
 import { price, providerUsage } from '../e2e-group-send-review.mjs';
-import { auditRun, blindRun, pairedInterval, validateJudge } from '../group-send-review-report.mjs';
+import {
+  auditRun,
+  blindRun,
+  humanReviewComplete,
+  pairedInterval,
+  validateJudge,
+} from '../group-send-review-report.mjs';
 import { sumHostRows } from '../e2e-llm-scenarios.mjs';
 
 describe('send review evaluation evidence', () => {
+  it('records insufficient Human evidence without forcing fabricated scores', () => {
+    expect(humanReviewComplete({ winner: 'insufficient', reason: 'Left history is missing' })).toBe(
+      true,
+    );
+    expect(humanReviewComplete({ winner: 'insufficient', reason: ' ' })).toBe(false);
+    expect(humanReviewComplete({ winner: 'tie', reason: 'Looks similar' })).toBe(false);
+    const scores = { currentState: 3, value: 3, space: 3, coverage: 3, clarity: 3 };
+    expect(
+      humanReviewComplete({ winner: 'tie', reason: 'Both finish', Left: scores, Right: scores }),
+    ).toBe(true);
+    expect(
+      humanReviewComplete({
+        winner: 'tie',
+        reason: 'Both finish',
+        Left: { ...scores, value: 0 },
+        Right: scores,
+      }),
+    ).toBe(false);
+  });
   it('does not turn a missing native export into zero usage or a reconciled run', () => {
     const audit = auditRun({ usage: { host: { totalTokens: 0 } } });
     expect(audit.nativeKnownBuckets.totalTokens).toBeNull();
