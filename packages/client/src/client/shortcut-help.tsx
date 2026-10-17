@@ -151,6 +151,7 @@ export function shortcutEntryKeys(
   if (entry.id === 'newline') return [SEND_KEY_COMBOS[sendKey].newline];
   const fixed = entry.keys ?? [];
   if (entry.action === undefined) return fixed;
+  if (bindings?.isDisabled(entry.action)) return [];
   const binding = bindings?.binding(entry.action) ?? DEFAULT_SHORTCUT_BINDINGS[entry.action];
   return [...fixed, bindingKeys(binding)];
 }
@@ -242,6 +243,7 @@ function problemText(
     );
     return t('shortcuts.problem.conflict', { action: owner === undefined ? '' : t(owner.label) });
   }
+  if (problem.kind === 'storage' || problem.kind === 'storage-uncertain' || problem.kind === 'stale') return t('settings.shortcuts.saveFailed');
   if (problem.kind === 'reserved') return t('shortcuts.problem.reserved');
   return t('shortcuts.problem.needs-modifier', {
     mod: shortcutKeyLabel('Mod', apple),

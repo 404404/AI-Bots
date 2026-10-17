@@ -112,6 +112,13 @@ const CODES = new Set([
   'one-preference-required',
   'unsupported-client-preference',
 
+  'invalid-shortcut-edit',
+  'stale-client-shortcuts',
+  'shortcut-profile-mismatch',
+  'shortcut-config-unavailable',
+  'shortcut-storage-unavailable',
+  'shortcut-recovery-required',
+  'unknown-shortcut-command',
   'invalid-layout-edit',
   'stale-client-layout',
   'client-layout-unavailable',

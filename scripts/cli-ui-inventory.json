@@ -78,7 +78,7 @@
     },
     {
       "id": "client-shortcuts",
-      "description": "Custom bindings and native shortcut migration; target Client and conflict handling are required.",
+      "description": "Explicit Client/profile shortcut catalog and single set/disable/reset edits through native and existing navigation owners; conflicts preserve effective bindings.",
       "scope": "Client",
       "surfaces": [
         "setting:packages/client/src/client/keyboard-settings.tsx:{row.label}",
@@ -87,7 +87,7 @@
         "storage:packages/client/src/client/workspace-shortcuts.ts:setItem(key)",
         "storage:packages/client/src/client/workspace-shortcuts.ts:setItem(migrationKey)"
       ],
-      "issue": "#2097"
+      "commands": ["client-shortcuts", "client-shortcuts-set"]
     },
     {
       "id": "device-pairing",

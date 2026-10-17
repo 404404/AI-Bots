@@ -83,7 +83,7 @@ import {
   createChannelSidebarBuiltins,
 } from './channel-sidebar-builtins.js';
 import { webShortcutBlocked, webModalOpen, webShortcutHelpQuestion } from './channel-shortcuts.js';
-import { ShortcutBindings } from './shortcut-bindings.js';
+import { ShortcutBindings, SHORTCUT_BINDINGS_KEY } from './shortcut-bindings.js';
 import {
   browserNotificationApi,
   mountNotificationPreferenceSync,
@@ -93,6 +93,7 @@ import {
 import { openHumanAttentionSource } from './human-attention-source.js';
 import { mountTabTitle } from './tab-title.js';
 import { createChannelSidebarRegistry } from './channel-sidebar.js';
+import { createClientShortcutHandlers } from './client-shortcut-control.js';
 import { createClientLayoutHandlers } from './client-layout-control.js';
 import { createDockPanelRegistry } from './dock-panels.js';
 import { createActivityCenterPanel } from './activity-center-panel.js';
@@ -298,6 +299,16 @@ export function apply(ctx: ClientContext): void {
   );
   const botSettings = new BotSettings();
   const dockPanels = createDockPanelRegistry();
+  const shortcutBindings = new ShortcutBindings(storage, () => ctx.shortcuts.platform === 'macos', `${ctx.shortcuts.runtime}:${ctx.shortcuts.platform}`);
+  ctx.effect(() => {
+    if (typeof window === 'undefined') return () => {};
+    const refresh = (event: StorageEvent) => {
+      if (event.key !== SHORTCUT_BINDINGS_KEY) return;
+      try { shortcutBindings.refresh(); } catch {}
+    };
+    window.addEventListener('storage', refresh);
+    return () => window.removeEventListener('storage', refresh);
+  }, 'botharness: shortcut storage synchronization');
   const desktopNotifications = new DesktopNotificationPrefs(storage, browserNotificationApi());
   ctx.effect(() => {
     if (typeof window === 'undefined') return () => {};
@@ -307,7 +318,7 @@ export function apply(ctx: ClientContext): void {
     if (typeof window === 'undefined' || typeof sessionStorage === 'undefined') return () => {};
     return mountClientControl({
       call,
-      kind: 'web',
+      kind: ctx.shortcuts.runtime,
       target: createClientTarget(sessionStorage),
       handlers: new Map([
         ...createClientPreferenceHandlers({
@@ -316,10 +327,10 @@ export function apply(ctx: ClientContext): void {
           notifications: desktopNotifications,
         }),
         ...createClientLayoutHandlers(dockPanels),
+        ...createClientShortcutHandlers(ctx.shortcuts, shortcutBindings),
       ]),
     });
   }, 'botharness: client control');
-  const shortcutBindings = new ShortcutBindings(storage);
   ctx.slots.inject('shell.overlay', () =>
     ctx.slots.register(
       {

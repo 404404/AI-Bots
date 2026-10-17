@@ -919,3 +919,11 @@ printf '%s' '{"notifications":false}' | deepseekbot client-preferences-set CLIEN
 Channel 移动以叶节点为目标，`messages` 是固定内容叶；隐藏子面板保留分割树及百分比。全局移动要求源与目标在可见的独立面板组；不支持的组合拓扑、隐藏目标与不适用的 Bot 子面板均返回明确拒绝。应用时必须仍处于指定 Channel。既有 v1–v8 迁移及备份继续由布局 owner 负责。不可读／更高版本存储拒绝并要求恢复；保存失败返回 `client-outcome-uncertain`，再次修改前须重新读取。同源标签页共享持久化，精确运行代次选择实际执行的 owner。原生重启、实体几何与 UI 证据仍须单独验证。
 
 同源其他标签页替换布局存储后，旧 owner 拒绝 `stale-client-layout` 并停止保存，重载后再操作，保留其他标签页已接受的状态。
+
+### 指定 Client 的快捷键
+
+`client-shortcuts CLIENT_ID --generation GENERATION` 发现可定制的稳定面板命令 ID、七个 `botharness.navigation.*` 动作 ID、当前有效绑定、固定命令、原生配置 revision 和精确 `web|desktop:macos|windows|linux` profile。Alt+1…0 的 Channel 选择保持固定，不随控制栏顺序重新编号。
+
+通过 `client-shortcuts-set CLIENT_ID --generation GENERATION --scope client-profile --expected-state FINGERPRINT --patch-stdin` 提交 `{ "profile":"web:macos", "id":"DISCOVERED_ID", "type":"set", "binding":{"code":"KeyJ","modifiers":["primary","alt","shift"]} }`。使用不带 `binding` 的 `"type":"disable"` 显式禁用，或 `"type":"reset"` 仅恢复该动作。原生面板组合保留已有的可选 `secondCode`；导航动作沿用单键及 primary／Alt／Shift 限制。
+
+必须匹配目标 profile。面板修改把读取到的原生 revision 交给 Settings、提示文字与按键派发共用的原生 owner；导航修改复用现有 owner 和存储键，将旧覆盖迁入保留其他 profile 的记录，null 禁用重载后仍有效。保留键或冲突返回 `outcome:refused`、原因、冲突稳定 ID 及未变更的有效目录，不抢占已有绑定，也不重置全部配置。导航保存失败保留已接受绑定并明确拒绝，原生保存结果继续由原生 owner 分类。实体按键、输入框／弹窗／IME、Web 重载与 macOS 重启须分别验证。

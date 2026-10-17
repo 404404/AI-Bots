@@ -23,6 +23,13 @@ const DEFAULT_KEYS: Readonly<Record<string, string>> = {
 export const workspaceShortcutId = (id: string): ShortcutCommandId =>
   `botharness.panel.p${Array.from(id, (char) => char.codePointAt(0)!.toString(16)).join('-')}` as ShortcutCommandId;
 
+export function workspaceShortcutDefaultForCommand(commandId: string, profile: string) {
+  if (profile === 'web:linux') return undefined;
+  const id = Object.keys(DEFAULT_KEYS).find(id => workspaceShortcutId(id) === commandId);
+  if (!id) return undefined;
+  return { code: profile === 'desktop:linux' && id === WORKSPACE_HOME ? 'KeyO' : DEFAULT_KEYS[id]!, modifiers: ['primary', 'alt', 'shift'] as const };
+}
+
 export function registerWorkspaceShortcuts(
   shortcuts: Pick<Shortcuts, 'register'>,
   registry: DockPanelRegistry,

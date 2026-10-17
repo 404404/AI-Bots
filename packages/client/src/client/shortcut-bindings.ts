@@ -165,10 +165,11 @@ const RESERVED_CODES = new Set(['Enter', 'NumpadEnter', 'Tab', 'Escape', 'Backsp
 export type ShortcutBindingProblem =
   | { readonly kind: 'needs-modifier' }
   | { readonly kind: 'reserved' }
+  | { readonly kind: 'storage' | 'storage-uncertain' | 'stale' }
   | { readonly kind: 'conflict'; readonly action: ShortcutActionId };
 
 export function shortcutBindingProblem(
-  bindings: ShortcutBindingMap,
+  bindings: Readonly<Record<ShortcutActionId, ShortcutBinding | null>>,
   action: ShortcutActionId,
   binding: ShortcutBinding,
 ): ShortcutBindingProblem | undefined {
@@ -179,7 +180,7 @@ export function shortcutBindingProblem(
   if (binding.mod && !binding.alt && RESERVED_MOD_CODES.has(binding.code))
     return { kind: 'reserved' };
   const owner = SHORTCUT_ACTION_IDS.find(
-    (candidate) => candidate !== action && sameBinding(bindings[candidate], binding),
+    (candidate) => candidate !== action && bindings[candidate] !== null && sameBinding(bindings[candidate]!, binding),
   );
   return owner === undefined ? undefined : { kind: 'conflict', action: owner };
 }
@@ -207,25 +208,50 @@ export function parseShortcutBindings(raw: string | null | undefined): ShortcutB
     const value = custom[action];
     if (!isBinding(value)) continue;
     const binding = { code: value.code, mod: value.mod, alt: value.alt, shift: value.shift };
-    if (shortcutBindingProblem(result, action, binding) === undefined) result[action] = binding;
+    const effective = Object.fromEntries(SHORTCUT_ACTION_IDS.map(id => [id, custom[id] === null ? null : result[id]])) as Record<ShortcutActionId, ShortcutBinding | null>;
+    if (shortcutBindingProblem(effective, action, binding) === undefined) result[action] = binding;
   }
   return result;
 }
 
 export class ShortcutBindings {
   #bindings: ShortcutBindingMap;
+  #disabled = new Set<ShortcutActionId>();
+  #raw: string | null = null;
+  #readable = true;
+  #document: Record<string, unknown> = {};
+  readonly profile: string;
   readonly #listeners = new Set<() => void>();
   readonly #storage: ConfigStorage | undefined;
   readonly mac: () => boolean;
 
-  constructor(storage: ConfigStorage | undefined, mac: () => boolean = () => isApplePlatform()) {
+  constructor(storage: ConfigStorage | undefined, mac: () => boolean = () => isApplePlatform(), profile?: string) {
     this.#storage = storage;
     this.mac = mac;
+    this.profile = profile ?? `web:${mac() ? 'macos' : 'windows'}`;
     let raw: string | null = null;
     try {
       raw = storage?.getItem(SHORTCUT_BINDINGS_KEY) ?? null;
-    } catch {}
-    this.#bindings = parseShortcutBindings(raw);
+    } catch { this.#readable = false; }
+    this.#raw = raw;
+    let overrides: Record<string, unknown> = {};
+    try {
+      const parsed: unknown = raw === null ? {} : JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('invalid');
+      const record = parsed as Record<string, unknown>;
+      if ('version' in record) {
+        if (record.version !== 2 || !record.profiles || typeof record.profiles !== 'object' || Array.isArray(record.profiles)) throw new Error('future');
+        this.#document = record.profiles as Record<string, unknown>;
+        const profile = this.#document[this.profile] ?? {};
+        if (!profile || typeof profile !== 'object' || Array.isArray(profile)) throw new Error('invalid');
+        overrides = profile as Record<string, unknown>;
+      } else {
+        overrides = record;
+        this.#document = Object.fromEntries(['web:macos', 'web:windows', 'web:linux', 'desktop:macos', 'desktop:windows', 'desktop:linux'].map(profile => [profile, record]));
+      }
+    } catch { this.#readable = false; }
+    this.#disabled = new Set(SHORTCUT_ACTION_IDS.filter(id => overrides[id] === null));
+    this.#bindings = parseShortcutBindings(JSON.stringify(overrides));
   }
 
   readonly getSnapshot = (): ShortcutBindingMap => this.#bindings;
@@ -241,37 +267,76 @@ export class ShortcutBindings {
     return this.#bindings[action];
   }
 
+  isDisabled(action: ShortcutActionId): boolean { return this.#disabled.has(action); }
+
+  refresh(): void {
+    const next = new ShortcutBindings(this.#storage, this.mac, this.profile);
+    if (!next.#readable) throw new Error('shortcut-recovery-required');
+    this.#raw = next.#raw;
+    this.#document = next.#document;
+    this.#disabled = next.#disabled;
+    this.#bindings = next.#bindings;
+    for (const listener of this.#listeners) listener();
+  }
+
+  controlState() {
+    let stored: string | null;
+    try { stored = this.#storage?.getItem(SHORTCUT_BINDINGS_KEY) ?? null; }
+    catch { throw new Error('shortcut-storage-unavailable'); }
+    if (!this.#readable) throw new Error('shortcut-recovery-required');
+    if (stored !== this.#raw) this.refresh();
+    return { profile: this.profile, bindings: Object.fromEntries(SHORTCUT_ACTION_IDS.map(id => [id, this.isDisabled(id) ? null : this.binding(id)])), storage: this.#raw };
+  }
+
   isCustom(action: ShortcutActionId): boolean {
-    return !sameBinding(this.#bindings[action], DEFAULT_SHORTCUT_BINDINGS[action]);
+    return this.isDisabled(action) || !sameBinding(this.#bindings[action], DEFAULT_SHORTCUT_BINDINGS[action]);
   }
 
   matches(action: ShortcutActionId, event: ShortcutKeyboardEvent): boolean {
-    return bindingMatches(this.#bindings[action], event, this.mac(), REPEATABLE.has(action));
+    return !this.isDisabled(action) && bindingMatches(this.#bindings[action], event, this.mac(), REPEATABLE.has(action));
   }
 
   text(action: ShortcutActionId): string {
-    return bindingText(this.#bindings[action], this.mac());
+    return this.isDisabled(action) ? '' : bindingText(this.#bindings[action], this.mac());
   }
 
   set(action: ShortcutActionId, binding: ShortcutBinding): ShortcutBindingProblem | undefined {
-    const problem = shortcutBindingProblem(this.#bindings, action, binding);
+    const effective = Object.fromEntries(SHORTCUT_ACTION_IDS.map(id => [id, this.isDisabled(id) ? null : this.binding(id)])) as Record<ShortcutActionId, ShortcutBinding | null>;
+    const problem = shortcutBindingProblem(effective, action, binding);
     if (problem !== undefined) return problem;
-    this.#commit({ ...this.#bindings, [action]: binding });
-    return undefined;
+    return this.#commit({ ...this.#bindings, [action]: binding }, new Set([...this.#disabled].filter(id => id !== action)));
   }
 
   reset(action: ShortcutActionId): ShortcutBindingProblem | undefined {
     return this.set(action, DEFAULT_SHORTCUT_BINDINGS[action]);
   }
 
-  #commit(next: ShortcutBindingMap): void {
-    this.#bindings = next;
-    const custom: Partial<Record<ShortcutActionId, ShortcutBinding>> = {};
-    for (const action of SHORTCUT_ACTION_IDS)
-      if (this.isCustom(action)) custom[action] = next[action];
+  disable(action: ShortcutActionId): ShortcutBindingProblem | undefined {
+    return this.#commit({ ...this.#bindings }, new Set([...this.#disabled, action]));
+  }
+
+  #commit(next: ShortcutBindingMap, disabled: Set<ShortcutActionId>): ShortcutBindingProblem | undefined {
+    if (!this.#readable || !this.#storage) return { kind: 'storage' };
+    const custom: Record<string, unknown> = { ...(this.#document[this.profile] as Record<string, unknown> ?? {}) };
+    for (const action of SHORTCUT_ACTION_IDS) {
+      delete custom[action];
+      if (disabled.has(action)) custom[action] = null;
+      else if (!sameBinding(next[action], DEFAULT_SHORTCUT_BINDINGS[action])) custom[action] = next[action];
+    }
+    const profiles = { ...this.#document, [this.profile]: custom };
+    const raw = JSON.stringify({ version: 2, profiles });
     try {
-      this.#storage?.setItem(SHORTCUT_BINDINGS_KEY, JSON.stringify(custom));
-    } catch {}
+      if (this.#storage.getItem(SHORTCUT_BINDINGS_KEY) !== this.#raw) return { kind: 'stale' };
+      this.#storage.setItem(SHORTCUT_BINDINGS_KEY, raw);
+    } catch { return { kind: 'storage' }; }
+    try {
+      if (this.#storage.getItem(SHORTCUT_BINDINGS_KEY) !== raw) return { kind: 'storage-uncertain' };
+    } catch { return { kind: 'storage-uncertain' }; }
+    this.#raw = raw;
+    this.#document = profiles;
+    this.#disabled = disabled;
+    this.#bindings = next;
     for (const listener of this.#listeners) listener();
+    return undefined;
   }
 }
