@@ -1,0 +1,593 @@
+{
+  "pr": 2133,
+  "sourceHead": "34a42447e12acb58a799c4852fbf59911894e866",
+  "base": "390630e0dc81b0e776758bc420c1622b2ad51981",
+  "qaBase": "25069d79d7a7603b2686f72d3a83d48a9b68bdce",
+  "platform": {
+    "os": "Android16",
+    "sdk": 58,
+    "abi": "arm64-v8a",
+    "refreshHz": 60,
+    "viewport": "1220x2712",
+    "benchmarkTheme": "light"
+  },
+  "builds": {
+    "beforeSha256": "2ea9d6730a6577a77e1bf0a9c9ff313dd23e8ac0f2254a16694939e55d242c59",
+    "afterSha256": "1901cb745a1a0b750dbcda32f609c08c07acbb6b4932655195f8efbdd01f38b0",
+    "qaOnlyNativeConfig": "Private loopback-only test transport; no config or native dependency change in the source PR."
+  },
+  "sourceFiles": [
+    {
+      "file": "apps/mobile/src/ui/markdown-window.ts",
+      "sha256": "475152706df239fd43301cadf48ee5871681d197c77d1b78eb2bbcf4abe4dc2e"
+    },
+    {
+      "file": "apps/mobile/src/ui/markdown-viewport.ts",
+      "sha256": "772aebebd8223eaa0ee9402862298aadbf3d07f9e64b887f4bb6092fde02ba34"
+    },
+    {
+      "file": "apps/mobile/src/ui/markdown-view.android.tsx",
+      "sha256": "6c1d87c344293c5703548ecac8c8179782ed05e6282fdc8be6acecdb8a6ea632"
+    },
+    {
+      "file": "apps/mobile/src/ui/chat/conversation-screen.tsx",
+      "sha256": "db28b2199b8a4997ef76a66352587fa22d8f0281a72e4667a59779c298afc96f"
+    }
+  ],
+  "comparison": {
+    "method": "ABBAAB; Release arm64; 60Hz; same fixed source; no screenshot or hierarchy polling in first45seconds; app-associated presentations are not scroll FPS; completion is first observed upper bound.",
+    "records": [
+      {
+        "version": "a",
+        "run": "f56",
+        "observedCompleteMs": 79470,
+        "canonicalElapsedMs": 12749.84033203125,
+        "sourceStartupMs": 3222,
+        "traceLaunchDelayMs": 60,
+        "source": {
+          "characters": 21492,
+          "chunks": 281,
+          "elapsedMs": 8974.290100000799,
+          "maxLagMs": 15.497299998998642
+        },
+        "canonicalComplete": true,
+        "visibleComplete": true,
+        "views": 924,
+        "frames": [
+          {
+            "period": "early",
+            "app_frames": 827,
+            "avg_app_duration_ms": 13.472,
+            "p95_app_duration_ms": 20.098,
+            "max_app_duration_ms": 24.638,
+            "app_deadline_missed": 59,
+            "buffer_stuffing": 8,
+            "intervals": 826,
+            "avg_presentation_gap_ms": 24.204,
+            "p95_presentation_gap_ms": 32.931,
+            "max_presentation_gap_ms": 65.711,
+            "app_update_presentations_per_second": 41.316,
+            "gaps_over_25ms": 365
+          },
+          {
+            "period": "late",
+            "app_frames": 551,
+            "avg_app_duration_ms": 20.101,
+            "p95_app_duration_ms": 30.359,
+            "max_app_duration_ms": 41.525,
+            "app_deadline_missed": 236,
+            "buffer_stuffing": 78,
+            "intervals": 550,
+            "avg_presentation_gap_ms": 36.32,
+            "p95_presentation_gap_ms": 49.492,
+            "max_presentation_gap_ms": 82.171,
+            "app_update_presentations_per_second": 27.533,
+            "gaps_over_25ms": 467
+          }
+        ],
+        "trace": [
+          {
+            "retained_trace_seconds": 44.994
+          }
+        ],
+        "traceErrors": []
+      },
+      {
+        "version": "b",
+        "run": "f57",
+        "observedCompleteMs": 52145,
+        "canonicalElapsedMs": 12497.883056640625,
+        "sourceStartupMs": 2970,
+        "traceLaunchDelayMs": 88,
+        "source": {
+          "characters": 21492,
+          "chunks": 281,
+          "elapsedMs": 8962.84240000695,
+          "maxLagMs": 17.29670000076294
+        },
+        "canonicalComplete": true,
+        "visibleComplete": true,
+        "views": 287,
+        "frames": [
+          {
+            "period": "early",
+            "app_frames": 907,
+            "avg_app_duration_ms": 12.271,
+            "p95_app_duration_ms": 14.234,
+            "max_app_duration_ms": 22.501,
+            "app_deadline_missed": 8,
+            "buffer_stuffing": 9,
+            "intervals": 906,
+            "avg_presentation_gap_ms": 22.048,
+            "p95_presentation_gap_ms": 32.891,
+            "max_presentation_gap_ms": 49.34,
+            "app_update_presentations_per_second": 45.355,
+            "gaps_over_25ms": 308
+          },
+          {
+            "period": "late",
+            "app_frames": 928,
+            "avg_app_duration_ms": 11.929,
+            "p95_app_duration_ms": 13.692,
+            "max_app_duration_ms": 16.024,
+            "app_deadline_missed": 0,
+            "buffer_stuffing": 0,
+            "intervals": 927,
+            "avg_presentation_gap_ms": 21.549,
+            "p95_presentation_gap_ms": 32.853,
+            "max_presentation_gap_ms": 49.361,
+            "app_update_presentations_per_second": 46.406,
+            "gaps_over_25ms": 288
+          }
+        ],
+        "trace": [
+          {
+            "retained_trace_seconds": 44.995
+          }
+        ],
+        "traceErrors": []
+      },
+      {
+        "version": "b",
+        "run": "f58",
+        "observedCompleteMs": 52095,
+        "canonicalElapsedMs": 12060.246826171875,
+        "sourceStartupMs": 2555,
+        "traceLaunchDelayMs": 7,
+        "source": {
+          "characters": 21492,
+          "chunks": 281,
+          "elapsedMs": 8975.021799996495,
+          "maxLagMs": 15.083200000226498
+        },
+        "canonicalComplete": true,
+        "visibleComplete": true,
+        "views": 287,
+        "frames": [
+          {
+            "period": "early",
+            "app_frames": 930,
+            "avg_app_duration_ms": 12.502,
+            "p95_app_duration_ms": 14.858,
+            "max_app_duration_ms": 21.16,
+            "app_deadline_missed": 13,
+            "buffer_stuffing": 18,
+            "intervals": 929,
+            "avg_presentation_gap_ms": 21.502,
+            "p95_presentation_gap_ms": 32.87,
+            "max_presentation_gap_ms": 49.077,
+            "app_update_presentations_per_second": 46.507,
+            "gaps_over_25ms": 287
+          },
+          {
+            "period": "late",
+            "app_frames": 940,
+            "avg_app_duration_ms": 11.939,
+            "p95_app_duration_ms": 13.65,
+            "max_app_duration_ms": 26.954,
+            "app_deadline_missed": 3,
+            "buffer_stuffing": 12,
+            "intervals": 939,
+            "avg_presentation_gap_ms": 21.274,
+            "p95_presentation_gap_ms": 32.863,
+            "max_presentation_gap_ms": 49.344,
+            "app_update_presentations_per_second": 47.007,
+            "gaps_over_25ms": 273
+          }
+        ],
+        "trace": [
+          {
+            "retained_trace_seconds": 44.886
+          }
+        ],
+        "traceErrors": []
+      },
+      {
+        "version": "a",
+        "run": "f59",
+        "observedCompleteMs": 80216,
+        "canonicalElapsedMs": 13005.64599609375,
+        "sourceStartupMs": 3065,
+        "traceLaunchDelayMs": 104,
+        "source": {
+          "characters": 21492,
+          "chunks": 281,
+          "elapsedMs": 8965.509500004351,
+          "maxLagMs": 22.088700003921986
+        },
+        "canonicalComplete": true,
+        "visibleComplete": true,
+        "views": 924,
+        "frames": [
+          {
+            "period": "early",
+            "app_frames": 835,
+            "avg_app_duration_ms": 13.499,
+            "p95_app_duration_ms": 20.178,
+            "max_app_duration_ms": 27.36,
+            "app_deadline_missed": 72,
+            "buffer_stuffing": 21,
+            "intervals": 834,
+            "avg_presentation_gap_ms": 23.971,
+            "p95_presentation_gap_ms": 32.937,
+            "max_presentation_gap_ms": 82.071,
+            "app_update_presentations_per_second": 41.717,
+            "gaps_over_25ms": 358
+          },
+          {
+            "period": "late",
+            "app_frames": 541,
+            "avg_app_duration_ms": 19.619,
+            "p95_app_duration_ms": 29.049,
+            "max_app_duration_ms": 31.224,
+            "app_deadline_missed": 234,
+            "buffer_stuffing": 51,
+            "intervals": 540,
+            "avg_presentation_gap_ms": 36.931,
+            "p95_presentation_gap_ms": 49.364,
+            "max_presentation_gap_ms": 82.068,
+            "app_update_presentations_per_second": 27.077,
+            "gaps_over_25ms": 476
+          }
+        ],
+        "trace": [
+          {
+            "retained_trace_seconds": 44.982
+          }
+        ],
+        "traceErrors": []
+      },
+      {
+        "version": "a",
+        "run": "f60",
+        "observedCompleteMs": 79326,
+        "canonicalElapsedMs": 12334.365234375,
+        "sourceStartupMs": 3041,
+        "traceLaunchDelayMs": 18,
+        "source": {
+          "characters": 21492,
+          "chunks": 281,
+          "elapsedMs": 8974.293899998069,
+          "maxLagMs": 15.515999995172024
+        },
+        "canonicalComplete": true,
+        "visibleComplete": true,
+        "views": 924,
+        "frames": [
+          {
+            "period": "early",
+            "app_frames": 844,
+            "avg_app_duration_ms": 13.463,
+            "p95_app_duration_ms": 19.247,
+            "max_app_duration_ms": 29.762,
+            "app_deadline_missed": 67,
+            "buffer_stuffing": 13,
+            "intervals": 843,
+            "avg_presentation_gap_ms": 23.677,
+            "p95_presentation_gap_ms": 32.959,
+            "max_presentation_gap_ms": 49.982,
+            "app_update_presentations_per_second": 42.235,
+            "gaps_over_25ms": 348
+          },
+          {
+            "period": "late",
+            "app_frames": 554,
+            "avg_app_duration_ms": 19.45,
+            "p95_app_duration_ms": 29.152,
+            "max_app_duration_ms": 30.766,
+            "app_deadline_missed": 232,
+            "buffer_stuffing": 62,
+            "intervals": 553,
+            "avg_presentation_gap_ms": 36.152,
+            "p95_presentation_gap_ms": 49.327,
+            "max_presentation_gap_ms": 82.058,
+            "app_update_presentations_per_second": 27.661,
+            "gaps_over_25ms": 472
+          }
+        ],
+        "trace": [
+          {
+            "retained_trace_seconds": 44.892
+          }
+        ],
+        "traceErrors": []
+      },
+      {
+        "version": "b",
+        "run": "f61",
+        "observedCompleteMs": 51973,
+        "canonicalElapsedMs": 11786.48974609375,
+        "sourceStartupMs": 2742,
+        "traceLaunchDelayMs": 102,
+        "source": {
+          "characters": 21492,
+          "chunks": 281,
+          "elapsedMs": 8963.475100003183,
+          "maxLagMs": 16.51919999718666
+        },
+        "canonicalComplete": true,
+        "visibleComplete": true,
+        "views": 287,
+        "frames": [
+          {
+            "period": "early",
+            "app_frames": 933,
+            "avg_app_duration_ms": 12.53,
+            "p95_app_duration_ms": 14.8,
+            "max_app_duration_ms": 19.649,
+            "app_deadline_missed": 7,
+            "buffer_stuffing": 12,
+            "intervals": 932,
+            "avg_presentation_gap_ms": 21.434,
+            "p95_presentation_gap_ms": 32.876,
+            "max_presentation_gap_ms": 49.205,
+            "app_update_presentations_per_second": 46.655,
+            "gaps_over_25ms": 284
+          },
+          {
+            "period": "late",
+            "app_frames": 940,
+            "avg_app_duration_ms": 11.981,
+            "p95_app_duration_ms": 13.782,
+            "max_app_duration_ms": 21.306,
+            "app_deadline_missed": 2,
+            "buffer_stuffing": 6,
+            "intervals": 939,
+            "avg_presentation_gap_ms": 21.255,
+            "p95_presentation_gap_ms": 32.86,
+            "max_presentation_gap_ms": 49.272,
+            "app_update_presentations_per_second": 47.047,
+            "gaps_over_25ms": 275
+          }
+        ],
+        "trace": [
+          {
+            "retained_trace_seconds": 44.987
+          }
+        ],
+        "traceErrors": []
+      }
+    ],
+    "medians": [
+      {
+        "version": "a",
+        "observedCompleteMs": 79470,
+        "views": 924,
+        "periods": [
+          {
+            "period": "early",
+            "app_frames": 835,
+            "avg_app_duration_ms": 13.472,
+            "p95_app_duration_ms": 20.098,
+            "max_app_duration_ms": 27.36,
+            "app_deadline_missed": 67,
+            "buffer_stuffing": 13,
+            "intervals": 834,
+            "avg_presentation_gap_ms": 23.971,
+            "p95_presentation_gap_ms": 32.937,
+            "max_presentation_gap_ms": 65.711,
+            "app_update_presentations_per_second": 41.717,
+            "gaps_over_25ms": 358
+          },
+          {
+            "period": "late",
+            "app_frames": 551,
+            "avg_app_duration_ms": 19.619,
+            "p95_app_duration_ms": 29.152,
+            "max_app_duration_ms": 31.224,
+            "app_deadline_missed": 234,
+            "buffer_stuffing": 62,
+            "intervals": 550,
+            "avg_presentation_gap_ms": 36.32,
+            "p95_presentation_gap_ms": 49.364,
+            "max_presentation_gap_ms": 82.068,
+            "app_update_presentations_per_second": 27.533,
+            "gaps_over_25ms": 472
+          }
+        ]
+      },
+      {
+        "version": "b",
+        "observedCompleteMs": 52095,
+        "views": 287,
+        "periods": [
+          {
+            "period": "early",
+            "app_frames": 930,
+            "avg_app_duration_ms": 12.502,
+            "p95_app_duration_ms": 14.8,
+            "max_app_duration_ms": 21.16,
+            "app_deadline_missed": 8,
+            "buffer_stuffing": 12,
+            "intervals": 929,
+            "avg_presentation_gap_ms": 21.502,
+            "p95_presentation_gap_ms": 32.876,
+            "max_presentation_gap_ms": 49.205,
+            "app_update_presentations_per_second": 46.507,
+            "gaps_over_25ms": 287
+          },
+          {
+            "period": "late",
+            "app_frames": 940,
+            "avg_app_duration_ms": 11.939,
+            "p95_app_duration_ms": 13.692,
+            "max_app_duration_ms": 21.306,
+            "app_deadline_missed": 2,
+            "buffer_stuffing": 6,
+            "intervals": 939,
+            "avg_presentation_gap_ms": 21.274,
+            "p95_presentation_gap_ms": 32.86,
+            "max_presentation_gap_ms": 49.344,
+            "app_update_presentations_per_second": 47.007,
+            "gaps_over_25ms": 275
+          }
+        ]
+      }
+    ]
+  },
+  "native": {
+    "textMatrix": [
+      {
+        "label": "window-light-1",
+        "scale": 1,
+        "theme": "light",
+        "complete": true,
+        "composerBounds": [
+          198,
+          2514,
+          1022,
+          2631
+        ]
+      },
+      {
+        "label": "window-light-1-3",
+        "scale": 1.3,
+        "theme": "light",
+        "complete": true,
+        "composerBounds": [
+          198,
+          2514,
+          1022,
+          2631
+        ]
+      },
+      {
+        "label": "window-light-2",
+        "scale": 2,
+        "theme": "light",
+        "complete": true,
+        "composerBounds": [
+          68,
+          2362,
+          1152,
+          2501
+        ]
+      },
+      {
+        "label": "window-dark-1",
+        "scale": 1,
+        "theme": "dark",
+        "complete": true,
+        "composerBounds": [
+          198,
+          2514,
+          1022,
+          2631
+        ]
+      },
+      {
+        "label": "window-dark-1-3",
+        "scale": 1.3,
+        "theme": "dark",
+        "complete": true,
+        "composerBounds": [
+          198,
+          2514,
+          1022,
+          2631
+        ]
+      },
+      {
+        "label": "window-dark-2",
+        "scale": 2,
+        "theme": "dark",
+        "complete": true,
+        "composerBounds": [
+          68,
+          2362,
+          1152,
+          2501
+        ]
+      }
+    ],
+    "inputWidth": [
+      {
+        "label": "keyboard",
+        "draftVisible": true,
+        "keyboardTop": 1457,
+        "focusedInputBounds": [
+          198,
+          1259,
+          1022,
+          1376
+        ],
+        "draftBounds": [
+          198,
+          2513,
+          1022,
+          2630
+        ]
+      },
+      {
+        "label": "width-change",
+        "draftRetained": true,
+        "complete": true
+      }
+    ],
+    "history": {
+      "historyStable": true,
+      "olderReplyRestored": true,
+      "resumedComplete": true,
+      "canonicalComplete": true,
+      "dragDuringProducer": true,
+      "heldAcrossCommit": true
+    },
+    "dragAfterSourceStartMs": 2108,
+    "sourceEndedAfterMs": 8965,
+    "heldSnapshotsRelativeToCommitMs": [
+      -5782.535400390625,
+      3237.464599609375
+    ]
+  },
+  "checks": {
+    "mobilePassed": 571,
+    "mobileSkipped": 8,
+    "typecheck": "pass",
+    "lint": "pass",
+    "formatting": "pass",
+    "featureMap": "pass",
+    "changelog": "pass",
+    "iosBundle": "pass",
+    "androidBundle": "pass",
+    "iosNative": "untested: Windows runner",
+    "humanQA": "pending",
+    "native120FPS": "unqualified",
+    "reactFiberRenderCounts": "not qualified by these Release traces",
+    "ci": {
+      "head": "34a42447e12acb58a799c4852fbf59911894e866",
+      "status": "pass",
+      "run": "https://github.com/BotHarness/DeepSeekBot/actions/runs/39074547283"
+    }
+  },
+  "privacy": "Only dedicated fixed QA content, source/build provenance and app-scoped aggregates; no device identifiers, local paths, tokens, raw traces or profiles.",
+  "video": {
+    "framesPerClip": 658,
+    "originalSeconds": 14.9596,
+    "slowSeconds": 30.001956,
+    "speed": [
+      1,
+      0.5
+    ],
+    "framePolicy": "Preserved variable timestamps; zero duplicated or dropped frames in the1x encoding. The0.5x clip retains the same658frames."
+  }
+}
