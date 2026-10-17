@@ -556,6 +556,52 @@ try {
       'section plus opens embedded form; Git/ZIP switches preserve target; blank draft restored; actual create persisted into same section',
     );
   }
+  if (phase === 'restart-read') {
+    assert.ok(
+      process.env.BH_E2E_HOME_FIXTURE,
+      'restart-read requires the previous creation-readback.json',
+    );
+    const fixture = JSON.parse(readFileSync(process.env.BH_E2E_HOME_FIXTURE, 'utf8'));
+    const created = (await rpc('list')).bots.find((bot) => bot.slug === fixture.created.slug);
+    assert.ok(
+      created && created.displayName === fixture.created.displayName,
+      'same created Bot identity retained',
+    );
+    const oldSection = fixture.roster.sections.find((section) =>
+      section.channelIds.includes('dm-' + created.slug),
+    );
+    assert.ok(oldSection, 'fixture must identify its target section');
+    const roster = await rpc('rosterGet');
+    const section = roster.sections.find((section) => section.id === oldSection.id);
+    assert.ok(
+      section &&
+        section.name === oldSection.name &&
+        section.channelIds.includes('dm-' + created.slug),
+      'same section and Bot DM retained',
+    );
+    const facts = await rpc('homeDashboard', { range: '24h' });
+    assert.equal(facts.usage.status, 'ready');
+    assert.ok(facts.usage.value.totalTokens > 0, 'retained reported usage must remain positive');
+    if (process.env.BH_E2E_HOME_USAGE_FIXTURE) {
+      const old = JSON.parse(readFileSync(process.env.BH_E2E_HOME_USAGE_FIXTURE, 'utf8'));
+      const usage = old.facts?.usage ?? old.usage;
+      assert.equal(
+        facts.usage.value.totalTokens,
+        usage.value.totalTokens,
+        'restart neither loses nor double counts recent receipts',
+      );
+    }
+    await click('Refresh Home');
+    await pause(300);
+    await shot('restart-retained-facts');
+    writeFileSync(
+      resolve(out, 'restart-readback.json'),
+      JSON.stringify({ created, section, facts }, null, 2),
+    );
+    steps.push(
+      'same Profile restart retains created Bot identity, target section/DM and positive usage without duplicate receipt folding',
+    );
+  }
   if (phase === 'configure') {
     const desc = await rpc('describe', {}, 'settings');
     const d = desc.namespaces.find((x) => x.ns === 'agent-default-model');
