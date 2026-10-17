@@ -24,6 +24,8 @@ A write carries the parsed namespace, patch, expected revision and previous valu
 
 Human `settings-set` also accepts explicit previous-value/revision inputs for a reviewed patch. Both flags are optional together for the existing Human flow and mandatory for scoped Tob writes. This keeps one command vocabulary without equating Human and Agent authority.
 
+The scheduled-work extension (#2093) follows the same boundary: the existing application-defined Bot Schedule owner remains the sole scheduler, Admission and history authority. Its scoped writes carry the observed Bot identity and collection/task fingerprint, and recheck after review. The owner atomically records creation-key receipts with the task in its operational database; replay recovers the original identity and refuses a deleted original instead of creating replacement work. A lock permits only a separately reviewed unlock-only action. Deletion retains explicit confirmation; uncertain manual firing requires history reconciliation and never an automatic retry. This is the existing scoped-operation and durable-receipt pattern applied to schedules, without a new scheduler or model Tool.
+
 ## Security and lifecycle limits
 
 The child environment contains a bearer capability. Arbitrary Shell code can inspect or copy it, and this design is not isolation against another process controlled by the same OS user. Its protection is narrow operation scope, actual Host-side source checks, existing approval, revision guards and revocation. The capability must not be logged or stored as an administrator credential; its expiry does not make arbitrary Shell output safe to publish. Diagnostics omit endpoint/token values and record bounded operation outcomes.

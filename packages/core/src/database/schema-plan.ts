@@ -2345,6 +2345,17 @@ const GROUP_SEND_REVIEW_MIGRATION: SchemaMigration = {
   },
 };
 
+const BOT_SCHEDULE_CREATION_MIGRATION: SchemaMigration = {
+  generation: 100,
+  module: 'bot-schedules',
+  description: 'Reconcile scoped schedule creation retries without recreating deleted work',
+  migrate(database) {
+    database.exec(`CREATE TABLE bot_schedule_creations (
+      operation_key TEXT PRIMARY KEY, payload_hash TEXT NOT NULL, schedule_id TEXT NOT NULL
+    );`);
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2444,4 +2455,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   BOT_CREATION_OPERATION_MIGRATION,
   CHANNEL_MANAGEMENT_OPERATION_MIGRATION,
   GROUP_SEND_REVIEW_MIGRATION,
+  BOT_SCHEDULE_CREATION_MIGRATION,
 ]);

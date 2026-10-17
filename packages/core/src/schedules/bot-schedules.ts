@@ -78,7 +78,9 @@ export type BotScheduleErrorCode =
   | 'invalid-input'
   | 'limit-reached'
   | 'locked'
-  | 'inactive';
+  | 'inactive'
+  | 'operation-key-conflict'
+  | 'schedule-creation-deleted';
 
 export class BotScheduleError extends Error {
   readonly code: BotScheduleErrorCode;
@@ -92,7 +94,13 @@ export class BotScheduleError extends Error {
 
 export interface BotScheduleStore {
   list(botSlug: string): BotSchedule[];
-  create(botSlug: string, input: BotScheduleInput, creator: BotScheduleCreator): BotSchedule;
+  creation(operationKey: string, payloadHash: string): string | undefined;
+  create(
+    botSlug: string,
+    input: BotScheduleInput,
+    creator: BotScheduleCreator,
+    receipt?: { operationKey: string; payloadHash: string },
+  ): BotSchedule;
   update(
     botSlug: string,
     id: string,
@@ -605,17 +613,56 @@ export function createBotScheduleStore(options: BotScheduleStoreOptions): BotSch
       );
     },
 
-    create(botSlug, input, creator) {
+    creation(operationKey, payloadHash) {
+      return database.read((db) => {
+        const row = db
+          .prepare(
+            'SELECT payload_hash, schedule_id FROM bot_schedule_creations WHERE operation_key = ?',
+          )
+          .get(operationKey) as { payload_hash: string; schedule_id: string } | undefined;
+        if (row && row.payload_hash !== payloadHash)
+          throw new BotScheduleError(
+            'operation-key-conflict',
+            'The operation key belongs to another schedule request',
+          );
+        return row?.schedule_id;
+      });
+    },
+
+    create(botSlug, input, creator, receipt) {
       const title = normalizeText(input.title, 'title', 120);
       const prompt = normalizeText(input.prompt, 'prompt', 4000);
       const id = createId();
       const at = now();
-      const record = buildRecord(id, title, prompt, input.trigger, at.getTime());
       const enabled = input.enabled ?? true;
       if (creator === 'personabot' && input.locked !== undefined)
         throw new BotScheduleError('locked', 'Only the Human can lock or unlock a Bot Schedule');
       const locked = input.locked === true;
       const created = write((db) => {
+        if (receipt) {
+          const previous = db
+            .prepare(
+              'SELECT payload_hash, schedule_id FROM bot_schedule_creations WHERE operation_key = ?',
+            )
+            .get(receipt.operationKey) as { payload_hash: string; schedule_id: string } | undefined;
+          if (previous) {
+            if (previous.payload_hash !== receipt.payloadHash)
+              throw new BotScheduleError(
+                'operation-key-conflict',
+                'The operation key belongs to another schedule request',
+              );
+            const row = db
+              .prepare('SELECT * FROM bot_schedules WHERE schedule_id = ? AND bot_slug = ?')
+              .get(previous.schedule_id, botSlug) as unknown as ScheduleRow | undefined;
+            if (!row)
+              throw new BotScheduleError(
+                'schedule-creation-deleted',
+                'The original schedule no longer exists',
+              );
+            return view(db, row);
+          }
+        }
+        const record = buildRecord(id, title, prompt, input.trigger, at.getTime());
         if (enabled) requireCapacity(db, botSlug);
         db.prepare(`
           INSERT INTO bot_schedules
@@ -631,6 +678,10 @@ export function createBotScheduleStore(options: BotScheduleStoreOptions): BotSch
           at.toISOString(),
           at.toISOString(),
         );
+        if (receipt)
+          db.prepare(
+            'INSERT INTO bot_schedule_creations (operation_key, payload_hash, schedule_id) VALUES (?, ?, ?)',
+          ).run(receipt.operationKey, receipt.payloadHash, id);
         return view(db, readRow(db, botSlug, id));
       });
       mutated(botSlug);

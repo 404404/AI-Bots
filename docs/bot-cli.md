@@ -337,6 +337,24 @@ deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 
 `inbox` returns one page of the Human Inbox (`items` and `nextCursor`), filtered like the Inbox tabs by `--category` (`action`, `info`, `unread`, `replies`, `handled`), `--bot` or `--channel`. `inbox-dismiss` takes an item's `id` and, when the item has one, its `sourceEventId` as `--source-key`; `inbox-ignore` marks an informational assignment report as read. `inbox-snooze` hides an Action, Info or Replies item until `--until` (at most 30 days away), the Web Inbox's "Remind me later"; `--clear` brings it back now, and `inbox --snoozed` lists the items still snoozed with their `snoozedUntil`. `assignment-context` reads the report behind an `assignment-report` item. `channel-assignments` lists a group Channel's assignment work; `channel-assign` moves a Channel into a sidebar section (`--unsectioned` takes it out). `session-ids` lists the root Sessions Bots own and `session-owner` names a Session's Bot and role. `tool-approval-rules` lists a Bot's "always allow" rules. Revoking a rule, a Workspace Grant or a private MCP server needs `--confirm`, as the Web UI asks for confirmation. With a Host targeted, `grant-revoke` and `grant-write-set` go through it; with `--home` they stay offline maintenance commands. Private MCP servers are listed by `ask-secret-accounts`; a name the Host does not know fails with `private-mcp-server-unavailable`.
 
+### Tob scheduled work
+
+Inside Tob’s trusted Human-DM Shell, the same seven schedule commands use the existing Bot Schedule owner. `schedules <bot>` returns each schedule’s `stateFingerprint`, its trigger timezone, next occurrence and last firing, plus a collection `stateFingerprint`. Calendar triggers require an explicit IANA timezone; ask the Human to resolve an ambiguous Bot or timezone before writing.
+
+For `schedule-create`, pass the observed collection fingerprint as `--expected-state` and a stable `--operation-key`. For `schedule-update`, `schedule-delete` and `schedule-run-now`, pass the selected schedule’s fingerprint. Creation keys bind the Bot’s identity and complete input; replaying the same key and payload reads the original schedule without another write or approval, even after a Host restart. A changed payload refuses `operation-key-conflict`; deletion refuses `schedule-creation-deleted` instead of recreating work. After an uncertain creation, reconcile that same key and payload before considering a new request.
+
+All five trigger types and the UI’s title, prompt, enable/disable and lock settings are available. The review shows the exact Bot/task, previous state and requested changes. Writes recheck Bot identity and state after approval; independent edits refuse `stale-schedule`. Firing/history changes alone do not invalidate an edit. Locked tasks refuse editing, deleting and running; an explicit reviewed `--unlocked`-only patch can unlock, followed by a separate fresh review for the intended change. Deletion always requires `--confirm` and removes its history. Manual firing is a write: inspect `schedule-history` after an uncertain response and never retry automatically.
+
+```bash
+deepseekbot schedules writer
+deepseekbot schedule-create writer --title Check --prompt "Summarize the task" --daily 09:00 --timezone Asia/Tokyo --operation-key daily-check-001 --expected-state <collection-fingerprint>
+deepseekbot schedule-update writer --sid <id> --disabled --expected-state <schedule-fingerprint>
+deepseekbot schedule-history writer --sid <id>
+deepseekbot schedule-delete writer --sid <id> --expected-state <schedule-fingerprint> --confirm
+```
+
+These scoped requirements supplement the Human CLI below. Preview is timing evidence; only actual history with its Source Event/Session and the selected Bot’s result establishes execution. CLI access does not grant unattended authorization or bypass the original Human-DM source and approval policy.
+
 ### Schedules on a live Host
 
 ```bash

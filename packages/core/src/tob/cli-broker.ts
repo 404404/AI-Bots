@@ -86,6 +86,12 @@ const CODES = new Set([
   'creation-target-unavailable',
   'git-not-found',
   'memory-unavailable',
+  'unknown-schedule',
+  'stale-schedule',
+  'schedule-creation-deleted',
+  'locked',
+  'inactive',
+  'limit-reached',
   'invalid-memory-dir',
 ]);
 

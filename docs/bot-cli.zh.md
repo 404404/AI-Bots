@@ -330,6 +330,24 @@ deepseekbot private-mcp-remove <bot-id> --server <name> --confirm
 
 `inbox` 返回 Human Inbox 的一页（`items` 和 `nextCursor`），可以像 Inbox 的标签页一样按 `--category`（`action`、`info`、`unread`、`replies`、`handled`）、`--bot` 或 `--channel` 筛选。`inbox-dismiss` 接收条目的 `id`，条目带有 `sourceEventId` 时把它作为 `--source-key` 传入；`inbox-ignore` 把一条仅供知悉的委派汇报标为已读。`inbox-snooze` 把需要处理、通知或回复里的条目隐藏到 `--until`（最多 30 天后），对应网页 Inbox 的「稍后提醒」；`--clear` 立即让它回来，`inbox --snoozed` 列出仍在延后的条目及其 `snoozedUntil`。`assignment-context` 读取 `assignment-report` 条目背后的汇报。`channel-assignments` 列出群组 Channel 的委派工作；`channel-assign` 把 Channel 移到侧栏的某个分组（`--unsectioned` 移出分组）。`session-ids` 列出 Bot 拥有的根会话，`session-owner` 说明某个会话属于哪个 Bot、以什么角色运行。`tool-approval-rules` 列出 Bot 的"始终允许"规则。撤销规则、工作区授权或私有 MCP 服务器都需要 `--confirm`，与 Web UI 的确认一致。指定了 Host 时，`grant-revoke` 和 `grant-write-set` 经由 Host 执行；使用 `--home` 时仍是离线维护命令。私有 MCP 服务器由 `ask-secret-accounts` 列出；Host 不认识的名称会以 `private-mcp-server-unavailable` 失败。
 
+### Tob scheduled work
+
+在 Tob 的可信 Human 私聊 Shell 中，同样七个定时任务命令调用既有 Bot Schedule owner。`schedules <bot>` 返回各任务的 `stateFingerprint`、触发器时区、下次运行时间与上次触发，以及任务集合的 `stateFingerprint`。日历触发器必须明确 IANA 时区；Bot 或时区有歧义时，先向 Human 澄清再写入。
+
+`schedule-create` 必须用 `--expected-state` 传入读到的集合指纹，并提供稳定 `--operation-key`；`schedule-update`、`schedule-delete`、`schedule-run-now` 则传入选定任务的指纹。创建标识绑定 Bot 身份和完整输入；同标识、同输入重放只读回原任务，不重复写入或审批，Host 重启后仍有效。输入变化拒绝 `operation-key-conflict`；原任务删除后拒绝 `schedule-creation-deleted`，不会重新创建。创建结果不确定时先按同标识、同输入核对，再考虑新请求。
+
+五种触发器及 UI 的名称、提示词、启停和锁定选项全部可用。审核展示准确 Bot／任务、旧状态和改动，审批后重验身份和状态；独立修改使旧请求拒绝 `stale-schedule`，正常触发／历史变化不会使编辑过期。锁定任务拒绝编辑、删除和立即运行；可通过独立审核的仅 `--unlocked` 操作解锁，再根据新状态审核具体修改，不能把解锁藏在编辑中。删除始终要求 `--confirm`，并删除历史。立即运行也是写入：结果不确定时先查 `schedule-history`，绝不能自动重试。
+
+```bash
+deepseekbot schedules writer
+deepseekbot schedule-create writer --title Check --prompt "汇总任务" --daily 09:00 --timezone Asia/Tokyo --operation-key daily-check-001 --expected-state <集合指纹>
+deepseekbot schedule-update writer --sid <id> --disabled --expected-state <任务指纹>
+deepseekbot schedule-history writer --sid <id>
+deepseekbot schedule-delete writer --sid <id> --expected-state <任务指纹> --confirm
+```
+
+这些受限要求补充下文的 Human CLI。预览仅证明时间计算；实际历史中的 Source Event／Session 与正确 Bot 的结果才证明执行。CLI 能力不会授予无人值守权限，也不能绕过原 Human 私聊来源与审批策略。
+
 ### 在线 Host 上的定时任务
 
 ```bash
