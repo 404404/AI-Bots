@@ -628,6 +628,7 @@ describe('bridge typert service', () => {
       'sessionOwner',
       'botSessionIds',
       'memoryFileTarget',
+      'memoryRevisionQuery',
       'memorySnapshot',
       'memoryFile',
       'memoryHistory',
