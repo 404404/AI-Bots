@@ -1,3 +1,5 @@
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useCallback,
@@ -9,14 +11,7 @@ import {
   memo,
   type ReactElement,
 } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  RefreshControl,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Platform, Pressable, RefreshControl, View, useWindowDimensions } from 'react-native';
 import { TabView } from 'react-native-tab-view';
 import { useIsFocused } from 'expo-router';
 import Animated, {
@@ -585,7 +580,9 @@ const ActivityPage = memo(function ActivityPage({
           flexGrow: 1,
           paddingBottom: bottom + headerTravel + space.x6,
         }}
-        automaticallyAdjustKeyboardInsets={!searchFocused}
+        renderScrollComponent={(props) => (
+          <KeyboardFormScroll {...props} enabled={!searchFocused} />
+        )}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         onScroll={onScroll}

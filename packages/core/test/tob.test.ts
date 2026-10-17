@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { attachOperationalModule } from '../src/database/owner.js';
 import type { DshWorkspace } from '../src/workspaces/grants.js';
 import { createCore } from '../src/plugin.js';
 import { createBridgeMethods } from '../src/bridge/methods.js';
@@ -25,6 +26,7 @@ function settings() {
 function fixture(
   run: (input: OrchestratorAgentRun) => Promise<void> = async () => {},
   extra: Partial<Parameters<typeof createCore>[0]> = {},
+  steerOrchestrator?: () => boolean,
 ) {
   const native = settings();
   const home = createTempRoot('tob-');
@@ -35,6 +37,7 @@ function fixture(
       tobSettings: () => native,
       agents: {
         runOrchestrator: run,
+        ...(steerOrchestrator ? { steerOrchestrator } : {}),
         async runAssignment() {},
         requestAssignment() {
           throw new Error('unexpected');
@@ -172,10 +175,11 @@ describe('Tob canonical identity and settings', () => {
     const outcomes: unknown[] = [];
     const f = fixture(async (run) => {
       try {
-        outcomes.push(await run.channels.tobSetting!());
-        outcomes.push(
-          await run.channels.tobSetting!({ value: 3, previousValue: 8, expectedRevision: 0 }),
-        );
+        const authorize = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+        expect(run.tobCli).toBe(true);
+        authorize();
+        outcomes.push(f.core.tob.readSetting());
+        outcomes.push(await f.core.tob.writeSetting(3, 0, authorize));
       } catch (error) {
         outcomes.push(error instanceof Error ? error.message : error);
       }
@@ -221,9 +225,252 @@ describe('Tob canonical identity and settings', () => {
       await f.core.runtime.whenIdle();
       expect(outcomes.at(-1)).toBe('human-dm-required');
       expect(f.core.tob.readSetting().value).toBe(3);
-      expect(() => f.core.runtime.validateTobSetting?.('forged-session', {})).toThrow(
+      expect(() => f.core.runtime.captureTobCliAuthority?.('forged-session')).toThrow(
         'tob-authority-required',
       );
+    } finally {
+      await f.close();
+    }
+  });
+  it('revokes a captured CLI authority after its turn ends, including another turn in the same Session', async () => {
+    const captured: Array<{ sessionId: string; authorize: () => void }> = [];
+    const f = fixture(async (run) => {
+      if (captured[0]) expect(captured[0].authorize).toThrow('human-dm-required');
+      const authorize = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+      expect(authorize).not.toThrow();
+      captured.push({ sessionId: run.sessionId, authorize });
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core });
+      for (const body of ['Read the limit', 'Read again']) {
+        await bridge.channelSend({
+          channelId: home.channelId,
+          messageId: 'human-' + crypto.randomUUID(),
+          body,
+        });
+        await f.core.runtime.whenIdle();
+        expect(captured.at(-1)!.authorize).toThrow('human-dm-required');
+      }
+      expect(captured).toHaveLength(2);
+      expect(captured[0]!.sessionId).toBe(captured[1]!.sessionId);
+      expect(f.core.tob.readSetting().value).toBe(8);
+    } finally {
+      await f.close();
+    }
+  });
+  it('rechecks the canonical source after capture instead of trusting a once-valid CLI call', async () => {
+    let checked = false;
+    const f = fixture(async (run) => {
+      const authorize = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+      expect(authorize).not.toThrow();
+      attachOperationalModule(f.core.operationalDatabase, 'tob-test').transaction((db) => {
+        db.prepare(
+          "UPDATE inbox_admissions SET last_error = 'channel-ended' WHERE bot_slug = ?",
+        ).run(run.bot.slug);
+      });
+      expect(authorize).toThrow('Source Channel has ended');
+      await expect(f.core.tob.writeSetting(3, 0, authorize)).rejects.toThrow(
+        'Source Channel has ended',
+      );
+      checked = true;
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Set limit to 3',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+      expect(f.core.tob.readSetting().value).toBe(8);
+    } finally {
+      await f.close();
+    }
+  });
+  it('revokes a Shell snapshot when a new Human message is accepted by steering', async () => {
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let authorize!: () => void;
+    let sessionId!: string;
+    const steer = vi.fn(() => true);
+    const f = fixture(
+      async (run) => {
+        sessionId = run.sessionId;
+        authorize = f.core.runtime.captureTobCliAuthority!(sessionId);
+        started();
+        await released;
+      },
+      {},
+      steer,
+    );
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core });
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read the limit',
+      });
+      await start;
+      expect(authorize).not.toThrow();
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Wait, do not change it',
+      });
+      expect(steer).toHaveBeenCalled();
+      expect(authorize).toThrow('human-dm-required');
+      expect(f.core.runtime.captureTobCliAuthority!(sessionId)).not.toThrow();
+    } finally {
+      release();
+      await f.core.runtime.whenIdle();
+      await f.close();
+    }
+  });
+  it('marks only the captured accepted sources before a write and refuses marking after the turn', async () => {
+    let mark!: () => void;
+    let checked = false;
+    const f = fixture(async (run) => {
+      const authority = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+      const port = attachOperationalModule(f.core.operationalDatabase, 'tob-cli-test');
+      const marked = () =>
+        port.read((db) =>
+          db
+            .prepare(
+              'SELECT side_effect_started_at FROM inbox_admissions WHERE bot_slug = ? AND reason = ?',
+            )
+            .all(run.bot.slug, 'human-dm'),
+        );
+      expect(marked()).toEqual([{ side_effect_started_at: null }]);
+      authority();
+      expect(marked()).toEqual([{ side_effect_started_at: null }]);
+      authority.markSideEffect();
+      expect(marked()).toEqual([{ side_effect_started_at: expect.any(String) }]);
+      mark = authority.markSideEffect;
+      checked = true;
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Set limit to 3',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+      expect(mark).toThrow('human-dm-required');
+    } finally {
+      await f.close();
+    }
+  });
+  it('revokes CLI authority when native Session content becomes unavailable', async () => {
+    let checked = false;
+    const f = fixture(async (run) => {
+      const authority = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+      f.core.ownership.markContentUnavailable();
+      expect(authority).toThrow('tob-authority-required');
+      expect(authority.markSideEffect).toThrow('tob-authority-required');
+      checked = true;
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read limit',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it('refuses legacy Group management at the runtime boundary while keeping Tob private replies available', async () => {
+    let checked = false;
+    const f = fixture(async (run) => {
+      const actions = [
+        () => run.channels.createGroup('Group'),
+        () => run.channels.inviteGroup({ channelId: 'group', targetBotSlug: 'peer' }),
+        () => run.channels.respondToGroupInvite({ invitationId: 'invite', accept: true }),
+        () => run.channels.requestGroupJoin!({ channelId: 'group' }),
+        () =>
+          run.channels.decideGroupJoin!({ channelId: 'group', requestId: 'request', accept: true }),
+        () => run.channels.renameGroup({ channelId: 'group', name: 'Renamed' }),
+        () => run.channels.removeGroupMember({ channelId: 'group', botSlug: 'peer' }),
+        () => run.channels.leaveGroup({ channelId: 'group' }),
+      ];
+      for (const action of actions) expect(action).toThrow('tob-cli-required');
+      const sent = await run.channels.send({ body: 'I can manage groups from this private DM.' });
+      expect(sent.body).toBe('I can manage groups from this private DM.');
+      checked = true;
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Create a group',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it('keeps ordinary Group tools working but prevents inviting or approving protected Tob', async () => {
+    let checked = false;
+    let tobSlug!: string;
+    const f = fixture(async (run) => {
+      if (run.bot.slug !== 'owner') return;
+      const group = run.channels.createGroup('Ordinary Group');
+      expect(group.members).toContain('owner');
+      expect(() =>
+        run.channels.inviteGroup({ channelId: group.id, targetBotSlug: tobSlug }),
+      ).toThrow('protected-bot');
+      const invitation = run.channels.inviteGroup({ channelId: group.id, targetBotSlug: 'peer' });
+      expect(invitation.targetBotSlug).toBe('peer');
+      const request = f.core.channels.requestGroupJoin({
+        channelId: group.id,
+        requesterBotSlug: tobSlug,
+        requesterBotCreatedAt: f.core.registry.get(tobSlug)!.createdAt,
+      });
+      expect(() =>
+        run.channels.decideGroupJoin!({ channelId: group.id, requestId: request.id, accept: true }),
+      ).toThrow('protected-bot');
+      expect(f.core.channels.get(group.id)?.members).not.toContain(tobSlug);
+      const peerRequest = f.core.channels.requestGroupJoin({
+        channelId: group.id,
+        requesterBotSlug: 'another-peer',
+        requesterBotCreatedAt: f.core.registry.get('another-peer')!.createdAt,
+      });
+      const decided = run.channels.decideGroupJoin!({
+        channelId: group.id,
+        requestId: peerRequest.id,
+        accept: true,
+      });
+      expect(decided.channel.members).toContain('another-peer');
+      checked = true;
+    });
+    try {
+      tobSlug = (await f.core.tob.ensure()).botSlug;
+      for (const slug of ['owner', 'peer', 'another-peer'])
+        f.core.registry.create({ slug, displayName: slug });
+      const dm = f.core.channels.getOrCreateDm('owner', 'owner')!;
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: dm.id,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Create a group',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
     } finally {
       await f.close();
     }

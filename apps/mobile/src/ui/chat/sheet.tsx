@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { ActivityIndicator, Modal, Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import type { LayerName } from '../design/layers';
 import { radius, space } from '../design/tokens';
@@ -57,6 +58,7 @@ export function Sheet({
   subtitle,
   onClose,
   children,
+  avoidKeyboard = false,
 }: {
   page?: ComponentType<SheetPageProps> | undefined;
   visible: boolean;
@@ -65,6 +67,7 @@ export function Sheet({
   subtitle?: string;
   onClose(): void;
   children: ReactNode;
+  avoidKeyboard?: boolean;
 }) {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
@@ -81,7 +84,9 @@ export function Sheet({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {visible ? (
-        <View
+        <KeyboardAvoidingView
+          behavior="padding"
+          enabled={avoidKeyboard}
           style={{
             flex: 1,
             justifyContent: 'flex-end',
@@ -140,7 +145,7 @@ export function Sheet({
             )}
             {children}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       ) : null}
     </Modal>
   );

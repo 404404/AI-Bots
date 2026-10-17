@@ -466,7 +466,7 @@ export class CloudClient {
   createOrganization = (id: string, name: string) =>
     this.lock(async () => {
       name = name.trim();
-      if (!name || name.length > 80 || /[\u0000-\u001f]/.test(name))
+      if (!name || name.length > 80 || [...name].some((char) => char.charCodeAt(0) < 32))
         fail('INVALID_ORGANIZATION_INPUT');
       let entry = await this.current(this.entry(id));
       if (entry.pendingCreate && entry.pendingCreate.name !== name)

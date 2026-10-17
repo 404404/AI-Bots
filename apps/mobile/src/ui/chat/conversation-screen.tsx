@@ -181,6 +181,7 @@ const RequestCard = memo(function RequestCard({
       focused={focused}
       group={group}
       replyInChat={replyInChat}
+      expandInput
       answeredHere={answeredHere}
     />
   );

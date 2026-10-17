@@ -99,8 +99,8 @@ export interface ReleaseInstaller {
 export interface ReleaseService {
   info(since?: string): ReleaseInfo;
   update(): Promise<ReleaseUpdate>;
-  install(version: string): Promise<ReleaseInstall>;
-  restart(): Promise<ReleaseRestart>;
+  install(version: string, beforeEffect?: () => void): Promise<ReleaseInstall>;
+  restart(beforeEffect?: (pendingVersion: string) => void): Promise<ReleaseRestart>;
 }
 
 export interface ReleaseServiceOptions {
@@ -215,8 +215,8 @@ export function createLoadingReleaseService(options: ReleaseServiceOptions): Rel
   return {
     info: (since) => current().info(since),
     update: () => current().update(),
-    install: (version) => current().install(version),
-    restart: () => current().restart(),
+    install: (version, beforeEffect) => current().install(version, beforeEffect),
+    restart: (beforeEffect) => current().restart(beforeEffect),
   };
 }
 
@@ -233,6 +233,7 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
   let pending: Promise<CheckResult> | undefined;
   let installed: string | undefined;
   let installing: Promise<ReleaseInstall> | undefined;
+  let installingVersion: string | undefined;
 
   const profileBundle = async (): Promise<
     { installer: ReleaseInstaller; version: string | undefined } | undefined
@@ -259,7 +260,10 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
       ? version
       : undefined;
 
-  const runInstall = async (version: string): Promise<ReleaseInstall> => {
+  const runInstall = async (
+    version: string,
+    beforeEffect?: () => void,
+  ): Promise<ReleaseInstall> => {
     const current = runningVersion;
     if (identity?.kind === 'unknown') return { status: 'failed', reason: 'identity-invalid' };
     if (!isReleaseVersion(version) || compareVersions(version, current) <= 0) {
@@ -267,6 +271,7 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
     }
     const installer = (await profileBundle())?.installer;
     if (installer === undefined) return { status: 'failed', reason: 'unavailable' };
+    beforeEffect?.();
     let result: ReleaseInstallerResult;
     try {
       result = await installer.installBundle(`${RELEASE_PACKAGE}@${version}`);
@@ -395,19 +400,26 @@ export function createReleaseService(options: ReleaseServiceOptions): ReleaseSer
       if (result.status !== 'available') return result;
       return { ...result, installable: bundle !== undefined };
     },
-    install(version) {
-      installing ??= runInstall(version).finally(() => {
-        installing = undefined;
-      });
+    install(version, beforeEffect) {
+      if (installing && (beforeEffect !== undefined || installingVersion !== version))
+        return Promise.resolve({ status: 'failed', reason: 'unavailable' });
+      if (!installing) {
+        installingVersion = version;
+        installing = runInstall(version, beforeEffect).finally(() => {
+          installing = undefined;
+          installingVersion = undefined;
+        });
+      }
       return installing;
     },
-    async restart() {
+    async restart(beforeEffect) {
       if (identity?.kind === 'unknown') return { status: 'failed', reason: 'identity-invalid' };
       const restarter = options.restarter?.();
       if (restarter === undefined) return { status: 'failed', reason: 'unavailable' };
       const pendingVersion =
         installed ?? newerInProfile(runningVersion, (await profileBundle())?.version);
       if (pendingVersion === undefined) return { status: 'failed', reason: 'not-pending' };
+      beforeEffect?.(pendingVersion);
       restarter.restart();
       return { status: 'restarting' };
     },

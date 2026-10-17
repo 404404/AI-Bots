@@ -26,11 +26,29 @@ export const edge = {
 export const sheetHandle = { width: 32, height: 4 } as const;
 export const navigationBar = {
   height: 64,
-  indicatorWidth: 56,
+  itemWidth: 80,
+  radius: 20,
+  indicatorWidth: 40,
   indicatorHeight: 32,
+  indicatorRadius: radius.md,
   itemPadding: 6,
+  shadow: {
+    light: '0 2px 8px rgba(15, 17, 21, 0.06)',
+    dark: '0 2px 8px rgba(0, 0, 0, 0.12)',
+  },
 } as const;
 export const modalRail = { maxWidth: 360 } as const;
+
+export const androidSettings = {
+  radius: radius.xl,
+  rowHeight: 56,
+  supportingRowHeight: 72,
+  inset: space.x5,
+  vertical: space.x5,
+  sectionGap: space.x4,
+  switchWidth: 52,
+  switchHeight: 48,
+} as const;
 
 export type TypeRole = { size: number; line: number };
 
