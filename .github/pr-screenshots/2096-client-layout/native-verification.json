@@ -12,6 +12,172 @@
     "assertions": ["layout gap remains 8", "Client generation changes"],
     "pageErrors": []
   },
-  "coverage": "single Client; layout gap only; not nested native layout or physical input",
-  "mainDesktopRestored": true
+  "coverage": "single native Client; gap, owner tree/ratio, move, hide/show, Channel round trip and restart. Not physical drag/resize, pixel fit audit, old native migration or native model approval.",
+  "mainDesktopRestored": true,
+  "nested": {
+    "capturedAt": "2026-10-17T22:58:40.434Z",
+    "viewport": {
+      "width": 2522,
+      "height": 1640
+    },
+    "channelId": "dm-bot-f9fed43629fe495184280845d864f15e",
+    "beforeTree": {
+      "axis": "horizontal",
+      "ratio": 0.7,
+      "first": {
+        "axis": "horizontal",
+        "ratio": 0.7,
+        "first": {
+          "axis": "horizontal",
+          "ratio": 0.7,
+          "first": {
+            "axis": "horizontal",
+            "ratio": 0.7,
+            "first": {
+              "axis": "horizontal",
+              "ratio": 0.7,
+              "first": {
+                "axis": "horizontal",
+                "ratio": 0.7,
+                "first": {
+                  "panel": "messages"
+                },
+                "second": {
+                  "panel": "botharness-computer"
+                }
+              },
+              "second": {
+                "panel": "botharness-browser"
+              }
+            },
+            "second": {
+              "panel": "schedules"
+            }
+          },
+          "second": {
+            "panel": "memory-evolution"
+          }
+        },
+        "second": {
+          "panel": "memory-files"
+        }
+      },
+      "second": {
+        "panel": "sessions"
+      }
+    },
+    "afterTree": {
+      "axis": "vertical",
+      "ratio": 0.58,
+      "first": {
+        "axis": "horizontal",
+        "ratio": 0.7,
+        "first": {
+          "axis": "horizontal",
+          "ratio": 0.7,
+          "first": {
+            "axis": "horizontal",
+            "ratio": 0.7,
+            "first": {
+              "axis": "horizontal",
+              "ratio": 0.7,
+              "first": {
+                "axis": "vertical",
+                "ratio": 0.5,
+                "first": {
+                  "panel": "memory-files"
+                },
+                "second": {
+                  "panel": "messages"
+                }
+              },
+              "second": {
+                "panel": "botharness-computer"
+              }
+            },
+            "second": {
+              "panel": "botharness-browser"
+            }
+          },
+          "second": {
+            "panel": "schedules"
+          }
+        },
+        "second": {
+          "panel": "memory-evolution"
+        }
+      },
+      "second": {
+        "panel": "sessions"
+      }
+    },
+    "assertions": [
+      "Memory moved above Messages",
+      "root axis vertical and ratio 0.58",
+      "Memory hide/show restores same tree",
+      "another Channel differs; returning restores same tree"
+    ],
+    "pageErrors": [],
+    "restart": {
+      "capturedAt": "2026-10-17T22:59:09.544Z",
+      "generationBefore": "8e6c1121-86ad-41b8-8102-981d045cb2a6",
+      "generationAfter": "f0ae76e0-b48d-422a-9568-97f0e4131855",
+      "tree": {
+        "axis": "vertical",
+        "ratio": 0.58,
+        "first": {
+          "axis": "horizontal",
+          "ratio": 0.7,
+          "first": {
+            "axis": "horizontal",
+            "ratio": 0.7,
+            "first": {
+              "axis": "horizontal",
+              "ratio": 0.7,
+              "first": {
+                "axis": "horizontal",
+                "ratio": 0.7,
+                "first": {
+                  "axis": "vertical",
+                  "ratio": 0.5,
+                  "first": {
+                    "panel": "memory-files"
+                  },
+                  "second": {
+                    "panel": "messages"
+                  }
+                },
+                "second": {
+                  "panel": "botharness-computer"
+                }
+              },
+              "second": {
+                "panel": "botharness-browser"
+              }
+            },
+            "second": {
+              "panel": "schedules"
+            }
+          },
+          "second": {
+            "panel": "memory-evolution"
+          }
+        },
+        "second": {
+          "panel": "sessions"
+        }
+      },
+      "assertions": [
+        "same tree and ratio after Desktop restart",
+        "Memory visibly mounted",
+        "Client generation changed"
+      ],
+      "pageErrors": []
+    },
+    "mainDesktopRestored": true
+  },
+  "retainedHarnessFailures": [
+    "Unscoped Channel row click was not clickable; scoped to the visible Channel-list button with accessible-name and stable-box checks.",
+    "Generic panel-body selector did not exist on special Channel body; changed readiness to the actual shared panel header."
+  ]
 }
