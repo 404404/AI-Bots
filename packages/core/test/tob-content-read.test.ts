@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BotAgentAdapter, OrchestratorAgentRun } from '../src/runtime/bot-runtime.js';
 import { createCore } from '../src/plugin.js';
 import { createBridgeMethods } from '../src/bridge/methods.js';
-import { createTobContentReader } from '../src/tob/content-read.js';
+import { createTobContentReader, readTobBodyChunk } from '../src/tob/content-read.js';
 import {
   createTobContentOperations,
   TOB_CONTENT_CAPABILITIES,
@@ -139,6 +139,28 @@ describe('selected Tob content reads through existing Human owners', () => {
       'message-unavailable',
     );
   });
+  it('refuses forged offsets or anchors and expires cursor integrity after owner restart', async () => {
+    const f = fixture();
+    await messages(f, f.dm.id);
+    const first = f.reader.channel({ target: f.dm.id, limit: 1 });
+    const second = f.reader.channel({ target: f.dm.id, limit: 1, cursor: first.nextCursor });
+    const [payload, signature] = second.nextCursor!.split('.');
+    const decoded = JSON.parse(Buffer.from(payload!, 'base64url').toString('utf8'));
+    for (const patch of [{ offset: 1 }, { offset: 999 }, { anchor: 'different-anchor' }]) {
+      const forged =
+        Buffer.from(JSON.stringify({ ...decoded, ...patch })).toString('base64url') +
+        '.' +
+        signature;
+      if (forged === second.nextCursor) continue;
+      expect(() => f.reader.channel({ target: f.dm.id, cursor: forged })).toThrow(
+        'invalid-read-cursor',
+      );
+    }
+    expect(() =>
+      createTobContentReader(f.core).channel({ target: f.dm.id, cursor: first.nextCursor }),
+    ).toThrow('invalid-read-cursor');
+    expect(createTobContentReader(f.core).channel({ target: f.dm.id }).entries).toHaveLength(3);
+  });
   it('bounds message bodies, attachments and structured private/review fields while preserving quoted text as data', async () => {
     const f = fixture();
     await f.core.channels.appendMessage(f.dm.id, {
@@ -210,6 +232,12 @@ describe('selected Tob content reads through existing Human owners', () => {
     expect(() =>
       createTobContentReader({ ...f.core, runtime: undefined }).progress({ target: 'alpha' }),
     ).toThrow('progress-unavailable');
+  });
+  it('stops a multibyte body exactly at the total traversal boundary without splitting a Unicode character', () => {
+    const cjk = readTobBodyChunk('中'.repeat(1_000_333), 999999);
+    expect(cjk).toEqual({ text: '中', next: 1000000, hasMore: true, limitReached: true });
+    const emoji = readTobBodyChunk('x'.repeat(999999) + '😀tail', 999999);
+    expect(emoji).toEqual({ text: '', next: 999999, hasMore: true, limitReached: true });
   });
   it('keeps each response below eight KiB even when the requested page has twenty long messages', async () => {
     const f = fixture();
