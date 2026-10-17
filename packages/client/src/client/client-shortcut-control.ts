@@ -151,8 +151,6 @@ export function createClientShortcutHandlers(
               problem.kind === 'conflict' ? [navigationShortcutId(problem.action)] : [],
             );
         } else {
-          // The native owner accepts a revision-checked request, not an abortable write.
-          // Once dispatched, a lost reply or lifetime must be reconciled by readback.
           let result;
           try {
             result = await shortcuts.edit(
