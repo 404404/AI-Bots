@@ -1946,7 +1946,7 @@
         <div class="am-head-meta">
           <span><b>base</b>a3e2c4e64d131191e686e33cb207d3db9b3a0937</span
           ><span><b>qualified-source</b>f9fcb32bc65d0453fdd0559bb7b75b6dc9a7ca45</span
-          ><span><b>evidence-head</b>b9b8529a5bca353638a141dccdd1bc0dd6b2ee00</span
+          ><span><b>evidence-head</b>496d76ed9c0b4bd99b6d6d06b6888ccd0b8067e2</span
           ><span><b>generated</b>2026-10-18</span>
         </div>
         <div class="am-intro am-md">
@@ -2410,7 +2410,7 @@
                   expires and disappears on restart.
                 </p>
                 <p>
-                  The real Web form resumed the same attempt. Captured requests were two polls, with
+                  Both Web and macOS resumed their original attempt. Each captured two polls, with
                   no new start or credential submission.
                 </p>
               </div>
@@ -2495,11 +2495,29 @@
                         </td>
                       </tr>
                       <tr>
-                        <td>Native macOS, full CI and integrated stack</td>
+                        <td>Native macOS policy, private continuation and restart</td>
+                        <td>
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span>same Profile
+                            and exact readback</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Full CI at 496d76ed9</td>
+                        <td>
+                          <span class="am-status am-status--ok"
+                            ><span class="am-status-icon" aria-hidden="true">✓</span>all shards,
+                            docs, bundles and smoke</span
+                          >
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Integrated stack</td>
                         <td>
                           <span class="am-status am-status--warn"
                             ><span class="am-status-icon" aria-hidden="true">!</span>separate
-                            pending gates</span
+                            pending gate</span
                           >
                         </td>
                       </tr>
@@ -2574,7 +2592,7 @@
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >Answer me with HTML</a
       >
-      0.5.0 · 2026-10-18 07:45 ·
+      0.5.0 · 2026-10-18 08:08 ·
       <a href="https://github.com/QingYunA/answer-me-with-html" target="_blank" rel="noopener"
         >★ Star on GitHub</a
       >
@@ -2588,7 +2606,7 @@ lang: en
 cols: 2
 base: a3e2c4e64d131191e686e33cb207d3db9b3a0937
 qualified-source: f9fcb32bc65d0453fdd0559bb7b75b6dc9a7ca45
-evidence-head: b9b8529a5bca353638a141dccdd1bc0dd6b2ee00
+evidence-head: 496d76ed9c0b4bd99b6d6d06b6888ccd0b8067e2
 generated: 2026-10-18
 ---
 Tob prepares supported policy changes through ordinary Shell and CLI calls. Existing owners retain permissions, persistence and private inputs.
@@ -2645,7 +2663,7 @@ Human -&gt; Applications: private credentials or QR consent
 
 Only the authenticated Human adapter resolves the native attempt. Tob and the Human CLI receive safe receipt/status output. The process-local receipt projection expires and disappears on restart.
 
-The real Web form resumed the same attempt. Captured requests were two polls, with no new start or credential submission.
+Both Web and macOS resumed their original attempt. Each captured two polls, with no new start or credential submission.
 
 ## E What the evidence proves
 
@@ -2658,7 +2676,9 @@ The real Web form resumed the same attempt. Captured requests were two polls, wi
 | Real connector policy change and stale refusal | ok local policy only |
 | IM start, private continuation, status and cancel | ok same Provider attempt |
 | Same-Profile restart and final reporting | ok persisted policy and accurate approval reply |
-| Native macOS, full CI and integrated stack | warn separate pending gates |
+| Native macOS policy, private continuation and restart | ok same Profile and exact readback |
+| Full CI at 496d76ed9 | ok all shards, docs, bundles and smoke |
+| Integrated stack | warn separate pending gate |
 | Human QA and merge | warn pending; Draft remains unmerged |
 
 The first grant reply incorrectly claimed direct application. Actual Human review occurred. The final instruction, contracts and fresh real reply address that reporting discrepancy.
