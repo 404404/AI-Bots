@@ -6,12 +6,16 @@ import {
   createChatBackgrounds,
   parseBackgroundDocument,
   type BackgroundDocument,
+  type BackgroundDimensions,
+  type BackgroundSource,
 } from './chat-background';
 
 const root = () => new Directory(Paths.document, 'chat-backgrounds');
 const images = () => new Directory(root(), 'images');
 const records = () => new Directory(root(), 'settings');
 const MAX_EDGE = 2048;
+const MAX_SOURCE_PIXELS = 16_000_000;
+const MAX_FILE_BYTES = 16 * 1024 * 1024;
 const imageId = (id: string) => /^[\w-]+\.jpg$/u.test(id);
 
 export function backgroundImageUri(id: string): string {
@@ -74,18 +78,26 @@ export function nativeBackgroundPorts() {
         }
       } catch {}
     },
-    async importImage(uri: string) {
+    async importImage(uri: string, dimensions?: BackgroundDimensions) {
+      if (
+        !dimensions ||
+        !Number.isSafeInteger(dimensions.width) ||
+        !Number.isSafeInteger(dimensions.height) ||
+        dimensions.width < 1 ||
+        dimensions.height < 1 ||
+        Math.max(dimensions.width, dimensions.height) > 16384 ||
+        dimensions.width * dimensions.height > MAX_SOURCE_PIXELS
+      )
+        throw Error('background-image-budget');
       const context = ImageManipulator.manipulate(uri);
       let rendered: ImageRef | undefined;
       try {
-        rendered = await context.renderAsync();
-        if (Math.max(rendered.width, rendered.height) > MAX_EDGE) {
+        if (Math.max(dimensions.width, dimensions.height) > MAX_EDGE) {
           context.resize(
-            rendered.width >= rendered.height ? { width: MAX_EDGE } : { height: MAX_EDGE },
+            dimensions.width >= dimensions.height ? { width: MAX_EDGE } : { height: MAX_EDGE },
           );
-          rendered.release();
-          rendered = await context.renderAsync();
         }
+        rendered = await context.renderAsync();
         const saved = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.88 });
         const dir = images();
         if (!dir.exists) dir.create({ intermediates: true });
@@ -94,7 +106,8 @@ export function nativeBackgroundPorts() {
         const temporary = new File(saved.uri);
         try {
           await temporary.copy(target);
-          if (!target.exists || target.size === 0) throw Error('background-copy-failed');
+          if (!target.exists || target.size === 0 || target.size > MAX_FILE_BYTES)
+            throw Error('background-copy-failed');
           return { id, width: saved.width, height: saved.height };
         } catch (error) {
           if (target.exists) target.delete();
@@ -129,7 +142,10 @@ export function useChatBackgrounds() {
   return useSyncExternalStore(chatBackgrounds.subscribe, chatBackgrounds.getSnapshot);
 }
 
-export async function pickBackgroundImage(): Promise<string | undefined> {
+export async function pickBackgroundImage(): Promise<BackgroundSource | undefined> {
   const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
-  return result.canceled ? undefined : result.assets[0]?.uri;
+  const asset = result.canceled ? undefined : result.assets[0];
+  return asset === undefined
+    ? undefined
+    : { uri: asset.uri, width: asset.width, height: asset.height };
 }

@@ -2,6 +2,47 @@ import { describe, expect, it } from 'vitest';
 import { createChatBackgrounds, type BackgroundDocument } from '../src/host/chat-background';
 
 describe('chat background preferences', () => {
+  it('normalizes persisted missing fields and finite ranges while refusing invalid live edits', async () => {
+    const owner = createChatBackgrounds({
+      read: async () => ({
+        version: 1,
+        default: { kind: 'image', id: 'old.jpg', width: 800, height: 1200, x: 1.01, y: -0.2 },
+        overrides: {},
+      }),
+      write: async () => {},
+      importImage: async () => {
+        throw Error('unused');
+      },
+      listImages: async () => ['old.jpg'],
+      removeImage: async () => {
+        throw Error('saved picture must stay');
+      },
+    });
+    await owner.ready;
+    expect(owner.resolve()).toEqual({
+      kind: 'image',
+      id: 'old.jpg',
+      width: 800,
+      height: 1200,
+      fit: 'cover',
+      x: 1,
+      y: 0,
+      fade: 60,
+    });
+    const edit = owner.edit();
+    expect(() =>
+      edit.choose({
+        kind: 'image',
+        id: 'old.jpg',
+        width: 800,
+        height: 1200,
+        fit: 'cover',
+        x: 1.01,
+        y: 0,
+        fade: 60,
+      }),
+    ).toThrow('background-invalid-choice');
+  });
   it('inherits device defaults without crossing stable Host/Channel overrides', async () => {
     let stored: BackgroundDocument | undefined;
     const owner = createChatBackgrounds({

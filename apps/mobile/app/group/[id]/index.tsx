@@ -2,15 +2,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
-import { groupActions, groupInfo } from '../../src/host/group-channel';
-import { useHostSession, useHostSnapshot } from '../../src/host/host-session';
-import { pickGroupAvatar } from '../../src/host/pick-group-avatar';
-import { SettingsRow, SettingsSection } from '../../src/ui/primitives/settings-row';
-import { GroupInfoSheet } from '../../src/ui/chat/group-info';
-import { useDesignTheme } from '../../src/ui/design/theme';
-import { space } from '../../src/ui/design/tokens';
-import { Text } from '../../src/ui/primitives/text';
-import { t } from '../../src/ui/strings';
+import { groupActions, groupInfo } from '../../../src/host/group-channel';
+import { useHostSession, useHostSnapshot } from '../../../src/host/host-session';
+import { pickGroupAvatar } from '../../../src/host/pick-group-avatar';
+import { SettingsRow, SettingsSection } from '../../../src/ui/primitives/settings-row';
+import { GroupInfoSheet } from '../../../src/ui/chat/group-info';
+import { useDesignTheme } from '../../../src/ui/design/theme';
+import { space } from '../../../src/ui/design/tokens';
+import { Text } from '../../../src/ui/primitives/text';
+import { t } from '../../../src/ui/strings';
 
 export default function GroupInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,8 +42,8 @@ export default function GroupInfoScreen() {
               disclosure
               onPress={() =>
                 router.push({
-                  pathname: '/chat-background',
-                  params: { hostId: saved.hostId, channelId: id },
+                  pathname: '/group/[id]/chat-background',
+                  params: { id, hostId: saved.hostId, channelId: id },
                 })
               }
             />

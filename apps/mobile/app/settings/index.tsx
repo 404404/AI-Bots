@@ -32,7 +32,7 @@ export default function SettingsScreen() {
         <SettingsRow
           title={t.chatBackground.global}
           disclosure
-          onPress={() => router.push('/chat-background')}
+          onPress={() => router.push('/settings/chat-background')}
         />
       }
       key={saved?.hostId}

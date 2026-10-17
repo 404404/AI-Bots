@@ -39,7 +39,7 @@ it('previews a picked image and only persists it when Done succeeds', async () =
           edit={edit}
           inherited={backgrounds.resolve()}
           imageUri={(id) => `file:///${id}`}
-          onPickImage={async () => 'picker://temporary'}
+          onPickImage={async () => ({ uri: 'picker://temporary', width: 800, height: 1200 })}
           onDone={done}
           onCancel={() => {}}
         />,

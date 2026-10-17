@@ -31,7 +31,8 @@ const en = {
     vertical: 'Vertical position',
     center: 'Center image',
     title: 'Chat background',
-    local: 'Only on this phone. Changes apply when you tap Done.',
+    local:
+      'Only on this phone. Changes apply when you tap Done. Photos up to 16 MP; reduce larger originals first.',
     chooseImage: 'Choose photo',
     fade: 'Background fade',
     fadeHint: '0% original image · 100% theme canvas',
@@ -796,7 +797,7 @@ const zh: typeof en = {
     vertical: '垂直位置',
     center: '图片居中',
     title: '聊天背景',
-    local: '仅保存在这台手机上，点击完成后生效。',
+    local: '仅保存在这台手机上，点击完成后生效。支持 1600 万像素以内的照片，大图请先缩小。',
     chooseImage: '选择照片',
     fade: '背景淡化',
     fadeHint: '0% 原图 · 100% 主题底色',

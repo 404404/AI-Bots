@@ -7,13 +7,12 @@ import {
   useChatBackgrounds,
   backgroundImageUri,
   pickBackgroundImage,
-} from '../src/host/native-chat-background';
-import { useHostSession } from '../src/host/host-session';
-import type { BackgroundScope, BackgroundEdit } from '../src/host/chat-background';
-import { ChatBackgroundEditor } from '../src/ui/chat/chat-background-editor';
-import { SheetScreen } from '../src/ui/primitives/sheet-screen';
-import { Text } from '../src/ui/primitives/text';
-import { t } from '../src/ui/strings';
+} from '../../host/native-chat-background';
+import { useHostSession } from '../../host/host-session';
+import type { BackgroundScope, BackgroundEdit } from '../../host/chat-background';
+import { ChatBackgroundEditor } from './chat-background-editor';
+import { Text } from '../primitives/text';
+import { t } from '../strings';
 
 function Editor({ scope }: { scope: BackgroundScope | undefined }) {
   const router = useRouter();
@@ -66,16 +65,14 @@ export default function ChatBackgroundScreen() {
       ? { hostId: params.hostId, channelId: params.channelId }
       : undefined;
   return (
-    <SheetScreen>
-      <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
-        {!valid ? (
-          <Text accessibilityRole="alert">{t.chatBackground.failed}</Text>
-        ) : !state.loaded ? (
-          <ActivityIndicator />
-        ) : (
-          <Editor key={JSON.stringify(scope)} scope={scope} />
-        )}
-      </SafeAreaView>
-    </SheetScreen>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+      {!valid ? (
+        <Text accessibilityRole="alert">{t.chatBackground.failed}</Text>
+      ) : !state.loaded ? (
+        <ActivityIndicator />
+      ) : (
+        <Editor key={JSON.stringify(scope)} scope={scope} />
+      )}
+    </SafeAreaView>
   );
 }

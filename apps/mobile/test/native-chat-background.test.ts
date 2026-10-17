@@ -6,6 +6,8 @@ const disk = vi.hoisted(() => ({
   root: 'file:///container-a',
   writeFailure: 'none' as 'none' | 'partial' | 'after',
   copyFailure: false,
+  steps: [] as string[],
+  source: { width: 900, height: 1600 },
 }));
 vi.mock('expo-file-system', () => {
   const join = (...parts: Array<string | { uri: string }>) =>
@@ -79,17 +81,28 @@ vi.mock('expo-image-manipulator', () => ({
   SaveFormat: { JPEG: 'jpeg' },
   ImageManipulator: {
     manipulate: () => ({
-      resize() {},
+      resize(size: { width?: number; height?: number }) {
+        disk.steps.push('resize');
+        const scale = size.width
+          ? size.width / disk.source.width
+          : size.height! / disk.source.height;
+        disk.source = {
+          width: Math.round(disk.source.width * scale),
+          height: Math.round(disk.source.height * scale),
+        };
+      },
       release() {},
-      renderAsync: async () => ({
-        width: 900,
-        height: 1600,
-        release() {},
-        saveAsync: async () => {
-          disk.files.set('file:///cache/photo.jpg', 'photo');
-          return { uri: 'file:///cache/photo.jpg', width: 900, height: 1600 };
-        },
-      }),
+      renderAsync: async () => {
+        disk.steps.push('render');
+        return {
+          ...disk.source,
+          release() {},
+          saveAsync: async () => {
+            disk.files.set('file:///cache/photo.jpg', 'photo');
+            return { uri: 'file:///cache/photo.jpg', ...disk.source };
+          },
+        };
+      },
     }),
   },
 }));
@@ -102,13 +115,28 @@ beforeEach(() => {
   disk.root = 'file:///container-a';
   disk.writeFailure = 'none';
   disk.copyFailure = false;
+  disk.steps = [];
+  disk.source = { width: 900, height: 1600 };
+});
+
+it('rejects oversized sources before decoding and schedules accepted resizing before the first render', async () => {
+  const owner = createChatBackgrounds(nativeBackgroundPorts());
+  await owner.ready;
+  const edit = owner.edit();
+  await expect(edit.pick('huge', { width: 8000, height: 6000 })).rejects.toThrow();
+  expect(disk.steps).toEqual([]);
+  expect([...disk.files]).toEqual([]);
+  disk.source = { width: 4000, height: 3000 };
+  await edit.pick('large', disk.source);
+  expect(disk.steps).toEqual(['resize', 'render']);
+  expect(edit.getSnapshot().choice).toMatchObject({ width: 2048, height: 1536 });
 });
 
 it('keeps the last complete native record across an interrupted write and a process restart', async () => {
   const owner = createChatBackgrounds(nativeBackgroundPorts());
   await owner.ready;
   const first = owner.edit();
-  await first.pick('picker://photo');
+  await first.pick('picker://photo', { width: 900, height: 1600 });
   await first.save();
   const old = owner.resolve();
   const next = owner.edit();
@@ -129,7 +157,7 @@ it('reconciles a completed write error and rebases owned image references after 
   const owner = createChatBackgrounds(nativeBackgroundPorts());
   await owner.ready;
   const edit = owner.edit();
-  await edit.pick('picker://photo');
+  await edit.pick('picker://photo', { width: 900, height: 1600 });
   disk.writeFailure = 'after';
   await edit.save();
   const image = owner.resolve();
@@ -152,7 +180,7 @@ it('rejects a failed native image copy and removes its partial owned file', asyn
   await owner.ready;
   const edit = owner.edit();
   disk.copyFailure = true;
-  await expect(edit.pick('picker://photo')).rejects.toThrow();
+  await expect(edit.pick('picker://photo', { width: 900, height: 1600 })).rejects.toThrow();
   expect(owner.resolve()).toEqual({ kind: 'default' });
   expect([...disk.files.keys()]).toEqual([]);
 });

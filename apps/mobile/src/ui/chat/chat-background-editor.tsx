@@ -1,6 +1,10 @@
 import { useState, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import type { BackgroundChoice, BackgroundEdit } from '../../host/chat-background';
+import type {
+  BackgroundChoice,
+  BackgroundEdit,
+  BackgroundSource,
+} from '../../host/chat-background';
 import { DesignThemeProvider, useDesignTheme, type ColorScheme } from '../design/theme';
 import { backgroundColors } from '../design/background-colors';
 import { radius, space } from '../design/tokens';
@@ -25,7 +29,7 @@ export function ChatBackgroundEditor({
   inherited: BackgroundChoice;
   scoped?: boolean;
   imageUri(id: string): string;
-  onPickImage(): Promise<string | undefined>;
+  onPickImage(): Promise<BackgroundSource | undefined>;
   onDone(): void;
   onCancel(): void;
 }) {
@@ -45,7 +49,7 @@ export function ChatBackgroundEditor({
     setPickError(false);
     setPicking(true);
     void onPickImage()
-      .then((uri) => (uri === undefined ? undefined : edit.pick(uri)))
+      .then((source) => (source === undefined ? undefined : edit.pick(source.uri, source)))
       .catch(() => setPickError(true))
       .finally(() => setPicking(false));
   };

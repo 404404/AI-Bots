@@ -64,8 +64,8 @@ export function BotSettingsPanel({ client, bot }: { client: HostClient; bot: Ros
             trailing={chevron}
             onPress={() =>
               router.push({
-                pathname: '/chat-background',
-                params: { hostId: saved.hostId, channelId: bot.dmChannelId },
+                pathname: '/bot/[slug]/chat-background',
+                params: { slug: bot.slug, hostId: saved.hostId, channelId: bot.dmChannelId },
               })
             }
           />

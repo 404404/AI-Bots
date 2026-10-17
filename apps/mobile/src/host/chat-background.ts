@@ -1,5 +1,7 @@
 export type BackgroundScope = { hostId: string; channelId: string };
 export type BackgroundImage = { id: string; width: number; height: number };
+export type BackgroundDimensions = { width: number; height: number };
+export type BackgroundSource = BackgroundDimensions & { uri: string };
 export type BackgroundChoice =
   | { kind: 'default' }
   | { kind: 'color'; color: string }
@@ -18,7 +20,7 @@ export type BackgroundDocument = {
 export interface BackgroundPorts {
   read(): Promise<unknown>;
   write(value: BackgroundDocument): Promise<void>;
-  importImage(uri: string): Promise<BackgroundImage>;
+  importImage(uri: string, dimensions?: BackgroundDimensions): Promise<BackgroundImage>;
   listImages(): Promise<string[]>;
   removeImage(id: string): Promise<void>;
 }
@@ -65,11 +67,29 @@ export function parseBackground(value: unknown): BackgroundChoice | undefined {
   return undefined;
 }
 
+function persistedBackground(value: unknown): BackgroundChoice | undefined {
+  const row = object(value);
+  if (row['kind'] !== 'image') return parseBackground(value);
+  const bounded = (field: string, initial: number, maximum: number) =>
+    row[field] === undefined
+      ? initial
+      : typeof row[field] === 'number' && Number.isFinite(row[field])
+        ? Math.max(0, Math.min(maximum, row[field]))
+        : row[field];
+  return parseBackground({
+    ...row,
+    fit: row['fit'] ?? 'cover',
+    x: bounded('x', 0.5, 1),
+    y: bounded('y', 0.5, 1),
+    fade: bounded('fade', 60, 100),
+  });
+}
+
 export function parseBackgroundDocument(value: unknown): BackgroundDocument | undefined {
   const row = object(value);
   if (
     row['version'] !== 1 ||
-    !parseBackground(row['default']) ||
+    !persistedBackground(row['default']) ||
     !row['overrides'] ||
     typeof row['overrides'] !== 'object' ||
     Array.isArray(row['overrides'])
@@ -79,7 +99,7 @@ export function parseBackgroundDocument(value: unknown): BackgroundDocument | un
   for (const [key, choice] of Object.entries(object(row['overrides']))) {
     try {
       const parts: unknown = JSON.parse(key);
-      const parsed = parseBackground(choice);
+      const parsed = persistedBackground(choice);
       if (
         Array.isArray(parts) &&
         parts.length === 2 &&
@@ -92,7 +112,7 @@ export function parseBackgroundDocument(value: unknown): BackgroundDocument | un
       return undefined;
     }
   }
-  return { version: 1, default: parseBackground(row['default']) ?? DEFAULT, overrides };
+  return { version: 1, default: persistedBackground(row['default']) ?? DEFAULT, overrides };
 }
 
 type EditSnapshot = {
@@ -105,7 +125,7 @@ export interface BackgroundEdit {
   getSnapshot(): EditSnapshot;
   subscribe(listener: () => void): () => void;
   choose(choice: BackgroundChoice | undefined): void;
-  pick(uri: string): Promise<void>;
+  pick(uri: string, dimensions?: BackgroundDimensions): Promise<void>;
   save(): Promise<void>;
   cancel(): Promise<void>;
 }
@@ -196,12 +216,12 @@ export function createChatBackgrounds(ports: BackgroundPorts) {
             throw Error('background-invalid-choice');
           update({ choice: scope === undefined ? (parsed ?? DEFAULT) : parsed, error: false });
         },
-        async pick(uri) {
+        async pick(uri, dimensions) {
           if (state.closed || state.busy) return;
           update({ busy: true, error: false });
           importing++;
           try {
-            const image = await ports.importImage(uri);
+            const image = await ports.importImage(uri, dimensions);
             if (!state.closed)
               update({
                 choice: { kind: 'image', ...image, fit: 'cover', x: 0.5, y: 0.5, fade: 60 },

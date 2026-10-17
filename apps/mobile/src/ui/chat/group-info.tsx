@@ -24,7 +24,6 @@ import {
   SettingsSection,
 } from '../primitives/settings-row';
 import { Text } from '../primitives/text';
-import { SheetScreen } from '../primitives/sheet-screen';
 import { ChevronRightIcon, MoreIcon, PlusIcon } from '../shell/icons';
 import { t } from '../strings';
 import { GroupMark } from './group-mark';
@@ -394,7 +393,7 @@ export function GroupInfoSheet({
 
   return (
     <>
-      <SheetScreen>
+      <View style={{ flex: 1 }}>
         <SectionList
           sections={groupRows(info)}
           keyExtractor={(row) => row.key}
@@ -431,7 +430,7 @@ export function GroupInfoSheet({
             </SettingsGroupItem>
           )}
         />
-      </SheetScreen>
+      </View>
       <InviteSheet
         visible={sheet === 'invite'}
         candidates={info.candidates}
