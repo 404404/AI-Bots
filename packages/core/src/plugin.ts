@@ -1,4 +1,8 @@
 import {
+  createTobContentOperations,
+  TOB_CONTENT_CAPABILITIES,
+} from './tob/cli-content-operations.js';
+import {
   createTobScheduleOperations,
   TOB_SCHEDULE_CAPABILITIES,
 } from './tob/cli-schedule-operations.js';
@@ -1183,6 +1187,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                 signal: execution.signal,
                 authorize,
                 prepareOperation: async (command, args) =>
+                  (await tobContentOperations(command, args)) ??
                   (await tobModelOperations(command, args)) ??
                   (await tobMaintenanceOperations(command, args)) ??
                   (await tobBotCreationOperations(command, args)) ??
@@ -1192,6 +1197,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobScheduleOperations(command, args)) ??
                   (await createTobMemoryOperations(core.runtime, actor.session.id)(command, args)),
                 capabilities: [
+                  ...TOB_CONTENT_CAPABILITIES,
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
@@ -2180,6 +2186,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
+  const tobContentOperations = createTobContentOperations(bridgeMethods);
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,
     creations: core.creations,

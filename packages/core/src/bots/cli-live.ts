@@ -1,3 +1,4 @@
+import { parseAgentContent, TOB_CONTENT_COMMAND_USAGE } from './cli-agent-content.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +96,8 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  'expected-target': { type: 'string' },
+  message: { type: 'string' },
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -183,6 +186,10 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...Object.entries(TOB_CONTENT_COMMAND_USAGE).map(([command, description]) => ({
+    command,
+    description,
+  })),
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -356,6 +363,8 @@ interface LiveValues
     ApprovalReviewerValues {
   host?: string;
   'token-file'?: string;
+  'expected-target'?: string;
+  message?: string;
   timeout?: string;
   'message-id'?: string;
   body?: string;
@@ -681,6 +690,14 @@ export async function runLiveCli(
         });
       throw error;
     }
+  }
+  if (Object.hasOwn(TOB_CONTENT_COMMAND_USAGE, command)) {
+    const { host: _host, 'token-file': _tokenFile, ...options } = values;
+    const operation = parseAgentContent(command, rest, options)!;
+    return (await connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout)))).rpc(
+      command === 'channel-content' ? 'tobChannelContent' : 'tobBotProgress',
+      operation.args,
+    );
   }
   if (MEMORY_COMMANDS.has(command)) return runMemoryCommand(command, rest, values, io);
   if (isModelsUsageCommand(command))

@@ -1,3 +1,4 @@
+import { parseAgentContent, TOB_CONTENT_COMMAND_USAGE } from './cli-agent-content.js';
 import { parseAgentSchedules, TOB_AGENT_SCHEDULE_COMMAND_USAGE } from './cli-agent-schedules.js';
 import { parseAgentMemory, TOB_MEMORY_COMMAND_USAGE } from './cli-agent-memory.js';
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
@@ -18,6 +19,7 @@ export interface AgentManagementInvocation {
 }
 
 export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
+  ...TOB_CONTENT_COMMAND_USAGE,
   ...TOB_AGENT_SCHEDULE_COMMAND_USAGE,
   ...TOB_MEMORY_COMMAND_USAGE,
   ...TOB_AGENT_BOT_COMMAND_USAGE,
@@ -209,6 +211,8 @@ export async function parseAgentManagement(
   values: Record<string, unknown>,
   io: BotCreateCliIo,
 ): Promise<AgentManagementInvocation | undefined> {
+  const content = parseAgentContent(command, rest, values);
+  if (content) return content;
   const schedule = parseAgentSchedules(command, rest, values);
   if (schedule) return schedule;
   const memory = parseAgentMemory(command, rest, values);

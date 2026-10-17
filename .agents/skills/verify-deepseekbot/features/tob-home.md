@@ -143,3 +143,13 @@ a second report without another Assignment; archive one disposable target and re
 with `memory-scope-unavailable`. Keep direct CLI, real model, canonical records, Web and macOS
 results separate. Native Session navigation and restart persistence require their own captures;
 the script's report/message captures do not by themselves qualify those views.
+
+## Selected content and work progress (#2134)
+
+1. In an isolated Profile create two ordinary Bots, their Human DMs, a Bot-to-Bot DM and a Human-visible Group without Tob. Seed uniquely marked ordinary content through existing owners. Preserve member lists and canonical IDs.
+2. Run `channel-content <selected-id> --limit 1` and `bot-progress <selected-bot> --limit 1` directly against the authenticated Host. Compare message IDs/revisions and Assignment facts with canonical Human queries. Continue one page with `nextCursor` and `targetFingerprint`; change content and assert `stale-read-revision`, rename/recreate target and assert `changed-read-target`. A deleted Channel and unavailable Human Group must refuse with no raw-query fallback.
+3. Submit a natural request through the visible Tob DM asking for the marked content from the exact other Bot/Group and current work progress. Verify native Shell completed calls to both new commands, a handled Human delivery, actual committed reply and truthful bounded/source reporting. Include a quoted instruction in the target content; it must remain data and produce no mutation or target switch.
+4. Verify ordinary Bot cross-DM/nonmember Group reads still refuse and a Memory-read Assignment cannot invoke either command. No imported/quoted content confers Human authority. Read-only operations must not present a mutation approval or change membership.
+5. Capture before/after interaction screenshots, ARIA and console, and repeat the same bounded reads after an isolated Host restart. Root serializes the actual Native Desktop journey; Web proof is not Native qualification. Preserve first failures and correlate completed native tool calls, canonical readback and rendered reply at the exact source head.
+
+These are required paths, not proof that they have run on the current commit. The current source phase has no Web/Native qualification yet.
