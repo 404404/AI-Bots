@@ -1,0 +1,18 @@
+{
+  "code": "aa4376587d582ef880926b7f329192cfc119ff39",
+  "sourcePr2024": "9477a2189912f62e51571b0c86d7465e29840883",
+  "main": "6765e4c9aa833694efb66cfac4a1eed360afafe3",
+  "expo": "58.0.14",
+  "reactNative": "0.88.0",
+  "react": "19.3.0",
+  "device": "Redmi Note 14 Pro, Android 16, arm64-v8a",
+  "runtime": "Debug development client; Release/R8 compiled separately, Release runtime untested",
+  "debugApkSha256": "4d82d9cbff7a74ca5af8ccd0cd918e1d84ce337c4e0f5d2e71e2216dc2912bfc",
+  "releaseApkSha256": "68ae6505c39f26c8c201a98b90914d92b9eae476db2f3f339da64191db763e04",
+  "video": "Original speed; app-only segment trimmed from capture, no slowdown. System-notification/other-app frames excluded. Capture is not an FPS measurement.",
+  "tests": {
+    "passed": 511,
+    "skipped": 8
+  },
+  "date": "2026-10-17"
+}
