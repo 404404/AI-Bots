@@ -16,7 +16,8 @@ const native = vi.hoisted(() => ({
 
 vi.mock('react-native-reanimated', () => import('./reanimated-shim'));
 
-vi.mock('react-native', () => {
+vi.mock('react-native', async () => {
+  const { useWindowDimensions, StyleSheet } = await import('./react-native-shim');
   const host = (name: string) => {
     const Component = ({ children, ...props }: Record<string, unknown>) => {
       if (typeof props['onPress'] === 'function' && typeof props['accessibilityLabel'] === 'string')
@@ -43,6 +44,8 @@ vi.mock('react-native', () => {
     return Component;
   };
   return {
+    useWindowDimensions,
+    StyleSheet,
     View: host('View'),
     Text: host('Text'),
     Pressable: host('Pressable'),
@@ -61,7 +64,6 @@ vi.mock('react-native', () => {
     },
     Image: host('Image'),
     Share: { share: async ({ message }: { message: string }) => native.shared.push(message) },
-    useWindowDimensions: () => ({ width: 390, height: 844 }),
     ActivityIndicator: host('ActivityIndicator'),
     Linking: { openURL: async () => undefined },
     Platform: {

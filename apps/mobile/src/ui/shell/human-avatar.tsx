@@ -60,7 +60,9 @@ export function HumanAvatarButton({
         {initial === undefined ? (
           <PersonIcon color={theme.color.fg} size={theme.type.title.size} />
         ) : (
-          <Text strong>{initial}</Text>
+          <Text allowFontScaling={false} strong>
+            {initial}
+          </Text>
         )}
       </View>
     </Pressable>

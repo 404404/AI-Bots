@@ -142,7 +142,7 @@ try {
   const state = await page.evaluate(() =>
     JSON.parse(localStorage.getItem('botharness.bot-mode-layout')),
   );
-  assert.equal(state.version, 4);
+  assert.equal(state.version, 6);
   assert.equal(state.layout.panels.sessions, undefined);
   console.log('Settings click');
   await page.click(settings);
@@ -232,11 +232,85 @@ try {
   await wait(500);
   await page.screenshot({ path: resolve(out, 'native-final.png') });
   results.push({ groupScope: true, groupBotOnlyExcluded: true });
+  await page.evaluate(() =>
+    [...document.querySelectorAll('[data-dock-panel="bh:channels"] [data-channel-id]')]
+      .find((n) => n.textContent.trim().startsWith('DeepSeek Bot'))
+      ?.click(),
+  );
+  const botPanels = [
+    ['memory-files', '记忆文件', '6'],
+    ['memory-evolution', '记忆演化', 'E'],
+    ['schedules', '定时任务', '9'],
+    ['botharness-browser', '浏览器', 'B'],
+    ['botharness-computer', '电脑', '0'],
+  ];
+  for (const [id, label, code] of botPanels) {
+    const button = `${parent} button[aria-label="${label}"]`;
+    const selector = `[data-channel-subpanel="${id}"]`;
+    await page.waitForSelector(button);
+    assert.equal(await page.$(`${rail} [data-pinned-panel="${id}"]`), null);
+    if (!(await page.$eval(selector, (node) => node.checkVisibility()))) await page.click(button);
+    await page.waitForFunction(
+      (selector) => document.querySelector(selector)?.checkVisibility(),
+      {},
+      selector,
+    );
+    await page.click(`${rail} [data-pinned-panel="bh:channel-body"]`);
+    await key(code, ['meta', 'alt', 'shift']);
+    await page.waitForFunction(
+      (selector) => document.querySelector(selector)?.checkVisibility(),
+      {},
+      selector,
+    );
+    await key(code, ['meta', 'alt', 'shift']);
+    await page.waitForFunction(
+      (selector) => !document.querySelector(selector)?.checkVisibility(),
+      {},
+      selector,
+    );
+    await key(code, ['meta', 'alt', 'shift']);
+    await page.waitForFunction(
+      (selector) => document.querySelector(selector)?.checkVisibility(),
+      {},
+      selector,
+    );
+  }
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(rail);
+  await page.evaluate(() =>
+    [...document.querySelectorAll('[data-dock-panel="bh:channels"] [data-channel-id]')]
+      .find((n) => n.textContent.trim().startsWith('DeepSeek Bot'))
+      ?.click(),
+  );
+  for (const [id] of botPanels)
+    await page.waitForFunction(
+      (id) => document.querySelector(`[data-channel-subpanel="${id}"]`)?.checkVisibility(),
+      {},
+      id,
+    );
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[data-dock-header="bh:channel-body"]')
+      ?.textContent.includes('DeepSeek Bot'),
+  );
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-channel-subpanel="memory-files"] [data-path="MEMORY.md"]') !==
+      null,
+  );
+  await wait(1000);
+  await page.screenshot({ path: resolve(out, 'native-bot-panels.png') });
+  results.push({ botSubpanelsNativeDispatch: true, botSubpanelsRefresh: true });
+
   assert.deepEqual(errors, []);
 } catch (error) {
   results.push({ failure: String(error) });
-  await page.screenshot({ path: resolve(out, 'failure.png') });
-  writeFileSync(resolve(out, 'failure.txt'), await page.evaluate(() => document.body.innerText));
+  await page.screenshot({ path: resolve(out, 'failure.png') }).catch(() => {});
+  if (!page.isClosed())
+    writeFileSync(
+      resolve(out, 'failure.txt'),
+      await page.evaluate(() => document.body.innerText).catch(() => 'Renderer unavailable'),
+    );
   throw error;
 } finally {
   writeFileSync(resolve(out, 'results.json'), JSON.stringify({ results, errors }, null, 2));

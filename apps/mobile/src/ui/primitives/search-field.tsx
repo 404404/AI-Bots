@@ -1,21 +1,26 @@
 import type { ReactNode } from 'react';
-import { TextInput, View } from 'react-native';
+import { View } from 'react-native';
+import { TextInput } from './system-text';
 
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
 
 export function SearchField({
+  trailing,
+  autoFocus,
+  onBlur,
   value,
   inset,
   placeholder,
   onChangeText,
-  trailing,
 }: {
+  trailing?: ReactNode;
+  autoFocus?: boolean;
+  onBlur?(): void;
   value: string;
   inset: number;
   placeholder: string;
   onChangeText(text: string): void;
-  trailing?: ReactNode;
 }) {
   const theme = useDesignTheme();
   return (
@@ -30,6 +35,8 @@ export function SearchField({
       }}
     >
       <TextInput
+        autoFocus={autoFocus}
+        onBlur={onBlur}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

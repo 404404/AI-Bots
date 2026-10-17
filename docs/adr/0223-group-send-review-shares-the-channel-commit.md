@@ -1,4 +1,4 @@
-# ADR-0222: Group send review shares the Channel commit transaction
+# ADR-0223: Group send review shares the Channel commit transaction
 
 - Status: Proposed; opt-in pilot, pending Human history review
 - Date: 2026-10-17

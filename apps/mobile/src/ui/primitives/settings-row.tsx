@@ -59,11 +59,11 @@ export function SettingsRow({
     >
       {leading}
       <View style={{ flex: 1, gap: space.x1 }}>
-        <Text tone={tone} strong={strong} numberOfLines={1}>
+        <Text tone={tone} strong={strong}>
           {title}
         </Text>
         {detail === undefined ? null : (
-          <Text variant="meta" tone="muted" numberOfLines={2}>
+          <Text variant="meta" tone="muted">
             {detail}
           </Text>
         )}

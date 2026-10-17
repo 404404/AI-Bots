@@ -1,5 +1,7 @@
 import { BottomTabBar, Tabs } from 'expo-router/js-tabs';
+import type { ComponentProps } from 'react';
 import { View } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { actionCount } from '../../src/host/inbox';
@@ -10,9 +12,45 @@ import { edge, edgeFade, navigationBar, radius, space } from '../../src/ui/desig
 import { FloatingTabInset } from '../../src/ui/shell/floating-tab-inset';
 import { HostDrawer } from '../../src/ui/shell/host-drawer';
 import { ActivityIcon, ChatsIcon } from '../../src/ui/shell/icons';
+import {
+  ScrollChromeProvider,
+  useChromeHidden,
+  useChromeProgress,
+} from '../../src/ui/shell/scroll-chrome';
 import { t } from '../../src/ui/strings';
 
 export default function TabsLayout() {
+  return (
+    <ScrollChromeProvider>
+      <AndroidTabLayout />
+    </ScrollChromeProvider>
+  );
+}
+
+function ScrollTabBar({
+  reserved,
+  ...props
+}: ComponentProps<typeof BottomTabBar> & { reserved: number }) {
+  const progress = useChromeProgress();
+  const hidden = useChromeHidden();
+  const style = useAnimatedStyle(() => ({
+    transform: [{ translateY: reserved * progress.value }],
+    opacity: 1 - progress.value,
+  }));
+  return (
+    <Animated.View
+      pointerEvents={hidden ? 'none' : 'box-none'}
+      accessibilityElementsHidden={hidden}
+      importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}
+      style={[{ position: 'absolute', left: 0, right: 0, bottom: 0, height: reserved }, style]}
+    >
+      <EdgeFade edge="bottom" height={reserved + edgeFade.bottom} />
+      <BottomTabBar {...props} />
+    </Animated.View>
+  );
+}
+
+function AndroidTabLayout() {
   const theme = useDesignTheme();
   const insets = useSafeAreaInsets();
   const { inbox } = useHostSession();
@@ -25,15 +63,7 @@ export default function TabsLayout() {
       <View style={{ flex: 1, backgroundColor: theme.color.base }}>
         <Tabs
           safeAreaInsets={{ bottom: 0 }}
-          tabBar={(props) => (
-            <View
-              pointerEvents="box-none"
-              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: reserved }}
-            >
-              <EdgeFade edge="bottom" height={reserved + edgeFade.bottom} />
-              <BottomTabBar {...props} />
-            </View>
-          )}
+          tabBar={(props) => <ScrollTabBar {...props} reserved={reserved} />}
           screenOptions={{
             headerShown: false,
             tabBarActiveTintColor: theme.color.fg,

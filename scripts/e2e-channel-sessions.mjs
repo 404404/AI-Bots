@@ -118,7 +118,7 @@ try {
   await visible();
   results.push('header context menu hides child and switch, persists, keyboard recovers switch');
   const initial = await stored();
-  assert.equal(initial.version, 4);
+  assert.equal(initial.version, 6);
   assert.equal(initial.layout.panels.sessions, undefined);
   assert.equal(await page.$('.bh-workspace-rail [data-pinned-panel="sessions"]'), null);
   const backup = await page.evaluate(() =>

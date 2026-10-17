@@ -3,7 +3,7 @@
 #2053 的本地 Group 发送复核试点由 Channel owner 在正式 Source Event / placement 追加的同一事务内比较实际观察依据。
 待复核草稿保存在现有 Operational Database，仅正式提交进入 Channel/Inbox；drop 不解决 Inbox，过期或重启不自动恢复。
 原始依据与修订草稿归同一 owner，purge 清除派生内容。默认关闭，按群 opt-in；CLI 与模型使用同一契约。
-held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0222](../adr/0222-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
+held 工具结果复用 Channel 的有界模型读取投影直接返回新增正文与显式观察凭据；仅完整返回的内容计入观察，省略内容仍需读取，后续提交仍在同一事务重查。其持久边界和保守取舍见 [ADR-0223](../adr/0223-group-send-review-shares-the-channel-commit.md)，效果与 Human 验收仍由试点评估决定。
 
 Group composer 的 `/workspace` 和工作区 chip 复用 DM 的目录选择器与授权确认组件。默认选中当前未暂停、未删除的全部 Bot；Human 可以取消勾选，只授权指定几个。Group 只是逐 Bot 授权的入口，不持有权限；预览固定确认目标，后来加入的 Bot 不自动继承 Grant。共享目录预览相对于权限是只读的：native Workspace controller 可以登记、解析一个 DSH Workspace，但确认前不会建立任何 Workspace Grant。确认展示每个 Bot、canonical 目录、既有 Assignment mode 和 Orchestrator 写入状态；这些权限设置保持不变。逐 Bot 调用既有 `grantCreate`，可选的 application-defined Group scope 仅约束当前 Channel 成员与确认目录，并在异步 Workspace status 检查后、没有后续 await 的实际写入边界再次校验。SQLite `workspace_grants` 仍是唯一授权权威；无 Channel Workspace Binding、Group Grant 或统一 cwd。成功、有效 Grant 复用、拒绝和未知结果分别展示；失败/未知成员重试前通过同一个 `grants` readback 验证成员、撤销状态与当前目录，读回失败不发起写入。原侧栏与 chip 使用既有逐 Bot 变更通知刷新，正常委派仍通过原 Channel、Orchestrator 与 Assignment seam（#1433）。
 
@@ -55,7 +55,7 @@ Channel 的消息引用（#145）只保存同 Channel 的已提交目标 ID；Hu
 
 应用定义的 `group_leave` Tool 只在规范成员移除提交后返回 `{channelId,left:true,outcome:"changed"}`；Bot 当前不是该群成员时返回 `{channelId,left:false,outcome:"unchanged",reason:"not-member"}`。无变更既包括重复退出，也包括从未加入的群；不推断历史成员身份，不返回未加入群的名称或名单。缺失 Channel 抛出 `group_leave: channel-unavailable`，非群聊目标抛出 `group_leave: group-required`，替代旧的含糊 `left:false` 成功结果；Tool 异常保持为失败。既有 `{channelId,left}` 字段及 Core 返回结构保持兼容，调用方须处理新的无效目标失败。ADR-0073 的同一事务仍承担创建者移交 Human、待处理 Admission 撤销、单条持久离群通知及剩余成员注意力策略；提交后的实时通知警告不否定已提交变更。读写权限立即撤销，因此 Bot 应通过仍可访问的 Channel 向 Human 报告（[#571](https://github.com/BotHarness/BotHarness/issues/571)）。
 
-The reply Consumer can compose an explicit `resolve_inbox_ids` selection with a successful send/drop, using the existing Inbox triage owner afterward; completion failures remain separate from delivery. A revoked initiating opted-in Group prevents that run from continuing in another Channel. A later independent DM remains available (ADR-0222).
+The reply Consumer can compose an explicit `resolve_inbox_ids` selection with a successful send/drop, using the existing Inbox triage owner afterward; completion failures remain separate from delivery. A revoked initiating opted-in Group prevents that run from continuing in another Channel. A later independent DM remains available (ADR-0223).
 
 ## 原生 Human 等待的验证边界
 
@@ -486,9 +486,11 @@ Channel sidebar 的编辑模式只折叠当前呈现而不改写展开偏好，�
 
 #2017 首片在符合 rc.2 AppFrame 结构的 Web/macOS 宽屏中启用工作区：一个不可关闭、可移到左／右／任意整列之间的 Workspace Control Rail（工作区控制列），以及独立的全局 Channel 列表面板（`bh:channels`）。列表沿用现有 Roster 与选中 Channel 的唯一状态。没有选中 Channel 时，控制列和全局面板仍可操作。`workspace-shell` 只对当前 AppFrame 标记后释放原生侧栏占位，临时将公开 `layout.toggleSidebar()` 命令接到 Channel 列表开关，退出、卸载或收窄时恢复原方法描述符并移除标记；不改原生 Store、宽度或折叠偏好。结构不匹配、命令无法接管或 Windows 标题栏布局使用旧侧栏回退。macOS 仅在红黄绿按钮覆盖的左上角避让，其他面板利用顶部空间，全屏取消避让。窗口拖拽与面板拖拽保持各自区域。
 
-**两层布局（会话首片已实现，其余分阶段迁移）**：[ADR-0221](../adr/0221-global-and-channel-workspaces-own-panel-placement.md) 与 [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) 在上述已交付的平铺布局之上定义 Global workspace → Messages panel → Channel workspace 的归属。#2049 首片把会话移入消息面板：沿用已有会话查询与快捷键命令，新增稳定 DOM 的四方向分割容器；版本 4 的原布局存储按稳定 Channel ID 保存开关、方向、比例和隐藏入口偏好，并保留升级前原始备份。旧 Work 迁移先执行；隐藏父面板保留子状态，会话快捷键恢复父子面板。最终 Control Rail 只管理全局面板和消息面板；频道子面板由消息 header 控制，右键该 header 以图标、名称和复选框管理开关显隐（隐藏开关同时关闭子面板，不设单独管理按钮），并在父面板内分割、移动、按频道保存比例与开关。隐藏父面板不清空子状态，也不改变执行或权限。群聊保留群资料和成员，不提供记忆文件、记忆演化、定时任务、Browser、Computer 或 PersonaBot Profile，即使会话显式查看成员 Bot 也不例外。共享的浏览器／电脑资源设置仍可属于全局；Bot 专属访问与视图不因物理资源共享而变成全局。
+**两层布局（会话、记忆与定时任务已迁入，其余分阶段迁移）**：[ADR-0221](../adr/0221-global-and-channel-workspaces-own-panel-placement.md) 与 [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) 在上述已交付的平铺布局之上定义 Global workspace → Messages panel → Channel workspace 的归属。#2049 首片把会话移入消息面板：沿用已有会话查询与快捷键命令，新增稳定 DOM 的四方向分割容器；版本 4 的原布局存储按稳定 Channel ID 保存开关、方向、比例和隐藏入口偏好，并保留升级前原始备份。旧 Work 迁移先执行；隐藏父面板保留子状态，会话快捷键恢复父子面板。最终 Control Rail 只管理全局面板和消息面板；频道子面板由消息 header 控制，右键该 header 以图标、名称和复选框管理开关显隐（隐藏开关同时关闭子面板，不设单独管理按钮），并在父面板内分割、移动、按频道保存比例与开关。隐藏父面板不清空子状态，也不改变执行或权限。群聊保留群资料和成员，不提供记忆文件、记忆演化、定时任务、Browser、Computer 或 PersonaBot Profile，即使会话显式查看成员 Bot 也不例外。共享的浏览器／电脑资源设置仍可属于全局；Bot 专属访问与视图不因物理资源共享而变成全局。
 
 [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049) 实现首个可运行切片：仅把会话迁入消息面板，保留 ADR-0220 的 DM／群聊查询与访问校验，其他面板暂留外层。现有 Client 布局 owner 负责外层与每频道内层偏好、带备份的幂等旧布局迁移及首次使用种子；不新建 Host 数据权威。沿用原会话快捷键标识和原生绑定：父隐藏时恢复父子，父显示时仅切换子面板。正式目标只有两层，不引入递归工作区、标签页或浮窗。验收入口为真实 Web 升级旅程与 macOS Desktop，证据记录在该切片的 PR；其余子面板的迁移仍待后续反馈。
+
+[#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067) 将记忆文件、记忆演化和定时任务加入同一消息内布局：各分割容器保持稳定内容身份，分别保存方位与比例。方位由 Human 选择，消息面板变窄时不自动换轴或限制停靠方向；布局库的主题与拖放配置保持稳定，只在实际配置变化时更新，避免拖拽中的重排反馈。原布局 owner 的版本 5 在保留会话 v4 字段的同时，新增按 Bot DM Channel ID 保存的三个面板状态与首次使用种子；旧外层面板和 Rail 项移除前备份原记录。原快捷键标识与默认键（Primary+Alt+Shift+6 / E / 9）保持，父隐藏时恢复父子，群聊不响应 Bot 专属操作。右键消息 header 管理图标、名称、复选框形式的开关显隐；隐藏开关同时关闭子面板。所有变化仅涉及呈现，复用既有 Memory 和 Schedule 查询与权限 owner。[#2069](https://github.com/BotHarness/DeepSeekBot/issues/2069) 将浏览器／电脑加入同一 Bot 频道子面板集合：v6 单独备份旧记录并移除旧外层节点，保留 v5 记忆／定时任务状态；默认 Primary+Alt+Shift+B / 0 与自定义／解绑保持。未启用状态复用居中图标说明，启用仍使用原子面板 header 的显式电源操作；布局开闭不改变 Browser/Computer Access 或执行资源。
 
 Control Rail switch visibility is a workspace preference (`hiddenControls`) in the existing versioned layout record. The rail context menu updates that preference and closes a hidden Panel through the existing Dock owner; checking it again restores the entry without opening content. A Panel header's Close action changes only open layout state. Explicit shortcuts can still toggle Panels independently of rail visibility. Tooltip keycaps project the effective native shortcut catalog, including customized bindings, and render outside the rail's clipping boundary.
 
@@ -826,6 +828,8 @@ PersonaBot Profile 展示最多 50 个 Inbox 锚定话题的收件方式、修�
 
 ### Human Inbox 详情与移除（#687 QA）
 
+手机 Activity 通过认证 Bridge 读取同一应用定义 Human Attention owner。查询版本 1 在分组分页前执行安全摘要搜索、未读消息筛选，个人消息默认提及优先或显式按时间排序，游标绑定当前筛选。消费者分别加载可见分组；已处理历史需显式筛选。没有 Activity 专用持久化或第二套请求生命周期。悬浮顶部栏仅持有临时筛选、搜索和排序状态，折叠偏好仍按设备与 Host 保存。旧 Host 明确拒绝，避免静默返回未筛选结果。
+
 消息窗口上下沿的等宽箭头分别增量读取历史／较新上下文；下沿到达此前末尾后仍能查询后来消息。Channel 沿用原时间线游标，Assignment 报告通过同一个有界查询继续读取边沿。每条消息在悬停或键盘聚焦时显示精确来源按钮，触屏保持可用；Assignment 原始报告则打开所属 DSH Session。常规手动刷新与底部来源按钮移除，失败可重试且保留回复草稿。
 
 Human Attention 在原 operational database 拥有 `human_inbox_dismissals`，只保存 Human、item、Source Event key、可选 unread placement revision 和时间，不保存另一份消息。Host 验证可见原来源后提交 Inbox-only Dismiss；它不答复、审批、授权或推进已读，不创建已处理记录。查询分页和待行动计数排除已移除项；入口未读总数仍由原已读位置决定。Channel 未读汇总只隐藏当时 revision 及之前的批次，之后的消息重新出现；新的 Assignment 报告也不被旧决定隐藏。多窗口与重启共享同一状态，原 Channel 卡片仍能处理，随后真正回应的已处理历史仍引用原权威。再次点击同一行只收起详情，不移除。
@@ -1043,3 +1047,9 @@ A local default-on preference preserves saved opt-outs. The switch lives at the 
 ### Searchable Bot Settings
 
 The application-defined Bot Settings modal keeps a single active settings Slot mounted. Its localized search index resolves only currently registered pages, then selects the page and focuses the matching settings row or section; searching never mounts hidden providers or starts their requests. Appearance contains a nested layout Slot so the live workspace retains ownership of gap/reset state. Theme and language remain DSH-native preferences, written through `theme.setTheme` and `locale.setLocale`; no second preference store is introduced. Notifications and Keyboard shortcuts are first-level pages. The shortcuts page reuses existing Bot bindings and the DSH-native Panel command catalog/edit protocol, including revision checks, conflicts and native recording interception. The General tutorial describes the current Panel workspace and retains the narrow-layout fallback.
+
+### Channel workspace split topology (#2076)
+
+The Client owns a per-Channel binary split tree inside Messages. A leaf is message content or one registered Channel subpanel; a branch stores its axis and first-child fraction. Hidden/unavailable leaves collapse only in the rendered projection, leaving the saved tree intact. Bot-only availability and shortcut dispatch still use the existing ChannelDock owner. No Host capability, data authority, or execution permission changes.
+
+Version 7 retains the old per-panel open/hidden-control records and migrates legacy side/fraction geometry lazily into an equivalent tree. It backs up the prior raw record before upgrade. Explicit dragging splits the destination leaf; resizing only updates the selected branch. Stable keyed portals render into leaf-owned DOM containers, which move between layout slots without remounting content. Width changes never rewrite topology. See ADR-0222.

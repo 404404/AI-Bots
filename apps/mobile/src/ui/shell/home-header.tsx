@@ -58,16 +58,20 @@ export function HomeHeader({
             accessibilityState={{ expanded: drawerOpen }}
             style={({ pressed }) => ({
               flex: 1,
+              minWidth: 0,
+              minHeight: theme.touch,
               flexDirection: 'row',
               alignItems: 'center',
               gap: space.x4,
               opacity: pressed ? 0.7 : 1,
             })}
           >
-            <HostChipFace hostName={hostName} avatar={look.avatar} band={band} />
+            <HostChipFace hostName={hostName} avatar={look.avatar} band={band} singleLine />
           </Pressable>
           {actions === undefined ? null : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.x2 }}>
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 0, gap: space.x2 }}
+            >
               {actions}
             </View>
           )}

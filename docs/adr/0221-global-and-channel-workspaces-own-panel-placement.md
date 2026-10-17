@@ -1,6 +1,6 @@
 # ADR-0221: Global and Channel workspaces own panel placement
 
-- Status: Accepted (Sessions slice; remaining subpanels staged)
+- Status: Accepted (Sessions, Memory, Schedules, Browser and Computer slices)
 - Date: 2026-10-17
 - Spec: [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048)
 - First runnable slice: [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049)
@@ -11,7 +11,7 @@
 
 The current flat Dock puts global content, such as Channel list and Activity Center, beside content that only makes sense for the active Channel. Hiding Messages leaves Channel-bound panels visible, and the Control Rail does not communicate that relationship. A Group's ability to inspect a member Bot's Sessions must not imply that the Group owns that Bot's Browser, Computer or Profile.
 
-The Human wants freedom to arrange content without losing the relationship between a Channel and its panels. The agreed target is two layout levels. The first Sessions slice implements this ownership inside Messages. Other Channel-bound panels remain staged.
+The Human wants freedom to arrange content without losing the relationship between a Channel and its panels. The agreed target is two layout levels. The first Sessions slice implements this ownership inside Messages. Memory files, Memory evolution and Schedules join the inner workspace in #2067. Other Channel-bound panels remain staged.
 
 ## Decision
 
@@ -65,4 +65,20 @@ Later slices move the remaining Channel-bound surfaces after Human feedback. Bro
 - Local layout migration has a cost: closed/missing parents, hidden switches, older Work layouts and partially migrated records all need observable recovery. Reverting code leaves Host data intact; restoring the saved layout backup replaces subsequent local geometry. Native bindings remain in their existing settings owner.
 - The Human confirmed the highest acceptance seam: real Web old-layout upgrade, Sessions inside Messages, split/resize and refresh, parent hide, shortcut restoration, then DM/Group switching. Supplement with actual macOS Desktop dispatch and window controls. Use existing real Sessions/Assignments where available; API-only checks are not proof of the UI journey.
 - Focused regression coverage checks migration idempotence and backup, closed-state preservation, per-Channel persistence, shortcut customization/unbinding/conflicts, stale reads and stable content on rearrangement. Verify Group exclusions independently of Sessions' member-Bot override.
-- The Sessions slice uses a stable flex split, rather than reparenting React content between Dockview groups. A pointer drop or header menu changes its side; the separator changes a saved proportion. The same content containers remain mounted. Below 520px of parent width, the split temporarily stacks vertically without changing its stored side or ratio. Runtime, visual and native evidence belongs to #2049's implementation PR before Human QA.
+- The Sessions slice uses a stable flex split, rather than reparenting React content between Dockview groups. A pointer drop or header menu changes its side; the separator changes a saved proportion. The same content containers remain mounted. The original below-520px vertical fallback was removed in #2074: every split now keeps the saved side at any parent width. Runtime, visual and native evidence belongs to #2049's implementation PR before Human QA.
+
+## Bot Memory and Schedules slice (#2067)
+
+Memory files, Memory evolution and Schedules reuse the Channel workspace split container and their existing Consumers. All four registered children have stable containers in a fixed split sequence, each dividing the remaining message region with its saved side and ratio. Moving a child changes its direction inside its own split; it does not reparent any live content. This is one Channel workspace with sibling content, not recursively nested product workspaces. Following the Human clarification in [#2074](https://github.com/BotHarness/DeepSeekBot/issues/2074), saved placement is authoritative at every parent width. Narrowing Messages never changes the split axis or limits available docking sides; only an explicit placement action changes direction. The earlier automatic vertical fallback is removed.
+
+The existing layout record advances to v5 with `botPanelSeeds` and `botWorkspaces`, keyed by stable Bot DM Channel identity. Sessions keeps its v4 fields. Migration first normalizes older Work/Sessions records, then removes only these three outer panels and their rail entries. Meaningful adjacency supplies side/proportion; parked sides and explicit closed/hidden states are retained. Unknown plugins, other panels and their placement survive. The original raw record is retained at `.before-bot-workspace-v5`, and existing per-Channel records win over lazy seeds. A failed backup prevents replacing the original record.
+
+Messages header switches and its shared context menu operate the same layout owner. Hiding a switch closes that child; restoring a switch does not silently reopen it. Child header menus close or reposition only that child. Group contexts cannot open these Bot-only panels, including through existing shortcuts; switching to a Group preserves each Bot DM's saved state. Their existing command identities, Primary+Alt+Shift+6 / E / 9 defaults, custom overrides and explicit unbinding are unchanged. Each command uses the same parent restoration state machine as Sessions. Layout actions do not create, cancel or edit schedules or Memory.
+
+The native bridge and Host APIs do not change. Transient Members/files/Inbox unification remains separate work.
+
+## Browser and Computer slice (#2069)
+
+Browser and Computer reuse the same stable Bot Channel split containers, header switches and shared context menu. The global rail no longer exposes either entry. v6 backs up the original record at `.before-bot-workspace-v6`, migrates both outer nodes into lazy seeds, and preserves v5 Memory/Schedules seeds and per-Channel states. Older version backup keys remain intact. Existing Browser/Computer Consumers retain their access, observation and execution owners; visibility does not grant access, open tabs, start a Computer or stop resources.
+
+Existing command IDs and Primary+Alt+Shift+B / 0 defaults remain unchanged, including customization and explicit unbinding. Group and unresolved Bot contexts cannot execute either child action. Disabled access uses the shared centered panel icon/description with the existing explicit power action in the child header. Layout moves preserve mounted content; changing Bot scope follows the existing keyed Consumer lifecycle.

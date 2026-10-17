@@ -185,7 +185,7 @@ describe('desktop Bot mode dock', () => {
   it('reopens a closed panel where it was, from the Panels menu', async () => {
     await render(builtins);
     await click('[data-dock-close="sessions"]');
-    expect(readChannelDock(storage)!.parked['sessions']).toEqual({
+    expect(readChannelDock(storage)!.parked['sessions']).toMatchObject({
       neighbor: CHANNEL_BODY_PANEL,
       direction: 'right',
     });
@@ -796,8 +796,14 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     scope: 'global',
     component: () => null,
   });
-  registry.registerEntry(entry('sessions'));
-  const botOnly = ['memory-files', 'memory-evolution', 'schedules'];
+  registry.registerEntry({ ...entry('sessions'), label: '会话' });
+  const botOnly = [
+    'memory-files',
+    'memory-evolution',
+    'schedules',
+    'botharness-browser',
+    'botharness-computer',
+  ];
   for (const id of botOnly) registry.registerEntry(entry(id));
   const workspace = { rail: () => createElement('nav') };
   const view = (id: string) =>
@@ -832,7 +838,9 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(host.querySelector('[data-message-draft]')).toBe(draft);
   expect(host.querySelector('[data-body="sessions"]')).toBe(session);
-  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  expect(readChannelDock(storage)?.channelSplits?.ada).toMatchObject({
+    ratio: expect.closeTo(0.68),
+  });
   act(() => registry.close(CHANNEL_BODY_PANEL));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
@@ -840,6 +848,9 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   await settle();
   expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
   expect(registry.isOpen('sessions')).toBe(true);
+  expect(readChannelDock(storage)?.channelSplits?.ada).toMatchObject({
+    ratio: expect.closeTo(0.68),
+  });
   act(() => registry.toggle('sessions'));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
@@ -865,7 +876,9 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   act(() => root.render(view('ada')));
   await settle();
   expect(registry.isOpen('sessions')).toBe(false);
-  expect(readChannelDock(storage)?.channelWorkspaces?.ada?.ratio).toBeCloseTo(0.32);
+  expect(readChannelDock(storage)?.channelSplits?.ada).toMatchObject({
+    ratio: expect.closeTo(0.68),
+  });
   act(() => registry.close(CHANNEL_BODY_PANEL));
   await settle();
   act(() => root.render(null));
@@ -885,7 +898,7 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
     ),
   );
   await settle();
-  const item = document.querySelector<HTMLButtonElement>('[data-menu-item="session-control"]')!;
+  const item = document.querySelector<HTMLButtonElement>('[data-menu-item="control:sessions"]')!;
   expect(item).not.toBeNull();
   act(() => item.click());
   await settle();
@@ -904,10 +917,122 @@ it('routes Sessions through its parent, remembers each Channel and preserves con
   );
   await settle();
   act(() =>
-    document.querySelector<HTMLButtonElement>('[data-menu-item="session-control"]')!.click(),
+    document.querySelector<HTMLButtonElement>('[data-menu-item="control:sessions"]')!.click(),
   );
   await settle();
   expect(readChannelDock(storage)?.channelWorkspaces?.ada?.hiddenControl).toBe(false);
   expect(context().querySelector('button[aria-label="会话"]')).not.toBeNull();
   expect(registry.isOpen('sessions')).toBe(false);
+  for (const id of botOnly) {
+    act(() => registry.open(id));
+    await settle();
+    expect(
+      host.querySelector(`[data-channel-subpanel="${id}"] [data-body="${id}"]`),
+    ).not.toBeNull();
+    expect(readChannelDock(storage)?.layout.panels[id]).toBeUndefined();
+    const body = host.querySelector(`[data-body="${id}"]`);
+    const divider = host
+      .querySelector(`[data-channel-leaf="${id}"]`)!
+      .closest('.bh-channel-branch')!
+      .parentElement!.querySelector(':scope > [role="separator"]')!;
+    act(() =>
+      divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })),
+    );
+    await settle();
+    expect(host.querySelector(`[data-body="${id}"]`)).toBe(body);
+    const savedTree = readChannelDock(storage)?.channelSplits?.ada;
+    expect(divider.getAttribute('aria-valuenow')).toBe('68');
+    act(() => registry.close(CHANNEL_BODY_PANEL));
+    await settle();
+    act(() => registry.toggle(id));
+    await settle();
+    expect(registry.isOpen(CHANNEL_BODY_PANEL)).toBe(true);
+    expect(registry.isOpen(id)).toBe(true);
+    act(() => registry.toggle(id));
+    await settle();
+    expect(registry.isOpen(id)).toBe(false);
+    expect(readChannelDock(storage)?.channelSplits?.ada).toEqual(savedTree);
+    act(() => registry.open(id));
+    await settle();
+    expect(
+      host
+        .querySelector(`[data-channel-leaf="${id}"]`)!
+        .closest('.bh-channel-branch')!
+        .parentElement!.querySelector(':scope > [role="separator"]')
+        ?.getAttribute('aria-valuenow'),
+    ).toBe('68');
+    act(() => registry.close(id));
+    await settle();
+  }
+  act(() => root.render(view('bob')));
+  await settle();
+  for (const id of botOnly) {
+    expect(registry.isOpen(id)).toBe(false);
+    act(() => registry.open(id));
+  }
+  await settle();
+  act(() => root.render(view('ada')));
+  await settle();
+  for (const id of botOnly) expect(registry.isOpen(id)).toBe(false);
+  act(() => root.render(null));
+  await settle();
+  act(() => root.render(view('bob')));
+  await settle();
+  for (const id of botOnly) expect(registry.isOpen(id)).toBe(true);
+});
+
+it('does not reapply Dockview options while geometry changes', async () => {
+  const { WorkspaceContext, WORKSPACE_CHANNELS } =
+    await import('../src/client/workspace-context.js');
+  let dock: import('dockview-react').DockviewApi | undefined;
+  let changeGap: (value: number) => void = () => {};
+  const registry = createDockPanelRegistry();
+  registry.register({
+    id: CHANNEL_BODY_PANEL,
+    title: 'Messages',
+    scope: 'global',
+    component: () => null,
+  });
+  registry.register({
+    id: WORKSPACE_CHANNELS,
+    title: 'Channels',
+    scope: 'global',
+    component: () => null,
+  });
+  const workspace: NonNullable<ContextType<typeof WorkspaceContext>> = {
+    rail: (api, _gap, setGap) => {
+      dock = api;
+      changeGap = setGap;
+      return createElement('nav');
+    },
+  };
+  act(() =>
+    root.render(
+      createElement(
+        WorkspaceContext.Provider,
+        { value: workspace },
+        createElement(ChannelDock, {
+          body: createElement('div'),
+          panels: registry.panels(),
+          registry,
+          entryProps,
+          shows: () => true,
+          t: zhTranslate,
+          storage,
+        }),
+      ),
+    ),
+  );
+  await settle();
+  const update = vi.spyOn(dock!, 'updateOptions');
+  act(() => dock!.layout(1200, 800));
+  await settle();
+  act(() => dock!.getPanel(WORKSPACE_CHANNELS)!.group.api.setSize({ width: 370 }));
+  await settle();
+  expect(update).not.toHaveBeenCalled();
+  act(() => changeGap(12));
+  await settle();
+  expect(update).toHaveBeenCalledWith(
+    expect.objectContaining({ theme: expect.objectContaining({ gap: 12 }) }),
+  );
 });

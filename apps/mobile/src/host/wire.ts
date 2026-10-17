@@ -346,9 +346,12 @@ export interface HumanAttentionItem {
   summary: string;
   messageId?: string;
   responseMessageId?: string;
+  unreadCount?: number;
+  isUnread?: boolean;
 }
 
 export interface HumanAttentionPage {
+  queryVersion?: number;
   items: HumanAttentionItem[];
   nextCursor?: string;
 }
