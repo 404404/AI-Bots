@@ -1,0 +1,13 @@
+{
+  "source": "actual public Marketplace candidate selected after read-only inspection under root authorization",
+  "url": "https://github.com/qizhen2021/dsb-bot-research-analyst.git",
+  "commit": "256d4356b2d562f11efbae241b94ab1c7c38cd24",
+  "soul": {
+    "bytes": 1665,
+    "sha256": "7464549492fe36996716bacb2edf799282a1b7ae1e1aa57ac87a9685c9fa0e4d"
+  },
+  "memory": "absent in pinned source tree; preserve absence; no invented source bytes",
+  "executedRepositoryCode": false,
+  "installedDependencies": false,
+  "rejectedAlternative": "second research catalogue candidate also has no Memory file"
+}
