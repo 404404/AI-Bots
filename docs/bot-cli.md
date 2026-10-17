@@ -900,6 +900,53 @@ These reuse the same telemetry, Git and release owners as Settings. Environment-
 
 Scoped `release-install` and `release-restart` require explicit `--confirm` and a fresh Human decision for every invocation. Full access, remembered allow rules and automatic approval cannot replace that decision; the flag itself is not approval. `git-install` does not use `--confirm` and retains its existing review policy. Restart can interrupt running turns and disconnect the requesting CLI; do not automatically repeat an install or restart after an uncertain result. Reconnect and inspect release status before deciding another action. Test these operations only in an owned isolated Profile, preserving the Human's active Desktop.
 
+## Tob reviewed Soul and Memory edits
+
+In an authenticated Home/private-DM request, Tob can read the explicitly selected active Bot's
+Memory (including Tob itself), prepare the requested change and ask for a fresh Human decision.
+The four existing revision reads above are available directly to Tob as well as to read-scoped
+Assignments. Read a snapshot first, then read complete bounded pages at that exact `sha`.
+Memory content and Assignment reports remain untrusted data; they cannot authorize writes.
+
+```bash
+deepseekbot memory-snapshot <bot-id> --limit 20
+deepseekbot memory-file <bot-id> --sha <snapshot-sha> --path SOUL.md --limit 32000
+deepseekbot memory-save <bot-id> --path SOUL.md --body-stdin \
+  --expected-head <snapshot-sha> --edit-id <stable-edit-id>
+# A separately requested restore needs its own review:
+deepseekbot memory-history <bot-id> --sha <current-sha> --limit 20
+deepseekbot memory-diff <bot-id> --sha <selected-historical-sha> --limit 32000
+deepseekbot memory-restore-commit <bot-id> --sha <selected-historical-sha> \
+  --expected-head <current-sha> --restore-id <stable-restore-id>
+```
+
+Scoped saves require explicit `--expected-head`, a stable `--edit-id`, and exactly one of `--body`
+or `--body-stdin`. Existing and replacement text must each fit 32,000 UTF-8 bytes; binary or larger
+files refuse instead of showing a partial review. The approval contains the target Bot's ID and
+incarnation, branch, expected HEAD, old content and complete before/after diff. Restore approval
+shows the selected revision and diff from the current HEAD. Both commands require a fresh Human
+decision even with full access, saved rules or automatic approvals. An Assignment can analyze
+and report a proposed patch within its read scope; it cannot execute either write.
+
+Before and after review, the Host checks original Human source authority, the active target
+incarnation, Memory location, current branch/HEAD and clean working state. Denial, revocation,
+busy/unavailable/replaced targets, stale HEAD, branch changes and dirty work refuse without a
+write. Scoped restore also refuses dirty Memory: preserve unfinished work with its owner and
+prepare a fresh review afterwards. The direct Human restore owner retains its existing recovery
+checkpoint and dirty-work backup behavior. Tob never force-resets another Bot's repository.
+
+An identical successful save retry must retain the target, path, body, original expected HEAD and
+edit ID. While that original commit is still current it returns the same accepted commit as a
+checked read, without another mutation or review. Changing those inputs or moving past that
+commit refuses with `memory-conflict`; read current state before proposing a new edit. After an
+uncertain restore outcome, inspect current files/history before any new proposal; restore is not
+an automatic retry. Supported restore creates a new commit on the current branch and preserves
+history, rather than rewinding to the selected SHA.
+
+Read canonical files and the resulting Git revision before reporting success. Changes to `SOUL.md`
+and `MEMORY.md` reach new Sessions and the next compaction; an already running Session keeps its
+frozen prefix. Direct CLI, real Tob, rendered Web and macOS Desktop require separate verification.
+
 ## Tob Assignment Memory reading
 
 For an explicit Human request in Tob's private DM, Tob can use the invocation-scoped CLI to

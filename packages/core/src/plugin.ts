@@ -42,6 +42,8 @@ import {
 } from './tob/cli-maintenance-operations.js';
 import {
   createTobMemoryOperations,
+  createTobMemoryEditOperations,
+  TOB_MEMORY_EDIT_CAPABILITIES,
   createAssignmentMemoryOperations,
   TOB_MEMORY_CAPABILITIES,
   MEMORY_READ_CAPABILITIES,
@@ -1190,9 +1192,18 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobChannelOperations(command, args)) ??
                   (await tobChannelPreferencesOperations(command, args)) ??
                   (await tobScheduleOperations(command, args)) ??
-                  (await createTobMemoryOperations(core.runtime, actor.session.id)(command, args)),
+                  (await createTobMemoryOperations(core.runtime, actor.session.id)(
+                    command,
+                    args,
+                  )) ??
+                  (await createTobMemoryEditOperations(
+                    core.runtime,
+                    core.memory,
+                    actor.session.id,
+                  )(command, args)),
                 capabilities: [
                   ...TOB_MEMORY_CAPABILITIES,
+                  ...TOB_MEMORY_EDIT_CAPABILITIES,
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
                   ...TOB_BOT_CREATE_CAPABILITIES,
