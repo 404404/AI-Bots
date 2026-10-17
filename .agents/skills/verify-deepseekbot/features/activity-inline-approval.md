@@ -3,7 +3,7 @@
 ## Sub-features
 
 - Full page and Dock open Human Inbox directly, without Overview or statistics.
-- Content fills the allocated Panel width in page and Dock, including after resizing; the workspace shell owns outer insets and gaps. Cards and toolbar share 16px horizontal content gutters. Cards match Channel rows: small radius, transparent resting fill and the same hover fill.
+- Content fills the allocated Panel width in page and Dock, including after resizing; the workspace shell owns outer insets and gaps. Dock body shares the Channel list shell’s 2px padding on all sides, without additional content gutters. Cards match Channel rows: small radius, transparent resting fill and the same hover fill.
 - Tool approval preview, single decision, below-card context and source navigation.
 - A failed submission remains pending and retryable; success removes the inert card with
   a 220ms exit. Removing a focused card cannot approve the next item.
@@ -20,7 +20,7 @@ to finish mounting after resizing. Toggle the other panels off from the rail for
 list; verify both a narrow allocated Panel and a width greater than the former 760px cap.
 Expand **View context** below an approval, then collapse it and choose **Allow once** or
 **Reject** directly. **Open source** opens the exact Channel message. Select reveals the
-existing checkboxes/batch controls; Filters and history retains the existing category filters.
+existing checkboxes/batch controls. The header’s Notification settings ellipsis menu owns category/history, sorting, Bot/Channel filters and snoozed items; no filter tabs appear in the body. Verify menu selection, Escape/outside dismissal, and that changing filters clears explicit selection/context.
 
 ## Driving it with verify-app
 

@@ -1,3 +1,5 @@
+import { ActivityInboxMenu } from './activity-inbox-menu.js';
+import { useClientState } from './bot-sidebar.js';
 import type { ReactElement } from 'react';
 import type { BridgeActions } from './actions.js';
 import { HumanInboxView } from './human-inbox-view.js';
@@ -16,6 +18,14 @@ export function ActivityCenterView({
   placement?: 'page' | 'panel';
 }): ReactElement {
   const panel = placement === 'panel';
+  const { humanInbox: inbox } = useClientState();
+  const filterKey = JSON.stringify([
+    inbox.category,
+    inbox.botSlug,
+    inbox.channelId,
+    inbox.sort,
+    inbox.snoozed,
+  ]);
   const mount = useMountedResource<HTMLDivElement>(() => {
     const detach = panel ? actions.attachActivityCenterPanel() : undefined;
     void actions.refreshHumanInboxStatus();
@@ -34,9 +44,10 @@ export function ActivityCenterView({
       {panel ? null : (
         <header className="bh-activity-center-header">
           <h1>{t('activityCenter.title')}</h1>
+          <ActivityInboxMenu actions={actions} t={t} />
         </header>
       )}
-      <HumanInboxView actions={actions} t={t} embedded activity />
+      <HumanInboxView key={filterKey} actions={actions} t={t} embedded activity />
     </div>
   );
 }

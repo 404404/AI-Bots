@@ -9,7 +9,8 @@ export const zh = {
   'activityInbox.context': '查看上下文',
   'activityInbox.hideContext': '收起上下文',
   'activityInbox.select': '选择',
-  'activityInbox.filters': '筛选与历史',
+  'activityInbox.settings': '通知设置',
+  'activityInbox.category': '显示',
 
   'mobile.back': '返回会话列表',
   'mobile.conversations': '会话',
@@ -3623,7 +3624,8 @@ export const en = {
   'activityInbox.context': 'View context',
   'activityInbox.hideContext': 'Hide context',
   'activityInbox.select': 'Select',
-  'activityInbox.filters': 'Filters and history',
+  'activityInbox.settings': 'Notification settings',
+  'activityInbox.category': 'Show',
 
   'mobile.back': 'Back to conversations',
   'mobile.conversations': 'Conversations',

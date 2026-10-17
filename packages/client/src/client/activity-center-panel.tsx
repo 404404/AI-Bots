@@ -1,3 +1,4 @@
+import { ActivityInboxMenu } from './activity-inbox-menu.js';
 import type { BridgeActions } from './actions.js';
 import { ActivityCenterView } from './activity-center-view.js';
 import { ACTIVITY_CENTER_PANEL, type DockPanel } from './dock-panels.js';
@@ -16,6 +17,7 @@ export function createActivityCenterPanel(
     scope: 'global',
     order: -100,
     defaultPosition: { zone: 'right' },
+    headerAction: () => <ActivityInboxMenu actions={actions} t={t} />,
     component: () => (
       <ActivityCenterView
         actions={actions}

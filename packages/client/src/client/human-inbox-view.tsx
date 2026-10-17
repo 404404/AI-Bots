@@ -83,7 +83,6 @@ export function HumanInboxView({
           sort: 'oldest' as const,
         };
   const [selectionMode, setSelectionMode] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const retained = useActivityRows(
     inbox.items,
     JSON.stringify([inbox.category, inbox.botSlug, inbox.channelId, inbox.sort, inbox.snoozed]),
@@ -485,17 +484,9 @@ export function HumanInboxView({
             >
               {t(selectionMode ? 'common.cancel' : 'activityInbox.select')}
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              {t('activityInbox.filters')}
-            </Button>
           </div>
         ) : null}
-        {actionBotSlug !== undefined || (activity && !filtersOpen) ? null : (
+        {actionBotSlug !== undefined || activity ? null : (
           <>
             <div className="bh-human-inbox-tabs" role="tablist" aria-label={t('humanInbox.title')}>
               {(['unread', 'replies', 'action', 'info', 'handled'] as const)
@@ -589,7 +580,7 @@ export function HumanInboxView({
             </div>
           </>
         )}
-        {actionBotSlug !== undefined && inbox.items.length > 150 ? (
+        {(actionBotSlug !== undefined || activity) && inbox.items.length > 150 ? (
           <div role="status">
             <p>{t('humanInbox.refresh.paused')}</p>
             <button type="button" onClick={() => void actions.refreshHumanInbox()}>

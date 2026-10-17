@@ -115,6 +115,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
   store.setHumanInbox({
     ...previous.humanInbox,
     category: 'action',
+    sort: 'oldest',
     status: 'idle',
     items: [],
     botSlug: undefined,
@@ -135,6 +136,28 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
     expect(container.querySelector('.bh-human-inbox-batch')).toBeNull();
     await act(async () => button('选择')!.click());
     expect(container.querySelector('.bh-human-inbox-batch')).not.toBeNull();
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+    expect(container.querySelector('.bh-human-inbox-filters')).toBeNull();
+    if (placement === 'page') {
+      const settings = () =>
+        container.querySelector<HTMLButtonElement>('header button[aria-label="通知设置"]')!;
+      await act(async () => settings().click());
+      await act(async () => button('最新在前')!.click());
+      expect(store.getSnapshot().humanInbox.sort).toBe('newest');
+      expect(container.querySelector('.bh-human-inbox-batch')).toBeNull();
+      expect(
+        calls.filter((entry) => entry.endpoint === 'humanAttention').at(-1)?.payload.sort,
+      ).toBe('newest');
+      await act(async () => settings().click());
+      await act(async () => button('已处理')!.click());
+      expect(store.getSnapshot().humanInbox.category).toBe('handled');
+      await act(async () => settings().click());
+      await act(async () => button('需要你处理')!.click());
+      expect(store.getSnapshot().humanInbox.category).toBe('action');
+      expect(container.querySelector('[role="tablist"]')).toBeNull();
+      await act(async () => button('选择')!.click());
+    }
+
     await act(async () => button('取消')!.click());
     expect(container.querySelector('.bh-human-inbox-batch')).toBeNull();
     await act(async () => button('查看上下文')!.click());

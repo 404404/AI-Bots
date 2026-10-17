@@ -56,5 +56,8 @@ export const Modal = ({
 }): ReactElement | null =>
   open ? createElement('div', { role: 'dialog', className }, children, footer) : null;
 
+export const IconEllipsisOutlineRegular = (): ReactElement =>
+  createElement('svg', { 'aria-hidden': true });
+
 export const IconCloseOutlineRegular = (): ReactElement =>
   createElement('svg', { 'aria-hidden': true });
