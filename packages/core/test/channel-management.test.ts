@@ -350,7 +350,7 @@ describe('canonical Channel management receipts', () => {
     before.close();
     const after = mountOperationalDatabase({ dshHome: home, schemaPlan: BOT_HARNESS_SCHEMA_PLAN });
     cleanup.push(() => after.close());
-    expect(after.generation).toBe(98);
+    expect(after.generation).toBe(BOT_HARNESS_SCHEMA_PLAN.targetGeneration);
     const port = attachOperationalModule(after, 'migration-test');
     expect(
       port.read((db) => db.prepare('SELECT bot_slug FROM bot_creation_operations').get()),

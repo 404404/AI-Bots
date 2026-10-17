@@ -559,6 +559,15 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     return recipients.length === 0 ? undefined : recipients;
   };
 
+  const projectMessageAttachments = (
+    sourceEventId: string,
+    message: ChannelMessage,
+  ): ChannelMessage =>
+    projectAttachmentFiles(
+      attachmentMigration.project(sourceEventId, message),
+      options.attachments,
+    );
+
   const allMessages = (id: string): ChannelMessage[] => {
     if (!isValidChannelId(id)) return [];
     const rows = database.read((db) =>
@@ -649,7 +658,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     once: boolean,
     preview?: AllBotPreview,
     origin?: ChannelMessageOrigin,
-    canCommit?: () => boolean,
+    canCommit?: (database?: DatabaseSync) => boolean,
   ) => {
     const channel = readRecord(id);
     if (channel === undefined) return once ? { status: 'missing' as const } : undefined;
@@ -797,7 +806,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     try {
       database.transaction(
         (db) => {
-          if (canCommit?.() === false) {
+          if (canCommit?.(db) === false) {
             refused = true;
             return;
           }
@@ -2390,6 +2399,7 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     },
     assertAttachmentRefs,
     migrateAttachments: (signal) => attachmentMigration.migrate(signal),
+    projectMessageAttachments,
     attachmentReference(channelId, messageId, identity) {
       if (readRecord(channelId) === undefined) return undefined;
       const row = database.read((db) =>

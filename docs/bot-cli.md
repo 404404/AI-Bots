@@ -139,6 +139,7 @@ deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
 deepseekbot group-join-decide <channel> --request <request-id> --accept
 deepseekbot group-join-decide <channel> --request <request-id> --decline
 deepseekbot group-member-remove <channel> --bot <bot-id> [--expected-channel <channelFingerprint>]
+deepseekbot group-send-review <channel> [--accept | --off]
 deepseekbot group-wake-policies <channel>
 deepseekbot group-wake-set <channel> --bot <bot-id> --mode digest --count 5 --interval 30 [--expected-channel <channelFingerprint>]
 deepseekbot group-wake-set <channel> --bot <bot-id> --inherit [--expected-channel <channelFingerprint>]
@@ -159,6 +160,21 @@ deepseekbot channel-purge-preview <channel> --source-event <id> [--source-event 
 deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
   | deepseekbot channel-purge-confirm <channel> --source-event <id> --confirm --confirmation-stdin
 ```
+
+`channel_send` accepts optional `resolve_inbox_ids`: an explicit selection of 1–200 observed Source Event or Message IDs to mark done after a committed send or successful drop. Omitting it preserves Inbox responsibility. Held/refused outcomes never resolve these IDs. When the selection is omitted, `inboxResolution.outcome` is `not-requested`: complete remaining work with `inbox_resolve` before ending the turn. Drop uses the inbound Channel when `channel_id` is omitted. Inspect `inboxResolution` separately: if it fails, repair with `inbox_resolve`, never resend a committed reply. The same parameters work through `bot-tool <bot> channel_send --args-stdin`.
+
+If membership in the initiating opted-in Group is revoked, this run cannot redirect its reply to another Channel. `channel_send` returns `refused` with reason `group-reply-source-revoked`. A later independent DM is unaffected.
+
+`group-send-review <channel> --accept` enables the opt-in freshness check for a local Group;
+`--off` disables it and no flag reads its state. It does not change wake settings.
+A direct `bot-tool <bot> channel_read --args-stdin` returns `observationIds` for enabled Groups.
+Pass the target's handle as `observation_id` to `channel_send`. A `held` result is not a sent
+message: read `review.content` when present. If `review.complete` is true, pass its
+`review.observationId` as `observation_id` without another `channel_read`; otherwise read the
+missing content first. Then pass `draft_id` with the new observation and revised
+(or unchanged) `body`. Only one recheck is allowed. Send `drop: true`, `draft_id` and an empty
+`body` to abandon the draft without resolving its Inbox item. `expired`, `refused` and
+`requires-review` are terminal for automatic sending. Handles cannot cross Bot owners or Groups.
 
 `channel <group-channel>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}, wakePolicies}` and refuses non-group Channels. Stable creation/invitation inputs and retry semantics are described under [Tob group creation and invitations](#tob-group-creation-and-invitations); Human online commands may use them too.
 
