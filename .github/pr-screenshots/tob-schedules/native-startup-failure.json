@@ -1,0 +1,26 @@
+{
+  "productHead": "cc4f14d6db734830cba46dc8a5df2da5c014f5ba",
+  "kind": "preserved-failure-before-startup-fix",
+  "screenshot": {
+    "file": "native-startup-failure-before-fix.png",
+    "width": 2522,
+    "height": 1640,
+    "sha256": "2e77e17c9c3b82160fe530ddfae462937fbc19c70f7dc60dfd53d6bd49e47a5c",
+    "privacy": "Inspected synthetic test Bot only; no credentials, paths, login token or unrelated conversations visible."
+  },
+  "scheduleId": "836078d2-1dff-48ed-8e88-802c00c35847",
+  "successfulHandledFirings": 2,
+  "failedCatchup": {
+    "firingId": "d970be61-f686-402b-b175-a2f1eec23740",
+    "sourceEventId": "0a0fe08b-9cdd-453a-ab4d-276f9d862765",
+    "occurrenceAt": "2026-10-17T21:41:41.201Z",
+    "firedAt": "2026-10-17T21:42:18.840Z",
+    "attemptState": "retryable",
+    "observedAt": null,
+    "handledAt": null,
+    "sessionId": null,
+    "sideEffectStartedAt": null,
+    "failure": "Native credentials service is unavailable"
+  },
+  "acceptance": "Not passed: driver checked at least one handled firing, which missed this failed startup catch-up. History retained; native verification after fix is required."
+}
