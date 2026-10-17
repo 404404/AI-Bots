@@ -41,6 +41,7 @@ const call = (...command) =>
   execFileSync(adb, ['-s', serial, ...command], {
     encoding: 'utf8',
     timeout: 15000,
+    maxBuffer: 16 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -77,7 +78,10 @@ function capture(name) {
   writeFileSync(`${prefix}-${name}.xml`, xml);
   writeFileSync(
     `${prefix}-${name}.png`,
-    execFileSync(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], { timeout: 15000 }),
+    execFileSync(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], {
+      timeout: 15000,
+      maxBuffer: 16 * 1024 * 1024,
+    }),
   );
   return nodes(xml);
 }
