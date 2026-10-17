@@ -29,6 +29,7 @@ export interface DockPanel {
   readonly defaultPosition?: DockPanelPosition | undefined;
   readonly order?: number | undefined;
   readonly component: ComponentType<DockPanelProps>;
+  readonly headerAction?: ComponentType<DockPanelProps> | undefined;
 }
 
 export interface DockPanelRegistration extends DockPanel {

@@ -3095,7 +3095,7 @@ function ConversationView({
     state.selection === undefined ? (
       <Welcome state={state} t={t} />
     ) : state.selection.kind === 'inbox' ? (
-      <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />
+      <ActivityCenterView actions={actions} t={t} />
     ) : (
       conversationPane
     );
@@ -3193,7 +3193,7 @@ function BotMainContent({
   const workspace = useContext(WorkspaceContext);
   if (!workspace && state.selection === undefined) return <Welcome state={state} t={t} />;
   if (!workspace && state.selection?.kind === 'inbox')
-    return <ActivityCenterView actions={actions} t={t} nativeSessions={nativeSessions} />;
+    return <ActivityCenterView actions={actions} t={t} />;
   const scopeKey =
     state.selection === undefined
       ? 'welcome'
