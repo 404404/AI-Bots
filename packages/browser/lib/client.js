@@ -1378,7 +1378,7 @@ window.__ModuleLoader__.load({
 			"settings.containerDriver": "容器驱动",
 			"settings.driver.current": "默认",
 			"settings.driver.agent-browser": "agent-browser（试用）",
-			"settings.section": "Browser",
+			"settings.section": "浏览器控制",
 			"settings.target": "操作目标",
 			"settings.local": "本机 Browser",
 			"settings.container": "Docker Browser",

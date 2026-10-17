@@ -19,6 +19,17 @@ export const CSS =
   CHANNEL_DOCK_CSS +
   GENERATED_FILES_CSS +
   `
+.bh-settings-search-input input { color: ${color.fg}; }
+.bh-settings-search-input { width: 100%; box-sizing: border-box; color: ${color.fg}; }
+.bh-settings-search-input input::placeholder { color: ${color.muted}; }
+.bh-settings-search-results { display: flex; flex-direction: column; gap: ${space.x2}; max-height: 45vh; overflow-y: auto; }
+.bh-settings-search-results button { display: flex; flex-direction: column; gap: ${space.x2}; padding: ${space.x3}; text-align: start; border: 0; border-radius: ${radius.xs}; background: transparent; color: ${color.fg}; cursor: pointer; font: inherit; }
+.bh-settings-search-results button:hover { background: ${color.hover}; }
+.bh-settings-search-results small { opacity: .65; }
+[data-settings-highlight] { outline: ${border.focus} solid ${color.accent}; outline-offset: ${space.x1}; border-radius: ${radius.xs}; }
+.bh-keyboard-settings { display: flex; flex-direction: column; gap: ${space.x5}; }
+.bh-keyboard-settings:has([data-shortcut], [role="group"]) .bh-shortcuts-empty { display: none; }
+
 .bh-selection-bar { display: flex; align-items: center; justify-content: space-between; gap: ${space.x4}; margin: 0 ${space.x5} ${space.x5}; padding: ${space.x3} ${space.x4} ${space.x3} ${space.x5}; border-radius: ${radius.md}; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-primary); }
 .bh-selection-count { min-width: 0; font-size: ${text.bodySize}; line-height: ${text.bodyLine}; font-weight: ${text.strong}; font-variant-numeric: tabular-nums; }
 .bh-selection-export { display: inline-flex; align-items: center; gap: ${space.x2}; }
@@ -31,7 +42,7 @@ export const CSS =
 .bh-message-group:has(.bh-bubble-selecting) { position: relative; padding-left: 32px; }
 .bh-bubble-wrap.bh-bubble-selecting { position: static; cursor: pointer; user-select: none; }
 .bh-bubble-wrap.bh-bubble-selecting:focus-visible { outline: none; }
-.bh-bubble-wrap.bh-bubble-selecting:focus-visible .bh-bubble { outline: ${border.focus} solid var(--bh-accent); outline-offset: 2px; }
+.bh-bubble-wrap.bh-bubble-selecting:focus-visible .bh-bubble { outline: ${border.focus} solid var(--bh-accent); outline-offset: ${space.x1}; }
 .bh-bubble-wrap.bh-bubble-selecting .bh-bubble-surface { pointer-events: none; }
 .bh-bubble-wrap.bh-bubble-selecting .bh-bubble-side { display: none; }
 .bh-bubble-check { position: absolute; left: 4px; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-bottom: ${space.x3}; border-radius: ${radius.round}; border: ${border.hairline} solid ${color.borderStrong}; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary-foreground); }
@@ -42,7 +53,7 @@ export const CSS =
 .bh-composer-draft-version pre { flex: 1; min-width: 0; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 100px; overflow-y: auto; }
 .bh-composer-recovery > p button, .bh-composer-draft-version button { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-base); border: ${border.hairline} solid ${color.border}; border-radius: ${radius.sm}; padding: ${space.x2} ${space.x3}; cursor: pointer; }
 .bh-composer-recovery > p button:hover, .bh-composer-draft-version button:hover { background: var(--bh-hover); }
-.bh-composer-recovery > p button:focus-visible, .bh-composer-draft-version button:focus-visible { outline: ${border.focus} solid var(--bh-accent); outline-offset: 2px; }
+.bh-composer-recovery > p button:focus-visible, .bh-composer-draft-version button:focus-visible { outline: ${border.focus} solid var(--bh-accent); outline-offset: ${space.x1}; }
 .bh-root {
   --bh-chat-card-inset: ${space.x4};
   /* @bh-brand-aliases:start — thin BotHarness brand map onto DSH semantic

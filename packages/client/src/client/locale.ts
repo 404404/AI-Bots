@@ -3,6 +3,36 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots';
 export const LOCALE_NS = 'botharness';
 
 export const zh = {
+  'botSettings.section.appearance': '界面设置',
+  'botSettings.section.notifications': '通知',
+  'settings.search': '搜索设置',
+  'settings.results': '搜索结果',
+  'settings.noResults': '没有找到匹配的设置',
+  'settings.theme': '主题',
+  'settings.theme.system': '跟随系统',
+  'settings.theme.light': '浅色',
+  'settings.theme.dark': '深色',
+  'settings.language': '界面语言',
+  'settings.shortcuts.search': '搜索快捷键',
+  'settings.shortcuts.conflict': '此组合已被占用或保留，请选择其他按键。',
+  'settings.shortcuts.saveFailed': '未能保存快捷键，请重试。',
+  'settings.shortcuts.unbound': '未设置',
+  'workspace.shortcutSearch': '面板开关快捷键',
+  'onboarding.tour.panels.title': '面板工作区',
+  'onboarding.tour.panels.hint':
+    '每个面板独立显示内容。拖动标题移动面板，拖动间隙调整大小；位置和比例会自动保存。',
+  'onboarding.tour.rail.title': '面板控制列',
+  'onboarding.tour.rail.hint':
+    '点击图标开关面板，拖动图标调整顺序。鼠标移入控制列，底部会显示移动手柄；齿轮打开可搜索的设置。',
+  'onboarding.tour.channels.title': '频道面板',
+  'onboarding.tour.channels.hint':
+    '在这里切换频道。标题栏可以搜索、排序和新建频道；Alt + 数字可以快速切换。',
+  'onboarding.tour.messages.title': '消息面板',
+  'onboarding.tour.messages.hint': '阅读和发送消息。群聊右上角的成员按钮会打开右侧成员分区。',
+  'onboarding.tour.tools.title': '更多面板',
+  'onboarding.tour.tools.hint':
+    '用控制列打开会话、Bot 收件箱、记忆文件、浏览器控制和电脑控制等面板，按需要组合工作区。',
+
   'mobile.back': '返回会话列表',
   'mobile.conversations': '会话',
   'mobile.host': '退出 Bot 模式',
@@ -691,7 +721,7 @@ export const zh = {
   'panel.sidebar.open': '打开侧边栏',
   'panel.sidebar.collapse': '收起侧边栏',
   'icon.row.title': 'Bot 图标',
-  'icon.row.description': '选择 Bot 在应用侧边栏与设置导航中使用的标记',
+  'icon.row.description': '选择面板控制列和 Bot 模式入口使用的图标',
   'icon.menu.label': 'Bot 图标',
   'icon.mascot': 'DeepSeekBot 吉祥物',
   'icon.simple': 'DeepSeekBot 简约',
@@ -779,7 +809,7 @@ export const zh = {
   'shortcuts.help': '显示快捷键',
   'shortcuts.change': '修改',
   'shortcuts.locked': '不能修改',
-  'shortcuts.locked.sendKey': '不能在这里修改，请在 Bot 设置 › 通用 › 发送消息里切换',
+  'shortcuts.locked.sendKey': '不能在这里修改，请在 Bot 设置 › 消息 › 发送消息里切换',
   'shortcuts.change.label': '修改“{action}”的快捷键',
   'shortcuts.recording': '按下新组合键，Esc 取消',
   'shortcuts.reset': '恢复默认',
@@ -3609,6 +3639,37 @@ export function zhTranslate(key: BotHarnessKey | string, params?: Record<string,
 }
 
 export const en = {
+  'botSettings.section.appearance': 'Appearance',
+  'botSettings.section.notifications': 'Notifications',
+  'settings.search': 'Search settings',
+  'settings.results': 'Search results',
+  'settings.noResults': 'No matching settings',
+  'settings.theme': 'Theme',
+  'settings.theme.system': 'Follow system',
+  'settings.theme.light': 'Light',
+  'settings.theme.dark': 'Dark',
+  'settings.language': 'Interface language',
+  'settings.shortcuts.search': 'Search shortcuts',
+  'settings.shortcuts.conflict': 'This combination is reserved or already in use. Choose another.',
+  'settings.shortcuts.saveFailed': 'Could not save the shortcut. Please retry.',
+  'settings.shortcuts.unbound': 'Unassigned',
+  'workspace.shortcutSearch': 'Panel shortcuts',
+  'onboarding.tour.panels.title': 'Panel workspace',
+  'onboarding.tour.panels.hint':
+    'Each Panel owns its content. Drag its header to move it or a gap to resize it. Positions and proportions are saved.',
+  'onboarding.tour.rail.title': 'Control Rail',
+  'onboarding.tour.rail.hint':
+    'Toggle Panels with their icons and drag icons to reorder them. Hover over the rail to reveal its bottom move handle. The gear opens searchable settings.',
+  'onboarding.tour.channels.title': 'Channels Panel',
+  'onboarding.tour.channels.hint':
+    'Switch Channels here. Search, sort or create from the header, or switch quickly with Alt + a number.',
+  'onboarding.tour.messages.title': 'Messages Panel',
+  'onboarding.tour.messages.hint':
+    'Read and send messages. In a Group Channel, the Members button opens a section on the right.',
+  'onboarding.tour.tools.title': 'More Panels',
+  'onboarding.tour.tools.hint':
+    'Use the rail to open Sessions, Bot Inbox, Memory files, Browser control and Computer control, and arrange your workspace.',
+
   'mobile.back': 'Back to conversations',
   'mobile.conversations': 'Conversations',
   'mobile.host': 'Exit Bot mode',
@@ -4337,7 +4398,7 @@ export const en = {
   'panel.sidebar.open': 'Open sidebar',
   'panel.sidebar.collapse': 'Collapse sidebar',
   'icon.row.title': 'Bot icon',
-  'icon.row.description': 'Choose the mark for the Bot in the app sidebar and Settings navigation',
+  'icon.row.description': 'Choose the Bot icon used in the Control Rail and Bot mode entry',
   'icon.menu.label': 'Bot icon',
   'icon.mascot': 'DeepSeekBot mascot',
   'icon.simple': 'DeepSeekBot simple',
@@ -4429,7 +4490,7 @@ export const en = {
   'shortcuts.change': 'Change',
   'shortcuts.locked': "Can't be changed",
   'shortcuts.locked.sendKey':
-    "Can't be changed here; switch it in Bot settings › General › Send messages",
+    "Can't be changed here; switch it in Bot settings › Messaging › Send messages",
   'shortcuts.change.label': 'Change the shortcut for “{action}”',
   'shortcuts.recording': 'Press new keys, Esc to cancel',
   'shortcuts.reset': 'Reset',

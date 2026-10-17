@@ -31,7 +31,8 @@ const labels = {
   'Move control rail': '移动控制列',
   'Move to right edge': '移至最右',
   'Move before column 3': '移至第 3 列前',
-  'Workspace layout': '工作区布局',
+  Appearance: '界面设置',
+  'Search settings': '搜索设置',
   'Bot settings': 'Bot 设置',
   'Panel spacing': '面板间距',
 };
@@ -415,7 +416,16 @@ try {
   await page.click(
     '.bh-workspace-rail button[aria-label="' + (chinese ? 'Bot 设置' : 'Bot settings') + '"]',
   );
-  await click('Workspace layout');
+  await page.type(
+    `input[aria-label="${labelFor('Search settings')}"]`,
+    chinese ? '间距' : 'spacing',
+  );
+  await page.click('.bh-settings-search-results button');
+  await page.waitForSelector('[data-settings-highlight]');
+  assert.equal(
+    await page.$eval('[data-settings-content]', (node) => node.dataset.settingsContent),
+    'appearance',
+  );
   await page.locator(`input[aria-label="${labelFor('Panel spacing')}"]`).click();
   for (const gap of [0, 16, 12]) {
     await page.keyboard.press('Home');

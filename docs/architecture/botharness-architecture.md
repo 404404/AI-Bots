@@ -1014,3 +1014,7 @@ A local default-on preference preserves saved opt-outs. The switch lives at the 
 ### DSH 原生会话列表的 Bot 文件夹（#1997）
 
 首个 tracer 增加统一的 DeepSeekBot 产品分组，下面按 Bot／角色建立子组，以显式 PersonaBot ownership 收纳 Orchestrator 与 Assignment 根 Session，与 cwd 无关。两级标题复用 Channel sidebar 的 PanelHeader，并各自保存 Client 本地折叠偏好。现有 botSessionIds 查询在旧 ID 列表之外返回分组元数据；标题、执行状态和导航继续使用原生 Session 事实及 UiWorkspace。分组不修改 Workspace 成员、Grant 或 Session header。RC2 没有附加分组 Slot，因此有界的应用适配层在原生树中增加自有 portal 挂载点，并仅在挂载期间遮蔽重复行；找不到结构时保留原生列表。原生搜索仍独立工作；新增分组行中的原生菜单留待首个 tracer 的 Human 反馈后扩展。
+
+### Searchable Bot Settings
+
+The application-defined Bot Settings modal keeps a single active settings Slot mounted. Its localized search index resolves only currently registered pages, then selects the page and focuses the matching settings row or section; searching never mounts hidden providers or starts their requests. Appearance contains a nested layout Slot so the live workspace retains ownership of gap/reset state. Theme and language remain DSH-native preferences, written through `theme.setTheme` and `locale.setLocale`; no second preference store is introduced. Notifications and Keyboard shortcuts are first-level pages. The shortcuts page reuses existing Bot bindings and the DSH-native Panel command catalog/edit protocol, including revision checks, conflicts and native recording interception. The General tutorial describes the current Panel workspace and retains the narrow-layout fallback.

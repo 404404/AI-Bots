@@ -254,7 +254,7 @@ function WorkspaceRail({
       <span ref={settingsMount} hidden />
       {settingsTarget &&
         createPortal(
-          <SettingsSection>
+          <SettingsSection title={t('workspace.appearance')}>
             <SettingsRow
               title={t('workspace.gap')}
               control={
