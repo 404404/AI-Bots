@@ -17,6 +17,12 @@ import {
   runBackupCommand,
   type BackupValues,
 } from './cli-backup.js';
+import {
+  BOT_TRANSFER_COMMANDS,
+  BOT_TRANSFER_OPTIONS,
+  runBotTransfer,
+  type BotTransferValues,
+} from './cli-bot-transfer.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -117,6 +123,7 @@ export const LIVE_OPTIONS = {
   ...CLIENT_PREFERENCE_OPTIONS,
   ...PAIRED_DEVICE_OPTIONS,
   ...BACKUP_OPTIONS,
+  ...BOT_TRANSFER_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -208,6 +215,7 @@ export const LIVE_COMMANDS = [
   ...CLIENT_PREFERENCE_COMMANDS,
   ...PAIRED_DEVICE_COMMANDS,
   ...BACKUP_COMMANDS,
+  ...BOT_TRANSFER_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -380,7 +388,8 @@ interface LiveValues
     ProfileValues,
     TodoValues,
     ApprovalTemplateValues,
-    ApprovalReviewerValues {
+    ApprovalReviewerValues,
+    BotTransferValues {
   host?: string;
   'token-file'?: string;
   timeout?: string;
@@ -706,6 +715,8 @@ export async function runLiveCli(
     return runPairedDeviceCommand(command, rest, values, () =>
       connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
     );
+  if (BOT_TRANSFER_COMMANDS.some((entry) => entry.command === command))
+    return runBotTransfer(command, rest, values, io, connectLiveHost);
   if (IM_COMMANDS.some((entry) => entry.command === command)) {
     const operation = await prepareImAuthorization(command, rest, values, io);
     const signal = AbortSignal.timeout(timeoutMs(values.timeout));
