@@ -32,12 +32,10 @@ import { useFlipList } from './flip-list.js';
 import { GroupHeading } from './ds/group-heading.js';
 import { IconButton } from './ds/icon-button.js';
 import { PanelEmptyState } from './ds/empty-state.js';
-import { color, radius, space } from './ds/tokens.stylex.js';
+import { color, radius } from './ds/tokens.stylex.js';
 
 const styles = stylex.create({
-  groups: { display: 'flex', flexDirection: 'column', gap: space.x3 },
-  group: { marginBlock: space.x1 },
-  groupList: { marginTop: space.x1, marginBottom: space.x2 },
+  groups: { display: 'flex', flexDirection: 'column' },
   orchestrator: { display: 'grid', placeItems: 'center' },
   orchestratorIcon: {
     display: 'grid',
@@ -301,6 +299,7 @@ function SessionsPanel({
     countLabel?: string,
   ): ReactElement => (
     <GroupHeading
+      flush
       key={key}
       label={name}
       count={count}
@@ -331,7 +330,7 @@ function SessionsPanel({
         {preference.layout === 'status' ? (
           <>
             {orchestrators.length === 0 ? null : (
-              <SidebarCardList label={t('sessions.role.orchestrator')}>
+              <SidebarCardList flush label={t('sessions.role.orchestrator')}>
                 {orchestrators.map((row) => renderRow(row, true, 'idle'))}
               </SidebarCardList>
             )}
@@ -340,7 +339,7 @@ function SessionsPanel({
               const expanded = !preference.collapsedSections.includes(section.id);
               const name = t(`sessions.section.${section.id}`);
               return (
-                <section key={section.id} data-section={section.id} {...stylex.props(styles.group)}>
+                <section key={section.id} data-section={section.id}>
                   {section.id === 'working' && assignmentLimit !== undefined
                     ? heading(
                         section.id,
@@ -358,10 +357,7 @@ function SessionsPanel({
                         toggleSection(section.id),
                       )}
                   {expanded ? (
-                    <SidebarCardList
-                      label={name}
-                      className={stylex.props(styles.groupList).className}
-                    >
+                    <SidebarCardList flush label={name}>
                       {section.rows.map((row) => renderRow(row, true, section.implied))}
                     </SidebarCardList>
                   ) : null}
@@ -374,7 +370,7 @@ function SessionsPanel({
             const expanded = !preference.collapsedWorkspaces.includes(group.key);
             const name = group.name ?? t('sessions.workspace.unknown');
             return (
-              <section key={group.key} {...stylex.props(styles.group)}>
+              <section key={group.key}>
                 {heading(
                   group.key,
                   name,
@@ -384,10 +380,7 @@ function SessionsPanel({
                   group.path,
                 )}
                 {expanded ? (
-                  <SidebarCardList
-                    label={name}
-                    className={stylex.props(styles.groupList).className}
-                  >
+                  <SidebarCardList flush label={name}>
                     {group.rows.map((row) => renderRow(row, false))}
                   </SidebarCardList>
                 ) : null}
