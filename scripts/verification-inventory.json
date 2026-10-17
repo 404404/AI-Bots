@@ -1829,6 +1829,14 @@
       "reason": "Real Web preview/download/inspection, independent protected CLI export and stale/corrupt refusals; natural reviewed Tob export/inspection and new-Profile cold recovery/one-Bot authorization/activation UI. Host restore and launch remain explicit external steps.",
       "task": 2099,
       "sha256": "f2d4b2b1e9ab202a6ffabc2f3aacadaaf1766fcfa57ec1a5cf010e1444438a98"
+    },
+    {
+      "path": "scripts/e2e-tob-channel-transfer.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Reviewed Group deletion with denial/stale refusal, retained history and independent Human CLI readback; selected local attachment upload without send, stable-ID replay/conflict and separate Web/macOS restart reads.",
+      "task": 2090,
+      "sha256": "0d9e60c070838f63cdc2310b42f6c98abcc09aa80a6e9c291bb5a714bca73f38"
     }
   ],
   "native": [
