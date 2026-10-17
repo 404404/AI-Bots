@@ -1,0 +1,43 @@
+{
+  "evidence": "actual pinned artifact install and real Git commit/readback; no Host, Tob, UI or reboot claim",
+  "before": {
+    "available": false,
+    "reason": "missing",
+    "installable": true,
+    "install": {
+      "phase": "idle"
+    }
+  },
+  "installed": {
+    "available": true,
+    "version": "2.53.0",
+    "source": "managed",
+    "installable": true,
+    "install": {
+      "phase": "idle"
+    }
+  },
+  "recovered": {
+    "available": true,
+    "version": "2.53.0",
+    "source": "managed",
+    "installable": true,
+    "install": {
+      "phase": "idle"
+    }
+  },
+  "commit": "b488737bab145e5c3221c770eac528323f596e63",
+  "lifecycle": [
+    "git phase=install-started release=v2.53.0-4 asset=dugite-native-v2.53.0-4098283-macOS-arm64.tar.gz",
+    "git phase=downloaded source=media.botharness.ai bytes=62348987",
+    "git phase=installed release=v2.53.0-4 version=2.53.0"
+  ],
+  "platform": "darwin-arm64",
+  "sourceHead": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
+  "boundaries": [
+    "No Host or CLI invocation",
+    "No Tob model approval",
+    "No UI or operating-system restart",
+    "System Git was never uninstalled or modified"
+  ]
+}
