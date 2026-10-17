@@ -207,6 +207,40 @@ describe('plugin entry', () => {
     expect(stubs.skills.register).not.toHaveBeenCalled();
   });
 
+  it('restores and updates developer mode from native settings without a Client', async () => {
+    const { ctx, stubs } = createStubContext();
+    const settingsEvents = ctx as unknown as {
+      emit(name: 'settings/document-updated', namespace: string, revision: number): void;
+    };
+    let enabled = true;
+    const dispose = vi.fn();
+    stubs.skills.register.mockReturnValue(dispose);
+    ctx.provide('settings', {
+      describe: () => [{ ns: 'botharness-client', revision: 1, value: { developerMode: enabled } }],
+    } as never);
+    apply(ctx, { enabled: true });
+    await vi.waitFor(() => expect(stubs.skills.register).toHaveBeenCalledOnce());
+    enabled = false;
+    settingsEvents.emit('settings/document-updated', 'botharness-client', 2);
+    expect(dispose).toHaveBeenCalledOnce();
+    enabled = true;
+    settingsEvents.emit('settings/document-updated', 'unrelated', 3);
+    expect(stubs.skills.register).toHaveBeenCalledOnce();
+    settingsEvents.emit('settings/document-updated', 'botharness-client', 4);
+    expect(stubs.skills.register).toHaveBeenCalledTimes(2);
+  });
+
+  it('applies persisted developer mode when native Settings becomes available later', async () => {
+    const { ctx, stubs } = createStubContext();
+    apply(ctx, { enabled: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(stubs.skills.register).not.toHaveBeenCalled();
+    ctx.provide('settings', {
+      describe: () => [{ ns: 'botharness-client', revision: 0, value: { developerMode: true } }],
+    } as never);
+    await vi.waitFor(() => expect(stubs.skills.register).toHaveBeenCalledOnce());
+  });
+
   it('rebuilds the activity projection from owned Session logs and follows live events', () => {
     const home = createTempRoot('botharness-plugin-activity-');
     vi.stubEnv('DSH_HOME', home);
@@ -441,6 +475,7 @@ describe('plugin entry', () => {
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',
+      'channelGet',
       'channelCreate',
       'channelRename',
       'channelGroupAvatarSet',

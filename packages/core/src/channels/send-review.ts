@@ -273,7 +273,8 @@ export class GroupSendReview {
     const rows = db
       .prepare(`SELECT p.message_id, p.revision, e.payload_json, e.body
       FROM channel_placements p JOIN source_events e ON e.source_event_id = p.source_event_id
-      WHERE p.channel_id = ? AND p.revision >= ? ORDER BY p.revision`)
+      WHERE p.channel_id = ? AND p.revision >= ?
+      ORDER BY p.revision DESC ${allBasis.length === 0 ? 'LIMIT 20' : ''}`)
       .all(channelId, floor);
     const seen = new Map(basis.map((item) => [item.id, item]));
     const changed = rows
@@ -300,13 +301,14 @@ export class GroupSendReview {
             ? 'changed-again-stop-and-keep-responsibility-open'
             : 'read-new-context-then-revise-or-drop',
         ),
-        changedMessageIds: changed.slice(0, 20),
+        changedMessageIds: changed.slice(0, 20).reverse(),
         changedMessageCount: changed.length,
         read: { channel_id: channelId, limit: 20 },
       };
     }
-    draft.state = 'committed';
-    this.#save(db, draft);
+    db.prepare(
+      'DELETE FROM group_send_review_drafts WHERE id = ? AND owner = ? AND channel_id = ?',
+    ).run(id, owner, channelId);
     return undefined;
   }
 

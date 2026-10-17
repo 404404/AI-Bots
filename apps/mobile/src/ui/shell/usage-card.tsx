@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, View, type ViewInstance } from 'react-native';
+import { Platform, Pressable, View, type ViewInstance } from 'react-native';
 
 import { compactTokenCount, weekdayLabel } from '../../host/usage-days';
 import { usageWeek, type OverviewUsage } from '../../host/usage';
 import { useDesignTheme } from '../design/theme';
 import { chart } from '../design/chart';
 import type { LayerName } from '../design/layers';
-import { radius, space } from '../design/tokens';
+import { androidSettings, radius, space } from '../design/tokens';
 import { useMounted } from '../mounted';
 import { Text } from '../primitives/text';
 import { DayBars, type DayBar } from '../primitives/day-bars';
@@ -124,7 +124,7 @@ export function UsageCard({
         style={({ pressed }) => ({
           gap: space.x4,
           padding: space.x5,
-          borderRadius: radius.md,
+          borderRadius: Platform.OS === 'android' ? androidSettings.radius : radius.md,
           backgroundColor: pressed ? theme.layer[on].pressed : theme.layer[on].fill,
         })}
       >

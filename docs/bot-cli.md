@@ -71,11 +71,11 @@ deepseekbot bot-sessions <bot-id> --limit 20
 deepseekbot bot-activity <bot-id> --limit 20
 ```
 
-Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
+Creation returns `bot`, `dm`, the Host's Memory `dataDir`, completed/deferred `steps` and `next`. The model preset is applied through its owner, never forwarded as a native Agent preset. A missing specified preset is rejected before creation; other model failures after creation preserve the Bot and return its known identity and steps with `outcome: created`. A lost creation/import response without a stable operation key can return `outcome: unknown`: inspect the Host before creating again; no automatic mutation retry is provided. For blank online creation, use the [receipt-backed operation key](#tob-bot-creation-profiles-and-lifecycle) to reconcile the same identity. A created Bot alone does not prove model usability: use `send` and its exact correlated committed reply.
 
 `bot-attention` supports `--cursor` and the Host's pending/processing/observed/deferred/needs-repair/handled states; it limits pages to 1–100. Session summaries are newest-first and limited to 1–100 (default 50), with `total`; activity limits its session details and reports `sessionCount`. These are bounded summaries, not full tool-call logs or streaming drafts.
 
-For explicit cleanup, `bot-delete-preview <bot-id>` returns the owner's current scope and `preview.token`. Review it, then pipe `{"token":"<preview.token>"}` to `bot-delete-confirm <bot-id> --confirmation-stdin`. This command always retains Memory, and it erases the Bot's private-input secrets during the stop phase. Inspect `deletion.phase`; an incomplete cleanup can be continued with `bot-delete-retry <bot-id>`. Scope changes remain owner refusals; deletion is not content purge or complete data erasure.
+For explicit cleanup, `bot-delete-preview <bot-id>` returns the owner's current scope and `preview.token`. Review it, then pipe `{"token":"<preview.token>"}` to `bot-delete-confirm <bot-id> --confirmation-stdin --confirm`. Memory is retained unless `--erase-memory` explicitly selects the owner-reviewed directory, and it erases the Bot's private-input secrets during the stop phase. Inspect `deletion.phase`; an incomplete cleanup can be continued with `bot-delete-retry <bot-id> --confirm`. Scope changes remain owner refusals; deletion is not content purge or complete data erasure.
 
 From a built checkout, `node scripts/cli-smoke.mjs --preset <id> [--zip ./shared.zip] [--git owner/repo] [--cleanup]` drives the business CLI against the selected Host, checks a real reply for each source and returns owned IDs. Without an existing preset, provide `--provider <id> --model <id>`. Successful `--cleanup` deletes only that run's Bot identities through preview/confirmation, retaining Memory and any created preset; failed runs retain their resources for diagnosis. Use a disposable isolated Profile. The script does not authorize external messaging or verify UI rendering. See [ADR-0162](adr/0162-online-cli-management-keeps-explicit-host-authority.md).
 
@@ -127,12 +127,14 @@ deepseekbot group-create "Skill Lab" --member <bot-id> --member <bot-id>
 These commands manage Channels and groups through the same Host owners and checks as the Web UI. Each takes a Channel ID from `channels`:
 
 ```bash
+deepseekbot channel <group-channel>
+deepseekbot group-create "Skill Lab" [--member <bot-id> ...] [--operation-key <stable-key>]
 deepseekbot channel-rename <channel> --name "Skill Lab"
 deepseekbot channel-media-target <channel> --source-event <source-event-id> --attachment <attachment-id>
 deepseekbot channel-media-download <channel> --source-event <source-event-id> --attachment <attachment-id> --out ./original.csv
 deepseekbot group-avatar-set <channel> --avatar-file ./avatar.png
 deepseekbot group-avatar-set <channel> --clear
-deepseekbot group-invite <channel> --bot <bot-id>
+deepseekbot group-invite <channel> --bot <bot-id> [--operation-key <stable-key>] [--expected-channel <channelFingerprint>]
 deepseekbot group-invite-cancel <channel> --invitation <invitation-id>
 deepseekbot group-join-decide <channel> --request <request-id> --accept
 deepseekbot group-join-decide <channel> --request <request-id> --decline
@@ -182,6 +184,8 @@ in the draft audit and `bot-trace`. Unobserved, changed, purged, own, Human or p
 references return `peer-answer-not-observed`; no drop or Inbox completion occurs. The Host
 does not decide that the peer answered adequately. Useful additions and new direct questions
 still use the existing send path; resolve only explicitly selected completed Inbox items.
+
+`channel <group-channel>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}}` and refuses non-group Channels. Stable creation/invitation inputs and retry semantics are described under [Tob group creation and invitations](#tob-group-creation-and-invitations); Human online commands may use them too.
 
 Renaming a Bot DM renames that Bot, as in the Web UI. `group-avatar-set` reads a PNG, JPEG or WebP file of at most 96 KiB. Invitation and join-request IDs are in the group's `invitations` and `joinRequests`, returned by `channels` and by every group command. `group-wake-set` sets when a member Bot wakes for ordinary group messages: `all`, `mentions`, `digest` (after `--count` messages or `--interval` seconds; defaults 5 and 30) or `silent`; `--inherit` returns the member to its Bot's default. `channel-timeline` and `channel-journal` page messages the way the chat view does; take the `revision` from `channel-timeline` as `--through`. `channel-retry` asks the Bot to answer a Human DM message again after a failed reply. `channel-unread` lists the unread Bot message count of each Channel that has any; these are the numbers the sidebar shows on each row. `channel-mute` mutes a Channel the way the sidebar menu does: it keeps its row greyed and its unread messages out of the Activity total; `--off` unmutes it. `channel-bot-stop` stops the Bot's current turn, as the Stop button on the working status does: the Bot goes idle, the Channel records that the Human stopped it, and a Bot that is not working is refused with `not-working`. Assignments the Bot delegated keep running. `channel-react` adds your reaction to one message, or removes it with `--remove`, and returns the message's `reactions`; a message holds at most 20 of your reactions, and the emoji must be a single emoji. Bots react through `channel_send` with `react_to` and `reaction`, and an empty `body` when they only react; `bot-tool <bot> channel_send --args-stdin` runs that without the model. `channel-search` matches `--query` without case in the messages you can see, newest first, and pages with the `nextCursor` it returns.
 
@@ -522,6 +526,8 @@ deepseekbot model-plan-customize <bot-id> --orchestrator-provider deepseek --orc
 printf '%s' "$ASSIGNMENTS_JSON" | deepseekbot model-plan-assignments-set <bot-id> --plan-stdin
 deepseekbot model-plan-inherit <bot-id>
 deepseekbot model-preset-update <preset-id> --name Nightly --orchestrator-effort high
+deepseekbot home-model-set --provider <provider-id> --model <model-id> [--orchestrator-effort <effort>] [--expected-revision <default-revision>]
+deepseekbot model-preset-apply <bot-id> --preset <preset-id> [--expected-revision <plan-revision>] [--preset-revision <preset-revision>]
 deepseekbot overview-usage --period week
 deepseekbot overview-memory
 deepseekbot activity-overview
@@ -532,7 +538,11 @@ deepseekbot bot-activity-history <bot-id> [--before 2026-10-14] [--weeks 26]
 deepseekbot group-activity <group-channel>
 ```
 
+`model-preset-create` also accepts `--plan-stdin` against an online Host, with only `{"assignmentModels":[...]}` in stdin, to preserve allowed models, reasoning efforts and notes when creating a preset. Creation and update forward the complete policy through the same Host bridge as the mobile editor; neither silently reduces it to the default model.
+
 `model-catalog` lists the models the Host can run and the Profile default, as the model pickers do. `model-plan-set` replaces a Bot's whole plan with stdin `{"orchestrator":{...},"assignmentDefault":{...},"assignmentModels":[...]}`; `model-plan-assignments-set` takes the same object without `orchestrator`. A route is `{"provider","model","reasoningEffort"?}` and an Assignment model is `{"provider","model","allowedEfforts":[...],"defaultEffort","note"?}`. `model-plan-customize` changes only the Bot’s Orchestrator, creating an independent override if necessary while preserving fixed or inherited Assignment settings. `model-plan-inherit` drops the Bot's own model so it follows the Profile default. `model-preset-update` changes a preset's name or routes; flags you leave out keep the current values, and an optional `--plan-stdin` `{"assignmentModels":[...]}` replaces its Assignment models. The Host validates every route against its catalog. Plan and preset writes check a revision: `--expected-revision` makes that check explicit; without it the command reads the current revision first, like `memory-save` does with `--expected-head`. A plan changed meanwhile fails with the Host's `invalid-input`.
+
+The online Human CLI accepts `home-model-set --orchestrator-effort` and `--expected-revision`; the latter names `model-catalog.defaultRevision`, or the command reads the current default revision when omitted. `model-preset-apply` accepts `--expected-revision` for the Bot plan and `--preset-revision` for the preset; omitting these retains the existing Human behavior. Scoped Tob calls require the corresponding explicit revisions and cannot omit them to bypass the reviewed snapshot.
 
 `overview-usage` (`--period today|week|month|quarter`; `month` is the last 28 days and `quarter` the last 84, default `today`) and `overview-memory` return the Overview page's per-Bot rows; pass `nextCursor` back as `--after` for more. In `overview-usage`, each bucket is the sum of what providers reported and is `null` only when nothing in it was reported; `partial: true` on the totals, a day or a Bot means some usage in it went unreported, so its `totalTokens` is a lower bound. `activity-overview` shows what every Bot is doing and `channel-activity-today` today's messages per Channel. The `bot-*` readers address a Bot by id and read the Profile panels through its DM: `bot-usage` needs a non-future `--start`/`--end` range shorter than 182 days, `bot-session-usage` groups usage by Session and Assignment, and `bot-activity-history` returns the activity calendar (`--weeks` 1–104). `group-activity` takes a group Channel id. In `bot-activity-history`, a model row’s `totalTokens` retains the reported lower bound with `partial: true` when other calls are unreported; fully unreported usage stays `null`. The strict `bot-usage` query retains its existing unknown-total semantics.
 
@@ -605,7 +615,7 @@ Failure exits non-zero with `{"error": {"code", "message"}}` using a stable code
 
 ## Identity
 
-The bot name is a label; identity is the id. Every create mints a new bot, so reusing a name returns a second bot and still exits 0.
+The bot name is a label; identity is the id. Without an operation key, every create mints a new bot, so reusing a name returns a second bot and still exits 0. A stable online operation key instead reconciles its original identity.
 
 ## Secrets
 
@@ -663,4 +673,136 @@ The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist
 
 `deepseekbot tob-home` prepares/reuses the protected local Tob identity, Memory, managed Workspace and DM, returning their IDs and the canonical attention summary. It does not send a message. `deepseekbot home-model-set --provider <id> --model <id>` updates the native Host default; independent Bot plans remain unchanged.
 
-`deepseekbot bot-tool <tob-id> tob_assignment_limit_read` uses the same registered management read tool without a model. `tob_assignment_limit_set` accepts `value`, `previous_value` and `expected_revision`, but direct execution refuses `tob-authority-required`/`human-dm-required`: CLI callers cannot impersonate an accepted Human DM. Use the real Tob DM approval journey for that tool, or the existing authenticated Human settings command for administration. Invalid values refuse, stale proposals do not overwrite, and uncertain writes require read-back before retry. Tob delete/archive commands return `protected-bot`.
+Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the Bot creation/profile/lifecycle, group creation/invitation, model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
+
+Tob's Host-supplied system guidance is bundled with the plugin and is installed only for the protected Tob Orchestrator; upgrades do not overwrite the Human's editable personality or Memory. A simple question such as “What can you do?” first discovers the installed CLI capabilities, then describes practical outcomes in the Human's language and offers a concrete next step. Capability questions are read-only: they do not propose a mutation or approval. A later specific change request still goes through the existing authority and approval checks.
+
+The npm Bundle ships the core CLI module and product CLI entry. Tob uses a managed executable injected into its eligible Shell environment; it does not depend on a global `deepseekbot`, a source checkout, or manually copied skill files. Missing packaged CLI entries fail release verification; an unavailable runtime CLI is reported rather than replaced with an administrative fallback.
+
+Inside an eligible Tob Shell execution:
+
+```bash
+deepseekbot capabilities
+deepseekbot settings botharness-client
+# Use the previous value and revision returned by the read, not these example values.
+printf '%s' '{"assignmentConcurrencyLimit":3}' | deepseekbot settings-set botharness-client --patch-stdin --expected-revision 12 --previous-value '{"assignmentConcurrencyLimit":8}'
+```
+
+`capabilities` (also scoped `--help`) reports supported commands, fields, required review inputs and coded refusals. The read returns `{scope, ns, revision, value}`; `value` contains only the allowed fields. The write goes through existing Host approval policy for the parsed namespace, previous value, proposed value and revision. It rechecks the actual Tob root Orchestrator and the exact accepted Human DM source before and after approval and at execution, then reads back the native Settings value. Group/IM requests, Bot-originated input, Assignment Sessions and caller-supplied identities cannot grant this authority.
+
+The Host supplies an ephemeral loopback endpoint and scoped token to this Shell's child environment. This is a short-lived bearer capability, not a Human administrator credential or an isolation boundary against the same OS user; do not print or persist it. It expires when the Shell finishes, aborts or is disposed. Unsupported commands/options, incomplete scoped context and attempts to select another Host, token or offline home refuse rather than falling back to Human/offline access. `stale-setting` requires a new read and proposal; `agent-write-uncertain`, `setting-outcome-uncertain` and `setting-readback-mismatch` require read-back before any retry. A fresh Shell execution is required after context expiry.
+
+Authenticated Human `settings-set` keeps its existing behavior. It additionally accepts the paired `--expected-revision` and `--previous-value` flags to apply a previously reviewed patch; the latter is a JSON object with the same fields as the patch. Omitting both retains the existing read-then-write flow. Tob deletion/archiving still refuses with `protected-bot`.
+
+The [UI/CLI coverage inventory](agents/cli-ui-coverage.md) distinguishes existing Human commands from scoped Tob access and tracks the remaining coverage work. See [ADR-0224](adr/0224-tob-management-uses-scoped-native-shell-cli.md) for authority and lifecycle boundaries.
+
+### Tob Bot creation, profiles and lifecycle
+
+`create` in scoped Tob execution makes a blank Bot in managed Memory storage. A name is the only required user choice; Tob supplies a stable `--operation-key` for the operation. Optional `--description`, repeated `--role` tags, `--avatar-file`, `--persona` / `--persona-stdin`, and `--core-memory` / `--core-memory-stdin` reuse the existing creation validation. Only one content option may consume stdin. Initial personality and Memory become `SOUL.md` and `MEMORY.md`; no unrelated Workspace Grants or credentials are copied.
+
+```bash
+deepseekbot create --name Translator --operation-key create-translator-001 --persona 'Translate clearly.' --core-memory 'Prefer concise explanations.'
+deepseekbot show <bot-id>
+deepseekbot update <bot-id> --expected-profile <profileFingerprint> --name Translator --description 'Translation assistant' --role translator
+deepseekbot pause <bot-id> --expected-profile <profileFingerprint>
+deepseekbot resume <bot-id> --expected-profile <profileFingerprint>
+```
+
+The Host reserves one identity in its durable creation receipt before creating the Memory Repository and DM. After a lost response, repeat the **same operation key and same payload**: an existing completed receipt returns that Bot and DM, while a partially completed operation reconciles the reserved identity. A completed scoped retry performs a checked read instead of another creation approval. A changed payload refuses with `creation-key-conflict`; an archived or deleted identity refuses with `creation-identity-unavailable` and is never recreated by replay. `creation-memory-conflict` means the reserved folder exists without its Registry identity: preserve it for repair rather than deleting it or trying a new key. Receipt-backed creation is not a filesystem/database transaction and does not promise automatic repair of that interrupted state.
+
+The authenticated Human online `create` also accepts `--operation-key`. It is limited to blank creation with managed Memory, without `--preset` or a custom Memory location; apply a model plan or move Memory separately. Calls without a key keep their existing behavior, including import behavior. Scoped Tob does not gain Git/Zip/directory import, Marketplace search or edits to another Bot's existing Memory from this slice.
+
+Scoped `show` returns `{bot, profileFingerprint}`. Before every `update`, `pause`, `resume`, `bot-avatar-set`, `bot-banner-set`, `bot-appearance-set` or `bot-primary-color-set`, read the target and pass that fingerprint using `--expected-profile`. Presentation commands retain their existing file/recipe/clear/color options. The fingerprint covers the complete Registry record, so a concurrent change to any recorded profile field invalidates the reviewed snapshot. The Host rechecks it after approval and before applying the existing owner operation, then returns the canonical profile and new fingerprint. Re-read after `stale-setting`; do not silently overwrite. Profile metadata updates are limited to name, description and tags, not Workspace Grants, credentials or model configuration. Human online `update` also requires `--expected-profile` from `show` and uses the same Host owner; a stale fingerprint is not silently refreshed. Use `--description ''` to clear the bio and `--role ''` to clear all tags.
+
+```bash
+deepseekbot bot-delete-preview <bot-id>
+deepseekbot bot-delete-memory-folder <bot-id>
+printf '%s' '{"token":"<preview.token>"}' | deepseekbot bot-delete-confirm <bot-id> --confirmation-stdin --confirm
+# Only after explicitly reviewing erasure of the owner's displayed Memory folder:
+printf '%s' '{"token":"<preview.token>"}' | deepseekbot bot-delete-confirm <bot-id> --confirmation-stdin --confirm --erase-memory
+deepseekbot bot-delete-retry <bot-id> --confirm
+```
+
+Deletion retains Memory by default. `--erase-memory` selects the exact owner-reviewed Memory directory, only when `preview.eraseAvailable` permits it; caller-selected paths are rejected. `bot-delete-memory-folder` returns the validated `{target:{path,relativePath,kind}}` for inspection, not arbitrary filesystem access. Preview tokens, dependency scope and path ownership checks remain authoritative. Deletion retry continues the already accepted retention/erasure choice; it cannot change that choice. Scoped confirm and retry require a fresh Human decision each time, including under full access, remembered rules or automatic approval. Both Human commands now require `--confirm`, so update existing cleanup scripts. Tob itself cannot be archived or deleted (`protected-bot`), and names, personality text and imports never grant its authority.
+
+See [ADR-0225](adr/0225-bot-creation-receipts-and-reviewed-profile-lifecycle.md) and the [coverage inventory](agents/cli-ui-coverage.md#2089-bot-management-scope). Direct CLI, actual Tob conversation, Web navigation and macOS Desktop are separate verification gates; these command contracts do not imply those runs have passed.
+
+### Tob group creation and invitations
+
+The first [#2090](https://github.com/BotHarness/DeepSeekBot/issues/2090) slice lets Tob create groups and add existing Bots from its accepted Human DM. After the management operation is approved, invited Bots join immediately under the existing default `autoAcceptGroupInvites=true`; no separate invitation decision is needed. It uses the existing Channel owner through the scoped CLI, without a new model Tool. Tob manages other Bots and cannot be an initial member or invitation target.
+
+```bash
+deepseekbot channels --limit 25
+deepseekbot channel <channel-id>
+deepseekbot group-create "Research team" --member <bot-a> --member <bot-b> --operation-key group-research-001
+deepseekbot group-create "Planning" --operation-key group-planning-001
+deepseekbot group-invite <channel-id> --bot <bot-c> --operation-key invite-research-001 --expected-channel <channelFingerprint>
+```
+
+Scoped `channels` returns bounded Channel metadata, not message bodies; use `--limit` from 1 to 100 (default 50) and the returned `nextCursor` with `--cursor`. `channel <group-channel-id>` returns `{channel, channelFingerprint, invitationPolicy:{autoAccept}}` and refuses a non-group target. The scoped projection keeps at most 100 members and the last 100 invitations, with counts for omitted entries. These reads do not admit Tob as a member or authorize group messages as management instructions.
+
+`group-create` supports an empty group or repeated `--member` values for existing eligible Bots. Explicit initial members join directly, matching the existing Human/UI creation behavior. A later `group-invite` uses the existing invitation owner. With the default `autoAcceptGroupInvites=true`, it records an accepted invitation (`respondedBy: "profile-policy"`) and membership together, without waking the invited Bot for a separate decision. This adds no setting or UI toggle. Only if the Human has already disabled auto-accept does the existing pending-invitation decision flow apply. Tob preserves that choice and reports the returned state.
+
+Scoped writes require a stable `--operation-key` of 8–128 letters, digits, dots, underscores, colons or hyphens, starting with a letter or digit; invitation also requires the `--expected-channel` fingerprint from the preceding read. The reviewed snapshot binds current Channel metadata, membership and invitation policy, plus the target Bot identity. Message arrivals and unread counters do not invalidate that snapshot. Approval and execution recheck the accepted Human DM and current target state. If a relevant setting changes while review is pending, read it again and submit a new proposal rather than refreshing the approved snapshot silently.
+
+The keyed result includes a `receipt` with `operationKey`, `kind`, `channelId`, optional `invitationId` and completion `status`, alongside canonical Channel state and the invitation when applicable. The durable operation receipt reserves the Channel or invitation identity. After an uncertain response, repeat the **same command, key and payload** to reconcile that operation instead of selecting another key. A completed scoped replay reads back the existing result without asking for another mutation approval. Changed payloads, unavailable targets or changed Bot incarnations refuse; replay never recreates a deleted group or duplicates an invitation. Current authority is still required after a Shell or Host restart; the receipt does not preserve the expired Shell capability.
+
+`stale-channel` or `stale-profile` requires a fresh read and review. `operation-key-conflict` means the key is already bound to different input. `channel-operation-unavailable`, `unknown-channel`, `unknown-bot` and `archived-bot` refuse unavailable identities; `protected-bot` refuses Tob as a target. An unavailable invitation returns `group-invite-unavailable`. These failures do not authorize a fallback command or a replacement identity.
+
+Authenticated Human online `group-create` and `group-invite` also support stable operation keys; the invitation command accepts `--expected-channel` for the observed state. These review/retry inputs are optional for Human commands and mandatory for scoped Tob. Existing unkeyed Human operations retain their owner behavior.
+
+Group rename/avatar, wake settings, invitation cancellation, join decisions, member removal, personal mute/pin/nickname/visibility, group deletion, attachments and external membership remain outside this scoped slice. Some already have Human CLI commands above; that does not grant Tob access. #2090 remains open for its remaining scope. See [ADR-0226](adr/0226-group-management-receipts-preserve-channel-authority.md) and the [coverage inventory](agents/cli-ui-coverage.md#2090-group-management-first-slice). Direct CLI, real Tob approval/readback, Web membership/history and macOS Desktop are separate verification gates.
+
+### Tob model and runtime management
+
+Use `deepseekbot capabilities` inside Tob's eligible Shell execution to discover its current commands. The following commands reuse existing Host owners; writes still require the accepted Human DM and existing review policy.
+
+```bash
+deepseekbot list
+deepseekbot model-catalog
+deepseekbot model-plan <bot-id>
+deepseekbot model-presets
+deepseekbot settings
+
+deepseekbot home-model-set --provider <provider-id> --model <model-id> [--orchestrator-effort <effort>] --expected-revision <default-revision>
+deepseekbot model-plan-customize <bot-id> --orchestrator-provider <provider-id> --orchestrator-model <model-id> --expected-revision <plan-revision>
+deepseekbot model-plan-inherit <bot-id> --expected-revision <plan-revision>
+# Full plan JSON: orchestrator, assignmentDefault and assignmentModels.
+deepseekbot model-plan-set <bot-id> --plan-stdin --expected-revision <plan-revision> < plan.json
+# Assignment-only JSON omits orchestrator; the Bot must already have a plan.
+deepseekbot model-plan-assignments-set <bot-id> --plan-stdin --expected-revision <plan-revision> < assignments.json
+deepseekbot model-preset-apply <bot-id> --preset <preset-id> --expected-revision <plan-revision> --preset-revision <preset-revision>
+```
+
+`model-catalog` returns available models and `default`/`defaultRevision`; model-plan reads return the Bot plan revision. Changing the Host default preserves other Bots' independent overrides. Customize changes the Orchestrator while preserving Assignment choices; inherit returns the Bot to the Host default. The Host validates route availability both while preparing the operation and before execution. An unavailable route refuses with `model-unavailable`, while a changed reviewed revision refuses with `stale-setting`. Legacy plans requiring repair return `legacy-model-repair-required` rather than being silently rewritten. Credential setup remains native and private: use the existing model/credential interface; Tob receives catalog/readiness information, never credential values.
+
+Preset create/read/update/application reuse the existing preset owner. Scoped `model-preset-create --name <name>` and `model-preset-update <preset-id> --name <name> --expected-revision <revision>` require explicit `--orchestrator-provider`, `--orchestrator-model`, `--assignment-provider` and `--assignment-model`; optional effort flags and `--plan-stdin` with `{"assignmentModels":[...]}` use the existing shapes. Scoped updates require the complete intended name and routes even though the Human command supports partial updates. Applying a preset checks both Bot and preset revisions. There is no preset deletion owner or command; this slice does not invent one or claim complete preset CRUD.
+
+`settings` discovers the supported namespaces; `settings botharness-client` returns exactly four live runtime fields:
+
+| Field                        | Accepted value |
+| ---------------------------- | -------------- |
+| `assignmentConcurrencyLimit` | Integer 1–32   |
+| `showBotSessions`            | Boolean        |
+| `showApprovalReviewSessions` | Boolean        |
+| `developerMode`              | Boolean        |
+
+Use the paired reviewed flags with `settings-set botharness-client --patch-stdin`; the previous-value JSON must name exactly the patched fields. `settings agent-default-model` reads the default route; change it with `home-model-set`. Unknown fields, other namespaces and direct default-model patches refuse rather than editing configuration files. Motion, theme, language, shortcuts, layout and other preferences are not implied by this scope.
+
+### Tob privacy, Git and updates
+
+```bash
+deepseekbot telemetry-status
+deepseekbot telemetry-set --enabled
+# Or: deepseekbot telemetry-set --disabled
+deepseekbot git-status
+deepseekbot git-install
+deepseekbot release-info
+deepseekbot release-check
+deepseekbot release-install <version> --confirm
+deepseekbot release-restart --confirm
+```
+
+These reuse the same telemetry, Git and release owners as Settings. Environment-locked telemetry cannot be overridden; inspect the returned effective/locked state rather than assuming the stored preference controls collection. Git covers availability and installation only, with no new global Git identity editor.
+
+Scoped `release-install` and `release-restart` require explicit `--confirm` and a fresh Human decision for every invocation. Full access, remembered allow rules and automatic approval cannot replace that decision; the flag itself is not approval. `git-install` does not use `--confirm` and retains its existing review policy. Restart can interrupt running turns and disconnect the requesting CLI; do not automatically repeat an install or restart after an uncertain result. Reconnect and inspect release status before deciding another action. Test these operations only in an owned isolated Profile, preserving the Human's active Desktop.

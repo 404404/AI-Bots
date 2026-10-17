@@ -94,3 +94,19 @@ Natural timing may miss the race: retain those attempts as incomparable, not rep
 successes. Export the two pairwise comparisons without double-counting shared candidate cost.
 Capture full Group history in Messages and compare with direct CLI/trace evidence; judge
 complete histories in both orders before giving the Human the offline preference cards.
+
+## Merge follow-through regressions
+
+Start from a fresh isolated Profile for schema generation 99; old unmerged generation 96/97/98
+pilot Profiles remain immutable evidence, not supported upgrade sources. In a Group with more
+than 20 historical messages, send without an observation: the held delta must include the latest
+Human correction and permit a corrected recheck. With an existing observation and more than
+20 intervening changes, the delta is incomplete and a retry cannot silently skip omitted content.
+After successful submission, inspect returns no pending draft and explicit reuse is refused;
+the Channel retains exactly one committed reply.
+
+As directed by the Human on 2026-10-18, future cohorts use DSH to run actual Bot Sessions.
+The current GPT-6 Astra assistant reads full Session, conversation and Tool records to assess
+correctness and interaction quality; no external model judge is invoked. Record reviewer and
+protocol provenance, retain original external-judge results, and never label assistant review
+as independent Human acceptance. Missing token/cost data remains unknown.

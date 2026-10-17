@@ -1,4 +1,4 @@
-# ADR-0224: Group send review shares the Channel commit transaction
+# ADR-0227: Group send review shares the Channel commit transaction
 
 - Status: Accepted for #2053 with explicit Human quiet-latency exception; #2054 peer-yield extension awaits its own evaluation
 - Date: 2026-10-17
@@ -43,15 +43,15 @@ decision adds neither a Session manager nor a wake scheduler. Review evidence co
 canonical history and usage; exported pilot files are process evidence, not message authority.
 
 The durable draft shape and purge integration make this more than a prompt experiment.
-Schema generation 97 is additive, following main's generation 96 Tob identity reservation;
+Schema generation 99 is additive, following main's generation 98 Channel management receipts;
 roll back behavior by disabling the opt-in before reverting code.
 The database generation still requires a compatible binary. Acceptance remains separate from
 mechanical regression, real-model outcomes and Human evaluation.
 
-Earlier unmerged pilot Profiles used generation 96 for the review tables. Those private QA
+Earlier unmerged pilot Profiles used generations 96, 97 or 98 for the review tables. Those private QA
 Profiles remain historical QA evidence and must not be opened by the new binary; they are not
 a supported upgrade source for the merged migration order. Integration verification uses a fresh Profile
-and separately checks the canonical main generation 96 to 97 migration without changing Tob.
+and separately checks the canonical main generation 98 to 99 migration without changing Tob, Bot creation or Channel management receipts.
 
 The model can explicitly select `resolve_inbox_ids` on the send/drop Tool. The Consumer
 first awaits a committed send or successful drop, then calls the existing Inbox triage
@@ -81,3 +81,14 @@ own, failure, purged and preview-only content. It stores the evidence IDs in the
 JSON and returns `explicit-peer-yield`. No database generation or second content store is added.
 The trace records the model's deliberate choice, not a Host verdict that all work is complete.
 Inbox resolution remains a separate explicit selection, including after a peer yield.
+
+Merge follow-through: when no valid observation exists, the held result starts from the latest
+20 Channel placements, matching a bounded recent read rather than scanning all history. It is
+not evidence of reading earlier history. Existing observations retain their original floor;
+more than 20 changed messages remain incomplete and cannot be silently skipped. The latest 20
+messages are selected, then offered in chronological order; a recent Human correction is not
+excluded merely because older changes occupied the ID window. The existing content budget
+can still omit oversized messages, which never become observed.
+Successful submission deletes the pending draft inside the same Channel commit transaction;
+the canonical Channel message remains, and an explicit retry of the retired draft is refused.
+Unfinished and dropped intents retain the existing conservative inspection/purge behavior.

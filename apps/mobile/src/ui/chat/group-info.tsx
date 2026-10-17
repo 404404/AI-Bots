@@ -1,6 +1,7 @@
 import { TextInput } from '../primitives/system-text';
 import { useState, type ReactNode } from 'react';
 import { Alert, FlatList, Pressable, SectionList, View } from 'react-native';
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
 
 import { errorText } from '../../host/bot-settings';
 import {
@@ -153,42 +154,50 @@ function RenameSheet({
     if (ok) onClose();
   };
   return (
-    <Sheet visible={visible} label={t.groupRename} title={t.groupRename} onClose={onClose}>
-      <TextInput
-        value={draft}
-        onChangeText={setDraft}
-        accessibilityLabel={t.groupName}
-        maxLength={GROUP_NAME_MAX}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={() => {
-          if (next !== '' && next !== name) void save();
-        }}
-        style={{
-          minHeight: theme.touch,
-          marginHorizontal: space.x5,
-          paddingHorizontal: space.x4,
-          borderRadius: radius.md,
-          backgroundColor: theme.layer[SHEET_GROUP].fill,
-          color: theme.color.fg,
-          fontSize: theme.type.body.size,
-        }}
-      />
-      <SheetActions>
-        <View>
-          <Button label={t.cancel} on="canvas" onPress={onClose} />
-        </View>
-        <View>
-          <Button
-            label={t.groupRenameSave}
-            tone="primary"
-            on="canvas"
-            busy={busy}
-            disabled={next === '' || next === name}
-            onPress={() => void save()}
-          />
-        </View>
-      </SheetActions>
+    <Sheet
+      visible={visible}
+      label={t.groupRename}
+      title={t.groupRename}
+      onClose={onClose}
+      avoidKeyboard
+    >
+      <KeyboardFormScroll enabled={false}>
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          accessibilityLabel={t.groupName}
+          maxLength={GROUP_NAME_MAX}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            if (next !== '' && next !== name) void save();
+          }}
+          style={{
+            minHeight: theme.touch,
+            marginHorizontal: space.x5,
+            paddingHorizontal: space.x4,
+            borderRadius: radius.md,
+            backgroundColor: theme.layer[SHEET_GROUP].fill,
+            color: theme.color.fg,
+            fontSize: theme.type.body.size,
+          }}
+        />
+        <SheetActions>
+          <View>
+            <Button label={t.cancel} on="canvas" onPress={onClose} />
+          </View>
+          <View>
+            <Button
+              label={t.groupRenameSave}
+              tone="primary"
+              on="canvas"
+              busy={busy}
+              disabled={next === '' || next === name}
+              onPress={() => void save()}
+            />
+          </View>
+        </SheetActions>
+      </KeyboardFormScroll>
     </Sheet>
   );
 }

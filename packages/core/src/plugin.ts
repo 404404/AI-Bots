@@ -1,5 +1,35 @@
+import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
+import {
+  createTobChannelOperations,
+  TOB_CHANNEL_CAPABILITIES,
+} from './tob/cli-channel-operations.js';
+import { createBotCreation, type BotCreationService } from './bots/creation.js';
+import {
+  createTobBotCreationOperations,
+  TOB_BOT_CREATE_CAPABILITIES,
+} from './tob/cli-bot-create.js';
+import {
+  createTobBotProfileOperations,
+  TOB_BOT_PROFILE_CAPABILITIES,
+} from './tob/cli-bot-profile-operations.js';
 import { followCompanion } from './companions/live.js';
-import { createTobService, type TobService, type TobSettingsProvider } from './tob/service.js';
+import {
+  createTobService,
+  TobError,
+  type TobService,
+  type TobSettingsProvider,
+} from './tob/service.js';
+import {
+  createTobModelOperations,
+  TOB_MODEL_CAPABILITIES,
+  type TobNativeSettings,
+} from './tob/cli-model-operations.js';
+import {
+  createTobMaintenanceOperations,
+  TOB_MAINTENANCE_CAPABILITIES,
+} from './tob/cli-maintenance-operations.js';
+import { installTobCliShell } from './tob/cli-shell.js';
+import { approveTobCliOperation } from './tob/cli-approval.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
 import { nativeTimedQuestions } from './channels/native-timed-questions.js';
 import { credentialStoreDenial } from './credentials/store-guard.js';
@@ -298,6 +328,8 @@ export interface BotHarnessCore {
   rootDir: string;
   onboarding: BotOnboarding;
   tob: TobService;
+  creations: BotCreationService;
+  channelManagement: ChannelManagementService;
   partLibrary: PartLibrary;
   operationalDatabase: OperationalDatabaseOwner;
   registry: PersonaBotRegistry;
@@ -753,6 +785,20 @@ export function createCore(
     ...(options.ensureTobWorkspace ? { ensureWorkspace: options.ensureTobWorkspace } : {}),
     ...(options.tobSettings ? { settings: options.tobSettings } : {}),
   });
+  const creations = createBotCreation({
+    database: attachOperationalModule(operationalDatabase, 'bot-creation'),
+    registry,
+    channels,
+  });
+  const channelManagement = createChannelManagement({
+    database: attachOperationalModule(operationalDatabase, 'channel-management'),
+    channels,
+    registry,
+    isProtectedBot: (slug) => tob.isTob(slug),
+    autoAcceptGroupInvitations: () =>
+      (groupInvitationPolicies.at(-1)?.policy ?? initialGroupInvitationPolicy)(),
+    onInvitation: (dmId, invitationId) => runtime?.admitGroupInvitation(dmId, invitationId),
+  });
   const profileRecovery = createProfileRecovery(operationalDatabase, registry, ownership);
   const orchestratorCwd = (bot: { slug: string }): string | undefined =>
     registry.memoryDirFor(bot.slug);
@@ -888,6 +934,8 @@ export function createCore(
     contentPurge,
     onboarding,
     tob,
+    creations,
+    channelManagement,
     partLibrary,
     rootDir,
     operationalDatabase,
@@ -1063,6 +1111,87 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         agent,
         ctx.get('agentPresets') as DshAgentPresetHost | undefined,
         (name, args) => nativeExecutionRoot(core, agent.session, name, args),
+        (shellCtx, shell) =>
+          installTobCliShell(shellCtx, shell, {
+            capture: (execution) => {
+              const actor = execution.agent;
+              if (
+                !actor ||
+                !core.tob.isTob(core.ownership.resolve(actor.session.id)?.botSlug ?? '')
+              )
+                return undefined;
+
+              let source: (() => void) & { markSideEffect?: () => void };
+              try {
+                source =
+                  core.runtime.captureTobCliAuthority?.(actor.session.id) ??
+                  (() => {
+                    throw new TobError('tob-authority-required');
+                  });
+              } catch (error) {
+                source = () => {
+                  throw error;
+                };
+              }
+              const authorize = () => {
+                if (execution.signal.aborted) throw new TobError('agent-context-expired');
+                source();
+                const denial = grantExecutionDenial(
+                  core,
+                  actor.session,
+                  ctx.get('sandboxPolicy'),
+                  ctx.get('approval'),
+                );
+                if (denial) throw new TobError('tob-authority-required');
+              };
+              const started = Date.now();
+              return {
+                signal: execution.signal,
+                authorize,
+                prepareOperation: async (command, args) =>
+                  (await tobModelOperations(command, args)) ??
+                  (await tobMaintenanceOperations(command, args)) ??
+                  (await tobBotCreationOperations(command, args)) ??
+                  (await tobBotProfileOperations(command, args)) ??
+                  (await tobChannelOperations(command, args)),
+                capabilities: [
+                  ...TOB_MODEL_CAPABILITIES,
+                  ...TOB_MAINTENANCE_CAPABILITIES,
+                  ...TOB_BOT_CREATE_CAPABILITIES,
+                  ...TOB_BOT_PROFILE_CAPABILITIES,
+                  ...TOB_CHANNEL_CAPABILITIES,
+                ],
+                beforeWrite: () => source.markSideEffect?.(),
+                readSetting: () => core.tob.readSetting(),
+                writeSetting: (value, revision, guard) =>
+                  core.tob.writeSetting(value, revision, () => {
+                    guard();
+                    source.markSideEffect?.();
+                  }),
+                approve: async (operation, signal) => {
+                  source();
+                  return approveTobCliOperation({
+                    execution,
+                    operation,
+                    signal,
+                    authorize: source,
+                    approval: ctx.get('approval') as ApprovalService | undefined,
+                    channelApproval: toolApproval,
+                    fullAccess: () => sessionHasFullAccess(core, actor.session.id),
+                  });
+                },
+                log: (phase, details) =>
+                  ctx.logger.info('tob-cli %j', {
+                    phase,
+                    sessionId: actor.session.id,
+                    callId: execution.callId,
+                    initiator: 'tob-native-shell',
+                    durationMs: Date.now() - started,
+                    ...details,
+                  }),
+              };
+            },
+          }),
       ),
     authorizeBorrow: (agent, role) => {
       const owner = core.ownership.resolve(agent.session.id);
@@ -1578,23 +1707,6 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
           untrackBrowser();
         }
       }
-      if (
-        execution.name === 'tob_assignment_limit_set' ||
-        execution.name === 'tob_assignment_limit_read'
-      ) {
-        try {
-          if (!core.runtime.validateTobSetting) throw new Error('tob-unavailable');
-          core.runtime.validateTobSetting(
-            agent.session.id,
-            execution.name === 'tob_assignment_limit_set' ? execution.arguments : undefined,
-          );
-        } catch (error) {
-          return {
-            kind: 'deny',
-            reason: error instanceof Error ? error.message : 'tob-authority-required',
-          };
-        }
-      }
       const denial = permissionDenial(agent.session);
       if (denial !== undefined) return { kind: 'deny', reason: denial };
       if (!requiresHumanToolApproval(execution.name, execution.arguments, templateInUse))
@@ -1637,18 +1749,16 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               toolName: execution.name,
               callId: execution.callId,
               reason:
-                execution.name === 'tob_assignment_limit_set'
-                  ? 'Tob wants to change the GLOBAL Assignment concurrency limit. Review previous_value, value and expected_revision. Running Assignments will not be stopped.'
-                  : execution.name === 'channel_attachment_open'
-                    ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
-                    : execution.name === 'bot_create'
-                      ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
-                      : changesApprovalPolicy(
-                            JSON.stringify(execution.arguments) ?? '',
-                            templateInUse,
-                          )
-                        ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
-                        : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
+                execution.name === 'channel_attachment_open'
+                  ? 'This PersonaBot wants to edit the selected original attachment. All references to this file will show its current contents.'
+                  : execution.name === 'bot_create'
+                    ? 'This PersonaBot wants to create a new PersonaBot with a new Memory folder. The new Bot gets no grants, accesses or secrets from it.'
+                    : changesApprovalPolicy(
+                          JSON.stringify(execution.arguments) ?? '',
+                          templateInUse,
+                        )
+                      ? 'This PersonaBot wants to change its own approval policy. Only a Human can approve this; neither a saved rule nor the Approval Reviewer answers it.'
+                      : 'This PersonaBot wants to run a command-line tool with a secret you entered. The program receives the secret and could reveal it. Check the program and every argument.',
               signal: execution.signal,
             });
         if (outcome !== 'allowed-once') {
@@ -1777,6 +1887,33 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const dshSessions = (ctx as unknown as { sessions: DshSessionStore }).sessions;
 
   const developerModeTarget: { gate?: DeveloperModeSkillGate } = {};
+  const syncDeveloperMode = () => {
+    let enabled = false;
+    try {
+      const settings = ctx.get('settings') as unknown as TobNativeSettings | undefined;
+      const value = settings
+        ?.describe({ redactSecrets: true })
+        .find((entry) => entry.ns === 'botharness-client')?.value;
+      enabled =
+        typeof value === 'object' &&
+        value !== null &&
+        'developerMode' in value &&
+        value.developerMode === true;
+    } catch {}
+    developerModeTarget.gate?.set(enabled);
+  };
+  ctx.inject(['settings'], (settingsCtx) => {
+    const events = settingsCtx as unknown as {
+      on(event: 'settings/document-updated', listener: (namespace: string) => void): void;
+    };
+    events.on('settings/document-updated', (namespace) => {
+      if (namespace === 'botharness-client') syncDeveloperMode();
+    });
+    settingsCtx.effect(() => {
+      syncDeveloperMode();
+      return () => developerModeTarget.gate?.set(false);
+    }, 'botharness: developer mode settings');
+  });
   const releaseInstaller: { current: ReleaseInstaller | undefined } = { current: undefined };
   ctx.inject(['pluginManager'], (managerCtx) => {
     managerCtx.effect(() => {
@@ -1799,6 +1936,30 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       };
     }, 'botharness: release restarter');
   });
+  const releaseService = createLoadingReleaseService({
+    version: () => runningRelease.version,
+    identity: () =>
+      installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
+    ledgers: () => runningRelease.ledgers,
+    installer: () => releaseInstaller.current,
+    restarter: () => releaseRestarter.current,
+  });
+  const tobModelOperations = createTobModelOperations({
+    registry: core.registry,
+    presets: core.modelPresets,
+    catalog: modelCatalog,
+    settings: () => ctx.get('settings') as unknown as TobNativeSettings | undefined,
+    defaultModel,
+    runtimeChanged: (patch) => {
+      if (typeof patch.developerMode === 'boolean')
+        developerModeTarget.gate?.set(patch.developerMode);
+    },
+  });
+  const tobMaintenanceOperations = createTobMaintenanceOperations({
+    telemetry,
+    git,
+    release: releaseService,
+  });
   const bridgeMethods = createBridgeMethods({
     approvalReviewer,
     composerIdentity: () =>
@@ -1812,11 +1973,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     approvalTemplates,
     deletions: core.deletions,
     contentPurge: core.contentPurge,
+    defaultModelSettings: () => ctx.get('settings') as unknown as TobNativeSettings | undefined,
     modelPresets: core.modelPresets,
     modelCatalog,
     modelReadiness,
     onboarding: core.onboarding,
     tob: core.tob,
+    creations: core.creations,
+    channelManagement: core.channelManagement,
     partLibrary: core.partLibrary,
     onboardingNews: (slug) =>
       onboardingNewsAvailable(
@@ -1869,14 +2033,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     marketplace: createMarketplaceClient({
       baseUrl: config.marketplaceUrl ?? DEFAULT_MARKETPLACE_URL,
     }),
-    release: createLoadingReleaseService({
-      version: () => runningRelease.version,
-      identity: () =>
-        installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
-      ledgers: () => runningRelease.ledgers,
-      installer: () => releaseInstaller.current,
-      restarter: () => releaseRestarter.current,
-    }),
+    release: releaseService,
     telemetry,
     git,
     developerMode: {
@@ -1917,6 +2074,22 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
+  const tobBotCreationOperations = createTobBotCreationOperations({
+    registry: core.registry,
+    creations: core.creations,
+    bridge: bridgeMethods,
+  });
+  const tobBotProfileOperations = createTobBotProfileOperations({
+    registry: core.registry,
+    bridge: () => bridgeMethods,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
+  });
+  const tobChannelOperations = createTobChannelOperations({
+    management: core.channelManagement,
+    channels: core.channels,
+    registry: core.registry,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
+  });
   registerBridge(ctx, bridgeMethods, privateInputs, {
     followRoster: (signal) => core.live.followRoster(signal),
     followActivity: (signal) => core.live.followActivity(signal),
@@ -1946,7 +2119,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         };
       }
     ).skills;
-    developerModeTarget.gate = new DeveloperModeSkillGate({
+    const gate = new DeveloperModeSkillGate({
       register: (definition) => {
         let dispose: (() => void) | undefined;
         skillsCtx.effect(() => {
@@ -1956,6 +2129,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         return () => dispose?.();
       },
     });
+    developerModeTarget.gate = gate;
+    skillsCtx.effect(() => {
+      syncDeveloperMode();
+      return () => {
+        gate.set(false);
+        if (developerModeTarget.gate === gate) delete developerModeTarget.gate;
+      };
+    }, 'botharness: developer mode skill gate');
   });
 
   ctx.inject(['connection'], (connectionCtx) => {

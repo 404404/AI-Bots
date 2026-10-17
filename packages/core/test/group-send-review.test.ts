@@ -9,16 +9,22 @@ import { defineSchemaPlan } from '../src/database/schema.js';
 import { BOT_HARNESS_SCHEMA_PLAN } from '../src/database/schema-plan.js';
 import { GroupSendReview } from '../src/channels/send-review.js';
 
-it('adds review tables after the canonical Tob migration while preserving its identity', () => {
+it('adds review tables after the canonical Channel management migration while preserving existing identities', () => {
   const dshHome = createTempRoot('review-tob-upgrade-');
   const prior = mountOperationalDatabase({
     dshHome,
     schemaPlan: defineSchemaPlan(
-      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 96),
+      BOT_HARNESS_SCHEMA_PLAN.migrations.filter((migration) => migration.generation <= 98),
     ),
   });
   try {
     attachOperationalModule(prior, 'tob-upgrade-test').transaction((db) => {
+      db.exec(
+        "INSERT INTO channel_management_operations VALUES ('group-a', 'create', 'hash-a', 'channel-a', NULL, '[]', 'completed')",
+      );
+      db.exec(
+        "INSERT INTO bot_creation_operations VALUES ('create-a', 'hash-a', 'created-bot', 'created')",
+      );
       db.prepare('INSERT INTO tob_identity (singleton, bot_slug) VALUES (1, ?)').run(
         'protected-tob',
       );
@@ -34,6 +40,22 @@ it('adds review tables after the canonical Tob migration while preserving its id
         (db) => db.prepare('SELECT bot_slug FROM tob_identity WHERE singleton = 1').get()?.bot_slug,
       ),
     ).toBe('protected-tob');
+    expect(
+      port.read(
+        (db) =>
+          db
+            .prepare('SELECT bot_slug FROM bot_creation_operations WHERE operation_key = ?')
+            .get('create-a')?.bot_slug,
+      ),
+    ).toBe('created-bot');
+    expect(
+      port.read(
+        (db) =>
+          db
+            .prepare('SELECT channel_id FROM channel_management_operations WHERE operation_key = ?')
+            .get('group-a')?.channel_id,
+      ),
+    ).toBe('channel-a');
     const review = new GroupSendReview(port);
     expect(review.enabled('group-a')).toBe(false);
     review.configure('group-a', true);
@@ -129,8 +151,6 @@ async function fixture(
       messageId: string;
       observationIds: Record<string, string>;
       changedMessageIds?: string[];
-      reason?: string;
-      yieldedToMessageIds?: string[];
       review?: {
         observationId: string;
         content: string;
@@ -309,6 +329,60 @@ describe('Group send review through the same direct model tools', () => {
         yield_to_message_ids: [peer.messageId],
       });
       expect(drop.status).toBe('dropped');
+    });
+  });
+
+  it('offers the latest context without a prior observation and permits a corrected recheck in a long Group', async () => {
+    await fixture(async ({ core, channelId, human, tool }) => {
+      for (let i = 0; i < 40; i++) await human(`history-${i}`, `Earlier message ${i}`);
+      await human('latest-correction', 'Correction: meet at 11:00, not 10:00');
+      const held = await tool('channel_send', { body: 'Confirmed 10:00' });
+      expect(held.status).toBe('held');
+      expect(held.changedMessageIds).toHaveLength(20);
+      expect(held.changedMessageIds).toContain('latest-correction');
+      expect(held.changedMessageIds).not.toContain('history-0');
+      expect(held.review!.content).toContain('Correction: meet at 11:00');
+      const sent = await tool('channel_send', {
+        body: 'Confirmed 11:00',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(sent.status).toBe('committed');
+      expect(core.channels.message(channelId, sent.messageId)?.body).toBe('Confirmed 11:00');
+      expect(
+        core.runtime.groupSendReview!.inspect('direct:ada', channelId, held.draftId!),
+      ).toBeUndefined();
+      const retry = await tool('channel_send', {
+        body: 'Duplicate 11:00',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(retry.status).toBe('refused');
+      expect(
+        core.channels.readMessages(channelId).filter((m) => m.author.kind === 'bot'),
+      ).toHaveLength(1);
+    });
+  });
+
+  it('keeps an observed floor and refuses to silently skip a gap larger than the held delta', async () => {
+    await fixture(async ({ channelId, human, tool }) => {
+      await human('question', 'Meet at 10:00');
+      const read = await tool('channel_read', {});
+      for (let i = 0; i < 25; i++) await human(`new-${i}`, `New context ${i}`);
+      await human('latest-correction', 'Actually 11:00');
+      const held = await tool('channel_send', {
+        body: '10:00',
+        observation_id: read.observationIds[channelId],
+      });
+      expect(held.changedMessageIds).toContain('latest-correction');
+      expect(held.review!.complete).toBe(false);
+      const retry = await tool('channel_send', {
+        body: '11:00',
+        draft_id: held.draftId,
+        observation_id: held.review!.observationId,
+      });
+      expect(retry.status).toBe('requires-review');
+      expect(retry.changedMessageIds).toContain('new-0');
     });
   });
 
