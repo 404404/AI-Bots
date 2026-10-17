@@ -132,17 +132,6 @@ async function judge(report, outputPath) {
         round.httpStatus = response.status;
         round.returnedModel = data.model;
         round.usage = data.usage ?? null;
-        if (!response.ok)
-          throw new Error(`judge HTTP ${response.status}, code ${data.error?.code ?? 'unknown'}`);
-        round.raw = data.choices?.[0]?.message?.content ?? '';
-        round.output = JSON.parse(round.raw);
-        round.validation = validateJudge(round.output, input);
-        round.mappedWinner =
-          round.output.winner === 'Left'
-            ? order[0]
-            : round.output.winner === 'Right'
-              ? order[1]
-              : round.output.winner;
         const usage = data.usage;
         round.runtimeBucketEquivalent = {
           inputTokens: usage?.prompt_cache_miss_tokens ?? null,
@@ -157,6 +146,17 @@ async function judge(report, outputPath) {
               : null,
         };
         round.costEstimateUSD = price(round.runtimeBucketEquivalent);
+        if (!response.ok)
+          throw new Error(`judge HTTP ${response.status}, code ${data.error?.code ?? 'unknown'}`);
+        round.raw = data.choices?.[0]?.message?.content ?? '';
+        round.output = JSON.parse(round.raw);
+        round.validation = validateJudge(round.output, input);
+        round.mappedWinner =
+          round.output.winner === 'Left'
+            ? order[0]
+            : round.output.winner === 'Right'
+              ? order[1]
+              : round.output.winner;
       } catch (error) {
         round.error = error.message;
       }
