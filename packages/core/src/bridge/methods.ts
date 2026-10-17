@@ -293,7 +293,10 @@ import {
   type ApprovalTemplateLibrary,
   type ApprovalTemplateWriteResult,
 } from '../workspaces/approval-templates.js';
-import type { ApprovalReviewerSettings } from '../workspaces/approval-reviewer-settings.js';
+import type {
+  ApprovalReviewerSettings,
+  ApprovalReviewerModelSetting,
+} from '../workspaces/approval-reviewer-settings.js';
 
 export type ApprovalTemplateEntry = ApprovalTemplate & { usedBy: string[] };
 import type {
@@ -3070,6 +3073,15 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
     async approvalReviewerModelSet(payload) {
       if (deps.approvalReviewer === undefined) return unavailable();
       const model = asObject(payload)['model'];
+      const expected = asObject(payload)['expectedSetting'];
+      if (expected !== undefined) {
+        const setting = asObject(expected);
+        if (
+          !['bot', 'invalid', 'model'].includes(String(setting['kind'])) ||
+          (setting['kind'] === 'model' && !isModelRoute(setting['route']))
+        )
+          return invalidInput('Invalid expected reviewer setting');
+      }
       if (model !== null && !isModelRoute(model))
         return invalidInput(
           'model must be {provider, model, reasoningEffort?}, or null to follow each Bot',
@@ -3085,8 +3097,10 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
                 : { reasoningEffort: model.reasoningEffort.trim() }),
             };
       try {
-        deps.approvalReviewer.setModel(route);
+        deps.approvalReviewer.setModel(route, expected as ApprovalReviewerModelSetting | undefined);
       } catch (error) {
+        if (error instanceof Error && error.message === 'stale-policy')
+          return { ok: false, error: { code: 'stale-policy', message: 'stale-policy' } };
         return invalidInput(error instanceof Error ? error.message : String(error));
       }
       return { ok: true, value: await reviewerModelView(route) };

@@ -216,6 +216,7 @@ export async function runImAuthorization(
   operation: ImOperation,
   rpc: Rpc,
   signal: AbortSignal,
+  options: { returnTerminalState?: boolean } = {},
 ): Promise<unknown> {
   if (operation.command === 'im-setup-receipts') return rpc('imSetupReceipts', {});
   if (operation.command === 'im-setup-resume') {
@@ -336,6 +337,7 @@ export async function runImAuthorization(
   platform ??= authorization.platform;
   while (true) {
     if (
+      !options.returnTerminalState &&
       operation.command !== 'im-cancel' &&
       ['failed', 'expired', 'cancelled'].includes(authorization.state)
     )

@@ -10,6 +10,9 @@ import {
 import { parseAgentPolicies } from '../src/bots/cli-agent-policies.js';
 import { createApprovalTemplateLibrary } from '../src/workspaces/approval-templates.js';
 import { TobError } from '../src/tob/service.js';
+import { createApprovalReviewerSettings } from '../src/workspaces/approval-reviewer-settings.js';
+import type { MessagingProvider } from '../src/messaging/provider.js';
+import { attachOperationalModule } from '../src/database/owner.js';
 import { createTempRoot } from './helpers.js';
 
 const close: Array<() => Promise<void>> = [];
@@ -38,11 +41,14 @@ function fixture() {
   expect(core.registry.create({ slug: 'research', displayName: 'Research' }).ok).toBe(true);
   core.channels.getOrCreateDm('research');
   const approvalTemplates = createApprovalTemplateLibrary(join(root, 'templates'));
-  const bridge = createBridgeMethods({ ...core, approvalTemplates });
+  const reviewer = createApprovalReviewerSettings(join(root, 'reviewer'));
+  const bridge = createBridgeMethods({ ...core, approvalTemplates, approvalReviewer: reviewer });
   const prepare = createTobPolicyOperations({
     bridge: () => bridge,
     registry: core.registry,
     grants: core.grants,
+    messagingMutations: core.externalMessaging.policyMutations,
+    reviewer,
   });
   const args = (
     rest: string[],
@@ -89,6 +95,7 @@ function fixture() {
     read,
     write,
     approvalTemplates,
+    reviewer,
     setStatus: (next: typeof status) => {
       status = next;
     },
@@ -250,6 +257,135 @@ describe('Tob policy operations reuse canonical owners', () => {
 });
 
 describe('connector concurrency at the owner boundary', () => {
+  it.each(['source', 'policy'] as const)(
+    'rejects %s changes while the existing Provider inspection is suspended',
+    async (change) => {
+      const f = fixture();
+      let entered!: () => void;
+      let release!: () => void;
+      const inspected = new Promise<void>((resolve) => {
+        entered = resolve;
+      });
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const provider: MessagingProvider = {
+        id: 'synthetic-provider',
+        async accounts() {
+          return [
+            {
+              ref: 'own-app',
+              platform: 'synthetic',
+              name: 'Own test app',
+              fingerprint: 'a'.repeat(64),
+              connected: true,
+            },
+          ];
+        },
+        async targets() {
+          return [{ ref: 'own-target', name: 'Own test destination', digest: 'b'.repeat(64) }];
+        },
+        async inspect() {
+          entered();
+          await held;
+          return {
+            account: (await provider.accounts())[0]!,
+            target: (await provider.targets('own-app'))[0]!,
+          };
+        },
+        async send() {
+          return { accepted: true };
+        },
+      };
+      f.core.externalMessaging.register(provider);
+      const before = await f.read('messaging-grants');
+      const operation = (await f.prepare(
+        'messaging-authorize',
+        f.args(['research'], { app: 'own-app', target: 'own-target' }, before.stateFingerprint),
+      ))!;
+      let authorized = true;
+      const running = operation.run(() => {
+        if (!authorized) throw new TobError('agent-context-expired');
+      });
+      const rejected = expect(running).rejects.toThrow(
+        change === 'source' ? 'agent-context-expired' : 'stale-policy',
+      );
+      await inspected;
+      if (change === 'source') authorized = false;
+      else f.core.externalMessaging.failureAlerts.set('research', false, 0);
+      release();
+      await rejected;
+      expect((await f.core.externalMessaging.snapshot('research')).grants).toEqual([]);
+    },
+  );
+
+  it('isolates concurrent trusted mutation guards and ignores ordinary delivery traffic', async () => {
+    const f = fixture();
+    const service = f.core.externalMessaging;
+    expect(f.core.registry.create({ slug: 'second', displayName: 'Second' }).ok).toBe(true);
+    const stamp = service.policyMutations.stamp('research');
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const guardOne = vi.fn();
+    const guardTwo = vi.fn();
+    const one = service.policyMutations.run('research', stamp, guardOne, async () => {
+      await held;
+      service.failureAlerts.set('research', false, 0);
+    });
+    await service.policyMutations.run(
+      'second',
+      service.policyMutations.stamp('second'),
+      guardTwo,
+      async () => {
+        service.failureAlerts.set('second', false, 0);
+        attachOperationalModule(f.core.operationalDatabase, 'messaging').transaction((db) => {
+          db.prepare(
+            'INSERT INTO messaging_failure_alert_deliveries(id,bot_slug,event_key,body) VALUES(?,?,?,?)',
+          ).run(
+            'synthetic-delivery',
+            'research',
+            'own-event',
+            JSON.stringify({ state: 'failed', reason: 'ordinary traffic' }),
+          );
+        });
+      },
+    );
+    expect(guardOne).toHaveBeenCalledTimes(1);
+    expect(guardTwo).toHaveBeenCalledTimes(2);
+    expect(service.policyMutations.stamp('research')).toBe(stamp);
+    release();
+    await one;
+    expect(guardOne).toHaveBeenCalledTimes(2);
+    expect(guardTwo).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not overwrite a reviewer route changed during an awaited native catalog view', async () => {
+    const f = fixture();
+    f.reviewer.setModel({ provider: 'synthetic', model: 'reviewer-a' });
+    const before = await f.read('approval-reviewer-model', []);
+    const operation = (await f.prepare(
+      'approval-reviewer-model-set',
+      f.args(['synthetic/reviewer-c'], {}, before.stateFingerprint),
+    ))!;
+    const original = f.bridge.approvalReviewerModel.bind(f.bridge);
+    vi.spyOn(f.bridge, 'approvalReviewerModel').mockImplementation(async () => {
+      const view = await original();
+      f.reviewer.setModel({ provider: 'synthetic', model: 'reviewer-b' });
+      return view;
+    });
+    await expect(operation.run(() => {})).rejects.toThrow('stale-policy');
+    expect(f.reviewer.model()).toEqual({
+      kind: 'model',
+      route: { provider: 'synthetic', model: 'reviewer-b' },
+    });
+    await expect(
+      f.bridge.approvalReviewerModelSet({ model: null, expectedSetting: { kind: 'bot' } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: 'stale-policy' } });
+    expect(f.reviewer.model()).toMatchObject({ kind: 'model', route: { model: 'reviewer-b' } });
+  });
+
   it('projects only reviewed policy fields and does not bind unrelated Outbox or delivery text', async () => {
     const f = fixture();
     const before = await f.read('failure-alerts');

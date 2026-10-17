@@ -177,6 +177,10 @@ describe('Tob reuses the qualified native setup owner', () => {
       state: 'cancelled',
     });
     expect(f.calls.filter((method) => method === 'setup.cancel')).toHaveLength(1);
+    expect(await f.read('pairing-status', started.receiptId)).toMatchObject({
+      receiptId: started.receiptId,
+      state: 'cancelled',
+    });
   });
 
   it('rechecks authority around asynchronous calls and scrubs arbitrary Provider errors', async () => {
