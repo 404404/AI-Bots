@@ -17,17 +17,17 @@ Runtime source: `6eea6b76828c94c7a4dbcab00ff101a2cde16ca1`, 2026-10-18. Subseque
 
 The earlier real run found that resetting disabled navigation quick switcher was refused as unsupported-browser. Native binding restrictions were being applied to the existing navigation owner. The fix lets that owner handle unsupported-browser combinations while preserving its reserved-key and cross-command conflict checks. The regression proves default reset succeeds, navigation Command+R still refuses, and a native panel Command+K still refuses.
 
-Source verification: 19 focused files / 165 cases were covered after the two initial fixture/reset fixes; the latest shortcut file passed all 7 cases. Root TypeScript, lint, format and build passed. Local tests remained focused. The full remote CI suite passed at `e2cd20e9bf058e8fba15e40fda2cb329f94b08ea`.
+Source verification: 19 focused files / 165 cases were covered after the two initial fixture/reset fixes; the latest shortcut file passed all 7 cases. Root TypeScript, lint, format and build passed. Local tests remained focused. The full remote CI suite passed at `dbe77028e68da6cbfe3ec50f10d25edb90cb400d`; final evidence commits rerun CI without product changes.
 
 ## Native dispatch boundary
 
 Read-only inspection of installed Desktop 0.2.0-rc.2, build `5e9e301dd9dc8923b2762f76dacfc5751f6ca851`, confirms sender validation and a queued revision comparison before the owner writes. Its edit API accepts no abort signal. BotHarness rechecks authorization, lifetime and state before dispatch; a lost reply or expired lifetime afterward reports client-outcome-uncertain and requires readback, never automatic replay. Focused tests cover pre-dispatch abort, accepted-write abort, lost reply and queued stale revision.
 
-The root-owned native queue passed single-Client desktop:macos direct CLI edits and restart: Home changes from Command+Alt+Shift+H to U, Electron key delivery opens Home, quick-switcher disables, and both bindings persist under a new generation. Main Desktop was restored after both phases. See native-verification.json and native screenshots. Native set/disable/reset coverage is narrower than the Web run; native default reset, editable/modal/IME edge cases, physical keys, native model approval and Human QA remain unverified. No merge authorization is implied.
+The root-owned native queue passed single-Client desktop:macos direct CLI edits and restart: Home changes from Command+Alt+Shift+H to U, Electron key delivery opens Home, quick-switcher disables, and both bindings persist under a new generation. Main Desktop was restored after both phases. See native-verification.json and native screenshots. The subsequent native phases also passed actual Tob approval/readback, custom-key hint, editable draft preservation, modal blocking, trusted IME composition blocking, restart persistence, and a Home-only reset to its default key. Physical keyboard use and Human QA remain unverified. No merge authorization is implied.
 
 ## Natural Tob management
 
-A natural Chinese Home request asked to change only this macOS browser quick-switcher to Command+Option+J. Tob read the live catalog, submitted the existing review card for the canonical originating ClientTarget and exact `web:macos` profile, then read back after approval. The model turn completed, delivery was handled and the actual reply was visible. The shared layout journey also proved denial and stale approval do not apply a write. Both layout and shortcut fingerprints of the independent second Client stayed unchanged; no page errors occurred. See `natural-tob-verification.json` and `natural-tob-approved.png` (1440×1000). This proves the Web model-management path; native model approval is not claimed.
+A natural Chinese Home request asked to change only this macOS browser quick-switcher to Command+Option+J. Tob read the live catalog, submitted the existing review card for the canonical originating ClientTarget and exact `web:macos` profile, then read back after approval. The model turn completed, delivery was handled and the actual reply was visible. The shared layout journey also proved denial and stale approval do not apply a write. Both layout and shortcut fingerprints of the independent second Client stayed unchanged; no page errors occurred. See `natural-tob-verification.json` and `natural-tob-approved.png` (1440×1000). The independent native model-management run below covers `desktop:macos`.
 
 The final harness correlates review `parentShellCallId` to the exact native Shell call, rather than searching truncated command previews. Earlier harness failures are retained privately, including the review-time Home toggle that correctly made layout approval stale.
 
@@ -36,3 +36,17 @@ Private natural replay: `.humanlayer/verify/tob-layout-shortcuts/natural/web-179
 Private reconstruction: `.humanlayer/verify/tob-layout-shortcuts/journey/web-1792276104850/`; replay helper `.humanlayer/tasks/2097-client-shortcuts/web-control-journey.mjs`. Native driver and the private switch launcher are prepared for the root-owned queue. Credentials, login manifests and user profiles are excluded.
 
 Agent-Task: codex/local/01a145b7-59ea-73c3-9e1f-104d93d7ab60
+
+## Native Tob, composition and reset qualification
+
+A natural Home request changed only the desktop quick-switcher from disabled to Command+Option+J through the existing review card. The model completed, delivery was handled, and owner readback retained all other 17 bindings. Actual Electron key events opened the switcher and its visible hint showed the configured keys.
+
+The same shortcut intentionally opened from Home's editable field and preserved its unsent test draft. With Bot settings open it left that modal in place. CDP supplied an IME candidate and the page observed trusted compositionstart/update plus trusted KeyJ with isComposing=true; the shortcut did not open. This proves the actual composition guard through automated input, not physical keyboard or a specific OS input-method workflow.
+
+Restart created a new Client generation, retained KeyJ and opened the actual switcher. A later single-action Home reset changed U back to its default H; actual Command+Option+Shift+H opened Home and all other bindings stayed unchanged.
+
+**Existing Desktop owner collision:** resetting quick-switcher to its default Command+K correctly refused with reason conflict and conflicts [session.search]. Installed DSH ui-workspace owns that desktop combination; its Web default includes Alt. The refusal retained KeyJ and did not steal the upstream binding. This slice does not change either owner's existing defaults.
+
+Retained harness failures are distinct from product failures: the first phase passed model approval, actual key and editable preservation, then its CDP select-all cleanup did not select the fixture; one Backspace removed only its last character. The resumed phase recorded both CDP and Electron select-all leaving a collapsed selection, then cleaned only the exact owned fixture through checked real Backspace keys. The restart harness initially expected quick-switcher default reset to succeed; a bounded follow-up captured the legitimate session.search conflict and unchanged readback. Both original failures remain private.
+
+All successful phases had no page errors, and the root-owned queue restored the main Desktop after each launch. `native-verification.json` includes the exact review identity, completion, observed input events, readbacks, retained failure and conflict. Native screenshots are 2522 × 1640, dark, Chinese.
