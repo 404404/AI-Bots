@@ -204,7 +204,7 @@ export function createTobImSetupOperations(deps: {
       { env: {}, stdout() {}, stderr() {} },
     );
     try {
-      return await runImAuthorization(
+      const result = await runImAuthorization(
         operation,
         async <T>(method: string, args: Record<string, unknown>) => {
           try {
@@ -219,7 +219,9 @@ export function createTobImSetupOperations(deps: {
           }
         },
         AbortSignal.timeout(30_000),
+        { returnTerminalState: true },
       );
+      return object(result).authorization;
     } catch (error) {
       if (boundaryError) throw boundaryError;
       throw error;

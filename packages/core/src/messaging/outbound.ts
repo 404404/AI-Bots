@@ -1,4 +1,8 @@
 import { readIngest } from './conversation-ingest.js';
+import {
+  createMessagingPolicyMutations,
+  type MessagingPolicyMutations,
+} from './policy-mutation.js';
 import { isChannelNotice } from '../channels/channel-notice.js';
 import { sourceContentPurged } from '../purge/fence.js';
 import { effectiveDmControls } from './dm-controls.js';
@@ -280,6 +284,7 @@ export interface MessagingSnapshot {
 }
 
 export interface OutboundMessaging {
+  policyMutations: MessagingPolicyMutations;
   privateInputReplyAuthority(
     botSlug: string,
     sourceEventId: string,
@@ -414,7 +419,7 @@ export function createOutboundMessaging(options: {
   warn?: (message: string) => void;
   capture?: TelemetryCapture;
 }): OutboundMessaging {
-  const { database } = options;
+  const { database, mutations: policyMutations } = createMessagingPolicyMutations(options.database);
   const connectorEnabled = (platform: string): void => {
     try {
       options.capture?.('connector_enabled', { type: connectorType(platform) });
@@ -1356,6 +1361,7 @@ export function createOutboundMessaging(options: {
   }
 
   const service: OutboundMessaging = {
+    policyMutations,
     privateInputReplyAuthority(botSlug, sourceEventId, authority) {
       const key = privateReplyKey(botSlug, sourceEventId);
       let authorities = privateReplies.get(key);

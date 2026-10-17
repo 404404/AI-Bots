@@ -2138,6 +2138,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     bridge: () => bridgeMethods,
     registry: core.registry,
     grants: core.grants,
+    messagingMutations: core.externalMessaging.policyMutations,
+    reviewer: approvalReviewer,
   });
   const tobChannelOperations = createTobChannelOperations({
     management: core.channelManagement,

@@ -16,6 +16,11 @@ import { CliLiveError } from '../bots/cli-live-error.js';
 import type { BotCreateCliIo } from '../bots/bot-create-cli.js';
 import type { PrepareTobOperation, TobCliCapability } from './cli-operations.js';
 import { TobError } from './service.js';
+import {
+  MessagingPolicyConflict,
+  type MessagingPolicyMutations,
+} from '../messaging/policy-mutation.js';
+import type { ApprovalReviewerSettings } from '../workspaces/approval-reviewer-settings.js';
 
 export const TOB_POLICY_CAPABILITIES: readonly TobCliCapability[] = Object.entries(
   TOB_POLICY_COMMANDS,
@@ -198,6 +203,8 @@ export function createTobPolicyOperations(deps: {
   bridge: () => BridgeMethods;
   registry: Pick<PersonaBotRegistry, 'get' | 'list'>;
   grants: WorkspaceGrantStore;
+  messagingMutations: MessagingPolicyMutations;
+  reviewer?: ApprovalReviewerSettings;
 }): PrepareTobOperation {
   return async (command, raw) => {
     if (!Object.hasOwn(TOB_POLICY_COMMANDS, command)) return undefined;
@@ -275,7 +282,7 @@ export function createTobPolicyOperations(deps: {
                   : 'access';
     const scopeTarget = template || reviewer || apps ? '' : target;
     const identity = () =>
-      template
+      template || defaults || bridges
         ? deps.registry
             .list()
             .map((record) => ({ slug: record.slug, createdAt: record.createdAt }))
@@ -293,8 +300,12 @@ export function createTobPolicyOperations(deps: {
             .map((record) => ({ slug: record.slug, template: record.approvalTemplate ?? null }))
             .sort((a, b) => a.slug.localeCompare(b.slug)),
         };
-      else if (reviewer) value = await call('approvalReviewerModel', {});
-      else if (defaults) value = await call('messagingDefaults', { platform: target });
+      else if (reviewer) {
+        const expected = deps.reviewer?.model();
+        value = await call('approvalReviewerModel', {});
+        if (expected !== undefined && canonical(expected) !== canonical(deps.reviewer?.model()))
+          throw new TobError('stale-policy');
+      } else if (defaults) value = await call('messagingDefaults', { platform: target });
       else if (bridges) value = await call('channelBridges', { channelId: target });
       else if (apps) value = await call('messagingApps', {});
       else if (family === 'messaging')
@@ -328,11 +339,34 @@ export function createTobPolicyOperations(deps: {
       beforeEffect?: () => void,
     ) => {
       guard();
+      const guardedMessaging = ['messaging', 'defaults', 'bridges'].includes(family);
+      const mutationBot = family === 'messaging' ? target : undefined;
+      const expectedStamp = guardedMessaging ? deps.messagingMutations.stamp(mutationBot) : '';
+      const expectedReviewer = reviewer ? deps.reviewer?.model() : undefined;
       if ((await snapshot()).stateFingerprint !== expectedState) throw new TobError('stale-policy');
       guard();
+      if (reviewer && expectedReviewer === undefined) throw new TobError('policy-unavailable');
       beforeEffect?.();
       guard();
-      return call(method, args);
+      if (guardedMessaging) {
+        try {
+          return await deps.messagingMutations.run(
+            mutationBot,
+            expectedStamp,
+            () => {
+              guard();
+              const actualIdentity = identity();
+              if (canonical(actualIdentity) !== canonical(previous.targetIdentity))
+                throw new TobError('stale-policy');
+            },
+            () => call(method, args),
+          );
+        } catch (error) {
+          if (error instanceof MessagingPolicyConflict) throw new TobError('stale-policy');
+          throw error;
+        }
+      }
+      return call(method, reviewer ? { ...args, expectedSetting: expectedReviewer } : args);
     };
     const isReadMethod = (method: string) =>
       ['messagingSnapshot', 'messagingApps', 'messagingTargets'].includes(method);
