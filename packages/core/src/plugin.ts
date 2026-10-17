@@ -1,4 +1,8 @@
 import {
+  createTobScheduleOperations,
+  TOB_SCHEDULE_CAPABILITIES,
+} from './tob/cli-schedule-operations.js';
+import {
   createChannelPreferences,
   type ChannelPreferencesService,
 } from './channels/preferences.js';
@@ -1166,7 +1170,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobBotCreationOperations(command, args)) ??
                   (await tobBotProfileOperations(command, args)) ??
                   (await tobChannelOperations(command, args)) ??
-                  (await tobChannelPreferencesOperations(command, args)),
+                  (await tobChannelPreferencesOperations(command, args)) ??
+                  (await tobScheduleOperations(command, args)),
                 capabilities: [
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
@@ -1174,6 +1179,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_BOT_PROFILE_CAPABILITIES,
                   ...TOB_CHANNEL_CAPABILITIES,
                   ...TOB_CHANNEL_PREFERENCES_CAPABILITIES,
+                  ...TOB_SCHEDULE_CAPABILITIES,
                 ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
@@ -2097,6 +2103,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const tobBotProfileOperations = createTobBotProfileOperations({
     registry: core.registry,
     bridge: () => bridgeMethods,
+    isProtectedBot: (slug) => core.tob.isTob(slug),
+  });
+  const tobScheduleOperations = createTobScheduleOperations({
+    schedules: core.schedules,
+    registry: core.registry,
     isProtectedBot: (slug) => core.tob.isTob(slug),
   });
   const tobChannelPreferencesOperations = createTobChannelPreferencesOperations(
