@@ -76,8 +76,14 @@
         "screenshot": "native-guard-notification-readback.png",
         "passed": "actual notification controls/read-write, reload persistence and old generation refusal",
         "errors": [],
-        "limits": "one selected native Client; prior model and external process-restart journeys retained at their original source; no post-fix Web rerun",
-        "runtimeOwner": "parent serialized native runner; main Desktop restored"
+        "limits": "one selected native Client; prior model journeys retained at their original source; no post-fix Web/model rerun",
+        "runtimeOwner": "parent serialized native runner; main Desktop restored",
+        "processRestart": {
+          "receipt": "native-guard-restart-result.json",
+          "screenshot": "native-guard-restart-readback.png",
+          "passed": "actual new process, same absolute home/Profile and userdata; read before writes enabled=true/theme=dark and actual notification switch on",
+          "errors": []
+        }
       }
     }
   },
@@ -160,6 +166,12 @@
       "width": 2522,
       "height": 1640,
       "sha256": "68e8863b59887c2762c96a68cf83a2491d8833ad6573d1761f1ade8a520e86e3"
+    },
+    {
+      "file": "native-guard-restart-readback.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "4d1a9e152e5b3d61d8c7d6c99c329ad033667633b956c513fbc89aa67385fbf5"
     }
   ],
   "pullRequest": "https://github.com/BotHarness/DeepSeekBot/pull/2126",
@@ -187,7 +199,7 @@
     },
     "typecheck": "root and mobile passed after required Cordis disposer return correction",
     "build": "passed on identical source content before source-fix commit",
-    "runtimeAfterFix": "Native single-Client direct phase passed on built guard source5b/candidate678: actual notification controls, owner read/write, reload persistence and old generation refusal. Historical model/Web/process-restart captures remain bound to original source.",
+    "runtimeAfterFix": "Native single-Client direct and external process-restart phases passed on built guard source5b/candidate678: actual notification controls, owner read/write, reload persistence, old generation refusal and retained values in actual new process. Historical Web/model captures remain bound to original source.",
     "fullCI": {
       "head": "6783c8d1823611ea601e18c2599af164aa4aa5e1",
       "conclusion": "success",
