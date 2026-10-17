@@ -112,6 +112,38 @@ async function click(...names) {
   }
   throw Error('visible action missing: ' + names.join('/'));
 }
+async function visibleElement(selector) {
+  for (const element of await page.$$(selector)) if (await element.isVisible()) return element;
+  return undefined;
+}
+async function waitVisible(selector) {
+  const deadline = Date.now() + 30000;
+  while (Date.now() < deadline) {
+    const element = await visibleElement(selector);
+    if (element) return element;
+    await pause(100);
+  }
+  throw Error('visible renderer control missing: ' + selector);
+}
+async function ensureBotMode() {
+  const deadline = Date.now() + 30000;
+  let selected = false;
+  while (Date.now() < deadline) {
+    if (await visibleElement('.bh-workspace-rail')) return;
+    if (!selected) {
+      for (const name of ['Bot mode', 'Bot 模式']) {
+        const button = await visibleElement(`::-p-aria([name=${JSON.stringify(name)}])`);
+        if (button) {
+          await button.click();
+          selected = true;
+          break;
+        }
+      }
+    }
+    await pause(100);
+  }
+  throw Error('Bot renderer did not become visible within 30 seconds');
+}
 async function capture(label) {
   await pause(500);
   assert.equal(await page.$('[data-pair-qr]'), null, 'never capture a live pairing QR');
@@ -134,10 +166,10 @@ async function model(prompt, commands) {
   console.log(JSON.stringify({ step: 'model', commands, resumeOffer }));
   const home = await rpc('tobHome');
   await resetClient();
-  await page.waitForSelector('.bh-workspace-rail');
-  if (!(await page.$('[data-home-panel]')))
-    await page.click('.bh-workspace-rail [data-pinned-panel="bh:home"]');
-  const input = await page.waitForSelector('[data-home-panel] textarea');
+  await ensureBotMode();
+  if (!(await visibleElement('[data-home-panel]')))
+    await (await waitVisible('.bh-workspace-rail [data-pinned-panel="bh:home"]')).click();
+  const input = await waitVisible('[data-home-panel] textarea');
   const started = Date.now();
   const traceSnapshot = async () => {
     try {
@@ -249,8 +281,7 @@ try {
     await click(visible);
     await pause(200);
   }
-  if (!(await page.$('.bh-workspace-rail'))) await click('Bot mode', 'Bot 模式');
-  await page.waitForSelector('.bh-workspace-rail');
+  await ensureBotMode();
   if (!resumeOffer) {
     await showDevices();
     await capture('before-devices');
@@ -347,7 +378,7 @@ try {
     checks.revokedAccessDenied = true;
     checks.streamClosed = true;
     await resetClient();
-    await page.waitForSelector('.bh-workspace-rail');
+    await ensureBotMode();
     await showDevices();
     await page.waitForSelector('[data-paired-device][data-revoked]');
     await capture('after-revoked');

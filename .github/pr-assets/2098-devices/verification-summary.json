@@ -2,7 +2,7 @@
   "issue": 2098,
   "pr": 2129,
   "base": "a3e2c4e64d131191e686e33cb207d3db9b3a0937",
-  "testedProductSource": "8bde3340afb8ba4a23f3f715851f83da188168d2",
+  "testedProductSource": "f69a80a9d7148d4f6e8d80cc562590997ef19c6d",
   "captureCommit": "e734b55dc6b74fa07ec9b0e8d1a9e6b762b67f51",
   "productionIdenticalAfterTestedSource": true,
   "checks": {
@@ -21,6 +21,22 @@
       "syntheticClientOnly": true,
       "noPageErrors": true,
       "noSecretInEvidenceOrHostLog": true
+    },
+    "authority-web": {
+      "modelShell": true,
+      "revokedAccessDenied": true,
+      "streamClosed": true,
+      "modelOfferHumanHandoff": true,
+      "syntheticClientOnly": true,
+      "nativeDesktop": false,
+      "noPageErrors": true,
+      "noSecretInEvidenceOrHostLog": true
+    },
+    "authority-triage-web": {
+      "actualTriagePrompt": true,
+      "freshHumanNextStepSplice": true,
+      "sameTurnOfferAndStatus": true,
+      "sourceProvenanceReadback": true
     }
   },
   "canonicalModelEvidence": {
@@ -32,15 +48,37 @@
     "earlierRelatedTests": 97,
     "typecheck": "passed",
     "build": "passed",
-    "fullLocalSuite": "not-run"
+    "fullLocalSuite": "not-run",
+    "authorityFocusedTests": 79,
+    "authorityTypecheck": "passed",
+    "authorityBuild": "passed"
   },
   "gates": {
-    "CI": "requested-ci:full",
-    "nativeDesktop": "pending-parent-serialized-run",
+    "CI": "new-head-awaits-ci:full",
+    "nativeDesktop": "old-source-second-Human-refusal-retained; fixed-source-retry-pending",
     "physicalPhone": "unverified",
     "HumanQA": "pending",
     "merge": "not-authorized",
     "deployment": "not-authorized"
   },
-  "publicationCheck": "No tests, product builds, Host or native Desktop launches were run during artifact publication."
+  "publicationCheck": "New source f69 has focused tests, types, build and real continuous-DM Web proof. Original screenshots remain tied to source 8bde/capture e734. No physical-phone or final-native claim.",
+  "previousTestedProductSource": "8bde3340afb8ba4a23f3f715851f83da188168d2",
+  "exactMemoryTriageSteer": "passed: real Memory change, actual automatic Triage turn, fresh Human next-step splice and successful device-offer/status in that same turn; synthetic timing fixture",
+  "retainedNativeFailures": [
+    {
+      "source": "8bde3340a",
+      "stage": "startup",
+      "reason": "task-local YAML helper format; corrected before subsequent launch"
+    },
+    {
+      "source": "8bde3340a",
+      "stage": "second Human model request",
+      "reason": "mixed Memory-triage source authority; product fixed in f69"
+    },
+    {
+      "source": "f69a80a9d",
+      "stage": "initial renderer readiness",
+      "reason": "verifier checked rail once before hydration and searched absent mode button; bounded visible-renderer polling added; model phase not reached"
+    }
+  ]
 }
