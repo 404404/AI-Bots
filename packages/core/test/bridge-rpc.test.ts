@@ -595,6 +595,7 @@ describe('bridge typert service', () => {
       'botSourcePolicySet',
       'botSourcePolicyReset',
       'activityOverview',
+      'homeDashboard',
       'channelActivityToday',
       'humanAttention',
       'humanAssignmentContext',

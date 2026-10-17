@@ -1331,8 +1331,8 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrap(this.methods.channelActivityToday({}));
   }
 
-  async homeDashboard(range: RollingUsageRange = '24h') {
-    return unwrap(await this.methods.homeDashboard({ range }));
+  async homeDashboard(range?: RollingUsageRange) {
+    return unwrap(await this.methods.homeDashboard({ range: range ?? '24h' }));
   }
 
   activityOverview() {

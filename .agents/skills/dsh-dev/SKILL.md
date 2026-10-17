@@ -249,3 +249,7 @@ In pinned rc.2, the native `credentials` Service may be absent while other depen
 
 
 The same #2093 recovery exposed an application-defined distinction: a retryable, unobserved schedule Source Event could coalesce later occurrences without waking again. BotHarness startup now asks the existing Inbox harvest to recover only canonical Schedule/firing-backed items whose Source Event and Admission both have no side effect or observation, preserving resolution, snooze, current Bot/DM and pause checks. Harvest repeats the same eligibility test so another safe item cannot pull unsafe or deleted work into execution. Disabling stops future occurrences rather than revoking an already admitted one; never manufacture recovery by rewriting Session or Inbox history.
+
+## Additional verified pitfall — #2081 Gateway SRC signatures
+
+The rc.2 Gateway resolves SRC methods from their actual runtime function signature. Every parameter must be a unique identifier; defaults, destructuring and rest are rejected with `gateway/signature-invalid`, even when a local test helper extracts their names successfully. Home reproduced this with `homeDashboard(range = '24h')`: the Client mounted but all cards were unavailable. Use an optional identifier parameter and apply the default inside the method body. Exercise the installed `TypertGatewayService.invoke` parser, then rebuild and restart the owning Host before repeating the real Web query.
