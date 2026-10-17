@@ -2382,7 +2382,8 @@ const ROLLING_USAGE_RECEIPT_MIGRATION: SchemaMigration = {
     `);
     const historical = database
       .prepare(`SELECT 1 FROM usage_receipts
-      UNION ALL SELECT 1 FROM usage_daily LIMIT 1`)
+      UNION ALL SELECT 1 FROM usage_daily
+      UNION ALL SELECT 1 FROM session_ownership LIMIT 1`)
       .get();
     if (historical !== undefined)
       database

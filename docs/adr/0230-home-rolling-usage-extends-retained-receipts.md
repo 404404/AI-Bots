@@ -26,7 +26,7 @@ Session Query, a model, or a background reconstruction. Existing Host startup re
 continues independently; its behavior is not a guarantee about Home reads or proof that old
 histories remain available. Metadata enrichment piggybacks that existing owner workflow only.
 
-An upgraded Profile with historical daily statistics or receipts starts with an explicit coverage
+An upgraded Profile with historical daily statistics, receipts or owned Sessions starts with an explicit coverage
 boundary. Adding nullable fields does not establish precise historical coverage. Partial trusted
 replay can supply a numeric lower bound, while absent histories and legacy baselines remain
 partial or unknown. New reported unknown totals stay null; reconciliation/degraded quality is
