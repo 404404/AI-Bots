@@ -37,7 +37,9 @@ tabs show only their labels. All three blocks have equal width; the selected ico
 label are centered together and its underline fills the entire block without gutters.
 Swipe left/right from the page content (including empty/loading states), not just the
 tab strip, to switch pages. The underline tracks the gesture; short/cancelled drags
-return to the same page. Scroll a populated page vertically, switch away and back,
+return to the same page. Confirm the incoming icon is already partially visible before the page settles.
+Its fade/scale and label movement track the same drag as the underline; cancelling
+reverses them, with no late icon pop or layout jump. Then scroll vertically, switch away/back,
 and confirm its scroll position is retained. Vertical scrolling and pull-to-refresh
 must not switch pages. Check repeated fast direction changes and tap-to-third-tab.
 Return to a loaded question and confirm it does not flash a loading card or lose

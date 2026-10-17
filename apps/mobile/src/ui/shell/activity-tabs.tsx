@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Animated, I18nManager, Pressable, View } from 'react-native';
 import type { SceneRendererProps } from 'react-native-tab-view';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useDesignTheme } from '../design/theme';
-import { edge, space } from '../design/tokens';
+import { edge, space, tabMotion } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { t } from '../strings';
 import type { ActivitySection } from './activity-filters';
@@ -25,14 +26,21 @@ export function ActivityTabs({
   const [width, setWidth] = useState(0);
   const tabWidth = width / ACTIVITY_TABS.length;
   const iconSize = theme.type.body.line;
+  const reducedMotion = useReducedMotion();
+  const showIcons = selected !== 'all' && selected !== 'handled';
+  const direction = I18nManager.isRTL ? -1 : 1;
+  const inactiveOffset = (-(iconSize + space.x2) / 2) * direction;
   return (
     <View
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
       style={{ backgroundColor: theme.color.base }}
     >
       <View style={{ flexDirection: 'row' }}>
-        {ACTIVITY_TABS.map(({ key }) => {
+        {ACTIVITY_TABS.map(({ key }, index) => {
           const Icon = ICONS[key];
+          const inputRange = [index - 1, index, index + 1];
+          const animate = showIcons && !reducedMotion;
+          const focused = showIcons && selected === key;
           return (
             <Pressable
               key={key}
@@ -52,23 +60,71 @@ export function ActivityTabs({
                 backgroundColor: pressed ? theme.layer.canvas.pressed : theme.color.base,
               })}
             >
-              <View
+              <Animated.View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: space.x2,
+                  transform: [
+                    {
+                      translateX: animate
+                        ? position.interpolate({
+                            inputRange,
+                            outputRange: [inactiveOffset, 0, inactiveOffset],
+                            extrapolate: 'clamp',
+                          })
+                        : focused
+                          ? 0
+                          : inactiveOffset,
+                    },
+                  ],
                 }}
               >
-                {selected === key ? (
-                  <View
-                    pointerEvents="none"
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                  >
-                    <Icon color={theme.color.fg} size={iconSize} />
-                  </View>
-                ) : null}
+                <Animated.View
+                  pointerEvents="none"
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                  style={{
+                    width: iconSize,
+                    height: iconSize,
+                    opacity: animate
+                      ? position.interpolate({
+                          inputRange,
+                          outputRange: [0, 1, 0],
+                          extrapolate: 'clamp',
+                        })
+                      : focused
+                        ? 1
+                        : 0,
+                    transform: [
+                      {
+                        scale: animate
+                          ? position.interpolate({
+                              inputRange,
+                              outputRange: [
+                                tabMotion.inactiveIconScale,
+                                1,
+                                tabMotion.inactiveIconScale,
+                              ],
+                              extrapolate: 'clamp',
+                            })
+                          : 1,
+                      },
+                      {
+                        translateX: animate
+                          ? position.interpolate({
+                              inputRange,
+                              outputRange: [space.x2 * direction, 0, space.x2 * direction],
+                              extrapolate: 'clamp',
+                            })
+                          : 0,
+                      },
+                    ],
+                  }}
+                >
+                  <Icon color={theme.color.fg} size={iconSize} />
+                </Animated.View>
                 <Text
                   tone={selected === key ? 'fg' : 'muted'}
                   strong={selected === key}
@@ -76,7 +132,7 @@ export function ActivityTabs({
                 >
                   {t.inboxSections[key]}
                 </Text>
-              </View>
+              </Animated.View>
             </Pressable>
           );
         })}
