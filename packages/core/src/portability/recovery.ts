@@ -73,8 +73,6 @@ export function createProfileRecovery(
         return write(db);
       });
     } catch (error) {
-      // Preserve the domain refusal only after the database confirms rollback.
-      // A failed rollback/recovery transition remains the database owner's error.
       if (refusal !== undefined && database.mode === 'ready') throw refusal;
       throw error;
     }

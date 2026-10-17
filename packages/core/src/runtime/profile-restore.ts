@@ -41,7 +41,6 @@ export function suspendRestoredExecution(database: OperationalDatabaseOwner): vo
       .prepare('UPDATE tool_approval_rules SET active = 0, revoked_at = ? WHERE revoked_at IS NULL')
       .run(new Date().toISOString()),
   );
-  // A restored database is content, never the source Host's management capability.
   attachOperationalModule(database, 'device-pairing').transaction((db) => {
     db.prepare(
       'UPDATE paired_devices SET revoked_at = COALESCE(revoked_at, ?), secret_hash = lower(hex(randomblob(32))), public_key = NULL',
@@ -54,8 +53,6 @@ export function suspendRestoredExecution(database: OperationalDatabaseOwner): vo
   attachOperationalModule(database, 'secret-mcp').transaction((db) =>
     db.exec('DELETE FROM bot_secret_mcp_enabled; DELETE FROM bot_secret_mcp_servers;'),
   );
-  // Retain the imported steward's persona/Memory as an ordinary paused Bot. Home
-  // allocates a fresh target-local protected identity under current Human authority.
   attachOperationalModule(database, 'tob').transaction((db) => db.exec('DELETE FROM tob_identity'));
   attachOperationalModule(database, 'assignment-access').transaction((db) =>
     db.exec("UPDATE bot_assignment_access SET mode = 'workspace-write', revision = revision + 1"),
