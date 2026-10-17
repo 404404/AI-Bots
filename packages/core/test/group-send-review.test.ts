@@ -208,7 +208,7 @@ describe('Group send review through the same direct model tools', () => {
       const held = await tool('channel_send', { body: 'Confirmed 10:00' });
       expect(held.status).toBe('held');
       expect(held.changedMessageIds).toHaveLength(20);
-      expect(held.changedMessageIds![0]).toBe('latest-correction');
+      expect(held.changedMessageIds).toContain('latest-correction');
       expect(held.changedMessageIds).not.toContain('history-0');
       expect(held.review!.content).toContain('Correction: meet at 11:00');
       const sent = await tool('channel_send', {
@@ -243,7 +243,7 @@ describe('Group send review through the same direct model tools', () => {
         body: '10:00',
         observation_id: read.observationIds[channelId],
       });
-      expect(held.changedMessageIds![0]).toBe('latest-correction');
+      expect(held.changedMessageIds).toContain('latest-correction');
       expect(held.review!.complete).toBe(false);
       const retry = await tool('channel_send', {
         body: '11:00',

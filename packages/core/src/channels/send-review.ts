@@ -247,7 +247,7 @@ export class GroupSendReview {
             ? 'changed-again-stop-and-keep-responsibility-open'
             : 'read-new-context-then-revise-or-drop',
         ),
-        changedMessageIds: changed.slice(0, 20),
+        changedMessageIds: changed.slice(0, 20).reverse(),
         changedMessageCount: changed.length,
         read: { channel_id: channelId, limit: 20 },
       };

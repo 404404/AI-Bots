@@ -505,6 +505,14 @@
       "guide": ".agents/skills/verify-deepseekbot/features/tob-home.md",
       "task": 2082,
       "gap": null
+    },
+    {
+      "id": "desktop.group.send-review",
+      "label": "Hold stale Group replies and revise or drop with full paired history review",
+      "source": "packages/core/src/channels/send-review.ts",
+      "guide": ".agents/skills/verify-deepseekbot/features/group-send-review.md",
+      "task": 2053,
+      "gap": null
     }
   ],
   "scripts": [

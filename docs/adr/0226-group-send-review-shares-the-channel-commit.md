@@ -74,8 +74,10 @@ Channel default; the existing draft owner/channel check still decides whether it
 Merge follow-through: when no valid observation exists, the held result starts from the latest
 20 Channel placements, matching a bounded recent read rather than scanning all history. It is
 not evidence of reading earlier history. Existing observations retain their original floor;
-more than 20 changed messages remain incomplete and cannot be silently skipped. Latest
-messages are offered first so a recent Human correction is not hidden behind older changes.
+more than 20 changed messages remain incomplete and cannot be silently skipped. The latest 20
+messages are selected, then offered in chronological order; a recent Human correction is not
+excluded merely because older changes occupied the ID window. The existing content budget
+can still omit oversized messages, which never become observed.
 Successful submission deletes the pending draft inside the same Channel commit transaction;
 the canonical Channel message remains, and an explicit retry of the retired draft is refused.
 Unfinished and dropped intents retain the existing conservative inspection/purge behavior.
