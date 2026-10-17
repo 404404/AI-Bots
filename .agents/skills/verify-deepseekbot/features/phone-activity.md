@@ -32,7 +32,9 @@ question/approval, a Human mention, a reply and ordinary unread group messages.
 Confirm exactly three pinned, underlined tabs: Needs you (default), For you and
 Other unread. Needs you retains approvals, formal questions and private input.
 Switch all three tabs; only their own rows appear, without collapsible section
-headings. All and handled history remain available through the filter. The header contains
+headings. The selected tab shows its leading icon and underline together; inactive
+tabs show only their labels. Labels and tab bounds stay in place as selection changes.
+All and handled history remain available through the filter. The header contains
 sorting, filtering and Activity search; no permanent chips appear above the feed.
 Open Filters, combine Bot/Channel/unread/category, switch tabs and confirm those
 other filters survive. Reset returns to Needs you and default filters, preserving
