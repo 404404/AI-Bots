@@ -105,6 +105,7 @@ const CODES = new Set([
   'limit-reached',
 
   'client-target-required',
+  'client-proof-required',
   'unknown-client-target',
   'no-connected-client',
   'client-target-replaced',

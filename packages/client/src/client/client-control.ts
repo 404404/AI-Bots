@@ -10,6 +10,7 @@ import {
 import type { BridgeCall } from './bridge.js';
 import type { DesktopNotificationPrefs } from './desktop-notifications.js';
 
+const targetOwners = new WeakMap<ClientTarget, string>();
 export function createClientTarget(storage: Pick<Storage, 'getItem' | 'setItem'>): ClientTarget {
   const key = 'botharness.client-control-id.v1';
   let clientId = storage.getItem(key);
@@ -17,10 +18,22 @@ export function createClientTarget(storage: Pick<Storage, 'getItem' | 'setItem'>
     clientId = crypto.randomUUID();
     storage.setItem(key, clientId);
   }
-  return { clientId, generation: crypto.randomUUID() };
+  const secretKey = 'botharness.client-control-owner.v1';
+  let ownerProof = storage.getItem(secretKey);
+  if (!ownerProof || !/^[a-zA-Z0-9-]{16,80}$/u.test(ownerProof)) {
+    ownerProof = crypto.randomUUID();
+    storage.setItem(secretKey, ownerProof);
+  }
+  const target = { clientId, generation: crypto.randomUUID() };
+  targetOwners.set(target, ownerProof);
+  return target;
 }
 export type ClientControlHandler = (args: Record<string, unknown>) => unknown | Promise<unknown>;
 const origins = new WeakMap<BridgeCall, () => ClientTarget | undefined>();
+const proofs = new WeakMap<BridgeCall, () => string | undefined>();
+export function currentClientProof(call: BridgeCall): string | undefined {
+  return proofs.get(call)?.();
+}
 export function currentClientTarget(call: BridgeCall): ClientTarget | undefined {
   return origins.get(call)?.();
 }
@@ -31,12 +44,15 @@ export function mountClientControl(input: {
   handlers: ReadonlyMap<string, ClientControlHandler>;
   intervalMs?: number;
 }): () => void {
+  const proof = crypto.randomUUID();
+  const ownerProof = targetOwners.get(input.target) ?? crypto.randomUUID();
   let active = true;
   let registered = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   origins.set(input.call, () => (registered ? input.target : undefined));
+  proofs.set(input.call, () => (registered ? proof : undefined));
   const invoke = async (args: Record<string, unknown>): Promise<unknown> => {
-    const response = (await input.call('clientControl', args)) as {
+    const response = (await input.call('clientControl', { ...args, proof })) as {
       ok: boolean;
       value?: unknown;
       error?: { code?: string };
@@ -47,7 +63,7 @@ export function mountClientControl(input: {
   const tick = async (): Promise<void> => {
     try {
       if (!registered) {
-        await invoke({ action: 'register', target: input.target, kind: input.kind });
+        await invoke({ action: 'register', target: input.target, kind: input.kind, ownerProof });
         registered = true;
       }
       const response = (await invoke({ action: 'poll', target: input.target })) as {
@@ -85,6 +101,7 @@ export function mountClientControl(input: {
     registered = false;
     if (timer) clearTimeout(timer);
     origins.delete(input.call);
+    proofs.delete(input.call);
   };
 }
 export function createClientPreferenceHandlers(input: {
