@@ -13,6 +13,7 @@ import {
   auditRun,
   blindRun,
   humanReviewComplete,
+  humanReviewSet,
   pairedInterval,
   judgePrompt,
   JUDGE_PROMPT,
@@ -21,6 +22,29 @@ import {
 import { sumHostRows } from '../e2e-llm-scenarios.mjs';
 
 describe('send review evaluation evidence', () => {
+  it('requires baseline failures and quiet-control latency anomalies in Human review', () => {
+    const report = {
+      protocol: { issue: 2054, families: ['fyi-control'] },
+      pairs: Array.from({ length: 10 }, (_, i) => ({
+        id: `control-${i}`,
+        family: 'fyi-control',
+        runs: {
+          baseline: { valid: true, goal: i !== 2, firstReplyMs: 100, controlReplyMs: 100 },
+          candidate: {
+            valid: true,
+            goal: true,
+            firstReplyMs: 1000 - i,
+            controlReplyMs: i === 9 ? 200 : i === 3 ? 120 : 100,
+          },
+        },
+      })),
+    };
+    const required = humanReviewSet(report);
+    expect(required['control-2']).toContain('基线未达成场景目标');
+    expect(required['control-9']).toContain('候选明确请求控制 latency p95 尾部');
+    expect(required['control-3']).toContain('明确请求控制延迟超过预登记 1.10 倍预算');
+    expect(required['control-0']).not.toContain('候选明确请求控制 latency p95 尾部');
+  });
   it('keeps prelude history while judging cancellation only after the target request', () => {
     const run = {
       conversation: true,

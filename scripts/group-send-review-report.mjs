@@ -420,11 +420,21 @@ export function humanReviewSet(report, judged) {
         .filter((value) => typeof value === 'number'),
       0.95,
     );
+    const controlLatency95 =
+      report.protocol?.issue === 2054 && family === 'fyi-control'
+        ? quantile(
+            pairs
+              .map((pair) => pair.runs.candidate?.controlReplyMs)
+              .filter((value) => typeof value === 'number'),
+            0.95,
+          )
+        : null;
     for (const pair of pairs) {
       const a = pair.runs.baseline,
         b = pair.runs.candidate;
       if (!a?.valid || !b?.valid) add(pair.id, '失败、窗口未命中或未结算');
       if (!b?.goal) add(pair.id, '候选未达成场景目标');
+      if (!a?.goal) add(pair.id, '基线未达成场景目标');
       for (const run of [a, b].filter(Boolean)) {
         const audit = auditRun(run);
         if (!audit.hostReconciliation || audit.nativeRouteMismatch)
@@ -449,6 +459,15 @@ export function humanReviewSet(report, judged) {
       )
         add(pair.id, '超过预登记 token 预算');
       if (latency95 !== null && b?.firstReplyMs >= latency95) add(pair.id, '候选 latency p95 尾部');
+      if (controlLatency95 !== null && b?.controlReplyMs >= controlLatency95)
+        add(pair.id, '候选明确请求控制 latency p95 尾部');
+      if (
+        report.protocol?.issue === 2054 &&
+        family === 'fyi-control' &&
+        a?.controlReplyMs > 0 &&
+        b?.controlReplyMs / a.controlReplyMs > 1.1
+      )
+        add(pair.id, '明确请求控制延迟超过预登记 1.10 倍预算');
       const rounds = judged?.rounds.filter((round) => round.pairId === pair.id) ?? [];
       if (rounds.length === 2 && rounds[0].mappedWinner !== rounds[1].mappedWinner)
         add(pair.id, 'LLM 双顺序分歧');
