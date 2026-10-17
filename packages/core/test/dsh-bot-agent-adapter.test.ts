@@ -110,7 +110,13 @@ describe('DSH Bot Agent adapter', () => {
           expect(prompt).toContain('deepseekbot capabilities');
           expect(prompt).toContain('deepseekbot settings botharness-client');
           expect(prompt).toContain('--patch-stdin --expected-revision');
-          expect(prompt).toContain('only assignmentConcurrencyLimit');
+          expect(prompt).toContain('What can you do?');
+          expect(prompt).toContain('read-only discovery');
+          expect(prompt).toContain('THIS installed version');
+          expect(prompt).toContain('does not need to know commands');
+          expect(prompt).not.toContain('only assignmentConcurrencyLimit');
+          expect(prompt).toContain('private steward and secretary');
+          expect(prompt).toContain('never replace a required Human decision with your own');
         } else expect(prompt).toBeUndefined();
         expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_read');
         expect(scope.tools.map((tool) => tool.name)).not.toContain('tob_assignment_limit_set');
