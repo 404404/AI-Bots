@@ -580,6 +580,8 @@ describe('bridge typert service', () => {
       'channelHistorySources',
       'channelPurgePreview',
       'channelPurgeConfirm',
+      'tobChannelContent',
+      'tobBotProgress',
       'channelMessages',
       'channelTimeline',
       'channelReadPosition',
@@ -820,6 +822,19 @@ describe('bridge typert service', () => {
       'expectedChannel',
     ]);
     expect(parameterNames(service.channelRename)).toEqual(['channelId', 'name', 'expectedChannel']);
+    expect(parameterNames(service.tobChannelContent)).toEqual([
+      'target',
+      'expectedTarget',
+      'cursor',
+      'limit',
+      'messageId',
+    ]);
+    expect(parameterNames(service.tobBotProgress)).toEqual([
+      'target',
+      'expectedTarget',
+      'cursor',
+      'limit',
+    ]);
     expect(parameterNames(service.channelMessages)).toEqual(['channelId', 'before', 'limit']);
     expect(parameterNames(service.channelTimeline)).toEqual([
       'channelId',
