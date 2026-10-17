@@ -379,6 +379,648 @@ describe('Tob canonical identity and settings', () => {
       await f.close();
     }
   });
+  it('authorizes a fresh Human DM steered into a Memory triage turn without authorizing its anchor', async () => {
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let triage!: OrchestratorAgentRun;
+    let automationQuestion: ReturnType<
+      NonNullable<ReturnType<typeof fixture>['core']['runtime']['bindNativeQuestionInput']>
+    >;
+    let automationAnswerChecked = false;
+    const steer = vi.fn(() => true);
+    const f = fixture(
+      async (run) => {
+        if (run.acceptNativeInput) {
+          expect(() => f.core.runtime.captureTobCliAuthority!(run.sessionId)).toThrow(
+            'human-dm-required',
+          );
+          expect(run.acceptNativeInput()).toBe(true);
+          expect(() => f.core.runtime.captureTobCliAuthority!(run.sessionId)).toThrow(
+            'human-dm-required',
+          );
+          automationAnswerChecked = true;
+          return;
+        }
+        if (!run.message.startsWith('[Triage]')) {
+          run.triage!.resolve({
+            ids: run
+              .triage!.list()
+              .groups.filter((g) => g.sourceKind === 'human-message')
+              .flatMap((g) => g.ids),
+            outcome: 'done',
+          });
+          return;
+        }
+        triage = run;
+        automationQuestion = f.core.runtime.bindNativeQuestionInput!(
+          run.sessionId,
+          run.inboundChannelId!,
+        );
+        started();
+        await released;
+      },
+      { triageContinuation: true },
+      steer,
+    );
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core });
+      expect(
+        await bridge.channelSend({
+          channelId: home.channelId,
+          messageId: 'human-' + crypto.randomUUID(),
+          body: 'Initialize Memory observation',
+        }),
+      ).toMatchObject({ ok: true });
+      await f.core.runtime.whenIdle();
+      f.core.memory.saveHuman({
+        botSlug: home.botSlug,
+        path: 'qa-note.md',
+        body: 'Memory context only',
+        expectedHead: f.core.memory.snapshot(home.botSlug).head!,
+        editId: 'qa-memory-context',
+      });
+      expect(
+        await bridge.channelSend({
+          channelId: home.channelId,
+          messageId: 'human-' + crypto.randomUUID(),
+          body: 'Read devices',
+        }),
+      ).toMatchObject({ ok: true });
+      await Promise.race([
+        start,
+        f.core.runtime.whenIdle().then(() => {
+          throw new Error('Memory triage was not scheduled');
+        }),
+      ]);
+      expect(triage.inbox).toContain('memory-change');
+      expect(() => f.core.runtime.captureTobCliAuthority!(triage.sessionId)).toThrow(
+        'human-dm-required',
+      );
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Create an offer now',
+      });
+      expect(steer).toHaveBeenCalled();
+      const authority = f.core.runtime.captureTobCliAuthority!(triage.sessionId);
+      expect(authority.humanSourceEventIds).toHaveLength(1);
+      expect(authority.acceptedSourceEventIds).toContain(triage.triage!.current()[0]);
+      expect(authority.acceptedSourceEventIds.length).toBeGreaterThan(
+        authority.humanSourceEventIds.length,
+      );
+      authority.markSideEffect();
+      expect(await f.core.tob.writeSetting(3, 0, authority)).toMatchObject({
+        value: 3,
+        revision: 1,
+      });
+      const probe = attachOperationalModule(f.core.operationalDatabase, 'tob-triage-regression');
+      const sources = probe.read((db) =>
+        db
+          .prepare(`
+        SELECT e.source_event_id, e.source_kind, e.channel_id, e.message_id, a.reason
+          FROM source_events e JOIN inbox_admissions a USING(source_event_id)
+         WHERE a.bot_slug = ? AND e.body = ?
+      `)
+          .all(home.botSlug, 'Create an offer now'),
+      );
+      expect(sources).toEqual([
+        {
+          source_event_id: expect.any(String),
+          source_kind: 'human-message',
+          channel_id: home.channelId,
+          message_id: expect.any(String),
+          reason: 'human-dm',
+        },
+      ]);
+      const anchor = triage.triage!.current()[0]!;
+      probe.transaction((db) =>
+        db
+          .prepare(
+            "UPDATE inbox_admissions SET last_error = 'channel-ended' WHERE source_event_id = ?",
+          )
+          .run(anchor),
+      );
+      expect(authority).toThrow('Source Channel has ended');
+      probe.transaction((db) =>
+        db
+          .prepare('UPDATE inbox_admissions SET last_error = NULL WHERE source_event_id = ?')
+          .run(anchor),
+      );
+      expect(authority).not.toThrow();
+      triage.triage!.resolve({
+        ids: triage.triage!.list().groups.flatMap((g) => g.ids),
+        outcome: 'done',
+      });
+      release();
+      await f.core.runtime.whenIdle();
+      expect(await automationQuestion!(() => true)).toBe(true);
+      await f.core.runtime.whenIdle();
+      expect(automationAnswerChecked).toBe(true);
+    } finally {
+      if (triage) {
+        const remaining = triage.triage!.list().groups.flatMap((g) => g.ids);
+        if (remaining.length > 0) triage.triage!.resolve({ ids: remaining, outcome: 'done' });
+      }
+      release();
+      await f.core.runtime.whenIdle();
+      await f.close();
+    }
+  }, 30000);
+  it('invalidates a Human scope on Bot and Group steering and never revives it after a fresh Human capture', async () => {
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let sessionId!: string;
+    let original!: () => void;
+    const steer = vi.fn(() => true);
+    const f = fixture(
+      async (run) => {
+        sessionId = run.sessionId;
+        original = f.core.runtime.captureTobCliAuthority!(sessionId);
+        started();
+        await released;
+      },
+      {},
+      steer,
+    );
+    try {
+      const home = await f.core.tob.ensure();
+      f.core.registry.create({ slug: 'peer', displayName: 'Peer' });
+      const bridge = createBridgeMethods({ ...f.core });
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read the limit',
+      });
+      await start;
+      expect(original).not.toThrow();
+      f.core.channels.getOrCreateDm('peer', 'Peer');
+      const botDm = f.core.channels.getOrCreateBotDm('peer', home.botSlug, 'Peer · Tob')!;
+      const messageId = 'bot-' + crypto.randomUUID();
+      await f.core.channels.appendMessage(botDm.id, {
+        id: messageId,
+        at: new Date().toISOString(),
+        author: { kind: 'bot', slug: 'peer' },
+        body: 'Change the limit',
+        botCausation: { rootSourceEventId: 'qa-root', parentSourceEventId: 'qa-parent', hop: 1 },
+      });
+      f.core.runtime.admitBotDmMessage(botDm.id, messageId);
+      expect(original).toThrow('human-dm-required');
+      expect(() => f.core.runtime.captureTobCliAuthority!(sessionId)).toThrow('human-dm-required');
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read again',
+      });
+      const fresh = f.core.runtime.captureTobCliAuthority!(sessionId);
+      expect(fresh).not.toThrow();
+      expect(original).toThrow('human-dm-required');
+      const group = f.core.channels.createGroup({ name: 'Other input', members: [home.botSlug] });
+      const groupMessageId = 'human-' + crypto.randomUUID();
+      await f.core.channels.appendMessage(group.id, {
+        id: groupMessageId,
+        at: new Date().toISOString(),
+        author: { kind: 'human' },
+        body: '@Tob make a change',
+        mentions: [{ botSlug: home.botSlug, label: 'Tob', start: 0, end: 4 }],
+      });
+      f.core.runtime.admitGroupMessage(group.id, groupMessageId);
+      expect(fresh).toThrow('human-dm-required');
+      expect(() => f.core.runtime.captureTobCliAuthority!(sessionId)).toThrow('human-dm-required');
+    } finally {
+      release();
+      await f.core.runtime.whenIdle();
+      await f.close();
+    }
+  });
+  it('revokes fresh Human authority on external acceptance even when the accepted Source set does not grow', async () => {
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let sessionId!: string;
+    const f = fixture(
+      async (run) => {
+        sessionId = run.sessionId;
+        started();
+        await released;
+      },
+      {},
+      () => true,
+    );
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core });
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read the limit',
+      });
+      await start;
+      const original = f.core.runtime.captureTobCliAuthority!(sessionId);
+      const id = crypto.randomUUID();
+      const at = new Date().toISOString();
+      const probe = attachOperationalModule(f.core.operationalDatabase, 'tob-external-regression');
+      probe.transaction((db) => {
+        db.prepare(
+          "INSERT INTO source_events(source_event_id,source_kind,bot_slug,body,created_at,payload_json) VALUES (?,'bridge-message',?,'External input',?,'{}')",
+        ).run(id, home.botSlug, at);
+        db.prepare(
+          "INSERT INTO inbox_admissions(source_event_id,bot_slug,reason,wake_mode) VALUES (?,?,'human-dm','all')",
+        ).run(id, home.botSlug);
+      });
+      vi.spyOn(f.core.externalMessaging.inbound, 'available').mockReturnValue(true);
+      vi.spyOn(f.core.externalMessaging.inbound, 'read').mockReturnValue({
+        id,
+        body: 'External input',
+        at,
+        platform: 'discord',
+        accountName: 'QA',
+        conversationName: 'QA',
+        grantId: 'qa-grant',
+        grantRevision: 1,
+        event: {
+          version: 1,
+          channel: 'discord',
+          botId: 'qa',
+          fingerprint: 'qa',
+          eventId: id,
+          messageId: id,
+          actor: { kind: 'user', id: 'external-human' },
+          conversation: { kind: 'dm', id: 'external-dm' },
+          mentions: [],
+          mentionedAccount: false,
+          at,
+          reply: { messageId: id, conversationId: 'external-dm', actorId: 'external-human' },
+          replay: { kind: 'provider-redelivery', resumeCursor: false, gapPossible: true },
+        },
+      });
+      f.core.runtime.admitExternalSource!(home.botSlug, id);
+      expect(original).toThrow('human-dm-required');
+      expect(() => f.core.runtime.captureTobCliAuthority!(sessionId)).toThrow('human-dm-required');
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read the limit again',
+      });
+      const fresh = f.core.runtime.captureTobCliAuthority!(sessionId);
+      expect(fresh.acceptedSourceEventIds).toContain(id);
+      expect(fresh.humanSourceEventIds).not.toContain(id);
+      probe.transaction((db) =>
+        db
+          .prepare(
+            "UPDATE inbox_admissions SET attempt_state = 'pending' WHERE source_event_id = ?",
+          )
+          .run(id),
+      );
+      f.core.runtime.admitExternalSource!(home.botSlug, id);
+      expect(fresh).toThrow('human-dm-required');
+      expect(() => f.core.runtime.captureTobCliAuthority!(sessionId)).toThrow('human-dm-required');
+    } finally {
+      release();
+      await f.core.runtime.whenIdle();
+      await f.close();
+    }
+  });
+  it('does not restore an earlier Human identity when a reentrant steering delivery accepts newer input', async () => {
+    let started!: () => void;
+    const start = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let release!: () => void;
+    const released = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let sessionId!: string;
+    let nested: { channelId: string; messageId: string; body: string } | undefined;
+    const f = fixture(
+      async (run) => {
+        sessionId = run.sessionId;
+        started();
+        await released;
+      },
+      {},
+      () => {
+        if (nested) {
+          const input = nested;
+          nested = undefined;
+          f.core.runtime.admitDmMessage(input);
+        }
+        return true;
+      },
+    );
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core });
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Initial instruction',
+      });
+      await start;
+      const initial = f.core.runtime.captureTobCliAuthority!(sessionId);
+      const firstId = 'human-' + crypto.randomUUID(),
+        secondId = 'human-' + crypto.randomUUID();
+      for (const id of [firstId, secondId])
+        await f.core.channels.appendMessage(home.channelId, {
+          id,
+          at: new Date().toISOString(),
+          author: { kind: 'human' },
+          body: id,
+        });
+      nested = { channelId: home.channelId, messageId: secondId, body: secondId };
+      f.core.runtime.admitDmMessage({
+        channelId: home.channelId,
+        messageId: firstId,
+        body: firstId,
+      });
+      expect(initial).toThrow('human-dm-required');
+      expect(() => f.core.runtime.captureTobCliAuthority!(sessionId)).toThrow('human-dm-required');
+      await bridge.channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Latest fresh instruction',
+      });
+      expect(() => f.core.runtime.captureTobCliAuthority!(sessionId)).not.toThrow();
+      expect(initial).toThrow('human-dm-required');
+    } finally {
+      release();
+      await f.core.runtime.whenIdle();
+      await f.close();
+    }
+  });
+  it('restores eligible Human management only after its bound native answer is accepted', async () => {
+    let bind: ReturnType<
+      NonNullable<ReturnType<typeof fixture>['core']['runtime']['bindNativeQuestionInput']>
+    >;
+    let checked = false;
+    const f = fixture(async (run) => {
+      if (run.acceptNativeInput) {
+        expect(() => f.core.runtime.captureTobCliAuthority!(run.sessionId)).toThrow(
+          'human-dm-required',
+        );
+        expect(run.acceptNativeInput()).toBe(true);
+        const authority = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+        expect(authority).not.toThrow();
+        expect(authority.humanSourceEventIds).toHaveLength(1);
+        checked = true;
+      } else bind = f.core.runtime.bindNativeQuestionInput!(run.sessionId, run.inboundChannelId!);
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Ask a question',
+      });
+      await f.core.runtime.whenIdle();
+      expect(bind).toBeTypeOf('function');
+      expect(await bind!(() => true)).toBe(true);
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it('does not restore a detached question proof after an intervening Human turn', async () => {
+    let bind: ReturnType<
+      NonNullable<ReturnType<typeof fixture>['core']['runtime']['bindNativeQuestionInput']>
+    >;
+    let checked = false;
+    const f = fixture(async (run) => {
+      if (run.acceptNativeInput) {
+        expect(run.acceptNativeInput()).toBe(true);
+        expect(() => f.core.runtime.captureTobCliAuthority!(run.sessionId)).toThrow(
+          'human-dm-required',
+        );
+        checked = true;
+      } else if (run.message.includes('Original question'))
+        bind = f.core.runtime.bindNativeQuestionInput!(run.sessionId, run.inboundChannelId!);
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      const bridge = createBridgeMethods({ ...f.core });
+      for (const body of ['Original question', 'A later different Human instruction']) {
+        await bridge.channelSend({
+          channelId: home.channelId,
+          messageId: 'human-' + crypto.randomUUID(),
+          body,
+        });
+        await f.core.runtime.whenIdle();
+      }
+      expect(await bind!(() => true)).toBe(true);
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it('does not restore management when bound native answer delivery fails', async () => {
+    let bind: ReturnType<
+      NonNullable<ReturnType<typeof fixture>['core']['runtime']['bindNativeQuestionInput']>
+    >;
+    let checked = false;
+    const f = fixture(async (run) => {
+      if (run.acceptNativeInput) {
+        expect(run.acceptNativeInput()).toBe(false);
+        expect(() => f.core.runtime.captureTobCliAuthority!(run.sessionId)).toThrow(
+          'human-dm-required',
+        );
+        checked = true;
+      } else bind = f.core.runtime.bindNativeQuestionInput!(run.sessionId, run.inboundChannelId!);
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Ask a question',
+      });
+      await f.core.runtime.whenIdle();
+      expect(await bind!(() => false)).toBe(false);
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it('does not reconstruct management authority from a recovered native question card', async () => {
+    let sessionId!: string;
+    let checked = false;
+    const f = fixture(async (run) => {
+      sessionId = run.sessionId;
+      if (run.acceptNativeInput) {
+        expect(run.acceptNativeInput()).toBe(true);
+        expect(() => f.core.runtime.captureTobCliAuthority!(run.sessionId)).toThrow(
+          'human-dm-required',
+        );
+        checked = true;
+      }
+    });
+    try {
+      const home = await f.core.tob.ensure();
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Ask a question',
+      });
+      await f.core.runtime.whenIdle();
+      const messageId = crypto.randomUUID();
+      await f.core.channels.appendMessage(home.channelId, {
+        id: messageId,
+        at: new Date().toISOString(),
+        author: { kind: 'bot', slug: home.botSlug },
+        body: 'A recovered native question',
+        userQuestionRequest: {
+          sessionId,
+          callId: 'recovered-call',
+          questions: [
+            {
+              id: 'which',
+              header: 'Choice',
+              question: 'Which?',
+              options: [
+                { label: 'One', description: 'One' },
+                { label: 'Two', description: 'Two' },
+              ],
+            },
+          ],
+        },
+      });
+      const recover = f.core.runtime.recoverNativeQuestionInput!(
+        sessionId,
+        home.channelId,
+        messageId,
+      );
+      expect(recover).toBeTypeOf('function');
+      expect(await recover!(() => true)).toBe(true);
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
+  it.each([
+    'source-kind',
+    'source-channel',
+    'source-bot',
+    'source-message',
+    'source-author',
+    'admission-reason',
+    'owner-role',
+    'owner-bot',
+    'parent-session',
+    'purged-source',
+    'archived-session',
+  ])('rechecks %s before using a fresh Human scope', async (change) => {
+    const archived: string[] = [];
+    let checked = false;
+    const f = fixture(
+      async (run) => {
+        const authority = f.core.runtime.captureTobCliAuthority!(run.sessionId);
+        const probe = attachOperationalModule(
+          f.core.operationalDatabase,
+          'tob-provenance-regression',
+        );
+        const source = probe.read((db) =>
+          db
+            .prepare(
+              "SELECT source_event_id, channel_id, message_id FROM source_events WHERE source_kind = 'human-message' AND channel_id = ?",
+            )
+            .get(run.inboundChannelId!),
+        )!;
+        const sourceId = source.source_event_id;
+        const sourceChannel = source.channel_id;
+        const sourceMessage = source.message_id;
+        if (
+          typeof sourceId !== 'string' ||
+          typeof sourceChannel !== 'string' ||
+          typeof sourceMessage !== 'string'
+        )
+          throw new Error('Canonical Human Source identity missing');
+        if (change === 'archived-session') archived.push(run.sessionId);
+        else
+          probe.transaction((db) => {
+            if (change === 'source-kind')
+              db.prepare(
+                "UPDATE source_events SET source_kind = 'bot-message' WHERE source_event_id = ?",
+              ).run(sourceId);
+            if (change === 'source-bot')
+              db.prepare(
+                "UPDATE source_events SET bot_slug = 'ordinary' WHERE source_event_id = ?",
+              ).run(sourceId);
+            if (change === 'source-channel')
+              db.prepare(
+                "UPDATE source_events SET channel_id = 'foreign-dm' WHERE source_event_id = ?",
+              ).run(sourceId);
+            if (change === 'source-message')
+              db.prepare(
+                "UPDATE source_events SET message_id = 'foreign-message' WHERE source_event_id = ?",
+              ).run(sourceId);
+            if (change === 'source-author')
+              db.prepare(
+                "UPDATE source_events SET payload_json = json_set(payload_json, '$.author.kind', 'bot') WHERE source_event_id = ?",
+              ).run(sourceId);
+            if (change === 'admission-reason')
+              db.prepare(
+                "UPDATE inbox_admissions SET reason = 'bot-dm' WHERE source_event_id = ?",
+              ).run(sourceId);
+            if (change === 'owner-role')
+              db.prepare(
+                "UPDATE session_ownership SET root_role = 'assignment' WHERE session_id = ?",
+              ).run(run.sessionId);
+            if (change === 'owner-bot')
+              db.prepare(
+                "UPDATE session_ownership SET bot_slug = 'ordinary' WHERE session_id = ?",
+              ).run(run.sessionId);
+            if (change === 'parent-session')
+              db.prepare(
+                "UPDATE session_ownership SET parent_session_id = 'foreign-parent' WHERE session_id = ?",
+              ).run(run.sessionId);
+            if (change === 'purged-source')
+              db.prepare(
+                "INSERT INTO messaging_purge_facts(source_event_id,channel_id,message_id,accepted_at,tombstone_json) VALUES (?,?,?,?,'{}')",
+              ).run(sourceId, sourceChannel, sourceMessage, new Date().toISOString());
+          });
+        expect(authority).toThrow();
+        await expect(f.core.tob.writeSetting(3, 0, authority)).rejects.toThrow();
+        expect(f.core.tob.readSetting().value).toBe(8);
+        checked = true;
+      },
+      {
+        workspaces: () => ({ get: () => undefined, list: () => [], archivedSessionIds: archived }),
+      },
+    );
+    try {
+      const home = await f.core.tob.ensure();
+      f.core.registry.create({ slug: 'ordinary', displayName: 'Ordinary' });
+      await createBridgeMethods({ ...f.core }).channelSend({
+        channelId: home.channelId,
+        messageId: 'human-' + crypto.randomUUID(),
+        body: 'Read the limit',
+      });
+      await f.core.runtime.whenIdle();
+      expect(checked).toBe(true);
+    } finally {
+      await f.close();
+    }
+  });
   it('marks only the captured accepted sources before a write and refuses marking after the turn', async () => {
     let mark!: () => void;
     let checked = false;

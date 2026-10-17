@@ -709,6 +709,8 @@ printf '%s' '{"assignmentConcurrencyLimit":3}' | deepseekbot settings-set bothar
 
 Host 将短期 loopback endpoint 与受限 token 注入这次 Shell 的子进程环境。它是短期 bearer capability，不是 Human 管理员凭据，也不构成同一 OS 用户之间的隔离边界；不要打印或持久化它。Shell 完成、取消或释放后立即撤销。不支持的命令／参数、不完整的受限上下文、指定其他 Host／token／离线 home 的尝试均会拒绝，不回退到 Human 或离线访问。`stale-setting` 要求重新读取并提案；`agent-write-uncertain`、`setting-outcome-uncertain` 和 `setting-readback-mismatch` 要求重试前先读回。上下文过期后必须发起新的 Shell 执行。
 
+即使 Tob 正在处理 Memory 整理回合，发到其受保护私有 DM 的新 Human 消息也会建立新的执行范围。Host 将本次真实送达身份与完整已接收上下文分开固定；Memory、群聊、外部 IM 和 Bot 输入均不能建立或继承该身份。后续任何已接收输入都会撤销捕获的执行范围，只有另一条新送达的受保护 DM Human 消息可以重新建立。当前 Source Event、Message、接收 Bot 的准入记录、Session 归属和内容清除检查继续生效。澄清问题只有在原有私有问题绑定与实际 Human 回答成立、期间无其他上下文时才能续接；恢复的历史问题或自动化发起的问题不会授予管理权限。
+
 已认证 Human 的 `settings-set` 保持原行为，新增成对的 `--expected-revision` 与 `--previous-value` 参数，用于提交已审核的 patch；后者为与 patch 字段一致的 JSON 对象。同时省略这两个参数仍使用原有先读再写流程。Tob 的删除／归档仍返回 `protected-bot`。
 
 [UI／CLI 覆盖清单](agents/cli-ui-coverage.md) 区分既有 Human 命令和 Tob 受限访问，并跟踪后续缺口。身份与生命周期边界见 [ADR-0224](adr/0224-tob-management-uses-scoped-native-shell-cli.md)。

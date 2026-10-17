@@ -18,6 +18,8 @@ const env = {
 };
 delete env.DEEPSEEKBOT_AGENT_ENDPOINT;
 delete env.DEEPSEEKBOT_AGENT_TOKEN;
+const resumeOffer = process.argv.includes('--resume-offer');
+assert.ok(!resumeOffer || process.argv.includes('--model'), 'offer resume requires --model');
 const secrets = [],
   outputs = [],
   checks = {};
@@ -129,6 +131,7 @@ async function showDevices() {
   await page.waitForSelector('[data-paired-devices]');
 }
 async function model(prompt, commands) {
+  console.log(JSON.stringify({ step: 'model', commands, resumeOffer }));
   const home = await rpc('tobHome');
   await resetClient();
   await page.waitForSelector('.bh-workspace-rail');
@@ -179,34 +182,47 @@ async function model(prompt, commands) {
           (c) =>
             ['bash', 'pwsh'].includes(c.name) &&
             JSON.stringify(c.args).includes('deepseekbot ' + command) &&
-            c.outcome !== 'pending',
+            c.outcome === 'ok' &&
+            !/\[exit code: [1-9]\d*\]/u.test(c.result ?? ''),
         ),
       ) &&
       (await rpc('channelMessages', { channelId: home.channelId })).messages.some(
         (m) =>
           m.author?.kind === 'bot' &&
           Date.parse(m.at) >= started &&
-          m.body?.includes('DEVICES-QA-DONE'),
+          /^DEVICES-QA-DONE[.!]?\s*$/mu.test(m.body ?? ''),
       )
     )
       break;
     await pause(1000);
   }
   const calls = trace.turns.flatMap((t) => t.calls).filter((c) => !prior.has(c.callId));
+  const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages.filter(
+    (m) => Date.parse(m.at) >= started,
+  );
+  outputs.push({ modelCommands: commands, modelTrace: calls, canonicalMessages: messages });
+  writeFileSync(
+    join(out, 'model-' + commands.at(-1) + '-private.json'),
+    JSON.stringify({ calls, messages }, null, 2),
+    { mode: 0o600 },
+  );
   for (const command of commands)
     assert.ok(
       calls.some(
         (c) =>
           ['bash', 'pwsh'].includes(c.name) &&
           JSON.stringify(c.args).includes('deepseekbot ' + command) &&
-          c.outcome !== 'pending',
+          c.outcome === 'ok' &&
+          !/\[exit code: [1-9]\d*\]/u.test(c.result ?? ''),
       ),
       'model Shell call missing: ' + command,
     );
-  const messages = (await rpc('channelMessages', { channelId: home.channelId })).messages.filter(
-    (m) => Date.parse(m.at) >= started,
+  assert.ok(
+    messages.some(
+      (m) => m.author?.kind === 'bot' && /^DEVICES-QA-DONE[.!]?\s*$/mu.test(m.body ?? ''),
+    ),
+    'model did not confirm completion',
   );
-  outputs.push({ modelTrace: calls, canonicalMessages: messages });
   await capture('tob-' + commands.at(-1));
   checks.modelShell = true;
 }
@@ -235,103 +251,125 @@ try {
   }
   if (!(await page.$('.bh-workspace-rail'))) await click('Bot mode', 'Bot 模式');
   await page.waitForSelector('.bh-workspace-rail');
-  await showDevices();
-  await capture('before-devices');
-  const before = await cli('devices');
-  assert.equal(before.devices.filter((d) => !d.revokedAt).length, 0);
-  await cli('device-routes');
-  const protectedFile = join(out, 'private-offer-' + Date.now() + '.json');
-  const receipt = await cli('device-offer', '--out', protectedFile);
-  const saved = JSON.parse(readFileSync(protectedFile, 'utf8'));
-  rmSync(protectedFile);
-  const payload = JSON.parse(
-    Buffer.from(new URL(saved.link).searchParams.get('p'), 'base64url').toString(),
-  );
-  secrets.push(payload.offer, saved.link);
-  assert.equal((await cli('device-offer-status', receipt.receiptId)).status, 'pending');
-  const dialogResponse = page.waitForResponse(
-    (response) =>
-      response.url().endsWith('/api/botharness/devices/offer') &&
-      response.request().method() === 'POST',
-  );
-  await click('Pair a phone', '配对手机');
-  assert.equal((await (await dialogResponse).json()).receiptId, receipt.receiptId);
-  await page.waitForSelector('[data-pair-qr]');
-  const displayed = await page.$eval('[data-pair-qr]', (n) =>
-    Number(n.getAttribute('viewBox').split(' ')[2]),
-  );
-  assert.ok(displayed > 20);
-  const pairedResponse = await fetch(origin + '/botharness-device/pair', {
-    method: 'POST',
-    body: JSON.stringify({ offer: payload.offer, name: 'CLI QA test client' }),
-  });
-  assert.equal(pairedResponse.status, 200);
-  const paired = await pairedResponse.json();
-  secrets.push(paired.credential, paired.credential.split('.')[1]);
-  await page.waitForFunction(() =>
-    document.querySelector('[data-pair-dialog]')?.textContent.includes('CLI QA test client'),
-  );
-  await click('Close', '关闭');
-  const active = (await cli('devices')).devices.find((d) => d.id === paired.deviceId);
-  assert.ok(active);
-  assert.equal((await cli('device-offer-status', receipt.receiptId)).status, 'redeemed');
-  await page.waitForSelector('[data-paired-device]');
-  await capture('after-paired');
-  const deviceCall = () =>
-    fetch(origin + '/botharness-device/api/botharness/list', {
+  if (!resumeOffer) {
+    await showDevices();
+    await capture('before-devices');
+    const before = await cli('devices');
+    assert.equal(before.devices.filter((d) => !d.revokedAt).length, 0);
+    await cli('device-routes');
+    const protectedFile = join(out, 'private-offer-' + Date.now() + '.json');
+    const receipt = await cli('device-offer', '--out', protectedFile);
+    const saved = JSON.parse(readFileSync(protectedFile, 'utf8'));
+    rmSync(protectedFile);
+    const payload = JSON.parse(
+      Buffer.from(new URL(saved.link).searchParams.get('p'), 'base64url').toString(),
+    );
+    secrets.push(payload.offer, saved.link);
+    assert.equal((await cli('device-offer-status', receipt.receiptId)).status, 'pending');
+    const dialogResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/botharness/devices/offer') &&
+        response.request().method() === 'POST',
+    );
+    await click('Pair a phone', '配对手机');
+    assert.equal((await (await dialogResponse).json()).receiptId, receipt.receiptId);
+    await page.waitForSelector('[data-pair-qr]');
+    const displayed = await page.$eval('[data-pair-qr]', (n) =>
+      Number(n.getAttribute('viewBox').split(' ')[2]),
+    );
+    assert.ok(displayed > 20);
+    const pairedResponse = await fetch(origin + '/botharness-device/pair', {
       method: 'POST',
-      headers: { authorization: 'Device ' + paired.credential, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        type: 'client-request',
-        rpcId: crypto.randomUUID(),
-        method: 'botharness/list',
-        payload: { args: {} },
-      }),
+      body: JSON.stringify({ offer: payload.offer, name: 'CLI QA test client' }),
     });
-  assert.equal((await deviceCall()).status, 200);
-  const socket = new WebSocket(
-    origin.replace('http:', 'ws:') + '/botharness-device/api/remote.mux',
-    { headers: { authorization: 'Device ' + paired.credential, origin } },
-  );
-  const streamReady = new Promise((done, fail) => {
-    const timeout = setTimeout(() => fail(Error('stream open deadline')), 10000);
-    socket.addEventListener('open', () =>
-      socket.send(
-        JSON.stringify({
-          type: 'open',
-          streamId: 'device-qa',
-          endpoint: 'botharness/followRoster',
+    assert.equal(pairedResponse.status, 200);
+    const paired = await pairedResponse.json();
+    secrets.push(paired.credential, paired.credential.split('.')[1]);
+    await page.waitForFunction(() =>
+      document.querySelector('[data-pair-dialog]')?.textContent.includes('CLI QA test client'),
+    );
+    await click('Close', '关闭');
+    const active = (await cli('devices')).devices.find((d) => d.id === paired.deviceId);
+    assert.ok(active);
+    assert.equal((await cli('device-offer-status', receipt.receiptId)).status, 'redeemed');
+    await page.waitForSelector('[data-paired-device]');
+    await capture('after-paired');
+    const deviceCall = () =>
+      fetch(origin + '/botharness-device/api/botharness/list', {
+        method: 'POST',
+        headers: {
+          authorization: 'Device ' + paired.credential,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'client-request',
+          rpcId: crypto.randomUUID(),
+          method: 'botharness/list',
           payload: { args: {} },
         }),
-      ),
+      });
+    assert.equal((await deviceCall()).status, 200);
+    const socket = new WebSocket(
+      origin.replace('http:', 'ws:') + '/botharness-device/api/remote.mux',
+      { headers: { authorization: 'Device ' + paired.credential, origin } },
     );
-    socket.addEventListener('message', (event) => {
-      if (JSON.parse(String(event.data)).type === 'item') {
-        clearTimeout(timeout);
-        done();
-      }
+    const streamReady = new Promise((done, fail) => {
+      const timeout = setTimeout(() => fail(Error('stream open deadline')), 10000);
+      socket.addEventListener('open', () =>
+        socket.send(
+          JSON.stringify({
+            type: 'open',
+            streamId: 'device-qa',
+            endpoint: 'botharness/followRoster',
+            payload: { args: {} },
+          }),
+        ),
+      );
+      socket.addEventListener('message', (event) => {
+        if (JSON.parse(String(event.data)).type === 'item') {
+          clearTimeout(timeout);
+          done();
+        }
+      });
     });
-  });
-  await streamReady;
-  const closed = new Promise((done) => socket.addEventListener('close', (e) => done(e.code)));
-  if (process.argv.includes('--model')) {
-    await model(
-      'This is the authorized isolated device QA. Discover CLI capabilities, run deepseekbot devices and deepseekbot device-routes, then revoke only the currently unrevoked device named CLI QA test client using its observed identity and --confirm. Use native Shell, no other changes. Approval is provided for this test. End with DEVICES-QA-DONE.',
-      ['devices', 'device-routes', 'device-revoke'],
+    await streamReady;
+    const closed = new Promise((done) => socket.addEventListener('close', (e) => done(e.code)));
+    if (process.argv.includes('--model')) {
+      await model(
+        'This is the authorized isolated device QA. Discover CLI capabilities, run deepseekbot devices and deepseekbot device-routes, then revoke only the currently unrevoked device named CLI QA test client using its observed identity and --confirm. Use native Shell, no other changes. Approval is provided for this test. End with DEVICES-QA-DONE.',
+        ['devices', 'device-routes', 'device-revoke'],
+      );
+    } else await cli('device-revoke', active.id, '--expected-device', active.identity, '--confirm');
+    assert.equal(await Promise.race([closed, pause(10000).then(() => 'timeout')]), 1006);
+    const denied = await deviceCall();
+    assert.equal(denied.status, 401);
+    assert.equal((await denied.json()).code, 'device-revoked');
+    checks.revokedAccessDenied = true;
+    checks.streamClosed = true;
+    await resetClient();
+    await page.waitForSelector('.bh-workspace-rail');
+    await showDevices();
+    await page.waitForSelector('[data-paired-device][data-revoked]');
+    await capture('after-revoked');
+    assert.ok((await cli('devices')).devices.find((d) => d.id === active.id).revokedAt);
+    writeFileSync(
+      join(out, 'revoke-stage-proof-private.json'),
+      JSON.stringify({ checks, outputs }, null, 2),
+      { mode: 0o600 },
     );
-  } else await cli('device-revoke', active.id, '--expected-device', active.identity, '--confirm');
-  assert.equal(await Promise.race([closed, pause(10000).then(() => 'timeout')]), 1006);
-  const denied = await deviceCall();
-  assert.equal(denied.status, 401);
-  assert.equal((await denied.json()).code, 'device-revoked');
-  checks.revokedAccessDenied = true;
-  checks.streamClosed = true;
-  await resetClient();
-  await page.waitForSelector('.bh-workspace-rail');
-  await showDevices();
-  await page.waitForSelector('[data-paired-device][data-revoked]');
-  await capture('after-revoked');
-  assert.ok((await cli('devices')).devices.find((d) => d.id === active.id).revokedAt);
+  } else {
+    const retained = await cli('devices');
+    assert.equal(
+      retained.devices.filter((d) => !d.revokedAt).length,
+      0,
+      'resume cannot skip an active device',
+    );
+    assert.ok(
+      retained.devices.some((d) => d.name === 'CLI QA test client' && d.revokedAt),
+      'resume requires the retained revoked test device',
+    );
+    checks.resumeOfferOnly = true;
+  }
   if (process.argv.includes('--model')) {
     await model(
       'Authorized isolated device QA. Create a fresh pairing offer through deepseekbot device-offer using native Shell, then use device-offer-status with the returned receipt. Do not request a file or reveal a link. Return the safe receipt and tell me to open Devices. Approval is provided for this test. End with DEVICES-QA-DONE.',
@@ -375,6 +413,11 @@ try {
   console.log(JSON.stringify({ result: 'pass', checks, evidence: out }));
 } catch (error) {
   writeFileSync(join(out, 'first-failure.txt'), String(error));
+  writeFileSync(
+    join(out, 'failure-stage-proof-private.json'),
+    JSON.stringify({ checks, outputs, errors }, null, 2),
+    { mode: 0o600 },
+  );
   if (!(await page.$('[data-pair-qr]'))) await page.screenshot({ path: join(out, 'failure.png') });
   throw error;
 } finally {
