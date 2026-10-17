@@ -911,17 +911,17 @@ The notification owner refreshes actual shared storage before reads/comparisons 
 
 Use `client-layout-set CLIENT_ID --generation GENERATION --scope browser-origin --expected-state FINGERPRINT --patch-stdin` with one JSON edit:
 
-| `type` | Fields |
-| --- | --- |
-| `gap` | `gap`: integer 0–16 |
-| `rail-order` | `order`: unique stable panel IDs |
-| `rail-location` | `before`: `left`, `right` or a discovered Dockview column group ID |
-| `control` | `panel`, `visible`; Channel children require `channelId` |
-| `visibility` | `panel`, `open`; Channel children require `channelId` |
-| `move` | `panel`, `target`, `direction`: left/right/above/below; Channel children require `channelId` |
-| `size` | Global `panel`, `width`, `height`: fractions 0.05–1 |
-| `child-resize` | `channelId`, binary split `path` (root is empty), `ratio`: 0.2–0.8 |
-| `child-axis` | `channelId`, `path`, `axis`: horizontal/vertical |
+| `type`          | Fields                                                                                       |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| `gap`           | `gap`: integer 0–16                                                                          |
+| `rail-order`    | `order`: unique stable panel IDs                                                             |
+| `rail-location` | `before`: `left`, `right` or a discovered Dockview column group ID                           |
+| `control`       | `panel`, `visible`; Channel children require `channelId`                                     |
+| `visibility`    | `panel`, `open`; Channel children require `channelId`                                        |
+| `move`          | `panel`, `target`, `direction`: left/right/above/below; Channel children require `channelId` |
+| `size`          | Global `panel`, `width`, `height`: fractions 0.05–1                                          |
+| `child-resize`  | `channelId`, binary split `path` (root is empty), `ratio`: 0.2–0.8                           |
+| `child-axis`    | `channelId`, `path`, `axis`: horizontal/vertical                                             |
 
 Channel moves target a sibling leaf (`messages` is the fixed content leaf). Hidden children retain their tree and saved percentages. Global moves require visible separate panel groups; unsupported grouped topology, hidden targets and ineligible Bot-only children return coded refusals. The selected Channel must still match when applying the edit. Existing layout v1–v8 migration and backup storage remain authoritative. Unreadable/newer layout storage refuses recovery-required; a save failure reports `client-outcome-uncertain`, requiring a fresh read before another write. Same-origin tabs share persistence; runtime identity selects the live owner that applies the edit. Native restart, physical geometry and UI evidence require separate qualification.
 

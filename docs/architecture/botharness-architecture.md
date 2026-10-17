@@ -1064,7 +1064,6 @@ The Client owns a per-Channel binary split tree inside Messages. A leaf is messa
 
 Version 7 retains the old per-panel open/hidden-control records and migrates legacy side/fraction geometry lazily into an equivalent tree. It backs up the prior raw record before upgrade. Explicit dragging splits the destination leaf; resizing only updates the selected branch. Stable keyed portals render into leaf-owned DOM containers, which move between layout slots without remounting content. Width changes never rewrite topology. See ADR-0222.
 
-
 ### Explicit Client layout control (#2096)
 
 The application-defined ClientControlService forwards `client-layout` reads and one fingerprint-checked edit to the mounted Workspace's existing Dock panel Registry. ChannelDock remains the only geometry/state owner and writes the same version-8 layout record, parked positions, migration backups and per-Channel split trees. Channel children require the exact selected Channel ID; an edit cannot switch selection or rewrite another Channel. Global actions reuse Dockview panel movement and sizing, rail movement reuses the full-height rail helper, and hidden children keep their saved topology. The live owner rechecks the complete snapshot synchronously after the asynchronous SHA-256 fingerprint check. A malformed/newer record refuses recovery, unavailable owners refuse, and failed persistence returns an uncertain outcome requiring readback. No new schema, Host layout store or durable command queue is introduced.

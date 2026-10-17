@@ -3,8 +3,10 @@ import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 
 export const CLIENT_PREFERENCE_USAGE: Readonly<Record<string, string>> = {
-  'client-layout': 'deepseekbot client-layout <client-id|current> --generation <generation>; discover live workspace, Channel, stable panel ids and stateFingerprint',
-  'client-layout-set': 'deepseekbot client-layout-set <client-id|current> --generation <generation> --scope browser-origin --expected-state <fingerprint> --patch-stdin; one layout edit, with explicit channelId for Channel children',
+  'client-layout':
+    'deepseekbot client-layout <client-id|current> --generation <generation>; discover live workspace, Channel, stable panel ids and stateFingerprint',
+  'client-layout-set':
+    'deepseekbot client-layout-set <client-id|current> --generation <generation> --scope browser-origin --expected-state <fingerprint> --patch-stdin; one layout edit, with explicit channelId for Channel children',
   'human-name': 'deepseekbot human-name; read default Human display name and stateFingerprint',
   'client-targets':
     'deepseekbot client-targets; discover live Client ids and generations; never selects a sole client implicitly',
