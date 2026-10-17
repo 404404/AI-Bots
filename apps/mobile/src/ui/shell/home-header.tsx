@@ -1,7 +1,7 @@
 import { useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewInstance } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AVATAR_EDGE } from '../chat/conversation-row';
@@ -30,7 +30,7 @@ export function HomeHeader({
   const drawerOpen = useHostDrawerOpen();
   const insets = useSafeAreaInsets();
   const band = useHostBand(look.banner);
-  const chip = useMounted<View>((node) => {
+  const chip = useMounted<ViewInstance>((node) => {
     hostDrawer.setReturnFocus(() => focusOn(node));
     return () => hostDrawer.setReturnFocus(undefined);
   }, []);

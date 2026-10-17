@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  type ScrollViewInstance,
 } from 'react-native';
 
 import { hostSession } from '../src/host/host-session';
@@ -38,7 +39,7 @@ export default function PairScreen() {
   const lastMethod = useRef<PairingMethod>('paste');
   const pending = useRef<AbortController | undefined>(undefined);
   const handled = useRef<string | undefined>(undefined);
-  const scroll = useRef<ScrollView | null>(null);
+  const scroll = useRef<ScrollViewInstance | null>(null);
   const keyboardTop = useRef<number | undefined>(undefined);
   const [keyboardSpace, setKeyboardSpace] = useState(0);
   const showPair = () => scroll.current?.scrollToEnd({ animated: true });
@@ -52,7 +53,7 @@ export default function PairScreen() {
       setKeyboardSpace(Math.max(0, y + height - top));
     });
   };
-  const mounted = useMounted<ScrollView>((node) => {
+  const mounted = useMounted<ScrollViewInstance>((node) => {
     scroll.current = node;
     const shown = Keyboard.addListener('keyboardDidShow', (event) => {
       keyboardTop.current = event.endCoordinates.screenY;

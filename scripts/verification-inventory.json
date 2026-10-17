@@ -1392,9 +1392,9 @@
       "path": "scripts/e2e-mobile-sim.mjs",
       "category": "mapped",
       "behaviors": ["phone.pairing", "phone.notifications"],
-      "reason": "Shared-device queue only: creates its own Simulator/Metro/two Hosts, resets evidence directory; simulated push is not APNs/FCM; approval model phase optional.",
-      "task": 1967,
-      "sha256": "6c921afffb1506daac494835616d3881b974e4eba5b7b12cac9a9bd7f7018512"
+      "reason": "Shared-device queue only: creates its own Simulator/Metro/two Hosts, resets evidence directory; simulated push is not APNs/FCM; approval model phase optional. SDK 58 cache uses strict native fingerprints, including app-version fields; unit fingerprint checks are not device evidence.",
+      "task": 2020,
+      "sha256": "f78a7b9e9c52d6a813cb1dfccc15c99f85d2f6dda4b6d97e2715828eb53964f6"
     },
     {
       "path": "scripts/e2e-mobile-usage-web.mjs",

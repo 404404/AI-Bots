@@ -75,8 +75,15 @@
             }
           }
         ]
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-sharing",
+      "expo-status-bar"
     ],
+    "web": {
+      "output": "single"
+    },
     "experiments": {
       "typedRoutes": false
     }

@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import type { Text as NativeText } from 'react-native';
+import type { TextInstance } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -45,7 +45,7 @@ export function FadingText({ text, color }: { text: string; color: string }) {
   const current = previous.text === text ? previous : appendTextReveal(previous, text, Date.now());
   if (previous !== current) setPrevious(current);
   const clock = useSharedValue(Date.now());
-  const mount = useMounted<NativeText>(() => {
+  const mount = useMounted<TextInstance>(() => {
     const now = current.glyphs.at(-1)?.at ?? Date.now();
     const duration = streamReveal.duration + streamReveal.stagger;
     clock.value = now;

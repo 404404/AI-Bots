@@ -8,6 +8,8 @@ import {
   Pressable,
   TextInput,
   View,
+  type ViewInstance,
+  type TextInputInstance,
 } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSharedValue } from 'react-native-reanimated';
@@ -60,7 +62,7 @@ export default function ComputerScreen() {
   );
   const [mode, setMode] = useState<BrowserTouchMode>('trackpad');
   const [tool, setTool] = useState<ComputerTool>('mouse');
-  const keyboard = useRef<TextInput>(null);
+  const keyboard = useRef<TextInputInstance>(null);
   const typed = useRef('');
   const resetField = () => {
     keyboard.current?.clear();
@@ -92,7 +94,7 @@ export default function ComputerScreen() {
     setTool(next);
   };
 
-  const mount = useMounted<View>(() => {
+  const mount = useMounted<ViewInstance>(() => {
     viewer?.start();
     const hidden = Keyboard.addListener('keyboardDidHide', () =>
       setTool((current) => (current === 'keyboard' ? 'mouse' : current)),
