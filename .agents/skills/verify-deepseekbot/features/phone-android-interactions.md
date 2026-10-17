@@ -17,6 +17,7 @@ The Android development app uses native form sheets for Bot and group profiles, 
 - `history-reading` stops visual playback as soon as a drag begins, keeps the read position while text arrives or commits, and resumes only after returning to the bottom or choosing the jump button. A near-bottom layout callback alone must not resume it. Confirm the canonical complete message still arrives while the displayed prefix is held.
 - `offscreen-roster` detaches Chats' roster/Inbox view subscriptions while another route covers it, without stopping either Host transport. Returning to Chats shows the latest state directly; selecting another Host never exposes the held snapshot from the previous one.
 - `stream-text-stability` keeps previously displayed Android prose, code and table text visible while a draft grows. Completed Markdown blocks do not rerender on a pure tail append. Draft and settled content use the same Android renderer.
+- `stream-caption` shows the streamed content without a separate replying caption below its bubble; an empty streaming bubble keeps its ellipsis placeholder.
 
 ## How to get to it (user POV)
 
