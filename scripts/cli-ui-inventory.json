@@ -357,13 +357,13 @@
     },
     {
       "id": "bot-transfer",
-      "description": "Bot Zip export and file-list inspection lack direct CLI; create --from-zip already covers import.",
+      "description": "Bot ZIP listing and content-fingerprinted export reuse the existing owner; scoped Tob export reviews exact files/history and writes a new local output without exposing archive bytes in stdout.",
       "scope": "Host",
       "surfaces": [
         "route:packages/core/src/plugin.ts:BOT_ZIP_EXPORT_PATH",
         "route:packages/core/src/plugin.ts:BOT_ZIP_FILES_PATH"
       ],
-      "issue": "#2089"
+      "commands": ["bot-zip-files", "bot-zip-export"]
     },
     {
       "id": "memory-download",

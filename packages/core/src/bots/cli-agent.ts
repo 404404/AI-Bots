@@ -1,3 +1,4 @@
+import { readBotArchive, saveBotArchive } from './cli-bot-transfer.js';
 import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import { parseAgentManagement } from './cli-agent-management.js';
@@ -154,8 +155,20 @@ export async function runAgentCli(
       headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
       body: JSON.stringify({ command: operation, args }),
     });
+    if (
+      operation === 'bot-zip-export' &&
+      response.ok &&
+      response.headers.get('content-type') === 'application/zip'
+    ) {
+      const encoded = response.headers.get('x-botharness-result');
+      if (!encoded)
+        throw new CliLiveError('agent-protocol-error', 'Archive response metadata is missing.');
+      const metadata = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+      return saveBotArchive(values.out, await readBotArchive(response), metadata);
+    }
     body = await response.json();
-  } catch {
+  } catch (error) {
+    if (error instanceof CliLiveError) throw error;
     return refuse(
       write ? 'agent-write-uncertain' : 'agent-unreachable',
       write
@@ -165,7 +178,11 @@ export async function runAgentCli(
   }
   const envelope =
     typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
-  if (response.ok && envelope['ok'] === true) return envelope['value'];
+  if (response.ok && envelope['ok'] === true) {
+    if (operation === 'bot-zip-export')
+      return refuse('agent-protocol-error', 'The scoped Host did not return an archive.');
+    return envelope['value'];
+  }
   const error = envelope['error'];
   if (envelope['ok'] === false && typeof error === 'object' && error !== null) {
     const coded = error as Record<string, unknown>;

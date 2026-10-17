@@ -715,6 +715,20 @@ Host 将短期 loopback endpoint 与受限 token 注入这次 Shell 的子进程
 
 [UI／CLI 覆盖清单](agents/cli-ui-coverage.md) 区分既有 Human 命令和 Tob 受限访问，并跟踪后续缺口。身份与生命周期边界见 [ADR-0224](adr/0224-tob-management-uses-scoped-native-shell-cli.md)。
 
+### Bot ZIP 文件列表与导出
+
+```bash
+deepseekbot bot-zip-files <bot-id> --host <url>
+deepseekbot bot-zip-export <bot-id> --include SOUL.md --out ./selected.zip --expected-state <stateFingerprint> --host <url>
+deepseekbot bot-zip-export <bot-id> --all --history --out ./full.zip --expected-state <stateFingerprint> --host <url>
+```
+
+这两个在线命令使用现有 Bot ZIP owner。文件列表只返回 Git 允许的相对路径、大小、必要的描述／展示文件和内容快照指纹，不在结果中展示文件内容或 Host Memory 绝对路径。指纹覆盖实际文件字节、Bot 资料身份和可导出的 Git refs；导出之前和完成归档后再次核对。`--include` 可重复，必须选择当前列表中的准确相对路径；必要的描述／头像等仍会纳入。`--all` 选择全部可导出文件；只有它能与 `--history` 同用。Git 忽略规则、符号链接排除和既有 ZIP 大小／文件数限制仍有效；带历史会包含历史提交中的内容。
+
+`--out` 必须是不存在的新文件；CLI 以 `0600` 独占创建，已有路径返回 `output-exists`，不覆盖文件。stdout 只输出下载路径、字节数、SHA-256 等元数据；归档二进制和文件内容不会进入聊天结果。内容或身份在读取／审批后变化时返回 `stale-bot-files`，需要重新读取并审核准确范围，不盲目重放。
+
+Tob 从自己的已认证 Human DM 经 native Shell 调用相同命令；不接受 Human Host token、任意 Host 或离线目录绕过。导出沿用现有审批规则，审核范围展示 Bot、准确选中文件、必要文件和是否带历史。审批拒绝或授权失效时不下载归档。导出 Tob 的 Soul／Memory 也不会传递本地受保护身份；原有 ZIP 导入仍创建普通 Bot。此能力不授予 Marketplace 导入或跨 Bot Memory 编辑权限。
+
 ### Tob 创建 Bot、资料与生命周期
 
 Tob 的受限 `create` 只在受管 Memory 位置创建空白 Bot。用户只需提供名称；Tob 为本次操作准备稳定的 `--operation-key`。可选 `--description`、重复的 `--role` 标签、`--avatar-file`、`--persona`／`--persona-stdin` 和 `--core-memory`／`--core-memory-stdin` 复用现有创建校验。仅一个内容参数可读取 stdin。初始人格和记忆写入 `SOUL.md`、`MEMORY.md`，不复制其他 Workspace Grants 或凭据。

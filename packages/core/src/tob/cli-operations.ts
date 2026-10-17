@@ -22,3 +22,10 @@ export type PrepareTobOperation = (
   command: string,
   args: Record<string, unknown>,
 ) => PreparedTobOperation | undefined | Promise<PreparedTobOperation | undefined>;
+
+export class TobCliDownload {
+  constructor(
+    readonly bytes: Uint8Array,
+    readonly metadata: Record<string, unknown>,
+  ) {}
+}

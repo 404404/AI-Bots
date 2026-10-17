@@ -14,6 +14,11 @@ import {
   TOB_CLIENT_PREFERENCE_CAPABILITIES,
 } from './tob/cli-client-preferences.js';
 import { createTobBackupOperations, TOB_BACKUP_CAPABILITIES } from './tob/cli-backup-operations.js';
+import { createBotTransfer } from './bots/transfer.js';
+import {
+  createTobBotTransferOperations,
+  TOB_BOT_TRANSFER_CAPABILITIES,
+} from './tob/cli-bot-transfer.js';
 import {
   createChannelPreferences,
   type ChannelPreferencesService,
@@ -1239,6 +1244,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobDeviceOperations(command, args)) ??
                   (await tobBotCreationOperations(command, args)) ??
                   (await tobBotProfileOperations(command, args)) ??
+                  (await tobBotTransferOperations(command, args)) ??
                   (await tobChannelOperations(command, args)) ??
                   (await tobChannelPreferencesOperations(command, args)) ??
                   (await tobScheduleOperations(command, args)) ??
@@ -1269,6 +1275,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_DEVICE_CAPABILITIES,
                   ...TOB_BOT_CREATE_CAPABILITIES,
                   ...TOB_BOT_PROFILE_CAPABILITIES,
+                  ...TOB_BOT_TRANSFER_CAPABILITIES,
                   ...TOB_CHANNEL_CAPABILITIES,
                   ...TOB_CHANNEL_PREFERENCES_CAPABILITIES,
                   ...TOB_SCHEDULE_CAPABILITIES,
@@ -2309,6 +2316,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       },
     },
   });
+  const botTransfer = createBotTransfer(core.registry);
+  const tobBotTransferOperations = createTobBotTransferOperations(botTransfer);
   const tobBotCreationOperations = createTobBotCreationOperations({
     registry: core.registry,
     creations: core.creations,
@@ -2501,6 +2510,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       'botharness: PersonaBot avatar',
     );
     const botZipHttp = createBotZipHttp({
+      transfer: botTransfer,
       registry: core.registry,
       detail: (slug) => bridgeMethods.get({ slug }),
       log: (message) => ctx.logger.info(message),

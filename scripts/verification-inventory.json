@@ -1722,9 +1722,9 @@
       "path": "scripts/e2e-tob-bot-management.mjs",
       "category": "mapped",
       "behaviors": ["desktop.tob.home"],
-      "reason": "Natural Tob creation, profile and optional model changes through rendered approval, completed native Shell turns, canonical identity/Memory/DM replay, deny/protected refusals and separate restart readback on Web and Desktop.",
+      "reason": "Natural creation/profile/model and exact-key reconciliation, reviewed ZIP transfer with denied/stale/output checks, canonical readback and separate Web/Desktop navigation/restart.",
       "task": 2089,
-      "sha256": "a0ba72ab479894cab9050ed440c72d32b20330b9694c3d9edcab2dd49183e5f8"
+      "sha256": "b35034bd3f5056acd6fe58a9038aa29765ee67de846cc02a67f2029c148d09b3"
     },
     {
       "path": "scripts/e2e-llm-scenarios.mjs",
