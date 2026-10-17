@@ -608,6 +608,10 @@ try {
       'transfer-group-' + Date.now(),
     ]);
     await page.waitForSelector(row(result.channel.id), { visible: true });
+    await rpc('channelSend', {
+      channelId: result.channel.id,
+      body: 'Synthetic retained transfer history.',
+    });
     fixture.groups.push({ id: result.channel.id, name, deleted: false });
     save();
     return fixture.groups.at(-1);
@@ -735,9 +739,27 @@ try {
     );
     assert.equal(conflict.error.code, 'invalid-ref');
     fixture.uploads.push(result.attachment);
+    const group = await seed();
+    await shot('direct-group-before');
+    const current = await humanCli('channel', [group.id]);
+    await humanCli('group-delete', [
+      group.id,
+      '--confirm',
+      '--expected-channel',
+      current.channelFingerprint,
+    ]);
+    group.deleted = true;
+    assert.ok((await humanCli('channel-history')).channels.some((item) => item.id === group.id));
+    assert.ok(
+      (await humanCli('channel-history-sources', [group.id])).sources.some(
+        (item) => item.body === 'Synthetic retained transfer history.',
+      ),
+    );
+    await page.waitForSelector(row(group.id), { hidden: true });
+    await shot('direct-group-after');
     save();
     steps.push(
-      'direct authenticated Human CLI raw upload, same-ID replay and changed-content refusal',
+      'direct authenticated Human CLI raw upload/replay/conflict and Group deletion with rendered roster removal and retained source history',
     );
   }
   if (runs('restart-read')) {
