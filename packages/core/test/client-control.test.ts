@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { ClientControlService } from '../src/client-control/service.js';
 import { createTobClientPreferenceOperations } from '../src/tob/cli-client-preferences.js';
 import { parseClientPreferences } from '../src/bots/cli-client-preferences.js';
-import type { BotCreateCliIo } from '../src/bots/bot-create-cli.js';
+import { runBotCreateCli, type BotCreateCliIo } from '../src/bots/bot-create-cli.js';
 const a = { clientId: 'client-aaa', generation: 'generation-aaa' };
 const b = { clientId: 'client-bbb', generation: 'generation-bbb' };
 const services: ClientControlService[] = [];
@@ -105,6 +105,33 @@ it('binds current to captured source and refuses changed targets after Human rev
     }),
   ).rejects.toThrow('host-scope-required');
 });
+it('CLI help distinguishes explicit Client generations from Tob current across all Client commands', async () => {
+  const output: string[] = [];
+  expect(
+    await runBotCreateCli(['--help'], {
+      env: {},
+      stdout: (text) => output.push(text),
+      stderr: () => {},
+    }),
+  ).toBe(0);
+  const help = output.join('\n');
+  for (const command of [
+    'client-preferences',
+    'client-preferences-set',
+    'client-layout',
+    'client-layout-set',
+    'client-shortcuts',
+    'client-shortcuts-set',
+  ]) {
+    const line = help.split('\n').find((entry) => entry.includes('deepseekbot ' + command + ' '));
+    expect(line).toContain('<client-id> --generation <generation>');
+    expect(line).toContain(
+      'Tob may replace <client-id> --generation <generation> with current; omit --generation with current.',
+    );
+  }
+  expect(help).not.toContain('<client-id|current> --generation');
+});
+
 it('parser rejects implicit targets and model-supplied current generations', async () => {
   const io = { readStdin: async () => '{"notifications":false}' } as BotCreateCliIo;
   await expect(parseClientPreferences('client-preferences', [], {}, io)).rejects.toThrow(
