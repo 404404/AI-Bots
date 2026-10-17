@@ -34,8 +34,17 @@
     ]
   },
   "automated": {
+    "scope": "preceding drawer slice; caption and chat-fade follow-ups recorded separately",
     "passed": 628,
     "skipped": 8
+  },
+  "chatFadeFollowup": {
+    "relatedTestsPassed": 41,
+    "before": { "heightDp": 101.85, "startsAboveComposerDp": 32 },
+    "after": { "heightDp": 24, "bottomDp": 834.46 },
+    "keyboardOpen": { "heightDp": 24, "bottomDp": 487.08 },
+    "nativeBoundsRegression": "old layout fails; closed and open keyboard layouts pass",
+    "qualification": "Android layout only; no new performance or iOS claim"
   },
   "limits": [
     "iOS not run",
