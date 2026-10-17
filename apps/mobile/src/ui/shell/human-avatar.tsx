@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewInstance } from 'react-native';
 
 import { useDesignTheme } from '../design/theme';
 import { radius, space } from '../design/tokens';
@@ -21,7 +21,7 @@ export function HumanAvatarButton({
 }) {
   const theme = useDesignTheme();
   const [name, setName] = useState<string>();
-  const mount = useMounted<View>(() => {
+  const mount = useMounted<ViewInstance>(() => {
     let live = true;
     loadName?.().then(
       (loaded) => live && setName(loaded),

@@ -1,5 +1,15 @@
 # Native activity rows
 
+## Sub-features
+
+DM/group activity layout, full details, explicit navigation and device-local DM visibility switches.
+
+## How to get to it (user POV)
+
+Open the dedicated QA DM or group in the paired phone app. Activity rows appear in its conversation timeline; long-press a row for details and explicit destinations.
+
+## Driving it with verify-app
+
 Use the shared device queue; reuse its sole assigned Simulator and existing dev
 client for this JavaScript-only change. Do not run a second Simulator or restart
 the shared QA Host. Use only the dedicated QA conversations.
@@ -64,3 +74,7 @@ Scroll under the header with search open and closed; verify light/dark and large
 text. A failed query retains stale content with an error; an unsupported Host
 asks for an update. Capture matched screenshots only after driving these controls.
 Web preview evidence does not qualify native keyboard, safe-area or scrolling.
+
+## Gotchas
+
+The earlier PR #1928 evidence remains specific to its own commit and limitations. Native iOS and Android acceptance are separate; this map does not requalify earlier evidence.

@@ -81,7 +81,8 @@ export function HostChipFace({
         letter={band.tileInk}
       />
       <Text
-        variant="display"
+        variant="title"
+        strong
         numberOfLines={theme.largeText ? 2 : 1}
         style={{
           flexShrink: 1,

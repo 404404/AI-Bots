@@ -1,3 +1,5 @@
+import { PointerMenu } from './ds/pointer-menu.js';
+import { PanelEmptyState } from './ds/empty-state.js';
 import { ChannelHistory } from './channel-history.js';
 import { attachmentReferenceLabels } from './attachment-refs.js';
 import {
@@ -16,6 +18,7 @@ import {
   IconAgentPresetOutlineRegular,
   IconCheckOutlineRegular,
   IconChevronDownOutlineRegular,
+  IconChevronRightOutlineRegular,
   IconCloseFillRegular,
   IconEditOutlineRegular,
   IconEllipsisOutlineRegular,
@@ -31,6 +34,7 @@ import {
   IconTrashOutlineRegular,
   HoverCard,
   Menu,
+  MenuItemButton,
   Tag,
   Toast,
   Tooltip,
@@ -148,6 +152,14 @@ import {
   UNGROUPED_MOVE_TARGET,
 } from './section-management.js';
 import { store, type BotSummary, type ChannelSummary, type ClientState } from './store.js';
+import {
+  errorMessage,
+  type ModelCatalogView,
+  type ModelPlanStateView,
+  type ModelRouteView,
+} from './bridge.js';
+import { rememberModelPlan } from './model-plan-store.js';
+import { applyBotModelRoute, botModelMenuGroups, type BotModelGroup } from './bot-model-route.js';
 import { useMountedResource } from './mounted-resource.js';
 import { onCreationRequest } from './create-request.js';
 
@@ -378,6 +390,8 @@ export function createBotPanelEntry(
 
 interface SidebarProps {
   headerEnd?: ReactNode;
+  headerTarget?: HTMLElement | null;
+  onViewProfile?: ((slug: string) => void) | undefined;
   companion?: WindowCompanions | undefined;
   wide: boolean;
   actions: BridgeActions;
@@ -922,6 +936,8 @@ type FlatBlockView =
 
 export function BotSidebar({
   headerEnd,
+  headerTarget,
+  onViewProfile,
   companion,
   wide,
   actions,
@@ -974,6 +990,54 @@ export function BotSidebar({
   };
   const [deleting, setDeleting] = useState<BotSummary | undefined>(undefined);
   const [nicknameTarget, setNicknameTarget] = useState<ChannelSummary | undefined>(undefined);
+  const menuBotSlug = state.channels.find(
+    (candidate) => candidate.id === channelMenu?.channelId && candidate.type === 'dm',
+  )?.botSlug;
+  const [menuModelOptions, setMenuModelOptions] = useState<{
+    slug: string;
+    catalog: ModelCatalogView;
+    state: ModelPlanStateView;
+  }>();
+  const menuModelData = menuModelOptions?.slug === menuBotSlug ? menuModelOptions : undefined;
+  const [menuModelBusy, setMenuModelBusy] = useState(false);
+  const [menuModelError, setMenuModelError] = useState<string | undefined>(undefined);
+  const menuModelMount = useMountedResource<HTMLSpanElement>(() => {
+    setMenuModelOptions(undefined);
+    if (menuBotSlug === undefined) return;
+    let active = true;
+    void Promise.all([actions.modelCatalog(), actions.modelPlanState(menuBotSlug)]).then(
+      ([catalog, planState]) => {
+        if (!active) return;
+        rememberModelPlan(menuBotSlug, planState.plan);
+        setMenuModelOptions({ slug: menuBotSlug, catalog, state: planState });
+      },
+      (failure: unknown) => {
+        if (active) setMenuModelError(`${t('modelPreset.loadFailed')}: ${errorMessage(failure)}`);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [actions, menuBotSlug]);
+  const applyMenuModel = (route: ModelRouteView): void => {
+    if (menuBotSlug === undefined || menuModelData === undefined || menuModelBusy) return;
+    setMenuModelBusy(true);
+    void applyBotModelRoute(actions, menuBotSlug, menuModelData.state, route)
+      .then((plan) => {
+        setMenuModelOptions((current) =>
+          current?.slug === menuBotSlug
+            ? { ...current, state: { revision: plan.revision, plan } }
+            : current,
+        );
+      })
+      .catch((failure: unknown) => {
+        setMenuModelError(t('modelPreset.changeFailed', { error: errorMessage(failure) }));
+      })
+      .finally(() => {
+        setMenuModelBusy(false);
+        setChannelMenu((current) => (current === channelMenu ? undefined : current));
+      });
+  };
   const menuHiddenDmActions = useHiddenDmActions(
     channelMenu === undefined
       ? undefined
@@ -1720,6 +1784,7 @@ export function BotSidebar({
     setSectionMenuId(undefined);
     setSectionCreateMenuId(undefined);
     setSectionContextMenu(undefined);
+    setMenuModelError(undefined);
     setChannelMenu({ ...request, channelIds });
   };
 
@@ -1905,6 +1970,132 @@ export function BotSidebar({
     return null;
   };
 
+  const header = (
+    <div className="bh-header">
+      {!headerTarget && (
+        <span className={`bh-header-label${searchOpen ? ' bh-header-label-hidden' : ''}`}>
+          {t('roster.messages')}
+        </span>
+      )}
+      <div className={`bh-search-slot${searchOpen ? ' bh-search-slot-open' : ''}`}>
+        <div
+          ref={searchMount}
+          className={`bh-search${searchOpen ? ' bh-search-open' : ''}`}
+          onClick={() => {
+            setMenuOpen(false);
+            setSortMenuOpen(false);
+            setSearchOpen(true);
+            searchInput.current?.focus();
+          }}
+        >
+          <Tooltip
+            label={t('roster.search.label')}
+            side="bottom"
+            delayMs={500}
+            disabled={searchOpen}
+          >
+            <button
+              type="button"
+              className="bh-search-btn"
+              aria-label={t('roster.search.label')}
+              aria-expanded={searchOpen}
+              onClick={() => {
+                setMenuOpen(false);
+                setSortMenuOpen(false);
+                setSearchOpen(true);
+              }}
+            >
+              <IconSearchOutlineRegular size={searchOpen ? 11 : 14} />
+            </button>
+          </Tooltip>
+          <input
+            ref={searchInput}
+            className="bh-search-input"
+            type="text"
+            placeholder={t('roster.search.placeholder')}
+            value={state.query}
+            tabIndex={searchOpen ? 0 : -1}
+            onChange={(event) => store.setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape') return;
+              store.setQuery('');
+              setSearchOpen(false);
+            }}
+          />
+          {searchOpen ? (
+            <button
+              type="button"
+              className="bh-clear-btn"
+              aria-label={t('roster.search.clear')}
+              onClick={(event) => {
+                event.stopPropagation();
+                store.setQuery('');
+                setSearchOpen(false);
+              }}
+            >
+              <IconCloseFillRegular />
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className={`bh-header-actions${searchOpen ? ' bh-header-actions-hidden' : ''}`}>
+        <Menu
+          open={sortMenuOpen}
+          portal
+          dense
+          align="end"
+          anchor={
+            <Tooltip label={t('roster.menu.label')} side="bottom" delayMs={500}>
+              <button
+                type="button"
+                className="bh-icon-btn"
+                aria-label={t('roster.menu.label')}
+                onClick={() => {
+                  setSortMenuOpen((value) => !value);
+                }}
+              >
+                <IconEllipsisOutlineRegular size={16} />
+              </button>
+            </Tooltip>
+          }
+          items={globalSortMenuItems(t, {
+            hasUnread: Object.keys(channelUnread).length > 0,
+          })}
+          selectedId={prefs.sortMode}
+          onSelect={selectSortMenu}
+          onClose={() => {
+            setSortMenuOpen(false);
+          }}
+        />
+        <Menu
+          open={menuOpen}
+          portal
+          dense
+          align="end"
+          anchor={
+            <Tooltip label={t('roster.new.label')} side="bottom" delayMs={500}>
+              <button
+                type="button"
+                className="bh-icon-btn"
+                aria-label={t('roster.new.label')}
+                onClick={() => {
+                  setMenuOpen((value) => !value);
+                }}
+              >
+                <IconPlusOutlineRegular size={16} />
+              </button>
+            </Tooltip>
+          }
+          items={menuItems(t, gitReady(state.git))}
+          onSelect={selectMenu}
+          onClose={() => {
+            setMenuOpen(false);
+          }}
+        />
+      </div>
+      {headerEnd}
+    </div>
+  );
   return (
     <div
       ref={rosterMount}
@@ -1949,128 +2140,7 @@ export function BotSidebar({
         }}
         t={t}
       />
-      <div className="bh-header">
-        <span className={`bh-header-label${searchOpen ? ' bh-header-label-hidden' : ''}`}>
-          {t('roster.messages')}
-        </span>
-        <div className={`bh-search-slot${searchOpen ? ' bh-search-slot-open' : ''}`}>
-          <div
-            ref={searchMount}
-            className={`bh-search${searchOpen ? ' bh-search-open' : ''}`}
-            onClick={() => {
-              setMenuOpen(false);
-              setSortMenuOpen(false);
-              setSearchOpen(true);
-              searchInput.current?.focus();
-            }}
-          >
-            <Tooltip
-              label={t('roster.search.label')}
-              side="bottom"
-              delayMs={500}
-              disabled={searchOpen}
-            >
-              <button
-                type="button"
-                className="bh-search-btn"
-                aria-label={t('roster.search.label')}
-                aria-expanded={searchOpen}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setSortMenuOpen(false);
-                  setSearchOpen(true);
-                }}
-              >
-                <IconSearchOutlineRegular size={searchOpen ? 11 : 14} />
-              </button>
-            </Tooltip>
-            <input
-              ref={searchInput}
-              className="bh-search-input"
-              type="text"
-              placeholder={t('roster.search.placeholder')}
-              value={state.query}
-              tabIndex={searchOpen ? 0 : -1}
-              onChange={(event) => store.setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== 'Escape') return;
-                store.setQuery('');
-                setSearchOpen(false);
-              }}
-            />
-            {searchOpen ? (
-              <button
-                type="button"
-                className="bh-clear-btn"
-                aria-label={t('roster.search.clear')}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  store.setQuery('');
-                  setSearchOpen(false);
-                }}
-              >
-                <IconCloseFillRegular />
-              </button>
-            ) : null}
-          </div>
-        </div>
-        <div className={`bh-header-actions${searchOpen ? ' bh-header-actions-hidden' : ''}`}>
-          <Menu
-            open={sortMenuOpen}
-            portal
-            dense
-            align="end"
-            anchor={
-              <Tooltip label={t('roster.menu.label')} side="bottom" delayMs={500}>
-                <button
-                  type="button"
-                  className="bh-icon-btn"
-                  aria-label={t('roster.menu.label')}
-                  onClick={() => {
-                    setSortMenuOpen((value) => !value);
-                  }}
-                >
-                  <IconEllipsisOutlineRegular size={16} />
-                </button>
-              </Tooltip>
-            }
-            items={globalSortMenuItems(t, {
-              hasUnread: Object.keys(channelUnread).length > 0,
-            })}
-            selectedId={prefs.sortMode}
-            onSelect={selectSortMenu}
-            onClose={() => {
-              setSortMenuOpen(false);
-            }}
-          />
-          <Menu
-            open={menuOpen}
-            portal
-            dense
-            align="end"
-            anchor={
-              <Tooltip label={t('roster.new.label')} side="bottom" delayMs={500}>
-                <button
-                  type="button"
-                  className="bh-icon-btn"
-                  aria-label={t('roster.new.label')}
-                  onClick={() => {
-                    setMenuOpen((value) => !value);
-                  }}
-                >
-                  <IconPlusOutlineRegular size={16} />
-                </button>
-              </Tooltip>
-            }
-            items={menuItems(t, gitReady(state.git))}
-            onSelect={selectMenu}
-            onClose={() => {
-              setMenuOpen(false);
-            }}
-          />
-        </div>
-        {headerEnd}
-      </div>
+      {headerTarget ? createPortal(header, headerTarget) : header}
       {state.status === 'loading' && state.bots.length === 0 ? (
         <LoadingSkeleton kind="roster" label={t('roster.loading')} />
       ) : null}
@@ -2079,22 +2149,26 @@ export function BotSidebar({
       ) : null}
       {state.roster.readOnly ? <div className="bh-note">{t('roster.readOnly')}</div> : null}
       {state.status === 'ready' && state.bots.length === 0 ? (
-        <div className="bh-empty-create">
-          <span>{t('roster.empty')}</span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!gitReady(state.git)}
-            onClick={() => setCreateRequest({ kind: 'bot', source: 'empty' })}
-          >
-            {t('roster.empty.create')}
-          </Button>
-        </div>
+        <PanelEmptyState
+          icon="hash"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!gitReady(state.git)}
+              onClick={() => setCreateRequest({ kind: 'bot', source: 'empty' })}
+            >
+              {t('roster.empty.create')}
+            </Button>
+          }
+        >
+          {t('roster.empty')}
+        </PanelEmptyState>
       ) : null}
       {visibleCount === 0 && (state.bots.length > 0 || state.channels.length > 0) ? (
-        <div className="bh-note">
+        <PanelEmptyState icon="hash">
           {query.length === 0 && hiddenItems.length > 0 ? t('hidden.all') : t('roster.noMatch')}
-        </div>
+        </PanelEmptyState>
       ) : null}
       {batchError !== undefined ? (
         <div className="bh-error">
@@ -2795,6 +2869,7 @@ export function BotSidebar({
           }}
         />
       ) : null}
+      <span ref={menuModelMount} aria-hidden="true" style={{ display: 'contents' }} />
       {channelMenu !== undefined && (channelMenu.channelIds?.length ?? 0) > 1 ? (
         <BulkChannelMenu
           menu={channelMenu}
@@ -2845,6 +2920,15 @@ export function BotSidebar({
               },
             };
           })()}
+          profileAction={
+            menuBotSlug === undefined
+              ? undefined
+              : () => {
+                  setChannelMenu(undefined);
+                  if (onViewProfile) onViewProfile(menuBotSlug);
+                  else void actions.openBot(menuBotSlug, 'profile');
+                }
+          }
           settingsAction={(() => {
             const channel = state.channels.find(
               (candidate) => candidate.id === channelMenu.channelId,
@@ -2879,6 +2963,19 @@ export function BotSidebar({
               toggle: (kind: DmActionKind) => toggleHiddenDmAction(botSlug, kind),
             };
           })()}
+          modelAction={
+            menuBotSlug === undefined
+              ? undefined
+              : {
+                  groups: botModelMenuGroups(
+                    menuModelData?.state.plan?.orchestrator ?? menuModelData?.catalog.default,
+                    menuModelData?.catalog,
+                    t('modelPreset.providerDefault'),
+                  ),
+                  disabled: menuModelBusy || menuModelData === undefined,
+                  apply: applyMenuModel,
+                }
+          }
           shareAction={(() => {
             const botId = state.channels.find(
               (channel) => channel.id === channelMenu.channelId && channel.type === 'dm',
@@ -2989,6 +3086,14 @@ export function BotSidebar({
           onClose={() => setDeleting(undefined)}
         />
       )}
+      {menuModelError === undefined ? null : (
+        <Toast
+          key="menu-model-error"
+          text={menuModelError}
+          holdMs={6000}
+          onDone={() => setMenuModelError(undefined)}
+        />
+      )}
       {undoToast === undefined ? null : (
         <Toast
           key={undoToast.seq}
@@ -3032,14 +3137,12 @@ export function SectionContextMenu({
 }): ReactElement {
   const proxy = useRef<HTMLSpanElement | null>(null);
   return (
-    <span className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-      <Menu
-        open
-        portal
+    <span hidden>
+      <PointerMenu
+        point={menu}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
         items={sectionMenuItems(t, {
           canMoveUp: index > 0,
           canMoveDown: index >= 0 && index < count - 1,
@@ -3111,14 +3214,12 @@ export function BulkChannelMenu({
     },
   ];
   return (
-    <span ref={menuMount} className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-      <Menu
-        open
-        portal
+    <span ref={menuMount} hidden>
+      <PointerMenu
+        point={menu}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
         items={items}
         onSelect={(id) => {
           if (id === 'pin' || id === 'unpin') onPin(id === 'pin');
@@ -3132,6 +3233,102 @@ export function BulkChannelMenu({
   );
 }
 
+function BotModelMenu({
+  label,
+  groups,
+  disabled,
+  open,
+  setOpen,
+  apply,
+}: {
+  label: string;
+  groups: readonly BotModelGroup[];
+  disabled: boolean;
+  open: boolean;
+  setOpen(open: boolean): void;
+  apply(route: ModelRouteView): void;
+}): ReactElement {
+  const anchor = useRef<HTMLSpanElement>(null);
+  const [active, setActive] = useState<string>();
+  return (
+    <span onPointerDown={(event) => event.stopPropagation()}>
+      <Menu
+        open={open}
+        portal
+        dense
+        autoFocus
+        side="right"
+        closeOnPointerLeave
+        className="bh-model-menu-anchor"
+        listClassName="bh-model-menu-list"
+        getAnchorRect={() => anchor.current?.closest('button')?.getBoundingClientRect() ?? null}
+        anchor={
+          <span
+            ref={anchor}
+            className="bh-move-checked"
+            onMouseEnter={() => {
+              if (!disabled) setOpen(true);
+            }}
+          >
+            <span className="bh-move-checked-text">{label}</span>
+            <IconChevronRightOutlineRegular size={16} />
+          </span>
+        }
+        onClose={() => {
+          setOpen(false);
+          setActive(undefined);
+        }}
+      >
+        {groups.map((group) => (
+          <Menu
+            key={group.key}
+            open={active === group.key}
+            portal
+            dense
+            side="right"
+            closeOnPointerLeave
+            className="bh-model-menu-anchor"
+            listClassName="bh-model-menu-list"
+            anchor={
+              <button
+                type="button"
+                role="menuitem"
+                className="bh-sidebar-settings-trigger"
+                aria-haspopup="menu"
+                aria-expanded={active === group.key}
+                disabled={disabled}
+                onMouseEnter={() => setActive(group.key)}
+                onFocus={() => setActive(group.key)}
+                onClick={() => setActive(group.key)}
+              >
+                <span className="bh-move-checked">
+                  <span className="bh-move-checked-text">{group.label}</span>
+                  {group.current ? <IconCheckOutlineRegular size={16} /> : null}
+                </span>
+                <IconChevronRightOutlineRegular size={16} />
+              </button>
+            }
+            onClose={() => setActive(undefined)}
+          >
+            {group.efforts.map((effort) => (
+              <MenuItemButton
+                key={effort.route.reasoningEffort ?? ''}
+                disabled={disabled}
+                onSelect={() => apply(effort.route)}
+              >
+                <span className="bh-move-checked">
+                  <span className="bh-move-checked-text">{effort.label}</span>
+                  {effort.current ? <IconCheckOutlineRegular size={16} /> : null}
+                </span>
+              </MenuItemButton>
+            ))}
+          </Menu>
+        ))}
+      </Menu>
+    </span>
+  );
+}
+
 export function ChannelMoveMenu({
   readAction,
   muteAction,
@@ -3139,8 +3336,10 @@ export function ChannelMoveMenu({
   shareAction,
   deleteAction,
   settingsAction,
+  profileAction,
   nicknameAction,
   dmActions,
+  modelAction,
   menu,
   sections,
   currentSectionId,
@@ -3159,8 +3358,16 @@ export function ChannelMoveMenu({
   shareAction?: { label: string; run(): void } | undefined;
   deleteAction?: { label: string; run(): void } | undefined;
   settingsAction?: { attention: boolean; run(): void } | undefined;
+  profileAction?: (() => void) | undefined;
   nicknameAction?: (() => void) | undefined;
   dmActions?: { hidden: readonly DmActionKind[]; toggle(kind: DmActionKind): void } | undefined;
+  modelAction?:
+    | {
+        groups: readonly BotModelGroup[];
+        disabled: boolean;
+        apply(route: ModelRouteView): void;
+      }
+    | undefined;
   menu: ChannelMenuRequest;
   sections: readonly RosterSection[];
   currentSectionId: string | undefined;
@@ -3173,6 +3380,7 @@ export function ChannelMoveMenu({
   onPick: (sectionId: string | undefined) => void;
   onClose: () => void;
 }): ReactElement {
+  const [modelOpen, setModelOpen] = useState(false);
   const proxy = useRef<HTMLSpanElement | null>(null);
   const menuMount = useMountedResource<HTMLSpanElement>(() => {
     const timer = window.setTimeout(() => {
@@ -3187,6 +3395,15 @@ export function ChannelMoveMenu({
     };
   }, []);
   const items: readonly MenuEntry[] = [
+    ...(profileAction
+      ? [
+          {
+            id: 'profile',
+            label: t('profile.view'),
+            icon: <ChannelSidebarIcon name="id-card" size={16} />,
+          },
+        ]
+      : []),
     ...(settingsAction === undefined
       ? []
       : [
@@ -3235,6 +3452,23 @@ export function ChannelMoveMenu({
           },
         ]),
     { type: 'separator', id: 'pin-separator' },
+    ...(modelAction === undefined
+      ? []
+      : [
+          {
+            id: 'bot-model',
+            label: (
+              <BotModelMenu
+                label={t('roster.menu.model')}
+                {...modelAction}
+                open={modelOpen}
+                setOpen={setModelOpen}
+              />
+            ),
+            icon: <IconAgentPresetOutlineRegular size={16} />,
+            disabled: modelAction.disabled || modelAction.groups.length === 0,
+          },
+        ]),
     ...channelMoveMenuItems(t, sections, currentSectionId).map((entry) =>
       'type' in entry ? entry : { ...entry, icon: <IconFolderOpenOutlineRegular size={16} /> },
     ),
@@ -3264,16 +3498,18 @@ export function ChannelMoveMenu({
         ]),
   ];
   return (
-    <span ref={menuMount} className="bh-menu-anchor" style={{ left: menu.x, top: menu.y }}>
-      <Menu
-        open
-        portal
+    <span ref={menuMount} hidden>
+      <PointerMenu
+        point={menu}
         dense
         autoFocus
         anchor={<span ref={proxy} aria-hidden="true" />}
-        getAnchorRect={() => proxy.current?.getBoundingClientRect() ?? null}
         items={items}
         onSelect={(id) => {
+          if (id === 'profile') {
+            profileAction?.();
+            return;
+          }
           if (id === 'mark-read') {
             readAction?.run();
             return;
@@ -3285,6 +3521,10 @@ export function ChannelMoveMenu({
           const dmKind = dmActionKindOf(id);
           if (dmKind !== undefined) {
             dmActions?.toggle(dmKind);
+            return;
+          }
+          if (id === 'bot-model') {
+            setModelOpen(true);
             return;
           }
           if (id === CHANNEL_SETTINGS_ITEM) {

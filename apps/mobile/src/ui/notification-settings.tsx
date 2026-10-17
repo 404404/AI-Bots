@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, Switch, View } from 'react-native';
+import { ScrollView, Switch, View, type ScrollViewInstance } from 'react-native';
 
 import {
   PUSH_KINDS,
@@ -52,7 +52,7 @@ export function NotificationSettings({
     setError(undefined);
     port.load().then(setSettings, (reason: unknown) => setError(failure(reason)));
   }, [port]);
-  const mount = useMounted<ScrollView>(() => {
+  const mount = useMounted<ScrollViewInstance>(() => {
     if (on) load();
   }, [on, load]);
 
@@ -78,8 +78,9 @@ export function NotificationSettings({
   return (
     <ScrollView
       ref={mount}
+      nestedScrollEnabled
       contentInsetAdjustmentBehavior="automatic"
-      style={{ backgroundColor: theme.color.base }}
+      style={{ backgroundColor: theme.overlay.fill }}
       contentContainerStyle={{ padding: space.x5, gap: space.x5 }}
     >
       <Text variant="meta" tone="muted">
@@ -117,9 +118,10 @@ export function NotificationSettings({
           <Text accessibilityRole="header" variant="meta" tone="muted" strong>
             {t.notifyAbout}
           </Text>
-          <SettingsSection>
+          <SettingsSection on="raised">
             {PUSH_KINDS.map((kind) => (
               <SettingsRow
+                on="raised"
                 key={kind}
                 title={t.pushKind[kind]}
                 trailing={

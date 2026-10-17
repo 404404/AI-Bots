@@ -230,7 +230,7 @@ describe('message states', () => {
     expect(html).not.toContain('full client to view.');
   });
 
-  it('shows a card note for interactive messages and a typing line for drafts', () => {
+  it('shows a card note for interactive messages without a typing caption below drafts', () => {
     expect(
       renderToStaticMarkup(
         <MessageBubble
@@ -246,7 +246,7 @@ describe('message states', () => {
       <DraftBubble draft={{ draftId: 'd', botSlug: 'b', body: 'Hel' }} />,
     );
     expect(draft).toContain('Hel');
-    expect(draft).toContain(t.typing);
+    expect(draft).not.toContain(t.typing);
   });
 
   it('names a group Channel Bot above its first bubble and puts its avatar at the last one', () => {

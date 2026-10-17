@@ -2,6 +2,7 @@ import type { SerializedDockview } from 'dockview-react';
 import { describe, expect, it } from 'vitest';
 
 import {
+  migrateWorkPanel,
   allowsDockDrop,
   CHANNEL_BODY_PANEL,
   CHANNEL_DOCK_STORAGE_KEY,
@@ -53,12 +54,34 @@ describe('Bot mode layout persistence', () => {
   it('round-trips a versioned dockview serialization', () => {
     const storage = memoryStorage();
     writeChannelDock({ layout, parked: { schedules: { direction: 'below' } } }, storage);
-    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(1);
+    expect(JSON.parse(storage.values.get(CHANNEL_DOCK_STORAGE_KEY)!).version).toBe(5);
     expect(readChannelDock(storage)).toEqual({
-      version: 1,
+      version: 5,
+      gap: 4,
+      order: [],
+      hiddenControls: [],
+      members: { open: false, ratio: 0.3 },
+      channelWorkspaces: {},
+      sessionSeed: undefined,
+      botPanelSeeds: {},
+      botWorkspaces: {},
       layout,
       parked: { schedules: { direction: 'below' } },
     });
+  });
+
+  it('validates and preserves rail visibility preferences', () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      CHANNEL_DOCK_STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        layout,
+        hiddenControls: ['sessions', 42, 'sessions', 'bot-inbox'],
+      }),
+    );
+    expect(readChannelDock(storage)?.hiddenControls).toEqual(['bot-inbox']);
+    expect(readChannelDock(storage)?.sessionSeed?.hiddenControl).toBe(true);
   });
 
   it('ignores a layout from another version or a damaged value', () => {
@@ -131,5 +154,284 @@ describe('drops never tab two panels together', () => {
     expect(allowsDockDrop('header_space', 'center')).toBe(false);
     expect(allowsDockDrop('content', 'left')).toBe(true);
     expect(allowsDockDrop('edge', 'right')).toBe(true);
+  });
+});
+
+describe('Work → Sessions upgrade', () => {
+  const stored = (views: string[]) => ({
+    version: 5 as const,
+    layout: {
+      ...layout,
+      grid: {
+        ...layout.grid,
+        root: {
+          type: 'branch' as const,
+          data: [leaf('main', CHANNEL_BODY_PANEL), ...views.map((id) => leaf(id, id))],
+        },
+      },
+      panels: Object.fromEntries(
+        [CHANNEL_BODY_PANEL, ...views].map((id) => [id, { id, params: { entryId: id } }]),
+      ),
+    },
+    order: ['group-work', 'memory-files', ...views.filter((id) => id !== 'group-work')],
+    hiddenControls: ['sessions'],
+    gap: 7,
+    parked: { schedules: { neighbor: 'group-work', direction: 'below' as const } },
+  });
+  it('replaces Work in place and keeps its switch recoverable', () => {
+    const original = stored(['group-work', 'bot-inbox']);
+    const result = migrateWorkPanel(original);
+    expect(Object.keys(result.layout.panels)).toEqual([
+      CHANNEL_BODY_PANEL,
+      'sessions',
+      'bot-inbox',
+    ]);
+    expect(result.layout.panels.sessions?.params?.entryId).toBe('sessions');
+    expect((result.layout.grid.root.data as unknown[])[1]).toEqual(leaf('group-work', 'sessions'));
+    expect(result.hiddenControls).not.toContain('sessions');
+    expect(result.parked.schedules?.neighbor).toBe('sessions');
+    expect(result.gap).toBe(7);
+    expect(migrateWorkPanel(result)).toEqual(result);
+    expect(original.layout.panels['group-work']).toBeDefined();
+  });
+  it('keeps the existing Sessions geometry/order and removes the duplicate Work leaf', () => {
+    const original = stored(['group-work', 'sessions', 'bot-inbox']);
+    const result = migrateWorkPanel(original);
+    expect(result.layout.grid.root.data).toEqual([
+      leaf('main', CHANNEL_BODY_PANEL),
+      leaf('sessions', 'sessions'),
+      leaf('bot-inbox', 'bot-inbox'),
+    ]);
+    expect(result.order).toEqual(['memory-files', 'sessions', 'bot-inbox']);
+    expect(result.hiddenControls).toContain('sessions');
+    expect(migrateWorkPanel(result)).toEqual(result);
+  });
+  it('does not reopen either closed panel and rewrites parked neighbors', () => {
+    const result = migrateWorkPanel(stored(['bot-inbox']));
+    expect(result.layout.panels.sessions).toBeUndefined();
+    expect(result.parked.schedules?.neighbor).toBe('sessions');
+  });
+});
+
+describe('flat Sessions → Channel workspace migration', () => {
+  it.each([1, 2, 3])(
+    'backs up v%s, preserves unrelated plugins and migrates only once',
+    (version) => {
+      const storage = memoryStorage();
+      const raw = JSON.stringify({
+        version,
+        layout,
+        gap: 8,
+        order: ['computer', 'sessions'],
+        hiddenControls: ['sessions'],
+        parked: { future: { neighbor: 'sessions', direction: 'left' } },
+      });
+      storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
+      const next = readChannelDock(storage)!;
+      expect(next.layout.panels.sessions).toBeUndefined();
+      expect(next.layout.panels.computer).toEqual(layout.panels.computer);
+      expect(next.sessionSeed).toEqual({
+        open: true,
+        direction: 'right',
+        ratio: 0.3,
+        hiddenControl: true,
+      });
+      expect(next.order).toEqual(['computer']);
+      expect(next.gap).toBe(8);
+      expect(next.parked.future?.neighbor).toBe(CHANNEL_BODY_PANEL);
+      expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-channel-workspace-v4`)).toBe(raw);
+      writeChannelDock(
+        {
+          ...next,
+          channelWorkspaces: {
+            group: { open: false, direction: 'below', ratio: 0.42, hiddenControl: false },
+          },
+        },
+        storage,
+      );
+      const refreshed = readChannelDock(storage)!;
+      expect(refreshed.channelWorkspaces?.group?.ratio).toBe(0.42);
+      expect(refreshed.channelWorkspaces?.group?.open).toBe(false);
+      expect(readChannelDock(storage)).toEqual(refreshed);
+      expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-channel-workspace-v4`)).toBe(raw);
+    },
+  );
+
+  it('keeps a closed or missing parent closed, and imports meaningful adjacent geometry', () => {
+    const storage = memoryStorage();
+    const nextLayout = {
+      ...layout,
+      grid: {
+        ...layout.grid,
+        root: {
+          type: 'branch',
+          data: [
+            { ...leaf('session', 'sessions'), size: 250 },
+            { ...leaf('messages', CHANNEL_BODY_PANEL), size: 750 },
+          ],
+        },
+      },
+      panels: Object.fromEntries(['sessions', CHANNEL_BODY_PANEL].map((id) => [id, { id }])),
+    };
+    storage.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify({ version: 3, layout: nextLayout }));
+    expect(readChannelDock(storage)?.sessionSeed).toEqual({
+      open: true,
+      direction: 'left',
+      ratio: 0.25,
+      hiddenControl: false,
+    });
+    expect(readChannelDock(storage)?.layout.grid.root.data).toEqual([
+      { ...leaf('messages', CHANNEL_BODY_PANEL), size: 1000 },
+    ]);
+    nextLayout.panels = { sessions: { id: 'sessions' } };
+    nextLayout.grid.root.data.pop();
+    storage.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify({ version: 3, layout: nextLayout }));
+    expect(readChannelDock(storage)?.layout.panels[CHANNEL_BODY_PANEL]).toBeUndefined();
+    nextLayout.panels = {};
+    nextLayout.grid.root.data = [];
+    storage.setItem(CHANNEL_DOCK_STORAGE_KEY, JSON.stringify({ version: 3, layout: nextLayout }));
+    expect(readChannelDock(storage)?.sessionSeed?.open).toBe(false);
+  });
+
+  it('does not overwrite a recoverable old record if backup storage refuses the write', () => {
+    const storage = memoryStorage();
+    const raw = JSON.stringify({ version: 3, layout });
+    storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
+    const refusing = {
+      ...storage,
+      setItem: () => {
+        throw Error('quota');
+      },
+    };
+    expect(readChannelDock(refusing)?.sessionSeed?.open).toBe(true);
+    expect(storage.getItem(CHANNEL_DOCK_STORAGE_KEY)).toBe(raw);
+  });
+});
+
+it('recovers malformed storage without discarding the original backup', () => {
+  const storage = memoryStorage();
+  storage.setItem(CHANNEL_DOCK_STORAGE_KEY, '{broken');
+  expect(readChannelDock(storage)).toBeUndefined();
+  writeChannelDock({ layout, parked: {} }, storage);
+  expect(readChannelDock(storage)?.version).toBe(5);
+  expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`)).toBe('{broken');
+});
+
+it('retains hidden Work intent when every legacy panel is closed', () => {
+  const storage = memoryStorage();
+  storage.setItem(
+    CHANNEL_DOCK_STORAGE_KEY,
+    JSON.stringify({
+      version: 2,
+      layout: {
+        ...layout,
+        panels: {},
+        grid: { ...layout.grid, root: { type: 'branch', data: [] } },
+      },
+      hiddenControls: ['group-work'],
+      order: ['group-work'],
+    }),
+  );
+  const next = readChannelDock(storage)!;
+  expect(next.sessionSeed).toMatchObject({ open: false, hiddenControl: true });
+  expect(next.order).toEqual([]);
+  expect(next.layout.panels[CHANNEL_BODY_PANEL]).toBeUndefined();
+});
+
+describe('Bot subpanel migration', () => {
+  it.each([1, 2, 3, 4])(
+    'migrates v%s while preserving Sessions, unknown panels and explicit preferences',
+    (version) => {
+      const storage = memoryStorage();
+      const previous = {
+        version,
+        gap: 9,
+        order: ['plugin-x', 'memory-files', 'schedules'],
+        hiddenControls: ['memory-evolution'],
+        layout: {
+          ...layout,
+          grid: {
+            ...layout.grid,
+            root: {
+              type: 'branch',
+              data: [
+                { ...leaf('message', CHANNEL_BODY_PANEL), size: 600 },
+                { ...leaf('files', 'memory-files'), size: 200 },
+                { ...leaf('other', 'plugin-x'), size: 400 },
+              ],
+            },
+          },
+          panels: Object.fromEntries(
+            [CHANNEL_BODY_PANEL, 'memory-files', 'plugin-x'].map((id) => [id, { id }]),
+          ),
+        },
+        parked: {
+          'memory-evolution': { direction: 'below' },
+          schedules: { direction: 'left' },
+          'plugin-y': { neighbor: 'memory-files', direction: 'right' },
+        },
+        sessionSeed: { open: false, direction: 'above', ratio: 0.4, hiddenControl: false },
+        channelWorkspaces: {
+          group: { open: true, direction: 'left', ratio: 0.42, hiddenControl: false },
+        },
+        botWorkspaces: {
+          ada: {
+            'memory-files': { open: false, direction: 'below', ratio: 0.45, hiddenControl: false },
+          },
+        },
+      };
+      const raw = JSON.stringify(previous);
+      storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
+      const migrated = readChannelDock(storage)!;
+      expect(migrated.version).toBe(5);
+      expect(migrated.layout.panels['memory-files']).toBeUndefined();
+      expect(migrated.layout.panels['plugin-x']).toEqual({ id: 'plugin-x' });
+      expect(migrated.layout.grid.root.data).toEqual([
+        { ...leaf('message', CHANNEL_BODY_PANEL), size: 800 },
+        { ...leaf('other', 'plugin-x'), size: 400 },
+      ]);
+      expect(migrated.botPanelSeeds?.['memory-files']).toMatchObject({
+        open: true,
+        ratio: 0.25,
+        direction: 'right',
+      });
+      expect(migrated.botPanelSeeds?.['memory-evolution']).toMatchObject({
+        open: false,
+        hiddenControl: true,
+        direction: 'below',
+      });
+      expect(migrated.botPanelSeeds?.schedules).toMatchObject({ open: false, direction: 'left' });
+      expect(migrated.botWorkspaces).toEqual(previous.botWorkspaces);
+      expect(migrated.channelWorkspaces).toEqual(previous.channelWorkspaces);
+      expect(migrated.sessionSeed).toEqual(previous.sessionSeed);
+      expect(migrated.order).toEqual(['plugin-x']);
+      expect(migrated.parked['plugin-y']?.neighbor).toBe(CHANNEL_BODY_PANEL);
+      expect(migrated.gap).toBe(9);
+      expect(storage.getItem(`${CHANNEL_DOCK_STORAGE_KEY}.before-bot-workspace-v5`)).toBe(raw);
+      expect(readChannelDock(storage)).toEqual(migrated);
+    },
+  );
+  it('keeps absent parents closed and preserves original v4 if backup fails', () => {
+    const storage = memoryStorage();
+    const previous = {
+      version: 4,
+      layout: {
+        ...layout,
+        panels: { schedules: { id: 'schedules' } },
+        grid: { ...layout.grid, root: { type: 'branch', data: [leaf('schedule', 'schedules')] } },
+      },
+    };
+    const raw = JSON.stringify(previous);
+    storage.setItem(CHANNEL_DOCK_STORAGE_KEY, raw);
+    const next = readChannelDock({
+      ...storage,
+      setItem: () => {
+        throw new Error('blocked');
+      },
+    })!;
+    expect(next.layout.panels[CHANNEL_BODY_PANEL]).toBeUndefined();
+    expect(next.botPanelSeeds?.schedules?.open).toBe(true);
+    expect(storage.getItem(CHANNEL_DOCK_STORAGE_KEY)).toBe(raw);
+    expect(next.layout.grid.root.data).toEqual([]);
   });
 });

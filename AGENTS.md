@@ -77,7 +77,7 @@ The dev VPS lives on the Human's Tailscale tailnet. Per-machine values (SSH host
 
 ### Shared device QA (AX)
 
-Native checks for `apps/mobile` share one Mac, one QA Simulator, one physical iPhone and one QA Host among all coding agents. Before you boot a Simulator, build the app, start a Host or touch the phone, follow [shared device QA](docs/agents/device-qa.md): submit to the Simulator queue instead of running your own, batch on a local `qa/batch-<n>` branch, use the dedicated QA Host, ask the Human for the steps only they can do, and report redacted results on each PR.
+Native checks for `apps/mobile` share devices and QA Hosts among coding agents. Before booting an emulator/Simulator, building the app, starting a Host or touching a phone, follow [shared device QA](docs/agents/device-qa.md): choose the Mac/iOS or Windows/Android queue, submit to its owner-cut batch, use the dedicated QA Host, and report redacted results. Windows emulator and USB-phone checks use the shared `android-qa.ps1` lease and scrcpy capture workflow.
 
 ### SEO research and tracking (AX)
 
@@ -139,7 +139,7 @@ Building or changing in-harness UI follows the `dsh-ui` skill: DSH tokens (centr
 
 ### Verify behavior
 
-Before claiming a feature or fix works, reproducing a bug in the running app, or capturing PR screenshots, follow the `verify-deepseekbot` skill: it launches an isolated Host, drives the Web Client by accessible name, and keeps screenshots, ARIA snapshots and console output as evidence. Its feature map names each mapped feature's user path and the observable result that proves it; update the map in the same change when the app moves.
+Before claiming a feature or fix works, reproducing a bug in the running app, or capturing PR screenshots, follow the `verify-deepseekbot` skill: it launches an isolated Host, drives the Web Client by accessible name, and keeps screenshots, ARIA snapshots and console output as evidence. Its feature map names each mapped feature's user path and the observable result that proves it; update the map in the same change when the app moves. `node scripts/check-feature-map.mjs` (in lint) checks map references; run the touched journey to verify behavior. For a failed or surprising drive, use `verify-app observe` and the skill’s observation guide before retrying.
 
 ### DSH development
 

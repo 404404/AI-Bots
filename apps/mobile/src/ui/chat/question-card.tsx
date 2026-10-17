@@ -1,6 +1,6 @@
 import { TextInput } from '../primitives/system-text';
 import { useCallback, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewInstance } from 'react-native';
 
 import type { CardResolution } from '../../host/conversation';
 import {
@@ -279,7 +279,7 @@ export function QuestionCard({
     }
   }, [port]);
 
-  const mount = useMounted<View>(() => {
+  const mount = useMounted<ViewInstance>(() => {
     if (!known.current) void load();
   }, [load]);
 

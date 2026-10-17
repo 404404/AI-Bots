@@ -23,7 +23,7 @@ const FlatList = (props: {
 
 const View = (props: Props) => createElement('div', null, props.children);
 
-export default { FlatList, View };
+export default { FlatList, View, createAnimatedComponent: <T>(component: T) => component };
 export const makeMutable = <T>(value: T) => ({ value });
 export const measure = () => null;
 export const useAnimatedRef = () => ({ current: null });
@@ -37,7 +37,15 @@ export const FadeOut = transition;
 export const LinearTransition = transition;
 export const useReducedMotion = () => false;
 export const withTiming = <T>(value: T) => value;
-export const Easing = { out: (curve: unknown) => curve, quad: (t: number) => t * t };
+export const interpolateColor = (_value: number, _range: number[], colors: string[]) =>
+  colors.at(-1);
+export const cancelAnimation = () => {};
+export const ReduceMotion = { System: 'system' };
+export const Easing = {
+  linear: (t: number) => t,
+  out: (curve: unknown) => curve,
+  quad: (t: number) => t * t,
+};
 export class Keyframe {
   duration() {
     return this;

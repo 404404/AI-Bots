@@ -4,6 +4,16 @@
 
 ## 语言
 
+### 产品发布
+
+**Product Release Version**：
+电脑端 DeepSeekBot 产品及其同步发布组件共用的唯一发布身份；它与独立版本的 DSH runtime、Provider、工具／Skill 和手机应用不同。
+_避免使用_：独立桌面版本、独立 npm 版本、未限定的 Version
+
+**Development Build Identity**：
+未发布 DeepSeekBot 构建的身份及源码状态。它不是 Product Release Version，也不证明发布产物已通过资格验证。
+_避免使用_：已安装发布版、latest 版本、0.0.0 发布版
+
 ### PersonaBot（持久机器人身份）
 
 **PersonaBot**：
@@ -91,7 +101,7 @@ _避免使用_：Channel pin、Channel membership、Agent Scope
 _避免使用_：DSH Agent preset、SoulSnapshot
 
 **PersonaBot Model Plan**：
-PersonaBot 模型方案。某个 PersonaBot 持有的模型预设快照或 Human 自定义选择，决定其 Orchestrator 路由与后续 Assignment 的模型选择。它属于运行配置，不属于 Soul 或 Memory。
+PersonaBot 模型方案。某个 PersonaBot 持有的模型预设快照或 Human 自定义选择，决定其 Orchestrator 路由与后续 Assignment 的模型选择。其 Assignment 策略可继续继承全局模型，而 Orchestrator 独立定制。它属于运行配置，不属于 Soul 或 Memory。
 _避免使用_：Soul、DSH Agent preset、model usage
 
 ### 支撑与执行
@@ -629,7 +639,7 @@ _避免使用_：wake policy、inferred step state、message priority
 _避免使用_：per-event queue、wake storm、batch（单独使用）
 
 **Activity Center**：
-「活动中心」是 Bot 模式中面向 Human 的跨 PersonaBot、跨 Channel 入口，包含运行总览与个人 Human Inbox。它汇总已有权威事实，不成为消息、用量或 Session 活动的另一份权威。
+「活动中心」是 Bot 模式中面向 Human 的跨 PersonaBot、跨 Channel 注意力入口，直接打开个人 Human Inbox。完整页面与 Dock 共用原位工具审批卡，运行统计不再属于此入口（#2026）。它汇总已有权威事实，不成为消息、用量或 Session 活动的另一份权威。
 _避免使用_：Human Inbox（指整个入口时）、dashboard list
 
 **Human Inbox**：
@@ -669,6 +679,8 @@ Channel message 的可信 origin 与 causal identity——包括它的 Actor、i
 _避免使用_：caller-supplied author、transport metadata（单独使用）
 
 ### 聊天与回复
+
+**IM 会话镜像**是针对一个已绑定外部私聊的可选本地展示，复用 canonical content，不新增 Inbox Admission 或唤醒。**本地私聊转发**是另一项独立选择，通过同一 Binding 和已授权会话执行外部发送。两者均默认关闭，不新增接收或主动发送权限。见 ADR-0217。
 
 **Chat**：
 PersonaBot 参与的 Feishu/Lark conversation——group 或 p2p——通过 `chat_id` 识别。
@@ -785,7 +797,7 @@ bot-mode sidebar 中展示 PersonaBot 与 Channel 及其 state 的列表。
 _避免使用_：dashboard、bot list
 
 **App Sidebar**：
-client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode（宽度 960 px 及以上）中由 BotHarness 换成自己的 Bot mode sidebar（DeepSeekBot 标题，其 Logo 悬停时变成「退出 Bot mode」；活动中心、Roster、Bot 设置），这一栏的宽度、拖动调整和收起仍由 DSH 负责；其他插件在左栏的内容在 Bot mode 期间隐藏（ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
+client 的左侧栏。Bot mode 之外是 DSH 原生左栏；桌面端 Bot mode 回退布局中由 BotHarness 换成自己的 Bot mode sidebar（DeepSeekBot 标题，其 Logo 悬停时变成「退出 Bot mode」；活动中心、Roster、Bot 设置），这一栏的宽度、拖动调整和收起仍由 DSH 负责；其他插件在左栏的内容在 Bot mode 期间隐藏（ADR-0203）。采用此名称是为了与右侧的 Channel sidebar 区分。
 _避免使用_：left sidebar、main sidebar、navigation
 
 **Channel sidebar**：
@@ -805,12 +817,34 @@ _避免使用_：widget、card、tab、destination、Channel section
 _避免使用_：view、page、rail item
 
 **Bot mode layout**：
-桌面端 Bot mode（宽度 960 px 及以上）中、App Sidebar 右侧的 `main` 区域：一个可停靠布局，Human 可以拖动、停靠、调整大小、关闭和重新打开 Dock panel。每个面板独立存在，面板之间不叠成 tab，Channel body 只有一个，布局按浏览器保存，并可恢复默认（提议中，ADR-0203）。窄布局与手机保持响应式布局。
+桌面端 Bot mode 的两层呈现布局：Global workspace，以及唯一消息面板内当前频道的 Channel workspace。Human 可以在所属工作区内移动面板、调整大小；面板不组成标签页，也不浮出所属工作区。符合条件的 Web/macOS shell 释放原生侧栏占位；窄屏和不符合条件的 shell 保留响应式回退。
 _避免使用_：workbench、panel layout、dock
 
+以下布局术语描述 [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) 与 ADR-0221 中已确认的目标设计。[#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049) 已交付会话子面板，[#2067](https://github.com/BotHarness/DeepSeekBot/issues/2067) 迁入记忆文件、记忆演化和定时任务。其余 surface 继续分阶段迁移，尚未实现完整目标。
+
+**Global workspace**：
+全局工作区。Bot mode 的外层呈现空间，包含 Workspace Control Rail、频道列表和活动中心等全局 Dock panel，以及唯一的消息面板。全局面板不依赖当前频道也具有独立用途。这是 UI 布局，不是 DSH Workspace、执行环境或权限边界。
+_避免使用_：App Sidebar、全局频道、根频道
+
+**Workspace Control Rail**：
+工作区控制列。Global workspace 中唯一、不可关闭、占据整列高度的控制区域。顶部为 DSB 模式退出入口，可排序的开关控制全局面板和消息面板，底部是 Bot Settings。设置上方的拖拽把手在悬停或键盘聚焦时显示，用于把整列移动到各外层列之间。控制列与其他面板使用一致的小圆角。频道子面板开关属于消息 header；布局偏好属于 Bot Settings。
+_避免使用_：panel control、panel control sidebar、App Sidebar、频道列表
+
 **Dock panel**：
-Bot mode layout 中注册的一个单元：稳定 id、标题、图标、scope（`channel` 面板跟随当前 Channel，`global` 面板不跟随）、默认位置与渲染器。Channel body 和每个 Channel sidebar entry 都是 Dock panel；App Sidebar 不是 Dock panel，留在布局之外；其他插件通过 `dockPanels` Service 注册更多面板。Dock panel 只是 UI Consumer；插件的数据存放在它自己的 Service 与 Provider 中（提议中，ADR-0203）。
+可移动的内容单元，其声明的呈现范围决定所属工作区。header 标识内容并提供操作；body 呈现内容。面板是 UI Consumer，不是所展示数据的权威。Workspace Control Rail 是布局控制区域，不是可关闭的 Dock panel。
 _避免使用_：widget、view、pane、DSH main panel
+
+**Messages panel**：
+消息面板。承载当前 Channel workspace 的唯一外层 Dock panel。header 标识当前频道并控制可用的频道子面板。右键 header 通过图标、名称与右侧复选框管理子面板开关的显隐；隐藏开关也会关闭对应子面板，不另设管理按钮。隐藏消息面板会隐藏整个频道工作区，同时保留子面板的开关和几何偏好；不停止执行，也不撤销访问权限。
+_避免使用_：Channel body、聊天侧栏、消息列表（指整个面板时）
+
+**Channel workspace**：
+频道工作区。消息面板为当前频道承载的内层呈现空间，包含消息内容及该频道可用的子面板。各频道分别保留布局、尺寸比例和显示偏好。这是第二层，也是最后一层布局；子面板不能停靠到全局工作区。它不引入第二份频道选择状态或数据权威。
+_避免使用_：Channel sidebar、嵌套全局工作区、DSH Workspace
+
+**Channel subpanel**：
+频道子面板。Channel workspace 内的 Dock panel，从消息 header 打开，仅在父面板可见时显示。可用性跟随当前频道及现有访问检查。会话适用于 PersonaBot 私聊和群聊；成员适用于群聊。记忆文件、记忆演化、定时任务、浏览器控制、电脑控制和 PersonaBot Profile 是 Bot 专属 surface，群聊不提供这些入口，即使会话正在显式查看某个群成员 Bot 也不例外。群资料仍可使用。子面板开关只改变呈现，不改变执行或权限。
+_避免使用_：Channel sidebar entry、全局面板（指频道内容时）、tab
 
 **Channel settings**：
 当前 Channel 的运行配置 modal（频道设置）：PersonaBot DM 中是 Wake Policy、外部身份与外部连接器；群聊中是 Wake Policy、外部连接器与群管理。从 Channel sidebar 齿轮菜单和 Channel header 的「···」菜单打开，按 Channel settings section 组织。
@@ -821,11 +855,11 @@ Channel settings 中的一个分区：以 settings surface 注册的 Channel sid
 _避免使用_：settings tab、settings entry
 
 **PersonaBot Profile**：
-单个 PersonaBot 可分享的身份与只读活动 surface：身份会在分享 PersonaBot 时随之带走（Display name、Avatar、Profile Banner、Bot Tag、Bot Bio）；活动包括由其 owned Session 派生的 token 用量、来自 Bot Inbox Admission 的事件活跃度，以及 Memory commit 活跃度。Model Plan、Wake Policy、外部身份、Bridge、审批等运行配置不属于它，而在 Channel sidebar 与 Channel settings 中。它以 Profile popover 的紧凑形态出现在 DM header 的头像旁，并展开为 Channel body 中的 Profile view。
+单个 PersonaBot 可分享的身份与只读活动 surface：身份会在分享 PersonaBot 时随之带走（Display name、Avatar、Profile Banner、Bot Tag、Bot Bio）；活动包括由其 owned Session 派生的 token 用量、来自 Bot Inbox Admission 的事件活跃度，以及 Memory commit 活跃度。Model Plan、Wake Policy、外部身份、Bridge、审批等运行配置不属于它，而在 Channel sidebar 与 Channel settings 中。DM header 或频道列表中的「查看资料」直接打开消息面板内的 Profile view；从频道列表进入时，若消息面板关闭则先开启。
 _避免使用_：account、dashboard、bot page、裸用 profile、settings page
 
 **Group Profile**：
-单个 Group Channel 的名称、头像，以及基于已提交 Channel 消息的活动 surface，按天和作者展示消息数量，并区分 Human 与 PersonaBot 作者；成员 Wake Policy、Bridge 等群配置在 Channel settings 中。群聊 header 打开弹层及 Channel body 详情；DM Channel 只有对应的 PersonaBot Profile。
+单个 Group Channel 的名称、头像，以及基于已提交 Channel 消息的活动 surface，按天和作者展示消息数量，并区分 Human 与 PersonaBot 作者；成员 Wake Policy、Bridge 等群配置在 Channel settings 中。群聊 header 直接打开 Channel body 中的 Profile view；DM Channel 只有对应的 PersonaBot Profile。
 _避免使用_：PersonaBot token 用量、群管理侧栏、DM Channel Profile
 
 **Approver**：
@@ -837,7 +871,7 @@ _避免使用_：admin、moderator、group member、recipient
 _避免使用_：approver、notification channel、webhook
 
 **Profile popover**：
-PersonaBot 或 Group Profile 的紧凑形态，锚定在 Channel body header 的头像旁。它只显示 Human 为相应 scope 固定的 Profile Card，并提供进入 Profile view 的入口。
+ADR-0085 中已退役的呈现形态：头像旁的紧凑预览及固定卡片偏好不再使用。「查看资料」直接进入 Profile view（#2017）。
 _避免使用_：menu、dropdown、tooltip、card stack
 
 **Profile view**：
@@ -845,7 +879,7 @@ PersonaBot 或 Group Profile 的展开形态。它占据 Channel body，暂时�
 _避免使用_：panel、page、tab、inspector、settings
 
 **Profile Card**：
-PersonaBot 或 Group Profile 中一个已注册的 component，具有稳定 id、label、order、scope、visibility rule，以及 compact 与 full 两种 renderer，可用于展示信息、提供 control，或同时承担两者。Human 可以把 Profile Card pin 到相应的 Profile popover。
+PersonaBot 或 Group Profile 中一个已注册的 component，具有稳定 id、label、order、scope、visibility rule，以及 compact 与 full 两种 renderer，可用于展示信息、提供 control，或同时承担两者。可用的卡片直接显示在 Profile view 中，不再固定到独立预览。
 _避免使用_：widget、tile、gadget、Channel sidebar entry
 
 **Client bridge**：
@@ -870,6 +904,12 @@ _避免使用_：secret、API key、token
 
 ### 遥测与推广活动
 
+**Mobile Telemetry**：
+Expo 手机应用内默认开启、可在设置底部关闭的粗粒度统计，独立于 Host 统计。只观察配对、实时连接和首次聊天结果，不拥有产品权威，不包含聊天内容或领域标识（ADR-0214）。
+
+**Mobile Install ID**：
+启用统计时保存在手机上的随机统计 UUID，与 Host Install ID、配对设备身份、Human 账号及网站访客均独立。关闭统计会清除标识和待发队列，再开启生成新标识；系统恢复应用数据可能恢复已保存的选择与标识。
+
 **Telemetry**：
 Host 发送到项目分析服务的匿名产品使用事件，默认开启，可用插件配置 `telemetry: false`、`DO_NOT_TRACK=1` 或 `BOTHARNESS_TELEMETRY=0` 关闭。从不包含名称、Memory、对话内容、路径或 IP 地址（ADR-0132）。
 _避免使用_：追踪、分析 SDK、崩溃上报器
@@ -885,3 +925,9 @@ _避免使用_：广告、促销
 **Campaign Link**：
 `go.botharness.ai` 上对应 Campaign 中某一条帖子或视频的短链，带有平台和媒体类型；访问时重定向到官网并附上 UTM 参数，同时计入点击。
 _避免使用_：短网址、UTM 链接、邀请链接
+
+### Sessions panel（会话面板）
+
+查看已有 Session 的唯一会话 surface（`sessions`，TextQuote 图标）；在两层目标布局中，它是消息面板内的 Channel subpanel（ADR-0221）。PersonaBot 私聊固定查看该 Bot；群聊默认查看「当前频道」，即原始 Source Event 属于该群的 Assignment，跨负责 Bot 展示。Human 可以明确选择可访问的群成员 Bot，查看其 Orchestrator 与 Assignment Session，且不改变当前聊天。范围是按频道保存的本地视图偏好，与历史筛选及工作区分组独立。查看操作不创建 Assignment、不发送执行请求、不改变执行。旧工作面板退役；活动中心仍负责 Human 待处理事项与审批。见 ADR-0220。
+
+会话面板默认跟随当前频道时不重复显示范围标签；群聊范围选择收进视图选项菜单，仅显式指定 Bot 时在标题栏显示 `Bot · 名称`。

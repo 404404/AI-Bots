@@ -14,6 +14,7 @@ export const radius = {
   sm: 8,
   md: 12,
   lg: 16,
+  xl: 28,
   round: 9999,
 } as const;
 
@@ -21,6 +22,15 @@ export const edge = {
   hairline: 1,
   focus: 2,
 } as const;
+
+export const sheetHandle = { width: 32, height: 4 } as const;
+export const navigationBar = {
+  height: 64,
+  indicatorWidth: 56,
+  indicatorHeight: 32,
+  itemPadding: 6,
+} as const;
+export const modalRail = { maxWidth: 360 } as const;
 
 export type TypeRole = { size: number; line: number };
 
@@ -85,6 +95,17 @@ export const motion = {
   menu: 160,
 } as const;
 
+export const markdownTable = { minColumnWidth: 96, maxColumnWidth: 280 } as const;
+
+export const drawerSpring = { duration: 280, dampingRatio: 1 } as const;
+
+export const streamReveal = {
+  duration: 180,
+  stagger: 72,
+  maxGlyphs: 48,
+  maxFreshSpans: 8,
+} as const;
+
 export const lift = 0.96;
 
 export const tabMotion = {
@@ -92,13 +113,6 @@ export const tabMotion = {
 } as const;
 
 export const scrollChrome = { threshold: 12, top: 2, duration: 180 } as const;
-
-export const navigationBar = {
-  height: 64,
-  indicatorWidth: 56,
-  indicatorHeight: 32,
-  itemPadding: 6,
-} as const;
 
 export const PRESS_TINT = 0.12;
 

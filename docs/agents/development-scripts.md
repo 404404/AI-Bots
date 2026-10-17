@@ -6,7 +6,7 @@ Vitest runs test files in parallel workers, one isolated worker per file; Git-ba
 
 ## CI test plan
 
-The `verify` workflow runs lint, format, typecheck and build on every pull request. Tests and the docs site build run only where `scripts/ci-plan.mjs` says the change can reach them:
+The `verify` workflow runs lint, format, typecheck, Expo Doctor, repository build and iOS/Android mobile bundle exports on every pull request. The `mobile-export` job uses the frozen workspace lockfile and pinned Node/pnpm toolchain, and must succeed for the required aggregate check to pass. Bundle exports do not replace native compilation or device QA. Tests and the docs site build run only where `scripts/ci-plan.mjs` says the change can reach them:
 
 - **Full**: pushes to `main`, the nightly schedule, manual dispatch, the `ci:full` label, and any pull request that changes a full-run input below. The suite runs in parallel shards.
 - **Affected**: every other pull request runs `vitest related` on its changed files, plus every test-area file that names a changed path as a string (for example a fixture, migration, workflow or script read with `fs` or run as a subprocess) and the import closure of such a named script.
