@@ -271,6 +271,21 @@ describe('Tob-owned delegated Memory reading', () => {
       ok: false,
       error: { code: 'memory-read-only' },
     });
+    expect(
+      await b.cli([
+        'memory-save',
+        'alpha',
+        '--path',
+        'AX-DENIED.md',
+        '--body',
+        'overwrite',
+        '--expected-head',
+        sources[0]!.sha,
+        '--edit-id',
+        'assignment-denied-edit',
+      ]),
+    ).toMatchObject({ status: 1, value: { error: { code: 'memory-read-only' } } });
+    expect(f.core.memory.readAccepted('alpha', 'AX-DENIED.md')).toBeUndefined();
     expect(await b.invoke('memory-snapshot', { slug: f.tob.botSlug })).toMatchObject({
       ok: false,
       error: { code: 'memory-target-denied' },
