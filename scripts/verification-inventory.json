@@ -1796,7 +1796,7 @@
       "behaviors": ["desktop.tob.memory-edit"],
       "reason": "Independent Human CLI edit/retry/stale refusal and real Tob edit/deny/stale/restore with rendered approval, canonical Memory and untouched second Bot; Web and macOS are separate runs.",
       "task": 2092,
-      "sha256": "21e33fc3e7180cd2410f801698a0b9dbf84ed9692c7be27e3f570efca8c65902"
+      "sha256": "748004f434d957714105fd00a592e75d6de90730dc203031e500985e63e836b2"
     }
   ],
   "native": [
