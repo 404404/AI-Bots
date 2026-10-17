@@ -316,11 +316,11 @@ describe('Human attention projection', () => {
       const second = core.humanAttention.list({
         category: 'unread',
         limit: 1,
-        cursor: first.nextCursor!!,
+        cursor: first.nextCursor!,
       });
       expect(second.items[0]?.id).not.toBe(first.items[0]?.id);
       expect(() =>
-        core.humanAttention.list({ category: 'action', cursor: first.nextCursor!! }),
+        core.humanAttention.list({ category: 'action', cursor: first.nextCursor! }),
       ).toThrow('Human attention cursor is invalid for these filters');
       expect(
         core.humanAttention.list({ category: 'unread', channelId: 'group-other' }).items,

@@ -1,12 +1,16 @@
 import { ActivityApproval, useActivityRows } from './activity-approval.js';
 import { PanelEmptyState } from './ds/empty-state.js';
-import { useCallback, useId, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
 import {
-  HumanInboxFilter,
-  HumanInboxSnoozeButton,
-  HumanInboxSourceButton,
-} from './human-inbox-controls.js';
+  useCallback,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives';
+import { HumanInboxSnoozeButton, HumanInboxSourceButton } from './human-inbox-controls.js';
 import { canSnoozeHumanInboxItem } from './human-inbox-snooze.js';
 
 import type { BridgeActions } from './actions.js';
@@ -16,15 +20,12 @@ import {
 } from './human-attention-source.js';
 import { useClientState } from './bot-sidebar.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
-import { store } from './store.js';
-import type { HumanAttentionItem, HumanInboxCategory, HumanInboxFilters } from './store.js';
+import type { HumanAttentionItem } from './store.js';
 import { useMountedResource } from './mounted-resource.js';
 import { webModalOpen } from './channel-shortcuts.js';
 import { HumanInboxReply } from './human-inbox-reply.js';
-import { Modal } from './modal.js';
 import { HumanInboxDismiss } from './human-inbox-detail-controls.js';
 import { HumanInboxWorkspaceAction } from './human-inbox-workspace-action.js';
-import { useHumanActionScope } from './human-inbox-scope.js';
 import { HumanInboxAssignment } from './human-inbox-assignment.js';
 import {
   AllowAutoRejectionButton,
@@ -56,20 +57,14 @@ const batchApprovable = (item: HumanAttentionItem): boolean =>
   item.messageId !== undefined;
 
 export function HumanInboxView({
-  actions: sourceActions,
-  actionBotSlug,
+  actions,
   t = zhTranslate,
-  embedded = false,
-  activity = false,
   inboxOverride,
   emptyMessage,
   sectionHeading,
   collapsed = false,
 }: {
   actions: BridgeActions;
-  actionBotSlug?: string;
-  embedded?: boolean;
-  activity?: boolean;
   inboxOverride?: import('./store.js').HumanInboxState;
   sectionHeading?: ReactNode;
   emptyMessage?: string | undefined;
@@ -77,38 +72,34 @@ export function HumanInboxView({
   t?: BotHarnessTranslate | undefined;
 }): ReactElement {
   const state = useClientState();
-  const scope = useHumanActionScope(sourceActions, actionBotSlug);
-  const actions = scope.actions;
-  const inbox =
-    inboxOverride ??
-    (actionBotSlug === undefined
-      ? state.humanInbox
-      : {
-          ...state.humanInbox,
-          ...scope.page,
-          category: 'action' as const,
-          botSlug: actionBotSlug,
-          channelId: undefined,
-          sort: 'oldest' as const,
-        });
+  const inbox = inboxOverride ?? state.humanInbox;
   const [selectionMode, setSelectionMode] = useState(false);
-  const retained = useActivityRows(
-    inbox.items,
-    JSON.stringify([inbox.category, inbox.botSlug, inbox.channelId, inbox.sort, inbox.snoozed]),
-    activity && !selectionMode,
-  );
   const detailId = useId();
   const [busyId, setBusyId] = useState<string>();
   const [actionError, setActionError] = useState<string>();
   const [replySource, setReplySource] = useState<HumanAttentionItem>();
-  const [actionSource, setActionSource] = useState<HumanAttentionItem>();
+  const replyRows = useMemo(
+    () =>
+      replySource &&
+      ['channel-unread', 'channel-reply', 'channel-mention'].includes(replySource.kind) &&
+      !inbox.items.some((item) => itemKey(item) === itemKey(replySource))
+        ? [...inbox.items, replySource]
+        : inbox.items,
+    [inbox.items, replySource],
+  );
+  const retained = useActivityRows(
+    replyRows,
+    JSON.stringify([inbox.category, inbox.botSlug, inbox.channelId, inbox.sort, inbox.snoozed]),
+    !selectionMode,
+  );
+
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [cursor, setCursor] = useState<string>();
   const [snoozeMenu, setSnoozeMenu] = useState<string>();
   const [batchBusy, setBatchBusy] = useState(false);
   const root = useRef<HTMLDivElement | null>(null);
   const keyHandler = useRef<(event: KeyboardEvent) => void>(() => undefined);
-  const selectable = actionBotSlug === undefined && (!activity || selectionMode);
+  const selectable = selectionMode;
   const selectedItems = inbox.items.filter((item) => selected.has(itemKey(item)));
 
   const openAction = (item: HumanAttentionItem): void => {
@@ -118,36 +109,14 @@ export function HumanInboxView({
         .catch(() => setActionError(t('humanInbox.failed')));
       return;
     }
-    if (actionBotSlug !== undefined) setActionSource(item);
-    else setReplySource(item);
+    setReplySource(item);
   };
-
-  const mount = useMountedResource<HTMLDivElement>(() => {
-    if (actionBotSlug !== undefined || inboxOverride !== undefined) return;
-    const timer = window.setInterval(() => {
-      if (store.getSnapshot().humanInbox.items.length <= 150)
-        void actions.refreshHumanInbox(undefined, true);
-    }, 10_000);
-    return () => window.clearInterval(timer);
-  }, [actions, actionBotSlug, inboxOverride !== undefined]);
 
   const botName = (slug: string): string =>
     state.bots.find((bot) => bot.slug === slug)?.displayName ?? slug;
   const bots = [...state.bots].sort((left, right) =>
     left.displayName.localeCompare(right.displayName),
   );
-  const channels = state.channels
-    .filter((channel) =>
-      inbox.category === 'action'
-        ? channel.type === 'group' || (channel.type === 'dm' && channel.botSlug !== undefined)
-        : inbox.category === 'replies'
-          ? channel.type === 'group'
-          : inbox.category === 'unread'
-            ? channel.type === 'group' || (channel.type === 'dm' && channel.botSlug !== undefined)
-            : channel.type === 'dm' && channel.botSlug !== undefined,
-    )
-    .sort((left, right) => left.name.localeCompare(right.name));
-
   const openRepairBotInbox = (item: HumanAttentionItem): Promise<void> =>
     openRepairBotInboxFor(actions, item);
   const openSource = (item: HumanAttentionItem): Promise<void> =>
@@ -270,10 +239,6 @@ export function HumanInboxView({
   };
 
   const toggleDetail = (item: HumanAttentionItem): void => {
-    if (actionBotSlug !== undefined) {
-      setActionSource(item);
-      return;
-    }
     setReplySource(
       replySource?.id === item.id && replySource.sourceEventId === item.sourceEventId
         ? undefined
@@ -283,7 +248,6 @@ export function HumanInboxView({
 
   keyHandler.current = (event) => {
     if (
-      activity &&
       event.target instanceof Element &&
       event.target.closest('.bh-tool-approval-card, .bh-human-inbox-reply')
     )
@@ -292,7 +256,7 @@ export function HumanInboxView({
     if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
     if (event.isComposing || webModalOpen(document)) return;
     const container = root.current;
-    if (container === null || actionSource !== undefined) return;
+    if (container === null) return;
     const target = event.target instanceof Element ? event.target : null;
     if (target !== null && target !== document.body && !container.contains(target)) return;
     if (
@@ -312,8 +276,6 @@ export function HumanInboxView({
     else if (key === 'Enter' && onRow && current !== undefined)
       void openSource(current).catch(() => setActionError(t('humanInbox.failed')));
     else if (key === 'o' && current !== undefined) toggleDetail(current);
-    else if (!activity && key === 'e' && current !== undefined && current.category !== 'handled')
-      void settleOne(current);
     else if (key === 'x' && selectable && current !== undefined && current.category !== 'handled')
       toggleSelected(current);
     else if (key === 's' && selectable && current !== undefined && canSnoozeHumanInboxItem(current))
@@ -329,14 +291,12 @@ export function HumanInboxView({
     document.addEventListener('keydown', listener);
     return () => document.removeEventListener('keydown', listener);
   }, []);
-  const scopeMount = scope.mount;
   const rootRef = useCallback(
     (node: HTMLDivElement | null) => {
       root.current = node;
-      (actionBotSlug === undefined ? mount : scopeMount)(node);
       keysMount(node);
     },
-    [actionBotSlug, mount, scopeMount, keysMount],
+    [keysMount],
   );
 
   const itemTitle = (item: HumanAttentionItem): string =>
@@ -372,21 +332,6 @@ export function HumanInboxView({
                         : item.kind === 'bot-message-needs-repair'
                           ? t('humanInbox.repair', { bot: botName(item.botSlug) })
                           : botName(item.botSlug);
-
-  const changeCategory = (category: HumanInboxCategory): void => {
-    if (category === inbox.category) return;
-    setActionError(undefined);
-    setReplySource(undefined);
-    setSelected(new Set());
-    void actions.refreshHumanInbox(category);
-  };
-
-  const changeFilters = (filters: HumanInboxFilters): void => {
-    setReplySource(undefined);
-    setActionError(undefined);
-    setSelected(new Set());
-    void actions.setHumanInboxFilters(filters);
-  };
 
   const renderSource = (source: HumanAttentionItem, onClose: () => void): ReactElement =>
     source.kind === 'auto-rejection' ? (
@@ -457,157 +402,33 @@ export function HumanInboxView({
     );
 
   return (
-    <div
-      className={
-        actionBotSlug !== undefined
-          ? 'bh-human-inbox bh-overview-actions'
-          : embedded
-            ? 'bh-human-inbox'
-            : 'bh-root bh-main bh-human-inbox'
-      }
-      ref={rootRef}
-    >
-      <main
-        className={
-          'bh-human-inbox-inner' +
-          (activity ? ' bh-activity-inbox' : '') +
-          (replySource === undefined || activity ? '' : ' bh-human-inbox-with-context')
-        }
-      >
-        {embedded ? null : <h1>{t('humanInbox.title')}</h1>}
-        {activity ? (
-          <div className="bh-activity-toolbar">
-            <h2>
-              {sectionHeading ??
-                t(
-                  inbox.category === 'action'
-                    ? 'activityInbox.needsYou'
-                    : categoryCopy[inbox.category].title,
-                )}
-            </h2>
-            {!collapsed && inbox.items.length > 0 ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-pressed={selectionMode}
-                disabled={batchBusy}
-                onClick={() => {
-                  setSelectionMode(!selectionMode);
-                  setSelected(new Set());
-                }}
-              >
-                {t(selectionMode ? 'common.cancel' : 'activityInbox.select')}
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-        <div hidden={collapsed}>
-          {actionBotSlug !== undefined || activity ? null : (
-            <>
-              <div
-                className="bh-human-inbox-tabs"
-                role="tablist"
-                aria-label={t('humanInbox.title')}
-              >
-                {(['unread', 'replies', 'action', 'info', 'handled'] as const)
-                  .filter((category) => !activity || category !== 'info')
-                  .map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      role="tab"
-                      aria-selected={inbox.category === category}
-                      onClick={() => changeCategory(category)}
-                    >
-                      {t(categoryCopy[category].title)}
-                    </button>
-                  ))}
-              </div>
-              {inbox.items.length <= 150 ? null : (
-                <div role="status">
-                  <p>{t('humanInbox.refresh.paused')}</p>
-                  <button type="button" onClick={() => void actions.refreshHumanInbox()}>
-                    {t('humanInbox.refresh.current')}
-                  </button>
-                </div>
+    <div className="bh-human-inbox" ref={rootRef}>
+      <main className="bh-human-inbox-inner bh-activity-inbox">
+        <div className="bh-activity-toolbar">
+          <h2>
+            {sectionHeading ??
+              t(
+                inbox.category === 'action'
+                  ? 'activityInbox.needsYou'
+                  : categoryCopy[inbox.category].title,
               )}
-              <div className="bh-human-inbox-filters">
-                {inbox.category === 'unread' ? null : (
-                  <HumanInboxFilter
-                    label={t('humanInbox.filter.bot')}
-                    value={inbox.botSlug ?? ''}
-                    options={[
-                      { id: '', label: t('humanInbox.filter.allBots') },
-                      ...bots.map((bot) => ({ id: bot.slug, label: bot.displayName })),
-                    ]}
-                    onChange={(value) =>
-                      changeFilters({
-                        botSlug: value || undefined,
-                        channelId: inbox.channelId,
-                        sort: inbox.sort,
-                      })
-                    }
-                  />
-                )}
-                <HumanInboxFilter
-                  label={t('humanInbox.filter.channel')}
-                  value={inbox.channelId ?? ''}
-                  options={[
-                    { id: '', label: t('humanInbox.filter.allChannels') },
-                    ...channels.map((channel) => ({ id: channel.id, label: channel.name })),
-                  ]}
-                  onChange={(value) =>
-                    changeFilters({
-                      botSlug: inbox.botSlug,
-                      channelId: value || undefined,
-                      sort: inbox.sort,
-                    })
-                  }
-                />
-                <HumanInboxFilter
-                  label={t('humanInbox.filter.sort')}
-                  value={inbox.sort}
-                  options={[
-                    { id: 'newest', label: t('humanInbox.filter.newest') },
-                    { id: 'oldest', label: t('humanInbox.filter.oldest') },
-                  ]}
-                  onChange={(value) =>
-                    changeFilters({
-                      botSlug: inbox.botSlug,
-                      channelId: inbox.channelId,
-                      sort: value === 'oldest' ? 'oldest' : 'newest',
-                    })
-                  }
-                />
-                {inbox.category === 'unread' || inbox.category === 'handled' ? null : (
-                  <Button
-                    variant="outline"
-                    type="button"
-                    className="bh-human-inbox-snoozed-toggle"
-                    aria-pressed={inbox.snoozed}
-                    onClick={() =>
-                      changeFilters({
-                        botSlug: inbox.botSlug,
-                        channelId: inbox.channelId,
-                        sort: inbox.sort,
-                        snoozed: !inbox.snoozed,
-                      })
-                    }
-                  >
-                    {t('humanInbox.snoozed')}
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-          {(actionBotSlug !== undefined || activity) && inbox.items.length > 150 ? (
-            <div role="status">
-              <p>{t('humanInbox.refresh.paused')}</p>
-              <button type="button" onClick={() => void actions.refreshHumanInbox()}>
-                {t('humanInbox.refresh.current')}
-              </button>
-            </div>
+          </h2>
+          {!collapsed && inbox.items.length > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-pressed={selectionMode}
+              disabled={batchBusy}
+              onClick={() => {
+                setSelectionMode(!selectionMode);
+                setSelected(new Set());
+              }}
+            >
+              {t(selectionMode ? 'common.cancel' : 'activityInbox.select')}
+            </Button>
           ) : null}
+        </div>
+        <div hidden={collapsed}>
           {actionError === undefined ? null : <p role="alert">{actionError}</p>}
           {inbox.error === undefined ? null : (
             <div role="alert">
@@ -628,11 +449,7 @@ export function HumanInboxView({
               </p>
             ) : (
               <PanelEmptyState icon="bell">
-                {t(
-                  inbox.snoozed && actionBotSlug === undefined
-                    ? 'humanInbox.empty.snoozed'
-                    : categoryCopy[inbox.category].empty,
-                )}
+                {t(inbox.snoozed ? 'humanInbox.empty.snoozed' : categoryCopy[inbox.category].empty)}
               </PanelEmptyState>
             )
           ) : null}
@@ -730,11 +547,10 @@ export function HumanInboxView({
           ) : null}
           <div className="bh-human-inbox-workspace">
             <div ref={retained.mount} role="list" tabIndex={-1} className="bh-human-inbox-list">
-              {(activity && !selectionMode
+              {(!selectionMode
                 ? retained.rows
                 : inbox.items.map((item) => ({ item, leaving: false }))
               ).map(({ item, leaving }) =>
-                activity &&
                 item.kind === 'tool-approval' &&
                 item.category === 'action' &&
                 item.channelId &&
@@ -1005,7 +821,7 @@ export function HumanInboxView({
                         }
                       />
                     </div>
-                    {activity && replySource?.id === item.id ? (
+                    {replySource?.id === item.id ? (
                       <div id={detailId} className="bh-human-inbox-detail">
                         {renderSource(item, () => setReplySource(undefined))}
                       </div>
@@ -1014,11 +830,6 @@ export function HumanInboxView({
                 ),
               )}
             </div>
-            {replySource === undefined || activity ? null : (
-              <div id={detailId} className="bh-human-inbox-detail">
-                {renderSource(replySource, () => setReplySource(undefined))}
-              </div>
-            )}
           </div>
           {inbox.nextCursor === undefined ? null : (
             <button
@@ -1030,18 +841,6 @@ export function HumanInboxView({
             </button>
           )}
         </div>
-        {actionSource === undefined ? null : (
-          <Modal
-            open
-            title={itemTitle(actionSource)}
-            closeLabel={t('common.close')}
-            onClose={() => setActionSource(undefined)}
-            className="bh-root bh-human-inbox-action-dialog"
-            contentClassName="bh-human-inbox-action-dialog-content"
-          >
-            {renderSource(actionSource, () => setActionSource(undefined))}
-          </Modal>
-        )}
       </main>
     </div>
   );

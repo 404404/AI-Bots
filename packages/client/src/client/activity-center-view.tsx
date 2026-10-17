@@ -4,7 +4,6 @@ import type { BridgeActions } from './actions.js';
 import { HumanInboxView } from './human-inbox-view.js';
 import { zhTranslate, type BotHarnessTranslate } from './locale.js';
 import { useMountedResource } from './mounted-resource.js';
-import type { NativeSessionCatalog } from './sessions-entry.js';
 import { activitySectionActions, useActivityFeed, type ActivitySection } from './activity-feed.js';
 import {
   IconChevronDownOutlineMedium,
@@ -25,7 +24,6 @@ export function ActivityCenterView({
 }: {
   actions: BridgeActions;
   t?: BotHarnessTranslate;
-  nativeSessions?: NativeSessionCatalog | undefined;
   placement?: 'page' | 'panel';
 }): ReactElement {
   const panel = placement === 'panel';
@@ -78,8 +76,6 @@ export function ActivityCenterView({
               key={section + filterKey}
               actions={scoped[section]}
               t={t}
-              embedded
-              activity
               inboxOverride={page}
               emptyMessage={query.search ? t('activityInbox.noResults') : undefined}
               collapsed={!expanded}

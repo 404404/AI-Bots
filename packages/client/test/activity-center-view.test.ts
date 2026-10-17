@@ -114,9 +114,7 @@ async function scenario(placement: 'page' | 'panel', mode: 'success' | 'retry' |
     [...container.querySelectorAll<HTMLButtonElement>('button')].find(
       (node) => node.textContent?.trim() === text,
     );
-  store.select(
-    placement === 'panel' ? { kind: 'bot', slug: 'other' } : { kind: 'inbox', view: 'overview' },
-  );
+  store.select(placement === 'panel' ? { kind: 'bot', slug: 'other' } : { kind: 'inbox' });
   store.setHumanInbox({
     ...previous.humanInbox,
     category: 'action',
