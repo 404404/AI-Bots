@@ -554,6 +554,12 @@ export interface OrchestratorChannelAccess {
     deliveryKey?: string;
   }): Promise<{ channelId: string; message: ChannelMessage }>;
   createBot?(input: BotCreateInput): BotCreateOutcome;
+  inspectDrafts?(input: {
+    channelId: string;
+    draftId?: string;
+  }):
+    | import('../channels/send-review.js').DraftInspection
+    | import('../channels/send-review.js').SendReviewOutcome;
   dropDraft?(input: {
     channelId: string;
     draftId: string;
@@ -563,6 +569,7 @@ export interface OrchestratorChannelAccess {
   send(input: {
     observationId?: string;
     draftId?: string;
+    recover?: boolean;
     body: string;
     channelId?: string;
     replyTo?: string;
@@ -3972,6 +3979,7 @@ class BotRuntimeImplementation implements BotRuntime {
     ].filter((run): run is Promise<void> => run !== undefined);
     if (this.#agents.stopBot === undefined && active.length > 0)
       throw new Error('Agent adapter cannot stop this Bot safely');
+    this.groupSendReview.stop(botSlug);
     this.#database.transaction(
       (database) => {
         database
@@ -4005,6 +4013,7 @@ class BotRuntimeImplementation implements BotRuntime {
     const sessionId = this.#agents.stopOrchestratorTurn?.(botSlug);
     if (sessionId === undefined) return undefined;
     this.#stoppedTurns.add(botSlug);
+    this.groupSendReview.stop(botSlug);
     this.#stopNotices.set(
       botSlug,
       `[Host: the Human stopped your previous turn at ${this.#now().toISOString()} before it finished. Do not resume that work unless they ask again.]\n\n`,
@@ -5968,6 +5977,27 @@ class BotRuntimeImplementation implements BotRuntime {
         if (appended === undefined) throw new Error(`Channel disappeared: ${channel.id}`);
         return appended;
       },
+      inspectDrafts: (input) => {
+        const channel = this.#channels.get(input.channelId);
+        const bot = this.#registry.get(botSlug);
+        if (
+          !channel ||
+          channel.type !== 'group' ||
+          !this.#isMember(botSlug, channel) ||
+          !bot ||
+          bot.paused ||
+          this.#closed
+        )
+          return {
+            status: 'refused',
+            channelId: input.channelId,
+            draftId: input.draftId ?? '',
+            reason: 'draft-access-unavailable',
+          };
+        requireReplySource();
+        this.#requireSendReviewOwner(botSlug, sessionId);
+        return this.groupSendReview.inspectRecords(reviewOwner, channel.id, input.draftId);
+      },
       dropDraft: (input) => {
         resolve(input.channelId);
         return this.groupSendReview.drop(
@@ -6049,6 +6079,7 @@ class BotRuntimeImplementation implements BotRuntime {
             reviewOwner,
             observationId: input.observationId ?? initialObservations.get(channel.id),
             draftId: input.draftId,
+            recover: input.recover,
             botSlug,
             channel,
             sourceEventId,
@@ -6141,10 +6172,22 @@ class BotRuntimeImplementation implements BotRuntime {
     };
   }
 
+  #requireSendReviewOwner(botSlug: string, sessionId: string): void {
+    if (sessionId.startsWith('direct-')) return;
+    const owner = this.#ownership?.resolve(sessionId);
+    if (
+      owner?.botSlug !== botSlug ||
+      owner.rootRole !== 'orchestrator' ||
+      !this.#ownership?.contentAvailable(sessionId)
+    )
+      throw new Error('Group sender Session ownership changed');
+  }
+
   async #sendBotGroup(input: {
     reviewOwner?: string | undefined;
     observationId?: string | undefined;
     draftId?: string | undefined;
+    recover?: boolean | undefined;
     botSlug: string;
     channel: ChannelRecord;
     sourceEventId: string;
@@ -6242,6 +6285,26 @@ class BotRuntimeImplementation implements BotRuntime {
       ...this.#perf(input.sessionId, body),
     };
     input.beforeSend();
+    if (this.groupSendReview.enabled(channel.id) || input.draftId !== undefined)
+      this.#requireSendReviewOwner(botSlug, input.sessionId);
+    this.#database.read((db) => requireSourceEffects(db, input.sourceEventId, botSlug));
+    if (
+      input.reviewOwner !== undefined &&
+      (this.groupSendReview.enabled(channel.id) || input.draftId !== undefined)
+    ) {
+      const replayId = this.groupSendReview.replay(
+        input.reviewOwner,
+        channel.id,
+        input.draftId ?? message.id,
+        message,
+      );
+      if (replayId !== undefined) {
+        const committed = this.#channels.message(channel.id, replayId);
+        if (!committed) throw new Error('Committed Group message is unavailable');
+        input.afterSend?.();
+        return committed;
+      }
+    }
     let reviewOutcome: import('../channels/send-review.js').SendReviewOutcome | undefined;
     const result = await this.#channels.appendMessageOnce(
       channel.id,
@@ -6260,13 +6323,7 @@ class BotRuntimeImplementation implements BotRuntime {
           !input.sessionId.startsWith('direct-') &&
           (this.groupSendReview.enabled(channel.id) || input.draftId !== undefined)
         ) {
-          const owner = this.#ownership?.resolve(input.sessionId);
-          if (
-            owner?.botSlug !== botSlug ||
-            owner.rootRole !== 'orchestrator' ||
-            !this.#ownership?.contentAvailable(input.sessionId)
-          )
-            throw new Error('Group sender Session ownership changed');
+          this.#requireSendReviewOwner(botSlug, input.sessionId);
         }
         this.#database.read((database) =>
           requireSourceEffects(database, input.sourceEventId, botSlug),
@@ -6281,6 +6338,7 @@ class BotRuntimeImplementation implements BotRuntime {
             message,
             ...(input.observationId === undefined ? {} : { observationId: input.observationId }),
             ...(input.draftId === undefined ? {} : { draftId: input.draftId }),
+            ...(input.recover === undefined ? {} : { recover: input.recover }),
           });
           if (reviewOutcome) return false;
         }

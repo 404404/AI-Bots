@@ -166,6 +166,16 @@ deepseekbot channel-purge-preview <channel> --source-event <id> | jq '{token}' \
 携带 `draft_id`、新观察凭据和改写（或保持原文）的 `body` 再提交一次。`drop: true` 配合 `draft_id`
 和空 `body` 放弃草稿，不会解决 Inbox 事项。`expired`、`refused`、`requires-review` 停止自动发送。
 凭据不能跨 Bot owner 或 Group 使用。
+
+发送中断后，通过同一条直接 Tool 命令传入
+`{"channel_id":"...","body":"","review_action":"inspect"}`，读取自己最多 20 条草稿／回执元数据，
+待处理记录优先，并返回 `hasMore`；指定 `draft_id` 可查更早的准确记录。检查不发送消息、不结清 Inbox。
+Host 重启后，先读取当前群聊，再用 `review_action:"recover"`、`draft_id`、新 `observation_id`
+和修正后的 `body` 恢复。旧观察无效，过期时间及已消耗的复核预算不重置。
+已提交回执给出原 `messageId`，可读取规范消息核实；同 `draft_id`、同正文重放只返回原消息 ID，
+不新增消息或 Admission。正文变化返回 `draft-commit-content-changed`。成员、owner、来源和附件仍须
+通过当前授权检查；直接 runner 可能在 Tool 执行前拒绝已撤权的群。
+
 主动让话使用同一条 `bot-tool <bot> channel_send --args-stdin`，传入
 `{"channel_id":"...","body":"","drop":true,"draft_id":"...","observation_id":"...","yield_to_message_ids":["..."]}`。
 先读同伴完整答复；`review.peerMessageIds` 标出已完整返回的同伴消息。成功返回

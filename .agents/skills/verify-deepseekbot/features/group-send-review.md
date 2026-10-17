@@ -12,12 +12,26 @@ observed basis. The Human sees only committed replies in canonical history.
 - Recheck: explicit `draft_id` and `observation_id` allow one revision or unchanged recheck.
 - Drop: `drop: true` abandons the draft independently of Inbox resolution.
 - Refuse: revoked membership, purged source, expired draft or restarted Host cannot auto-send.
+- Recover: `channel_send` with `review_action: inspect` exposes own metadata only. After an actual
+  isolated Host restart, a new `channel_read` observation and `review_action: recover` can revise
+  the pending draft. Old observation, expiry, owner and membership checks remain effective.
+- Confirm: a committed draft receipt returns the same canonical message ID on unchanged replay;
+  the message, DM action notice and Inbox Admission counts must not increase.
 - Review: the pilot retains complete paired histories and separate runtime/judge usage.
 - Human preference: two full-history cards accept one Left/Right choice, save it and advance;
   dimensions and reasons are not required. “两边差不多” and “不好判断” are explicit outcomes; the last-choice button reveals per-arm tokens and known cost only after a choice. Skip leaves the pair unreviewed; undo and changes
   preserve previous choices. Legacy rubric scores retain their original review mode.
 
 ## How to get to it (user POV)
+
+For #2056, preserve the isolated Profile and session evidence, hold a draft, stop only that Host,
+restart it, then supply a correction and explicitly resume. Inspect the complete Group history
+and native Tool trace before and after restart. It must show one corrected formal message.
+Use direct `bot-tool` calls to inspect/recover/replay the same contract without the model;
+include changed-body, wrong-owner, expired, purged and revoked cases. Discard a successful send
+response at the transport seam and verify canonical message identity and unchanged Admission
+counts, rather than inferring deduplication from a success status. Count usage across restart.
+No new #2056 model cohort has yet been qualified; the issue records its frozen run protocol.
 
 Create a local Group with two Bots and mentions-only wake settings. Enable it with
 `deepseekbot group-send-review <channel> --accept`. Mention one Bot with a request; correct

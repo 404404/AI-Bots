@@ -453,7 +453,12 @@ describe('Group send review through the same direct model tools', () => {
       expect(core.channels.message(channelId, sent.messageId)?.body).toBe('Confirmed 11:00');
       expect(
         core.runtime.groupSendReview!.inspect('direct:ada', channelId, held.draftId!),
-      ).toBeUndefined();
+      ).toMatchObject({
+        state: 'committed',
+        committed: { messageId: sent.messageId },
+        original: { body: '' },
+        current: { body: '' },
+      });
       const retry = await tool('channel_send', {
         body: 'Duplicate 11:00',
         draft_id: held.draftId,

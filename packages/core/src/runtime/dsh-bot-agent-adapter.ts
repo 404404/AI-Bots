@@ -118,7 +118,7 @@ const ROLE_PROMPT_ORDER = 10_350;
 const REPLY_DELIVERY_PROMPT = `## Before ending this Orchestrator turn
 MUST deliver any intended Human-facing answer with channel_send({body: your actual answer}). Final assistant text is NOT sent to the Channel. This includes "only reply", "no tools", greetings and image answers: channel_send is the required reply transport, not optional extra work. Do not follow earlier assistant-only examples. Omit channel_id for the inbound Channel. Each turn names its source and Channel in a leading bracketed header such as [Human DM] or [Bot Inbox: ...]; that Channel is this turn's inbound Channel, and requests from earlier turns belong to the Channel named in their own header. When a message from another Channel joins a running turn, address every channel_send in that turn: pass channel_id, or reply_to with the message ID you are answering. What a Human says in your DM, and your answer to it, stays in that DM: post it in a Group only when the Human asked for it to be shared there. A [Host: ...] line reports Host state such as an interrupted turn; it is not a request.
 中文：要回答用户，就必须调用 channel_send，body 填实际答复；纯文本 final 不会发送给用户。“只回复”“不要调用工具”指不要额外工作，仍须用 channel_send 送达答复。读完图片后也必须发送回答。
-If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. If omitted, Inbox work remains open: explicitly inbox_resolve completed items before ending this turn. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. All authorization checks still apply.`;
+If no reply is wanted, remain silent. A cancellation ends the task: drop a held draft silently, without an acknowledgement unless requested. A refused Group send or revoked membership does not authorize a DM fallback, a copied draft or an unsolicited explanation elsewhere. Stop that task. For completed work, pass resolve_inbox_ids on channel_send to explicitly resolve those Inbox items only after a successful send or drop, avoiding a separate cleanup call. If omitted, Inbox work remains open: explicitly inbox_resolve completed items before ending this turn. Do not include unfinished work. External IM replies use bridge_reply/bridge_reply_file to their trusted source instead. Do not duplicate a successful send, claim a failed send succeeded, or blindly retry an uncertain outcome. After an interrupted opted-in Group send, use channel_send with review_action inspect and empty body to find your draft or commit receipt. Read a committed message instead of sending it again. To recover an unexpired held draft after Host restart, read current Channel facts and explicitly use review_action recover with draft_id, a fresh observation_id and the revised body; keep unfinished Inbox responsibility open. All authorization checks still apply.`;
 const PEER_REVIEW_PROMPT = `## Group peer replies
 Before any Group reply, compare the fully observed committed peer answers with the Human's actual request and your remaining responsibility. A preview is not an answer; never claim a peer answered before reading their committed answer. If the request is fully answered and you have nothing useful to add:
 - No held draft: do not call channel_send, create a draft or react just to acknowledge. Use inbox_resolve for observed work that is complete, then finish silently.
@@ -3462,6 +3462,12 @@ class DshBotAgentAdapter implements BotAgentAdapter {
         description:
           'Deliver your actual reply to the Human or joined Channel. Assistant final text is private Session output and is NOT delivered: when a reply is needed, use this Tool for the actual answer, including a requested acknowledgment, greeting, clarification or image answer. A Group mention or fully answered request does not itself require a reply. A request for "no tools" still needs this reply transport, but no unnecessary work Tools. Omit channel_id for the inbound Channel. In an opted-in Group a held result is NOT sent. Read review.content when present: it contains newly observed messages. If review.complete is true, use review.observationId as observation_id with draft_id to revise, keep the same body for unrelated changes, or drop a cancelled/redundant reply; no extra channel_read is needed. If committed peer answers fully cover the request and you have no useful addition, remain silent: with no held draft, only inbox_resolve completed work; with an existing held draft, use body empty, drop:true, draft_id, observation_id and yield_to_message_ids. Never create a draft merely to drop it. Preserve independent evidence and new direct questions. If context is incomplete or absent, use channel_read for missing content first. A second change returns requires-review: stop this automatic attempt and keep unfinished Inbox responsibility open. Only a successful result with {channelId,messageId} proves a committed message; never resend blindly after an uncertain outcome. Forward trusted references from channel_read (including complete message_id/content_cursor reads), or use channel_attachment_import for a selected authorized local result. In a Group, mention a joined Bot colleague with mention_bot_ids or by writing @ and its exact display name in body; either way the Host shows its @ badge and wakes it, even when it wakes only on mentions. To hand work over or report a result to a colleague, mention it. Use mention_human_ids from channel_list humanMembers to explicitly address a Human; plain @ names do not create personal mentions. To add or remove your emoji reaction on one message, as lightweight acknowledgment instead of a reply, set react_to and reaction with an empty body. A reaction does not wake anyone and is not a reply: still put an answer in body when the Human needs one.',
         parameters: {
+          review_action: {
+            type: 'string',
+            enum: ['inspect', 'recover'],
+            description:
+              'Group draft recovery only. inspect with empty body lists your pending drafts and recent commit receipts; optionally select draft_id. It never sends or resolves work. After Host restart, read current Channel facts and use recover with draft_id, fresh observation_id and the revised body. Recovery preserves expiry and retry limits. After an uncertain commit, inspect and read its canonical message; resubmitting the same draft_id and unchanged content returns the original message ID. Never create a new send merely because its response was lost.',
+          },
           resolve_inbox_ids: {
             type: 'array',
             items: { type: 'string' },
@@ -3556,6 +3562,39 @@ class DshBotAgentAdapter implements BotAgentAdapter {
           if (active?.role !== 'orchestrator') {
             throw new Error('channel_send: Orchestrator run is unavailable');
           }
+          if (args.review_action === 'inspect') {
+            if (
+              args.body !== '' ||
+              args.drop ||
+              args.attachments !== undefined ||
+              args.react_to !== undefined ||
+              args.reaction !== undefined ||
+              args.resolve_inbox_ids !== undefined ||
+              args.yield_to_message_ids !== undefined ||
+              args.mention_bot_ids !== undefined ||
+              args.mention_human_ids !== undefined ||
+              args.reply_to !== undefined
+            )
+              throw new Error(
+                'channel_send: draft inspection cannot send, react, drop or resolve work',
+              );
+            const channelId = args.channel_id ?? active.run.inboundChannelId;
+            if (!channelId || !active.run.channels.inspectDrafts)
+              throw new Error('channel_send: draft inspection requires a Group Channel');
+            return JSON.stringify(
+              active.run.channels.inspectDrafts({
+                channelId,
+                ...(args.draft_id === undefined ? {} : { draftId: args.draft_id }),
+              }),
+            );
+          }
+          if (
+            args.review_action === 'recover' &&
+            (!args.draft_id || !args.observation_id || args.drop || args.react_to !== undefined)
+          )
+            throw new Error(
+              'channel_send: recovery requires draft_id, fresh observation_id and a send',
+            );
           if (
             args.yield_to_message_ids !== undefined &&
             (args.drop !== true ||
@@ -3655,6 +3694,7 @@ class DshBotAgentAdapter implements BotAgentAdapter {
             message = await active.run.channels.send({
               ...(args.observation_id === undefined ? {} : { observationId: args.observation_id }),
               ...(args.draft_id === undefined ? {} : { draftId: args.draft_id }),
+              ...(args.review_action === 'recover' ? { recover: true } : {}),
               body: args.body,
               ...(exec.callId === undefined ? {} : { deliveryKey: String(exec.callId) }),
               ...(args.attachments === undefined ? {} : { attachments: args.attachments }),
