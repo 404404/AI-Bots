@@ -5,6 +5,7 @@ import {
   botToolNamesFrom,
   checkCliParity,
   routePathsFrom,
+  profileBackupRoutesFrom,
 } from '../check-cli-parity.mjs';
 
 const cli = `
@@ -14,6 +15,27 @@ const cli = `
 `;
 
 describe('CLI parity check', () => {
+  it('checks dynamic Profile backup actions individually, including a newly added suffix', () => {
+    const routes = profileBackupRoutesFrom(
+      "action === ''; action === '/inspect'; action === '/authorize' || action === '/activate'; action !== ''; action === '/new-action';",
+    );
+    expect(routes).toEqual([
+      '/api/botharness/profile-backup',
+      '/api/botharness/profile-backup/inspect',
+      '/api/botharness/profile-backup/authorize',
+      '/api/botharness/profile-backup/activate',
+      '/api/botharness/profile-backup/new-action',
+    ]);
+    const errors = checkCliParity({
+      surfaces: { bridge: [], routes, tools: [] },
+      cliSource:
+        "'/api/botharness/profile-backup' '/api/botharness/profile-backup/inspect' '/api/botharness/profile-backup/authorize' '/api/botharness/profile-backup/activate'",
+      baseline: {},
+    });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('/new-action');
+  });
+
   it('passes when every surface is covered by the CLI or recorded in the baseline', () => {
     expect(
       checkCliParity({

@@ -1,3 +1,10 @@
+import {
+  BACKUP_COMMANDS,
+  BACKUP_OPTIONS,
+  isBackupCommand,
+  runBackupCommand,
+  type BackupValues,
+} from './cli-backup.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -95,6 +102,7 @@ import {
 export { CliLiveError } from './cli-live-error.js';
 
 export const LIVE_OPTIONS = {
+  ...BACKUP_OPTIONS,
   ...IM_OPTIONS,
   ...MESSAGING_OPTIONS,
   ...MODELS_USAGE_OPTIONS,
@@ -183,6 +191,7 @@ const CONTROL_COMMANDS = [
 ] as const;
 
 export const LIVE_COMMANDS = [
+  ...BACKUP_COMMANDS,
   ...IM_COMMANDS,
   ...MESSAGING_COMMANDS,
   ...MODELS_USAGE_COMMANDS,
@@ -343,6 +352,7 @@ export const LIVE_COMMANDS = [
 
 interface LiveValues
   extends
+    BackupValues,
     ImValues,
     MessagingValues,
     ModelsUsageValues,
@@ -634,12 +644,13 @@ export async function connectLiveHost(values: LiveValues, io: BotCreateCliIo, si
     if (!response.ok) refuse(path, response.status, bytes);
     return { response, bytes };
   };
-  const stream = async (path: string, init: RequestInit = {}): Promise<Response> => {
+  const stream = async (path: string, init: RequestInit = {}, check = true): Promise<Response> => {
     const response = await request(new URL(path, base), {
       ...init,
       headers: { ...(init.headers as Record<string, string> | undefined), cookie },
     });
-    if (!response.ok) refuse(path, response.status, new Uint8Array(await response.arrayBuffer()));
+    if (check && !response.ok)
+      refuse(path, response.status, new Uint8Array(await response.arrayBuffer()));
     return response;
   };
   const socket = (path: string): WebSocket => {
@@ -706,6 +717,15 @@ export async function runLiveCli(
     return runBrowserComputerCommand(command, rest, values, io, () =>
       connectLiveHost(values, io, AbortSignal.timeout(timeoutMs(values.timeout))),
     );
+  if (isBackupCommand(command))
+    return runBackupCommand(command, rest, values, io, async () => {
+      const host = await connectLiveHost(
+        values,
+        io,
+        AbortSignal.timeout(timeoutMs(values.timeout)),
+      );
+      return { stream: (path, init) => host.stream(path, init, false) };
+    });
   if (isProfileCommand(command))
     return runProfileCommand(command, rest, values, io, async () => {
       const signal = AbortSignal.timeout(timeoutMs(values.timeout));

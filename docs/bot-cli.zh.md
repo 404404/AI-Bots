@@ -865,3 +865,22 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+## Profile 备份与恢复
+
+在线命令通过已认证的运行中 Host 调用与 Bot 模式 Settings 相同的备份 owner，不在运行中的 Host 上覆盖恢复。stdout 不包含档案内容或一次性导出 token。Human CLI 文件路径必须为绝对路径，输出只能创建新的私有文件（POSIX 为 0600），预览计划输入必须为权限私有的普通文件。先检查返回的范围，再确认导出；Profile 变化或五分钟计划过期会拒绝为 `preview-stale`。失败导出的不完整文件会被删除。请私下保存计划和档案。
+
+```sh
+deepseekbot profile-backup-preview --out /private/path/review.json
+deepseekbot profile-backup-export --file /private/path/review.json --out /private/path/environment.botharness-backup --confirm
+deepseekbot profile-backup-inspect --file /private/path/environment.botharness-backup
+deepseekbot profile-recovery
+deepseekbot profile-recovery-authorize <bot-slug> --confirm
+deepseekbot profile-recovery-activate <bot-slug> --confirm --acknowledge-split-brain
+```
+
+`profile-backup-inspect` 将受保护档案上传到所选 Host，只返回有界数量、Session 支持情况、字节数和完整性元数据。已有的 `botharness-profile inspect --file <archive>` 在本地离线检查。`botharness-profile restore --file <archive> --new-home <new-directory>` 仍是唯一恢复入口：必须选择不存在的新目录，恢复后保持停止及冷状态，不重启或修改正在使用的 Desktop。使用可信固定版 DSH 0.2.0-rc.2 和当前 BotHarness 候选版启动新数据空间，再对新 Host 执行恢复命令。仍可读取 rc.1 生成的 v1 档案。原生 Session 历史仍不支持迁移；凭据和外部权限不会导入。
+
+恢复的 Bot 必须在目标端明确配置 Model Plan 和凭据，逐个授权并确认同身份双活风险。先检查就绪状态，再授权或激活一个 Bot。Plan 变化会使授权失效。Browser／Computer access、外部绑定、Workspace 和其他导入权限保持挂起，需要通过原有路径独立授权。
+
+在 Tob 经过认证的 Home／私聊 Shell 中，先发现当前 capabilities。`profile-backup-preview` 只返回安全的 `planId`，导出 bearer token 留在 Host 内。`profile-backup-export --plan <planId> --confirm` 经过新的 Human 审核，仅写入 Host 受保护档案；回执只返回 `receiptId`、文件位置、字节数和 hash。`profile-backup-inspect --receipt <receiptId>` 返回有界元数据。Tob 不能提供 `--host`、`--token-file`、任意输入／输出路径或档案内容。模型授权与激活同样需要 Human 审核、当前就绪状态和显式标志。写入结果不确定时通过回执及当前状态核对，不自动重试。这些导出是手动文件，没有自动保留 catalog；使用后通过可信本地文件管理清理。Host 将该导出目录限制为八个文件和总计 512 MiB。

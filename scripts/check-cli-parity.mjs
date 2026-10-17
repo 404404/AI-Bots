@@ -24,6 +24,16 @@ export function routePathsFrom(sources) {
   return [...paths];
 }
 
+export function profileBackupRoutesFrom(source) {
+  return [
+    ...new Set(
+      [...source.matchAll(/action\s*(?:===|!==)\s*'([^']*)'/g)].map(
+        (match) => '/api/botharness/profile-backup' + match[1],
+      ),
+    ),
+  ];
+}
+
 export function botToolNamesFrom(grantExecutionSource) {
   const block = /const BOT_TOOL_NAMES = new Set\(\[([\s\S]*?)\]\)/.exec(grantExecutionSource);
   return block === null ? [] : [...block[1].matchAll(/'([a-z_]+)'/g)].map((name) => name[1]);
@@ -112,7 +122,12 @@ function main(root) {
     .join('\n');
   const surfaces = {
     bridge: bridgeMethodsFrom(read('packages/core/src/bridge/rpc.ts')),
-    routes: routePathsFrom(hostSources),
+    routes: [
+      ...new Set([
+        ...routePathsFrom(hostSources),
+        ...profileBackupRoutesFrom(read('packages/core/src/portability/http.ts')),
+      ]),
+    ],
     tools: botToolNamesFrom(read('packages/core/src/workspaces/grant-execution.ts')),
   };
   const baseline = JSON.parse(read(BASELINE));

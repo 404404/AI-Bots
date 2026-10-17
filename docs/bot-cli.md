@@ -872,3 +872,22 @@ deepseekbot release-restart --confirm
 These reuse the same telemetry, Git and release owners as Settings. Environment-locked telemetry cannot be overridden; inspect the returned effective/locked state rather than assuming the stored preference controls collection. Git covers availability and installation only, with no new global Git identity editor.
 
 Scoped `release-install` and `release-restart` require explicit `--confirm` and a fresh Human decision for every invocation. Full access, remembered allow rules and automatic approval cannot replace that decision; the flag itself is not approval. `git-install` does not use `--confirm` and retains its existing review policy. Restart can interrupt running turns and disconnect the requesting CLI; do not automatically repeat an install or restart after an uncertain result. Reconnect and inspect release status before deciding another action. Test these operations only in an owned isolated Profile, preserving the Human's active Desktop.
+
+## Profile backup and recovery
+
+Online commands use the authenticated live Host and the same backup owner as Bot-mode Settings. They never restore over a running Host. Archive content and the single-use export token never appear on stdout. Human CLI file paths must be absolute; outputs are new private files (0600 on POSIX), and the preview plan input must be a regular private file. Review the reported scope before exporting; a changed Profile or expired five-minute plan refuses `preview-stale`. Failed exports remove their partial output. Keep review plans and archives private.
+
+```sh
+deepseekbot profile-backup-preview --out /private/path/review.json
+deepseekbot profile-backup-export --file /private/path/review.json --out /private/path/environment.botharness-backup --confirm
+deepseekbot profile-backup-inspect --file /private/path/environment.botharness-backup
+deepseekbot profile-recovery
+deepseekbot profile-recovery-authorize <bot-slug> --confirm
+deepseekbot profile-recovery-activate <bot-slug> --confirm --acknowledge-split-brain
+```
+
+`profile-backup-inspect` uploads the protected archive to the selected Host and returns only bounded counts, Session support, bytes and integrity metadata. The existing `botharness-profile inspect --file <archive>` is an offline local inspection. `botharness-profile restore --file <archive> --new-home <new-directory>` remains the only restore entry: it requires a new directory, keeps the destination stopped and cold, and never restarts or changes the active Desktop. Launch the new data space with the trusted pinned DSH 0.2.0-rc.2 and this BotHarness candidate, then run recovery commands against that Host. v1 archives produced by rc.1 remain readable. Native Session history remains unsupported; credentials and external authority are excluded.
+
+Restored Bots require an explicit target-local Model Plan and credentials, per-Bot authorization and split-brain acknowledgement. Inspect readiness before authorizing or activating one Bot. Plan changes invalidate authorization. Browser/Computer access, external bindings, Workspace and other imported authority remain suspended and require their own existing authorization paths.
+
+In Tob's authenticated Home/private-DM Shell, discover capabilities first. `profile-backup-preview` returns a safe `planId` while the bearer-like export token stays inside the Host. `profile-backup-export --plan <planId> --confirm` requires fresh Human review and writes only a protected Host archive; its receipt returns `receiptId`, file location, bytes and hash. `profile-backup-inspect --receipt <receiptId>` returns bounded metadata. Tob cannot supply `--host`, `--token-file`, arbitrary input/output paths or archive content. Model authorization and activation also require Human review, current readiness and explicit flags. An uncertain write is reconciled through receipt/current readiness, never automatically retried. Protected exports are manual artifacts, without an automatic retention catalog; remove them through trusted local file management after use. The Host bounds this export folder to eight files and 512 MiB total.
