@@ -65,6 +65,7 @@ export default function RootLayout() {
                 name="cloud-organizations"
                 options={{ title: t.cloudOrganizations.title }}
               />
+              <Stack.Screen name="cloud-channels" options={{ title: t.cloudChannels.title }} />
               <Stack.Screen name="notifications" options={{ title: t.notifications }} />
               <Stack.Screen
                 name="browser/[slug]"

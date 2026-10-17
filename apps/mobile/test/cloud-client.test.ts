@@ -362,6 +362,108 @@ describe('cloud organizations', () => {
     expect(f.operations[0]).toBe(f.operations[1]);
     expect(restarted.getSnapshot().rows[0]?.pendingCreate).toBeUndefined();
   });
+  it('replays a lost channel creation and message response after restart with the same durable operation', async () => {
+    const f = organizationsFixture();
+    const baseRequest = f.rt.request;
+    const channel = {
+      channelId: 'ch_' + 'a'.repeat(64),
+      organizationId: 'org_a',
+      name: 'general',
+      creatorId: 'user_test',
+      creatorType: 'human',
+      createdAt: '2026-10-18T00:00:00Z',
+    };
+    const operations: string[] = [];
+    let lose = true;
+    let storedMessage: Record<string, unknown> | undefined;
+    f.rt.request = async (url, init) => {
+      if (!url.includes('/channels')) return baseRequest(url, init);
+      if (init?.method === 'POST') {
+        const operation = new Headers(init.headers).get('Idempotency-Key')!;
+        operations.push(operation);
+        const body = JSON.parse(String(init.body));
+        if (body.text)
+          storedMessage = {
+            sequence: 1,
+            authorId: 'user_test',
+            authorType: 'human',
+            operationId: operation,
+            text: body.text,
+            createdAt: '2026-10-18T00:00:00Z',
+          };
+        if (lose) {
+          lose = false;
+          throw new Error('lost response');
+        }
+        return Response.json(body.text ? { message: storedMessage, replayed: true } : channel);
+      }
+      if (url.includes('/messages'))
+        return Response.json({
+          messages: storedMessage ? [storedMessage] : [],
+          nextCursor: storedMessage ? 1 : 0,
+          hasMore: false,
+        });
+      return Response.json({ channels: [channel], nextCursor: null });
+    };
+    let client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    await expect(client.createChannel(config.instanceId, 'org_a', 'general')).rejects.toMatchObject(
+      { code: 'NETWORK_UNAVAILABLE' },
+    );
+    client = new CloudClient(f.rt);
+    await client.load();
+    await client.whoami(config.instanceId);
+    expect(client.getSnapshot().rows[0]?.pendingChannelAction?.value).toBe('general');
+    await expect(
+      client.createChannel(config.instanceId, 'org_a', 'different'),
+    ).rejects.toMatchObject({ code: 'PENDING_CHANNEL_ACTION' });
+    await client.createChannel(config.instanceId, 'org_a', 'general');
+    expect(operations[0]).toBe(operations[1]);
+    expect((await client.listChannels(config.instanceId, 'org_a')).channels[0]?.channelId).toBe(
+      channel.channelId,
+    );
+    lose = true;
+    await expect(
+      client.sendMessage(config.instanceId, 'org_a', channel.channelId, 'Durable text'),
+    ).rejects.toMatchObject({ code: 'NETWORK_UNAVAILABLE' });
+    client = new CloudClient(f.rt);
+    await client.load();
+    await client.whoami(config.instanceId);
+    await expect(
+      client.sendMessage(config.instanceId, 'org_a', 'ch_' + 'b'.repeat(64), 'Durable text'),
+    ).rejects.toMatchObject({ code: 'PENDING_CHANNEL_ACTION' });
+    expect(
+      (await client.sendMessage(config.instanceId, 'org_a', channel.channelId, 'Durable text'))
+        .sequence,
+    ).toBe(1);
+    expect(operations[2]).toBe(operations[3]);
+    expect(client.getSnapshot().rows[0]?.pendingChannelAction).toBeUndefined();
+    expect(
+      (await client.readMessages(config.instanceId, 'org_a', channel.channelId)).messages,
+    ).toHaveLength(1);
+    await expect(
+      client.readMessages(config.instanceId, 'org_other', channel.channelId),
+    ).rejects.toMatchObject({ code: 'ORGANIZATION_TOKEN_REQUIRED' });
+  });
+  it('keeps pending channel work private to the signed-in identity and clears it on logout', async () => {
+    const f = organizationsFixture();
+    const old = f.rt.request;
+    f.rt.request = async (url, init) =>
+      url.includes('/channels') ? Promise.reject(new Error('offline')) : old(url, init);
+    const client = new CloudClient(f.rt);
+    await client.importConfig(JSON.stringify(config));
+    await client.login(config.instanceId);
+    await client.useOrganization(config.instanceId, 'org_a');
+    await expect(client.createChannel(config.instanceId, 'org_a', 'general')).rejects.toMatchObject(
+      { code: 'NETWORK_UNAVAILABLE' },
+    );
+    expect(client.getSnapshot().rows[0]?.pendingChannelAction?.userId).toBe('user_test');
+    await client.logout(config.instanceId);
+    expect(client.getSnapshot().rows[0]?.pendingChannelAction).toBeUndefined();
+    expect(f.stored()).not.toContain('channel.create');
+  });
   it('never treats stale owner UI or a mismatched selection response as organization authorization', async () => {
     const f = organizationsFixture();
     const client = new CloudClient(f.rt);

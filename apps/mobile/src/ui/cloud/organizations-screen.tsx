@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -137,6 +137,16 @@ export function CloudOrganizationsScreen() {
                       ? t.cloudOrganizations.owner
                       : t.cloudOrganizations.member}
                   </Text>
+                  <Button
+                    label={t.cloudChannels.title}
+                    disabled={busy}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/cloud-channels',
+                        params: { instanceId, organizationId: selected.organizationId },
+                      })
+                    }
+                  />
                   <TextInput
                     accessibilityLabel={t.cloudOrganizations.description}
                     placeholder={t.cloudOrganizations.description}

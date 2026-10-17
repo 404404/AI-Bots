@@ -1,4 +1,11 @@
 import {
+  parseChannel,
+  parseMessage,
+  parsePendingChannelAction,
+  validChannelId,
+  type PendingChannelAction,
+} from './channel-contract';
+import {
   ClientError,
   connectionKey,
   MOBILE_REDIRECT_URI,
@@ -24,6 +31,7 @@ type Entry = {
   config: InstanceConfig;
   session?: Session;
   pendingCreate?: { name: string; operation: string } | undefined;
+  pendingChannelAction?: PendingChannelAction | undefined;
 };
 type Vault = { version: 1; entries: Entry[] };
 export type CloudRow = {
@@ -32,6 +40,7 @@ export type CloudRow = {
   identity?: Identity | undefined;
   organization?: Organization | undefined;
   pendingCreate?: { name: string; operation: string } | undefined;
+  pendingChannelAction?: PendingChannelAction | undefined;
 };
 export type CloudSnapshot = {
   ready: boolean;
@@ -150,6 +159,7 @@ export class CloudClient {
         config: e.config,
         hasSession: !!e.session,
         pendingCreate: e.pendingCreate,
+        pendingChannelAction: e.pendingChannelAction,
         identity: this.identities.get(e.config.instanceId),
         organization: this.organizations.get(e.config.instanceId),
       })),
@@ -202,6 +212,7 @@ export class CloudClient {
             return {
               config,
               pendingCreate,
+              pendingChannelAction: parsePendingChannelAction(e.pendingChannelAction),
               session: {
                 ...session,
                 userId: saved.userId as string | undefined,
@@ -446,7 +457,7 @@ export class CloudClient {
       headers: { ...init.headers, Authorization: 'Bearer ' + entry.session.accessToken },
     });
     if (!r.ok) {
-      this.organizations.delete(entry.config.instanceId);
+      if (r.status === 401 || r.status === 403) this.organizations.delete(entry.config.instanceId);
       this.publish();
       const code = record(r.value.error).code;
       return fail(
@@ -527,6 +538,124 @@ export class CloudClient {
       this.publish();
       return result;
     });
+  private async channelEntry(id: string, organizationId: string) {
+    const entry = await this.current(this.entry(id));
+    if (
+      !/^org_[A-Za-z0-9]+$/.test(organizationId) ||
+      entry.session?.organizationId !== organizationId ||
+      !entry.session.userId
+    )
+      return fail('ORGANIZATION_TOKEN_REQUIRED');
+    return entry;
+  }
+  listChannels = (id: string, organizationId: string, after?: string) =>
+    this.lock(async () => {
+      const entry = await this.channelEntry(id, organizationId);
+      const value = await this.orgRequest(
+        entry,
+        '/' + organizationId + '/channels' + (after ? '?after=' + encodeURIComponent(after) : ''),
+      );
+      if (
+        !Array.isArray(value.channels) ||
+        value.channels.length > 50 ||
+        (value.nextCursor !== null && !validChannelId(value.nextCursor))
+      )
+        return fail('INVALID_RESPONSE');
+      return {
+        channels: value.channels.map(parseChannel),
+        nextCursor: value.nextCursor as string | null,
+      };
+    });
+  readMessages = (id: string, organizationId: string, channelId: string, after = 0) =>
+    this.lock(async () => {
+      if (!validChannelId(channelId) || !Number.isSafeInteger(after) || after < 0)
+        return fail('INVALID_CURSOR');
+      const entry = await this.channelEntry(id, organizationId);
+      const value = await this.orgRequest(
+        entry,
+        '/' + organizationId + '/channels/' + channelId + '/messages?after=' + after,
+      );
+      if (
+        !Array.isArray(value.messages) ||
+        value.messages.length > 50 ||
+        !Number.isSafeInteger(value.nextCursor) ||
+        Number(value.nextCursor) < after ||
+        typeof value.hasMore !== 'boolean'
+      )
+        return fail('INVALID_RESPONSE');
+      const messages = value.messages.map(parseMessage);
+      if (
+        messages.some(
+          (m, index) => m.sequence <= (index ? messages[index - 1]!.sequence : after),
+        ) ||
+        value.nextCursor !== (messages.at(-1)?.sequence ?? after)
+      )
+        return fail('INVALID_RESPONSE');
+      return { messages, nextCursor: value.nextCursor as number, hasMore: value.hasMore };
+    });
+  private async channelMutation(
+    id: string,
+    organizationId: string,
+    kind: PendingChannelAction['kind'],
+    value: string,
+    channelId?: string,
+  ) {
+    let entry = await this.channelEntry(id, organizationId);
+    if (
+      !value.trim() ||
+      value.length > (kind === 'channel.create' ? 80 : 4000) ||
+      (kind === 'message.send' && !validChannelId(channelId))
+    )
+      return fail('INVALID_CHANNEL_INPUT');
+    const pending = entry.pendingChannelAction;
+    if (
+      pending &&
+      (pending.kind !== kind ||
+        pending.organizationId !== organizationId ||
+        pending.userId !== entry.session!.userId ||
+        pending.channelId !== channelId ||
+        pending.value !== value)
+    )
+      return fail('PENDING_CHANNEL_ACTION');
+    const action: PendingChannelAction = pending ?? {
+      kind,
+      organizationId,
+      userId: entry.session!.userId!,
+      channelId,
+      value,
+      operation: this.rt.random(),
+    };
+    await this.save({ ...entry, pendingChannelAction: action });
+    entry = this.entry(id);
+    const result = await this.orgRequest(
+      entry,
+      '/' + organizationId + '/channels' + (channelId ? '/' + channelId + '/messages' : ''),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': action.operation },
+        body: JSON.stringify(kind === 'channel.create' ? { name: value } : { text: value }),
+      },
+    );
+    const parsed = kind === 'channel.create' ? parseChannel(result) : parseMessage(result.message);
+    if (
+      kind === 'channel.create'
+        ? result.organizationId !== organizationId
+        : record(result.message).authorId !== action.userId ||
+          record(result.message).operationId !== action.operation ||
+          record(result.message).text !== value
+    )
+      return fail('INVALID_RESPONSE');
+    await this.save({ ...entry, pendingChannelAction: undefined });
+    return parsed;
+  }
+  createChannel = (id: string, organizationId: string, name: string) =>
+    this.lock(async () =>
+      parseChannel(await this.channelMutation(id, organizationId, 'channel.create', name.trim())),
+    );
+  sendMessage = (id: string, organizationId: string, channelId: string, text: string) =>
+    this.lock(async () =>
+      parseMessage(await this.channelMutation(id, organizationId, 'message.send', text, channelId)),
+    );
   login = (id: string) =>
     this.lock(async () => {
       let entry = this.entry(id);
