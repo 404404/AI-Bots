@@ -96,3 +96,27 @@ The former flat Sessions scripts are retained only as historical evidence; the n
 - `bot-channel-shortcuts`: verify Primary+Alt+Shift+6 / E / 9 individually: closed parent restores parent plus requested child; visible parent toggles only that child. Customize Memory files, reload and inspect effective binding, then restore the default. Native supplement `scripts/e2e-channel-sessions-desktop.mjs` now also drives all three child commands through Electron input on the task-owned macOS window and checks persistence after reload. Command identities/config authority are unchanged; regression coverage retains native null/custom handling.
 
 The v5 migration passes v1–v4 through the existing owner and preserves earlier Sessions state, unknown plugins, hidden switches, closed parents and unrelated geometry. Each child has a fixed content container and splits the remaining message area; moves use its four sides. Browser/Computer migration remains outside this slice. Keep first failed runs and report which layer failed; screenshots must omit private Memory or local authorization IDs.
+
+## Browser and Computer subpanels (#2069)
+
+Capture an actual v5 layout with both outer panels open, then run `scripts/e2e-browser-computer-subpanels.mjs` using the same task-owned profile and `BH_LEGACY_LAYOUT`. It verifies the v6 raw backup, stable inner nodes during pointer drag and resize, per-Bot state and refresh, Group exclusion, right-click visibility and default/custom Browser/Computer shortcuts. Disabled access must show centered icons/descriptions; verify no access/start/stop request results from layout actions. Preserve existing v5 Memory/Schedules state. The native supplement also checks Browser B / Computer 0 using actual macOS input and verifies actual MEMORY.md rows rather than assuming SOUL.md exists. Opening a panel never authorizes enabling tools; off-state UI checks do not qualify remote execution.
+
+## Panel dimensions across visibility changes (#2071)
+
+Run `scripts/e2e-panel-size-persistence.mjs` against the same disposable two-Bot Web profile with `BH_E2E_INSTANCE` and `BH_BROWSER_PROFILE`. Drag the outer Channel sash, cycle Channels and Messages, refresh while closed and reopen. Compare actual widths/heights (2px tolerance) rather than only stored flags. Resize and cycle Sessions and all Bot subpanels and their parent; verify each ratio survives and the parent's geometry stays stable. Resize the Activity vertical split, repeat three times and refresh while closed. Keep failed runs and before/after measurements. Global saved dimensions use rendered proportions, converted to pre-gap allocations when restoring; old records without sizes keep their placement fallback.
+
+Dockview 8.4.1's `setSize` expects a pre-gap allocation while its rendered group dimensions and serialized sizes exclude the split margin. Restore adds `gap × (sibling count − 1) / sibling count` on each affected axis, derived from the reopened tree. Without this conversion every reopen loses pixels.
+
+Sequential closes preserve the pre-close geometry of surviving panels too, so temporary expansion cannot replace the user's dimensions. Active-panel resize or move clears these retained snapshots; closed-panel preferences stay intact. The journey also closes both global panels, refreshes, restores them in sequence, and changes viewport size while Activity is closed.
+
+## Continuous resize and fixed Channel placement (#2074)
+
+Run `scripts/e2e-panel-resize-stability.mjs` against the task-owned Web instance with `BH_E2E_INSTANCE` and `BH_BROWSER_PROFILE`, or an authorized native rc.2 window with `BH_DESKTOP_CDP`. Prepare a Bot DM with Memory files and Memory evolution switches available. The script opens both, holds the outer sash through eight pointer positions and samples five stationary frames each time; the sash must stay within 3px of the requested position. A screenshot only after releasing the pointer cannot prove this behavior. It also asserts that each visible subpanel's axis matches its saved direction even below 520px, and that saved ratios/visibility are untouched.
+
+Dockview 8.4.1 calls its shell layout when **any** options change; new theme or dndEdges objects on a size-driven React render can restore cached proportions during an active drag. Keep both identities stable until their actual values change. Channel subpanels have no width-based axis fallback: only an explicit placement action changes sides. Retain failed probes, inspect screenshots and page errors, and rerun the dimensions-across-visibility journey after changing this path.
+
+## Nested Channel splits and narrow headers (#2076)
+
+Run `scripts/e2e-nested-channel-panels.mjs` with the task-owned Web profile (`BH_E2E_INSTANCE`, `BH_BROWSER_PROFILE`) or authorized native window (`BH_DESKTOP_CDP`, `BH_DESKTOP_MAIN_CDP`). It verifies the v7 backup, drags Memory evolution below Memory files using native HTML drag data, captures the target preview, resizes the nested row, cycles visibility, restores Messages through the existing shortcut, refreshes, and verifies fixed placement and usable narrow headers. Web additionally switches to the Group and back. Keep failed runs. Never enable Browser/Computer access as part of layout QA.
+
+The maintained continuous-resize journey now compares every visible tree branch axis and the persisted tree, replacing the legacy fixed-wrapper selectors. Channel split geometry is version-7 tree authority; the older per-child ratio field is only a migration seed.
