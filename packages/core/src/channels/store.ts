@@ -268,6 +268,7 @@ export function queryChannelMessages(
 }
 
 export interface CreateChannelGroupInput {
+  id?: string;
   name: string;
   members: string[];
   ownerBotSlug?: string;
@@ -309,6 +310,7 @@ export interface ChannelStore {
   createGroup(input: CreateChannelGroupInput): ChannelRecord;
 
   inviteGroupBot(input: {
+    invitationId?: string;
     channelId: string;
     inviterBotSlug?: string;
     inviterHuman?: true;
@@ -800,7 +802,9 @@ export function createChannelStore(options: ChannelStoreOptions): ChannelStore {
       return record;
     },
     createGroup(input) {
-      const id = nextGroupId(input.name);
+      const id = input.id ?? nextGroupId(input.name);
+      if (!isValidChannelId(id) || read(id) !== undefined)
+        throw new Error('Group Channel identity is unavailable');
       const name = input.name.trim();
       const timestamp = now().toISOString();
       const record: ChannelRecord = {

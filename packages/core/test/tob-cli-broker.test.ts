@@ -60,6 +60,24 @@ const update = () => ({
 });
 
 describe('Tob scoped CLI broker', () => {
+  it.each([
+    'operation-key-conflict',
+    'stale-channel',
+    'channel-operation-unavailable',
+    'protected-bot',
+  ])('returns the Channel refusal %s without exposing owner diagnostics', async (code) => {
+    const f = await fixture({
+      prepareOperation: () => {
+        throw new TobError(code);
+      },
+    });
+    expect(await f.invoke('group-invite', {})).toMatchObject({
+      ok: false,
+      error: { code, message: code },
+    });
+    expect(f.approve).not.toHaveBeenCalled();
+  });
+
   it.each(['create', 'bot-avatar-set', 'bot-banner-set', 'bot-appearance-set'])(
     'accepts a bounded large %s envelope and still delegates validation and approval',
     async (command) => {

@@ -1372,9 +1372,18 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     },
     createGroup(input) {
       const base = groupChannelIdBase(input.name);
-      let id = base;
+      let id = input.id ?? base;
+      if (
+        input.id !== undefined &&
+        (!isValidChannelId(id) ||
+          database.read((db) =>
+            db.prepare('SELECT 1 FROM channel_records WHERE channel_id = ?').get(id),
+          ) !== undefined)
+      )
+        throw new Error('Group Channel identity is unavailable');
       for (
         let suffix = 2;
+        input.id === undefined &&
         database.read((db) =>
           db.prepare('SELECT 1 FROM channel_records WHERE channel_id = ?').get(id),
         ) !== undefined;
@@ -1423,10 +1432,16 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
       if (existing !== undefined) return existing;
       if (channel.members.includes(input.targetBotSlug))
         throw new Error('Invitee is already a Group member');
+      if (
+        input.invitationId !== undefined &&
+        (!/^group-invite-[a-f0-9-]+$/u.test(input.invitationId) ||
+          channel.invitations?.some((item) => item.id === input.invitationId))
+      )
+        throw new Error('Group invitation identity is unavailable');
       const autoAccept = options.autoAcceptGroupInvitations?.() === true;
       const timestamp = now().toISOString();
       const invitation: GroupInvitation = {
-        id: 'group-invite-' + randomUUID(),
+        id: input.invitationId ?? 'group-invite-' + randomUUID(),
         targetBotSlug: input.targetBotSlug,
         targetBotCreatedAt: input.targetBotCreatedAt,
         ...(invitedByHuman

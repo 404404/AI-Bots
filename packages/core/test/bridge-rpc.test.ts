@@ -8,9 +8,14 @@ import { Context } from '@deepseek-ai/cordis';
 import { remoteMethods } from '@deepseek-ai/dsh-typert-protocol';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createBridgeMethods, type BridgeMethods } from '../src/bridge/methods.js';
+import {
+  createBridgeMethods,
+  type BridgeMethods,
+  type BridgeMethodsDeps,
+} from '../src/bridge/methods.js';
 import { BRIDGE_NAMESPACE, BRIDGE_SERVICE_KEY, registerBridge } from '../src/bridge/rpc.js';
 
+import { createSqliteChannelStore } from '../src/channels/sqlite-store.js';
 import { createChannelStore } from '../src/channels/store.js';
 import { createBotStateTracker } from '../src/state/bot-state.js';
 import { attachOperationalModule, mountOperationalDatabase } from '../src/database/owner.js';
@@ -30,11 +35,16 @@ afterEach(() => {
   }
 });
 
-function setup(sourcePolicy?: BotSourcePolicyStore) {
+function setup(
+  sourcePolicy?: BotSourcePolicyStore,
+  extras: Pick<BridgeMethodsDeps, 'channelManagement' | 'tob'> = {},
+  operational = false,
+) {
   const root = mkdtempSync(join(tmpdir(), 'botharness-bridge-rpc-'));
   roots.push(root);
   const registry = createTestRegistry({ rootDir: root });
-  const channels = createChannelStore({
+  const channels = (operational ? createSqliteChannelStore : createChannelStore)({
+    database: attachOperationalModule(registryDatabase(root), 'channels'),
     rootDir: join(root, 'channels'),
     now: () => new Date('2026-09-19T00:00:00.000Z'),
   });
@@ -45,11 +55,12 @@ function setup(sourcePolicy?: BotSourcePolicyStore) {
     ownership: createTestOwnership(),
     roster: createTestRosterStore({ database: registryDatabase(root) }),
     createBotId: () => 'ada',
+    ...extras,
     ...(sourcePolicy === undefined ? {} : { sourcePolicy }),
   });
   const ctx = new Context();
   const service = registerBridge(ctx, methods);
-  return { root, registry, methods, service };
+  return { root, registry, channels, methods, service };
 }
 
 function parameterNames(method: (...args: never[]) => unknown): string[] {
@@ -65,6 +76,110 @@ function parameterNames(method: (...args: never[]) => unknown): string[] {
 }
 
 describe('bridge typert service', () => {
+  it('refuses reviewed or keyed Channel writes when the durable owner is unavailable', () => {
+    const { service, channels } = setup();
+    service.create('Ada');
+    const group = service.channelCreate('Legacy', []).channel;
+    const before = channels.list();
+    expect(() => service.channelCreate('Keyed', [], 'keyed-create-1')).toThrow(
+      expect.objectContaining({ code: 'unavailable' }),
+    );
+    expect(() => service.channelGroupInvite(group.id, 'ada', 'keyed-invite-1')).toThrow(
+      expect.objectContaining({ code: 'unavailable' }),
+    );
+    expect(() => service.channelGroupInvite(group.id, 'ada', undefined, 'observed')).toThrow(
+      expect.objectContaining({ code: 'unavailable' }),
+    );
+    expect(() => service.channelGet(group.id)).toThrow(
+      expect.objectContaining({ code: 'unavailable' }),
+    );
+    expect(channels.list()).toEqual(before);
+  });
+
+  it('refuses admitting protected Tob through legacy group creation, invitation or join acceptance', () => {
+    const { service, channels } = setup(
+      undefined,
+      {
+        tob: {
+          ensure: async () => {
+            throw new Error('unused');
+          },
+          isTob: (slug) => slug === 'ada',
+          readSetting: () => ({ scope: 'global', value: 8, revision: 0 }),
+          writeSetting: async () => {
+            throw new Error('unused');
+          },
+        },
+      },
+      true,
+    );
+    const bot = service.create('Ada').bot;
+    const group = service.channelCreate('Group', []).channel;
+    expect(() => service.channelCreate('Protected', ['ada'])).toThrow(
+      expect.objectContaining({ code: 'protected-bot' }),
+    );
+    expect(() => service.channelGroupInvite(group.id, 'ada')).toThrow(
+      expect.objectContaining({ code: 'protected-bot' }),
+    );
+    const request = channels.requestGroupJoin({
+      channelId: group.id,
+      requesterBotSlug: 'ada',
+      requesterBotCreatedAt: bot.createdAt,
+    });
+    expect(() => service.channelGroupJoinDecide(group.id, request.id, true)).toThrow(
+      expect.objectContaining({ code: 'protected-bot' }),
+    );
+    expect(channels.get(group.id)?.members).toEqual([]);
+    expect(
+      channels.get(group.id)?.joinRequests?.find((entry) => entry.id === request.id)?.status,
+    ).toBe('pending');
+    service.channelGroupJoinDecide(group.id, request.id, false);
+    expect(
+      channels.get(group.id)?.joinRequests?.find((entry) => entry.id === request.id)?.status,
+    ).toBe('declined');
+  });
+
+  it('forwards Channel fingerprints and stable operation keys through the named RPC facade', () => {
+    const { service, methods } = setup();
+    const channel = service.channelCreate('Team', []).channel;
+    const snapshot = {
+      channel,
+      channelFingerprint: 'observed',
+      invitationPolicy: { autoAccept: false },
+    };
+    const get = vi.spyOn(methods, 'channelGet').mockReturnValue({ ok: true, value: snapshot });
+    expect(service.channelGet(channel.id)).toEqual(snapshot);
+    expect(get).toHaveBeenCalledWith({ channelId: channel.id });
+    const create = vi
+      .spyOn(methods, 'channelCreate')
+      .mockReturnValue({ ok: true, value: snapshot });
+    expect(service.channelCreate('Team', [], 'create-team-1')).toEqual(snapshot);
+    expect(create).toHaveBeenCalledWith({
+      name: 'Team',
+      members: [],
+      operationKey: 'create-team-1',
+    });
+    const invite = vi
+      .spyOn(methods, 'channelGroupInvite')
+      .mockReturnValue({ ok: true, value: snapshot });
+    expect(service.channelGroupInvite(channel.id, 'ada', 'invite-team-1', 'observed')).toEqual(
+      snapshot,
+    );
+    expect(invite).toHaveBeenCalledWith({
+      channelId: channel.id,
+      botSlug: 'ada',
+      operationKey: 'invite-team-1',
+      expectedChannel: 'observed',
+    });
+    invite.mockReturnValue({
+      ok: false,
+      error: { code: 'stale-channel', message: 'Channel changed' },
+    });
+    expect(() => service.channelGroupInvite(channel.id, 'ada', 'invite-team-1', 'old')).toThrow(
+      expect.objectContaining({ code: 'stale-channel' }),
+    );
+  });
+
   it('forwards Bot creation identity and Core Memory through the named RPC facade', () => {
     const { service, methods } = setup();
     const bot = service.create('Ada').bot;
@@ -371,6 +486,7 @@ describe('bridge typert service', () => {
       'humanNameSet',
       'channelHumanNameSet',
       'channelDm',
+      'channelGet',
       'channelCreate',
       'channelRename',
       'channelGroupAvatarSet',
@@ -611,7 +727,14 @@ describe('bridge typert service', () => {
     expect(parameterNames(service.messagingDefaults)).toEqual(['platform']);
     expect(parameterNames(service.channels)).toEqual([]);
     expect(parameterNames(service.channelDm)).toEqual(['slug', 'displayName']);
-    expect(parameterNames(service.channelCreate)).toEqual(['name', 'members']);
+    expect(parameterNames(service.channelGet)).toEqual(['channelId']);
+    expect(parameterNames(service.channelCreate)).toEqual(['name', 'members', 'operationKey']);
+    expect(parameterNames(service.channelGroupInvite)).toEqual([
+      'channelId',
+      'botSlug',
+      'operationKey',
+      'expectedChannel',
+    ]);
     expect(parameterNames(service.channelRename)).toEqual(['channelId', 'name']);
     expect(parameterNames(service.channelMessages)).toEqual(['channelId', 'before', 'limit']);
     expect(parameterNames(service.channelTimeline)).toEqual([

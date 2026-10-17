@@ -1,3 +1,8 @@
+import {
+  ChannelManagementError,
+  type ChannelManagementService,
+  type ChannelManagementResult,
+} from '../channels/management.js';
 import { botProfileFingerprint } from '../bots/profile-snapshot.js';
 import {
   BotCreationError,
@@ -553,10 +558,15 @@ export interface BridgeMethods {
   channelHumanNameSet(payload: unknown): BridgeResult<{ channel: ChannelListItem }>;
   channels(payload: unknown): BridgeResult<{ channels: ChannelListItem[] }>;
   channelDm(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
-  channelCreate(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
+  channelGet(payload: unknown): BridgeResult<ChannelManagementResult>;
+  channelCreate(
+    payload: unknown,
+  ): BridgeResult<{ channel: ChannelRecord } | ChannelManagementResult>;
   channelRename(payload: unknown): BridgeResult<{ channel: ChannelRecord; bot?: PersonaBotDetail }>;
   channelGroupAvatarSet(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
-  channelGroupInvite(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
+  channelGroupInvite(
+    payload: unknown,
+  ): BridgeResult<{ channel: ChannelRecord } | ChannelManagementResult>;
   channelGroupInviteCancel(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
   channelGroupJoinDecide(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
   channelGroupMemberRemove(payload: unknown): BridgeResult<{ channel: ChannelRecord }>;
@@ -759,6 +769,7 @@ export interface BridgeMethodsDeps {
   warn?: (message: string) => void;
   registry: PersonaBotRegistry;
   creations?: BotCreationService;
+  channelManagement?: ChannelManagementService;
   approvalTemplates?: ApprovalTemplateLibrary;
   deletions?: PersonaBotDeletions;
   contentPurge?: ContentPurge;
@@ -3309,6 +3320,23 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         },
       };
     },
+    channelGet(payload) {
+      const channelId = asNonBlank(asObject(payload), 'channelId');
+      if (channelId === undefined) return invalidInput('channelId is required');
+      if (!deps.channelManagement)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Channel management is unavailable' },
+        };
+      try {
+        const result = deps.channelManagement.snapshot(channelId);
+        return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+      } catch (error) {
+        if (error instanceof ChannelManagementError)
+          return { ok: false, error: { code: error.code, message: error.message } };
+        throw error;
+      }
+    },
     channelCreate(payload) {
       const source = asObject(payload);
       const name = asNonBlank(source, 'name');
@@ -3320,6 +3348,32 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       ) {
         return invalidInput('members must be an array of PersonaBot IDs');
       }
+      const operationKey = source['operationKey'];
+      if (operationKey !== undefined && (typeof operationKey !== 'string' || !operationKey.trim()))
+        return invalidInput('operationKey must be a nonempty string');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.create(
+            { name, members: [...members] },
+            operationKey,
+          );
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (operationKey !== undefined)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Channel management is unavailable' },
+        };
+      if (members.some((slug) => deps.tob?.isTob(slug)))
+        return {
+          ok: false,
+          error: { code: 'protected-bot', message: 'Tob cannot join group Channels' },
+        };
       const channel = deps.channels.createGroup({ name, members: [...members] });
       return { ok: true, value: { channel: channelView(channel) } };
     },
@@ -3369,6 +3423,38 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const botSlug = asNonBlank(source, 'botSlug');
       if (channelId === undefined || botSlug === undefined || !isValidSlug(botSlug))
         return invalidInput('valid channelId and botSlug are required');
+      const operationKey = source['operationKey'];
+      const expectedChannel = source['expectedChannel'];
+      if (operationKey !== undefined && (typeof operationKey !== 'string' || !operationKey.trim()))
+        return invalidInput('operationKey must be a nonempty string');
+      if (
+        expectedChannel !== undefined &&
+        (typeof expectedChannel !== 'string' || !expectedChannel.trim())
+      )
+        return invalidInput('expectedChannel must be a nonempty string');
+      if (deps.channelManagement) {
+        try {
+          const result = deps.channelManagement.invite(
+            { channelId, botSlug, ...(expectedChannel === undefined ? {} : { expectedChannel }) },
+            operationKey,
+          );
+          return { ok: true, value: { ...result, channel: channelView(result.channel) } };
+        } catch (error) {
+          if (error instanceof ChannelManagementError)
+            return { ok: false, error: { code: error.code, message: error.message } };
+          throw error;
+        }
+      }
+      if (operationKey !== undefined || expectedChannel !== undefined)
+        return {
+          ok: false,
+          error: { code: 'unavailable', message: 'Channel management is unavailable' },
+        };
+      if (deps.tob?.isTob(botSlug))
+        return {
+          ok: false,
+          error: { code: 'protected-bot', message: 'Tob cannot join group Channels' },
+        };
       const bot = deps.registry.get(botSlug);
       const channel = deps.channels.get(channelId);
       if (bot === undefined || bot.paused === true) return unknownBot(botSlug);
@@ -3415,6 +3501,11 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const request = channel?.joinRequests?.find((item) => item.id === requestId);
       if (channel?.type !== 'group' || request === undefined)
         return invalidInput('Pending Group join request not found');
+      if (accept && deps.tob?.isTob(request.requesterBotSlug))
+        return {
+          ok: false,
+          error: { code: 'protected-bot', message: 'Tob cannot join group Channels' },
+        };
       if (request.status !== 'pending')
         return request.status === (accept ? 'accepted' : 'declined')
           ? { ok: true, value: { channel: channelView(channel) } }

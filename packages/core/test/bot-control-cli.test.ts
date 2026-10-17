@@ -242,7 +242,7 @@ describe('Agent control commands', () => {
     expect(live.calls.filter((call) => call.method === 'settings/update')).toHaveLength(1);
   });
 
-  it('creates a native workspace from an absolute path and a group with members', async () => {
+  it('creates a native workspace and groups with explicit or empty initial membership', async () => {
     const live = await host((method, args) => ({ ok: true, value: { method, args } }));
     await invoke(['workspace-create', '/srv/bots/workspace'], live.url);
     await invoke(['group-create', 'Skill Lab', '--member', 'bot-a', '--member', 'bot-b'], live.url);
@@ -253,7 +253,11 @@ describe('Agent control commands', () => {
     expect((await invoke(['workspace-create', 'relative/dir'], live.url)).json.error.code).toBe(
       'usage',
     );
-    expect((await invoke(['group-create', 'Empty'], live.url)).json.error.code).toBe('usage');
-    expect(live.calls).toHaveLength(2);
+    expect((await invoke(['group-create', 'Empty'], live.url)).code).toBe(0);
+    expect(live.calls.at(-1)).toEqual({
+      method: 'channelCreate',
+      args: { name: 'Empty', members: [] },
+    });
+    expect(live.calls).toHaveLength(3);
   });
 });
