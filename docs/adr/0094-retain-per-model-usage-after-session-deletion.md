@@ -2,6 +2,8 @@
 
 Status: accepted
 
+> Amended by [ADR-0230](0230-home-rolling-usage-extends-retained-receipts.md): existing anonymous receipts retain exact occurrence time and nullable token total for bounded rolling Home queries; original history-retention and purge ownership remain.
+
 > Amended by [ADR-0204](0204-an-exact-total-settles-omitted-usage-buckets.md): an exact reported total settles the buckets a request leaves out.
 
 DSH SessionEvents are the canonical facts for each actual provider/model attempt and its provider-reported token usage, including reported usage from failed or retried attempts. BotHarness records a daily PersonaBot × execution-role × exact provider/model aggregate of uncached input, output, cache-read, and cache-write tokens, plus unknown-usage attempts. It attributes DSH Subagent work to its owning PersonaBot and distinguishes Orchestrator, Assignment, and Subagent activity. A Turn that calls several models contributes to each route separately rather than to a `mixed` bucket.

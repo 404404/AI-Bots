@@ -54,10 +54,15 @@ it('reads canonical actions and message activity without changing read state or 
     });
     core.channels.setHumanNickname(older.id, 'Recent visit is not activity');
     const before = core.humanAttention.status();
+    const readUsageSessionLog = vi.fn(async () => {
+      throw new Error('Home must not read Session logs');
+    });
     const result = await createBridgeMethods({
       ...core,
       runningSessionIds: () => new Set(),
+      readUsageSessionLog,
     }).homeDashboard({});
+    expect(readUsageSessionLog).not.toHaveBeenCalled();
     if (!result.ok) throw new Error(result.error.message);
     expect(result.value.attention).toMatchObject({
       status: 'ready',
@@ -69,7 +74,10 @@ it('reads canonical actions and message activity without changing read state or 
       status: 'ready',
       value: [{ channelId: newer.id, messageId: 'new' }, { channelId: older.id }],
     });
-    expect(result.value.usage).toEqual({ status: 'unavailable' });
+    expect(result.value.usage).toMatchObject({
+      status: 'ready',
+      value: { totalTokens: 0, status: 'ready' },
+    });
     expect(core.humanAttention.status()).toEqual(before);
     expect(
       core.registry

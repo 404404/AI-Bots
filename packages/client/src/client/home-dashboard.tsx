@@ -209,6 +209,12 @@ export function HomeDashboard({
               {date(usage.from)} — {date(usage.to)}
             </p>
             <p {...stylex.props(styles.muted)}>{t(`home.usageStatus.${usage.status}`)}</p>
+            {usage.coverageStart && Date.parse(usage.from) < Date.parse(usage.coverageStart) && (
+              <p {...stylex.props(styles.muted)}>
+                {t('home.usageCoverage', { time: date(usage.coverageStart) })}
+              </p>
+            )}
+            {usage.truncated && <p {...stylex.props(styles.muted)}>{t('home.usageTruncated')}</p>}
             {usage.freshness !== 'ready' && (
               <p role="status" {...stylex.props(styles.muted)}>
                 {t(`home.usageFreshness.${usage.freshness}`)}

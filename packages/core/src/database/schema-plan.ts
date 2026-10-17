@@ -2369,6 +2369,28 @@ const ASSIGNMENT_MEMORY_READ_MIGRATION: SchemaMigration = {
   },
 };
 
+const ROLLING_USAGE_RECEIPT_MIGRATION: SchemaMigration = {
+  generation: 102,
+  module: 'usage',
+  description: 'Retain exact usage timestamps and nullable totals in existing anonymous receipts',
+  migrate(database) {
+    database.exec(`
+      ALTER TABLE usage_receipts ADD COLUMN occurred_at_ms INTEGER;
+      ALTER TABLE usage_receipts ADD COLUMN total_tokens INTEGER;
+      ALTER TABLE usage_receipt_state ADD COLUMN rolling_coverage_start_ms INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX usage_receipts_time ON usage_receipts (occurred_at_ms, fingerprint);
+    `);
+    const historical = database
+      .prepare(`SELECT 1 FROM usage_receipts
+      UNION ALL SELECT 1 FROM usage_daily LIMIT 1`)
+      .get();
+    if (historical !== undefined)
+      database
+        .prepare('UPDATE usage_receipt_state SET rolling_coverage_start_ms = ? WHERE singleton = 1')
+        .run(Date.now());
+  },
+};
+
 export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   SESSION_OWNERSHIP_MIGRATION,
   MESSAGING_TRACER_MIGRATION,
@@ -2470,4 +2492,5 @@ export const BOT_HARNESS_SCHEMA_PLAN = defineSchemaPlan([
   GROUP_SEND_REVIEW_MIGRATION,
   BOT_SCHEDULE_CREATION_MIGRATION,
   ASSIGNMENT_MEMORY_READ_MIGRATION,
+  ROLLING_USAGE_RECEIPT_MIGRATION,
 ]);
