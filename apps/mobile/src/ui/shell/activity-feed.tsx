@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
   useSyncExternalStore,
+  memo,
   type ReactElement,
 } from 'react';
 import {
@@ -17,7 +18,13 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { TabView } from 'react-native-tab-view';
-import Animated, { FadeOut, LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import { useIsFocused } from 'expo-router';
+import Animated, {
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useReducedMotion,
+} from 'react-native-reanimated';
 
 import type { HostClient, RosterBot } from '../../host/client';
 import {
@@ -45,10 +52,12 @@ import { space } from '../design/tokens';
 import { Text } from '../primitives/text';
 import { CountBadge } from '../primitives/count-badge';
 import { Loading, Notice } from '../request-parts';
-import { EdgeFade, useChatHeaderHeight } from '../chat/header-chrome';
+import { useChatHeaderHeight } from '../chat/header-chrome';
 import { Button } from '../primitives/button';
 import { ActivityToolbar, type ActivityToolbarHandle } from './activity-toolbar';
 import { ActivityTabs, ACTIVITY_TABS, type ActivityTab } from './activity-tabs';
+import { useFloatingTabInset } from './floating-tab-inset';
+import { CollapsingToolbar, useChromeProgress, useChromeScroll } from './scroll-chrome';
 import { t } from '../strings';
 import {
   DEFAULT_ACTIVITY,
@@ -138,7 +147,7 @@ function minutesSince(at: string, now: number): number {
   return Math.max(0, Math.floor((now - Date.parse(at)) / 60_000));
 }
 
-function Row({
+const Row = memo(function Row({
   item,
   settled,
   bot,
@@ -231,7 +240,7 @@ function Row({
       </View>
     </Pressable>
   );
-}
+});
 
 function Post({
   client,
@@ -359,6 +368,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const { botSlugs, channels = [], bot } = props;
   const theme = useDesignTheme();
   const toolbar = useRef<ActivityToolbarHandle>(null);
+  const dismissSearch = useCallback(() => toolbar.current?.dismissSearch(), []);
   const [filter, setFilter] = useState<ActivityFilter>(DEFAULT_ACTIVITY);
   const [search, setSearch] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
@@ -370,6 +380,8 @@ export function ActivityFeed(props: ActivityFeedProps) {
   const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 0 : initialHeight);
   const width = useWindowDimensions().width;
   const reducedMotion = useReducedMotion();
+  const focused = useIsFocused();
+  const progress = useChromeProgress();
   const selectedIndex = ACTIVITY_TABS.findIndex((tab) => tab.key === filter.section);
   const index = selectedIndex < 0 ? lastTab : selectedIndex;
   const slugsWithSelection =
@@ -382,50 +394,76 @@ export function ActivityFeed(props: ActivityFeedProps) {
     setLastTab(next);
     setFilter((current) => ({ ...current, section: tab.key }));
   };
-  const top =
-    Platform.OS === 'ios' ? Math.max(headerHeight, initialHeight - insets.top) : headerHeight;
+  const top = headerHeight;
+  const travel = Math.max(0, top - insets.top);
+  const pageStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -travel * progress.value }],
+  }));
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} enabled={searchFocused} behavior="padding">
-      <TabView
-        style={{ marginTop: top, backgroundColor: theme.color.base }}
-        navigationState={{ index, routes: ACTIVITY_ROUTES }}
-        initialLayout={{ width }}
-        onIndexChange={selectIndex}
-        animationEnabled={!reducedMotion}
-        lazy
-        renderLazyPlaceholder={() => <Loading />}
-        renderTabBar={({ position, jumpTo }) => (
-          <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
-        )}
-        renderScene={({ route }: { route: ActivityTab }) => (
-          <ActivityPage
-            {...props}
-            filter={
-              route.key === ACTIVITY_TABS[index]?.key ? filter : { ...filter, section: route.key }
-            }
-            search={search}
-            sort={sort}
-            active={route.key === ACTIVITY_TABS[index]?.key}
-            searchFocused={searchFocused}
-            dismissSearch={() => toolbar.current?.dismissSearch()}
-          />
-        )}
-      />
-      <ActivityToolbar
-        ref={toolbar}
-        search={search}
-        onSearchFocus={setSearchFocused}
-        filtered={
-          sort !== 'default' ||
-          filter.section === 'all' ||
-          filter.section === 'handled' ||
-          filter.bot !== undefined ||
-          filter.channel !== undefined ||
-          filter.unreadOnly === true
-        }
-        onSearch={setSearch}
-        onFilter={() => setFiltering(true)}
-        onHeight={setHeaderHeight}
+    <KeyboardAvoidingView
+      style={{ flex: 1, overflow: 'hidden', backgroundColor: theme.color.base }}
+      enabled={searchFocused}
+      behavior="padding"
+    >
+      <Animated.View style={[{ flex: 1, marginTop: top, marginBottom: -travel }, pageStyle]}>
+        <TabView
+          style={{ backgroundColor: theme.color.base }}
+          navigationState={{ index, routes: ACTIVITY_ROUTES }}
+          initialLayout={{ width }}
+          onIndexChange={selectIndex}
+          animationEnabled={!reducedMotion}
+          lazy
+          renderLazyPlaceholder={() => <Loading />}
+          renderTabBar={({ position, jumpTo }) => (
+            <ActivityTabs selected={filter.section} position={position} onSelect={jumpTo} />
+          )}
+          renderScene={({ route }: { route: ActivityTab }) => (
+            <ActivityPage
+              {...props}
+              section={route.key === ACTIVITY_TABS[index]?.key ? filter.section : route.key}
+              filterBot={filter.bot}
+              filterChannel={filter.channel}
+              filterUnread={filter.unreadOnly}
+              search={search}
+              sort={sort}
+              active={route.key === ACTIVITY_TABS[index]?.key}
+              searchFocused={searchFocused}
+              scrollActive={focused && route.key === ACTIVITY_TABS[index]?.key}
+              pinChrome={searchFocused || filtering}
+              headerTravel={travel}
+              dismissSearch={dismissSearch}
+            />
+          )}
+        />
+      </Animated.View>
+      <CollapsingToolbar travel={travel} height={top}>
+        <ActivityToolbar
+          ref={toolbar}
+          search={search}
+          onSearchFocus={setSearchFocused}
+          filtered={
+            sort !== 'default' ||
+            filter.section === 'all' ||
+            filter.section === 'handled' ||
+            filter.bot !== undefined ||
+            filter.channel !== undefined ||
+            filter.unreadOnly === true
+          }
+          onSearch={setSearch}
+          onFilter={() => setFiltering(true)}
+          onHeight={setHeaderHeight}
+        />
+      </CollapsingToolbar>
+      <View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: insets.top,
+          backgroundColor: theme.color.base,
+        }}
       />
       <ActivityFilters
         visible={filtering}
@@ -441,7 +479,7 @@ export function ActivityFeed(props: ActivityFeedProps) {
   );
 }
 
-function ActivityPage({
+const ActivityPage = memo(function ActivityPage({
   hostId,
   client,
   inbox,
@@ -450,25 +488,51 @@ function ActivityPage({
   onOpen,
   header,
   now = Date.now(),
-  filter,
+  section,
+  filterBot,
+  filterChannel,
+  filterUnread,
   search,
   sort,
   active,
   searchFocused,
   dismissSearch,
+  scrollActive,
+  pinChrome,
+  headerTravel,
 }: ActivityFeedProps & {
-  filter: ActivityFilter;
+  section: ActivityFilter['section'];
+  filterBot: ActivityFilter['bot'];
+  filterChannel: ActivityFilter['channel'];
+  filterUnread: ActivityFilter['unreadOnly'];
   search: string;
   sort: ActivitySort;
   active: boolean;
   searchFocused: boolean;
   dismissSearch(): void;
+  scrollActive: boolean;
+  pinChrome: boolean;
+  headerTravel: number;
 }) {
   const theme = useDesignTheme();
+  const bottom = useFloatingTabInset();
+  const filter = useMemo<ActivityFilter>(
+    () => ({
+      section,
+      bot: filterBot,
+      channel: filterChannel,
+      ...(filterUnread === undefined ? {} : { unreadOnly: filterUnread }),
+    }),
+    [section, filterBot, filterChannel, filterUnread],
+  );
+  const onScroll = useChromeScroll(scrollActive, pinChrome);
   const [refreshing, setRefreshing] = useState(false);
   const [gone, setGone] = useState<ReadonlySet<string>>(() => new Set());
   const [held, setHeld] = useState<readonly HumanAttentionItem[]>([]);
-  useLayoutEffect(() => setHeld([]), [filter, search, sort]);
+  useLayoutEffect(
+    () => setHeld((current) => (current.length === 0 ? current : [])),
+    [filter, search, sort],
+  );
   const scoped = useMemo(
     () =>
       client === undefined
@@ -519,11 +583,13 @@ function ActivityPage({
         contentInsetAdjustmentBehavior="never"
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: space.x6,
+          paddingBottom: bottom + headerTravel + space.x6,
         }}
         automaticallyAdjustKeyboardInsets={!searchFocused}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        onScroll={onScroll}
+        scrollEventThrottle={1}
         style={{
           backgroundColor: theme.color.base,
         }}
@@ -596,7 +662,7 @@ function ActivityPage({
                 settled={row.settled}
                 bot={bot(row.item.botSlug)}
                 onOpen={onOpen}
-                now={now}
+                now={Math.floor(now / 60_000) * 60_000}
               />
             );
           return (
@@ -617,12 +683,6 @@ function ActivityPage({
           );
         }}
       />
-      <View
-        pointerEvents="none"
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: space.x6 }}
-      >
-        <EdgeFade edge="top" height={space.x6} />
-      </View>
     </View>
   );
-}
+});

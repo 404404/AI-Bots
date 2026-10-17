@@ -1,6 +1,7 @@
-import { Redirect, Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useIsFocused, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { fullClientParams } from '../../../src/host/full-client';
 import { useHostSession, useHostSnapshot, useInbox } from '../../../src/host/host-session';
@@ -25,6 +26,8 @@ import { HomeHeader } from '../../../src/ui/shell/home-header';
 import { HostDrawerEdge } from '../../../src/ui/shell/host-drawer';
 import { HumanAvatarButton } from '../../../src/ui/shell/human-avatar';
 import { openConversation } from '../../../src/ui/shell/open-conversation';
+import { useChromeScroll } from '../../../src/ui/shell/scroll-chrome';
+import { useFloatingTabInset } from '../../../src/ui/shell/floating-tab-inset';
 import { t } from '../../../src/ui/strings';
 import type { HumanAttentionItem } from '../../../src/host/wire';
 
@@ -32,6 +35,8 @@ const NONE: HumanAttentionItem[] = [];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const onScroll = useChromeScroll(useIsFocused());
+  const bottom = useFloatingTabInset();
   const { saved, client, inbox } = useHostSession();
   const look = useHostLook(saved?.hostId);
   const snapshot = useHostSnapshot(client);
@@ -92,7 +97,10 @@ export default function HomeScreen() {
             </>
           }
         >
-          <FlatList
+          <Animated.FlatList
+            onScroll={onScroll}
+            scrollEventThrottle={1}
+            contentContainerStyle={{ paddingBottom: bottom + space.x6 }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             data={rows}

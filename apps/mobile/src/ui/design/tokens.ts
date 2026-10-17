@@ -91,6 +91,15 @@ export const tabMotion = {
   inactiveIconScale: 0.72,
 } as const;
 
+export const scrollChrome = { threshold: 12, top: 2, duration: 180 } as const;
+
+export const navigationBar = {
+  height: 64,
+  indicatorWidth: 56,
+  indicatorHeight: 32,
+  itemPadding: 6,
+} as const;
+
 export const PRESS_TINT = 0.12;
 
 export const scrim = {

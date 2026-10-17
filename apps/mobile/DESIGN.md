@@ -86,6 +86,8 @@ The shell is set by [ADR-0211](../../docs/adr/0211-the-mobile-app-has-two-tabs-w
 
 **Conversation row**
 
+- On the Activity and Chats root lists, deliberate downward content scrolling hides the global bottom navigation; upward travel or reaching the top restores it. Clamp elastic overscroll so bounce does not toggle chrome. Activity also collapses its title/filter/search row, leaving the three tabs pinned below the safe area; no gradient covers rows beneath the tabs. Searching and filtering keep controls visible. Page changes restore chrome without discarding each page's scroll position. Scroll intent and transforms run on the UI thread; only native visibility/accessibility boundaries cross to React. List geometry stays fixed during the animation.
+
 - A 48pt avatar: the Bot's round avatar with its state ring, or a rounded square with `#` for a Channel.
 - First line: title, IM channel badges and time.
 - Second line: a one-line preview.
