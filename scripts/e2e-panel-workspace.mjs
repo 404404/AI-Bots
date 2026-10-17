@@ -333,11 +333,17 @@ try {
       );
       return window.__headerMenuPeers.map((node) => node.dataset.dockHeader).sort();
     }, id);
-    const point = await page.$eval(header, (node) => {
-      const box = node.getBoundingClientRect();
-      return { x: box.left + 30, y: box.top + box.height / 2 };
+    await page.$eval(header, (node) => {
+      node.addEventListener(
+        'contextmenu',
+        (event) => {
+          window.__headerContextPoint = { x: event.clientX, y: event.clientY };
+        },
+        { once: true },
+      );
     });
-    await page.mouse.click(point.x, point.y, { button: 'right' });
+    await page.locator(header).click({ button: 'right' });
+    const point = await page.evaluate(() => window.__headerContextPoint);
     await page.waitForSelector('[data-pointer-menu] [role="menu"]');
     const box = await page.$eval('[data-pointer-menu] [role="menu"]', (node) => {
       const rect = node.getBoundingClientRect();
@@ -370,7 +376,7 @@ try {
       'Escape restores header focus',
     );
     if (id === 'bh:channel-body') {
-      await page.mouse.click(point.x, point.y, { button: 'right' });
+      await page.locator(header).click({ button: 'right' });
       await page.waitForSelector('[data-pointer-menu] [role="menu"]');
       await page.click('.bh-dock-body [role="textbox"]');
       await page.waitForSelector('[data-pointer-menu]', { hidden: true });
