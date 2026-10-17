@@ -404,8 +404,16 @@ try {
         break;
       }
     }
-    const expand = await page.$('::-p-aria([name="展开全部"])');
-    if (expand && (await expand.isVisible())) await expand.click();
+    await shot('retained-latest-reply');
+    const expansions = [
+      ...(await page.$$('::-p-aria([name="展开全部"])')),
+      ...(await page.$$('::-p-aria([name="Expand all"])')),
+    ];
+    for (const expand of expansions.reverse())
+      if (await expand.isVisible()) {
+        await expand.click();
+        break;
+      }
     await shot('expanded-selected-read');
   }
   await shot(phase);
