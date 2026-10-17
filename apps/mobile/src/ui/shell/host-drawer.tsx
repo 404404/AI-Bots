@@ -4,7 +4,6 @@ import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   ActionSheetIOS,
-  Alert,
   BackHandler,
   FlatList,
   Platform,
@@ -36,6 +35,7 @@ import { useMounted } from '../mounted';
 import { drawerSpring, edge, motion, radius, scrim, space } from '../design/tokens';
 import { CountBadge } from '../primitives/count-badge';
 import { Text } from '../primitives/text';
+import { showAppDialog } from '../primitives/app-dialog';
 import { t } from '../strings';
 import { HostTile } from './host-tile';
 import {
@@ -145,12 +145,12 @@ function closeThen(action: () => void): void {
 }
 
 function confirmUnpair(row: HostDrawerRow, name: string): void {
-  Alert.alert(t.unpairHost(name), t.unpairHostDetail, [
+  showAppDialog(t.unpairHost(name), t.unpairHostDetail, [
     { text: t.cancel, style: 'cancel' },
     {
       text: t.unpair,
       style: 'destructive',
-      onPress: () => void hostSession.unpair(row.hostId).catch(() => undefined),
+      onPress: () => hostSession.unpair(row.hostId),
     },
   ]);
 }
@@ -179,7 +179,7 @@ function openHostMenu(row: HostDrawerRow, name: string): void {
     );
     return;
   }
-  Alert.alert(name, undefined, [
+  showAppDialog(name, undefined, [
     { text: t.cancel, style: 'cancel' },
     ...actions.map((action) => ({
       text: action.label,

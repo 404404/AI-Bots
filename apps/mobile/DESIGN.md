@@ -11,6 +11,14 @@ References:
 | Meta Muse | A Bot profile whose identity and memory are visible and editable.                                                                                                                            |
 | Slack     | Workspace switching, a row of shortcut cards on Chats, an Activity feed with filters, and agent steps with a Stop button.                                                                    |
 
+## Android application dialogs
+
+- Application-owned menus and confirmations use `showAppDialog` and the root `AppDialogHost`, matching the accepted OCAT-inspired Settings surfaces. Do not call React Native `Alert.alert` directly from a screen or feature. iOS retains its existing system alerts/action sheets; operating-system permission prompts, photo pickers and the share sheet remain system-owned.
+- Use `theme.overlay.fill`, the same `androidSettings.radius` as Settings groups, the shared scrim, semantic text and existing Button/SettingsRow primitives. Keep the panel centered with safe-area gutters and a bounded width; do not stretch a short confirmation to fill the screen or add heavy shadows. Contents scroll at large system text sizes; confirmation actions stack when horizontal space is limited. Never cap font scaling or truncate the consequence text.
+- Choice menus show tappable rows with a separate Cancel pill. Destructive menu choices open a second confirmation describing the consequence, with explicit Cancel and destructive actions. Back, accessibility escape and backdrop taps dismiss only; none chooses an action. Keep the current drawer/page underneath.
+- While an asynchronous action is pending, disable repeat submission and dismissal; close after success. On failure, keep the prompt and retry available. A menu opening a confirmation must not dismiss the newer prompt when its old callback finishes. Dialog requests are transient UI state, never a second persistence or authorization owner.
+- Native checks include cancel/button/Back/backdrop paths, nested confirmation, light/dark and default/intermediate/maximum text. Verify the original pairing/group remains unchanged after cancellation, keyboard dismissal from focused search, and the actual rendering above an open drawer or profile. Record iOS and TalkBack qualification separately.
+
 ## Activity query controls
 
 - Activity has two header entries: **Filter and sort** and **Search Activity**. Sorting is part of the same options sheet as category, unread-only, Bot and conversation filters.
