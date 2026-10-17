@@ -80,7 +80,7 @@ describe('Channel unread counts', () => {
       expect(core.humanAttention.status().unreadCount).toBe(3);
       expect(await methods.channelMuteSet({ channelId: group.id, muted: true })).toEqual({
         ok: true,
-        value: { muted: [group.id] },
+        value: { muted: [group.id], preferences: core.channelPreferences.snapshot(group.id) },
       });
       expect(core.humanAttention.status().unreadCount).toBe(1);
       expect(methods.channelUnreadCounts({})).toMatchObject({
@@ -93,7 +93,7 @@ describe('Channel unread counts', () => {
       });
       expect(await methods.channelMuteSet({ channelId: group.id, muted: false })).toEqual({
         ok: true,
-        value: { muted: [] },
+        value: { muted: [], preferences: core.channelPreferences.snapshot(group.id) },
       });
       expect(core.humanAttention.status().unreadCount).toBe(3);
     } finally {
