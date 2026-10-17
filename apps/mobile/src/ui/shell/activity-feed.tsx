@@ -1,5 +1,5 @@
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
-import { renderKeyboardFormScroll } from '../primitives/keyboard-form';
+import { KeyboardFormScroll } from '../primitives/keyboard-form';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useCallback,
@@ -580,7 +580,9 @@ const ActivityPage = memo(function ActivityPage({
           flexGrow: 1,
           paddingBottom: bottom + headerTravel + space.x6,
         }}
-        renderScrollComponent={renderKeyboardFormScroll}
+        renderScrollComponent={(props) => (
+          <KeyboardFormScroll {...props} enabled={!searchFocused} />
+        )}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
         onScroll={onScroll}
