@@ -1,0 +1,33 @@
+{
+  "product": "895efde6aa3aa616d3f0968f23d4363477fbf2c7",
+  "screenshots": [
+    {
+      "file": "after-expanded-reply.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "a52f82fa83e6d890e09511d8c9b4300e0b06f52826adbf0b69414f2d2c67e980",
+      "bytes": 164699,
+      "syntheticOnly": true,
+      "reviewed": true
+    },
+    {
+      "file": "after-reply.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "09b1ba77bc6404f6979e2c630ba1396e85257a975ddc001c97bfc7c4a5f2716b",
+      "bytes": 158768,
+      "syntheticOnly": true,
+      "reviewed": true
+    },
+    {
+      "file": "before-request.png",
+      "width": 1440,
+      "height": 1000,
+      "sha256": "193b9bcf0084a2059ea6bb21871bc6a607b2dfdc5eaf840cc2f4ded552ec86d1",
+      "bytes": 66646,
+      "syntheticOnly": true,
+      "reviewed": true
+    }
+  ],
+  "interpretation": "Current-product before-request and after-real-reply interaction states; not a layout comparison. No credentials or unrelated conversations."
+}
