@@ -1085,6 +1085,10 @@ The Client owns a per-Channel binary split tree inside Messages. A leaf is messa
 
 Version 7 retains the old per-panel open/hidden-control records and migrates legacy side/fraction geometry lazily into an equivalent tree. It backs up the prior raw record before upgrade. Explicit dragging splits the destination leaf; resizing only updates the selected branch. Stable keyed portals render into leaf-owned DOM containers, which move between layout slots without remounting content. Width changes never rewrite topology. See ADR-0222.
 
+### Tob 选定内容与工作进度查询（#2134）
+
+沿用 ADR-0224 的受保护 Tob root Orchestrator、当前可信 Human DM 和临时 native Shell CLI broker。应用定义 `channel-content` 与 `bot-progress` 是只读 Consumer，直接 Human CLI 与 Tob 调用同一 Host 查询边界；现有 Channel Human timeline、Registry、Assignment Directory 和 Runtime state 继续拥有规范事实，不新增存储、索引或执行入口。频道结果保留既有 Human 可见范围与 purge 过滤，支持 Human DM、Bot 间 DM 及当前可见 Group；普通 Bot 的成员检查不变。目标身份代次、内容/进度修订和不透明分页游标共同拒绝目标替换或过期页面。每页、总遍历、正文与附件元数据均有上限并返回完整性说明；结构化审批/私密载荷不进入结果。当前进程状态与 Agent 自报语义报告明确区分，报告和消息中引用的指令仅是数据。此只读能力不自动进入 Assignment，Memory 查询的独立授权不因此扩大。
+
 ### Tob 所有的 Assignment Memory 查询（#2091）
 
 Host 授权的应用定义只读范围，把一个 Tob 所有的 Assignment Session 绑定到原始 Human 私聊

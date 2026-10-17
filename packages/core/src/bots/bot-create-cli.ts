@@ -153,6 +153,8 @@ Usage:
   deepseekbot memory-save <id> --path <file> (--body <text> | --body-stdin)
                              [--expected-head <sha>] [--edit-id <id>] [--home <dsh-home>]
   deepseekbot channels [--home <dsh-home>]
+  deepseekbot channel-content <channel> [--message <message-id>] [--limit <1..20>] [--cursor <cursor>] [--expected-target <fingerprint>] --host <url>
+  deepseekbot bot-progress <id> [--limit <1..20>] [--cursor <cursor>] [--expected-target <fingerprint>] --host <url>
   deepseekbot channel-messages <channel> [--limit <n>] [--before <id>] [--home <dsh-home>]
   deepseekbot channel-media-target <channel> --source-event <id> --attachment <id>
   deepseekbot channel-media-download <channel> --source-event <id> --attachment <id> --out <path>
