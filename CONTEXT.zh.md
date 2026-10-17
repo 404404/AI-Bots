@@ -817,16 +817,34 @@ _避免使用_：widget、card、tab、destination、Channel section
 _避免使用_：view、page、rail item
 
 **Bot mode layout**：
-桌面端 Bot mode（宽度 961 px 及以上）的可停靠工作区，Human 可以拖动、停靠、调整大小、关闭和重新打开 Dock panel。符合条件的 Web/macOS shell 释放原生侧栏占位，显示 Workspace Control Rail 和独立 Channel 列表。面板不组成标签页；至多一个消息面板呈现当前 Channel body。几何、开关排序和间距保存在浏览器本地，重置位于 Bot Settings（ADR-0203）。窄屏及不符合条件的 shell 保留响应式回退。
+桌面端 Bot mode 的两层呈现布局：Global workspace，以及唯一消息面板内当前频道的 Channel workspace。Human 可以在所属工作区内移动面板、调整大小；面板不组成标签页，也不浮出所属工作区。符合条件的 Web/macOS shell 释放原生侧栏占位；窄屏和不符合条件的 shell 保留响应式回退。
 _避免使用_：workbench、panel layout、dock
 
+以下布局术语描述 [#2048](https://github.com/BotHarness/DeepSeekBot/issues/2048) 与 ADR-0221 中已确认的目标设计。交付从 [#2049](https://github.com/BotHarness/DeepSeekBot/issues/2049) 的会话子面板开始；当前已交付的平铺布局尚未实现完整目标。
+
+**Global workspace**：
+全局工作区。Bot mode 的外层呈现空间，包含 Workspace Control Rail、频道列表和活动中心等全局 Dock panel，以及唯一的消息面板。全局面板不依赖当前频道也具有独立用途。这是 UI 布局，不是 DSH Workspace、执行环境或权限边界。
+_避免使用_：App Sidebar、全局频道、根频道
+
 **Workspace Control Rail**：
-工作区控制列。Bot mode layout 中唯一、不可关闭、占据整列高度的控制区域。顶部为 DSB 模式退出入口，中间是可排序的 Dock panel 开关，底部是 Bot Settings。设置上方的拖拽把手在悬停或键盘聚焦时显示，用于把整列移动到各根列之间。它只控制呈现，不持有 Channel 或 Session 选择；Channel 列表是独立 Dock panel。控制列与其他面板使用一致的小圆角。布局偏好放在 Bot Settings，不另设控制列弹窗。
-_避免使用_：panel control、panel control sidebar、App Sidebar、Channel 列表
+工作区控制列。Global workspace 中唯一、不可关闭、占据整列高度的控制区域。顶部为 DSB 模式退出入口，可排序的开关控制全局面板和消息面板，底部是 Bot Settings。设置上方的拖拽把手在悬停或键盘聚焦时显示，用于把整列移动到各外层列之间。控制列与其他面板使用一致的小圆角。频道子面板开关属于消息 header；布局偏好属于 Bot Settings。
+_避免使用_：panel control、panel control sidebar、App Sidebar、频道列表
 
 **Dock panel**：
-Bot mode layout 中一个已注册的内容单元：稳定 id、标题、图标、scope（`channel` 跟随当前 Channel，`global` 不跟随）、默认位置与渲染器。消息面板呈现 Channel body；Channel 列表是全局面板；群成员为消息面板的内部左右分割。其他插件通过 `dockPanels` Service 注册面板。Workspace Control Rail 是特殊布局控制区域，不是普通可关闭内容面板。Dock panel 只是 UI Consumer；插件的数据仍属于自己的 Service 和 Provider（ADR-0203）。
+可移动的内容单元，其声明的呈现范围决定所属工作区。header 标识内容并提供操作；body 呈现内容。面板是 UI Consumer，不是所展示数据的权威。Workspace Control Rail 是布局控制区域，不是可关闭的 Dock panel。
 _避免使用_：widget、view、pane、DSH main panel
+
+**Messages panel**：
+消息面板。承载当前 Channel workspace 的唯一外层 Dock panel。header 标识当前频道并控制可用的频道子面板。隐藏消息面板会隐藏整个频道工作区，同时保留子面板的开关和几何偏好；不停止执行，也不撤销访问权限。
+_避免使用_：Channel body、聊天侧栏、消息列表（指整个面板时）
+
+**Channel workspace**：
+频道工作区。消息面板为当前频道承载的内层呈现空间，包含消息内容及该频道可用的子面板。各频道分别保留布局、尺寸比例和显示偏好。这是第二层，也是最后一层布局；子面板不能停靠到全局工作区。它不引入第二份频道选择状态或数据权威。
+_避免使用_：Channel sidebar、嵌套全局工作区、DSH Workspace
+
+**Channel subpanel**：
+频道子面板。Channel workspace 内的 Dock panel，从消息 header 打开，仅在父面板可见时显示。可用性跟随当前频道及现有访问检查。会话适用于 PersonaBot 私聊和群聊；成员适用于群聊。浏览器控制、电脑控制和 PersonaBot Profile 是 Bot 专属 surface，群聊不提供这些入口，即使会话正在显式查看某个群成员 Bot 也不例外。群资料仍可使用。子面板开关只改变呈现，不改变执行或权限。
+_避免使用_：Channel sidebar entry、全局面板（指频道内容时）、tab
 
 **Channel settings**：
 当前 Channel 的运行配置 modal（频道设置）：PersonaBot DM 中是 Wake Policy、外部身份与外部连接器；群聊中是 Wake Policy、外部连接器与群管理。从 Channel sidebar 齿轮菜单和 Channel header 的「···」菜单打开，按 Channel settings section 组织。
@@ -910,6 +928,6 @@ _避免使用_：短网址、UTM 链接、邀请链接
 
 ### Sessions panel（会话面板）
 
-查看已有 Session 的唯一 Dock panel（`sessions`，TextQuote 图标）。PersonaBot 私聊固定查看该 Bot；群聊默认查看「当前频道」，即原始 Source Event 属于该群的 Assignment，跨负责 Bot 展示。Human 可以明确选择可访问的群成员 Bot，查看其 Orchestrator 与 Assignment Session，且不改变当前聊天。范围是按频道保存的本地视图偏好，与历史筛选及工作区分组独立。查看操作不创建 Assignment、不发送执行请求、不改变执行。旧工作面板退役；活动中心仍负责 Human 待处理事项与审批。见 ADR-0220。
+查看已有 Session 的唯一会话 surface（`sessions`，TextQuote 图标）；在两层目标布局中，它是消息面板内的 Channel subpanel（ADR-0221）。PersonaBot 私聊固定查看该 Bot；群聊默认查看「当前频道」，即原始 Source Event 属于该群的 Assignment，跨负责 Bot 展示。Human 可以明确选择可访问的群成员 Bot，查看其 Orchestrator 与 Assignment Session，且不改变当前聊天。范围是按频道保存的本地视图偏好，与历史筛选及工作区分组独立。查看操作不创建 Assignment、不发送执行请求、不改变执行。旧工作面板退役；活动中心仍负责 Human 待处理事项与审批。见 ADR-0220。
 
 会话面板默认跟随当前频道时不重复显示范围标签；群聊范围选择收进视图选项菜单，仅显式指定 Bot 时在标题栏显示 `Bot · 名称`。
