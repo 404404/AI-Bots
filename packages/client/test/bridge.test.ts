@@ -612,6 +612,26 @@ describe('bridge actions', () => {
     });
   });
 
+  it('reopens the same Bot Inbox on each explicit navigation request', async () => {
+    const { clientStore, actions } = setup();
+    await actions.load();
+    await actions.openBot('ada', 'inbox');
+    expect(clientStore.getSnapshot().selection).toEqual({
+      kind: 'bot',
+      slug: 'ada',
+      inboxRequest: 1,
+    });
+    await actions.openBot('ada', 'inbox');
+    expect(clientStore.getSnapshot().selection).toEqual({
+      kind: 'bot',
+      slug: 'ada',
+      inboxRequest: 2,
+    });
+    expect(clientStore.getSnapshot().conversation.status).toBe('ready');
+    await actions.openBot('ada');
+    expect(clientStore.getSnapshot().selection).toEqual({ kind: 'bot', slug: 'ada' });
+  });
+
   it('loads the roster and opens a DM with its history in chronological order', async () => {
     const { clientStore, actions } = setup();
 

@@ -14,7 +14,7 @@ export const CHANNEL_BODY_PANEL = 'bh:channel-body';
 export const CHANNEL_DOCK_QUERY = '(min-width: 961px)';
 export const CHANNEL_BODY_COMPONENT = 'channel-body';
 export const CHANNEL_ENTRY_COMPONENT = 'channel-entry';
-export const DEFAULT_DOCK_PANELS = ['sessions', 'bot-inbox'] as const;
+export const DEFAULT_DOCK_PANELS = ['sessions'] as const;
 
 export type DockDirection = 'left' | 'right' | 'above' | 'below';
 

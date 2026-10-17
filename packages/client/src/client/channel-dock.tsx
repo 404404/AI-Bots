@@ -108,6 +108,11 @@ interface EntryRuntime {
   expandable: boolean;
 }
 
+interface ChannelInboxView {
+  open: boolean;
+  setOpen(open: boolean): void;
+}
+
 interface ChannelFilesView {
   open: boolean;
   setOpen(open: boolean): void;
@@ -117,6 +122,7 @@ interface ChannelFilesView {
 interface DockContextValue {
   body: ReactNode;
   files?: ChannelFilesView | undefined;
+  inbox?: ChannelInboxView | undefined;
   rail?: ReactNode;
   channelsHeader: HTMLSpanElement | null;
   setChannelsHeader(node: HTMLSpanElement | null): void;
@@ -162,17 +168,26 @@ function ChannelBodyPanel(): ReactElement {
   const dock = useDock();
   const members = dock.members;
   const filesOpen = dock.channel !== undefined && dock.files?.open === true;
-  const detailLabel = dock.t(filesOpen ? 'generatedFiles.title' : 'entry.members');
-  const closeDetail = () => (filesOpen ? dock.files?.setOpen(false) : members?.setOpen(false));
-  const memberProps = useEntryProps('members');
-  const MemberActions = dock.panels.get('members')?.entry?.headerAction;
+  const inboxOpen = dock.channel?.type === 'dm' && dock.inbox?.open === true;
+  const detailEntryId = inboxOpen ? 'bot-inbox' : 'members';
+  const detailLabel = dock.t(
+    filesOpen ? 'generatedFiles.title' : inboxOpen ? 'entry.botInbox' : 'entry.members',
+  );
+  const closeDetail = () => {
+    if (filesOpen) dock.files?.setOpen(false);
+    else if (inboxOpen) dock.inbox?.setOpen(false);
+    else members?.setOpen(false);
+  };
+  const detailProps = useEntryProps(detailEntryId);
+  const DetailActions = dock.panels.get(detailEntryId)?.entry?.headerAction;
+  const DetailBadge = dock.panels.get(detailEntryId)?.entry?.badge;
   return (
     <div className="bh-dock-body bh-message-split">
       <div className="bh-message-content">
         {dock.body}
         {dock.menu}
       </div>
-      {members && (filesOpen || (dock.channel?.type === 'group' && members.open)) && (
+      {members && (filesOpen || inboxOpen || (dock.channel?.type === 'group' && members.open)) && (
         <>
           <div
             className="bh-message-member-divider"
@@ -208,9 +223,14 @@ function ChannelBodyPanel(): ReactElement {
           >
             <PanelHeader
               label={detailLabel}
+              badge={
+                !filesOpen && DetailBadge && detailProps ? (
+                  <DetailBadge {...detailProps} />
+                ) : undefined
+              }
               action={
                 <>
-                  {!filesOpen && MemberActions && memberProps && <MemberActions {...memberProps} />}
+                  {!filesOpen && DetailActions && detailProps && <DetailActions {...detailProps} />}
                   <IconButton
                     aria-label={dock.t('dock.close', { label: detailLabel })}
                     onClick={closeDetail}
@@ -220,7 +240,7 @@ function ChannelBodyPanel(): ReactElement {
                 </>
               }
             />
-            {filesOpen ? dock.files?.content : <ChannelEntryContent entryId="members" />}
+            {filesOpen ? dock.files?.content : <ChannelEntryContent entryId={detailEntryId} />}
           </aside>
         </>
       )}
@@ -329,11 +349,28 @@ function ChannelDockTab({ api, params }: IDockviewPanelHeaderProps<{ entryId?: s
                   aria-label={dock.t('generatedFiles.title')}
                   aria-expanded={dock.files.open}
                   onClick={() => {
-                    if (!dock.files?.open) dock.members?.setOpen(false);
+                    if (!dock.files?.open) {
+                      dock.members?.setOpen(false);
+                      dock.inbox?.setOpen(false);
+                    }
                     dock.files?.setOpen(!dock.files.open);
                   }}
                 >
                   <ChannelSidebarIcon name="file" />
+                </IconButton>
+              </Tooltip>
+            )}
+            {entryId === CHANNEL_BODY_PANEL && dock.channel?.type === 'dm' && dock.inbox && (
+              <Tooltip label={dock.t('entry.botInbox')} side="bottom" delayMs={500}>
+                <IconButton
+                  aria-label={dock.t('entry.botInbox')}
+                  aria-expanded={dock.inbox.open}
+                  onClick={() => {
+                    if (!dock.inbox?.open) dock.files?.setOpen(false);
+                    dock.inbox?.setOpen(!dock.inbox.open);
+                  }}
+                >
+                  <ChannelSidebarIcon name="inbox" />
                 </IconButton>
               </Tooltip>
             )}
@@ -452,6 +489,7 @@ function buildDefaultLayout(api: DockviewApi, entries: ReadonlyMap<string, DockP
 export interface ChannelDockProps {
   body: ReactNode;
   files?: ChannelFilesView | undefined;
+  inbox?: ChannelInboxView | undefined;
   revealBody?: boolean | undefined;
   panels: readonly DockPanelRegistration[];
   channel?: DockPanelChannel | undefined;
@@ -465,6 +503,7 @@ export interface ChannelDockProps {
 export function ChannelDock({
   body,
   files,
+  inbox,
   revealBody = false,
   panels,
   channel,
@@ -497,6 +536,22 @@ export function ChannelDock({
   const known = useRef(byId);
   known.current = byId;
 
+  const reportOpen = (target: DockviewApi): void => {
+    const ids = target.panels.map((panel) => panel.id);
+    registry?.reportOpen([
+      ...ids.filter((id) => id !== WORKSPACE_RAIL && (workspace || id !== CHANNEL_BODY_PANEL)),
+      ...(workspace &&
+      channel?.type === 'group' &&
+      membersRef.current.open &&
+      ids.includes(CHANNEL_BODY_PANEL)
+        ? ['members']
+        : []),
+      ...(channel?.type === 'dm' && inbox?.open && ids.includes(CHANNEL_BODY_PANEL)
+        ? ['bot-inbox']
+        : []),
+    ]);
+  };
+
   const save = (target: DockviewApi): void => {
     hideBodyHeader(target);
     if (workspace)
@@ -512,15 +567,7 @@ export function ChannelDock({
       }
     const ids = target.panels.map((panel) => panel.id);
     setOpenIds(ids);
-    registry?.reportOpen([
-      ...ids.filter((id) => id !== WORKSPACE_RAIL && (workspace || id !== CHANNEL_BODY_PANEL)),
-      ...(workspace &&
-      channel?.type === 'group' &&
-      membersRef.current.open &&
-      ids.includes(CHANNEL_BODY_PANEL)
-        ? ['members']
-        : []),
-    ]);
+    reportOpen(target);
     if (workspace || !readChannelDock(storage)?.layout.panels[WORKSPACE_RAIL])
       writeChannelDock(
         {
@@ -550,6 +597,7 @@ export function ChannelDock({
           (id === CHANNEL_BODY_PANEL ||
             (workspace !== undefined && validRail && id === WORKSPACE_RAIL) ||
             known.current.has(id)) &&
+          id !== 'bot-inbox' &&
           !(workspace && id === 'members'),
       );
       for (const [id, position] of Object.entries(pruned.parked))
@@ -632,7 +680,7 @@ export function ChannelDock({
       if (
         panel.id === CHANNEL_BODY_PANEL ||
         (workspace && panel.id === WORKSPACE_RAIL) ||
-        byId.has(panel.id)
+        (byId.has(panel.id) && panel.id !== 'bot-inbox')
       )
         continue;
       const position = positionOf(api, panel.id);
@@ -641,7 +689,12 @@ export function ChannelDock({
     }
     for (const [id, position] of Object.entries(parked.current)) {
       const panel = byId.get(id);
-      if (position.missing !== true || panel === undefined || (workspace && id === 'members'))
+      if (
+        position.missing !== true ||
+        panel === undefined ||
+        id === 'bot-inbox' ||
+        (workspace && id === 'members')
+      )
         continue;
       delete parked.current[id];
       addEntryPanel(api, panel, position);
@@ -649,7 +702,15 @@ export function ChannelDock({
     save(api);
   }, [api, byId]);
 
+  const inboxStateMount = useMountedResource<HTMLSpanElement>(() => {
+    if (api) reportOpen(api);
+  }, [api, channel?.id, inbox?.open]);
+
   const close = (panelId: string): void => {
+    if (panelId === 'bot-inbox') {
+      inbox?.setOpen(false);
+      return;
+    }
     if (workspace && panelId === 'members') {
       membersRef.current = { ...membersRef.current, open: false };
       updateMembers(membersRef.current);
@@ -670,9 +731,20 @@ export function ChannelDock({
   };
 
   const open = (panelId: string): void => {
+    if (panelId === 'bot-inbox') {
+      if (channel?.type !== 'dm' || !inbox || !api) return;
+      files?.setOpen(false);
+      inbox.setOpen(true);
+      const message = byId.get(CHANNEL_BODY_PANEL);
+      if (message && !api.getPanel(CHANNEL_BODY_PANEL))
+        addEntryPanel(api, message, parked.current[CHANNEL_BODY_PANEL]);
+      api.getPanel(CHANNEL_BODY_PANEL)?.api.setActive();
+      return;
+    }
     if (workspace && panelId === 'members') {
       if (channel?.type !== 'group' || !api) return;
       files?.setOpen(false);
+      inbox?.setOpen(false);
       membersRef.current = { ...membersRef.current, open: true };
       updateMembers(membersRef.current);
       const message = byId.get(CHANNEL_BODY_PANEL);
@@ -704,7 +776,7 @@ export function ChannelDock({
 
   const menu = (
     <ChannelDockPanelsMenu
-      panels={panels}
+      panels={panels.filter((panel) => panel.id !== 'bot-inbox')}
       openIds={openIds}
       t={t}
       onToggle={(id) => (api?.getPanel(id) === undefined ? open(id) : close(id))}
@@ -722,6 +794,7 @@ export function ChannelDock({
     if (!api) return;
     parked.current = {};
     files?.setOpen(false);
+    inbox?.setOpen(false);
     gapRef.current = DEFAULT_WORKSPACE_GAP;
     updateGap(DEFAULT_WORKSPACE_GAP);
     orderRef.current = [];
@@ -744,13 +817,17 @@ export function ChannelDock({
   const value: DockContextValue = {
     body,
     files,
+    inbox,
     channelsHeader,
     setChannelsHeader,
     members: workspace
       ? {
           ...members,
           setOpen: (open) => {
-            if (open) files?.setOpen(false);
+            if (open) {
+              files?.setOpen(false);
+              inbox?.setOpen(false);
+            }
             membersRef.current = { ...members, open };
             updateMembers(membersRef.current);
             if (api) save(api);
@@ -857,6 +934,7 @@ export function ChannelDock({
         role="region"
         aria-label={t('dock.region')}
       >
+        <span ref={inboxStateMount} hidden />
         <span ref={layoutMount} hidden />
         <span ref={scrollbarsMount} hidden />
         {dropX !== undefined && <span className="bh-workspace-drop" style={{ left: dropX }} />}

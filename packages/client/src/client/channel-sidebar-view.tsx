@@ -676,11 +676,6 @@ export function ChannelSidebar({
     () => registry.tabs(scope),
   );
   const selectedBotSlug = context?.botSlug;
-  const inboxMount = useMountedResource<HTMLDivElement>(() => {
-    if (selectedBotSlug === undefined) return;
-    const timer = window.setInterval(() => void actions.refreshBotInbox(selectedBotSlug), 10_000);
-    return () => window.clearInterval(timer);
-  }, [selectedBotSlug, actions]);
   const closeRef = useRef(controller);
   closeRef.current = controller;
   const overlayMount = useMountedResource<HTMLDivElement>(() => {
@@ -714,7 +709,9 @@ export function ChannelSidebar({
           onMemoryWorkingSelect,
           selectedMemoryWorking,
         };
-  const sidebarEntries = entries.filter((entry) => !isChannelSettingsSection(entry));
+  const sidebarEntries = entries.filter(
+    (entry) => entry.id !== 'bot-inbox' && !isChannelSettingsSection(entry),
+  );
   const visibleEntries =
     entryProps === undefined
       ? []
@@ -723,7 +720,6 @@ export function ChannelSidebar({
   const panel = (
     <div
       id="bh-channel-sidebar"
-      ref={inboxMount}
       className={`bh-channel-sidebar${controller.mode === 'overlay' ? ' bh-channel-sidebar-overlay' : ''}`}
       data-bh-tour="channel-sidebar"
       role="complementary"
