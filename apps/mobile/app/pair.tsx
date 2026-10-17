@@ -39,12 +39,33 @@ export default function PairScreen() {
   const pending = useRef<AbortController | undefined>(undefined);
   const handled = useRef<string | undefined>(undefined);
   const scroll = useRef<ScrollView | null>(null);
+  const keyboardTop = useRef<number | undefined>(undefined);
+  const [keyboardSpace, setKeyboardSpace] = useState(0);
   const showPair = () => scroll.current?.scrollToEnd({ animated: true });
+  const adjustForKeyboard = () => {
+    if (Platform.OS !== 'android') return;
+    const top = keyboardTop.current;
+    const view = scroll.current;
+    if (top === undefined || view === null) return;
+    view.getNativeScrollRef()?.measureInWindow((_x, y, _width, height) => {
+      if (scroll.current !== view || keyboardTop.current !== top) return;
+      setKeyboardSpace(Math.max(0, y + height - top));
+    });
+  };
   const mounted = useMounted<ScrollView>((node) => {
     scroll.current = node;
-    const shown = Keyboard.addListener('keyboardDidShow', showPair);
+    const shown = Keyboard.addListener('keyboardDidShow', (event) => {
+      keyboardTop.current = event.endCoordinates.screenY;
+      adjustForKeyboard();
+      showPair();
+    });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardTop.current = undefined;
+      setKeyboardSpace(0);
+    });
     return () => {
       shown.remove();
+      hidden.remove();
       scroll.current = null;
     };
   }, []);
@@ -92,6 +113,7 @@ export default function PairScreen() {
   return (
     <ScrollView
       ref={mounted}
+      onLayout={adjustForKeyboard}
       onContentSizeChange={() => {
         if (Keyboard.isVisible()) showPair();
       }}
@@ -99,7 +121,7 @@ export default function PairScreen() {
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={{ padding: 16, gap: 12 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 16 + keyboardSpace, gap: 12 }}
     >
       <Text style={{ color: theme.inkSoft, fontSize: 14 }}>{t.pairHint}</Text>
       <View
@@ -152,6 +174,8 @@ export default function PairScreen() {
         placeholderTextColor={theme.inkSoft}
         autoCapitalize="none"
         autoCorrect={false}
+        keyboardType="url"
+        onFocus={showPair}
         returnKeyType="go"
         onSubmitEditing={() => void pair(link, 'paste')}
         style={{

@@ -8,6 +8,7 @@ import { appBuildLabel } from '../src/ui/app-build';
 import { copyMessage } from '../src/ui/chat/message-menu';
 import { currentAppBuild } from '../src/ui/native-app-build';
 import { StatisticsSettings } from '../src/ui/shell/statistics-settings';
+import { MessageDisplaySettings } from '../src/ui/shell/message-display-settings';
 import { SettingsView } from '../src/ui/settings-view';
 import { openHostDrawer } from '../src/ui/shell/host-drawer';
 
@@ -22,6 +23,7 @@ export default function SettingsScreen() {
   return (
     <SettingsView
       statistics={<StatisticsSettings />}
+      messageDisplay={<MessageDisplaySettings />}
       key={saved?.hostId}
       hostName={saved?.hostName}
       connection={connection}

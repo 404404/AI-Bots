@@ -24,6 +24,8 @@ Native steps belong to the designated [shared device QA runner](../../../../docs
 
 ## Gotchas
 
+- **Windows Android (queued runner).** Follow [Android device QA](../../../../docs/agents/android-device-qa.md): claim the explicit emulator or phone serial, use `scripts/android-qa.ps1` to build/install/open the dev client, then exercise the phone entry points above and capture PNG/XML/MP4 evidence. Pairing, switching computers and permission UI require their visible and canonical facts; scrcpy working alone does not pass them. The Mac `simctl push` journey cannot simulate Android notifications. Real FCM delivery and notification actions stay untested until verified on a configured phone build.
+
 - The Simulator cannot get an Expo push token without an EAS projectId, so Notifications shows "This build of the app cannot receive notifications." and the per-kind switches and test button do not appear. Real APNs/FCM delivery needs a physical device and EAS credentials; say it is still owed.
 - `xcrun simctl push` stands in for the Expo push service. The notification data goes under the payload's `body` key, which is where expo-notifications reads it on iOS.
 - The banner belongs to SpringBoard, so Maestro cannot find it by text: the flow taps it by point (top centre). agent-device can tap it the same way (`press 196 90` on an iPhone 16).

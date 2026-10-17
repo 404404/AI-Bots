@@ -132,6 +132,14 @@
       "gap": null
     },
     {
+      "id": "phone.android-interactions",
+      "label": "Android profile/settings content scrolls before dismissal and chat composer follows keyboard frames",
+      "source": "apps/mobile/src/ui/primitives/keyboard-frame.android.tsx",
+      "guide": ".agents/skills/verify-deepseekbot/features/phone-android-interactions.md",
+      "task": 2021,
+      "gap": null
+    },
+    {
       "id": "phone.notifications",
       "label": "Switch Host, configure notifications and route simulated push; physical delivery separate",
       "source": "apps/mobile/src/host/push-routing.ts",
@@ -1363,6 +1371,22 @@
       "reason": "Own task Host and Expo Web export; routine mutations/history in Web, scheduler/model and native layers separate.",
       "task": 1967,
       "sha256": "e29724093fff370ef0a621c5784ec4715e46b3eb24b176b3349a10a653cf2f13"
+    },
+    {
+      "path": "scripts/e2e-mobile-android-interactions.mjs",
+      "category": "mapped",
+      "behaviors": ["phone.android-interactions"],
+      "reason": "Matching Windows Android lease only: profile/settings content-first scroll and handle gestures, dark-theme 30fps composer pixel regression; scroll selection excludes the underlying dimmed chat. Prepared QA surface, FFmpeg and native build required; no model or iOS claim.",
+      "task": 2028,
+      "sha256": "6f618d74345592e46f70e4bc5b0e7845df50f57a517e0c448e0a91f47b13afae"
+    },
+    {
+      "path": "scripts/e2e-mobile-pair-android.mjs",
+      "category": "mapped",
+      "behaviors": ["phone.pairing"],
+      "reason": "Queued Windows Android lease only: real IME geometry and, after Human QR/paste pairing, isolated Host device facts plus visible roster across app restart; does not prove Host restart, revoke or notification delivery.",
+      "task": 2021,
+      "sha256": "281deb822273ba865e6a151ff70ce1040e0ee025185020fb26d301cf100cf9da"
     },
     {
       "path": "scripts/e2e-mobile-sim.mjs",
