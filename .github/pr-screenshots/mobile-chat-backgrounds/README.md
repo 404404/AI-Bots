@@ -6,7 +6,7 @@ These are original Android captures with a neutral, procedurally drawn fixture. 
 
 - Date: 2026-10-18 (Asia/Tokyo).
 - Before: `47a2fbf4553e7760480fe10f3c47c1bd5cb3ef19`; the entire `apps/mobile` tree is identical to the original issue base `0f75f3e38f7d0e3b59189203998bd7c817aad496` (`git diff` is empty).
-- After: `1e2294329147e15ff9272393c0e48a127141d341` for the final Settings/global entry and conversation-save matrix. DM editor and Group frames use `dd1fa3275282f7150b85c9e2e24b082d727f14f5`; their runtime modules have no subsequent diff. Main merge and navigation-test mocks do not alter those views. Evidence-only commits do not alter runtime code.
+- Initial matrix: `1e2294329147e15ff9272393c0e48a127141d341` for Settings/global entry and conversation-save captures. DM editor and Group frames use `dd1fa3275282f7150b85c9e2e24b082d727f14f5`; their runtime modules were unchanged through `1e2294329`. The review follow-up below records the later changes separately. Evidence-only commits do not alter runtime code.
 - Native binary: existing SDK58 / RN0.88 development client built from the before checkout. Mobile package, app configuration and config-plugin inputs have no diff against the after revision. No native dependency or generated native project changed.
 - Host: task-isolated pinned DSH0.2.0-rc.2 Host, built at the original issue base. This preference has no Host API or model dependency. The merged main's unrelated peer-review changes are not used by these local background checks.
 - Android16 / API36; 1080×2400 physical pixels, 420dpi (about411×914dp), portrait, Chinese locale, native font scales1.0/1.3/2.0, light/dark OS appearance.
@@ -72,3 +72,12 @@ Additional flow captures:
 - [group-inherits-color](group-inherits-color.png)
 - [group-inherits-photo](group-inherits-photo.png)
 - [group-override-after-global-reset](group-override-after-global-reset.png)
+
+## Review follow-up
+
+The four source-review findings were fixed in352c6e9da416d521398581ca8f0501c0e69f5298. Both Standards and Spec review have0 unresolved source/documentation findings. A subsequent native probe found the error alert below the initial scroll fold;3f4786f3b7cf2c9afa535d1d61cced44f5ce8158 moves it beside fixed Done/Cancel actions. That tiny delta also has0 findings on both axes.
+
+- [Before inherited-image controls](before-inherited-image-controls.png), source1e2294329 (before review fixes; scrolled to controls). [Read-only inherited preview](after-inherited-image.png), source352c6e9da. A drag plus Done leaves the group override absent (record25), and [changing the global default still updates it](after-inherited-default-change.png) (record26). Explicit-image editing is unchanged.
+- Source3f4786f3b, [unreadable metadata save refusal](unreadable-metadata-save-refused.png) at light/1.0 and [dark/2.0](unreadable-metadata-large-dark.png): only this task’s newest feature record temporarily had read permission removed. Done shows its error beside reachable actions. Save/cancel preserve the exact record and owned image. Restoring the original permission and cold reopening [recovers the original DM background](readable-metadata-recovered.png); revision26 and image file are unchanged. Font scale and night mode were restored. This is a native metadata-I/O failure probe, not native disk-exhaustion or image-decode proof.
+- Conversation route regressions reject empty/partial/unknown scope; only Settings permits parameter-free default editing. Deterministic journal coverage distinguishes text I/O failure from incomplete JSON fallback. Failed hydration blocks writes and collection until a fresh successful read.
+- Updated Windows mobile run:79 files passed,1 failed,6 skipped;590 tests passed,1 failed,8 skipped. The existing stream-replay test reported fetch failed/bad port. A focused rerun of that file plus the touched background/conversation paths passed all44 tests. It does not erase the full-run failure. Editor/style follow-up6 tests passed; typecheck, lint and format passed. New-head CI remains separately reported on the PR.
