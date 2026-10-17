@@ -1,3 +1,11 @@
+import {
+  createChannelPreferences,
+  type ChannelPreferencesService,
+} from './channels/preferences.js';
+import {
+  createTobChannelPreferencesOperations,
+  TOB_CHANNEL_PREFERENCES_CAPABILITIES,
+} from './tob/cli-channel-preferences.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
 import {
   createTobChannelOperations,
@@ -330,6 +338,7 @@ export interface BotHarnessCore {
   tob: TobService;
   creations: BotCreationService;
   channelManagement: ChannelManagementService;
+  channelPreferences: ChannelPreferencesService;
   partLibrary: PartLibrary;
   operationalDatabase: OperationalDatabaseOwner;
   registry: PersonaBotRegistry;
@@ -790,6 +799,7 @@ export function createCore(
     registry,
     channels,
   });
+  const channelPreferences = createChannelPreferences({ channels, registry, roster });
   const channelManagement = createChannelManagement({
     database: attachOperationalModule(operationalDatabase, 'channel-management'),
     channels,
@@ -937,6 +947,7 @@ export function createCore(
     tob,
     creations,
     channelManagement,
+    channelPreferences,
     partLibrary,
     rootDir,
     operationalDatabase,
@@ -1154,13 +1165,15 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobMaintenanceOperations(command, args)) ??
                   (await tobBotCreationOperations(command, args)) ??
                   (await tobBotProfileOperations(command, args)) ??
-                  (await tobChannelOperations(command, args)),
+                  (await tobChannelOperations(command, args)) ??
+                  (await tobChannelPreferencesOperations(command, args)),
                 capabilities: [
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
                   ...TOB_BOT_CREATE_CAPABILITIES,
                   ...TOB_BOT_PROFILE_CAPABILITIES,
                   ...TOB_CHANNEL_CAPABILITIES,
+                  ...TOB_CHANNEL_PREFERENCES_CAPABILITIES,
                 ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
@@ -1982,6 +1995,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     tob: core.tob,
     creations: core.creations,
     channelManagement: core.channelManagement,
+    channelPreferences: core.channelPreferences,
     partLibrary: core.partLibrary,
     onboardingNews: (slug) =>
       onboardingNewsAvailable(
@@ -2085,6 +2099,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     bridge: () => bridgeMethods,
     isProtectedBot: (slug) => core.tob.isTob(slug),
   });
+  const tobChannelPreferencesOperations = createTobChannelPreferencesOperations(
+    core.channelPreferences,
+  );
   const tobChannelOperations = createTobChannelOperations({
     management: core.channelManagement,
     channels: core.channels,

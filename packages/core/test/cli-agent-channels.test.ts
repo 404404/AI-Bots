@@ -195,3 +195,120 @@ describe('scoped invitation cancellation and join decisions', () => {
     },
   );
 });
+
+describe('scoped personal Channel preference CLI', () => {
+  const writes = [
+    { command: 'channel-pin', flags: {}, args: { pinned: true } },
+    { command: 'channel-pin', flags: { off: true }, args: { pinned: false } },
+    { command: 'channel-hide', flags: {}, args: { hidden: true } },
+    { command: 'channel-hide', flags: { off: true }, args: { hidden: false } },
+    { command: 'channel-mute', flags: {}, args: { muted: true } },
+    { command: 'channel-mute', flags: { off: true }, args: { muted: false } },
+    {
+      command: 'channel-human-name-set',
+      flags: { nickname: ' Boss ' },
+      args: { nickname: 'Boss' },
+    },
+    { command: 'channel-human-name-set', flags: { clear: true }, args: { nickname: null } },
+  ];
+  it('reads target preferences without mutation flags or stdin', async () => {
+    const p = parser();
+    expect(await p.parse('channel-preferences', ['dm-ada'])).toEqual({
+      command: 'channel-preferences',
+      args: { channelId: 'dm-ada' },
+      write: false,
+    });
+    expect(p.readStdin).not.toHaveBeenCalled();
+    await expect(
+      p.parse('channel-preferences', ['dm-ada'], { 'expected-state': fingerprint }),
+    ).rejects.toMatchObject({ code: 'agent-scope-denied' });
+  });
+  it.each(writes)(
+    'changes exactly one preference with $command',
+    async ({ command, flags, args }) => {
+      expect(
+        await parser().parse(command, ['dm-ada'], { ...flags, 'expected-state': fingerprint }),
+      ).toEqual({
+        command,
+        args: { channelId: 'dm-ada', expectedState: fingerprint, ...args },
+        write: true,
+      });
+      expect(TOB_AGENT_COMMAND_USAGE[command]).toContain('--expected-state');
+    },
+  );
+  it.each(writes)(
+    'requires the exact observed personal state for $command',
+    async ({ command, flags }) => {
+      for (const value of [
+        undefined,
+        '',
+        'old',
+        'a'.repeat(63),
+        'A'.repeat(64),
+        ' ' + fingerprint,
+        42,
+      ])
+        await expect(
+          parser().parse(command, ['dm-ada'], { ...flags, 'expected-state': value }),
+        ).rejects.toMatchObject({ code: 'usage' });
+    },
+  );
+  it.each(writes)(
+    'rejects bulk changes and authority overrides for $command',
+    async ({ command, flags }) => {
+      for (const flag of [
+        'home',
+        'host',
+        'token',
+        'operation-key',
+        'expected-channel',
+        'section',
+        'pins',
+        'hidden',
+        'channelIds',
+        'owner',
+      ])
+        await expect(
+          parser().parse(command, ['dm-ada'], {
+            ...flags,
+            'expected-state': fingerprint,
+            [flag]: 'private-value',
+          }),
+        ).rejects.toMatchObject({ code: 'agent-scope-denied' });
+      for (const rest of [[], ['dm-ada', 'dm-other'], [''], ['channel\ninvalid']])
+        await expect(
+          parser().parse(command, rest, { ...flags, 'expected-state': fingerprint }),
+        ).rejects.toMatchObject({ code: 'usage' });
+    },
+  );
+  it.each(['channel-pin', 'channel-hide', 'channel-mute'])(
+    'refuses malformed toggle flags for %s',
+    async (command) => {
+      await expect(
+        parser().parse(command, ['dm-ada'], { off: 'true', 'expected-state': fingerprint }),
+      ).rejects.toMatchObject({ code: 'usage' });
+    },
+  );
+  it.each([
+    {},
+    { nickname: '' },
+    { nickname: ' ' },
+    { nickname: 'name', clear: true },
+    { nickname: 'name', clear: 'false' },
+    { clear: 'true' },
+    { nickname: 'a'.repeat(129) },
+    { nickname: 'a\nb' },
+    { nickname: 123 },
+  ])('validates a single-line nickname or an explicit clear', async (flags) => {
+    await expect(
+      parser().parse('channel-human-name-set', ['dm-ada'], {
+        ...flags,
+        'expected-state': fingerprint,
+      }),
+    ).rejects.toMatchObject({ code: 'usage' });
+  });
+  it('keeps whole-roster mutation commands outside scoped management', async () => {
+    for (const command of ['roster-pins-set', 'roster-hidden-set', 'roster-batch'])
+      expect(await parser().parse(command, ['dm-ada'])).toBeUndefined();
+  });
+});

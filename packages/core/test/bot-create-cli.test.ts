@@ -716,6 +716,32 @@ describe('deepseekbot lifecycle', () => {
     const set = await invoke(['channel-human-name-set', channelId, '--nickname', 'Ops'], home);
     expect(set.code).toBe(0);
     expect(set.json).toMatchObject({ channel: { id: channelId }, nickname: 'Ops' });
+    const guardedOffline = await invoke(
+      [
+        'channel-human-name-set',
+        channelId,
+        '--nickname',
+        'Must not replace Ops',
+        '--expected-state',
+        'a'.repeat(64),
+      ],
+      home,
+    );
+    expect(guardedOffline.code).toBe(2);
+    expect(guardedOffline.json.error.code).toBe('usage');
+    const readOwner = mountOperationalDatabase({
+      dshHome: home,
+      schemaPlan: BOT_HARNESS_SCHEMA_PLAN,
+    });
+    try {
+      const channels = createSqliteChannelStore({
+        database: attachOperationalModule(readOwner, 'messaging'),
+        rootDir: join(home, 'botharness', 'channels'),
+      });
+      expect(channels.humanNickname(channelId)).toBe('Ops');
+    } finally {
+      readOwner.close();
+    }
     const cleared = await invoke(['channel-human-name-set', channelId, '--clear'], home);
     expect(cleared.code).toBe(0);
     expect(cleared.json.nickname).toBeNull();

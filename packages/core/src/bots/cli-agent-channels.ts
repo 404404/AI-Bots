@@ -1,8 +1,18 @@
 import type { AgentManagementInvocation } from './cli-agent-management.js';
 import { CliLiveError } from './cli-live-error.js';
-import { channelAvatarDataUrl } from './cli-channels.js';
+import { channelAvatarDataUrl, channelExpectedState } from './cli-channels.js';
 
 export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> = {
+  'channel-preferences':
+    'deepseekbot channel-preferences <channel-id>; current Human preferences and stateFingerprint, not Group settings',
+  'channel-pin':
+    'deepseekbot channel-pin <channel-id> [--off] --expected-state <observed-fingerprint>; pin or unpin only this Channel',
+  'channel-hide':
+    'deepseekbot channel-hide <channel-id> [--off] --expected-state <observed-fingerprint>; hide or show only this Channel',
+  'channel-mute':
+    'deepseekbot channel-mute <channel-id> [--off] --expected-state <observed-fingerprint>; enable or disable personal do not disturb only for this Channel',
+  'channel-human-name-set':
+    'deepseekbot channel-human-name-set <channel-id> (--nickname <text> | --clear) --expected-state <observed-fingerprint>; set or clear the Human nickname only in this Channel',
   channels:
     'deepseekbot channels [--limit <1..100>] [--cursor <last-channel-id>]; bounded Channel metadata, not messages',
   channel:
@@ -27,6 +37,11 @@ export const TOB_AGENT_CHANNEL_COMMAND_USAGE: Readonly<Record<string, string>> =
 };
 
 const OPTIONS: Readonly<Record<string, readonly string[]>> = {
+  'channel-preferences': [],
+  'channel-pin': ['off', 'expected-state'],
+  'channel-hide': ['off', 'expected-state'],
+  'channel-mute': ['off', 'expected-state'],
+  'channel-human-name-set': ['nickname', 'clear', 'expected-state'],
   channels: ['limit', 'cursor'],
   channel: [],
   'channel-rename': ['name', 'expected-channel'],
@@ -103,8 +118,36 @@ export function parseAgentChannels(
     return { command, args, write: false };
   }
   const target = text(rest[0], command === 'group-create' ? 'Group name' : 'Channel ID');
-  if (command === 'channel' || command === 'group-wake-policies')
+  if (
+    command === 'channel' ||
+    command === 'group-wake-policies' ||
+    command === 'channel-preferences'
+  )
     return { command, args: { channelId: target }, write: false };
+  if (['channel-pin', 'channel-hide', 'channel-mute', 'channel-human-name-set'].includes(command)) {
+    const args: Record<string, unknown> = {
+      channelId: target,
+      expectedState: channelExpectedState(values['expected-state']),
+    };
+    if (command === 'channel-human-name-set') {
+      if (
+        (values.clear !== undefined && typeof values.clear !== 'boolean') ||
+        (values.nickname === undefined) === (values.clear !== true)
+      )
+        usage('channel-human-name-set needs --nickname or --clear, not both or neither.');
+      const nickname = values.clear === true ? null : text(values.nickname, '--nickname');
+      if (nickname !== null && nickname.length > 128)
+        usage('--nickname must contain at most 128 characters.');
+      args.nickname = nickname;
+    } else {
+      if (values.off !== undefined && typeof values.off !== 'boolean')
+        usage('--off must be a boolean flag.');
+      const field =
+        command === 'channel-pin' ? 'pinned' : command === 'channel-hide' ? 'hidden' : 'muted';
+      args[field] = values.off !== true;
+    }
+    return { command, args, write: true };
+  }
   if (command !== 'group-create' && command !== 'group-invite') {
     const args: Record<string, unknown> = {
       channelId: target,

@@ -7,6 +7,7 @@ import type { connectLiveHost } from './cli-live.js';
 export const CHANNEL_OPTIONS = {
   'avatar-file': { type: 'string' },
   'expected-channel': { type: 'string' },
+  'expected-state': { type: 'string' },
   invitation: { type: 'string' },
   request: { type: 'string' },
   accept: { type: 'boolean' },
@@ -28,6 +29,12 @@ export const CHANNEL_OPTIONS = {
 } as const;
 
 export const CHANNEL_COMMANDS = [
+  {
+    command: 'channel-preferences',
+    description: 'read personal Channel preferences and their current fingerprint',
+  },
+  { command: 'channel-pin', description: 'pin one Channel, or unpin it with --off' },
+  { command: 'channel-hide', description: 'hide one Channel, or show it with --off' },
   { command: 'channel', description: 'read a group Channel and its current fingerprint' },
   {
     command: 'channel-media-target',
@@ -98,6 +105,7 @@ type ChannelCommand = (typeof CHANNEL_COMMANDS)[number]['command'];
 interface ChannelValues {
   'operation-key'?: string;
   'expected-channel'?: string;
+  'expected-state'?: string;
   timeout?: string;
   name?: string;
   clear?: boolean;
@@ -137,6 +145,12 @@ const MAX_AVATAR_BYTES = 98_304;
 
 function usage(message: string): never {
   throw new CliLiveError('usage', message);
+}
+
+export function channelExpectedState(value: unknown): string {
+  if (typeof value !== 'string' || !/^[a-f0-9]{64}$/u.test(value))
+    usage('--expected-state must be the observed personal Channel preferences fingerprint.');
+  return value;
 }
 
 export function channelOperationKey(value: string): string {
@@ -228,6 +242,17 @@ export async function runChannelCommand(
   let args: Record<string, unknown> = { channelId };
   let method: string;
   switch (command) {
+    case 'channel-preferences':
+      method = 'channelPreferences';
+      break;
+    case 'channel-pin':
+      method = 'channelPinSet';
+      args.pinned = values.off !== true;
+      break;
+    case 'channel-hide':
+      method = 'channelHiddenSet';
+      args.hidden = values.off !== true;
+      break;
     case 'channel':
       method = 'channelGet';
       break;
@@ -407,6 +432,9 @@ export async function runChannelCommand(
       usage('--expected-channel must be the observed Channel fingerprint.');
     args.expectedChannel = fingerprint;
   }
+
+  if (values['expected-state'] !== undefined)
+    args.expectedState = channelExpectedState(values['expected-state']);
 
   const host = await connect(values, io, AbortSignal.timeout(Math.ceil(seconds * 1000)));
   if (command === 'channel-media-download') {

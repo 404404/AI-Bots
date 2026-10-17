@@ -1,3 +1,4 @@
+import type { ChannelPreferencesSnapshot } from '../channels/preferences.js';
 import type { ChannelManagementResult } from '../channels/management.js';
 import type { BotCreationReceipt } from '../bots/creation.js';
 import type { TurnTrace } from '../bots/tool-trace.js';
@@ -1071,8 +1072,43 @@ export class BotharnessBridgeService extends TypertRemoteService {
     );
   }
 
-  channelHumanNameSet(channelId: string, nickname: string | null) {
-    return unwrap(this.methods.channelHumanNameSet({ channelId, nickname }));
+  channelPreferences(channelId: string): ChannelPreferencesSnapshot {
+    return unwrap(this.methods.channelPreferences({ channelId }));
+  }
+  channelPinSet(
+    channelId: string,
+    pinned: boolean,
+    expectedState?: string,
+  ): Promise<ChannelPreferencesSnapshot> {
+    return unwrapAsync(
+      this.methods.channelPinSet({
+        channelId,
+        pinned,
+        ...(expectedState === undefined ? {} : { expectedState }),
+      }),
+    );
+  }
+  channelHiddenSet(
+    channelId: string,
+    hidden: boolean,
+    expectedState?: string,
+  ): Promise<ChannelPreferencesSnapshot> {
+    return unwrapAsync(
+      this.methods.channelHiddenSet({
+        channelId,
+        hidden,
+        ...(expectedState === undefined ? {} : { expectedState }),
+      }),
+    );
+  }
+  channelHumanNameSet(channelId: string, nickname: string | null, expectedState?: string) {
+    return unwrap(
+      this.methods.channelHumanNameSet({
+        channelId,
+        nickname,
+        ...(expectedState === undefined ? {} : { expectedState }),
+      }),
+    );
   }
 
   humanNameSet(displayName: string | null) {
@@ -1653,8 +1689,18 @@ export class BotharnessBridgeService extends TypertRemoteService {
   hiddenSet(hidden: string[]): Promise<{ hidden: string[] }> {
     return unwrapAsync(this.methods.hiddenSet({ hidden }));
   }
-  channelMuteSet(channelId: string, muted: boolean): Promise<{ muted: string[] }> {
-    return unwrapAsync(this.methods.channelMuteSet({ channelId, muted }));
+  channelMuteSet(
+    channelId: string,
+    muted: boolean,
+    expectedState?: string,
+  ): Promise<{ muted: string[]; preferences?: ChannelPreferencesSnapshot }> {
+    return unwrapAsync(
+      this.methods.channelMuteSet({
+        channelId,
+        muted,
+        ...(expectedState === undefined ? {} : { expectedState }),
+      }),
+    );
   }
 
   rosterBatch(
@@ -1833,6 +1879,9 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'composerIdentity',
   'composerValidate',
   'humanNameSet',
+  'channelPreferences',
+  'channelPinSet',
+  'channelHiddenSet',
   'channelHumanNameSet',
   'channelDm',
   'channelGet',

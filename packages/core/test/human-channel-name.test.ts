@@ -1,3 +1,4 @@
+import { createFakeRosterDomain } from './roster-fixture.js';
 import { describe, expect, it } from 'vitest';
 import { createCore } from '../src/plugin.js';
 import { createBridgeMethods } from '../src/bridge/methods.js';
@@ -8,6 +9,7 @@ describe('Human Channel nicknames', () => {
   it('keeps explicit DM and Group names independent and restores inheritance durably', async () => {
     const home = createTempRoot('botharness-channel-name-');
     const core = createCore({ dshHome: home });
+    await core.roster.attach(createFakeRosterDomain().facility);
     core.registry.create({ slug: 'ada', displayName: 'Ada' });
     const dm = core.channels.getOrCreateDm('ada', 'Ada')!;
     const group = core.channels.createGroup({ name: 'Roleplay', members: ['ada'] });
@@ -37,6 +39,7 @@ describe('Human Channel nicknames', () => {
       core.operationalDatabase.close();
     }
     const resumed = createCore({ dshHome: home });
+    await resumed.roster.attach(createFakeRosterDomain().facility);
     try {
       const bridge = createBridgeMethods(resumed);
       expect(resumed.channels.listHumanMembers(dm.id)[0]?.displayName).toBe('Captain');
@@ -107,6 +110,7 @@ describe('Human Channel nicknames', () => {
       async close() {},
     };
     const core = createCore({ dshHome: createTempRoot('botharness-human-name-mentions-'), agents });
+    await core.roster.attach(createFakeRosterDomain().facility);
     const methods = createBridgeMethods(core);
     core.registry.create({ slug: 'ada', displayName: 'Ada' });
     groupId = core.channels.createGroup({ name: 'Names', members: ['ada'] }).id;
@@ -137,6 +141,7 @@ describe('Human Channel nicknames', () => {
   });
   it('refuses nicknames for Bot-to-Bot inspection, absent Channels and replacement Human identities', async () => {
     const core = createCore({ dshHome: createTempRoot('botharness-nickname-authority-') });
+    await core.roster.attach(createFakeRosterDomain().facility);
     try {
       core.registry.create({ slug: 'ada', displayName: 'Ada' });
       core.registry.create({ slug: 'lin', displayName: 'Lin' });

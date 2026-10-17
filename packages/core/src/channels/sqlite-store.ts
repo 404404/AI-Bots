@@ -1284,11 +1284,13 @@ export function createSqliteChannelStore(options: SqliteChannelStoreOptions): Ch
     humanNickname(id) {
       return participates(id) ? readNickname(id) : undefined;
     },
-    setHumanNickname(id, nickname) {
-      if (!participates(id)) throw new Error('The local Human must participate in this Channel');
+    setHumanNickname(id, nickname, beforeWrite) {
       const normalized = normalizeHumanName(nickname);
       database.transaction(
         (db) => {
+          beforeWrite?.();
+          if (!participates(id))
+            throw new Error('The local Human must participate in this Channel');
           if (normalized === null)
             db.prepare(
               'DELETE FROM channel_human_nicknames WHERE channel_id = ? AND human_id = ?',
