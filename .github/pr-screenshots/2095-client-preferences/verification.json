@@ -47,7 +47,6 @@
     "unrun": [
       "multiple native windows",
       "real Human OS permission prompt and notification delivery",
-      "CI",
       "Human QA",
       "merge",
       "deployment"
@@ -68,7 +67,18 @@
         "Human OS permission prompt",
         "actual OS notification delivery"
       ],
-      "runtimeOwner": "parent serialized native runner; main Desktop restored after both runs"
+      "runtimeOwner": "parent serialized native runner; main Desktop restored after both runs",
+      "guardFollowup": {
+        "candidateHead": "6783c8d1823611ea601e18c2599af164aa4aa5e1",
+        "sourceHead": "5b4cc293fa2ab661543b0a464a1ada38268d3115",
+        "phase": "direct",
+        "receipt": "native-guard-result.json",
+        "screenshot": "native-guard-notification-readback.png",
+        "passed": "actual notification controls/read-write, reload persistence and old generation refusal",
+        "errors": [],
+        "limits": "one selected native Client; prior model and external process-restart journeys retained at their original source; no post-fix Web rerun",
+        "runtimeOwner": "parent serialized native runner; main Desktop restored"
+      }
     }
   },
   "scope": {
@@ -144,6 +154,12 @@
       "width": 1440,
       "height": 900,
       "sha256": "4b579c331ff896b8314c303773410aac0387e024b5adc52aa680964d41798752"
+    },
+    {
+      "file": "native-guard-notification-readback.png",
+      "width": 2522,
+      "height": 1640,
+      "sha256": "68e8863b59887c2762c96a68cf83a2491d8833ad6573d1761f1ade8a520e86e3"
     }
   ],
   "pullRequest": "https://github.com/BotHarness/DeepSeekBot/pull/2126",
@@ -171,7 +187,11 @@
     },
     "typecheck": "root and mobile passed after required Cordis disposer return correction",
     "build": "passed on identical source content before source-fix commit",
-    "runtimeAfterFix": "not rerun; historical Web/native captures remain bound to their original source",
-    "fullCI": "new exact-head full CI pending after push"
+    "runtimeAfterFix": "Native single-Client direct phase passed on built guard source5b/candidate678: actual notification controls, owner read/write, reload persistence and old generation refusal. Historical model/Web/process-restart captures remain bound to original source.",
+    "fullCI": {
+      "head": "6783c8d1823611ea601e18c2599af164aa4aa5e1",
+      "conclusion": "success",
+      "url": "https://github.com/BotHarness/DeepSeekBot/actions/runs/39074167339"
+    }
   }
 }
