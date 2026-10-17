@@ -7,10 +7,32 @@ import { resolve, join } from 'node:path';
 const instance = JSON.parse(
   readFileSync(process.env.BH_E2E_INSTANCE || process.env.BH_E2E_HUMAN_INSTANCE, 'utf8'),
 );
+const flags = process.argv.slice(2);
+assert.ok(
+  flags.every((flag) => ['--model', '--resume-offer', '--preflight-only'].includes(flag)),
+  'unknown device journey flag',
+);
+const resumeOffer = flags.includes('--resume-offer');
+assert.ok(!resumeOffer || flags.includes('--model'), 'offer resume requires --model');
+assert.equal(typeof instance.home, 'string', 'instance home is required');
+assert.ok(Number.isSafeInteger(instance.pid) && instance.pid > 0, 'instance PID is required');
+assert.equal(typeof instance.log, 'string', 'readable instance log path is required');
+const initialLog = readFileSync(instance.log);
+const logOffset = instance.logOffset ?? 0;
+assert.ok(
+  Number.isSafeInteger(logOffset) && logOffset >= 0 && logOffset <= initialLog.length,
+  'instance log offset is invalid',
+);
 const out = resolve(process.env.BH_E2E_EVIDENCE || '.humanlayer/verify/tob-devices/journey');
-mkdirSync(out, { recursive: true, mode: 0o700 });
 const login = new URL(instance.url),
   origin = login.origin;
+assert.ok(['http:', 'https:'].includes(login.protocol), 'instance URL must use HTTP');
+assert.ok(login.searchParams.get('token'), 'instance operator token is required');
+if (flags.includes('--preflight-only')) {
+  console.log(JSON.stringify({ preflight: 'pass', noHostOrBrowserStarted: true }));
+  process.exit(0);
+}
+mkdirSync(out, { recursive: true, mode: 0o700 });
 const env = {
   ...process.env,
   DEEPSEEKBOT_HOST: origin,
@@ -18,8 +40,6 @@ const env = {
 };
 delete env.DEEPSEEKBOT_AGENT_ENDPOINT;
 delete env.DEEPSEEKBOT_AGENT_TOKEN;
-const resumeOffer = process.argv.includes('--resume-offer');
-assert.ok(!resumeOffer || process.argv.includes('--model'), 'offer resume requires --model');
 const secrets = [],
   outputs = [],
   checks = {};
@@ -434,7 +454,9 @@ try {
   for (const secret of secrets)
     assert.ok(!safe.includes(secret), 'secret appeared in ordinary evidence');
   assert.ok(!safe.includes(login.searchParams.get('token')), 'operator token leaked');
-  const hostLog = readFileSync(instance.log, 'utf8');
+  const hostLogBytes = readFileSync(instance.log);
+  assert.ok(hostLogBytes.length >= logOffset, 'instance log was truncated during the journey');
+  const hostLog = hostLogBytes.subarray(logOffset).toString('utf8');
   for (const secret of secrets) assert.ok(!hostLog.includes(secret), 'secret appeared in Host log');
   checks.noSecretInEvidenceOrHostLog = true;
   writeFileSync(

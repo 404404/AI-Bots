@@ -1817,9 +1817,9 @@
       "path": "scripts/e2e-tob-devices.mjs",
       "category": "mapped",
       "behaviors": ["phone.pairing"],
-      "reason": "Direct CLI and scoped Tob Shell management with Human Devices dialog handoff; synthetic device pairing, list, revoke, stream closure and denied access. Native CDP uses the existing dsh-app page. Offer-only continuation preserves failed and completed stage proofs separately; physical phone and full native journey qualification remain explicit. Renderer readiness polls visible Bot rail/mode and Home controls, including delayed Native hydration and hidden duplicates.",
+      "reason": "Direct CLI and scoped Tob Shell management with Human Devices dialog handoff; synthetic device pairing, list, revoke, stream closure and denied access. Native CDP uses the existing dsh-app page. Offer-only continuation preserves failed and completed stage proofs separately; physical phone and full native journey qualification remain explicit. Renderer readiness polls visible Bot rail/mode and Home controls, including delayed Native hydration and hidden duplicates. Preflight validates flags and the readable instance log/offset before network or browser work; Native wrapper supplies its current launch offset before startup.",
       "task": 2098,
-      "sha256": "3450278c960f6c782226015d53a47fb10238953f5497937ec7245c1d11163ef4"
+      "sha256": "48a54f91a697ed5c6e46da29e54bd54d882a83740fc470824f888a8b542e1679"
     }
   ],
   "native": [
