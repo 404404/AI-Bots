@@ -3,7 +3,7 @@
 Issue: #2094. Agent task: `codex/local/01a145b7-59ea-73c3-9e1f-104d93d7ab60`.
 Base: `a3e2c4e64d131191e686e33cb207d3db9b3a0937` (#2119, unmerged).
 Final product source: `f9fcb32bc65d0453fdd0559bb7b75b6dc9a7ca45`.
-Later evidence-only descendants do not change the qualified product.
+Later documentation, test inventory and evidence descendants do not change the qualified product.
 
 ## Source checks
 
@@ -48,6 +48,6 @@ The committed light/dark screenshots are actual 1440 × 1000 captures. The Befor
 - The first IM resume selector matched a title instead of the button. The retry used the button role and resumed the same attempt.
 - One stock observer classified console error events from caught diagnostic RPC discovery as an unclassified Client exception. Do not treat this as a globally clean observer run. Later task journeys captured empty page-error and console-warning/error arrays.
 - Connector proof is local policy configuration only. There was no authorized external destination, test notification, live external message, credential submission, QR scan, browser/container launch or OS-consent claim.
-- macOS Native verification is queued under the parent, not run by this worker. CI, integrated-stack runtime and Human QA remain separate pending gates. The Draft PR must remain unmerged.
+- Parent-controlled macOS Native verification subsequently passed; see `native-evidence.md`. Full CI passed at `496d76ed9c0b4bd99b6d6d06b6888ccd0b8067e2` (run 39077048323). Integrated-stack runtime and Human QA remain separate pending gates. The Draft PR must remain unmerged.
 
 Private reconstruction artifacts retain the authenticated launch manifest, complete traces, raw Provider identity checks, ARIA snapshots, console records and first failures. They are deliberately excluded from publication.
