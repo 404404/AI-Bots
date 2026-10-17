@@ -399,22 +399,79 @@ describe('Usage and activity commands', () => {
   });
 });
 
-it('configures the Home native default without overwriting an independent Bot plan', async () => {
-  const live = await host(() => ({ ok: true, value: { saved: true } }));
+it('configures the Home native default with its actual revision and reasoning effort', async () => {
+  const live = await host((method) => ({
+    ok: true,
+    value: method === 'modelCatalog' ? { defaultRevision: 7 } : { revision: 8 },
+  }));
   const result = await invoke(
-    ['home-model-set', '--provider', 'deepseek', '--model', 'test-model'],
+    [
+      'home-model-set',
+      '--provider',
+      'deepseek',
+      '--model',
+      'test-model',
+      '--orchestrator-effort',
+      'high',
+    ],
     live.url,
   );
   expect(result.code).toBe(0);
   expect(live.calls).toEqual([
+    { method: 'modelCatalog', args: {} },
     {
       method: 'onboardingModel',
       args: {
         expectedRevision: 0,
-        route: { provider: 'deepseek', model: 'test-model' },
+        expectedDefaultRevision: 7,
+        route: { provider: 'deepseek', model: 'test-model', reasoningEffort: 'high' },
         globalDefault: true,
       },
     },
   ]);
   expect((await invoke(['home-model-set'], live.url)).json.error.code).toBe('usage');
+});
+it('forwards explicit native default and preset target revisions', async () => {
+  const live = await host(() => ({ ok: true, value: { revision: 9 } }));
+  expect(
+    (
+      await invoke(
+        ['home-model-set', '--provider', 'deepseek', '--model', 'test', '--expected-revision', '8'],
+        live.url,
+      )
+    ).code,
+  ).toBe(0);
+  expect(live.calls[0]).toMatchObject({
+    method: 'onboardingModel',
+    args: { expectedDefaultRevision: 8 },
+  });
+  expect(
+    (
+      await invoke(
+        [
+          'model-preset-apply',
+          'one',
+          '--preset',
+          'preset-1',
+          '--expected-revision',
+          '2',
+          '--preset-revision',
+          '4',
+        ],
+        live.url,
+      )
+    ).code,
+  ).toBe(0);
+  expect(live.calls[1]).toEqual({
+    method: 'modelPresetApply',
+    args: { slug: 'one', presetId: 'preset-1', expectedRevision: 2, expectedPresetRevision: 4 },
+  });
+  expect(
+    (
+      await invoke(
+        ['model-preset-apply', 'one', '--preset', 'preset-1', '--preset-revision', '-1'],
+        live.url,
+      )
+    ).json.error.code,
+  ).toBe('usage');
 });

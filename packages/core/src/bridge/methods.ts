@@ -509,7 +509,9 @@ export interface BridgeMethods {
 
   modelCatalog(
     payload: unknown,
-  ): Promise<BridgeResult<{ models: ModelCatalogEntry[]; default?: ModelRoute }>>;
+  ): Promise<
+    BridgeResult<{ models: ModelCatalogEntry[]; default?: ModelRoute; defaultRevision?: number }>
+  >;
   modelPresets(payload: unknown): BridgeResult<{ presets: ModelPreset[] }>;
   modelPresetCreate(payload: unknown): Promise<BridgeResult<{ preset: ModelPreset }>>;
   modelPresetUpdate(payload: unknown): Promise<BridgeResult<{ preset: ModelPreset }>>;
@@ -763,6 +765,14 @@ export interface BridgeMethodsDeps {
     currentSelection(): ModelRoute;
     saveSelection(route: ModelRoute): Promise<void>;
   };
+  defaultModelSettings?: () =>
+    | {
+        describe(options: {
+          redactSecrets: boolean;
+        }): { ns: string; value: unknown; revision: number }[];
+        replace(ns: string, value: object, expectedRevision: number): Promise<void>;
+      }
+    | undefined;
   states: BotStateTracker;
   runningSessionIds?: () => ReadonlySet<string>;
   channels: ChannelStore;
@@ -1874,6 +1884,17 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       const slug = asSlug(payload);
       const route = source['route'];
       const revision = source['expectedRevision'];
+      const defaultRevision = source['expectedDefaultRevision'];
+      if (
+        defaultRevision !== undefined &&
+        (!Number.isSafeInteger(defaultRevision) ||
+          Number(defaultRevision) < 0 ||
+          source['globalDefault'] !== true ||
+          slug !== undefined)
+      )
+        return invalidInput(
+          'A nonnegative native default revision requires global scope without a Bot target',
+        );
       if (
         !isModelRoute(route) ||
         typeof source['globalDefault'] !== 'boolean' ||
@@ -1887,7 +1908,48 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       try {
         await deps.modelCatalog.validate(route);
         if (source['globalDefault']) {
-          await deps.defaultModel.saveSelection(route);
+          let savedDefaultRevision = 0;
+          if (defaultRevision === undefined) await deps.defaultModel.saveSelection(route);
+          else {
+            const settings = deps.defaultModelSettings?.();
+            if (!settings) return unavailable();
+            const current = settings
+              .describe({ redactSecrets: true })
+              .find((entry) => entry.ns === 'agent-default-model');
+            if (!current) return unavailable();
+            if (current.revision !== defaultRevision)
+              return {
+                ok: false,
+                error: {
+                  code: 'stale-setting',
+                  message: 'Host default model changed; read it again before saving',
+                },
+              };
+            await settings.replace(
+              'agent-default-model',
+              {
+                provider: route.provider,
+                model: route.model,
+                ...(route.reasoningEffort === undefined
+                  ? {}
+                  : { reasoningEffort: route.reasoningEffort }),
+              },
+              Number(defaultRevision),
+            );
+            const saved = settings
+              .describe({ redactSecrets: true })
+              .find((entry) => entry.ns === 'agent-default-model');
+            if (!saved)
+              return {
+                ok: false,
+                error: {
+                  code: 'setting-outcome-uncertain',
+                  message:
+                    'The Host default model was submitted but its settings owner is unavailable for readback',
+                },
+              };
+            savedDefaultRevision = saved.revision;
+          }
           const saved = deps.defaultModel.currentSelection();
           if (
             saved.provider !== route.provider ||
@@ -1895,7 +1957,7 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
             saved.reasoningEffort !== route.reasoningEffort
           )
             return invalidInput('Profile default model was not saved; open native model settings');
-          if (slug === undefined) return { ok: true, value: { revision: 0 } };
+          if (slug === undefined) return { ok: true, value: { revision: savedDefaultRevision } };
           return this.modelPlanInherit({ slug, expectedRevision: revision });
         }
         if (slug === undefined) return invalidInput('Choose a Bot for an individual model');
@@ -1918,6 +1980,14 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         if (!result.ok) return invalidInput('Bot model changed; reopen before saving');
         return { ok: true, value: { revision: result.record.modelPlan!.revision } };
       } catch (error) {
+        if ((error as { code?: string }).code === 'SETTINGS_CONFLICT')
+          return {
+            ok: false,
+            error: {
+              code: 'stale-setting',
+              message: 'Host default model changed; read it again before saving',
+            },
+          };
         return invalidInput(error instanceof Error ? error.message : 'Model unavailable');
       }
     },
@@ -1976,12 +2046,18 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
       if (deps.modelCatalog === undefined) return unavailable();
       try {
         const models = await deps.modelCatalog.list();
-        const defaultRoute = deps.modelCatalog.defaultRoute?.();
+        const defaultRoute =
+          deps.defaultModel?.currentSelection() ?? deps.modelCatalog.defaultRoute?.();
+        const defaultRevision = deps
+          .defaultModelSettings?.()
+          ?.describe({ redactSecrets: true })
+          .find((entry) => entry.ns === 'agent-default-model')?.revision;
         return {
           ok: true,
           value: {
             models,
             ...(defaultRoute === undefined ? {} : { default: defaultRoute }),
+            ...(defaultRevision === undefined ? {} : { defaultRevision }),
           },
         };
       } catch (error) {
@@ -2092,13 +2168,40 @@ export function createBridgeMethods(deps: BridgeMethodsDeps): BridgeMethods {
         return invalidInput('slug and presetId are required');
       }
       if (deps.registry.get(slug) === undefined) return unknownBot(slug);
+      const expectedRevision = source['expectedRevision'];
+      const expectedPresetRevision = source['expectedPresetRevision'];
+      if (
+        [expectedRevision, expectedPresetRevision].some(
+          (value) => value !== undefined && (!Number.isSafeInteger(value) || Number(value) < 0),
+        )
+      )
+        return invalidInput('Expected revisions must be nonnegative integers');
       const preset = deps.modelPresets.get(presetId);
       if (preset === undefined) return invalidInput('Model Preset was not found');
+      const changed = () => {
+        const current = deps.registry.get(slug);
+        return (
+          (expectedRevision !== undefined &&
+            (current?.modelPlan?.revision ?? current?.modelPlanRevision ?? 0) !==
+              expectedRevision) ||
+          (expectedPresetRevision !== undefined &&
+            deps.modelPresets?.get(presetId)?.revision !== expectedPresetRevision)
+        );
+      };
+      const stale = (): BridgeResult<{ plan: PersonaBotModelPlan }> => ({
+        ok: false,
+        error: {
+          code: 'stale-setting',
+          message: 'Bot plan or Model Preset changed; read both again before applying',
+        },
+      });
+      if (changed()) return stale();
       try {
         await deps.modelCatalog.validate(preset.orchestrator);
         await deps.modelCatalog.validate(preset.assignmentDefault);
         if (preset.assignmentModels !== undefined)
           await validateAssignmentCatalog(preset.assignmentDefault, preset.assignmentModels);
+        if (changed()) return stale();
         const result = deps.registry.applyModelPreset(slug, preset);
         if (!result.ok || result.record.modelPlan === undefined) return unknownBot(slug);
         return { ok: true, value: { plan: result.record.modelPlan } };

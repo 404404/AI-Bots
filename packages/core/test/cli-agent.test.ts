@@ -111,7 +111,7 @@ describe('scoped Tob CLI', () => {
   it('does not fall back to offline stores or Human credentials for unsupported commands and overrides', async () => {
     const live = await broker();
     for (const argv of [
-      ['list'],
+      ['list', '--home', '/tmp/profile'],
       ['create'],
       ['pause', 'tob'],
       ['settings', 'other'],

@@ -490,6 +490,8 @@ deepseekbot model-plan-customize <bot-id> --orchestrator-provider deepseek --orc
 printf '%s' "$ASSIGNMENTS_JSON" | deepseekbot model-plan-assignments-set <bot-id> --plan-stdin
 deepseekbot model-plan-inherit <bot-id>
 deepseekbot model-preset-update <preset-id> --name Nightly --orchestrator-effort high
+deepseekbot home-model-set --provider <provider-id> --model <model-id> [--orchestrator-effort <effort>] [--expected-revision <default-revision>]
+deepseekbot model-preset-apply <bot-id> --preset <preset-id> [--expected-revision <plan-revision>] [--preset-revision <preset-revision>]
 deepseekbot overview-usage --period week
 deepseekbot overview-memory
 deepseekbot activity-overview
@@ -503,6 +505,8 @@ deepseekbot group-activity <group-channel>
 连接在线 Host 时，`model-preset-create` 也支持 `--plan-stdin`，stdin 仅包含 `{"assignmentModels":[...]}`，创建预设时保留可选模型、推理强度和备注。创建与更新都通过移动端编辑器使用的同一 Host bridge 转发完整策略，不会悄悄缩减为默认模型。
 
 `model-catalog` 列出 Host 能运行的模型和 Profile 默认模型，与模型选择器看到的一致。`model-plan-set` 用 stdin 中的 `{"orchestrator":{...},"assignmentDefault":{...},"assignmentModels":[...]}` 替换 Bot 的整个模型方案；`model-plan-assignments-set` 接受去掉 `orchestrator` 的同一对象。路由写作 `{"provider","model","reasoningEffort"?}`，Assignment 模型写作 `{"provider","model","allowedEfforts":[...],"defaultEffort","note"?}`。`model-plan-customize` 只修改 Bot 的 Orchestrator；原本继承全局时建立独立覆盖，Assignment 的固定配置或全局继承保持不变。`model-plan-inherit` 去掉 Bot 自己的模型，改为跟随 Profile 默认模型。`model-preset-update` 修改预设的名称或路由；没有给出的参数保持当前值，可选的 `--plan-stdin` `{"assignmentModels":[...]}` 替换它的 Assignment 模型。每条路由都由 Host 按模型目录校验。方案和预设的写入会核对版本：`--expected-revision` 显式指定版本；不指定时命令先读取当前版本，与 `memory-save` 的 `--expected-head` 相同。方案在此期间被改过时，返回 Host 的 `invalid-input`。
+
+在线 Human CLI 的 `home-model-set` 支持 `--orchestrator-effort` 和 `--expected-revision`；后者对应 `model-catalog.defaultRevision`，省略时先读取当前默认模型 revision。`model-preset-apply` 可通过 `--expected-revision` 约束 Bot 计划、`--preset-revision` 约束预设；省略这些参数时保留原有 Human 行为。受限 Tob 调用必须明确传入对应 revision，不能借省略参数跳过已审核快照。
 
 `overview-usage`（`--period today|week|month|quarter`，`month` 为近 28 天，`quarter` 为近 84 天，默认 `today`）和 `overview-memory` 返回总览页上每个 Bot 的数据行；把返回的 `nextCursor` 作为 `--after` 传回可以继续读取。`activity-overview` 显示每个 Bot 正在做什么，`channel-activity-today` 显示每个 Channel 今天的消息。`bot-*` 读取命令按 Bot ID 定位，通过它的私聊读取 Profile 面板：`bot-usage` 需要不晚于今天、跨度小于 182 天的 `--start`/`--end`，`bot-session-usage` 按会话和 Assignment 汇总用量，`bot-activity-history` 返回活动日历（`--weeks` 为 1–104）。`group-activity` 接受群组 Channel ID。
 
@@ -635,7 +639,7 @@ deepseekbot memory-move <bot-id> --default-location
 
 `deepseekbot tob-home` 幂等准备受保护的本地 Tob、Memory、管理 Workspace 与 DM，返回标识及权威 Attention 摘要，不发送消息。`deepseekbot home-model-set --provider <id> --model <id>` 修改原生 Host 默认模型，保留其他 Bot 的独立计划。
 
-Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_assignment_limit_read`、`tob_assignment_limit_set` Tool 及直接运行入口已移除。既有 Assignment Tools 不变。首个受限 CLI 流程只支持当前 Profile 的全局 `botharness-client.assignmentConcurrencyLimit`（1–32 的整数），并未开放所有设置或其他 Bot 的数据。
+Tob 通过普通原生 bash／pwsh Tool 调用 `deepseekbot`；专用的 `tob_assignment_limit_read`、`tob_assignment_limit_set` Tool 及直接运行入口已移除。既有 Assignment Tools 不变。受限 CLI 流程支持下方列出的模型、运行、隐私、Git 和更新操作；这是明确的允许清单，不代表开放全部 Human CLI 命令或其他 Bot 的数据。
 
 在具备权限的 Tob Shell 执行中：
 
@@ -653,3 +657,57 @@ Host 将短期 loopback endpoint 与受限 token 注入这次 Shell 的子进程
 已认证 Human 的 `settings-set` 保持原行为，新增成对的 `--expected-revision` 与 `--previous-value` 参数，用于提交已审核的 patch；后者为与 patch 字段一致的 JSON 对象。同时省略这两个参数仍使用原有先读再写流程。Tob 的删除／归档仍返回 `protected-bot`。
 
 [UI／CLI 覆盖清单](agents/cli-ui-coverage.md) 区分既有 Human 命令和 Tob 受限访问，并跟踪后续缺口。身份与生命周期边界见 [ADR-0224](adr/0224-tob-management-uses-scoped-native-shell-cli.md)。
+
+### Tob 模型与运行设置
+
+在 Tob 具备权限的 Shell 执行中使用 `deepseekbot capabilities` 查看当前命令。下列命令复用已有 Host owner；写入仍须满足已准入 Human DM 和现有审核策略。
+
+```bash
+deepseekbot list
+deepseekbot model-catalog
+deepseekbot model-plan <bot-id>
+deepseekbot model-presets
+deepseekbot settings
+
+deepseekbot home-model-set --provider <provider-id> --model <model-id> [--orchestrator-effort <effort>] --expected-revision <default-revision>
+deepseekbot model-plan-customize <bot-id> --orchestrator-provider <provider-id> --orchestrator-model <model-id> --expected-revision <plan-revision>
+deepseekbot model-plan-inherit <bot-id> --expected-revision <plan-revision>
+# 完整计划 JSON：orchestrator、assignmentDefault、assignmentModels。
+deepseekbot model-plan-set <bot-id> --plan-stdin --expected-revision <plan-revision> < plan.json
+# 仅 Assignment 的 JSON 省略 orchestrator；Bot 必须已经有独立计划。
+deepseekbot model-plan-assignments-set <bot-id> --plan-stdin --expected-revision <plan-revision> < assignments.json
+deepseekbot model-preset-apply <bot-id> --preset <preset-id> --expected-revision <plan-revision> --preset-revision <preset-revision>
+```
+
+`model-catalog` 返回可用模型及 `default`／`defaultRevision`；读取 model-plan 返回 Bot 计划的 revision。修改 Host 默认模型保留其他 Bot 的独立配置。Customize 修改 Orchestrator 并保留 Assignment 选择；inherit 让 Bot 恢复跟随 Host 默认值。Host 在准备操作和执行前均检查模型可用性：不可用路由返回 `model-unavailable`，已审核 revision 发生变化返回 `stale-setting`。需要修复的旧计划返回 `legacy-model-repair-required`，不会静默重写。凭据配置仍使用原生私密输入和既有凭据界面；Tob 只获取目录／就绪状态，不获取密钥值。
+
+预设的创建、读取、更新和应用复用既有 preset owner。受限 `model-preset-create --name <name>` 与 `model-preset-update <preset-id> --name <name> --expected-revision <revision>` 必须显式提供 `--orchestrator-provider`、`--orchestrator-model`、`--assignment-provider`、`--assignment-model`；可选 effort 参数和包含 `{"assignmentModels":[...]}` 的 `--plan-stdin` 沿用既有格式。受限更新要求完整的目标名称与模型路由，Human 命令仍可局部更新。应用预设同时校验 Bot 和 preset revision。当前没有预设删除 owner 或命令，本片不新增删除操作，也不宣称完整 preset CRUD。
+
+`settings` 列出支持的命名空间；`settings botharness-client` 只返回以下四个实时运行字段：
+
+| 字段                         | 接受值      |
+| ---------------------------- | ----------- |
+| `assignmentConcurrencyLimit` | 1–32 的整数 |
+| `showBotSessions`            | 布尔值      |
+| `showApprovalReviewSessions` | 布尔值      |
+| `developerMode`              | 布尔值      |
+
+`settings-set botharness-client --patch-stdin` 必须配合成对的审核参数；previous-value JSON 必须与 patch 使用完全一致的字段。`settings agent-default-model` 读取默认模型路由，通过 `home-model-set` 修改。未知字段、其他命名空间和直接 patch 默认模型均拒绝，不绕过 owner 编辑配置文件。本片范围不包含动效、主题、语言、快捷键、布局等其他偏好。
+
+### Tob 隐私、Git 与更新
+
+```bash
+deepseekbot telemetry-status
+deepseekbot telemetry-set --enabled
+# 或：deepseekbot telemetry-set --disabled
+deepseekbot git-status
+deepseekbot git-install
+deepseekbot release-info
+deepseekbot release-check
+deepseekbot release-install <version> --confirm
+deepseekbot release-restart --confirm
+```
+
+这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
+
+受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。

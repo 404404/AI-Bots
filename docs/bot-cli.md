@@ -497,6 +497,8 @@ deepseekbot model-plan-customize <bot-id> --orchestrator-provider deepseek --orc
 printf '%s' "$ASSIGNMENTS_JSON" | deepseekbot model-plan-assignments-set <bot-id> --plan-stdin
 deepseekbot model-plan-inherit <bot-id>
 deepseekbot model-preset-update <preset-id> --name Nightly --orchestrator-effort high
+deepseekbot home-model-set --provider <provider-id> --model <model-id> [--orchestrator-effort <effort>] [--expected-revision <default-revision>]
+deepseekbot model-preset-apply <bot-id> --preset <preset-id> [--expected-revision <plan-revision>] [--preset-revision <preset-revision>]
 deepseekbot overview-usage --period week
 deepseekbot overview-memory
 deepseekbot activity-overview
@@ -510,6 +512,8 @@ deepseekbot group-activity <group-channel>
 `model-preset-create` also accepts `--plan-stdin` against an online Host, with only `{"assignmentModels":[...]}` in stdin, to preserve allowed models, reasoning efforts and notes when creating a preset. Creation and update forward the complete policy through the same Host bridge as the mobile editor; neither silently reduces it to the default model.
 
 `model-catalog` lists the models the Host can run and the Profile default, as the model pickers do. `model-plan-set` replaces a Bot's whole plan with stdin `{"orchestrator":{...},"assignmentDefault":{...},"assignmentModels":[...]}`; `model-plan-assignments-set` takes the same object without `orchestrator`. A route is `{"provider","model","reasoningEffort"?}` and an Assignment model is `{"provider","model","allowedEfforts":[...],"defaultEffort","note"?}`. `model-plan-customize` changes only the Bot’s Orchestrator, creating an independent override if necessary while preserving fixed or inherited Assignment settings. `model-plan-inherit` drops the Bot's own model so it follows the Profile default. `model-preset-update` changes a preset's name or routes; flags you leave out keep the current values, and an optional `--plan-stdin` `{"assignmentModels":[...]}` replaces its Assignment models. The Host validates every route against its catalog. Plan and preset writes check a revision: `--expected-revision` makes that check explicit; without it the command reads the current revision first, like `memory-save` does with `--expected-head`. A plan changed meanwhile fails with the Host's `invalid-input`.
+
+The online Human CLI accepts `home-model-set --orchestrator-effort` and `--expected-revision`; the latter names `model-catalog.defaultRevision`, or the command reads the current default revision when omitted. `model-preset-apply` accepts `--expected-revision` for the Bot plan and `--preset-revision` for the preset; omitting these retains the existing Human behavior. Scoped Tob calls require the corresponding explicit revisions and cannot omit them to bypass the reviewed snapshot.
 
 `overview-usage` (`--period today|week|month|quarter`; `month` is the last 28 days and `quarter` the last 84, default `today`) and `overview-memory` return the Overview page's per-Bot rows; pass `nextCursor` back as `--after` for more. In `overview-usage`, each bucket is the sum of what providers reported and is `null` only when nothing in it was reported; `partial: true` on the totals, a day or a Bot means some usage in it went unreported, so its `totalTokens` is a lower bound. `activity-overview` shows what every Bot is doing and `channel-activity-today` today's messages per Channel. The `bot-*` readers address a Bot by id and read the Profile panels through its DM: `bot-usage` needs a non-future `--start`/`--end` range shorter than 182 days, `bot-session-usage` groups usage by Session and Assignment, and `bot-activity-history` returns the activity calendar (`--weeks` 1–104). `group-activity` takes a group Channel id. In `bot-activity-history`, a model row’s `totalTokens` retains the reported lower bound with `partial: true` when other calls are unreported; fully unreported usage stays `null`. The strict `bot-usage` query retains its existing unknown-total semantics.
 
@@ -640,7 +644,7 @@ The repository moves to `<absolute-dir>/<bot-id>`; the folder must already exist
 
 `deepseekbot tob-home` prepares/reuses the protected local Tob identity, Memory, managed Workspace and DM, returning their IDs and the canonical attention summary. It does not send a message. `deepseekbot home-model-set --provider <id> --model <id>` updates the native Host default; independent Bot plans remain unchanged.
 
-Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. This first scoped CLI journey supports only the current Profile's global `botharness-client.assignmentConcurrencyLimit` (integer 1–32), not all settings or other Bots' data.
+Tob uses the normal native bash/pwsh Tool to call `deepseekbot`; the dedicated `tob_assignment_limit_read` and `tob_assignment_limit_set` Tools and their direct-runner entries are removed. Existing Assignment Tools are unchanged. The scoped journey supports the model, runtime, privacy, Git and update operations listed below; it is an explicit allowlist, not blanket access to every Human CLI command or other Bots' data.
 
 Inside an eligible Tob Shell execution:
 
@@ -651,10 +655,64 @@ deepseekbot settings botharness-client
 printf '%s' '{"assignmentConcurrencyLimit":3}' | deepseekbot settings-set botharness-client --patch-stdin --expected-revision 12 --previous-value '{"assignmentConcurrencyLimit":8}'
 ```
 
-`capabilities` (also scoped `--help`) reports supported commands, fields, required review inputs and coded refusals. The read returns `{scope, ns, revision, value}`; `value` contains only the allowed field. The write goes through existing Host approval policy for the parsed namespace, previous value, proposed value and revision. It rechecks the actual Tob root Orchestrator and the exact accepted Human DM source before and after approval and at execution, then reads back the native Settings value. Group/IM requests, Bot-originated input, Assignment Sessions and caller-supplied identities cannot grant this authority.
+`capabilities` (also scoped `--help`) reports supported commands, fields, required review inputs and coded refusals. The read returns `{scope, ns, revision, value}`; `value` contains only the allowed fields. The write goes through existing Host approval policy for the parsed namespace, previous value, proposed value and revision. It rechecks the actual Tob root Orchestrator and the exact accepted Human DM source before and after approval and at execution, then reads back the native Settings value. Group/IM requests, Bot-originated input, Assignment Sessions and caller-supplied identities cannot grant this authority.
 
 The Host supplies an ephemeral loopback endpoint and scoped token to this Shell's child environment. This is a short-lived bearer capability, not a Human administrator credential or an isolation boundary against the same OS user; do not print or persist it. It expires when the Shell finishes, aborts or is disposed. Unsupported commands/options, incomplete scoped context and attempts to select another Host, token or offline home refuse rather than falling back to Human/offline access. `stale-setting` requires a new read and proposal; `agent-write-uncertain`, `setting-outcome-uncertain` and `setting-readback-mismatch` require read-back before any retry. A fresh Shell execution is required after context expiry.
 
 Authenticated Human `settings-set` keeps its existing behavior. It additionally accepts the paired `--expected-revision` and `--previous-value` flags to apply a previously reviewed patch; the latter is a JSON object with the same fields as the patch. Omitting both retains the existing read-then-write flow. Tob deletion/archiving still refuses with `protected-bot`.
 
 The [UI/CLI coverage inventory](agents/cli-ui-coverage.md) distinguishes existing Human commands from scoped Tob access and tracks the remaining coverage work. See [ADR-0224](adr/0224-tob-management-uses-scoped-native-shell-cli.md) for authority and lifecycle boundaries.
+
+### Tob model and runtime management
+
+Use `deepseekbot capabilities` inside Tob's eligible Shell execution to discover its current commands. The following commands reuse existing Host owners; writes still require the accepted Human DM and existing review policy.
+
+```bash
+deepseekbot list
+deepseekbot model-catalog
+deepseekbot model-plan <bot-id>
+deepseekbot model-presets
+deepseekbot settings
+
+deepseekbot home-model-set --provider <provider-id> --model <model-id> [--orchestrator-effort <effort>] --expected-revision <default-revision>
+deepseekbot model-plan-customize <bot-id> --orchestrator-provider <provider-id> --orchestrator-model <model-id> --expected-revision <plan-revision>
+deepseekbot model-plan-inherit <bot-id> --expected-revision <plan-revision>
+# Full plan JSON: orchestrator, assignmentDefault and assignmentModels.
+deepseekbot model-plan-set <bot-id> --plan-stdin --expected-revision <plan-revision> < plan.json
+# Assignment-only JSON omits orchestrator; the Bot must already have a plan.
+deepseekbot model-plan-assignments-set <bot-id> --plan-stdin --expected-revision <plan-revision> < assignments.json
+deepseekbot model-preset-apply <bot-id> --preset <preset-id> --expected-revision <plan-revision> --preset-revision <preset-revision>
+```
+
+`model-catalog` returns available models and `default`/`defaultRevision`; model-plan reads return the Bot plan revision. Changing the Host default preserves other Bots' independent overrides. Customize changes the Orchestrator while preserving Assignment choices; inherit returns the Bot to the Host default. The Host validates route availability both while preparing the operation and before execution. An unavailable route refuses with `model-unavailable`, while a changed reviewed revision refuses with `stale-setting`. Legacy plans requiring repair return `legacy-model-repair-required` rather than being silently rewritten. Credential setup remains native and private: use the existing model/credential interface; Tob receives catalog/readiness information, never credential values.
+
+Preset create/read/update/application reuse the existing preset owner. Scoped `model-preset-create --name <name>` and `model-preset-update <preset-id> --name <name> --expected-revision <revision>` require explicit `--orchestrator-provider`, `--orchestrator-model`, `--assignment-provider` and `--assignment-model`; optional effort flags and `--plan-stdin` with `{"assignmentModels":[...]}` use the existing shapes. Scoped updates require the complete intended name and routes even though the Human command supports partial updates. Applying a preset checks both Bot and preset revisions. There is no preset deletion owner or command; this slice does not invent one or claim complete preset CRUD.
+
+`settings` discovers the supported namespaces; `settings botharness-client` returns exactly four live runtime fields:
+
+| Field                        | Accepted value |
+| ---------------------------- | -------------- |
+| `assignmentConcurrencyLimit` | Integer 1–32   |
+| `showBotSessions`            | Boolean        |
+| `showApprovalReviewSessions` | Boolean        |
+| `developerMode`              | Boolean        |
+
+Use the paired reviewed flags with `settings-set botharness-client --patch-stdin`; the previous-value JSON must name exactly the patched fields. `settings agent-default-model` reads the default route; change it with `home-model-set`. Unknown fields, other namespaces and direct default-model patches refuse rather than editing configuration files. Motion, theme, language, shortcuts, layout and other preferences are not implied by this scope.
+
+### Tob privacy, Git and updates
+
+```bash
+deepseekbot telemetry-status
+deepseekbot telemetry-set --enabled
+# Or: deepseekbot telemetry-set --disabled
+deepseekbot git-status
+deepseekbot git-install
+deepseekbot release-info
+deepseekbot release-check
+deepseekbot release-install <version> --confirm
+deepseekbot release-restart --confirm
+```
+
+These reuse the same telemetry, Git and release owners as Settings. Environment-locked telemetry cannot be overridden; inspect the returned effective/locked state rather than assuming the stored preference controls collection. Git covers availability and installation only, with no new global Git identity editor.
+
+Scoped `release-install` and `release-restart` require explicit `--confirm` and a fresh Human decision for every invocation. Full access, remembered allow rules and automatic approval cannot replace that decision; the flag itself is not approval. `git-install` does not use `--confirm` and retains its existing review policy. Restart can interrupt running turns and disconnect the requesting CLI; do not automatically repeat an install or restart after an uncertain result. Reconnect and inspect release status before deciding another action. Test these operations only in an owned isolated Profile, preserving the Human's active Desktop.

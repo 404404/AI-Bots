@@ -5,6 +5,15 @@ import {
   type TobService,
   type TobSettingsProvider,
 } from './tob/service.js';
+import {
+  createTobModelOperations,
+  TOB_MODEL_CAPABILITIES,
+  type TobNativeSettings,
+} from './tob/cli-model-operations.js';
+import {
+  createTobMaintenanceOperations,
+  TOB_MAINTENANCE_CAPABILITIES,
+} from './tob/cli-maintenance-operations.js';
 import { installTobCliShell } from './tob/cli-shell.js';
 import { approveTobCliOperation } from './tob/cli-approval.js';
 import { onboardingNewsAvailable } from './onboarding/search.js';
@@ -1107,6 +1116,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               return {
                 signal: execution.signal,
                 authorize,
+                prepareOperation: async (command, args) =>
+                  (await tobModelOperations(command, args)) ??
+                  (await tobMaintenanceOperations(command, args)),
+                capabilities: [...TOB_MODEL_CAPABILITIES, ...TOB_MAINTENANCE_CAPABILITIES],
+                beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
                 writeSetting: (value, revision, guard) =>
                   core.tob.writeSetting(value, revision, () => {
@@ -1832,6 +1846,33 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const dshSessions = (ctx as unknown as { sessions: DshSessionStore }).sessions;
 
   const developerModeTarget: { gate?: DeveloperModeSkillGate } = {};
+  const syncDeveloperMode = () => {
+    let enabled = false;
+    try {
+      const settings = ctx.get('settings') as unknown as TobNativeSettings | undefined;
+      const value = settings
+        ?.describe({ redactSecrets: true })
+        .find((entry) => entry.ns === 'botharness-client')?.value;
+      enabled =
+        typeof value === 'object' &&
+        value !== null &&
+        'developerMode' in value &&
+        value.developerMode === true;
+    } catch {}
+    developerModeTarget.gate?.set(enabled);
+  };
+  ctx.inject(['settings'], (settingsCtx) => {
+    const events = settingsCtx as unknown as {
+      on(event: 'settings/document-updated', listener: (namespace: string) => void): void;
+    };
+    events.on('settings/document-updated', (namespace) => {
+      if (namespace === 'botharness-client') syncDeveloperMode();
+    });
+    settingsCtx.effect(() => {
+      syncDeveloperMode();
+      return () => developerModeTarget.gate?.set(false);
+    }, 'botharness: developer mode settings');
+  });
   const releaseInstaller: { current: ReleaseInstaller | undefined } = { current: undefined };
   ctx.inject(['pluginManager'], (managerCtx) => {
     managerCtx.effect(() => {
@@ -1854,6 +1895,30 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
       };
     }, 'botharness: release restarter');
   });
+  const releaseService = createLoadingReleaseService({
+    version: () => runningRelease.version,
+    identity: () =>
+      installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
+    ledgers: () => runningRelease.ledgers,
+    installer: () => releaseInstaller.current,
+    restarter: () => releaseRestarter.current,
+  });
+  const tobModelOperations = createTobModelOperations({
+    registry: core.registry,
+    presets: core.modelPresets,
+    catalog: modelCatalog,
+    settings: () => ctx.get('settings') as unknown as TobNativeSettings | undefined,
+    defaultModel,
+    runtimeChanged: (patch) => {
+      if (typeof patch.developerMode === 'boolean')
+        developerModeTarget.gate?.set(patch.developerMode);
+    },
+  });
+  const tobMaintenanceOperations = createTobMaintenanceOperations({
+    telemetry,
+    git,
+    release: releaseService,
+  });
   const bridgeMethods = createBridgeMethods({
     approvalReviewer,
     composerIdentity: () =>
@@ -1867,6 +1932,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     approvalTemplates,
     deletions: core.deletions,
     contentPurge: core.contentPurge,
+    defaultModelSettings: () => ctx.get('settings') as unknown as TobNativeSettings | undefined,
     modelPresets: core.modelPresets,
     modelCatalog,
     modelReadiness,
@@ -1924,14 +1990,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     marketplace: createMarketplaceClient({
       baseUrl: config.marketplaceUrl ?? DEFAULT_MARKETPLACE_URL,
     }),
-    release: createLoadingReleaseService({
-      version: () => runningRelease.version,
-      identity: () =>
-        installedPackage.identity(releaseAnchors, loadedReleaseComponents(ctx.registry.values())),
-      ledgers: () => runningRelease.ledgers,
-      installer: () => releaseInstaller.current,
-      restarter: () => releaseRestarter.current,
-    }),
+    release: releaseService,
     telemetry,
     git,
     developerMode: {
@@ -2001,7 +2060,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         };
       }
     ).skills;
-    developerModeTarget.gate = new DeveloperModeSkillGate({
+    const gate = new DeveloperModeSkillGate({
       register: (definition) => {
         let dispose: (() => void) | undefined;
         skillsCtx.effect(() => {
@@ -2011,6 +2070,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
         return () => dispose?.();
       },
     });
+    developerModeTarget.gate = gate;
+    skillsCtx.effect(() => {
+      syncDeveloperMode();
+      return () => {
+        gate.set(false);
+        if (developerModeTarget.gate === gate) delete developerModeTarget.gate;
+      };
+    }, 'botharness: developer mode skill gate');
   });
 
   ctx.inject(['connection'], (connectionCtx) => {

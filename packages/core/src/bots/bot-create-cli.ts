@@ -137,7 +137,7 @@ Usage:
                                   [--orchestrator-effort <e>] --assignment-provider <p>
                                   --assignment-model <m> [--assignment-effort <e>] [--home <dsh-home>]
                                   [--plan-stdin (online Host only)]
-  deepseekbot model-preset-apply <id> --preset <preset-id> [--home <dsh-home>]
+  deepseekbot model-preset-apply <id> --preset <preset-id> [--expected-revision <n>] [--preset-revision <n>] [--home <dsh-home>]
   deepseekbot model-plan <id> [--home <dsh-home>]
   deepseekbot pause <id> [--home <dsh-home>]
   deepseekbot resume <id> [--home <dsh-home>]
@@ -475,6 +475,7 @@ const CREATE_OPTIONS = {
   description: { type: 'string' },
   role: { type: 'string', multiple: true },
   preset: { type: 'string' },
+  'preset-revision': { type: 'string' },
   'from-zip': { type: 'string' },
   'from-dir': { type: 'string' },
   'from-git': { type: 'string' },
