@@ -1,3 +1,4 @@
+import { currentClientTarget } from './client-control.js';
 import { isPixelBannerRecipe, type PixelBannerRecipe } from '@botharness/pixel-banner';
 import { parseToolApprovalActor } from '../../../core/src/workspaces/tool-approval-actor.js';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
@@ -2869,6 +2870,7 @@ export async function sendChannelMessage(
     call,
     'channelSend',
     {
+      clientTarget: currentClientTarget(call),
       channelId,
       body,
       ...(replyTo === undefined ? {} : { replyTo }),

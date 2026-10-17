@@ -592,6 +592,10 @@ export class BotharnessBridgeService extends TypertRemoteService {
     return unwrapAsync(this.methods.messagingSend({ slug, grantId, requestId, text }));
   }
 
+  clientControl(payload: unknown): Promise<unknown> {
+    return unwrapAsync(this.methods.clientControl(payload));
+  }
+
   tobHome() {
     return unwrapAsync(this.methods.tobHome({}));
   }
@@ -1855,6 +1859,7 @@ markRemoteMethods(BotharnessBridgeService.prototype, [
   'messagingConversation',
   'messagingSend',
   'tobHome',
+  'clientControl',
   'onboarding',
   'onboardingModel',
   'modelPlanInherit',

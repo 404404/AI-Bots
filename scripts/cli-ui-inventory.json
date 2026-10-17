@@ -2,15 +2,37 @@
   "version": 1,
   "groups": [
     {
-      "id": "client-preferences",
-      "description": "Theme, locale, notifications, file opening and presentation preferences; native Settings fields already have generic settings CLI, but local services need a target Client.",
-      "scope": "Client",
+      "id": "client-preferences-qualified",
+      "description": "Native theme and locale use shared Host settings; notification preference dispatch targets one live Client browser-origin owner, with OS permission separate. Human name and IM defaults reuse existing owners.",
+      "scope": "Host / Human Profile / browser origin",
       "surfaces": [
         "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.language')}",
         "setting:packages/client/src/client/appearance-settings.tsx:{t('settings.theme')}",
         "setting:packages/client/src/client/notification-settings.tsx:{t('desktopNotify.row.title')}",
+        "storage:packages/client/src/client/desktop-notifications.ts:setItem(DESKTOP_NOTIFICATIONS_KEY)"
+      ],
+      "commands": [
+        "settings",
+        "settings-set",
+        "client-targets",
+        "client-preferences",
+        "client-preferences-set"
+      ]
+    },
+    {
+      "id": "client-control-identity",
+      "description": "Nonconfigurable per-tab dispatch identity and per-mount generation; not a preference or authorization grant.",
+      "scope": "Client tab",
+      "surfaces": ["storage:packages/client/src/client/client-control.ts:setItem(key)"],
+      "configurable": false,
+      "exemption": "Ephemeral routing identity; preference commands use discovered exact target rather than editing it."
+    },
+    {
+      "id": "client-preferences",
+      "description": "Remaining local file-opening, composer-footer and DM presentation controls; commands report unsupported-client-preference rather than mutating an unavailable owner.",
+      "scope": "Client",
+      "surfaces": [
         "storage:packages/client/src/client/composer-footer-preferences.ts:setItem(FOOTER_STORAGE_KEY)",
-        "storage:packages/client/src/client/desktop-notifications.ts:setItem(DESKTOP_NOTIFICATIONS_KEY)",
         "storage:packages/client/src/client/dm-actions.ts:setItem(STORAGE_KEY)",
         "storage:packages/client/src/client/file-open-preferences.ts:setItem(storageKey)",
         "setting:packages/client/src/client/channel-personal-settings.tsx:{t(`dmTrace.kind.${kind}`)}"

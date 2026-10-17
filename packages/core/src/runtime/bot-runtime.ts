@@ -682,6 +682,7 @@ export interface TobCliAuthority {
   (): void;
 
   markSideEffect(): void;
+  currentClientTarget?(): import('../client-control/contracts.js').ClientTarget;
 }
 
 export interface MemoryReadAssignmentInput {
@@ -3611,6 +3612,28 @@ class BotRuntimeImplementation implements BotRuntime {
     };
     authorize();
     return Object.assign(authorize, {
+      currentClientTarget: () => {
+        authorize();
+        const targets = this.#database.read((db) =>
+          [...accepted].map((id) => {
+            const row = db
+              .prepare('SELECT payload_json FROM source_events WHERE source_event_id = ?')
+              .get(id);
+            const payload =
+              typeof row?.payload_json === 'string'
+                ? (JSON.parse(row.payload_json) as {
+                    clientTarget?: import('../client-control/contracts.js').ClientTarget;
+                  })
+                : undefined;
+            return payload?.clientTarget;
+          }),
+        );
+        const first = targets[0];
+        if (!first) throw new TobError('current-client-unavailable');
+        if (targets.some((target) => JSON.stringify(target) !== JSON.stringify(first)))
+          throw new TobError('ambiguous-client-target');
+        return { ...first };
+      },
       markSideEffect: () => {
         authorize();
         this.#markAdmissionsSideEffect(owner.botSlug, [...accepted]);

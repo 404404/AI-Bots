@@ -1797,6 +1797,14 @@
       "reason": "Independent Human CLI edit/retry/stale refusal and real Tob edit/deny/stale/restore with rendered approval, canonical Memory and untouched second Bot; Web and macOS are separate runs.",
       "task": 2092,
       "sha256": "b35c1b80c504db3db55327457f17c4d1eb0159128f5345dea587a7d81d62e0c4"
+    },
+    {
+      "path": "scripts/e2e-tob-client-preferences.mjs",
+      "category": "mapped",
+      "behaviors": ["desktop.tob.home"],
+      "reason": "Targeted notification preference CLI and natural Tob review; actual owner, permission status, second browser context, reload generation and canonical originating Client; Web/macOS checks remain separate.",
+      "task": 2095,
+      "sha256": "745368a593f972ccd38ee99917dbb70866cb3d8377300c7a359bfa0b641411e2"
     }
   ],
   "native": [

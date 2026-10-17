@@ -3,6 +3,15 @@ import {
   TOB_SCHEDULE_CAPABILITIES,
 } from './tob/cli-schedule-operations.js';
 import {
+  createTobHumanPreferenceOperations,
+  TOB_HUMAN_PREFERENCE_CAPABILITIES,
+} from './tob/cli-human-preferences.js';
+import { ClientControlService } from './client-control/service.js';
+import {
+  createTobClientPreferenceOperations,
+  TOB_CLIENT_PREFERENCE_CAPABILITIES,
+} from './tob/cli-client-preferences.js';
+import {
   createChannelPreferences,
   type ChannelPreferencesService,
 } from './channels/preferences.js';
@@ -1117,6 +1126,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     },
     modelCatalog,
   );
+  const clientControl = new ClientControlService(15_000, 10_000, (phase, details) =>
+    ctx.logger.info('client-control %j', {
+      phase,
+      initiator: 'authenticated-client-control',
+      ...details,
+    }),
+  );
+  ctx.effect(() => () => clientControl.dispose(), 'botharness: client control');
   const privateExecution = new ProtectedExecution((phase, details = {}) =>
     ctx.logger.info('private-input %j', { phase, ...details }),
   );
@@ -1157,7 +1174,10 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
               )
                 return undefined;
 
-              let source: (() => void) & { markSideEffect?: () => void };
+              let source: (() => void) & {
+                markSideEffect?: () => void;
+                currentClientTarget?: () => import('./client-control/contracts.js').ClientTarget;
+              };
               try {
                 source =
                   core.runtime.captureTobCliAuthority?.(actor.session.id) ??
@@ -1200,7 +1220,14 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                     core.runtime,
                     core.memory,
                     actor.session.id,
-                  )(command, args)),
+                  )(command, args)) ??
+                  (await tobHumanPreferenceOperations(command, args)) ??
+                  (await createTobClientPreferenceOperations(clientControl, () => {
+                    source();
+                    if (!source.currentClientTarget)
+                      throw new TobError('current-client-unavailable');
+                    return source.currentClientTarget();
+                  })(command, args)),
                 capabilities: [
                   ...TOB_MEMORY_CAPABILITIES,
                   ...TOB_MEMORY_EDIT_CAPABILITIES,
@@ -1211,6 +1238,9 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_CHANNEL_CAPABILITIES,
                   ...TOB_CHANNEL_PREFERENCES_CAPABILITIES,
                   ...TOB_SCHEDULE_CAPABILITIES,
+
+                  ...TOB_CLIENT_PREFERENCE_CAPABILITIES,
+                  ...TOB_HUMAN_PREFERENCE_CAPABILITIES,
                 ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
@@ -2077,6 +2107,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     release: releaseService,
   });
   const bridgeMethods = createBridgeMethods({
+    clientControl,
     approvalReviewer,
     composerIdentity: () =>
       composerRecoveryIdentity(
@@ -2206,6 +2237,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
     registry: core.registry,
     isProtectedBot: (slug) => core.tob.isTob(slug),
   });
+
+  const tobHumanPreferenceOperations = createTobHumanPreferenceOperations(() => bridgeMethods);
   const tobChannelPreferencesOperations = createTobChannelPreferencesOperations(
     core.channelPreferences,
   );

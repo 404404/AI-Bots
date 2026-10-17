@@ -143,3 +143,12 @@ a second report without another Assignment; archive one disposable target and re
 with `memory-scope-unavailable`. Keep direct CLI, real model, canonical records, Web and macOS
 results separate. Native Session navigation and restart persistence require their own captures;
 the script's report/message captures do not by themselves qualify those views.
+
+
+## Client preferences acceptance (#2095)
+
+`scripts/e2e-tob-client-preferences.mjs` uses `BH_E2E_INSTANCE` for an isolated Web Host or an already selected `BH_DESKTOP_CDP` native window plus `BH_E2E_HUMAN_INSTANCE`; it never launches native Desktop. Run `direct` independently from `model` (or `journey` for both). `direct` reads exact Client ids/generations, changes the selected existing notification owner, opens Settings → Notifications for screenshot/ARIA evidence, reloads the same tab to verify persistence and generation replacement, and checks a second independent browser context remains unchanged. Notification permission remains a Human/OS flow; headless Web may use explicit synthetic granted permission for preference testing, which does not qualify real OS delivery. Native unsupported/denied/pending states remain explicit.
+
+`model` submits a natural Home request to turn off notifications in this browser. Require a fresh ordinary Shell `deepseekbot client-preferences-set` trace, rendered review with the exact target generation and browser-origin scope, completed turn, handled Human delivery, a real reply and owner readback. The canonical submitted message must carry the same Client target; a model string or a single connected Client is not proof of current origin. Inspect screenshots and page errors. Unit coverage separately checks source expiration before dispatch, mixed/missing origin refusal, stale owner state and uncertain delivered outcomes.
+
+Native theme and locale actually use Host user settings in pinned DSH; preserve this scope and test explicit shared changes with `settings-set --scope host`, not local overrides. Verify a second connected Client reflects those Host changes. Current-client-only theme/locale must refuse `host-scope-required`. Run restart checks against the same isolated Profile and retained browser context. Record direct CLI, real model, Web rendering, native rendering, restart and Human/OS notification delivery separately; unrun checks remain owed.

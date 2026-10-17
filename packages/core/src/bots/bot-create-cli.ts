@@ -2593,12 +2593,16 @@ export async function runBotCreateCli(
     if (
       values['expected-state'] !== undefined &&
       (!online ||
-        !['channel-pin', 'channel-hide', 'channel-mute', 'channel-human-name-set'].includes(
-          command,
-        ))
+        ![
+          'channel-pin',
+          'channel-hide',
+          'channel-mute',
+          'channel-human-name-set',
+          'client-preferences-set',
+        ].includes(command))
     )
       throw usageError(
-        '--expected-state is supported only for online personal Channel preference changes.',
+        '--expected-state is supported only for online Channel or Client preference changes.',
       );
     if (
       values['operation-key'] !== undefined &&
