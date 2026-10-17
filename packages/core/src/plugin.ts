@@ -6,6 +6,7 @@ import {
   createTobChannelPreferencesOperations,
   TOB_CHANNEL_PREFERENCES_CAPABILITIES,
 } from './tob/cli-channel-preferences.js';
+import { createTobPolicyOperations, TOB_POLICY_CAPABILITIES } from './tob/cli-policy-operations.js';
 import { createChannelManagement, type ChannelManagementService } from './channels/management.js';
 import {
   createTobChannelOperations,
@@ -1166,7 +1167,8 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   (await tobBotCreationOperations(command, args)) ??
                   (await tobBotProfileOperations(command, args)) ??
                   (await tobChannelOperations(command, args)) ??
-                  (await tobChannelPreferencesOperations(command, args)),
+                  (await tobChannelPreferencesOperations(command, args)) ??
+                  (await tobPolicyOperations(command, args)),
                 capabilities: [
                   ...TOB_MODEL_CAPABILITIES,
                   ...TOB_MAINTENANCE_CAPABILITIES,
@@ -1174,6 +1176,7 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
                   ...TOB_BOT_PROFILE_CAPABILITIES,
                   ...TOB_CHANNEL_CAPABILITIES,
                   ...TOB_CHANNEL_PREFERENCES_CAPABILITIES,
+                  ...TOB_POLICY_CAPABILITIES,
                 ],
                 beforeWrite: () => source.markSideEffect?.(),
                 readSetting: () => core.tob.readSetting(),
@@ -2102,6 +2105,11 @@ export function apply(ctx: Context, config: BotHarnessConfig): void {
   const tobChannelPreferencesOperations = createTobChannelPreferencesOperations(
     core.channelPreferences,
   );
+  const tobPolicyOperations = createTobPolicyOperations({
+    bridge: () => bridgeMethods,
+    registry: core.registry,
+    grants: core.grants,
+  });
   const tobChannelOperations = createTobChannelOperations({
     management: core.channelManagement,
     channels: core.channels,

@@ -87,6 +87,18 @@ const CODES = new Set([
   'git-not-found',
   'memory-unavailable',
   'invalid-memory-dir',
+  'stale-policy',
+  'policy-unavailable',
+  'policy-outcome-uncertain',
+  'unavailable',
+  'capability-unavailable',
+  'unknown-workspace',
+  'unavailable-workspace',
+  'invalid-grant',
+  'unknown-template',
+  'unknown-app',
+  'unknown-target',
+  'unknown-pairing',
 ]);
 
 export interface TobCliProposal {
@@ -274,6 +286,10 @@ export async function startTobCliBroker(options: TobCliBrokerOptions): Promise<T
                   rule: 'Read the current target and pass its observed revision; follow each command usage. Settings patches also require exact previous values for patched fields.',
                   maintenance:
                     'Installation and restart require --confirm plus a fresh Human decision. Never retry an uncertain maintenance write automatically.',
+                  policies:
+                    'Read grants for Workspace writes; access for access/device toggles; approval-templates for template writes; tool-approval-rules for rule revocation; approval-reviewer-model for reviewer changes; messaging-defaults for defaults; channel-bridges for bridges; messaging-grants, pairing-list, approval-routes or failure-alerts for Bot connector policies. Pass stateFingerprint as --expected-state; every policy write requires a fresh Human decision even under Full access. Device Settings writes use exact revision and previous-value instead.',
+                  privateInput:
+                    'IM credentials, verification codes, app tokens and OS/browser consent remain in their existing Human private-input flows. Tob cannot use this broker to supply credentials, answer approval cards or send external tests/messages.',
                 }
               : { required: ['ns', 'patch', 'expectedRevision', 'previousValue'] }),
             approval: 'existing-host-policy',

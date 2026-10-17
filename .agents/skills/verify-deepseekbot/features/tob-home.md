@@ -1,5 +1,19 @@
 # Home and the protected Tob DM
 
+## Grants, approval and connector policies (#2094)
+
+Use a task-owned isolated Web Profile and synthetic Bot/Workspace. Do not launch native Desktop in parallel; the parent/shared-device owner schedules that proof. The same existing owners must be read independently through authenticated Human CLI after each Tob operation.
+
+1. Seed an ordinary Bot and a real disposable Workspace through Human `create` and `workspace-create`; these are preconditions, not Tob proof. Record its exact Bot id, Workspace id, grants, `access`, selected Approval Template and `failure-alerts` state.
+2. In Home ask Tob naturally to authorize that Workspace for the selected Bot. Require an ordinary native bash/pwsh call of `deepseekbot grants` followed by `grant-create --workspace ... --expected-state ...`, a rendered fresh Human approval with previous state/target/patch, and canonical grant readback. Open that Bot's Workspace/access UI and verify the same directory and capability. Request revocation, review it, and verify the canonical grant is revoked and subsequent use refuses.
+3. Ask Tob to select the built-in Cautious Approval Template for the synthetic Bot. First deny the management approval and require `approval-denied` with unchanged selection. Ask again, approve once, require CLI template discovery and `approval-template-set` with the observed fingerprint, and read the selected template in the existing Bot UI and Human CLI. Full access or an automatic template cannot replace this Human decision.
+4. Ask Tob to disable failure alerts for that Bot. Review the exact existing connector setting, approve once and require `failure-alerts-set` through native Shell. Read the same failure-alert owner through Human CLI and the rendered messaging settings. No test/retry/external message is needed or authorized by this local policy check.
+5. Leave one policy review pending, change its canonical state independently through Human CLI, then accept the old review. Require `stale-policy`, unchanged independently edited state and a real Tob reply. Record source revocation and asynchronous Workspace status races separately in source tests; do not call these runtime-proven from screenshots.
+
+Keep screenshots of each approval and visible resulting setting, accessible trees, browser console, fresh native Tool trace ids, handled Human delivery, completed turn and actual reply, plus exact canonical readbacks. On the same Profile after an externally scheduled Host restart, reopen the affected UI and compare saved state. Repeat on actual macOS Desktop separately before claiming that gate. Preserve first failures, and disclose any skipped branch.
+
+`im-apps` shows qualified setup availability. Scoped non-secret `im-authorize` / `pairing-status` / `im-cancel` are not implemented in this bounded change; existing authenticated Human setup remains available. Credential/token/verification stdin and OS/browser consent remain the existing Human private flows. Do not label unavailable Provider state, OS permission required or skipped external delivery as success.
+
 ## Sub-features
 
 - Home is a global panel. Fresh workspace entry opens it; upgrades append its control without opening it or replacing existing geometry.

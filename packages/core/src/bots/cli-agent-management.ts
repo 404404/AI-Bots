@@ -1,5 +1,6 @@
 import { parseAgentChannels, TOB_AGENT_CHANNEL_COMMAND_USAGE } from './cli-agent-channels.js';
 import { parseAgentBots, TOB_AGENT_BOT_COMMAND_USAGE } from './cli-agent-bots.js';
+import { parseAgentPolicies, TOB_AGENT_POLICY_COMMAND_USAGE } from './cli-agent-policies.js';
 import {
   isAssignmentModelOption,
   isModelRoute,
@@ -18,6 +19,7 @@ export interface AgentManagementInvocation {
 export const TOB_AGENT_COMMAND_USAGE: Readonly<Record<string, string>> = {
   ...TOB_AGENT_BOT_COMMAND_USAGE,
   ...TOB_AGENT_CHANNEL_COMMAND_USAGE,
+  ...TOB_AGENT_POLICY_COMMAND_USAGE,
   list: 'deepseekbot list',
   'model-catalog': 'deepseekbot model-catalog',
   'model-plan': 'deepseekbot model-plan <bot-slug>',
@@ -205,6 +207,8 @@ export async function parseAgentManagement(
   values: Record<string, unknown>,
   io: BotCreateCliIo,
 ): Promise<AgentManagementInvocation | undefined> {
+  const policy = await parseAgentPolicies(command, rest, values, io);
+  if (policy) return policy;
   const channel = parseAgentChannels(command, rest, values);
   if (channel) return channel;
   const bot = await parseAgentBots(command, rest, values, io);

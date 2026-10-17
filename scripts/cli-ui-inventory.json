@@ -79,14 +79,22 @@
     },
     {
       "id": "browser-pairing",
-      "description": "Browser profile pair/forget, daily connect/grant/return and borrowed-browser pair/return routes lack matching Human CLI commands.",
+      "description": "Human CLI covers profile pair/forget, Daily connect/grant/return and Borrowed pair/return through the existing routes with --confirm. These Human-browser pairing and OS-consent flows are outside scoped Tob policy authority.",
       "scope": "Host / Bot",
       "surfaces": [
         "route:packages/browser/src/index.ts:`/api/browser/borrow/${action}` in ['pair', 'return'] as const",
         "route:packages/browser/src/index.ts:`/api/browser/daily/${action}` in ['connect', 'grant', 'return'] as const",
         "route:packages/browser/src/index.ts:`/api/browser/profile/${action}` in ['pair', 'forget'] as const"
       ],
-      "issue": "#2094"
+      "commands": [
+        "browser-profile-pair",
+        "browser-profile-forget",
+        "browser-daily-connect",
+        "browser-daily-grant",
+        "browser-daily-return",
+        "browser-borrow-pair",
+        "browser-borrow-return"
+      ]
     },
     {
       "id": "companion-preferences",
@@ -148,7 +156,7 @@
     },
     {
       "id": "approval",
-      "description": "Existing reviewer and approval template owners.",
+      "description": "#2094 reuses reviewer/template owners, including template library CRUD, Bot selection and rule revocation. Scoped policy writes require exact fingerprints and a fresh Human decision even under Full access; listing cards grants no answering authority.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/approval-reviewer-model-setting.tsx:{t('autoApproval.reviewerModel.title')}",
@@ -165,7 +173,7 @@
     },
     {
       "id": "messaging-defaults",
-      "description": "External messaging default routing and identities.",
+      "description": "#2094 admits existing default routing and identity policy owners through scoped Tob CLI, with canonical policy fingerprints and mandatory Human review. External sending and test/retry commands remain outside this policy scope.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/messaging-defaults-settings.tsx:{t('bridge.condition')}",
@@ -252,17 +260,26 @@
     },
     {
       "id": "workspace-grants",
-      "description": "Workspace access and grant controls.",
+      "description": "#2094 covers grant create/revoke/write, access mode/scope, Browser/Computer access and canonical readback. Every scoped write needs a fresh Human decision; granting capability does not launch a runtime or grant system consent.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/workspace-grants-entry.tsx:{t('access.scopeTitle')}",
         "setting:packages/client/src/client/workspace-grants-entry.tsx:{t('access.title')}"
       ],
-      "commands": ["grants", "grant-create", "grant-revoke"]
+      "commands": [
+        "grants",
+        "grant-create",
+        "grant-revoke",
+        "grant-write-set",
+        "access",
+        "access-set",
+        "browser-access-set",
+        "computer-access-set"
+      ]
     },
     {
       "id": "im-apps",
-      "description": "IM application instances and provider setup.",
+      "description": "Existing Human CLI covers IM application status/setup/credentials/binding. Tob can inspect qualified app/setup availability and edit existing pairing, reception/wake, bridges/targets, approval routes and failure alerts. Credential/verification/token submission remains in existing Human private stdin flows; no new Provider or external-send authority.",
       "scope": "Host",
       "surfaces": [
         "setting:packages/client/src/client/im-apps-section.tsx:{app.name}",
@@ -631,15 +648,15 @@
     },
     {
       "id": "computer-client-confirmation",
-      "description": "Remember Computer start confirmation in this browser session; target Client consent state is separate from Host Computer access and must not be silently bypassed.",
+      "description": "Human computer-start supplies explicit direct start consent; the Web session's remembered start confirmation remains local to that Client. Host access, OS permission and runtime readiness remain separate and scoped Tob policy writes cannot bypass them.",
       "scope": "Client / Computer",
-      "issue": "#2094",
+      "commands": ["computer-start"],
       "surfaces": ["storage:packages/computer/src/client/index.tsx:setItem(APPROVED_KEY)"]
     },
     {
       "id": "browser-computer-native-settings",
       "scope": "Host Settings",
-      "description": "Browser target/drivers and Computer target, idle stop, export directory and auto-allow are native namespace settings. Generic Human CLI coverage is not Tob authorization.",
+      "description": "#2094 admits Browser target/drivers and Computer target, idle stop, export directory and auto-allow through native Settings. Scoped writes require the exact revision and previous values plus a fresh Human decision, with canonical readback. They neither start runtimes nor grant OS permission; secret/non-UI native fields stay excluded.",
       "commands": ["settings", "settings-set"],
       "surfaces": [
         "field-control:packages/browser/src/client/settings.tsx:\"target\"",

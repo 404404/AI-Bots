@@ -303,45 +303,55 @@ describe('disruptive scoped CLI operations require Human review', () => {
     };
   }
 
-  it.each(['release-install', 'release-restart', 'bot-delete-confirm', 'bot-delete-retry'])(
-    'does not bypass %s via full access, saved rules or automatic reviewer',
-    async (command) => {
-      const match = vi.fn(() => ({ id: 'allow-all' }));
-      const createPending = vi.fn();
-      const template = vi.fn(() => ({ name: 'allow-all', text: 'Allow operations' }));
-      const review = vi.fn(async () => ({ outcome: 'allow' as const, reason: 'Allowed' }));
-      const f = fixture({
-        rules: { match, createPending } as unknown as ToolApprovalRuleStore,
-        autoApproval: { template, review, log: vi.fn() },
-      });
-      f.setFullAccess(true);
-      const operation = release(command);
-      const pending = writeAfterApproval({ ...f.options, operation });
-      const card = await f.card();
-      expect(card.toolApprovalRequest).toMatchObject({
-        toolName: 'deepseekbot ' + command,
-        externalDecision: 'each-use',
-      });
-      expect(JSON.parse(card.toolApprovalRequest!.input)).toMatchObject({
-        ...operation,
-        parentShellCallId: 'original-shell',
-      });
-      expect(pending.write).not.toHaveBeenCalled();
-      expect(match).not.toHaveBeenCalled();
-      expect(template).not.toHaveBeenCalled();
-      expect(review).not.toHaveBeenCalled();
-      expect(await f.channelApproval.decide('tob', card.id, 'allowed-always-exact')).toBe(false);
-      expect(await f.channelApproval.decide('tob', card.id, 'allowed-always-all')).toBe(false);
-      expect(createPending).not.toHaveBeenCalled();
-      expect(await f.channelApproval.decide('tob', card.id, 'allowed-once')).toBe(true);
-      expect(await pending.result).toMatchObject({ ok: true });
-      expect(pending.write).toHaveBeenCalledTimes(1);
-      expect(f.channelApproval.activeMessageIds()).toEqual([]);
-      expect(
-        f.channelApproval.executionGuard(f.execution.agent!, card.toolApprovalRequest!.callId),
-      ).toBeUndefined();
-    },
-  );
+  it.each([
+    'release-install',
+    'release-restart',
+    'bot-delete-confirm',
+    'bot-delete-retry',
+    'grant-create',
+    'approval-template-set',
+    'failure-alerts-set',
+  ])('does not bypass %s via full access, saved rules or automatic reviewer', async (command) => {
+    const match = vi.fn(() => ({ id: 'allow-all' }));
+    const createPending = vi.fn();
+    const template = vi.fn(() => ({ name: 'allow-all', text: 'Allow operations' }));
+    const review = vi.fn(async () => ({ outcome: 'allow' as const, reason: 'Allowed' }));
+    const f = fixture({
+      rules: { match, createPending } as unknown as ToolApprovalRuleStore,
+      autoApproval: { template, review, log: vi.fn() },
+    });
+    f.setFullAccess(true);
+    const operation = {
+      ...release(command),
+      ...(['grant-create', 'approval-template-set', 'failure-alerts-set'].includes(command)
+        ? { requireHumanReview: true }
+        : {}),
+    };
+    const pending = writeAfterApproval({ ...f.options, operation });
+    const card = await f.card();
+    expect(card.toolApprovalRequest).toMatchObject({
+      toolName: 'deepseekbot ' + command,
+      externalDecision: 'each-use',
+    });
+    expect(JSON.parse(card.toolApprovalRequest!.input)).toMatchObject({
+      ...operation,
+      parentShellCallId: 'original-shell',
+    });
+    expect(pending.write).not.toHaveBeenCalled();
+    expect(match).not.toHaveBeenCalled();
+    expect(template).not.toHaveBeenCalled();
+    expect(review).not.toHaveBeenCalled();
+    expect(await f.channelApproval.decide('tob', card.id, 'allowed-always-exact')).toBe(false);
+    expect(await f.channelApproval.decide('tob', card.id, 'allowed-always-all')).toBe(false);
+    expect(createPending).not.toHaveBeenCalled();
+    expect(await f.channelApproval.decide('tob', card.id, 'allowed-once')).toBe(true);
+    expect(await pending.result).toMatchObject({ ok: true });
+    expect(pending.write).toHaveBeenCalledTimes(1);
+    expect(f.channelApproval.activeMessageIds()).toEqual([]);
+    expect(
+      f.channelApproval.executionGuard(f.execution.agent!, card.toolApprovalRequest!.callId),
+    ).toBeUndefined();
+  });
 
   it('does not reuse a prior automatic-rejection override for a disruptive command', async () => {
     const f = fixture();

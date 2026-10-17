@@ -2,6 +2,7 @@ import type { BotCreateCliIo } from './bot-create-cli.js';
 import { CliLiveError } from './cli-live-error.js';
 import { parseAgentManagement } from './cli-agent-management.js';
 import { parseReviewedSettings } from './cli-live.js';
+import { TOB_DEVICE_SETTINGS_FIELDS } from './cli-device-settings.js';
 
 export function hasAgentCliContext(env: NodeJS.ProcessEnv): boolean {
   return (
@@ -61,7 +62,13 @@ export async function runAgentCli(
       if (rest.length > 1 || (operation === 'settings-set' && rest.length !== 1))
         refuse('usage', 'settings takes an optional namespace; settings-set requires a namespace.');
       if (rest.length) {
-        if (!['botharness-client', 'agent-default-model'].includes(rest[0]!))
+        if (
+          ![
+            'botharness-client',
+            'agent-default-model',
+            ...Object.keys(TOB_DEVICE_SETTINGS_FIELDS),
+          ].includes(rest[0]!)
+        )
           refuse(
             'agent-scope-denied',
             'This namespace is not available in the scoped CLI context.',
@@ -87,7 +94,11 @@ export async function runAgentCli(
               'showBotSessions',
               'showApprovalReviewSessions',
             ]
-          : ['provider', 'model', 'reasoningEffort'];
+          : (TOB_DEVICE_SETTINGS_FIELDS[String(args['ns'])] ?? [
+              'provider',
+              'model',
+              'reasoningEffort',
+            ]);
       if (
         !Object.keys(patch).length ||
         Object.keys(patch).some((key) => !allowedFields.includes(key))

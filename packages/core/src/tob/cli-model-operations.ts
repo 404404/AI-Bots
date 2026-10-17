@@ -12,6 +12,7 @@ import {
 } from '../models/presets.js';
 import type { PreparedTobOperation } from './cli-operations.js';
 import { TobError } from './service.js';
+import { TOB_DEVICE_SETTINGS_FIELDS, validDeviceSetting } from '../bots/cli-device-settings.js';
 
 export const TOB_MODEL_CAPABILITIES = [
   ['list', 'List Bot names and identifiers', false],
@@ -102,21 +103,28 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
     return owner;
   };
   const settings = (ns: string) => {
-    if (!['botharness-client', 'agent-default-model'].includes(ns))
+    if (
+      ![
+        'botharness-client',
+        'agent-default-model',
+        ...Object.keys(TOB_DEVICE_SETTINGS_FIELDS),
+      ].includes(ns)
+    )
       throw new TobError('unsupported-setting');
     const row = native()
       .describe({ redactSecrets: true })
       .find((entry) => entry.ns === ns);
     if (!row) throw new TobError('settings-unavailable');
     const source = object(row.value);
-    const fields = ns === 'botharness-client' ? runtimeFields : routeFields;
+    const fields =
+      ns === 'botharness-client' ? runtimeFields : (TOB_DEVICE_SETTINGS_FIELDS[ns] ?? routeFields);
     const value = Object.fromEntries(
       fields.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]),
     );
     if (ns === 'botharness-client') {
       value.assignmentConcurrencyLimit ??= 8;
       for (const key of runtimeFields.slice(1)) value[key] ??= key === 'showBotSessions';
-    } else {
+    } else if (ns === 'agent-default-model') {
       if (isModelRoute(value) && deps.defaultModel)
         same(value, deps.defaultModel.currentSelection());
     }
@@ -173,6 +181,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
         previousValue,
         patch,
         ...(expectedRevision === undefined ? {} : { expectedRevision }),
+        ...(Object.hasOwn(TOB_DEVICE_SETTINGS_FIELDS, target) ? { requireHumanReview: true } : {}),
       }),
     ),
     run,
@@ -234,7 +243,19 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
           guard();
           return ns
             ? settings(ns)
-            : { namespaces: [settings('botharness-client'), settings('agent-default-model')] };
+            : {
+                namespaces: [
+                  settings('botharness-client'),
+                  settings('agent-default-model'),
+                  ...Object.keys(TOB_DEVICE_SETTINGS_FIELDS)
+                    .filter((namespace) =>
+                      native()
+                        .describe({ redactSecrets: true })
+                        .some((row) => row.ns === namespace),
+                    )
+                    .map(settings),
+                ],
+              };
         },
       };
     }
@@ -247,19 +268,23 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
           : ['ns', 'patch', 'expectedRevision', 'previousValue'],
       );
       const ns = isDefault ? 'agent-default-model' : text(args.ns);
-      if (!isDefault && ns !== 'botharness-client') throw new TobError('unsupported-setting');
+      const deviceFields = TOB_DEVICE_SETTINGS_FIELDS[ns];
+      if (!isDefault && ns !== 'botharness-client' && !deviceFields)
+        throw new TobError('unsupported-setting');
       const expected = revision(args.expectedRevision);
       const current = settings(ns);
       same(current.revision, expected);
       const patch = isDefault ? object(route(args.route)) : object(args.patch);
       if (!isDefault) {
-        keys(patch, runtimeFields);
+        keys(patch, deviceFields ? [...deviceFields] : runtimeFields);
         if (!Object.keys(patch).length) throw new TobError('invalid-input');
         for (const [key, value] of Object.entries(patch)) {
           if (
-            key === 'assignmentConcurrencyLimit'
-              ? !Number.isInteger(value) || Number(value) < 1 || Number(value) > 32
-              : typeof value !== 'boolean'
+            deviceFields
+              ? !validDeviceSetting(ns, key, value)
+              : key === 'assignmentConcurrencyLimit'
+                ? !Number.isInteger(value) || Number(value) < 1 || Number(value) > 32
+                : typeof value !== 'boolean'
           )
             throw new TobError('invalid-setting');
         }
@@ -302,7 +327,7 @@ export function createTobModelOperations(deps: TobModelOperationDependencies) {
             (isDefault && !isDeepStrictEqual(saved.value, patch))
           )
             throw new TobError('setting-readback-mismatch');
-          if (!isDefault) deps.runtimeChanged?.(patch);
+          if (ns === 'botharness-client') deps.runtimeChanged?.(patch);
           return isDefault ? { route: saved.value, revision: saved.revision } : saved;
         },
       );

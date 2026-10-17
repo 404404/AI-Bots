@@ -865,3 +865,26 @@ deepseekbot release-restart --confirm
 这些命令与设置页复用同一套 telemetry、Git 和 release owner。环境锁定的 telemetry 不能覆盖；应读取实际生效／锁定状态，不能假定已保存的偏好一定控制数据收集。Git 仅覆盖可用性和安装，不新增全局 Git 身份编辑器。
 
 受限 `release-install` 和 `release-restart` 必须带显式 `--confirm`，而且每次调用都需要新的 Human 决定。Full access、记住的允许规则和自动审批都不能替代这次决定；该参数本身不等于审批。`git-install` 不使用 `--confirm`，继续沿用其既有审核策略。重启可能中断运行中的轮次并断开请求 CLI；结果不确定时不得自动重复安装或重启，应重新连接并读取发布状态后再决定下一步。仅在自己拥有的隔离 Profile 中验证这些操作，保留 Human 当前 Desktop。
+
+### Tob 授权、审批与连接器策略
+
+在合格的 Tob Human-DM Shell 中，已有策略命令返回 `{value, stateFingerprint, result?}`。先读对应 owner，再用 `--expected-state` 携带指纹提交修改。每次策略写入（包括缩小权限）都必须由 Human 新作决定；Full access、记住规则与自动审核模型不能代替。审批卡展示准确目标、旧状态和变更。执行时重验来源与策略，完成后返回规范读回。指纹过期返回 `stale-policy`，必须重新读取再提议；`policy-outcome-uncertain` 或 `agent-write-uncertain` 不得盲目重试。
+
+| 先读                                                                                            | Tob 可使用的已有写入                                                                                                                 |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `grants <bot>`                                                                                  | `grant-create --workspace <id>`、`grant-write-set --grant <id> (--enabled                                                            | --disabled)`、`grant-revoke --grant <id> --confirm` |
+| `access <bot>`                                                                                  | `access-set --mode <workspace-write                                                                                                  | danger-full-access> [--scope <chat                  | assignments>] [--acknowledge-risk]`、Browser/Computer 访问开关 |
+| `approval-templates`                                                                            | Bot 模板选择／关闭、模板创建／编辑／删除；文本经 `--text-stdin`，复制经 `--from`，删除带 `--confirm`                                 |
+| `tool-approval-rules <bot>`                                                                     | `tool-approval-rule-revoke <bot> --rule <id> --confirm`                                                                              |
+| `approval-reviewer-model`                                                                       | `approval-reviewer-model-set <provider/model                                                                                         | bot> [--effort <effort>]`                           |
+| `messaging-defaults <platform>`                                                                 | `messaging-defaults-set <platform> --input-stdin`                                                                                    |
+| `messaging-grants <bot>`、`pairing-list <bot>`、`approval-routes <bot>`、`failure-alerts <bot>` | 已有配对决定、消息授权／撤销、接收开关、Channel 目标、群／线程接收与唤醒策略、会话与发送者策略、主动发送限额、审批路由和失败提醒设置 |
+| `channel-bridges <channel>`                                                                     | `channel-bridge <channel> --input-stdin [--confirm]`                                                                                 |
+
+`workspace-options`、`approval-template-show`、`messaging-targets` 与 `im-apps` 用于只读发现，准确参数见 `capabilities`。Provider 缺失仍是缺失，不能伪装成本地成功。`access` 包含 Browser/Computer 能力开关；改变开关不启动运行时、不配对 Human 浏览器，也不授予系统权限。`workspace-write` 的实际 scope 沿用已有 owner。
+
+Browser/Computer 原生 UI 字段继续走 `settings` 与 `settings-set --patch-stdin --expected-revision <n> --previous-value <json>`，且强制 Human 审阅。`botharness-browser` 只开放 `target`、`localDriver`、`containerDriver`；`botharness-computer` 只开放 `target`、`idleStopMinutes`（1–1440）、`exportDir`（空值／默认或绝对路径）、`autoAllowActions`。Provider 可用、运行时就绪与系统授权分别检查。
+
+应用 token、凭据和验证码保留在已认证 Human 的原有 CLI stdin／私密输入流程（`im-app-add`、`im-credentials`、`im-verify`）及原生配置 UI。Tob 可通过 `im-apps` 检查应用／配置能力，但不能通过此 broker 提交秘密或猜测 Provider 配置接口。外部发送、测试／重试投递及 `tool-approval-decide` 不在策略 allowlist；能列出其他 Bot 的审批不等于有权回答。
+
+Human CLI 补齐 Browser 控制路由：`browser-profile-pair`／`browser-profile-forget` 无 Bot 参数；`browser-daily-connect`、`browser-daily-grant`、`browser-daily-return`、`browser-borrow-pair`、`browser-borrow-return` 带一个 Bot 参数。均需 `--confirm`，复用已有配对／控制 owner，保留 Human 浏览器与系统授权步骤；这些命令不授予 Tob 受限策略权限。直接 CLI、真实 Tob 审批／拒绝／读回、Web 显示、macOS Desktop 与真实外部投递分别验收。
