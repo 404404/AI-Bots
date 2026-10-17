@@ -689,6 +689,7 @@ export interface MemoryReadAssignmentInput {
   grantId: string;
   targets: string[];
   operationKey: string;
+  expectedTargets?: Array<{ slug: string; createdAt: string }>;
   key?: string;
 }
 
@@ -699,6 +700,10 @@ export interface AssignmentMemoryScope {
 }
 
 export interface BotRuntime {
+  prepareMemoryReadTargets?(
+    sessionId: string,
+    targets: string[],
+  ): Array<{ slug: string; createdAt: string }>;
   createMemoryReadAssignment?(
     sessionId: string,
     input: MemoryReadAssignmentInput,
@@ -3381,6 +3386,25 @@ class BotRuntimeImplementation implements BotRuntime {
     };
   }
 
+  prepareMemoryReadTargets(
+    sessionId: string,
+    targets: string[],
+  ): Array<{ slug: string; createdAt: string }> {
+    this.captureTobCliAuthority(sessionId)();
+    if (
+      !Array.isArray(targets) ||
+      targets.length < 1 ||
+      targets.length > 10 ||
+      new Set(targets).size !== targets.length
+    )
+      throw new TobError('invalid-input');
+    return [...targets].sort().map((slug) => {
+      const bot = this.#registry.get(slug);
+      if (!bot || bot.paused) throw new TobError('memory-target-unavailable');
+      return { slug, createdAt: bot.createdAt };
+    });
+  }
+
   createMemoryReadAssignment(
     sessionId: string,
     input: MemoryReadAssignmentInput,
@@ -3400,11 +3424,9 @@ class BotRuntimeImplementation implements BotRuntime {
       !/^[a-zA-Z0-9][a-zA-Z0-9._:-]{7,127}$/u.test(input.operationKey)
     )
       throw new TobError('invalid-input');
-    const targets = [...input.targets].sort().map((slug) => {
-      const bot = this.#registry.get(slug);
-      if (!bot || bot.paused) throw new TobError('memory-target-unavailable');
-      return { slug, createdAt: bot.createdAt };
-    });
+    const targets = this.prepareMemoryReadTargets(sessionId, input.targets);
+    if (!input.expectedTargets || JSON.stringify(input.expectedTargets) !== JSON.stringify(targets))
+      throw new TobError('memory-target-changed');
     const grant = this.#grants?.requireActive(owner.botSlug, input.grantId);
     if (!grant) throw new TobError('memory-scope-unavailable');
     const workspace = realpathSync(grant.workspacePath);

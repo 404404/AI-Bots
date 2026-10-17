@@ -11,6 +11,8 @@ import {
   type ShellExecution,
 } from '@deepseek-ai/dsh-shell';
 import type { ToolExecution } from '@deepseek-ai/dsh-tools';
+import { literalManagedCliArguments } from './cli-literal-command.js';
+import { completedCliExecution } from './cli-completed-execution.js';
 import { startTobCliBroker, type TobCliBrokerOptions } from './cli-broker.js';
 
 export interface TobCliShellOptions {
@@ -135,6 +137,32 @@ export function installTobCliShell(
         text.replaceAll(broker.token, '[redacted]').replaceAll(broker.endpoint, '[scoped-cli]');
       try {
         signal.throwIfAborted();
+        if (captured.scope === 'assignment-memory-read') {
+          const args = literalManagedCliArguments(spec.command);
+          if (spec.stdin !== undefined && spec.stdin !== '')
+            throw new Error('Delegated Memory CLI does not accept Shell stdin');
+          const cli = (await import(pathToFileURL(options.cliPath ?? cliModulePath()).href)) as {
+            runBotCreateCli: typeof import('../bots/bot-create-cli.js').runBotCreateCli;
+          };
+          const stdout: string[] = [],
+            stderr: string[] = [];
+          const exitCode = await cli.runBotCreateCli(args, {
+            env: {
+              DEEPSEEKBOT_AGENT_ENDPOINT: broker.endpoint,
+              DEEPSEEKBOT_AGENT_TOKEN: broker.token,
+            },
+            stdout: (text) => stdout.push(text + '\n'),
+            stderr: (text) => stderr.push(text + '\n'),
+            readStdin: async () => '',
+          });
+          await close();
+          return completedCliExecution(
+            spec,
+            exitCode,
+            scrub(stdout.join('')),
+            scrub(stderr.join('')),
+          );
+        }
         const env = { ...spec.env };
 
         for (const key of [

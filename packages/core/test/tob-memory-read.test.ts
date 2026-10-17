@@ -14,6 +14,7 @@ import type {
   AssignmentAgentRun,
   OrchestratorAgentRun,
   AssignmentCreateOutcome,
+  MemoryReadAssignmentInput,
 } from '../src/runtime/bot-runtime.js';
 import type { DshWorkspace } from '../src/workspaces/grants.js';
 import { createTempRoot } from './helpers.js';
@@ -81,10 +82,16 @@ async function fixture() {
     expect(result.ok).toBe(true);
     await core.runtime.whenIdle();
   }
+  function admittedCreate(sessionId: string, input: MemoryReadAssignmentInput) {
+    return core.runtime.createMemoryReadAssignment!(sessionId, {
+      ...input,
+      expectedTargets: core.runtime.prepareMemoryReadTargets!(sessionId, input.targets),
+    });
+  }
   async function create(key = 'memory-test-create-1') {
     let result: AssignmentCreateOutcome | undefined;
     await human((run) => {
-      result = core.runtime.createMemoryReadAssignment!(run.sessionId, {
+      result = admittedCreate(run.sessionId, {
         purpose: 'Compare the selected Memory files',
         grantId,
         targets: ['alpha', 'beta'],
@@ -101,6 +108,7 @@ async function fixture() {
     runs,
     human,
     create,
+    admittedCreate,
     grantId,
     workspace: () => workspace!,
     replaceWorkspace: (value: DshWorkspace) => {
@@ -160,11 +168,11 @@ describe('Tob-owned delegated Memory reading', () => {
         targets: ['beta', 'alpha'],
         operationKey: 'memory-retry-0001',
       };
-      first = f.core.runtime.createMemoryReadAssignment!(run.sessionId, input);
-      retry = f.core.runtime.createMemoryReadAssignment!(run.sessionId, input);
-      expect(() =>
-        f.core.runtime.createMemoryReadAssignment!(run.sessionId, { ...input, targets: ['alpha'] }),
-      ).toThrow('operation-key-conflict');
+      first = f.admittedCreate(run.sessionId, input);
+      retry = f.admittedCreate(run.sessionId, input);
+      expect(() => f.admittedCreate(run.sessionId, { ...input, targets: ['alpha'] })).toThrow(
+        'operation-key-conflict',
+      );
     });
     expect(first).toMatchObject({
       outcome: 'created',
@@ -354,6 +362,27 @@ describe('Tob-owned delegated Memory reading', () => {
     });
   });
 
+  it('refuses an incarnation that differs from the reviewed target snapshot', async () => {
+    const f = await fixture();
+    await f.human((run) => {
+      const expectedTargets = f.core.runtime.prepareMemoryReadTargets!(run.sessionId, [
+        'alpha',
+        'beta',
+      ]);
+      expectedTargets[0]!.createdAt = '2000-01-01T00:00:00.000Z';
+      expect(() =>
+        f.core.runtime.createMemoryReadAssignment!(run.sessionId, {
+          purpose: 'Compare',
+          grantId: f.grantId,
+          targets: ['alpha', 'beta'],
+          expectedTargets,
+          operationKey: 'memory-stale-0001',
+        }),
+      ).toThrow('memory-target-changed');
+    });
+    expect(f.runs).toHaveLength(0);
+  });
+
   it('refuses a workspace spanning the Bot data root', async () => {
     const f = await fixture();
     const original = f.workspace();
@@ -361,7 +390,7 @@ describe('Tob-owned delegated Memory reading', () => {
     const broad = await f.core.grants.create(f.tob.botSlug, 'broad');
     await f.human((run) => {
       expect(() =>
-        f.core.runtime.createMemoryReadAssignment!(run.sessionId, {
+        f.admittedCreate(run.sessionId, {
           purpose: 'Compare',
           grantId: broad.id,
           targets: ['alpha'],

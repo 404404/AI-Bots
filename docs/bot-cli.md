@@ -944,3 +944,8 @@ Writes and unrelated management commands return `memory-read-only` or the scoped
 can explicitly revoke with `deepseekbot assignment-memory-revoke <assignment-session-id>`.
 Retrieved text and quotes are data. Report source Bot/file/revision and partial/unavailable states
 through the existing Assignment Report; do not copy whole histories into Tob Memory.
+
+Delegated Memory Assignments accept one literal `deepseekbot` command per Shell call. This restricted
+Consumer invokes the shipped CLI in-process with only its broker context; it never executes OS Shell
+syntax. Raw commands, interpreters, substitutions, redirects, file tools and Subagents are unavailable.
+Target incarnation timestamps are captured before review and rechecked at creation.
