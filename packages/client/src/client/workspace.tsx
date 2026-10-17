@@ -20,7 +20,7 @@ import { PinnedPanelCards } from './pinned-panel-cards.js';
 import { useChannelDockActive, useChannelsHeader } from './channel-dock.js';
 import { useMountedResource } from './mounted-resource.js';
 import { mountWorkspaceShell, type WorkspaceLayoutCommand } from './workspace-shell.js';
-import { CHANNEL_BODY_PANEL } from './channel-dock-layout.js';
+import { CHANNEL_BODY_PANEL, CHANNEL_WORKSPACE_PANELS } from './channel-dock-layout.js';
 import { WORKSPACE_CHANNELS, WorkspaceContext } from './workspace-context.js';
 import type { BotHarnessTranslate } from './locale.js';
 
@@ -198,7 +198,7 @@ function WorkspaceRail({
           (panel) =>
             panel.id !== 'members' &&
             panel.id !== 'bot-inbox' &&
-            panel.id !== 'sessions' &&
+            !CHANNEL_WORKSPACE_PANELS.includes(panel.id) &&
             !botOnlyHidden.includes(panel.id),
         )
         .map((panel) => ({
@@ -252,7 +252,13 @@ function WorkspaceRail({
             registry={options.dockPanels}
             order={order}
             onOrderChange={setOrder}
-            hiddenIds={['members', 'bot-inbox', 'sessions', ...botOnlyHidden, ...hiddenControls]}
+            hiddenIds={[
+              'members',
+              'bot-inbox',
+              ...CHANNEL_WORKSPACE_PANELS,
+              ...botOnlyHidden,
+              ...hiddenControls,
+            ]}
             shortcut={(id) => shortcuts.find((row) => row.id === workspaceShortcutId(id))?.keys}
             collapsed
             t={t}

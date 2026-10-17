@@ -6,6 +6,7 @@ const DRAG_TYPE = 'application/x-bh-channel-session';
 
 export function ChannelWorkspace({
   channelId,
+  panelId = 'sessions',
   state,
   setState,
   content,
@@ -14,6 +15,7 @@ export function ChannelWorkspace({
   label,
 }: {
   channelId: string | undefined;
+  panelId?: string;
   state: ChannelWorkspaceState;
   setState(next: ChannelWorkspaceState): void;
   content: ReactNode;
@@ -56,7 +58,8 @@ export function ChannelWorkspace({
     <div
       ref={mount}
       className="bh-channel-workspace"
-      data-channel-workspace={channelId}
+      data-channel-workspace={panelId === 'sessions' ? channelId : undefined}
+      data-workspace-split={panelId}
       data-direction={state.direction}
       data-split-axis={vertical ? 'vertical' : 'horizontal'}
       style={{ flexDirection: vertical ? 'column' : 'row' }}
@@ -72,7 +75,8 @@ export function ChannelWorkspace({
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDrop(undefined);
       }}
       onDrop={(event) => {
-        if (!event.dataTransfer.types.includes(DRAG_TYPE)) return;
+        if (!event.dataTransfer.types.includes(DRAG_TYPE) || dragChannel.current !== channelId)
+          return;
         event.preventDefault();
         event.stopPropagation();
         if (
@@ -129,7 +133,7 @@ export function ChannelWorkspace({
         className="bh-channel-session-host"
         hidden={!active}
         aria-label={label}
-        data-channel-subpanel="sessions"
+        data-channel-subpanel={panelId}
         style={{ order: leading ? 0 : 2, flex: `0 0 ${state.ratio * 100}%` }}
       >
         <div
