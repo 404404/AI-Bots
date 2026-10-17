@@ -1,4 +1,8 @@
 import {
+  createTobClientShortcutOperations,
+  TOB_CLIENT_SHORTCUT_CAPABILITIES,
+} from './cli-client-shortcuts.js';
+import {
   createTobClientLayoutOperations,
   TOB_CLIENT_LAYOUT_CAPABILITIES,
 } from './cli-client-layout.js';
@@ -9,6 +13,7 @@ import { TobError } from './service.js';
 
 export const TOB_CLIENT_PREFERENCE_CAPABILITIES: readonly TobCliCapability[] = [
   ...TOB_CLIENT_LAYOUT_CAPABILITIES,
+  ...TOB_CLIENT_SHORTCUT_CAPABILITIES,
   {
     command: 'client-targets',
     description: 'Discover live targets; never infer current from one connected Client',
@@ -31,8 +36,11 @@ export function createTobClientPreferenceOperations(
   current: () => ClientTarget,
 ): PrepareTobOperation {
   const layout = createTobClientLayoutOperations(service, current);
+  const shortcuts = createTobClientShortcutOperations(service, current);
   return async (command, raw) => {
     if (command === 'client-layout' || command === 'client-layout-set') return layout(command, raw);
+    if (command === 'client-shortcuts' || command === 'client-shortcuts-set')
+      return shortcuts(command, raw);
     if (!TOB_CLIENT_PREFERENCE_CAPABILITIES.some((item) => item.command === command))
       return undefined;
     const args = structuredClone(raw);
