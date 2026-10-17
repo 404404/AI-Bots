@@ -72,6 +72,8 @@ owner 先刷新真实存储，再比较 expectedState。
 | 自然 Tob 通知请求      | 来源、审批、普通 Shell trace、owner readback 通过             |
 | 自然 Tob Host 主题请求 | 审批明确 all connected clients，native Settings readback 通过 |
 | Host 与浏览器进程重启  | 同 Profile、保留浏览器存储，先读后写验证通过                  |
+| 原生单 Client          | 实际通知控件、普通 CLI、自然 Tob 审批与 Host 主题通过         |
+| 原生进程重启           | 同绝对 Profile 与 userdata，通知和主题先读后写验证通过        |
 
 最初 Go provider 返回 429。
 保留失败后，使用已授权官方 provider 和全新 Human 请求。
@@ -80,9 +82,10 @@ owner 先刷新真实存储，再比较 expectedState。
 
 ## E 仍需验证与回退
 
-父级正在验证原生 Desktop，当前尚未验收。
-真实 OS 权限和通知投递仍未验证。
-原生脚本只覆盖选定的一个 Client。
+父级已完成原生 Desktop 单 Client 与重启验证。
+两次进程退出均为 0，page-error 列表为空。
+真实 OS 权限提示和通知投递仍未验证。
+原生脚本和截图只覆盖选定的一个 Client。
 它不证明双窗口、独立 context 或三个 Client 的行为。
 CI、Human QA、合并与部署也不属于本地通过项。
 
