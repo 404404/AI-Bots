@@ -4,7 +4,7 @@ import { Stack, useNavigation } from 'expo-router';
 import type { NativeStackHeaderProps } from 'expo-router/native-stack';
 import { Platform, Pressable, View } from 'react-native';
 import { space } from '../design/tokens';
-import { ChevronLeftIcon } from '../shell/icons';
+import { ChevronLeftIcon, CloseIcon } from '../shell/icons';
 import { t } from '../strings';
 import { Text } from './text';
 
@@ -95,7 +95,7 @@ export function SheetCloseButton({ onPress }: { onPress(): void }) {
         opacity: pressed ? 0.7 : 1,
       })}
     >
-      <Text tone="accent">{t.close}</Text>
+      <CloseIcon color={theme.color.fg} size={space.x5} />
     </Pressable>
   );
 }
